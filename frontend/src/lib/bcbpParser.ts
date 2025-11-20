@@ -47,13 +47,16 @@ export function parseBCBP(barcodeData: string): BoardingPassData | null {
 
     let pos = 1;
 
-    // Format code (1 char) - usually '1'
+    // Format code (1 char) - '1' for single leg, 'M' for multi-leg
     const formatCode = barcodeData.charAt(pos);
     pos += 1;
 
-    // Number of legs encoded (1 char)
-    const numberOfLegs = parseInt(barcodeData.charAt(pos), 10);
-    pos += 1;
+    // Number of legs (only in multi-leg format 'M', not in format '1')
+    let numberOfLegs = 1;
+    if (formatCode === 'M') {
+      numberOfLegs = parseInt(barcodeData.charAt(pos), 10);
+      pos += 1;
+    }
 
     // Passenger name (FIXED LENGTH: 20 chars, right-padded with spaces)
     // Format: LASTNAME/FIRSTNAME followed by spaces
