@@ -74,12 +74,21 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
       let depAirport, arrAirport;
 
       try {
-        [depAirport, arrAirport] = await Promise.all([
-          airportsApi.getByCode(bcbpData.departureAirport),
-          airportsApi.getByCode(bcbpData.arrivalAirport),
+        // Use search API (more reliable than direct lookup)
+        const [depResults, arrResults] = await Promise.all([
+          airportsApi.search(bcbpData.departureAirport),
+          airportsApi.search(bcbpData.arrivalAirport),
         ]);
+
+        // Find exact IATA match
+        depAirport = depResults.find(a => a.iata === bcbpData.departureAirport);
+        arrAirport = arrResults.find(a => a.iata === bcbpData.arrivalAirport);
+
+        if (!depAirport || !arrAirport) {
+          throw new Error('Airports not found');
+        }
       } catch (airportError) {
-        // If airports not found in database, create placeholder objects
+        // If airports not found, create placeholder objects
         console.warn('Airports not in database, using IATA codes directly');
         depAirport = {
           id: 0,
@@ -107,7 +116,7 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
         };
 
         // Show warning to user
-        setError(`Could not find airport data for ${bcbpData.departureAirport} or ${bcbpData.arrivalAirport}. Please enter manually.`);
+        setError(`Could not connect to server. Please select airports "${bcbpData.departureAirport}" and "${bcbpData.arrivalAirport}" from dropdown.`);
       }
 
       // Set airports
