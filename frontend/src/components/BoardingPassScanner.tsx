@@ -58,8 +58,6 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
 
       try {
         // Try ZXing first (supports PDF417, QR, Aztec, etc.)
-        const codeReader = new BrowserMultiFormatReader();
-
         // Configure hints for better detection
         const hints = new Map();
         hints.set(DecodeHintType.POSSIBLE_FORMATS, [
@@ -69,6 +67,9 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
           BarcodeFormat.DATA_MATRIX // Alternative format
         ]);
         hints.set(DecodeHintType.TRY_HARDER, true);
+
+        // Pass hints to constructor
+        const codeReader = new BrowserMultiFormatReader(hints);
 
         const result = await codeReader.decodeFromCanvas(canvas);
         if (result && result.getText()) {
