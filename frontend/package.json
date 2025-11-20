@@ -23,7 +23,8 @@
     "zod": "^3.22.4",
     "@hookform/resolvers": "^3.3.3",
     "jsqr": "^1.4.0",
-    "@zxing/library": "^0.20.0"
+    "@zxing/browser": "^0.1.5",
+    "@zxing/library": "^0.21.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.45",
