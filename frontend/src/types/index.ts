@@ -33,6 +33,14 @@ export interface Flight {
   status: 'scheduled' | 'flown' | 'cancelled';
   notes?: string;
   createdAt: string;
+  // Extended fields
+  seatNumber?: string;
+  seatClass?: 'economy' | 'premium_economy' | 'business' | 'first';
+  boardingGroup?: string;
+  gate?: string;
+  terminal?: string;
+  bookingReference?: string;
+  ticketNumber?: string;
 }
 
 export interface FlightInput {
@@ -46,6 +54,14 @@ export interface FlightInput {
   arrivalTime: string;
   status?: 'scheduled' | 'flown' | 'cancelled';
   notes?: string;
+  // Extended fields
+  seatNumber?: string;
+  seatClass?: 'economy' | 'premium_economy' | 'business' | 'first';
+  boardingGroup?: string;
+  gate?: string;
+  terminal?: string;
+  bookingReference?: string;
+  ticketNumber?: string;
 }
 
 export interface FlightFilters {
