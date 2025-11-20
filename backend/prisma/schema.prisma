@@ -12,11 +12,12 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  username     String   @unique
-  passwordHash String   @map("password_hash")
-  createdAt    DateTime @default(now()) @map("created_at")
-  flights      Flight[]
+  id                  String              @id @default(uuid())
+  username            String              @unique
+  passwordHash        String              @map("password_hash")
+  createdAt           DateTime            @default(now()) @map("created_at")
+  flights             Flight[]
+  userAchievements    UserAchievement[]
 
   @@map("users")
 }
@@ -70,4 +71,40 @@ model Flight {
   @@index([status])
   @@index([airline])
   @@map("flights")
+}
+
+model Achievement {
+  id               String            @id @default(uuid())
+  code             String            @unique
+  name             String
+  description      String
+  category         String            // explorer, distance, collector, social, elite, special
+  icon             String            // icon identifier
+  tier             String            @default("bronze") // bronze, silver, gold, platinum, diamond
+  requirement      Int               // numeric requirement for achievement
+  requirementType  String            // flights_count, distance_km, countries, airlines, airports, continents, etc.
+  points           Int               @default(10)
+  isHidden         Boolean           @default(false) @map("is_hidden")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  userAchievements UserAchievement[]
+
+  @@index([category])
+  @@index([tier])
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String      @id @default(uuid())
+  userId        String      @map("user_id")
+  achievementId String      @map("achievement_id")
+  unlockedAt    DateTime    @default(now()) @map("unlocked_at")
+  progress      Int         @default(0) // current progress towards achievement
+
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+  @@index([achievementId])
+  @@map("user_achievements")
 }

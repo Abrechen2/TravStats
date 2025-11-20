@@ -122,3 +122,50 @@ export interface GeoJSONFeatureCollection {
   type: 'FeatureCollection';
   features: GeoJSONFeature[];
 }
+
+export interface Achievement {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  category: string;
+  icon: string;
+  tier: 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
+  requirement: number;
+  requirementType: string;
+  points: number;
+  isHidden: boolean;
+  createdAt: string;
+  isUnlocked?: boolean;
+  unlockedAt?: string | null;
+  progress?: number;
+  progressPercentage?: number;
+}
+
+export interface AchievementSummary {
+  totalAchievements: number;
+  unlockedAchievements: number;
+  totalPoints: number;
+  categories: Record<string, { total: number; unlocked: number }>;
+}
+
+export interface AchievementsResponse {
+  achievements: Achievement[];
+  summary: AchievementSummary;
+}
+
+export interface UserAchievement {
+  id: string;
+  userId: string;
+  achievementId: string;
+  unlockedAt: string;
+  progress: number;
+  achievement: Achievement;
+}
+
+export interface LeaderboardEntry {
+  rank: number;
+  username: string;
+  totalPoints: number;
+  achievementCount: number;
+}

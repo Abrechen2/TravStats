@@ -7,6 +7,7 @@ import authRoutes from './routes/auth';
 import flightRoutes from './routes/flights';
 import statsRoutes from './routes/stats';
 import airportRoutes from './routes/airports';
+import achievementRoutes from './routes/achievements';
 import { errorHandler } from './middleware/errorHandler';
 import { prisma } from './db';
 
@@ -44,6 +45,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/flights', flightRoutes);
 app.use('/api/v1/stats', statsRoutes);
 app.use('/api/v1/airports', airportRoutes);
+app.use('/api/v1/achievements', achievementRoutes);
 
 // Error handling
 app.use(errorHandler);
