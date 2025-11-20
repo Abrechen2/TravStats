@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import jsQR from 'jsqr';
-import { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType } from '@zxing/library';
+import { BrowserMultiFormatReader, DecodeHintType } from '@zxing/browser';
+import { BarcodeFormat } from '@zxing/library';
 import { parseBCBP, getAirlineName, BoardingPassData } from '../lib/bcbpParser';
 
 interface BoardingPassScannerProps {
