@@ -100,4 +100,32 @@ export const statsApi = {
   },
 };
 
+// Airport API
+export interface Airport {
+  id: number;
+  iata?: string;
+  icao?: string;
+  name: string;
+  city?: string;
+  country?: string;
+  lat: number;
+  lon: number;
+  altitude?: number;
+  timezone?: string;
+}
+
+export const airportsApi = {
+  search: async (query: string): Promise<Airport[]> => {
+    const { data } = await api.get<Airport[]>('/airports/search', {
+      params: { q: query },
+    });
+    return data;
+  },
+
+  getByCode: async (code: string): Promise<Airport> => {
+    const { data } = await api.get<Airport>(`/airports/${code}`);
+    return data;
+  },
+};
+
 export default api;

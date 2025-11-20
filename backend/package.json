@@ -12,7 +12,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "seed": "tsx src/seed.ts"
+    "seed": "tsx src/seed.ts",
+    "seed:airports": "tsx src/seedAirports.ts"
   },
   "keywords": ["flight", "tracking", "api"],
   "author": "",
