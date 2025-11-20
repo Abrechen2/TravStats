@@ -55,19 +55,10 @@ export function parseBCBP(barcodeData: string): BoardingPassData | null {
     const numberOfLegs = parseInt(barcodeData.charAt(pos), 10);
     pos += 1;
 
-    // Passenger name (variable length, up to 20 chars, ends at first space or PNR start)
-    // Format: LASTNAME/FIRSTNAME
-    let passengerName = '';
-    let nameEnd = pos + 20; // Max 20 chars
-    for (let i = pos; i < nameEnd && i < barcodeData.length; i++) {
-      const char = barcodeData.charAt(i);
-      if (char === ' ') {
-        pos = i + 1;
-        break;
-      }
-      passengerName += char;
-      pos = i + 1;
-    }
+    // Passenger name (FIXED LENGTH: 20 chars, right-padded with spaces)
+    // Format: LASTNAME/FIRSTNAME followed by spaces
+    const passengerName = barcodeData.substring(pos, pos + 20).trim();
+    pos += 20;
 
     // Electronic ticket indicator (1 char) - 'E' for e-ticket
     const electronicTicketIndicator = barcodeData.charAt(pos);
@@ -168,6 +159,7 @@ function julianDateToDate(julianDate: string): string {
 export function getAirlineName(iataCode: string): string {
   const airlines: Record<string, string> = {
     'LH': 'Lufthansa',
+    'EN': 'AirDolomiti',
     'BA': 'British Airways',
     'AF': 'Air France',
     'KL': 'KLM',
