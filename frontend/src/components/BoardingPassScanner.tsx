@@ -60,50 +60,86 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
       console.log('🔍 Starting barcode scan...');
       console.log('📐 Canvas size:', canvas.width, 'x', canvas.height);
 
-      try {
-        // Try ZXing first (supports PDF417, QR, Aztec, etc.)
-        console.log('🔍 Trying ZXing...');
+      // Try multiple image preprocessing techniques
+      const scanAttempts = async () => {
+        // Save original image data
+        const originalImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-        // Configure hints for better detection
-        const hints = new Map();
-        hints.set(DecodeHintType.POSSIBLE_FORMATS, [
-          BarcodeFormat.PDF_417,    // Paper boarding passes
-          BarcodeFormat.QR_CODE,    // Mobile boarding passes
-          BarcodeFormat.AZTEC,      // Some airlines use Aztec
-          BarcodeFormat.DATA_MATRIX // Alternative format
-        ]);
-        hints.set(DecodeHintType.TRY_HARDER, true);
+        const attempts = [
+          { name: 'Original', enhance: false },
+          { name: 'High Contrast', enhance: true, brightness: 1.2, contrast: 2.0 },
+          { name: 'Enhanced Brightness', enhance: true, brightness: 1.5, contrast: 1.5 },
+        ];
 
-        // Pass hints to constructor
-        const codeReader = new BrowserMultiFormatReader(hints);
+        for (const attempt of attempts) {
+          console.log(`🔍 Attempt: ${attempt.name}...`);
 
-        const result = await codeReader.decodeFromCanvas(canvas);
-        if (result && result.getText()) {
-          barcodeText = result.getText();
-          console.log('✅ ZXing detected barcode!');
-          console.log('📊 Format:', result.getBarcodeFormat());
-        }
-      } catch (zxingError) {
-        console.log('❌ ZXing failed:', zxingError);
-        console.log('🔍 Trying jsQR fallback...');
+          // Restore original image
+          ctx.putImageData(originalImageData, 0, 0);
 
-        // Fallback to jsQR for QR codes
-        try {
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const code = jsQR(imageData.data, imageData.width, imageData.height, {
-            inversionAttempts: 'attemptBoth',
-          });
+          // Apply preprocessing
+          if (attempt.enhance) {
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
 
-          if (code && code.data) {
-            barcodeText = code.data;
-            console.log('✅ jsQR detected QR code!');
-          } else {
-            console.log('❌ jsQR found nothing');
+            for (let i = 0; i < data.length; i += 4) {
+              // Convert to grayscale
+              const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+
+              // Apply brightness and contrast
+              let adjusted = ((gray / 255 - 0.5) * (attempt.contrast || 1) + 0.5) * 255;
+              adjusted *= (attempt.brightness || 1);
+              adjusted = Math.min(255, Math.max(0, adjusted));
+
+              data[i] = data[i + 1] = data[i + 2] = adjusted;
+            }
+
+            ctx.putImageData(imageData, 0, 0);
           }
-        } catch (jsqrError) {
-          console.error('❌ jsQR error:', jsqrError);
+
+          // Try ZXing
+          try {
+            const hints = new Map();
+            hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+              BarcodeFormat.QR_CODE,
+              BarcodeFormat.PDF_417,
+              BarcodeFormat.AZTEC,
+              BarcodeFormat.DATA_MATRIX
+            ]);
+            hints.set(DecodeHintType.TRY_HARDER, true);
+
+            const codeReader = new BrowserMultiFormatReader(hints);
+            const result = await codeReader.decodeFromCanvas(canvas);
+
+            if (result && result.getText()) {
+              console.log(`✅ ZXing SUCCESS with ${attempt.name}!`);
+              console.log('📊 Format:', result.getBarcodeFormat());
+              return result.getText();
+            }
+          } catch (zxingError) {
+            console.log(`  ❌ ZXing failed for ${attempt.name}`);
+          }
+
+          // Try jsQR
+          try {
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height, {
+              inversionAttempts: 'attemptBoth',
+            });
+
+            if (code && code.data) {
+              console.log(`✅ jsQR SUCCESS with ${attempt.name}!`);
+              return code.data;
+            }
+          } catch (jsqrError) {
+            console.log(`  ❌ jsQR failed for ${attempt.name}`);
+          }
         }
-      }
+
+        return null;
+      };
+
+      barcodeText = await scanAttempts();
 
       // Process the barcode if found
       if (barcodeText) {
