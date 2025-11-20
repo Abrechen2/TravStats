@@ -34,6 +34,19 @@ export default function AdvancedStatsPage() {
     return (arr - dep) / (1000 * 60 * 60); // Convert to hours
   };
 
+  // Calculate distance between two coordinates using Haversine formula
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371; // Earth's radius in kilometers
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // Distance in kilometers
+  };
+
   // Airline statistics
   const airlineStats = flights.reduce((acc, flight) => {
     if (!acc[flight.airline]) {
@@ -94,6 +107,27 @@ export default function AdvancedStatsPage() {
   }));
   const longestFlight = flightDurations.sort((a, b) => b.duration - a.duration)[0];
   const shortestFlight = flightDurations.sort((a, b) => a.duration - b.duration)[0];
+
+  // Distance calculations
+  const flightDistances = flights.map(f => ({
+    flight: f,
+    distance: calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon)
+  }));
+
+  const totalDistance = flightDistances.reduce((sum, f) => sum + f.distance, 0);
+  const avgDistance = flights.length > 0 ? totalDistance / flights.length : 0;
+  const longestDistance = flightDistances.sort((a, b) => b.distance - a.distance)[0];
+  const shortestDistance = flightDistances.sort((a, b) => a.distance - b.distance)[0];
+
+  // Distance equivalents
+  const earthCircumference = 40075; // km
+  const earthCircumnavigations = totalDistance / earthCircumference;
+  const moonDistance = 384400; // km
+  const moonPercentage = (totalDistance / moonDistance) * 100;
+  const marsDistance = 225000000; // km (average)
+  const marsPercentage = (totalDistance / marsDistance) * 100;
+  const voyagerDistance = 24000000000; // km (Voyager 1, ~24 billion km)
+  const voyagerPercentage = (totalDistance / voyagerDistance) * 100;
 
   // Most visited airports
   const airportVisits = flights.reduce((acc, flight) => {
@@ -190,6 +224,122 @@ export default function AdvancedStatsPage() {
               {Object.keys(airlineStats).length}
             </p>
           </div>
+        </div>
+
+        {/* Distance Visualization */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 mb-8 border border-gray-200 dark:border-gray-700">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Geflogene Distanz</h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div className="bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-700 dark:to-blue-800 rounded-lg p-6 text-white shadow-md">
+              <h3 className="text-sm font-medium opacity-90 mb-2">Gesamt-Distanz</h3>
+              <p className="text-4xl font-bold">{totalDistance.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, '.')}</p>
+              <p className="text-sm opacity-75 mt-1">Kilometer</p>
+            </div>
+
+            <div className="bg-gradient-to-br from-purple-500 to-purple-600 dark:from-purple-700 dark:to-purple-800 rounded-lg p-6 text-white shadow-md">
+              <h3 className="text-sm font-medium opacity-90 mb-2">Durchschnitt pro Flug</h3>
+              <p className="text-4xl font-bold">{avgDistance.toFixed(0)}</p>
+              <p className="text-sm opacity-75 mt-1">Kilometer</p>
+            </div>
+
+            <div className="bg-gradient-to-br from-green-500 to-green-600 dark:from-green-700 dark:to-green-800 rounded-lg p-6 text-white shadow-md">
+              <h3 className="text-sm font-medium opacity-90 mb-2">Erdumrundungen</h3>
+              <p className="text-4xl font-bold">{earthCircumnavigations.toFixed(2)}</p>
+              <p className="text-sm opacity-75 mt-1">× um die Erde</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-gray-900 dark:text-white font-medium">🌍 Erde-Umrundung</span>
+                <span className="text-gray-900 dark:text-white font-bold">{earthCircumnavigations.toFixed(2)}×</span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3">
+                <div
+                  className="bg-green-500 dark:bg-green-600 rounded-full h-3 transition-all"
+                  style={{ width: `${Math.min(earthCircumnavigations * 100, 100)}%` }}
+                />
+              </div>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+                40.075 km Erdumfang
+              </p>
+            </div>
+
+            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-gray-900 dark:text-white font-medium">🌙 Weg zum Mond</span>
+                <span className="text-gray-900 dark:text-white font-bold">{moonPercentage.toFixed(2)}%</span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3">
+                <div
+                  className="bg-yellow-500 dark:bg-yellow-600 rounded-full h-3 transition-all"
+                  style={{ width: `${Math.min(moonPercentage, 100)}%` }}
+                />
+              </div>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+                384.400 km Entfernung
+              </p>
+            </div>
+
+            {marsPercentage > 0.01 && (
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-gray-900 dark:text-white font-medium">🔴 Weg zum Mars</span>
+                  <span className="text-gray-900 dark:text-white font-bold">{marsPercentage.toFixed(4)}%</span>
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3">
+                  <div
+                    className="bg-red-500 dark:bg-red-600 rounded-full h-3 transition-all"
+                    style={{ width: `${Math.min(marsPercentage * 1000, 100)}%` }}
+                  />
+                </div>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+                  ~225 Millionen km Entfernung (Durchschnitt)
+                </p>
+              </div>
+            )}
+
+            {voyagerPercentage > 0.00001 && (
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-gray-900 dark:text-white font-medium">🚀 Weg zu Voyager 1</span>
+                  <span className="text-gray-900 dark:text-white font-bold">{voyagerPercentage.toFixed(6)}%</span>
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3">
+                  <div
+                    className="bg-cyan-500 dark:bg-cyan-600 rounded-full h-3 transition-all"
+                    style={{ width: `${Math.min(voyagerPercentage * 10000, 100)}%` }}
+                  />
+                </div>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+                  ~24 Milliarden km von der Erde entfernt
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Longest/Shortest Distance */}
+          {longestDistance && shortestDistance && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+              <div className="bg-gradient-to-br from-orange-500 to-orange-600 dark:from-orange-700 dark:to-orange-800 rounded-lg p-4 text-white shadow-md">
+                <h3 className="text-sm font-medium opacity-90 mb-2">Längste Strecke</h3>
+                <p className="text-2xl font-bold mb-1">{longestDistance.distance.toFixed(0)} km</p>
+                <p className="text-sm opacity-75">
+                  {longestDistance.flight.depIata || longestDistance.flight.depIcao} → {longestDistance.flight.arrIata || longestDistance.flight.arrIcao}
+                </p>
+              </div>
+
+              <div className="bg-gradient-to-br from-teal-500 to-teal-600 dark:from-teal-700 dark:to-teal-800 rounded-lg p-4 text-white shadow-md">
+                <h3 className="text-sm font-medium opacity-90 mb-2">Kürzeste Strecke</h3>
+                <p className="text-2xl font-bold mb-1">{shortestDistance.distance.toFixed(0)} km</p>
+                <p className="text-sm opacity-75">
+                  {shortestDistance.flight.depIata || shortestDistance.flight.depIcao} → {shortestDistance.flight.arrIata || shortestDistance.flight.arrIcao}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Two Column Layout */}
