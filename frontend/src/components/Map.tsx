@@ -29,6 +29,10 @@ function MapUpdater({ flights }: { flights: GeoJSONFeature[] }) {
     if (flights.length > 0) {
       const bounds = flights.reduce((acc, flight) => {
         flight.geometry.coordinates.forEach(([lon, lat]) => {
+          // Skip invalid coordinates (0,0 or non-finite)
+          if ((lat === 0 && lon === 0) || !Number.isFinite(lat) || !Number.isFinite(lon)) {
+            return;
+          }
           acc.extend([lat, lon]);
         });
         return acc;
@@ -80,6 +84,14 @@ export default function Map({ flights, selectedFlightId, onFlightClick }: MapPro
           const positions = flight.geometry.coordinates.map(
             ([lon, lat]) => [lat, lon] as [number, number]
           );
+
+          // Skip flights with invalid coordinates (0,0 or missing data)
+          if (positions.length === 0 ||
+              positions.some(pos => !pos || pos.length !== 2 ||
+                            (pos[0] === 0 && pos[1] === 0) ||
+                            !Number.isFinite(pos[0]) || !Number.isFinite(pos[1]))) {
+            return null;
+          }
 
           const startPos = positions[0];
           const endPos = positions[positions.length - 1];
