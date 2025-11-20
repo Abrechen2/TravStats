@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import jsQR from 'jsqr';
+import { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType } from '@zxing/library';
 import { parseBCBP, getAirlineName, BoardingPassData } from '../lib/bcbpParser';
 
 interface BoardingPassScannerProps {
@@ -36,9 +37,10 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
     }
   };
 
-  const scanImage = (dataUrl: string) => {
+  const scanImage = async (dataUrl: string) => {
     const img = new Image();
-    img.onload = () => {
+
+    img.onload = async () => {
       const canvas = canvasRef.current;
       if (!canvas) return;
 
@@ -52,27 +54,61 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
       // Draw image
       ctx.drawImage(img, 0, 0);
 
-      // Get image data
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      let barcodeText: string | null = null;
 
-      // Scan for QR code
-      const code = jsQR(imageData.data, imageData.width, imageData.height, {
-        inversionAttempts: 'dontInvert',
-      });
+      try {
+        // Try ZXing first (supports PDF417, QR, Aztec, etc.)
+        const codeReader = new BrowserMultiFormatReader();
 
-      if (code && code.data) {
+        // Configure hints for better detection
+        const hints = new Map();
+        hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+          BarcodeFormat.PDF_417,    // Paper boarding passes
+          BarcodeFormat.QR_CODE,    // Mobile boarding passes
+          BarcodeFormat.AZTEC,      // Some airlines use Aztec
+          BarcodeFormat.DATA_MATRIX // Alternative format
+        ]);
+        hints.set(DecodeHintType.TRY_HARDER, true);
+
+        const result = await codeReader.decodeFromCanvas(canvas);
+        if (result && result.getText()) {
+          barcodeText = result.getText();
+          console.log('✅ ZXing detected barcode:', result.getBarcodeFormat());
+        }
+      } catch (zxingError) {
+        console.log('ZXing scan failed, trying jsQR fallback...');
+
+        // Fallback to jsQR for QR codes
+        try {
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: 'attemptBoth',
+          });
+
+          if (code && code.data) {
+            barcodeText = code.data;
+            console.log('✅ jsQR detected QR code');
+          }
+        } catch (jsqrError) {
+          console.error('jsQR also failed:', jsqrError);
+        }
+      }
+
+      // Process the barcode if found
+      if (barcodeText) {
         // Try to parse as BCBP
-        const bcbpData = parseBCBP(code.data);
+        const bcbpData = parseBCBP(barcodeText);
 
         if (bcbpData) {
+          console.log('✅ Successfully parsed BCBP data:', bcbpData);
           setScanning(false);
           onScanSuccess(bcbpData);
         } else {
-          setError('QR code found, but it\'s not a valid boarding pass format');
+          setError('Barcode found, but it\'s not a valid IATA boarding pass format. Make sure you\'re scanning the 2D barcode (not the simple barcode).');
           setScanning(false);
         }
       } else {
-        setError('No barcode found in image. Try a clearer photo or better lighting.');
+        setError('No barcode found in image. Tips:\n• Make sure the barcode is clearly visible\n• Try better lighting\n• Scan the 2D barcode (PDF417/QR code, not the simple 1D barcode)');
         setScanning(false);
       }
     };
@@ -110,15 +146,22 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
         {!preview && (
           <div className="mb-6">
             <p className="text-gray-600 mb-4">
-              Take a photo or upload an image of your boarding pass barcode (the 2D barcode, not the 1D barcode).
+              Upload a photo of your boarding pass barcode. Supports both paper and mobile boarding passes!
             </p>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h3 className="font-semibold mb-2">✅ Supported barcode types:</h3>
+              <ul className="text-sm text-gray-700 space-y-1 mb-3">
+                <li>📄 <strong>PDF417</strong> - Long rectangular barcode on paper passes</li>
+                <li>📱 <strong>QR Code</strong> - Square barcode on mobile passes</li>
+                <li>🔷 <strong>Aztec Code</strong> - Some airlines use this format</li>
+              </ul>
               <h3 className="font-semibold mb-2">📝 Tips for best results:</h3>
               <ul className="text-sm text-gray-700 space-y-1">
                 <li>• Make sure the barcode is clearly visible</li>
                 <li>• Use good lighting (avoid shadows)</li>
                 <li>• Keep the camera steady</li>
                 <li>• Fill the frame with the barcode</li>
+                <li>• Scan the 2D barcode (not the simple 1D barcode at top)</li>
               </ul>
             </div>
           </div>
