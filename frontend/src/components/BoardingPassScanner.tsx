@@ -56,8 +56,13 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
 
       let barcodeText: string | null = null;
 
+      console.log('🔍 Starting barcode scan...');
+      console.log('📐 Canvas size:', canvas.width, 'x', canvas.height);
+
       try {
         // Try ZXing first (supports PDF417, QR, Aztec, etc.)
+        console.log('🔍 Trying ZXing...');
+
         // Configure hints for better detection
         const hints = new Map();
         hints.set(DecodeHintType.POSSIBLE_FORMATS, [
@@ -74,10 +79,12 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
         const result = await codeReader.decodeFromCanvas(canvas);
         if (result && result.getText()) {
           barcodeText = result.getText();
-          console.log('✅ ZXing detected barcode:', result.getBarcodeFormat());
+          console.log('✅ ZXing detected barcode!');
+          console.log('📊 Format:', result.getBarcodeFormat());
         }
       } catch (zxingError) {
-        console.log('ZXing scan failed, trying jsQR fallback...');
+        console.log('❌ ZXing failed:', zxingError);
+        console.log('🔍 Trying jsQR fallback...');
 
         // Fallback to jsQR for QR codes
         try {
@@ -88,15 +95,21 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
 
           if (code && code.data) {
             barcodeText = code.data;
-            console.log('✅ jsQR detected QR code');
+            console.log('✅ jsQR detected QR code!');
+          } else {
+            console.log('❌ jsQR found nothing');
           }
         } catch (jsqrError) {
-          console.error('jsQR also failed:', jsqrError);
+          console.error('❌ jsQR error:', jsqrError);
         }
       }
 
       // Process the barcode if found
       if (barcodeText) {
+        console.log('📊 Raw barcode text:', barcodeText);
+        console.log('📊 Barcode length:', barcodeText.length);
+        console.log('📊 First 50 chars:', barcodeText.substring(0, 50));
+
         // Try to parse as BCBP
         const bcbpData = parseBCBP(barcodeText);
 
@@ -105,7 +118,7 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
           setScanning(false);
           onScanSuccess(bcbpData);
         } else {
-          setError('Barcode found, but it\'s not a valid IATA boarding pass format. Make sure you\'re scanning the 2D barcode (not the simple barcode).');
+          setError(`Barcode found, but it's not a valid IATA boarding pass format.\n\nDetected: ${barcodeText.substring(0, 100)}...\n\nMake sure you're scanning the 2D barcode (not the simple barcode).`);
           setScanning(false);
         }
       } else {
