@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Airport } from '../lib/api';
+import { Airport, airportsApi } from '../lib/api';
 import AirportAutocomplete from './AirportAutocomplete';
+import BoardingPassScanner from './BoardingPassScanner';
+import { BoardingPassData, getAirlineName } from '../lib/bcbpParser';
 import type { FlightInput } from '../types';
 
 interface SimplifiedFlightFormProps {
@@ -12,6 +14,7 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
 
   // Required fields
   const [departure, setDeparture] = useState<Airport | null>(null);
@@ -61,6 +64,43 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
       }
     }
   }, [departureDate]);
+
+  const handleBoardingPassScan = async (bcbpData: BoardingPassData) => {
+    setShowScanner(false);
+    setError('');
+
+    try {
+      // Lookup airports by IATA code
+      const [depAirport, arrAirport] = await Promise.all([
+        airportsApi.getByCode(bcbpData.departureAirport),
+        airportsApi.getByCode(bcbpData.arrivalAirport),
+      ]);
+
+      // Set airports
+      setDeparture(depAirport);
+      setArrival(arrAirport);
+
+      // Set date
+      setDepartureDate(bcbpData.dateOfFlight);
+      setArrivalDate(bcbpData.dateOfFlight);
+
+      // Set airline and flight number
+      const airlineName = getAirlineName(bcbpData.operatingCarrierDesignator);
+      setAirline(airlineName);
+      setFlightNumber(`${bcbpData.operatingCarrierDesignator}${bcbpData.flightNumber}`);
+
+      // Set status to flown (since user has boarding pass)
+      setStatus('flown');
+
+      // Show advanced options since we have flight details
+      setShowAdvanced(true);
+
+      // Show success message
+      setError('');
+    } catch (err) {
+      setError(`Could not find airport data for ${bcbpData.departureAirport} or ${bcbpData.arrivalAirport}. Please enter manually.`);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,9 +169,26 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
         )}
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* Boarding Pass Scanner Button */}
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-lg">🎫 Have a Boarding Pass?</h3>
+                <p className="text-sm text-gray-600">Scan it to auto-fill all details!</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowScanner(true)}
+                className="btn-primary"
+              >
+                📸 Scan Now
+              </button>
+            </div>
+          </div>
+
           {/* Quick Add Section */}
           <div className="space-y-4">
-            <h3 className="font-semibold text-lg">Quick Add</h3>
+            <h3 className="font-semibold text-lg">Or Enter Manually</h3>
 
             {/* Airports */}
             <div className="grid grid-cols-2 gap-4">
@@ -296,9 +353,17 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
 
         {/* Helper Text */}
         <div className="px-6 pb-4 text-sm text-gray-500 border-t pt-4">
-          💡 <strong>Pro tip:</strong> Just select airports and date - times, airline, and aircraft are optional!
+          💡 <strong>Pro tip:</strong> Scan your boarding pass or just select airports and date!
         </div>
       </div>
+
+      {/* Boarding Pass Scanner Modal */}
+      {showScanner && (
+        <BoardingPassScanner
+          onScanSuccess={handleBoardingPassScan}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
     </div>
   );
 }
