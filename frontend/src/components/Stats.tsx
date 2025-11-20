@@ -27,11 +27,11 @@ export default function Stats() {
   };
 
   if (loading) {
-    return <div className="text-center py-4">Loading statistics...</div>;
+    return <div className="text-center py-4 dark:text-gray-300">Loading statistics...</div>;
   }
 
   if (!stats) {
-    return <div className="text-center py-4 text-gray-500">No statistics available</div>;
+    return <div className="text-center py-4 text-gray-500 dark:text-gray-400">No statistics available</div>;
   }
 
   return (
@@ -39,24 +39,24 @@ export default function Stats() {
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-4">
         <div className="card">
-          <p className="text-sm text-gray-600">Total Flights</p>
-          <p className="text-3xl font-bold text-blue-600">{stats.totalFlights}</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Total Flights</p>
+          <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{stats.totalFlights}</p>
         </div>
         <div className="card">
-          <p className="text-sm text-gray-600">Total Distance</p>
-          <p className="text-3xl font-bold text-green-600">
+          <p className="text-sm text-gray-600 dark:text-gray-400">Total Distance</p>
+          <p className="text-3xl font-bold text-green-600 dark:text-green-400">
             {stats.totalDistance.toLocaleString()} km
           </p>
         </div>
         <div className="card">
-          <p className="text-sm text-gray-600">Avg Distance</p>
-          <p className="text-3xl font-bold text-purple-600">
+          <p className="text-sm text-gray-600 dark:text-gray-400">Avg Distance</p>
+          <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">
             {stats.avgDistance.toLocaleString()} km
           </p>
         </div>
         <div className="card">
-          <p className="text-sm text-gray-600">Total Flight Time</p>
-          <p className="text-3xl font-bold text-orange-600">
+          <p className="text-sm text-gray-600 dark:text-gray-400">Total Flight Time</p>
+          <p className="text-3xl font-bold text-orange-600 dark:text-orange-400">
             {Math.round(stats.totalFlightTime / 60)} hrs
           </p>
         </div>
@@ -64,10 +64,10 @@ export default function Stats() {
 
       {/* By Status */}
       <div className="card">
-        <h3 className="font-semibold mb-3">By Status</h3>
+        <h3 className="font-semibold mb-3 dark:text-gray-100">By Status</h3>
         <div className="space-y-2">
           {Object.entries(stats.byStatus).map(([status, count]) => (
-            <div key={status} className="flex justify-between items-center">
+            <div key={status} className="flex justify-between items-center dark:text-gray-200">
               <span className="capitalize">{status}</span>
               <span className="font-semibold">{count}</span>
             </div>
@@ -77,13 +77,13 @@ export default function Stats() {
 
       {/* By Airline */}
       <div className="card">
-        <h3 className="font-semibold mb-3">By Airline</h3>
+        <h3 className="font-semibold mb-3 dark:text-gray-100">By Airline</h3>
         <div className="space-y-2">
           {Object.entries(stats.byAirline)
             .sort(([, a], [, b]) => b - a)
             .slice(0, 5)
             .map(([airline, count]) => (
-              <div key={airline} className="flex justify-between items-center">
+              <div key={airline} className="flex justify-between items-center dark:text-gray-200">
                 <span>{airline}</span>
                 <span className="font-semibold">{count}</span>
               </div>
@@ -94,20 +94,20 @@ export default function Stats() {
       {/* Top Routes */}
       {routes.length > 0 && (
         <div className="card">
-          <h3 className="font-semibold mb-3">Top Routes</h3>
+          <h3 className="font-semibold mb-3 dark:text-gray-100">Top Routes</h3>
           <div className="space-y-3">
             {routes.map((route, index) => (
-              <div key={route.route} className="border-b pb-2 last:border-0">
+              <div key={route.route} className="border-b dark:border-gray-700 pb-2 last:border-0">
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="font-medium">
+                    <p className="font-medium dark:text-gray-100">
                       {index + 1}. {route.route}
                     </p>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
                       {Math.round(route.distance)} km
                     </p>
                   </div>
-                  <span className="text-sm font-semibold text-blue-600">
+                  <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
                     {route.count}x
                   </span>
                 </div>

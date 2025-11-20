@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir /b /s \"D:\\Projekte\\TravStats\\frontend\\src\\types*\")",
+      "Bash(curl:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run seed:airports:csv:*)",
+      "Bash(npm run dev:*)",
+      "Bash(timeout 5 bash:*)",
+      "Bash(node -e:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

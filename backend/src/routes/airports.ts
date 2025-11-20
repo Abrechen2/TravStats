@@ -1,5 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { prisma } from '../db';
+import { findOrCreateAirport } from '../services/airportLookup';
 
 const router = Router();
 
@@ -35,19 +36,13 @@ router.get('/search', async (req: Request, res: Response, next: NextFunction) =>
   }
 });
 
-// Get airport by IATA code
+// Get airport by IATA/ICAO code - with automatic external lookup and DB save
 router.get('/:code', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { code } = req.params;
 
-    const airport = await prisma.airport.findFirst({
-      where: {
-        OR: [
-          { iata: code.toUpperCase() },
-          { icao: code.toUpperCase() },
-        ],
-      },
-    });
+    // Try to find in DB, or fetch from external API and save
+    const airport = await findOrCreateAirport(code);
 
     if (!airport) {
       return res.status(404).json({ error: 'Airport not found' });

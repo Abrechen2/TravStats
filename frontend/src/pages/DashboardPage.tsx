@@ -6,6 +6,8 @@ import SimplifiedFlightForm from '../components/SimplifiedFlightForm';
 import FlightList from '../components/FlightList';
 import Stats from '../components/Stats';
 import Filters from '../components/Filters';
+import ErrorBoundary from '../components/ErrorBoundary';
+import DarkModeToggle from '../components/DarkModeToggle';
 import type { Flight, FlightInput, FlightFilters, GeoJSONFeature } from '../types';
 
 export default function DashboardPage() {
@@ -110,13 +112,14 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
+    <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700">
         <div className="px-6 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">TravStats</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">TravStats</h1>
           <div className="flex items-center gap-4">
-            <span className="text-gray-600">Welcome, {user?.username}!</span>
+            <span className="text-gray-600 dark:text-gray-300">Welcome, {user?.username}!</span>
+            <DarkModeToggle />
             <button onClick={logout} className="btn-secondary">
               Logout
             </button>
@@ -127,20 +130,20 @@ export default function DashboardPage() {
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Sidebar - Flights List */}
-        <div className="w-96 bg-white border-r flex flex-col">
-          <div className="p-4 border-b">
+        <div className="w-96 bg-white dark:bg-gray-800 border-r dark:border-gray-700 flex flex-col">
+          <div className="p-4 border-b dark:border-gray-700">
             <button onClick={() => setShowFlightForm(true)} className="btn-primary w-full">
               + Add Flight
             </button>
           </div>
 
-          <div className="p-4 border-b">
+          <div className="p-4 border-b dark:border-gray-700">
             <Filters onFilterChange={setFilters} onExport={handleExport} />
           </div>
 
           <div className="flex-1 overflow-y-auto p-4">
             {loading ? (
-              <div className="text-center py-8 text-gray-500">Loading flights...</div>
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">Loading flights...</div>
             ) : (
               <FlightList
                 flights={flights}
@@ -154,17 +157,30 @@ export default function DashboardPage() {
 
         {/* Center - Map */}
         <div className="flex-1 p-4">
-          <Map
-            flights={geoFlights}
-            selectedFlightId={selectedFlightId}
-            onFlightClick={setSelectedFlightId}
-          />
+          <ErrorBoundary
+            fallback={
+              <div className="h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
+                <div className="text-center">
+                  <p className="text-gray-600 dark:text-gray-300 mb-2">Unable to display map</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Please check your flight data</p>
+                </div>
+              </div>
+            }
+          >
+            <Map
+              flights={geoFlights}
+              selectedFlightId={selectedFlightId}
+              onFlightClick={setSelectedFlightId}
+            />
+          </ErrorBoundary>
         </div>
 
         {/* Right Sidebar - Stats */}
-        <div className="w-80 bg-white border-l overflow-y-auto p-4">
-          <h2 className="text-xl font-bold mb-4">Statistics</h2>
-          <Stats />
+        <div className="w-80 bg-white dark:bg-gray-800 border-l dark:border-gray-700 overflow-y-auto p-4">
+          <h2 className="text-xl font-bold mb-4 dark:text-white">Statistics</h2>
+          <ErrorBoundary>
+            <Stats />
+          </ErrorBoundary>
         </div>
       </div>
 
