@@ -54,8 +54,25 @@ export default function AirportAutocomplete({
     const timer = setTimeout(async () => {
       try {
         setLoading(true);
+
+        // First try regular search
         const airports = await airportsApi.search(query);
-        setResults(airports);
+
+        // If no results and query looks like an airport code (3-4 uppercase letters)
+        // try direct lookup which will fetch from external API if needed
+        if (airports.length === 0 && /^[A-Z]{3,4}$/i.test(query.trim())) {
+          console.log(`🔍 Keine Ergebnisse für "${query}", versuche externe Suche...`);
+          try {
+            const airport = await airportsApi.getByCode(query.trim().toUpperCase());
+            setResults([airport]);
+          } catch (lookupError) {
+            console.log('Auch externe Suche fand nichts');
+            setResults([]);
+          }
+        } else {
+          setResults(airports);
+        }
+
         setIsOpen(true);
       } catch (error) {
         console.error('Airport search failed:', error);
@@ -105,11 +122,19 @@ export default function AirportAutocomplete({
       {isOpen && (
         <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
           {loading && (
-            <div className="px-4 py-3 text-sm text-gray-500">Searching...</div>
+            <div className="px-4 py-3 text-sm text-gray-500">
+              {/^[A-Z]{3,4}$/i.test(query.trim())
+                ? '🔍 Suche weltweit...'
+                : 'Suche...'}
+            </div>
           )}
 
           {!loading && results.length === 0 && query.length >= 2 && (
-            <div className="px-4 py-3 text-sm text-gray-500">No airports found</div>
+            <div className="px-4 py-3 text-sm text-gray-500">
+              {/^[A-Z]{3,4}$/i.test(query.trim())
+                ? `❌ Flughafen "${query.toUpperCase()}" nicht gefunden`
+                : 'Keine Flughäfen gefunden'}
+            </div>
           )}
 
           {!loading && results.map((airport) => (

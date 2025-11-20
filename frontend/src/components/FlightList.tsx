@@ -16,9 +16,9 @@ export default function FlightList({
 }: FlightListProps) {
   const getStatusBadge = (status: string) => {
     const colors = {
-      scheduled: 'bg-blue-100 text-blue-800',
-      flown: 'bg-green-100 text-green-800',
-      cancelled: 'bg-red-100 text-red-800',
+      scheduled: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+      flown: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+      cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
     };
 
     return (
@@ -30,7 +30,7 @@ export default function FlightList({
 
   if (flights.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
+      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
         No flights found. Add your first flight!
       </div>
     );
@@ -43,15 +43,15 @@ export default function FlightList({
           key={flight.id}
           className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
             selectedFlightId === flight.id
-              ? 'border-blue-500 bg-blue-50'
-              : 'border-gray-200 hover:border-gray-300 bg-white'
+              ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/30'
+              : 'border-gray-200 hover:border-gray-300 bg-white dark:border-gray-600 dark:hover:border-gray-500 dark:bg-gray-700'
           }`}
           onClick={() => onFlightClick(flight.id)}
         >
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
-                <h3 className="font-semibold text-lg">
+                <h3 className="font-semibold text-lg dark:text-gray-100">
                   {flight.airline} {flight.flightNumber}
                 </h3>
                 {getStatusBadge(flight.status)}
@@ -59,40 +59,40 @@ export default function FlightList({
 
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="text-gray-500">From</p>
-                  <p className="font-medium">
+                  <p className="text-gray-500 dark:text-gray-400">From</p>
+                  <p className="font-medium dark:text-gray-100">
                     {flight.depIata || flight.depIcao}
                     {flight.depName && (
-                      <span className="text-gray-600 ml-1">- {flight.depName}</span>
+                      <span className="text-gray-600 dark:text-gray-400 ml-1">- {flight.depName}</span>
                     )}
                   </p>
-                  <p className="text-gray-600">
+                  <p className="text-gray-600 dark:text-gray-400">
                     {format(new Date(flight.departureTime), 'MMM dd, yyyy HH:mm')}
                   </p>
                 </div>
 
                 <div>
-                  <p className="text-gray-500">To</p>
-                  <p className="font-medium">
+                  <p className="text-gray-500 dark:text-gray-400">To</p>
+                  <p className="font-medium dark:text-gray-100">
                     {flight.arrIata || flight.arrIcao}
                     {flight.arrName && (
-                      <span className="text-gray-600 ml-1">- {flight.arrName}</span>
+                      <span className="text-gray-600 dark:text-gray-400 ml-1">- {flight.arrName}</span>
                     )}
                   </p>
-                  <p className="text-gray-600">
+                  <p className="text-gray-600 dark:text-gray-400">
                     {format(new Date(flight.arrivalTime), 'MMM dd, yyyy HH:mm')}
                   </p>
                 </div>
               </div>
 
               {flight.aircraft && (
-                <p className="text-sm text-gray-600 mt-2">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                   Aircraft: {flight.aircraft}
                 </p>
               )}
 
               {flight.notes && (
-                <p className="text-sm text-gray-600 mt-2 italic">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 italic">
                   {flight.notes}
                 </p>
               )}
@@ -105,7 +105,7 @@ export default function FlightList({
                   onDeleteFlight(flight.id);
                 }
               }}
-              className="text-red-600 hover:text-red-800 ml-4"
+              className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 ml-4"
             >
               <svg
                 className="w-5 h-5"
