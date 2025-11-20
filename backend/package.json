@@ -14,7 +14,8 @@
     "prisma:studio": "prisma studio",
     "seed": "tsx src/seed.ts",
     "seed:airports": "tsx src/seedAirports.ts",
-    "seed:airports:csv": "tsx src/seedAirportsFromCSV.ts"
+    "seed:airports:csv": "tsx src/seedAirportsFromCSV.ts",
+    "seed:achievements": "tsx src/seedAchievements.ts"
   },
   "keywords": [
     "flight",
