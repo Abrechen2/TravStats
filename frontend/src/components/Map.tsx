@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import type { GeoJSONFeature } from '../types';
+import { useThemeStore } from '../store/themeStore';
 import 'leaflet/dist/leaflet.css';
 
 // Fix for default marker icons
@@ -48,6 +49,8 @@ function MapUpdater({ flights }: { flights: GeoJSONFeature[] }) {
 }
 
 export default function Map({ flights, selectedFlightId, onFlightClick }: MapProps) {
+  const { isDarkMode } = useThemeStore();
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'flown':
@@ -61,18 +64,38 @@ export default function Map({ flights, selectedFlightId, onFlightClick }: MapPro
     }
   };
 
+  // World bounds to prevent wrapping
+  const maxBounds: L.LatLngBoundsExpression = [
+    [-90, -180], // Southwest
+    [90, 180],   // Northeast
+  ];
+
   return (
     <div className="h-full w-full">
       <MapContainer
         center={[50, 10]}
         zoom={4}
+        minZoom={2}
+        maxBounds={maxBounds}
+        maxBoundsViscosity={1.0}
+        worldCopyJump={false}
         style={{ height: '100%', width: '100%' }}
         className="rounded-lg"
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+        {isDarkMode ? (
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            subdomains="abcd"
+            maxZoom={20}
+          />
+        ) : (
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            maxZoom={19}
+          />
+        )}
 
         <MapUpdater flights={flights} />
 
