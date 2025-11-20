@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { flightsApi } from '../lib/api';
 import Map from '../components/Map';
-import FlightForm from '../components/FlightForm';
+import SimplifiedFlightForm from '../components/SimplifiedFlightForm';
 import FlightList from '../components/FlightList';
 import Stats from '../components/Stats';
 import Filters from '../components/Filters';
@@ -170,7 +170,7 @@ export default function DashboardPage() {
 
       {/* Flight Form Modal */}
       {showFlightForm && (
-        <FlightForm
+        <SimplifiedFlightForm
           onSubmit={handleAddFlight}
           onCancel={() => setShowFlightForm(false)}
         />

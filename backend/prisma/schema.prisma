@@ -21,11 +21,30 @@ model User {
   @@map("users")
 }
 
+model Airport {
+  id       Int     @id @default(autoincrement())
+  iata     String? @unique
+  icao     String? @unique
+  name     String
+  city     String?
+  country  String?
+  lat      Float
+  lon      Float
+  altitude Int?
+  timezone String?
+
+  @@index([iata])
+  @@index([icao])
+  @@index([name])
+  @@index([city])
+  @@map("airports")
+}
+
 model Flight {
   id            String   @id @default(uuid())
   userId        String   @map("user_id")
-  airline       String
-  flightNumber  String   @map("flight_number")
+  airline       String?
+  flightNumber  String?  @map("flight_number")
   callsign      String?
   aircraft      String?
   depIcao       String?  @map("dep_icao")

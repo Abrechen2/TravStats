@@ -9,8 +9,8 @@ export const airportSchema = z.object({
 });
 
 const baseFlightSchema = z.object({
-  airline: z.string().min(1),
-  flightNumber: z.string().min(1),
+  airline: z.string().min(1).optional(),
+  flightNumber: z.string().min(1).optional(),
   callsign: z.string().optional(),
   aircraft: z.string().optional(),
   departure: z.object({
