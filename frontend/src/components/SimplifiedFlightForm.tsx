@@ -71,10 +71,44 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
 
     try {
       // Lookup airports by IATA code
-      const [depAirport, arrAirport] = await Promise.all([
-        airportsApi.getByCode(bcbpData.departureAirport),
-        airportsApi.getByCode(bcbpData.arrivalAirport),
-      ]);
+      let depAirport, arrAirport;
+
+      try {
+        [depAirport, arrAirport] = await Promise.all([
+          airportsApi.getByCode(bcbpData.departureAirport),
+          airportsApi.getByCode(bcbpData.arrivalAirport),
+        ]);
+      } catch (airportError) {
+        // If airports not found in database, create placeholder objects
+        console.warn('Airports not in database, using IATA codes directly');
+        depAirport = {
+          id: 0,
+          iata: bcbpData.departureAirport,
+          icao: null,
+          name: bcbpData.departureAirport,
+          city: null,
+          country: null,
+          lat: 0,
+          lon: 0,
+          altitude: null,
+          timezone: null
+        };
+        arrAirport = {
+          id: 0,
+          iata: bcbpData.arrivalAirport,
+          icao: null,
+          name: bcbpData.arrivalAirport,
+          city: null,
+          country: null,
+          lat: 0,
+          lon: 0,
+          altitude: null,
+          timezone: null
+        };
+
+        // Show warning to user
+        setError(`Could not find airport data for ${bcbpData.departureAirport} or ${bcbpData.arrivalAirport}. Please enter manually.`);
+      }
 
       // Set airports
       setDeparture(depAirport);
