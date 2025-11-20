@@ -1,0 +1,54 @@
+// This is your Prisma schema file
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [postgis]
+}
+
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+  flights      Flight[]
+
+  @@map("users")
+}
+
+model Flight {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  airline       String
+  flightNumber  String   @map("flight_number")
+  callsign      String?
+  aircraft      String?
+  depIcao       String?  @map("dep_icao")
+  depIata       String?  @map("dep_iata")
+  depName       String?  @map("dep_name")
+  depLat        Float    @map("dep_lat")
+  depLon        Float    @map("dep_lon")
+  arrIcao       String?  @map("arr_icao")
+  arrIata       String?  @map("arr_iata")
+  arrName       String?  @map("arr_name")
+  arrLat        Float    @map("arr_lat")
+  arrLon        Float    @map("arr_lon")
+  departureTime DateTime @map("departure_time")
+  arrivalTime   DateTime @map("arrival_time")
+  status        String   @default("scheduled") // scheduled, flown, cancelled
+  notes         String?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([departureTime])
+  @@index([status])
+  @@index([airline])
+  @@map("flights")
+}

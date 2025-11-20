@@ -1,0 +1,58 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgis/postgis:15-3.4
+    container_name: travstats-db
+    environment:
+      POSTGRES_DB: flights
+      POSTGRES_USER: flights
+      POSTGRES_PASSWORD: example
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flights"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: travstats-backend
+    ports:
+      - "8000:8000"
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://flights:example@db:5432/flights
+      JWT_SECRET: changeme-in-production
+      PORT: 8000
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    command: npm run dev
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: travstats-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      VITE_API_URL: http://localhost:8000
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev
+
+volumes:
+  db-data:
