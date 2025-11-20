@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react';
+
 import { Link } from 'react-router-dom';
+
+import { useNavigate } from 'react-router-dom';
+
 import { useAuthStore } from '../store/authStore';
 import { flightsApi } from '../lib/api';
 import Map from '../components/Map';
@@ -13,6 +17,7 @@ import type { Flight, FlightInput, FlightFilters, GeoJSONFeature } from '../type
 
 export default function DashboardPage() {
   const { user, logout } = useAuthStore();
+  const navigate = useNavigate();
   const [flights, setFlights] = useState<Flight[]>([]);
   const [geoFlights, setGeoFlights] = useState<GeoJSONFeature[]>([]);
   const [selectedFlightId, setSelectedFlightId] = useState<string>();
@@ -119,12 +124,21 @@ export default function DashboardPage() {
         <div className="px-6 py-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">TravStats</h1>
           <div className="flex items-center gap-4">
+
             <Link
               to="/achievements"
               className="px-4 py-2 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white rounded-lg font-semibold transition-all shadow-sm hover:shadow-md"
             >
               🏆 Achievements
             </Link>
+
+            <button
+              onClick={() => navigate('/stats')}
+              className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+            >
+              Erweiterte Statistiken
+            </button>
+
             <span className="text-gray-600 dark:text-gray-300">Welcome, {user?.username}!</span>
             <DarkModeToggle />
             <button onClick={logout} className="btn-secondary">
