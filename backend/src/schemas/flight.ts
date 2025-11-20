@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
 export const airportSchema = z.object({
-  icao: z.string().optional(),
-  iata: z.string().optional(),
-  name: z.string().optional(),
+  icao: z.string().nullable().optional(),
+  iata: z.string().nullable().optional(),
+  name: z.string().nullable().optional(),
   lat: z.number().min(-90).max(90),
   lon: z.number().min(-180).max(180),
 });
@@ -14,16 +14,16 @@ const baseFlightSchema = z.object({
   callsign: z.string().optional(),
   aircraft: z.string().optional(),
   departure: z.object({
-    icao: z.string().optional(),
-    iata: z.string().optional(),
-    name: z.string().optional(),
+    icao: z.string().nullable().optional(),
+    iata: z.string().nullable().optional(),
+    name: z.string().nullable().optional(),
     lat: z.number().min(-90).max(90),
     lon: z.number().min(-180).max(180),
   }),
   arrival: z.object({
-    icao: z.string().optional(),
-    iata: z.string().optional(),
-    name: z.string().optional(),
+    icao: z.string().nullable().optional(),
+    iata: z.string().nullable().optional(),
+    name: z.string().nullable().optional(),
     lat: z.number().min(-90).max(90),
     lon: z.number().min(-180).max(180),
   }),
