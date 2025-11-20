@@ -8,7 +8,7 @@ export const airportSchema = z.object({
   lon: z.number().min(-180).max(180),
 });
 
-export const createFlightSchema = z.object({
+const baseFlightSchema = z.object({
   airline: z.string().min(1),
   flightNumber: z.string().min(1),
   callsign: z.string().optional(),
@@ -31,7 +31,9 @@ export const createFlightSchema = z.object({
   arrivalTime: z.string().datetime(),
   status: z.enum(['scheduled', 'flown', 'cancelled']).default('scheduled'),
   notes: z.string().optional(),
-}).refine(
+});
+
+export const createFlightSchema = baseFlightSchema.refine(
   data => new Date(data.departureTime) < new Date(data.arrivalTime),
   {
     message: 'Departure time must be before arrival time',
@@ -39,7 +41,7 @@ export const createFlightSchema = z.object({
   }
 );
 
-export const updateFlightSchema = createFlightSchema.partial();
+export const updateFlightSchema = baseFlightSchema.partial();
 
 export const flightQuerySchema = z.object({
   airline: z.string().optional(),
