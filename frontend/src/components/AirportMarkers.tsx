@@ -33,7 +33,14 @@ export default function AirportMarkers({ flights }: AirportMarkersProps) {
       // Process departure
       if (depCode && geometry.coordinates?.[0]) {
         const [lon, lat] = geometry.coordinates[0];
+
+        // Only create new entry if coordinates are valid
+        const coordsValid = Number.isFinite(lat) && Number.isFinite(lon) && !(lat === 0 && lon === 0);
+
         if (!statsMap.has(depCode)) {
+          // Skip if coordinates are invalid and airport doesn't exist yet
+          if (!coordsValid) return;
+
           statsMap.set(depCode, {
             code: depCode,
             name: properties.departureAirport.name || depCode,
@@ -47,6 +54,8 @@ export default function AirportMarkers({ flights }: AirportMarkersProps) {
             airlines: [],
           });
         }
+
+        // Update stats (even if current flight has invalid coords)
         const stats = statsMap.get(depCode)!;
         stats.visits++;
         stats.departures++;
@@ -64,7 +73,14 @@ export default function AirportMarkers({ flights }: AirportMarkersProps) {
       // Process arrival
       if (arrCode && geometry.coordinates?.length > 0) {
         const [lon, lat] = geometry.coordinates[geometry.coordinates.length - 1];
+
+        // Only create new entry if coordinates are valid
+        const coordsValid = Number.isFinite(lat) && Number.isFinite(lon) && !(lat === 0 && lon === 0);
+
         if (!statsMap.has(arrCode)) {
+          // Skip if coordinates are invalid and airport doesn't exist yet
+          if (!coordsValid) return;
+
           statsMap.set(arrCode, {
             code: arrCode,
             name: properties.arrivalAirport.name || arrCode,
@@ -78,6 +94,8 @@ export default function AirportMarkers({ flights }: AirportMarkersProps) {
             airlines: [],
           });
         }
+
+        // Update stats (even if current flight has invalid coords)
         const stats = statsMap.get(arrCode)!;
         stats.visits++;
         stats.arrivals++;
