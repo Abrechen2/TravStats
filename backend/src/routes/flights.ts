@@ -4,6 +4,7 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import { createFlightSchema, updateFlightSchema, flightQuerySchema } from '../schemas/flight';
 import { AppError } from '../middleware/errorHandler';
 import { calculateDistance, generateArcPoints } from '../utils/geo';
+import { checkAndUpdateAchievements } from '../utils/achievements';
 
 const router = Router();
 
@@ -39,6 +40,13 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
         notes: data.notes,
       },
     });
+
+    // Check achievements after creating a flown flight (don't wait for it)
+    if (data.status === 'flown') {
+      checkAndUpdateAchievements(userId).catch(err =>
+        console.error('Failed to check achievements:', err)
+      );
+    }
 
     res.status(201).json(flight);
   } catch (error) {
@@ -245,6 +253,13 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
       where: { id },
       data: updateData,
     });
+
+    // Check achievements if status changed to flown
+    if (data.status === 'flown' && existingFlight.status !== 'flown') {
+      checkAndUpdateAchievements(userId).catch(err =>
+        console.error('Failed to check achievements:', err)
+      );
+    }
 
     res.json(flight);
   } catch (error) {

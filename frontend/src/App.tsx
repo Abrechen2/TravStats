@@ -26,9 +26,10 @@ function App() {
           element={token ? <DashboardPage /> : <Navigate to="/login" />}
         />
         <Route
-
           path="/achievements"
           element={token ? <AchievementsPage /> : <Navigate to="/login" />}
+        />
+        <Route
           path="/stats"
           element={token ? <AdvancedStatsPage /> : <Navigate to="/login" />}
         />
