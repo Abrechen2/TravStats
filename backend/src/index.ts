@@ -10,9 +10,15 @@ import airportRoutes from './routes/airports';
 import achievementRoutes from './routes/achievements';
 import { errorHandler } from './middleware/errorHandler';
 import { prisma } from './db';
+import { DATABASE_URL } from './utils/database';
 
 // Load environment variables
 dotenv.config();
+
+// Set DATABASE_URL from individual components if not already set
+if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL = DATABASE_URL;
+}
 
 const app = express();
 const PORT = process.env.PORT || 8000;
