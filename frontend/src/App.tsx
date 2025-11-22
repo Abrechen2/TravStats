@@ -5,6 +5,7 @@ import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import AchievementsPage from './pages/AchievementsPage';
 import AdvancedStatsPage from './pages/AdvancedStatsPage';
+import SettingsPage from './pages/SettingsPage';
 
 
 function App() {
@@ -32,6 +33,10 @@ function App() {
         <Route
           path="/stats"
           element={token ? <AdvancedStatsPage /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/settings"
+          element={token ? <SettingsPage /> : <Navigate to="/login" />}
         />
       </Routes>
     </BrowserRouter>
