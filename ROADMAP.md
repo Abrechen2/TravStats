@@ -10,18 +10,18 @@
 - [x] Distanz-Rangliste der längsten Strecken
 - [x] Visuelle Darstellung mit Icons
 
-### 🔄 2. Zeitbasierte Diagramme
-- [ ] Flüge pro Monat/Jahr als Balkendiagramm
-- [ ] Trend-Analyse mit Liniendiagramm
-- [ ] Saisonale Muster visualisieren
-- [ ] Wochentags-Analyse (Welcher Tag am meisten?)
-- [ ] Integration mit Chart.js oder Recharts
+### ✅ 2. Zeitbasierte Diagramme
+- [x] Flüge pro Monat/Jahr als Balkendiagramm
+- [x] Trend-Analyse mit Liniendiagramm
+- [x] Saisonale Muster visualisieren
+- [x] Wochentags-Analyse (Welcher Tag am meisten?)
+- [x] Integration mit Chart.js oder Recharts
 
-### 📅 3. Kalender-Ansicht
-- [ ] Monatskalender mit Flug-Markierungen
-- [ ] Jahresübersicht-Kalender
-- [ ] Heatmap für Reiseintensität
-- [ ] Klickbare Tage mit Flugdetails
+### ✅ 3. Kalender-Ansicht
+- [x] Monatskalender mit Flug-Markierungen
+- [x] Jahresübersicht-Kalender
+- [x] Heatmap für Reiseintensität
+- [x] Klickbare Tage mit Flugdetails
 
 ## Phase 2: Gamification & Achievements (Woche 3-4)
 *Macht die App unterhaltsamer und motivierender*

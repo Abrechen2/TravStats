@@ -3,7 +3,24 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { flightsApi } from '../lib/api';
 import DarkModeToggle from '../components/DarkModeToggle';
+import FlightCalendar from '../components/FlightCalendar';
+import YearHeatmap from '../components/YearHeatmap';
 import type { Flight } from '../types';
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts';
 
 export default function AdvancedStatsPage() {
   const { user, logout } = useAuthStore();
@@ -18,8 +35,24 @@ export default function AdvancedStatsPage() {
   const loadFlights = async () => {
     try {
       setLoading(true);
-      const data = await flightsApi.getAll({});
-      setFlights(data.flights);
+      // Load all flights by pagination (max 100 per request)
+      let allFlights: Flight[] = [];
+      let offset = 0;
+      const limit = 100;
+
+      while (true) {
+        const data = await flightsApi.getAll({ limit, offset });
+        allFlights = [...allFlights, ...data.flights];
+
+        // If we received fewer flights than the limit, we've reached the end
+        if (data.flights.length < limit) {
+          break;
+        }
+
+        offset += limit;
+      }
+
+      setFlights(allFlights);
     } catch (error) {
       console.error('Failed to load flights:', error);
     } finally {
@@ -162,6 +195,65 @@ export default function AdvancedStatsPage() {
     return labels[key] || key;
   };
 
+  // Time-based analytics
+  // Flights per month
+  const flightsPerMonth = flights.reduce((acc, flight) => {
+    const date = new Date(flight.departureTime);
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const monthlyData = Object.entries(flightsPerMonth)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([month, count]) => ({
+      month,
+      flights: count,
+    }));
+
+  // Flights per year
+  const flightsPerYear = flights.reduce((acc, flight) => {
+    const year = new Date(flight.departureTime).getFullYear();
+    acc[year] = (acc[year] || 0) + 1;
+    return acc;
+  }, {} as Record<number, number>);
+
+  const yearlyData = Object.entries(flightsPerYear)
+    .sort(([a], [b]) => Number(a) - Number(b))
+    .map(([year, count]) => ({
+      year,
+      flights: count,
+    }));
+
+  // Weekday analysis
+  const weekdayNames = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+  const flightsPerWeekday = flights.reduce((acc, flight) => {
+    const weekday = new Date(flight.departureTime).getDay();
+    acc[weekday] = (acc[weekday] || 0) + 1;
+    return acc;
+  }, {} as Record<number, number>);
+
+  const weekdayData = weekdayNames.map((name, index) => ({
+    day: name,
+    flights: flightsPerWeekday[index] || 0,
+  }));
+
+  // Seasonal patterns (by month name)
+  const monthNames = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+  const flightsPerMonthOfYear = flights.reduce((acc, flight) => {
+    const month = new Date(flight.departureTime).getMonth();
+    acc[month] = (acc[month] || 0) + 1;
+    return acc;
+  }, {} as Record<number, number>);
+
+  const seasonalData = monthNames.map((name, index) => ({
+    month: name,
+    flights: flightsPerMonthOfYear[index] || 0,
+  }));
+
+  // Colors for charts
+  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
+
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
@@ -223,6 +315,140 @@ export default function AdvancedStatsPage() {
             <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
               {Object.keys(airlineStats).length}
             </p>
+          </div>
+        </div>
+
+        {/* Time-based Charts Section */}
+        <div className="mb-8">
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
+            📊 Zeitbasierte Analysen
+          </h2>
+
+          {/* Yearly Trend */}
+          {yearlyData.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6 border border-gray-200 dark:border-gray-700">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                Flüge pro Jahr - Trend-Analyse
+              </h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={yearlyData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="year" stroke="#9ca3af" />
+                  <YAxis stroke="#9ca3af" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#1f2937',
+                      border: '1px solid #374151',
+                      borderRadius: '0.5rem',
+                      color: '#fff',
+                    }}
+                  />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="flights"
+                    stroke="#3b82f6"
+                    strokeWidth={3}
+                    name="Flüge"
+                    dot={{ fill: '#3b82f6', r: 5 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* Monthly Bar Chart */}
+          {monthlyData.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6 border border-gray-200 dark:border-gray-700">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                Flüge pro Monat
+              </h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="month" stroke="#9ca3af" angle={-45} textAnchor="end" height={80} />
+                  <YAxis stroke="#9ca3af" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#1f2937',
+                      border: '1px solid #374151',
+                      borderRadius: '0.5rem',
+                      color: '#fff',
+                    }}
+                  />
+                  <Legend />
+                  <Bar dataKey="flights" fill="#10b981" name="Flüge" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* Seasonal Patterns and Weekday Analysis */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            {/* Seasonal Pattern */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                Saisonale Muster
+              </h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={seasonalData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="month" stroke="#9ca3af" />
+                  <YAxis stroke="#9ca3af" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#1f2937',
+                      border: '1px solid #374151',
+                      borderRadius: '0.5rem',
+                      color: '#fff',
+                    }}
+                  />
+                  <Legend />
+                  <Bar dataKey="flights" fill="#f59e0b" name="Flüge" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Weekday Analysis */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                Wochentags-Analyse
+              </h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={weekdayData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="day" stroke="#9ca3af" />
+                  <YAxis stroke="#9ca3af" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#1f2937',
+                      border: '1px solid #374151',
+                      borderRadius: '0.5rem',
+                      color: '#fff',
+                    }}
+                  />
+                  <Legend />
+                  <Bar dataKey="flights" fill="#8b5cf6" name="Flüge" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+        {/* Calendar Views Section */}
+        <div className="mb-8">
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
+            📅 Kalender-Ansichten
+          </h2>
+
+          {/* Year Heatmap */}
+          <div className="mb-6">
+            <YearHeatmap flights={flights} />
+          </div>
+
+          {/* Monthly Calendar */}
+          <div>
+            <FlightCalendar flights={flights} />
           </div>
         </div>
 
