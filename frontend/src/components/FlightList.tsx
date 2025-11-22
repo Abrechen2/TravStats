@@ -85,6 +85,35 @@ export default function FlightList({
                 </div>
               </div>
 
+              <div className="flex flex-wrap items-center gap-3 mt-3 text-sm">
+                {flight.category && (
+                  <span className="px-2 py-1 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-100">
+                    {flight.category === 'business'
+                      ? 'Geschäftlich'
+                      : flight.category === 'vacation'
+                      ? 'Urlaub'
+                      : 'Privat'}
+                  </span>
+                )}
+                {flight.ticketPrice !== undefined && (
+                  <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100">
+                    {flight.ticketPrice.toFixed(2)} {flight.currency || 'EUR'}
+                  </span>
+                )}
+                {flight.tags && flight.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {flight.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200"
+                      >
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {flight.aircraft && (
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                   Aircraft: {flight.aircraft}

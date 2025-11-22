@@ -38,6 +38,10 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
         arrivalTime: new Date(data.arrivalTime),
         status: data.status,
         notes: data.notes,
+        ticketPrice: data.ticketPrice,
+        currency: data.currency,
+        category: data.category,
+        tags: data.tags,
       },
     });
 
@@ -229,6 +233,10 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     if (data.aircraft !== undefined) updateData.aircraft = data.aircraft;
     if (data.status) updateData.status = data.status;
     if (data.notes !== undefined) updateData.notes = data.notes;
+    if (data.ticketPrice !== undefined) updateData.ticketPrice = data.ticketPrice;
+    if (data.currency !== undefined) updateData.currency = data.currency;
+    if (data.category) updateData.category = data.category;
+    if (data.tags !== undefined) updateData.tags = data.tags;
 
     if (data.departure) {
       updateData.depIcao = data.departure.icao;
