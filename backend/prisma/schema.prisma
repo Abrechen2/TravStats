@@ -70,6 +70,10 @@ model Flight {
   terminal          String?
   bookingReference  String?  @map("booking_reference")
   ticketNumber      String?  @map("ticket_number")
+  ticketPrice       Float?   @map("ticket_price")
+  currency          String   @default("EUR")
+  category          String   @default("private") // business, private, vacation
+  tags              String[] @default([])
   createdAt         DateTime @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

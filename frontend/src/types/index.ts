@@ -41,6 +41,10 @@ export interface Flight {
   terminal?: string;
   bookingReference?: string;
   ticketNumber?: string;
+  ticketPrice?: number;
+  currency?: string;
+  category?: 'business' | 'private' | 'vacation';
+  tags?: string[];
 }
 
 export interface FlightInput {
@@ -62,6 +66,10 @@ export interface FlightInput {
   terminal?: string;
   bookingReference?: string;
   ticketNumber?: string;
+  ticketPrice?: number;
+  currency?: string;
+  category?: 'business' | 'private' | 'vacation';
+  tags?: string[];
 }
 
 export interface FlightFilters {

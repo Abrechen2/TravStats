@@ -33,6 +33,10 @@ export default function FlightForm({ onSubmit, onCancel }: FlightFormProps) {
     arrivalTime: '',
     status: 'scheduled',
     notes: '',
+    ticketPrice: undefined,
+    currency: 'EUR',
+    category: 'private',
+    tags: [],
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -296,19 +300,89 @@ export default function FlightForm({ onSubmit, onCancel }: FlightFormProps) {
                   <option value="cancelled">Cancelled</option>
                 </select>
               </div>
+        </div>
+      </div>
+
+      {/* Costs & Categorization */}
+      <div className="space-y-4">
+        <h3 className="font-semibold text-lg">Kosten & Kategorien</h3>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="label">Ticketpreis</label>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.ticketPrice ?? ''}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    ticketPrice: e.target.value ? parseFloat(e.target.value) : undefined,
+                  })
+                }
+                className="input flex-1"
+                placeholder="z.B. 249.99"
+              />
+              <select
+                value={formData.currency}
+                onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+                className="input w-24"
+              >
+                <option value="EUR">EUR</option>
+                <option value="USD">USD</option>
+                <option value="GBP">GBP</option>
+              </select>
             </div>
           </div>
 
-          {/* Notes */}
           <div>
-            <label className="label">Notes</label>
-            <textarea
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+            <label className="label">Kategorie</label>
+            <select
+              value={formData.category}
+              onChange={(e) =>
+                setFormData({ ...formData, category: e.target.value as 'business' | 'private' | 'vacation' })
+              }
               className="input"
-              rows={3}
-            />
+            >
+              <option value="business">Geschäftlich</option>
+              <option value="private">Privat</option>
+              <option value="vacation">Urlaub</option>
+            </select>
           </div>
+        </div>
+
+        <div>
+          <label className="label">Tags</label>
+          <input
+            type="text"
+            value={formData.tags?.join(', ') ?? ''}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                tags: e.target.value
+                  .split(',')
+                  .map((tag) => tag.trim())
+                  .filter(Boolean),
+              })
+            }
+            className="input"
+            placeholder="Kommagetrennt, z.B. Konferenz, Nachtflug"
+          />
+          <p className="text-xs text-gray-500 mt-1">Tags können später gefiltert und farblich markiert werden.</p>
+        </div>
+      </div>
+
+      {/* Notes */}
+      <div>
+        <label className="label">Notes</label>
+        <textarea
+          value={formData.notes}
+          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+          className="input"
+          rows={3}
+        />
+      </div>
 
           {/* Actions */}
           <div className="flex gap-3 justify-end pt-4 border-t">
