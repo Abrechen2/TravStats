@@ -70,6 +70,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
   const [aircraft, setAircraft] = useState('');
   const [terminal, setTerminal] = useState('');
   const [gate, setGate] = useState('');
+  const [seatNumber, setSeatNumber] = useState('');
   const [status, setStatus] = useState<'scheduled' | 'flown' | 'cancelled'>('flown');
   const [notes, setNotes] = useState('');
   const [price, setPrice] = useState<string>('');
@@ -229,7 +230,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
       }
 
       if (bcbpData.seatNumber) {
-        setNotes((prev) => prev + `\nSeat: ${bcbpData.seatNumber}`);
+        setSeatNumber(bcbpData.seatNumber.toUpperCase());
       }
 
       if (bcbpData.airlineCode && bcbpData.flightNumber) {
@@ -285,6 +286,9 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
         airline: airline || undefined,
         flightNumber: flightNumber || undefined,
         aircraft: aircraft || undefined,
+        seatNumber: seatNumber || undefined,
+        terminal: terminal || undefined,
+        gate: gate || undefined,
         departureTime: departureDateTime,
         arrivalTime: arrivalDateTime,
         status,
@@ -309,6 +313,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
   const inputClass = isDarkMode
     ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
     : 'bg-white border-gray-300 text-gray-900';
+  const sizedInputClass = `${inputClass} text-base py-3`;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -358,7 +363,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                     type="text"
                     value={flightNumber}
                     onChange={(e) => setFlightNumber(e.target.value.toUpperCase())}
-                    className={`input flex-1 ${inputClass}`}
+                    className={`input flex-1 ${sizedInputClass}`}
                     placeholder="LH400"
                     maxLength={10}
                   />
@@ -366,7 +371,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                     type="date"
                     value={searchDate}
                     onChange={(e) => setSearchDate(e.target.value)}
-                    className={`input ${inputClass}`}
+                    className={`input ${sizedInputClass}`}
                   />
                   <button
                     type="button"
@@ -486,7 +491,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                     type="date"
                     value={departureDate}
                     onChange={(e) => setDepartureDate(e.target.value)}
-                    className={`input ${inputClass}`}
+                    className={`input ${sizedInputClass}`}
                     required
                   />
                 </div>
@@ -496,7 +501,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                     type="time"
                     value={departureTime}
                     onChange={(e) => setDepartureTime(e.target.value)}
-                    className={`input ${inputClass}`}
+                    className={`input ${sizedInputClass}`}
                   />
                 </div>
               </div>
@@ -509,7 +514,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                     type="text"
                     value={airline}
                     onChange={(e) => setAirline(e.target.value)}
-                    className={`input ${inputClass}`}
+                    className={`input ${sizedInputClass}`}
                     placeholder="Lufthansa"
                   />
                 </div>
@@ -518,35 +523,82 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                   <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value as any)}
-                    className={`input ${inputClass}`}
+                    className={`input ${sizedInputClass}`}
                   >
-                    <option value="flown">Flown ✓</option>
+                    <option value="flown">Flown</option>
                     <option value="scheduled">Scheduled</option>
                     <option value="cancelled">Cancelled</option>
                   </select>
                 </div>
               </div>
 
-              {/* Category */}
-              <div>
-                <label className={`label ${textClass}`}>Category</label>
-                <div className="flex gap-2">
-                  {(['business', 'private', 'vacation'] as const).map((cat) => (
-                    <button
-                      key={cat}
-                      type="button"
-                      onClick={() => setCategory(cat)}
-                      className={`px-4 py-2 rounded ${
-                        category === cat
-                          ? 'bg-blue-500 text-white'
-                          : isDarkMode
-                          ? 'bg-gray-700 text-gray-300'
-                          : 'bg-gray-100 text-gray-700'
-                      }`}
-                    >
-                      {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                    </button>
-                  ))}
+              {/* Equipment / Gate / Seat / Category */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={`label ${textClass}`}>Aircraft</label>
+                  <input
+                    type="text"
+                    value={aircraft}
+                    onChange={(e) => setAircraft(e.target.value)}
+                    className={`input ${sizedInputClass}`}
+                    placeholder="A320, B737"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={`label ${textClass}`}>Terminal</label>
+                    <input
+                      type="text"
+                      value={terminal}
+                      onChange={(e) => setTerminal(e.target.value)}
+                      className={`input ${sizedInputClass}`}
+                      placeholder="T1"
+                    />
+                  </div>
+                  <div>
+                    <label className={`label ${textClass}`}>Gate</label>
+                    <input
+                      type="text"
+                      value={gate}
+                      onChange={(e) => setGate(e.target.value)}
+                      className={`input ${sizedInputClass}`}
+                      placeholder="A12"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={`label ${textClass}`}>Seat Number</label>
+                  <input
+                    type="text"
+                    value={seatNumber}
+                    onChange={(e) => setSeatNumber(e.target.value.toUpperCase())}
+                    className={`input ${sizedInputClass}`}
+                    placeholder="12A"
+                  />
+                </div>
+                <div>
+                  <label className={`label ${textClass}`}>Category</label>
+                  <div className="flex gap-2">
+                    {(['business', 'private', 'vacation'] as const).map((cat) => (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => setCategory(cat)}
+                        className={`px-4 py-2 rounded ${
+                          category === cat
+                            ? 'bg-blue-500 text-white'
+                            : isDarkMode
+                            ? 'bg-gray-700 text-gray-300'
+                            : 'bg-gray-100 text-gray-700'
+                        }`}
+                      >
+                        {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -556,7 +608,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className={`input ${inputClass}`}
+                  className={`input ${sizedInputClass}`}
                   rows={3}
                   placeholder="Additional information..."
                 />
@@ -590,10 +642,14 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
       {/* Boarding Pass Scanner Modal */}
       {showScanner && (
         <BoardingPassScanner
-          onScan={handleBoardingPassScan}
+          onScanSuccess={handleBoardingPassScan}
           onClose={() => setShowScanner(false)}
         />
       )}
     </div>
   );
 }
+
+
+
+
