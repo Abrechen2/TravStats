@@ -16,6 +16,13 @@ export default function Filters({ onFilterChange, onExport }: FiltersProps) {
     onFilterChange(newFilters);
   };
 
+  const handleNumberFilter = (key: 'minPrice' | 'maxPrice', value: string) => {
+    const numeric = value === '' ? undefined : Number(value);
+    const newFilters = { ...filters, [key]: numeric };
+    setFilters(newFilters);
+    onFilterChange(newFilters);
+  };
+
   const handleClear = () => {
     setFilters({});
     onFilterChange({});
@@ -104,6 +111,67 @@ export default function Filters({ onFilterChange, onExport }: FiltersProps) {
               <option value="flown">Flown</option>
               <option value="cancelled">Cancelled</option>
             </select>
+          </div>
+
+          <div>
+            <label className="label">Kategorie</label>
+            <select
+              value={filters.category || ''}
+              onChange={(e) => handleFilterChange('category', e.target.value)}
+              className="input"
+            >
+              <option value="">Alle</option>
+              <option value="business">Geschäftlich</option>
+              <option value="private">Privat</option>
+              <option value="vacation">Urlaub</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="label">Tags</label>
+            <input
+              type="text"
+              value={filters.tags?.join(', ') || ''}
+              onChange={(e) => {
+                const arr = e.target.value
+                  .split(',')
+                  .map((t) => t.trim())
+                  .filter(Boolean);
+                const newFilters = { ...filters, tags: arr.length ? arr : undefined };
+                setFilters(newFilters);
+                onFilterChange(newFilters);
+              }}
+              className="input"
+              placeholder="Komma-getrennt (Konferenz, Familie)"
+            />
+            <p className="text-xs text-gray-500 mt-1">Filtert Flüge, die alle angegebenen Tags enthalten.</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Min Preis</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={filters.minPrice ?? ''}
+                onChange={(e) => handleNumberFilter('minPrice', e.target.value)}
+                className="input"
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <label className="label">Max Preis</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={filters.maxPrice ?? ''}
+                onChange={(e) => handleNumberFilter('maxPrice', e.target.value)}
+                className="input"
+                placeholder="999"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

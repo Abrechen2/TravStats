@@ -33,6 +33,14 @@ export interface Flight {
   status: 'scheduled' | 'flown' | 'cancelled';
   notes?: string;
   createdAt: string;
+  // Costs & categorization
+  price?: number;
+  currency?: 'EUR' | 'USD' | 'GBP' | 'CHF';
+  taxes?: number;
+  fees?: number;
+  category?: 'business' | 'private' | 'vacation';
+  tags?: string[];
+  receiptUrl?: string;
   // Extended fields
   seatNumber?: string;
   seatClass?: 'economy' | 'premium_economy' | 'business' | 'first';
@@ -62,6 +70,13 @@ export interface FlightInput {
   terminal?: string;
   bookingReference?: string;
   ticketNumber?: string;
+  price?: number;
+  currency?: 'EUR' | 'USD' | 'GBP' | 'CHF';
+  taxes?: number;
+  fees?: number;
+  category?: 'business' | 'private' | 'vacation';
+  tags?: string[];
+  receiptUrl?: string;
 }
 
 export interface FlightFilters {
@@ -70,6 +85,10 @@ export interface FlightFilters {
   fromDate?: string;
   toDate?: string;
   status?: 'scheduled' | 'flown' | 'cancelled';
+  category?: 'business' | 'private' | 'vacation';
+  tags?: string[];
+  minPrice?: number;
+  maxPrice?: number;
 }
 
 export interface Stats {
