@@ -521,57 +521,7 @@ export default function DashboardPage() {
             </ErrorBoundary>
           </div>
 
-          {!loading && flights.length > 0 && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="card">
-                <p className="text-sm text-gray-600 dark:text-gray-400">Gesamt-Distanz</p>
-                <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-                  {distanceSummary.total.toFixed(0)} {distanceSummary.unit}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">Ø pro Flug: {distanceSummary.average.toFixed(0)} {distanceSummary.unit}</p>
-              </div>
-              <div className="card">
-                <p className="text-sm text-gray-600 dark:text-gray-400">Flüge (letzte 6 Monate)</p>
-                <div className="h-24">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={monthlyData}>
-                      <XAxis dataKey="month" hide />
-                      <Tooltip />
-                      <Bar dataKey="flights" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-              <div className="card">
-                <p className="text-sm text-gray-600 dark:text-gray-400">Kalender (aktuell)</p>
-                <div className="max-h-40 overflow-hidden">
-                  <FlightCalendar flights={flights} />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {!loading && flights.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
-                    Roadmap MVP
-                  </span>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
-                    Kalender-Heatmap direkt im Dashboard. Weitere Zeit- und Distanz-Diagramme findest du unter &quot;Erweiterte Statistiken&quot;.
-                  </p>
-                </div>
-                <button
-                  onClick={() => navigate('/stats')}
-                  className="px-3 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg shadow-sm hover:bg-blue-700 transition-colors"
-                >
-                  Zu den Analysen
-                </button>
-              </div>
-              <YearHeatmap flights={flights} />
-            </div>
-          )}
+          {/* Jahresübersicht entfernt */}
         </div>
 
         {/* Right Sidebar - Stats */}

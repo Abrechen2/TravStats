@@ -566,16 +566,13 @@ export default function SettingsPage() {
           </div>
         </div>
 
-                <div className=\"bg-blue-50 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-700 rounded-lg p-4 text-sm text-blue-900 dark:text-blue-100 flex items-center justify-between\">
+        <div className="bg-blue-50 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-700 rounded-lg p-4 text-sm text-blue-900 dark:text-blue-100 flex items-center justify-between">
           <div>
-            <p className=\"font-semibold\">Automatisch gespeichert</p>
-            <p className=\"text-blue-800 dark:text-blue-200\">Alle Einstellungen werden lokal gespeichert und sind sofort aktiv.</p>
+            <p className="font-semibold">Automatisch gespeichert</p>
+            <p className="text-blue-800 dark:text-blue-200">Alle Einstellungen werden lokal gespeichert und sind sofort aktiv.</p>
           </div>
-          <div className=\"flex items-center gap-2\">
-            <button className=\"btn-secondary\" onClick={() => saveRemoteSettings()}>
-              Backend Sync
-            </button>
-            <button className=\"btn-secondary\" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+          <div className="flex items-center gap-2">
+            <button className="btn-secondary" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
               Nach oben
             </button>
           </div>
