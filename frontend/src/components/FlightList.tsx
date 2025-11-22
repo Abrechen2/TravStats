@@ -1,5 +1,6 @@
 import { format } from 'date-fns';
 import type { Flight } from '../types';
+import { useMemo } from 'react';
 
 interface FlightListProps {
   flights: Flight[];
@@ -26,6 +27,34 @@ export default function FlightList({
         {status}
       </span>
     );
+  };
+
+  const getCategoryBadge = (category?: string) => {
+    if (!category) return null;
+    const colors = {
+      business: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+      private: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+      vacation: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
+    };
+    return (
+      <span className={`px-2 py-1 rounded text-xs font-medium ${colors[category as keyof typeof colors]}`}>
+        {category}
+      </span>
+    );
+  };
+
+  const formatCurrency = (value?: number, currency?: string) => {
+    if (value === undefined || value === null) return '';
+    try {
+      return new Intl.NumberFormat('de-DE', {
+        style: 'currency',
+        currency: (currency as string) || 'EUR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      }).format(value);
+    } catch {
+      return `${value} ${currency || ''}`.trim();
+    }
   };
 
   if (flights.length === 0) {
@@ -55,6 +84,7 @@ export default function FlightList({
                   {flight.airline} {flight.flightNumber}
                 </h3>
                 {getStatusBadge(flight.status)}
+                {getCategoryBadge(flight.category)}
               </div>
 
               <div className="grid grid-cols-2 gap-4 text-sm">
@@ -91,10 +121,31 @@ export default function FlightList({
                 </p>
               )}
 
+              {(flight.price || flight.taxes || flight.fees) && (
+                <p className="text-sm text-gray-700 dark:text-gray-200 mt-2">
+                  Kosten: {formatCurrency(flight.price, flight.currency)}
+                  {flight.taxes ? `  •  Steuern ${formatCurrency(flight.taxes, flight.currency)}` : ''}
+                  {flight.fees ? `  •  Gebühren ${formatCurrency(flight.fees, flight.currency)}` : ''}
+                </p>
+              )}
+
               {flight.notes && (
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 italic">
                   {flight.notes}
                 </p>
+              )}
+
+              {flight.tags && flight.tags.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {flight.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-100"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
               )}
             </div>
 
