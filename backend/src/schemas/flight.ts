@@ -31,6 +31,10 @@ const baseFlightSchema = z.object({
   arrivalTime: z.string().datetime(),
   status: z.enum(['scheduled', 'flown', 'cancelled']).default('scheduled'),
   notes: z.string().optional(),
+  ticketPrice: z.number().positive().optional(),
+  currency: z.string().min(1).default('EUR').optional(),
+  category: z.enum(['business', 'private', 'vacation']).default('private'),
+  tags: z.array(z.string()).default([]),
 });
 
 export const createFlightSchema = baseFlightSchema.refine(
