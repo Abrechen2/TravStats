@@ -63,6 +63,8 @@
 - [ ] Kosten pro Airline/Strecke analysieren
 - [ ] Budget-Tracking und Prognosen
 - [ ] Währungsumrechnung
+- [ ] Beleg-Upload (Fotos/PDF) mit OCR für Beträge
+- [ ] Automatische Währungs- und Steuerkategorie-Erkennung
 
 ### ✈️ 7. Vielflieger-Meilen Tracker
 - [ ] Meilen-Berechnung pro Airline
@@ -142,6 +144,7 @@
 - [ ] Route-Statistiken (Durchschnittsdauer, Verspätungen)
 - [ ] Beste Reisezeit für Routen
 - [ ] Alternative Routen vorschlagen
+- [ ] Multi-Leg- und Open-Jaw-Reisen mit Umsteigezeit-Prüfung (MCT)
 
 ### 📈 12. Heatmap & Intensitäts-Visualisierung
 - [ ] Jahres-Heatmap (wie GitHub Contributions)
@@ -165,6 +168,8 @@
 - [ ] JSON/CSV Bulk-Import
 - [ ] Import von anderen Apps (TripIt, etc.)
 - [ ] Beta: Frühe JSON/CSV-Import-/Export-Pfade hinter Feature-Flag aktivieren, um Migrationstests zu ermöglichen
+- [ ] Strikte Schema-Validierung und Duplikat-Erkennung für Bulk-Importe
+- [ ] IATA/ICAO-Autocomplete und Flugnummer-Lookups zur Datenanreicherung
 
 ### 💾 15. Backup & Sync
 - [ ] Automatische Backups
@@ -187,6 +192,8 @@
 - [ ] Reise-Timeline
 - [ ] Notizen und Fotos zu Reisen
 - [ ] Reiseberichte erstellen
+- [ ] Multi-Leg-Ketten mit Segment-Details und realistischen Umsteigezeiten
+- [ ] Abo-Benachrichtigungen für neue Routentrends oder Preisalarme
 
 ### 👥 18. Freunde-Vergleich (Optional)
 - [ ] Freunde hinzufügen
@@ -227,11 +234,14 @@
 - [ ] Caching für häufige Routen-/Statistik-Abfragen
 - [ ] Map-Layer-Clustering und Lazy-Loading für Charts/Module
 - [ ] Performance-Regression-Checks in der CI/CD-Pipeline
+- [ ] Stress-Tests für Import/Export, um Konflikte und Inkonsistenzen zu vermeiden
 
 ### 🛡️ 24. Sicherheit & Compliance-Erweiterungen
 - [ ] Rate-Limiting und Log-Redaction im Express-Backend
 - [ ] Frühzeitige Planung für 2FA, Session-Übersicht und DSGVO-Export/Löschung (Verzahnung mit Phase 3 "Einstellungsseite")
 - [ ] Wiederkehrende Dependency- und Secret-Scans (aufbauend auf Phase 0)
+- [ ] Durchgängige Frontend- und Backend-Validierung inkl. Schema-Härtung
+- [ ] Konsistenz-Checks bei Importen (z. B. doppelte Routen/Flüge)
 
 ## Phase 9: Erweiterte Features (Woche 15+)
 *Nice-to-have Features für Power-User*
@@ -253,6 +263,12 @@
 - [ ] Fortschritt zu Zielen
 - [ ] Inspiration für neue Ziele
 - [ ] Preisalarme (externe Integration)
+
+### 🩺 28. Wellbeing & Jetlag Insights
+- [ ] Jetlag- und Schlaf-Score basierend auf Zeitzonenwechseln
+- [ ] Empfehlungen für Schlaf-/Hydrationsfenster vor und nach Flügen
+- [ ] Integration mit bestehenden Zeit- und Distanz-Statistiken
+- [ ] Optionales Logging für Ruhezeiten und Trainings
 
 ---
 
@@ -295,11 +311,11 @@
 4, 5, 7, 10, 11, 13, 15, 19, 20
 
 **Could Have:**
-12, 16, 17, 18, 25, 26, 27
+12, 16, 17, 18, 25, 26, 27, 28
 
 **Won't Have (Vorerst):**
 -
 
 ---
 
-*Letzte Aktualisierung: 2025-01-20*
+*Letzte Aktualisierung: 2025-02-15*
