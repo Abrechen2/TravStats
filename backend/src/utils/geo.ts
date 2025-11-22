@@ -35,6 +35,7 @@ const toRad = (degrees: number): number => {
 
 /**
  * Generate points along a great circle arc for map visualization
+ * Handles antimeridian (dateline) crossing correctly
  * @param start Starting coordinates [lon, lat]
  * @param end Ending coordinates [lon, lat]
  * @param numPoints Number of intermediate points
@@ -46,13 +47,29 @@ export const generateArcPoints = (
   numPoints: number = 50
 ): [number, number][] => {
   const points: [number, number][] = [];
-  const [lon1, lat1] = start;
-  const [lon2, lat2] = end;
+  let [lon1, lat1] = start;
+  let [lon2, lat2] = end;
+
+  // Handle antimeridian crossing
+  // If the difference is greater than 180°, we should cross the dateline
+  let lonDiff = lon2 - lon1;
+
+  if (lonDiff > 180) {
+    lon1 += 360;
+  } else if (lonDiff < -180) {
+    lon2 += 360;
+  }
 
   for (let i = 0; i <= numPoints; i++) {
     const fraction = i / numPoints;
     const point = interpolateGreatCircle(lat1, lon1, lat2, lon2, fraction);
-    points.push([point.lon, point.lat]);
+
+    // Normalize longitude to -180 to 180 range
+    let normalizedLon = point.lon;
+    while (normalizedLon > 180) normalizedLon -= 360;
+    while (normalizedLon < -180) normalizedLon += 360;
+
+    points.push([normalizedLon, point.lat]);
   }
 
   return points;

@@ -1,0 +1,248 @@
+import { useState } from 'react';
+import type { Flight } from '../types';
+
+interface YearHeatmapProps {
+  flights: Flight[];
+}
+
+interface DayCell {
+  date: Date;
+  flightCount: number;
+  flights: Flight[];
+}
+
+export default function YearHeatmap({ flights }: YearHeatmapProps) {
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [hoveredCell, setHoveredCell] = useState<DayCell | null>(null);
+
+  // Get all years from flights
+  const availableYears = Array.from(
+    new Set(flights.map((f) => new Date(f.departureTime).getFullYear()))
+  ).sort((a, b) => b - a);
+
+  // Generate all days for the year
+  const generateYearData = (): DayCell[][] => {
+    const weeks: DayCell[][] = [];
+    const startDate = new Date(selectedYear, 0, 1);
+    const endDate = new Date(selectedYear, 11, 31);
+
+    // Start from the first Sunday before or on Jan 1
+    const firstDay = new Date(startDate);
+    firstDay.setDate(firstDay.getDate() - firstDay.getDay());
+
+    let currentDate = new Date(firstDay);
+    let week: DayCell[] = [];
+
+    while (currentDate <= endDate || week.length > 0) {
+      if (week.length === 7) {
+        weeks.push(week);
+        week = [];
+      }
+
+      const dayFlights = flights.filter((flight) => {
+        const flightDate = new Date(flight.departureTime);
+        return (
+          flightDate.getFullYear() === currentDate.getFullYear() &&
+          flightDate.getMonth() === currentDate.getMonth() &&
+          flightDate.getDate() === currentDate.getDate()
+        );
+      });
+
+      week.push({
+        date: new Date(currentDate),
+        flightCount: dayFlights.length,
+        flights: dayFlights,
+      });
+
+      currentDate.setDate(currentDate.getDate() + 1);
+
+      // Stop after filling the last week if we've passed the end of the year
+      if (currentDate > endDate && week.length === 7) {
+        weeks.push(week);
+        break;
+      }
+    }
+
+    return weeks;
+  };
+
+  const getIntensityClass = (count: number): string => {
+    if (count === 0) return 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700';
+    if (count === 1) return 'bg-green-200 dark:bg-green-900 border-green-300 dark:border-green-800';
+    if (count === 2) return 'bg-green-400 dark:bg-green-700 border-green-500 dark:border-green-600';
+    if (count === 3) return 'bg-green-600 dark:bg-green-600 border-green-700 dark:border-green-500';
+    return 'bg-green-800 dark:bg-green-500 border-green-900 dark:border-green-400';
+  };
+
+  const yearData = generateYearData();
+  const monthLabels = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+  const weekDayLabels = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+          Jahresübersicht - Reiseintensität
+        </h3>
+        {availableYears.length > 1 && (
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(Number(e.target.value))}
+            className="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded border border-gray-300 dark:border-gray-600"
+          >
+            {availableYears.map((year) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
+
+      {/* Heatmap */}
+      <div className="overflow-x-auto">
+        <div className="inline-block min-w-full">
+          {/* Month labels */}
+          <div className="flex mb-2">
+            <div className="w-8"></div>
+            <div className="flex-1 flex justify-start gap-1">
+              {monthLabels.map((month, i) => {
+                // Calculate approximate week position for each month
+                const monthStart = new Date(selectedYear, i, 1);
+                const dayOfYear = Math.floor(
+                  (monthStart.getTime() - new Date(selectedYear, 0, 1).getTime()) /
+                    (1000 * 60 * 60 * 24)
+                );
+                const weekOfYear = Math.floor(dayOfYear / 7);
+
+                return (
+                  <div
+                    key={month}
+                    className="text-xs text-gray-600 dark:text-gray-400"
+                    style={{ width: '12px', marginLeft: i === 0 ? '0' : `${(weekOfYear - (i > 0 ? Math.floor((new Date(selectedYear, i - 1, 1).getTime() - new Date(selectedYear, 0, 1).getTime()) / (1000 * 60 * 60 * 24)) / 7 : 0)) * 13}px` }}
+                  >
+                    {month}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex">
+            {/* Weekday labels */}
+            <div className="flex flex-col gap-1 mr-2">
+              {weekDayLabels.map((day, i) => (
+                <div
+                  key={day}
+                  className="text-xs text-gray-600 dark:text-gray-400 h-3 flex items-center"
+                  style={{ opacity: i % 2 === 0 ? 1 : 0 }}
+                >
+                  {day}
+                </div>
+              ))}
+            </div>
+
+            {/* Grid */}
+            <div className="flex gap-1">
+              {yearData.map((week, weekIndex) => (
+                <div key={weekIndex} className="flex flex-col gap-1">
+                  {week.map((day, dayIndex) => {
+                    const isCurrentYear = day.date.getFullYear() === selectedYear;
+                    return (
+                      <div
+                        key={dayIndex}
+                        className={`
+                          w-3 h-3 rounded-sm border cursor-pointer transition-all hover:scale-125
+                          ${!isCurrentYear ? 'opacity-20' : ''}
+                          ${getIntensityClass(day.flightCount)}
+                        `}
+                        onMouseEnter={() => setHoveredCell(day)}
+                        onMouseLeave={() => setHoveredCell(null)}
+                        title={`${day.date.toLocaleDateString('de-DE')}: ${day.flightCount} Flug${
+                          day.flightCount !== 1 ? 'e' : ''
+                        }`}
+                      />
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Hover tooltip */}
+      {hoveredCell && hoveredCell.flightCount > 0 && (
+        <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+          <p className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+            {hoveredCell.date.toLocaleDateString('de-DE', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })}
+          </p>
+          <div className="space-y-1">
+            {hoveredCell.flights.map((flight) => (
+              <div
+                key={flight.id}
+                className="text-xs text-gray-700 dark:text-gray-300"
+              >
+                {flight.airline} {flight.flightNumber}: {flight.depIata || flight.depIcao} →{' '}
+                {flight.arrIata || flight.arrIcao}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Legend */}
+      <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-gray-600 dark:text-gray-400">Weniger</p>
+          <div className="flex gap-1">
+            {[0, 1, 2, 3, 4].map((level) => (
+              <div
+                key={level}
+                className={`w-4 h-4 rounded-sm border ${getIntensityClass(level)}`}
+              />
+            ))}
+          </div>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Mehr</p>
+        </div>
+      </div>
+
+      {/* Statistics */}
+      <div className="mt-4 grid grid-cols-3 gap-4">
+        <div className="text-center">
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">
+            {flights.filter((f) => new Date(f.departureTime).getFullYear() === selectedYear).length}
+          </p>
+          <p className="text-xs text-gray-600 dark:text-gray-400">Flüge in {selectedYear}</p>
+        </div>
+        <div className="text-center">
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">
+            {
+              new Set(
+                flights
+                  .filter((f) => new Date(f.departureTime).getFullYear() === selectedYear)
+                  .map((f) => f.departureTime.split('T')[0])
+              ).size
+            }
+          </p>
+          <p className="text-xs text-gray-600 dark:text-gray-400">Tage mit Flügen</p>
+        </div>
+        <div className="text-center">
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">
+            {Math.max(
+              ...yearData.flat().map((d) => d.flightCount),
+              0
+            )}
+          </p>
+          <p className="text-xs text-gray-600 dark:text-gray-400">Max. Flüge/Tag</p>
+        </div>
+      </div>
+    </div>
+  );
+}

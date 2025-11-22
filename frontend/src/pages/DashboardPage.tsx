@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { useAuthStore } from '../store/authStore';
 import { flightsApi } from '../lib/api';
-import Map from '../components/Map';
+import MapContainer3D from '../components/MapContainer3D';
 import SimplifiedFlightForm from '../components/SimplifiedFlightForm';
 import FlightList from '../components/FlightList';
 import Stats from '../components/Stats';
@@ -32,12 +32,42 @@ export default function DashboardPage() {
   const loadFlights = async () => {
     try {
       setLoading(true);
-      const [flightsData, geoData] = await Promise.all([
-        flightsApi.getAll(filters),
-        flightsApi.getGeoJSON(filters),
-      ]);
-      setFlights(flightsData.flights);
-      setGeoFlights(geoData.features);
+
+      // Load all flights by pagination (max 100 per request)
+      let allFlights: Flight[] = [];
+      let offset = 0;
+      const limit = 100;
+
+      while (true) {
+        const data = await flightsApi.getAll({ ...filters, limit, offset });
+        allFlights = [...allFlights, ...data.flights];
+
+        // If we received fewer flights than the limit, we've reached the end
+        if (data.flights.length < limit) {
+          break;
+        }
+
+        offset += limit;
+      }
+
+      // Load all GeoJSON features by pagination
+      let allGeoFeatures: GeoJSONFeature[] = [];
+      offset = 0;
+
+      while (true) {
+        const geoData = await flightsApi.getGeoJSON({ ...filters, limit, offset });
+        allGeoFeatures = [...allGeoFeatures, ...geoData.features];
+
+        // If we received fewer features than the limit, we've reached the end
+        if (geoData.features.length < limit) {
+          break;
+        }
+
+        offset += limit;
+      }
+
+      setFlights(allFlights);
+      setGeoFlights(allGeoFeatures);
     } catch (error) {
       console.error('Failed to load flights:', error);
     } finally {
@@ -139,6 +169,13 @@ export default function DashboardPage() {
               Erweiterte Statistiken
             </button>
 
+            <Link
+              to="/settings"
+              className="px-4 py-2 text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            >
+              ⚙️ Einstellungen
+            </Link>
+
             <span className="text-gray-600 dark:text-gray-300">Welcome, {user?.username}!</span>
             <DarkModeToggle />
             <button onClick={logout} className="btn-secondary">
@@ -188,7 +225,7 @@ export default function DashboardPage() {
               </div>
             }
           >
-            <Map
+            <MapContainer3D
               flights={geoFlights}
               selectedFlightId={selectedFlightId}
               onFlightClick={setSelectedFlightId}

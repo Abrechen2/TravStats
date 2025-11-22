@@ -42,27 +42,39 @@ model Airport {
 }
 
 model Flight {
-  id            String   @id @default(uuid())
-  userId        String   @map("user_id")
-  airline       String?
-  flightNumber  String?  @map("flight_number")
-  callsign      String?
-  aircraft      String?
-  depIcao       String?  @map("dep_icao")
-  depIata       String?  @map("dep_iata")
-  depName       String?  @map("dep_name")
-  depLat        Float    @map("dep_lat")
-  depLon        Float    @map("dep_lon")
-  arrIcao       String?  @map("arr_icao")
-  arrIata       String?  @map("arr_iata")
-  arrName       String?  @map("arr_name")
-  arrLat        Float    @map("arr_lat")
-  arrLon        Float    @map("arr_lon")
-  departureTime DateTime @map("departure_time")
-  arrivalTime   DateTime @map("arrival_time")
-  status        String   @default("scheduled") // scheduled, flown, cancelled
-  notes         String?
-  createdAt     DateTime @default(now()) @map("created_at")
+  id                String   @id @default(uuid())
+  userId            String   @map("user_id")
+  airline           String?
+  flightNumber      String?  @map("flight_number")
+  callsign          String?
+  aircraft          String?
+  depIcao           String?  @map("dep_icao")
+  depIata           String?  @map("dep_iata")
+  depName           String?  @map("dep_name")
+  depLat            Float    @map("dep_lat")
+  depLon            Float    @map("dep_lon")
+  arrIcao           String?  @map("arr_icao")
+  arrIata           String?  @map("arr_iata")
+  arrName           String?  @map("arr_name")
+  arrLat            Float    @map("arr_lat")
+  arrLon            Float    @map("arr_lon")
+  departureTime     DateTime @map("departure_time")
+  arrivalTime       DateTime @map("arrival_time")
+  status            String   @default("scheduled") // scheduled, flown, cancelled
+  notes             String?
+  // Boarding Pass Information
+  seatNumber        String?  @map("seat_number")
+  seatClass         String?  @map("seat_class") // economy, premium_economy, business, first
+  boardingGroup     String?  @map("boarding_group")
+  gate              String?
+  terminal          String?
+  bookingReference  String?  @map("booking_reference")
+  ticketNumber      String?  @map("ticket_number")
+  ticketPrice       Float?   @map("ticket_price")
+  currency          String   @default("EUR")
+  category          String   @default("private") // business, private, vacation
+  tags              String[] @default([])
+  createdAt         DateTime @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
