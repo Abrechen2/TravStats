@@ -32,12 +32,42 @@ export default function DashboardPage() {
   const loadFlights = async () => {
     try {
       setLoading(true);
-      const [flightsData, geoData] = await Promise.all([
-        flightsApi.getAll(filters),
-        flightsApi.getGeoJSON(filters),
-      ]);
-      setFlights(flightsData.flights);
-      setGeoFlights(geoData.features);
+
+      // Load all flights by pagination (max 100 per request)
+      let allFlights: Flight[] = [];
+      let offset = 0;
+      const limit = 100;
+
+      while (true) {
+        const data = await flightsApi.getAll({ ...filters, limit, offset });
+        allFlights = [...allFlights, ...data.flights];
+
+        // If we received fewer flights than the limit, we've reached the end
+        if (data.flights.length < limit) {
+          break;
+        }
+
+        offset += limit;
+      }
+
+      // Load all GeoJSON features by pagination
+      let allGeoFeatures: GeoJSONFeature[] = [];
+      offset = 0;
+
+      while (true) {
+        const geoData = await flightsApi.getGeoJSON({ ...filters, limit, offset });
+        allGeoFeatures = [...allGeoFeatures, ...geoData.features];
+
+        // If we received fewer features than the limit, we've reached the end
+        if (geoData.features.length < limit) {
+          break;
+        }
+
+        offset += limit;
+      }
+
+      setFlights(allFlights);
+      setGeoFlights(allGeoFeatures);
     } catch (error) {
       console.error('Failed to load flights:', error);
     } finally {

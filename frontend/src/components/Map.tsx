@@ -12,6 +12,37 @@ interface MapProps {
   onFlightClick?: (flightId: string) => void;
 }
 
+// Helper function to split lines that cross the antimeridian (dateline)
+function splitLineAtAntimeridian(positions: [number, number][]): [number, number][][] {
+  if (positions.length < 2) return [positions];
+
+  const segments: [number, number][][] = [];
+  let currentSegment: [number, number][] = [positions[0]];
+
+  for (let i = 1; i < positions.length; i++) {
+    const prev = positions[i - 1];
+    const curr = positions[i];
+
+    // Check if line crosses antimeridian (large longitude jump)
+    const lonDiff = Math.abs(curr[1] - prev[1]);
+
+    if (lonDiff > 180) {
+      // Line crosses antimeridian - start a new segment
+      segments.push(currentSegment);
+      currentSegment = [curr];
+    } else {
+      currentSegment.push(curr);
+    }
+  }
+
+  // Add the last segment
+  if (currentSegment.length > 0) {
+    segments.push(currentSegment);
+  }
+
+  return segments;
+}
+
 function MapUpdater({ flights }: { flights: GeoJSONFeature[] }) {
   const map = useMap();
 
@@ -76,12 +107,14 @@ export default function Map({ flights = [], selectedFlightId, onFlightClick }: M
             url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
             subdomains="abcd"
             maxZoom={20}
+            noWrap={true}
           />
         ) : (
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             maxZoom={19}
+            noWrap={true}
           />
         )}
 
@@ -105,10 +138,14 @@ export default function Map({ flights = [], selectedFlightId, onFlightClick }: M
             return null;
           }
 
-          return (
+          // Split line at antimeridian crossings
+          const segments = splitLineAtAntimeridian(positions);
+
+          // Render each segment as a separate polyline
+          return segments.map((segment, index) => (
             <Polyline
-              key={flight.properties.id}
-              positions={positions}
+              key={`${flight.properties.id}-${index}`}
+              positions={segment}
               pathOptions={{
                 color,
                 weight: isSelected ? 4 : 2,
@@ -118,7 +155,7 @@ export default function Map({ flights = [], selectedFlightId, onFlightClick }: M
                 click: () => onFlightClick?.(flight.properties.id),
               }}
             />
-          );
+          ));
         })}
 
         {/* Airport markers with aggregated stats */}
