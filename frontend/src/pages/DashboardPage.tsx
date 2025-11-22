@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { useAuthStore } from '../store/authStore';
 import { flightsApi } from '../lib/api';
-import Map from '../components/Map';
+import MapContainer3D from '../components/MapContainer3D';
 import SimplifiedFlightForm from '../components/SimplifiedFlightForm';
 import FlightList from '../components/FlightList';
 import Stats from '../components/Stats';
@@ -169,6 +169,13 @@ export default function DashboardPage() {
               Erweiterte Statistiken
             </button>
 
+            <Link
+              to="/settings"
+              className="px-4 py-2 text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            >
+              ⚙️ Einstellungen
+            </Link>
+
             <span className="text-gray-600 dark:text-gray-300">Welcome, {user?.username}!</span>
             <DarkModeToggle />
             <button onClick={logout} className="btn-secondary">
@@ -218,7 +225,7 @@ export default function DashboardPage() {
               </div>
             }
           >
-            <Map
+            <MapContainer3D
               flights={geoFlights}
               selectedFlightId={selectedFlightId}
               onFlightClick={setSelectedFlightId}

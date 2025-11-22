@@ -84,20 +84,13 @@ export default function Map({ flights = [], selectedFlightId, onFlightClick }: M
     }
   };
 
-  const maxBounds: L.LatLngBoundsExpression = [
-    [-90, -180],
-    [90, 180],
-  ];
-
   return (
     <div className="h-full w-full">
       <MapContainer
         center={[50, 10]}
         zoom={4}
         minZoom={2}
-        maxBounds={maxBounds}
-        maxBoundsViscosity={1.0}
-        worldCopyJump={false}
+        worldCopyJump={true}
         style={{ height: '100%', width: '100%' }}
         className="rounded-lg"
       >
@@ -107,14 +100,14 @@ export default function Map({ flights = [], selectedFlightId, onFlightClick }: M
             url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
             subdomains="abcd"
             maxZoom={20}
-            noWrap={true}
+            noWrap={false}
           />
         ) : (
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             maxZoom={19}
-            noWrap={true}
+            noWrap={false}
           />
         )}
 
