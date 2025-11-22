@@ -31,6 +31,13 @@ const baseFlightSchema = z.object({
   arrivalTime: z.string().datetime(),
   status: z.enum(['scheduled', 'flown', 'cancelled']).default('scheduled'),
   notes: z.string().optional(),
+  price: z.number().min(0).optional(),
+  currency: z.enum(['EUR', 'USD', 'GBP', 'CHF']).optional(),
+  taxes: z.number().min(0).optional(),
+  fees: z.number().min(0).optional(),
+  category: z.enum(['business', 'private', 'vacation']).optional(),
+  tags: z.array(z.string().max(40)).optional(),
+  receiptUrl: z.string().url().optional(),
 });
 
 export const createFlightSchema = baseFlightSchema.refine(
@@ -49,6 +56,10 @@ export const flightQuerySchema = z.object({
   fromDate: z.string().datetime().optional(),
   toDate: z.string().datetime().optional(),
   status: z.enum(['scheduled', 'flown', 'cancelled']).optional(),
+  category: z.enum(['business', 'private', 'vacation']).optional(),
+  tags: z.union([z.string(), z.array(z.string())]).optional(),
+  minPrice: z.coerce.number().min(0).optional(),
+  maxPrice: z.coerce.number().min(0).optional(),
   limit: z.coerce.number().min(1).max(100).default(50),
   offset: z.coerce.number().min(0).default(0),
 });

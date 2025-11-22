@@ -70,6 +70,14 @@ model Flight {
   terminal          String?
   bookingReference  String?  @map("booking_reference")
   ticketNumber      String?  @map("ticket_number")
+  // Costs & categorization
+  price             Float?   @map("price")
+  currency          String?  @default("EUR") @map("currency")
+  taxes             Float?   @map("taxes")
+  fees              Float?   @map("fees")
+  category          String?  @map("category")
+  tags              String[] @default([]) @map("tags")
+  receiptUrl        String?  @map("receipt_url")
   createdAt         DateTime @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -115,4 +123,30 @@ model UserAchievement {
   @@index([userId])
   @@index([achievementId])
   @@map("user_achievements")
+}
+
+model UserSettings {
+  id        String   @id @default(uuid())
+  userId    String   @unique @map("user_id")
+  data      Json     @map("data")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_settings")
+}
+
+model AnalyticsEvent {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  type      String   @map("type")
+  payload   Json     @map("payload")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@map("analytics_events")
 }

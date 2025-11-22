@@ -71,7 +71,12 @@ export default function Map({ flights = [], selectedFlightId, onFlightClick }: M
   const themeStore = useThemeStore();
   const isDarkMode = themeStore?.isDarkMode ?? false;
 
-  const getStatusColor = (status: string) => {
+  const getRouteColor = (status: string, category?: string) => {
+    if (category) {
+      if (category === 'business') return '#3b82f6';
+      if (category === 'private') return '#10b981';
+      if (category === 'vacation') return '#f59e0b';
+    }
     switch (status) {
       case 'flown':
         return '#10b981';
@@ -118,7 +123,7 @@ export default function Map({ flights = [], selectedFlightId, onFlightClick }: M
           if (!flight?.properties || !flight?.geometry) return null;
 
           const isSelected = flight.properties.id === selectedFlightId;
-          const color = getStatusColor(flight.properties.status);
+          const color = getRouteColor(flight.properties.status, (flight as any).properties.category);
 
           const positions = flight.geometry.coordinates.map(
             ([lon, lat]) => [lat, lon] as [number, number]

@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { useAuthStore } from './store/authStore';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -6,10 +7,18 @@ import DashboardPage from './pages/DashboardPage';
 import AchievementsPage from './pages/AchievementsPage';
 import AdvancedStatsPage from './pages/AdvancedStatsPage';
 import SettingsPage from './pages/SettingsPage';
+import { useSettingsStore } from './store/settingsStore';
 
 
 function App() {
   const { token } = useAuthStore();
+  const loadRemoteSettings = useSettingsStore((s) => s.loadRemoteSettings);
+
+  useEffect(() => {
+    if (token) {
+      loadRemoteSettings();
+    }
+  }, [token, loadRemoteSettings]);
 
   return (
     <BrowserRouter>

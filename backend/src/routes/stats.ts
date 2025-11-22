@@ -32,6 +32,7 @@ router.get('/summary', async (req: AuthRequest, res: Response, next: NextFunctio
 
     let totalDistance = 0;
     let totalFlightTime = 0;
+    let totalCost = 0;
 
     flights.forEach(flight => {
       const distance = calculateDistance(
@@ -45,6 +46,13 @@ router.get('/summary', async (req: AuthRequest, res: Response, next: NextFunctio
       const flightTime =
         (flight.arrivalTime.getTime() - flight.departureTime.getTime()) / 1000 / 60; // minutes
       totalFlightTime += flightTime;
+
+      const costParts = [flight.price, flight.taxes, flight.fees].filter(
+        (v): v is number => typeof v === 'number'
+      );
+      if (costParts.length > 0) {
+        totalCost += costParts.reduce((a, b) => a + b, 0);
+      }
     });
 
     const avgDistance = flights.length > 0 ? totalDistance / flights.length : 0;
@@ -61,6 +69,12 @@ router.get('/summary', async (req: AuthRequest, res: Response, next: NextFunctio
       return acc;
     }, {} as Record<string, number>);
 
+    const byCategory = flights.reduce((acc, flight) => {
+      const cat = flight.category || 'unassigned';
+      acc[cat] = (acc[cat] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
     res.json({
       totalFlights: flights.length,
       totalDistance: Math.round(totalDistance),
@@ -68,6 +82,8 @@ router.get('/summary', async (req: AuthRequest, res: Response, next: NextFunctio
       avgDistance: Math.round(avgDistance),
       byStatus,
       byAirline,
+      totalCost: Math.round(totalCost * 100) / 100,
+      byCategory,
     });
   } catch (error) {
     next(error);

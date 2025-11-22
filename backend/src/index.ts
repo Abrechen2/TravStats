@@ -8,6 +8,8 @@ import flightRoutes from './routes/flights';
 import statsRoutes from './routes/stats';
 import airportRoutes from './routes/airports';
 import achievementRoutes from './routes/achievements';
+import settingsRoutes from './routes/settings';
+import analyticsRoutes from './routes/analytics';
 import { errorHandler } from './middleware/errorHandler';
 import { prisma } from './db';
 import { DATABASE_URL } from './utils/database';
@@ -52,6 +54,8 @@ app.use('/api/v1/flights', flightRoutes);
 app.use('/api/v1/stats', statsRoutes);
 app.use('/api/v1/airports', airportRoutes);
 app.use('/api/v1/achievements', achievementRoutes);
+app.use('/api/v1/settings', settingsRoutes);
+app.use('/api/v1/analytics', analyticsRoutes);
 
 // Error handling
 app.use(errorHandler);

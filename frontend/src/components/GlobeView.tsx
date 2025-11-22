@@ -9,8 +9,13 @@ interface GlobeViewProps {
   onFlightClick?: (flightId: string) => void;
 }
 
-// Helper function for status colors
-const getStatusColor = (status: string) => {
+// Helper function for status/category colors
+const getStatusColor = (status: string, category?: string) => {
+  if (category) {
+    if (category === 'business') return '#3b82f6';
+    if (category === 'private') return '#10b981';
+    if (category === 'vacation') return '#f59e0b';
+  }
   switch (status) {
     case 'flown':
       return '#10b981';
@@ -89,11 +94,12 @@ export default function GlobeView({ flights = [], selectedFlightId, onFlightClic
         endLat: end[1],
         endLng: end[0],
         status: flight.properties.status,
+        category: (flight as any).properties.category,
         airline: flight.properties.airline,
         flightNumber: flight.properties.flightNumber,
         departure: flight.properties.departureAirport,
         arrival: flight.properties.arrivalAirport,
-        color: getStatusColor(flight.properties.status),
+        color: getStatusColor(flight.properties.status, (flight as any).properties.category),
         altitude: getArcAltitude(start[1], start[0], end[1], end[0]),
       };
     }).filter(arc => arc !== null);
