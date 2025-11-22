@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { useAuthStore } from '../store/authStore';
 import { flightsApi } from '../lib/api';
-import Map from '../components/Map';
+import MapContainer3D from '../components/MapContainer3D';
 import SimplifiedFlightForm from '../components/SimplifiedFlightForm';
 import FlightList from '../components/FlightList';
 import Stats from '../components/Stats';
@@ -218,7 +218,7 @@ export default function DashboardPage() {
               </div>
             }
           >
-            <Map
+            <MapContainer3D
               flights={geoFlights}
               selectedFlightId={selectedFlightId}
               onFlightClick={setSelectedFlightId}
