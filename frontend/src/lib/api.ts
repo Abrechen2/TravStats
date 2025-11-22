@@ -165,4 +165,23 @@ export const achievementsApi = {
   },
 };
 
+// Settings API
+export const settingsApi = {
+  get: async () => {
+    const { data } = await api.get('/settings');
+    return data;
+  },
+  update: async (payload: any) => {
+    const { data } = await api.put('/settings', payload);
+    return data;
+  },
+};
+
+// Analytics API
+export const analyticsApi = {
+  track: async (type: string, payload?: Record<string, any>) => {
+    await api.post('/analytics/events', { type, payload });
+  },
+};
+
 export default api;

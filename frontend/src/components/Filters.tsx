@@ -3,10 +3,11 @@ import type { FlightFilters } from '../types';
 
 interface FiltersProps {
   onFilterChange: (filters: FlightFilters) => void;
-  onExport: (format: 'csv' | 'geojson') => void;
+  onExport: (format: 'csv' | 'geojson' | 'pdf' | 'kml') => void;
+  onImport?: () => void;
 }
 
-export default function Filters({ onFilterChange, onExport }: FiltersProps) {
+export default function Filters({ onFilterChange, onExport, onImport }: FiltersProps) {
   const [filters, setFilters] = useState<FlightFilters>({});
   const [showFilters, setShowFilters] = useState(false);
 
@@ -71,6 +72,35 @@ export default function Filters({ onFilterChange, onExport }: FiltersProps) {
             >
               Export as GeoJSON
             </button>
+            <button
+              onClick={() => {
+                onExport('pdf');
+                document.getElementById('export-menu')?.classList.add('hidden');
+              }}
+              className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+            >
+              Export as PDF (Beta)
+            </button>
+            <button
+              onClick={() => {
+                onExport('kml');
+                document.getElementById('export-menu')?.classList.add('hidden');
+              }}
+              className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+            >
+              Export as KML
+            </button>
+            {onImport && (
+              <button
+                onClick={() => {
+                  onImport();
+                  document.getElementById('export-menu')?.classList.add('hidden');
+                }}
+                className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+              >
+                Import CSV/JSON (Beta)
+              </button>
+            )}
           </div>
         </div>
       </div>

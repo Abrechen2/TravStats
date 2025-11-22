@@ -98,6 +98,8 @@ export interface Stats {
   avgDistance: number;
   byStatus: Record<string, number>;
   byAirline: Record<string, number>;
+  totalCost?: number;
+  byCategory?: Record<string, number>;
 }
 
 export interface Route {
@@ -129,6 +131,12 @@ export interface GeoJSONFeature {
     departureTime: string;
     arrivalTime: string;
     status: string;
+    category?: 'business' | 'private' | 'vacation';
+    tags?: string[];
+    price?: number;
+    currency?: 'EUR' | 'USD' | 'GBP' | 'CHF';
+    taxes?: number;
+    fees?: number;
     distance: number;
   };
   geometry: {

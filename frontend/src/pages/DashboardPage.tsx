@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 
 import { Link } from 'react-router-dom';
 
@@ -14,7 +14,11 @@ import Filters from '../components/Filters';
 import ErrorBoundary from '../components/ErrorBoundary';
 import DarkModeToggle from '../components/DarkModeToggle';
 import YearHeatmap from '../components/YearHeatmap';
+import FlightCalendar from '../components/FlightCalendar';
 import type { Flight, FlightInput, FlightFilters, GeoJSONFeature } from '../types';
+import { useSettingsStore } from '../store/settingsStore';
+import { BarChart, Bar, XAxis, ResponsiveContainer, Tooltip } from 'recharts';
+import { analyticsApi } from '../lib/api';
 
 export default function DashboardPage() {
   const { user, logout } = useAuthStore();
@@ -26,10 +30,66 @@ export default function DashboardPage() {
   const [filters, setFilters] = useState<FlightFilters>({});
   const [loading, setLoading] = useState(true);
   const [is3DView, setIs3DView] = useState(true);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
+  const [onboarding, setOnboarding] = useState(() => {
+    const saved = localStorage.getItem('onboarding-checklist');
+    return saved
+      ? JSON.parse(saved)
+      : { flightAdded: false, usedFilter: false, exported: false, dismissed: false };
+  });
+  const settings = useSettingsStore();
+
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  const distanceUnitFactor = settings.units.distanceUnit === 'miles'
+    ? 0.621371
+    : settings.units.distanceUnit === 'nautical_miles'
+    ? 0.539957
+    : 1;
+
+  const monthlyData = useMemo(() => {
+    const map = new Map<string, number>();
+    flights.forEach((f) => {
+      const date = new Date(f.departureTime);
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      map.set(key, (map.get(key) || 0) + 1);
+    });
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-6)
+      .map(([month, count]) => ({ month, flights: count }));
+  }, [flights]);
+
+  const distanceSummary = useMemo(() => {
+    let total = 0;
+    flights.forEach((f) => {
+      total += calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon);
+    });
+    const converted = total * distanceUnitFactor;
+    return {
+      total: converted,
+      average: flights.length > 0 ? converted / flights.length : 0,
+      unit: settings.units.distanceUnit === 'miles' ? 'mi' : settings.units.distanceUnit === 'nautical_miles' ? 'nm' : 'km',
+    };
+  }, [flights, distanceUnitFactor, settings.units.distanceUnit]);
 
   useEffect(() => {
     loadFlights();
   }, [filters]);
+
+  useEffect(() => {
+    localStorage.setItem('onboarding-checklist', JSON.stringify(onboarding));
+  }, [onboarding]);
 
   const loadFlights = async () => {
     try {
@@ -81,6 +141,10 @@ export default function DashboardPage() {
     await flightsApi.create(flight);
     setShowFlightForm(false);
     loadFlights();
+    setOnboarding((prev: any) => ({ ...prev, flightAdded: true }));
+    if (settings.privacy.analyticsOptIn) {
+      analyticsApi.track('flight_created', { method: 'simplified_form' });
+    }
   };
 
   const handleDeleteFlight = async (id: string) => {
@@ -95,8 +159,20 @@ export default function DashboardPage() {
     }
   };
 
-  const handleExport = async (format: 'csv' | 'geojson') => {
+  const handleFilterChange = (newFilters: FlightFilters) => {
+    setFilters(newFilters);
+    setOnboarding((prev: any) => ({ ...prev, usedFilter: true }));
+    if (settings.privacy.analyticsOptIn) {
+      analyticsApi.track('filter_applied', { filters: newFilters });
+    }
+  };
+
+  const handleExport = async (format: 'csv' | 'geojson' | 'pdf' | 'kml') => {
     try {
+      setOnboarding((prev: any) => ({ ...prev, exported: true }));
+      if (settings.privacy.analyticsOptIn) {
+        analyticsApi.track('export', { format });
+      }
       if (format === 'geojson') {
         const geoData = await flightsApi.getGeoJSON(filters);
         const blob = new Blob([JSON.stringify(geoData, null, 2)], {
@@ -109,9 +185,9 @@ export default function DashboardPage() {
         a.click();
         URL.revokeObjectURL(url);
       } else {
-        // CSV export
+        // CSV/PDF/KML export
         const data = await flightsApi.getAll(filters);
-        const csv = [
+        const rows = [
           [
             'Airline',
             'Flight Number',
@@ -146,23 +222,122 @@ export default function DashboardPage() {
               f.fees ?? '',
             ].join(',')
           ),
-        ].join('\n');
+        ];
 
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `flights-${new Date().toISOString()}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
+        if (format === 'csv') {
+          const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `flights-${new Date().toISOString()}.csv`;
+          a.click();
+          URL.revokeObjectURL(url);
+        } else if (format === 'pdf') {
+          const html = `
+            <html><body><h1>TravStats Flight Report</h1>
+            <p>Export: ${new Date().toLocaleString()}</p>
+            <table border="1" cellspacing="0" cellpadding="4">
+            ${rows.map(r => `<tr>${r.split(',').map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}
+            </table></body></html>`;
+          const blob = new Blob([html], { type: 'application/pdf' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `flights-${new Date().toISOString()}.pdf`;
+          a.click();
+          URL.revokeObjectURL(url);
+        } else if (format === 'kml') {
+          const placemarks = data.flights
+            .map((f) => {
+              if (!f.depLat || !f.depLon || !f.arrLat || !f.arrLon) return '';
+              return `
+                <Placemark>
+                  <name>${f.airline || ''} ${f.flightNumber || ''}</name>
+                  <description>${f.depIata || f.depIcao} -> ${f.arrIata || f.arrIcao}</description>
+                  <LineString>
+                    <coordinates>
+                      ${f.depLon},${f.depLat},0
+                      ${f.arrLon},${f.arrLat},0
+                    </coordinates>
+                  </LineString>
+                </Placemark>
+              `;
+            })
+            .join('\n');
+          const kml = `<?xml version="1.0" encoding="UTF-8"?>
+            <kml xmlns="http://www.opengis.net/kml/2.2">
+              <Document>
+                <name>TravStats Flights</name>
+                ${placemarks}
+              </Document>
+            </kml>`;
+          const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `flights-${new Date().toISOString()}.kml`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
       }
     } catch (error) {
       console.error('Failed to export:', error);
     }
   };
 
+  const handleImport = () => {
+    importInputRef.current?.click();
+  };
+
+  const handleImportFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const content = e.target?.result;
+        if (!content || typeof content !== 'string') return;
+
+        let parsed: any[] = [];
+        if (file.name.endsWith('.json')) {
+          parsed = JSON.parse(content);
+        } else {
+          // naive CSV parser
+          const lines = content.split('\n').filter(Boolean);
+          const header = lines.shift()?.split(',') || [];
+          parsed = lines.map((line) => {
+            const cells = line.split(',');
+            return header.reduce((acc, key, idx) => {
+              acc[key.trim()] = cells[idx]?.trim();
+              return acc;
+            }, {} as Record<string, string>);
+          });
+        }
+        console.info(`Imported ${parsed.length} records (beta preview only)`);
+        if (settings.privacy.analyticsOptIn) {
+          analyticsApi.track('import_preview', { count: parsed.length });
+        }
+        alert(`Import (Beta): ${parsed.length} Datensätze erkannt. Bitte Backend-Import integrieren bevor Persistenz aktiv ist.`);
+      } catch (err) {
+        alert('Import fehlgeschlagen. Bitte gültige CSV oder JSON Datei verwenden.');
+      } finally {
+        if (importInputRef.current) {
+          importInputRef.current.value = '';
+        }
+      }
+    };
+    reader.readAsText(file);
+  };
+
   return (
     <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
+      <input
+        type="file"
+        accept=".csv,.json"
+        ref={importInputRef}
+        onChange={handleImportFile}
+        className="hidden"
+      />
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700">
         <div className="px-6 py-4 flex items-center justify-between">
@@ -209,8 +384,57 @@ export default function DashboardPage() {
             </button>
           </div>
 
+          {!onboarding.dismissed && (
+            <div className="p-4 border-b dark:border-gray-700">
+              <div className="card space-y-2 bg-gradient-to-r from-blue-50 to-amber-50 dark:from-gray-800 dark:to-gray-700">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">Onboarding</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Roadmap Punkt 21</p>
+                  </div>
+                  <button
+                    onClick={() => setOnboarding((prev: any) => ({ ...prev, dismissed: true }))}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    ×
+                  </button>
+                </div>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={onboarding.flightAdded}
+                    onChange={(e) => setOnboarding((prev: any) => ({ ...prev, flightAdded: e.target.checked }))}
+                  />
+                  Flug anlegen
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={onboarding.usedFilter}
+                    onChange={(e) => setOnboarding((prev: any) => ({ ...prev, usedFilter: e.target.checked }))}
+                  />
+                  Filter nutzen
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={onboarding.exported}
+                    onChange={(e) => setOnboarding((prev: any) => ({ ...prev, exported: e.target.checked }))}
+                  />
+                  Export testen
+                </label>
+                <button
+                  className="btn-secondary w-full"
+                  onClick={() => navigate('/stats')}
+                >
+                  Guided Tour starten
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="p-4 border-b dark:border-gray-700">
-            <Filters onFilterChange={setFilters} onExport={handleExport} />
+            <Filters onFilterChange={handleFilterChange} onExport={handleExport} onImport={handleImport} />
           </div>
 
           <div className="flex-1 overflow-y-auto p-4">
@@ -296,6 +520,36 @@ export default function DashboardPage() {
               />
             </ErrorBoundary>
           </div>
+
+          {!loading && flights.length > 0 && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div className="card">
+                <p className="text-sm text-gray-600 dark:text-gray-400">Gesamt-Distanz</p>
+                <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                  {distanceSummary.total.toFixed(0)} {distanceSummary.unit}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">Ø pro Flug: {distanceSummary.average.toFixed(0)} {distanceSummary.unit}</p>
+              </div>
+              <div className="card">
+                <p className="text-sm text-gray-600 dark:text-gray-400">Flüge (letzte 6 Monate)</p>
+                <div className="h-24">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={monthlyData}>
+                      <XAxis dataKey="month" hide />
+                      <Tooltip />
+                      <Bar dataKey="flights" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              <div className="card">
+                <p className="text-sm text-gray-600 dark:text-gray-400">Kalender (aktuell)</p>
+                <div className="max-h-40 overflow-hidden">
+                  <FlightCalendar flights={flights} />
+                </div>
+              </div>
+            </div>
+          )}
 
           {!loading && flights.length > 0 && (
             <div className="space-y-3">

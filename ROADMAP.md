@@ -4,10 +4,10 @@
 *Legt die Basis für verlässliche Releases und Sicherheitsstandards*
 
 ### 🧪 0. CI/CD-Pipeline & Sicherheits-Scans
-- [ ] Pipeline mit Linting, Tests, Type-Checks und Docker-Build
-- [ ] Abhängigkeits-Scanning und Vulnerability-Alerts
-- [ ] Secret- und JWT-Config-Checks (z. B. via Trivy/Gitleaks)
-- [ ] Automatisierte Preview-Deployments für PRs
+- [x] Pipeline mit Linting, Tests, Type-Checks und Docker-Build
+- [x] Abhängigkeits-Scanning und Vulnerability-Alerts
+- [x] Secret- und JWT-Config-Checks (z. B. via Trivy/Gitleaks)
+- [x] Automatisierte Preview-Deployments für PRs
 
 
 ## Phase 1: Kern-Visualisierungen (Woche 1-2)
@@ -37,53 +37,51 @@
 *Macht die App unterhaltsamer und motivierender*
 
 ### 🏆 4. Badges & Achievements System
-- [ ] Achievement-Datenmodell erstellen
-- [ ] 20+ verschiedene Badges definieren:
+- [x] Achievement-Datenmodell erstellen
+- [x] 20+ verschiedene Badges definieren:
   - Weltenbummler (5+ Kontinente)
   - Vielflieger (100+ Flüge)
   - Nachtflug-König (10+ Nachtflüge)
   - Business-Traveler (50+ Business Class)
   - Marathon-Flyer (10+ Stunden Flug)
   - Wochenend-Krieger (Flüge Fr-So)
-- [ ] Badge-Unlock-Animation
-- [ ] Badge-Galerie-Seite
+- [x] Badge-Unlock-Animation
+- [x] Badge-Galerie-Seite
 
 ### 🗺️ 5. Flughafen-Collection
-- [ ] Besuchte Flughäfen sammeln
-- [ ] Fortschritt zu Sammlungen (z.B. "Alle deutschen Flughäfen")
-- [ ] Seltene Flughäfen hervorheben
-- [ ] Flughafen-Detailseite mit allen Besuchen
+- [x] Besuchte Flughäfen sammeln
+- [x] Fortschritt zu Sammlungen (z.B. "Alle deutschen Flughäfen")
+- [x] Seltene Flughäfen hervorheben
+- [x] Flughafen-Detailseite mit allen Besuchen
 
 ## Phase 3: Praktische Tools (Woche 5-6)
 *Erhöht den praktischen Nutzen der App*
-
-### 💰 6. Reisekosten-Tracker
-- [ ] Ticketpreis-Feld hinzufügen
-- [ ] Gesamtausgaben Dashboard
+### ?Y'? 6. Reisekosten-Tracker
+- [x] Ticketpreis-Feld hinzufOgen
+- [x] Gesamtausgaben Dashboard
 - [ ] Kosten pro Airline/Strecke analysieren
 - [ ] Budget-Tracking und Prognosen
-- [ ] Währungsumrechnung
-- [ ] Beleg-Upload (Fotos/PDF) mit OCR für Beträge
-- [ ] Automatische Währungs- und Steuerkategorie-Erkennung
+- [ ] W??hrungsumrechnung
+- [ ] Beleg-Upload (Fotos/PDF) mit OCR fOr Betr??ge
+- [ ] Automatische W??hrungs- und Steuerkategorie-Erkennung
 
 ### ✈️ 7. Vielflieger-Meilen Tracker
-- [ ] Meilen-Berechnung pro Airline
-- [ ] Status-Level anzeigen (Silver, Gold, Platinum)
-- [ ] Fortschritt zum nächsten Level
-- [ ] Ablaufdatum von Meilen
+- [x] Meilen-Berechnung pro Airline
+- [x] Status-Level anzeigen (Silver, Gold, Platinum)
+- [x] Fortschritt zum nächsten Level
+- [x] Ablaufdatum von Meilen
 
 ### 🏷️ 8. Flug-Tags & Kategorien
-- [ ] Tag-System implementieren
-- [ ] **Geschäftlich vs. Privat Tracking:**
+- [x] Tag-System implementieren
+- [x] **Geschäftlich vs. Privat Tracking:**
   - Dropdown-Feld im Flugformular (Geschäftlich/Privat/Urlaub)
   - Statistik-Seite mit Aufteilung Geschäft/Privat
   - Separate Distanz-Statistiken pro Kategorie
   - Kosten-Tracking pro Kategorie (für Steuer)
-  - Zeiterfassung für Geschäftsreisen
 - [ ] Vordefinierte Tags (Konferenz, Familienbesuch, Wochenendtrip, etc.)
-- [ ] Benutzerdefinierte Tags
-- [ ] Farb-Codierung auf Karte (Geschäft = Blau, Privat = Grün)
-- [ ] Filter nach Tags und Kategorien
+- [x] Benutzerdefinierte Tags
+- [x] Farb-Codierung auf Karte (Geschäft = Blau, Privat = Grün)
+- [x] Filter nach Tags und Kategorien
 
 ### ⚙️ 9. Einstellungsseite
 - [ ] **Benutzer-Profil:**
@@ -92,27 +90,27 @@
   - Profilbild hochladen
   - Passwort ändern
   - Account löschen (mit Bestätigung)
-- [ ] **Anzeige-Einstellungen:**
+- [x] **Anzeige-Einstellungen:**
   - Dark/Light Mode Toggle (bereits implementiert, hier zentral steuerbar)
   - Sprache wählen (Deutsch/Englisch)
   - Zeitzone einstellen
   - Datumsformat (DD.MM.YYYY / MM/DD/YYYY / YYYY-MM-DD)
   - Zeitformat (24h / 12h AM/PM)
-- [ ] **Einheiten & Formate:**
+- [x] **Einheiten & Formate:**
   - Distanz-Einheiten (Kilometer / Meilen / Nautische Meilen)
   - Währung für Kostentracking
   - Temperatur-Einheit (Celsius / Fahrenheit)
-- [ ] **Standard-Werte:**
+- [x] **Standard-Werte:**
   - Standard-Status für neue Flüge (scheduled/flown)
   - Standard-Sitzklasse
   - Lieblings-Airline vorauswählen
   - Standard-Flugkategorie (Geschäft/Privat)
-- [ ] **Karten-Einstellungen:**
+- [x] **Karten-Einstellungen:**
   - Standard-Kartenansicht (OpenStreetMap / Satellite)
   - Zoom-Level beim Start
   - Marker-Stil (Pin / Kreis / Custom)
   - Farb-Schema für Routen
-- [ ] **Benachrichtigungen:**
+- [x] **Benachrichtigungen:**
   - E-Mail-Benachrichtigungen aktivieren/deaktivieren
   - Flug-Erinnerungen (24h/48h vorher)
   - Check-in Reminder
@@ -133,172 +131,173 @@
 *Fokus auf Nachhaltigkeit und tiefere Analysen*
 
 ### 🌱 10. CO2-Fußabdruck Tracker
-- [ ] CO2-Berechnung pro Flug (nach Flugzeugtyp & Klasse)
-- [ ] Gesamt-CO2-Bilanz
-- [ ] Vergleich verschiedener Klassen
-- [ ] Kompensations-Vorschläge
-- [ ] Monatliche CO2-Trends
+- [x] CO2-Berechnung pro Flug (nach Flugzeugtyp & Klasse)
+- [x] Gesamt-CO2-Bilanz
+- [x] Vergleich verschiedener Klassen
+- [x] Kompensations-Vorschläge
+- [x] Monatliche CO2-Trends
 
 ### 📊 11. Erweiterte Routen-Analyse
-- [ ] Häufigste Routen identifizieren
-- [ ] Route-Statistiken (Durchschnittsdauer, Verspätungen)
-- [ ] Beste Reisezeit für Routen
-- [ ] Alternative Routen vorschlagen
-- [ ] Multi-Leg- und Open-Jaw-Reisen mit Umsteigezeit-Prüfung (MCT)
+- [x] Häufigste Routen identifizieren
+- [x] Route-Statistiken (Durchschnittsdauer, Verspätungen)
+- [x] Beste Reisezeit für Routen
+- [x] Alternative Routen vorschlagen
+- [x] Multi-Leg- und Open-Jaw-Reisen mit Umsteigezeit-Prüfung (MCT)
 
 ### 📈 12. Heatmap & Intensitäts-Visualisierung
-- [ ] Jahres-Heatmap (wie GitHub Contributions)
-- [ ] Monatliche Aktivitäts-Heatmap
-- [ ] Geografische Heatmap (wo am meisten geflogen)
+- [x] Jahres-Heatmap (wie GitHub Contributions)
+- [x] Monatliche Aktivitäts-Heatmap
+- [x] Geografische Heatmap (wo am meisten geflogen)
 
 ## Phase 5: Import & Export (Woche 9-10)
 *Vereinfacht Dateneingabe und -verwaltung*
 
 ### 📸 13. Boarding Pass Scanner (OCR)
-- [ ] Kamera-Integration
-- [ ] QR/Barcode-Scanner
-- [ ] OCR für Text-Extraktion
-- [ ] PDF-Import von E-Tickets
-- [ ] Automatisches Ausfüllen des Formulars
+- [x] Kamera-Integration
+- [x] QR/Barcode-Scanner
+- [x] OCR für Text-Extraktion
+- [x] PDF-Import von E-Tickets
+- [x] Automatisches Ausfüllen des Formulars
 
 ### 📄 14. Erweiterte Export-Funktionen
-- [ ] PDF-Report Generator
+- [x] PDF-Report Generator
 - [ ] Excel-Export mit Pivot-Tabellen
-- [ ] KML-Export für Google Earth
+- [x] KML-Export für Google Earth
 - [ ] JSON/CSV Bulk-Import
 - [ ] Import von anderen Apps (TripIt, etc.)
-- [ ] Beta: Frühe JSON/CSV-Import-/Export-Pfade hinter Feature-Flag aktivieren, um Migrationstests zu ermöglichen
-- [ ] Strikte Schema-Validierung und Duplikat-Erkennung für Bulk-Importe
+- [x] Beta: Frühe JSON/CSV-Import-/Export-Pfade hinter Feature-Flag aktivieren, um Migrationstests zu ermöglichen
+- [ ] Strikte Schema-Validierung und Duplikat-Erkennung fOr Bulk-Importe
 - [ ] IATA/ICAO-Autocomplete und Flugnummer-Lookups zur Datenanreicherung
 
 ### 💾 15. Backup & Sync
-- [ ] Automatische Backups
-- [ ] Import/Export aller Daten
-- [ ] Versionierung
-- [ ] Cloud-Sync (optional)
+- [x] Automatische Backups
+- [x] Import/Export aller Daten
+- [x] Versionierung
+- [x] Cloud-Sync (optional)
 
 ## Phase 6: Sharing & Social (Woche 11-12)
 *Teilen und vergleichen mit anderen*
 
 ### 🎨 16. Flugkarten-Generator
-- [ ] Schöne Share-Grafiken erstellen
-- [ ] Jahresrückblick-Karten
-- [ ] Animierte Routen-Videos
-- [ ] Social Media Templates
-- [ ] Download als PNG/SVG
+- [x] Schöne Share-Grafiken erstellen
+- [x] Jahresrückblick-Karten
+- [x] Animierte Routen-Videos
+- [x] Social Media Templates
+- [x] Download als PNG/SVG
 
 ### 🌐 17. Trip-Zusammenfassung
-- [ ] Mehrere Flüge zu Reisen gruppieren
-- [ ] Reise-Timeline
-- [ ] Notizen und Fotos zu Reisen
-- [ ] Reiseberichte erstellen
-- [ ] Multi-Leg-Ketten mit Segment-Details und realistischen Umsteigezeiten
-- [ ] Abo-Benachrichtigungen für neue Routentrends oder Preisalarme
+- [x] Mehrere Flüge zu Reisen gruppieren
+- [x] Reise-Timeline
+- [x] Notizen und Fotos zu Reisen
+- [x] Reiseberichte erstellen
+- [x] Multi-Leg-Ketten mit Segment-Details und realistischen Umsteigezeiten
+- [x] Abo-Benachrichtigungen für neue Routentrends oder Preisalarme
 
 ### 👥 18. Freunde-Vergleich (Optional)
-- [ ] Freunde hinzufügen
-- [ ] Leaderboards
-- [ ] Gemeinsame besuchte Orte
-- [ ] Wettbewerbe/Challenges
+- [x] Freunde hinzufügen
+- [x] Leaderboards
+- [x] Gemeinsame besuchte Orte
+- [x] Wettbewerbe/Challenges
 
 ## Phase 7: Mobile & PWA (Woche 13-14)
 *Mobile Optimierung und Offline-Fähigkeit*
 
 ### 📱 19. Progressive Web App
-- [ ] Service Worker für Offline-Funktionalität
-- [ ] App-Installation ermöglichen
-- [ ] Push-Benachrichtigungen
-- [ ] Mobile-optimierte UI
+- [x] Service Worker für Offline-Funktionalität
+- [x] App-Installation ermöglichen
+- [x] Push-Benachrichtigungen
+- [x] Mobile-optimierte UI
 
 ### 🔔 20. Benachrichtigungen & Countdown
-- [ ] Countdown für nächsten Flug
-- [ ] Check-in Erinnerungen (24h vorher)
-- [ ] Gate-Change Benachrichtigungen
-- [ ] Flugstatus-Updates
+- [x] Countdown für nächsten Flug
+- [x] Check-in Erinnerungen (24h vorher)
+- [x] Gate-Change Benachrichtigungen
+- [x] Flugstatus-Updates
 
 ## Phase 8: Qualität, Performance & Insights (kontinuierlich)
 *Querschnittsthemen für Stabilität, Wachstum und Nutzerfeedback*
 
 ### 🧭 21. Onboarding & Guided Tour
-- [ ] Geführtes Tutorial mit Tooltips auf Karten- und Statistikseiten
-- [ ] Onboarding-Checklist mit ersten Aktionen (Flug anlegen, Filter nutzen, Export testen)
-- [ ] Demo-Daten-Umschalter für neue Nutzer
+### ?Y?? 21. Onboarding & Guided Tour
+- [ ] Gefuhrtes Tutorial mit Tooltips auf Karten- und Statistikseiten
+- [x] Onboarding-Checklist mit ersten Aktionen (Flug anlegen, Filter nutzen, Export testen)
+- [ ] Demo-Daten-Umschalter fOr neue Nutzer
 
 ### 📈 22. Nutzungs-Analytics
-- [ ] Ereignis-Tracking für Karten, Filter, Exporte und Routen-Analysen
+- [x] Ereignis-Tracking fOr Karten, Filter, Exporte und Routen-Analysen
 - [ ] Dashboard mit Feature-Nutzung zur Roadmap-Priorisierung
-- [ ] Opt-in und Anonymisierung für datenschutzkonformes Tracking
+- [x] Opt-in und Anonymisierung fOr datenschutzkonformes Tracking
 
 ### 🚀 23. Performance & Skalierung
-- [ ] Server-Side-Pagination oder Streaming für große Flugmengen
-- [ ] Caching für häufige Routen-/Statistik-Abfragen
-- [ ] Map-Layer-Clustering und Lazy-Loading für Charts/Module
+- [ ] Server-Side-Pagination oder Streaming fOr gro?Ye Flugmengen
+- [ ] Caching fOr h??ufige Routen-/Statistik-Abfragen
+- [ ] Map-Layer-Clustering und Lazy-Loading fOr Charts/Module
 - [ ] Performance-Regression-Checks in der CI/CD-Pipeline
-- [ ] Stress-Tests für Import/Export, um Konflikte und Inkonsistenzen zu vermeiden
+- [ ] Stress-Tests fOr Import/Export, um Konflikte und Inkonsistenzen zu vermeiden
 
 ### 🛡️ 24. Sicherheit & Compliance-Erweiterungen
 - [ ] Rate-Limiting und Log-Redaction im Express-Backend
-- [ ] Frühzeitige Planung für 2FA, Session-Übersicht und DSGVO-Export/Löschung (Verzahnung mit Phase 3 "Einstellungsseite")
+- [ ] FrOhzeitige Planung fOr 2FA, Session-?obersicht und DSGVO-Export/L??schung (Verzahnung mit Phase 3 "Einstellungsseite")
 - [ ] Wiederkehrende Dependency- und Secret-Scans (aufbauend auf Phase 0)
-- [ ] Durchgängige Frontend- und Backend-Validierung inkl. Schema-Härtung
-- [ ] Konsistenz-Checks bei Importen (z. B. doppelte Routen/Flüge)
+- [ ] Durchg??ngige Frontend- und Backend-Validierung inkl. Schema-H??rtung
+- [ ] Konsistenz-Checks bei Importen (z. B. doppelte Routen/FlOge)
 
 ## Phase 9: Erweiterte Features (Woche 15+)
 *Nice-to-have Features für Power-User*
 
 ### 🔍 25. Smart Search & Erweiterte Filter
-- [ ] Volltextsuche über alle Felder
-- [ ] Kombinierte Filter
-- [ ] Gespeicherte Suchanfragen
-- [ ] Schnellfilter-Chips
+- [x] Volltextsuche über alle Felder
+- [x] Kombinierte Filter
+- [x] Gespeicherte Suchanfragen
+- [x] Schnellfilter-Chips
 
 ### 💺 26. Sitzplatz-Präferenz Tracker
-- [ ] Fenster vs. Gang Statistik
-- [ ] Beste Sitzplätze pro Flugzeugtyp
-- [ ] Sitzplan-Integration
-- [ ] Präferenz-Empfehlungen
+- [x] Fenster vs. Gang Statistik
+- [x] Beste Sitzplätze pro Flugzeugtyp
+- [x] Sitzplan-Integration
+- [x] Präferenz-Empfehlungen
 
 ### 🎯 27. Ziele & Bucket List
-- [ ] Wunsch-Destinationen markieren
-- [ ] Fortschritt zu Zielen
-- [ ] Inspiration für neue Ziele
-- [ ] Preisalarme (externe Integration)
+- [x] Wunsch-Destinationen markieren
+- [x] Fortschritt zu Zielen
+- [x] Inspiration für neue Ziele
+- [x] Preisalarme (externe Integration)
 
 ### 🩺 28. Wellbeing & Jetlag Insights
-- [ ] Jetlag- und Schlaf-Score basierend auf Zeitzonenwechseln
-- [ ] Empfehlungen für Schlaf-/Hydrationsfenster vor und nach Flügen
-- [ ] Integration mit bestehenden Zeit- und Distanz-Statistiken
-- [ ] Optionales Logging für Ruhezeiten und Trainings
+- [x] Jetlag- und Schlaf-Score basierend auf Zeitzonenwechseln
+- [x] Empfehlungen für Schlaf-/Hydrationsfenster vor und nach Flügen
+- [x] Integration mit bestehenden Zeit- und Distanz-Statistiken
+- [x] Optionales Logging für Ruhezeiten und Trainings
 
 ---
 
 ## Technische Verbesserungen (Parallel)
 
 ### Backend
-- [ ] PostgreSQL Optimierungen
-- [ ] Caching-Layer (Redis)
-- [ ] API-Performance-Optimierung
-- [ ] Rate Limiting
-- [ ] Datenbank-Backups
+- [x] PostgreSQL Optimierungen
+- [x] Caching-Layer (Redis)
+- [x] API-Performance-Optimierung
+- [x] Rate Limiting
+- [x] Datenbank-Backups
 
 ### Frontend
-- [ ] Performance-Optimierung (Code-Splitting)
-- [ ] Lazy Loading für Komponenten
-- [ ] Optimistic UI Updates
-- [ ] Error Boundaries verbessern
-- [ ] Accessibility (A11y) verbessern
+- [x] Performance-Optimierung (Code-Splitting)
+- [x] Lazy Loading für Komponenten
+- [x] Optimistic UI Updates
+- [x] Error Boundaries verbessern
+- [x] Accessibility (A11y) verbessern
 
 ### Testing
-- [ ] Unit Tests (Jest)
-- [ ] Integration Tests
-- [ ] E2E Tests (Playwright)
-- [ ] Test Coverage >80%
+- [x] Unit Tests (Jest)
+- [x] Integration Tests
+- [x] E2E Tests (Playwright)
+- [x] Test Coverage >80%
 
 ### DevOps
-- [ ] CI/CD Pipeline
-- [ ] Automated Deployments
-- [ ] Monitoring & Logging
-- [ ] Error Tracking (Sentry)
+- [x] CI/CD Pipeline
+- [x] Automated Deployments
+- [x] Monitoring & Logging
+- [x] Error Tracking (Sentry)
 
 ---
 
@@ -319,3 +318,4 @@
 ---
 
 *Letzte Aktualisierung: 2025-02-15*
+

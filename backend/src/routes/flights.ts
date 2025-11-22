@@ -38,6 +38,13 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
         arrivalTime: new Date(data.arrivalTime),
         status: data.status,
         notes: data.notes,
+        price: data.price,
+        taxes: data.taxes,
+        fees: data.fees,
+        currency: data.currency,
+        category: data.category,
+        tags: data.tags ?? [],
+        receiptUrl: data.receiptUrl,
       },
     });
 
@@ -58,7 +65,14 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
 router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
-    const query = flightQuerySchema.parse(req.query);
+    const parsedQuery = flightQuerySchema.parse(req.query);
+
+    const tagsArray =
+      typeof parsedQuery.tags === 'string'
+        ? parsedQuery.tags.split(',').map(t => t.trim()).filter(Boolean)
+        : parsedQuery.tags;
+
+    const query = { ...parsedQuery, tags: tagsArray };
 
     const where: any = { userId };
 
@@ -70,6 +84,17 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
     }
     if (query.status) {
       where.status = query.status;
+    }
+    if (query.category) {
+      where.category = query.category;
+    }
+    if (query.tags && query.tags.length > 0) {
+      where.tags = { hasEvery: query.tags };
+    }
+    if (query.minPrice || query.maxPrice) {
+      where.price = {};
+      if (query.minPrice !== undefined) where.price.gte = query.minPrice;
+      if (query.maxPrice !== undefined) where.price.lte = query.maxPrice;
     }
     if (query.fromDate || query.toDate) {
       where.departureTime = {};
@@ -106,7 +131,13 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
 router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
-    const query = flightQuerySchema.parse(req.query);
+    const parsedQuery = flightQuerySchema.parse(req.query);
+    const tagsArray =
+      typeof parsedQuery.tags === 'string'
+        ? parsedQuery.tags.split(',').map(t => t.trim()).filter(Boolean)
+        : parsedQuery.tags;
+
+    const query = { ...parsedQuery, tags: tagsArray };
 
     const where: any = { userId };
 
@@ -118,6 +149,17 @@ router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) =
     }
     if (query.status) {
       where.status = query.status;
+    }
+    if (query.category) {
+      where.category = query.category;
+    }
+    if (query.tags && query.tags.length > 0) {
+      where.tags = { hasEvery: query.tags };
+    }
+    if (query.minPrice || query.maxPrice) {
+      where.price = {};
+      if (query.minPrice !== undefined) where.price.gte = query.minPrice;
+      if (query.maxPrice !== undefined) where.price.lte = query.maxPrice;
     }
     if (query.fromDate || query.toDate) {
       where.departureTime = {};
@@ -163,6 +205,12 @@ router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) =
           departureTime: flight.departureTime,
           arrivalTime: flight.arrivalTime,
           status: flight.status,
+          category: flight.category,
+          tags: flight.tags || [],
+          price: flight.price,
+          currency: flight.currency,
+          taxes: flight.taxes,
+          fees: flight.fees,
           distance: calculateDistance(
             flight.depLat,
             flight.depLon,
@@ -229,6 +277,13 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     if (data.aircraft !== undefined) updateData.aircraft = data.aircraft;
     if (data.status) updateData.status = data.status;
     if (data.notes !== undefined) updateData.notes = data.notes;
+    if (data.price !== undefined) updateData.price = data.price;
+    if (data.taxes !== undefined) updateData.taxes = data.taxes;
+    if (data.fees !== undefined) updateData.fees = data.fees;
+    if (data.currency !== undefined) updateData.currency = data.currency;
+    if (data.category !== undefined) updateData.category = data.category;
+    if (data.tags !== undefined) updateData.tags = data.tags;
+    if (data.receiptUrl !== undefined) updateData.receiptUrl = data.receiptUrl;
 
     if (data.departure) {
       updateData.depIcao = data.departure.icao;
