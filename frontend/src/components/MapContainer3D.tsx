@@ -16,20 +16,22 @@ export default function MapContainer3D({
   is3D,
 }: MapContainer3DProps) {
   return (
-    <div className="relative h-full w-full rounded-lg shadow overflow-hidden bg-white dark:bg-gray-900">
-      {is3D ? (
-        <GlobeView
-          flights={flights}
-          selectedFlightId={selectedFlightId}
-          onFlightClick={onFlightClick}
-        />
-      ) : (
-        <Map
-          flights={flights}
-          selectedFlightId={selectedFlightId}
-          onFlightClick={onFlightClick}
-        />
-      )}
+    <div className="relative h-full w-full rounded-lg shadow overflow-hidden bg-white dark:bg-gray-900 flex items-center justify-center">
+      <div className="h-full w-full max-w-[1200px] flex items-center justify-center px-4">
+        {is3D ? (
+          <GlobeView
+            flights={flights}
+            selectedFlightId={selectedFlightId}
+            onFlightClick={onFlightClick}
+          />
+        ) : (
+          <Map
+            flights={flights}
+            selectedFlightId={selectedFlightId}
+            onFlightClick={onFlightClick}
+          />
+        )}
+      </div>
     </div>
   );
 }

@@ -18,6 +18,8 @@ model User {
   createdAt           DateTime            @default(now()) @map("created_at")
   flights             Flight[]
   userAchievements    UserAchievement[]
+  settings            UserSettings?
+  analyticsEvents     AnalyticsEvent[]
 
   @@map("users")
 }

@@ -58,7 +58,7 @@ const getArcAltitude = (startLat: number, startLng: number, endLat: number, endL
   } else if (distance < 5000) {
     return 0.075 + ((distance - 1000) / 4000) * 0.075;
   } else {
-    return Math.min(0.15 + ((distance - 5000) / 10000) * 0.075, 0.225);
+    return Math.min(0.35 + ((distance - 5000) / 10000) * 0.075, 0.28);
   }
 };
 
@@ -67,6 +67,13 @@ export default function GlobeView({ flights = [], selectedFlightId, onFlightClic
   const themeStore = useThemeStore();
   const isDarkMode = themeStore?.isDarkMode ?? false;
   const [autoRotate, setAutoRotate] = useState(false);
+
+  // Center globe initially
+  useEffect(() => {
+    if (globeRef.current) {
+      globeRef.current.pointOfView({ lat: 0, lng: 0, altitude: 2.2 }, 0);
+    }
+  }, []);
 
   // Control auto-rotation
   useEffect(() => {
@@ -147,7 +154,7 @@ export default function GlobeView({ flights = [], selectedFlightId, onFlightClic
   }, [flights]);
 
   return (
-    <div className="h-full w-full relative">
+    <div className="h-full w-full relative flex items-center justify-center">
       {/* Control Panel */}
       <div className="absolute bottom-4 left-4 z-[9999] bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 border border-gray-200 dark:border-gray-700">
         {/* Auto-Rotation Toggle */}
@@ -166,6 +173,7 @@ export default function GlobeView({ flights = [], selectedFlightId, onFlightClic
 
       <Globe
         ref={globeRef}
+        style={{ width: '100%', height: '100%' }}
         globeImageUrl="https://unpkg.com/three-globe@2.31.1/example/img/earth-blue-marble.jpg"
         bumpImageUrl="https://unpkg.com/three-globe@2.31.1/example/img/earth-topology.png"
         backgroundImageUrl={null}
