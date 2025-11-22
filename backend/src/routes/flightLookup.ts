@@ -41,11 +41,11 @@ router.get('/:flightNumber', async (req: Request, res: Response, next: NextFunct
     const flights = await lookupFlightByNumber(flightNumber, searchDate);
 
     if (flights.length === 0) {
-      // Try to provide helpful info even if no results
+      // Provide helpful response but do not fail the request (status 200 to avoid proxy errors)
       const parsed = parseFlightNumber(flightNumber);
-
-      return res.status(404).json({
+      return res.status(200).json({
         success: false,
+        count: 0,
         error: 'No flights found',
         parsed,
         hint: 'Try adding a date parameter or check if the flight number is correct',
