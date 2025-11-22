@@ -2,7 +2,8 @@ import { useState, useRef } from 'react';
 import jsQR from 'jsqr';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 import { BarcodeFormat, DecodeHintType } from '@zxing/library';
-import { parseBCBP, getAirlineName, BoardingPassData } from '../lib/bcbpParser';
+import { parseBCBP, BoardingPassData } from '../lib/bcbpParser';
+import { useThemeStore } from '../store/themeStore';
 
 interface BoardingPassScannerProps {
   onScanSuccess: (data: BoardingPassData) => void;
@@ -15,6 +16,7 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
   const [preview, setPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const isDarkMode = useThemeStore((s) => s.isDarkMode);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -24,7 +26,6 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
     setScanning(true);
 
     try {
-      // Create image preview
       const reader = new FileReader();
       reader.onload = (event) => {
         const dataUrl = event.target?.result as string;
@@ -48,23 +49,14 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
-      // Set canvas size to image size
       canvas.width = img.width;
       canvas.height = img.height;
-
-      // Draw image
       ctx.drawImage(img, 0, 0);
 
       let barcodeText: string | null = null;
 
-      console.log('🔍 Starting barcode scan...');
-      console.log('📐 Canvas size:', canvas.width, 'x', canvas.height);
-
-      // Try multiple image preprocessing techniques
       const scanAttempts = async () => {
-        // Save original image data
         const originalImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
         const attempts = [
           { name: 'Original', enhance: false },
           { name: 'High Contrast', enhance: true, brightness: 1.2, contrast: 2.0 },
@@ -72,94 +64,63 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
         ];
 
         for (const attempt of attempts) {
-          console.log(`🔍 Attempt: ${attempt.name}...`);
-
-          // Restore original image
           ctx.putImageData(originalImageData, 0, 0);
 
-          // Apply preprocessing
           if (attempt.enhance) {
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const data = imageData.data;
-
             for (let i = 0; i < data.length; i += 4) {
-              // Convert to grayscale
               const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-
-              // Apply brightness and contrast
               let adjusted = ((gray / 255 - 0.5) * (attempt.contrast || 1) + 0.5) * 255;
-              adjusted *= (attempt.brightness || 1);
+              adjusted *= attempt.brightness || 1;
               adjusted = Math.min(255, Math.max(0, adjusted));
-
               data[i] = data[i + 1] = data[i + 2] = adjusted;
             }
-
             ctx.putImageData(imageData, 0, 0);
           }
 
-          // Try ZXing
           try {
             const hints = new Map();
             hints.set(DecodeHintType.POSSIBLE_FORMATS, [
               BarcodeFormat.QR_CODE,
               BarcodeFormat.PDF_417,
               BarcodeFormat.AZTEC,
-              BarcodeFormat.DATA_MATRIX
+              BarcodeFormat.DATA_MATRIX,
             ]);
             hints.set(DecodeHintType.TRY_HARDER, true);
-
             const codeReader = new BrowserMultiFormatReader(hints);
             const result = await codeReader.decodeFromCanvas(canvas);
-
             if (result && result.getText()) {
-              console.log(`✅ ZXing SUCCESS with ${attempt.name}!`);
-              console.log('📊 Format:', result.getBarcodeFormat());
               return result.getText();
             }
-          } catch (zxingError) {
-            console.log(`  ❌ ZXing failed for ${attempt.name}`);
-          }
+          } catch {}
 
-          // Try jsQR
           try {
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const code = jsQR(imageData.data, imageData.width, imageData.height, {
               inversionAttempts: 'attemptBoth',
             });
-
             if (code && code.data) {
-              console.log(`✅ jsQR SUCCESS with ${attempt.name}!`);
               return code.data;
             }
-          } catch (jsqrError) {
-            console.log(`  ❌ jsQR failed for ${attempt.name}`);
-          }
+          } catch {}
         }
-
         return null;
       };
 
       barcodeText = await scanAttempts();
 
-      // Process the barcode if found
       if (barcodeText) {
-        console.log('📊 Raw barcode text:', barcodeText);
-        console.log('📊 Barcode length:', barcodeText.length);
-        console.log('📊 First 50 chars:', barcodeText.substring(0, 50));
-
-        // Try to parse as BCBP
         const bcbpData = parseBCBP(barcodeText);
-
         if (bcbpData) {
-          console.log('✅ Successfully parsed BCBP data:', bcbpData);
           setScanning(false);
           onScanSuccess(bcbpData);
         } else {
-          setError(`Barcode found, but it's not a valid IATA boarding pass format.\n\nDetected: ${barcodeText.substring(0, 100)}...\n\nMake sure you're scanning the 2D barcode (not the simple barcode).`);
+          setError('Barcode found, but not a valid boarding pass (PDF417/QR/Aztec expected).');
           setScanning(false);
         }
       } else {
-        setError('No barcode found in image. Tips:\n• Make sure the barcode is clearly visible\n• Try better lighting\n• Scan the 2D barcode (PDF417/QR code, not the simple 1D barcode)');
+        setError('No barcode found. Tips: good lighting, focus the 2D barcode (PDF417/QR/Aztec).');
         setScanning(false);
       }
     };
@@ -176,63 +137,59 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
     setError('');
     setPreview(null);
     setScanning(false);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-2xl w-full p-6">
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+      <div className={`${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'} rounded-lg max-w-2xl w-full p-6 shadow-2xl`}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold">📸 Scan Boarding Pass</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+          <h2 className="text-2xl font-bold">Scan Boarding Pass</h2>
+          <button onClick={onClose} className={`${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-500 hover:text-gray-700'}`}>
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        {/* Instructions */}
         {!preview && (
           <div className="mb-6">
-            <p className="text-gray-600 mb-4">
-              Upload a photo of your boarding pass barcode. Supports both paper and mobile boarding passes!
+            <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} mb-4`}>
+              Upload a photo of your boarding pass barcode. Supports both paper and mobile boarding passes.
             </p>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="font-semibold mb-2">✅ Supported barcode types:</h3>
-              <ul className="text-sm text-gray-700 space-y-1 mb-3">
-                <li>📄 <strong>PDF417</strong> - Long rectangular barcode on paper passes</li>
-                <li>📱 <strong>QR Code</strong> - Square barcode on mobile passes</li>
-                <li>🔷 <strong>Aztec Code</strong> - Some airlines use this format</li>
+            <div className={`${isDarkMode ? 'bg-blue-900/40 border-blue-700 text-blue-100' : 'bg-blue-50 border-blue-200 text-gray-800'} border rounded-lg p-4`}>
+              <h3 className="font-semibold mb-2">Supported barcode types:</h3>
+              <ul className="text-sm space-y-1 mb-3">
+                <li>PDF417 (paper)</li>
+                <li>QR Code (mobile)</li>
+                <li>Aztec Code (some airlines)</li>
               </ul>
-              <h3 className="font-semibold mb-2">📝 Tips for best results:</h3>
-              <ul className="text-sm text-gray-700 space-y-1">
-                <li>• Make sure the barcode is clearly visible</li>
-                <li>• Use good lighting (avoid shadows)</li>
-                <li>• Keep the camera steady</li>
-                <li>• Fill the frame with the barcode</li>
-                <li>• Scan the 2D barcode (not the simple 1D barcode at top)</li>
+              <h3 className="font-semibold mb-2">Tips for best results:</h3>
+              <ul className="text-sm space-y-1">
+                <li>Clear, well-lit barcode</li>
+                <li>Fill the frame; keep steady</li>
+                <li>Scan the 2D barcode (not 1D)</li>
               </ul>
             </div>
           </div>
         )}
 
-        {/* Preview */}
         {preview && (
           <div className="mb-4">
-            <img src={preview} alt="Boarding pass preview" className="max-w-full h-auto rounded-lg border" />
+            <img
+              src={preview}
+              alt="Boarding pass preview"
+              className={`max-w-full h-auto rounded-lg border ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}
+            />
           </div>
         )}
 
-        {/* Error message */}
         {error && (
-          <div className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          <div className={`mb-4 px-4 py-3 rounded border ${isDarkMode ? 'bg-red-900 border-red-700 text-red-100' : 'bg-red-100 border-red-400 text-red-700'}`}>
             {error}
           </div>
         )}
 
-        {/* File input */}
         <div className="space-y-3">
           <input
             ref={fileInputRef}
@@ -245,11 +202,8 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
           />
 
           {!preview ? (
-            <label
-              htmlFor="boarding-pass-upload"
-              className="btn-primary w-full cursor-pointer text-center block"
-            >
-              📷 Take Photo / Upload Image
+            <label htmlFor="boarding-pass-upload" className="btn-primary w-full cursor-pointer text-center block">
+              Take Photo / Upload Image
             </label>
           ) : (
             <div className="flex gap-3">
@@ -269,11 +223,9 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
           </button>
         </div>
 
-        {/* Hidden canvas for image processing */}
         <canvas ref={canvasRef} className="hidden" />
 
-        {/* Info */}
-        <div className="mt-6 text-xs text-gray-500 text-center">
+        <div className={`mt-6 text-xs text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
           <p>Your boarding pass data is processed locally and never sent to any server.</p>
         </div>
       </div>

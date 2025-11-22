@@ -71,6 +71,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
   const [terminal, setTerminal] = useState('');
   const [gate, setGate] = useState('');
   const [seatNumber, setSeatNumber] = useState('');
+  const [seatClass, setSeatClass] = useState<'economy' | 'premium_economy' | 'business' | 'first'>('economy');
   const [status, setStatus] = useState<'scheduled' | 'flown' | 'cancelled'>('flown');
   const [notes, setNotes] = useState('');
   const [price, setPrice] = useState<string>('');
@@ -91,6 +92,9 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
     if (settings?.defaults?.flightCategory) {
       setCategory(settings.defaults.flightCategory);
     }
+    if (settings?.defaults?.seatClass) {
+      setSeatClass(settings.defaults.seatClass);
+    }
   }, [settings]);
 
   // Auto-set status based on date
@@ -102,6 +106,15 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
       setStatus(depDate < today ? 'flown' : 'scheduled');
     }
   }, [departureDate]);
+
+  const mapCompartmentToSeatClass = (code?: string) => {
+    if (!code) return undefined;
+    const c = code.toUpperCase();
+    if ('FAP'.includes(c)) return 'first';
+    if ('CJDZ'.includes(c)) return 'business';
+    if ('WPE'.includes(c)) return 'premium_economy';
+    return 'economy';
+  };
 
   // Flight Lookup Handler
   const handleFlightLookup = async () => {
@@ -129,7 +142,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
       setStep('select');
     } catch (err) {
       console.error('Flight lookup error:', err);
-      setError('Flight lookup service unavailable. Please enter manually.');
+      setError('Flight lookup unavailable (Backend/API-Key). Bitte manuell eingeben oder später erneut versuchen.');
       setStep('complete');
     } finally {
       setLoading(false);
@@ -186,14 +199,18 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
 
     try {
       // Step 1: Try online validation if flight number available
-      if (bcbpData.flightNumber) {
-        const flightDate = bcbpData.flightDate
-          ? new Date(bcbpData.flightDate).toISOString().split('T')[0]
-          : searchDate;
+      const carrierCode = bcbpData.airlineCode || bcbpData.operatingCarrierDesignator;
+      const scannedFlightNumber = bcbpData.flightNumber ? `${carrierCode || ''}${bcbpData.flightNumber}` : '';
+
+      if (carrierCode && bcbpData.flightNumber) {
+        const flightDate =
+          bcbpData.flightDate
+            ? new Date(bcbpData.flightDate).toISOString().split('T')[0]
+            : searchDate;
 
         try {
           const response = await fetch(
-            `/api/v1/flight-lookup/${bcbpData.airlineCode}${bcbpData.flightNumber}?date=${flightDate}`
+            `/api/v1/flight-lookup/${carrierCode}${bcbpData.flightNumber}?date=${flightDate}`
           );
           const data = await response.json();
 
@@ -208,8 +225,10 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
 
             // Use API data as source of truth
             await handleSelectFlight(apiFlight);
-            setFlightNumber(`${bcbpData.airlineCode}${bcbpData.flightNumber}`);
+            setFlightNumber(`${carrierCode}${bcbpData.flightNumber}`);
             return;
+          } else {
+            setError('Kein Online-Match gefunden (API-Key/Backend prüfen). Nutze gescannte Daten.');
           }
         } catch (err) {
           console.warn('Online validation failed, using scanned data');
@@ -232,10 +251,14 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
       if (bcbpData.seatNumber) {
         setSeatNumber(bcbpData.seatNumber.toUpperCase());
       }
+      const mappedSeatClass = mapCompartmentToSeatClass(bcbpData.compartmentCode);
+      if (mappedSeatClass) {
+        setSeatClass(mappedSeatClass);
+      }
 
-      if (bcbpData.airlineCode && bcbpData.flightNumber) {
-        setFlightNumber(`${bcbpData.airlineCode}${bcbpData.flightNumber}`);
-        setAirline(getAirlineName(bcbpData.airlineCode) || bcbpData.airlineCode);
+      if (carrierCode && bcbpData.flightNumber) {
+        setFlightNumber(scannedFlightNumber);
+        setAirline(getAirlineName(carrierCode) || carrierCode);
       }
 
       if (bcbpData.flightDate) {
@@ -286,6 +309,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
         airline: airline || undefined,
         flightNumber: flightNumber || undefined,
         aircraft: aircraft || undefined,
+        seatClass: seatClass || undefined,
         seatNumber: seatNumber || undefined,
         terminal: terminal || undefined,
         gate: gate || undefined,
@@ -568,7 +592,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className={`label ${textClass}`}>Seat Number</label>
                   <input
@@ -578,6 +602,19 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                     className={`input ${sizedInputClass}`}
                     placeholder="12A"
                   />
+                </div>
+                <div>
+                  <label className={`label ${textClass}`}>Seat Class</label>
+                  <select
+                    value={seatClass}
+                    onChange={(e) => setSeatClass(e.target.value as any)}
+                    className={`input ${sizedInputClass}`}
+                  >
+                    <option value="economy">Economy</option>
+                    <option value="premium_economy">Premium Economy</option>
+                    <option value="business">Business</option>
+                    <option value="first">First</option>
+                  </select>
                 </div>
                 <div>
                   <label className={`label ${textClass}`}>Category</label>
