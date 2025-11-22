@@ -4,6 +4,7 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import { createFlightSchema, updateFlightSchema, flightQuerySchema } from '../schemas/flight';
 import { AppError } from '../middleware/errorHandler';
 import { calculateDistance, generateArcPoints } from '../utils/geo';
+import { checkAndUpdateAchievements } from '../utils/achievements';
 
 const router = Router();
 
@@ -37,8 +38,19 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
         arrivalTime: new Date(data.arrivalTime),
         status: data.status,
         notes: data.notes,
+        ticketPrice: data.ticketPrice,
+        currency: data.currency,
+        category: data.category,
+        tags: data.tags,
       },
     });
+
+    // Check achievements after creating a flown flight (don't wait for it)
+    if (data.status === 'flown') {
+      checkAndUpdateAchievements(userId).catch(err =>
+        console.error('Failed to check achievements:', err)
+      );
+    }
 
     res.status(201).json(flight);
   } catch (error) {
@@ -221,6 +233,10 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     if (data.aircraft !== undefined) updateData.aircraft = data.aircraft;
     if (data.status) updateData.status = data.status;
     if (data.notes !== undefined) updateData.notes = data.notes;
+    if (data.ticketPrice !== undefined) updateData.ticketPrice = data.ticketPrice;
+    if (data.currency !== undefined) updateData.currency = data.currency;
+    if (data.category) updateData.category = data.category;
+    if (data.tags !== undefined) updateData.tags = data.tags;
 
     if (data.departure) {
       updateData.depIcao = data.departure.icao;
@@ -245,6 +261,13 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
       where: { id },
       data: updateData,
     });
+
+    // Check achievements if status changed to flown
+    if (data.status === 'flown' && existingFlight.status !== 'flown') {
+      checkAndUpdateAchievements(userId).catch(err =>
+        console.error('Failed to check achievements:', err)
+      );
+    }
 
     res.json(flight);
   } catch (error) {

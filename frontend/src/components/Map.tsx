@@ -1,21 +1,10 @@
-import { useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Polyline, Marker, Popup, useMap } from 'react-leaflet';
+import { useEffect } from 'react';
+import { MapContainer, TileLayer, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import type { GeoJSONFeature } from '../types';
 import { useThemeStore } from '../store/themeStore';
+import AirportMarkers from './AirportMarkers';
 import 'leaflet/dist/leaflet.css';
-
-// Fix for default marker icons
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconUrl: markerIcon,
-  iconRetinaUrl: markerIcon2x,
-  shadowUrl: markerShadow,
-});
 
 interface MapProps {
   flights: GeoJSONFeature[];
@@ -23,14 +12,44 @@ interface MapProps {
   onFlightClick?: (flightId: string) => void;
 }
 
+// Helper function to split lines that cross the antimeridian (dateline)
+function splitLineAtAntimeridian(positions: [number, number][]): [number, number][][] {
+  if (positions.length < 2) return [positions];
+
+  const segments: [number, number][][] = [];
+  let currentSegment: [number, number][] = [positions[0]];
+
+  for (let i = 1; i < positions.length; i++) {
+    const prev = positions[i - 1];
+    const curr = positions[i];
+
+    // Check if line crosses antimeridian (large longitude jump)
+    const lonDiff = Math.abs(curr[1] - prev[1]);
+
+    if (lonDiff > 180) {
+      // Line crosses antimeridian - start a new segment
+      segments.push(currentSegment);
+      currentSegment = [curr];
+    } else {
+      currentSegment.push(curr);
+    }
+  }
+
+  // Add the last segment
+  if (currentSegment.length > 0) {
+    segments.push(currentSegment);
+  }
+
+  return segments;
+}
+
 function MapUpdater({ flights }: { flights: GeoJSONFeature[] }) {
   const map = useMap();
 
   useEffect(() => {
-    if (flights.length > 0) {
+    if (flights && flights.length > 0) {
       const bounds = flights.reduce((acc, flight) => {
         flight.geometry.coordinates.forEach(([lon, lat]) => {
-          // Skip invalid coordinates (0,0 or non-finite)
           if ((lat === 0 && lon === 0) || !Number.isFinite(lat) || !Number.isFinite(lon)) {
             return;
           }
@@ -48,27 +67,22 @@ function MapUpdater({ flights }: { flights: GeoJSONFeature[] }) {
   return null;
 }
 
-export default function Map({ flights, selectedFlightId, onFlightClick }: MapProps) {
-  const { isDarkMode } = useThemeStore();
+export default function Map({ flights = [], selectedFlightId, onFlightClick }: MapProps) {
+  const themeStore = useThemeStore();
+  const isDarkMode = themeStore?.isDarkMode ?? false;
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'flown':
-        return '#10b981'; // green
+        return '#10b981';
       case 'scheduled':
-        return '#3b82f6'; // blue
+        return '#3b82f6';
       case 'cancelled':
-        return '#ef4444'; // red
+        return '#ef4444';
       default:
-        return '#6b7280'; // gray
+        return '#6b7280';
     }
   };
-
-  // World bounds to prevent wrapping
-  const maxBounds: L.LatLngBoundsExpression = [
-    [-90, -180], // Southwest
-    [90, 180],   // Northeast
-  ];
 
   return (
     <div className="h-full w-full">
@@ -76,9 +90,7 @@ export default function Map({ flights, selectedFlightId, onFlightClick }: MapPro
         center={[50, 10]}
         zoom={4}
         minZoom={2}
-        maxBounds={maxBounds}
-        maxBoundsViscosity={1.0}
-        worldCopyJump={false}
+        worldCopyJump={true}
         style={{ height: '100%', width: '100%' }}
         className="rounded-lg"
       >
@@ -88,27 +100,30 @@ export default function Map({ flights, selectedFlightId, onFlightClick }: MapPro
             url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
             subdomains="abcd"
             maxZoom={20}
+            noWrap={false}
           />
         ) : (
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             maxZoom={19}
+            noWrap={false}
           />
         )}
 
         <MapUpdater flights={flights} />
 
+        {/* Flight paths */}
         {flights.map((flight) => {
+          if (!flight?.properties || !flight?.geometry) return null;
+
           const isSelected = flight.properties.id === selectedFlightId;
           const color = getStatusColor(flight.properties.status);
 
-          // Convert coordinates from [lon, lat] to [lat, lon] for Leaflet
           const positions = flight.geometry.coordinates.map(
             ([lon, lat]) => [lat, lon] as [number, number]
           );
 
-          // Skip flights with invalid coordinates (0,0 or missing data)
           if (positions.length === 0 ||
               positions.some(pos => !pos || pos.length !== 2 ||
                             (pos[0] === 0 && pos[1] === 0) ||
@@ -116,64 +131,28 @@ export default function Map({ flights, selectedFlightId, onFlightClick }: MapPro
             return null;
           }
 
-          const startPos = positions[0];
-          const endPos = positions[positions.length - 1];
+          // Split line at antimeridian crossings
+          const segments = splitLineAtAntimeridian(positions);
 
-          return (
-            <div key={flight.properties.id}>
-              {/* Flight path */}
-              <Polyline
-                positions={positions}
-                pathOptions={{
-                  color,
-                  weight: isSelected ? 4 : 2,
-                  opacity: isSelected ? 1 : 0.6,
-                }}
-                eventHandlers={{
-                  click: () => onFlightClick?.(flight.properties.id),
-                }}
-              />
-
-              {/* Departure marker */}
-              <Marker position={startPos}>
-                <Popup>
-                  <div className="text-sm">
-                    <strong>Departure</strong>
-                    <br />
-                    {flight.properties.departureAirport.iata || flight.properties.departureAirport.icao}
-                    {flight.properties.departureAirport.name && (
-                      <>
-                        <br />
-                        {flight.properties.departureAirport.name}
-                      </>
-                    )}
-                    <br />
-                    {new Date(flight.properties.departureTime).toLocaleString()}
-                  </div>
-                </Popup>
-              </Marker>
-
-              {/* Arrival marker */}
-              <Marker position={endPos}>
-                <Popup>
-                  <div className="text-sm">
-                    <strong>Arrival</strong>
-                    <br />
-                    {flight.properties.arrivalAirport.iata || flight.properties.arrivalAirport.icao}
-                    {flight.properties.arrivalAirport.name && (
-                      <>
-                        <br />
-                        {flight.properties.arrivalAirport.name}
-                      </>
-                    )}
-                    <br />
-                    {new Date(flight.properties.arrivalTime).toLocaleString()}
-                  </div>
-                </Popup>
-              </Marker>
-            </div>
-          );
+          // Render each segment as a separate polyline
+          return segments.map((segment, index) => (
+            <Polyline
+              key={`${flight.properties.id}-${index}`}
+              positions={segment}
+              pathOptions={{
+                color,
+                weight: isSelected ? 4 : 2,
+                opacity: isSelected ? 1 : 0.6,
+              }}
+              eventHandlers={{
+                click: () => onFlightClick?.(flight.properties.id),
+              }}
+            />
+          ));
         })}
+
+        {/* Airport markers with aggregated stats */}
+        <AirportMarkers flights={flights} />
       </MapContainer>
     </div>
   );
