@@ -383,3 +383,9 @@ CI/CD (0), PWA (21), Social Features (18-20)
 
 *Letzte Aktualisierung: 2025-11-22*
 *Roadmap-Status basierend auf tatsÃ¤chlicher Code-Analyse*
+### Add Flight UX Polish (Backlog)
+- [ ] Boarding-Pass-Scan weiter anreichern (Gate/Terminal/Seat-Class/Zeiten) und API-Fallback klar anzeigen
+- [ ] Lookup-Fehlerzustände (kein Backend/kein API-Key) mit klaren Hinweisen im Dialog
+- [ ] Dunkelmodus für alle Add-Flight-Dialogteile inkl. Scanner-Overlay konsistent testen
+- [ ] Eingabefelder ergonomisch skalieren (Breite/Höhe) und Responsiveness prüfen
+- [ ] Validierung/Tests für neuen Add-Flight-Flow (V2) ergänzen

@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { flightsApi } from '../lib/api';
 import MapContainer3D from '../components/MapContainer3D';
-import SimplifiedFlightForm from '../components/SimplifiedFlightForm';
+import SimplifiedFlightFormV2 from '../components/SimplifiedFlightFormV2';
 import FlightList from '../components/FlightList';
 import Stats from '../components/Stats';
 import Filters from '../components/Filters';
@@ -535,7 +535,7 @@ export default function DashboardPage() {
 
       {/* Flight Form Modal */}
       {showFlightForm && (
-        <SimplifiedFlightForm
+        <SimplifiedFlightFormV2
           onSubmit={handleAddFlight}
           onCancel={() => setShowFlightForm(false)}
         />
