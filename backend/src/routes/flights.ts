@@ -5,6 +5,7 @@ import { createFlightSchema, updateFlightSchema, flightQuerySchema } from '../sc
 import { AppError } from '../middleware/errorHandler';
 import { calculateDistance, generateArcPoints } from '../utils/geo';
 import { checkAndUpdateAchievements } from '../utils/achievements';
+import { enrichFlightAirports } from '../services/airportLookup';
 
 const router = Router();
 
@@ -17,6 +18,24 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
     const userId = req.userId!;
     const data = createFlightSchema.parse(req.body);
 
+    // Enrich airport data with missing information from database
+    const enriched = await enrichFlightAirports({
+      departure: {
+        iata: data.departure.iata,
+        icao: data.departure.icao,
+        name: data.departure.name,
+        lat: data.departure.lat,
+        lon: data.departure.lon,
+      },
+      arrival: {
+        iata: data.arrival.iata,
+        icao: data.arrival.icao,
+        name: data.arrival.name,
+        lat: data.arrival.lat,
+        lon: data.arrival.lon,
+      },
+    });
+
     const flight = await prisma.flight.create({
       data: {
         userId,
@@ -24,16 +43,18 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
         flightNumber: data.flightNumber,
         callsign: data.callsign,
         aircraft: data.aircraft,
-        depIcao: data.departure.icao,
-        depIata: data.departure.iata,
-        depName: data.departure.name,
-        depLat: data.departure.lat,
-        depLon: data.departure.lon,
-        arrIcao: data.arrival.icao,
-        arrIata: data.arrival.iata,
-        arrName: data.arrival.name,
-        arrLat: data.arrival.lat,
-        arrLon: data.arrival.lon,
+        // Use enriched departure data (fills in missing IATA/ICAO/names)
+        depIcao: enriched.departure.icao,
+        depIata: enriched.departure.iata,
+        depName: enriched.departure.name,
+        depLat: enriched.departure.lat,
+        depLon: enriched.departure.lon,
+        // Use enriched arrival data (fills in missing IATA/ICAO/names)
+        arrIcao: enriched.arrival.icao,
+        arrIata: enriched.arrival.iata,
+        arrName: enriched.arrival.name,
+        arrLat: enriched.arrival.lat,
+        arrLon: enriched.arrival.lon,
         departureTime: new Date(data.departureTime),
         arrivalTime: new Date(data.arrivalTime),
         status: data.status,

@@ -14,7 +14,8 @@
       "Bash(npx prisma generate)",
       "Bash(npm run seed:enhanced:*)",
       "Bash(findstr:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(npm run seed:airports:openflights:*)"
     ],
     "deny": [],
     "ask": []
