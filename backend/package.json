@@ -15,6 +15,7 @@
     "seed": "tsx src/seed.ts",
     "seed:airports": "tsx src/seedAirports.ts",
     "seed:airports:csv": "tsx src/seedAirportsFromCSV.ts",
+    "seed:airports:openflights": "tsx src/scripts/importAirports.ts",
     "seed:achievements": "tsx src/seedAchievements.ts",
     "seed:enhanced": "tsx src/seedEnhancedFlights.ts"
   },
@@ -27,6 +28,7 @@
   "license": "MIT",
   "dependencies": {
     "@prisma/client": "^5.7.0",
+    "axios": "^1.13.2",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "csv-parse": "^6.1.0",

@@ -66,11 +66,16 @@
 - [ ] Beleg-Upload (Fotos/PDF) mit OCR für Beträge
 - [ ] Automatische Währungs- und Steuerkategorie-Erkennung
 
-### ✈️ 7. Vielflieger-Meilen Tracker
-- [ ] Meilen-Berechnung pro Airline
-- [ ] Status-Level anzeigen (Silver, Gold, Platinum)
-- [ ] Fortschritt zum nächsten Level
-- [ ] Ablaufdatum von Meilen
+### ✅ 7. Automatic Flight Data Lookup (AirLabs API)
+- [x] AirLabs API Integration (Free Tier: 1000 req/month)
+- [x] Flight Number Lookup Service
+- [x] API-Endpunkt für Flugnummer-Abfrage
+- [x] Smart Flight-First UX im Add Flight Dialog
+- [x] Automatisches Ausfüllen aller Flugdetails
+- [x] Boarding Pass Scanner mit Online-Validierung
+- [x] Dark Mode Support für Flight Form
+- [x] Step-by-Step geführter Eingabeprozess
+- [ ] Vielflieger-Meilen Tracking (Future Feature)
 
 ### ✅ 8. Flug-Tags & Kategorien
 - [x] Tag-System implementieren
@@ -177,17 +182,53 @@
 - [ ] Versionierung
 - [ ] Cloud-Sync (optional)
 
+## Phase 5.5: Daten-Anreicherung & Validierung 🆕
+*Automatische Verbesserung der Datenqualität mit kostenlosen Quellen*
+
+### ✅ 16. OpenFlights Airport Database
+- [x] OpenFlights Datenbank-Import (~14.000 Flughäfen)
+- [x] Automatischer Koordinaten-Lookup für IATA/ICAO
+- [x] Automatischer IATA/ICAO-Lookup für Koordinaten
+- [x] Nearest-Airport-Suche (Umkreis-basiert)
+- [x] Airport-Enrichment bei Flug-Erstellung
+- [x] API-Endpunkte für Airport-Suche und -Lookup
+- [x] Duplikat-Vermeidung durch konsistente Daten
+
+**Vorteile:**
+- Löst Problem mit doppelten Markern auf der Karte
+- Automatisches Ausfüllen fehlender Flughafen-Daten
+- Konsistente IATA/ICAO-Codes für alle Flughäfen
+- Komplett kostenlos (keine externen API-Calls)
+- Schnelle lokale Lookups statt langsame externe Abfragen
+
+**Nutzung:**
+```bash
+# Einmalig: OpenFlights-Datenbank importieren
+npm run seed:airports:openflights
+
+# Danach werden alle neuen Flüge automatisch angereichert
+```
+
+### 📊 17. Daten-Validierung & Korrektur
+- [x] Automatische Enrichment-Pipeline in Flug-Erstellung
+- [x] Koordinaten-zu-Airport-Matching (5km Radius)
+- [x] IATA/ICAO-Normalisierung
+- [ ] Batch-Update für bestehende Flüge
+- [ ] Duplikat-Erkennung bei Import
+- [ ] Fuzzy-Matching für Flughafen-Namen
+- [ ] Validierungs-Report für inkonsistente Daten
+
 ## Phase 6: Sharing & Social (Woche 11-12)
 *Teilen und vergleichen mit anderen*
 
-### 🎨 16. Flugkarten-Generator
+### 🎨 18. Flugkarten-Generator
 - [ ] Schöne Share-Grafiken erstellen
 - [ ] Jahresrückblick-Karten
 - [ ] Animierte Routen-Videos
 - [ ] Social Media Templates
 - [ ] Download als PNG/SVG
 
-### 🌐 17. Trip-Zusammenfassung
+### 🌐 19. Trip-Zusammenfassung
 - [ ] Mehrere Flüge zu Reisen gruppieren
 - [ ] Reise-Timeline
 - [ ] Notizen und Fotos zu Reisen
@@ -195,7 +236,7 @@
 - [ ] Multi-Leg-Ketten mit Segment-Details und realistischen Umsteigezeiten
 - [ ] Abo-Benachrichtigungen für neue Routentrends oder Preisalarme
 
-### 👥 18. Freunde-Vergleich (Optional)
+### 👥 20. Freunde-Vergleich (Optional)
 - [ ] Freunde hinzufügen
 - [x] Leaderboards (in Achievement-System vorhanden)
 - [ ] Gemeinsame besuchte Orte
@@ -204,13 +245,13 @@
 ## Phase 7: Mobile & PWA (Woche 13-14)
 *Mobile Optimierung und Offline-Fähigkeit*
 
-### 📱 19. Progressive Web App
+### 📱 21. Progressive Web App
 - [ ] Service Worker für Offline-Funktionalität
 - [ ] App-Installation ermöglichen (manifest.json)
 - [ ] Push-Benachrichtigungen
 - [x] Mobile-optimierte UI (Responsive Design vorhanden)
 
-### 🔔 20. Benachrichtigungen & Countdown
+### 🔔 22. Benachrichtigungen & Countdown
 - [ ] Countdown für nächsten Flug
 - [ ] Check-in Erinnerungen (24h vorher)
 - [ ] Gate-Change Benachrichtigungen
@@ -219,24 +260,24 @@
 ## Phase 8: Qualität, Performance & Insights (kontinuierlich)
 *Querschnittsthemen für Stabilität, Wachstum und Nutzerfeedback*
 
-### 🧭 21. Onboarding & Guided Tour
+### 🧭 23. Onboarding & Guided Tour
 - [ ] Geführtes Tutorial mit Tooltips auf Karten- und Statistikseiten
 - [x] Onboarding-Checklist mit ersten Aktionen (Flug anlegen, Filter nutzen, Export testen)
 - [ ] Demo-Daten-Umschalter für neue Nutzer
 
-### 📈 22. Nutzungs-Analytics
+### 📈 24. Nutzungs-Analytics
 - [x] Ereignis-Tracking für Karten, Filter, Exporte und Routen-Analysen
 - [ ] Dashboard mit Feature-Nutzung zur Roadmap-Priorisierung
 - [x] Opt-in und Anonymisierung für datenschutzkonformes Tracking
 
-### 🚀 23. Performance & Skalierung
+### 🚀 25. Performance & Skalierung
 - [ ] Server-Side-Pagination oder Streaming für große Flugmengen
 - [ ] Caching für häufige Routen-/Statistik-Abfragen (Redis)
 - [ ] Map-Layer-Clustering und Lazy-Loading für Charts/Module
 - [ ] Performance-Regression-Checks in der CI/CD-Pipeline
 - [ ] Stress-Tests für Import/Export, um Konflikte und Inkonsistenzen zu vermeiden
 
-### 🛡️ 24. Sicherheit & Compliance-Erweiterungen
+### 🛡️ 26. Sicherheit & Compliance-Erweiterungen
 - [x] Rate-Limiting im Express-Backend (100 req/15min)
 - [ ] Log-Redaction für sensitive Daten
 - [ ] Frühzeitige Planung für 2FA-Backend, Session-Übersicht und DSGVO-Export/Löschung
@@ -247,25 +288,25 @@
 ## Phase 9: Erweiterte Features (Woche 15+)
 *Nice-to-have Features für Power-User*
 
-### 🔍 25. Smart Search & Erweiterte Filter
+### 🔍 27. Smart Search & Erweiterte Filter
 - [ ] Volltextsuche über alle Felder
 - [x] Kombinierte Filter (Airline, Datum, Status, Tags)
 - [ ] Gespeicherte Suchanfragen
 - [x] Schnellfilter-Chips
 
-### 💺 26. Sitzplatz-Präferenz Tracker
+### 💺 28. Sitzplatz-Präferenz Tracker
 - [ ] Fenster vs. Gang Statistik
 - [ ] Beste Sitzplätze pro Flugzeugtyp
 - [ ] Sitzplan-Integration
 - [ ] Präferenz-Empfehlungen
 
-### 🎯 27. Ziele & Bucket List
+### 🎯 29. Ziele & Bucket List
 - [ ] Wunsch-Destinationen markieren
 - [ ] Fortschritt zu Zielen
 - [ ] Inspiration für neue Ziele
 - [ ] Preisalarme (externe Integration)
 
-### 🩺 28. Wellbeing & Jetlag Insights
+### 🩺 30. Wellbeing & Jetlag Insights
 - [ ] Jetlag- und Schlaf-Score basierend auf Zeitzonenwechseln
 - [ ] Empfehlungen für Schlaf-/Hydrationsfenster vor und nach Flügen
 - [ ] Integration mit bestehenden Zeit- und Distanz-Statistiken
@@ -306,16 +347,16 @@
 ## Priorisierung
 
 **Must Have (MVP+):**
-1, 2, 3, 6, 8, 9, 13, 14, 21, 22, 24
+1, 2, 3, 6, 8, 9, 13, 14, 16, 17, 23, 24, 26
 
 **Should Have:**
-4, 5, 11, 12, 15, 23
+4, 5, 11, 12, 15, 25
 
 **Could Have:**
-7, 10, 16, 17, 18, 19, 20, 25, 26, 27, 28
+7, 10, 18, 19, 20, 22, 27, 28, 29, 30
 
 **Won't Have (Vorerst):**
-CI/CD (0), PWA (19), Social Features (16-18)
+CI/CD (0), PWA (21), Social Features (18-20)
 
 ---
 
@@ -324,6 +365,7 @@ CI/CD (0), PWA (19), Social Features (16-18)
 ### ✅ Vollständig implementiert:
 - Phase 1: Kern-Visualisierungen (100%)
 - Phase 2: Gamification & Achievements (100%)
+- **Phase 5.5: Daten-Anreicherung (100%)** 🎉
 
 ### 🟡 Teilweise implementiert:
 - Phase 3: Praktische Tools (~70% - Einstellungs-UI vorhanden, Backend teilweise)

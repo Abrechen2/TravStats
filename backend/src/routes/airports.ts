@@ -1,6 +1,10 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { prisma } from '../db';
-import { findOrCreateAirport } from '../services/airportLookup';
+import {
+  findOrCreateAirport,
+  findNearestAirport,
+  enrichAirportData
+} from '../services/airportLookup';
 
 const router = Router();
 
@@ -49,6 +53,60 @@ router.get('/:code', async (req: Request, res: Response, next: NextFunction) => 
     }
 
     res.json(airport);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/v1/airports/nearest?lat=50.033&lon=8.570&maxDistance=5
+// Find nearest airport by coordinates
+router.get('/coords/nearest', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const lat = parseFloat(req.query.lat as string);
+    const lon = parseFloat(req.query.lon as string);
+    const maxDistance = req.query.maxDistance
+      ? parseFloat(req.query.maxDistance as string)
+      : 5;
+
+    if (isNaN(lat) || isNaN(lon)) {
+      return res.status(400).json({ error: 'Invalid latitude or longitude' });
+    }
+
+    const airport = await findNearestAirport(lat, lon, maxDistance);
+
+    if (!airport) {
+      return res.status(404).json({
+        error: `No airport found within ${maxDistance}km of coordinates`,
+      });
+    }
+
+    res.json(airport);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /api/v1/airports/enrich
+// Enrich airport data with missing information
+router.post('/enrich', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { iata, icao, lat, lon } = req.body;
+
+    if (!iata && !icao && (lat === undefined || lon === undefined)) {
+      return res.status(400).json({
+        error: 'Provide either IATA, ICAO, or coordinates (lat/lon)',
+      });
+    }
+
+    const enriched = await enrichAirportData({ iata, icao, lat, lon });
+
+    if (!enriched) {
+      return res.status(404).json({
+        error: 'No matching airport found',
+      });
+    }
+
+    res.json(enriched);
   } catch (error) {
     next(error);
   }
