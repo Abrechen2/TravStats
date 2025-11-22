@@ -1,5 +1,15 @@
 # TravStats Feature Roadmap
 
+## Phase 0: Qualitätssicherung & Delivery (vor Woche 1)
+*Legt die Basis für verlässliche Releases und Sicherheitsstandards*
+
+### 🧪 0. CI/CD-Pipeline & Sicherheits-Scans
+- [ ] Pipeline mit Linting, Tests, Type-Checks und Docker-Build
+- [ ] Abhängigkeits-Scanning und Vulnerability-Alerts
+- [ ] Secret- und JWT-Config-Checks (z. B. via Trivy/Gitleaks)
+- [ ] Automatisierte Preview-Deployments für PRs
+
+
 ## Phase 1: Kern-Visualisierungen (Woche 1-2)
 *Erweitert die Statistik-Seite mit wichtigen Kennzahlen*
 
@@ -154,6 +164,7 @@
 - [ ] KML-Export für Google Earth
 - [ ] JSON/CSV Bulk-Import
 - [ ] Import von anderen Apps (TripIt, etc.)
+- [ ] Beta: Frühe JSON/CSV-Import-/Export-Pfade hinter Feature-Flag aktivieren, um Migrationstests zu ermöglichen
 
 ### 💾 15. Backup & Sync
 - [ ] Automatische Backups
@@ -198,22 +209,46 @@
 - [ ] Gate-Change Benachrichtigungen
 - [ ] Flugstatus-Updates
 
-## Phase 8: Erweiterte Features (Woche 15+)
+## Phase 8: Qualität, Performance & Insights (kontinuierlich)
+*Querschnittsthemen für Stabilität, Wachstum und Nutzerfeedback*
+
+### 🧭 21. Onboarding & Guided Tour
+- [ ] Geführtes Tutorial mit Tooltips auf Karten- und Statistikseiten
+- [ ] Onboarding-Checklist mit ersten Aktionen (Flug anlegen, Filter nutzen, Export testen)
+- [ ] Demo-Daten-Umschalter für neue Nutzer
+
+### 📈 22. Nutzungs-Analytics
+- [ ] Ereignis-Tracking für Karten, Filter, Exporte und Routen-Analysen
+- [ ] Dashboard mit Feature-Nutzung zur Roadmap-Priorisierung
+- [ ] Opt-in und Anonymisierung für datenschutzkonformes Tracking
+
+### 🚀 23. Performance & Skalierung
+- [ ] Server-Side-Pagination oder Streaming für große Flugmengen
+- [ ] Caching für häufige Routen-/Statistik-Abfragen
+- [ ] Map-Layer-Clustering und Lazy-Loading für Charts/Module
+- [ ] Performance-Regression-Checks in der CI/CD-Pipeline
+
+### 🛡️ 24. Sicherheit & Compliance-Erweiterungen
+- [ ] Rate-Limiting und Log-Redaction im Express-Backend
+- [ ] Frühzeitige Planung für 2FA, Session-Übersicht und DSGVO-Export/Löschung (Verzahnung mit Phase 3 "Einstellungsseite")
+- [ ] Wiederkehrende Dependency- und Secret-Scans (aufbauend auf Phase 0)
+
+## Phase 9: Erweiterte Features (Woche 15+)
 *Nice-to-have Features für Power-User*
 
-### 🔍 21. Smart Search & Erweiterte Filter
+### 🔍 25. Smart Search & Erweiterte Filter
 - [ ] Volltextsuche über alle Felder
 - [ ] Kombinierte Filter
 - [ ] Gespeicherte Suchanfragen
 - [ ] Schnellfilter-Chips
 
-### 💺 22. Sitzplatz-Präferenz Tracker
+### 💺 26. Sitzplatz-Präferenz Tracker
 - [ ] Fenster vs. Gang Statistik
 - [ ] Beste Sitzplätze pro Flugzeugtyp
 - [ ] Sitzplan-Integration
 - [ ] Präferenz-Empfehlungen
 
-### 🎯 23. Ziele & Bucket List
+### 🎯 27. Ziele & Bucket List
 - [ ] Wunsch-Destinationen markieren
 - [ ] Fortschritt zu Zielen
 - [ ] Inspiration für neue Ziele
@@ -254,16 +289,16 @@
 ## Priorisierung
 
 **Must Have (MVP+):**
-1, 2, 3, 6, 8, 9, 14
+1, 2, 3, 6, 8, 9, 14, 21, 22, 23, 24
 
 **Should Have:**
-4, 5, 7, 10, 11, 13, 15
+4, 5, 7, 10, 11, 13, 15, 19, 20
 
 **Could Have:**
-12, 16, 17, 19, 20, 21, 22
+12, 16, 17, 18, 25, 26, 27
 
 **Won't Have (Vorerst):**
-18, 23
+-
 
 ---
 
