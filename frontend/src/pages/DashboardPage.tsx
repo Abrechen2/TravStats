@@ -33,6 +33,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [is3DView, setIs3DView] = useState(true);
   const importInputRef = useRef<HTMLInputElement | null>(null);
+  const [leftOpen, setLeftOpen] = useState(false);
+  const [rightOpen, setRightOpen] = useState(false);
   const [onboarding, setOnboarding] = useState(() => {
     const saved = localStorage.getItem('onboarding-checklist');
     return saved
@@ -92,6 +94,20 @@ export default function DashboardPage() {
   useEffect(() => {
     localStorage.setItem('onboarding-checklist', JSON.stringify(onboarding));
   }, [onboarding]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+      setLeftOpen(true);
+      setRightOpen(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+      setLeftOpen(true);
+      setRightOpen(true);
+    }
+  }, []);
 
   const loadFlights = async () => {
     try {
@@ -395,9 +411,9 @@ export default function DashboardPage() {
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Left Sidebar - Flights List */}
-        <div className="w-96 bg-white dark:bg-gray-800 border-r dark:border-gray-700 flex flex-col">
+        <div className={`${leftOpen ? 'flex' : 'hidden lg:flex'} w-full lg:w-96 bg-white dark:bg-gray-800 border-b lg:border-r dark:border-gray-700 flex-col`}>
           <div className="p-4 border-b dark:border-gray-700">
             <button onClick={() => setShowFlightForm(true)} className="btn-primary w-full">
               + Add Flight
@@ -475,6 +491,22 @@ export default function DashboardPage() {
         {/* Center - Map & Roadmap MVP highlights */}
         <div className="flex-1 p-4 flex flex-col gap-4 min-w-0 overflow-auto">
           <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setLeftOpen(prev => !prev)}
+                className="p-2 text-sm font-semibold bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-full shadow-sm flex items-center gap-1"
+                title={leftOpen ? 'Liste ausblenden' : 'Liste anzeigen'}
+              >
+                <span className="text-gray-600 dark:text-gray-300">{leftOpen ? '<' : '>'}</span>
+              </button>
+              <button
+                onClick={() => setRightOpen(prev => !prev)}
+                className="p-2 text-sm font-semibold bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-full shadow-sm flex items-center gap-1"
+                title={rightOpen ? 'Stats ausblenden' : 'Stats anzeigen'}
+              >
+                <span className="text-gray-600 dark:text-gray-300">{rightOpen ? '>' : '<'}</span>
+              </button>
+            </div>
             <div>
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Flugkarte</h2>
               <p className="text-sm text-gray-600 dark:text-gray-300">
@@ -546,7 +578,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Right Sidebar - Stats */}
-        <div className="w-80 bg-white dark:bg-gray-800 border-l dark:border-gray-700 overflow-y-auto p-4">
+        <div className={`${rightOpen ? 'block' : 'hidden lg:block'} ${rightOpen ? "block" : "hidden lg:block"} w-full lg:w-80 bg-white dark:bg-gray-800 border-t lg:border-l dark:border-gray-700 overflow-y-auto p-4`}>
           <h2 className="text-xl font-bold mb-4 dark:text-white">Statistics</h2>
           <ErrorBoundary>
             <Stats />
@@ -574,3 +606,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+
