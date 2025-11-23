@@ -11,13 +11,13 @@
 
 
 ### Hotfixes (ASAP)
-- [ ] Backend startet nicht: Merge-Konflikte in `backend/src/routes/flights.ts` und `backend/src/services/flightLookup.ts` bereinigen, Flight-Lookup-Endpoint vereinheitlichen (Aviationstack vs. AirLabs) und Rate-Limiter wieder aktivieren.
-- [ ] Auth mobil: API-Basis-URL für LAN-Zugriff konfigurierbar/relativ machen (`frontend/src/lib/api.ts`) und CORS/SameSite für mobile Clients anpassen.
-- [ ] Achievements: `checkAndUpdateAchievements` so anpassen, dass nur freigeschaltete Achievements Persistenz erzeugen (neue Nutzer starten sonst vollständig freigeschaltet).
-- [ ] Add-Flight-Flow: Simplified-Form-Komponenten ohne Konflikte bauen, Lookup-Flow (V2) gegen den aktiven Endpoint testen und automatisierten Happy-Path-Test ergänzen.
-- [ ] 3D-Marker: Dedup primär über IATA/ICAO (Fallback Koordinaten) und 0/0-Koordinaten filtern, um gestapelte Marker zu vermeiden (`frontend/src/components/GlobeView.tsx`).
-- [ ] Build-Smoketest: Kurzen `npm run build`/`npm run test`-Smoke-Check in README/CI ergänzen, damit Backend/Frontend-Breaks sofort auffallen.
-
+- [x] Backend startet nicht: Merge-Konflikte in `backend/src/routes/flights.ts` und `backend/src/services/flightLookup.ts` bereinigen, Flight-Lookup-Endpoint vereinheitlichen (Aviationstack vs. AirLabs) und Rate-Limiter wieder aktivieren.
+- [ ] Auth mobil: API-Basis-URL fuer LAN-Zugriff konfigurierbar/relativ machen (`frontend/src/lib/api.ts`) und CORS/SameSite fuer mobile Clients anpassen. (Basis-URL/CORS/SameSite umgesetzt, Live-Test auf Geraeten offen)
+- [x] Achievements: `checkAndUpdateAchievements` so anpassen, dass nur freigeschaltete Achievements Persistenz erzeugen (neue Nutzer starten sonst vollstaendig freigeschaltet).
+- [ ] Add-Flight-Flow: Simplified-Form-Komponenten ohne Konflikte bauen, Lookup-Flow (V2) gegen den aktiven Endpoint testen und automatisierten Happy-Path-Test ergaenzen. (Konflikte behoben, Lookup/E2E-Tests fehlen)
+- [x] 3D-Marker: Dedup primaer ueber IATA/ICAO (Fallback Koordinaten) und 0/0-Koordinaten filtern, um gestapelte Marker zu vermeiden (`frontend/src/components/GlobeView.tsx`).
+- [x] Build-Smoketest: Kurzen `npm run build`/`npm run test`-Smoke-Check in README/CI ergaenzen, damit Backend/Frontend-Breaks sofort auffallen.
+- [ ] OpenSky OAuth: Flight-Endpunkt liefert 404 trotz gueltigem Token (Client-Credentials). Korrekte OAuth-Flight-URL recherchieren oder States/Tracks-Fallback bauen, damit OpenSky als Free-Fallback funktioniert.
 ## Phase 1: Kern-Visualisierungen (Woche 1-2)
 *Erweitert die Statistik-Seite mit wichtigen Kennzahlen*
 
@@ -212,6 +212,14 @@
 - [x] Import/Export aller Daten (CSV, GeoJSON, KML)
 - [ ] Versionierung
 - [ ] Cloud-Sync (optional)
+
+### Neue Importquelle: Buchungsbestaetigungs-Mail
+- [ ] E-Mail-Weiterleitung an Server (dedizierte Inbox/Webhook) und MIME-Parser, der PNR/LOC, Name, Airline, Flugnummer, Datum/Zeit, Airports, Sitz/Terminal/Gate, Preis/PNR extrahiert.
+- [ ] Nutzer-Zuordnung via Custom Weiterleitungsadresse für jeden Nutzer ; automatisch einen Flug-Entwurf mit den gefundenen Feldern erzeugen.
+- [ ] UI-Preview: Zur Kontrolle in sonder Bereich Speichern, beim nächsten öffen dann zur review auffordern mit Popup fenster dann fehlende Felder markieren, manuell nachpflegen lassen, erst danach final speichern.
+
+
+
 
 ## Phase 5.5: Daten-Anreicherung & Validierung 🆕
 *Automatische Verbesserung der Datenqualität mit kostenlosen Quellen*

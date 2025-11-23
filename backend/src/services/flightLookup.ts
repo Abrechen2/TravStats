@@ -23,6 +23,9 @@ const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours for historical flights
 const RECENT_CACHE_TTL = 30 * 60 * 1000; // 30 minutes for recent/future flights
 const flightCache: FlightLookupCache = {};
 
+// OpenSky token cache
+let openSkyTokenCache: { token: string; expiresAt: number } | null = null;
+
 export interface FlightData {
   flightNumber: string;
   airline: string;
@@ -107,15 +110,15 @@ export async function lookupFlightByNumber(
 
     const flights: FlightData[] = response.data.response.map((flight: any) => ({
       flightNumber: flight.flight_iata || flightNumber,
-      airline: flight.airline_name || 'Unknown',
+      airline: flight.airline_name || getAirlineName(flight.airline_iata || '') || flight.airline_icao || 'Unknown',
       airlineIata: flight.airline_iata,
       airlineIcao: flight.airline_icao,
       departure: {
         iata: flight.dep_iata,
         icao: flight.dep_icao,
         name: flight.dep_name,
-        scheduledTime: flight.dep_time,
-        actualTime: flight.dep_actual,
+        scheduledTime: flight.dep_time_utc || flight.dep_time,
+        actualTime: flight.dep_actual_utc || flight.dep_actual,
         terminal: flight.dep_terminal,
         gate: flight.dep_gate,
       },
@@ -123,8 +126,8 @@ export async function lookupFlightByNumber(
         iata: flight.arr_iata,
         icao: flight.arr_icao,
         name: flight.arr_name,
-        scheduledTime: flight.arr_time,
-        actualTime: flight.arr_actual,
+        scheduledTime: flight.arr_time_utc || flight.arr_time,
+        actualTime: flight.arr_actual_utc || flight.arr_actual,
         terminal: flight.arr_terminal,
         gate: flight.arr_gate,
       },
@@ -163,6 +166,61 @@ export interface FlightLookupResult {
   arrivalTime?: string;
 }
 
+/**
+ * Resolve OpenSky auth headers (prefers OAuth2 client credentials, falls back to basic)
+ */
+async function getOpenSkyAuthHeaders(opts: {
+  clientId?: string;
+  clientSecret?: string;
+  user?: string;
+  pass?: string;
+}): Promise<Record<string, string> | null> {
+  // OAuth2 client credentials
+  if (opts.clientId && opts.clientSecret) {
+    const now = Date.now();
+    if (openSkyTokenCache && openSkyTokenCache.expiresAt > now + 30_000) {
+      return { Authorization: `Bearer ${openSkyTokenCache.token}` };
+    }
+
+    try {
+      const params = new URLSearchParams({
+        grant_type: 'client_credentials',
+        client_id: opts.clientId,
+        client_secret: opts.clientSecret,
+      });
+
+      const response = await axios.post(
+        'https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token',
+        params.toString(),
+        {
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          timeout: 5000,
+        }
+      );
+
+      const token = response.data?.access_token as string | undefined;
+      const expiresIn = response.data?.expires_in as number | undefined;
+      if (token) {
+        const ttl = expiresIn ? expiresIn * 1000 : 30 * 60 * 1000; // default 30min
+        openSkyTokenCache = { token, expiresAt: Date.now() + ttl };
+        return { Authorization: `Bearer ${token}` };
+      }
+    } catch (err) {
+      console.warn('OpenSky OAuth token fetch failed', err instanceof Error ? err.message : err);
+      // fallback to basic if provided
+    }
+  }
+
+  // Basic auth fallback
+  if (opts.user && opts.pass) {
+    const pair = `${opts.user}:${opts.pass}`;
+    const b64 = Buffer.from(pair).toString('base64');
+    return { Authorization: `Basic ${b64}` };
+  }
+
+  return null;
+}
+
 export async function lookupFlightDetails(
   flightNumber: string,
   date?: string
@@ -170,23 +228,35 @@ export async function lookupFlightDetails(
   const trimmedNumber = flightNumber.trim();
   if (!trimmedNumber) return null;
 
+  // Optional OpenSky credentials (supports token and basic)
+  const openSkyUser = process.env.OPENSKY_USERNAME;
+  const openSkyPass = process.env.OPENSKY_PASSWORD;
+  const openSkyClientId = process.env.OPENSKY_CLIENT_ID;
+  const openSkyClientSecret = process.env.OPENSKY_CLIENT_SECRET;
+
   // Prefer Aviationstack if configured
   const aviationstackKey = process.env.AVIATIONSTACK_API_KEY;
   if (aviationstackKey) {
-    const params = new URLSearchParams({ access_key: aviationstackKey, limit: '1' });
+    // API docs: https://docs.apilayer.com/aviationstack/docs/endpoints#flights
+    // Use HTTPS + params to avoid signature/order issues
+    const params: Record<string, string> = {
+      access_key: aviationstackKey,
+      limit: '1',
+    };
     if (/^[A-Za-z]{2}\d+/.test(trimmedNumber)) {
-      params.set('flight_iata', trimmedNumber);
+      params.flight_iata = trimmedNumber;
     } else {
-      params.set('flight_icao', trimmedNumber);
+      params.flight_icao = trimmedNumber;
     }
     if (date) {
-      params.set('flight_date', date);
+      params.flight_date = date;
     }
 
-    const url = `http://api.aviationstack.com/v1/flights?${params.toString()}`;
-
     try {
-      const response = await axios.get(url, { timeout: 6000 });
+      const response = await axios.get('https://api.aviationstack.com/v1/flights', {
+        params,
+        timeout: 6000,
+      });
       const json: any = response.data;
       const result = json.data?.[0];
 
@@ -217,7 +287,19 @@ export async function lookupFlightDetails(
   // Fallback to AirLabs
   const fallbackDate = date ? new Date(date) : undefined;
   const flights = await lookupFlightByNumber(trimmedNumber, fallbackDate);
-  if (!flights.length) return null;
+
+  if (!flights.length) {
+    // Try OpenSky as last resort (requires credentials)
+    const openSkyAuth = await getOpenSkyAuthHeaders({
+      clientId: openSkyClientId,
+      clientSecret: openSkyClientSecret,
+      user: openSkyUser,
+      pass: openSkyPass,
+    });
+    const openSky = await lookupOpenSkyFlight(trimmedNumber, date, openSkyAuth);
+    if (openSky) return openSky;
+    return null;
+  }
 
   const first = flights[0];
   const departureCode = first.departure.iata || first.departure.icao;
@@ -229,7 +311,7 @@ export async function lookupFlightDetails(
   ]);
 
   return {
-    airline: first.airline || (first.airlineIata ? getAirlineName(first.airlineIata) || undefined : undefined),
+    airline: first.airline || (first.airlineIata ? getAirlineName(first.airlineIata) || undefined : undefined) || first.airlineIcao,
     flightNumber: first.flightNumber,
     aircraft: first.aircraft || first.aircraftIcao,
     departure: departureAirport || undefined,
@@ -237,6 +319,47 @@ export async function lookupFlightDetails(
     departureTime: first.departure.scheduledTime || first.departure.actualTime,
     arrivalTime: first.arrival.scheduledTime || first.arrival.actualTime,
   };
+}
+
+/**
+ * Very lightweight OpenSky fallback (requires optional OPENSKY_USERNAME/PASSWORD)
+ * Only works for recent flights and provides limited fields.
+ */
+async function lookupOpenSkyFlight(
+  flightNumber: string,
+  date?: string,
+  authHeaders?: Record<string, string>
+): Promise<FlightLookupResult | null> {
+  if (!authHeaders) return null;
+
+  const callsign = flightNumber.toUpperCase();
+  const baseDate = date ? new Date(date) : new Date();
+  const begin = Math.floor(baseDate.setHours(0, 0, 0, 0) / 1000);
+  const end = begin + 24 * 60 * 60;
+
+  try {
+    const url = `https://opensky-network.org/api/flights/callsign?callsign=${callsign}&begin=${begin}&end=${end}`;
+    const response = await axios.get(url, { timeout: 6000, headers: authHeaders });
+    const result = (response.data as any[])[0];
+    if (!result) return null;
+
+    const [departureAirport, arrivalAirport] = await Promise.all([
+      result.estDepartureAirport ? findOrCreateAirport(result.estDepartureAirport) : Promise.resolve(null),
+      result.estArrivalAirport ? findOrCreateAirport(result.estArrivalAirport) : Promise.resolve(null),
+    ]);
+
+    return {
+      airline: getAirlineName(callsign.slice(0, 2)) || undefined,
+      flightNumber: callsign.trim(),
+      departure: departureAirport || undefined,
+      arrival: arrivalAirport || undefined,
+      departureTime: result.firstSeen ? new Date(result.firstSeen * 1000).toISOString() : undefined,
+      arrivalTime: result.lastSeen ? new Date(result.lastSeen * 1000).toISOString() : undefined,
+    };
+  } catch (err) {
+    console.warn('OpenSky fallback failed', err instanceof Error ? err.message : err);
+    return null;
+  }
 }
 
 /**

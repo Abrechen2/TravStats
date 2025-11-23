@@ -170,18 +170,23 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
       setTerminal(flight.departure.terminal || '');
       setGate(flight.departure.gate || '');
 
-      // Parse times
-      if (flight.departure.scheduledTime) {
-        const depTime = new Date(flight.departure.scheduledTime);
-        setDepartureDate(depTime.toISOString().split('T')[0]);
-        setDepartureTime(depTime.toTimeString().slice(0, 5));
-      }
+      const applyDateTime = (value?: string, setters?: { setDate: (v: string) => void; setTime: (v: string) => void }) => {
+        if (!value || !setters) return;
+        const match = value.match(/^(\d{4}-\d{2}-\d{2})[T ]?(\d{2}:\d{2})?/);
+        if (match) {
+          if (match[1]) setters.setDate(match[1]);
+          if (match[2]) setters.setTime(match[2]);
+          return;
+        }
+        const parsed = new Date(value);
+        if (!Number.isNaN(parsed.getTime())) {
+          setters.setDate(parsed.toISOString().split('T')[0]);
+          setters.setTime(parsed.toTimeString().slice(0, 5));
+        }
+      };
 
-      if (flight.arrival.scheduledTime) {
-        const arrTime = new Date(flight.arrival.scheduledTime);
-        setArrivalDate(arrTime.toISOString().split('T')[0]);
-        setArrivalTime(arrTime.toTimeString().slice(0, 5));
-      }
+      applyDateTime(flight.departure.scheduledTime, { setDate: setDepartureDate, setTime: setDepartureTime });
+      applyDateTime(flight.arrival.scheduledTime, { setDate: setArrivalDate, setTime: setArrivalTime });
 
       setStep('complete');
     } catch (err) {
@@ -258,12 +263,16 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
 
       if (carrierCode && bcbpData.flightNumber) {
         setFlightNumber(scannedFlightNumber);
-        setAirline(getAirlineName(carrierCode) || carrierCode);
+        setAirline(bcbpData.airlineName || getAirlineName(carrierCode) || carrierCode);
       }
 
       if (bcbpData.flightDate) {
         const date = new Date(bcbpData.flightDate);
         setDepartureDate(date.toISOString().split('T')[0]);
+      }
+
+      if (bcbpData.seatClass) {
+        setSeatClass(bcbpData.seatClass);
       }
 
       setStep('complete');
