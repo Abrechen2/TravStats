@@ -4,11 +4,16 @@ export interface User {
 }
 
 export interface Airport {
+  id?: number;
   icao?: string;
   iata?: string;
   name?: string;
+  city?: string | null;
+  country?: string | null;
   lat: number;
   lon: number;
+  altitude?: number | null;
+  timezone?: string | null;
 }
 
 export interface Flight {
@@ -52,8 +57,8 @@ export interface Flight {
 }
 
 export interface FlightInput {
-  airline: string;
-  flightNumber: string;
+  airline?: string;
+  flightNumber?: string;
   callsign?: string;
   aircraft?: string;
   departure: Airport;
@@ -77,6 +82,16 @@ export interface FlightInput {
   category?: 'business' | 'private' | 'vacation';
   tags?: string[];
   receiptUrl?: string;
+}
+
+export interface FlightLookupResult {
+  airline?: string;
+  flightNumber?: string;
+  aircraft?: string;
+  departure?: Airport;
+  arrival?: Airport;
+  departureTime?: string;
+  arrivalTime?: string;
 }
 
 export interface FlightFilters {

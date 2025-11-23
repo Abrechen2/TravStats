@@ -7,11 +7,36 @@ import { calculateDistance, generateArcPoints } from '../utils/geo';
 import { checkAndUpdateAchievements } from '../utils/achievements';
 import { enrichFlightAirports } from '../services/airportLookup';
 import { flightCreationLimiter } from '../middleware/rateLimit';
+import { lookupFlightDetails } from '../services/flightLookup';
 
 const router = Router();
 
 // All routes require authentication
 router.use(authenticate);
+
+// Lookup flight details from external providers
+router.get('/lookup', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { flightNumber, date } = req.query;
+
+    if (!flightNumber || typeof flightNumber !== 'string') {
+      return res.status(400).json({ error: 'flightNumber is required' });
+    }
+
+    const lookup = await lookupFlightDetails(
+      flightNumber,
+      typeof date === 'string' ? date : undefined
+    );
+
+    if (!lookup) {
+      return res.status(404).json({ error: 'No flight data found' });
+    }
+
+    res.json(lookup);
+  } catch (error) {
+    next(error);
+  }
+});
 
 // Create flight (rate limited to prevent abuse)
 router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
