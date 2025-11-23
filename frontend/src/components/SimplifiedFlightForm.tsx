@@ -5,6 +5,7 @@ import BoardingPassScanner from './BoardingPassScanner';
 import { BoardingPassData, getAirlineName } from '../lib/bcbpParser';
 import type { FlightInput, FlightLookupResult } from '../types';
 import { useSettingsStore } from '../store/settingsStore';
+import type { FlightInput, FlightLookupResult } from '../types';
 
 interface SimplifiedFlightFormProps {
   onSubmit: (flight: FlightInput) => Promise<void>;
