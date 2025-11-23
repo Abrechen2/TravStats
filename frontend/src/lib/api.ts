@@ -9,7 +9,8 @@ import type {
   GeoJSONFeatureCollection,
   AchievementsResponse,
   UserAchievement,
-  LeaderboardEntry
+  LeaderboardEntry,
+  FlightLookupResult
 } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -87,6 +88,11 @@ export const flightsApi = {
   delete: async (id: string) => {
     await api.delete(`/flights/${id}`);
   },
+
+  lookup: async (params: { flightNumber: string; date?: string }) => {
+    const { data } = await api.get<FlightLookupResult>('/flights/lookup', { params });
+    return data;
+  },
 };
 
 // Stats API
@@ -106,7 +112,7 @@ export const statsApi = {
 
 // Airport API
 export interface Airport {
-  id: number;
+  id?: number;
   iata?: string;
   icao?: string;
   name: string;
