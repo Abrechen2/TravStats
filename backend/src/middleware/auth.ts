@@ -13,13 +13,20 @@ export const authenticate = (
   next: NextFunction
 ) => {
   try {
-    const authHeader = req.headers.authorization;
+    let token: string | undefined;
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new AppError('No token provided', 401);
+    // Try to get token from cookie first (preferred method - more secure)
+    if (req.cookies && req.cookies.auth_token) {
+      token = req.cookies.auth_token;
+    }
+    // Fallback to Authorization header for backwards compatibility
+    else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+      token = req.headers.authorization.substring(7);
     }
 
-    const token = authHeader.substring(7);
+    if (!token) {
+      throw new AppError('No token provided', 401);
+    }
 
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
     req.userId = decoded.userId;

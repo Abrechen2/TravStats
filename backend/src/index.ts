@@ -3,11 +3,16 @@ import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
+import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth';
 import flightRoutes from './routes/flights';
+import flightLookupRoutes from './routes/flightLookup';
 import statsRoutes from './routes/stats';
 import airportRoutes from './routes/airports';
 import achievementRoutes from './routes/achievements';
+import settingsRoutes from './routes/settings';
+import analyticsRoutes from './routes/analytics';
+import uploadsRoutes from './routes/uploads';
 import { errorHandler } from './middleware/errorHandler';
 import { prisma } from './db';
 import { DATABASE_URL } from './utils/database';
@@ -41,6 +46,9 @@ app.use('/api/', limiter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Cookie parsing (for HttpOnly JWT cookies)
+app.use(cookieParser());
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -49,9 +57,13 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/flights', flightRoutes);
+app.use('/api/v1/flight-lookup', flightLookupRoutes);
 app.use('/api/v1/stats', statsRoutes);
 app.use('/api/v1/airports', airportRoutes);
 app.use('/api/v1/achievements', achievementRoutes);
+app.use('/api/v1/settings', settingsRoutes);
+app.use('/api/v1/analytics', analyticsRoutes);
+app.use('/api/v1/uploads', uploadsRoutes);
 
 // Error handling
 app.use(errorHandler);

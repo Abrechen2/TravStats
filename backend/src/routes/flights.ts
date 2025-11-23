@@ -5,6 +5,8 @@ import { createFlightSchema, updateFlightSchema, flightQuerySchema } from '../sc
 import { AppError } from '../middleware/errorHandler';
 import { calculateDistance, generateArcPoints } from '../utils/geo';
 import { checkAndUpdateAchievements } from '../utils/achievements';
+import { enrichFlightAirports } from '../services/airportLookup';
+import { flightCreationLimiter } from '../middleware/rateLimit';
 import { lookupFlightDetails } from '../services/flightLookup';
 
 const router = Router();
@@ -12,6 +14,8 @@ const router = Router();
 // All routes require authentication
 router.use(authenticate);
 
+// Create flight (rate limited to prevent abuse)
+router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
 // Lookup flight details from external providers (Aviationstack)
 router.get('/lookup', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -42,6 +46,24 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
     const userId = req.userId!;
     const data = createFlightSchema.parse(req.body);
 
+    // Enrich airport data with missing information from database
+    const enriched = await enrichFlightAirports({
+      departure: {
+        iata: data.departure.iata,
+        icao: data.departure.icao,
+        name: data.departure.name,
+        lat: data.departure.lat,
+        lon: data.departure.lon,
+      },
+      arrival: {
+        iata: data.arrival.iata,
+        icao: data.arrival.icao,
+        name: data.arrival.name,
+        lat: data.arrival.lat,
+        lon: data.arrival.lon,
+      },
+    });
+
     const flight = await prisma.flight.create({
       data: {
         userId,
@@ -49,20 +71,29 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
         flightNumber: data.flightNumber,
         callsign: data.callsign,
         aircraft: data.aircraft,
-        depIcao: data.departure.icao,
-        depIata: data.departure.iata,
-        depName: data.departure.name,
-        depLat: data.departure.lat,
-        depLon: data.departure.lon,
-        arrIcao: data.arrival.icao,
-        arrIata: data.arrival.iata,
-        arrName: data.arrival.name,
-        arrLat: data.arrival.lat,
-        arrLon: data.arrival.lon,
+        // Use enriched departure data (fills in missing IATA/ICAO/names)
+        depIcao: enriched.departure.icao,
+        depIata: enriched.departure.iata,
+        depName: enriched.departure.name,
+        depLat: enriched.departure.lat,
+        depLon: enriched.departure.lon,
+        // Use enriched arrival data (fills in missing IATA/ICAO/names)
+        arrIcao: enriched.arrival.icao,
+        arrIata: enriched.arrival.iata,
+        arrName: enriched.arrival.name,
+        arrLat: enriched.arrival.lat,
+        arrLon: enriched.arrival.lon,
         departureTime: new Date(data.departureTime),
         arrivalTime: new Date(data.arrivalTime),
         status: data.status,
         notes: data.notes,
+        price: data.price,
+        taxes: data.taxes,
+        fees: data.fees,
+        currency: data.currency,
+        category: data.category,
+        tags: data.tags ?? [],
+        receiptUrl: data.receiptUrl,
         ticketPrice: data.ticketPrice,
         currency: data.currency,
         category: data.category,
@@ -87,7 +118,14 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
 router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
-    const query = flightQuerySchema.parse(req.query);
+    const parsedQuery = flightQuerySchema.parse(req.query);
+
+    const tagsArray =
+      typeof parsedQuery.tags === 'string'
+        ? parsedQuery.tags.split(',').map(t => t.trim()).filter(Boolean)
+        : parsedQuery.tags;
+
+    const query = { ...parsedQuery, tags: tagsArray };
 
     const where: any = { userId };
 
@@ -99,6 +137,17 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
     }
     if (query.status) {
       where.status = query.status;
+    }
+    if (query.category) {
+      where.category = query.category;
+    }
+    if (query.tags && query.tags.length > 0) {
+      where.tags = { hasEvery: query.tags };
+    }
+    if (query.minPrice || query.maxPrice) {
+      where.price = {};
+      if (query.minPrice !== undefined) where.price.gte = query.minPrice;
+      if (query.maxPrice !== undefined) where.price.lte = query.maxPrice;
     }
     if (query.fromDate || query.toDate) {
       where.departureTime = {};
@@ -135,7 +184,13 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
 router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
-    const query = flightQuerySchema.parse(req.query);
+    const parsedQuery = flightQuerySchema.parse(req.query);
+    const tagsArray =
+      typeof parsedQuery.tags === 'string'
+        ? parsedQuery.tags.split(',').map(t => t.trim()).filter(Boolean)
+        : parsedQuery.tags;
+
+    const query = { ...parsedQuery, tags: tagsArray };
 
     const where: any = { userId };
 
@@ -147,6 +202,17 @@ router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) =
     }
     if (query.status) {
       where.status = query.status;
+    }
+    if (query.category) {
+      where.category = query.category;
+    }
+    if (query.tags && query.tags.length > 0) {
+      where.tags = { hasEvery: query.tags };
+    }
+    if (query.minPrice || query.maxPrice) {
+      where.price = {};
+      if (query.minPrice !== undefined) where.price.gte = query.minPrice;
+      if (query.maxPrice !== undefined) where.price.lte = query.maxPrice;
     }
     if (query.fromDate || query.toDate) {
       where.departureTime = {};
@@ -192,6 +258,12 @@ router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) =
           departureTime: flight.departureTime,
           arrivalTime: flight.arrivalTime,
           status: flight.status,
+          category: flight.category,
+          tags: flight.tags || [],
+          price: flight.price,
+          currency: flight.currency,
+          taxes: flight.taxes,
+          fees: flight.fees,
           distance: calculateDistance(
             flight.depLat,
             flight.depLon,
@@ -258,6 +330,13 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     if (data.aircraft !== undefined) updateData.aircraft = data.aircraft;
     if (data.status) updateData.status = data.status;
     if (data.notes !== undefined) updateData.notes = data.notes;
+    if (data.price !== undefined) updateData.price = data.price;
+    if (data.taxes !== undefined) updateData.taxes = data.taxes;
+    if (data.fees !== undefined) updateData.fees = data.fees;
+    if (data.currency !== undefined) updateData.currency = data.currency;
+    if (data.category !== undefined) updateData.category = data.category;
+    if (data.tags !== undefined) updateData.tags = data.tags;
+    if (data.receiptUrl !== undefined) updateData.receiptUrl = data.receiptUrl;
     if (data.ticketPrice !== undefined) updateData.ticketPrice = data.ticketPrice;
     if (data.currency !== undefined) updateData.currency = data.currency;
     if (data.category) updateData.category = data.category;
