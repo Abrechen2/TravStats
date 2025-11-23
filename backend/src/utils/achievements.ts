@@ -31,8 +31,8 @@ export async function checkAndUpdateAchievements(userId: string) {
     where: { userId },
   });
 
-  const existingAchievementIds = new Set(
-    existingAchievements.map(ua => ua.achievementId)
+  const existingAchievementMap = new Map(
+    existingAchievements.map(ua => [ua.achievementId, ua])
   );
 
   // Get user's flights
@@ -48,41 +48,43 @@ export async function checkAndUpdateAchievements(userId: string) {
   const newlyUnlocked = [];
 
   for (const achievement of allAchievements) {
-    // Skip if already unlocked
-    if (existingAchievementIds.has(achievement.id)) {
+    const existing = existingAchievementMap.get(achievement.id);
+    const alreadyUnlocked =
+      existing && existing.progress >= achievement.requirement;
+
+    if (alreadyUnlocked) {
       continue;
     }
 
     const { isUnlocked, progress } = checkAchievement(achievement, stats, flights);
 
     if (isUnlocked) {
-      // Unlock achievement
-      const userAchievement = await prisma.userAchievement.create({
-        data: {
-          userId,
-          achievementId: achievement.id,
-          progress: achievement.requirement,
-        },
-        include: { achievement: true },
-      });
-      newlyUnlocked.push(userAchievement);
-    } else {
-      // Update progress (even if not unlocked)
-      await prisma.userAchievement.upsert({
-        where: {
-          userId_achievementId: {
+      if (existing) {
+        const updated = await prisma.userAchievement.update({
+          where: { id: existing.id },
+          data: {
+            progress: achievement.requirement,
+            unlockedAt: new Date(),
+          },
+          include: { achievement: true },
+        });
+        newlyUnlocked.push(updated);
+      } else {
+        const userAchievement = await prisma.userAchievement.create({
+          data: {
             userId,
             achievementId: achievement.id,
+            progress: achievement.requirement,
           },
-        },
-        create: {
-          userId,
-          achievementId: achievement.id,
-          progress,
-        },
-        update: {
-          progress,
-        },
+          include: { achievement: true },
+        });
+        newlyUnlocked.push(userAchievement);
+      }
+    } else if (existing) {
+      // Update progress only for existing rows; avoid creating rows for locked achievements
+      await prisma.userAchievement.update({
+        where: { id: existing.id },
+        data: { progress },
       });
     }
   }
