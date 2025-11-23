@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { settingsApi } from '../lib/api';
 
 type ThemePreference = 'light' | 'dark';
 type LanguagePreference = 'de' | 'en';
@@ -69,6 +70,7 @@ export interface PrivacySettings {
   loginAlerts: boolean;
   dataExportRequested: boolean;
   accountDeletionRequested: boolean;
+  analyticsOptIn?: boolean;
 }
 
 export interface BackupSettings {
@@ -96,9 +98,14 @@ export interface SettingsState {
   setPrivacy: SettingsUpdater<PrivacySettings>;
   setBackup: SettingsUpdater<BackupSettings>;
   resetSettings: () => void;
+  loadRemoteSettings: () => Promise<void>;
+  saveRemoteSettings: () => Promise<void>;
 }
 
-const defaultSettings: Omit<SettingsState, keyof SettingsUpdater<any> | 'resetSettings'> = {
+const defaultSettings: Omit<
+  SettingsState,
+  keyof SettingsUpdater<any> | 'resetSettings' | 'loadRemoteSettings' | 'saveRemoteSettings'
+> = {
   profile: {
     username: 'Traveler',
     email: 'traveler@example.com',
@@ -139,6 +146,7 @@ const defaultSettings: Omit<SettingsState, keyof SettingsUpdater<any> | 'resetSe
     loginAlerts: true,
     dataExportRequested: false,
     accountDeletionRequested: false,
+    analyticsOptIn: false,
   },
   backup: {
     autoBackup: false,
@@ -150,7 +158,7 @@ const defaultSettings: Omit<SettingsState, keyof SettingsUpdater<any> | 'resetSe
 
 export const useSettingsStore = create<SettingsState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       ...defaultSettings,
       setProfile: (updates) =>
         set((state) => ({
@@ -185,6 +193,27 @@ export const useSettingsStore = create<SettingsState>()(
           backup: { ...state.backup, ...updates },
         })),
       resetSettings: () => set(defaultSettings),
+      loadRemoteSettings: async () => {
+        try {
+          const remote = await settingsApi.get();
+          if (remote) {
+            set((state) => ({
+              ...state,
+              ...remote,
+            }));
+          }
+        } catch (error) {
+          console.warn('Failed to load remote settings, using local defaults', error);
+        }
+      },
+      saveRemoteSettings: async () => {
+        try {
+          const { resetSettings, loadRemoteSettings, saveRemoteSettings, ...rest } = get();
+          await settingsApi.update(rest);
+        } catch (error) {
+          console.warn('Failed to save settings remotely', error);
+        }
+      },
     }),
     {
       name: 'settings-storage',

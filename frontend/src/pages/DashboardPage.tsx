@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 
 import { Link } from 'react-router-dom';
 
@@ -7,13 +7,19 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { flightsApi } from '../lib/api';
 import MapContainer3D from '../components/MapContainer3D';
-import SimplifiedFlightForm from '../components/SimplifiedFlightForm';
+import SimplifiedFlightFormV2 from '../components/SimplifiedFlightFormV2';
 import FlightList from '../components/FlightList';
+import FlightEditModal from '../components/FlightEditModal';
 import Stats from '../components/Stats';
 import Filters from '../components/Filters';
 import ErrorBoundary from '../components/ErrorBoundary';
 import DarkModeToggle from '../components/DarkModeToggle';
+import YearHeatmap from '../components/YearHeatmap';
+import FlightCalendar from '../components/FlightCalendar';
 import type { Flight, FlightInput, FlightFilters, GeoJSONFeature } from '../types';
+import { useSettingsStore } from '../store/settingsStore';
+import { BarChart, Bar, XAxis, ResponsiveContainer, Tooltip } from 'recharts';
+import { analyticsApi } from '../lib/api';
 
 export default function DashboardPage() {
   const { user, logout } = useAuthStore();
@@ -22,12 +28,70 @@ export default function DashboardPage() {
   const [geoFlights, setGeoFlights] = useState<GeoJSONFeature[]>([]);
   const [selectedFlightId, setSelectedFlightId] = useState<string>();
   const [showFlightForm, setShowFlightForm] = useState(false);
+  const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
   const [filters, setFilters] = useState<FlightFilters>({});
   const [loading, setLoading] = useState(true);
+  const [is3DView, setIs3DView] = useState(true);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
+  const [onboarding, setOnboarding] = useState(() => {
+    const saved = localStorage.getItem('onboarding-checklist');
+    return saved
+      ? JSON.parse(saved)
+      : { flightAdded: false, usedFilter: false, exported: false, dismissed: false };
+  });
+  const settings = useSettingsStore();
+
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  const distanceUnitFactor = settings.units.distanceUnit === 'miles'
+    ? 0.621371
+    : settings.units.distanceUnit === 'nautical_miles'
+    ? 0.539957
+    : 1;
+
+  const monthlyData = useMemo(() => {
+    const map = new Map<string, number>();
+    flights.forEach((f) => {
+      const date = new Date(f.departureTime);
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      map.set(key, (map.get(key) || 0) + 1);
+    });
+    return Array.from(map.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-6)
+      .map(([month, count]) => ({ month, flights: count }));
+  }, [flights]);
+
+  const distanceSummary = useMemo(() => {
+    let total = 0;
+    flights.forEach((f) => {
+      total += calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon);
+    });
+    const converted = total * distanceUnitFactor;
+    return {
+      total: converted,
+      average: flights.length > 0 ? converted / flights.length : 0,
+      unit: settings.units.distanceUnit === 'miles' ? 'mi' : settings.units.distanceUnit === 'nautical_miles' ? 'nm' : 'km',
+    };
+  }, [flights, distanceUnitFactor, settings.units.distanceUnit]);
 
   useEffect(() => {
     loadFlights();
   }, [filters]);
+
+  useEffect(() => {
+    localStorage.setItem('onboarding-checklist', JSON.stringify(onboarding));
+  }, [onboarding]);
 
   const loadFlights = async () => {
     try {
@@ -79,6 +143,10 @@ export default function DashboardPage() {
     await flightsApi.create(flight);
     setShowFlightForm(false);
     loadFlights();
+    setOnboarding((prev: any) => ({ ...prev, flightAdded: true }));
+    if (settings.privacy.analyticsOptIn) {
+      analyticsApi.track('flight_created', { method: 'simplified_form' });
+    }
   };
 
   const handleDeleteFlight = async (id: string) => {
@@ -93,8 +161,38 @@ export default function DashboardPage() {
     }
   };
 
-  const handleExport = async (format: 'csv' | 'geojson') => {
+  const handleEditFlight = (flight: Flight) => {
+    setEditingFlight(flight);
+  };
+
+  const handleUpdateFlight = async (id: string, updates: Partial<Flight>) => {
     try {
+      await flightsApi.update(id, updates);
+      setEditingFlight(null);
+      loadFlights();
+      if (settings.privacy.analyticsOptIn) {
+        analyticsApi.track('flight_updated', { flightId: id });
+      }
+    } catch (error) {
+      console.error('Failed to update flight:', error);
+      throw error;
+    }
+  };
+
+  const handleFilterChange = (newFilters: FlightFilters) => {
+    setFilters(newFilters);
+    setOnboarding((prev: any) => ({ ...prev, usedFilter: true }));
+    if (settings.privacy.analyticsOptIn) {
+      analyticsApi.track('filter_applied', { filters: newFilters });
+    }
+  };
+
+  const handleExport = async (format: 'csv' | 'geojson' | 'pdf' | 'kml') => {
+    try {
+      setOnboarding((prev: any) => ({ ...prev, exported: true }));
+      if (settings.privacy.analyticsOptIn) {
+        analyticsApi.track('export', { format });
+      }
       if (format === 'geojson') {
         const geoData = await flightsApi.getGeoJSON(filters);
         const blob = new Blob([JSON.stringify(geoData, null, 2)], {
@@ -107,9 +205,9 @@ export default function DashboardPage() {
         a.click();
         URL.revokeObjectURL(url);
       } else {
-        // CSV export
+        // CSV/PDF/KML export
         const data = await flightsApi.getAll(filters);
-        const csv = [
+        const rows = [
           [
             'Airline',
             'Flight Number',
@@ -119,6 +217,12 @@ export default function DashboardPage() {
             'Arrival Time',
             'Status',
             'Aircraft',
+            'Category',
+            'Tags',
+            'Price',
+            'Currency',
+            'Taxes',
+            'Fees',
           ].join(','),
           ...data.flights.map((f) =>
             [
@@ -130,25 +234,130 @@ export default function DashboardPage() {
               f.arrivalTime,
               f.status,
               f.aircraft || '',
+              f.category || '',
+              f.tags?.join('|') || '',
+              f.price ?? '',
+              f.currency || '',
+              f.taxes ?? '',
+              f.fees ?? '',
             ].join(',')
           ),
-        ].join('\n');
+        ];
 
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `flights-${new Date().toISOString()}.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
+        if (format === 'csv') {
+          const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `flights-${new Date().toISOString()}.csv`;
+          a.click();
+          URL.revokeObjectURL(url);
+        } else if (format === 'pdf') {
+          const html = `
+            <html><body><h1>TravStats Flight Report</h1>
+            <p>Export: ${new Date().toLocaleString()}</p>
+            <table border="1" cellspacing="0" cellpadding="4">
+            ${rows.map(r => `<tr>${r.split(',').map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}
+            </table></body></html>`;
+          const blob = new Blob([html], { type: 'application/pdf' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `flights-${new Date().toISOString()}.pdf`;
+          a.click();
+          URL.revokeObjectURL(url);
+        } else if (format === 'kml') {
+          const placemarks = data.flights
+            .map((f) => {
+              if (!f.depLat || !f.depLon || !f.arrLat || !f.arrLon) return '';
+              return `
+                <Placemark>
+                  <name>${f.airline || ''} ${f.flightNumber || ''}</name>
+                  <description>${f.depIata || f.depIcao} -> ${f.arrIata || f.arrIcao}</description>
+                  <LineString>
+                    <coordinates>
+                      ${f.depLon},${f.depLat},0
+                      ${f.arrLon},${f.arrLat},0
+                    </coordinates>
+                  </LineString>
+                </Placemark>
+              `;
+            })
+            .join('\n');
+          const kml = `<?xml version="1.0" encoding="UTF-8"?>
+            <kml xmlns="http://www.opengis.net/kml/2.2">
+              <Document>
+                <name>TravStats Flights</name>
+                ${placemarks}
+              </Document>
+            </kml>`;
+          const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `flights-${new Date().toISOString()}.kml`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
       }
     } catch (error) {
       console.error('Failed to export:', error);
     }
   };
 
+  const handleImport = () => {
+    importInputRef.current?.click();
+  };
+
+  const handleImportFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const content = e.target?.result;
+        if (!content || typeof content !== 'string') return;
+
+        let parsed: any[] = [];
+        if (file.name.endsWith('.json')) {
+          parsed = JSON.parse(content);
+        } else {
+          // naive CSV parser
+          const lines = content.split('\n').filter(Boolean);
+          const header = lines.shift()?.split(',') || [];
+          parsed = lines.map((line) => {
+            const cells = line.split(',');
+            return header.reduce((acc, key, idx) => {
+              acc[key.trim()] = cells[idx]?.trim();
+              return acc;
+            }, {} as Record<string, string>);
+          });
+        }
+        console.info(`Imported ${parsed.length} records (beta preview only)`);
+        if (settings.privacy.analyticsOptIn) {
+          analyticsApi.track('import_preview', { count: parsed.length });
+        }
+        alert(`Import (Beta): ${parsed.length} Datensätze erkannt. Bitte Backend-Import integrieren bevor Persistenz aktiv ist.`);
+      } catch (err) {
+        alert('Import fehlgeschlagen. Bitte gültige CSV oder JSON Datei verwenden.');
+      } finally {
+        if (importInputRef.current) {
+          importInputRef.current.value = '';
+        }
+      }
+    };
+    reader.readAsText(file);
+  };
+
   return (
     <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
+      <input
+        type="file"
+        accept=".csv,.json"
+        ref={importInputRef}
+        onChange={handleImportFile}
+        className="hidden"
+      />
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700">
         <div className="px-6 py-4 flex items-center justify-between">
@@ -195,8 +404,57 @@ export default function DashboardPage() {
             </button>
           </div>
 
+          {!onboarding.dismissed && (
+            <div className="p-4 border-b dark:border-gray-700">
+              <div className="card space-y-2 bg-gradient-to-r from-blue-50 to-amber-50 dark:from-gray-800 dark:to-gray-700">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">Onboarding</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Roadmap Punkt 21</p>
+                  </div>
+                  <button
+                    onClick={() => setOnboarding((prev: any) => ({ ...prev, dismissed: true }))}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    ×
+                  </button>
+                </div>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={onboarding.flightAdded}
+                    onChange={(e) => setOnboarding((prev: any) => ({ ...prev, flightAdded: e.target.checked }))}
+                  />
+                  Flug anlegen
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={onboarding.usedFilter}
+                    onChange={(e) => setOnboarding((prev: any) => ({ ...prev, usedFilter: e.target.checked }))}
+                  />
+                  Filter nutzen
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={onboarding.exported}
+                    onChange={(e) => setOnboarding((prev: any) => ({ ...prev, exported: e.target.checked }))}
+                  />
+                  Export testen
+                </label>
+                <button
+                  className="btn-secondary w-full"
+                  onClick={() => navigate('/stats')}
+                >
+                  Guided Tour starten
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="p-4 border-b dark:border-gray-700">
-            <Filters onFilterChange={setFilters} onExport={handleExport} />
+            <Filters onFilterChange={handleFilterChange} onExport={handleExport} onImport={handleImport} />
           </div>
 
           <div className="flex-1 overflow-y-auto p-4">
@@ -207,30 +465,84 @@ export default function DashboardPage() {
                 flights={flights}
                 selectedFlightId={selectedFlightId}
                 onFlightClick={setSelectedFlightId}
+                onEditFlight={handleEditFlight}
                 onDeleteFlight={handleDeleteFlight}
               />
             )}
           </div>
         </div>
 
-        {/* Center - Map */}
-        <div className="flex-1 p-4">
-          <ErrorBoundary
-            fallback={
-              <div className="h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
-                <div className="text-center">
-                  <p className="text-gray-600 dark:text-gray-300 mb-2">Unable to display map</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Please check your flight data</p>
+        {/* Center - Map & Roadmap MVP highlights */}
+        <div className="flex-1 p-4 flex flex-col gap-4 min-w-0 overflow-auto">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Flugkarte</h2>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                Wechsle zwischen 3D-Globus und 2D-Karte; MVP-Visualisierungen findest du direkt darunter.
+              </p>
+            </div>
+            <button
+              onClick={() => setIs3DView((prev) => !prev)}
+              className="
+                inline-flex items-center gap-2 px-4 py-2
+                bg-white dark:bg-gray-800
+                text-gray-800 dark:text-gray-100
+                border border-gray-300 dark:border-gray-600
+                rounded-lg shadow-sm
+                hover:bg-gray-50 dark:hover:bg-gray-700
+                transition-colors font-semibold text-sm
+              "
+              title={is3DView ? 'Zur 2D-Karte wechseln' : 'Zum 3D-Globus wechseln'}
+            >
+              {is3DView ? (
+                <>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+                    />
+                  </svg>
+                  <span>2D-Karte anzeigen</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <span>3D-Globus anzeigen</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          <div className="flex-1 min-h-[420px]">
+            <ErrorBoundary
+              fallback={
+                <div className="h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
+                  <div className="text-center">
+                    <p className="text-gray-600 dark:text-gray-300 mb-2">Unable to display map</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Please check your flight data</p>
+                  </div>
                 </div>
-              </div>
-            }
-          >
-            <MapContainer3D
-              flights={geoFlights}
-              selectedFlightId={selectedFlightId}
-              onFlightClick={setSelectedFlightId}
-            />
-          </ErrorBoundary>
+              }
+            >
+              <MapContainer3D
+                flights={geoFlights}
+                selectedFlightId={selectedFlightId}
+                onFlightClick={setSelectedFlightId}
+                is3D={is3DView}
+              />
+            </ErrorBoundary>
+          </div>
+
+          {/* Jahresübersicht entfernt */}
         </div>
 
         {/* Right Sidebar - Stats */}
@@ -244,9 +556,19 @@ export default function DashboardPage() {
 
       {/* Flight Form Modal */}
       {showFlightForm && (
-        <SimplifiedFlightForm
+        <SimplifiedFlightFormV2
           onSubmit={handleAddFlight}
           onCancel={() => setShowFlightForm(false)}
+        />
+      )}
+
+      {/* Flight Edit Modal */}
+      {editingFlight && (
+        <FlightEditModal
+          flight={editingFlight}
+          isOpen={!!editingFlight}
+          onClose={() => setEditingFlight(null)}
+          onSave={handleUpdateFlight}
         />
       )}
     </div>

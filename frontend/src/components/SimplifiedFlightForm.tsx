@@ -3,6 +3,8 @@ import { Airport, airportsApi, flightsApi } from '../lib/api';
 import AirportAutocomplete from './AirportAutocomplete';
 import BoardingPassScanner from './BoardingPassScanner';
 import { BoardingPassData, getAirlineName } from '../lib/bcbpParser';
+import type { FlightInput } from '../types';
+import { useSettingsStore } from '../store/settingsStore';
 import type { FlightInput, FlightLookupResult } from '../types';
 
 interface SimplifiedFlightFormProps {
@@ -31,6 +33,24 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
   const [arrivalTime, setArrivalTime] = useState('14:00');
   const [status, setStatus] = useState<'scheduled' | 'flown' | 'cancelled'>('flown');
   const [notes, setNotes] = useState('');
+  const [price, setPrice] = useState<string>('');
+  const [taxes, setTaxes] = useState<string>('');
+  const [fees, setFees] = useState<string>('');
+  const [currency, setCurrency] = useState<'EUR' | 'USD' | 'GBP' | 'CHF'>('EUR');
+  const [category, setCategory] = useState<'business' | 'private' | 'vacation'>('business');
+  const [tagInput, setTagInput] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
+
+  const settings = useSettingsStore();
+
+  useEffect(() => {
+    if (settings?.units?.currency) {
+      setCurrency(settings.units.currency);
+    }
+    if (settings?.defaults?.flightCategory) {
+      setCategory(settings.defaults.flightCategory);
+    }
+  }, [settings]);
 
   // Smart defaults
   useEffect(() => {
@@ -245,12 +265,25 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
         arrivalTime: arrivalDateTime,
         status,
         notes: notes || undefined,
+        price: price ? Number(price) : undefined,
+        taxes: taxes ? Number(taxes) : undefined,
+        fees: fees ? Number(fees) : undefined,
+        currency,
+        category,
+        tags: tags.length ? tags : undefined,
       });
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to save flight');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAddTag = () => {
+    const clean = tagInput.trim();
+    if (!clean || tags.includes(clean)) return;
+    setTags([...tags, clean]);
+    setTagInput('');
   };
 
   return (
@@ -418,6 +451,116 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
                       className="input"
                     />
                   </div>
+                </div>
+
+                {/* Costs & Category */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="label">Preis</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={price}
+                        onChange={(e) => setPrice(e.target.value)}
+                        className="input"
+                        placeholder="z.B. 199.99"
+                      />
+                      <select
+                        value={currency}
+                        onChange={(e) => setCurrency(e.target.value as typeof currency)}
+                        className="input w-28"
+                      >
+                        <option value="EUR">EUR</option>
+                        <option value="USD">USD</option>
+                        <option value="GBP">GBP</option>
+                        <option value="CHF">CHF</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="label">Kategorie</label>
+                    <select
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value as typeof category)}
+                      className="input"
+                    >
+                      <option value="business">Geschäftlich</option>
+                      <option value="private">Privat</option>
+                      <option value="vacation">Urlaub</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="label">Steuern</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={taxes}
+                      onChange={(e) => setTaxes(e.target.value)}
+                      className="input"
+                      placeholder="optional"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Gebühren</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={fees}
+                      onChange={(e) => setFees(e.target.value)}
+                      className="input"
+                      placeholder="optional"
+                    />
+                  </div>
+                </div>
+
+                {/* Tags */}
+                <div>
+                  <label className="label">Tags</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddTag();
+                        }
+                      }}
+                      className="input"
+                      placeholder="z.B. Konferenz, Familienbesuch"
+                    />
+                    <button type="button" onClick={handleAddTag} className="btn-secondary whitespace-nowrap">
+                      Tag hinzufügen
+                    </button>
+                  </div>
+                  {tags.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-100 text-blue-800 text-xs"
+                        >
+                          {tag}
+                          <button
+                            type="button"
+                            onClick={() => setTags(tags.filter((t) => t !== tag))}
+                            className="text-blue-600 hover:text-blue-900"
+                            aria-label={`Tag ${tag} entfernen`}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Notes */}

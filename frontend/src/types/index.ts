@@ -38,6 +38,14 @@ export interface Flight {
   status: 'scheduled' | 'flown' | 'cancelled';
   notes?: string;
   createdAt: string;
+  // Costs & categorization
+  price?: number;
+  currency?: 'EUR' | 'USD' | 'GBP' | 'CHF';
+  taxes?: number;
+  fees?: number;
+  category?: 'business' | 'private' | 'vacation';
+  tags?: string[];
+  receiptUrl?: string;
   // Extended fields
   seatNumber?: string;
   seatClass?: 'economy' | 'premium_economy' | 'business' | 'first';
@@ -71,6 +79,13 @@ export interface FlightInput {
   terminal?: string;
   bookingReference?: string;
   ticketNumber?: string;
+  price?: number;
+  currency?: 'EUR' | 'USD' | 'GBP' | 'CHF';
+  taxes?: number;
+  fees?: number;
+  category?: 'business' | 'private' | 'vacation';
+  tags?: string[];
+  receiptUrl?: string;
   ticketPrice?: number;
   currency?: string;
   category?: 'business' | 'private' | 'vacation';
@@ -93,6 +108,10 @@ export interface FlightFilters {
   fromDate?: string;
   toDate?: string;
   status?: 'scheduled' | 'flown' | 'cancelled';
+  category?: 'business' | 'private' | 'vacation';
+  tags?: string[];
+  minPrice?: number;
+  maxPrice?: number;
 }
 
 export interface Stats {
@@ -102,6 +121,8 @@ export interface Stats {
   avgDistance: number;
   byStatus: Record<string, number>;
   byAirline: Record<string, number>;
+  totalCost?: number;
+  byCategory?: Record<string, number>;
 }
 
 export interface Route {
@@ -133,6 +154,12 @@ export interface GeoJSONFeature {
     departureTime: string;
     arrivalTime: string;
     status: string;
+    category?: 'business' | 'private' | 'vacation';
+    tags?: string[];
+    price?: number;
+    currency?: 'EUR' | 'USD' | 'GBP' | 'CHF';
+    taxes?: number;
+    fees?: number;
     distance: number;
   };
   geometry: {

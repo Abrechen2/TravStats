@@ -21,21 +21,13 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
   timeout: 10000, // 10 second timeout
-});
-
-// Add auth token to requests
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
+  withCredentials: true, // Send cookies with every request (HttpOnly JWT)
 });
 
 // Auth API
 export const authApi = {
   register: async (username: string, password: string) => {
-    const { data } = await api.post<{ token: string; user: User }>('/auth/register', {
+    const { data } = await api.post<{ user: User }>('/auth/register', {
       username,
       password,
     });
@@ -43,11 +35,15 @@ export const authApi = {
   },
 
   login: async (username: string, password: string) => {
-    const { data } = await api.post<{ token: string; user: User }>('/auth/login', {
+    const { data } = await api.post<{ user: User }>('/auth/login', {
       username,
       password,
     });
     return data;
+  },
+
+  logout: async () => {
+    await api.post('/auth/logout');
   },
 };
 
@@ -168,6 +164,55 @@ export const achievementsApi = {
       { params: { limit } }
     );
     return data;
+  },
+};
+
+// Settings API
+export const settingsApi = {
+  get: async () => {
+    const { data } = await api.get('/settings');
+    return data;
+  },
+  update: async (payload: any) => {
+    const { data } = await api.put('/settings', payload);
+    return data;
+  },
+};
+
+// Analytics API
+export const analyticsApi = {
+  track: async (type: string, payload?: Record<string, any>) => {
+    await api.post('/analytics/events', { type, payload });
+  },
+};
+
+// Upload API
+export const uploadsApi = {
+  uploadReceipt: async (file: File, onProgress?: (progress: number) => void): Promise<string> => {
+    const formData = new FormData();
+    formData.append('receipt', file);
+
+    const { data } = await api.post<{ receiptUrl: string; filename: string; size: number; mimetype: string }>(
+      '/uploads/receipt',
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          if (onProgress && progressEvent.total) {
+            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            onProgress(progress);
+          }
+        },
+      }
+    );
+
+    return data.receiptUrl;
+  },
+
+  deleteReceipt: async (filename: string): Promise<void> => {
+    await api.delete(`/uploads/receipts/${filename}`);
   },
 };
 

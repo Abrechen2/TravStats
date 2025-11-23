@@ -9,8 +9,13 @@ interface GlobeViewProps {
   onFlightClick?: (flightId: string) => void;
 }
 
-// Helper function for status colors
-const getStatusColor = (status: string) => {
+// Helper function for status/category colors
+const getStatusColor = (status: string, category?: string) => {
+  if (category) {
+    if (category === 'business') return '#3b82f6';
+    if (category === 'private') return '#10b981';
+    if (category === 'vacation') return '#f59e0b';
+  }
   switch (status) {
     case 'flown':
       return '#10b981';
@@ -40,21 +45,38 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 };
 
-// Calculate arc altitude based on distance - shorter flights = lower arcs, longer = higher
-const getArcAltitude = (startLat: number, startLng: number, endLat: number, endLng: number): number => {
-  const distance = calculateDistance(startLat, startLng, endLat, endLng);
+// Calculate base arc altitude based on distance
+const getBaseArcAltitude = (distance: number): number => {
+  // New optimized values:
+  // Short flights (< 1000km): 0.02 - 0.04 (reduziert von 0.05-0.075)
+  // Medium flights (1000-5000km): 0.04 - 0.12
+  // Long flights (5000-10000km): 0.12 - 0.25
+  // Very long flights (> 10000km): 0.25 - 0.40 (erhöht damit sie sichtbar bleiben)
 
-  // Scale altitude based on distance (halved for closer to surface)
-  // Short flights (< 1000km): 0.05 - 0.075
-  // Medium flights (1000-5000km): 0.075 - 0.15
-  // Long flights (> 5000km): 0.15 - 0.225
   if (distance < 1000) {
-    return 0.05 + (distance / 1000) * 0.025;
+    // Kurze Flüge: niedrig halten
+    return 0.02 + (distance / 1000) * 0.02;
   } else if (distance < 5000) {
-    return 0.075 + ((distance - 1000) / 4000) * 0.075;
+    // Mittlere Flüge
+    return 0.04 + ((distance - 1000) / 4000) * 0.08;
+  } else if (distance < 10000) {
+    // Lange Flüge
+    return 0.12 + ((distance - 5000) / 5000) * 0.13;
   } else {
-    return Math.min(0.15 + ((distance - 5000) / 10000) * 0.075, 0.225);
+    // Sehr lange Flüge: deutlich höher damit sie sichtbar bleiben
+    return Math.min(0.25 + ((distance - 10000) / 10000) * 0.15, 0.45);
   }
+};
+
+// Static arc altitude based only on distance (no zoom adjustment)
+const getStaticArcAltitude = (
+  startLat: number,
+  startLng: number,
+  endLat: number,
+  endLng: number
+): number => {
+  const distance = calculateDistance(startLat, startLng, endLat, endLng);
+  return getBaseArcAltitude(distance);
 };
 
 export default function GlobeView({ flights = [], selectedFlightId, onFlightClick }: GlobeViewProps) {
@@ -62,6 +84,14 @@ export default function GlobeView({ flights = [], selectedFlightId, onFlightClic
   const themeStore = useThemeStore();
   const isDarkMode = themeStore?.isDarkMode ?? false;
   const [autoRotate, setAutoRotate] = useState(false);
+  const [cameraAltitude, setCameraAltitude] = useState(2.2);
+
+  // Center globe initially
+  useEffect(() => {
+    if (globeRef.current) {
+      globeRef.current.pointOfView({ lat: 0, lng: 0, altitude: 2.2 }, 0);
+    }
+  }, []);
 
   // Control auto-rotation
   useEffect(() => {
@@ -70,6 +100,36 @@ export default function GlobeView({ flights = [], selectedFlightId, onFlightClic
       globeRef.current.controls().autoRotateSpeed = 0.3;
     }
   }, [autoRotate]);
+
+  // Track camera altitude for dynamic arc scaling
+  useEffect(() => {
+    if (globeRef.current) {
+      const interval = setInterval(() => {
+        const pov = globeRef.current.pointOfView();
+        if (pov && pov.altitude !== cameraAltitude) {
+          setCameraAltitude(pov.altitude);
+        }
+      }, 100);
+      return () => clearInterval(interval);
+    }
+  }, [cameraAltitude]);
+
+  // Calculate dynamic stroke width based on camera zoom
+  const dynamicStroke = useMemo(() => {
+    const baseStroke = 0.5;
+    // Näher gezoomt (kleinere altitude) = dünnere Linien
+    // Weiter weg (größere altitude) = dickere Linien
+    const zoomFactor = cameraAltitude / 2.5;
+    return Math.min(Math.max(baseStroke * zoomFactor, 0.2), 1.0);
+  }, [cameraAltitude]);
+
+  // Calculate dynamic point radius based on camera zoom
+  const dynamicPointScale = useMemo(() => {
+    // Näher gezoomt (kleinere altitude) = kleinere Marker
+    // Weiter weg (größere altitude) = größere Marker
+    const zoomFactor = cameraAltitude / 2.5;
+    return Math.min(Math.max(zoomFactor, 0.4), 1.5);
+  }, [cameraAltitude]);
 
   // Convert flights to arcs format
   const arcsData = useMemo(() => {
@@ -89,17 +149,18 @@ export default function GlobeView({ flights = [], selectedFlightId, onFlightClic
         endLat: end[1],
         endLng: end[0],
         status: flight.properties.status,
+        category: (flight as any).properties.category,
         airline: flight.properties.airline,
         flightNumber: flight.properties.flightNumber,
         departure: flight.properties.departureAirport,
         arrival: flight.properties.arrivalAirport,
-        color: getStatusColor(flight.properties.status),
-        altitude: getArcAltitude(start[1], start[0], end[1], end[0]),
+        color: getStatusColor(flight.properties.status, (flight as any).properties.category),
+        altitude: getStaticArcAltitude(start[1], start[0], end[1], end[0]),
       };
     }).filter(arc => arc !== null);
   }, [flights]);
 
-  // Extract airport points
+  // Extract airport points with proper deduplication
   const pointsData = useMemo(() => {
     const airportMap = new Map();
 
@@ -109,39 +170,68 @@ export default function GlobeView({ flights = [], selectedFlightId, onFlightClic
       const coords = flight.geometry.coordinates;
       if (coords.length < 2) return;
 
-      const depCode = flight.properties.departureAirport?.iata || 'Unknown';
-      const arrCode = flight.properties.arrivalAirport?.iata || 'Unknown';
+      // Departure airport - ALWAYS use coordinates for deduplication key
+      const depLat = coords[0][1];
+      const depLng = coords[0][0];
+      const depIata = flight.properties.departureAirport?.iata;
+      const depIcao = flight.properties.departureAirport?.icao;
+      const depCode = depIata || depIcao || 'Unknown';
+      // Always use coordinate-based key to avoid duplicates when IATA/ICAO is missing in some flights
+      // Precision: 2 decimals ≈ 1.1km (good enough to identify same airport)
+      const depKey = `${depLat.toFixed(2)}_${depLng.toFixed(2)}`;
 
-      // Departure airport
-      if (!airportMap.has(depCode)) {
-        airportMap.set(depCode, {
-          lat: coords[0][1],
-          lng: coords[0][0],
+      if (!airportMap.has(depKey)) {
+        airportMap.set(depKey, {
+          lat: depLat,
+          lng: depLng,
           name: flight.properties.departureAirport?.name || depCode,
           code: depCode,
           size: 0,
         });
+      } else {
+        // If airport already exists, prefer IATA/ICAO code if this flight has it
+        const existing = airportMap.get(depKey);
+        if (depIata && existing.code === 'Unknown') {
+          existing.code = depCode;
+          existing.name = flight.properties.departureAirport?.name || depCode;
+        }
       }
-      airportMap.get(depCode).size++;
+      airportMap.get(depKey).size++;
 
-      // Arrival airport
-      if (!airportMap.has(arrCode)) {
-        airportMap.set(arrCode, {
-          lat: coords[coords.length - 1][1],
-          lng: coords[coords.length - 1][0],
+      // Arrival airport - ALWAYS use coordinates for deduplication key
+      const arrLat = coords[coords.length - 1][1];
+      const arrLng = coords[coords.length - 1][0];
+      const arrIata = flight.properties.arrivalAirport?.iata;
+      const arrIcao = flight.properties.arrivalAirport?.icao;
+      const arrCode = arrIata || arrIcao || 'Unknown';
+      // Always use coordinate-based key to avoid duplicates when IATA/ICAO is missing in some flights
+      // Precision: 2 decimals ≈ 1.1km (good enough to identify same airport)
+      const arrKey = `${arrLat.toFixed(2)}_${arrLng.toFixed(2)}`;
+
+      if (!airportMap.has(arrKey)) {
+        airportMap.set(arrKey, {
+          lat: arrLat,
+          lng: arrLng,
           name: flight.properties.arrivalAirport?.name || arrCode,
           code: arrCode,
           size: 0,
         });
+      } else {
+        // If airport already exists, prefer IATA/ICAO code if this flight has it
+        const existing = airportMap.get(arrKey);
+        if (arrIata && existing.code === 'Unknown') {
+          existing.code = arrCode;
+          existing.name = flight.properties.arrivalAirport?.name || arrCode;
+        }
       }
-      airportMap.get(arrCode).size++;
+      airportMap.get(arrKey).size++;
     });
 
     return Array.from(airportMap.values());
   }, [flights]);
 
   return (
-    <div className="h-full w-full relative">
+    <div className="h-full w-full relative flex items-center justify-center">
       {/* Control Panel */}
       <div className="absolute bottom-4 left-4 z-[9999] bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 border border-gray-200 dark:border-gray-700">
         {/* Auto-Rotation Toggle */}
@@ -160,13 +250,14 @@ export default function GlobeView({ flights = [], selectedFlightId, onFlightClic
 
       <Globe
         ref={globeRef}
+        style={{ width: '100%', height: '100%' }}
         globeImageUrl="https://unpkg.com/three-globe@2.31.1/example/img/earth-blue-marble.jpg"
         bumpImageUrl="https://unpkg.com/three-globe@2.31.1/example/img/earth-topology.png"
         backgroundImageUrl={null}
-        // Arcs (Flight paths) - Static, thin lines that stay above globe
+        // Arcs (Flight paths) - Dynamic lines that adjust with zoom
         arcsData={arcsData}
         arcColor={(arc: any) => arc.color}
-        arcStroke={0.4}
+        arcStroke={dynamicStroke}
         arcAltitude={(arc: any) => arc.altitude}
         arcCurveResolution={64}
         arcDashLength={1}
@@ -195,13 +286,13 @@ export default function GlobeView({ flights = [], selectedFlightId, onFlightClic
             onFlightClick(arc.id);
           }
         }}
-        // Points (Airports)
+        // Points (Airports) - Dynamic size based on zoom
         pointsData={pointsData}
         pointLat="lat"
         pointLng="lng"
         pointColor={() => isDarkMode ? '#fbbf24' : '#f59e0b'}
         pointAltitude={0.01}
-        pointRadius={(point: any) => Math.sqrt(point.size) * 0.2}
+        pointRadius={(point: any) => Math.sqrt(point.size) * 0.2 * dynamicPointScale}
         pointLabel={(point: any) => `
           <div style="
             background: rgba(0, 0, 0, 0.8);
