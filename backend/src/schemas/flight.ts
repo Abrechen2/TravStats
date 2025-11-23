@@ -84,6 +84,10 @@ const baseFlightSchema = z.object({
   category: z.enum(['business', 'private', 'vacation']).optional(),
   tags: z.array(z.string().max(40)).optional(),
   receiptUrl: receiptUrlValidator,
+  ticketPrice: z.number().positive().optional(),
+  currency: z.string().min(1).default('EUR').optional(),
+  category: z.enum(['business', 'private', 'vacation']).default('private'),
+  tags: z.array(z.string()).default([]),
 });
 
 export const createFlightSchema = baseFlightSchema.refine(
