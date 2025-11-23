@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Airport, airportsApi } from '../lib/api';
+import { Airport, airportsApi, flightsApi } from '../lib/api';
 import AirportAutocomplete from './AirportAutocomplete';
 import BoardingPassScanner from './BoardingPassScanner';
 import { BoardingPassData, getAirlineName } from '../lib/bcbpParser';
-import type { FlightInput } from '../types';
+import type { FlightInput, FlightLookupResult } from '../types';
 import { useSettingsStore } from '../store/settingsStore';
 
 interface SimplifiedFlightFormProps {
@@ -14,6 +14,7 @@ interface SimplifiedFlightFormProps {
 export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedFlightFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [autoFillMessage, setAutoFillMessage] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
 
@@ -84,6 +85,68 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
     }
   }, [departureDate]);
 
+  const applyLookupData = (lookup: FlightLookupResult) => {
+    if (!lookup) return;
+
+    if (lookup.airline) setAirline(lookup.airline);
+    if (lookup.flightNumber) setFlightNumber(lookup.flightNumber);
+    if (lookup.aircraft) setAircraft(prev => prev || lookup.aircraft || '');
+
+    if (lookup.departure) setDeparture(lookup.departure);
+    if (lookup.arrival) setArrival(lookup.arrival);
+
+    const updateDateTime = (
+      isoString: string | undefined,
+      setDate: (val: string) => void,
+      setTime: (val: string) => void
+    ) => {
+      if (!isoString) return;
+      const parsed = new Date(isoString);
+      if (Number.isNaN(parsed.getTime())) return;
+
+      setDate(parsed.toISOString().split('T')[0]);
+      setTime(parsed.toTimeString().slice(0, 5));
+    };
+
+    updateDateTime(lookup.departureTime, setDepartureDate, setDepartureTime);
+    updateDateTime(lookup.arrivalTime, setArrivalDate, setArrivalTime);
+  };
+
+  useEffect(() => {
+    const normalizedFlightNumber = flightNumber.trim();
+    if (!normalizedFlightNumber) {
+      setAutoFillMessage('');
+      return;
+    }
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setAutoFillMessage('🔄 Suche Fluginfos (Aviationstack)...');
+      try {
+        const lookup = await flightsApi.lookup({
+          flightNumber: normalizedFlightNumber,
+          date: departureDate || undefined,
+        });
+
+        if (cancelled || !lookup) return;
+
+        applyLookupData(lookup);
+        setShowAdvanced(true);
+        setAutoFillMessage('✈️ Daten automatisch ergänzt');
+      } catch (lookupError) {
+        if (!cancelled) {
+          console.warn('Flight lookup failed', lookupError);
+          setAutoFillMessage('');
+        }
+      }
+    }, 600);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [flightNumber, departureDate]);
+
   const handleBoardingPassScan = async (bcbpData: BoardingPassData) => {
     setShowScanner(false);
     setError('');
@@ -107,7 +170,7 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
         depAirport = {
           id: 0,
           iata: bcbpData.departureAirport,
-          icao: null,
+          icao: undefined,
           name: bcbpData.departureAirport,
           city: null,
           country: null,
@@ -119,7 +182,7 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
         arrAirport = {
           id: 0,
           iata: bcbpData.arrivalAirport,
-          icao: null,
+          icao: undefined,
           name: bcbpData.arrivalAirport,
           city: null,
           country: null,
@@ -350,6 +413,9 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
                       className="input"
                       placeholder="e.g., LH123"
                     />
+                    {autoFillMessage && (
+                      <p className="text-xs text-blue-600 mt-1">{autoFillMessage}</p>
+                    )}
                   </div>
                 </div>
 
