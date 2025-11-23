@@ -127,7 +127,7 @@ export default function FlightList({
                       : 'Privat'}
                   </span>
                 )}
-                {flight.ticketPrice !== undefined && (
+                {flight.ticketPrice != null && (
                   <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100">
                     {flight.ticketPrice.toFixed(2)} {flight.currency || 'EUR'}
                   </span>

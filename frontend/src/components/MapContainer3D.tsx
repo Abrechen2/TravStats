@@ -16,8 +16,8 @@ export default function MapContainer3D({
   is3D,
 }: MapContainer3DProps) {
   return (
-    <div className="relative h-full w-full rounded-lg shadow overflow-hidden bg-white dark:bg-gray-900 flex items-center justify-center">
-      <div className="h-full w-full max-w-[1200px] flex items-center justify-center px-4">
+    <div className="relative h-full w-full rounded-lg shadow overflow-hidden bg-white dark:bg-gray-900 flex items-center justify-center" style={{ touchAction: 'pan-x pan-y pinch-zoom' }}>
+      <div className="h-full w-full max-w-[1200px] flex items-center justify-center px-4" style={{ touchAction: 'pan-x pan-y pinch-zoom' }}>
         {is3D ? (
           <GlobeView
             flights={flights}

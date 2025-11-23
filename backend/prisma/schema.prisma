@@ -20,6 +20,7 @@ model User {
   userAchievements    UserAchievement[]
   settings            UserSettings?
   analyticsEvents     AnalyticsEvent[]
+  importedFlights     ImportedFlight[]
 
   @@map("users")
 }
@@ -77,13 +78,10 @@ model Flight {
   currency          String?  @default("EUR") @map("currency")
   taxes             Float?   @map("taxes")
   fees              Float?   @map("fees")
-  category          String?  @map("category")
+  category          String?  @default("private") @map("category") // business, private, vacation
   tags              String[] @default([]) @map("tags")
   receiptUrl        String?  @map("receipt_url")
   ticketPrice       Float?   @map("ticket_price")
-  currency          String   @default("EUR")
-  category          String   @default("private") // business, private, vacation
-  tags              String[] @default([])
   createdAt         DateTime @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
