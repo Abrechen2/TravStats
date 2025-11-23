@@ -15,7 +15,9 @@
       "Bash(npm run seed:enhanced:*)",
       "Bash(findstr:*)",
       "Bash(cat:*)",
-      "Bash(npm run seed:airports:openflights:*)"
+      "Bash(npm run seed:airports:openflights:*)",
+      "Bash(npx tsc:*)",
+      "Bash(dir /b \"D:\\Projekte\\TravStats\\backend\\.env\")"
     ],
     "deny": [],
     "ask": []

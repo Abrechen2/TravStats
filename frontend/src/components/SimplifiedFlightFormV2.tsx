@@ -132,7 +132,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
       );
       const data = await response.json();
 
-      if (!data.success || data.flights.length === 0) {
+      if (!data.success || !data.flights || data.flights.length === 0) {
         setError('No flights found. Try a different date or enter manually.');
         setStep('complete'); // Skip to manual entry
         return;
@@ -214,7 +214,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
           );
           const data = await response.json();
 
-          if (data.success && data.flights.length > 0) {
+          if (data.success && data.flights && data.flights.length > 0) {
             // Validate scanned data against API data
             const apiFlight = data.flights[0];
 
@@ -395,13 +395,13 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                     type="date"
                     value={searchDate}
                     onChange={(e) => setSearchDate(e.target.value)}
-                    className={`input ${sizedInputClass}`}
+                    className={`input ${sizedInputClass} w-40`}
                   />
                   <button
                     type="button"
                     onClick={handleFlightLookup}
                     disabled={loading || !flightNumber.trim()}
-                    className="btn-primary whitespace-nowrap"
+                    className="btn-primary whitespace-nowrap px-6"
                   >
                     {loading ? '🔍 Searching...' : '🔍 Lookup'}
                   </button>
@@ -531,7 +531,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
               </div>
 
               {/* Additional Fields */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className={`label ${textClass}`}>Airline</label>
                   <input
@@ -540,6 +540,17 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                     onChange={(e) => setAirline(e.target.value)}
                     className={`input ${sizedInputClass}`}
                     placeholder="Lufthansa"
+                  />
+                </div>
+                <div>
+                  <label className={`label ${textClass}`}>Flight Number</label>
+                  <input
+                    type="text"
+                    value={flightNumber}
+                    onChange={(e) => setFlightNumber(e.target.value.toUpperCase())}
+                    className={`input ${sizedInputClass}`}
+                    placeholder="LH400"
+                    maxLength={10}
                   />
                 </div>
                 <div>

@@ -5,11 +5,13 @@ import {
   findNearestAirport,
   enrichAirportData
 } from '../services/airportLookup';
+import { authenticate, AuthRequest } from '../middleware/auth';
+import { airportSearchLimiter } from '../middleware/rateLimit';
 
 const router = Router();
 
-// Search airports (no auth required for better UX)
-router.get('/search', async (req: Request, res: Response, next: NextFunction) => {
+// Search airports (no auth required for better UX, but rate limited)
+router.get('/search', airportSearchLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { q } = req.query;
 
@@ -40,8 +42,8 @@ router.get('/search', async (req: Request, res: Response, next: NextFunction) =>
   }
 });
 
-// Get airport by IATA/ICAO code - with automatic external lookup and DB save
-router.get('/:code', async (req: Request, res: Response, next: NextFunction) => {
+// Get airport by IATA/ICAO code - with automatic external lookup and DB save (rate limited)
+router.get('/:code', airportSearchLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { code } = req.params;
 
@@ -59,8 +61,8 @@ router.get('/:code', async (req: Request, res: Response, next: NextFunction) => 
 });
 
 // GET /api/v1/airports/nearest?lat=50.033&lon=8.570&maxDistance=5
-// Find nearest airport by coordinates
-router.get('/coords/nearest', async (req: Request, res: Response, next: NextFunction) => {
+// Find nearest airport by coordinates (requires authentication)
+router.get('/coords/nearest', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const lat = parseFloat(req.query.lat as string);
     const lon = parseFloat(req.query.lon as string);
@@ -87,8 +89,8 @@ router.get('/coords/nearest', async (req: Request, res: Response, next: NextFunc
 });
 
 // POST /api/v1/airports/enrich
-// Enrich airport data with missing information
-router.post('/enrich', async (req: Request, res: Response, next: NextFunction) => {
+// Enrich airport data with missing information (requires authentication)
+router.post('/enrich', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { iata, icao, lat, lon } = req.body;
 

@@ -171,12 +171,35 @@
 - [x] KML-Export für Google Earth
 - [ ] PDF-Report Generator (aktuell nur HTML-Export als .pdf)
 - [ ] Excel-Export mit Pivot-Tabellen
-- [ ] JSON/CSV Bulk-Import
-- [ ] Import von anderen Apps (TripIt, etc.)
-- [ ] Strikte Schema-Validierung und Duplikat-Erkennung für Bulk-Importe
-- [ ] IATA/ICAO-Autocomplete und Flugnummer-Lookups zur Datenanreicherung
 
-### 💾 15. Backup & Sync
+### 📥 15. Batch Import System
+- [ ] **CSV/JSON Bulk-Import:**
+  - Datei-Upload mit Drag & Drop Support
+  - Template-Download für CSV-Format
+  - Spalten-Mapping UI (Flexible Zuordnung der CSV-Spalten)
+  - Vorschau der zu importierenden Daten (erste 10 Zeilen)
+  - Progress Bar während Import
+- [ ] **Validierung & Fehlerbehandlung:**
+  - Strikte Schema-Validierung mit Zod
+  - Duplikat-Erkennung (gleiche Flugnummer + Datum + Route)
+  - Fehler-Report mit Zeilennummer und Fehlerbeschreibung
+  - Partial Import (erfolgreiche Zeilen importieren, fehlerhafte überspringen)
+  - Download der fehlerhaften Zeilen als CSV zur Korrektur
+- [ ] **Automatische Datenanreicherung:**
+  - IATA/ICAO-Autocomplete für Flughäfen
+  - Automatisches Airport-Enrichment (Koordinaten, Namen)
+  - Optional: Flugnummer-Lookup für fehlende Details
+  - Automatische Währungsumrechnung
+- [ ] **Import-Quellen:**
+  - Import von anderen Apps (TripIt, MyFlightRadar24, etc.)
+  - Airline-CSV-Export kompatibel (Lufthansa, Emirates, etc.)
+  - Custom Format mit flexiblem Mapper
+- [ ] **Post-Import:**
+  - Import-Summary Dashboard (X Flüge hinzugefügt, Y übersprungen)
+  - Undo-Funktion für letzten Import
+  - Import-Historie mit Rollback-Möglichkeit
+
+### 💾 16. Backup & Sync
 - [ ] Automatische Backups (Backend-Logik fehlt)
 - [x] Import/Export aller Daten (CSV, GeoJSON, KML)
 - [ ] Versionierung
@@ -185,7 +208,7 @@
 ## Phase 5.5: Daten-Anreicherung & Validierung 🆕
 *Automatische Verbesserung der Datenqualität mit kostenlosen Quellen*
 
-### ✅ 16. OpenFlights Airport Database
+### ✅ 17. OpenFlights Airport Database
 - [x] OpenFlights Datenbank-Import (~14.000 Flughäfen)
 - [x] Automatischer Koordinaten-Lookup für IATA/ICAO
 - [x] Automatischer IATA/ICAO-Lookup für Koordinaten
@@ -209,7 +232,7 @@ npm run seed:airports:openflights
 # Danach werden alle neuen Flüge automatisch angereichert
 ```
 
-### 📊 17. Daten-Validierung & Korrektur
+### 📊 18. Daten-Validierung & Korrektur
 - [x] Automatische Enrichment-Pipeline in Flug-Erstellung
 - [x] Koordinaten-zu-Airport-Matching (5km Radius)
 - [x] IATA/ICAO-Normalisierung
@@ -221,14 +244,14 @@ npm run seed:airports:openflights
 ## Phase 6: Sharing & Social (Woche 11-12)
 *Teilen und vergleichen mit anderen*
 
-### 🎨 18. Flugkarten-Generator
+### 🎨 19. Flugkarten-Generator
 - [ ] Schöne Share-Grafiken erstellen
 - [ ] Jahresrückblick-Karten
 - [ ] Animierte Routen-Videos
 - [ ] Social Media Templates
 - [ ] Download als PNG/SVG
 
-### 🌐 19. Trip-Zusammenfassung
+### 🌐 20. Trip-Zusammenfassung
 - [ ] Mehrere Flüge zu Reisen gruppieren
 - [ ] Reise-Timeline
 - [ ] Notizen und Fotos zu Reisen
@@ -236,7 +259,7 @@ npm run seed:airports:openflights
 - [ ] Multi-Leg-Ketten mit Segment-Details und realistischen Umsteigezeiten
 - [ ] Abo-Benachrichtigungen für neue Routentrends oder Preisalarme
 
-### 👥 20. Freunde-Vergleich (Optional)
+### 👥 21. Freunde-Vergleich (Optional)
 - [ ] Freunde hinzufügen
 - [x] Leaderboards (in Achievement-System vorhanden)
 - [ ] Gemeinsame besuchte Orte
@@ -245,13 +268,13 @@ npm run seed:airports:openflights
 ## Phase 7: Mobile & PWA (Woche 13-14)
 *Mobile Optimierung und Offline-Fähigkeit*
 
-### 📱 21. Progressive Web App
+### 📱 22. Progressive Web App
 - [ ] Service Worker für Offline-Funktionalität
 - [ ] App-Installation ermöglichen (manifest.json)
 - [ ] Push-Benachrichtigungen
 - [x] Mobile-optimierte UI (Responsive Design vorhanden)
 
-### 🔔 22. Benachrichtigungen & Countdown
+### 🔔 23. Benachrichtigungen & Countdown
 - [ ] Countdown für nächsten Flug
 - [ ] Check-in Erinnerungen (24h vorher)
 - [ ] Gate-Change Benachrichtigungen
@@ -260,24 +283,24 @@ npm run seed:airports:openflights
 ## Phase 8: Qualität, Performance & Insights (kontinuierlich)
 *Querschnittsthemen für Stabilität, Wachstum und Nutzerfeedback*
 
-### 🧭 23. Onboarding & Guided Tour
+### 🧭 24. Onboarding & Guided Tour
 - [ ] Geführtes Tutorial mit Tooltips auf Karten- und Statistikseiten
 - [x] Onboarding-Checklist mit ersten Aktionen (Flug anlegen, Filter nutzen, Export testen)
 - [ ] Demo-Daten-Umschalter für neue Nutzer
 
-### 📈 24. Nutzungs-Analytics
+### 📈 25. Nutzungs-Analytics
 - [x] Ereignis-Tracking für Karten, Filter, Exporte und Routen-Analysen
 - [ ] Dashboard mit Feature-Nutzung zur Roadmap-Priorisierung
 - [x] Opt-in und Anonymisierung für datenschutzkonformes Tracking
 
-### 🚀 25. Performance & Skalierung
+### 🚀 26. Performance & Skalierung
 - [ ] Server-Side-Pagination oder Streaming für große Flugmengen
 - [ ] Caching für häufige Routen-/Statistik-Abfragen (Redis)
 - [ ] Map-Layer-Clustering und Lazy-Loading für Charts/Module
 - [ ] Performance-Regression-Checks in der CI/CD-Pipeline
 - [ ] Stress-Tests für Import/Export, um Konflikte und Inkonsistenzen zu vermeiden
 
-### 🛡️ 26. Sicherheit & Compliance-Erweiterungen
+### 🛡️ 27. Sicherheit & Compliance-Erweiterungen
 - [x] Rate-Limiting im Express-Backend (100 req/15min)
 - [ ] Log-Redaction für sensitive Daten
 - [ ] Frühzeitige Planung für 2FA-Backend, Session-Übersicht und DSGVO-Export/Löschung
@@ -288,25 +311,25 @@ npm run seed:airports:openflights
 ## Phase 9: Erweiterte Features (Woche 15+)
 *Nice-to-have Features für Power-User*
 
-### 🔍 27. Smart Search & Erweiterte Filter
+### 🔍 28. Smart Search & Erweiterte Filter
 - [ ] Volltextsuche über alle Felder
 - [x] Kombinierte Filter (Airline, Datum, Status, Tags)
 - [ ] Gespeicherte Suchanfragen
 - [x] Schnellfilter-Chips
 
-### 💺 28. Sitzplatz-Präferenz Tracker
+### 💺 29. Sitzplatz-Präferenz Tracker
 - [ ] Fenster vs. Gang Statistik
 - [ ] Beste Sitzplätze pro Flugzeugtyp
 - [ ] Sitzplan-Integration
 - [ ] Präferenz-Empfehlungen
 
-### 🎯 29. Ziele & Bucket List
+### 🎯 30. Ziele & Bucket List
 - [ ] Wunsch-Destinationen markieren
 - [ ] Fortschritt zu Zielen
 - [ ] Inspiration für neue Ziele
 - [ ] Preisalarme (externe Integration)
 
-### 🩺 30. Wellbeing & Jetlag Insights
+### 🩺 31. Wellbeing & Jetlag Insights
 - [ ] Jetlag- und Schlaf-Score basierend auf Zeitzonenwechseln
 - [ ] Empfehlungen für Schlaf-/Hydrationsfenster vor und nach Flügen
 - [ ] Integration mit bestehenden Zeit- und Distanz-Statistiken
@@ -347,16 +370,16 @@ npm run seed:airports:openflights
 ## Priorisierung
 
 **Must Have (MVP+):**
-1, 2, 3, 6, 8, 9, 13, 14, 16, 17, 23, 24, 26
+1, 2, 3, 6, 8, 9, 13, 14, 15, 17, 18, 24, 25, 27
 
 **Should Have:**
-4, 5, 11, 12, 15, 25
+4, 5, 11, 12, 16, 26
 
 **Could Have:**
-7, 10, 18, 19, 20, 22, 27, 28, 29, 30
+7, 10, 19, 20, 21, 23, 28, 29, 30, 31
 
 **Won't Have (Vorerst):**
-CI/CD (0), PWA (21), Social Features (18-20)
+CI/CD (0), PWA (22), Social Features (19-21)
 
 ---
 
@@ -385,7 +408,7 @@ CI/CD (0), PWA (21), Social Features (18-20)
 *Roadmap-Status basierend auf tatsächlicher Code-Analyse*
 ### Add Flight UX Polish (Backlog)
 - [ ] Boarding-Pass-Scan weiter anreichern (Gate/Terminal/Seat-Class/Zeiten) und API-Fallback klar anzeigen
-- [ ] Lookup-Fehlerzust�nde (kein Backend/kein API-Key) mit klaren Hinweisen im Dialog
-- [ ] Dunkelmodus f�r alle Add-Flight-Dialogteile inkl. Scanner-Overlay konsistent testen
-- [ ] Eingabefelder ergonomisch skalieren (Breite/H�he) und Responsiveness pr�fen
-- [ ] Validierung/Tests f�r neuen Add-Flight-Flow (V2) erg�nzen
+- [ ] Lookup-Fehlerzust�nde (kein Backend/kein API-Key) mit klaren Hinweisen im Dialog
+- [ ] Dunkelmodus f�r alle Add-Flight-Dialogteile inkl. Scanner-Overlay konsistent testen
+- [ ] Eingabefelder ergonomisch skalieren (Breite/H�he) und Responsiveness pr�fen
+- [ ] Validierung/Tests f�r neuen Add-Flight-Flow (V2) erg�nzen
