@@ -9,6 +9,7 @@ import { flightsApi } from '../lib/api';
 import MapContainer3D from '../components/MapContainer3D';
 import SimplifiedFlightFormV2 from '../components/SimplifiedFlightFormV2';
 import FlightList from '../components/FlightList';
+import FlightEditModal from '../components/FlightEditModal';
 import Stats from '../components/Stats';
 import Filters from '../components/Filters';
 import ErrorBoundary from '../components/ErrorBoundary';
@@ -27,6 +28,7 @@ export default function DashboardPage() {
   const [geoFlights, setGeoFlights] = useState<GeoJSONFeature[]>([]);
   const [selectedFlightId, setSelectedFlightId] = useState<string>();
   const [showFlightForm, setShowFlightForm] = useState(false);
+  const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
   const [filters, setFilters] = useState<FlightFilters>({});
   const [loading, setLoading] = useState(true);
   const [is3DView, setIs3DView] = useState(true);
@@ -156,6 +158,24 @@ export default function DashboardPage() {
       }
     } catch (error) {
       console.error('Failed to delete flight:', error);
+    }
+  };
+
+  const handleEditFlight = (flight: Flight) => {
+    setEditingFlight(flight);
+  };
+
+  const handleUpdateFlight = async (id: string, updates: Partial<Flight>) => {
+    try {
+      await flightsApi.update(id, updates);
+      setEditingFlight(null);
+      loadFlights();
+      if (settings.privacy.analyticsOptIn) {
+        analyticsApi.track('flight_updated', { flightId: id });
+      }
+    } catch (error) {
+      console.error('Failed to update flight:', error);
+      throw error;
     }
   };
 
@@ -445,6 +465,7 @@ export default function DashboardPage() {
                 flights={flights}
                 selectedFlightId={selectedFlightId}
                 onFlightClick={setSelectedFlightId}
+                onEditFlight={handleEditFlight}
                 onDeleteFlight={handleDeleteFlight}
               />
             )}
@@ -538,6 +559,16 @@ export default function DashboardPage() {
         <SimplifiedFlightFormV2
           onSubmit={handleAddFlight}
           onCancel={() => setShowFlightForm(false)}
+        />
+      )}
+
+      {/* Flight Edit Modal */}
+      {editingFlight && (
+        <FlightEditModal
+          flight={editingFlight}
+          isOpen={!!editingFlight}
+          onClose={() => setEditingFlight(null)}
+          onSave={handleUpdateFlight}
         />
       )}
     </div>

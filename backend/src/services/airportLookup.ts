@@ -23,6 +23,15 @@ interface ExternalAirportData {
   altitude?: number;
 }
 
+// In-memory cache for OurAirports CSV data (24 hour TTL)
+interface CsvCache {
+  data: string | null;
+  timestamp: number;
+}
+
+const CSV_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
+let csvCache: CsvCache = { data: null, timestamp: 0 };
+
 /**
  * Calculate distance between two coordinates (Haversine formula)
  * Returns distance in kilometers
@@ -110,7 +119,7 @@ async function fetchFromExternalAPI(code: string): Promise<ExternalAirportData |
     );
 
     if (response.ok) {
-      const data = await response.json();
+      const data: any = await response.json();
 
       if (data && data.latitude && data.longitude) {
         return {
@@ -129,43 +138,63 @@ async function fetchFromExternalAPI(code: string): Promise<ExternalAirportData |
     console.log(`⚠️  Airport-data.com API fehlgeschlagen für ${code}`);
   }
 
-  // Fallback: Versuche OurAirports direkten Lookup
+  // Fallback: Versuche OurAirports direkten Lookup mit Cache
   try {
-    const response = await fetch(
-      `https://davidmegginson.github.io/ourairports-data/airports.csv`
-    );
+    let csvText: string;
+    const now = Date.now();
 
-    if (response.ok) {
-      const csvText = await response.text();
-      const lines = csvText.split('\n');
+    // Check if cache is valid
+    if (csvCache.data && (now - csvCache.timestamp) < CSV_CACHE_TTL) {
+      console.log(`🔄 Using cached OurAirports data (age: ${Math.round((now - csvCache.timestamp) / 1000 / 60)}min)`);
+      csvText = csvCache.data;
+    } else {
+      console.log(`📥 Downloading OurAirports CSV data (this may take a moment)...`);
+      const response = await fetch(
+        `https://davidmegginson.github.io/ourairports-data/airports.csv`
+      );
 
-      // Finde die Zeile mit dem gesuchten Code
-      for (const line of lines) {
-        if (line.includes(`,${code},`) || line.includes(`,"${code}",`)) {
-          const parts = line.split(',');
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
 
-          // CSV-Format parsen (vereinfacht)
-          // Format: id,ident,type,name,latitude_deg,longitude_deg,...
-          const iataCode = parts[13]?.replace(/"/g, '') || null;
-          const icaoCode = parts[12]?.replace(/"/g, '') || parts[1]?.replace(/"/g, '');
+      csvText = await response.text();
 
-          if (iataCode === code || icaoCode === code) {
-            return {
-              iata: iataCode || undefined,
-              icao: icaoCode || undefined,
-              name: parts[3]?.replace(/"/g, '') || code,
-              city: parts[10]?.replace(/"/g, '') || undefined,
-              country: parts[8]?.replace(/"/g, '') || undefined,
-              lat: parseFloat(parts[4]),
-              lon: parseFloat(parts[5]),
-              altitude: parts[6] ? Math.round(parseFloat(parts[6]) * 0.3048) : undefined,
-            };
-          }
+      // Update cache
+      csvCache = {
+        data: csvText,
+        timestamp: now,
+      };
+      console.log(`✅ CSV data cached (${(csvText.length / 1024 / 1024).toFixed(2)}MB)`);
+    }
+
+    const lines = csvText.split('\n');
+
+    // Finde die Zeile mit dem gesuchten Code
+    for (const line of lines) {
+      if (line.includes(`,${code},`) || line.includes(`,"${code}",`)) {
+        const parts = line.split(',');
+
+        // CSV-Format parsen (vereinfacht)
+        // Format: id,ident,type,name,latitude_deg,longitude_deg,...
+        const iataCode = parts[13]?.replace(/"/g, '') || null;
+        const icaoCode = parts[12]?.replace(/"/g, '') || parts[1]?.replace(/"/g, '');
+
+        if (iataCode === code || icaoCode === code) {
+          return {
+            iata: iataCode || undefined,
+            icao: icaoCode || undefined,
+            name: parts[3]?.replace(/"/g, '') || code,
+            city: parts[10]?.replace(/"/g, '') || undefined,
+            country: parts[8]?.replace(/"/g, '') || undefined,
+            lat: parseFloat(parts[4]),
+            lon: parseFloat(parts[5]),
+            altitude: parts[6] ? Math.round(parseFloat(parts[6]) * 0.3048) : undefined,
+          };
         }
       }
     }
   } catch (error) {
-    console.log(`⚠️  OurAirports CSV-Lookup fehlgeschlagen für ${code}`);
+    console.log(`⚠️  OurAirports CSV-Lookup fehlgeschlagen für ${code}:`, error);
   }
 
   console.log(`❌ Kein externer Treffer für ${code} gefunden`);

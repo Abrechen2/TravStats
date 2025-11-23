@@ -6,14 +6,15 @@ import { AppError } from '../middleware/errorHandler';
 import { calculateDistance, generateArcPoints } from '../utils/geo';
 import { checkAndUpdateAchievements } from '../utils/achievements';
 import { enrichFlightAirports } from '../services/airportLookup';
+import { flightCreationLimiter } from '../middleware/rateLimit';
 
 const router = Router();
 
 // All routes require authentication
 router.use(authenticate);
 
-// Create flight
-router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
+// Create flight (rate limited to prevent abuse)
+router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
     const data = createFlightSchema.parse(req.body);

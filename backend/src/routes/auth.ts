@@ -33,8 +33,16 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
     // Generate token
     const token = generateToken(user.id);
 
+    // Set HttpOnly cookie for security (XSS protection)
+    res.cookie('auth_token', token, {
+      httpOnly: true,  // Prevents JavaScript access (XSS protection)
+      secure: process.env.NODE_ENV === 'production',  // HTTPS only in production
+      sameSite: 'strict',  // CSRF protection
+      maxAge: 7 * 24 * 60 * 60 * 1000,  // 7 days
+      path: '/',
+    });
+
     res.status(201).json({
-      token,
       user: {
         id: user.id,
         username: user.username,
@@ -68,8 +76,16 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
     // Generate token
     const token = generateToken(user.id);
 
+    // Set HttpOnly cookie for security (XSS protection)
+    res.cookie('auth_token', token, {
+      httpOnly: true,  // Prevents JavaScript access (XSS protection)
+      secure: process.env.NODE_ENV === 'production',  // HTTPS only in production
+      sameSite: 'strict',  // CSRF protection
+      maxAge: 7 * 24 * 60 * 60 * 1000,  // 7 days
+      path: '/',
+    });
+
     res.json({
-      token,
       user: {
         id: user.id,
         username: user.username,
@@ -78,6 +94,19 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
   } catch (error) {
     next(error);
   }
+});
+
+// Logout
+router.post('/logout', (req: Request, res: Response) => {
+  // Clear the auth cookie
+  res.clearCookie('auth_token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/',
+  });
+
+  res.json({ message: 'Logged out successfully' });
 });
 
 export default router;

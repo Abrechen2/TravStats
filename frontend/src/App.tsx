@@ -11,41 +11,43 @@ import { useSettingsStore } from './store/settingsStore';
 
 
 function App() {
-  const { token } = useAuthStore();
+  const { user } = useAuthStore();
   const loadRemoteSettings = useSettingsStore((s) => s.loadRemoteSettings);
 
   useEffect(() => {
-    if (token) {
+    if (user) {
       loadRemoteSettings();
     }
-  }, [token, loadRemoteSettings]);
+  }, [user, loadRemoteSettings]);
+
+  const isAuthenticated = !!user;
 
   return (
     <BrowserRouter>
       <Routes>
         <Route
           path="/login"
-          element={token ? <Navigate to="/" /> : <LoginPage />}
+          element={isAuthenticated ? <Navigate to="/" /> : <LoginPage />}
         />
         <Route
           path="/register"
-          element={token ? <Navigate to="/" /> : <RegisterPage />}
+          element={isAuthenticated ? <Navigate to="/" /> : <RegisterPage />}
         />
         <Route
           path="/"
-          element={token ? <DashboardPage /> : <Navigate to="/login" />}
+          element={isAuthenticated ? <DashboardPage /> : <Navigate to="/login" />}
         />
         <Route
           path="/achievements"
-          element={token ? <AchievementsPage /> : <Navigate to="/login" />}
+          element={isAuthenticated ? <AchievementsPage /> : <Navigate to="/login" />}
         />
         <Route
           path="/stats"
-          element={token ? <AdvancedStatsPage /> : <Navigate to="/login" />}
+          element={isAuthenticated ? <AdvancedStatsPage /> : <Navigate to="/login" />}
         />
         <Route
           path="/settings"
-          element={token ? <SettingsPage /> : <Navigate to="/login" />}
+          element={isAuthenticated ? <SettingsPage /> : <Navigate to="/login" />}
         />
       </Routes>
     </BrowserRouter>

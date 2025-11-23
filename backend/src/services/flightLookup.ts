@@ -3,9 +3,22 @@
  *
  * Uses AirLabs API (Free Tier: 1000 requests/month)
  * Fetches real-time and historical flight data by flight number
+ * Implements in-memory caching to reduce API calls
  */
 
 import axios from 'axios';
+
+// In-memory cache for flight lookup results
+interface FlightLookupCache {
+  [key: string]: {
+    data: FlightData[];
+    timestamp: number;
+  };
+}
+
+const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours for historical flights
+const RECENT_CACHE_TTL = 30 * 60 * 1000; // 30 minutes for recent/future flights
+const flightCache: FlightLookupCache = {};
 
 export interface FlightData {
   flightNumber: string;
@@ -39,7 +52,7 @@ export interface FlightData {
 
 /**
  * Lookup flight by flight number and optional date
- * Uses AirLabs API (free tier)
+ * Uses AirLabs API (free tier) with caching
  */
 export async function lookupFlightByNumber(
   flightNumber: string,
@@ -50,6 +63,26 @@ export async function lookupFlightByNumber(
   if (!apiKey) {
     console.warn('⚠️  AIRLABS_API_KEY not configured - flight lookup disabled');
     return [];
+  }
+
+  // Generate cache key
+  const dateStr = date ? date.toISOString().split('T')[0] : 'nodate';
+  const cacheKey = `${flightNumber.toUpperCase()}_${dateStr}`;
+
+  // Check cache
+  const now = Date.now();
+  const cached = flightCache[cacheKey];
+
+  if (cached) {
+    // Determine TTL based on flight date
+    const isHistorical = date && date < new Date();
+    const ttl = isHistorical ? CACHE_TTL : RECENT_CACHE_TTL;
+
+    if (now - cached.timestamp < ttl) {
+      const age = Math.round((now - cached.timestamp) / 1000 / 60);
+      console.log(`🔄 Using cached flight data for ${flightNumber} (age: ${age}min)`);
+      return cached.data;
+    }
   }
 
   try {
@@ -65,6 +98,11 @@ export async function lookupFlightByNumber(
     });
 
     if (!response.data || !response.data.response) {
+      // Cache empty results for 1 hour to avoid repeated failed lookups
+      flightCache[cacheKey] = {
+        data: [],
+        timestamp: now,
+      };
       return [];
     }
 
@@ -97,7 +135,13 @@ export async function lookupFlightByNumber(
       distance: flight.distance,
     }));
 
-    console.log(`✅ Found ${flights.length} flights for ${flightNumber}`);
+    // Cache the results
+    flightCache[cacheKey] = {
+      data: flights,
+      timestamp: now,
+    };
+
+    console.log(`✅ Found ${flights.length} flights for ${flightNumber} (cached for ${date && date < new Date() ? '6h' : '30min'})`);
     return flights;
 
   } catch (error: any) {
@@ -108,6 +152,13 @@ export async function lookupFlightByNumber(
     } else {
       console.error('❌ Error looking up flight:', error.message);
     }
+
+    // Return cached data even if expired, as fallback
+    if (cached) {
+      console.log(`⚠️  Returning expired cache for ${flightNumber} due to API error`);
+      return cached.data;
+    }
+
     return [];
   }
 }
