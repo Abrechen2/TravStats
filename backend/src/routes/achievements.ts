@@ -36,32 +36,35 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
     // Combine data
     const achievementsWithProgress = achievements.map(achievement => {
       const userAchievement = userAchievementMap.get(achievement.id);
+      const progress = userAchievement?.progress || 0;
+      const isUnlocked = !!userAchievement && progress >= achievement.requirement;
 
       return {
         ...achievement,
-        isUnlocked: !!userAchievement,
-        unlockedAt: userAchievement?.unlockedAt || null,
-        progress: userAchievement?.progress || 0,
+        isUnlocked,
+        unlockedAt: isUnlocked ? userAchievement?.unlockedAt || null : null,
+        progress,
         progressPercentage: Math.min(
           100,
-          Math.round((userAchievement?.progress || 0) / achievement.requirement * 100)
+          Math.round(progress / achievement.requirement * 100)
         ),
       };
     });
 
-    // Calculate total points
-    const totalPoints = userAchievements.reduce(
-      (sum, ua) => sum + ua.achievement.points,
-      0
+    // Calculate totals only for unlocked achievements
+    const unlocked = userAchievements.filter(
+      ua => ua.progress >= ua.achievement.requirement
     );
+
+    const totalPoints = unlocked.reduce((sum, ua) => sum + ua.achievement.points, 0);
 
     // Calculate achievements by category
     const categories = achievements.reduce((acc, ach) => {
       if (!acc[ach.category]) {
         acc[ach.category] = { total: 0, unlocked: 0 };
       }
-      acc[ach.category].total++;
-      if (userAchievementMap.has(ach.id)) {
+        acc[ach.category].total++;
+      if (achievementsWithProgress.find(a => a.id === ach.id)?.isUnlocked) {
         acc[ach.category].unlocked++;
       }
       return acc;
@@ -71,7 +74,7 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
       achievements: achievementsWithProgress,
       summary: {
         totalAchievements: achievements.length,
-        unlockedAchievements: userAchievements.length,
+        unlockedAchievements: unlocked.length,
         totalPoints,
         categories,
       },

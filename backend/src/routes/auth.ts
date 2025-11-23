@@ -37,7 +37,7 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
     res.cookie('auth_token', token, {
       httpOnly: true,  // Prevents JavaScript access (XSS protection)
       secure: process.env.NODE_ENV === 'production',  // HTTPS only in production
-      sameSite: 'strict',  // CSRF protection
+      sameSite: 'lax',  // Allow mobile/LAN clients while keeping CSRF protection
       maxAge: 7 * 24 * 60 * 60 * 1000,  // 7 days
       path: '/',
     });
@@ -80,7 +80,7 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
     res.cookie('auth_token', token, {
       httpOnly: true,  // Prevents JavaScript access (XSS protection)
       secure: process.env.NODE_ENV === 'production',  // HTTPS only in production
-      sameSite: 'strict',  // CSRF protection
+      sameSite: 'lax',  // Allow mobile/LAN clients while keeping CSRF protection
       maxAge: 7 * 24 * 60 * 60 * 1000,  // 7 days
       path: '/',
     });
@@ -102,7 +102,7 @@ router.post('/logout', (req: Request, res: Response) => {
   res.clearCookie('auth_token', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    sameSite: 'lax',
     path: '/',
   });
 

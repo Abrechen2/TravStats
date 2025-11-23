@@ -22,6 +22,8 @@ export interface BoardingPassData {
   seatNumber: string;
   checkInSequenceNumber: string;
   passengerStatus: string;
+  seatClass?: 'economy' | 'premium_economy' | 'business' | 'first';
+  airlineName?: string;
 
   // Conditional data (if present)
   airlineNumericCode?: string;
@@ -109,6 +111,8 @@ export function parseBCBP(barcodeData: string): BoardingPassData | null {
 
     // Convert Julian date to actual date
     const dateOfFlight = julianDateToDate(julianDate);
+    const seatClass = mapCompartmentToSeatClass(compartmentCode);
+    const airlineName = getAirlineName(operatingCarrierDesignator);
 
     return {
       formatCode,
@@ -125,6 +129,8 @@ export function parseBCBP(barcodeData: string): BoardingPassData | null {
       seatNumber,
       checkInSequenceNumber,
       passengerStatus,
+      seatClass,
+      airlineName,
       raw: barcodeData,
     };
   } catch (error) {
@@ -154,6 +160,16 @@ function julianDateToDate(julianDate: string): string {
   }
 
   return date.toISOString().split('T')[0]; // Return YYYY-MM-DD
+}
+
+function mapCompartmentToSeatClass(
+  code: string
+): 'economy' | 'premium_economy' | 'business' | 'first' {
+  const c = code.toUpperCase();
+  if ('FAP'.includes(c)) return 'first';
+  if ('CJDZ'.includes(c)) return 'business';
+  if ('WPE'.includes(c)) return 'premium_economy';
+  return 'economy';
 }
 
 /**

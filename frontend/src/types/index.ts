@@ -102,6 +102,16 @@ export interface FlightLookupResult {
   arrivalTime?: string;
 }
 
+export interface FlightLookupResult {
+  airline?: string;
+  flightNumber?: string;
+  aircraft?: string;
+  departure?: Airport;
+  arrival?: Airport;
+  departureTime?: string;
+  arrivalTime?: string;
+}
+
 export interface FlightFilters {
   airline?: string;
   flightNumber?: string;

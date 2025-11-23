@@ -3,7 +3,7 @@ import { Airport, airportsApi, flightsApi } from '../lib/api';
 import AirportAutocomplete from './AirportAutocomplete';
 import BoardingPassScanner from './BoardingPassScanner';
 import { BoardingPassData, getAirlineName } from '../lib/bcbpParser';
-import type { FlightInput } from '../types';
+import type { FlightInput, FlightLookupResult } from '../types';
 import { useSettingsStore } from '../store/settingsStore';
 import type { FlightInput, FlightLookupResult } from '../types';
 
@@ -97,14 +97,20 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
     if (lookup.arrival) setArrival(lookup.arrival);
 
     const updateDateTime = (
-      isoString: string | undefined,
+      value: string | undefined,
       setDate: (val: string) => void,
       setTime: (val: string) => void
     ) => {
-      if (!isoString) return;
-      const parsed = new Date(isoString);
+      if (!value) return;
+      // Avoid timezone shifts: use raw parts if present
+      const match = value.match(/^(\d{4}-\d{2}-\d{2})[T ]?(\d{2}:\d{2})?/);
+      if (match) {
+        if (match[1]) setDate(match[1]);
+        if (match[2]) setTime(match[2]);
+        return;
+      }
+      const parsed = new Date(value);
       if (Number.isNaN(parsed.getTime())) return;
-
       setDate(parsed.toISOString().split('T')[0]);
       setTime(parsed.toTimeString().slice(0, 5));
     };
@@ -206,12 +212,13 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
       setArrivalDate(bcbpData.dateOfFlight);
 
       // Set airline and flight number
-      const airlineName = getAirlineName(bcbpData.operatingCarrierDesignator);
+      const airlineName = bcbpData.airlineName || getAirlineName(bcbpData.operatingCarrierDesignator);
       setAirline(airlineName);
       setFlightNumber(`${bcbpData.operatingCarrierDesignator}${bcbpData.flightNumber}`);
 
       // Set status to flown (since user has boarding pass)
       setStatus('flown');
+
 
       // Show advanced options since we have flight details
       setShowAdvanced(true);
