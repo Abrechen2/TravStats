@@ -35,6 +35,8 @@ export default function DashboardPage() {
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const [leftOpen, setLeftOpen] = useState(false);
   const [rightOpen, setRightOpen] = useState(false);
+  const [imports, setImports] = useState<any[]>([]);
+  const [importsOpen, setImportsOpen] = useState(false);
   const [onboarding, setOnboarding] = useState(() => {
     const saved = localStorage.getItem('onboarding-checklist');
     return saved
@@ -94,6 +96,24 @@ export default function DashboardPage() {
   useEffect(() => {
     localStorage.setItem('onboarding-checklist', JSON.stringify(onboarding));
   }, [onboarding]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+      setLeftOpen(true);
+      setRightOpen(true);
+    }
+    // fetch imports for badge
+    fetchImports();
+  }, []);
+
+  const fetchImports = async () => {
+    try {
+      const data = await importsApi.getPending();
+      setImports(data.imports || []);
+    } catch (err) {
+      console.error('Failed to load imports', err);
+    }
+  };
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
@@ -406,6 +426,17 @@ export default function DashboardPage() {
             <button onClick={logout} className="btn-secondary">
               Logout
             </button>
+            <button
+              onClick={() => setImportsOpen(prev => !prev)}
+              className="relative px-3 py-2 text-sm font-semibold bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm"
+            >
+              Imports
+              {imports.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                  {imports.length}
+                </span>
+              )}
+            </button>
           </div>
         </div>
       </header>
@@ -490,6 +521,42 @@ export default function DashboardPage() {
 
         {/* Center - Map & Roadmap MVP highlights */}
         <div className="flex-1 p-4 flex flex-col gap-4 min-w-0 overflow-auto">
+          {importsOpen && (
+            <div className="bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-600 rounded-lg p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Pending Imports</h3>
+                <button className="text-sm text-blue-600" onClick={fetchImports}>Refresh</button>
+              </div>
+              {imports.length === 0 && (
+                <div className="text-sm text-gray-500">Keine offenen Importe.</div>
+              )}
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {imports.map((imp: any) => (
+                  <div key={imp.id} className="border border-gray-200 dark:border-gray-700 rounded-md p-3">
+                    <div className="text-sm font-semibold text-gray-900 dark:text-white">{imp.subject || 'Ohne Betreff'}</div>
+                    <div className="text-xs text-gray-500">{imp.fromAddress}</div>
+                    <div className="mt-2 text-xs text-gray-600 dark:text-gray-300">
+                      Flug: {imp.parsed?.flightNumber || '—'} | {imp.parsed?.departureCode} → {imp.parsed?.arrivalCode} | Abflug: {imp.parsed?.departureTime || '—'}
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={async () => { await importsApi.accept(imp.id); fetchImports(); loadFlights(); }}
+                        className="px-3 py-1 text-xs font-semibold bg-green-500 text-white rounded"
+                      >
+                        Übernehmen
+                      </button>
+                      <button
+                        onClick={async () => { await importsApi.reject(imp.id); fetchImports(); }}
+                        className="px-3 py-1 text-xs font-semibold bg-red-500 text-white rounded"
+                      >
+                        Verwerfen
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-2">
               <button
@@ -505,6 +572,13 @@ export default function DashboardPage() {
                 title={rightOpen ? 'Stats ausblenden' : 'Stats anzeigen'}
               >
                 <span className="text-gray-600 dark:text-gray-300">{rightOpen ? '>' : '<'}</span>
+              </button>
+              <button
+                onClick={() => setImportsOpen(prev => !prev)}
+                className="p-2 text-sm font-semibold bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-500 rounded-full shadow-sm flex items-center gap-1"
+                title="Pending Imports anzeigen"
+              >
+                <span className="text-amber-600 dark:text-amber-300">⇅</span>
               </button>
             </div>
             <div>
