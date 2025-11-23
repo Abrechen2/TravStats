@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { airportsApi, Airport } from '../lib/api';
 
 interface AirportAutocompleteProps {
-  value?: Airport;
+  value?: Airport | null;
   onChange: (airport: Airport | null) => void;
   label: string;
   placeholder?: string;
