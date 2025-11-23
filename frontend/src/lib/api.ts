@@ -47,6 +47,22 @@ export const authApi = {
   },
 };
 
+// Imports API
+export const importsApi = {
+  getPending: async () => {
+    const { data } = await api.get<{ imports: any[] }>('/imports/pending');
+    return data;
+  },
+  accept: async (id: string) => {
+    const { data } = await api.post(`/imports/${id}/accept`);
+    return data;
+  },
+  reject: async (id: string) => {
+    const { data } = await api.post(`/imports/${id}/reject`);
+    return data;
+  },
+};
+
 // Flights API
 export const flightsApi = {
   getAll: async (filters?: FlightFilters) => {

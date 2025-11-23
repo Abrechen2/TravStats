@@ -39,7 +39,9 @@
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.2",
-    "zod": "^3.22.4"
+    "zod": "^3.22.4",
+    "imapflow": "^1.5.8",
+    "mailparser": "^3.9.0"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",

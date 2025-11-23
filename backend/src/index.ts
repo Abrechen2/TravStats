@@ -13,6 +13,7 @@ import achievementRoutes from './routes/achievements';
 import settingsRoutes from './routes/settings';
 import analyticsRoutes from './routes/analytics';
 import uploadsRoutes from './routes/uploads';
+import importsRoutes from './routes/imports';
 import { errorHandler } from './middleware/errorHandler';
 import { prisma } from './db';
 import { DATABASE_URL } from './utils/database';
@@ -77,6 +78,7 @@ app.use('/api/v1/achievements', achievementRoutes);
 app.use('/api/v1/settings', settingsRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
 app.use('/api/v1/uploads', uploadsRoutes);
+app.use('/api/v1/imports', importsRoutes);
 
 // Error handling
 app.use(errorHandler);
