@@ -54,6 +54,10 @@ export interface Flight {
   terminal?: string;
   bookingReference?: string;
   ticketNumber?: string;
+  ticketPrice?: number;
+  currency?: string;
+  category?: 'business' | 'private' | 'vacation';
+  tags?: string[];
 }
 
 export interface FlightInput {
@@ -82,6 +86,20 @@ export interface FlightInput {
   category?: 'business' | 'private' | 'vacation';
   tags?: string[];
   receiptUrl?: string;
+  ticketPrice?: number;
+  currency?: string;
+  category?: 'business' | 'private' | 'vacation';
+  tags?: string[];
+}
+
+export interface FlightLookupResult {
+  airline?: string;
+  flightNumber?: string;
+  aircraft?: string;
+  departure?: Airport;
+  arrival?: Airport;
+  departureTime?: string;
+  arrivalTime?: string;
 }
 
 export interface FlightLookupResult {
