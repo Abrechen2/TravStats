@@ -131,100 +131,122 @@ export default function GlobeView({ flights = [], selectedFlightId, onFlightClic
     return Math.min(Math.max(zoomFactor, 0.4), 1.5);
   }, [cameraAltitude]);
 
-  // Convert flights to arcs format
+  // Convert flights to arcs format (skip invalid coordinates)
   const arcsData = useMemo(() => {
-    return flights.map(flight => {
-      if (!flight?.properties || !flight?.geometry) return null;
+    return (flights || [])
+      .map(flight => {
+        if (!flight?.properties || !flight?.geometry) return null;
 
-      const coords = flight.geometry.coordinates;
-      if (coords.length < 2) return null;
+        const coords = flight.geometry.coordinates;
+        if (coords.length < 2) return null;
 
-      const start = coords[0];
-      const end = coords[coords.length - 1];
+        const start = coords[0];
+        const end = coords[coords.length - 1];
 
-      return {
-        id: flight.properties.id,
-        startLat: start[1],
-        startLng: start[0],
-        endLat: end[1],
-        endLng: end[0],
-        status: flight.properties.status,
-        category: (flight as any).properties.category,
-        airline: flight.properties.airline,
-        flightNumber: flight.properties.flightNumber,
-        departure: flight.properties.departureAirport,
-        arrival: flight.properties.arrivalAirport,
-        color: getStatusColor(flight.properties.status, (flight as any).properties.category),
-        altitude: getStaticArcAltitude(start[1], start[0], end[1], end[0]),
-      };
-    }).filter(arc => arc !== null);
+        const validCoords =
+          Number.isFinite(start[0]) &&
+          Number.isFinite(start[1]) &&
+          Number.isFinite(end[0]) &&
+          Number.isFinite(end[1]) &&
+          !(start[0] === 0 && start[1] === 0) &&
+          !(end[0] === 0 && end[1] === 0);
+
+        if (!validCoords) return null;
+
+        return {
+          id: flight.properties.id,
+          startLat: start[1],
+          startLng: start[0],
+          endLat: end[1],
+          endLng: end[0],
+          status: flight.properties.status,
+          category: (flight as any).properties.category,
+          airline: flight.properties.airline,
+          flightNumber: flight.properties.flightNumber,
+          departure: flight.properties.departureAirport,
+          arrival: flight.properties.arrivalAirport,
+          color: getStatusColor(flight.properties.status, (flight as any).properties.category),
+          altitude: getStaticArcAltitude(start[1], start[0], end[1], end[0]),
+        };
+      })
+      .filter(arc => arc !== null);
   }, [flights]);
 
   // Extract airport points with proper deduplication
   const pointsData = useMemo(() => {
     const airportMap = new Map();
 
-    flights.forEach(flight => {
+    (flights || []).forEach(flight => {
       if (!flight?.properties || !flight?.geometry) return;
 
       const coords = flight.geometry.coordinates;
       if (coords.length < 2) return;
 
-      // Departure airport - ALWAYS use coordinates for deduplication key
+      // Departure airport - prefer codes, fallback to coordinate bucket
       const depLat = coords[0][1];
       const depLng = coords[0][0];
       const depIata = flight.properties.departureAirport?.iata;
       const depIcao = flight.properties.departureAirport?.icao;
       const depCode = depIata || depIcao || 'Unknown';
-      // Always use coordinate-based key to avoid duplicates when IATA/ICAO is missing in some flights
-      // Precision: 2 decimals ≈ 1.1km (good enough to identify same airport)
-      const depKey = `${depLat.toFixed(2)}_${depLng.toFixed(2)}`;
+      const depValid =
+        [depLat, depLng].every(Number.isFinite) &&
+        !(depLat === 0 && depLng === 0);
 
-      if (!airportMap.has(depKey)) {
-        airportMap.set(depKey, {
-          lat: depLat,
-          lng: depLng,
-          name: flight.properties.departureAirport?.name || depCode,
-          code: depCode,
-          size: 0,
-        });
-      } else {
-        // If airport already exists, prefer IATA/ICAO code if this flight has it
-        const existing = airportMap.get(depKey);
-        if (depIata && existing.code === 'Unknown') {
-          existing.code = depCode;
-          existing.name = flight.properties.departureAirport?.name || depCode;
+      if (depValid) {
+        const depKey = depCode !== 'Unknown'
+          ? depCode
+          : `${depLat.toFixed(2)}_${depLng.toFixed(2)}`;
+
+        if (!airportMap.has(depKey)) {
+          airportMap.set(depKey, {
+            lat: depLat,
+            lng: depLng,
+            name: flight.properties.departureAirport?.name || depCode,
+            code: depCode,
+            size: 0,
+          });
+        } else {
+          const existing = airportMap.get(depKey);
+          if ((depIata || depIcao) && existing.code === 'Unknown') {
+            existing.code = depCode;
+            existing.name = flight.properties.departureAirport?.name || depCode;
+          }
         }
+        airportMap.get(depKey).size++;
       }
-      airportMap.get(depKey).size++;
 
-      // Arrival airport - ALWAYS use coordinates for deduplication key
+      // Arrival airport - prefer codes, fallback to coordinate bucket
       const arrLat = coords[coords.length - 1][1];
       const arrLng = coords[coords.length - 1][0];
       const arrIata = flight.properties.arrivalAirport?.iata;
       const arrIcao = flight.properties.arrivalAirport?.icao;
       const arrCode = arrIata || arrIcao || 'Unknown';
-      // Always use coordinate-based key to avoid duplicates when IATA/ICAO is missing in some flights
-      // Precision: 2 decimals ≈ 1.1km (good enough to identify same airport)
-      const arrKey = `${arrLat.toFixed(2)}_${arrLng.toFixed(2)}`;
+      const arrValid =
+        [arrLat, arrLng].every(Number.isFinite) &&
+        !(arrLat === 0 && arrLng === 0);
 
-      if (!airportMap.has(arrKey)) {
-        airportMap.set(arrKey, {
-          lat: arrLat,
-          lng: arrLng,
-          name: flight.properties.arrivalAirport?.name || arrCode,
-          code: arrCode,
-          size: 0,
-        });
-      } else {
-        // If airport already exists, prefer IATA/ICAO code if this flight has it
-        const existing = airportMap.get(arrKey);
-        if (arrIata && existing.code === 'Unknown') {
-          existing.code = arrCode;
-          existing.name = flight.properties.arrivalAirport?.name || arrCode;
+      if (arrValid) {
+        const arrKey = arrCode !== 'Unknown'
+          ? arrCode
+          : `${arrLat.toFixed(2)}_${arrLng.toFixed(2)}`;
+
+        if (!airportMap.has(arrKey)) {
+          airportMap.set(arrKey, {
+            lat: arrLat,
+            lng: arrLng,
+            name: flight.properties.arrivalAirport?.name || arrCode,
+            code: arrCode,
+            size: 0,
+          });
+        } else {
+          const existing = airportMap.get(arrKey);
+          if ((arrIata || arrIcao) && existing.code === 'Unknown') {
+            existing.code = arrCode;
+            existing.name = flight.properties.arrivalAirport?.name || arrCode;
+          }
         }
+        airportMap.get(arrKey).size++;
       }
-      airportMap.get(arrKey).size++;
     });
 
     return Array.from(airportMap.values());
@@ -318,3 +340,5 @@ export default function GlobeView({ flights = [], selectedFlightId, onFlightClic
     </div>
   );
 }
+
+

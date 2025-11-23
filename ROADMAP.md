@@ -10,6 +10,14 @@
 - [ ] Automatisierte Preview-Deployments für PRs
 
 
+### Hotfixes (ASAP)
+- [ ] Backend startet nicht: Merge-Konflikte in `backend/src/routes/flights.ts` und `backend/src/services/flightLookup.ts` bereinigen, Flight-Lookup-Endpoint vereinheitlichen (Aviationstack vs. AirLabs) und Rate-Limiter wieder aktivieren.
+- [ ] Auth mobil: API-Basis-URL für LAN-Zugriff konfigurierbar/relativ machen (`frontend/src/lib/api.ts`) und CORS/SameSite für mobile Clients anpassen.
+- [ ] Achievements: `checkAndUpdateAchievements` so anpassen, dass nur freigeschaltete Achievements Persistenz erzeugen (neue Nutzer starten sonst vollständig freigeschaltet).
+- [ ] Add-Flight-Flow: Simplified-Form-Komponenten ohne Konflikte bauen, Lookup-Flow (V2) gegen den aktiven Endpoint testen und automatisierten Happy-Path-Test ergänzen.
+- [ ] 3D-Marker: Dedup primär über IATA/ICAO (Fallback Koordinaten) und 0/0-Koordinaten filtern, um gestapelte Marker zu vermeiden (`frontend/src/components/GlobeView.tsx`).
+- [ ] Build-Smoketest: Kurzen `npm run build`/`npm run test`-Smoke-Check in README/CI ergänzen, damit Backend/Frontend-Breaks sofort auffallen.
+
 ## Phase 1: Kern-Visualisierungen (Woche 1-2)
 *Erweitert die Statistik-Seite mit wichtigen Kennzahlen*
 

@@ -30,8 +30,21 @@ const PORT = process.env.PORT || 8000;
 
 // Security middleware
 app.use(helmet());
+
+// CORS configuration to allow LAN/mobile clients
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000')
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean);
+const allowAllOriginsInDev = process.env.NODE_ENV !== 'production';
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: (origin, callback) => {
+    if (allowAllOriginsInDev) return callback(null, true);
+    if (!origin) return callback(null, true); // mobile apps / same-origin
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
 }));
 

@@ -186,30 +186,28 @@ export async function lookupFlightDetails(
     const url = `http://api.aviationstack.com/v1/flights?${params.toString()}`;
 
     try {
-      const response = await fetch(url);
-      if (response.ok) {
-        const json: any = await response.json();
-        const result = json.data?.[0];
+      const response = await axios.get(url, { timeout: 6000 });
+      const json: any = response.data;
+      const result = json.data?.[0];
 
-        if (result) {
-          const departureCode = result.departure?.iata || result.departure?.icao;
-          const arrivalCode = result.arrival?.iata || result.arrival?.icao;
+      if (result) {
+        const departureCode = result.departure?.iata || result.departure?.icao;
+        const arrivalCode = result.arrival?.iata || result.arrival?.icao;
 
-          const [departureAirport, arrivalAirport] = await Promise.all([
-            departureCode ? findOrCreateAirport(departureCode) : Promise.resolve(null),
-            arrivalCode ? findOrCreateAirport(arrivalCode) : Promise.resolve(null),
-          ]);
+        const [departureAirport, arrivalAirport] = await Promise.all([
+          departureCode ? findOrCreateAirport(departureCode) : Promise.resolve(null),
+          arrivalCode ? findOrCreateAirport(arrivalCode) : Promise.resolve(null),
+        ]);
 
-          return {
-            airline: result.airline?.name,
-            flightNumber: result.flight?.iata || result.flight?.icao || trimmedNumber,
-            aircraft: result.aircraft?.icao || result.aircraft?.iata,
-            departure: departureAirport || undefined,
-            arrival: arrivalAirport || undefined,
-            departureTime: result.departure?.estimated || result.departure?.scheduled,
-            arrivalTime: result.arrival?.estimated || result.arrival?.scheduled,
-          };
-        }
+        return {
+          airline: result.airline?.name,
+          flightNumber: result.flight?.iata || result.flight?.icao || trimmedNumber,
+          aircraft: result.aircraft?.icao || result.aircraft?.iata,
+          departure: departureAirport || undefined,
+          arrival: arrivalAirport || undefined,
+          departureTime: result.departure?.estimated || result.departure?.scheduled,
+          arrivalTime: result.arrival?.estimated || result.arrival?.scheduled,
+        };
       }
     } catch (err) {
       console.error('Aviationstack lookup failed', err);
