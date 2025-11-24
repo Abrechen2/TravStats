@@ -3,6 +3,22 @@ set -e
 
 echo "🚀 Starting TravStats..."
 
+# Auto-generate JWT_SECRET if not set
+if [ -z "$JWT_SECRET" ]; then
+    JWT_SECRET_FILE="/app/data/jwt_secret"
+
+    if [ -f "$JWT_SECRET_FILE" ]; then
+        echo "📝 Loading existing JWT_SECRET..."
+        export JWT_SECRET=$(cat "$JWT_SECRET_FILE")
+    else
+        echo "🔐 Generating new JWT_SECRET..."
+        export JWT_SECRET=$(openssl rand -hex 32)
+        echo "$JWT_SECRET" > "$JWT_SECRET_FILE"
+        chmod 600 "$JWT_SECRET_FILE"
+        echo "✅ JWT_SECRET generated and saved"
+    fi
+fi
+
 # Wait for database to be ready
 if [ -n "$DATABASE_URL" ]; then
     echo "⏳ Waiting for database..."
