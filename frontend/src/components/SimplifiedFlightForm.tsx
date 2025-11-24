@@ -5,7 +5,6 @@ import BoardingPassScanner from './BoardingPassScanner';
 import { BoardingPassData, getAirlineName } from '../lib/bcbpParser';
 import type { FlightInput, FlightLookupResult } from '../types';
 import { useSettingsStore } from '../store/settingsStore';
-import type { FlightInput, FlightLookupResult } from '../types';
 
 interface SimplifiedFlightFormProps {
   onSubmit: (flight: FlightInput) => Promise<void>;
@@ -93,8 +92,8 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
     if (lookup.flightNumber) setFlightNumber(lookup.flightNumber);
     if (lookup.aircraft) setAircraft(prev => prev || lookup.aircraft || '');
 
-    if (lookup.departure) setDeparture(lookup.departure);
-    if (lookup.arrival) setArrival(lookup.arrival);
+    if (lookup.departure) setDeparture(lookup.departure as any);
+    if (lookup.arrival) setArrival(lookup.arrival as any);
 
     const updateDateTime = (
       value: string | undefined,
@@ -204,8 +203,8 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
       }
 
       // Set airports
-      setDeparture(depAirport);
-      setArrival(arrAirport);
+      setDeparture(depAirport as any);
+      setArrival(arrAirport as any);
 
       // Set date
       setDepartureDate(bcbpData.dateOfFlight);

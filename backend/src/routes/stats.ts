@@ -65,7 +65,8 @@ router.get('/summary', async (req: AuthRequest, res: Response, next: NextFunctio
 
     // Count by airline
     const byAirline = flights.reduce((acc, flight) => {
-      acc[flight.airline] = (acc[flight.airline] || 0) + 1;
+      const airline = flight.airline || 'Unknown';
+      acc[airline] = (acc[airline] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 

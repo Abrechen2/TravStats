@@ -1,11 +1,7 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
-
-import { Link } from 'react-router-dom';
-
-import { useNavigate } from 'react-router-dom';
-
+import { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { flightsApi, importsApi } from '../lib/api';
+import { flightsApi, importsApi, analyticsApi } from '../lib/api';
 import MapContainer3D from '../components/MapContainer3D';
 import SimplifiedFlightFormV2 from '../components/SimplifiedFlightFormV2';
 import FlightList from '../components/FlightList';
@@ -14,12 +10,8 @@ import Stats from '../components/Stats';
 import Filters from '../components/Filters';
 import ErrorBoundary from '../components/ErrorBoundary';
 import DarkModeToggle from '../components/DarkModeToggle';
-import YearHeatmap from '../components/YearHeatmap';
-import FlightCalendar from '../components/FlightCalendar';
 import type { Flight, FlightInput, FlightFilters, GeoJSONFeature } from '../types';
 import { useSettingsStore } from '../store/settingsStore';
-import { BarChart, Bar, XAxis, ResponsiveContainer, Tooltip } from 'recharts';
-import { analyticsApi } from '../lib/api';
 
 export default function DashboardPage() {
   const { user, logout } = useAuthStore();
@@ -45,50 +37,6 @@ export default function DashboardPage() {
       : { flightAdded: false, usedFilter: false, exported: false, dismissed: false };
   });
   const settings = useSettingsStore();
-
-  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-    const R = 6371;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  };
-
-  const distanceUnitFactor = settings.units.distanceUnit === 'miles'
-    ? 0.621371
-    : settings.units.distanceUnit === 'nautical_miles'
-    ? 0.539957
-    : 1;
-
-  const monthlyData = useMemo(() => {
-    const map = new Map<string, number>();
-    flights.forEach((f) => {
-      const date = new Date(f.departureTime);
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      map.set(key, (map.get(key) || 0) + 1);
-    });
-    return Array.from(map.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .slice(-6)
-      .map(([month, count]) => ({ month, flights: count }));
-  }, [flights]);
-
-  const distanceSummary = useMemo(() => {
-    let total = 0;
-    flights.forEach((f) => {
-      total += calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon);
-    });
-    const converted = total * distanceUnitFactor;
-    return {
-      total: converted,
-      average: flights.length > 0 ? converted / flights.length : 0,
-      unit: settings.units.distanceUnit === 'miles' ? 'mi' : settings.units.distanceUnit === 'nautical_miles' ? 'nm' : 'km',
-    };
-  }, [flights, distanceUnitFactor, settings.units.distanceUnit]);
 
   useEffect(() => {
     loadFlights();

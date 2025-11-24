@@ -37,3 +37,30 @@ export const generalLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+/**
+ * Rate limiter for authentication endpoints (login, register)
+ * Protects against brute-force attacks and mass registration
+ * Allows 10 attempts per 15 minutes per IP
+ */
+export const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Limit each IP to 10 login/register attempts per 15 minutes
+  message: 'Too many authentication attempts, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true, // Don't count successful logins towards limit
+});
+
+/**
+ * Rate limiter for flight lookup API endpoints
+ * Protects external API keys from abuse (AirLabs, OpenSky)
+ * Allows 30 lookups per 15 minutes per IP
+ */
+export const flightLookupLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30, // Limit each IP to 30 flight lookups per 15 minutes
+  message: 'Too many flight lookup requests, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});

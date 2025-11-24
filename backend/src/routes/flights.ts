@@ -47,16 +47,16 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
     // Enrich airport data with missing information from database
     const enriched = await enrichFlightAirports({
       departure: {
-        iata: data.departure.iata,
-        icao: data.departure.icao,
-        name: data.departure.name,
+        iata: data.departure.iata ?? undefined,
+        icao: data.departure.icao ?? undefined,
+        name: data.departure.name ?? undefined,
         lat: data.departure.lat,
         lon: data.departure.lon,
       },
       arrival: {
-        iata: data.arrival.iata,
-        icao: data.arrival.icao,
-        name: data.arrival.name,
+        iata: data.arrival.iata ?? undefined,
+        icao: data.arrival.icao ?? undefined,
+        name: data.arrival.name ?? undefined,
         lat: data.arrival.lat,
         lon: data.arrival.lon,
       },
@@ -92,18 +92,17 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
         category: data.category,
         tags: data.tags ?? [],
         receiptUrl: data.receiptUrl,
-        ticketPrice: data.ticketPrice,
-        currency: data.currency,
-        category: data.category,
-        tags: data.tags,
       },
     });
 
     // Check achievements after creating a flown flight (don't wait for it)
     if (data.status === 'flown') {
-      checkAndUpdateAchievements(userId).catch(err =>
-        console.error('Failed to check achievements:', err)
-      );
+      checkAndUpdateAchievements(userId).catch(err => {
+        // Import logger locally to avoid circular dependencies
+        import('../utils/logger').then(({ default: logger }) => {
+          logger.error({ type: 'achievement_check_failed', userId, error: err.message });
+        });
+      });
     }
 
     res.status(201).json(flight);
@@ -335,10 +334,6 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     if (data.category !== undefined) updateData.category = data.category;
     if (data.tags !== undefined) updateData.tags = data.tags;
     if (data.receiptUrl !== undefined) updateData.receiptUrl = data.receiptUrl;
-    if (data.ticketPrice !== undefined) updateData.ticketPrice = data.ticketPrice;
-    if (data.currency !== undefined) updateData.currency = data.currency;
-    if (data.category) updateData.category = data.category;
-    if (data.tags !== undefined) updateData.tags = data.tags;
 
     if (data.departure) {
       updateData.depIcao = data.departure.icao;

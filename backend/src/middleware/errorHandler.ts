@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
+import logger from '../utils/logger';
 
 export interface ApiError extends Error {
   statusCode?: number;
@@ -11,7 +12,16 @@ export const errorHandler = (
   res: Response,
   next: NextFunction
 ) => {
-  console.error('Error:', err);
+  // Log error with context
+  logger.error({
+    type: 'error',
+    message: err.message,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+    method: req.method,
+    url: req.url,
+    ip: req.ip,
+    userAgent: req.get('user-agent'),
+  });
 
   // Zod validation errors
   if (err instanceof ZodError) {

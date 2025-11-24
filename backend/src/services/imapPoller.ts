@@ -29,7 +29,7 @@ export async function pollImapAndImport(config: ImapConfig, defaultUserId?: stri
 
   await client.connect();
   const mailbox = config.mailbox || 'INBOX';
-  await client.selectMailbox(mailbox);
+  await client.mailboxOpen(mailbox);
 
   const allowedSenders = (config.allowedSenders || []).map((s) => s.toLowerCase().trim()).filter(Boolean);
   const subjectKeywords = (config.subjectKeywords || []).map((s) => s.toLowerCase().trim()).filter(Boolean);
@@ -44,7 +44,8 @@ export async function pollImapAndImport(config: ImapConfig, defaultUserId?: stri
       }
     }
   } else {
-    targetUids = await client.search({ seen: false });
+    const searchResult = await client.search({ seen: false });
+    targetUids = Array.isArray(searchResult) ? searchResult : [];
   }
 
   const deduped = Array.from(new Set(targetUids)).sort((a, b) => a - b);
@@ -56,8 +57,8 @@ export async function pollImapAndImport(config: ImapConfig, defaultUserId?: stri
   for await (const msg of client.fetch(deduped, { envelope: true, source: true, flags: true })) {
     const parsed = await simpleParser(msg.source!);
     const subject = parsed.subject || '';
-    const from = parsed.from?.text || '';
-    const to = parsed.to?.text || '';
+    const from = (parsed.from as any)?.text || '';
+    const to = (parsed.to as any)?.text || '';
     const text = parsed.text || '';
     const html = parsed.html ? String(parsed.html) : '';
 

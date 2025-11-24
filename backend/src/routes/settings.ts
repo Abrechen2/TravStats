@@ -101,14 +101,14 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
 
     const merged = {
       ...defaultSettings,
-      ...(existing?.data || {}),
+      ...(typeof existing?.data === 'object' && existing.data !== null ? existing.data : {}),
       ...payload,
     };
 
     const saved = await prisma.userSettings.upsert({
       where: { userId },
-      update: { data: merged },
-      create: { userId, data: merged },
+      update: { data: merged as any },
+      create: { userId, data: merged as any },
     });
 
     res.json(saved.data);

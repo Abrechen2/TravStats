@@ -200,7 +200,8 @@ async function main() {
 
     // Wähle Start- und Zielflughafen (oft von/nach Hub)
     const useHub = Math.random() > 0.5;
-    let depAirport, arrAirport;
+    let depAirport: typeof worldAirports[0];
+    let arrAirport: typeof worldAirports[0];
 
     if (useHub && airline.hubs.length > 0) {
       const hubCode = randomChoice(airline.hubs);
