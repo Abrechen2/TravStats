@@ -26,12 +26,18 @@ RUN npx prisma generate
 RUN npm run build
 
 # Stage 3: Production - Combined Container
-FROM node:20-alpine AS production
+FROM node:20-slim AS production
 
 WORKDIR /app
 
-# Install nginx and supervisor
-RUN apk add --no-cache nginx supervisor
+# Install nginx, supervisor, and other dependencies
+RUN apt-get update && apt-get install -y \
+    nginx \
+    supervisor \
+    openssl \
+    ca-certificates \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
 
 # Setup Backend
 WORKDIR /app/backend
@@ -45,11 +51,13 @@ RUN npx prisma generate
 WORKDIR /app/frontend
 COPY --from=frontend-builder /app/frontend/dist ./dist
 
-# Nginx configuration
-COPY nginx-combined.conf /etc/nginx/http.d/default.conf
+# Nginx configuration (Debian uses sites-available)
+COPY nginx-combined.conf /etc/nginx/sites-available/default
+RUN rm -f /etc/nginx/sites-enabled/default && \
+    ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 
-# Supervisor configuration (manages both nginx and node)
-COPY supervisord.conf /etc/supervisord.conf
+# Supervisor configuration (Debian uses conf.d)
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Startup script
 COPY docker-entrypoint.sh /docker-entrypoint.sh
@@ -57,8 +65,8 @@ RUN chmod +x /docker-entrypoint.sh
 
 # Create data directory for persistent config (JWT secret, etc.)
 RUN mkdir -p /app/data && \
-    mkdir -p /var/lib/nginx/tmp /var/log/supervisor /run/nginx && \
-    chown -R nginx:nginx /var/lib/nginx /var/log/nginx /run/nginx && \
+    mkdir -p /var/log/supervisor /var/log/nginx /var/lib/nginx && \
+    chown -R www-data:www-data /var/log/nginx /var/lib/nginx && \
     chown -R node:node /app
 
 # Volume for persistent data (JWT secret, future configs)
@@ -71,4 +79,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=40s \
   CMD wget --no-verbose --tries=1 --spider http://localhost/health || exit 1
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

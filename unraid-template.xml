@@ -1,78 +1,144 @@
 <?xml version="1.0"?>
 <Container version="2">
   <Name>TravStats</Name>
-  <Repository>ghcr.io/yourusername/travstats:latest</Repository>
+  <Repository>ghcr.io/abrechen2/travstats:latest</Repository>
   <Registry>https://ghcr.io</Registry>
   <Network>bridge</Network>
   <Privileged>false</Privileged>
-  <Support>https://forums.unraid.net/topic/XXXXX-travstats-flight-tracking-dashboard/</Support>
-  <Project>https://github.com/yourusername/travstats</Project>
+  <Support>https://github.com/Abrechen2/TravStats/issues</Support>
+  <Project>https://github.com/Abrechen2/TravStats</Project>
   <Overview>
-    TravStats - Personal Flight Tracking &amp; Statistics Dashboard
+    ✈️ TravStats - Personal Flight Tracking &amp; Statistics Dashboard
 
-    Track your flights, visualize routes on an interactive world map, and unlock achievements as you explore the world.
+    Track your flights, visualize routes on an interactive world map, and unlock achievements as you explore the world!
 
-    &#x2708; Features:
-    - Interactive Leaflet map with flight paths and airport markers
-    - Detailed airport statistics (visits, airlines, first/last visit)
-    - 58 Battlefield-style achievements across 5 categories
-    - Advanced statistics and analytics dashboard
-    - Dark mode support with theme persistence
-    - RESTful API with JWT authentication
-    - Responsive mobile-friendly UI
+    🌟 KEY FEATURES:
+    • Interactive 2D/3D maps with flight paths and airport markers
+    • 58 Battlefield-style achievements across 5 categories
+    • Advanced statistics and analytics dashboard
+    • CO2 footprint tracking and compensation suggestions
+    • Boarding pass scanner with QR code support
+    • Flight cost tracking with multi-currency support
+    • Export to CSV, GeoJSON, KML (Google Earth)
+    • Dark mode with theme persistence
+    • RESTful API with JWT authentication
+    • Mobile-friendly responsive UI
 
-    &#x26A0; REQUIREMENTS:
-    This application requires a PostgreSQL database with PostGIS extension.
-    See the support thread for detailed setup instructions.
+    🔒 SECURITY FEATURES:
+    • Auto-generated secure JWT secrets
+    • Rate limiting on all endpoints
+    • Duplicate flight detection
+    • Production-ready with Pino structured logging
 
-    First-time setup:
-    1. Install PostgreSQL container (postgis/postgis:15-3.4) named "travstats-db"
-    2. Configure database environment variables (see Requires section)
-    3. Install this container with matching database credentials
-    4. Access web UI and create your account
+    ⚠️ REQUIREMENTS:
+    This is an all-in-one container that includes both frontend and backend.
+    PostgreSQL database is handled separately (see installation steps below).
+
+    📝 INSTALLATION:
+    1. Install PostgreSQL container first (postgis/postgis:15-3.4)
+    2. Set a strong database password
+    3. Install TravStats with the same password
+    4. Access at http://[IP]:[PORT]/ and create your account
+    5. Start tracking flights!
+
+    Version 1.0.0 - Production Ready ✅
   </Overview>
-  <Category>Status:Stable Productivity: Tools:</Category>
+  <Category>Productivity: Status:Stable</Category>
   <WebUI>http://[IP]:[PORT:3000]/</WebUI>
-  <TemplateURL>https://raw.githubusercontent.com/yourusername/travstats/main/unraid-template.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/yourusername/travstats/main/logo.png</Icon>
-  <ExtraParams>--network=container:travstats-db</ExtraParams>
+  <TemplateURL>https://raw.githubusercontent.com/Abrechen2/TravStats/main/unraid-template.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/Abrechen2/TravStats/main/frontend/public/vite.svg</Icon>
+  <ExtraParams></ExtraParams>
+  <PostArgs></PostArgs>
+  <CPUset></CPUset>
+  <DateInstalled></DateInstalled>
+  <DonateText></DonateText>
+  <DonateLink></DonateLink>
   <Requires>
-    &#x26A0; PostgreSQL 15 with PostGIS extension required!
+    🗄️ PostgreSQL 15 with PostGIS extension REQUIRED
 
-    STEP 1: Install PostgreSQL container first:
-    - Search for "postgis/postgis" in Community Apps
+    STEP 1: Install PostgreSQL Database
+    =====================================
+    Search for "postgis" in Community Apps and install:
+    - Image: postgis/postgis:15-3.4
     - Container Name: travstats-db
     - POSTGRES_DB: flights
     - POSTGRES_USER: flights
-    - POSTGRES_PASSWORD: [choose-secure-password]
-    - Port: 5432:5432
-    - Volume: /mnt/user/appdata/travstats-db:/var/lib/postgresql/data
+    - POSTGRES_PASSWORD: [CHOOSE A STRONG PASSWORD]
+    - Port Mapping: 5432:5432
+    - Volume: /mnt/user/appdata/travstats-db → /var/lib/postgresql/data
 
-    STEP 2: Then install this TravStats container with:
-    - DATABASE_URL matching your PostgreSQL credentials
-    - Strong JWT_SECRET (generate with: openssl rand -hex 32)
+    STEP 2: Install TravStats (this container)
+    ===========================================
+    - Set "Database Password" to match PostgreSQL password
+    - JWT secret will be auto-generated securely
+    - Airport database seeds automatically on first start
 
-    See support thread for detailed installation guide.
+    ⚙️ OPTIONAL: External API Keys
+    ================================
+    For automatic flight data lookup, add:
+    - AirLabs API Key (free tier: 1000 req/month)
+      Get at: https://airlabs.co/
+
+    📚 Full documentation:
+    https://github.com/Abrechen2/TravStats/blob/main/README.md
   </Requires>
+  <Config Name="WebUI Port" Target="80" Default="3000" Mode="tcp" Description="Port for accessing TravStats web interface" Type="Port" Display="always" Required="true" Mask="false">3000</Config>
+
+  <Config Name="Database Password" Target="DATABASE_URL" Default="postgresql://flights:CHANGEME@travstats-db:5432/flights" Mode="" Description="PostgreSQL connection URL. Replace CHANGEME with your database password from Step 1." Type="Variable" Display="always" Required="true" Mask="true">postgresql://flights:changeme@travstats-db:5432/flights</Config>
+
+  <Config Name="AppData Volume" Target="/app/data" Default="/mnt/user/appdata/travstats" Mode="rw" Description="Persistent storage for auto-generated JWT secret and configuration files" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/travstats</Config>
+
+  <Config Name="Seed Airports Database" Target="SEED_AIRPORTS" Default="true" Mode="" Description="Automatically populate airports database with ~8000 airports on first start (recommended). Takes 1-2 minutes on first boot." Type="Variable" Display="always" Required="false" Mask="false">true</Config>
+
+  <Config Name="AirLabs API Key" Target="AIRLABS_API_KEY" Default="" Mode="" Description="Optional: AirLabs API key for automatic flight data lookup. Free tier: 1000 requests/month. Get at https://airlabs.co/" Type="Variable" Display="normal" Required="false" Mask="true"></Config>
+
+  <Config Name="OpenSky Client ID" Target="OPENSKY_CLIENT_ID" Default="" Mode="" Description="Optional: OpenSky Network OAuth Client ID for flight lookup fallback" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+
+  <Config Name="OpenSky Client Secret" Target="OPENSKY_CLIENT_SECRET" Default="" Mode="" Description="Optional: OpenSky Network OAuth Client Secret" Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+
+  <Config Name="Node Environment" Target="NODE_ENV" Default="production" Mode="" Description="Runtime environment. Leave as 'production' unless debugging." Type="Variable" Display="advanced" Required="false" Mask="false">production</Config>
+
+  <Config Name="Backend Port" Target="PORT" Default="8000" Mode="" Description="Internal backend API port. Do not change." Type="Variable" Display="advanced" Required="false" Mask="false">8000</Config>
+
   <Changes>
-    ### Version 1.0.0 (2025-01-21)
-    - Initial release
-    - Combined frontend + backend in single container
-    - 58 achievements system
-    - Interactive map with flight paths
-    - Airport statistics and markers
+    ### Version 1.0.0 (2025-01-24)
+    🎉 INITIAL PRODUCTION RELEASE
+
+    ✅ Core Features:
+    - Complete flight tracking system with CRUD operations
+    - Interactive 2D Leaflet maps with curved flight paths
+    - 3D Globe visualization with WebGL
+    - 58 achievement system with progress tracking
+    - Advanced statistics dashboard with charts
+
+    ✅ Security & Performance:
+    - JWT authentication with auto-generated secure secrets
+    - Rate limiting (Auth: 10/15min, Lookup: 30/15min)
+    - Duplicate flight detection
+    - Structured logging with Pino
+    - Production-ready error handling
+    - Top-level error boundaries
+
+    ✅ Data Features:
+    - Boarding pass scanner (QR/barcode)
+    - Flight cost tracking with receipts
+    - Multi-currency support (EUR, USD, GBP, CHF)
+    - Flight categorization (Business/Private/Vacation)
+    - Export to CSV, GeoJSON, KML
+    - OpenFlights airport database (8000+ airports)
+
+    ✅ Quality:
+    - 0 security vulnerabilities (npm audit)
+    - TypeScript strict mode
+    - Comprehensive API validation with Zod
+    - Mobile-responsive design
     - Dark mode support
-    - PostgreSQL with PostGIS backend
-    - JWT authentication
+
+    🔧 Technical:
+    - Node.js 20 + Express + Prisma ORM
+    - React 18 + Vite + TypeScript
+    - PostgreSQL 15 with PostGIS
+    - All-in-one Docker container
+    - Health checks and graceful shutdown
   </Changes>
-  <Config Name="WebUI Port" Target="80" Default="3000" Mode="tcp" Description="Port for accessing the web interface. Default: 3000" Type="Port" Display="always" Required="true" Mask="false">3000</Config>
-  <Config Name="Database Password" Target="DB_PASSWORD" Default="" Mode="" Description="PostgreSQL database password. Must match the POSTGRES_PASSWORD you set in the travstats-db container." Type="Variable" Display="always" Required="true" Mask="true">changeme</Config>
-  <Config Name="Database Host" Target="DB_HOST" Default="localhost" Mode="" Description="PostgreSQL hostname. Use 'localhost' if using --network=container mode, or 'travstats-db' if using --link." Type="Variable" Display="advanced" Required="false" Mask="false">localhost</Config>
-  <Config Name="Database Port" Target="DB_PORT" Default="5432" Mode="" Description="PostgreSQL port. Default: 5432" Type="Variable" Display="advanced" Required="false" Mask="false">5432</Config>
-  <Config Name="Database Name" Target="DB_NAME" Default="flights" Mode="" Description="PostgreSQL database name. Default: flights" Type="Variable" Display="advanced" Required="false" Mask="false">flights</Config>
-  <Config Name="Database User" Target="DB_USER" Default="flights" Mode="" Description="PostgreSQL username. Default: flights" Type="Variable" Display="advanced" Required="false" Mask="false">flights</Config>
-  <Config Name="AppData" Target="/app/data" Default="/mnt/user/appdata/travstats" Mode="rw" Description="Persistent storage for auto-generated JWT secret and app configuration" Type="Path" Display="advanced" Required="true" Mask="false">/mnt/user/appdata/travstats</Config>
-  <Config Name="Seed Airports" Target="SEED_AIRPORTS" Default="true|false" Mode="" Description="Automatically populate airports database with ~8000 airports on first start. Recommended: true (takes 1-2 minutes on first boot)" Type="Variable" Display="always" Required="false" Mask="false">true</Config>
-  <Config Name="Node Environment" Target="NODE_ENV" Default="production" Mode="" Description="Node.js runtime environment. Leave as 'production' unless debugging." Type="Variable" Display="advanced" Required="false" Mask="false">production</Config>
-  <Config Name="Backend Port" Target="PORT" Default="8000" Mode="" Description="Internal backend API port. Do not change unless you know what you're doing." Type="Variable" Display="advanced" Required="false" Mask="false">8000</Config>
 </Container>

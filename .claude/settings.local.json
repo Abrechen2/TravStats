@@ -1,26 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dir /b /s \"D:\\Projekte\\TravStats\\frontend\\src\\types*\")",
-      "Bash(curl:*)",
+      "Bash(Select-Object Id,ProcessName,StartTime)",
+      "Bash(tasklist:*)",
+      "Bash(.env)",
       "Bash(npm install:*)",
-      "Bash(npm run seed:airports:csv:*)",
-      "Bash(npm run dev:*)",
-      "Bash(timeout 5 bash:*)",
-      "Bash(node -e:*)",
-      "Bash(git checkout:*)",
-      "Bash(npx prisma migrate:*)",
-      "Bash(npx ts-node:*)",
-      "Bash(npx prisma generate)",
-      "Bash(npm run seed:enhanced:*)",
-      "Bash(findstr:*)",
-      "Bash(cat:*)",
-      "Bash(npm run seed:airports:openflights:*)",
+      "Bash(npm audit:*)",
+      "Bash(npm run build:*)",
       "Bash(npx tsc:*)",
-      "Bash(dir /b \"D:\\Projekte\\TravStats\\backend\\.env\")",
-      "Bash(npm view:*)",
-      "Bash(netstat:*)",
-      "Bash(taskkill:*)"
+      "Bash(docker build:*)",
+      "Bash(docker push:*)"
     ],
     "deny": [],
     "ask": []

@@ -54,10 +54,6 @@ export interface Flight {
   terminal?: string;
   bookingReference?: string;
   ticketNumber?: string;
-  ticketPrice?: number;
-  currency?: string;
-  category?: 'business' | 'private' | 'vacation';
-  tags?: string[];
 }
 
 export interface FlightInput {
@@ -86,10 +82,6 @@ export interface FlightInput {
   category?: 'business' | 'private' | 'vacation';
   tags?: string[];
   receiptUrl?: string;
-  ticketPrice?: number;
-  currency?: string;
-  category?: 'business' | 'private' | 'vacation';
-  tags?: string[];
 }
 
 export interface FlightLookupResult {
@@ -122,6 +114,8 @@ export interface FlightFilters {
   tags?: string[];
   minPrice?: number;
   maxPrice?: number;
+  limit?: number;
+  offset?: number;
 }
 
 export interface Stats {

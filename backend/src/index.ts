@@ -16,6 +16,7 @@ import uploadsRoutes from './routes/uploads';
 import importsRoutes from './routes/imports';
 import { errorHandler } from './middleware/errorHandler';
 import { prisma } from './db';
+import logger from './utils/logger';
 import { DATABASE_URL } from './utils/database';
 
 // Load environment variables
@@ -85,22 +86,25 @@ app.use(errorHandler);
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
-  console.log('Shutting down gracefully...');
+  logger.info('Received SIGINT, shutting down gracefully...');
   await prisma.$disconnect();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
-  console.log('Shutting down gracefully...');
+  logger.info('Received SIGTERM, shutting down gracefully...');
   await prisma.$disconnect();
   process.exit(0);
 });
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV}`);
-  console.log(`🗄️  Database: Connected`);
+  logger.info({
+    message: 'TravStats backend started',
+    port: PORT,
+    environment: process.env.NODE_ENV,
+    nodeVersion: process.version,
+  });
 });
 
 export default app;

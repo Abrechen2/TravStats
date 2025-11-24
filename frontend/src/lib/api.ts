@@ -13,7 +13,7 @@ import type {
   FlightLookupResult
 } from '../types';
 
-const API_URL = import.meta.env.VITE_API_URL || '';
+const API_URL = (import.meta as any).env?.VITE_API_URL || '';
 
 const api = axios.create({
   baseURL: API_URL ? `${API_URL}/api/v1` : '/api/v1',

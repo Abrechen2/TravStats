@@ -1,6 +1,5 @@
 import { format } from 'date-fns';
 import type { Flight } from '../types';
-import { useMemo } from 'react';
 
 interface FlightListProps {
   flights: Flight[];
@@ -127,9 +126,9 @@ export default function FlightList({
                       : 'Privat'}
                   </span>
                 )}
-                {flight.ticketPrice !== undefined && (
+                {flight.price != null && (
                   <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100">
-                    {flight.ticketPrice.toFixed(2)} {flight.currency || 'EUR'}
+                    {flight.price.toFixed(2)} {flight.currency || 'EUR'}
                   </span>
                 )}
                 {flight.tags && flight.tags.length > 0 && (
