@@ -3,7 +3,13 @@
     "allow": [
       "Bash(Select-Object Id,ProcessName,StartTime)",
       "Bash(tasklist:*)",
-      "Bash(.env)"
+      "Bash(.env)",
+      "Bash(npm install:*)",
+      "Bash(npm audit:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx tsc:*)",
+      "Bash(docker build:*)",
+      "Bash(docker push:*)"
     ],
     "deny": [],
     "ask": []

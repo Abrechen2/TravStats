@@ -296,7 +296,7 @@ export async function lookupFlightDetails(
       user: openSkyUser,
       pass: openSkyPass,
     });
-    const openSky = await lookupOpenSkyFlight(trimmedNumber, date, openSkyAuth);
+    const openSky = await lookupOpenSkyFlight(trimmedNumber, date, openSkyAuth ?? undefined);
     if (openSky) return openSky;
     return null;
   }

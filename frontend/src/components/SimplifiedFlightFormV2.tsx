@@ -74,10 +74,10 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
   const [seatClass, setSeatClass] = useState<'economy' | 'premium_economy' | 'business' | 'first'>('economy');
   const [status, setStatus] = useState<'scheduled' | 'flown' | 'cancelled'>('flown');
   const [notes, setNotes] = useState('');
-  const [price, setPrice] = useState<string>('');
+  const [price, _setPrice] = useState<number | undefined>(undefined);
   const [currency, setCurrency] = useState<'EUR' | 'USD' | 'GBP' | 'CHF'>('EUR');
   const [category, setCategory] = useState<'business' | 'private' | 'vacation'>('business');
-  const [tags, setTags] = useState<string[]>([]);
+  const [tags, _setTags] = useState<string[]>([]);
 
   // Initialize defaults from settings
   useEffect(() => {
@@ -204,14 +204,11 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
 
     try {
       // Step 1: Try online validation if flight number available
-      const carrierCode = bcbpData.airlineCode || bcbpData.operatingCarrierDesignator;
+      const carrierCode = bcbpData.operatingCarrierDesignator;
       const scannedFlightNumber = bcbpData.flightNumber ? `${carrierCode || ''}${bcbpData.flightNumber}` : '';
 
       if (carrierCode && bcbpData.flightNumber) {
-        const flightDate =
-          bcbpData.flightDate
-            ? new Date(bcbpData.flightDate).toISOString().split('T')[0]
-            : searchDate;
+        const flightDate = searchDate;
 
         try {
           const response = await fetch(
@@ -266,11 +263,6 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
         setAirline(bcbpData.airlineName || getAirlineName(carrierCode) || carrierCode);
       }
 
-      if (bcbpData.flightDate) {
-        const date = new Date(bcbpData.flightDate);
-        setDepartureDate(date.toISOString().split('T')[0]);
-      }
-
       if (bcbpData.seatClass) {
         setSeatClass(bcbpData.seatClass);
       }
@@ -297,8 +289,8 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
     setError('');
 
     try {
-      const departureDateTime = new Date(`${departureDate}T${departureTime}`);
-      const arrivalDateTime = new Date(`${arrivalDate}T${arrivalTime}`);
+      const departureDateTime = `${departureDate}T${departureTime}`;
+      const arrivalDateTime = `${arrivalDate}T${arrivalTime}`;
 
       await onSubmit({
         departure: {
@@ -326,7 +318,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
         arrivalTime: arrivalDateTime,
         status,
         notes: notes || undefined,
-        price: price ? Number(price) : undefined,
+        price: price,
         currency,
         category,
         tags: tags.length ? tags : undefined,

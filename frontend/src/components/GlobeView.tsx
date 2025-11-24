@@ -79,7 +79,7 @@ const getStaticArcAltitude = (
   return getBaseArcAltitude(distance);
 };
 
-export default function GlobeView({ flights = [], selectedFlightId, onFlightClick }: GlobeViewProps) {
+export default function GlobeView({ flights = [], selectedFlightId: _selectedFlightId, onFlightClick }: GlobeViewProps) {
   const globeRef = useRef<any>();
   const themeStore = useThemeStore();
   const isDarkMode = themeStore?.isDarkMode ?? false;

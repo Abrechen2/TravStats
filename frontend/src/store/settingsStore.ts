@@ -104,7 +104,7 @@ export interface SettingsState {
 
 const defaultSettings: Omit<
   SettingsState,
-  keyof SettingsUpdater<any> | 'resetSettings' | 'loadRemoteSettings' | 'saveRemoteSettings'
+  'setProfile' | 'setDisplay' | 'setUnits' | 'setDefaults' | 'setMap' | 'setNotifications' | 'setPrivacy' | 'setBackup' | 'resetSettings' | 'loadRemoteSettings' | 'saveRemoteSettings'
 > = {
   profile: {
     username: 'Traveler',
