@@ -79,7 +79,7 @@ const getStaticArcAltitude = (
   return getBaseArcAltitude(distance);
 };
 
-export default function GlobeView({ flights = [], selectedFlightId, onFlightClick }: GlobeViewProps) {
+export default function GlobeView({ flights = [], selectedFlightId: _selectedFlightId, onFlightClick }: GlobeViewProps) {
   const globeRef = useRef<any>();
   const themeStore = useThemeStore();
   const isDarkMode = themeStore?.isDarkMode ?? false;
@@ -253,9 +253,9 @@ export default function GlobeView({ flights = [], selectedFlightId, onFlightClic
   }, [flights]);
 
   return (
-    <div className="h-full w-full relative flex items-center justify-center">
+    <div className="h-full w-full relative flex items-center justify-center" style={{ touchAction: 'pan-x pan-y pinch-zoom' }}>
       {/* Control Panel */}
-      <div className="absolute bottom-4 left-4 z-[9999] bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 border border-gray-200 dark:border-gray-700">
+      <div className="absolute bottom-4 left-4 z-[9999] bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 border border-gray-200 dark:border-gray-700" style={{ touchAction: 'auto', pointerEvents: 'auto' }}>
         {/* Auto-Rotation Toggle */}
         <label className="flex items-center gap-2 cursor-pointer select-none">
           <input

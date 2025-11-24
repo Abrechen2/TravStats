@@ -1,0 +1,72 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgis/postgis:15-3.4
+    container_name: travstats-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: flights
+      POSTGRES_USER: flights
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    volumes:
+      - travstats-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flights"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - travstats-network
+
+  app:
+    image: ghcr.io/abrechen2/travstats:latest
+    container_name: travstats-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-3000}:80"
+    environment:
+      NODE_ENV: production
+      # Database connection
+      DATABASE_URL: postgresql://flights:${DB_PASSWORD:-changeme}@db:5432/flights
+      # JWT will be auto-generated and persisted to /app/data/jwt.secret
+      # Optional: Set custom JWT_SECRET here
+      # JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: 7d
+      # API Keys (optional)
+      AIRLABS_API_KEY: ${AIRLABS_API_KEY:-}
+      OPENSKY_CLIENT_ID: ${OPENSKY_CLIENT_ID:-}
+      OPENSKY_CLIENT_SECRET: ${OPENSKY_CLIENT_SECRET:-}
+      # IMAP Import (optional)
+      IMAP_ENABLED: ${IMAP_ENABLED:-false}
+      IMAP_HOST: ${IMAP_HOST:-}
+      IMAP_PORT: ${IMAP_PORT:-993}
+      IMAP_SECURE: ${IMAP_SECURE:-true}
+      IMAP_USER: ${IMAP_USER:-}
+      IMAP_PASSWORD: ${IMAP_PASSWORD:-}
+      # Seeding
+      SEED_AIRPORTS: ${SEED_AIRPORTS:-true}
+    volumes:
+      - travstats-app-data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - travstats-network
+
+volumes:
+  travstats-db-data:
+    name: travstats-db-data
+  travstats-app-data:
+    name: travstats-app-data
+
+networks:
+  travstats-network:
+    name: travstats-network
+    driver: bridge

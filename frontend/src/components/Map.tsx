@@ -90,13 +90,13 @@ export default function Map({ flights = [], selectedFlightId, onFlightClick }: M
   };
 
   return (
-    <div className="h-full w-full">
+    <div className="h-full w-full" style={{ touchAction: 'pan-x pan-y pinch-zoom' }}>
       <MapContainer
         center={[50, 10]}
         zoom={4}
         minZoom={2}
         worldCopyJump={true}
-        style={{ height: '100%', width: '100%' }}
+        style={{ height: '100%', width: '100%', touchAction: 'pan-x pan-y pinch-zoom' }}
         className="rounded-lg"
       >
         {isDarkMode ? (

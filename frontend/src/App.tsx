@@ -8,6 +8,7 @@ import AchievementsPage from './pages/AchievementsPage';
 import AdvancedStatsPage from './pages/AdvancedStatsPage';
 import SettingsPage from './pages/SettingsPage';
 import { useSettingsStore } from './store/settingsStore';
+import ErrorBoundary from './components/ErrorBoundary';
 
 
 function App() {
@@ -23,7 +24,30 @@ function App() {
   const isAuthenticated = !!user;
 
   return (
-    <BrowserRouter>
+    <ErrorBoundary
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+          <div className="max-w-md w-full p-8 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-red-200 dark:border-red-800">
+            <div className="text-center">
+              <div className="text-6xl mb-4">💥</div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                Oops! Something went wrong
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400 mb-6">
+                The application encountered an unexpected error. Please try refreshing the page.
+              </p>
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+              >
+                Refresh Page
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <BrowserRouter>
       <Routes>
         <Route
           path="/login"
@@ -51,6 +75,7 @@ function App() {
         />
       </Routes>
     </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 

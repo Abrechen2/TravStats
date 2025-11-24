@@ -4,11 +4,12 @@ import { hashPassword, comparePassword } from '../utils/password';
 import { generateToken } from '../utils/jwt';
 import { registerSchema, loginSchema } from '../schemas/auth';
 import { AppError } from '../middleware/errorHandler';
+import { authLimiter } from '../middleware/rateLimit';
 
 const router = Router();
 
 // Register
-router.post('/register', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/register', authLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { username, password } = registerSchema.parse(req.body);
 
@@ -54,7 +55,7 @@ router.post('/register', async (req: Request, res: Response, next: NextFunction)
 });
 
 // Login
-router.post('/login', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/login', authLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { username, password } = loginSchema.parse(req.body);
 

@@ -33,7 +33,7 @@ export default function FlightForm({ onSubmit, onCancel }: FlightFormProps) {
     arrivalTime: '',
     status: 'scheduled',
     notes: '',
-    ticketPrice: undefined,
+    price: undefined,
     currency: 'EUR',
     category: 'private',
     tags: [],
@@ -314,11 +314,11 @@ export default function FlightForm({ onSubmit, onCancel }: FlightFormProps) {
                 type="number"
                 min="0"
                 step="0.01"
-                value={formData.ticketPrice ?? ''}
+                value={formData.price ?? ''}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    ticketPrice: e.target.value ? parseFloat(e.target.value) : undefined,
+                    price: e.target.value ? parseFloat(e.target.value) : undefined,
                   })
                 }
                 className="input flex-1"
@@ -326,7 +326,7 @@ export default function FlightForm({ onSubmit, onCancel }: FlightFormProps) {
               />
               <select
                 value={formData.currency}
-                onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, currency: e.target.value as 'EUR' | 'USD' | 'GBP' | 'CHF' })}
                 className="input w-24"
               >
                 <option value="EUR">EUR</option>

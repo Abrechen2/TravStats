@@ -155,7 +155,7 @@ export default function FlightEditModal({
               <label className="label">Status</label>
               <select
                 value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value as 'scheduled' | 'flown' | 'cancelled' })}
                 className="input"
               >
                 <option value="scheduled">Scheduled</option>
@@ -222,7 +222,7 @@ export default function FlightEditModal({
               <label className="label">Currency</label>
               <select
                 value={formData.currency}
-                onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, currency: e.target.value as 'EUR' | 'USD' | 'GBP' | 'CHF' })}
                 className="input"
               >
                 <option value="EUR">EUR</option>

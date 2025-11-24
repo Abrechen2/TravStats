@@ -91,6 +91,34 @@ router.post('/:id/accept', authenticate, async (req: AuthRequest, res: Response,
       return res.status(400).json({ error: 'Could not resolve airports' });
     }
 
+    // Check for duplicate flights (same flight number, date, and route)
+    const departureDate = parsed.departureTime ? new Date(parsed.departureTime) : new Date();
+    const startOfDay = new Date(departureDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(departureDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const existingFlight = await prisma.flight.findFirst({
+      where: {
+        userId,
+        flightNumber: parsed.flightNumber,
+        departureTime: {
+          gte: startOfDay,
+          lt: endOfDay,
+        },
+        depIata: depAirport.iata,
+        arrIata: arrAirport.iata,
+      },
+    });
+
+    if (existingFlight) {
+      return res.status(409).json({
+        error: 'Flight already exists',
+        message: `Flight ${parsed.flightNumber} on ${departureDate.toLocaleDateString()} from ${depAirport.iata} to ${arrAirport.iata} is already in your flight list.`,
+        existingFlightId: existingFlight.id,
+      });
+    }
+
     const flight = await prisma.flight.create({
       data: {
         userId,
