@@ -12,12 +12,13 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
-    "seed": "tsx src/seed.ts",
-    "seed:airports": "tsx src/seedAirports.ts",
-    "seed:airports:csv": "tsx src/seedAirportsFromCSV.ts",
-    "seed:airports:openflights": "tsx src/scripts/importAirports.ts",
-    "seed:achievements": "tsx src/seedAchievements.ts",
-    "seed:enhanced": "tsx src/seedEnhancedFlights.ts"
+    "seed": "node dist/seed.js",
+    "seed:airports": "node dist/seedAirports.js",
+    "seed:airports:csv": "node dist/seedAirportsFromCSV.js",
+    "seed:airports:openflights": "node dist/scripts/importAirports.js",
+    "seed:achievements": "node dist/seedAchievements.js",
+    "seed:demo": "node dist/seedDemoUser.js",
+    "seed:enhanced": "node dist/seedEnhancedFlights.js"
   },
   "keywords": [
     "flight",

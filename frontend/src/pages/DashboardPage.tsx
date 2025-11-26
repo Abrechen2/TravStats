@@ -344,6 +344,7 @@ export default function DashboardPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
+            <img src="/logo.png" alt="TravStats Logo" className="h-8 xl:h-10 w-auto" />
             <h1 className="text-xl xl:text-2xl font-bold text-gray-900 dark:text-white">TravStats</h1>
           </div>
           <div className="flex items-center gap-2 xl:gap-4">

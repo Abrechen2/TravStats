@@ -46,21 +46,30 @@ services:
       NODE_ENV: production
       PORT: 8000
 
+      # CORS - Allow any origin when behind nginx reverse proxy
+      CORS_ORIGIN: "*"
+
+      # Allow HTTP cookies (set to 'false' for HTTP, remove for HTTPS)
+      COOKIE_SECURE: "false"
+
       # Auto-seed airports database on first start
       SEED_AIRPORTS: "true"
+
+      # Create demo user (username: demo, password: demo123)
+      CREATE_DEMO_USER: "true"
 
       # Optional: API Keys (uncomment and fill if needed)
       # AIRLABS_API_KEY: your_airlabs_key_here
       # OPENSKY_CLIENT_ID: your_opensky_client_id
       # OPENSKY_CLIENT_SECRET: your_opensky_client_secret
     ports:
-      - "3001:3000"  # Non-standard port: 3001 instead of 3000
+      - "3001:80"  # Map to nginx internal port 80 (not 3000!)
     volumes:
       - /mnt/user/appdata/travstats-dev:/app/data
     networks:
       - travstats-dev-network
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3

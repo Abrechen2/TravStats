@@ -62,6 +62,12 @@ if [ "$SEED_AIRPORTS" = "true" ]; then
     npm run seed:airports:csv 2>/dev/null || echo "   Airports already seeded or failed"
 fi
 
+# Create demo user if requested
+if [ "$CREATE_DEMO_USER" = "true" ]; then
+    echo "👤 Creating demo user..."
+    npm run seed:demo 2>/dev/null || echo "   Demo user already exists or failed"
+fi
+
 echo "✅ TravStats is ready!"
 echo "🌐 Web UI available on port 80"
 echo "🔌 API available at /api"
