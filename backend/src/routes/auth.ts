@@ -1,4 +1,4 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response, NextFunction, CookieOptions } from 'express';
 import { prisma } from '../db';
 import { hashPassword, comparePassword } from '../utils/password';
 import { generateToken } from '../utils/jwt';
@@ -7,6 +7,17 @@ import { AppError } from '../middleware/errorHandler';
 import { authLimiter } from '../middleware/rateLimit';
 
 const router = Router();
+const cookieMaxAgeMs = 7 * 24 * 60 * 60 * 1000; // 7 days
+const cookieSecure = process.env.COOKIE_SECURE
+  ? process.env.COOKIE_SECURE !== 'false'
+  : process.env.NODE_ENV === 'production';
+const authCookieOptions: CookieOptions = {
+  httpOnly: true, // Prevents JavaScript access (XSS protection)
+  secure: cookieSecure, // Allow HTTP in dev if COOKIE_SECURE=false
+  sameSite: 'lax',
+  maxAge: cookieMaxAgeMs,
+  path: '/',
+};
 
 // Register
 router.post('/register', authLimiter, async (req: Request, res: Response, next: NextFunction) => {
@@ -35,13 +46,7 @@ router.post('/register', authLimiter, async (req: Request, res: Response, next: 
     const token = generateToken(user.id);
 
     // Set HttpOnly cookie for security (XSS protection)
-    res.cookie('auth_token', token, {
-      httpOnly: true,  // Prevents JavaScript access (XSS protection)
-      secure: process.env.COOKIE_SECURE !== 'false',  // Allow HTTP for reverse proxies/dev
-      sameSite: 'lax',  // Allow mobile/LAN clients while keeping CSRF protection
-      maxAge: 7 * 24 * 60 * 60 * 1000,  // 7 days
-      path: '/',
-    });
+    res.cookie('auth_token', token, authCookieOptions);
 
     res.status(201).json({
       user: {
@@ -78,13 +83,7 @@ router.post('/login', authLimiter, async (req: Request, res: Response, next: Nex
     const token = generateToken(user.id);
 
     // Set HttpOnly cookie for security (XSS protection)
-    res.cookie('auth_token', token, {
-      httpOnly: true,  // Prevents JavaScript access (XSS protection)
-      secure: process.env.COOKIE_SECURE !== 'false',  // Allow HTTP for reverse proxies/dev
-      sameSite: 'lax',  // Allow mobile/LAN clients while keeping CSRF protection
-      maxAge: 7 * 24 * 60 * 60 * 1000,  // 7 days
-      path: '/',
-    });
+    res.cookie('auth_token', token, authCookieOptions);
 
     res.json({
       user: {
@@ -102,7 +101,7 @@ router.post('/logout', (req: Request, res: Response) => {
   // Clear the auth cookie
   res.clearCookie('auth_token', {
     httpOnly: true,
-    secure: process.env.COOKIE_SECURE !== 'false',
+    secure: cookieSecure,
     sameSite: 'lax',
     path: '/',
   });

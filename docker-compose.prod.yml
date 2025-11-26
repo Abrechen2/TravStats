@@ -23,10 +23,12 @@ services:
     image: ghcr.io/abrechen2/travstats:latest
     container_name: travstats-app
     restart: unless-stopped
+    working_dir: /app/backend # default to backend so npm commands run in the right place
     ports:
       - "${APP_PORT:-3000}:80"
     environment:
       NODE_ENV: production
+      COOKIE_SECURE: ${COOKIE_SECURE:-true} # Set to false when serving via plain HTTP
       # Database connection
       DATABASE_URL: postgresql://flights:${DB_PASSWORD:-changeme}@db:5432/flights
       # JWT will be auto-generated and persisted to /app/data/jwt.secret
@@ -46,6 +48,7 @@ services:
       IMAP_PASSWORD: ${IMAP_PASSWORD:-}
       # Seeding
       SEED_AIRPORTS: ${SEED_AIRPORTS:-true}
+      CREATE_DEMO_USER: ${CREATE_DEMO_USER:-false}
     volumes:
       - travstats-app-data:/app/data
     depends_on:

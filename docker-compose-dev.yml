@@ -24,6 +24,7 @@ services:
   travstats-app-dev:
     # Using GitHub Container Registry
     image: ghcr.io/abrechen2/travstats:latest
+    working_dir: /app/backend  # make npm scripts default to backend path
 
     # Alternative: Use Docker Hub (if you push there)
     # image: abrechen2/travstats:latest
