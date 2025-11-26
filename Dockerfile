@@ -10,6 +10,8 @@ COPY frontend/package*.json ./
 RUN npm ci
 
 COPY frontend/ ./
+# Build without VITE_API_URL - frontend will use relative path /api/v1
+ENV VITE_API_URL=
 RUN npm run build
 
 # Stage 2: Build Backend

@@ -30,20 +30,23 @@ if (!process.env.DATABASE_URL) {
 const app = express();
 const PORT = process.env.PORT || 8000;
 
+// Trust proxy - we're behind exactly 1 proxy (nginx)
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet());
 
 // CORS configuration to allow LAN/mobile clients
-const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000')
-  .split(',')
-  .map(o => o.trim())
-  .filter(Boolean);
-const allowAllOriginsInDev = process.env.NODE_ENV !== 'production';
+const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:3000';
+const allowedOrigins = corsOrigin === '*'
+  ? []
+  : corsOrigin.split(',').map(o => o.trim()).filter(Boolean);
+const allowAllOrigins = corsOrigin === '*' || process.env.NODE_ENV !== 'production';
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (allowAllOriginsInDev) return callback(null, true);
-    if (!origin) return callback(null, true); // mobile apps / same-origin
+    if (allowAllOrigins) return callback(null, true);
+    if (!origin) return callback(null, true); // mobile apps / same-origin / reverse proxy
     if (allowedOrigins.includes(origin)) return callback(null, true);
     return callback(new Error('Not allowed by CORS'));
   },
