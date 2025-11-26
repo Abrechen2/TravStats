@@ -29,6 +29,8 @@ services:
     environment:
       NODE_ENV: production
       COOKIE_SECURE: ${COOKIE_SECURE:-true} # Set to false when serving via plain HTTP
+      # Comma-separated list of allowed frontend origins (adjust to your LAN/hostnames)
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
       # Database connection
       DATABASE_URL: postgresql://flights:${DB_PASSWORD:-changeme}@db:5432/flights
       # JWT will be auto-generated and persisted to /app/data/jwt.secret
