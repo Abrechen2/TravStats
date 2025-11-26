@@ -1,0 +1,78 @@
+services:
+  # PostgreSQL Database with PostGIS
+  travstats-db-dev:
+    image: postgis/postgis:15-3.4
+    container_name: travstats-db-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: flights_dev
+      POSTGRES_USER: flights_dev
+      POSTGRES_PASSWORD: dev_password_change_me_123
+    ports:
+      - "5433:5432"  # Non-standard port: 5433 instead of 5432
+    volumes:
+      - /mnt/user/appdata/travstats-db-dev:/var/lib/postgresql/data
+    networks:
+      - travstats-dev-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flights_dev -d flights_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # TravStats Application
+  travstats-app-dev:
+    # Using GitHub Container Registry
+    image: ghcr.io/abrechen2/travstats:latest
+
+    # Alternative: Use Docker Hub (if you push there)
+    # image: abrechen2/travstats:latest
+
+    # Option 3: Build locally (uncomment to build from source)
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+
+    container_name: travstats-app-dev
+    restart: unless-stopped
+    depends_on:
+      travstats-db-dev:
+        condition: service_healthy
+    environment:
+      # Database connection
+      DATABASE_URL: postgresql://flights_dev:dev_password_change_me_123@travstats-db-dev:5432/flights_dev
+
+      # Node environment
+      NODE_ENV: production
+      PORT: 8000
+
+      # Auto-seed airports database on first start
+      SEED_AIRPORTS: "true"
+
+      # Optional: API Keys (uncomment and fill if needed)
+      # AIRLABS_API_KEY: your_airlabs_key_here
+      # OPENSKY_CLIENT_ID: your_opensky_client_id
+      # OPENSKY_CLIENT_SECRET: your_opensky_client_secret
+    ports:
+      - "3001:3000"  # Non-standard port: 3001 instead of 3000
+    volumes:
+      - /mnt/user/appdata/travstats-dev:/app/data
+    networks:
+      - travstats-dev-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+networks:
+  travstats-dev-network:
+    driver: bridge
+    name: travstats-dev-network
+
+volumes:
+  travstats-db-dev:
+    driver: local
+  travstats-app-dev:
+    driver: local

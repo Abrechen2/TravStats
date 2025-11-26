@@ -82,9 +82,9 @@
     📚 Full documentation:
     https://github.com/Abrechen2/TravStats/blob/main/README.md
   </Requires>
-  <Config Name="WebUI Port" Target="80" Default="3000" Mode="tcp" Description="Port for accessing TravStats web interface" Type="Port" Display="always" Required="true" Mask="false">3000</Config>
+  <Config Name="WebUI Port" Target="3000" Default="3000" Mode="tcp" Description="Port for accessing TravStats web interface" Type="Port" Display="always" Required="true" Mask="false">3000</Config>
 
-  <Config Name="Database Password" Target="DATABASE_URL" Default="postgresql://flights:CHANGEME@travstats-db:5432/flights" Mode="" Description="PostgreSQL connection URL. Replace CHANGEME with your database password from Step 1." Type="Variable" Display="always" Required="true" Mask="true">postgresql://flights:changeme@travstats-db:5432/flights</Config>
+  <Config Name="Database Password" Target="DATABASE_URL" Default="" Mode="" Description="PostgreSQL connection URL. Format: postgresql://flights:YOUR_PASSWORD@travstats-db:5432/flights (Replace YOUR_PASSWORD with your database password from Step 1)" Type="Variable" Display="always" Required="true" Mask="true">postgresql://flights:changeme@travstats-db:5432/flights</Config>
 
   <Config Name="AppData Volume" Target="/app/data" Default="/mnt/user/appdata/travstats" Mode="rw" Description="Persistent storage for auto-generated JWT secret and configuration files" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/travstats</Config>
 
