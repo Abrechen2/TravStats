@@ -22,10 +22,16 @@ fi
 # Wait for database to be ready
 if [ -n "$DATABASE_URL" ]; then
     echo "⏳ Waiting for database..."
+
+    # Extract host and port from DATABASE_URL
+    # Format: postgresql://user:pass@host:port/database
+    DB_HOST=$(echo "$DATABASE_URL" | sed -e 's|.*@\(.*\):.*|\1|')
+    DB_PORT=$(echo "$DATABASE_URL" | sed -e 's|.*:\([0-9]*\)/.*|\1|')
+
     max_retries=30
     retry_count=0
 
-    until wget --spider -q "$DATABASE_URL" 2>/dev/null || [ $retry_count -eq $max_retries ]; do
+    until nc -z "$DB_HOST" "$DB_PORT" 2>/dev/null || [ $retry_count -eq $max_retries ]; do
         retry_count=$((retry_count + 1))
         echo "   Database not ready yet (attempt $retry_count/$max_retries)..."
         sleep 2
