@@ -22,10 +22,16 @@ fi
 # Wait for database to be ready
 if [ -n "$DATABASE_URL" ]; then
     echo "⏳ Waiting for database..."
+
+    # Extract host and port from DATABASE_URL
+    # Format: postgresql://user:pass@host:port/database
+    DB_HOST=$(echo "$DATABASE_URL" | sed -e 's|.*@\(.*\):.*|\1|')
+    DB_PORT=$(echo "$DATABASE_URL" | sed -e 's|.*:\([0-9]*\)/.*|\1|')
+
     max_retries=30
     retry_count=0
 
-    until wget --spider -q "$DATABASE_URL" 2>/dev/null || [ $retry_count -eq $max_retries ]; do
+    until nc -z "$DB_HOST" "$DB_PORT" 2>/dev/null || [ $retry_count -eq $max_retries ]; do
         retry_count=$((retry_count + 1))
         echo "   Database not ready yet (attempt $retry_count/$max_retries)..."
         sleep 2
@@ -54,6 +60,12 @@ npm run seed:achievements 2>/dev/null || echo "   Achievements already seeded or
 if [ "$SEED_AIRPORTS" = "true" ]; then
     echo "✈️  Seeding airports database..."
     npm run seed:airports:csv 2>/dev/null || echo "   Airports already seeded or failed"
+fi
+
+# Create demo user if requested
+if [ "$CREATE_DEMO_USER" = "true" ]; then
+    echo "👤 Creating demo user..."
+    npm run seed:demo 2>/dev/null || echo "   Demo user already exists or failed"
 fi
 
 echo "✅ TravStats is ready!"
