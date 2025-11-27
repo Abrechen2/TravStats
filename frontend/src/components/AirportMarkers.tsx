@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, memo } from 'react';
 import { CircleMarker, Popup } from 'react-leaflet';
 import type { GeoJSONFeature } from '../types';
 
@@ -19,7 +19,7 @@ interface AirportStats {
   airlines: string[];
 }
 
-export default function AirportMarkers({ flights }: AirportMarkersProps) {
+function AirportMarkers({ flights }: AirportMarkersProps) {
   const airportStats = useMemo(() => {
     const statsMap = new Map<string, AirportStats>();
 
@@ -214,3 +214,6 @@ export default function AirportMarkers({ flights }: AirportMarkersProps) {
     </>
   );
 }
+
+// Export memoized version to prevent unnecessary re-renders
+export default memo(AirportMarkers);
