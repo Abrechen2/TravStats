@@ -311,10 +311,43 @@ npm run seed:airports:openflights
 
 ### 🚀 26. Performance & Skalierung
 - [ ] Server-Side-Pagination oder Streaming für große Flugmengen
-- [ ] Caching für häufige Routen-/Statistik-Abfragen (Redis)
+- [ ] Caching für häufige Routen-/Statistik-Abfragen (Redis - Backend)
 - [ ] Map-Layer-Clustering und Lazy-Loading für Charts/Module
 - [ ] Performance-Regression-Checks in der CI/CD-Pipeline
 - [ ] Stress-Tests für Import/Export, um Konflikte und Inkonsistenzen zu vermeiden
+
+#### 🗺️ Map Performance Optimierungen
+**Phase 1: Quick Wins** ✅ (Implementiert)
+- [x] Route-Aggregation (eine Polyline pro Route statt pro Flug)
+- [x] Heatmap-Farben basierend auf Flughäufigkeit (grün→gelb→orange→rot)
+- [x] Canvas Renderer aktivieren (`preferCanvas` für schnelleres Rendering)
+- [x] React.memo() für Map und AirportMarkers
+- [x] useMemo() für Route-Berechnungen und Farb-Logik
+- [x] useCallback() für Event-Handlers
+
+**Phase 2: Clustering & Aggregation** (Geplant)
+- [ ] Marker Clustering für Flughäfen (react-leaflet-cluster)
+- [ ] Polyline Simplification mit Douglas-Peucker Algorithmus (simplify-js)
+- [ ] Adaptive Detailstufen basierend auf Zoom-Level
+- [ ] Cluster-Statistiken in Popups
+
+**Phase 3: Virtualisierung** (Geplant)
+- [ ] Viewport-Culling (nur sichtbare Routen rendern)
+- [ ] Debouncing für Map-Updates (lodash debounce)
+- [ ] Lazy Loading für AirportMarkers außerhalb des Viewports
+- [ ] Progressive Route-Loading (wichtige Routen zuerst)
+
+**Phase 4: WebGL-Rendering** (Für >1000 Flüge)
+- [ ] deck.gl Integration für WebGL-beschleunigtes Rendering
+- [ ] PathLayer für Flugrouten
+- [ ] ScatterplotLayer für Flughäfen
+- [ ] Interaktive Layer-Controls
+
+**Erwartete Performance-Gewinne:**
+- Phase 1: 60-80% weniger DOM-Elemente, 50% schnellere Re-Renders
+- Phase 2: 70% weniger Marker bei vielen Airports
+- Phase 3: 80% weniger Elemente bei ausgezoomter Ansicht
+- Phase 4: 10x Performance bei 1000+ Flügen
 
 ### 🛡️ 27. Sicherheit & Compliance-Erweiterungen
 - [x] Rate-Limiting im Express-Backend (100 req/15min)
