@@ -56,12 +56,56 @@ function splitLineAtAntimeridian(positions: [number, number][]): [number, number
   return segments;
 }
 
-// Heatmap color based on route frequency
-const getHeatmapColor = (count: number): string => {
-  if (count >= 11) return '#ef4444'; // red - very frequent
-  if (count >= 6) return '#f59e0b';  // orange - frequent
-  if (count >= 2) return '#eab308';  // yellow - moderate
-  return '#10b981';                  // green - single flight
+// Helper function to create bidirectional route key (FRA-JFK === JFK-FRA)
+const createRouteKey = (airportA: string, airportB: string): string => {
+  // Sort alphabetically to ensure bidirectional routes are treated as the same
+  return airportA < airportB
+    ? `${airportA}-${airportB}`
+    : `${airportB}-${airportA}`;
+};
+
+// Calculate dynamic heatmap thresholds based on data distribution
+const calculateHeatmapThresholds = (counts: number[]): { q25: number; q50: number; q75: number; max: number } => {
+  if (counts.length === 0) return { q25: 1, q50: 2, q75: 3, max: 5 };
+
+  const sorted = [...counts].sort((a, b) => a - b);
+  const len = sorted.length;
+  const max = sorted[len - 1];
+  const min = sorted[0];
+
+  // If all values are the same, create artificial thresholds
+  if (max === min) {
+    return {
+      q25: Math.floor(min * 0.75),
+      q50: Math.floor(min * 0.85),
+      q75: Math.floor(min * 0.95),
+      max: max,
+    };
+  }
+
+  // Use actual quantiles, but ensure they're distinct
+  const q25Index = Math.floor(len * 0.25);
+  const q50Index = Math.floor(len * 0.50);
+  const q75Index = Math.floor(len * 0.75);
+
+  let q25 = sorted[q25Index] || min;
+  let q50 = sorted[q50Index] || min + Math.floor((max - min) * 0.33);
+  let q75 = sorted[q75Index] || min + Math.floor((max - min) * 0.66);
+
+  // Ensure thresholds are strictly increasing
+  if (q50 <= q25) q50 = q25 + Math.max(1, Math.floor((max - q25) * 0.4));
+  if (q75 <= q50) q75 = q50 + Math.max(1, Math.floor((max - q50) * 0.5));
+
+  return { q25, q50, q75, max };
+};
+
+// Heatmap color based on dynamic quantiles
+const getHeatmapColor = (count: number, thresholds: { q25: number; q50: number; q75: number }): string => {
+  // Use > instead of >= to ensure better distribution when values are equal
+  if (count > thresholds.q75) return '#ef4444'; // red - top 25%
+  if (count > thresholds.q50) return '#f59e0b';  // orange - 50-75%
+  if (count > thresholds.q25) return '#eab308';   // yellow - 25-50%
+  return '#10b981';                                // green - bottom 25%
 };
 
 const MapUpdater = memo(({ flights }: { flights: GeoJSONFeature[] }) => {
@@ -92,8 +136,8 @@ function Map({ flights = [], selectedFlightId, onFlightClick }: MapProps) {
   const themeStore = useThemeStore();
   const isDarkMode = themeStore?.isDarkMode ?? false;
 
-  // Aggregate flights by route (departure-arrival pair)
-  const aggregatedRoutes = useMemo<AggregatedRoute[]>(() => {
+  // Aggregate flights by route (departure-arrival pair) with dynamic heatmap colors
+  const { aggregatedRoutes, heatmapThresholds } = useMemo<{ aggregatedRoutes: AggregatedRoute[]; heatmapThresholds: { q25: number; q50: number; q75: number; max: number } }>(() => {
     const routeMap: Record<string, AggregatedRoute> = {};
 
     flights.forEach((flight) => {
@@ -104,8 +148,8 @@ function Map({ flights = [], selectedFlightId, onFlightClick }: MapProps) {
       const arrIATA = flight.properties.arrivalAirport?.iata ||
                       flight.properties.arrivalAirport?.icao || 'UNKNOWN';
 
-      // Create unique route key
-      const routeKey = `${depIATA}-${arrIATA}`;
+      // Create bidirectional route key (FRA-JFK === JFK-FRA)
+      const routeKey = createRouteKey(depIATA, arrIATA);
 
       if (!routeMap[routeKey]) {
         // Convert coordinates from [lon, lat] to [lat, lon] for Leaflet
@@ -134,18 +178,27 @@ function Map({ flights = [], selectedFlightId, onFlightClick }: MapProps) {
           count: 1,
           segments,
           flights: [flight],
-          color: getHeatmapColor(1),
+          color: '', // Will be set after threshold calculation
         };
       } else {
         // Increment count for existing route
         const route = routeMap[routeKey];
         route.count++;
         route.flights.push(flight);
-        route.color = getHeatmapColor(route.count);
       }
     });
 
-    return Object.values(routeMap);
+    // Calculate thresholds based on all route counts
+    const routes = Object.values(routeMap);
+    const counts = routes.map(r => r.count);
+    const thresholds = calculateHeatmapThresholds(counts);
+
+    // Assign colors based on thresholds
+    routes.forEach(route => {
+      route.color = getHeatmapColor(route.count, thresholds);
+    });
+
+    return { aggregatedRoutes: routes, heatmapThresholds: thresholds };
   }, [flights]);
 
   // Memoized click handler
@@ -214,7 +267,7 @@ function Map({ flights = [], selectedFlightId, onFlightClick }: MapProps) {
                   });
                   layer.bindTooltip(
                     `<div style="text-align: center;">
-                      <strong>${route.departureIATA} → ${route.arrivalIATA}</strong><br/>
+                      <strong>${route.departureIATA} ↔ ${route.arrivalIATA}</strong><br/>
                       <span>${route.count}x geflogen</span>
                     </div>`,
                     { sticky: true }
@@ -236,6 +289,41 @@ function Map({ flights = [], selectedFlightId, onFlightClick }: MapProps) {
         {/* Airport markers with aggregated stats */}
         <AirportMarkers flights={flights} />
       </MapContainer>
+
+      {/* Heatmap Legend */}
+      {aggregatedRoutes.length > 0 && (
+        <div className="absolute bottom-4 right-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3 border border-gray-200 dark:border-gray-700 z-[1000]">
+          <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            Routenfrequenz
+          </div>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-0.5" style={{ backgroundColor: '#10b981' }}></div>
+              <span className="text-xs text-gray-600 dark:text-gray-400">
+                1-{heatmapThresholds.q25}x
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-0.5" style={{ backgroundColor: '#eab308' }}></div>
+              <span className="text-xs text-gray-600 dark:text-gray-400">
+                {heatmapThresholds.q25 + 1}-{heatmapThresholds.q50}x
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-0.5" style={{ backgroundColor: '#f59e0b' }}></div>
+              <span className="text-xs text-gray-600 dark:text-gray-400">
+                {heatmapThresholds.q50 + 1}-{heatmapThresholds.q75}x
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-0.5" style={{ backgroundColor: '#ef4444' }}></div>
+              <span className="text-xs text-gray-600 dark:text-gray-400">
+                {heatmapThresholds.q75 + 1}+ ({heatmapThresholds.max}x max)
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -122,7 +122,8 @@ function AirportMarkers({ flights }: AirportMarkersProps) {
   };
 
   const getAirportRadius = (visits: number) => {
-    return Math.min(4 + visits * 0.5, 15);
+    // Reduced maximum size from 15 to 12 for better visibility
+    return Math.min(4 + visits * 0.5, 12);
   };
 
   return (
