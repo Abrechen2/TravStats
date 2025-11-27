@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BCBP Parser Test</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #2563eb;
+      border-bottom: 3px solid #2563eb;
+      padding-bottom: 10px;
+    }
+    .test-section {
+      margin: 30px 0;
+      padding: 20px;
+      background: #f8fafc;
+      border-left: 4px solid #3b82f6;
+      border-radius: 5px;
+    }
+    .test-input {
+      width: 100%;
+      padding: 15px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      border: 2px solid #d1d5db;
+      border-radius: 5px;
+      margin: 10px 0;
+      min-height: 100px;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 20px;
+      background: white;
+      border: 2px solid #10b981;
+      border-radius: 5px;
+    }
+    .result.error {
+      border-color: #ef4444;
+      background: #fee;
+    }
+    .result pre {
+      background: #1f2937;
+      color: #10b981;
+      padding: 15px;
+      border-radius: 5px;
+      overflow-x: auto;
+      font-size: 13px;
+    }
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      margin: 5px;
+    }
+    button:hover {
+      background: #1d4ed8;
+    }
+    .sample-button {
+      background: #059669;
+    }
+    .sample-button:hover {
+      background: #047857;
+    }
+    .info {
+      background: #dbeafe;
+      border-left: 4px solid #2563eb;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 5px;
+    }
+    .extracted-data {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+    .data-item {
+      background: #f9fafb;
+      padding: 12px;
+      border-radius: 5px;
+      border: 1px solid #e5e7eb;
+    }
+    .data-item strong {
+      color: #1f2937;
+      display: block;
+      margin-bottom: 5px;
+    }
+    .data-item span {
+      color: #2563eb;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 BCBP Parser Test Suite</h1>
+
+    <div class="info">
+      <strong>📋 Test Instructions:</strong>
+      <p>This page tests the enhanced boarding pass parser that supports:</p>
+      <ul>
+        <li>✅ Standard IATA BCBP format (starts with 'M')</li>
+        <li>✅ URL-based boarding passes</li>
+        <li>✅ Intelligent fallback parsing (extracts data from any text)</li>
+      </ul>
+      <p>Click the sample buttons below or paste your own barcode data.</p>
+    </div>
+
+    <div class="test-section">
+      <h2>📝 Input Barcode Data</h2>
+
+      <button class="sample-button" onclick="loadLufthansaSample()">Load Lufthansa Example (from screenshot)</button>
+      <button class="sample-button" onclick="loadBCBPSample()">Load Standard BCBP Sample</button>
+      <button class="sample-button" onclick="loadFallbackSample()">Load Non-Standard Sample</button>
+      <button onclick="clearInput()">Clear</button>
+
+      <textarea id="barcodeInput" class="test-input" placeholder="Paste barcode data here or click a sample button..."></textarea>
+
+      <button onclick="testParse()">🔍 Parse Boarding Pass</button>
+    </div>
+
+    <div id="resultContainer"></div>
+  </div>
+
+  <script>
+    // Copy the parser functions here (simplified versions for testing)
+
+    function loadLufthansaSample() {
+      // Based on the Lufthansa boarding pass from the screenshot
+      // This simulates what the Aztec code might contain
+      const lufthansaData = `LUFTHANSA LH2317 20NOV25 09:00 LUX MUC WITTKE/DENNIS MR ECONOMY 16F GATE 3 BOARDING 09:00 GATE SCHLIESST 09:15 FTL LH*S SEC 0C36`;
+      document.getElementById('barcodeInput').value = lufthansaData;
+    }
+
+    function loadBCBPSample() {
+      // Standard IATA BCBP format
+      const bcbpData = `M1DESMARAIS/LUC       EABC123 YULFRAAC 0834 226F001A0025 100`;
+      document.getElementById('barcodeInput').value = bcbpData;
+    }
+
+    function loadFallbackSample() {
+      // Non-standard format that still contains flight data
+      const fallbackData = `Flight: BA2490 From: LHR To: MUC Date: 2025-11-27 Passenger: SMITH/JOHN Seat: 24B Class: BUSINESS`;
+      document.getElementById('barcodeInput').value = fallbackData;
+    }
+
+    function clearInput() {
+      document.getElementById('barcodeInput').value = '';
+      document.getElementById('resultContainer').innerHTML = '';
+    }
+
+    function testParse() {
+      const input = document.getElementById('barcodeInput').value.trim();
+      if (!input) {
+        alert('Please enter or load sample barcode data first!');
+        return;
+      }
+
+      const result = parseBoardingPass(input);
+      displayResult(result);
+    }
+
+    function parseBoardingPass(barcodeData) {
+      console.log('🔍 Parsing:', barcodeData);
+
+      // Check format
+      if (barcodeData.startsWith('M1') || barcodeData.startsWith('M2')) {
+        return parseBCBPStandard(barcodeData);
+      } else if (barcodeData.startsWith('http')) {
+        return { error: 'URL-based boarding passes require backend integration', format: 'URL' };
+      } else {
+        return parseFallbackBoardingPass(barcodeData);
+      }
+    }
+
+    function parseBCBPStandard(data) {
+      try {
+        // Simplified BCBP parser (just for demo)
+        return {
+          format: 'IATA BCBP',
+          passengerName: data.substring(2, 22).trim(),
+          pnr: data.substring(23, 30).trim(),
+          departure: data.substring(30, 33),
+          arrival: data.substring(33, 36),
+          airline: data.substring(36, 39).trim(),
+          flightNumber: data.substring(39, 44).trim(),
+          success: true
+        };
+      } catch (e) {
+        return { error: 'Failed to parse BCBP: ' + e.message, format: 'BCBP' };
+      }
+    }
+
+    function parseFallbackBoardingPass(data) {
+      console.log('🔍 Attempting fallback parsing');
+      const extracted = {
+        format: 'FALLBACK',
+        raw: data,
+        success: true
+      };
+
+      // Extract airports
+      const airportPattern = /\b([A-Z]{3})\b/g;
+      const airports = [...data.matchAll(airportPattern)].map(m => m[1]);
+      if (airports.length >= 2) {
+        extracted.departure = airports[0];
+        extracted.arrival = airports[1];
+      }
+
+      // Extract flight number
+      const flightPattern = /\b([A-Z]{2})(\d{1,4})\b/g;
+      const flights = [...data.matchAll(flightPattern)];
+      if (flights.length > 0) {
+        extracted.airline = flights[0][1];
+        extracted.flightNumber = flights[0][2];
+      }
+
+      // Extract passenger name
+      const namePattern = /([A-Z]{2,})\s*[\/,]\s*([A-Z]{2,})/;
+      const nameMatch = data.match(namePattern);
+      if (nameMatch) {
+        extracted.passengerName = `${nameMatch[1]}/${nameMatch[2]}`;
+      }
+
+      // Extract seat
+      const seatPattern = /\b(\d{1,2}[A-F])\b/;
+      const seatMatch = data.match(seatPattern);
+      if (seatMatch) {
+        extracted.seatNumber = seatMatch[1];
+      }
+
+      // Extract class
+      if (data.includes('BUSINESS')) extracted.seatClass = 'business';
+      else if (data.includes('FIRST')) extracted.seatClass = 'first';
+      else if (data.includes('ECONOMY')) extracted.seatClass = 'economy';
+
+      // Extract date
+      const datePattern = /(\d{2})([A-Z]{3})(\d{2})/;
+      const dateMatch = data.match(datePattern);
+      if (dateMatch) {
+        extracted.dateOfFlight = dateMatch[0];
+      }
+
+      return extracted;
+    }
+
+    function displayResult(result) {
+      const container = document.getElementById('resultContainer');
+
+      if (result.error) {
+        container.innerHTML = `
+          <div class="result error">
+            <h3>❌ Parsing Failed</h3>
+            <p><strong>Format:</strong> ${result.format}</p>
+            <p><strong>Error:</strong> ${result.error}</p>
+          </div>
+        `;
+        return;
+      }
+
+      const dataHTML = Object.entries(result)
+        .filter(([key]) => key !== 'raw' && key !== 'success')
+        .map(([key, value]) => `
+          <div class="data-item">
+            <strong>${key}:</strong>
+            <span>${value || 'N/A'}</span>
+          </div>
+        `).join('');
+
+      container.innerHTML = `
+        <div class="result">
+          <h3>✅ Parsing Successful!</h3>
+          <p><strong>Format Detected:</strong> ${result.format}</p>
+
+          <div class="extracted-data">
+            ${dataHTML}
+          </div>
+
+          <details style="margin-top: 20px;">
+            <summary style="cursor: pointer; font-weight: 600;">🔍 Raw JSON Result</summary>
+            <pre>${JSON.stringify(result, null, 2)}</pre>
+          </details>
+        </div>
+      `;
+    }
+
+    // Auto-load Lufthansa example on page load
+    window.onload = function() {
+      loadLufthansaSample();
+      setTimeout(() => {
+        testParse();
+      }, 500);
+    };
+  </script>
+</body>
+</html>

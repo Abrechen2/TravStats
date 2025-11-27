@@ -168,8 +168,22 @@
 
 ### ✅ 13. Boarding Pass Scanner (OCR)
 - [x] Kamera-Integration
-- [x] QR/Barcode-Scanner
+- [x] QR/Barcode-Scanner (PDF417, QR, Aztec, Data Matrix)
 - [x] OCR für Text-Extraktion (jsQR, @zxing)
+- [x] **Multi-Format Parser mit Fallback-Chain:**
+  - [x] Standard IATA BCBP Format (beginnt mit 'M')
+  - [x] Intelligenter Fallback-Parser (RegEx-basierte Extraktion)
+  - [ ] URL-basierte Boarding Passes (Lufthansa Web-BP, Ryanair, etc.)
+  - [ ] Airline-spezifische Parser (Lufthansa, Ryanair, easyJet, etc.)
+- [x] **Debug-Modus:**
+  - [x] Rohen gescannten Text anzeigen
+  - [x] Format-Erkennung und Parsing-Methode
+  - [x] Schritt-für-Schritt Parsing-Log
+- [x] Online-Validierung mit Flight Lookup API (falls Flugnummer erkannt)
+- [ ] **OCR-Integration für Text-basierte Boarding Passes:**
+  - [ ] Tesseract.js für Text-Erkennung
+  - [ ] Layout-Analyse (Spalten, Zeilen erkennen)
+  - [ ] Smart Field Extraction (Label → Wert Zuordnung)
 - [ ] PDF-Import von E-Tickets
 - [x] Automatisches Ausfüllen des Formulars
 
@@ -217,6 +231,22 @@
 - [ ] E-Mail-Weiterleitung an Server (dedizierte Inbox/Webhook) und MIME-Parser, der PNR/LOC, Name, Airline, Flugnummer, Datum/Zeit, Airports, Sitz/Terminal/Gate, Preis/PNR extrahiert.
 - [ ] Nutzer-Zuordnung via Custom Weiterleitungsadresse für jeden Nutzer ; automatisch einen Flug-Entwurf mit den gefundenen Feldern erzeugen.
 - [ ] UI-Preview: Zur Kontrolle in sonder Bereich Speichern, beim nächsten öffen dann zur review auffordern mit Popup fenster dann fehlende Felder markieren, manuell nachpflegen lassen, erst danach final speichern.
+
+### 🔗 17. Backend-Integration für URL-basierte Boarding Passes
+- [ ] **URL-Decoder Service:**
+  - [ ] Lufthansa Web-BP URL-Parser (https://lh.de/bp/...)
+  - [ ] Ryanair Boarding Pass Decoder
+  - [ ] easyJet/Wizz Air URL-Patterns
+  - [ ] British Airways/Eurowings Formate
+- [ ] **Web-Scraping/API-Integration:**
+  - [ ] Headless Browser für JavaScript-gerenderte Boarding Passes
+  - [ ] Session-Management für authentifizierte Requests
+  - [ ] Screenshot-Fallback wenn Parsing fehlschlägt
+- [ ] **Sicherheit & Rate Limiting:**
+  - [ ] Request-Validierung (nur bekannte Airline-Domains)
+  - [ ] Rate Limiting pro User (max 10 URL-Requests/Tag)
+  - [ ] Timeout-Handling (max 10s pro Request)
+  - [ ] User-Agent Rotation gegen Blocking
 
 
 
@@ -407,6 +437,10 @@ npm run seed:airports:openflights
 - [x] Integration Tests (Supertest)
 - [ ] E2E Tests (Playwright)
 - [ ] Test Coverage >80%
+- [ ] **Boarding Pass Testing Tools:**
+  - [ ] Barcode-Generator für Testdaten (IATA BCBP Format)
+  - [ ] Mock Boarding Pass Generator (verschiedene Airlines)
+  - [ ] Automated Scanner Tests mit generierten Barcodes
 
 ### DevOps
 - [ ] CI/CD Pipeline (GitHub Actions)
