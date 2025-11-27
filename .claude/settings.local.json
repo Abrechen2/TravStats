@@ -9,7 +9,9 @@
       "Bash(npm run build:*)",
       "Bash(npx tsc:*)",
       "Bash(docker build:*)",
-      "Bash(docker push:*)"
+      "Bash(docker push:*)",
+      "Bash(npm run dev:*)",
+      "Bash(Start-Process test-bcbp-parser.html)"
     ],
     "deny": [],
     "ask": []
