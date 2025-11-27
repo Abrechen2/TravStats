@@ -2,6 +2,7 @@ import { useEffect, useRef, useMemo, useState } from 'react';
 import Globe from 'react-globe.gl';
 import type { GeoJSONFeature } from '../types';
 import { useThemeStore } from '../store/themeStore';
+import GlobeFilters, { FilterState, defaultFilterState } from './GlobeFilters';
 
 interface GlobeViewProps {
   flights: GeoJSONFeature[];
@@ -9,23 +10,56 @@ interface GlobeViewProps {
   onFlightClick?: (flightId: string) => void;
 }
 
-// Helper function for status/category colors
-const getStatusColor = (status: string, category?: string) => {
-  if (category) {
-    if (category === 'business') return '#3b82f6';
-    if (category === 'private') return '#10b981';
-    if (category === 'vacation') return '#f59e0b';
+// Helper function to create bidirectional route key (FRA-JFK === JFK-FRA)
+const createRouteKey = (airportA: string, airportB: string): string => {
+  // Sort alphabetically to ensure bidirectional routes are treated as the same
+  return airportA < airportB
+    ? `${airportA}-${airportB}`
+    : `${airportB}-${airportA}`;
+};
+
+// Calculate dynamic heatmap thresholds based on data distribution
+const calculateHeatmapThresholds = (counts: number[]): { q25: number; q50: number; q75: number; max: number } => {
+  if (counts.length === 0) return { q25: 1, q50: 2, q75: 3, max: 5 };
+
+  const sorted = [...counts].sort((a, b) => a - b);
+  const len = sorted.length;
+  const max = sorted[len - 1];
+  const min = sorted[0];
+
+  // If all values are the same, create artificial thresholds
+  if (max === min) {
+    return {
+      q25: Math.floor(min * 0.75),
+      q50: Math.floor(min * 0.85),
+      q75: Math.floor(min * 0.95),
+      max: max,
+    };
   }
-  switch (status) {
-    case 'flown':
-      return '#10b981';
-    case 'scheduled':
-      return '#3b82f6';
-    case 'cancelled':
-      return '#ef4444';
-    default:
-      return '#6b7280';
-  }
+
+  // Use actual quantiles, but ensure they're distinct
+  const q25Index = Math.floor(len * 0.25);
+  const q50Index = Math.floor(len * 0.50);
+  const q75Index = Math.floor(len * 0.75);
+
+  let q25 = sorted[q25Index] || min;
+  let q50 = sorted[q50Index] || min + Math.floor((max - min) * 0.33);
+  let q75 = sorted[q75Index] || min + Math.floor((max - min) * 0.66);
+
+  // Ensure thresholds are strictly increasing
+  if (q50 <= q25) q50 = q25 + Math.max(1, Math.floor((max - q25) * 0.4));
+  if (q75 <= q50) q75 = q50 + Math.max(1, Math.floor((max - q50) * 0.5));
+
+  return { q25, q50, q75, max };
+};
+
+// Heatmap color based on dynamic quantiles
+const getHeatmapColor = (count: number, thresholds: { q25: number; q50: number; q75: number }): string => {
+  // Use > instead of >= to ensure better distribution when values are equal
+  if (count > thresholds.q75) return '#ef4444'; // red - top 25%
+  if (count > thresholds.q50) return '#f59e0b';  // orange - 50-75%
+  if (count > thresholds.q25) return '#eab308';   // yellow - 25-50%
+  return '#10b981';                                // green - bottom 25%
 };
 
 // Helper function to calculate distance between two coordinates (Haversine formula)
@@ -86,6 +120,10 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
   const [autoRotate, setAutoRotate] = useState(false);
   const [cameraAltitude, setCameraAltitude] = useState(2.2);
 
+  // Filter state
+  const [filters, setFilters] = useState<FilterState>(defaultFilterState);
+  const [isFilterCollapsed, setIsFilterCollapsed] = useState(false);
+
   // Center globe initially
   useEffect(() => {
     if (globeRef.current) {
@@ -116,67 +154,160 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
 
   // Calculate dynamic stroke width based on camera zoom
   const dynamicStroke = useMemo(() => {
-    const baseStroke = 0.5;
+    const baseStroke = 0.3; // Reduced from 0.5 for thinner lines
     // Näher gezoomt (kleinere altitude) = dünnere Linien
     // Weiter weg (größere altitude) = dickere Linien
     const zoomFactor = cameraAltitude / 2.5;
-    return Math.min(Math.max(baseStroke * zoomFactor, 0.2), 1.0);
+    return Math.min(Math.max(baseStroke * zoomFactor, 0.08), 0.7); // Reduced range for thinner lines
   }, [cameraAltitude]);
 
-  // Calculate dynamic point radius based on camera zoom
-  const dynamicPointScale = useMemo(() => {
-    // Näher gezoomt (kleinere altitude) = kleinere Marker
-    // Weiter weg (größere altitude) = größere Marker
-    const zoomFactor = cameraAltitude / 2.5;
-    return Math.min(Math.max(zoomFactor, 0.4), 1.5);
-  }, [cameraAltitude]);
+  // Static point radius - no dynamic scaling based on zoom
 
-  // Convert flights to arcs format (skip invalid coordinates)
-  const arcsData = useMemo(() => {
-    return (flights || [])
-      .map(flight => {
-        if (!flight?.properties || !flight?.geometry) return null;
+  // Extract available years and airlines for filters
+  const { availableYears, availableAirlines } = useMemo(() => {
+    const years = new Set<number>();
+    const airlines = new Set<string>();
 
-        const coords = flight.geometry.coordinates;
-        if (coords.length < 2) return null;
+    (flights || []).forEach(flight => {
+      if (!flight?.properties) return;
 
-        const start = coords[0];
-        const end = coords[coords.length - 1];
+      // Extract year
+      if (flight.properties.departureTime) {
+        const year = new Date(flight.properties.departureTime).getFullYear();
+        if (year && !isNaN(year)) years.add(year);
+      }
 
-        const validCoords =
-          Number.isFinite(start[0]) &&
-          Number.isFinite(start[1]) &&
-          Number.isFinite(end[0]) &&
-          Number.isFinite(end[1]) &&
-          !(start[0] === 0 && start[1] === 0) &&
-          !(end[0] === 0 && end[1] === 0);
+      // Extract airline
+      if (flight.properties.airline) {
+        airlines.add(flight.properties.airline);
+      }
+    });
 
-        if (!validCoords) return null;
+    return {
+      availableYears: Array.from(years).sort((a, b) => b - a), // Newest first
+      availableAirlines: Array.from(airlines).sort(),
+    };
+  }, [flights]);
 
-        return {
-          id: flight.properties.id,
+  // Apply filters to flights before aggregation
+  const filteredFlights = useMemo(() => {
+    return (flights || []).filter(flight => {
+      if (!flight?.properties) return false;
+
+      // Year filter
+      if (filters.yearFilter !== null) {
+        const year = new Date(flight.properties.departureTime).getFullYear();
+        if (year !== filters.yearFilter) return false;
+      }
+
+      // Month filter
+      if (filters.monthFilter !== null) {
+        const month = new Date(flight.properties.departureTime).getMonth() + 1; // 1-12
+        if (month !== filters.monthFilter) return false;
+      }
+
+      // Status filter
+      const status = flight.properties.status;
+      if (status === 'flown' && !filters.showFlown) return false;
+      if (status === 'scheduled' && !filters.showScheduled) return false;
+      if (status === 'cancelled' && !filters.showCancelled) return false;
+
+      // Airline filter (if any airlines selected, only show those)
+      if (filters.selectedAirlines.length > 0) {
+        if (!filters.selectedAirlines.includes(flight.properties.airline || '')) return false;
+      }
+
+      return true;
+    });
+  }, [flights, filters]);
+
+  // Convert flights to arcs format with route aggregation and dynamic heatmap colors
+  const { arcsData, heatmapThresholds } = useMemo(() => {
+    // First, aggregate flights by route
+    const routeMap = new Map<string, {
+      count: number;
+      startLat: number;
+      startLng: number;
+      endLat: number;
+      endLng: number;
+      flights: any[];
+      departure: any;
+      arrival: any;
+    }>();
+
+    (filteredFlights || []).forEach(flight => {
+      if (!flight?.properties || !flight?.geometry) return;
+
+      const coords = flight.geometry.coordinates;
+      if (coords.length < 2) return;
+
+      const start = coords[0];
+      const end = coords[coords.length - 1];
+
+      const validCoords =
+        Number.isFinite(start[0]) &&
+        Number.isFinite(start[1]) &&
+        Number.isFinite(end[0]) &&
+        Number.isFinite(end[1]) &&
+        !(start[0] === 0 && start[1] === 0) &&
+        !(end[0] === 0 && end[1] === 0);
+
+      if (!validCoords) return;
+
+      const depIATA = flight.properties.departureAirport?.iata ||
+                      flight.properties.departureAirport?.icao || 'UNKNOWN';
+      const arrIATA = flight.properties.arrivalAirport?.iata ||
+                      flight.properties.arrivalAirport?.icao || 'UNKNOWN';
+      // Create bidirectional route key (FRA-JFK === JFK-FRA)
+      const routeKey = createRouteKey(depIATA, arrIATA);
+
+      if (!routeMap.has(routeKey)) {
+        routeMap.set(routeKey, {
+          count: 1,
           startLat: start[1],
           startLng: start[0],
           endLat: end[1],
           endLng: end[0],
-          status: flight.properties.status,
-          category: (flight as any).properties.category,
-          airline: flight.properties.airline,
-          flightNumber: flight.properties.flightNumber,
+          flights: [flight],
           departure: flight.properties.departureAirport,
           arrival: flight.properties.arrivalAirport,
-          color: getStatusColor(flight.properties.status, (flight as any).properties.category),
-          altitude: getStaticArcAltitude(start[1], start[0], end[1], end[0]),
-        };
-      })
-      .filter(arc => arc !== null);
-  }, [flights]);
+        });
+      } else {
+        const route = routeMap.get(routeKey)!;
+        route.count++;
+        route.flights.push(flight);
+      }
+    });
 
-  // Extract airport points with proper deduplication
+    // Calculate thresholds
+    const counts = Array.from(routeMap.values()).map(r => r.count);
+    const thresholds = calculateHeatmapThresholds(counts);
+
+    // Create arcs with dynamic colors and apply route frequency filter
+    const arcs = Array.from(routeMap.entries())
+      .filter(([_, route]) => route.count >= filters.minRouteCount) // Apply min route count filter
+      .map(([routeKey, route]) => ({
+        routeKey,
+        count: route.count,
+        startLat: route.startLat,
+        startLng: route.startLng,
+        endLat: route.endLat,
+        endLng: route.endLng,
+        flights: route.flights,
+        departure: route.departure,
+        arrival: route.arrival,
+        color: getHeatmapColor(route.count, thresholds),
+        altitude: getStaticArcAltitude(route.startLat, route.startLng, route.endLat, route.endLng),
+      }));
+
+    return { arcsData: arcs, heatmapThresholds: thresholds };
+  }, [filteredFlights, filters.minRouteCount]);
+
+  // Extract airport points with proper deduplication (using filtered flights)
   const pointsData = useMemo(() => {
     const airportMap = new Map();
 
-    (flights || []).forEach(flight => {
+    (filteredFlights || []).forEach(flight => {
       if (!flight?.properties || !flight?.geometry) return;
 
       const coords = flight.geometry.coordinates;
@@ -250,10 +381,20 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
     });
 
     return Array.from(airportMap.values());
-  }, [flights]);
+  }, [filteredFlights]);
 
   return (
     <div className="h-full w-full relative flex items-center justify-center" style={{ touchAction: 'pan-x pan-y pinch-zoom' }}>
+      {/* Filter Panel */}
+      <GlobeFilters
+        filters={filters}
+        onChange={setFilters}
+        availableYears={availableYears}
+        availableAirlines={availableAirlines}
+        isCollapsed={isFilterCollapsed}
+        onToggleCollapse={() => setIsFilterCollapsed(!isFilterCollapsed)}
+      />
+
       {/* Control Panel */}
       <div className="absolute bottom-4 left-4 z-[9999] bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 border border-gray-200 dark:border-gray-700" style={{ touchAction: 'auto', pointerEvents: 'auto' }}>
         {/* Auto-Rotation Toggle */}
@@ -270,6 +411,41 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
         </label>
       </div>
 
+      {/* Heatmap Legend */}
+      {arcsData.length > 0 && (
+        <div className="absolute bottom-4 right-4 z-[9999] bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3 border border-gray-200 dark:border-gray-700" style={{ touchAction: 'auto', pointerEvents: 'auto' }}>
+          <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            Routenfrequenz
+          </div>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-0.5" style={{ backgroundColor: '#10b981' }}></div>
+              <span className="text-xs text-gray-600 dark:text-gray-400">
+                1-{heatmapThresholds.q25}x
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-0.5" style={{ backgroundColor: '#eab308' }}></div>
+              <span className="text-xs text-gray-600 dark:text-gray-400">
+                {heatmapThresholds.q25 + 1}-{heatmapThresholds.q50}x
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-0.5" style={{ backgroundColor: '#f59e0b' }}></div>
+              <span className="text-xs text-gray-600 dark:text-gray-400">
+                {heatmapThresholds.q50 + 1}-{heatmapThresholds.q75}x
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-0.5" style={{ backgroundColor: '#ef4444' }}></div>
+              <span className="text-xs text-gray-600 dark:text-gray-400">
+                {heatmapThresholds.q75 + 1}+ ({heatmapThresholds.max}x max)
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Globe
         ref={globeRef}
         style={{ width: '100%', height: '100%' }}
@@ -280,6 +456,7 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
         arcsData={arcsData}
         arcColor={(arc: any) => arc.color}
         arcStroke={dynamicStroke}
+        arcStrokeOpacity={0.6}
         arcAltitude={(arc: any) => arc.altitude}
         arcCurveResolution={64}
         arcDashLength={1}
@@ -295,17 +472,21 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
             font-size: 12px;
           ">
             <div style="font-weight: bold; margin-bottom: 4px;">
-              ${arc.airline} ${arc.flightNumber}
+              ${arc.departure?.iata || 'UNK'} ↔ ${arc.arrival?.iata || 'UNK'}
             </div>
-            <div>${arc.departure?.iata || arc.departure?.name} → ${arc.arrival?.iata || arc.arrival?.name}</div>
-            <div style="margin-top: 4px; color: ${arc.color};">
-              ${arc.status.toUpperCase()}
+            <div style="font-size: 11px; opacity: 0.9; margin-bottom: 6px;">
+              ${arc.departure?.name || 'Unknown'} ↔ ${arc.arrival?.name || 'Unknown'}
+            </div>
+            <div style="color: ${arc.color};">
+              ${arc.count}x geflogen
             </div>
           </div>
         `}
         onArcClick={(arc: any) => {
-          if (onFlightClick && arc.id) {
-            onFlightClick(arc.id);
+          if (onFlightClick && arc.flights && arc.flights.length > 0) {
+            // Click on most recent flight in route
+            const mostRecentFlight = arc.flights[arc.flights.length - 1];
+            onFlightClick(mostRecentFlight.properties.id);
           }
         }}
         // Points (Airports) - Dynamic size based on zoom
@@ -314,7 +495,12 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
         pointLng="lng"
         pointColor={() => isDarkMode ? '#fbbf24' : '#f59e0b'}
         pointAltitude={0.01}
-        pointRadius={(point: any) => Math.sqrt(point.size) * 0.2 * dynamicPointScale}
+        pointRadius={(point: any) => {
+          // Static radius calculation - no zoom-based scaling
+          // Very small base size for better visibility
+          const baseRadius = Math.sqrt(point.size) * 0.08;
+          return Math.min(baseRadius, 0.3); // Maximum size capped at 0.4
+        }}
         pointLabel={(point: any) => `
           <div style="
             background: rgba(0, 0, 0, 0.8);
