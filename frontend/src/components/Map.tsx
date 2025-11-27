@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, useCallback, memo } from 'react';
 import { MapContainer, TileLayer, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import type { GeoJSONFeature } from '../types';
@@ -10,6 +10,19 @@ interface MapProps {
   flights: GeoJSONFeature[];
   selectedFlightId?: string;
   onFlightClick?: (flightId: string) => void;
+}
+
+// Route representation for aggregation
+interface AggregatedRoute {
+  routeKey: string;
+  departureName: string;
+  arrivalName: string;
+  departureIATA: string;
+  arrivalIATA: string;
+  count: number;
+  segments: [number, number][][];
+  flights: GeoJSONFeature[];
+  color: string;
 }
 
 // Helper function to split lines that cross the antimeridian (dateline)
@@ -43,7 +56,15 @@ function splitLineAtAntimeridian(positions: [number, number][]): [number, number
   return segments;
 }
 
-function MapUpdater({ flights }: { flights: GeoJSONFeature[] }) {
+// Heatmap color based on route frequency
+const getHeatmapColor = (count: number): string => {
+  if (count >= 11) return '#ef4444'; // red - very frequent
+  if (count >= 6) return '#f59e0b';  // orange - frequent
+  if (count >= 2) return '#eab308';  // yellow - moderate
+  return '#10b981';                  // green - single flight
+};
+
+const MapUpdater = memo(({ flights }: { flights: GeoJSONFeature[] }) => {
   const map = useMap();
 
   useEffect(() => {
@@ -65,29 +86,76 @@ function MapUpdater({ flights }: { flights: GeoJSONFeature[] }) {
   }, [flights, map]);
 
   return null;
-}
+});
 
-export default function Map({ flights = [], selectedFlightId, onFlightClick }: MapProps) {
+function Map({ flights = [], selectedFlightId, onFlightClick }: MapProps) {
   const themeStore = useThemeStore();
   const isDarkMode = themeStore?.isDarkMode ?? false;
 
-  const getRouteColor = (status: string, category?: string) => {
-    if (category) {
-      if (category === 'business') return '#3b82f6';
-      if (category === 'private') return '#10b981';
-      if (category === 'vacation') return '#f59e0b';
+  // Aggregate flights by route (departure-arrival pair)
+  const aggregatedRoutes = useMemo<AggregatedRoute[]>(() => {
+    const routeMap: Record<string, AggregatedRoute> = {};
+
+    flights.forEach((flight) => {
+      if (!flight?.properties || !flight?.geometry) return;
+
+      const depIATA = flight.properties.departureAirport?.iata ||
+                      flight.properties.departureAirport?.icao || 'UNKNOWN';
+      const arrIATA = flight.properties.arrivalAirport?.iata ||
+                      flight.properties.arrivalAirport?.icao || 'UNKNOWN';
+
+      // Create unique route key
+      const routeKey = `${depIATA}-${arrIATA}`;
+
+      if (!routeMap[routeKey]) {
+        // Convert coordinates from [lon, lat] to [lat, lon] for Leaflet
+        const positions = flight.geometry.coordinates.map(
+          ([lon, lat]) => [lat, lon] as [number, number]
+        );
+
+        // Validate positions
+        const validPositions = positions.filter(pos =>
+          pos && pos.length === 2 &&
+          !(pos[0] === 0 && pos[1] === 0) &&
+          Number.isFinite(pos[0]) && Number.isFinite(pos[1])
+        );
+
+        if (validPositions.length < 2) return;
+
+        // Split at antimeridian
+        const segments = splitLineAtAntimeridian(validPositions);
+
+        routeMap[routeKey] = {
+          routeKey,
+          departureName: flight.properties.departureAirport?.name || depIATA,
+          arrivalName: flight.properties.arrivalAirport?.name || arrIATA,
+          departureIATA: depIATA,
+          arrivalIATA: arrIATA,
+          count: 1,
+          segments,
+          flights: [flight],
+          color: getHeatmapColor(1),
+        };
+      } else {
+        // Increment count for existing route
+        const route = routeMap[routeKey];
+        route.count++;
+        route.flights.push(flight);
+        route.color = getHeatmapColor(route.count);
+      }
+    });
+
+    return Object.values(routeMap);
+  }, [flights]);
+
+  // Memoized click handler
+  const handleRouteClick = useCallback((route: AggregatedRoute) => {
+    // Click on most recent flight in route
+    if (route.flights.length > 0 && onFlightClick) {
+      const mostRecentFlight = route.flights[route.flights.length - 1];
+      onFlightClick(mostRecentFlight.properties.id);
     }
-    switch (status) {
-      case 'flown':
-        return '#10b981';
-      case 'scheduled':
-        return '#3b82f6';
-      case 'cancelled':
-        return '#ef4444';
-      default:
-        return '#6b7280';
-    }
-  };
+  }, [onFlightClick]);
 
   return (
     <div className="h-full w-full" style={{ touchAction: 'pan-x pan-y pinch-zoom' }}>
@@ -96,6 +164,7 @@ export default function Map({ flights = [], selectedFlightId, onFlightClick }: M
         zoom={4}
         minZoom={2}
         worldCopyJump={true}
+        preferCanvas={true}
         style={{ height: '100%', width: '100%', touchAction: 'pan-x pan-y pinch-zoom' }}
         className="rounded-lg"
       >
@@ -118,39 +187,47 @@ export default function Map({ flights = [], selectedFlightId, onFlightClick }: M
 
         <MapUpdater flights={flights} />
 
-        {/* Flight paths */}
-        {flights.map((flight) => {
-          if (!flight?.properties || !flight?.geometry) return null;
-
-          const isSelected = flight.properties.id === selectedFlightId;
-          const color = getRouteColor(flight.properties.status, (flight as any).properties.category);
-
-          const positions = flight.geometry.coordinates.map(
-            ([lon, lat]) => [lat, lon] as [number, number]
+        {/* Aggregated route paths with heatmap colors */}
+        {aggregatedRoutes.map((route: AggregatedRoute) => {
+          // Check if any flight in this route is selected
+          const isSelected = route.flights.some(
+            (flight: GeoJSONFeature) => flight.properties.id === selectedFlightId
           );
 
-          if (positions.length === 0 ||
-              positions.some(pos => !pos || pos.length !== 2 ||
-                            (pos[0] === 0 && pos[1] === 0) ||
-                            !Number.isFinite(pos[0]) || !Number.isFinite(pos[1]))) {
-            return null;
-          }
-
-          // Split line at antimeridian crossings
-          const segments = splitLineAtAntimeridian(positions);
-
           // Render each segment as a separate polyline
-          return segments.map((segment, index) => (
+          return route.segments.map((segment: [number, number][], index: number) => (
             <Polyline
-              key={`${flight.properties.id}-${index}`}
+              key={`${route.routeKey}-${index}`}
               positions={segment}
               pathOptions={{
-                color,
-                weight: isSelected ? 4 : 2,
-                opacity: isSelected ? 1 : 0.6,
+                color: route.color,
+                weight: isSelected ? 5 : 3,
+                opacity: isSelected ? 1 : 0.7,
               }}
               eventHandlers={{
-                click: () => onFlightClick?.(flight.properties.id),
+                click: () => handleRouteClick(route),
+                mouseover: (e: any) => {
+                  const layer = e.target;
+                  layer.setStyle({
+                    weight: 5,
+                    opacity: 1,
+                  });
+                  layer.bindTooltip(
+                    `<div style="text-align: center;">
+                      <strong>${route.departureIATA} → ${route.arrivalIATA}</strong><br/>
+                      <span>${route.count}x geflogen</span>
+                    </div>`,
+                    { sticky: true }
+                  ).openTooltip();
+                },
+                mouseout: (e: any) => {
+                  const layer = e.target;
+                  layer.setStyle({
+                    weight: isSelected ? 5 : 3,
+                    opacity: isSelected ? 1 : 0.7,
+                  });
+                  layer.closeTooltip();
+                },
               }}
             />
           ));
@@ -162,3 +239,6 @@ export default function Map({ flights = [], selectedFlightId, onFlightClick }: M
     </div>
   );
 }
+
+// Export memoized version
+export default memo(Map);
