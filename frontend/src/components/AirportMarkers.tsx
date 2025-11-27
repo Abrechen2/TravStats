@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, memo } from 'react';
 import { CircleMarker, Popup } from 'react-leaflet';
 import type { GeoJSONFeature } from '../types';
 
@@ -19,7 +19,7 @@ interface AirportStats {
   airlines: string[];
 }
 
-export default function AirportMarkers({ flights }: AirportMarkersProps) {
+function AirportMarkers({ flights }: AirportMarkersProps) {
   const airportStats = useMemo(() => {
     const statsMap = new Map<string, AirportStats>();
 
@@ -122,7 +122,8 @@ export default function AirportMarkers({ flights }: AirportMarkersProps) {
   };
 
   const getAirportRadius = (visits: number) => {
-    return Math.min(4 + visits * 0.5, 15);
+    // Reduced maximum size from 15 to 12 for better visibility
+    return Math.min(4 + visits * 0.5, 12);
   };
 
   return (
@@ -214,3 +215,6 @@ export default function AirportMarkers({ flights }: AirportMarkersProps) {
     </>
   );
 }
+
+// Export memoized version to prevent unnecessary re-renders
+export default memo(AirportMarkers);

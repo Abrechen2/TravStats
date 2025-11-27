@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, useCallback, memo } from 'react';
 import { MapContainer, TileLayer, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import type { GeoJSONFeature } from '../types';
@@ -10,6 +10,19 @@ interface MapProps {
   flights: GeoJSONFeature[];
   selectedFlightId?: string;
   onFlightClick?: (flightId: string) => void;
+}
+
+// Route representation for aggregation
+interface AggregatedRoute {
+  routeKey: string;
+  departureName: string;
+  arrivalName: string;
+  departureIATA: string;
+  arrivalIATA: string;
+  count: number;
+  segments: [number, number][][];
+  flights: GeoJSONFeature[];
+  color: string;
 }
 
 // Helper function to split lines that cross the antimeridian (dateline)
@@ -43,7 +56,59 @@ function splitLineAtAntimeridian(positions: [number, number][]): [number, number
   return segments;
 }
 
-function MapUpdater({ flights }: { flights: GeoJSONFeature[] }) {
+// Helper function to create bidirectional route key (FRA-JFK === JFK-FRA)
+const createRouteKey = (airportA: string, airportB: string): string => {
+  // Sort alphabetically to ensure bidirectional routes are treated as the same
+  return airportA < airportB
+    ? `${airportA}-${airportB}`
+    : `${airportB}-${airportA}`;
+};
+
+// Calculate dynamic heatmap thresholds based on data distribution
+const calculateHeatmapThresholds = (counts: number[]): { q25: number; q50: number; q75: number; max: number } => {
+  if (counts.length === 0) return { q25: 1, q50: 2, q75: 3, max: 5 };
+
+  const sorted = [...counts].sort((a, b) => a - b);
+  const len = sorted.length;
+  const max = sorted[len - 1];
+  const min = sorted[0];
+
+  // If all values are the same, create artificial thresholds
+  if (max === min) {
+    return {
+      q25: Math.floor(min * 0.75),
+      q50: Math.floor(min * 0.85),
+      q75: Math.floor(min * 0.95),
+      max: max,
+    };
+  }
+
+  // Use actual quantiles, but ensure they're distinct
+  const q25Index = Math.floor(len * 0.25);
+  const q50Index = Math.floor(len * 0.50);
+  const q75Index = Math.floor(len * 0.75);
+
+  let q25 = sorted[q25Index] || min;
+  let q50 = sorted[q50Index] || min + Math.floor((max - min) * 0.33);
+  let q75 = sorted[q75Index] || min + Math.floor((max - min) * 0.66);
+
+  // Ensure thresholds are strictly increasing
+  if (q50 <= q25) q50 = q25 + Math.max(1, Math.floor((max - q25) * 0.4));
+  if (q75 <= q50) q75 = q50 + Math.max(1, Math.floor((max - q50) * 0.5));
+
+  return { q25, q50, q75, max };
+};
+
+// Heatmap color based on dynamic quantiles
+const getHeatmapColor = (count: number, thresholds: { q25: number; q50: number; q75: number }): string => {
+  // Use > instead of >= to ensure better distribution when values are equal
+  if (count > thresholds.q75) return '#ef4444'; // red - top 25%
+  if (count > thresholds.q50) return '#f59e0b';  // orange - 50-75%
+  if (count > thresholds.q25) return '#eab308';   // yellow - 25-50%
+  return '#10b981';                                // green - bottom 25%
+};
+
+const MapUpdater = memo(({ flights }: { flights: GeoJSONFeature[] }) => {
   const map = useMap();
 
   useEffect(() => {
@@ -65,29 +130,85 @@ function MapUpdater({ flights }: { flights: GeoJSONFeature[] }) {
   }, [flights, map]);
 
   return null;
-}
+});
 
-export default function Map({ flights = [], selectedFlightId, onFlightClick }: MapProps) {
+function Map({ flights = [], selectedFlightId, onFlightClick }: MapProps) {
   const themeStore = useThemeStore();
   const isDarkMode = themeStore?.isDarkMode ?? false;
 
-  const getRouteColor = (status: string, category?: string) => {
-    if (category) {
-      if (category === 'business') return '#3b82f6';
-      if (category === 'private') return '#10b981';
-      if (category === 'vacation') return '#f59e0b';
+  // Aggregate flights by route (departure-arrival pair) with dynamic heatmap colors
+  const { aggregatedRoutes, heatmapThresholds } = useMemo<{ aggregatedRoutes: AggregatedRoute[]; heatmapThresholds: { q25: number; q50: number; q75: number; max: number } }>(() => {
+    const routeMap: Record<string, AggregatedRoute> = {};
+
+    flights.forEach((flight) => {
+      if (!flight?.properties || !flight?.geometry) return;
+
+      const depIATA = flight.properties.departureAirport?.iata ||
+                      flight.properties.departureAirport?.icao || 'UNKNOWN';
+      const arrIATA = flight.properties.arrivalAirport?.iata ||
+                      flight.properties.arrivalAirport?.icao || 'UNKNOWN';
+
+      // Create bidirectional route key (FRA-JFK === JFK-FRA)
+      const routeKey = createRouteKey(depIATA, arrIATA);
+
+      if (!routeMap[routeKey]) {
+        // Convert coordinates from [lon, lat] to [lat, lon] for Leaflet
+        const positions = flight.geometry.coordinates.map(
+          ([lon, lat]) => [lat, lon] as [number, number]
+        );
+
+        // Validate positions
+        const validPositions = positions.filter(pos =>
+          pos && pos.length === 2 &&
+          !(pos[0] === 0 && pos[1] === 0) &&
+          Number.isFinite(pos[0]) && Number.isFinite(pos[1])
+        );
+
+        if (validPositions.length < 2) return;
+
+        // Split at antimeridian
+        const segments = splitLineAtAntimeridian(validPositions);
+
+        routeMap[routeKey] = {
+          routeKey,
+          departureName: flight.properties.departureAirport?.name || depIATA,
+          arrivalName: flight.properties.arrivalAirport?.name || arrIATA,
+          departureIATA: depIATA,
+          arrivalIATA: arrIATA,
+          count: 1,
+          segments,
+          flights: [flight],
+          color: '', // Will be set after threshold calculation
+        };
+      } else {
+        // Increment count for existing route
+        const route = routeMap[routeKey];
+        route.count++;
+        route.flights.push(flight);
+      }
+    });
+
+    // Calculate thresholds based on all route counts
+    const routes = Object.values(routeMap);
+    const counts = routes.map(r => r.count);
+    const thresholds = calculateHeatmapThresholds(counts);
+
+    // Assign colors based on thresholds
+    routes.forEach(route => {
+      route.color = getHeatmapColor(route.count, thresholds);
+    });
+
+    return { aggregatedRoutes: routes, heatmapThresholds: thresholds };
+  }, [flights]);
+
+  // Memoized click handler
+  const handleRouteClick = useCallback((route: AggregatedRoute) => {
+    // Click on most recent flight in route
+    if (route.flights.length > 0 && onFlightClick) {
+      const mostRecentFlight = route.flights[route.flights.length - 1];
+      onFlightClick(mostRecentFlight.properties.id);
     }
-    switch (status) {
-      case 'flown':
-        return '#10b981';
-      case 'scheduled':
-        return '#3b82f6';
-      case 'cancelled':
-        return '#ef4444';
-      default:
-        return '#6b7280';
-    }
-  };
+  }, [onFlightClick]);
 
   return (
     <div className="h-full w-full" style={{ touchAction: 'pan-x pan-y pinch-zoom' }}>
@@ -96,6 +217,7 @@ export default function Map({ flights = [], selectedFlightId, onFlightClick }: M
         zoom={4}
         minZoom={2}
         worldCopyJump={true}
+        preferCanvas={true}
         style={{ height: '100%', width: '100%', touchAction: 'pan-x pan-y pinch-zoom' }}
         className="rounded-lg"
       >
@@ -118,39 +240,47 @@ export default function Map({ flights = [], selectedFlightId, onFlightClick }: M
 
         <MapUpdater flights={flights} />
 
-        {/* Flight paths */}
-        {flights.map((flight) => {
-          if (!flight?.properties || !flight?.geometry) return null;
-
-          const isSelected = flight.properties.id === selectedFlightId;
-          const color = getRouteColor(flight.properties.status, (flight as any).properties.category);
-
-          const positions = flight.geometry.coordinates.map(
-            ([lon, lat]) => [lat, lon] as [number, number]
+        {/* Aggregated route paths with heatmap colors */}
+        {aggregatedRoutes.map((route: AggregatedRoute) => {
+          // Check if any flight in this route is selected
+          const isSelected = route.flights.some(
+            (flight: GeoJSONFeature) => flight.properties.id === selectedFlightId
           );
 
-          if (positions.length === 0 ||
-              positions.some(pos => !pos || pos.length !== 2 ||
-                            (pos[0] === 0 && pos[1] === 0) ||
-                            !Number.isFinite(pos[0]) || !Number.isFinite(pos[1]))) {
-            return null;
-          }
-
-          // Split line at antimeridian crossings
-          const segments = splitLineAtAntimeridian(positions);
-
           // Render each segment as a separate polyline
-          return segments.map((segment, index) => (
+          return route.segments.map((segment: [number, number][], index: number) => (
             <Polyline
-              key={`${flight.properties.id}-${index}`}
+              key={`${route.routeKey}-${index}`}
               positions={segment}
               pathOptions={{
-                color,
-                weight: isSelected ? 4 : 2,
-                opacity: isSelected ? 1 : 0.6,
+                color: route.color,
+                weight: isSelected ? 5 : 3,
+                opacity: isSelected ? 1 : 0.7,
               }}
               eventHandlers={{
-                click: () => onFlightClick?.(flight.properties.id),
+                click: () => handleRouteClick(route),
+                mouseover: (e: any) => {
+                  const layer = e.target;
+                  layer.setStyle({
+                    weight: 5,
+                    opacity: 1,
+                  });
+                  layer.bindTooltip(
+                    `<div style="text-align: center;">
+                      <strong>${route.departureIATA} ↔ ${route.arrivalIATA}</strong><br/>
+                      <span>${route.count}x geflogen</span>
+                    </div>`,
+                    { sticky: true }
+                  ).openTooltip();
+                },
+                mouseout: (e: any) => {
+                  const layer = e.target;
+                  layer.setStyle({
+                    weight: isSelected ? 5 : 3,
+                    opacity: isSelected ? 1 : 0.7,
+                  });
+                  layer.closeTooltip();
+                },
               }}
             />
           ));
@@ -159,6 +289,44 @@ export default function Map({ flights = [], selectedFlightId, onFlightClick }: M
         {/* Airport markers with aggregated stats */}
         <AirportMarkers flights={flights} />
       </MapContainer>
+
+      {/* Heatmap Legend */}
+      {aggregatedRoutes.length > 0 && (
+        <div className="absolute bottom-4 right-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3 border border-gray-200 dark:border-gray-700 z-[1000]">
+          <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            Routenfrequenz
+          </div>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-0.5" style={{ backgroundColor: '#10b981' }}></div>
+              <span className="text-xs text-gray-600 dark:text-gray-400">
+                1-{heatmapThresholds.q25}x
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-0.5" style={{ backgroundColor: '#eab308' }}></div>
+              <span className="text-xs text-gray-600 dark:text-gray-400">
+                {heatmapThresholds.q25 + 1}-{heatmapThresholds.q50}x
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-0.5" style={{ backgroundColor: '#f59e0b' }}></div>
+              <span className="text-xs text-gray-600 dark:text-gray-400">
+                {heatmapThresholds.q50 + 1}-{heatmapThresholds.q75}x
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-0.5" style={{ backgroundColor: '#ef4444' }}></div>
+              <span className="text-xs text-gray-600 dark:text-gray-400">
+                {heatmapThresholds.q75 + 1}+ ({heatmapThresholds.max}x max)
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+// Export memoized version
+export default memo(Map);

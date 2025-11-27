@@ -46,7 +46,7 @@
   <Category>Productivity: Status:Stable</Category>
   <WebUI>http://[IP]:[PORT:3000]/</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/Abrechen2/TravStats/main/unraid-template.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/Abrechen2/TravStats/main/frontend/public/vite.svg</Icon>
+  <Icon>https://raw.githubusercontent.com/Abrechen2/TravStats/main/AppLogo.png</Icon>
   <ExtraParams></ExtraParams>
   <PostArgs></PostArgs>
   <CPUset></CPUset>
@@ -72,6 +72,7 @@
     - Set "Database Password" to match PostgreSQL password
     - JWT secret will be auto-generated securely
     - Airport database seeds automatically on first start
+    - OPTIONAL: Enable "Create Demo User" for testing (demo/demo123)
 
     ⚙️ OPTIONAL: External API Keys
     ================================
@@ -82,13 +83,15 @@
     📚 Full documentation:
     https://github.com/Abrechen2/TravStats/blob/main/README.md
   </Requires>
-  <Config Name="WebUI Port" Target="80" Default="3000" Mode="tcp" Description="Port for accessing TravStats web interface" Type="Port" Display="always" Required="true" Mask="false">3000</Config>
+  <Config Name="WebUI Port" Target="80" Default="3000" Mode="tcp" Description="Port for accessing TravStats web interface (maps to internal nginx port 80)" Type="Port" Display="always" Required="true" Mask="false">3000</Config>
 
-  <Config Name="Database Password" Target="DATABASE_URL" Default="postgresql://flights:CHANGEME@travstats-db:5432/flights" Mode="" Description="PostgreSQL connection URL. Replace CHANGEME with your database password from Step 1." Type="Variable" Display="always" Required="true" Mask="true">postgresql://flights:changeme@travstats-db:5432/flights</Config>
+  <Config Name="Database Password" Target="DATABASE_URL" Default="" Mode="" Description="PostgreSQL connection URL. Format: postgresql://flights:YOUR_PASSWORD@travstats-db:5432/flights (Replace YOUR_PASSWORD with your database password from Step 1)" Type="Variable" Display="always" Required="true" Mask="true">postgresql://flights:changeme@travstats-db:5432/flights</Config>
 
   <Config Name="AppData Volume" Target="/app/data" Default="/mnt/user/appdata/travstats" Mode="rw" Description="Persistent storage for auto-generated JWT secret and configuration files" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/travstats</Config>
 
   <Config Name="Seed Airports Database" Target="SEED_AIRPORTS" Default="true" Mode="" Description="Automatically populate airports database with ~8000 airports on first start (recommended). Takes 1-2 minutes on first boot." Type="Variable" Display="always" Required="false" Mask="false">true</Config>
+
+  <Config Name="Create Demo User" Target="CREATE_DEMO_USER" Default="false" Mode="" Description="Create a demo user account on first start. Username: demo, Password: demo123. Recommended for testing only!" Type="Variable" Display="always" Required="false" Mask="false">false</Config>
 
   <Config Name="AirLabs API Key" Target="AIRLABS_API_KEY" Default="" Mode="" Description="Optional: AirLabs API key for automatic flight data lookup. Free tier: 1000 requests/month. Get at https://airlabs.co/" Type="Variable" Display="normal" Required="false" Mask="true"></Config>
 
@@ -97,6 +100,8 @@
   <Config Name="OpenSky Client Secret" Target="OPENSKY_CLIENT_SECRET" Default="" Mode="" Description="Optional: OpenSky Network OAuth Client Secret" Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
 
   <Config Name="Node Environment" Target="NODE_ENV" Default="production" Mode="" Description="Runtime environment. Leave as 'production' unless debugging." Type="Variable" Display="advanced" Required="false" Mask="false">production</Config>
+
+  <Config Name="Cookie Secure Flag" Target="COOKIE_SECURE" Default="false" Mode="" Description="Set to 'false' for HTTP access (no SSL). Set to 'true' only if using HTTPS reverse proxy." Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
 
   <Config Name="Backend Port" Target="PORT" Default="8000" Mode="" Description="Internal backend API port. Do not change." Type="Variable" Display="advanced" Required="false" Mask="false">8000</Config>
 

@@ -30,7 +30,10 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
       <div className="card w-full max-w-md">
-        <h1 className="text-3xl font-bold text-center mb-6">TravStats</h1>
+        <div className="flex flex-col items-center mb-6">
+          <img src="/logo.png" alt="TravStats Logo" className="h-24 w-auto mb-4" />
+          <h1 className="text-3xl font-bold text-center">TravStats</h1>
+        </div>
         <h2 className="text-xl text-gray-600 text-center mb-8">Sign In</h2>
 
         {error && (
@@ -78,14 +81,6 @@ export default function LoginPage() {
             Register
           </Link>
         </p>
-
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-          <p className="text-sm text-gray-600 text-center">
-            <strong>Demo credentials:</strong><br />
-            Username: demo<br />
-            Password: demo123
-          </p>
-        </div>
       </div>
     </div>
   );

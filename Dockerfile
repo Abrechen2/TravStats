@@ -10,6 +10,8 @@ COPY frontend/package*.json ./
 RUN npm ci
 
 COPY frontend/ ./
+# Build without VITE_API_URL - frontend will use relative path /api/v1
+ENV VITE_API_URL=
 RUN npm run build
 
 # Stage 2: Build Backend
@@ -37,6 +39,7 @@ RUN apt-get update && apt-get install -y \
     openssl \
     ca-certificates \
     wget \
+    netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
 # Setup Backend

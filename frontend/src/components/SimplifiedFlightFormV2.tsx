@@ -6,9 +6,11 @@
  * - Smart Flight Number Lookup (Flight-First UX)
  * - Boarding Pass Scanner with Online Validation
  * - Step-by-Step guided flow
+ * - Live Validation
+ * - Auto-Arrival Time Suggestion
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Airport, airportsApi } from '../lib/api';
 import AirportAutocomplete from './AirportAutocomplete';
 import BoardingPassScanner from './BoardingPassScanner';
@@ -16,6 +18,18 @@ import { BoardingPassData, getAirlineName } from '../lib/bcbpParser';
 import type { FlightInput } from '../types';
 import { useSettingsStore } from '../store/settingsStore';
 import { useThemeStore } from '../store/themeStore';
+import { calculateDistance } from '../lib/api';
+
+// Konsistente Error Messages (Deutsch)
+const ERROR_MESSAGES = {
+  NO_FLIGHT_NUMBER: 'Bitte geben Sie eine Flugnummer ein',
+  NO_FLIGHTS_FOUND: 'Keine Flüge gefunden. Bitte versuchen Sie ein anderes Datum oder geben Sie die Daten manuell ein.',
+  LOOKUP_UNAVAILABLE: 'Flugsuche momentan nicht verfügbar. Bitte geben Sie die Daten manuell ein.',
+  BOARDING_PASS_ERROR: 'Boarding Pass konnte nicht gescannt werden. Bitte versuchen Sie es erneut oder geben Sie die Daten manuell ein.',
+  MISSING_AIRPORTS: 'Bitte wählen Sie Start- und Zielflughafen aus',
+  SAVE_FAILED: 'Flug konnte nicht gespeichert werden. Bitte überprüfen Sie Ihre Eingaben.',
+  API_KEY_INFO: 'Hinweis: Für die automatische Flugsuche wird ein API-Schlüssel benötigt.',
+};
 
 interface FlightLookupResult {
   flightNumber: string;
@@ -74,10 +88,10 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
   const [seatClass, setSeatClass] = useState<'economy' | 'premium_economy' | 'business' | 'first'>('economy');
   const [status, setStatus] = useState<'scheduled' | 'flown' | 'cancelled'>('flown');
   const [notes, setNotes] = useState('');
-  const [price, _setPrice] = useState<number | undefined>(undefined);
+  const [price, setPrice] = useState<number | undefined>(undefined);
   const [currency, setCurrency] = useState<'EUR' | 'USD' | 'GBP' | 'CHF'>('EUR');
   const [category, setCategory] = useState<'business' | 'private' | 'vacation'>('business');
-  const [tags, _setTags] = useState<string[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
 
   // Initialize defaults from settings
   useEffect(() => {
@@ -107,6 +121,34 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
     }
   }, [departureDate]);
 
+  // Auto-suggest arrival time based on estimated flight duration
+  useEffect(() => {
+    if (departureDate && departureTime && departure && arrival && !arrivalDate) {
+      try {
+        // Simple heuristic: ~1 hour per 800km + 30min buffer
+        const distance = calculateDistance(
+          departure.lat,
+          departure.lon,
+          arrival.lat,
+          arrival.lon
+        );
+        const estimatedHours = Math.max(0.5, distance / 800 + 0.5);
+
+        const depDateTime = new Date(`${departureDate}T${departureTime}`);
+        const arrDateTime = new Date(depDateTime.getTime() + estimatedHours * 60 * 60 * 1000);
+
+        setArrivalDate(arrDateTime.toISOString().split('T')[0]);
+        setArrivalTime(arrDateTime.toTimeString().slice(0, 5));
+      } catch (err) {
+        // If calculation fails, use same day + 2 hours as fallback
+        const depDateTime = new Date(`${departureDate}T${departureTime}`);
+        const arrDateTime = new Date(depDateTime.getTime() + 2 * 60 * 60 * 1000);
+        setArrivalDate(arrDateTime.toISOString().split('T')[0]);
+        setArrivalTime(arrDateTime.toTimeString().slice(0, 5));
+      }
+    }
+  }, [departureDate, departureTime, departure, arrival]);
+
   const mapCompartmentToSeatClass = (code?: string) => {
     if (!code) return undefined;
     const c = code.toUpperCase();
@@ -119,7 +161,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
   // Flight Lookup Handler
   const handleFlightLookup = async () => {
     if (!flightNumber.trim()) {
-      setError('Please enter a flight number');
+      setError(ERROR_MESSAGES.NO_FLIGHT_NUMBER);
       return;
     }
 
@@ -133,7 +175,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
       const data = await response.json();
 
       if (!data.success || !data.flights || data.flights.length === 0) {
-        setError('No flights found. Try a different date or enter manually.');
+        setError(ERROR_MESSAGES.NO_FLIGHTS_FOUND);
         setStep('complete'); // Skip to manual entry
         return;
       }
@@ -142,7 +184,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
       setStep('select');
     } catch (err) {
       console.error('Flight lookup error:', err);
-      setError('Flight lookup unavailable (Backend/API-Key). Bitte manuell eingeben oder später erneut versuchen.');
+      setError(`${ERROR_MESSAGES.LOOKUP_UNAVAILABLE} ${ERROR_MESSAGES.API_KEY_INFO}`);
       setStep('complete');
     } finally {
       setLoading(false);
@@ -229,8 +271,6 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
             await handleSelectFlight(apiFlight);
             setFlightNumber(`${carrierCode}${bcbpData.flightNumber}`);
             return;
-          } else {
-            setError('Kein Online-Match gefunden (API-Key/Backend prüfen). Nutze gescannte Daten.');
           }
         } catch (err) {
           console.warn('Online validation failed, using scanned data');
@@ -270,18 +310,23 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
       setStep('complete');
 
     } catch (err) {
-      setError('Failed to process boarding pass. Please enter manually.');
+      setError(ERROR_MESSAGES.BOARDING_PASS_ERROR);
     } finally {
       setLoading(false);
     }
   };
+
+  // Live validation
+  const canSubmit = useMemo(() => {
+    return !!(departure && arrival && departureDate && arrivalDate);
+  }, [departure, arrival, departureDate, arrivalDate]);
 
   // Form Submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!departure || !arrival) {
-      setError('Please select both departure and arrival airports');
+      setError(ERROR_MESSAGES.MISSING_AIRPORTS);
       return;
     }
 
@@ -324,7 +369,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
         tags: tags.length ? tags : undefined,
       });
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to save flight');
+      setError(err.response?.data?.error || ERROR_MESSAGES.SAVE_FAILED);
     } finally {
       setLoading(false);
     }
@@ -531,6 +576,29 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                 </div>
               </div>
 
+              {/* Arrival Date & Time */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={`label ${textClass}`}>Arrival Date *</label>
+                  <input
+                    type="date"
+                    value={arrivalDate}
+                    onChange={(e) => setArrivalDate(e.target.value)}
+                    className={`input ${sizedInputClass}`}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className={`label ${textClass}`}>Arrival Time</label>
+                  <input
+                    type="time"
+                    value={arrivalTime}
+                    onChange={(e) => setArrivalTime(e.target.value)}
+                    className={`input ${sizedInputClass}`}
+                  />
+                </div>
+              </div>
+
               {/* Additional Fields */}
               <div className="grid grid-cols-3 gap-4">
                 <div>
@@ -630,25 +698,58 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                 </div>
                 <div>
                   <label className={`label ${textClass}`}>Category</label>
-                  <div className="flex gap-2">
-                    {(['business', 'private', 'vacation'] as const).map((cat) => (
-                      <button
-                        key={cat}
-                        type="button"
-                        onClick={() => setCategory(cat)}
-                        className={`px-4 py-2 rounded ${
-                          category === cat
-                            ? 'bg-blue-500 text-white'
-                            : isDarkMode
-                            ? 'bg-gray-700 text-gray-300'
-                            : 'bg-gray-100 text-gray-700'
-                        }`}
-                      >
-                        {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                      </button>
-                    ))}
-                  </div>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value as any)}
+                    className={`input ${sizedInputClass}`}
+                  >
+                    <option value="business">Business</option>
+                    <option value="private">Private</option>
+                    <option value="vacation">Vacation</option>
+                  </select>
                 </div>
+              </div>
+
+              {/* Price & Currency */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="col-span-2">
+                  <label className={`label ${textClass}`}>Ticket Price</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={price ?? ''}
+                    onChange={(e) => setPrice(e.target.value ? parseFloat(e.target.value) : undefined)}
+                    className={`input ${sizedInputClass}`}
+                    placeholder="249.99"
+                  />
+                </div>
+                <div>
+                  <label className={`label ${textClass}`}>Currency</label>
+                  <select
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value as 'EUR' | 'USD' | 'GBP' | 'CHF')}
+                    className={`input ${sizedInputClass}`}
+                  >
+                    <option value="EUR">EUR (€)</option>
+                    <option value="USD">USD ($)</option>
+                    <option value="GBP">GBP (£)</option>
+                    <option value="CHF">CHF (Fr)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Tags */}
+              <div>
+                <label className={`label ${textClass}`}>Tags</label>
+                <input
+                  type="text"
+                  value={tags.join(', ')}
+                  onChange={(e) => setTags(e.target.value.split(',').map(t => t.trim()).filter(Boolean))}
+                  className={`input ${sizedInputClass}`}
+                  placeholder="business, vacation, conference"
+                />
+                <p className={`text-xs ${mutedTextClass} mt-1`}>Comma-separated tags for filtering</p>
               </div>
 
               {/* Notes */}
@@ -678,10 +779,11 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
             {step === 'complete' && (
               <button
                 type="submit"
-                className="btn-primary"
-                disabled={loading || !departure || !arrival}
+                className={`btn-primary ${!canSubmit ? 'opacity-50 cursor-not-allowed' : ''}`}
+                disabled={loading || !canSubmit}
+                title={!canSubmit ? 'Bitte wählen Sie beide Flughäfen und Daten aus' : 'Flug speichern'}
               >
-                {loading ? 'Saving...' : 'Save Flight'}
+                {loading ? 'Speichere...' : 'Flug speichern'}
               </button>
             )}
           </div>
