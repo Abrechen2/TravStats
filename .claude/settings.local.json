@@ -11,7 +11,11 @@
       "Bash(docker build:*)",
       "Bash(docker push:*)",
       "Bash(npm run dev:*)",
-      "Bash(Start-Process test-bcbp-parser.html)"
+      "Bash(Start-Process test-bcbp-parser.html)",
+      "Bash(cat:*)",
+      "Bash(git diff:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
