@@ -15,12 +15,16 @@ model User {
   id                  String              @id @default(uuid())
   username            String              @unique
   passwordHash        String              @map("password_hash")
+  isAdmin             Boolean             @default(false) @map("is_admin")
+  isActive            Boolean             @default(true) @map("is_active")
+  invitedBy           String?             @map("invited_by")
   createdAt           DateTime            @default(now()) @map("created_at")
   flights             Flight[]
   userAchievements    UserAchievement[]
   settings            UserSettings?
   analyticsEvents     AnalyticsEvent[]
   importedFlights     ImportedFlight[]
+  createdInvitations  Invitation[]
 
   @@map("users")
 }
@@ -178,4 +182,21 @@ model ImportedFlight {
 
   @@index([userId, status])
   @@map("imported_flights")
+}
+
+model Invitation {
+  id        String    @id @default(uuid())
+  email     String?
+  token     String    @unique
+  createdBy String    @map("created_by")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  usedBy    String?   @map("used_by")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  creator User @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([createdBy])
+  @@map("invitations")
 }
