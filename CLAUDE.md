@@ -27,7 +27,28 @@
 
 ### What is TravStats?
 
-TravStats is a comprehensive full-stack web application that allows users to track, visualize, and analyze their flight history. It combines flight data management with gamification, statistics, and interactive visualizations.
+TravStats is a **self-hosted flight tracking and analytics platform** designed for privacy-conscious travelers who want full control over their personal flight data. Similar to self-hosted solutions like Nextcloud or Home Assistant, each user (or small group like family/friends) runs their own private instance.
+
+**Key Philosophy:**
+- **Privacy First**: Your flight data stays on YOUR server
+- **Self-Hosted**: Each person/family runs their own instance
+- **Small Scale**: Designed for 1-10 accounts per server (family & close friends)
+- **Data Ownership**: You control your data, backups, and access
+- **Not a SaaS**: This is NOT a multi-tenant cloud service
+
+### Deployment Model
+
+**Typical Use Cases:**
+- Individual runs their own instance for personal use
+- Family shares one server (parents, kids can have separate accounts)
+- Small friend group shares an instance (vacation buddies, travel club)
+- Each instance is completely independent and private
+
+**Infrastructure Options:**
+- Home server (Raspberry Pi, NAS, old laptop)
+- Personal VPS (DigitalOcean, Hetzner, etc.)
+- Docker on personal computer
+- Local network only OR exposed via VPN/Tailscale for remote access
 
 ### Core Features
 
@@ -41,11 +62,13 @@ TravStats is a comprehensive full-stack web application that allows users to tra
 
 ### User Flow
 
-1. User registers/logs in (JWT authentication)
-2. Adds flights manually or via email import/QR scanner
-3. Views flights on interactive map with statistics
-4. Earns achievements as they travel
-5. Analyzes travel patterns through advanced stats pages
+1. Admin sets up their own TravStats server (Docker or manual)
+2. Admin creates accounts for family/friends (or allows registration)
+3. Each user logs in to the shared instance
+4. Users add flights manually or via email import/QR scanner
+5. Users view their personal flights on interactive map with statistics
+6. Users earn achievements and analyze their travel patterns
+7. Data stays private on the self-hosted server
 
 ---
 
@@ -113,12 +136,20 @@ TravStats is a comprehensive full-stack web application that allows users to tra
 }
 ```
 
-### Infrastructure
+### Infrastructure (Self-Hosting Focused)
 
-- **Docker**: Containerization (development & production)
-- **Docker Compose**: Multi-container orchestration
+- **Docker**: Containerization (recommended deployment method)
+- **Docker Compose**: Simple multi-container orchestration (perfect for self-hosting)
 - **Nginx**: Production web server for frontend
 - **Supervisor**: Process management in production
+
+**Self-Hosting Considerations:**
+- **Lightweight**: Can run on Raspberry Pi 4 (4GB+ RAM recommended)
+- **Single Machine**: All services (frontend, backend, database) on one server
+- **No Scaling Needed**: Designed for 1-10 users, not thousands
+- **Simple Backup**: Standard PostgreSQL dumps + file backups
+- **Resource Usage**: ~500MB RAM for all services, minimal CPU
+- **Remote Access**: VPN (WireGuard, Tailscale) or reverse proxy with HTTPS
 
 ---
 
@@ -1315,22 +1346,130 @@ const upload = multer({
 });
 ```
 
-### Production Checklist
+### Self-Hosting Deployment Options
 
+#### Option 1: Local Network Only (Most Private)
+**Best for:** Home use, family members on same network
+
+```bash
+# Run with Docker Compose
+docker-compose up -d
+
+# Access via local IP
+http://192.168.1.100:3000
+```
+
+**Pros:**
+- ✅ Maximum privacy (never exposed to internet)
+- ✅ No SSL/domain needed
+- ✅ Simple setup
+- ✅ No firewall rules
+
+**Cons:**
+- ❌ Can't access when away from home
+- ❌ Requires VPN for remote access
+
+#### Option 2: VPN/Tailscale Access (Recommended)
+**Best for:** Secure remote access without public exposure
+
+```bash
+# Install Tailscale on server and devices
+curl -fsSL https://tailscale.com/install.sh | sh
+
+# Access via Tailscale IP
+https://100.64.0.1:3000
+```
+
+**Pros:**
+- ✅ Secure remote access (encrypted tunnel)
+- ✅ No public IP exposure
+- ✅ Works anywhere
+- ✅ Simple authentication
+- ✅ No port forwarding needed
+
+**Cons:**
+- ❌ Requires Tailscale on all devices
+- ❌ Slightly more complex setup
+
+#### Option 3: Public Reverse Proxy (Convenience)
+**Best for:** Easy access from any browser/device
+
+```bash
+# Nginx + Let's Encrypt + Cloudflare
+# Public domain: https://travstats.yourdomain.com
+```
+
+**Pros:**
+- ✅ Access from anywhere, any device
+- ✅ No additional software needed
+- ✅ Professional SSL certificates
+- ✅ Can share with friends/family easily
+
+**Cons:**
+- ❌ Exposed to internet (requires good security)
+- ❌ Need domain name
+- ❌ More complex firewall rules
+- ❌ SSL certificate management
+
+#### Option 4: Raspberry Pi Home Server
+**Best for:** Dedicated, always-on instance
+
+**Hardware Requirements:**
+- Raspberry Pi 4 (4GB+ RAM recommended)
+- 32GB+ SD card or external SSD
+- Stable power supply
+- Ethernet connection (WiFi works but slower)
+
+**Setup:**
+```bash
+# Install Docker on Raspberry Pi
+curl -sSL https://get.docker.com | sh
+sudo usermod -aG docker $USER
+
+# Clone and run
+git clone <repo-url>
+cd TravStats
+docker-compose up -d
+```
+
+**Resource Usage:**
+- PostgreSQL: ~150MB RAM
+- Backend: ~100MB RAM
+- Frontend (Nginx): ~50MB RAM
+- **Total: ~500MB RAM** (plenty of headroom on 4GB Pi)
+
+### Production Checklist (Self-Hosting)
+
+#### Security Basics (Always Required)
 - [ ] Change `JWT_SECRET` (32+ characters): `openssl rand -hex 32`
 - [ ] Use strong database password
 - [ ] Set `NODE_ENV=production`
+- [ ] Disable Prisma Studio in production
+
+#### If Exposing to Internet (Option 3)
 - [ ] Configure `CORS_ORIGIN` to real domain
 - [ ] Enable HTTPS (Let's Encrypt)
 - [ ] Set cookie `Secure` flag
 - [ ] Enable HSTS headers
-- [ ] Configure firewall (only ports 80, 443)
-- [ ] Set up database backups
-- [ ] Enable error monitoring (Sentry)
-- [ ] Configure log rotation
+- [ ] Configure firewall (only ports 80, 443, 22)
+- [ ] Set up fail2ban or similar for brute-force protection
+- [ ] Enable rate limiting on auth endpoints
+- [ ] Consider Cloudflare for DDoS protection
 - [ ] Review and harden nginx config
-- [ ] Disable Prisma Studio in production
 - [ ] Set up uptime monitoring
+
+#### Backup Strategy (All Options)
+- [ ] Automated daily PostgreSQL dumps
+- [ ] Backup uploaded files (receipts, etc.)
+- [ ] Test restore procedure
+- [ ] Offsite backup storage (USB drive, cloud)
+- [ ] Backup rotation (keep 7 daily, 4 weekly, 12 monthly)
+
+#### Monitoring (Optional but Recommended)
+- [ ] Log rotation (Docker logs can grow large)
+- [ ] Disk space alerts
+- [ ] Uptime monitoring (if publicly accessible)
+- [ ] Email alerts for failures
 
 ---
 
@@ -1694,6 +1833,13 @@ Achievement 1→N UserAchievement
 
 ### Key Decisions
 
+**Why Self-Hosted?**
+- **Privacy**: Flight data is highly personal (names, dates, locations, costs)
+- **Control**: Users own their data, no third-party access
+- **GDPR Compliance**: Data stays on user's server
+- **No Vendor Lock-in**: Open source, can modify freely
+- **Cost**: One-time setup, no monthly SaaS fees
+
 **Why TypeScript?**
 - Type safety reduces runtime errors
 - Better IDE support and autocomplete
@@ -1725,18 +1871,29 @@ Achievement 1→N UserAchievement
 - Easier to navigate
 - Single git repository
 
+**Why Single-Server Architecture?**
+- **Simplicity**: No complex orchestration needed
+- **Self-Hosting Friendly**: Runs on modest hardware (Raspberry Pi, NAS)
+- **Small Scale**: 1-10 users don't need microservices
+- **Easy Backup**: Single database, simple file structure
+- **Low Maintenance**: Fewer moving parts = fewer issues
+
 ### Future Enhancements
 
 See [ROADMAP.md](ROADMAP.md) for planned features. Key items:
 
-- Social features (sharing, friend leaderboards)
-- Real-time flight tracking integration
-- Mobile app (React Native)
-- Advanced analytics (ML predictions)
-- Multi-airline account sync
-- Calendar integration
-- Weather data overlay
-- Airport amenity ratings
+- **Mobile app** (React Native) - Client that connects to YOUR self-hosted server
+- **Simplified setup** - One-command Docker deployment, web-based setup wizard
+- **Backup automation** - Built-in backup/restore to local or cloud storage
+- **Real-time flight tracking** - Integration with flight APIs for live status
+- **Advanced analytics** - ML predictions, travel patterns
+- **Multi-airline account sync** - Import from airline loyalty programs
+- **Calendar integration** - iCal/Google Calendar sync
+- **Weather data overlay** - Historical weather for flight dates
+- **Social features** (optional) - Share stats with friends on same instance
+
+**Note on Mobile App:**
+The planned mobile app will NOT be a standalone service. It's a client that connects to your self-hosted TravStats server (similar to how Nextcloud or Bitwarden mobile apps work). This allows you to access your flight data on the go while maintaining full control and privacy.
 
 ### Contributing
 
