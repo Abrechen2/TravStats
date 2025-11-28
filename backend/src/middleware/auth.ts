@@ -8,7 +8,7 @@ export interface AuthRequest extends Request {
   userId?: string;
 }
 
-export const authenticate = (
+export const authenticate = async (
   req: AuthRequest,
   res: Response,
   next: NextFunction
@@ -30,6 +30,21 @@ export const authenticate = (
     }
 
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+
+    // Verify user exists in database
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { id: true, isActive: true },
+    });
+
+    if (!user) {
+      throw new AppError('Invalid token - user not found', 401);
+    }
+
+    if (!user.isActive) {
+      throw new AppError('Account has been deactivated', 403);
+    }
+
     req.userId = decoded.userId;
 
     next();

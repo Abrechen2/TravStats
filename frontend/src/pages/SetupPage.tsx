@@ -12,6 +12,7 @@ export default function SetupPage() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,11 +43,19 @@ export default function SetupPage() {
         formData.instanceName
       );
 
-      // Show success message
-      alert(response.message);
+      // Show success state
+      setSuccess(true);
+      setLoading(false);
 
-      // Redirect to login
-      navigate('/login');
+      // Redirect to login after 3 seconds
+      setTimeout(() => {
+        navigate('/login', {
+          state: {
+            message: 'Please log in with your admin account',
+            username: formData.username
+          }
+        });
+      }, 3000);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Setup failed. Please try again.');
       setLoading(false);
@@ -82,6 +91,22 @@ export default function SetupPage() {
           </div>
 
           {/* Form */}
+          {success ? (
+            <div className="space-y-4">
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-6 text-center">
+                <div className="text-5xl mb-4">✅</div>
+                <h2 className="text-2xl font-bold text-green-900 dark:text-green-100 mb-2">
+                  Setup Complete!
+                </h2>
+                <p className="text-green-800 dark:text-green-200 mb-4">
+                  Admin account <strong>"{formData.username}"</strong> has been created successfully.
+                </p>
+                <p className="text-sm text-green-700 dark:text-green-300">
+                  You will be redirected to the login page in 3 seconds...
+                </p>
+              </div>
+            </div>
+          ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-red-800 dark:text-red-200 text-sm">
@@ -160,6 +185,7 @@ export default function SetupPage() {
               {loading ? 'Creating Admin Account...' : 'Create Admin Account & Complete Setup'}
             </button>
           </form>
+          )}
 
           {/* Footer */}
           <div className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">

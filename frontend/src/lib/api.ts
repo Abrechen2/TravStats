@@ -24,6 +24,23 @@ const api = axios.create({
   withCredentials: true, // Send cookies with every request (HttpOnly JWT)
 });
 
+// Response interceptor for handling 401 errors (expired/invalid tokens)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token expired or invalid - redirect to login
+      // Import dynamically to avoid circular dependencies
+      import('../store/authStore').then(({ useAuthStore }) => {
+        const authStore = useAuthStore.getState();
+        authStore.logout();
+        window.location.href = '/login';
+      });
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Auth API
 export const authApi = {
   register: async (username: string, password: string) => {

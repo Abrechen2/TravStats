@@ -292,7 +292,7 @@ function Map({ flights = [], selectedFlightId, onFlightClick }: MapProps) {
 
       {/* Heatmap Legend */}
       {aggregatedRoutes.length > 0 && (
-        <div className="absolute bottom-4 right-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3 border border-gray-200 dark:border-gray-700 z-[1000]">
+        <div className="absolute bottom-4 right-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3 border border-gray-200 dark:border-gray-700 z-10">
           <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
             Routenfrequenz
           </div>

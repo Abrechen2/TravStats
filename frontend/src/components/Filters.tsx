@@ -10,6 +10,7 @@ interface FiltersProps {
 export default function Filters({ onFilterChange, onExport, onImport }: FiltersProps) {
   const [filters, setFilters] = useState<FlightFilters>({});
   const [showFilters, setShowFilters] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   const handleFilterChange = (key: keyof FlightFilters, value: string) => {
     const newFilters = { ...filters, [key]: value || undefined };
@@ -43,65 +44,61 @@ export default function Filters({ onFilterChange, onExport, onImport }: FiltersP
         <div className="relative">
           <button
             className="btn-secondary"
-            onClick={() => {
-              const menu = document.getElementById('export-menu');
-              menu?.classList.toggle('hidden');
-            }}
+            onClick={() => setShowExportMenu(!showExportMenu)}
           >
             Export
           </button>
-          <div
-            id="export-menu"
-            className="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-10 border"
-          >
-            <button
-              onClick={() => {
-                onExport('csv');
-                document.getElementById('export-menu')?.classList.add('hidden');
-              }}
-              className="block w-full text-left px-4 py-2 hover:bg-gray-100 rounded-t-lg"
-            >
-              Export as CSV
-            </button>
-            <button
-              onClick={() => {
-                onExport('geojson');
-                document.getElementById('export-menu')?.classList.add('hidden');
-              }}
-              className="block w-full text-left px-4 py-2 hover:bg-gray-100 rounded-b-lg"
-            >
-              Export as GeoJSON
-            </button>
-            <button
-              onClick={() => {
-                onExport('pdf');
-                document.getElementById('export-menu')?.classList.add('hidden');
-              }}
-              className="block w-full text-left px-4 py-2 hover:bg-gray-100"
-            >
-              Export as PDF (Beta)
-            </button>
-            <button
-              onClick={() => {
-                onExport('kml');
-                document.getElementById('export-menu')?.classList.add('hidden');
-              }}
-              className="block w-full text-left px-4 py-2 hover:bg-gray-100"
-            >
-              Export as KML
-            </button>
-            {onImport && (
+          {showExportMenu && (
+            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-10 border border-gray-200 dark:border-gray-700">
               <button
                 onClick={() => {
-                  onImport();
-                  document.getElementById('export-menu')?.classList.add('hidden');
+                  onExport('csv');
+                  setShowExportMenu(false);
                 }}
-                className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg text-gray-900 dark:text-white"
               >
-                Import CSV/JSON (Beta)
+                Export as CSV
               </button>
-            )}
-          </div>
+              <button
+                onClick={() => {
+                  onExport('geojson');
+                  setShowExportMenu(false);
+                }}
+                className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
+              >
+                Export as GeoJSON
+              </button>
+              <button
+                onClick={() => {
+                  onExport('pdf');
+                  setShowExportMenu(false);
+                }}
+                className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
+              >
+                Export as PDF (Beta)
+              </button>
+              <button
+                onClick={() => {
+                  onExport('kml');
+                  setShowExportMenu(false);
+                }}
+                className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-b-lg text-gray-900 dark:text-white"
+              >
+                Export as KML
+              </button>
+              {onImport && (
+                <button
+                  onClick={() => {
+                    onImport();
+                    setShowExportMenu(false);
+                  }}
+                  className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 border-t border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white"
+                >
+                  Import CSV/JSON (Beta)
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

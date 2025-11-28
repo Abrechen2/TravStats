@@ -376,8 +376,8 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
     setError('');
 
     try {
-      const departureDateTime = `${departureDate}T${departureTime}`;
-      const arrivalDateTime = `${arrivalDate}T${arrivalTime}`;
+      const departureDateTime = `${departureDate}T${departureTime}:00Z`;
+      const arrivalDateTime = `${arrivalDate}T${arrivalTime}:00Z`;
 
       await onSubmit({
         departure: {
@@ -428,7 +428,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
   const sizedInputClass = `${inputClass} text-base py-3`;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
       <div className={`${bgClass} rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto`}>
         {/* Header */}
         <div className={`sticky top-0 ${bgClass} border-b ${borderClass} px-6 py-4`}>

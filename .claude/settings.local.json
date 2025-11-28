@@ -15,7 +15,12 @@
       "Bash(cat:*)",
       "Bash(git diff:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git remote get-url:*)",
+      "Bash(docker buildx version:*)",
+      "Bash(docker --version:*)",
+      "Bash(Start-Process \"C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe\")",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []

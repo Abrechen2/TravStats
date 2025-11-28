@@ -271,7 +271,7 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
               </button>
             </div>
             {debugMode && (
-              <div className={`p-3 rounded border ${isDarkMode ? 'bg-gray-900 border-gray-700 text-gray-300' : 'bg-gray-50 border-gray-300 text-gray-800'}`}>
+              <div className={`p-3 rounded border max-h-64 overflow-auto ${isDarkMode ? 'bg-gray-900 border-gray-700 text-gray-300' : 'bg-gray-50 border-gray-300 text-gray-800'}`}>
                 <div className="text-xs font-mono break-all whitespace-pre-wrap">
                   {scannedRawText}
                 </div>

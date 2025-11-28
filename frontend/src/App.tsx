@@ -1,5 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { useAuthStore } from './store/authStore';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -11,17 +11,58 @@ import SetupPage from './pages/SetupPage';
 import AdminPage from './pages/AdminPage';
 import { useSettingsStore } from './store/settingsStore';
 import ErrorBoundary from './components/ErrorBoundary';
+import { setupApi } from './lib/api';
 
-
-function App() {
+function AppContent() {
   const { user } = useAuthStore();
   const loadRemoteSettings = useSettingsStore((s) => s.loadRemoteSettings);
+  const navigate = useNavigate();
+  const [setupChecked, setSetupChecked] = useState(false);
+
+  // Check setup status on app load
+  useEffect(() => {
+    const checkSetup = async () => {
+      try {
+        const { requiresSetup } = await setupApi.getStatus();
+        if (requiresSetup) {
+          navigate('/setup');
+        }
+      } catch (error) {
+        console.error('Setup status check failed:', error);
+      } finally {
+        setSetupChecked(true);
+      }
+    };
+
+    // Only check if not logged in
+    if (!user) {
+      checkSetup();
+    } else {
+      setSetupChecked(true);
+    }
+  }, [user, navigate]);
 
   useEffect(() => {
     if (user) {
       loadRemoteSettings();
     }
   }, [user, loadRemoteSettings]);
+
+  // Show loading while checking setup status
+  if (!setupChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-center">
+          <div className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            Loading...
+          </div>
+          <div className="text-gray-600 dark:text-gray-400">
+            Checking system status
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const isAuthenticated = !!user;
 
@@ -49,7 +90,6 @@ function App() {
         </div>
       }
     >
-      <BrowserRouter>
       <Routes>
         {/* Public routes */}
         <Route path="/setup" element={<SetupPage />} />
@@ -81,11 +121,22 @@ function App() {
         />
         <Route
           path="/admin"
-          element={isAuthenticated ? <AdminPage /> : <Navigate to="/login" />}
+          element={
+            isAuthenticated && user?.isAdmin
+              ? <AdminPage />
+              : <Navigate to={isAuthenticated ? "/" : "/login"} />
+          }
         />
       </Routes>
-    </BrowserRouter>
     </ErrorBoundary>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppContent />
+    </BrowserRouter>
   );
 }
 

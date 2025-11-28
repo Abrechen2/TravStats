@@ -19,6 +19,12 @@ router.get('/system/info', async (req: AuthRequest, res: Response, next: NextFun
     const maxUsers = parseInt(process.env.MAX_USERS || '10');
     const allowRegistration = process.env.ALLOW_REGISTRATION !== 'false';
 
+    // Check for demo user
+    const demoUser = await prisma.user.findUnique({
+      where: { username: 'demo' },
+      select: { id: true, isActive: true },
+    });
+
     res.json({
       instanceName: process.env.INSTANCE_NAME || 'TravStats',
       userCount,
@@ -27,6 +33,8 @@ router.get('/system/info', async (req: AuthRequest, res: Response, next: NextFun
       maxUsers,
       warningThreshold: userCount >= maxUsers,
       registrationEnabled: allowRegistration,
+      demoUserExists: !!demoUser,
+      demoUserActive: demoUser?.isActive || false,
       version: '1.0.0',
     });
   } catch (error) {
