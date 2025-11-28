@@ -5,7 +5,7 @@
  * Pattern: Usually contains "RYANAIR" or "FR" airline code prominently
  */
 
-import { BoardingPassData, getAirlineName } from '../bcbpParser';
+import { BoardingPassData } from '../bcbpParser';
 
 /**
  * Parse Ryanair-specific boarding pass format
