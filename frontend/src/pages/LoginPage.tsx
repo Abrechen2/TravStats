@@ -1,10 +1,13 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { authApi } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 
 export default function LoginPage() {
-  const [username, setUsername] = useState('');
+  const location = useLocation();
+  const state = location.state as { message?: string; username?: string } | null;
+
+  const [username, setUsername] = useState(state?.username || '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -35,6 +38,12 @@ export default function LoginPage() {
           <h1 className="text-3xl font-bold text-center">TravStats</h1>
         </div>
         <h2 className="text-xl text-gray-600 text-center mb-8">Sign In</h2>
+
+        {state?.message && (
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+            {state.message}
+          </div>
+        )}
 
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">

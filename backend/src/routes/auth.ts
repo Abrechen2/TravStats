@@ -142,6 +142,7 @@ router.post('/login', authLimiter, async (req: Request, res: Response, next: Nex
       user: {
         id: user.id,
         username: user.username,
+        isAdmin: user.isAdmin,
       },
     });
   } catch (error) {

@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import DarkModeToggle from '../components/DarkModeToggle';
 import { useSettingsStore } from '../store/settingsStore';
 import { useThemeStore } from '../store/themeStore';
+import { useAuthStore } from '../store/authStore';
 
 const timezoneOptions = [
   'Europe/Berlin',
@@ -15,6 +16,7 @@ const timezoneOptions = [
 const colorPresets = ['#2563eb', '#16a34a', '#f97316', '#7c3aed', '#e11d48'];
 
 export default function SettingsPage() {
+  const { user } = useAuthStore();
   const {
     profile,
     display,
@@ -565,6 +567,28 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+
+        {/* Admin Panel Link - Only visible for admins */}
+        {user?.isAdmin && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+              <span>👑</span> Administration
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
+              Manage users, invitations, and system settings
+            </p>
+            <Link
+              to="/admin"
+              className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Open Admin Panel
+            </Link>
+          </div>
+        )}
 
         <div className="bg-blue-50 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-700 rounded-lg p-4 text-sm text-blue-900 dark:text-blue-100 flex items-center justify-between">
           <div>

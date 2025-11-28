@@ -67,10 +67,11 @@ services:
 
       # Optional: API Keys (uncomment and fill if needed)
       # AIRLABS_API_KEY: your_airlabs_key_here
+      AIRLABS_API_KEY: ac977626-758e-4570-8eb2-c3ace7892a86
       # OPENSKY_CLIENT_ID: your_opensky_client_id
       # OPENSKY_CLIENT_SECRET: your_opensky_client_secret
     ports:
-      - "3001:80"  # Map to nginx internal port 80 (not 3000!)
+      - "3004:80"  # Map to nginx internal port 80 (not 3000!)
     volumes:
       - /mnt/user/appdata/travstats-dev:/app/data
     networks:

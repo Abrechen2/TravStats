@@ -607,7 +607,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Center - Map & Roadmap MVP highlights */}
-        <div className="flex-1 p-4 flex flex-col gap-4 min-w-0 overflow-auto relative z-45">
+        <div className="flex-1 p-4 flex flex-col gap-4 min-w-0 overflow-auto relative z-0">
           {importsOpen && (
             <div className="bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-600 rounded-lg p-4 shadow-sm">
               <div className="flex items-center justify-between mb-3">

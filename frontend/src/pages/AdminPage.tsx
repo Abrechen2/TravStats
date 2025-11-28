@@ -172,6 +172,31 @@ export default function AdminPage() {
             </div>
           )}
 
+          {/* Demo User Warning */}
+          {systemInfo.demoUserExists && systemInfo.demoUserActive && (
+            <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
+              <h3 className="font-semibold text-orange-900 dark:text-orange-100 mb-2">
+                🔓 Demo User Active
+              </h3>
+              <p className="text-sm text-orange-800 dark:text-orange-200 mb-3">
+                The demo user account (username: "demo", password: "demo123") is currently active.
+                This is a security risk in production environments. It is recommended to deactivate
+                this account after initial testing.
+              </p>
+              <button
+                onClick={() => {
+                  const demoUser = users.find(u => u.username === 'demo');
+                  if (demoUser && confirm('Deactivate the demo user account? This will prevent login with demo credentials.')) {
+                    handleToggleUserActive(demoUser.id);
+                  }
+                }}
+                className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition text-sm font-medium"
+              >
+                Deactivate Demo User
+              </button>
+            </div>
+          )}
+
           {/* Configuration */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
