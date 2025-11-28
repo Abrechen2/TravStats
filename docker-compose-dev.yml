@@ -59,6 +59,12 @@ services:
       # Create demo user (username: demo, password: demo123)
       CREATE_DEMO_USER: "true"
 
+      # Admin & Instance Settings
+      INSTANCE_NAME: "TravStats Dev"
+      MAX_USERS: "50"
+      ALLOW_REGISTRATION: "true"
+      FRONTEND_URL: "http://localhost:3001"
+
       # Optional: API Keys (uncomment and fill if needed)
       # AIRLABS_API_KEY: your_airlabs_key_here
       # OPENSKY_CLIENT_ID: your_opensky_client_id

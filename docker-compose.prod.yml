@@ -48,6 +48,11 @@ services:
       IMAP_SECURE: ${IMAP_SECURE:-true}
       IMAP_USER: ${IMAP_USER:-}
       IMAP_PASSWORD: ${IMAP_PASSWORD:-}
+      # Admin & Instance Settings
+      INSTANCE_NAME: ${INSTANCE_NAME:-TravStats}
+      MAX_USERS: ${MAX_USERS:-10}
+      ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-false}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       # Seeding
       SEED_AIRPORTS: ${SEED_AIRPORTS:-true}
       CREATE_DEMO_USER: ${CREATE_DEMO_USER:-false}
