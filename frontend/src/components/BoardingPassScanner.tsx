@@ -14,6 +14,8 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState('');
   const [preview, setPreview] = useState<string | null>(null);
+  const [debugMode, setDebugMode] = useState(false);
+  const [scannedRawText, setScannedRawText] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDarkMode = useThemeStore((s) => s.isDarkMode);
@@ -111,12 +113,13 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
       barcodeText = await scanAttempts();
 
       if (barcodeText) {
+        setScannedRawText(barcodeText); // Save for debug mode
         const bcbpData = parseBCBP(barcodeText);
         if (bcbpData) {
           setScanning(false);
           onScanSuccess(bcbpData);
         } else {
-          setError('Barcode found, but not a valid boarding pass (PDF417/QR/Aztec expected).');
+          setError(`Barcode found but format not recognized. Enable debug mode to see raw data.`);
           setScanning(false);
         }
       } else {
@@ -137,6 +140,7 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
     setError('');
     setPreview(null);
     setScanning(false);
+    setScannedRawText(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -155,20 +159,22 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
         {!preview && (
           <div className="mb-6">
             <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} mb-4`}>
-              Upload a photo of your boarding pass barcode. Supports both paper and mobile boarding passes.
+              Upload a photo of your boarding pass barcode. We support standard IATA formats and can intelligently extract data from most boarding passes!
             </p>
             <div className={`${isDarkMode ? 'bg-blue-900/40 border-blue-700 text-blue-100' : 'bg-blue-50 border-blue-200 text-gray-800'} border rounded-lg p-4`}>
-              <h3 className="font-semibold mb-2">Supported barcode types:</h3>
+              <h3 className="font-semibold mb-2">✅ Supported barcode types:</h3>
               <ul className="text-sm space-y-1 mb-3">
-                <li>PDF417 (paper)</li>
-                <li>QR Code (mobile)</li>
-                <li>Aztec Code (some airlines)</li>
+                <li>✈️ PDF417 (standard paper boarding passes)</li>
+                <li>📱 QR Code (mobile boarding passes)</li>
+                <li>🎯 Aztec Code (some airlines like Lufthansa)</li>
+                <li>🔍 Auto-detection of non-standard formats</li>
               </ul>
-              <h3 className="font-semibold mb-2">Tips for best results:</h3>
+              <h3 className="font-semibold mb-2">💡 Tips for best results:</h3>
               <ul className="text-sm space-y-1">
-                <li>Clear, well-lit barcode</li>
-                <li>Fill the frame; keep steady</li>
-                <li>Scan the 2D barcode (not 1D)</li>
+                <li>📸 Good lighting and focus on the 2D barcode</li>
+                <li>🎯 Center the barcode in the photo</li>
+                <li>🔲 Avoid glare and shadows</li>
+                <li>🔍 If scanning fails, enable debug mode to see raw data</li>
               </ul>
             </div>
           </div>
@@ -187,6 +193,47 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
         {error && (
           <div className={`mb-4 px-4 py-3 rounded border ${isDarkMode ? 'bg-red-900 border-red-700 text-red-100' : 'bg-red-100 border-red-400 text-red-700'}`}>
             {error}
+          </div>
+        )}
+
+        {scannedRawText && (
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <label className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                🔍 Debug Mode
+              </label>
+              <button
+                type="button"
+                onClick={() => setDebugMode(!debugMode)}
+                className={`text-xs px-3 py-1 rounded ${
+                  debugMode
+                    ? 'bg-blue-500 text-white'
+                    : isDarkMode
+                    ? 'bg-gray-700 text-gray-300'
+                    : 'bg-gray-200 text-gray-700'
+                }`}
+              >
+                {debugMode ? 'Hide Raw Data' : 'Show Raw Data'}
+              </button>
+            </div>
+            {debugMode && (
+              <div className={`p-3 rounded border ${isDarkMode ? 'bg-gray-900 border-gray-700 text-gray-300' : 'bg-gray-50 border-gray-300 text-gray-800'}`}>
+                <div className="text-xs font-mono break-all whitespace-pre-wrap">
+                  {scannedRawText}
+                </div>
+                <div className="mt-2 pt-2 border-t border-gray-600">
+                  <div className="text-xs">
+                    <strong>Length:</strong> {scannedRawText.length} characters
+                  </div>
+                  <div className="text-xs">
+                    <strong>First 10 chars:</strong> {scannedRawText.substring(0, 10)}
+                  </div>
+                  <div className="text-xs">
+                    <strong>Format:</strong> {scannedRawText.startsWith('M') ? 'IATA BCBP' : scannedRawText.startsWith('http') ? 'URL/Web' : 'Unknown/Proprietary'}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
