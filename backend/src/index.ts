@@ -14,6 +14,8 @@ import settingsRoutes from './routes/settings';
 import analyticsRoutes from './routes/analytics';
 import uploadsRoutes from './routes/uploads';
 import importsRoutes from './routes/imports';
+import setupRoutes from './routes/setup';
+import adminRoutes from './routes/admin';
 import { errorHandler } from './middleware/errorHandler';
 import { prisma } from './db';
 import logger from './utils/logger';
@@ -73,6 +75,8 @@ app.get('/health', (req, res) => {
 });
 
 // API routes
+app.use('/api/v1/setup', setupRoutes);
+app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/flights', flightRoutes);
 app.use('/api/v1/flight-lookup', flightLookupRoutes);
