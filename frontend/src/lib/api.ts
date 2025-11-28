@@ -232,6 +232,113 @@ export const uploadsApi = {
   },
 };
 
+// Setup API
+export const setupApi = {
+  getStatus: async () => {
+    const { data } = await api.get<{
+      setupComplete: boolean;
+      requiresSetup: boolean;
+      message: string;
+    }>('/setup/status');
+    return data;
+  },
+
+  initialize: async (username: string, password: string, instanceName?: string) => {
+    const { data } = await api.post<{
+      success: boolean;
+      message: string;
+      user: { id: string; username: string; isAdmin: boolean };
+    }>('/setup/initialize', {
+      username,
+      password,
+      instanceName,
+    });
+    return data;
+  },
+};
+
+// Admin API
+export const adminApi = {
+  getSystemInfo: async () => {
+    const { data } = await api.get<{
+      instanceName: string;
+      userCount: number;
+      activeUserCount: number;
+      flightCount: number;
+      maxUsers: number;
+      warningThreshold: boolean;
+      registrationEnabled: boolean;
+      version: string;
+    }>('/admin/system/info');
+    return data;
+  },
+
+  getUsers: async () => {
+    const { data } = await api.get<{
+      users: Array<{
+        id: string;
+        username: string;
+        isAdmin: boolean;
+        isActive: boolean;
+        invitedBy?: string;
+        createdAt: string;
+        _count: {
+          flights: number;
+          userAchievements: number;
+        };
+      }>;
+    }>('/admin/users');
+    return data;
+  },
+
+  toggleUserActive: async (userId: string) => {
+    const { data } = await api.patch<{
+      user: {
+        id: string;
+        username: string;
+        isAdmin: boolean;
+        isActive: boolean;
+      };
+    }>(`/admin/users/${userId}/toggle-active`);
+    return data;
+  },
+
+  createInvitation: async (email?: string, expiresInDays: number = 7) => {
+    const { data } = await api.post<{
+      invitation: {
+        id: string;
+        email?: string;
+        token: string;
+        expiresAt: string;
+      };
+      inviteUrl: string;
+    }>('/admin/invitations', { email, expiresInDays });
+    return data;
+  },
+
+  getInvitations: async () => {
+    const { data } = await api.get<{
+      invitations: Array<{
+        id: string;
+        email?: string;
+        token: string;
+        expiresAt: string;
+        usedAt?: string;
+        createdAt: string;
+        creator: {
+          username: string;
+        };
+      }>;
+    }>('/admin/invitations');
+    return data;
+  },
+
+  exportAllData: async () => {
+    const { data } = await api.get('/admin/export/all-data');
+    return data;
+  },
+};
+
 // Utility function: Calculate distance between two coordinates using Haversine formula
 export const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
   const R = 6371; // Earth's radius in km
