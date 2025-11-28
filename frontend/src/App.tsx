@@ -7,6 +7,8 @@ import DashboardPage from './pages/DashboardPage';
 import AchievementsPage from './pages/AchievementsPage';
 import AdvancedStatsPage from './pages/AdvancedStatsPage';
 import SettingsPage from './pages/SettingsPage';
+import SetupPage from './pages/SetupPage';
+import AdminPage from './pages/AdminPage';
 import { useSettingsStore } from './store/settingsStore';
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -49,6 +51,8 @@ function App() {
     >
       <BrowserRouter>
       <Routes>
+        {/* Public routes */}
+        <Route path="/setup" element={<SetupPage />} />
         <Route
           path="/login"
           element={isAuthenticated ? <Navigate to="/" /> : <LoginPage />}
@@ -57,6 +61,8 @@ function App() {
           path="/register"
           element={isAuthenticated ? <Navigate to="/" /> : <RegisterPage />}
         />
+
+        {/* Protected routes */}
         <Route
           path="/"
           element={isAuthenticated ? <DashboardPage /> : <Navigate to="/login" />}
@@ -72,6 +78,10 @@ function App() {
         <Route
           path="/settings"
           element={isAuthenticated ? <SettingsPage /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/admin"
+          element={isAuthenticated ? <AdminPage /> : <Navigate to="/login" />}
         />
       </Routes>
     </BrowserRouter>
