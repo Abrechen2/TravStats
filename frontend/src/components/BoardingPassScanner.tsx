@@ -51,66 +51,119 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
-
       let barcodeText: string | null = null;
+      let debugInfo: string[] = [];
 
       const scanAttempts = async () => {
-        const originalImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const attempts = [
-          { name: 'Original', enhance: false },
-          { name: 'High Contrast', enhance: true, brightness: 1.2, contrast: 2.0 },
-          { name: 'Enhanced Brightness', enhance: true, brightness: 1.5, contrast: 1.5 },
+        // Try multiple resolutions - important for Aztec codes!
+        const resolutions = [
+          { scale: 1.0, name: 'Original' },
+          { scale: 0.5, name: '50%' },
+          { scale: 1.5, name: '150%' },
+          { scale: 2.0, name: '200%' },
         ];
 
-        for (const attempt of attempts) {
-          ctx.putImageData(originalImageData, 0, 0);
+        for (const resolution of resolutions) {
+          debugInfo.push(`\n=== Trying resolution: ${resolution.name} ===`);
 
-          if (attempt.enhance) {
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const data = imageData.data;
-            for (let i = 0; i < data.length; i += 4) {
-              const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-              let adjusted = ((gray / 255 - 0.5) * (attempt.contrast || 1) + 0.5) * 255;
-              adjusted *= attempt.brightness || 1;
-              adjusted = Math.min(255, Math.max(0, adjusted));
-              data[i] = data[i + 1] = data[i + 2] = adjusted;
+          // Set canvas size based on resolution
+          canvas.width = img.width * resolution.scale;
+          canvas.height = img.height * resolution.scale;
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+          const originalImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+          // Different preprocessing strategies
+          const preprocessingAttempts = [
+            { name: 'Original', enhance: false },
+            { name: 'High Contrast (Aztec optimized)', enhance: true, brightness: 1.3, contrast: 2.5, threshold: 128 },
+            { name: 'Brightness Boost', enhance: true, brightness: 1.8, contrast: 1.5 },
+            { name: 'Dark Mode Invert', enhance: true, invert: true, brightness: 1.2, contrast: 2.0 },
+            { name: 'Extreme Contrast', enhance: true, brightness: 1.0, contrast: 3.0, threshold: 100 },
+          ];
+
+          for (const attempt of preprocessingAttempts) {
+            debugInfo.push(`  → Preprocessing: ${attempt.name}`);
+            ctx.putImageData(originalImageData, 0, 0);
+
+            if (attempt.enhance) {
+              const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+              const data = imageData.data;
+
+              for (let i = 0; i < data.length; i += 4) {
+                let r = data[i];
+                let g = data[i + 1];
+                let b = data[i + 2];
+
+                // Convert to grayscale
+                let gray = 0.299 * r + 0.587 * g + 0.114 * b;
+
+                // Apply brightness and contrast
+                gray = ((gray / 255 - 0.5) * (attempt.contrast || 1) + 0.5) * 255;
+                gray *= attempt.brightness || 1;
+
+                // Apply inversion if needed (for white-on-black codes)
+                if (attempt.invert) {
+                  gray = 255 - gray;
+                }
+
+                // Apply threshold if specified (binary conversion)
+                if (attempt.threshold) {
+                  gray = gray > attempt.threshold ? 255 : 0;
+                }
+
+                gray = Math.min(255, Math.max(0, gray));
+                data[i] = data[i + 1] = data[i + 2] = gray;
+              }
+              ctx.putImageData(imageData, 0, 0);
             }
-            ctx.putImageData(imageData, 0, 0);
+
+            // Try ZXing with comprehensive hints
+            try {
+              const hints = new Map();
+              hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+                BarcodeFormat.AZTEC,         // Priority for Lufthansa
+                BarcodeFormat.PDF_417,       // Common paper boarding pass
+                BarcodeFormat.QR_CODE,       // Mobile boarding pass
+                BarcodeFormat.DATA_MATRIX,   // Alternative format
+              ]);
+              hints.set(DecodeHintType.TRY_HARDER, true);
+              hints.set(DecodeHintType.PURE_BARCODE, false); // Allow detection in noisy images
+
+              const codeReader = new BrowserMultiFormatReader(hints);
+              const result = await codeReader.decodeFromCanvas(canvas);
+              if (result && result.getText()) {
+                debugInfo.push(`    ✅ SUCCESS with ZXing: ${result.getBarcodeFormat()}`);
+                return { text: result.getText(), debugInfo: debugInfo.join('\n') };
+              }
+            } catch (e: any) {
+              debugInfo.push(`    ❌ ZXing failed: ${e.message || 'Unknown error'}`);
+            }
+
+            // Try jsQR as fallback (QR codes only)
+            if (attempt.name === 'Original' || attempt.name === 'High Contrast (Aztec optimized)') {
+              try {
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                  inversionAttempts: 'attemptBoth',
+                });
+                if (code && code.data) {
+                  debugInfo.push(`    ✅ SUCCESS with jsQR`);
+                  return { text: code.data, debugInfo: debugInfo.join('\n') };
+                }
+              } catch (e: any) {
+                debugInfo.push(`    ❌ jsQR failed: ${e.message || 'Unknown error'}`);
+              }
+            }
           }
-
-          try {
-            const hints = new Map();
-            hints.set(DecodeHintType.POSSIBLE_FORMATS, [
-              BarcodeFormat.QR_CODE,
-              BarcodeFormat.PDF_417,
-              BarcodeFormat.AZTEC,
-              BarcodeFormat.DATA_MATRIX,
-            ]);
-            hints.set(DecodeHintType.TRY_HARDER, true);
-            const codeReader = new BrowserMultiFormatReader(hints);
-            const result = await codeReader.decodeFromCanvas(canvas);
-            if (result && result.getText()) {
-              return result.getText();
-            }
-          } catch {}
-
-          try {
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const code = jsQR(imageData.data, imageData.width, imageData.height, {
-              inversionAttempts: 'attemptBoth',
-            });
-            if (code && code.data) {
-              return code.data;
-            }
-          } catch {}
         }
-        return null;
+
+        return { text: null, debugInfo: debugInfo.join('\n') };
       };
 
-      barcodeText = await scanAttempts();
+      const result = await scanAttempts();
+      barcodeText = result.text;
+      console.log('Scan Debug Info:\n' + result.debugInfo);
 
       if (barcodeText) {
         setScannedRawText(barcodeText); // Save for debug mode
@@ -123,7 +176,8 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
           setScanning(false);
         }
       } else {
-        setError('No barcode found. Tips: good lighting, focus the 2D barcode (PDF417/QR/Aztec).');
+        setScannedRawText(`DEBUG INFO:\n${result.debugInfo}\n\nNo barcode detected in any attempt.`);
+        setError('No barcode found. Enable debug mode to see detailed scan attempts. Tips: good lighting, focus the 2D barcode (PDF417/QR/Aztec).');
         setScanning(false);
       }
     };
@@ -185,7 +239,7 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
             <img
               src={preview}
               alt="Boarding pass preview"
-              className={`max-w-full h-auto rounded-lg border ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}
+              className={`max-w-full max-h-80 object-contain rounded-lg border ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} mx-auto`}
             />
           </div>
         )}
