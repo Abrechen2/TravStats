@@ -1878,6 +1878,42 @@ Achievement 1→N UserAchievement
 - **Easy Backup**: Single database, simple file structure
 - **Low Maintenance**: Fewer moving parts = fewer issues
 
+### Self-Hosting Admin Features (Implemented)
+
+**Admin System:**
+- First user automatically becomes admin
+- Admin panel at `/admin` (backend: `/api/v1/admin/*`)
+- User management (view, activate/deactivate accounts)
+- Invitation system (token-based user registration)
+- System info dashboard (user count, instance health)
+- Bulk data export for backups
+
+**Setup Wizard:**
+- Initial setup endpoint: `/api/v1/setup/initialize`
+- Check setup status: `/api/v1/setup/status`
+- Guided first-time configuration
+
+**Environment Variables:**
+- `INSTANCE_NAME`: Custom instance name for UI
+- `ALLOW_REGISTRATION`: Enable/disable open registration (first user always allowed)
+- `MAX_USERS`: Warning threshold for user count (default: 10)
+- `FRONTEND_URL`: Used for invitation links
+
+**Deployment Scripts:**
+- `scripts/setup.sh`: One-command deployment with auto-configuration
+- `scripts/backup.sh`: Automated database and file backups
+- See `scripts/README.md` for detailed usage
+
+**Database Schema:**
+- User: Added `isAdmin`, `isActive`, `invitedBy` fields
+- Invitation: New model for token-based invitations
+
+**Security:**
+- First user registration requires no invitation (becomes admin)
+- Subsequent users require invitation token if registration disabled
+- Admin middleware protects admin-only routes
+- Active status check prevents deactivated users from accessing system
+
 ### Future Enhancements
 
 See [ROADMAP.md](ROADMAP.md) for planned features. Key items:
