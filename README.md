@@ -1,23 +1,41 @@
-# TravStats - Flight Tracking & Analytics Platform
+# TravStats - Self-Hosted Flight Tracking & Analytics
 
-Eine umfassende Full-Stack-Anwendung zur Verfolgung, Visualisierung und Analyse Ihrer Flughistorie. Mit fortgeschrittenen Statistiken, Gamification-Elementen, CO2-Tracking und vielem mehr.
+> **ğŸ  Privacy-First, Self-Hosted Flight Tracking**
+> Eine vollstÃ¤ndige Full-Stack-Anwendung zum Verfolgen, Visualisieren und Analysieren Ihrer Flughistorie - **auf Ihrem eigenen Server**.
+
+## ğŸ” Warum Self-Hosted?
+
+TravStats ist **bewusst als Self-Hosted LÃ¶sung** konzipiert, Ã¤hnlich wie Nextcloud oder Home Assistant:
+
+- **ğŸ›¡ï¸ Volle Datenkontrolle**: Ihre persÃ¶nlichen Flugdaten bleiben auf IHREM Server
+- **ğŸ”’ Maximale PrivatsphÃ¤re**: Keine Daten gehen an Dritte
+- **ğŸ‘¨â€ğŸ‘©â€ğŸ‘§â€ğŸ‘¦ FÃ¼r Familie & Freunde**: Ideal fÃ¼r 1-10 Accounts pro Server
+- **ğŸ’¾ DSGVO-Konform**: Sie bestimmen, wo Ihre Daten liegen
+- **ğŸ†“ Einmalige Kosten**: Keine monatlichen SaaS-GebÃ¼hren
+- **ğŸ›ï¸ VollstÃ¤ndige Kontrolle**: Open Source, anpassbar
+
+### ğŸ“± Geplante Mobile App = Client fÃ¼r IHREN Server
+
+Die zukÃ¼nftige Mobile App wird **kein eigenstÃ¤ndiger Service** sein, sondern ein Client, der sich mit Ihrer selbst gehosteten TravStats-Instanz verbindet - genau wie bei Nextcloud oder Bitwarden.
+
+---
 ## Schnelltest (Build-Smoketest)
 - Backend: cd backend && npm install && npm run build
 - Frontend: cd frontend && npm install && npm run build
-- Dev (lokal): cd backend && npm install && npm run dev in einem Terminal, cd frontend && npm install && npm run dev im zweiten; API läuft auf Port 8000, Vite auf 3000.
+- Dev (lokal): cd backend && npm install && npm run dev in einem Terminal, cd frontend && npm install && npm run dev im zweiten; API lï¿½uft auf Port 8000, Vite auf 3000.
 
 
-## Ô£¿ Features
+## Ô£ï¿½ Features
 
-### ­ƒÄ» Kern-Funktionalit+ñten
-- **Flugverwaltung**: Hinzuf++gen, Bearbeiten und L+Âschen von Fl++gen mit detaillierten Informationen
+### ï¿½ï¿½Ä» Kern-Funktionalit+ï¿½ten
+- **Flugverwaltung**: Hinzuf++gen, Bearbeiten und L+ï¿½schen von Fl++gen mit detaillierten Informationen
   - Airline, Flugnummer, Flugzeugtyp
-  - Abflug-/Ankunftsflugh+ñfen mit IATA/ICAO-Codes
+  - Abflug-/Ankunftsflugh+ï¿½fen mit IATA/ICAO-Codes
   - Datum und Uhrzeiten
   - Sitzklasse, Sitznummer, Gate, Terminal
   - Boarding Pass Informationen
-  - Kosten-Tracking (Preis, W+ñhrung, Steuern, Geb++hren)
-  - Kategorisierung (Gesch+ñftlich/Privat/Urlaub)
+  - Kosten-Tracking (Preis, W+ï¿½hrung, Steuern, Geb++hren)
+  - Kategorisierung (Gesch+ï¿½ftlich/Privat/Urlaub)
   - Benutzerdefinierte Tags
 - **Interaktive Karte**: Visualisierung aller Fl++ge auf einer Leaflet-Karte
   - Curved Arc Routes (Great Circle Paths)
@@ -29,19 +47,19 @@ Eine umfassende Full-Stack-Anwendung zur Verfolgung, Visualisierung und Analyse 
   - Token-basierte Sessions
   - Gesch++tzte API-Routen
 
-### ­ƒôè Statistiken & Analysen
+### ï¿½ï¿½ï¿½ï¿½ Statistiken & Analysen
 
 #### Basis-Statistiken
 - Gesamtfl++ge, Distanz, Flugzeit
 - Breakdown nach Airline und Status
 - Top-Routen-Analyse
-- H+ñufigste Flugh+ñfen
+- H+ï¿½ufigste Flugh+ï¿½fen
 
 #### Erweiterte Statistiken
 - **Distanz-Visualisierung**
-  - +äquivalente (Erdumrundungen, Mond-Distanz)
+  - +ï¿½quivalente (Erdumrundungen, Mond-Distanz)
   - Durchschnittliche Distanz pro Flug
-  - Rangliste der l+ñngsten Strecken
+  - Rangliste der l+ï¿½ngsten Strecken
 - **Zeitbasierte Diagramme**
   - Fl++ge pro Monat/Jahr (Balkendiagramm)
   - Trend-Analyse (Liniendiagramm)
@@ -50,22 +68,22 @@ Eine umfassende Full-Stack-Anwendung zur Verfolgung, Visualisierung und Analyse 
 - **Kalender-Ansicht**
   - Monatskalender mit Flug-Markierungen
   - Jahres++bersicht
-  - Heatmap f++r Reiseintensit+ñt
-- **CO2-Fu+ƒabdruck**
+  - Heatmap f++r Reiseintensit+ï¿½t
+- **CO2-Fu+ï¿½abdruck**
   - Berechnung pro Flug (nach Flugzeugtyp & Klasse)
   - Gesamt-CO2-Bilanz
   - Monatliche Trends
-  - Kompensations-Vorschl+ñge
+  - Kompensations-Vorschl+ï¿½ge
 - **Kosten-Tracking**
   - Gesamtausgaben Dashboard
   - Breakdown nach Airline/Route/Kategorie
-  - W+ñhrungsumrechnung
+  - W+ï¿½hrungsumrechnung
 - **Routen-Analyse**
-  - H+ñufigste Routen
+  - H+ï¿½ufigste Routen
   - Route-Statistiken
   - Multi-Leg Reisen
 
-### ­ƒÅå Gamification
+### ï¿½ï¿½ï¿½ï¿½ Gamification
 
 - **Achievement-System**
   - 20+ verschiedene Badges
@@ -74,26 +92,26 @@ Eine umfassende Full-Stack-Anwendung zur Verfolgung, Visualisierung und Analyse 
   - Fortschritts-Tracking
   - Badge-Galerie
 - **Flughafen-Collection**
-  - Sammlung besuchter Flugh+ñfen
+  - Sammlung besuchter Flugh+ï¿½fen
   - Fortschritt zu Sammlungen
-  - Seltene Flugh+ñfen hervorheben
+  - Seltene Flugh+ï¿½fen hervorheben
 - **Vielflieger-Meilen Tracker**
   - Meilen-Berechnung pro Airline
   - Status-Level (Silver, Gold, Platinum)
-  - Fortschritt zum n+ñchsten Level
+  - Fortschritt zum n+ï¿½chsten Level
 
-### ÔÜÖ´©Å Einstellungen & Personalisierung
+### ï¿½ï¿½Ö´ï¿½ï¿½ Einstellungen & Personalisierung
 
 - **Benutzer-Profil**: Benutzername, E-Mail, Profilbild, Passwort
 - **Anzeige**: Dark/Light Mode, Sprache (DE/EN), Zeitzone, Datumsformat
-- **Einheiten**: Distanz (km/mi/nm), W+ñhrung, Temperatur
+- **Einheiten**: Distanz (km/mi/nm), W+ï¿½hrung, Temperatur
 - **Standard-Werte**: Flugstatus, Sitzklasse, Lieblings-Airline
 - **Karten-Einstellungen**: Kartenansicht, Zoom-Level, Marker-Stil, Routenfarbe
 - **Benachrichtigungen**: E-Mail, Flug-Erinnerungen, Check-in Reminder
 - **Datenschutz**: 2FA, Login-Historie, Daten-Export (DSGVO)
 - **Backup & Sync**: Automatische Backups, Cloud-Sync
 
-### ­ƒô© Import & Export
+### ï¿½ï¿½ï¿½ï¿½ Import & Export
 
 - **Boarding Pass Scanner**
   - QR/Barcode-Scanner
@@ -107,16 +125,16 @@ Eine umfassende Full-Stack-Anwendung zur Verfolgung, Visualisierung und Analyse 
   - PDF-Report Generator
   - JSON Backup/Restore
 
-### ­ƒöì Erweiterte Features
+### ï¿½ï¿½ï¿½ï¿½ Erweiterte Features
 
 - **Smart Search**: Volltextsuche ++ber alle Felder
 - **Filter**: Nach Airline, Flugnummer, Datum, Status, Tags, Kategorien
-- **Sitzplatz-Tracker**: Fenster vs. Gang Statistik, Pr+ñferenz-Empfehlungen
+- **Sitzplatz-Tracker**: Fenster vs. Gang Statistik, Pr+ï¿½ferenz-Empfehlungen
 - **Trip-Zusammenfassung**: Mehrere Fl++ge zu Reisen gruppieren
 - **Flugkarten-Generator**: Share-Grafiken, Jahresr++ckblick
 - **Responsive Design**: Optimiert f++r Desktop, Tablet und Mobile
 
-## ­ƒøá´©Å Technologie-Stack
+## ï¿½ï¿½ï¿½á´©ï¿½ Technologie-Stack
 
 ### Frontend
 - **React 18** mit TypeScript
@@ -150,49 +168,49 @@ Eine umfassende Full-Stack-Anwendung zur Verfolgung, Visualisierung und Analyse 
 - **Nginx** - Production Web Server
 - **PostgreSQL with PostGIS** - Geospatial Database
 
-## ­ƒôü Projektstruktur
+## ï¿½ï¿½ï¿½ï¿½ Projektstruktur
 
 ```
 TravStats/
-Ôö£ÔöÇÔöÇ backend/              # Node.js/Express Backend
-Ôöé   Ôö£ÔöÇÔöÇ prisma/          # Datenbank-Schema und Migrationen
-Ôöé   Ôöé   Ôö£ÔöÇÔöÇ schema.prisma
-Ôöé   Ôöé   ÔööÔöÇÔöÇ migrations/
-Ôöé   Ôö£ÔöÇÔöÇ src/
-Ôöé   Ôöé   Ôö£ÔöÇÔöÇ __tests__/   # Test-Dateien
-Ôöé   Ôöé   Ôö£ÔöÇÔöÇ middleware/  # Express Middleware (auth, errorHandler)
-Ôöé   Ôöé   Ôö£ÔöÇÔöÇ routes/      # API Routes (auth, flights, stats, etc.)
-Ôöé   Ôöé   Ôö£ÔöÇÔöÇ schemas/     # Zod Validierungs-Schemas
-Ôöé   Ôöé   Ôö£ÔöÇÔöÇ services/    # Business Logic
-Ôöé   Ôöé   Ôö£ÔöÇÔöÇ utils/       # Utility-Funktionen
-Ôöé   Ôöé   Ôö£ÔöÇÔöÇ db.ts        # Prisma Client
-Ôöé   Ôöé   Ôö£ÔöÇÔöÇ index.ts     # Main Server File
-Ôöé   Ôöé   ÔööÔöÇÔöÇ seed*.ts     # Datenbank-Seeding Skripte
-Ôöé   Ôö£ÔöÇÔöÇ Dockerfile
-Ôöé   Ôö£ÔöÇÔöÇ package.json
-Ôöé   ÔööÔöÇÔöÇ tsconfig.json
-Ôö£ÔöÇÔöÇ frontend/            # React/Vite Frontend
-Ôöé   Ôö£ÔöÇÔöÇ src/
-Ôöé   Ôöé   Ôö£ÔöÇÔöÇ components/  # React Komponenten
-Ôöé   Ôöé   Ôö£ÔöÇÔöÇ pages/       # Seiten-Komponenten
-Ôöé   Ôöé   Ôö£ÔöÇÔöÇ lib/         # API Client & Utilities
-Ôöé   Ôöé   Ôö£ÔöÇÔöÇ store/       # Zustand Stores
-Ôöé   Ôöé   Ôö£ÔöÇÔöÇ types/       # TypeScript Types
-Ôöé   Ôöé   Ôö£ÔöÇÔöÇ App.tsx      # Main App Component
-Ôöé   Ôöé   Ôö£ÔöÇÔöÇ main.tsx     # Entry Point
-Ôöé   Ôöé   ÔööÔöÇÔöÇ index.css    # Global Styles
-Ôöé   Ôö£ÔöÇÔöÇ public/          # Static Assets
-Ôöé   Ôö£ÔöÇÔöÇ Dockerfile
-Ôöé   Ôö£ÔöÇÔöÇ nginx.conf
-Ôöé   Ôö£ÔöÇÔöÇ package.json
-Ôöé   ÔööÔöÇÔöÇ vite.config.ts
-Ôö£ÔöÇÔöÇ docker-compose.yml   # Docker Compose Konfiguration
-Ôö£ÔöÇÔöÇ ROADMAP.md          # Feature Roadmap
-Ôö£ÔöÇÔöÇ PRODUCTION_CHECKLIST.md  # Production Deployment Checklist
-ÔööÔöÇÔöÇ README.md
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ backend/              # Node.js/Express Backend
+ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ prisma/          # Datenbank-Schema und Migrationen
+ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ schema.prisma
+ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ migrations/
+ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ src/
+ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ __tests__/   # Test-Dateien
+ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ middleware/  # Express Middleware (auth, errorHandler)
+ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ routes/      # API Routes (auth, flights, stats, etc.)
+ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ schemas/     # Zod Validierungs-Schemas
+ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ services/    # Business Logic
+ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ utils/       # Utility-Funktionen
+ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ db.ts        # Prisma Client
+ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ index.ts     # Main Server File
+ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ seed*.ts     # Datenbank-Seeding Skripte
+ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Dockerfile
+ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ package.json
+ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ tsconfig.json
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ frontend/            # React/Vite Frontend
+ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ src/
+ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ components/  # React Komponenten
+ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ pages/       # Seiten-Komponenten
+ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ lib/         # API Client & Utilities
+ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ store/       # Zustand Stores
+ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ types/       # TypeScript Types
+ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ App.tsx      # Main App Component
+ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ main.tsx     # Entry Point
+ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ index.css    # Global Styles
+ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ public/          # Static Assets
+ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Dockerfile
+ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ nginx.conf
+ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ package.json
+ï¿½ï¿½ï¿½   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ vite.config.ts
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ docker-compose.yml   # Docker Compose Konfiguration
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ROADMAP.md          # Feature Roadmap
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ PRODUCTION_CHECKLIST.md  # Production Deployment Checklist
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ README.md
 ```
 
-## ­ƒÜÇ Quick Start
+## ï¿½ï¿½ï¿½ï¿½ Quick Start
 
 ### Voraussetzungen
 
@@ -228,7 +246,7 @@ TravStats/
    docker-compose exec backend npm run seed:achievements
    ```
 
-4. **Anwendung +Âffnen**
+4. **Anwendung +ï¿½ffnen**
    - Frontend: http://localhost:3000
    - Backend API: http://localhost:8000
    - API Health: http://localhost:8000/health
@@ -279,14 +297,103 @@ npm install
 # Environment-Datei erstellen
 cp .env.example .env
 
-# .env anpassen falls n+Âtig
+# .env anpassen falls n+ï¿½tig
 # VITE_API_URL=http://localhost:8000
 
 # Development Server starten
 npm run dev
 ```
 
-## ­ƒöº Environment Variables
+---
+
+## ğŸš€ Deployment-Optionen (Self-Hosting)
+
+### Option 1: Lokales Netzwerk (Einfachste Methode)
+**FÃ¼r:** Heimgebrauch, nur Zugriff im lokalen Netzwerk
+
+```bash
+docker-compose up -d
+# Zugriff: http://192.168.1.XXX:3000
+```
+
+**Vorteile:**
+- âœ… Maximal privat (nie im Internet exponiert)
+- âœ… Einfaches Setup, keine Domains nÃ¶tig
+- âœ… Kein SSL erforderlich
+
+**Nachteile:**
+- âŒ Kein Zugriff von unterwegs (auÃŸer via VPN)
+
+### Option 2: VPN/Tailscale (Empfohlen!)
+**FÃ¼r:** Sicherer Remote-Zugriff ohne Ã¶ffentliche Freigabe
+
+```bash
+# Tailscale auf Server & GerÃ¤ten installieren
+curl -fsSL https://tailscale.com/install.sh | sh
+
+# Zugriff Ã¼berall Ã¼ber verschlÃ¼sselten Tunnel
+# https://100.64.0.X:3000
+```
+
+**Vorteile:**
+- âœ… Sicher (verschlÃ¼sselter Tunnel)
+- âœ… Remote-Zugriff von Ã¼berall
+- âœ… Keine Portfreigabe nÃ¶tig
+- âœ… Einfache Authentifizierung
+
+**Nachteile:**
+- âŒ Tailscale-Client auf allen GerÃ¤ten nÃ¶tig
+
+### Option 3: Raspberry Pi Home Server
+**FÃ¼r:** Dedizierter, stromsparender Always-On Server
+
+**Hardware:**
+- Raspberry Pi 4 (4GB+ RAM empfohlen)
+- 32GB+ SD-Karte oder externe SSD
+- Stabile Stromversorgung
+- Ethernet-Verbindung (WiFi geht, aber langsamer)
+
+**Ressourcen-Bedarf:**
+- PostgreSQL: ~150MB RAM
+- Backend: ~100MB RAM
+- Frontend (Nginx): ~50MB RAM
+- **Gesamt: ~500MB RAM** (viel Headroom auf 4GB Pi)
+
+```bash
+# Docker auf Raspberry Pi installieren
+curl -sSL https://get.docker.com | sh
+sudo usermod -aG docker $USER
+
+# TravStats starten
+git clone <repo-url>
+cd TravStats
+docker-compose up -d
+```
+
+### Option 4: Ã–ffentlich Ã¼ber Domain (Fortgeschritten)
+**FÃ¼r:** Einfachen Zugriff von Ã¼berall, Teilen mit Familie/Freunden
+
+**Erfordert:**
+- Eigene Domain
+- Reverse Proxy (Nginx)
+- Let's Encrypt SSL-Zertifikat
+- Gute Security-Konfiguration (Firewall, fail2ban)
+
+**Siehe:** [PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md) fÃ¼r Details
+
+**Vorteile:**
+- âœ… Zugriff von Ã¼berall, jedem Browser
+- âœ… Professionelle SSL-Zertifikate
+- âœ… Einfach mit Freunden/Familie teilen
+
+**Nachteile:**
+- âŒ Im Internet exponiert (erfordert gute Security)
+- âŒ Domain & SSL-Management
+- âŒ Komplexere Firewall-Regeln
+
+---
+
+## ï¿½ï¿½ï¿½ï¿½ Environment Variables
 
 ### Backend (.env)
 
@@ -294,7 +401,7 @@ npm run dev
 # Database
 DATABASE_URL=postgresql://flights:password@localhost:5432/flights
 
-# JWT - WICHTIG: In Production +ñndern!
+# JWT - WICHTIG: In Production +ï¿½ndern!
 JWT_SECRET=your-secret-key-change-in-production-MINIMUM-32-chars
 JWT_EXPIRES_IN=7d
 
@@ -312,7 +419,7 @@ CORS_ORIGIN=http://localhost:3000
 VITE_API_URL=http://localhost:8000
 ```
 
-## ­ƒôÜ API-Dokumentation
+## ï¿½ï¿½ï¿½ï¿½ API-Dokumentation
 
 ### Basis-URL
 ```
@@ -414,7 +521,7 @@ Content-Type: application/json
 }
 ```
 
-#### Flug l+Âschen
+#### Flug l+ï¿½schen
 ```http
 DELETE /api/v1/flights/:id
 ```
@@ -439,7 +546,7 @@ GET /api/v1/stats/routes?limit=10
 - `/api/v1/settings` - Benutzer-Einstellungen
 - `/api/v1/analytics` - Analytics-Events
 
-## ­ƒùä´©Å Datenbank-Schema
+## ï¿½ï¿½ï¿½ä´©ï¿½ Datenbank-Schema
 
 ### Wichtige Tabellen
 
@@ -453,7 +560,7 @@ GET /api/v1/stats/routes?limit=10
 
 Siehe [backend/prisma/schema.prisma](backend/prisma/schema.prisma) f++r Details.
 
-## ­ƒº¬ Testing
+## ï¿½ï¿½ï¿½ï¿½ Testing
 
 ### Backend Tests
 ```bash
@@ -468,7 +575,7 @@ cd frontend
 npm test
 ```
 
-## ­ƒôª Production Deployment
+## ï¿½ï¿½ï¿½ï¿½ Production Deployment
 
 ### Wichtige Schritte
 
@@ -500,32 +607,32 @@ npm test
    - Log Aggregation
 
 6. **Backups automatisieren**
-   - Datenbank-Backups (t+ñglich)
+   - Datenbank-Backups (t+ï¿½glich)
    - Backup-Rotation
    - Offsite-Storage
 
-­ƒôï Siehe [PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md) f++r vollst+ñndige Checkliste!
+ï¿½ï¿½ï¿½ï¿½ Siehe [PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md) f++r vollst+ï¿½ndige Checkliste!
 
-## ­ƒù¦´©Å Feature Roadmap
+## ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Feature Roadmap
 
 Siehe [ROADMAP.md](ROADMAP.md) f++r geplante Features und Entwicklungsphasen.
 
-**Status**: Die meisten Kern-Features sind implementiert! ­ƒÄë
+**Status**: Die meisten Kern-Features sind implementiert! ï¿½ï¿½ï¿½ï¿½
 
 Highlights:
-- Ô£à Kern-Visualisierungen (Distanz, Diagramme, Kalender)
-- Ô£à Gamification (Achievements, Collections, Meilen)
-- Ô£à Praktische Tools (Kosten, Tags, Einstellungen)
-- Ô£à Umwelt & Analysen (CO2, Routen, Heatmaps)
-- Ô£à Import & Export (Scanner, PDF, KML)
+- Ô£ï¿½ Kern-Visualisierungen (Distanz, Diagramme, Kalender)
+- Ô£ï¿½ Gamification (Achievements, Collections, Meilen)
+- Ô£ï¿½ Praktische Tools (Kosten, Tags, Einstellungen)
+- Ô£ï¿½ Umwelt & Analysen (CO2, Routen, Heatmaps)
+- Ô£ï¿½ Import & Export (Scanner, PDF, KML)
 
-## ­ƒñØ Contributing
+## ï¿½ï¿½ï¿½ï¿½ Contributing
 
 1. Fork das Repository
 2. Feature Branch erstellen (`git checkout -b feature/AmazingFeature`)
-3. +änderungen committen (`git commit -m 'Add some AmazingFeature'`)
+3. +ï¿½nderungen committen (`git commit -m 'Add some AmazingFeature'`)
 4. Branch pushen (`git push origin feature/AmazingFeature`)
-5. Pull Request +Âffnen
+5. Pull Request +ï¿½ffnen
 
 ### Development Guidelines
 
@@ -535,31 +642,31 @@ Highlights:
 - Code-Style mit ESLint/Prettier einhalten
 - Sinnvolle Commit-Messages
 
-## ­ƒôä License
+## ï¿½ï¿½ï¿½ï¿½ License
 
 MIT License - siehe LICENSE-Datei f++r Details.
 
-## ­ƒÖÅ Acknowledgments
+## ï¿½ï¿½ï¿½ï¿½ Acknowledgments
 
 - OpenStreetMap f++r Kartendaten
 - Leaflet f++r die Karten-Bibliothek
 - OurAirports f++r Flughafen-Daten
 - React & TypeScript Community
 
-## ­ƒôº Support & Kontakt
+## ï¿½ï¿½ï¿½ï¿½ Support & Kontakt
 
 - **Issues**: GitHub Issues f++r Bug Reports und Feature Requests
 - **Discussions**: GitHub Discussions f++r Fragen und Ideen
 
 ---
 
-**Built with ÔØñ´©Å using modern web technologies**
+**Built with ï¿½ï¿½ï¿½ï¿½ using modern web technologies**
 
-*Viel Spa+ƒ beim Tracken Ihrer Fl++ge!* Ô£ê´©Å
+*Viel Spa+ï¿½ beim Tracken Ihrer Fl++ge!* Ô£ê´©ï¿½
 
 ---
 
-### ­ƒôè Project Stats
+### ï¿½ï¿½ï¿½ï¿½ Project Stats
 
 - **Features**: 25+ implementiert
 - **Lines of Code**: ~15,000+
