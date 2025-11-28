@@ -1,5 +1,5 @@
-import { Router, Request, Response, NextFunction } from 'express';
-import { authenticate, requireAdmin } from '../middleware/auth';
+import { Router, Response, NextFunction } from 'express';
+import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { AppError } from '../middleware/errorHandler';
 import crypto from 'crypto';
@@ -11,7 +11,7 @@ router.use(authenticate);
 router.use(requireAdmin);
 
 // Get system information
-router.get('/system/info', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/system/info', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userCount = await prisma.user.count();
     const activeUserCount = await prisma.user.count({ where: { isActive: true } });
@@ -35,7 +35,7 @@ router.get('/system/info', async (req: Request, res: Response, next: NextFunctio
 });
 
 // Get all users
-router.get('/users', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/users', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const users = await prisma.user.findMany({
       select: {
@@ -62,7 +62,7 @@ router.get('/users', async (req: Request, res: Response, next: NextFunction) => 
 });
 
 // Toggle user active status
-router.patch('/users/:id/toggle-active', async (req: Request, res: Response, next: NextFunction) => {
+router.patch('/users/:id/toggle-active', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
 
@@ -98,7 +98,7 @@ router.patch('/users/:id/toggle-active', async (req: Request, res: Response, nex
 });
 
 // Create invitation
-router.post('/invitations', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/invitations', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { email, expiresInDays = 7 } = req.body;
     const token = crypto.randomBytes(32).toString('hex');
@@ -131,7 +131,7 @@ router.post('/invitations', async (req: Request, res: Response, next: NextFuncti
 });
 
 // List invitations
-router.get('/invitations', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/invitations', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const invitations = await prisma.invitation.findMany({
       orderBy: { createdAt: 'desc' },
@@ -157,7 +157,7 @@ router.get('/invitations', async (req: Request, res: Response, next: NextFunctio
 });
 
 // Export all data (for backup)
-router.get('/export/all-data', async (req: Request, res: Response, next: NextFunction) => {
+router.get('/export/all-data', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const users = await prisma.user.findMany({
       include: {
