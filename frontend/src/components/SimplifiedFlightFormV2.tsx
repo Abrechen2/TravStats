@@ -245,12 +245,14 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
     setLoading(true);
 
     try {
-      // Step 1: Try online validation if flight number available
+      const isFallbackParsing = bcbpData.formatCode === 'FALLBACK';
+
+      // Step 1: Try online validation if flight number available (only if not fallback)
       const carrierCode = bcbpData.operatingCarrierDesignator;
       const scannedFlightNumber = bcbpData.flightNumber ? `${carrierCode || ''}${bcbpData.flightNumber}` : '';
 
-      if (carrierCode && bcbpData.flightNumber) {
-        const flightDate = searchDate;
+      if (!isFallbackParsing && carrierCode && bcbpData.flightNumber) {
+        const flightDate = bcbpData.dateOfFlight || searchDate;
 
         try {
           const response = await fetch(
@@ -264,28 +266,56 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
 
             if (apiFlight.departure.iata !== bcbpData.departureAirport ||
                 apiFlight.arrival.iata !== bcbpData.arrivalAirport) {
-              console.warn('Boarding pass data mismatch with API');
+              console.warn('⚠️ Boarding pass data mismatch with API - using API data as source of truth');
             }
 
-            // Use API data as source of truth
+            // Use API data as source of truth, but keep scanned seat info
             await handleSelectFlight(apiFlight);
             setFlightNumber(`${carrierCode}${bcbpData.flightNumber}`);
+
+            // Override with scanned seat info (more reliable)
+            if (bcbpData.seatNumber) {
+              setSeatNumber(bcbpData.seatNumber.toUpperCase());
+            }
+            if (bcbpData.seatClass) {
+              setSeatClass(bcbpData.seatClass);
+            }
+            if (bcbpData.passengerName) {
+              setNotes(`Passenger: ${bcbpData.passengerName}`);
+            }
+
+            console.log('✅ Used online validation + scanned seat data');
             return;
+          } else {
+            setError('Kein Online-Match gefunden (API-Key/Backend prüfen). Nutze gescannte Daten.');
           }
         } catch (err) {
-          console.warn('Online validation failed, using scanned data');
+          console.warn('⚠️ Online validation failed, using scanned data:', err);
         }
       }
 
       // Step 2: Fallback to scanned data + airport enrichment
+      if (!bcbpData.departureAirport || !bcbpData.arrivalAirport) {
+        setError('Could not extract airport codes from boarding pass. Please check the barcode quality or enter manually.');
+        setLoading(false);
+        return;
+      }
+
       const [depAirport, arrAirport] = await Promise.all([
-        airportsApi.getByCode(bcbpData.departureAirport),
-        airportsApi.getByCode(bcbpData.arrivalAirport),
+        airportsApi.getByCode(bcbpData.departureAirport).catch(() => null),
+        airportsApi.getByCode(bcbpData.arrivalAirport).catch(() => null),
       ]);
+
+      if (!depAirport || !arrAirport) {
+        setError(`Airport lookup failed for ${!depAirport ? bcbpData.departureAirport : bcbpData.arrivalAirport}. Please verify the codes.`);
+        setLoading(false);
+        return;
+      }
 
       setDeparture(depAirport);
       setArrival(arrAirport);
 
+      // Set all available data
       if (bcbpData.passengerName) {
         setNotes(`Passenger: ${bcbpData.passengerName}`);
       }
@@ -293,9 +323,12 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
       if (bcbpData.seatNumber) {
         setSeatNumber(bcbpData.seatNumber.toUpperCase());
       }
+
       const mappedSeatClass = mapCompartmentToSeatClass(bcbpData.compartmentCode);
       if (mappedSeatClass) {
         setSeatClass(mappedSeatClass);
+      } else if (bcbpData.seatClass) {
+        setSeatClass(bcbpData.seatClass);
       }
 
       if (carrierCode && bcbpData.flightNumber) {
@@ -303,14 +336,23 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
         setAirline(bcbpData.airlineName || getAirlineName(carrierCode) || carrierCode);
       }
 
-      if (bcbpData.seatClass) {
-        setSeatClass(bcbpData.seatClass);
+      if (bcbpData.dateOfFlight) {
+        setDepartureDate(bcbpData.dateOfFlight);
+        setArrivalDate(bcbpData.dateOfFlight);
+      }
+
+      // Show success message based on parsing method
+      if (isFallbackParsing) {
+        console.log('✅ Used intelligent fallback parsing - please verify all data!');
+        setNotes((prev) => (prev ? `${prev}\n` : '') + '⚠️ Extracted via fallback parsing - please verify!');
+      } else {
+        console.log('✅ Successfully parsed IATA BCBP boarding pass');
       }
 
       setStep('complete');
 
     } catch (err) {
-      setError(ERROR_MESSAGES.BOARDING_PASS_ERROR);
+      setError('Failed to process boarding pass. Please enter manually.');
     } finally {
       setLoading(false);
     }
