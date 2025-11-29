@@ -1,29 +1,75 @@
 import { useEffect, useState } from 'react';
-import { statsApi } from '../lib/api';
-import type { Stats as StatsType, Route } from '../types';
+import { statsApi, flightsApi } from '../lib/api';
+import type { Stats as StatsType, Route, FlightFilters } from '../types';
 
-export default function Stats() {
+interface StatsProps {
+  filters?: FlightFilters;
+}
+
+export default function Stats({ filters = {} }: StatsProps) {
   const [stats, setStats] = useState<StatsType | null>(null);
   const [routes, setRoutes] = useState<Route[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadStats();
-  }, []);
+  }, [filters]);
 
   const loadStats = async () => {
     try {
-      const [summaryData, routesData] = await Promise.all([
-        statsApi.getSummary(),
-        statsApi.getTopRoutes(5),
-      ]);
-      setStats(summaryData);
-      setRoutes(routesData.routes);
+      // If filters are applied, calculate stats from filtered flights
+      if (Object.keys(filters).length > 0) {
+        const { flights } = await flightsApi.getAll(filters);
+        const calculatedStats = calculateStats(flights);
+        setStats(calculatedStats);
+        setRoutes([]);
+      } else {
+        const [summaryData, routesData] = await Promise.all([
+          statsApi.getSummary(),
+          statsApi.getTopRoutes(5),
+        ]);
+        setStats(summaryData);
+        setRoutes(routesData.routes);
+      }
     } catch (error) {
       console.error('Failed to load stats:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const calculateStats = (flights: any[]): StatsType => {
+    const flownFlights = flights.filter(f => f.status === 'flown');
+    const totalDistance = flownFlights.reduce((sum, f) => {
+      const dist = Math.sqrt(
+        Math.pow(f.arrLat - f.depLat, 2) + Math.pow(f.arrLon - f.depLon, 2)
+      ) * 111; // Rough km conversion
+      return sum + dist;
+    }, 0);
+
+    const totalFlightTime = flownFlights.reduce((sum, f) => {
+      const duration = (new Date(f.arrivalTime).getTime() - new Date(f.departureTime).getTime()) / 60000;
+      return sum + duration;
+    }, 0);
+
+    const byStatus: Record<string, number> = {};
+    const byAirline: Record<string, number> = {};
+    flights.forEach(f => {
+      byStatus[f.status] = (byStatus[f.status] || 0) + 1;
+      if (f.airline) byAirline[f.airline] = (byAirline[f.airline] || 0) + 1;
+    });
+
+    const totalCost = flights.reduce((sum, f) => sum + (f.price || 0), 0);
+
+    return {
+      totalFlights: flights.length,
+      totalDistance: Math.round(totalDistance),
+      avgDistance: flights.length > 0 ? Math.round(totalDistance / flights.length) : 0,
+      totalFlightTime: Math.round(totalFlightTime),
+      byStatus,
+      byAirline,
+      totalCost: totalCost > 0 ? totalCost : undefined,
+    };
   };
 
   if (loading) {

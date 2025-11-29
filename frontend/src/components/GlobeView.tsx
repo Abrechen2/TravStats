@@ -2,7 +2,6 @@ import { useEffect, useRef, useMemo, useState } from 'react';
 import Globe from 'react-globe.gl';
 import type { GeoJSONFeature } from '../types';
 import { useThemeStore } from '../store/themeStore';
-import GlobeFilters, { FilterState, defaultFilterState } from './GlobeFilters';
 
 interface GlobeViewProps {
   flights: GeoJSONFeature[];
@@ -119,10 +118,7 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
   const isDarkMode = themeStore?.isDarkMode ?? false;
   const [autoRotate, setAutoRotate] = useState(false);
   const [cameraAltitude, setCameraAltitude] = useState(2.2);
-
-  // Filter state
-  const [filters, setFilters] = useState<FilterState>(defaultFilterState);
-  const [isFilterCollapsed, setIsFilterCollapsed] = useState(false);
+  const minRouteCount = 1; // Minimum route count filter (show all routes)
 
   // Center globe initially
   useEffect(() => {
@@ -162,64 +158,7 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
   }, [cameraAltitude]);
 
   // Static point radius - no dynamic scaling based on zoom
-
-  // Extract available years and airlines for filters
-  const { availableYears, availableAirlines } = useMemo(() => {
-    const years = new Set<number>();
-    const airlines = new Set<string>();
-
-    (flights || []).forEach(flight => {
-      if (!flight?.properties) return;
-
-      // Extract year
-      if (flight.properties.departureTime) {
-        const year = new Date(flight.properties.departureTime).getFullYear();
-        if (year && !isNaN(year)) years.add(year);
-      }
-
-      // Extract airline
-      if (flight.properties.airline) {
-        airlines.add(flight.properties.airline);
-      }
-    });
-
-    return {
-      availableYears: Array.from(years).sort((a, b) => b - a), // Newest first
-      availableAirlines: Array.from(airlines).sort(),
-    };
-  }, [flights]);
-
-  // Apply filters to flights before aggregation
-  const filteredFlights = useMemo(() => {
-    return (flights || []).filter(flight => {
-      if (!flight?.properties) return false;
-
-      // Year filter
-      if (filters.yearFilter !== null) {
-        const year = new Date(flight.properties.departureTime).getFullYear();
-        if (year !== filters.yearFilter) return false;
-      }
-
-      // Month filter
-      if (filters.monthFilter !== null) {
-        const month = new Date(flight.properties.departureTime).getMonth() + 1; // 1-12
-        if (month !== filters.monthFilter) return false;
-      }
-
-      // Status filter
-      const status = flight.properties.status;
-      if (status === 'flown' && !filters.showFlown) return false;
-      if (status === 'scheduled' && !filters.showScheduled) return false;
-      if (status === 'cancelled' && !filters.showCancelled) return false;
-
-      // Airline filter (if any airlines selected, only show those)
-      if (filters.selectedAirlines.length > 0) {
-        if (!filters.selectedAirlines.includes(flight.properties.airline || '')) return false;
-      }
-
-      return true;
-    });
-  }, [flights, filters]);
+  // Note: Filtering is now handled by parent component (DashboardPage) via main filters
 
   // Convert flights to arcs format with route aggregation and dynamic heatmap colors
   const { arcsData, heatmapThresholds } = useMemo(() => {
@@ -235,7 +174,7 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
       arrival: any;
     }>();
 
-    (filteredFlights || []).forEach(flight => {
+    (flights || []).forEach(flight => {
       if (!flight?.properties || !flight?.geometry) return;
 
       const coords = flight.geometry.coordinates;
@@ -285,7 +224,7 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
 
     // Create arcs with dynamic colors and apply route frequency filter
     const arcs = Array.from(routeMap.entries())
-      .filter(([_, route]) => route.count >= filters.minRouteCount) // Apply min route count filter
+      .filter(([_, route]) => route.count >= minRouteCount) // Apply min route count filter
       .map(([routeKey, route]) => ({
         routeKey,
         count: route.count,
@@ -301,13 +240,13 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
       }));
 
     return { arcsData: arcs, heatmapThresholds: thresholds };
-  }, [filteredFlights, filters.minRouteCount]);
+  }, [flights, minRouteCount]);
 
   // Extract airport points with proper deduplication (using filtered flights)
   const pointsData = useMemo(() => {
     const airportMap = new Map();
 
-    (filteredFlights || []).forEach(flight => {
+    (flights || []).forEach(flight => {
       if (!flight?.properties || !flight?.geometry) return;
 
       const coords = flight.geometry.coordinates;
@@ -381,20 +320,10 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
     });
 
     return Array.from(airportMap.values());
-  }, [filteredFlights]);
+  }, [flights]);
 
   return (
     <div className="h-full w-full relative flex items-center justify-center" style={{ touchAction: 'pan-x pan-y pinch-zoom' }}>
-      {/* Filter Panel */}
-      <GlobeFilters
-        filters={filters}
-        onChange={setFilters}
-        availableYears={availableYears}
-        availableAirlines={availableAirlines}
-        isCollapsed={isFilterCollapsed}
-        onToggleCollapse={() => setIsFilterCollapsed(!isFilterCollapsed)}
-      />
-
       {/* Control Panel */}
       <div className="absolute bottom-4 left-4 z-[9999] bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 border border-gray-200 dark:border-gray-700" style={{ touchAction: 'auto', pointerEvents: 'auto' }}>
         {/* Auto-Rotation Toggle */}

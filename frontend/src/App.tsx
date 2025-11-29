@@ -4,6 +4,7 @@ import { useAuthStore } from './store/authStore';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
+import FlightsTablePage from './pages/FlightsTablePage';
 import AchievementsPage from './pages/AchievementsPage';
 import AdvancedStatsPage from './pages/AdvancedStatsPage';
 import SettingsPage from './pages/SettingsPage';
@@ -106,6 +107,10 @@ function AppContent() {
         <Route
           path="/"
           element={isAuthenticated ? <DashboardPage /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/flights"
+          element={isAuthenticated ? <FlightsTablePage /> : <Navigate to="/login" />}
         />
         <Route
           path="/achievements"

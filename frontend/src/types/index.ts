@@ -108,6 +108,8 @@ export interface FlightLookupResult {
 export interface FlightFilters {
   airline?: string;
   flightNumber?: string;
+  departureAirport?: string;
+  arrivalAirport?: string;
   fromDate?: string;
   toDate?: string;
   status?: 'scheduled' | 'flown' | 'cancelled';
