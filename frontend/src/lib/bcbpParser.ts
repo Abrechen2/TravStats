@@ -33,6 +33,11 @@ export interface BoardingPassData {
   marketingCarrier?: string;
   frequentFlyerNumber?: string;
 
+  // Extended data from conditional/security sections
+  gate?: string;
+  terminal?: string;
+  boardingTime?: string; // HH:MM format
+
   // Raw data for debugging
   raw: string;
 }
@@ -47,13 +52,25 @@ import { parseRyanairBoardingPass } from './airline-parsers/ryanairParser';
  * This allows us to support any airline without duplicating scanner code.
  */
 export function parseBCBP(barcodeData: string): BoardingPassData | null {
+  console.log('🔍 BCBP PARSER: Raw barcode data:', barcodeData);
+  console.log('🔍 BCBP PARSER: Length:', barcodeData.length, 'chars');
+
   // Try 1: Standard IATA BCBP format (most common)
   const bcbpResult = parseBCBPStandard(barcodeData);
-  if (bcbpResult) return bcbpResult;
+  if (bcbpResult) {
+    console.log('✅ BCBP PARSER: Standard IATA format successful');
+    console.log('📅 Parsed date:', bcbpResult.dateOfFlight);
+    console.log('✈️ Airline:', bcbpResult.operatingCarrierDesignator, '-', bcbpResult.airlineName);
+    console.log('🔢 Flight:', bcbpResult.flightNumber);
+    return bcbpResult;
+  }
 
   // Try 2: Airline-specific formats (proprietary encodings)
   const ryanairResult = parseRyanairBoardingPass(barcodeData);
-  if (ryanairResult) return ryanairResult;
+  if (ryanairResult) {
+    console.log('✅ BCBP PARSER: Ryanair format successful');
+    return ryanairResult;
+  }
 
   // TODO: Add more airline-specific parsers here:
   // const easyJetResult = parseEasyJetBoardingPass(barcodeData);
@@ -61,12 +78,20 @@ export function parseBCBP(barcodeData: string): BoardingPassData | null {
 
   // Try 3: URL-based formats (e.g., Lufthansa, Ryanair web boarding passes)
   const urlResult = parseURLBoardingPass(barcodeData);
-  if (urlResult) return urlResult;
+  if (urlResult) {
+    console.log('✅ BCBP PARSER: URL format successful');
+    return urlResult;
+  }
 
   // Try 4: Intelligent fallback - extract what we can from any text
   const fallbackResult = parseFallbackBoardingPass(barcodeData);
-  if (fallbackResult) return fallbackResult;
+  if (fallbackResult) {
+    console.log('✅ BCBP PARSER: Fallback parsing successful');
+    console.log('📅 Parsed date:', fallbackResult.dateOfFlight);
+    return fallbackResult;
+  }
 
+  console.error('❌ BCBP PARSER: All parsing methods failed');
   return null;
 }
 
@@ -125,6 +150,7 @@ function parseBCBPStandard(barcodeData: string): BoardingPassData | null {
     // Date of flight (3 chars - Julian date, day of year)
     const julianDate = barcodeData.substring(pos, pos + 3);
     pos += 3;
+    console.log('📅 Julian date from barcode:', julianDate);
 
     // Compartment code (1 char) - Y=Economy, J=Business, F=First
     const compartmentCode = barcodeData.charAt(pos);
@@ -142,8 +168,122 @@ function parseBCBPStandard(barcodeData: string): BoardingPassData | null {
     const passengerStatus = barcodeData.charAt(pos);
     pos += 1;
 
+    // ===== END OF MANDATORY ITEMS (60 bytes) =====
+
+    // Parse conditional items if available (contains gate, terminal, boarding time, etc.)
+    let gate: string | undefined;
+    let terminal: string | undefined;
+    let boardingTime: string | undefined;
+
+    try {
+      // Beginning of variable size field (1 char) - should be at position 60
+      if (pos < barcodeData.length) {
+        pos += 1; // Skip version number byte
+
+        // Field size of structured message - Conditional (2 chars, hex)
+        if (pos + 1 < barcodeData.length) {
+          const conditionalLength = parseInt(barcodeData.substring(pos, pos + 2), 16);
+          pos += 2;
+          console.log('📦 Conditional items length:', conditionalLength);
+
+          if (conditionalLength > 0 && pos + conditionalLength <= barcodeData.length) {
+            const conditionalData = barcodeData.substring(pos, pos + conditionalLength);
+            console.log('📦 Conditional data:', conditionalData);
+
+            // Parse standard conditional fields (first ~40 bytes are standardized)
+            let cPos = 0;
+
+            // Airline Numeric Code (3 chars) - Optional
+            if (cPos + 3 <= conditionalData.length) {
+              cPos += 3;
+            }
+
+            // Document Form/Serial Number (13 chars total: 1 char type + 12 chars number) - Optional
+            if (cPos + 13 <= conditionalData.length) {
+              cPos += 13;
+            }
+
+            // Selectee indicator (1 char) - Optional
+            if (cPos + 1 <= conditionalData.length) {
+              cPos += 1;
+            }
+
+            // International documentation verification (1 char) - Optional
+            if (cPos + 1 <= conditionalData.length) {
+              cPos += 1;
+            }
+
+            // Marketing carrier designator (3 chars) - Optional
+            if (cPos + 3 <= conditionalData.length) {
+              cPos += 3;
+            }
+
+            // Frequent flyer airline designator (3 chars) - Optional
+            if (cPos + 3 <= conditionalData.length) {
+              cPos += 3;
+            }
+
+            // Frequent flyer number (16 chars) - Optional
+            if (cPos + 16 <= conditionalData.length) {
+              cPos += 16;
+            }
+
+            // ID/AD indicator (1 char) - Optional
+            if (cPos + 1 <= conditionalData.length) {
+              cPos += 1;
+            }
+
+            // Free baggage allowance (3 chars) - Optional
+            if (cPos + 3 <= conditionalData.length) {
+              cPos += 3;
+            }
+
+            // Fast Track (1 char) - Optional
+            if (cPos + 1 <= conditionalData.length) {
+              cPos += 1;
+            }
+
+            // ==== AIRLINE-SPECIFIC DATA (Individual Airline Use) ====
+            // The remaining bytes contain airline-specific data
+            // Common fields: Gate, Terminal, Boarding Time, Sequence Number
+            const airlineData = conditionalData.substring(cPos);
+            console.log('🏷️  Airline-specific data:', airlineData);
+
+            // Try to extract gate and terminal from airline-specific section
+            // Many airlines put gate/terminal in a structured format
+            // Common patterns: "B11T1" (Gate B11, Terminal 1), "A12" (Gate A12)
+            const gateMatch = airlineData.match(/([A-Z]\d{1,3})/);
+            if (gateMatch) {
+              gate = gateMatch[1];
+              console.log('🚪 Extracted gate:', gate);
+            }
+
+            // Try to extract terminal (often T followed by digit or single letter)
+            const terminalMatch = airlineData.match(/T(\d|[A-Z])/);
+            if (terminalMatch) {
+              terminal = `T${terminalMatch[1]}`;
+              console.log('🏢 Extracted terminal:', terminal);
+            }
+
+            // Try to extract boarding time (HH:MM format or HHMM)
+            const timeMatch = airlineData.match(/(\d{2})[:.]?(\d{2})/);
+            if (timeMatch && parseInt(timeMatch[1]) < 24 && parseInt(timeMatch[2]) < 60) {
+              boardingTime = `${timeMatch[1]}:${timeMatch[2]}`;
+              console.log('⏰ Extracted boarding time:', boardingTime);
+            }
+
+            pos += conditionalLength;
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to parse conditional items (non-critical):', error);
+      // Continue anyway - conditional items are optional
+    }
+
     // Convert Julian date to actual date
     const dateOfFlight = julianDateToDate(julianDate);
+    console.log('📅 Converted to date:', dateOfFlight);
     const seatClass = mapCompartmentToSeatClass(compartmentCode);
     const airlineName = getAirlineName(operatingCarrierDesignator);
 
@@ -164,6 +304,9 @@ function parseBCBPStandard(barcodeData: string): BoardingPassData | null {
       passengerStatus,
       seatClass,
       airlineName,
+      gate,
+      terminal,
+      boardingTime,
       raw: barcodeData,
     };
   } catch (error) {
@@ -178,21 +321,36 @@ function parseBCBPStandard(barcodeData: string): BoardingPassData | null {
  */
 function julianDateToDate(julianDate: string): string {
   const dayOfYear = parseInt(julianDate, 10);
-  const currentYear = new Date().getFullYear();
+  console.log('📅 Julian day conversion: Input day of year =', dayOfYear);
 
-  // Create date from day of year
-  const date = new Date(currentYear, 0); // January 1st
-  date.setDate(dayOfYear);
+  let currentYear = new Date().getFullYear();
+  console.log('📅 Current year:', currentYear);
+
+  // Create date from day of year using UTC to avoid timezone issues
+  // new Date(year, month, day) where month=0 is January
+  // day can overflow: new Date(2025, 0, 322) = 322nd day from January 1st
+  const date = new Date(Date.UTC(currentYear, 0, dayOfYear));
+
+  console.log('📅 Calculated date (before year adjustment):', date.toISOString().split('T')[0]);
 
   // If date is more than 30 days in the past, assume next year
   const today = new Date();
+  today.setHours(0, 0, 0, 0); // Normalize to midnight
   const diffDays = Math.floor((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
+  console.log('📅 Days difference from today:', diffDays);
+
   if (diffDays < -30) {
-    date.setFullYear(currentYear + 1);
+    console.log('📅 Date is >30 days in past, assuming next year');
+    const nextYearDate = new Date(Date.UTC(currentYear + 1, 0, dayOfYear));
+    const result = nextYearDate.toISOString().split('T')[0];
+    console.log('📅 Final converted date:', result);
+    return result;
   }
 
-  return date.toISOString().split('T')[0]; // Return YYYY-MM-DD
+  const result = date.toISOString().split('T')[0];
+  console.log('📅 Final converted date:', result);
+  return result; // Return YYYY-MM-DD
 }
 
 function mapCompartmentToSeatClass(

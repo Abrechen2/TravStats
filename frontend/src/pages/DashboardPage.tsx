@@ -13,7 +13,7 @@ import AchievementPopup from '../components/AchievementPopup';
 import type { Flight, FlightInput, FlightFilters, GeoJSONFeature } from '../types';
 import { useSettingsStore } from '../store/settingsStore';
 import { API_LIMITS, UI_CONFIG, STORAGE_KEYS } from '../lib/constants';
-import { escapeCsv, toCsv, escapeHtml, escapeXml, downloadBlob } from '../lib/export';
+import { toCsv, escapeHtml, escapeXml, downloadBlob } from '../lib/export';
 
 export default function DashboardPage() {
   const { user, logout } = useAuthStore();
@@ -26,7 +26,7 @@ export default function DashboardPage() {
   const [showFlightForm, setShowFlightForm] = useState(false);
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
   const [filters, setFilters] = useState<FlightFilters>({});
-  const [loadingMap, setLoadingMap] = useState(true);
+  const [_loadingMap, setLoadingMap] = useState(true); // TODO: Add loading indicator for map
   const [loadingRecent, setLoadingRecent] = useState(true);
   const [is3DView, setIs3DView] = useState(true);
   const importInputRef = useRef<HTMLInputElement | null>(null);
