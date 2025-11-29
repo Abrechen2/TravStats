@@ -18,7 +18,8 @@ import { BoardingPassData, getAirlineName } from '../lib/bcbpParser';
 import type { FlightInput } from '../types';
 import { useSettingsStore } from '../store/settingsStore';
 import { useThemeStore } from '../store/themeStore';
-import { calculateDistance } from '../lib/api';
+import { calculateDistance } from '../lib/geo';
+import { estimateFlightTimes, storeHistoricalFlightTime } from '../lib/timeEstimation';
 
 // Konsistente Error Messages (Deutsch)
 const ERROR_MESSAGES = {
@@ -66,6 +67,12 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
   const [error, setError] = useState('');
   const [showScanner, setShowScanner] = useState(false);
   const [step, setStep] = useState<'input' | 'lookup' | 'select' | 'complete'>('input');
+  const [timeEstimationWarning, setTimeEstimationWarning] = useState<{
+    show: boolean;
+    source: 'historical' | 'heuristic';
+    confidence: 'high' | 'medium' | 'low';
+    sampleCount?: number;
+  } | null>(null);
 
   // Flight Lookup State
   const [flightNumber, setFlightNumber] = useState('');
@@ -268,55 +275,12 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
 
     try {
       const isFallbackParsing = bcbpData.formatCode === 'FALLBACK';
-
-      // Step 1: Try online validation if flight number available (only if not fallback)
       const carrierCode = bcbpData.operatingCarrierDesignator;
       const scannedFlightNumber = bcbpData.flightNumber ? `${carrierCode || ''}${bcbpData.flightNumber}` : '';
 
-      if (!isFallbackParsing && carrierCode && bcbpData.flightNumber) {
-        const flightDate = bcbpData.dateOfFlight || searchDate;
+      console.log('🎫 BOARDING PASS is SOURCE OF TRUTH - API only for optional enrichment');
 
-        try {
-          const response = await fetch(
-            `/api/v1/flight-lookup/${carrierCode}${bcbpData.flightNumber}?date=${flightDate}`
-          );
-          const data = await response.json();
-
-          if (data.success && data.flights && data.flights.length > 0) {
-            // Validate scanned data against API data
-            const apiFlight = data.flights[0];
-
-            if (apiFlight.departure.iata !== bcbpData.departureAirport ||
-                apiFlight.arrival.iata !== bcbpData.arrivalAirport) {
-              console.warn('⚠️ Boarding pass data mismatch with API - using API data as source of truth');
-            }
-
-            // Use API data as source of truth, but keep scanned seat info
-            await handleSelectFlight(apiFlight);
-            setFlightNumber(`${carrierCode}${bcbpData.flightNumber}`);
-
-            // Override with scanned seat info (more reliable)
-            if (bcbpData.seatNumber) {
-              setSeatNumber(bcbpData.seatNumber.toUpperCase());
-            }
-            if (bcbpData.seatClass) {
-              setSeatClass(bcbpData.seatClass);
-            }
-            if (bcbpData.passengerName) {
-              setNotes(`Passenger: ${bcbpData.passengerName}`);
-            }
-
-            console.log('✅ Used online validation + scanned seat data');
-            return;
-          } else {
-            setError('Kein Online-Match gefunden (API-Key/Backend prüfen). Nutze gescannte Daten.');
-          }
-        } catch (err) {
-          console.warn('⚠️ Online validation failed, using scanned data:', err);
-        }
-      }
-
-      // Step 2: Fallback to scanned data + airport enrichment
+      // Step 1: Get airport data for the scanned airports
       if (!bcbpData.departureAirport || !bcbpData.arrivalAirport) {
         setError('Could not extract airport codes from boarding pass. Please check the barcode quality or enter manually.');
         setLoading(false);
@@ -337,9 +301,15 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
       setDeparture(depAirport);
       setArrival(arrAirport);
 
-      // Set all available data
-      if (bcbpData.passengerName) {
-        setNotes(`Passenger: ${bcbpData.passengerName}`);
+      // Step 2: Set all boarding pass data (SOURCE OF TRUTH)
+      if (carrierCode && bcbpData.flightNumber) {
+        setFlightNumber(scannedFlightNumber);
+        setAirline(bcbpData.airlineName || getAirlineName(carrierCode) || carrierCode);
+      }
+
+      if (bcbpData.dateOfFlight) {
+        setDepartureDate(bcbpData.dateOfFlight);
+        setArrivalDate(bcbpData.dateOfFlight);
       }
 
       if (bcbpData.seatNumber) {
@@ -353,17 +323,125 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
         setSeatClass(bcbpData.seatClass);
       }
 
-      if (carrierCode && bcbpData.flightNumber) {
-        setFlightNumber(scannedFlightNumber);
-        setAirline(bcbpData.airlineName || getAirlineName(carrierCode) || carrierCode);
+      if (bcbpData.passengerName) {
+        setNotes(`Passenger: ${bcbpData.passengerName}`);
       }
 
-      if (bcbpData.dateOfFlight) {
-        setDepartureDate(bcbpData.dateOfFlight);
-        setArrivalDate(bcbpData.dateOfFlight);
+      // Set gate and terminal from boarding pass if available (SOURCE OF TRUTH)
+      if (bcbpData.gate) {
+        setGate(bcbpData.gate);
+        console.log('🚪 Gate from boarding pass:', bcbpData.gate);
       }
 
-      // Show success message based on parsing method
+      if (bcbpData.terminal) {
+        setTerminal(bcbpData.terminal);
+        console.log('🏢 Terminal from boarding pass:', bcbpData.terminal);
+      }
+
+      // Step 3: Try API enrichment (terminal, gate, times) - only if data matches!
+      let apiTimesSet = false;
+      if (!isFallbackParsing && carrierCode && bcbpData.flightNumber && bcbpData.dateOfFlight) {
+        try {
+          const response = await fetch(
+            `/api/v1/flight-lookup/${carrierCode}${bcbpData.flightNumber}?date=${bcbpData.dateOfFlight}`
+          );
+          const data = await response.json();
+
+          if (data.success && data.flights && data.flights.length > 0) {
+            const apiFlight = data.flights[0];
+            const apiDepartureDate = apiFlight.departure.scheduledTime?.split('T')[0];
+
+            // Validate: API must match boarding pass
+            const airportsMatch =
+              apiFlight.departure.iata === bcbpData.departureAirport &&
+              apiFlight.arrival.iata === bcbpData.arrivalAirport;
+            const dateMatches = apiDepartureDate === bcbpData.dateOfFlight;
+
+            if (airportsMatch && dateMatches) {
+              console.log('✅ API data matches boarding pass - enriching with API times/terminal/gate');
+
+              // Enrich with API times (if available and reasonable)
+              if (apiFlight.departure.scheduledTime) {
+                const apiDepTime = new Date(apiFlight.departure.scheduledTime).toTimeString().slice(0, 5);
+                setDepartureTime(apiDepTime);
+                apiTimesSet = true;
+              }
+              if (apiFlight.arrival.scheduledTime) {
+                const apiArrTime = new Date(apiFlight.arrival.scheduledTime).toTimeString().slice(0, 5);
+                setArrivalTime(apiArrTime);
+              }
+
+              // Enrich with terminal/gate if NOT already set from boarding pass
+              if (apiFlight.departure.terminal && !bcbpData.terminal) {
+                setTerminal(apiFlight.departure.terminal);
+                console.log('🏢 Terminal from API (boarding pass had none):', apiFlight.departure.terminal);
+              }
+              if (apiFlight.departure.gate && !bcbpData.gate) {
+                setGate(apiFlight.departure.gate);
+                console.log('🚪 Gate from API (boarding pass had none):', apiFlight.departure.gate);
+              }
+
+              // Enrich with aircraft if available
+              if (apiFlight.aircraft) {
+                setAircraft(apiFlight.aircraft);
+              }
+
+              console.log('📊 API enrichment successful');
+            } else {
+              console.warn('⚠️ API data MISMATCH - ignoring API, using ONLY boarding pass data');
+              console.warn('  Boarding Pass:', bcbpData.departureAirport, '→', bcbpData.arrivalAirport, '@', bcbpData.dateOfFlight);
+              console.warn('  API Data:', apiFlight.departure.iata, '→', apiFlight.arrival.iata, '@', apiDepartureDate);
+            }
+          } else {
+            console.log('ℹ️ No API data available - using only boarding pass data');
+          }
+        } catch (err) {
+          console.warn('⚠️ API lookup failed - using only boarding pass data:', err);
+        }
+      }
+
+      // Step 4: Estimate times if API didn't provide them (Hybrid Time Estimation)
+      if (!apiTimesSet && bcbpData.dateOfFlight && depAirport && arrAirport && depAirport.iata && arrAirport.iata) {
+        console.log('🔮 API times not available - using hybrid time estimation');
+
+        // Use boarding time from boarding pass if available, otherwise default to 10:00 AM
+        const boardingTime = bcbpData.boardingTime || '10:00';
+        if (bcbpData.boardingTime) {
+          console.log('⏰ Using boarding time from boarding pass:', bcbpData.boardingTime);
+        } else {
+          console.log('⏰ No boarding time in boarding pass, using default:', boardingTime);
+        }
+
+        const estimation = estimateFlightTimes(
+          boardingTime,
+          bcbpData.dateOfFlight,
+          scannedFlightNumber,
+          depAirport.iata,
+          arrAirport.iata,
+          depAirport.lat,
+          depAirport.lon,
+          arrAirport.lat,
+          arrAirport.lon
+        );
+
+        setDepartureTime(estimation.departureTime);
+        setArrivalTime(estimation.arrivalTime);
+
+        // Show warning that times are estimated
+        setTimeEstimationWarning({
+          show: true,
+          source: estimation.source,
+          confidence: estimation.confidence,
+          sampleCount: estimation.sampleCount,
+        });
+
+        console.log(`📊 Times estimated using ${estimation.source} (confidence: ${estimation.confidence})`);
+        if (estimation.sampleCount !== undefined) {
+          console.log(`   Based on ${estimation.sampleCount} historical flight(s)`);
+        }
+      }
+
+      // Show success message
       if (isFallbackParsing) {
         console.log('✅ Used intelligent fallback parsing - please verify all data!');
         setNotes((prev) => (prev ? `${prev}\n` : '') + '⚠️ Extracted via fallback parsing - please verify!');
@@ -400,6 +478,25 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
     try {
       const departureDateTime = `${departureDate}T${departureTime}:00Z`;
       const arrivalDateTime = `${arrivalDate}T${arrivalTime}:00Z`;
+
+      // Store historical flight time data for future estimations
+      // (only if user manually verified/corrected the times)
+      if (flightNumber && departureTime && arrivalTime && departure.iata && arrival.iata) {
+        // Assume boarding is 30min before departure (we don't store boarding time separately)
+        const depDate = new Date(`${departureDate}T${departureTime}`);
+        depDate.setMinutes(depDate.getMinutes() - 30);
+        const estimatedBoardingTime = `${String(depDate.getHours()).padStart(2, '0')}:${String(depDate.getMinutes()).padStart(2, '0')}`;
+
+        storeHistoricalFlightTime(
+          flightNumber,
+          departure.iata,
+          arrival.iata,
+          estimatedBoardingTime,
+          departureTime,
+          arrivalTime,
+          departureDate
+        );
+      }
 
       await onSubmit({
         departure: {
@@ -596,6 +693,45 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                   <div className={`text-sm font-medium ${isDarkMode ? 'text-green-200' : 'text-green-800'}`}>
                     ✓ Flight details loaded from {selectedFlight.airline} {selectedFlight.flightNumber}
                   </div>
+                </div>
+              )}
+
+              {/* Time Estimation Warning */}
+              {timeEstimationWarning?.show && (
+                <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-yellow-900' : 'bg-yellow-50'} border ${isDarkMode ? 'border-yellow-700' : 'border-yellow-200'}`}>
+                  <div className={`font-medium ${isDarkMode ? 'text-yellow-200' : 'text-yellow-800'} flex items-center gap-2`}>
+                    ⚠️ Geschätzte Flugzeiten
+                  </div>
+                  <div className={`text-sm ${isDarkMode ? 'text-yellow-300' : 'text-yellow-700'} mt-2`}>
+                    {timeEstimationWarning.source === 'historical' ? (
+                      <>
+                        <strong>Basierend auf {timeEstimationWarning.sampleCount} {timeEstimationWarning.sampleCount === 1 ? 'historischen Flug' : 'historischen Flügen'}</strong> dieser Route.
+                        <br />
+                        Abflug- und Ankunftszeiten wurden aus Ihren früheren Flügen berechnet.
+                      </>
+                    ) : (
+                      <>
+                        <strong>Automatisch geschätzt</strong> basierend auf Boarding-Zeit und Flugdistanz.
+                        <br />
+                        Annahme: Abflug = Boarding + 30min, Flugdauer ≈ {Math.round((calculateDistance(
+                          departure?.lat || 0,
+                          departure?.lon || 0,
+                          arrival?.lat || 0,
+                          arrival?.lon || 0
+                        ) / 800) * 60 + 15)} Minuten.
+                      </>
+                    )}
+                  </div>
+                  <div className={`text-sm ${isDarkMode ? 'text-yellow-300' : 'text-yellow-700'} mt-2 font-semibold`}>
+                    → Bitte überprüfen und korrigieren Sie die Zeiten bei Bedarf.
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setTimeEstimationWarning(null)}
+                    className={`text-xs ${isDarkMode ? 'text-yellow-400 hover:text-yellow-300' : 'text-yellow-600 hover:text-yellow-800'} mt-2 underline`}
+                  >
+                    Warnung ausblenden
+                  </button>
                 </div>
               )}
 

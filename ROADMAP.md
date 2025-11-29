@@ -83,6 +83,14 @@
 - [x] Boarding Pass Scanner mit Online-Validierung
 - [x] Dark Mode Support für Flight Form
 - [x] Step-by-Step geführter Eingabeprozess
+- [x] **Hybrid Time Estimation System** (Historical Data + Heuristics)
+- [ ] **AI-gestützte Datenverbesserung (Optional):**
+  - [ ] OpenAI/Claude API Integration für intelligente Zeitschätzung
+  - [ ] ML-basierte Vorhersage von Flugzeiten basierend auf Route/Airline
+  - [ ] Automatische Validierung und Korrektur von Boarding Pass Daten
+  - [ ] Konfidenz-Score für AI-generierte Vorschläge
+  - [ ] User-Feedback-Loop zur Verbesserung der AI-Genauigkeit
+  - [ ] Kosten-Nutzen-Analyse (API-Kosten vs. Zeitersparnis)
 - [ ] Vielflieger-Meilen Tracking (Future Feature)
 
 ### ✅ 8. Flug-Tags & Kategorien
