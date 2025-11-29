@@ -188,10 +188,12 @@
   - [x] Format-Erkennung und Parsing-Methode
   - [x] Schritt-für-Schritt Parsing-Log
 - [x] Online-Validierung mit Flight Lookup API (falls Flugnummer erkannt)
-- [ ] **OCR-Integration für Text-basierte Boarding Passes:**
-  - [ ] Tesseract.js für Text-Erkennung
-  - [ ] Layout-Analyse (Spalten, Zeilen erkennen)
-  - [ ] Smart Field Extraction (Label → Wert Zuordnung)
+- [x] **OCR-Integration für visuelle Boarding Pass Daten:**
+  - [x] Tesseract.js für Text-Erkennung
+  - [x] Dual-Scan: Barcode (Flugdaten) + OCR (Gate/Terminal/Times)
+  - [x] Pattern Matching für Gate, Terminal, Boarding Time
+  - [x] Smart Field Extraction mit Regex-Patterns
+  - [x] Timeout-basierte OCR (max 8s) um UX nicht zu blockieren
 - [ ] PDF-Import von E-Tickets
 - [x] Automatisches Ausfüllen des Formulars
 
