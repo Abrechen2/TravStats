@@ -7,6 +7,7 @@ interface MapContainer3DProps {
   selectedFlightId?: string;
   onFlightClick?: (flightId: string) => void;
   is3D: boolean;
+  minRouteCount?: number;
 }
 
 export default function MapContainer3D({
@@ -14,6 +15,7 @@ export default function MapContainer3D({
   selectedFlightId,
   onFlightClick,
   is3D,
+  minRouteCount = 1,
 }: MapContainer3DProps) {
   return (
     <div className="relative h-full w-full rounded-lg shadow overflow-hidden bg-white dark:bg-gray-900 flex items-center justify-center" style={{ touchAction: 'pan-x pan-y pinch-zoom' }}>
@@ -23,12 +25,14 @@ export default function MapContainer3D({
             flights={flights}
             selectedFlightId={selectedFlightId}
             onFlightClick={onFlightClick}
+            minRouteCount={minRouteCount}
           />
         ) : (
           <Map
             flights={flights}
             selectedFlightId={selectedFlightId}
             onFlightClick={onFlightClick}
+            minRouteCount={minRouteCount}
           />
         )}
       </div>

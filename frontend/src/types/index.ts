@@ -95,30 +95,26 @@ export interface FlightLookupResult {
   arrivalTime?: string;
 }
 
-export interface FlightLookupResult {
-  airline?: string;
-  flightNumber?: string;
-  aircraft?: string;
-  departure?: Airport;
-  arrival?: Airport;
-  departureTime?: string;
-  arrivalTime?: string;
-}
-
 export interface FlightFilters {
-  airline?: string;
+  airline?: string | string[];
   flightNumber?: string;
   departureAirport?: string;
   arrivalAirport?: string;
   fromDate?: string;
   toDate?: string;
-  status?: 'scheduled' | 'flown' | 'cancelled';
+  status?:
+    | 'scheduled'
+    | 'flown'
+    | 'cancelled'
+    | Array<'scheduled' | 'flown' | 'cancelled'>;
   category?: 'business' | 'private' | 'vacation';
   tags?: string[];
   minPrice?: number;
   maxPrice?: number;
   limit?: number;
   offset?: number;
+  // Frontend-only filter to hide infrequent routes on the globe; never sent to backend
+  minRouteCount?: number;
 }
 
 export interface Stats {
@@ -237,4 +233,11 @@ export interface ImportedFlight {
   raw?: string;
   parsed: Record<string, any>;
   createdAt: string;
+}
+
+export interface OnboardingState {
+  flightAdded: boolean;
+  usedFilter: boolean;
+  exported: boolean;
+  dismissed: boolean;
 }

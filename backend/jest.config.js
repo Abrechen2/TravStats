@@ -9,4 +9,8 @@ module.exports = {
     '!src/**/*.test.ts',
     '!src/**/*.spec.ts',
   ],
+  // Mock uuid to avoid ESM issues
+  moduleNameMapper: {
+    '^uuid$': '<rootDir>/src/__mocks__/uuid.ts',
+  },
 };

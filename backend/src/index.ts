@@ -58,7 +58,12 @@ app.use(cors({
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  // Disable in non-production to avoid noisy 429s during local use;
+  // otherwise allow a generous burst for dashboards/pagination.
+  max: process.env.NODE_ENV === 'production' ? 10000 : Number.MAX_SAFE_INTEGER,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => process.env.NODE_ENV !== 'production',
 });
 app.use('/api/', limiter);
 
@@ -104,14 +109,16 @@ process.on('SIGTERM', async () => {
   process.exit(0);
 });
 
-// Start server
-app.listen(PORT, () => {
-  logger.info({
-    message: 'TravStats backend started',
-    port: PORT,
-    environment: process.env.NODE_ENV,
-    nodeVersion: process.version,
+// Start server only if not in test mode
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    logger.info({
+      message: 'TravStats backend started',
+      port: PORT,
+      environment: process.env.NODE_ENV,
+      nodeVersion: process.version,
+    });
   });
-});
+}
 
 export default app;

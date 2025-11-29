@@ -2,6 +2,7 @@ import { Router, Response, NextFunction } from 'express';
 import { prisma } from '../db';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { createFlightSchema, updateFlightSchema, flightQuerySchema } from '../schemas/flight';
+import type { FlightQueryInput } from '../schemas/flight';
 import { AppError } from '../middleware/errorHandler';
 import { calculateDistance, generateArcPoints } from '../utils/geo';
 import { checkAndUpdateAchievements } from '../utils/achievements';
@@ -13,6 +14,115 @@ const router = Router();
 
 // All routes require authentication
 router.use(authenticate);
+
+// Normalize query params coming from axios (arrays are sent as foo[] by default)
+const normalizeQueryParams = (query: Record<string, any>) => {
+  const normalized: Record<string, any> = {};
+
+  Object.entries(query).forEach(([key, value]) => {
+    const normalizedKey = key.endsWith('[]') ? key.slice(0, -2) : key;
+    normalized[normalizedKey] = value;
+  });
+
+  return normalized;
+};
+
+// Convert a potentially pipe/comma separated string or array into a clean string array
+const splitMultiValue = (value?: string | string[]) => {
+  if (!value) return [];
+
+  const raw = Array.isArray(value) ? value : value.split(',');
+
+  return raw
+    .flatMap(v => v.split('|'))
+    .map(v => v.trim())
+    .filter(Boolean);
+};
+
+const buildFlightWhere = (
+  query: (FlightQueryInput & { tags?: string[] }),
+  userId: string
+) => {
+  const andConditions: any[] = [{ userId }];
+  let noResults = false;
+
+  // Airlines (allow multiple selections)
+  const airlines = splitMultiValue(query.airline);
+  if (airlines.length === 1) {
+    andConditions.push({ airline: { contains: airlines[0], mode: 'insensitive' } });
+  } else if (airlines.length > 1) {
+    andConditions.push({
+      OR: airlines.map(airline => ({
+        airline: { contains: airline, mode: 'insensitive' },
+      })),
+    });
+  }
+
+  if (query.flightNumber) {
+    andConditions.push({ flightNumber: { contains: query.flightNumber, mode: 'insensitive' } });
+  }
+
+  if (query.departureAirport) {
+    andConditions.push({
+      OR: [
+        { depIata: { contains: query.departureAirport, mode: 'insensitive' } },
+        { depIcao: { contains: query.departureAirport, mode: 'insensitive' } },
+        { depName: { contains: query.departureAirport, mode: 'insensitive' } },
+      ],
+    });
+  }
+
+  if (query.arrivalAirport) {
+    andConditions.push({
+      OR: [
+        { arrIata: { contains: query.arrivalAirport, mode: 'insensitive' } },
+        { arrIcao: { contains: query.arrivalAirport, mode: 'insensitive' } },
+        { arrName: { contains: query.arrivalAirport, mode: 'insensitive' } },
+      ],
+    });
+  }
+
+  // Status (allow multiple selections, explicit empty means no results)
+  const statuses = splitMultiValue(query.status) as Array<'scheduled' | 'flown' | 'cancelled'>;
+  if (Array.isArray(query.status) && query.status.length === 0) {
+    noResults = true;
+  } else if (statuses.length === 1) {
+    andConditions.push({ status: statuses[0] });
+  } else if (statuses.length > 1) {
+    andConditions.push({ status: { in: statuses } });
+  }
+
+  if (query.category) {
+    andConditions.push({ category: query.category });
+  }
+
+  // Tags
+  const tags = query.tags || [];
+  if (tags.length > 0) {
+    andConditions.push({ tags: { hasEvery: tags } });
+  }
+
+  // Price range
+  if (query.minPrice !== undefined || query.maxPrice !== undefined) {
+    const price: any = {};
+    if (query.minPrice !== undefined) price.gte = query.minPrice;
+    if (query.maxPrice !== undefined) price.lte = query.maxPrice;
+    andConditions.push({ price });
+  }
+
+  // Date range
+  if (query.fromDate || query.toDate) {
+    const departureTime: any = {};
+    if (query.fromDate) departureTime.gte = new Date(query.fromDate);
+    if (query.toDate) departureTime.lte = new Date(query.toDate);
+    andConditions.push({ departureTime });
+  }
+
+  return {
+    where: { AND: andConditions },
+    noResults,
+  };
+};
 
 // Lookup flight details from external providers
 router.get('/lookup', async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -121,66 +231,23 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
 router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
-    const parsedQuery = flightQuerySchema.parse(req.query);
+    const normalizedQuery = normalizeQueryParams(req.query as Record<string, any>);
+    const parsedQuery = flightQuerySchema.parse(normalizedQuery);
+    const tagsArray = splitMultiValue(parsedQuery.tags as any);
+    const query = {
+      ...parsedQuery,
+      tags: tagsArray,
+      limit: Math.min(parsedQuery.limit ?? 100, 500),
+    };
+    const { where, noResults } = buildFlightWhere(query, userId);
 
-    const tagsArray =
-      typeof parsedQuery.tags === 'string'
-        ? parsedQuery.tags.split(',').map(t => t.trim()).filter(Boolean)
-        : parsedQuery.tags;
-
-    const query = { ...parsedQuery, tags: tagsArray };
-
-    const where: any = { userId };
-
-    if (query.airline) {
-      where.airline = { contains: query.airline, mode: 'insensitive' };
-    }
-    if (query.flightNumber) {
-      where.flightNumber = { contains: query.flightNumber, mode: 'insensitive' };
-    }
-    if (query.departureAirport) {
-      where.OR = [
-        { depIata: { contains: query.departureAirport, mode: 'insensitive' } },
-        { depIcao: { contains: query.departureAirport, mode: 'insensitive' } },
-        { depName: { contains: query.departureAirport, mode: 'insensitive' } },
-      ];
-    }
-    if (query.arrivalAirport) {
-      const arrivalFilter = [
-        { arrIata: { contains: query.arrivalAirport, mode: 'insensitive' } },
-        { arrIcao: { contains: query.arrivalAirport, mode: 'insensitive' } },
-        { arrName: { contains: query.arrivalAirport, mode: 'insensitive' } },
-      ];
-      // If we already have an OR clause for departure, combine them with AND
-      if (where.OR) {
-        where.AND = [{ OR: where.OR }, { OR: arrivalFilter }];
-        delete where.OR;
-      } else {
-        where.OR = arrivalFilter;
-      }
-    }
-    if (query.status) {
-      where.status = query.status;
-    }
-    if (query.category) {
-      where.category = query.category;
-    }
-    if (query.tags && query.tags.length > 0) {
-      where.tags = { hasEvery: query.tags };
-    }
-    if (query.minPrice || query.maxPrice) {
-      where.price = {};
-      if (query.minPrice !== undefined) where.price.gte = query.minPrice;
-      if (query.maxPrice !== undefined) where.price.lte = query.maxPrice;
-    }
-    if (query.fromDate || query.toDate) {
-      where.departureTime = {};
-      if (query.fromDate) {
-        where.departureTime.gte = new Date(query.fromDate);
-      }
-      if (query.toDate) {
-        where.departureTime.lte = new Date(query.toDate);
-      }
+    if (noResults) {
+      return res.json({
+        flights: [],
+        total: 0,
+        limit: query.limit,
+        offset: query.offset,
+      });
     }
 
     const [flights, total] = await Promise.all([
@@ -208,65 +275,21 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
 router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
-    const parsedQuery = flightQuerySchema.parse(req.query);
-    const tagsArray =
-      typeof parsedQuery.tags === 'string'
-        ? parsedQuery.tags.split(',').map(t => t.trim()).filter(Boolean)
-        : parsedQuery.tags;
+    const normalizedQuery = normalizeQueryParams(req.query as Record<string, any>);
+    const parsedQuery = flightQuerySchema.parse(normalizedQuery);
+    const tagsArray = splitMultiValue(parsedQuery.tags as any);
+    const query = {
+      ...parsedQuery,
+      tags: tagsArray,
+      limit: Math.min(parsedQuery.limit ?? 100, 500),
+    };
+    const { where, noResults } = buildFlightWhere(query, userId);
 
-    const query = { ...parsedQuery, tags: tagsArray };
-
-    const where: any = { userId };
-
-    if (query.airline) {
-      where.airline = { contains: query.airline, mode: 'insensitive' };
-    }
-    if (query.flightNumber) {
-      where.flightNumber = { contains: query.flightNumber, mode: 'insensitive' };
-    }
-    if (query.departureAirport) {
-      where.OR = [
-        { depIata: { contains: query.departureAirport, mode: 'insensitive' } },
-        { depIcao: { contains: query.departureAirport, mode: 'insensitive' } },
-        { depName: { contains: query.departureAirport, mode: 'insensitive' } },
-      ];
-    }
-    if (query.arrivalAirport) {
-      const arrivalFilter = [
-        { arrIata: { contains: query.arrivalAirport, mode: 'insensitive' } },
-        { arrIcao: { contains: query.arrivalAirport, mode: 'insensitive' } },
-        { arrName: { contains: query.arrivalAirport, mode: 'insensitive' } },
-      ];
-      // If we already have an OR clause for departure, combine them with AND
-      if (where.OR) {
-        where.AND = [{ OR: where.OR }, { OR: arrivalFilter }];
-        delete where.OR;
-      } else {
-        where.OR = arrivalFilter;
-      }
-    }
-    if (query.status) {
-      where.status = query.status;
-    }
-    if (query.category) {
-      where.category = query.category;
-    }
-    if (query.tags && query.tags.length > 0) {
-      where.tags = { hasEvery: query.tags };
-    }
-    if (query.minPrice || query.maxPrice) {
-      where.price = {};
-      if (query.minPrice !== undefined) where.price.gte = query.minPrice;
-      if (query.maxPrice !== undefined) where.price.lte = query.maxPrice;
-    }
-    if (query.fromDate || query.toDate) {
-      where.departureTime = {};
-      if (query.fromDate) {
-        where.departureTime.gte = new Date(query.fromDate);
-      }
-      if (query.toDate) {
-        where.departureTime.lte = new Date(query.toDate);
-      }
+    if (noResults) {
+      return res.json({
+        type: 'FeatureCollection',
+        features: [],
+      });
     }
 
     const flights = await prisma.flight.findMany({
@@ -412,8 +435,11 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     if (data.status === 'flown' && existingFlight.status !== 'flown') {
       try {
         newAchievements = await checkAndUpdateAchievements(userId);
-      } catch (err) {
-        console.error('Failed to check achievements:', err);
+      } catch (err: any) {
+        // Import logger locally to avoid circular dependencies
+        import('../utils/logger').then(({ default: logger }) => {
+          logger.error({ type: 'achievement_check_failed', userId, error: err.message });
+        });
       }
     }
 

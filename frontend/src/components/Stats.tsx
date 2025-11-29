@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { statsApi, flightsApi } from '../lib/api';
 import type { Stats as StatsType, Route, FlightFilters } from '../types';
+import { calculateDistance } from '../lib/geo';
+import { API_LIMITS } from '../lib/constants';
 
 interface StatsProps {
   filters?: FlightFilters;
@@ -17,16 +19,28 @@ export default function Stats({ filters = {} }: StatsProps) {
 
   const loadStats = async () => {
     try {
+      const { minRouteCount, ...apiFilters } = filters as any;
+      const hasBackendFilters = Object.keys(apiFilters).length > 0;
       // If filters are applied, calculate stats from filtered flights
-      if (Object.keys(filters).length > 0) {
-        const { flights } = await flightsApi.getAll(filters);
-        const calculatedStats = calculateStats(flights);
+      if (hasBackendFilters) {
+        const limit = API_LIMITS.MAX_PAGE_SIZE;
+        let allFlights: any[] = [];
+        let offset = 0;
+
+        while (true) {
+          const { flights } = await flightsApi.getAll({ ...apiFilters, limit, offset });
+          allFlights = [...allFlights, ...flights];
+          if (flights.length < limit) break;
+          offset += limit;
+        }
+
+        const calculatedStats = calculateStats(allFlights);
         setStats(calculatedStats);
         setRoutes([]);
       } else {
         const [summaryData, routesData] = await Promise.all([
           statsApi.getSummary(),
-          statsApi.getTopRoutes(5),
+          statsApi.getTopRoutes(API_LIMITS.TOP_ROUTES),
         ]);
         setStats(summaryData);
         setRoutes(routesData.routes);
@@ -41,9 +55,8 @@ export default function Stats({ filters = {} }: StatsProps) {
   const calculateStats = (flights: any[]): StatsType => {
     const flownFlights = flights.filter(f => f.status === 'flown');
     const totalDistance = flownFlights.reduce((sum, f) => {
-      const dist = Math.sqrt(
-        Math.pow(f.arrLat - f.depLat, 2) + Math.pow(f.arrLon - f.depLon, 2)
-      ) * 111; // Rough km conversion
+      // Use accurate Haversine formula for distance calculation
+      const dist = calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon);
       return sum + dist;
     }, 0);
 

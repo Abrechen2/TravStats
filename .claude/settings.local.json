@@ -20,7 +20,8 @@
       "Bash(docker buildx version:*)",
       "Bash(docker --version:*)",
       "Bash(Start-Process \"C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe\")",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(npm test:*)"
     ],
     "deny": [],
     "ask": []

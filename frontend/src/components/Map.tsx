@@ -10,6 +10,7 @@ interface MapProps {
   flights: GeoJSONFeature[];
   selectedFlightId?: string;
   onFlightClick?: (flightId: string) => void;
+  minRouteCount?: number;
 }
 
 // Route representation for aggregation
@@ -132,7 +133,7 @@ const MapUpdater = memo(({ flights }: { flights: GeoJSONFeature[] }) => {
   return null;
 });
 
-function Map({ flights = [], selectedFlightId, onFlightClick }: MapProps) {
+function Map({ flights = [], selectedFlightId, onFlightClick, minRouteCount = 1 }: MapProps) {
   const themeStore = useThemeStore();
   const isDarkMode = themeStore?.isDarkMode ?? false;
 
@@ -189,17 +190,18 @@ function Map({ flights = [], selectedFlightId, onFlightClick }: MapProps) {
     });
 
     // Calculate thresholds based on all route counts
-    const routes = Object.values(routeMap);
-    const counts = routes.map(r => r.count);
+    const allRoutes = Object.values(routeMap);
+    const counts = allRoutes.map(r => r.count);
     const thresholds = calculateHeatmapThresholds(counts);
 
-    // Assign colors based on thresholds
+    // Filter routes by minimum count and assign colors based on thresholds
+    const routes = allRoutes.filter(route => route.count >= minRouteCount);
     routes.forEach(route => {
       route.color = getHeatmapColor(route.count, thresholds);
     });
 
     return { aggregatedRoutes: routes, heatmapThresholds: thresholds };
-  }, [flights]);
+  }, [flights, minRouteCount]);
 
   // Memoized click handler
   const handleRouteClick = useCallback((route: AggregatedRoute) => {

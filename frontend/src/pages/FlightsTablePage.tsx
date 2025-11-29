@@ -12,6 +12,7 @@ import Filters from '../components/Filters';
 import FlightEditModal from '../components/FlightEditModal';
 import { useThemeStore } from '../store/themeStore';
 import DarkModeToggle from '../components/DarkModeToggle';
+import { API_LIMITS, DATE_FORMATS } from '../lib/constants';
 
 export default function FlightsTablePage() {
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
@@ -19,7 +20,7 @@ export default function FlightsTablePage() {
   const [filters, setFilters] = useState<FlightFilters>({});
   const [loading, setLoading] = useState(true);
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
-  const [sortBy, setSortBy] = useState<'departureTime' | 'airline' | 'status'>('departureTime');
+  const [sortBy, setSortBy] = useState<'departureTime' | 'airline' | 'status' | 'duration'>('departureTime');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
@@ -29,12 +30,13 @@ export default function FlightsTablePage() {
   const loadFlights = async () => {
     try {
       setLoading(true);
+      const { minRouteCount, ...apiFilters } = filters as any;
       let allFlights: Flight[] = [];
       let offset = 0;
-      const limit = 100;
+      const limit = API_LIMITS.MAX_PAGE_SIZE;
 
       while (true) {
-        const data = await flightsApi.getAll({ ...filters, limit, offset });
+        const data = await flightsApi.getAll({ ...apiFilters, limit, offset });
         allFlights = [...allFlights, ...data.flights];
 
         if (data.flights.length < limit) {
@@ -59,6 +61,7 @@ export default function FlightsTablePage() {
       loadFlights();
     } catch (error) {
       console.error('Failed to delete flight:', error);
+      alert('Fehler beim Löschen des Fluges. Bitte versuchen Sie es erneut.');
     }
   };
 
@@ -69,9 +72,13 @@ export default function FlightsTablePage() {
       loadFlights();
     } catch (error) {
       console.error('Failed to update flight:', error);
+      alert('Fehler beim Aktualisieren des Fluges. Bitte versuchen Sie es erneut.');
       throw error;
     }
   };
+
+  const getDurationMinutes = (flight: Flight) =>
+    (new Date(flight.arrivalTime).getTime() - new Date(flight.departureTime).getTime()) / 60000;
 
   const sortedFlights = [...flights].sort((a, b) => {
     let comparison = 0;
@@ -85,6 +92,9 @@ export default function FlightsTablePage() {
         break;
       case 'status':
         comparison = a.status.localeCompare(b.status);
+        break;
+      case 'duration':
+        comparison = getDurationMinutes(a) - getDurationMinutes(b);
         break;
     }
 
@@ -101,13 +111,13 @@ export default function FlightsTablePage() {
   };
 
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('de-DE', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    return new Date(date).toLocaleDateString(DATE_FORMATS.LOCALE, DATE_FORMATS.DEFAULT);
+  };
+
+  const formatDurationHours = (departure: string, arrival: string) => {
+    const minutes = getDurationMinutes({ departureTime: departure, arrivalTime: arrival } as Flight);
+    const hours = minutes / 60;
+    return `${hours.toFixed(1)} h`;
   };
 
   return (
@@ -159,7 +169,7 @@ export default function FlightsTablePage() {
                     <th className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                       <button onClick={() => handleSort('airline')} className="flex items-center gap-1 hover:text-blue-500">
                         Airline
-                        {sortBy === 'airline' && (sortOrder === 'asc' ? '↑' : '↓')}
+                        {sortBy === 'airline' && (sortOrder === 'asc' ? '▼' : '▲')}
                       </button>
                     </th>
                     <th className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -171,7 +181,7 @@ export default function FlightsTablePage() {
                     <th className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                       <button onClick={() => handleSort('departureTime')} className="flex items-center gap-1 hover:text-blue-500">
                         Departure
-                        {sortBy === 'departureTime' && (sortOrder === 'asc' ? '↑' : '↓')}
+                        {sortBy === 'departureTime' && (sortOrder === 'asc' ? '▼' : '▲')}
                       </button>
                     </th>
                     <th className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -180,7 +190,13 @@ export default function FlightsTablePage() {
                     <th className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                       <button onClick={() => handleSort('status')} className="flex items-center gap-1 hover:text-blue-500">
                         Status
-                        {sortBy === 'status' && (sortOrder === 'asc' ? '↑' : '↓')}
+                        {sortBy === 'status' && (sortOrder === 'asc' ? '▼' : '▲')}
+                      </button>
+                    </th>
+                    <th className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      <button onClick={() => handleSort('duration')} className="flex items-center gap-1 hover:text-blue-500">
+                        Flight Time (h)
+                        {sortBy === 'duration' && (sortOrder === 'asc' ? '▼' : '▲')}
                       </button>
                     </th>
                     <th className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -232,6 +248,9 @@ export default function FlightsTablePage() {
                         }`}>
                           {flight.status}
                         </span>
+                      </td>
+                      <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {formatDurationHours(flight.departureTime, flight.arrivalTime)}
                       </td>
                       <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                         {flight.aircraft || '—'}
