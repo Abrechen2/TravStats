@@ -275,6 +275,25 @@ export const setupApi = {
 };
 
 // Admin API
+export interface EmailImportSettings {
+  enabled: boolean;
+  importSecret: string;
+  allowUserConfiguration: boolean;
+  imap: {
+    enabled: boolean;
+    host: string;
+    port: number;
+    secure: boolean;
+    user: string;
+    password: string;
+    mailbox: string;
+    allowedSenders: string[];
+    subjectKeywords: string[];
+    defaultUserId: string;
+    pollIntervalMinutes: number;
+  };
+}
+
 export const adminApi = {
   getSystemInfo: async () => {
     const { data } = await api.get<{
@@ -286,6 +305,7 @@ export const adminApi = {
       warningThreshold: boolean;
       registrationEnabled: boolean;
       version: string;
+      emailImport?: { enabled: boolean; imapEnabled: boolean };
     }>('/admin/system/info');
     return data;
   },
@@ -353,6 +373,21 @@ export const adminApi = {
   exportAllData: async () => {
     const { data } = await api.get('/admin/export/all-data');
     return data;
+  },
+
+  getEmailImportSettings: async (): Promise<EmailImportSettings> => {
+    const { data } = await api.get<{ emailImport: EmailImportSettings }>('/admin/system/email-settings');
+    return data.emailImport;
+  },
+
+  updateEmailImportSettings: async (
+    payload: Partial<EmailImportSettings>
+  ): Promise<EmailImportSettings> => {
+    const { data } = await api.put<{ emailImport: EmailImportSettings }>(
+      '/admin/system/email-settings',
+      payload
+    );
+    return data.emailImport;
   },
 };
 
