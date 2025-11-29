@@ -95,17 +95,23 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
       },
     });
 
-    // Check achievements after creating a flown flight (don't wait for it)
+    // Check achievements after creating a flown flight and return newly unlocked ones
+    let newAchievements: any[] = [];
     if (data.status === 'flown') {
-      checkAndUpdateAchievements(userId).catch(err => {
+      try {
+        newAchievements = await checkAndUpdateAchievements(userId);
+      } catch (err: any) {
         // Import logger locally to avoid circular dependencies
         import('../utils/logger').then(({ default: logger }) => {
           logger.error({ type: 'achievement_check_failed', userId, error: err.message });
         });
-      });
+      }
     }
 
-    res.status(201).json(flight);
+    res.status(201).json({
+      flight,
+      newAchievements: newAchievements.length > 0 ? newAchievements : undefined
+    });
   } catch (error) {
     next(error);
   }
@@ -131,6 +137,27 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
     }
     if (query.flightNumber) {
       where.flightNumber = { contains: query.flightNumber, mode: 'insensitive' };
+    }
+    if (query.departureAirport) {
+      where.OR = [
+        { depIata: { contains: query.departureAirport, mode: 'insensitive' } },
+        { depIcao: { contains: query.departureAirport, mode: 'insensitive' } },
+        { depName: { contains: query.departureAirport, mode: 'insensitive' } },
+      ];
+    }
+    if (query.arrivalAirport) {
+      const arrivalFilter = [
+        { arrIata: { contains: query.arrivalAirport, mode: 'insensitive' } },
+        { arrIcao: { contains: query.arrivalAirport, mode: 'insensitive' } },
+        { arrName: { contains: query.arrivalAirport, mode: 'insensitive' } },
+      ];
+      // If we already have an OR clause for departure, combine them with AND
+      if (where.OR) {
+        where.AND = [{ OR: where.OR }, { OR: arrivalFilter }];
+        delete where.OR;
+      } else {
+        where.OR = arrivalFilter;
+      }
     }
     if (query.status) {
       where.status = query.status;
@@ -196,6 +223,27 @@ router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) =
     }
     if (query.flightNumber) {
       where.flightNumber = { contains: query.flightNumber, mode: 'insensitive' };
+    }
+    if (query.departureAirport) {
+      where.OR = [
+        { depIata: { contains: query.departureAirport, mode: 'insensitive' } },
+        { depIcao: { contains: query.departureAirport, mode: 'insensitive' } },
+        { depName: { contains: query.departureAirport, mode: 'insensitive' } },
+      ];
+    }
+    if (query.arrivalAirport) {
+      const arrivalFilter = [
+        { arrIata: { contains: query.arrivalAirport, mode: 'insensitive' } },
+        { arrIcao: { contains: query.arrivalAirport, mode: 'insensitive' } },
+        { arrName: { contains: query.arrivalAirport, mode: 'insensitive' } },
+      ];
+      // If we already have an OR clause for departure, combine them with AND
+      if (where.OR) {
+        where.AND = [{ OR: where.OR }, { OR: arrivalFilter }];
+        delete where.OR;
+      } else {
+        where.OR = arrivalFilter;
+      }
     }
     if (query.status) {
       where.status = query.status;
@@ -359,14 +407,20 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
       data: updateData,
     });
 
-    // Check achievements if status changed to flown
+    // Check achievements if status changed to flown and return newly unlocked ones
+    let newAchievements: any[] = [];
     if (data.status === 'flown' && existingFlight.status !== 'flown') {
-      checkAndUpdateAchievements(userId).catch(err =>
-        console.error('Failed to check achievements:', err)
-      );
+      try {
+        newAchievements = await checkAndUpdateAchievements(userId);
+      } catch (err) {
+        console.error('Failed to check achievements:', err);
+      }
     }
 
-    res.json(flight);
+    res.json({
+      flight,
+      newAchievements: newAchievements.length > 0 ? newAchievements : undefined
+    });
   } catch (error) {
     next(error);
   }

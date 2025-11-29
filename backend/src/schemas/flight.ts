@@ -99,6 +99,8 @@ export const updateFlightSchema = baseFlightSchema.partial();
 export const flightQuerySchema = z.object({
   airline: z.string().optional(),
   flightNumber: z.string().optional(),
+  departureAirport: z.string().optional(),
+  arrivalAirport: z.string().optional(),
   fromDate: z.string().datetime().optional(),
   toDate: z.string().datetime().optional(),
   status: z.enum(['scheduled', 'flown', 'cancelled']).optional(),

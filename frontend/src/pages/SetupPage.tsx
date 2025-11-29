@@ -37,7 +37,7 @@ export default function SetupPage() {
     setLoading(true);
 
     try {
-      const response = await setupApi.initialize(
+      await setupApi.initialize(
         formData.username,
         formData.password,
         formData.instanceName

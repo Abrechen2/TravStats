@@ -4,6 +4,7 @@ import { BrowserMultiFormatReader } from '@zxing/browser';
 import { BarcodeFormat, DecodeHintType } from '@zxing/library';
 import { parseBCBP, BoardingPassData } from '../lib/bcbpParser';
 import { useThemeStore } from '../store/themeStore';
+import Tesseract from 'tesseract.js';
 
 interface BoardingPassScannerProps {
   onScanSuccess: (data: BoardingPassData) => void;
@@ -176,8 +177,53 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
           setScanning(false);
         }
       } else {
-        setScannedRawText(`DEBUG INFO:\n${result.debugInfo}\n\nNo barcode detected in any attempt.`);
-        setError('No barcode found. Enable debug mode to see detailed scan attempts. Tips: good lighting, focus the 2D barcode (PDF417/QR/Aztec).');
+        // Fallback to OCR if barcode detection failed
+        console.log('🔍 Barcode detection failed, trying OCR fallback...');
+        try {
+          const ocrResult = await Tesseract.recognize(canvas, 'eng', {
+            logger: (m) => console.log('OCR:', m),
+          });
+
+          const text = ocrResult.data.text;
+          console.log('OCR extracted text:', text);
+
+          if (text && text.length > 20) {
+            // Try to parse as BCBP first
+            const bcbpData = parseBCBP(text);
+            if (bcbpData) {
+              console.log('✅ OCR successfully extracted BCBP data');
+              setScanning(false);
+              onScanSuccess(bcbpData);
+              return;
+            }
+
+            // If not BCBP, try to extract flight info from text
+            const flightInfoMatch = text.match(/([A-Z]{2})\s*(\d{1,4})/);
+            const airportMatch = text.match(/([A-Z]{3})\s*(?:TO|to|-|→)\s*([A-Z]{3})/);
+
+            if (flightInfoMatch || airportMatch) {
+              console.log('✅ OCR extracted flight information');
+              const partialData: Partial<BoardingPassData> = {
+                formatCode: 'FALLBACK',
+                operatingCarrierDesignator: flightInfoMatch?.[1],
+                flightNumber: flightInfoMatch?.[2],
+                departureAirport: airportMatch?.[1],
+                arrivalAirport: airportMatch?.[2],
+              };
+
+              setScanning(false);
+              onScanSuccess(partialData as BoardingPassData);
+              return;
+            }
+          }
+
+          setScannedRawText(`DEBUG INFO:\n${result.debugInfo}\n\nOCR TEXT:\n${text}\n\nNo barcode detected and OCR couldn't extract flight info.`);
+          setError('No barcode found and OCR couldn\'t extract flight information. Please try a clearer image or enter manually.');
+        } catch (ocrError) {
+          console.error('OCR failed:', ocrError);
+          setScannedRawText(`DEBUG INFO:\n${result.debugInfo}\n\nNo barcode detected in any attempt.`);
+          setError('No barcode found. Enable debug mode to see detailed scan attempts. Tips: good lighting, focus the 2D barcode (PDF417/QR/Aztec).');
+        }
         setScanning(false);
       }
     };

@@ -212,23 +212,45 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
       setTerminal(flight.departure.terminal || '');
       setGate(flight.departure.gate || '');
 
-      const applyDateTime = (value?: string, setters?: { setDate: (v: string) => void; setTime: (v: string) => void }) => {
+      const applyDateTime = (value?: string, setters?: { setDate: (v: string) => void; setTime: (v: string) => void }, useSearchDate?: boolean) => {
         if (!value || !setters) return;
         const match = value.match(/^(\d{4}-\d{2}-\d{2})[T ]?(\d{2}:\d{2})?/);
         if (match) {
-          if (match[1]) setters.setDate(match[1]);
+          // Use searchDate for departure date if provided, otherwise use API date
+          if (match[1] && !useSearchDate) setters.setDate(match[1]);
           if (match[2]) setters.setTime(match[2]);
           return;
         }
         const parsed = new Date(value);
         if (!Number.isNaN(parsed.getTime())) {
-          setters.setDate(parsed.toISOString().split('T')[0]);
+          if (!useSearchDate) setters.setDate(parsed.toISOString().split('T')[0]);
           setters.setTime(parsed.toTimeString().slice(0, 5));
         }
       };
 
-      applyDateTime(flight.departure.scheduledTime, { setDate: setDepartureDate, setTime: setDepartureTime });
+      // Use searchDate for departure date (user's input), but use API time
+      if (searchDate) {
+        setDepartureDate(searchDate);
+        applyDateTime(flight.departure.scheduledTime, { setDate: () => {}, setTime: setDepartureTime }, true);
+      } else {
+        applyDateTime(flight.departure.scheduledTime, { setDate: setDepartureDate, setTime: setDepartureTime });
+      }
+
+      // For arrival, calculate based on departure date and flight duration
       applyDateTime(flight.arrival.scheduledTime, { setDate: setArrivalDate, setTime: setArrivalTime });
+
+      // If searchDate was used, recalculate arrival date based on duration
+      if (searchDate && flight.departure.scheduledTime && flight.arrival.scheduledTime) {
+        const depTime = new Date(flight.departure.scheduledTime);
+        const arrTime = new Date(flight.arrival.scheduledTime);
+        const duration = arrTime.getTime() - depTime.getTime();
+
+        const newDepTime = new Date(`${searchDate}T${departureTime || '00:00'}`);
+        const newArrTime = new Date(newDepTime.getTime() + duration);
+
+        setArrivalDate(newArrTime.toISOString().split('T')[0]);
+        setArrivalTime(newArrTime.toTimeString().slice(0, 5));
+      }
 
       setStep('complete');
     } catch (err) {

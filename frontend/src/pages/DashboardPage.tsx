@@ -4,19 +4,21 @@ import { useAuthStore } from '../store/authStore';
 import { flightsApi, importsApi, analyticsApi } from '../lib/api';
 import MapContainer3D from '../components/MapContainer3D';
 import SimplifiedFlightFormV2 from '../components/SimplifiedFlightFormV2';
-import FlightList from '../components/FlightList';
 import FlightEditModal from '../components/FlightEditModal';
 import Stats from '../components/Stats';
 import Filters from '../components/Filters';
 import ErrorBoundary from '../components/ErrorBoundary';
 import DarkModeToggle from '../components/DarkModeToggle';
+import AchievementPopup from '../components/AchievementPopup';
 import type { Flight, FlightInput, FlightFilters, GeoJSONFeature } from '../types';
 import { useSettingsStore } from '../store/settingsStore';
 
 export default function DashboardPage() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
-  const [flights, setFlights] = useState<Flight[]>([]);
+  const [flights, setFlights] = useState<Flight[]>([]); // Filtered flights for map
+  const [recentFlights, setRecentFlights] = useState<Flight[]>([]); // Unfiltered recent flights for sidebar
+  const [totalFlightsCount, setTotalFlightsCount] = useState(0); // Total number of all flights
   const [geoFlights, setGeoFlights] = useState<GeoJSONFeature[]>([]);
   const [selectedFlightId, setSelectedFlightId] = useState<string>();
   const [showFlightForm, setShowFlightForm] = useState(false);
@@ -37,6 +39,22 @@ export default function DashboardPage() {
       : { flightAdded: false, usedFilter: false, exported: false, dismissed: false };
   });
   const settings = useSettingsStore();
+  const [newAchievements, setNewAchievements] = useState<any[]>([]);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+
+  // Load recent flights and total count (unfiltered) once on mount
+  useEffect(() => {
+    const loadRecentFlights = async () => {
+      try {
+        const data = await flightsApi.getAll({ limit: 10, offset: 0 });
+        setRecentFlights(data.flights);
+        setTotalFlightsCount(data.total); // Store total count
+      } catch (error) {
+        console.error('Failed to load recent flights:', error);
+      }
+    };
+    loadRecentFlights();
+  }, []);
 
   useEffect(() => {
     loadFlights();
@@ -112,26 +130,27 @@ export default function DashboardPage() {
   };
 
   const handleAddFlight = async (flight: FlightInput) => {
-    await flightsApi.create(flight);
+    const result: any = await flightsApi.create(flight);
     setShowFlightForm(false);
     loadFlights();
+
+    // Reload recent flights and total count for sidebar
+    const recentData = await flightsApi.getAll({ limit: 10, offset: 0 });
+    setRecentFlights(recentData.flights);
+    setTotalFlightsCount(recentData.total);
+
     setOnboarding((prev: any) => ({ ...prev, flightAdded: true }));
+
+    // Show achievement popup if new achievements were unlocked
+    if (result.newAchievements && result.newAchievements.length > 0) {
+      setNewAchievements(result.newAchievements);
+    }
+
     if (settings.privacy.analyticsOptIn) {
       analyticsApi.track('flight_created', { method: 'simplified_form' });
     }
   };
 
-  const handleDeleteFlight = async (id: string) => {
-    try {
-      await flightsApi.delete(id);
-      loadFlights();
-      if (selectedFlightId === id) {
-        setSelectedFlightId(undefined);
-      }
-    } catch (error) {
-      console.error('Failed to delete flight:', error);
-    }
-  };
 
   const handleEditFlight = (flight: Flight) => {
     setEditingFlight(flight);
@@ -139,9 +158,20 @@ export default function DashboardPage() {
 
   const handleUpdateFlight = async (id: string, updates: Partial<Flight>) => {
     try {
-      await flightsApi.update(id, updates);
+      const result: any = await flightsApi.update(id, updates);
       setEditingFlight(null);
       loadFlights();
+
+      // Reload recent flights and total count for sidebar
+      const recentData = await flightsApi.getAll({ limit: 10, offset: 0 });
+      setRecentFlights(recentData.flights);
+      setTotalFlightsCount(recentData.total);
+
+      // Show achievement popup if new achievements were unlocked
+      if (result.newAchievements && result.newAchievements.length > 0) {
+        setNewAchievements(result.newAchievements);
+      }
+
       if (settings.privacy.analyticsOptIn) {
         analyticsApi.track('flight_updated', { flightId: id });
       }
@@ -587,22 +617,81 @@ export default function DashboardPage() {
             </div>
           )}
 
-          <div className="p-4 border-b dark:border-gray-700">
-            <Filters onFilterChange={handleFilterChange} onExport={handleExport} onImport={handleImport} />
-          </div>
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {/* Quick Stats */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="card">
+                <p className="text-xs text-gray-600 dark:text-gray-400">Total Flights</p>
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{totalFlightsCount}</p>
+              </div>
+              <div className="card">
+                <p className="text-xs text-gray-600 dark:text-gray-400">Filtered</p>
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                  {flights.length}
+                </p>
+              </div>
+            </div>
 
-          <div className="flex-1 overflow-y-auto p-4">
-            {loading ? (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">Loading flights...</div>
-            ) : (
-              <FlightList
-                flights={flights}
-                selectedFlightId={selectedFlightId}
-                onFlightClick={setSelectedFlightId}
-                onEditFlight={handleEditFlight}
-                onDeleteFlight={handleDeleteFlight}
-              />
-            )}
+            {/* Quick Actions */}
+            <div className="space-y-2">
+              <Link
+                to="/flights"
+                className="btn-secondary w-full text-sm flex items-center justify-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                View All Flights
+              </Link>
+            </div>
+
+            {/* Recent Flights */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Recent Flights</h3>
+              {loading ? (
+                <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">Loading...</div>
+              ) : recentFlights.slice(0, 5).length === 0 ? (
+                <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
+                  No flights yet
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {recentFlights.slice(0, 5).map((flight) => (
+                    <div
+                      key={flight.id}
+                      onClick={() => setSelectedFlightId(flight.id)}
+                      className={`card cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all ${
+                        selectedFlightId === flight.id ? 'ring-2 ring-blue-500' : ''
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                            {flight.airline || 'Unknown'} {flight.flightNumber}
+                          </div>
+                          <div className="text-xs text-gray-600 dark:text-gray-400">
+                            {flight.depIata || flight.depIcao} → {flight.arrIata || flight.arrIcao}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditFlight(flight);
+                            }}
+                            className="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900 rounded"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -696,22 +785,99 @@ export default function DashboardPage() {
                 </svg>
               </button>
             </div>
-            <div>
+            <div className="flex items-center gap-3 flex-1">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Flugkarte</h2>
+              <div className="relative">
+                <Filters onFilterChange={handleFilterChange} />
+              </div>
             </div>
-            <button
-              onClick={() => setIs3DView((prev) => !prev)}
-              className="
-                inline-flex items-center gap-2 px-4 py-2
-                bg-white dark:bg-gray-800
-                text-gray-800 dark:text-gray-100
-                border border-gray-300 dark:border-gray-600
-                rounded-lg shadow-sm
-                hover:bg-gray-50 dark:hover:bg-gray-700
-                transition-colors font-semibold text-sm
-              "
-              title={is3DView ? 'Zur 2D-Karte wechseln' : 'Zum 3D-Globus wechseln'}
-            >
+
+            <div className="flex items-center gap-2">
+              {/* Export Menu */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowExportMenu(!showExportMenu)}
+                  className="
+                    inline-flex items-center gap-2 px-4 py-2
+                    bg-white dark:bg-gray-800
+                    text-gray-800 dark:text-gray-100
+                    border border-gray-300 dark:border-gray-600
+                    rounded-lg shadow-sm
+                    hover:bg-gray-50 dark:hover:bg-gray-700
+                    transition-colors font-semibold text-sm
+                  "
+                  title="Daten exportieren"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  <span className="hidden sm:inline">Export</span>
+                </button>
+                {showExportMenu && (
+                  <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-gray-800 rounded-lg shadow-xl z-50 border border-gray-200 dark:border-gray-700">
+                    <button
+                      onClick={() => {
+                        handleExport('csv');
+                        setShowExportMenu(false);
+                      }}
+                      className="block w-full text-left px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg text-gray-900 dark:text-white text-sm"
+                    >
+                      📊 Export als CSV
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleExport('geojson');
+                        setShowExportMenu(false);
+                      }}
+                      className="block w-full text-left px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                    >
+                      🗺️ Export als GeoJSON
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleExport('pdf');
+                        setShowExportMenu(false);
+                      }}
+                      className="block w-full text-left px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                    >
+                      📄 Export als PDF (Beta)
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleExport('kml');
+                        setShowExportMenu(false);
+                      }}
+                      className="block w-full text-left px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                    >
+                      🌐 Export als KML
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleImport();
+                        setShowExportMenu(false);
+                      }}
+                      className="block w-full text-left px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 border-t border-gray-200 dark:border-gray-700 rounded-b-lg text-gray-900 dark:text-white text-sm"
+                    >
+                      📥 Import CSV/JSON (Beta)
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* 2D/3D Toggle */}
+              <button
+                onClick={() => setIs3DView((prev) => !prev)}
+                className="
+                  inline-flex items-center gap-2 px-4 py-2
+                  bg-white dark:bg-gray-800
+                  text-gray-800 dark:text-gray-100
+                  border border-gray-300 dark:border-gray-600
+                  rounded-lg shadow-sm
+                  hover:bg-gray-50 dark:hover:bg-gray-700
+                  transition-colors font-semibold text-sm
+                "
+                title={is3DView ? 'Zur 2D-Karte wechseln' : 'Zum 3D-Globus wechseln'}
+              >
               {is3DView ? (
                 <>
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -722,7 +888,7 @@ export default function DashboardPage() {
                       d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
                     />
                   </svg>
-                  <span>2D-Karte anzeigen</span>
+                  <span className="hidden sm:inline">2D-Karte</span>
                 </>
               ) : (
                 <>
@@ -734,10 +900,11 @@ export default function DashboardPage() {
                       d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
-                  <span>3D-Globus anzeigen</span>
+                  <span className="hidden sm:inline">3D-Globus</span>
                 </>
               )}
             </button>
+            </div>
           </div>
 
           <div className="flex-1 min-h-[420px]" style={{ touchAction: 'none', overflow: 'hidden' }}>
@@ -792,7 +959,7 @@ export default function DashboardPage() {
           </div>
           <div className="p-4 pt-0 xl:pt-4">
             <ErrorBoundary>
-              <Stats />
+              <Stats filters={filters} />
             </ErrorBoundary>
           </div>
         </div>
@@ -813,6 +980,14 @@ export default function DashboardPage() {
           isOpen={!!editingFlight}
           onClose={() => setEditingFlight(null)}
           onSave={handleUpdateFlight}
+        />
+      )}
+
+      {/* Achievement Popup */}
+      {newAchievements.length > 0 && (
+        <AchievementPopup
+          achievements={newAchievements}
+          onClose={() => setNewAchievements([])}
         />
       )}
     </div>
