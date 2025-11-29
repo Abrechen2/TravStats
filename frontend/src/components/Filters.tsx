@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useThemeStore } from '../store/themeStore';
 import { flightsApi } from '../lib/api';
-import type { FlightFilters } from '../types';
+import type { Flight, FlightFilters } from '../types';
+import { API_LIMITS } from '../lib/constants';
 
 interface FiltersProps {
   onFilterChange: (filters: FlightFilters & { minRouteCount?: number }) => void;
@@ -49,13 +50,24 @@ export default function Filters({ onFilterChange }: FiltersProps) {
   useEffect(() => {
     const loadOptions = async () => {
       try {
-        const { flights } = await flightsApi.getAll({});
+        let allFlights: Flight[] = [];
+        let offset = 0;
+        const limit = API_LIMITS.MAX_PAGE_SIZE; // match backend max to avoid validation errors and fewer requests
+
+        // Fetch all flights to build complete filter options
+        while (true) {
+          const { flights } = await flightsApi.getAll({ limit, offset });
+          allFlights = [...allFlights, ...flights];
+
+          if (flights.length < limit) break;
+          offset += limit;
+        }
 
         // Extract years
         const years = new Set<number>();
         const airlineMap = new Map<string, number>();
 
-        flights.forEach(flight => {
+        allFlights.forEach(flight => {
           const year = new Date(flight.departureTime).getFullYear();
           years.add(year);
 
@@ -103,7 +115,7 @@ export default function Filters({ onFilterChange }: FiltersProps) {
     // Airline filter
     if (selectedAirlines.length > 0 && selectedAirlines.length < availableAirlines.length) {
       // Only apply if not all airlines selected
-      filters.airline = selectedAirlines.join('|'); // Backend needs to handle this
+      filters.airline = [...selectedAirlines];
     }
 
     // Status filter
@@ -112,17 +124,19 @@ export default function Filters({ onFilterChange }: FiltersProps) {
     if (showScheduled) statuses.push('scheduled');
     if (showCancelled) statuses.push('cancelled');
 
-    if (statuses.length === 1) {
-      filters.status = statuses[0];
+    if (statuses.length > 0 && statuses.length < 3) {
+      filters.status = statuses;
     } else if (statuses.length === 0) {
-      filters.status = 'flown'; // Show nothing if all unchecked
+      // Explicitly send empty array so backend can return zero results
+      filters.status = [];
     }
 
     // Route count (frontend only, not sent to backend)
     filters.minRouteCount = minRouteCount;
 
     onFilterChange(filters);
-  }, [yearFilter, monthFilter, minRouteCount, selectedAirlines, showFlown, showScheduled, showCancelled, availableAirlines.length, onFilterChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [yearFilter, monthFilter, minRouteCount, selectedAirlines, showFlown, showScheduled, showCancelled, availableAirlines.length]);
 
   // Click outside to close
   useEffect(() => {
@@ -297,7 +311,7 @@ export default function Filters({ onFilterChange }: FiltersProps) {
                     ? 'border-gray-600 bg-gray-700'
                     : 'border-gray-300 bg-gray-50'
                 }`}>
-                  {availableAirlines.slice(0, 15).map(airline => (
+                  {availableAirlines.slice(0, API_LIMITS.MAX_FILTER_AIRLINES).map(airline => (
                     <label
                       key={airline.name}
                       className={`flex items-center gap-2 text-sm mb-1 cursor-pointer p-1 rounded ${
@@ -318,9 +332,9 @@ export default function Filters({ onFilterChange }: FiltersProps) {
                       </span>
                     </label>
                   ))}
-                  {availableAirlines.length > 15 && (
+                  {availableAirlines.length > API_LIMITS.MAX_FILTER_AIRLINES && (
                     <div className={`text-xs mt-2 italic ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                      +{availableAirlines.length - 15} weitere...
+                      +{availableAirlines.length - API_LIMITS.MAX_FILTER_AIRLINES} weitere...
                     </div>
                   )}
                 </div>

@@ -24,7 +24,9 @@ describe('Auth API', () => {
         })
         .expect(201);
 
-      expect(response.body).toHaveProperty('token');
+      // Token should be in HttpOnly cookie, not in body
+      expect(response.headers['set-cookie']).toBeDefined();
+      expect(response.headers['set-cookie'][0]).toContain('auth_token');
       expect(response.body).toHaveProperty('user');
       expect(response.body.user.username).toBe('testuser1');
     });
@@ -67,7 +69,9 @@ describe('Auth API', () => {
         })
         .expect(200);
 
-      expect(response.body).toHaveProperty('token');
+      // Token should be in HttpOnly cookie, not in body
+      expect(response.headers['set-cookie']).toBeDefined();
+      expect(response.headers['set-cookie'][0]).toContain('auth_token');
       expect(response.body).toHaveProperty('user');
     });
 

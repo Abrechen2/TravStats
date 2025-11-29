@@ -7,6 +7,7 @@ interface GlobeViewProps {
   flights: GeoJSONFeature[];
   selectedFlightId?: string;
   onFlightClick?: (flightId: string) => void;
+  minRouteCount?: number;
 }
 
 // Helper function to create bidirectional route key (FRA-JFK === JFK-FRA)
@@ -112,13 +113,12 @@ const getStaticArcAltitude = (
   return getBaseArcAltitude(distance);
 };
 
-export default function GlobeView({ flights = [], selectedFlightId: _selectedFlightId, onFlightClick }: GlobeViewProps) {
+export default function GlobeView({ flights = [], selectedFlightId: _selectedFlightId, onFlightClick, minRouteCount = 1 }: GlobeViewProps) {
   const globeRef = useRef<any>();
   const themeStore = useThemeStore();
   const isDarkMode = themeStore?.isDarkMode ?? false;
   const [autoRotate, setAutoRotate] = useState(false);
   const [cameraAltitude, setCameraAltitude] = useState(2.2);
-  const minRouteCount = 1; // Minimum route count filter (show all routes)
 
   // Center globe initially
   useEffect(() => {

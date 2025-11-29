@@ -12,6 +12,8 @@ import DarkModeToggle from '../components/DarkModeToggle';
 import AchievementPopup from '../components/AchievementPopup';
 import type { Flight, FlightInput, FlightFilters, GeoJSONFeature } from '../types';
 import { useSettingsStore } from '../store/settingsStore';
+import { API_LIMITS, UI_CONFIG, STORAGE_KEYS } from '../lib/constants';
+import { escapeCsv, toCsv, escapeHtml, escapeXml, downloadBlob } from '../lib/export';
 
 export default function DashboardPage() {
   const { user, logout } = useAuthStore();
@@ -24,7 +26,8 @@ export default function DashboardPage() {
   const [showFlightForm, setShowFlightForm] = useState(false);
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
   const [filters, setFilters] = useState<FlightFilters>({});
-  const [loading, setLoading] = useState(true);
+  const [loadingMap, setLoadingMap] = useState(true);
+  const [loadingRecent, setLoadingRecent] = useState(true);
   const [is3DView, setIs3DView] = useState(true);
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const [navOpen, setNavOpen] = useState(false);
@@ -33,7 +36,7 @@ export default function DashboardPage() {
   const [imports, setImports] = useState<any[]>([]);
   const [importsOpen, setImportsOpen] = useState(false);
   const [onboarding, setOnboarding] = useState(() => {
-    const saved = localStorage.getItem('onboarding-checklist');
+    const saved = localStorage.getItem(STORAGE_KEYS.ONBOARDING_CHECKLIST);
     return saved
       ? JSON.parse(saved)
       : { flightAdded: false, usedFilter: false, exported: false, dismissed: false };
@@ -46,11 +49,14 @@ export default function DashboardPage() {
   useEffect(() => {
     const loadRecentFlights = async () => {
       try {
-        const data = await flightsApi.getAll({ limit: 10, offset: 0 });
+        setLoadingRecent(true);
+        const data = await flightsApi.getAll({ limit: API_LIMITS.RECENT_FLIGHTS, offset: 0 });
         setRecentFlights(data.flights);
         setTotalFlightsCount(data.total); // Store total count
       } catch (error) {
         console.error('Failed to load recent flights:', error);
+      } finally {
+        setLoadingRecent(false);
       }
     };
     loadRecentFlights();
@@ -61,7 +67,7 @@ export default function DashboardPage() {
   }, [filters]);
 
   useEffect(() => {
-    localStorage.setItem('onboarding-checklist', JSON.stringify(onboarding));
+    localStorage.setItem(STORAGE_KEYS.ONBOARDING_CHECKLIST, JSON.stringify(onboarding));
   }, [onboarding]);
 
   const fetchImports = async () => {
@@ -74,8 +80,8 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    // Only open sidebars by default on XL screens (>=1280px)
-    if (typeof window !== 'undefined' && window.innerWidth >= 1280) {
+    // Only open sidebars by default on XL screens
+    if (typeof window !== 'undefined' && window.innerWidth >= UI_CONFIG.XL_BREAKPOINT) {
       setLeftOpen(true);
       setRightOpen(true);
     }
@@ -85,15 +91,16 @@ export default function DashboardPage() {
 
   const loadFlights = async () => {
     try {
-      setLoading(true);
+      setLoadingMap(true);
+      const { minRouteCount, ...apiFilters } = filters as any;
 
-      // Load all flights by pagination (max 100 per request)
+      // Load all flights by pagination
       let allFlights: Flight[] = [];
       let offset = 0;
-      const limit = 100;
+      const limit = API_LIMITS.MAX_PAGE_SIZE;
 
       while (true) {
-        const data = await flightsApi.getAll({ ...filters, limit, offset });
+        const data = await flightsApi.getAll({ ...apiFilters, limit, offset });
         allFlights = [...allFlights, ...data.flights];
 
         // If we received fewer flights than the limit, we've reached the end
@@ -109,7 +116,7 @@ export default function DashboardPage() {
       offset = 0;
 
       while (true) {
-        const geoData = await flightsApi.getGeoJSON({ ...filters, limit, offset });
+        const geoData = await flightsApi.getGeoJSON({ ...apiFilters, limit, offset });
         allGeoFeatures = [...allGeoFeatures, ...geoData.features];
 
         // If we received fewer features than the limit, we've reached the end
@@ -125,29 +132,35 @@ export default function DashboardPage() {
     } catch (error) {
       console.error('Failed to load flights:', error);
     } finally {
-      setLoading(false);
+      setLoadingMap(false);
     }
   };
 
   const handleAddFlight = async (flight: FlightInput) => {
-    const result: any = await flightsApi.create(flight);
-    setShowFlightForm(false);
-    loadFlights();
+    try {
+      const result: any = await flightsApi.create(flight);
+      setShowFlightForm(false);
+      loadFlights();
 
-    // Reload recent flights and total count for sidebar
-    const recentData = await flightsApi.getAll({ limit: 10, offset: 0 });
-    setRecentFlights(recentData.flights);
-    setTotalFlightsCount(recentData.total);
+      // Reload recent flights and total count for sidebar
+      const recentData = await flightsApi.getAll({ limit: API_LIMITS.RECENT_FLIGHTS, offset: 0 });
+      setRecentFlights(recentData.flights);
+      setTotalFlightsCount(recentData.total);
 
-    setOnboarding((prev: any) => ({ ...prev, flightAdded: true }));
+      setOnboarding((prev: any) => ({ ...prev, flightAdded: true }));
 
-    // Show achievement popup if new achievements were unlocked
-    if (result.newAchievements && result.newAchievements.length > 0) {
-      setNewAchievements(result.newAchievements);
-    }
+      // Show achievement popup if new achievements were unlocked
+      if (result.newAchievements && result.newAchievements.length > 0) {
+        setNewAchievements(result.newAchievements);
+      }
 
-    if (settings.privacy.analyticsOptIn) {
-      analyticsApi.track('flight_created', { method: 'simplified_form' });
+      if (settings.privacy.analyticsOptIn) {
+        analyticsApi.track('flight_created', { method: 'simplified_form' });
+      }
+    } catch (error) {
+      console.error('Failed to add flight:', error);
+      alert('Fehler beim Hinzufügen des Fluges. Bitte versuchen Sie es erneut.');
+      throw error;
     }
   };
 
@@ -163,7 +176,7 @@ export default function DashboardPage() {
       loadFlights();
 
       // Reload recent flights and total count for sidebar
-      const recentData = await flightsApi.getAll({ limit: 10, offset: 0 });
+      const recentData = await flightsApi.getAll({ limit: API_LIMITS.RECENT_FLIGHTS, offset: 0 });
       setRecentFlights(recentData.flights);
       setTotalFlightsCount(recentData.total);
 
@@ -177,6 +190,7 @@ export default function DashboardPage() {
       }
     } catch (error) {
       console.error('Failed to update flight:', error);
+      alert('Fehler beim Aktualisieren des Fluges. Bitte versuchen Sie es erneut.');
       throw error;
     }
   };
@@ -196,7 +210,8 @@ export default function DashboardPage() {
         analyticsApi.track('export', { format });
       }
       if (format === 'geojson') {
-        const geoData = await flightsApi.getGeoJSON(filters);
+        const { minRouteCount, ...apiFilters } = filters as any;
+        const geoData = await flightsApi.getGeoJSON(apiFilters);
         const blob = new Blob([JSON.stringify(geoData, null, 2)], {
           type: 'application/json',
         });
@@ -208,8 +223,11 @@ export default function DashboardPage() {
         URL.revokeObjectURL(url);
       } else {
         // CSV/PDF/KML export
-        const data = await flightsApi.getAll(filters);
-        const rows = [
+        const { minRouteCount, ...apiFilters } = filters as any;
+        const data = await flightsApi.getAll(apiFilters);
+
+        // Build rows with proper structure (not pre-joined)
+        const rowsData = [
           [
             'Airline',
             'Flight Number',
@@ -225,57 +243,74 @@ export default function DashboardPage() {
             'Currency',
             'Taxes',
             'Fees',
-          ].join(','),
-          ...data.flights.map((f) =>
-            [
-              f.airline,
-              f.flightNumber,
-              f.depIata || f.depIcao || '',
-              f.arrIata || f.arrIcao || '',
-              f.departureTime,
-              f.arrivalTime,
-              f.status,
-              f.aircraft || '',
-              f.category || '',
-              f.tags?.join('|') || '',
-              f.price ?? '',
-              f.currency || '',
-              f.taxes ?? '',
-              f.fees ?? '',
-            ].join(',')
-          ),
+          ],
+          ...data.flights.map((f) => [
+            f.airline,
+            f.flightNumber,
+            f.depIata || f.depIcao || '',
+            f.arrIata || f.arrIcao || '',
+            f.departureTime,
+            f.arrivalTime,
+            f.status,
+            f.aircraft || '',
+            f.category || '',
+            f.tags?.join('|') || '',
+            f.price ?? '',
+            f.currency || '',
+            f.taxes ?? '',
+            f.fees ?? '',
+          ]),
         ];
 
         if (format === 'csv') {
-          const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `flights-${new Date().toISOString()}.csv`;
-          a.click();
-          URL.revokeObjectURL(url);
+          // Use proper CSV escaping
+          const csvContent = toCsv(rowsData);
+          const blob = new Blob([csvContent], { type: 'text/csv' });
+          downloadBlob(blob, `flights-${new Date().toISOString()}.csv`);
         } else if (format === 'pdf') {
-          const html = `
-            <html><body><h1>TravStats Flight Report</h1>
-            <p>Export: ${new Date().toLocaleString()}</p>
-            <table border="1" cellspacing="0" cellpadding="4">
-            ${rows.map(r => `<tr>${r.split(',').map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}
-            </table></body></html>`;
-          const blob = new Blob([html], { type: 'application/pdf' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `flights-${new Date().toISOString()}.pdf`;
-          a.click();
-          URL.revokeObjectURL(url);
+          // Note: This creates an HTML file, not a PDF. For real PDFs, use a library like jspdf or pdfmake
+          const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>TravStats Flight Report</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h1 { color: #333; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #f2f2f2; font-weight: bold; }
+    tr:nth-child(even) { background-color: #f9f9f9; }
+  </style>
+</head>
+<body>
+  <h1>TravStats Flight Report</h1>
+  <p>Exported: ${escapeHtml(new Date().toLocaleString())}</p>
+  <p>Total Flights: ${data.flights.length}</p>
+  <table>
+    <thead>
+      <tr>${rowsData[0].map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr>
+    </thead>
+    <tbody>
+      ${rowsData.slice(1).map(row =>
+        `<tr>${row.map(cell => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`
+      ).join('')}
+    </tbody>
+  </table>
+</body>
+</html>`;
+          const blob = new Blob([html], { type: 'text/html' });
+          downloadBlob(blob, `flights-${new Date().toISOString()}.html`);
         } else if (format === 'kml') {
           const placemarks = data.flights
             .map((f) => {
               if (!f.depLat || !f.depLon || !f.arrLat || !f.arrLon) return '';
+              const name = escapeXml(`${f.airline || ''} ${f.flightNumber || ''}`.trim());
+              const desc = escapeXml(`${f.depIata || f.depIcao || ''} -> ${f.arrIata || f.arrIcao || ''}`);
               return `
                 <Placemark>
-                  <name>${f.airline || ''} ${f.flightNumber || ''}</name>
-                  <description>${f.depIata || f.depIcao} -> ${f.arrIata || f.arrIcao}</description>
+                  <name>${name}</name>
+                  <description>${desc}</description>
                   <LineString>
                     <coordinates>
                       ${f.depLon},${f.depLat},0
@@ -294,12 +329,7 @@ export default function DashboardPage() {
               </Document>
             </kml>`;
           const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `flights-${new Date().toISOString()}.kml`;
-          a.click();
-          URL.revokeObjectURL(url);
+          downloadBlob(blob, `flights-${new Date().toISOString()}.kml`);
         }
       }
     } catch (error) {
@@ -648,7 +678,7 @@ export default function DashboardPage() {
             {/* Recent Flights */}
             <div className="space-y-2">
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Recent Flights</h3>
-              {loading ? (
+              {loadingRecent ? (
                 <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">Loading...</div>
               ) : recentFlights.slice(0, 5).length === 0 ? (
                 <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
@@ -923,6 +953,7 @@ export default function DashboardPage() {
                 selectedFlightId={selectedFlightId}
                 onFlightClick={setSelectedFlightId}
                 is3D={is3DView}
+                minRouteCount={(filters as any).minRouteCount ?? 1}
               />
             </ErrorBoundary>
           </div>

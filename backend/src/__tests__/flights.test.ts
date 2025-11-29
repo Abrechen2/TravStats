@@ -3,11 +3,11 @@ import app from '../index';
 import { prisma } from '../db';
 
 describe('Flights API', () => {
-  let authToken: string;
+  let authCookie: string;
   let userId: string;
 
   beforeAll(async () => {
-    // Create test user
+    // Create test user and get auth cookie
     const response = await request(app)
       .post('/api/v1/auth/register')
       .send({
@@ -15,7 +15,8 @@ describe('Flights API', () => {
         password: 'password123',
       });
 
-    authToken = response.body.token;
+    // Extract cookie from set-cookie header
+    authCookie = response.headers['set-cookie'][0];
     userId = response.body.user.id;
   });
 
@@ -30,7 +31,7 @@ describe('Flights API', () => {
     it('should create a flight', async () => {
       const response = await request(app)
         .post('/api/v1/flights')
-        .set('Authorization', `Bearer ${authToken}`)
+        .set('Cookie', authCookie)
         .send({
           airline: 'Lufthansa',
           flightNumber: 'LH123',
@@ -52,8 +53,9 @@ describe('Flights API', () => {
         })
         .expect(201);
 
-      expect(response.body).toHaveProperty('id');
-      expect(response.body.airline).toBe('Lufthansa');
+      expect(response.body).toHaveProperty('flight');
+      expect(response.body.flight).toHaveProperty('id');
+      expect(response.body.flight.airline).toBe('Lufthansa');
     });
 
     it('should reject unauthenticated request', async () => {
@@ -71,7 +73,7 @@ describe('Flights API', () => {
     it('should get user flights', async () => {
       const response = await request(app)
         .get('/api/v1/flights')
-        .set('Authorization', `Bearer ${authToken}`)
+        .set('Cookie', authCookie)
         .expect(200);
 
       expect(response.body).toHaveProperty('flights');
@@ -83,7 +85,7 @@ describe('Flights API', () => {
     it('should get flights as GeoJSON', async () => {
       const response = await request(app)
         .get('/api/v1/flights/geo')
-        .set('Authorization', `Bearer ${authToken}`)
+        .set('Cookie', authCookie)
         .expect(200);
 
       expect(response.body.type).toBe('FeatureCollection');

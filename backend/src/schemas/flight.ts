@@ -94,21 +94,27 @@ export const createFlightSchema = baseFlightSchema.refine(
   }
 );
 
-export const updateFlightSchema = baseFlightSchema.partial();
+export const updateFlightSchema = baseFlightSchema.partial().refine(
+  (data) => Object.keys(data).length > 0,
+  {
+    message: 'At least one field must be provided for update',
+  }
+);
 
 export const flightQuerySchema = z.object({
-  airline: z.string().optional(),
+  airline: z.union([z.string(), z.array(z.string())]).optional(),
   flightNumber: z.string().optional(),
   departureAirport: z.string().optional(),
   arrivalAirport: z.string().optional(),
   fromDate: z.string().datetime().optional(),
   toDate: z.string().datetime().optional(),
-  status: z.enum(['scheduled', 'flown', 'cancelled']).optional(),
+  status: z.union([z.enum(['scheduled', 'flown', 'cancelled']), z.array(z.enum(['scheduled', 'flown', 'cancelled']))]).optional(),
   category: z.enum(['business', 'private', 'vacation']).optional(),
   tags: z.union([z.string(), z.array(z.string())]).optional(),
   minPrice: z.coerce.number().min(0).optional(),
   maxPrice: z.coerce.number().min(0).optional(),
-  limit: z.coerce.number().min(1).max(100).default(50),
+  minRouteCount: z.coerce.number().min(1).max(100).optional(), // frontend-only; ignored server-side
+  limit: z.coerce.number().min(1).default(100),
   offset: z.coerce.number().min(0).default(0),
 });
 

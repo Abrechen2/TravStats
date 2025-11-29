@@ -1,0 +1,73 @@
+/**
+ * Application-wide constants
+ * Centralized configuration for magic numbers and common values
+ */
+
+/**
+ * API Pagination Limits
+ */
+export const API_LIMITS = {
+  /** Default page size for flight listings */
+  DEFAULT_PAGE_SIZE: 100,
+  /** Maximum page size allowed by backend */
+  MAX_PAGE_SIZE: 500,
+  /** Number of recent flights to show in sidebar */
+  RECENT_FLIGHTS: 10,
+  /** Number of top routes to display */
+  TOP_ROUTES: 5,
+  /** Maximum airlines to show in filter dropdown */
+  MAX_FILTER_AIRLINES: 15,
+} as const;
+
+/**
+ * UI Configuration
+ */
+export const UI_CONFIG = {
+  /** Minimum screen width for XL breakpoint (matches Tailwind xl:) */
+  XL_BREAKPOINT: 1280,
+} as const;
+
+/**
+ * Date & Time Formats
+ */
+export const DATE_FORMATS = {
+  /** Locale for date formatting */
+  LOCALE: 'de-DE',
+  /** Default date format options */
+  DEFAULT: {
+    year: 'numeric' as const,
+    month: '2-digit' as const,
+    day: '2-digit' as const,
+    hour: '2-digit' as const,
+    minute: '2-digit' as const,
+  },
+} as const;
+
+/**
+ * Export Formats
+ */
+export const EXPORT_FORMATS = {
+  CSV: 'csv',
+  GEOJSON: 'geojson',
+  PDF: 'pdf',
+  KML: 'kml',
+  JSON: 'json',
+} as const;
+
+/**
+ * Flight Status Values
+ */
+export const FLIGHT_STATUS = {
+  SCHEDULED: 'scheduled',
+  FLOWN: 'flown',
+  CANCELLED: 'cancelled',
+} as const;
+
+/**
+ * Storage Keys for localStorage
+ */
+export const STORAGE_KEYS = {
+  ONBOARDING_CHECKLIST: 'onboarding-checklist',
+  THEME: 'theme',
+  USER_SETTINGS: 'user-settings',
+} as const;
