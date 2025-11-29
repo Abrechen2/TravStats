@@ -168,7 +168,8 @@ function parseBCBPStandard(barcodeData: string): BoardingPassData | null {
     const passengerStatus = barcodeData.charAt(pos);
     pos += 1;
 
-    // ===== END OF MANDATORY ITEMS (60 bytes) =====
+    // ===== END OF MANDATORY ITEMS =====
+    // After mandatory items, there may be additional data including conditional items
 
     // Parse conditional items if available (contains gate, terminal, boarding time, etc.)
     let gate: string | undefined;
@@ -176,109 +177,63 @@ function parseBCBPStandard(barcodeData: string): BoardingPassData | null {
     let boardingTime: string | undefined;
 
     try {
-      // Beginning of variable size field (1 char) - should be at position 60
+      console.log(`🔍 Current position after mandatory: ${pos}, remaining string: "${barcodeData.substring(pos)}"`);
+
+      // Skip any padding spaces
+      while (pos < barcodeData.length && barcodeData.charAt(pos) === ' ') {
+        pos++;
+      }
+
+      // Beginning of variable size field (1 char) - version number/marker
       if (pos < barcodeData.length) {
-        pos += 1; // Skip version number byte
+        const versionByte = barcodeData.charAt(pos);
+        console.log('📌 Version/marker byte:', JSON.stringify(versionByte), 'at position', pos);
+        pos += 1;
 
         // Field size of structured message - Conditional (2 chars, hex)
         if (pos + 1 < barcodeData.length) {
-          const conditionalLength = parseInt(barcodeData.substring(pos, pos + 2), 16);
+          const lengthHex = barcodeData.substring(pos, pos + 2);
+          console.log('📏 Conditional length (raw HEX string):', JSON.stringify(lengthHex));
+
+          // Try to parse as hex
+          let conditionalLength = 0;
+          try {
+            conditionalLength = parseInt(lengthHex.trim(), 16);
+            console.log('📦 Conditional items length (parsed as hex):', conditionalLength);
+          } catch {
+            console.warn('⚠️ Failed to parse conditional length as hex');
+          }
+
           pos += 2;
-          console.log('📦 Conditional items length:', conditionalLength);
 
-          if (conditionalLength > 0 && pos + conditionalLength <= barcodeData.length) {
+          if (conditionalLength > 0 && conditionalLength < 200 && pos + conditionalLength <= barcodeData.length) {
             const conditionalData = barcodeData.substring(pos, pos + conditionalLength);
-            console.log('📦 Conditional data:', conditionalData);
+            console.log('📦 Full conditional data:', JSON.stringify(conditionalData));
+            console.log('📦 Conditional data length:', conditionalData.length);
 
-            // Parse standard conditional fields (first ~40 bytes are standardized)
-            let cPos = 0;
+            // NOTE: Gate, terminal, and boarding time are rarely in IATA barcodes
+            // They will be extracted via OCR from the visual boarding pass text
+            // We skip parsing airline-specific data here to avoid false positives
 
-            // Airline Numeric Code (3 chars) - Optional
-            if (cPos + 3 <= conditionalData.length) {
-              cPos += 3;
-            }
-
-            // Document Form/Serial Number (13 chars total: 1 char type + 12 chars number) - Optional
-            if (cPos + 13 <= conditionalData.length) {
-              cPos += 13;
-            }
-
-            // Selectee indicator (1 char) - Optional
-            if (cPos + 1 <= conditionalData.length) {
-              cPos += 1;
-            }
-
-            // International documentation verification (1 char) - Optional
-            if (cPos + 1 <= conditionalData.length) {
-              cPos += 1;
-            }
-
-            // Marketing carrier designator (3 chars) - Optional
-            if (cPos + 3 <= conditionalData.length) {
-              cPos += 3;
-            }
-
-            // Frequent flyer airline designator (3 chars) - Optional
-            if (cPos + 3 <= conditionalData.length) {
-              cPos += 3;
-            }
-
-            // Frequent flyer number (16 chars) - Optional
-            if (cPos + 16 <= conditionalData.length) {
-              cPos += 16;
-            }
-
-            // ID/AD indicator (1 char) - Optional
-            if (cPos + 1 <= conditionalData.length) {
-              cPos += 1;
-            }
-
-            // Free baggage allowance (3 chars) - Optional
-            if (cPos + 3 <= conditionalData.length) {
-              cPos += 3;
-            }
-
-            // Fast Track (1 char) - Optional
-            if (cPos + 1 <= conditionalData.length) {
-              cPos += 1;
-            }
-
-            // ==== AIRLINE-SPECIFIC DATA (Individual Airline Use) ====
-            // The remaining bytes contain airline-specific data
-            // Common fields: Gate, Terminal, Boarding Time, Sequence Number
-            const airlineData = conditionalData.substring(cPos);
-            console.log('🏷️  Airline-specific data:', airlineData);
-
-            // Try to extract gate and terminal from airline-specific section
-            // Many airlines put gate/terminal in a structured format
-            // Common patterns: "B11T1" (Gate B11, Terminal 1), "A12" (Gate A12)
-            const gateMatch = airlineData.match(/([A-Z]\d{1,3})/);
-            if (gateMatch) {
-              gate = gateMatch[1];
-              console.log('🚪 Extracted gate:', gate);
-            }
-
-            // Try to extract terminal (often T followed by digit or single letter)
-            const terminalMatch = airlineData.match(/T(\d|[A-Z])/);
-            if (terminalMatch) {
-              terminal = `T${terminalMatch[1]}`;
-              console.log('🏢 Extracted terminal:', terminal);
-            }
-
-            // Try to extract boarding time (HH:MM format or HHMM)
-            const timeMatch = airlineData.match(/(\d{2})[:.]?(\d{2})/);
-            if (timeMatch && parseInt(timeMatch[1]) < 24 && parseInt(timeMatch[2]) < 60) {
-              boardingTime = `${timeMatch[1]}:${timeMatch[2]}`;
-              console.log('⏰ Extracted boarding time:', boardingTime);
-            }
-
+            console.log('ℹ️ Conditional section parsed - airline-specific data will be extracted via OCR');
             pos += conditionalLength;
+          } else if (conditionalLength === 0) {
+            console.log('ℹ️ No conditional data present in this boarding pass');
+          } else {
+            console.warn(`⚠️ Invalid conditional length: ${conditionalLength} or insufficient data`);
           }
         }
       }
     } catch (error) {
       console.warn('⚠️ Failed to parse conditional items (non-critical):', error);
       // Continue anyway - conditional items are optional
+    }
+
+    // NOTE: We've disabled the fallback barcode search for gate/terminal
+    // because it produces too many false positives (e.g., A220 from document numbers, TT from passenger names)
+    // Gate, terminal, and boarding time should be extracted via OCR from the visual text instead
+    if (!gate && !terminal) {
+      console.log('ℹ️ Gate/Terminal/Time not in barcode - will be extracted via OCR from visual text');
     }
 
     // Convert Julian date to actual date
@@ -317,38 +272,48 @@ function parseBCBPStandard(barcodeData: string): BoardingPassData | null {
 
 /**
  * Convert Julian date (day of year) to ISO date string
- * Assumes current year unless date is in the past
+ * Smart year detection: assumes current year, but adjusts if date seems wrong
  */
 function julianDateToDate(julianDate: string): string {
   const dayOfYear = parseInt(julianDate, 10);
   console.log('📅 Julian day conversion: Input day of year =', dayOfYear);
 
-  let currentYear = new Date().getFullYear();
-  console.log('📅 Current year:', currentYear);
+  let year = new Date().getFullYear();
+  console.log('📅 Current year:', year);
 
   // Create date from day of year using UTC to avoid timezone issues
-  // new Date(year, month, day) where month=0 is January
-  // day can overflow: new Date(2025, 0, 322) = 322nd day from January 1st
-  const date = new Date(Date.UTC(currentYear, 0, dayOfYear));
+  const date = new Date(Date.UTC(year, 0, dayOfYear));
 
   console.log('📅 Calculated date (before year adjustment):', date.toISOString().split('T')[0]);
 
-  // If date is more than 30 days in the past, assume next year
+  // Calculate days difference from today
   const today = new Date();
   today.setHours(0, 0, 0, 0); // Normalize to midnight
   const diffDays = Math.floor((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
   console.log('📅 Days difference from today:', diffDays);
 
-  if (diffDays < -30) {
-    console.log('📅 Date is >30 days in past, assuming next year');
-    const nextYearDate = new Date(Date.UTC(currentYear + 1, 0, dayOfYear));
-    const result = nextYearDate.toISOString().split('T')[0];
-    console.log('📅 Final converted date:', result);
-    return result;
+  // Year adjustment logic:
+  // - If date is far in the FUTURE (>300 days), it's probably from LAST year
+  // - If date is in the past, keep current year (boarding passes from earlier this year)
+  let adjustedYear = year;
+
+  if (diffDays > 300) {
+    // Date is way in the future (e.g., day 158 when we're at day 333)
+    // This means it's actually from last year
+    adjustedYear = year - 1;
+    console.log('📅 Date is >300 days in future, assuming PREVIOUS year');
+  } else if (diffDays < -365) {
+    // Date is more than a year in the past - keep current year
+    console.log('📅 Date is >365 days in past, keeping current year');
+  } else {
+    // Date is reasonable (within ±300 days) - keep current year
+    console.log('📅 Date is within reasonable range, keeping current year');
   }
 
-  const result = date.toISOString().split('T')[0];
+  // Recalculate with adjusted year
+  const finalDate = new Date(Date.UTC(adjustedYear, 0, dayOfYear));
+  const result = finalDate.toISOString().split('T')[0];
   console.log('📅 Final converted date:', result);
   return result; // Return YYYY-MM-DD
 }

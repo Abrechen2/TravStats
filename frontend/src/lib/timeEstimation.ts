@@ -152,11 +152,17 @@ function estimateDurationHeuristic(
 
 /**
  * Add minutes to time string (HH:MM format)
+ * Uses local time consistently (flight times are always in local airport time)
  */
 function addMinutesToTime(timeStr: string, minutes: number, dateStr: string): string {
   const [hours, mins] = timeStr.split(':').map(Number);
-  const date = new Date(dateStr);
-  date.setHours(hours, mins, 0, 0);
+
+  // Parse date correctly: "2025-06-07" should be treated as local date, not UTC
+  // Split and use Date constructor with year, month, day to avoid timezone issues
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const date = new Date(year, month - 1, day, hours, mins, 0, 0);
+
+  // Add minutes
   date.setMinutes(date.getMinutes() + minutes);
 
   const resultHours = String(date.getHours()).padStart(2, '0');
@@ -201,9 +207,11 @@ export function estimateFlightTimes(
 
   // Step 2: Fallback to heuristics
   console.log('🔮 Using heuristic estimation (no historical data)');
+  console.log(`📅 Input: boardingTime=${boardingTime}, flightDate=${flightDate}`);
 
   // Departure = Boarding + 30 minutes
   const departureTime = addMinutesToTime(boardingTime, 30, flightDate);
+  console.log(`🛫 Calculated departure: ${departureTime} (boarding + 30min)`);
 
   // Duration based on distance
   const duration = estimateDurationHeuristic(
@@ -212,8 +220,10 @@ export function estimateFlightTimes(
     arrivalLat,
     arrivalLon
   );
+  console.log(`⏱️ Estimated duration: ${duration} minutes`);
 
   const arrivalTime = addMinutesToTime(departureTime, duration, flightDate);
+  console.log(`🛬 Calculated arrival: ${arrivalTime} (departure + ${duration}min)`);
 
   return {
     departureTime,
