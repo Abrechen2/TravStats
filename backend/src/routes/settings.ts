@@ -57,6 +57,12 @@ const settingsSchema = z.object({
     exportFormat: z.enum(['json', 'csv', 'pdf']).optional(),
     cloudSync: z.boolean().optional(),
   }).partial().optional(),
+  emailImport: z.object({
+    enabled: z.boolean().optional(),
+    forwardingAddress: z.string().email().optional().nullable(),
+    autoAccept: z.boolean().optional(),
+    shareWithAdmin: z.boolean().optional(),
+  }).partial().optional(),
 }).partial();
 
 const defaultSettings = {
@@ -68,6 +74,7 @@ const defaultSettings = {
   notifications: { emailNotifications: true, flightReminder: '24h', checkInReminder: true, featureUpdates: true },
   privacy: { twoFactorAuth: false, loginAlerts: true, dataExportRequested: false, accountDeletionRequested: false, analyticsOptIn: false },
   backup: { autoBackup: false, backupInterval: 'weekly', exportFormat: 'json', cloudSync: false },
+  emailImport: { enabled: false, forwardingAddress: null, autoAccept: false, shareWithAdmin: false },
 };
 
 router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {

@@ -4,21 +4,25 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import { parseBookingEmail } from '../services/bookingParser';
 import { findOrCreateAirport } from '../services/airportLookup';
 import { v4 as uuidv4 } from 'uuid';
+import { getSystemSettings } from '../services/systemSettings';
 
 const router = Router();
 
 // Helper to verify inbound secret for email/webhook ingestion
-function verifyImportSecret(req: Request) {
-  const secret = process.env.IMPORT_SECRET;
-  if (!secret) return false;
+async function verifyImportSecret(req: Request) {
+  const { emailImport } = await getSystemSettings();
+  if (!emailImport.enabled || !emailImport.importSecret) {
+    return false;
+  }
+
   const header = req.headers['x-import-secret'] || req.query.secret;
-  return header === secret;
+  return header === emailImport.importSecret;
 }
 
 // Ingest email/webhook payload: expects userId or token + subject/text/html
 router.post('/email', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    if (!verifyImportSecret(req)) {
+    if (!(await verifyImportSecret(req))) {
       return res.status(401).json({ error: 'Unauthorized import' });
     }
 
