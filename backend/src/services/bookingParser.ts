@@ -75,14 +75,14 @@ const CITY_TO_IATA: Record<string, string> = {
 const FLIGHT_REGEX = /\b([A-Z]{2,3}\s?\d{1,4})\b/;
 const PNR_REGEX = /\b([A-Z0-9]{6})\b/;
 const ISO_DATE_TIME = /\b(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(?::\d{2})?)\b/g;
-const EURO_PRICE = /(\d{1,5}[.,]\d{2})\s?(EUR|€)/i;
+const EURO_PRICE = /(\d{1,5}[.,]\d{2})\s?(EUR|\u20ac)/i;
 
 // Context-aware IATA code extraction
 const IATA_CONTEXT_PATTERNS = [
   /(?:von|ab|from|dep(?:arture)?)\s+([A-Z]{3})/g,
   /([A-Z]{3})\s+(?:nach|to|arr(?:ival)?)/g,
   /(?:nach|to|arr(?:ival)?)\s+([A-Z]{3})/g,
-  /([A-Z]{3})\s*(?:->|→|—|–|-)\s*([A-Z]{3})/g, // MUC-LUX, MUC -> LUX, MUC → LUX
+  /([A-Z]{3})\s*(?:->|-\>|-|\u2192|\u2194|\u2013|\u2014|\u27f6)\s*([A-Z]{3})/g, // MUC-LUX, MUC -> LUX, MUC → LUX
 ];
 
 function extractText(html?: string): string {
@@ -110,7 +110,7 @@ function extractAirportCodes(source: string): { departure?: string; arrival?: st
   const sourceUpper = source.toUpperCase();
 
   // Try city name mapping first (most reliable for German emails)
-  const cityPattern = /(?:von|ab|from)\s+([a-zäöüß\s-]+?)\s+(?:nach|to|bis)\s+([a-zäöüß\s-]+)/i;
+  const cityPattern = /(?:von|ab|from)\s+([\p{L}\s-]+?)\s+(?:nach|to|bis)\s+([\p{L}\s-]+)/iu;
   const cityMatch = cityPattern.exec(sourceLower);
 
   if (cityMatch) {

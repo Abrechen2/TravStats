@@ -22,7 +22,10 @@ const authCookieOptions: CookieOptions = {
 // Register
 router.post('/register', authLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { username, password, invitationToken } = req.body;
+    // Validate required fields
+    const { username, password } = registerSchema.parse(req.body);
+    const invitationToken =
+      typeof req.body.invitationToken === 'string' ? req.body.invitationToken : undefined;
 
     // Check if user exists
     const existingUser = await prisma.user.findUnique({
