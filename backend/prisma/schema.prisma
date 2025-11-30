@@ -200,3 +200,12 @@ model Invitation {
   @@index([createdBy])
   @@map("invitations")
 }
+
+model SystemSettings {
+  id        String   @id @default("global")
+  data      Json     @map("data")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("system_settings")
+}

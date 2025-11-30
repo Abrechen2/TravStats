@@ -27,6 +27,7 @@ lerna-debug.log*
 # OS
 .DS_Store
 Thumbs.db
+nul
 
 # IDE
 .vscode/
@@ -38,6 +39,14 @@ Thumbs.db
 # Testing
 coverage/
 .nyc_output
+
+# Test files with credentials (should not be committed)
+backend/test-imap.js
+
+# Uploads (user data should not be committed)
+backend/uploads/
+uploads/
+Sample Boardingpasses/
 
 # Database
 *.db

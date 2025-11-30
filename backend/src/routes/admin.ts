@@ -25,18 +25,18 @@ router.get('/system/info', async (req: AuthRequest, res: Response, next: NextFun
       select: { id: true, isActive: true },
     });
 
-    res.json({
-      instanceName: process.env.INSTANCE_NAME || 'TravStats',
-      userCount,
-      activeUserCount,
-      flightCount,
+  res.json({
+    instanceName: process.env.INSTANCE_NAME || 'TravStats',
+    userCount,
+    activeUserCount,
+    flightCount,
       maxUsers,
       warningThreshold: userCount >= maxUsers,
       registrationEnabled: allowRegistration,
       demoUserExists: !!demoUser,
       demoUserActive: demoUser?.isActive || false,
-      version: '1.0.0',
-    });
+    version: '1.0.0',
+  });
   } catch (error) {
     next(error);
   }
