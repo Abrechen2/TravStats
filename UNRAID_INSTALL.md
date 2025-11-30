@@ -125,13 +125,6 @@ SEED_AIRPORTS=true  # Recommended: true
 AIRLABS_API_KEY=  # Get free key at https://airlabs.co/
 OPENSKY_CLIENT_ID=
 OPENSKY_CLIENT_SECRET=
-
-# IMAP Email Import (Advanced)
-IMAP_ENABLED=false
-IMAP_HOST=imap.gmail.com
-IMAP_PORT=993
-IMAP_USER=your-email@gmail.com
-IMAP_PASSWORD=app-specific-password
 ```
 
 ### Volumes

@@ -41,13 +41,6 @@ services:
       AIRLABS_API_KEY: ${AIRLABS_API_KEY:-}
       OPENSKY_CLIENT_ID: ${OPENSKY_CLIENT_ID:-}
       OPENSKY_CLIENT_SECRET: ${OPENSKY_CLIENT_SECRET:-}
-      # IMAP Import (optional)
-      IMAP_ENABLED: ${IMAP_ENABLED:-false}
-      IMAP_HOST: ${IMAP_HOST:-}
-      IMAP_PORT: ${IMAP_PORT:-993}
-      IMAP_SECURE: ${IMAP_SECURE:-true}
-      IMAP_USER: ${IMAP_USER:-}
-      IMAP_PASSWORD: ${IMAP_PASSWORD:-}
       # Admin & Instance Settings
       INSTANCE_NAME: ${INSTANCE_NAME:-TravStats}
       MAX_USERS: ${MAX_USERS:-10}

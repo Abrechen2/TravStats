@@ -27,7 +27,7 @@ async function getUserIds() {
       console.log('');
     });
 
-    console.log('💡 Copy the ID and add it to .env as IMAP_DEFAULT_USER_ID');
+    console.log('💡 Copy the ID for use in admin tasks or scripting.');
   } catch (error) {
     console.error('❌ Error:', error);
   } finally {
