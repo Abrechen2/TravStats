@@ -195,7 +195,7 @@ backend/
 │   │   ├── flightLookup.ts        # AirLabs/OpenSky API integration
 │   │   ├── airportLookup.ts       # Airport data enrichment
 │   │   ├── bookingParser.ts       # Email parsing (regex-based)
-│   │   └── imapPoller.ts          # Email polling service
+│   │   └── (email webhook parser) # Email import logic (via webhook)
 │   ├── utils/                     # Helper utilities
 │   │   ├── achievements.ts        # Achievement calculation logic
 │   │   ├── geo.ts                 # Haversine distance, great circles

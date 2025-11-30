@@ -381,14 +381,7 @@ Zeige im Frontend die Import-Adresse an:
 
 ## 🔄 Vergleich: Email-to-Webhook vs. IMAP-Poller
 
-| Feature | Email-to-Webhook (empfohlen) | IMAP-Poller |
-|---------|------------------------------|-------------|
-| Setup | ✅ Einfach (5 Min) | ⚠️ Komplex (Gmail App-Passwort) |
-| Performance | ✅ Sofort | ⚠️ Verzögert (Polling-Intervall) |
-| Server Load | ✅ Minimal | ⚠️ Dauerhaft laufender Prozess |
-| Kosten | ✅ Kostenlos | ✅ Kostenlos |
-| Eigene Domain | ✅ Möglich | ❌ Nicht relevant |
-| User Experience | ✅ "Weiterleiten-Button" | ⚠️ E-Mail muss im Postfach bleiben |
+Der frühere IMAP-Poller wurde entfernt. Nutze stattdessen den **Email-to-Webhook**-Flow – er ist schneller, benötigt keinen dauerhaften Poller und funktioniert ohne IMAP-Zugangsdaten.
 
 ## 🚀 Produktions-Setup
 
