@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { adminApi, EmailImportSettings } from '../lib/api';
+import { adminApi } from '../lib/api';
 import { format } from 'date-fns';
 
 export default function AdminPage() {
@@ -7,11 +7,8 @@ export default function AdminPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [invitations, setInvitations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'users' | 'invitations' | 'system' | 'email'>('system');
+  const [activeTab, setActiveTab] = useState<'users' | 'invitations' | 'system'>('system');
   const [copiedUrl, setCopiedUrl] = useState(false);
-  const [emailSettings, setEmailSettings] = useState<EmailImportSettings | null>(null);
-  const [savingEmailSettings, setSavingEmailSettings] = useState(false);
-  const [emailSettingsNotice, setEmailSettingsNotice] = useState('');
 
   useEffect(() => {
     loadData();
@@ -20,16 +17,14 @@ export default function AdminPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [infoData, usersData, invitationsData, emailImportData] = await Promise.all([
+      const [infoData, usersData, invitationsData] = await Promise.all([
         adminApi.getSystemInfo(),
         adminApi.getUsers(),
         adminApi.getInvitations(),
-        adminApi.getEmailImportSettings(),
       ]);
       setSystemInfo(infoData);
       setUsers(usersData.users);
       setInvitations(invitationsData.invitations);
-      setEmailSettings(emailImportData);
     } catch (error) {
       console.error('Failed to load admin data:', error);
     } finally {
@@ -76,32 +71,6 @@ export default function AdminPage() {
       URL.revokeObjectURL(url);
     } catch (error: any) {
       alert(error.response?.data?.error || 'Failed to export data');
-    }
-  };
-
-  const handleEmailSettingsChange = (updates: Partial<EmailImportSettings>) => {
-    setEmailSettings((current) => {
-      if (!current) return current;
-      return {
-        ...current,
-        ...updates,
-        imap: { ...current.imap, ...((updates as any).imap || {}) },
-      };
-    });
-  };
-
-  const handleSaveEmailSettings = async () => {
-    if (!emailSettings) return;
-    setSavingEmailSettings(true);
-    setEmailSettingsNotice('');
-    try {
-      const updated = await adminApi.updateEmailImportSettings(emailSettings);
-      setEmailSettings(updated);
-      setEmailSettingsNotice('✅ Einstellungen gespeichert. Bitte IMAP-Dienst neu starten, falls aktiv.');
-    } catch (error: any) {
-      alert(error.response?.data?.error || 'Speichern fehlgeschlagen');
-    } finally {
-      setSavingEmailSettings(false);
     }
   };
 
@@ -156,16 +125,6 @@ export default function AdminPage() {
           }`}
         >
           Invitations
-        </button>
-        <button
-          onClick={() => setActiveTab('email')}
-          className={`px-4 py-2 font-medium transition ${
-            activeTab === 'email'
-              ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400'
-              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-          }`}
-        >
-          Extra Admin: E-Mail Parser
         </button>
       </div>
 
@@ -433,231 +392,6 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Email Parser Tab */}
-      {activeTab === 'email' && (
-        <div className="space-y-6">
-          {!emailSettings ? (
-            <div className="text-gray-600 dark:text-gray-400">E-Mail Einstellungen werden geladen...</div>
-          ) : (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-4">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">E-Mail Parser steuern</h2>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Richte IMAP, Sicherheitstoken und Hinweise ein, damit die automatische Bordkarten-Erkennung ohne CLI funktioniert.
-                  </p>
-                </div>
-                {emailSettings.enabled ? (
-                  <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-200 text-xs font-semibold">
-                    Aktiviert
-                  </span>
-                ) : (
-                  <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200 text-xs font-semibold">
-                    Deaktiviert
-                  </span>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="space-y-3">
-                  <label className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      checked={emailSettings.enabled}
-                      onChange={(e) => handleEmailSettingsChange({ enabled: e.target.checked })}
-                      className="h-4 w-4"
-                    />
-                    <div>
-                      <div className="font-semibold">E-Mail Parser global aktivieren</div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Erlaubt allen Nutzern, Imports zu nutzen. Nutzer müssen es zusätzlich in ihren Einstellungen einschalten.
-                      </p>
-                    </div>
-                  </label>
-
-                  <label className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      checked={emailSettings.allowUserConfiguration}
-                      onChange={(e) => handleEmailSettingsChange({ allowUserConfiguration: e.target.checked })}
-                      className="h-4 w-4"
-                    />
-                    <div>
-                      <div className="font-semibold">Nutzern eigene Konfiguration erlauben</div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Wenn aktiv, können User in ihrem Profil ihre Weiterleitungsadresse und Auto-Import steuern.
-                      </p>
-                    </div>
-                  </label>
-
-                  <div>
-                    <label className="label">Import-Secret (für Webhook/Weiterleitung)</label>
-                    <input
-                      type="text"
-                      value={emailSettings.importSecret || ''}
-                      onChange={(e) => handleEmailSettingsChange({ importSecret: e.target.value })}
-                      className="input"
-                      placeholder="z.B. sichere-Zeichenkette"
-                    />
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      Wird als <code className="font-mono">x-import-secret</code> Header oder <code className="font-mono">?secret=</code> Parameter erwartet.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="bg-gray-50 dark:bg-gray-900/40 rounded-lg p-4 space-y-2 border border-gray-200 dark:border-gray-700">
-                  <h3 className="font-semibold text-gray-900 dark:text-white">So funktioniert die Einrichtung</h3>
-                  <ol className="list-decimal list-inside text-sm text-gray-700 dark:text-gray-300 space-y-1">
-                    <li>IMAP-Daten hier hinterlegen und speichern.</li>
-                    <li>IMAP-Poller neu starten, damit die Werte übernommen werden.</li>
-                    <li>Import-Secret an Mail-Weiterleitung oder Webhook koppeln.</li>
-                    <li>Nutzer informieren, damit sie die Funktion in ihren Einstellungen aktivieren.</li>
-                  </ol>
-                </div>
-              </div>
-
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="label">IMAP Host</label>
-                    <input
-                      type="text"
-                      value={emailSettings.imap.host || ''}
-                      onChange={(e) => handleEmailSettingsChange({ imap: { host: e.target.value } as any })}
-                      className="input"
-                      placeholder="imap.beispiel.de"
-                    />
-                  </div>
-                  <div>
-                    <label className="label">Port</label>
-                    <input
-                      type="number"
-                      value={emailSettings.imap.port || 993}
-                      onChange={(e) => handleEmailSettingsChange({ imap: { port: Number(e.target.value) } as any })}
-                      className="input"
-                    />
-                  </div>
-                  <div>
-                    <label className="label">IMAP Benutzername</label>
-                    <input
-                      type="text"
-                      value={emailSettings.imap.user || ''}
-                      onChange={(e) => handleEmailSettingsChange({ imap: { user: e.target.value } as any })}
-                      className="input"
-                    />
-                  </div>
-                  <div>
-                    <label className="label">IMAP Passwort</label>
-                    <input
-                      type="password"
-                      value={emailSettings.imap.password || ''}
-                      onChange={(e) => handleEmailSettingsChange({ imap: { password: e.target.value } as any })}
-                      className="input"
-                    />
-                  </div>
-                  <div>
-                    <label className="label">Mailbox</label>
-                    <input
-                      type="text"
-                      value={emailSettings.imap.mailbox || ''}
-                      onChange={(e) => handleEmailSettingsChange({ imap: { mailbox: e.target.value } as any })}
-                      className="input"
-                      placeholder="INBOX"
-                    />
-                  </div>
-                  <div>
-                    <label className="label">Standard-Nutzer (User-ID)</label>
-                    <input
-                      type="text"
-                      value={emailSettings.imap.defaultUserId || ''}
-                      onChange={(e) => handleEmailSettingsChange({ imap: { defaultUserId: e.target.value } as any })}
-                      className="input"
-                      placeholder="User-ID für auto-import"
-                    />
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Wird für den IMAP-Poller genutzt.</p>
-                  </div>
-                  <div>
-                    <label className="label">Erlaubte Absender (kommagetrennt)</label>
-                    <input
-                      type="text"
-                      value={(emailSettings.imap.allowedSenders || []).join(', ')}
-                      onChange={(e) =>
-                        handleEmailSettingsChange({
-                          imap: { allowedSenders: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) } as any,
-                        })
-                      }
-                      className="input"
-                      placeholder="@lufthansa.com, @example.com"
-                    />
-                  </div>
-                  <div>
-                    <label className="label">Betreff-Stichworte</label>
-                    <input
-                      type="text"
-                      value={(emailSettings.imap.subjectKeywords || []).join(', ')}
-                      onChange={(e) =>
-                        handleEmailSettingsChange({
-                          imap: { subjectKeywords: e.target.value.split(',').map((s) => s.trim()).filter(Boolean) } as any,
-                        })
-                      }
-                      className="input"
-                      placeholder="etix, booking"
-                    />
-                  </div>
-                  <div>
-                    <label className="label">Abruf-Intervall (Minuten)</label>
-                    <input
-                      type="number"
-                      value={emailSettings.imap.pollIntervalMinutes || 5}
-                      onChange={(e) => handleEmailSettingsChange({ imap: { pollIntervalMinutes: Number(e.target.value) } as any })}
-                      className="input"
-                      min={1}
-                    />
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      checked={!!emailSettings.imap.secure}
-                      onChange={(e) => handleEmailSettingsChange({ imap: { secure: e.target.checked } as any })}
-                      className="h-4 w-4"
-                    />
-                    <span>SSL/TLS Verbindung erzwingen</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      checked={!!emailSettings.imap.enabled}
-                      onChange={(e) => handleEmailSettingsChange({ imap: { enabled: e.target.checked } as any })}
-                      className="h-4 w-4"
-                    />
-                    <span>IMAP-Poller aktivieren</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    <p className="font-semibold text-gray-800 dark:text-gray-200">Sicherheitshinweis</p>
-                    <p>
-                      Die Anmeldedaten werden verschlüsselt in der Datenbank gespeichert. Ändere das Secret regelmäßig und teile es nur
-                      mit vertrauenswürdigen Diensten.
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {emailSettingsNotice && <span className="text-sm text-green-600 dark:text-green-300">{emailSettingsNotice}</span>}
-                    <button
-                      onClick={handleSaveEmailSettings}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition"
-                      disabled={savingEmailSettings}
-                    >
-                      {savingEmailSettings ? 'Speichert...' : 'Einstellungen sichern'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }

@@ -3,8 +3,6 @@ import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { AppError } from '../middleware/errorHandler';
 import crypto from 'crypto';
-import { z } from 'zod';
-import { getSystemSettings, updateEmailImportSettings } from '../services/systemSettings';
 
 const router = Router();
 
@@ -27,64 +25,18 @@ router.get('/system/info', async (req: AuthRequest, res: Response, next: NextFun
       select: { id: true, isActive: true },
     });
 
-    const { emailImport } = await getSystemSettings();
-
-    res.json({
-      instanceName: process.env.INSTANCE_NAME || 'TravStats',
-      userCount,
-      activeUserCount,
-      flightCount,
+  res.json({
+    instanceName: process.env.INSTANCE_NAME || 'TravStats',
+    userCount,
+    activeUserCount,
+    flightCount,
       maxUsers,
       warningThreshold: userCount >= maxUsers,
       registrationEnabled: allowRegistration,
       demoUserExists: !!demoUser,
       demoUserActive: demoUser?.isActive || false,
-      version: '1.0.0',
-      emailImport: {
-        enabled: emailImport.enabled,
-        imapEnabled: emailImport.imap.enabled,
-      },
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-const emailImportSchema = z.object({
-  enabled: z.boolean().optional(),
-  importSecret: z.string().optional(),
-  allowUserConfiguration: z.boolean().optional(),
-  imap: z
-    .object({
-      enabled: z.boolean().optional(),
-      host: z.string().optional(),
-      port: z.number().int().positive().optional(),
-      secure: z.boolean().optional(),
-      user: z.string().optional(),
-      password: z.string().optional(),
-      mailbox: z.string().optional(),
-      allowedSenders: z.array(z.string()).optional(),
-      subjectKeywords: z.array(z.string()).optional(),
-      defaultUserId: z.string().optional(),
-      pollIntervalMinutes: z.number().int().positive().optional(),
-    })
-    .optional(),
-});
-
-router.get('/system/email-settings', async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const { emailImport } = await getSystemSettings();
-    res.json({ emailImport });
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.put('/system/email-settings', async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const payload = emailImportSchema.parse(req.body);
-    const updated = await updateEmailImportSettings(payload);
-    res.json({ emailImport: updated });
+    version: '1.0.0',
+  });
   } catch (error) {
     next(error);
   }
