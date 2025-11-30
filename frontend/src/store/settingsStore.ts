@@ -80,13 +80,6 @@ export interface BackupSettings {
   cloudSync: boolean;
 }
 
-export interface EmailImportPreferences {
-  enabled: boolean;
-  forwardingAddress: string | null;
-  autoAccept: boolean;
-  shareWithAdmin: boolean;
-}
-
 export interface SettingsState {
   profile: ProfileSettings;
   display: DisplaySettings;
@@ -96,7 +89,6 @@ export interface SettingsState {
   notifications: NotificationSettings;
   privacy: PrivacySettings;
   backup: BackupSettings;
-  emailImport: EmailImportPreferences;
   setProfile: SettingsUpdater<ProfileSettings>;
   setDisplay: SettingsUpdater<DisplaySettings>;
   setUnits: SettingsUpdater<UnitsSettings>;
@@ -105,7 +97,6 @@ export interface SettingsState {
   setNotifications: SettingsUpdater<NotificationSettings>;
   setPrivacy: SettingsUpdater<PrivacySettings>;
   setBackup: SettingsUpdater<BackupSettings>;
-  setEmailImport: SettingsUpdater<EmailImportPreferences>;
   resetSettings: () => void;
   loadRemoteSettings: () => Promise<void>;
   saveRemoteSettings: () => Promise<void>;
@@ -113,7 +104,7 @@ export interface SettingsState {
 
 const defaultSettings: Omit<
   SettingsState,
-  'setProfile' | 'setDisplay' | 'setUnits' | 'setDefaults' | 'setMap' | 'setNotifications' | 'setPrivacy' | 'setBackup' | 'setEmailImport' | 'resetSettings' | 'loadRemoteSettings' | 'saveRemoteSettings'
+  'setProfile' | 'setDisplay' | 'setUnits' | 'setDefaults' | 'setMap' | 'setNotifications' | 'setPrivacy' | 'setBackup' | 'resetSettings' | 'loadRemoteSettings' | 'saveRemoteSettings'
 > = {
   profile: {
     username: 'Traveler',
@@ -163,12 +154,6 @@ const defaultSettings: Omit<
     exportFormat: 'json',
     cloudSync: false,
   },
-  emailImport: {
-    enabled: false,
-    forwardingAddress: null,
-    autoAccept: false,
-    shareWithAdmin: false,
-  },
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -206,10 +191,6 @@ export const useSettingsStore = create<SettingsState>()(
       setBackup: (updates) =>
         set((state) => ({
           backup: { ...state.backup, ...updates },
-        })),
-      setEmailImport: (updates) =>
-        set((state) => ({
-          emailImport: { ...state.emailImport, ...updates },
         })),
       resetSettings: () => set(defaultSettings),
       loadRemoteSettings: async () => {

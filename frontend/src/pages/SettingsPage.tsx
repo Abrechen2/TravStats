@@ -26,7 +26,6 @@ export default function SettingsPage() {
     notifications,
     privacy,
     backup,
-    emailImport,
     setProfile,
     setDisplay,
     setUnits,
@@ -35,7 +34,6 @@ export default function SettingsPage() {
     setNotifications,
     setPrivacy,
     setBackup,
-    setEmailImport,
   } = useSettingsStore();
 
   const { isDarkMode, setDarkMode } = useThemeStore();
@@ -566,83 +564,6 @@ export default function SettingsPage() {
                 />
                 <span>Cloud-Sync aktivieren</span>
               </label>
-            </div>
-          </div>
-        </div>
-
-        {/* Email Import */}
-        <div className="card space-y-4">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div>
-              <h2 className="text-xl font-semibold">E-Mail Parser & Weiterleitung</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Aktiviere die automatische Erkennung von Bordkarten-E-Mails, sobald dein Admin die Funktion global freigeschaltet hat.
-              </p>
-            </div>
-            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${emailImport.enabled ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-200' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200'}`}>
-              {emailImport.enabled ? 'Import aktiv' : 'Import aus'}
-            </span>
-          </div>
-
-          <div className="space-y-3">
-            <label className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                checked={emailImport.enabled}
-                onChange={(e) => setEmailImport({ enabled: e.target.checked })}
-                className="h-4 w-4"
-              />
-              <div>
-                <div className="font-semibold">E-Mail Parser nutzen</div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Nutze deine Weiterleitung oder das Secret deines Admins, um Buchungsbestätigungen automatisch vorzubereiten.
-                </p>
-              </div>
-            </label>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="label">Deine Weiterleitungsadresse</label>
-                <input
-                  type="email"
-                  value={emailImport.forwardingAddress || ''}
-                  onChange={(e) => setEmailImport({ forwardingAddress: e.target.value || null })}
-                  className="input"
-                  placeholder="z.B. boarding@example.com"
-                />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Diese Adresse wird nur gespeichert, damit du sie im Blick behältst. Der Admin hinterlegt die Ziel-Mailbox.
-                </p>
-              </div>
-              <div className="space-y-2">
-                <label className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={emailImport.autoAccept}
-                    onChange={(e) => setEmailImport({ autoAccept: e.target.checked })}
-                    className="h-4 w-4"
-                  />
-                  <span>Importe automatisch annehmen</span>
-                </label>
-                <label className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={emailImport.shareWithAdmin}
-                    onChange={(e) => setEmailImport({ shareWithAdmin: e.target.checked })}
-                    className="h-4 w-4"
-                  />
-                  <span>Fehlerhafte Parsergebnisse mit Admin teilen</span>
-                </label>
-              </div>
-            </div>
-
-            <div className="bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 rounded-lg p-4 text-sm text-gray-700 dark:text-gray-300 space-y-1">
-              <p className="font-semibold">Hinweis für Nutzer</p>
-              <ul className="list-disc list-inside space-y-1">
-                <li>Bitte frage deinen Admin nach dem Import-Secret oder der Weiterleitungsadresse.</li>
-                <li>Nur aktivieren, wenn der Admin die Funktion freigeschaltet hat, sonst bleiben Mails unbeachtet.</li>
-                <li>Du kannst das Secret jederzeit ändern, sobald es vom Admin aktualisiert wird.</li>
-              </ul>
             </div>
           </div>
         </div>

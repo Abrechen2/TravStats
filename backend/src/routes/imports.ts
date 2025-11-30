@@ -4,53 +4,8 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import { parseBookingEmail } from '../services/bookingParser';
 import { findOrCreateAirport } from '../services/airportLookup';
 import { v4 as uuidv4 } from 'uuid';
-import { getSystemSettings } from '../services/systemSettings';
 
 const router = Router();
-
-// Helper to verify inbound secret for email/webhook ingestion
-async function verifyImportSecret(req: Request) {
-  const { emailImport } = await getSystemSettings();
-  if (!emailImport.enabled || !emailImport.importSecret) {
-    return false;
-  }
-
-  const header = req.headers['x-import-secret'] || req.query.secret;
-  return header === emailImport.importSecret;
-}
-
-// Ingest email/webhook payload: expects userId or token + subject/text/html
-router.post('/email', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    if (!(await verifyImportSecret(req))) {
-      return res.status(401).json({ error: 'Unauthorized import' });
-    }
-
-    const { userId, subject, text, html, from, to } = req.body;
-    if (!userId) {
-      return res.status(400).json({ error: 'userId required' });
-    }
-
-    const parsed = parseBookingEmail(subject, text, html);
-
-    const draft = await prisma.importedFlight.create({
-      data: {
-        id: uuidv4(),
-        userId,
-        status: 'pending_review',
-        subject,
-        fromAddress: from,
-        toAddress: to,
-        raw: typeof text === 'string' ? text.slice(0, 8000) : '',
-        parsed: parsed as any,
-      },
-    });
-
-    res.json({ id: draft.id, status: draft.status });
-  } catch (error) {
-    next(error);
-  }
-});
 
 // Helper function to sanitize text for PostgreSQL
 function sanitizeForPostgres(str: string | undefined): string {
