@@ -7,42 +7,46 @@ import { v4 as uuidv4 } from 'uuid';
 
 const router = Router();
 
-// Helper to verify inbound secret for email/webhook ingestion
-function verifyImportSecret(req: Request) {
-  const secret = process.env.IMPORT_SECRET;
-  if (!secret) return false;
-  const header = req.headers['x-import-secret'] || req.query.secret;
-  return header === secret;
+// Helper function to sanitize text for PostgreSQL
+function sanitizeForPostgres(str: string | undefined): string {
+  if (!str) return '';
+  // Remove null bytes and other problematic characters
+  return str.replace(/\0/g, '').replace(/\uFFFD/g, '');
 }
 
-// Ingest email/webhook payload: expects userId or token + subject/text/html
-router.post('/email', async (req: Request, res: Response, next: NextFunction) => {
+// Upload email manually (authenticated user)
+router.post('/upload', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    if (!verifyImportSecret(req)) {
-      return res.status(401).json({ error: 'Unauthorized import' });
+    const userId = req.userId!;
+    const { subject, text, html, from, to } = req.body;
+
+    if (!text && !html) {
+      return res.status(400).json({ error: 'Either text or html content required' });
     }
 
-    const { userId, subject, text, html, from, to } = req.body;
-    if (!userId) {
-      return res.status(400).json({ error: 'userId required' });
-    }
+    // Sanitize inputs to remove null bytes
+    const cleanSubject = sanitizeForPostgres(subject);
+    const cleanText = sanitizeForPostgres(text);
+    const cleanHtml = sanitizeForPostgres(html);
+    const cleanFrom = sanitizeForPostgres(from);
+    const cleanTo = sanitizeForPostgres(to);
 
-    const parsed = parseBookingEmail(subject, text, html);
+    const parsed = parseBookingEmail(cleanSubject, cleanText, cleanHtml);
 
     const draft = await prisma.importedFlight.create({
       data: {
         id: uuidv4(),
         userId,
         status: 'pending_review',
-        subject,
-        fromAddress: from,
-        toAddress: to,
-        raw: typeof text === 'string' ? text.slice(0, 8000) : '',
+        subject: cleanSubject || 'Manual Upload',
+        fromAddress: cleanFrom,
+        toAddress: cleanTo,
+        raw: cleanText.slice(0, 8000),
         parsed: parsed as any,
       },
     });
 
-    res.json({ id: draft.id, status: draft.status });
+    res.json({ id: draft.id, status: draft.status, parsed });
   } catch (error) {
     next(error);
   }
