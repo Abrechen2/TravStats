@@ -52,6 +52,51 @@ router.post('/email', async (req: Request, res: Response, next: NextFunction) =>
   }
 });
 
+// Helper function to sanitize text for PostgreSQL
+function sanitizeForPostgres(str: string | undefined): string {
+  if (!str) return '';
+  // Remove null bytes and other problematic characters
+  return str.replace(/\0/g, '').replace(/\uFFFD/g, '');
+}
+
+// Upload email manually (authenticated user)
+router.post('/upload', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId!;
+    const { subject, text, html, from, to } = req.body;
+
+    if (!text && !html) {
+      return res.status(400).json({ error: 'Either text or html content required' });
+    }
+
+    // Sanitize inputs to remove null bytes
+    const cleanSubject = sanitizeForPostgres(subject);
+    const cleanText = sanitizeForPostgres(text);
+    const cleanHtml = sanitizeForPostgres(html);
+    const cleanFrom = sanitizeForPostgres(from);
+    const cleanTo = sanitizeForPostgres(to);
+
+    const parsed = parseBookingEmail(cleanSubject, cleanText, cleanHtml);
+
+    const draft = await prisma.importedFlight.create({
+      data: {
+        id: uuidv4(),
+        userId,
+        status: 'pending_review',
+        subject: cleanSubject || 'Manual Upload',
+        fromAddress: cleanFrom,
+        toAddress: cleanTo,
+        raw: cleanText.slice(0, 8000),
+        parsed: parsed as any,
+      },
+    });
+
+    res.json({ id: draft.id, status: draft.status, parsed });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Get pending imports for current user
 router.get('/pending', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {

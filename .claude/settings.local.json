@@ -1,27 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(Select-Object Id,ProcessName,StartTime)",
-      "Bash(tasklist:*)",
-      "Bash(.env)",
-      "Bash(npm install:*)",
-      "Bash(npm audit:*)",
-      "Bash(npm run build:*)",
-      "Bash(npx tsc:*)",
-      "Bash(docker build:*)",
-      "Bash(docker push:*)",
-      "Bash(npm run dev:*)",
-      "Bash(Start-Process test-bcbp-parser.html)",
-      "Bash(cat:*)",
-      "Bash(git diff:*)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(git remote get-url:*)",
-      "Bash(docker buildx version:*)",
-      "Bash(docker --version:*)",
-      "Bash(Start-Process \"C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe\")",
-      "Bash(git push:*)",
-      "Bash(npm test:*)"
+      "Bash(Select-Object FullName)"
     ],
     "deny": [],
     "ask": []

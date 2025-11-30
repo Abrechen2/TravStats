@@ -29,6 +29,10 @@ export interface SystemSettingsData {
   emailImport: EmailImportSettings;
 }
 
+export type EmailImportSettingsUpdate = Partial<Omit<EmailImportSettings, 'imap'>> & {
+  imap?: Partial<EmailImportSettings['imap']>;
+};
+
 const defaultAllowedSenders = ['@lufthansa.com', '@dlh.de', '@mail.lufthansa.com'];
 const defaultSubjectKeywords = ['lufthansa', 'buchungsbestaetigung', 'booking', 'etix', 'eticket'];
 
@@ -61,7 +65,7 @@ const defaultSystemSettings: SystemSettingsData = {
   emailImport: defaultEmailImportSettings,
 };
 
-function mergeEmailImportSettings(partial?: Partial<EmailImportSettings>): EmailImportSettings {
+function mergeEmailImportSettings(partial?: EmailImportSettingsUpdate): EmailImportSettings {
   return {
     ...defaultEmailImportSettings,
     ...partial,
@@ -82,7 +86,7 @@ export async function getSystemSettings(): Promise<SystemSettingsData> {
 }
 
 export async function updateEmailImportSettings(
-  updates: Partial<EmailImportSettings>
+  updates: EmailImportSettingsUpdate
 ): Promise<EmailImportSettings> {
   const current = await getSystemSettings();
   const merged = mergeEmailImportSettings({
