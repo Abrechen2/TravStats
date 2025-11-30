@@ -28,6 +28,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@kenjiuno/msgreader": "^1.27.0-alpha.3",
     "@prisma/client": "^5.7.0",
     "axios": "^1.13.2",
     "bcrypt": "^5.1.1",

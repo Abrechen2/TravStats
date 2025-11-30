@@ -82,6 +82,18 @@ export const importsApi = {
     const { data } = await api.post('/imports/upload', payload);
     return data;
   },
+  uploadEmailFile: async (formData: FormData) => {
+    const { data } = await api.post('/imports/upload-file', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return data;
+  },
+  edit: async (id: string, parsed: any) => {
+    const { data } = await api.put(`/imports/${id}/edit`, { parsed });
+    return data;
+  },
 };
 
 // Flights API

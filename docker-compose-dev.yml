@@ -20,6 +20,24 @@ services:
       timeout: 5s
       retries: 5
 
+  # Ollama LLM Server (for AI-powered email parsing)
+  ollama-dev:
+    image: ollama/ollama:latest
+    container_name: travstats-ollama-dev
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - /mnt/user/appdata/travstats-ollama-dev:/root/.ollama
+    networks:
+      - travstats-dev-network
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
   # TravStats Application
   travstats-app-dev:
     # Using GitHub Container Registry
@@ -70,6 +88,11 @@ services:
       AIRLABS_API_KEY: ac977626-758e-4570-8eb2-c3ace7892a86
       # OPENSKY_CLIENT_ID: your_opensky_client_id
       # OPENSKY_CLIENT_SECRET: your_opensky_client_secret
+
+      # LLM Parser Settings
+      OLLAMA_URL: "http://ollama-dev:11434"
+      OLLAMA_MODEL: "llama3.2:3b"
+      USE_LLM_PARSER: "true"
     ports:
       - "3004:80"  # Map to nginx internal port 80 (not 3000!)
     volumes:

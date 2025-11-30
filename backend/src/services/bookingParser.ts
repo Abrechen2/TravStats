@@ -18,36 +18,70 @@ export interface ParsedBooking {
 
 // City name to IATA code mapping (common German/European cities)
 const CITY_TO_IATA: Record<string, string> = {
-  munchen: 'MUC',
-  muenchen: 'MUC',
-  munich: 'MUC',
-  frankfurt: 'FRA',
-  berlin: 'BER',
-  hamburg: 'HAM',
-  dusseldorf: 'DUS',
-  duesseldorf: 'DUS',
-  koln: 'CGN',
-  koeln: 'CGN',
-  cologne: 'CGN',
-  stuttgart: 'STR',
-  hannover: 'HAJ',
-  nurnberg: 'NUE',
-  nuernberg: 'NUE',
-  nuremberg: 'NUE',
-  leipzig: 'LEJ',
-  dresden: 'DRS',
-  bremen: 'BRE',
-  luxemburg: 'LUX',
-  luxembourg: 'LUX',
-  paris: 'CDG',
-  london: 'LHR',
-  amsterdam: 'AMS',
-  brussel: 'BRU',
-  bruessel: 'BRU',
-  brussels: 'BRU',
-  wien: 'VIE',
-  vienna: 'VIE',
-  zurich: 'ZRH',
+  // München / Munich
+  'münchen': 'MUC',
+  'munchen': 'MUC',
+  'muenchen': 'MUC',
+  'munich': 'MUC',
+
+  // Frankfurt
+  'frankfurt': 'FRA',
+
+  // Berlin
+  'berlin': 'BER',
+  'berlin-tegel': 'TXL',
+
+  // Hamburg
+  'hamburg': 'HAM',
+
+  // Düsseldorf
+  'düsseldorf': 'DUS',
+  'dusseldorf': 'DUS',
+  'duesseldorf': 'DUS',
+
+  // Köln / Cologne
+  'köln': 'CGN',
+  'koln': 'CGN',
+  'koeln': 'CGN',
+  'cologne': 'CGN',
+
+  // Other German cities
+  'stuttgart': 'STR',
+  'hannover': 'HAJ',
+  'nürnberg': 'NUE',
+  'nurnberg': 'NUE',
+  'nuernberg': 'NUE',
+  'nuremberg': 'NUE',
+  'leipzig': 'LEJ',
+  'dresden': 'DRS',
+  'bremen': 'BRE',
+
+  // Luxembourg
+  'luxemburg': 'LUX',
+  'luxembourg': 'LUX',
+
+  // Paris
+  'paris': 'CDG',
+
+  // London
+  'london': 'LHR',
+
+  // Amsterdam
+  'amsterdam': 'AMS',
+
+  // Brussels
+  'brüssel': 'BRU',
+  'brussel': 'BRU',
+  'bruessel': 'BRU',
+  'brussels': 'BRU',
+
+  // Vienna
+  'wien': 'VIE',
+  'vienna': 'VIE',
+
+  // Zurich
+  'zürich': 'ZRH',
+  'zurich': 'ZRH',
   genf: 'GVA',
   geneva: 'GVA',
   rom: 'FCO',
@@ -109,15 +143,28 @@ function extractAirportCodes(source: string): { departure?: string; arrival?: st
   const sourceLower = source.toLowerCase();
   const sourceUpper = source.toUpperCase();
 
+  console.log('[DEBUG] ==== AIRPORT CODE EXTRACTION ====');
+  console.log('[DEBUG] Source length:', source.length);
+  console.log('[DEBUG] Source preview:', source.substring(0, 200));
+
   // Try city name mapping first (most reliable for German emails)
-  const cityPattern = /(?:von|ab|from)\s+([\p{L}\s-]+?)\s+(?:nach|to|bis)\s+([\p{L}\s-]+)/iu;
+  // Pattern stops at "am" (date), "on", digits, or line break to avoid capturing date
+  const cityPattern = /(?:von|ab|from)\s+([\p{L}\s-]+?)\s+(?:nach|to|bis)\s+([\p{L}\s-]+?)(?:\s+am|\s+on|\s+\d|$|\n)/iu;
   const cityMatch = cityPattern.exec(sourceLower);
 
+  console.log('[DEBUG] City pattern match:', cityMatch ? cityMatch[0] : 'NO MATCH');
+
   if (cityMatch) {
-    const departure = CITY_TO_IATA[normalizeCityName(cityMatch[1])];
-    const arrival = CITY_TO_IATA[normalizeCityName(cityMatch[2])];
+    const depCity = normalizeCityName(cityMatch[1]);
+    const arrCity = normalizeCityName(cityMatch[2]);
+    console.log('[DEBUG] Normalized cities:', { depCity, arrCity });
+
+    const departure = CITY_TO_IATA[depCity];
+    const arrival = CITY_TO_IATA[arrCity];
+    console.log('[DEBUG] City to IATA lookup:', { departure, arrival });
 
     if (departure && arrival) {
+      console.log('[DEBUG] ✅ SUCCESS via city name mapping:', { departure, arrival });
       return { departure, arrival };
     }
   }
@@ -137,21 +184,29 @@ function extractAirportCodes(source: string): { departure?: string; arrival?: st
     }
   }
 
+  console.log('[DEBUG] IATA codes found:', codes);
+
   // Remove duplicates and filter out common false positives
   const falsePositives = ['UND', 'DER', 'DIE', 'DAS', 'VON', 'BIS', 'FUR', 'MIT', 'AUF', 'AUS'];
   const filtered = [...new Set(codes)].filter((code) => !falsePositives.includes(code));
 
+  console.log('[DEBUG] Filtered codes:', filtered);
+
   if (filtered.length >= 2) {
+    console.log('[DEBUG] ✅ SUCCESS via IATA pattern:', { departure: filtered[0], arrival: filtered[1] });
     return { departure: filtered[0], arrival: filtered[1] };
   }
   if (filtered.length === 1) {
+    console.log('[DEBUG] ⚠️ Only one code found:', filtered[0]);
     return { departure: filtered[0] };
   }
 
+  console.log('[DEBUG] ❌ NO CODES FOUND');
   return {};
 }
 
-export function parseBookingEmail(subject: string | undefined, text: string | undefined, html?: string): ParsedBooking {
+// Rename original function to internal use
+function parseBookingEmailRegex(subject: string | undefined, text: string | undefined, html?: string): ParsedBooking {
   const source = [subject || '', text || '', extractText(html)].join('\n');
   const sourceUpper = source.toUpperCase();
   const missing: string[] = [];
@@ -208,4 +263,104 @@ export function parseBookingEmail(subject: string | undefined, text: string | un
   if (!arrivalTime) missing.push('arrivalTime');
 
   return result;
+}
+
+/**
+ * Dual email parser - runs BOTH regex and LLM parsers
+ *
+ * This is the main entry point for email parsing. It will:
+ * 1. Always run regex-based parsing
+ * 2. Always run LLM parsing (if enabled)
+ * 3. Compare results and prefer LLM if available and complete
+ * 4. Log both results for debugging
+ * 5. Return ARRAY of flights (LLM can detect multiple flights in one email)
+ */
+export async function parseBookingEmail(
+  subject: string | undefined,
+  text: string | undefined,
+  html?: string
+): Promise<ParsedBooking[]> {
+  const useLLM = process.env.USE_LLM_PARSER === 'true';
+
+  console.log('[Parser] Starting dual parsing (Regex + LLM, LLM enabled:', useLLM, ')');
+
+  // ALWAYS run regex-based parsing
+  const regexResult = parseBookingEmailRegex(subject, text, html);
+
+  console.log('[Parser] Regex result:', {
+    departureCode: regexResult.departureCode,
+    arrivalCode: regexResult.arrivalCode,
+    flightNumber: regexResult.flightNumber,
+    missing: regexResult.missing,
+  });
+
+  // If LLM is disabled, return regex result immediately (wrapped in array)
+  if (!useLLM) {
+    console.log('[Parser] LLM disabled, using regex result');
+    return [regexResult];
+  }
+
+  // ALWAYS try LLM parsing when enabled (regardless of regex success)
+  try {
+    console.log('[Parser] Running LLM parser...');
+
+    // Import LLM parser dynamically to avoid issues if not available
+    const { parseEmailWithLLM, isOllamaAvailable } = await import('./llmParser');
+
+    // Check if Ollama is available
+    const ollamaAvailable = await isOllamaAvailable();
+    if (!ollamaAvailable) {
+      console.log('[Parser] ❌ Ollama not available, using regex result');
+      return [regexResult];
+    }
+
+    // Run LLM parsing (returns array)
+    const llmResults = await parseEmailWithLLM(subject || '', text || '', html);
+
+    console.log(`[Parser] LLM found ${llmResults.length} flight(s)`);
+    llmResults.forEach((result, i) => {
+      console.log(`[Parser] LLM Flight ${i + 1}:`, {
+        departureCode: result.departureCode,
+        arrivalCode: result.arrivalCode,
+        flightNumber: result.flightNumber,
+        missing: result.missing,
+      });
+    });
+
+    // Compare results
+    const regexHasCriticalFields =
+      regexResult.departureCode &&
+      regexResult.arrivalCode &&
+      regexResult.flightNumber;
+
+    // Check if any LLM result has critical fields
+    const llmHasValidFlight = llmResults.some(
+      (r) => r.departureCode && r.arrivalCode && r.flightNumber
+    );
+
+    // Prefer LLM results if at least one has critical fields
+    if (llmHasValidFlight) {
+      console.log(`[Parser] ✅ Using LLM results (${llmResults.length} flight(s) with critical fields)`);
+      if (regexHasCriticalFields) {
+        console.log('[Parser] 📊 Comparison: Both parsers succeeded');
+        console.log('[Parser] 📊 Regex:', regexResult.departureCode, '→', regexResult.arrivalCode, regexResult.flightNumber);
+        console.log(`[Parser] 📊 LLM: ${llmResults.length} flight(s)`);
+      }
+      return llmResults;
+    }
+
+    // If LLM failed but regex succeeded, use regex (wrapped in array)
+    if (regexHasCriticalFields) {
+      console.log('[Parser] ⚠️ LLM incomplete, using regex result (regex succeeded)');
+      return [regexResult];
+    }
+
+    // Both failed, return regex result with more context (wrapped in array)
+    console.log('[Parser] ⚠️ Both parsers incomplete, using regex result');
+    return [regexResult];
+  } catch (error) {
+    console.error('[Parser] LLM parsing error:', error);
+    console.log('[Parser] Using regex result due to LLM error');
+    return [regexResult];
+  }
 }

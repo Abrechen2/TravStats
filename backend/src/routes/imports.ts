@@ -4,6 +4,10 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import { parseBookingEmail } from '../services/bookingParser';
 import { findOrCreateAirport } from '../services/airportLookup';
 import { v4 as uuidv4 } from 'uuid';
+import { uploadEmailFile } from '../middleware/upload';
+import MsgReader from '@kenjiuno/msgreader';
+import fs from 'fs';
+import path from 'path';
 
 const router = Router();
 
@@ -31,22 +35,147 @@ router.post('/upload', authenticate, async (req: AuthRequest, res: Response, nex
     const cleanFrom = sanitizeForPostgres(from);
     const cleanTo = sanitizeForPostgres(to);
 
-    const parsed = parseBookingEmail(cleanSubject, cleanText, cleanHtml);
+    // Parse email (returns array of flights)
+    const parsedFlights = await parseBookingEmail(cleanSubject, cleanText, cleanHtml);
 
-    const draft = await prisma.importedFlight.create({
-      data: {
-        id: uuidv4(),
-        userId,
-        status: 'pending_review',
-        subject: cleanSubject || 'Manual Upload',
-        fromAddress: cleanFrom,
-        toAddress: cleanTo,
-        raw: cleanText.slice(0, 8000),
-        parsed: parsed as any,
-      },
+    console.log(`[Email Import] Found ${parsedFlights.length} flight(s) in text upload`);
+
+    // Create import record for EACH flight
+    const drafts = await Promise.all(
+      parsedFlights.map(async (parsed, index) => {
+        const flightSubject =
+          parsedFlights.length > 1
+            ? `${cleanSubject || 'Manual Upload'} - Flight ${index + 1}/${parsedFlights.length}`
+            : cleanSubject || 'Manual Upload';
+
+        return await prisma.importedFlight.create({
+          data: {
+            id: uuidv4(),
+            userId,
+            status: 'pending_review',
+            subject: flightSubject,
+            fromAddress: cleanFrom,
+            toAddress: cleanTo,
+            raw: cleanText.slice(0, 8000),
+            parsed: parsed as any,
+          },
+        });
+      })
+    );
+
+    res.json({
+      count: drafts.length,
+      imports: drafts.map((d) => ({
+        id: d.id,
+        status: d.status,
+        parsed: d.parsed,
+      })),
     });
+  } catch (error) {
+    next(error);
+  }
+});
 
-    res.json({ id: draft.id, status: draft.status, parsed });
+// Upload email file (.eml, .txt, .msg)
+router.post('/upload-file', authenticate, uploadEmailFile.single('file'), async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId!;
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    let subject = '';
+    let text = '';
+    let html = '';
+
+    const ext = path.extname(file.originalname).toLowerCase();
+
+    try {
+      if (ext === '.msg') {
+        // Parse .msg file
+        console.log('[MSG Parser] Reading .msg file:', file.path);
+        const msgFileBuffer = fs.readFileSync(file.path);
+        const msgReader = new MsgReader(msgFileBuffer);
+        const fileData = msgReader.getFileData();
+
+        subject = fileData.subject || '';
+        text = fileData.body || '';
+        html = fileData.bodyHTML || '';
+
+        console.log('[MSG Parser] Extracted:', { subject, textLength: text.length, htmlLength: html.length });
+      } else if (ext === '.eml' || ext === '.txt') {
+        // Parse .eml or .txt file
+        const content = fs.readFileSync(file.path, 'utf-8');
+
+        // Extract subject from .eml headers
+        const subjectMatch = content.match(/^Subject:\s*(.+)$/im);
+        subject = subjectMatch?.[1]?.trim() || '';
+
+        // Find body (after headers, separated by blank line)
+        const bodyStart = content.indexOf('\n\n');
+        const body = bodyStart !== -1 ? content.substring(bodyStart + 2) : content;
+
+        text = body;
+        html = body; // May contain HTML in .eml files
+      }
+
+      // Sanitize inputs
+      const cleanSubject = sanitizeForPostgres(subject);
+      const cleanText = sanitizeForPostgres(text);
+      const cleanHtml = sanitizeForPostgres(html);
+
+      // Parse email (returns array of flights)
+      const parsedFlights = await parseBookingEmail(cleanSubject, cleanText, cleanHtml);
+
+      console.log(`[Email Import] Found ${parsedFlights.length} flight(s) in email`);
+
+      // Create import record for EACH flight
+      const drafts = await Promise.all(
+        parsedFlights.map(async (parsed, index) => {
+          const flightSubject =
+            parsedFlights.length > 1
+              ? `${cleanSubject || file.originalname} - Flight ${index + 1}/${parsedFlights.length}`
+              : cleanSubject || file.originalname;
+
+          return await prisma.importedFlight.create({
+            data: {
+              id: uuidv4(),
+              userId,
+              status: 'pending_review',
+              subject: flightSubject,
+              fromAddress: '',
+              toAddress: '',
+              raw: cleanText.slice(0, 8000),
+              parsed: parsed as any,
+            },
+          });
+        })
+      );
+
+      // Clean up uploaded file
+      fs.unlinkSync(file.path);
+
+      res.json({
+        count: drafts.length,
+        imports: drafts.map((d) => ({
+          id: d.id,
+          status: d.status,
+          parsed: d.parsed,
+        })),
+      });
+    } catch (parseError: any) {
+      // Clean up file on error
+      if (fs.existsSync(file.path)) {
+        fs.unlinkSync(file.path);
+      }
+      console.error('[Email File Upload] Parse error:', parseError);
+      return res.status(400).json({
+        error: 'Failed to parse email file',
+        message: parseError.message
+      });
+    }
   } catch (error) {
     next(error);
   }
@@ -61,6 +190,37 @@ router.get('/pending', authenticate, async (req: AuthRequest, res: Response, nex
       orderBy: { createdAt: 'desc' },
     });
     res.json({ imports: drafts });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Update/edit a pending import
+router.put('/:id/edit', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId!;
+    const { id } = req.params;
+    const { parsed } = req.body;
+
+    // Find the import
+    const draft = await prisma.importedFlight.findFirst({
+      where: { id, userId, status: 'pending_review' },
+    });
+
+    if (!draft) {
+      return res.status(404).json({ error: 'Import not found' });
+    }
+
+    // Update the parsed data
+    const updated = await prisma.importedFlight.update({
+      where: { id },
+      data: {
+        parsed: parsed as any,
+        updatedAt: new Date(),
+      },
+    });
+
+    res.json({ import: updated });
   } catch (error) {
     next(error);
   }

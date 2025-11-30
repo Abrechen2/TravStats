@@ -19,6 +19,22 @@ services:
     networks:
       - travstats-network
 
+  # Ollama LLM Server (for AI-powered email parsing)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: travstats-ollama
+    restart: unless-stopped
+    volumes:
+      - travstats-ollama-data:/root/.ollama
+    networks:
+      - travstats-network
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
   app:
     image: ghcr.io/abrechen2/travstats:latest
     container_name: travstats-app
@@ -49,6 +65,10 @@ services:
       # Seeding
       SEED_AIRPORTS: ${SEED_AIRPORTS:-true}
       CREATE_DEMO_USER: ${CREATE_DEMO_USER:-false}
+      # LLM Parser Settings
+      OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2:3b}
+      USE_LLM_PARSER: ${USE_LLM_PARSER:-true}
     volumes:
       - travstats-app-data:/app/data
     depends_on:
@@ -68,6 +88,8 @@ volumes:
     name: travstats-db-data
   travstats-app-data:
     name: travstats-app-data
+  travstats-ollama-data:
+    name: travstats-ollama-data
 
 networks:
   travstats-network:
