@@ -3,13 +3,18 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 
-// Upload directory
+// Upload directories
 const UPLOAD_DIR = path.join(__dirname, '../../uploads/receipts');
+const EMAIL_UPLOAD_DIR = path.join(__dirname, '../../uploads/emails');
 
-// Ensure upload directory exists
+// Ensure upload directories exist
 if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
   console.log(`📁 Created upload directory: ${UPLOAD_DIR}`);
+}
+if (!fs.existsSync(EMAIL_UPLOAD_DIR)) {
+  fs.mkdirSync(EMAIL_UPLOAD_DIR, { recursive: true });
+  console.log(`📁 Created email upload directory: ${EMAIL_UPLOAD_DIR}`);
 }
 
 // Configure storage
@@ -106,3 +111,45 @@ export async function cleanupOldReceipts(prisma: any): Promise<number> {
 export function getUploadDir(): string {
   return UPLOAD_DIR;
 }
+
+// Email file storage configuration
+const emailStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, EMAIL_UPLOAD_DIR);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = `${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
+    const ext = path.extname(file.originalname);
+    const basename = path.basename(file.originalname, ext);
+    const sanitized = basename.replace(/[^a-zA-Z0-9-_]/g, '_');
+    cb(null, `${uniqueSuffix}-${sanitized}${ext}`);
+  },
+});
+
+// Email file filter - allow .eml, .txt, .msg
+const emailFileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  const allowedMimeTypes = [
+    'message/rfc822', // .eml files
+    'text/plain', // .txt files
+    'application/vnd.ms-outlook', // .msg files
+    'application/octet-stream', // fallback for .msg
+  ];
+
+  const allowedExtensions = ['.eml', '.txt', '.msg'];
+  const ext = path.extname(file.originalname).toLowerCase();
+
+  if (allowedMimeTypes.includes(file.mimetype) || allowedExtensions.includes(ext)) {
+    cb(null, true);
+  } else {
+    cb(new Error(`Invalid file type. Allowed: .eml, .txt, .msg files`));
+  }
+};
+
+// Configure multer for email uploads
+export const uploadEmailFile = multer({
+  storage: emailStorage,
+  fileFilter: emailFileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB max
+  },
+});

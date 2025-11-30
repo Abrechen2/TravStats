@@ -46,21 +46,11 @@ export default function EmailImportPage() {
     setSuccess(null);
 
     try {
-      const text = await file.text();
+      // Use FormData for file upload (supports .eml, .txt, .msg)
+      const formData = new FormData();
+      formData.append('file', file);
 
-      // Parse .eml file to extract subject and body
-      const subjectMatch = text.match(/^Subject:\s*(.+)$/im);
-      const extractedSubject = subjectMatch?.[1]?.trim() || file.name;
-
-      // Find email body (after headers, separated by blank line)
-      const bodyStart = text.indexOf('\n\n');
-      const body = bodyStart !== -1 ? text.substring(bodyStart + 2) : text;
-
-      await importsApi.uploadEmail({
-        subject: extractedSubject,
-        text: body,
-        html: body, // .eml files might have HTML
-      });
+      await importsApi.uploadEmailFile(formData);
 
       setSuccess('Email-Datei erfolgreich importiert! Der Flug ist nun unter "Pending Imports" verfügbar.');
 
@@ -72,7 +62,7 @@ export default function EmailImportPage() {
         navigate('/');
       }, 2000);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Fehler beim Lesen der Datei. Bitte prüfen Sie das Format.');
+      setError(err.response?.data?.error || err.response?.data?.message || 'Fehler beim Lesen der Datei. Bitte prüfen Sie das Format.');
     } finally {
       setLoading(false);
     }

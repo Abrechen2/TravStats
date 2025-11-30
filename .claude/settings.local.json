@@ -1,7 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(Select-Object FullName)"
+      "Bash(Select-Object FullName)",
+      "Bash(npm run dev:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(npx kill-port:*)",
+      "Bash(if exist test-parser.js del test-parser.js)",
+      "Bash(npm install:*)"
     ],
     "deny": [],
     "ask": []
