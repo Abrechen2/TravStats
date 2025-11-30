@@ -33,6 +33,37 @@ const CSV_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 let csvCache: CsvCache = { data: null, timestamp: 0 };
 
 /**
+ * Parse a CSV line handling quoted fields that may contain commas
+ * Example: "123","ABC","Large Airport","Berlin, Germany",52.5,13.4
+ */
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+
+    if (char === '"') {
+      // Toggle quote state
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      // End of field
+      result.push(current);
+      current = '';
+    } else {
+      // Regular character
+      current += char;
+    }
+  }
+
+  // Add last field
+  result.push(current);
+
+  return result;
+}
+
+/**
  * Calculate distance between two coordinates (Haversine formula)
  * Returns distance in kilometers
  */
@@ -79,7 +110,7 @@ export async function findOrCreateAirport(code: string): Promise<any> {
     return existingAirport;
   }
 
-  console.log(`🔍 Flughafen ${code} nicht in DB gefunden, suche extern...`);
+  console.log(`Airport ${code} not found locally, searching external sources...`);
 
   // 2. Von externer API laden
   const externalData = await fetchFromExternalAPI(upperCode);
@@ -89,7 +120,7 @@ export async function findOrCreateAirport(code: string): Promise<any> {
   }
 
   // 3. In DB speichern
-  console.log(`💾 Speichere neuen Flughafen: ${externalData.name} (${code})`);
+  console.log(`Storing new airport: ${externalData.name} (${code})`);
 
   const newAirport = await prisma.airport.create({
     data: {
@@ -135,7 +166,7 @@ async function fetchFromExternalAPI(code: string): Promise<ExternalAirportData |
       }
     }
   } catch (error) {
-    console.log(`⚠️  Airport-data.com API fehlgeschlagen für ${code}`);
+    console.log(`Airport-data.com API failed for ${code}`);
   }
 
   // Fallback: Versuche OurAirports direkten Lookup mit Cache
@@ -145,10 +176,10 @@ async function fetchFromExternalAPI(code: string): Promise<ExternalAirportData |
 
     // Check if cache is valid
     if (csvCache.data && (now - csvCache.timestamp) < CSV_CACHE_TTL) {
-      console.log(`🔄 Using cached OurAirports data (age: ${Math.round((now - csvCache.timestamp) / 1000 / 60)}min)`);
+      console.log(`Using cached OurAirports data (age: ${Math.round((now - csvCache.timestamp) / 1000 / 60)}min)`);
       csvText = csvCache.data;
     } else {
-      console.log(`📥 Downloading OurAirports CSV data (this may take a moment)...`);
+      console.log('Downloading OurAirports CSV data (this may take a moment)...');
       const response = await fetch(
         `https://davidmegginson.github.io/ourairports-data/airports.csv`
       );
@@ -164,40 +195,69 @@ async function fetchFromExternalAPI(code: string): Promise<ExternalAirportData |
         data: csvText,
         timestamp: now,
       };
-      console.log(`✅ CSV data cached (${(csvText.length / 1024 / 1024).toFixed(2)}MB)`);
+      console.log(`CSV data cached (${(csvText.length / 1024 / 1024).toFixed(2)}MB)`);
     }
 
     const lines = csvText.split('\n');
+    console.log(`Searching ${lines.length} airports for code: ${code}`);
 
     // Finde die Zeile mit dem gesuchten Code
-    for (const line of lines) {
-      if (line.includes(`,${code},`) || line.includes(`,"${code}",`)) {
-        const parts = line.split(',');
+    let foundLine = 0;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
 
-        // CSV-Format parsen (vereinfacht)
-        // Format: id,ident,type,name,latitude_deg,longitude_deg,...
-        const iataCode = parts[13]?.replace(/"/g, '') || null;
-        const icaoCode = parts[12]?.replace(/"/g, '') || parts[1]?.replace(/"/g, '');
+      // Skip header line
+      if (i === 0 || !line.trim()) continue;
 
-        if (iataCode === code || icaoCode === code) {
-          return {
-            iata: iataCode || undefined,
-            icao: icaoCode || undefined,
-            name: parts[3]?.replace(/"/g, '') || code,
-            city: parts[10]?.replace(/"/g, '') || undefined,
-            country: parts[8]?.replace(/"/g, '') || undefined,
-            lat: parseFloat(parts[4]),
-            lon: parseFloat(parts[5]),
-            altitude: parts[6] ? Math.round(parseFloat(parts[6]) * 0.3048) : undefined,
-          };
+      // Proper CSV parsing: handle quoted fields that may contain commas
+      const parts = parseCSVLine(line);
+
+      // OurAirports CSV format:
+      // 0: id, 1: ident (ICAO), 2: type, 3: name, 4: latitude_deg, 5: longitude_deg,
+      // 6: elevation_ft, 7: continent, 8: iso_country, 9: iso_region, 10: municipality,
+      // 11: scheduled_service, 12: gps_code (ICAO backup), 13: iata_code, 14: local_code
+
+      const iataCode = parts[13]?.trim() || '';
+      const icaoCode = parts[1]?.trim() || parts[12]?.trim() || '';
+
+      // Case-insensitive comparison
+      if (iataCode.toUpperCase() === code || icaoCode.toUpperCase() === code) {
+        foundLine = i + 1;
+        console.log(`Found airport in CSV (line ${foundLine}):`);
+        console.log(`   IATA: ${iataCode}, ICAO: ${icaoCode}`);
+        console.log(`   Name: ${parts[3]}`);
+        console.log(`   City: ${parts[10]}, Country: ${parts[8]}`);
+        console.log(`   Coordinates: ${parts[4]}, ${parts[5]}`);
+
+        const lat = parseFloat(parts[4]);
+        const lon = parseFloat(parts[5]);
+
+        if (isNaN(lat) || isNaN(lon)) {
+          console.log(`Invalid coordinates for ${code}, skipping`);
+          continue;
         }
+
+        return {
+          iata: iataCode || undefined,
+          icao: icaoCode || undefined,
+          name: parts[3]?.trim() || code,
+          city: parts[10]?.trim() || undefined,
+          country: parts[8]?.trim() || undefined,
+          lat,
+          lon,
+          altitude: parts[6] ? Math.round(parseFloat(parts[6]) * 0.3048) : undefined,
+        };
       }
     }
+
+    if (foundLine === 0) {
+      console.log(`Code ${code} not found in CSV (checked ${lines.length} lines)`);
+    }
   } catch (error) {
-    console.log(`⚠️  OurAirports CSV-Lookup fehlgeschlagen für ${code}:`, error);
+    console.log(`OurAirports CSV lookup failed for ${code}:`, error);
   }
 
-  console.log(`❌ Kein externer Treffer für ${code} gefunden`);
+  console.log(`No external match for ${code}`);
   return null;
 }
 

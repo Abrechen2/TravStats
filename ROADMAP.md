@@ -237,10 +237,29 @@
 - [ ] Versionierung
 - [ ] Cloud-Sync (optional)
 
-### Neue Importquelle: Buchungsbestaetigungs-Mail
-- [ ] E-Mail-Weiterleitung an Server (dedizierte Inbox/Webhook) und MIME-Parser, der PNR/LOC, Name, Airline, Flugnummer, Datum/Zeit, Airports, Sitz/Terminal/Gate, Preis/PNR extrahiert.
-- [ ] Nutzer-Zuordnung via Custom Weiterleitungsadresse für jeden Nutzer ; automatisch einen Flug-Entwurf mit den gefundenen Feldern erzeugen.
-- [ ] UI-Preview: Zur Kontrolle in sonder Bereich Speichern, beim nächsten öffen dann zur review auffordern mit Popup fenster dann fehlende Felder markieren, manuell nachpflegen lassen, erst danach final speichern.
+### ✅ Neue Importquelle: Buchungsbestaetigungs-Mail (Implementiert)
+- [x] **Manual Email Upload Page** (`/import` Route)
+  - [x] Text einfügen Option (Email-Inhalt kopieren & einfügen)
+  - [x] Datei-Upload Option (.eml, .txt Dateien)
+  - [x] Automatisches Parsing mit `parseBookingEmail` Service
+  - [x] Benutzerfreundliche Anleitung auf der Seite
+- [x] **Backend-Endpunkt** `/api/v1/imports/upload`
+  - [x] Authentifiziert (nutzt JWT-Token, kein Secret nötig)
+  - [x] Erstellt `pending_review` Import für User
+  - [x] Nutzt bestehenden Email-Parser
+- [x] **UI-Preview & Review-Flow**
+  - [x] Pending Imports im Dashboard anzeigen
+  - [x] Accept/Reject Funktionalität
+  - [x] Duplikat-Erkennung bei Accept
+- [ ] **IMAP Polling (Optionale Alternative)**
+  - [x] Backend-Service `runImapPoller.ts` vorhanden
+  - [x] Admin-UI Konfiguration vorhanden
+  - [ ] App-spezifisches Passwort Setup-Anleitung
+  - [ ] Dokumentation für IMAP-Setup
+- [ ] **E-Mail-Weiterleitung via Webhook** (Future Enhancement)
+  - [ ] Webhook-Endpunkt mit Secret-Authentifizierung (bereits vorhanden: `/imports/email`)
+  - [ ] Email-Provider Weiterleitungsregeln Setup-Anleitung
+  - [ ] Nutzer-spezifische Webhook-URLs
 
 ### 🔗 17. Backend-Integration für URL-basierte Boarding Passes
 - [ ] **URL-Decoder Service:**
@@ -486,7 +505,7 @@ CI/CD (0), PWA (22), Social Features (19-21)
 ### 🟡 Teilweise implementiert:
 - Phase 3: Praktische Tools (~70% - Einstellungs-UI vorhanden, Backend teilweise)
 - Phase 4: Umwelt & Analysen (~40% - Routen-Analyse und Heatmap)
-- Phase 5: Import & Export (~60% - Scanner und Export ohne PDF)
+- **Phase 5: Import & Export (~75% - Email Upload, Scanner, Export ohne PDF)** 🆕
 - Phase 8: Qualität & Analytics (~40% - Basis vorhanden)
 
 ### ❌ Nicht implementiert:
@@ -497,7 +516,7 @@ CI/CD (0), PWA (22), Social Features (19-21)
 
 ---
 
-*Letzte Aktualisierung: 2025-11-22*
+*Letzte Aktualisierung: 2025-11-30*
 *Roadmap-Status basierend auf tatsächlicher Code-Analyse*
 ### Add Flight UX Polish (Backlog)
 - [ ] Boarding-Pass-Scan weiter anreichern (Gate/Terminal/Seat-Class/Zeiten) und API-Fallback klar anzeigen

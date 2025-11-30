@@ -193,6 +193,9 @@ function parseFieldsFromText(text: string): OCRExtractedData {
   // Pattern 1: Gate (GATE B11, GATE 029, B11 gate, etc.)
   // OCR often misreads characters, so we use flexible patterns
   const gatePatterns = [
+    // First check for placeholders explicitly (before matching real gates)
+    /(?:GATE|GNTE|G[A4O]TE|G.TE)[:\s]+([-._*]{1,}|TBA|TBD|N\/A|NA)\b/i,  // "GATE ----", "GATE ....", "GATE -"
+
     // With letter prefix (most common)
     /(?:GATE|GNTE|G[A4O]TE|G.TE)[:\s]+([A-Z]\d{1,3})/i,           // "GATE B11", "GATE: B11" (tolerant for OCR errors)
     /(?:GATE|GNTE|G[A4O]TE)[:\s]+([A-Z])\s*(\d{1,3})/i,      // "GATE B 11"
@@ -211,11 +214,33 @@ function parseFieldsFromText(text: string): OCRExtractedData {
   for (const pattern of gatePatterns) {
     const match = normalizedText.match(pattern);
     if (match) {
+      // First pattern is placeholder-only (no capture group for gate code)
+      if (match[0].includes('----') || match[0].includes('....') || match[0].includes('***') ||
+          match[0].includes('TBA') || match[0].includes('TBD') || match[0].includes('N/A') || match[0].includes('-')) {
+        console.log('🚪 Gate placeholder detected (no gate assigned):', match[1] || match[0]);
+        break; // Don't set gate, leave undefined
+      }
+
       // Extract gate code (handle both captured groups)
       let gateCode = match[2] ? `${match[1]}${match[2]}` : match[1];
 
+      // Skip if no capture group (shouldn't happen with our patterns)
+      if (!gateCode) continue;
+
       // Clean up: remove spaces
       gateCode = gateCode.replace(/\s/g, '');
+
+      // Double-check for placeholders in captured content
+      const isPlaceholder = /^[.\-_*]+$/.test(gateCode) || // "....", "----", "____", "****"
+                            gateCode === 'TBA' ||          // "To Be Announced"
+                            gateCode === 'TBD' ||          // "To Be Determined"
+                            gateCode === 'N/A' ||
+                            gateCode === 'NA';
+
+      if (isPlaceholder) {
+        console.log('🚪 Gate placeholder detected (no gate assigned):', gateCode);
+        break; // Don't set gate, leave undefined
+      }
 
       // Validate: Gate should be either:
       // - 1 letter + 1-3 digits (B11, A5, etc.)
@@ -285,10 +310,17 @@ function parseFieldsFromText(text: string): OCRExtractedData {
     }
   }
 
-  // Pattern 3: Boarding Time (BOARDING 12:25, BOARDS 9:59 AM, etc.)
+  // Pattern 3: Boarding Time (BOARDING 12:25, BOARDS 9:59 AM, BOARDING TIME 11:20, etc.)
   const boardingTimePatterns = [
-    // Standard 24h format
+    // Standard 24h format - Most common patterns first for performance
+    /(?:BOARDING\s+TIME|BOARDING TIME)[:\s]+(\d{1,2})[:\.](\d{2})/i,  // Wideroe: "BOARDING TIME 11:20"
     /(?:BOARDING|BOARDI.G|BO.RDING|BOARDS|EINST)[:\s]+(\d{1,2})[:\.](\d{2})/i,   // "BOARDING 12:25", "BOARDS 9:59"
+
+    // Departure/Departs variations (Emirates, United, etc.)
+    /(?:DEPARTS?|DEPARTURE)[:\s]+(\d{1,2})[:\.](\d{2})/i,  // Emirates: "DEPARTS 15:40"
+    /(?:DEPARTS?)[:\s]+\d{1,2}\s+\w{3}[,\s]+(\d{1,2})[:\.](\d{2})/i,  // "DEPARTS 20 Apr, 15:40"
+
+    // Compact formats
     /(?:BOARDING|BOARDI.G|BOARDS)[:\s]+(\d{4})/i,                  // "BOARDING 1225"
     /(?:BOARD|BO.RD|EINST)[:\s]+(\d{1,2})[:\.](\d{2})/i,      // "BOARD 12:25", "EINST 12:25"
     /(?:EINSTEIGEN|EINSTIEG)[:\s]+(\d{1,2})[:\.](\d{2})/i,    // German: "EINSTEIGEN 12:25"
@@ -296,6 +328,10 @@ function parseFieldsFromText(text: string): OCRExtractedData {
     // 12h format with AM/PM (United Airlines, etc.)
     /(?:BOARDING|BOARDS)[:\s]+(\d{1,2})[:\.](\d{2})\s*(?:AM|PM)/i,   // "BOARDS 9:59 AM"
     /(?:BOARDING|BOARDS)[:\s]+(\d{1,2})\s*(?:AM|PM)/i,               // "BOARDS 9 AM"
+    /(?:DEPARTS?)[:\s]+(\d{1,2})[:\.](\d{2})\s*(?:AM|PM)/i,         // "DEPARTS 3:45 PM"
+
+    // Context-based: Look for time near boarding-related keywords
+    /(?:BOARDING|BOARDS|DEPARTS?|DEPARTURE).*?(\d{1,2})[:\.](\d{2})\s*(?:AM|PM)?/i,
   ];
 
   for (const pattern of boardingTimePatterns) {

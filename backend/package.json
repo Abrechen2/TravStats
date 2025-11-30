@@ -5,8 +5,10 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "dev:imap": "tsx src/services/runImapPoller.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "start:imap": "node dist/services/runImapPoller.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "prisma:generate": "prisma generate",

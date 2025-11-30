@@ -78,6 +78,10 @@ export const importsApi = {
     const { data } = await api.post(`/imports/${id}/reject`);
     return data;
   },
+  uploadEmail: async (payload: { subject: string; text?: string; html?: string; from?: string; to?: string }) => {
+    const { data } = await api.post('/imports/upload', payload);
+    return data;
+  },
 };
 
 // Flights API

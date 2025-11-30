@@ -2,7 +2,7 @@
 
 > **Purpose**: This document provides AI assistants with comprehensive context about the TravStats codebase structure, development workflows, and conventions to follow when assisting with development tasks.
 
-**Last Updated**: 2025-11-27
+**Last Updated**: 2025-11-30
 **Project**: TravStats - Flight Tracking & Analytics Platform
 **Stack**: TypeScript, React, Express, Prisma, PostgreSQL
 
@@ -56,7 +56,7 @@ TravStats is a **self-hosted flight tracking and analytics platform** designed f
 - **Interactive Mapping**: Leaflet-based maps with curved flight routes and airport markers
 - **Gamification**: 20+ achievements with tier system (Bronze to Diamond)
 - **Advanced Statistics**: CO2 tracking, cost analysis, route statistics, temporal trends
-- **Email Import**: Automated boarding pass parsing via IMAP
+- **Email Import**: Manual email upload (text paste or .eml file) with automated boarding pass parsing - IMAP polling available as optional advanced feature
 - **Export Options**: CSV, GeoJSON, KML, PDF reports
 - **User Settings**: Comprehensive preferences including dark mode, units, timezone
 
@@ -65,7 +65,7 @@ TravStats is a **self-hosted flight tracking and analytics platform** designed f
 1. Admin sets up their own TravStats server (Docker or manual)
 2. Admin creates accounts for family/friends (or allows registration)
 3. Each user logs in to the shared instance
-4. Users add flights manually or via email import/QR scanner
+4. Users add flights manually, via email upload (paste text or upload .eml file), or QR/barcode scanner
 5. Users view their personal flights on interactive map with statistics
 6. Users earn achievements and analyze their travel patterns
 7. Data stays private on the self-hosted server
@@ -244,6 +244,7 @@ frontend/
 │   │   ├── DashboardPage.tsx      # / (main app, map + list)
 │   │   ├── AdvancedStatsPage.tsx  # /stats (charts, CO2, costs)
 │   │   ├── AchievementsPage.tsx   # /achievements (badge gallery)
+│   │   ├── EmailImportPage.tsx    # /import (email upload & parsing)
 │   │   └── SettingsPage.tsx       # /settings (user preferences)
 │   ├── store/                     # Zustand global state
 │   │   ├── authStore.ts           # User, token, login/logout
@@ -331,6 +332,10 @@ App.tsx (Router)
       │   └── Statistics Tables
       ├── AchievementsPage
       │   └── Badge Gallery
+      ├── EmailImportPage
+      │   ├── Text Paste Input
+      │   ├── File Upload (.eml, .txt)
+      │   └── Import Instructions
       └── SettingsPage
           └── Settings Forms
 ```
@@ -687,9 +692,11 @@ Base: /api/v1
   POST   /receipts       - Upload receipt image
 
 /imports
-  GET    /               - List imported flights
-  POST   /start          - Start IMAP polling
-  POST   /stop           - Stop IMAP polling
+  GET    /pending        - Get pending imports for review
+  POST   /upload         - Upload email manually (authenticated)
+  POST   /:id/accept     - Accept and create flight from import
+  POST   /:id/reject     - Reject import
+  POST   /email          - Ingest email via webhook (requires secret)
 ```
 
 #### HTTP Status Codes
@@ -1052,6 +1059,89 @@ npm run seed:achievements
 
 // 4. Frontend automatically displays via /achievements endpoint
 ```
+
+### Using Email Import
+
+**Primary Method: Manual Email Upload**
+
+TravStats offers a simple email import feature that doesn't require IMAP configuration:
+
+1. **Navigate to Email Import Page**:
+   - Click "📧 Email Import" in the navigation menu
+   - Or visit `/import` directly
+
+2. **Option A: Paste Email Text**:
+   ```
+   - Open your booking confirmation email
+   - Copy the entire email text (Ctrl+A, Ctrl+C)
+   - Paste it into the text field on /import page
+   - Click "Email importieren"
+   ```
+
+3. **Option B: Upload Email File**:
+   ```
+   - Save your email as .eml file (in Outlook/Gmail: File → Save As → .eml)
+   - Upload the file on /import page
+   - System automatically extracts subject and body
+   ```
+
+4. **Review & Accept**:
+   - Parsed flight appears in "Pending Imports" on dashboard
+   - Review the extracted data (flight number, route, times, etc.)
+   - Click "Accept" to add to your flights or "Reject" to discard
+
+**How It Works:**
+```typescript
+// Backend: POST /api/v1/imports/upload
+// Authenticated endpoint - no secrets needed
+{
+  subject: "Booking Confirmation LH123",
+  text: "Your flight from Frankfurt to Munich...",
+  html: "<html>...</html>" // optional
+}
+
+// Response
+{
+  id: "abc-123",
+  status: "pending_review",
+  parsed: {
+    flightNumber: "LH123",
+    departureCode: "FRA",
+    arrivalCode: "MUC",
+    // ... extracted data
+  }
+}
+```
+
+**Advanced: IMAP Polling (Optional)**
+
+For automated email import without manual upload, IMAP polling is available:
+
+1. **Setup Requirements**:
+   - Admin access to configure IMAP settings
+   - App-specific password (required for 2FA-enabled accounts)
+   - IMAP enabled on email provider (most providers: Port 993, SSL/TLS)
+
+2. **Configuration** (Admin UI → Email Parser):
+   ```
+   IMAP Host: imap.example.com
+   Port: 993
+   SSL/TLS: Enabled
+   Username: your-email@example.com
+   Password: <app-specific-password>
+   Mailbox: INBOX
+   Poll Interval: 5 minutes
+   Default User ID: <your-user-id>
+   ```
+
+3. **Start Polling**:
+   ```bash
+   cd backend
+   npm run dev:imap  # Development
+   npm run start:imap  # Production
+   ```
+
+**Note**: Manual upload is recommended for most users as it's simpler and doesn't require password management. IMAP is useful for automated workflows where emails arrive regularly.
 
 ### Debugging Common Issues
 
@@ -1944,7 +2034,7 @@ When contributing to this project:
 
 ---
 
-**Last Updated**: 2025-11-27
+**Last Updated**: 2025-11-30
 **Maintained By**: Project maintainers
 **For Questions**: Open GitHub issue or discussion
 
