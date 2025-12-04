@@ -35,17 +35,17 @@ router.post('/upload', authenticate, async (req: AuthRequest, res: Response, nex
     const cleanFrom = sanitizeForPostgres(from);
     const cleanTo = sanitizeForPostgres(to);
 
-    // Parse email (returns array of flights)
-    const parsedFlights = await parseBookingEmail(cleanSubject, cleanText, cleanHtml);
+    // Parse email (returns ParseResult with metadata)
+    const parseResult = await parseBookingEmail(cleanSubject, cleanText, cleanHtml);
 
-    console.log(`[Email Import] Found ${parsedFlights.length} flight(s) in text upload`);
+    console.log(`[Email Import] Found ${parseResult.flights.length} flight(s) in text upload (Parser: ${parseResult.parserUsed})`);
 
     // Create import record for EACH flight
     const drafts = await Promise.all(
-      parsedFlights.map(async (parsed, index) => {
+      parseResult.flights.map(async (parsed, index) => {
         const flightSubject =
-          parsedFlights.length > 1
-            ? `${cleanSubject || 'Manual Upload'} - Flight ${index + 1}/${parsedFlights.length}`
+          parseResult.flights.length > 1
+            ? `${cleanSubject || 'Manual Upload'} - Flight ${index + 1}/${parseResult.flights.length}`
             : cleanSubject || 'Manual Upload';
 
         return await prisma.importedFlight.create({
@@ -65,6 +65,8 @@ router.post('/upload', authenticate, async (req: AuthRequest, res: Response, nex
 
     res.json({
       count: drafts.length,
+      parserUsed: parseResult.parserUsed,
+      ollamaAvailable: parseResult.ollamaAvailable,
       imports: drafts.map((d) => ({
         id: d.id,
         status: d.status,
@@ -97,12 +99,12 @@ router.post('/upload-file', authenticate, uploadEmailFile.single('file'), async 
         // Parse .msg file
         console.log('[MSG Parser] Reading .msg file:', file.path);
         const msgFileBuffer = fs.readFileSync(file.path);
-        const msgReader = new MsgReader(msgFileBuffer);
+        const msgReader = new MsgReader(msgFileBuffer.buffer);
         const fileData = msgReader.getFileData();
 
         subject = fileData.subject || '';
         text = fileData.body || '';
-        html = fileData.bodyHTML || '';
+        html = fileData.bodyHtml || '';
 
         console.log('[MSG Parser] Extracted:', { subject, textLength: text.length, htmlLength: html.length });
       } else if (ext === '.eml' || ext === '.txt') {
@@ -126,17 +128,17 @@ router.post('/upload-file', authenticate, uploadEmailFile.single('file'), async 
       const cleanText = sanitizeForPostgres(text);
       const cleanHtml = sanitizeForPostgres(html);
 
-      // Parse email (returns array of flights)
-      const parsedFlights = await parseBookingEmail(cleanSubject, cleanText, cleanHtml);
+      // Parse email (returns ParseResult with metadata)
+      const parseResult = await parseBookingEmail(cleanSubject, cleanText, cleanHtml);
 
-      console.log(`[Email Import] Found ${parsedFlights.length} flight(s) in email`);
+      console.log(`[Email Import] Found ${parseResult.flights.length} flight(s) in email (Parser: ${parseResult.parserUsed})`);
 
       // Create import record for EACH flight
       const drafts = await Promise.all(
-        parsedFlights.map(async (parsed, index) => {
+        parseResult.flights.map(async (parsed, index) => {
           const flightSubject =
-            parsedFlights.length > 1
-              ? `${cleanSubject || file.originalname} - Flight ${index + 1}/${parsedFlights.length}`
+            parseResult.flights.length > 1
+              ? `${cleanSubject || file.originalname} - Flight ${index + 1}/${parseResult.flights.length}`
               : cleanSubject || file.originalname;
 
           return await prisma.importedFlight.create({
@@ -159,6 +161,8 @@ router.post('/upload-file', authenticate, uploadEmailFile.single('file'), async 
 
       res.json({
         count: drafts.length,
+        parserUsed: parseResult.parserUsed,
+        ollamaAvailable: parseResult.ollamaAvailable,
         imports: drafts.map((d) => ({
           id: d.id,
           status: d.status,

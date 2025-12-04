@@ -49,24 +49,43 @@ fi
 cd /app/backend
 echo "📦 Running database migrations..."
 npx prisma migrate deploy || {
-    echo "⚠️  Migration failed, but continuing startup..."
+    echo "❌ Migration failed!"
+    echo "   This might be the first run. Continuing..."
 }
 
-# Seed achievements if not already done
-echo "🏆 Checking achievements..."
-npm run seed:achievements 2>/dev/null || echo "   Achievements already seeded or failed"
+# Essential seeds - always run (idempotent)
+echo ""
+echo "🌱 Running essential initialization..."
 
-# Seed airports if requested and not already done
+# Seed achievements (required for achievement system to work)
+echo "🏆 Seeding achievements..."
+if npm run seed:achievements; then
+    echo "   ✅ Achievements ready"
+else
+    echo "   ❌ Failed to seed achievements - achievement system may not work!"
+fi
+
+# Optional seeds based on environment variables
 if [ "$SEED_AIRPORTS" = "true" ]; then
     echo "✈️  Seeding airports database..."
-    npm run seed:airports:csv 2>/dev/null || echo "   Airports already seeded or failed"
+    if npm run seed:airports:csv; then
+        echo "   ✅ Airports database ready"
+    else
+        echo "   ⚠️  Failed to seed airports - autocomplete may not work"
+    fi
 fi
 
-# Create demo user if requested
+# Create demo user if requested (useful for testing)
 if [ "$CREATE_DEMO_USER" = "true" ]; then
-    echo "👤 Creating demo user..."
-    npm run seed:demo 2>/dev/null || echo "   Demo user already exists or failed"
+    echo "👤 Creating demo user with sample data..."
+    if npm run seed:demo; then
+        echo "   ✅ Demo user ready (username: demo, password: demo123)"
+    else
+        echo "   ⚠️  Demo user already exists or creation failed"
+    fi
 fi
+
+echo ""
 
 echo "✅ TravStats is ready!"
 echo "🌐 Web UI available on port 80"

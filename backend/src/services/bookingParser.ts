@@ -16,6 +16,12 @@ export interface ParsedBooking {
   missing: string[];
 }
 
+export interface ParseResult {
+  flights: ParsedBooking[];
+  parserUsed: 'ollama' | 'regex';
+  ollamaAvailable: boolean;
+}
+
 // City name to IATA code mapping (common German/European cities)
 const CITY_TO_IATA: Record<string, string> = {
   // München / Munich
@@ -274,12 +280,13 @@ function parseBookingEmailRegex(subject: string | undefined, text: string | unde
  * 3. Compare results and prefer LLM if available and complete
  * 4. Log both results for debugging
  * 5. Return ARRAY of flights (LLM can detect multiple flights in one email)
+ * 6. Return metadata about which parser was used
  */
 export async function parseBookingEmail(
   subject: string | undefined,
   text: string | undefined,
   html?: string
-): Promise<ParsedBooking[]> {
+): Promise<ParseResult> {
   const useLLM = process.env.USE_LLM_PARSER === 'true';
 
   console.log('[Parser] Starting dual parsing (Regex + LLM, LLM enabled:', useLLM, ')');
@@ -297,7 +304,11 @@ export async function parseBookingEmail(
   // If LLM is disabled, return regex result immediately (wrapped in array)
   if (!useLLM) {
     console.log('[Parser] LLM disabled, using regex result');
-    return [regexResult];
+    return {
+      flights: [regexResult],
+      parserUsed: 'regex',
+      ollamaAvailable: false,
+    };
   }
 
   // ALWAYS try LLM parsing when enabled (regardless of regex success)
@@ -311,7 +322,11 @@ export async function parseBookingEmail(
     const ollamaAvailable = await isOllamaAvailable();
     if (!ollamaAvailable) {
       console.log('[Parser] ❌ Ollama not available, using regex result');
-      return [regexResult];
+      return {
+        flights: [regexResult],
+        parserUsed: 'regex',
+        ollamaAvailable: false,
+      };
     }
 
     // Run LLM parsing (returns array)
@@ -346,21 +361,37 @@ export async function parseBookingEmail(
         console.log('[Parser] 📊 Regex:', regexResult.departureCode, '→', regexResult.arrivalCode, regexResult.flightNumber);
         console.log(`[Parser] 📊 LLM: ${llmResults.length} flight(s)`);
       }
-      return llmResults;
+      return {
+        flights: llmResults,
+        parserUsed: 'ollama',
+        ollamaAvailable: true,
+      };
     }
 
     // If LLM failed but regex succeeded, use regex (wrapped in array)
     if (regexHasCriticalFields) {
       console.log('[Parser] ⚠️ LLM incomplete, using regex result (regex succeeded)');
-      return [regexResult];
+      return {
+        flights: [regexResult],
+        parserUsed: 'regex',
+        ollamaAvailable: true,
+      };
     }
 
     // Both failed, return regex result with more context (wrapped in array)
     console.log('[Parser] ⚠️ Both parsers incomplete, using regex result');
-    return [regexResult];
+    return {
+      flights: [regexResult],
+      parserUsed: 'regex',
+      ollamaAvailable: true,
+    };
   } catch (error) {
     console.error('[Parser] LLM parsing error:', error);
     console.log('[Parser] Using regex result due to LLM error');
-    return [regexResult];
+    return {
+      flights: [regexResult],
+      parserUsed: 'regex',
+      ollamaAvailable: false,
+    };
   }
 }
