@@ -10,7 +10,7 @@
  * - Auto-Arrival Time Suggestion
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Airport, airportsApi } from '../lib/api';
 import AirportAutocomplete from './AirportAutocomplete';
 import BoardingPassScanner from './BoardingPassScanner';
@@ -128,9 +128,13 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
     }
   }, [departureDate]);
 
+  // Track if arrival date has been set manually (to avoid overwriting user input)
+  const arrivalDateSetRef = useRef(false);
+
   // Auto-suggest arrival time based on estimated flight duration
   useEffect(() => {
-    if (departureDate && departureTime && departure && arrival && !arrivalDate) {
+    // Only auto-suggest if arrival date hasn't been set yet
+    if (departureDate && departureTime && departure && arrival && !arrivalDateSetRef.current) {
       try {
         // Simple heuristic: ~1 hour per 800km + 30min buffer
         const distance = calculateDistance(
@@ -146,12 +150,14 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
 
         setArrivalDate(arrDateTime.toISOString().split('T')[0]);
         setArrivalTime(arrDateTime.toTimeString().slice(0, 5));
+        arrivalDateSetRef.current = true;
       } catch (err) {
         // If calculation fails, use same day + 2 hours as fallback
         const depDateTime = new Date(`${departureDate}T${departureTime}`);
         const arrDateTime = new Date(depDateTime.getTime() + 2 * 60 * 60 * 1000);
         setArrivalDate(arrDateTime.toISOString().split('T')[0]);
         setArrivalTime(arrDateTime.toTimeString().slice(0, 5));
+        arrivalDateSetRef.current = true;
       }
     }
   }, [departureDate, departureTime, departure, arrival]);
@@ -238,7 +244,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
       // Use searchDate for departure date (user's input), but use API time
       if (searchDate) {
         setDepartureDate(searchDate);
-        applyDateTime(flight.departure.scheduledTime, { setDate: () => {}, setTime: setDepartureTime }, true);
+        applyDateTime(flight.departure.scheduledTime, { setDate: () => { }, setTime: setDepartureTime }, true);
       } else {
         applyDateTime(flight.departure.scheduledTime, { setDate: setDepartureDate, setTime: setDepartureTime });
       }
@@ -642,11 +648,10 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                   key={idx}
                   type="button"
                   onClick={() => handleSelectFlight(flight)}
-                  className={`w-full text-left p-4 rounded-lg border-2 ${
-                    isDarkMode
-                      ? 'border-gray-700 hover:border-blue-500 bg-gray-700'
-                      : 'border-gray-200 hover:border-blue-500 bg-gray-50'
-                  } transition-colors`}
+                  className={`w-full text-left p-4 rounded-lg border-2 ${isDarkMode
+                    ? 'border-gray-700 hover:border-blue-500 bg-gray-700'
+                    : 'border-gray-200 hover:border-blue-500 bg-gray-50'
+                    } transition-colors`}
                 >
                   <div className="flex justify-between items-start">
                     <div>
@@ -663,11 +668,10 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                       )}
                     </div>
                     {flight.status && (
-                      <span className={`px-2 py-1 rounded text-xs ${
-                        flight.status === 'landed' ? 'bg-green-100 text-green-800' :
+                      <span className={`px-2 py-1 rounded text-xs ${flight.status === 'landed' ? 'bg-green-100 text-green-800' :
                         flight.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
+                          'bg-gray-100 text-gray-800'
+                        }`}>
                         {flight.status}
                       </span>
                     )}

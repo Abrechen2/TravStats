@@ -246,10 +246,19 @@ router.post('/:id/accept', authenticate, async (req: AuthRequest, res: Response,
       return res.status(400).json({ error: 'Missing departure/arrival codes' });
     }
 
-    const [depAirport, arrAirport] = await Promise.all([
-      findOrCreateAirport(depCode),
-      findOrCreateAirport(arrCode),
-    ]);
+    let depAirport, arrAirport;
+    try {
+      [depAirport, arrAirport] = await Promise.all([
+        findOrCreateAirport(depCode),
+        findOrCreateAirport(arrCode),
+      ]);
+    } catch (airportError: any) {
+      console.error('[Import Accept] Airport lookup failed:', airportError);
+      return res.status(400).json({
+        error: 'Airport lookup failed',
+        message: `Could not resolve airport codes: ${depCode}, ${arrCode}. ${airportError.message || ''}`
+      });
+    }
 
     if (!depAirport || !arrAirport) {
       return res.status(400).json({ error: 'Could not resolve airports' });
@@ -304,7 +313,11 @@ router.post('/:id/accept', authenticate, async (req: AuthRequest, res: Response,
         seatNumber: parsed.seat,
         terminal: parsed.terminal,
         gate: parsed.gate,
-        price: parsed.price ? Number(parsed.price.replace(',', '.')) : undefined,
+        price: parsed.price
+          ? (typeof parsed.price === 'string'
+            ? Number(parsed.price.replace(',', '.'))
+            : Number(parsed.price))
+          : undefined,
         currency: parsed.currency,
         category: 'business',
       },

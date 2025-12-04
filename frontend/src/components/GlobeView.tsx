@@ -113,6 +113,7 @@ const getStaticArcAltitude = (
   return getBaseArcAltitude(distance);
 };
 
+// Note: selectedFlightId is available for future implementation (e.g., highlighting selected flight on globe)
 export default function GlobeView({ flights = [], selectedFlightId: _selectedFlightId, onFlightClick, minRouteCount = 1 }: GlobeViewProps) {
   const globeRef = useRef<any>();
   const themeStore = useThemeStore();
@@ -135,18 +136,21 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
     }
   }, [autoRotate]);
 
-  // Track camera altitude for dynamic arc scaling
+  // Track camera altitude for dynamic arc scaling (using ref to avoid re-creating interval)
+  const cameraAltitudeRef = useRef(cameraAltitude);
+  cameraAltitudeRef.current = cameraAltitude;
+
   useEffect(() => {
     if (globeRef.current) {
       const interval = setInterval(() => {
         const pov = globeRef.current.pointOfView();
-        if (pov && pov.altitude !== cameraAltitude) {
+        if (pov && pov.altitude !== cameraAltitudeRef.current) {
           setCameraAltitude(pov.altitude);
         }
       }, 100);
       return () => clearInterval(interval);
     }
-  }, [cameraAltitude]);
+  }, []);
 
   // Calculate dynamic stroke width based on camera zoom
   const dynamicStroke = useMemo(() => {
@@ -194,9 +198,9 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
       if (!validCoords) return;
 
       const depIATA = flight.properties.departureAirport?.iata ||
-                      flight.properties.departureAirport?.icao || 'UNKNOWN';
+        flight.properties.departureAirport?.icao || 'UNKNOWN';
       const arrIATA = flight.properties.arrivalAirport?.iata ||
-                      flight.properties.arrivalAirport?.icao || 'UNKNOWN';
+        flight.properties.arrivalAirport?.icao || 'UNKNOWN';
       // Create bidirectional route key (FRA-JFK === JFK-FRA)
       const routeKey = createRouteKey(depIATA, arrIATA);
 

@@ -37,7 +37,7 @@ export default function LoginPage() {
           <img src="/logo.png" alt="TravStats Logo" className="h-24 w-auto mb-4" />
           <h1 className="text-3xl font-bold text-center">TravStats</h1>
         </div>
-        <h2 className="text-xl text-gray-600 text-center mb-8">Sign In</h2>
+        <h2 className="text-xl text-gray-600 dark:text-gray-300 text-center mb-8">Sign In</h2>
 
         {state?.message && (
           <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
@@ -84,9 +84,9 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-gray-600">
+        <p className="mt-6 text-center text-gray-600 dark:text-gray-400">
           Don't have an account?{' '}
-          <Link to="/register" className="text-blue-600 hover:underline">
+          <Link to="/register" className="text-blue-600 dark:text-blue-400 hover:underline">
             Register
           </Link>
         </p>
