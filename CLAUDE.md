@@ -24,15 +24,27 @@ Zweck: Schnelle Orientierung für KI-Helfer. Fokus auf kurze Antworten, bewahre 
 
 ## Schnellstart
 - Docker (empfohlen):
-  - `docker-compose up -d`
-  - `docker-compose exec backend npx prisma migrate deploy`
-  - Optional Seeds: `npm run seed`, `npm run seed:airports:csv`, `npm run seed:achievements`
+  - `docker-compose up -d` (Initialisierung läuft automatisch)
+  - Achievements werden automatisch geseedet
+  - Optional: `SEED_AIRPORTS=true` für Flughafen-Datenbank
+  - Optional: `CREATE_DEMO_USER=true` für Demo-User (demo/demo123)
 - Lokal:
-  - Backend: `cd backend && npm install && cp .env.example .env && npx prisma generate && npx prisma migrate dev && npm run dev`
+  - Backend: `cd backend && npm install && cp .env.example .env && npx prisma generate && npm run dev` (Initialisierung automatisch)
   - Frontend: `cd frontend && npm install && cp .env.example .env && npm run dev`
+  - Tipp: `npm run init` für manuelle Initialisierung ohne Dev-Server Start
+
+## Automatische Initialisierung
+
+- Achievements werden **immer automatisch** geseedet (essentiell für das System)
+- Im Dev-Modus läuft `npm run init` automatisch vor `npm run dev`
+- Im Docker läuft die Initialisierung über `docker-entrypoint.sh`
+- Alle Seeds sind idempotent (mehrfaches Ausführen ist sicher)
 
 ## Häufige Befehle
-- Backend: `npm run dev` | `npm test` | `npx tsc --noEmit` | `npm run seed:*` | `npx prisma migrate dev/deploy/reset/generate`
+
+- Backend: `npm run dev` (inkl. auto-init) | `npm run init` (nur Initialisierung) | `npm test` | `npx tsc --noEmit`
+- Seeds: `npm run seed:achievements` | `npm run seed:airports:csv` | `npm run seed:demo`
+- Prisma: `npx prisma migrate dev/deploy/reset/generate` | `npx prisma studio`
 - Frontend: `npm run dev` | `npm run build` (inkl. Typen) | `npm run lint`
 - Docker: `docker-compose up -d` | `docker-compose down` | `docker-compose logs -f backend`
 
@@ -45,6 +57,8 @@ Zweck: Schnelle Orientierung für KI-Helfer. Fokus auf kurze Antworten, bewahre 
 - Nach Schema-Änderungen: Migration + `npx prisma generate`; ggf. Frontend-Typen anpassen.
 - Tests hinzufügen/aktualisieren bei neuen Features; mindestens betroffene Routen/Komponenten.
 - Keine Secrets committen; `.env` unangetastet lassen.
+- Halte die Roadmap aktuell.
+
 
 ## Sicherheit Kurzfassung
 - Auth: JWT in HttpOnly-Cookies (Fallback Bearer), Ablauf 7d.
@@ -73,4 +87,4 @@ Zweck: Schnelle Orientierung für KI-Helfer. Fokus auf kurze Antworten, bewahre 
 - Neue Features: erst API/Schema planen, Migration + Zod-Schema + Tests; dann Frontend-API-Client und UI.
 - Dokumentiere größere Änderungen hier kurz, halte Inhalt schlank.
 
-Stand: bitte Datum im PR ergänzen, wenn wesentlich geändert.***
+

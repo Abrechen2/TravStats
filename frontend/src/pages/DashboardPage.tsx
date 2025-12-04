@@ -5,6 +5,7 @@ import { flightsApi, importsApi, analyticsApi } from '../lib/api';
 import MapContainer3D from '../components/MapContainer3D';
 import SimplifiedFlightFormV2 from '../components/SimplifiedFlightFormV2';
 import FlightEditModal from '../components/FlightEditModal';
+import ImportEditModal from '../components/ImportEditModal';
 import Stats from '../components/Stats';
 import Filters from '../components/Filters';
 import ErrorBoundary from '../components/ErrorBoundary';
@@ -35,6 +36,7 @@ export default function DashboardPage() {
   const [rightOpen, setRightOpen] = useState(false);
   const [imports, setImports] = useState<any[]>([]);
   const [importsOpen, setImportsOpen] = useState(false);
+  const [editingImport, setEditingImport] = useState<any | null>(null);
   const [onboarding, setOnboarding] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.ONBOARDING_CHECKLIST);
     return saved
@@ -76,6 +78,22 @@ export default function DashboardPage() {
       setImports(data.imports || []);
     } catch (err) {
       console.error('Failed to load imports', err);
+    }
+  };
+
+  const handleEditImport = (importData: any) => {
+    setEditingImport(importData);
+  };
+
+  const handleSaveImport = async (parsed: any) => {
+    if (!editingImport) return;
+    try {
+      await importsApi.edit(editingImport.id, parsed);
+      setEditingImport(null);
+      fetchImports();
+    } catch (error) {
+      console.error('Failed to update import:', error);
+      throw error;
     }
   };
 
@@ -763,13 +781,19 @@ export default function DashboardPage() {
                     <div className="flex gap-2 mt-2">
                       <button
                         onClick={async () => { await importsApi.accept(imp.id); fetchImports(); loadFlights(); }}
-                        className="px-3 py-1 text-xs font-semibold bg-green-500 text-white rounded"
+                        className="px-3 py-1 text-xs font-semibold bg-green-500 hover:bg-green-600 text-white rounded transition-colors"
                       >
                         Übernehmen
                       </button>
                       <button
+                        onClick={() => handleEditImport(imp)}
+                        className="px-3 py-1 text-xs font-semibold bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
+                      >
+                        Bearbeiten
+                      </button>
+                      <button
                         onClick={async () => { await importsApi.reject(imp.id); fetchImports(); }}
-                        className="px-3 py-1 text-xs font-semibold bg-red-500 text-white rounded"
+                        className="px-3 py-1 text-xs font-semibold bg-red-500 hover:bg-red-600 text-white rounded transition-colors"
                       >
                         Verwerfen
                       </button>
@@ -1035,6 +1059,16 @@ export default function DashboardPage() {
           isOpen={!!editingFlight}
           onClose={() => setEditingFlight(null)}
           onSave={handleUpdateFlight}
+        />
+      )}
+
+      {/* Import Edit Modal */}
+      {editingImport && (
+        <ImportEditModal
+          importData={editingImport}
+          isOpen={!!editingImport}
+          onClose={() => setEditingImport(null)}
+          onSave={handleSaveImport}
         />
       )}
 

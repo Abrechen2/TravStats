@@ -693,18 +693,52 @@ async function seedAchievements() {
   console.log('🏆 Starting achievement seeding...');
 
   try {
-    // Delete existing achievements
-    await prisma.achievement.deleteMany({});
-    console.log('✅ Cleared existing achievements');
+    // Check if achievements already exist
+    const existingCount = await prisma.achievement.count();
 
-    // Create all achievements
-    for (const achievement of achievements) {
-      await prisma.achievement.create({
-        data: achievement,
-      });
+    if (existingCount === achievements.length) {
+      console.log(`✅ Achievements already seeded (${existingCount} achievements)`);
+      return;
     }
 
-    console.log(`✅ Created ${achievements.length} achievements`);
+    if (existingCount > 0) {
+      console.log(`⚠️  Found ${existingCount} existing achievements, updating...`);
+    }
+
+    // Upsert all achievements
+    let created = 0;
+    let updated = 0;
+
+    for (const achievement of achievements) {
+      // Check if achievement already exists
+      const existing = await prisma.achievement.findUnique({
+        where: { code: achievement.code },
+      });
+
+      await prisma.achievement.upsert({
+        where: { code: achievement.code },
+        update: {
+          name: achievement.name,
+          description: achievement.description,
+          category: achievement.category,
+          icon: achievement.icon,
+          tier: achievement.tier,
+          requirement: achievement.requirement,
+          requirementType: achievement.requirementType,
+          points: achievement.points,
+          isHidden: achievement.isHidden || false,
+        },
+        create: achievement,
+      });
+
+      if (existing) {
+        updated++;
+      } else {
+        created++;
+      }
+    }
+
+    console.log(`✅ Processed ${achievements.length} achievements (${created} created, ${updated} updated)`);
 
     // Show summary by category
     const categoryCounts = achievements.reduce((acc, ach) => {

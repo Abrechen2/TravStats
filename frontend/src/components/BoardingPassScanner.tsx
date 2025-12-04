@@ -12,16 +12,30 @@ interface BoardingPassScannerProps {
   onClose: () => void;
 }
 
+interface ScanStep {
+  id: string;
+  label: string;
+  status: 'pending' | 'loading' | 'success' | 'error' | 'skipped';
+  icon: string;
+  detail?: string;
+}
+
 export default function BoardingPassScanner({ onScanSuccess, onClose }: BoardingPassScannerProps) {
   const [scanning, setScanning] = useState(false);
-  const [ocrRunning, setOcrRunning] = useState(false);
   const [error, setError] = useState('');
   const [preview, setPreview] = useState<string | null>(null);
   const [debugMode, setDebugMode] = useState(false);
   const [scannedRawText, setScannedRawText] = useState<string | null>(null);
+  const [scanSteps, setScanSteps] = useState<ScanStep[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDarkMode = useThemeStore((s) => s.isDarkMode);
+
+  const updateScanStep = (id: string, updates: Partial<ScanStep>) => {
+    setScanSteps((prev) =>
+      prev.map((step) => (step.id === id ? { ...step, ...updates } : step))
+    );
+  };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -29,16 +43,28 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
 
     setError('');
     setScanning(true);
+    setScannedRawText(null);
+
+    // Initialize scan steps
+    const steps: ScanStep[] = [
+      { id: 'load', label: 'Bild wird geladen', status: 'loading', icon: '📸' },
+      { id: 'barcode', label: 'Barcode wird gescannt', status: 'pending', icon: '🔲' },
+      { id: 'ocr', label: 'Textanalyse (OCR)', status: 'pending', icon: '🔍' },
+      { id: 'complete', label: 'Scan abgeschlossen', status: 'pending', icon: '✅' },
+    ];
+    setScanSteps(steps);
 
     try {
       const reader = new FileReader();
       reader.onload = (event) => {
         const dataUrl = event.target?.result as string;
         setPreview(dataUrl);
+        updateScanStep('load', { status: 'success' });
         scanImage(dataUrl);
       };
       reader.readAsDataURL(file);
     } catch (err) {
+      updateScanStep('load', { status: 'error' });
       setError('Failed to read file');
       setScanning(false);
     }
@@ -53,6 +79,9 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
 
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
+
+      // Start barcode scanning
+      updateScanStep('barcode', { status: 'loading', detail: 'ZXing/jsQR Barcode-Scan...' });
 
       let barcodeText: string | null = null;
       let debugInfo: string[] = [];
@@ -170,12 +199,13 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
 
       if (barcodeText) {
         setScannedRawText(barcodeText); // Save for debug mode
+        updateScanStep('barcode', { status: 'success', detail: 'Barcode erkannt (ZXing/jsQR)' });
+
         const bcbpData = parseBCBP(barcodeText);
         if (bcbpData) {
-          // ✨ NEW: Run OCR to extract gate, terminal, boarding time from visual text
+          // ✨ Run OCR to extract gate, terminal, boarding time from visual text
           console.log('✨ Barcode scan successful! Now running OCR to extract gate, terminal, and times from visual text...');
-          setScanning(false);
-          setOcrRunning(true);
+          updateScanStep('ocr', { status: 'loading', detail: 'Tesseract.js OCR läuft...' });
 
           try {
             // Use original image for OCR (not the preprocessed barcode image)
@@ -193,6 +223,10 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
 
             if (ocrData.gate || ocrData.terminal || ocrData.boardingTime) {
               console.log('✅ OCR enhancement successful:', ocrData);
+              updateScanStep('ocr', {
+                status: 'success',
+                detail: `Gate/Terminal/Zeit gefunden`
+              });
 
               // Merge OCR data into boarding pass data (OCR takes priority for gate/terminal/time)
               const enhancedData: BoardingPassData = {
@@ -203,25 +237,44 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
               };
 
               console.log('🎯 Final enhanced boarding pass data:', enhancedData);
-              setOcrRunning(false);
-              onScanSuccess(enhancedData);
+              updateScanStep('complete', { status: 'success' });
+              setScanning(false);
+
+              // Small delay to show success state
+              setTimeout(() => {
+                onScanSuccess(enhancedData);
+              }, 500);
             } else {
               console.log('ℹ️ OCR did not find additional data - using barcode data only');
-              setOcrRunning(false);
-              onScanSuccess(bcbpData);
+              updateScanStep('ocr', { status: 'skipped', detail: 'Keine zusätzlichen Daten gefunden' });
+              updateScanStep('complete', { status: 'success' });
+              setScanning(false);
+
+              setTimeout(() => {
+                onScanSuccess(bcbpData);
+              }, 500);
             }
           } catch (err) {
             console.warn('⚠️ OCR enhancement failed, using barcode data only:', err);
-            setOcrRunning(false);
-            onScanSuccess(bcbpData);
+            updateScanStep('ocr', { status: 'error', detail: 'OCR fehlgeschlagen' });
+            updateScanStep('complete', { status: 'success' });
+            setScanning(false);
+
+            setTimeout(() => {
+              onScanSuccess(bcbpData);
+            }, 500);
           }
         } else {
+          updateScanStep('barcode', { status: 'error', detail: 'Unbekanntes Format' });
           setError(`Barcode found but format not recognized. Enable debug mode to see raw data.`);
           setScanning(false);
         }
       } else {
         // Fallback to OCR if barcode detection failed
         console.log('🔍 Barcode detection failed, trying OCR fallback...');
+        updateScanStep('barcode', { status: 'error', detail: 'Kein Barcode gefunden' });
+        updateScanStep('ocr', { status: 'loading', detail: 'Fallback: Tesseract.js OCR läuft...' });
+
         try {
           const ocrResult = await Tesseract.recognize(canvas, 'eng', {
             logger: (m) => console.log('OCR:', m),
@@ -235,8 +288,13 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
             const bcbpData = parseBCBP(text);
             if (bcbpData) {
               console.log('✅ OCR successfully extracted BCBP data');
+              updateScanStep('ocr', { status: 'success', detail: 'BCBP-Daten via OCR extrahiert' });
+              updateScanStep('complete', { status: 'success' });
               setScanning(false);
-              onScanSuccess(bcbpData);
+
+              setTimeout(() => {
+                onScanSuccess(bcbpData);
+              }, 500);
               return;
             }
 
@@ -246,6 +304,9 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
 
             if (flightInfoMatch || airportMatch) {
               console.log('✅ OCR extracted flight information');
+              updateScanStep('ocr', { status: 'success', detail: 'Fluginfo via OCR extrahiert' });
+              updateScanStep('complete', { status: 'success' });
+
               const partialData: Partial<BoardingPassData> = {
                 formatCode: 'FALLBACK',
                 operatingCarrierDesignator: flightInfoMatch?.[1],
@@ -255,15 +316,19 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
               };
 
               setScanning(false);
-              onScanSuccess(partialData as BoardingPassData);
+              setTimeout(() => {
+                onScanSuccess(partialData as BoardingPassData);
+              }, 500);
               return;
             }
           }
 
+          updateScanStep('ocr', { status: 'error', detail: 'Keine Flugdaten gefunden' });
           setScannedRawText(`DEBUG INFO:\n${result.debugInfo}\n\nOCR TEXT:\n${text}\n\nNo barcode detected and OCR couldn't extract flight info.`);
           setError('No barcode found and OCR couldn\'t extract flight information. Please try a clearer image or enter manually.');
         } catch (ocrError) {
           console.error('OCR failed:', ocrError);
+          updateScanStep('ocr', { status: 'error', detail: 'OCR fehlgeschlagen' });
           setScannedRawText(`DEBUG INFO:\n${result.debugInfo}\n\nNo barcode detected in any attempt.`);
           setError('No barcode found. Enable debug mode to see detailed scan attempts. Tips: good lighting, focus the 2D barcode (PDF417/QR/Aztec).');
         }
@@ -284,6 +349,7 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
     setPreview(null);
     setScanning(false);
     setScannedRawText(null);
+    setScanSteps([]);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -291,7 +357,7 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
       <div className={`${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'} rounded-lg max-w-2xl w-full p-6 shadow-2xl`}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold">Scan Boarding Pass</h2>
+          <h2 className="text-2xl font-bold">✈️ Boarding-Pass scannen</h2>
           <button onClick={onClose} className={`${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-500 hover:text-gray-700'}`}>
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -302,21 +368,21 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
         {!preview && (
           <div className="mb-6">
             <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} mb-4`}>
-              Upload a photo of your boarding pass. We scan both the <strong>barcode</strong> (for flight details) and the <strong>printed text</strong> (for gate, terminal, boarding time)!
+              Laden Sie ein Foto Ihres Boarding-Passes hoch. Wir scannen sowohl den <strong>Barcode</strong> (für Flugdetails) als auch den <strong>gedruckten Text</strong> (für Gate, Terminal, Boarding-Zeit)!
             </p>
             <div className={`${isDarkMode ? 'bg-blue-900/40 border-blue-700 text-blue-100' : 'bg-blue-50 border-blue-200 text-gray-800'} border rounded-lg p-4`}>
-              <h3 className="font-semibold mb-2">✅ Dual-scan technology:</h3>
+              <h3 className="font-semibold mb-2">✅ Dual-Scan-Technologie:</h3>
               <ul className="text-sm space-y-1 mb-3">
-                <li>🔲 <strong>Barcode scan</strong>: Flight number, route, seat, date</li>
-                <li>🔍 <strong>OCR text scan</strong>: Gate, terminal, boarding time</li>
-                <li>🎯 Supported: PDF417, QR, Aztec codes</li>
+                <li>🔲 <strong>Barcode-Scan</strong>: Flugnummer, Route, Sitzplatz, Datum</li>
+                <li>🔍 <strong>OCR-Textanalyse</strong>: Gate, Terminal, Boarding-Zeit</li>
+                <li>🎯 Unterstützt: PDF417, QR, Aztec Codes</li>
               </ul>
-              <h3 className="font-semibold mb-2">💡 Tips for best results:</h3>
+              <h3 className="font-semibold mb-2">💡 Tipps für beste Ergebnisse:</h3>
               <ul className="text-sm space-y-1">
-                <li>📸 Capture the <strong>entire boarding pass</strong> (not just barcode)</li>
-                <li>🎯 Center the barcode in the photo</li>
-                <li>🔲 Avoid glare and shadows</li>
-                <li>🔍 If scanning fails, enable debug mode to see raw data</li>
+                <li>📸 Fotografieren Sie den <strong>gesamten Boarding-Pass</strong> (nicht nur den Barcode)</li>
+                <li>🎯 Zentrieren Sie den Barcode im Foto</li>
+                <li>🔲 Vermeiden Sie Blendung und Schatten</li>
+                <li>🔍 Bei Problemen: Debug-Modus für Details aktivieren</li>
               </ul>
             </div>
           </div>
@@ -335,6 +401,66 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
         {error && (
           <div className={`mb-4 px-4 py-3 rounded border ${isDarkMode ? 'bg-red-900 border-red-700 text-red-100' : 'bg-red-100 border-red-400 text-red-700'}`}>
             {error}
+          </div>
+        )}
+
+        {/* Scan Steps Progress */}
+        {scanSteps.length > 0 && (
+          <div className="mb-4">
+            <div className="space-y-2">
+              {scanSteps.map((step) => (
+                <div
+                  key={step.id}
+                  className={`flex items-center p-3 rounded-lg transition-all ${
+                    step.status === 'success'
+                      ? isDarkMode ? 'bg-green-900/30' : 'bg-green-50'
+                      : step.status === 'loading'
+                      ? isDarkMode ? 'bg-blue-900/30' : 'bg-blue-50'
+                      : step.status === 'error'
+                      ? isDarkMode ? 'bg-red-900/30' : 'bg-red-50'
+                      : step.status === 'skipped'
+                      ? isDarkMode ? 'bg-yellow-900/30' : 'bg-yellow-50'
+                      : isDarkMode ? 'bg-gray-700/50' : 'bg-gray-50'
+                  }`}
+                >
+                  <span className="text-xl mr-3">{step.icon}</span>
+                  <div className="flex-1">
+                    <p className={`text-sm font-medium ${
+                      step.status === 'success'
+                        ? isDarkMode ? 'text-green-300' : 'text-green-800'
+                        : step.status === 'loading'
+                        ? isDarkMode ? 'text-blue-300' : 'text-blue-800'
+                        : step.status === 'error'
+                        ? isDarkMode ? 'text-red-300' : 'text-red-800'
+                        : step.status === 'skipped'
+                        ? isDarkMode ? 'text-yellow-300' : 'text-yellow-700'
+                        : isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                    }`}>
+                      {step.label}
+                    </p>
+                    {step.detail && (
+                      <p className={`text-xs mt-1 ${
+                        isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                      }`}>
+                        {step.detail}
+                      </p>
+                    )}
+                  </div>
+                  {step.status === 'loading' && (
+                    <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                  )}
+                  {step.status === 'success' && (
+                    <span className={`text-lg ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>✓</span>
+                  )}
+                  {step.status === 'error' && (
+                    <span className={`text-lg ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>✗</span>
+                  )}
+                  {step.status === 'skipped' && (
+                    <span className={`text-lg ${isDarkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>⊘</span>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -392,35 +518,25 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
 
           {!preview ? (
             <label htmlFor="boarding-pass-upload" className="btn-primary w-full cursor-pointer text-center block">
-              Take Photo / Upload Image
+              📸 Foto aufnehmen / Bild hochladen
             </label>
           ) : (
             <div className="flex gap-3">
-              <button onClick={handleTryAgain} className="btn-secondary flex-1" disabled={scanning || ocrRunning}>
-                Try Again
+              <button onClick={handleTryAgain} className="btn-secondary flex-1" disabled={scanning}>
+                Erneut versuchen
               </button>
-              {scanning && (
-                <button disabled className="btn-primary flex-1">
-                  🔍 Scanning barcode...
-                </button>
-              )}
-              {ocrRunning && (
-                <button disabled className="btn-primary flex-1">
-                  📝 Reading text (OCR)...
-                </button>
-              )}
             </div>
           )}
 
           <button onClick={onClose} className="btn-secondary w-full">
-            Cancel
+            Abbrechen
           </button>
         </div>
 
         <canvas ref={canvasRef} className="hidden" />
 
         <div className={`mt-6 text-xs text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-          <p>Your boarding pass data is processed locally and never sent to any server.</p>
+          <p>🔒 Ihre Boarding-Pass-Daten werden lokal verarbeitet und niemals an einen Server gesendet.</p>
         </div>
       </div>
     </div>

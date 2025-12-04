@@ -80,12 +80,23 @@ export async function checkAndUpdateAchievements(userId: string) {
         });
         newlyUnlocked.push(userAchievement);
       }
-    } else if (existing) {
-      // Update progress only for existing rows; avoid creating rows for locked achievements
-      await prisma.userAchievement.update({
-        where: { id: existing.id },
-        data: { progress },
-      });
+    } else {
+      // Update or create progress for non-unlocked achievements
+      if (existing) {
+        await prisma.userAchievement.update({
+          where: { id: existing.id },
+          data: { progress },
+        });
+      } else if (progress > 0) {
+        // Create new entry only if there's some progress (avoid cluttering DB with 0 progress)
+        await prisma.userAchievement.create({
+          data: {
+            userId,
+            achievementId: achievement.id,
+            progress,
+          },
+        });
+      }
     }
   }
 
