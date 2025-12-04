@@ -60,7 +60,6 @@ export default function LoginPage() {
               onChange={(e) => setUsername(e.target.value)}
               className="input"
               required
-              autoFocus
             />
           </div>
 

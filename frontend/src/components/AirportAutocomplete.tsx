@@ -28,7 +28,11 @@ export default function AirportAutocomplete({
       const display = value.iata || value.icao || value.name;
       setQuery(display);
     } else {
-      setQuery('');
+      // Only clear query if input is NOT focused (to avoid clearing while user is typing)
+      const input = wrapperRef.current?.querySelector('input');
+      if (document.activeElement !== input) {
+        setQuery('');
+      }
     }
   }, [value]);
 

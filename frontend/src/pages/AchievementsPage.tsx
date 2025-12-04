@@ -131,15 +131,14 @@ export default function AchievementsPage() {
                   className="flex items-center gap-4 p-4 bg-gray-700 rounded-lg hover:bg-gray-650 transition-colors"
                 >
                   <div
-                    className={`text-3xl font-bold w-12 text-center ${
-                      entry.rank === 1
+                    className={`text-3xl font-bold w-12 text-center ${entry.rank === 1
                         ? 'text-yellow-400'
                         : entry.rank === 2
-                        ? 'text-gray-400'
-                        : entry.rank === 3
-                        ? 'text-amber-600'
-                        : 'text-gray-500'
-                    }`}
+                          ? 'text-gray-400'
+                          : entry.rank === 3
+                            ? 'text-amber-600'
+                            : 'text-gray-500'
+                      }`}
                   >
                     {entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : entry.rank === 3 ? '🥉' : `#${entry.rank}`}
                   </div>
@@ -194,7 +193,9 @@ export default function AchievementsPage() {
             <div className="bg-gradient-to-br from-purple-600 to-purple-800 rounded-xl p-6">
               <div className="text-sm text-purple-200 mb-1">Progress</div>
               <div className="text-3xl font-bold">
-                {Math.round((summary.unlockedAchievements / summary.totalAchievements) * 100)}%
+                {summary.totalAchievements > 0
+                  ? Math.round((summary.unlockedAchievements / summary.totalAchievements) * 100)
+                  : 0}%
               </div>
             </div>
             <button
@@ -275,21 +276,19 @@ export default function AchievementsPage() {
                 {categoryAchievements.map((achievement) => (
                   <div
                     key={achievement.id}
-                    className={`relative rounded-xl overflow-hidden transition-all ${
-                      achievement.isUnlocked
+                    className={`relative rounded-xl overflow-hidden transition-all ${achievement.isUnlocked
                         ? 'bg-gradient-to-br ' + tierColors[achievement.tier]
                         : 'bg-gray-800 opacity-60'
-                    } ${achievement.isUnlocked ? 'hover:scale-105' : ''}`}
+                      } ${achievement.isUnlocked ? 'hover:scale-105' : ''}`}
                   >
                     <div className="p-6">
                       <div className="flex items-start justify-between mb-3">
                         <div className="text-4xl">{achievement.icon}</div>
                         <div
-                          className={`text-xs font-bold uppercase px-2 py-1 rounded ${
-                            achievement.isUnlocked
+                          className={`text-xs font-bold uppercase px-2 py-1 rounded ${achievement.isUnlocked
                               ? tierTextColors[achievement.tier]
                               : 'text-gray-500'
-                          }`}
+                            }`}
                         >
                           {achievement.tier}
                         </div>
