@@ -13,7 +13,7 @@ import type {
   FlightLookupResult
 } from '../types';
 
-const API_URL = (import.meta as any).env?.VITE_API_URL || '';
+export const API_URL = (import.meta as any).env?.VITE_API_URL || '';
 
 const api = axios.create({
   baseURL: API_URL ? `${API_URL}/api/v1` : '/api/v1',
@@ -64,34 +64,26 @@ export const authApi = {
   },
 };
 
-// Imports API
-export const importsApi = {
-  getPending: async () => {
-    const { data } = await api.get<{ imports: any[] }>('/imports/pending');
-    return data;
-  },
-  accept: async (id: string) => {
-    const { data } = await api.post(`/imports/${id}/accept`);
-    return data;
-  },
-  reject: async (id: string) => {
-    const { data } = await api.post(`/imports/${id}/reject`);
-    return data;
-  },
-  uploadEmail: async (payload: { subject: string; text?: string; html?: string; from?: string; to?: string }) => {
-    const { data } = await api.post('/imports/upload', payload);
-    return data;
-  },
-  uploadEmailFile: async (formData: FormData) => {
-    const { data } = await api.post('/imports/upload-file', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+// Parse API (Email & Boarding Pass)
+export const parseApi = {
+  parseEmail: async (emailContent: string, subject?: string) => {
+    const { data } = await api.post('/parse-email', {
+      emailContent,
+      subject,
     });
     return data;
   },
-  edit: async (id: string, parsed: any) => {
-    const { data } = await api.put(`/imports/${id}/edit`, { parsed });
+
+  parseBoardingpass: async (imageBase64: string, enrichWithApi = true) => {
+    const { data } = await api.post('/parse-boardingpass', {
+      imageBase64,
+      enrichWithApi,
+    });
+    return data;
+  },
+
+  checkOllamaVision: async () => {
+    const { data } = await api.get('/parse-boardingpass/check');
     return data;
   },
 };

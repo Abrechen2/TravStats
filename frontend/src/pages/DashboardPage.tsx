@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { flightsApi, importsApi, analyticsApi } from '../lib/api';
+import { flightsApi, analyticsApi } from '../lib/api';
 import MapContainer3D from '../components/MapContainer3D';
 import SimplifiedFlightFormV2 from '../components/SimplifiedFlightFormV2';
 import FlightEditModal from '../components/FlightEditModal';
-import ImportEditModal from '../components/ImportEditModal';
 import Stats from '../components/Stats';
 import Filters from '../components/Filters';
 import ErrorBoundary from '../components/ErrorBoundary';
@@ -34,9 +33,6 @@ export default function DashboardPage() {
   const [navOpen, setNavOpen] = useState(false);
   const [leftOpen, setLeftOpen] = useState(false);
   const [rightOpen, setRightOpen] = useState(false);
-  const [imports, setImports] = useState<any[]>([]);
-  const [importsOpen, setImportsOpen] = useState(false);
-  const [editingImport, setEditingImport] = useState<any | null>(null);
   const [onboarding, setOnboarding] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.ONBOARDING_CHECKLIST);
     return saved
@@ -72,39 +68,12 @@ export default function DashboardPage() {
     localStorage.setItem(STORAGE_KEYS.ONBOARDING_CHECKLIST, JSON.stringify(onboarding));
   }, [onboarding]);
 
-  const fetchImports = async () => {
-    try {
-      const data = await importsApi.getPending();
-      setImports(data.imports || []);
-    } catch (err) {
-      console.error('Failed to load imports', err);
-    }
-  };
-
-  const handleEditImport = (importData: any) => {
-    setEditingImport(importData);
-  };
-
-  const handleSaveImport = async (parsed: any) => {
-    if (!editingImport) return;
-    try {
-      await importsApi.edit(editingImport.id, parsed);
-      setEditingImport(null);
-      fetchImports();
-    } catch (error) {
-      console.error('Failed to update import:', error);
-      throw error;
-    }
-  };
-
   useEffect(() => {
     // Only open sidebars by default on XL screens
     if (typeof window !== 'undefined' && window.innerWidth >= UI_CONFIG.XL_BREAKPOINT) {
       setLeftOpen(true);
       setRightOpen(true);
     }
-    // fetch imports for badge
-    fetchImports();
   }, []);
 
   const loadFlights = async () => {
@@ -461,18 +430,6 @@ export default function DashboardPage() {
             <button onClick={logout} className="btn-secondary text-sm xl:text-base px-3 xl:px-4">
               Logout
             </button>
-            <button
-              onClick={() => setImportsOpen(prev => !prev)}
-              className="relative px-2 xl:px-3 py-2 text-xs xl:text-sm font-semibold bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm"
-            >
-              <span className="hidden sm:inline">Imports</span>
-              <span className="sm:hidden">📥</span>
-              {imports.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
-                  {imports.length}
-                </span>
-              )}
-            </button>
           </div>
         </div>
       </header>
@@ -761,48 +718,6 @@ export default function DashboardPage() {
 
         {/* Center - Map & Roadmap MVP highlights */}
         <div className="flex-1 p-4 flex flex-col gap-4 min-w-0 overflow-auto relative z-0">
-          {importsOpen && (
-            <div className="bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-600 rounded-lg p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Pending Imports</h3>
-                <button className="text-sm text-blue-600" onClick={fetchImports}>Refresh</button>
-              </div>
-              {imports.length === 0 && (
-                <div className="text-sm text-gray-500">Keine offenen Importe.</div>
-              )}
-              <div className="space-y-3 max-h-64 overflow-y-auto">
-                {imports.map((imp: any) => (
-                  <div key={imp.id} className="border border-gray-200 dark:border-gray-700 rounded-md p-3">
-                    <div className="text-sm font-semibold text-gray-900 dark:text-white">{imp.subject || 'Ohne Betreff'}</div>
-                    <div className="text-xs text-gray-500">{imp.fromAddress}</div>
-                    <div className="mt-2 text-xs text-gray-600 dark:text-gray-300">
-                      Flug: {imp.parsed?.flightNumber || '—'} | {imp.parsed?.departureCode} → {imp.parsed?.arrivalCode} | Abflug: {imp.parsed?.departureTime || '—'}
-                    </div>
-                    <div className="flex gap-2 mt-2">
-                      <button
-                        onClick={async () => { await importsApi.accept(imp.id); fetchImports(); loadFlights(); }}
-                        className="px-3 py-1 text-xs font-semibold bg-green-500 hover:bg-green-600 text-white rounded transition-colors"
-                      >
-                        Übernehmen
-                      </button>
-                      <button
-                        onClick={() => handleEditImport(imp)}
-                        className="px-3 py-1 text-xs font-semibold bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
-                      >
-                        Bearbeiten
-                      </button>
-                      <button
-                        onClick={async () => { await importsApi.reject(imp.id); fetchImports(); }}
-                        className="px-3 py-1 text-xs font-semibold bg-red-500 hover:bg-red-600 text-white rounded transition-colors"
-                      >
-                        Verwerfen
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
           <div className="flex items-center justify-between flex-wrap gap-3">
             {/* Desktop Toggle Buttons (only on xl screens) */}
             <div className="hidden xl:flex items-center gap-2">
@@ -1059,16 +974,6 @@ export default function DashboardPage() {
           isOpen={!!editingFlight}
           onClose={() => setEditingFlight(null)}
           onSave={handleUpdateFlight}
-        />
-      )}
-
-      {/* Import Edit Modal */}
-      {editingImport && (
-        <ImportEditModal
-          importData={editingImport}
-          isOpen={!!editingImport}
-          onClose={() => setEditingImport(null)}
-          onSave={handleSaveImport}
         />
       )}
 

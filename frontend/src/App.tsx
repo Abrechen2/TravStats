@@ -10,7 +10,6 @@ import AdvancedStatsPage from './pages/AdvancedStatsPage';
 import SettingsPage from './pages/SettingsPage';
 import SetupPage from './pages/SetupPage';
 import AdminPage from './pages/AdminPage';
-import EmailImportPage from './pages/EmailImportPage';
 import { useSettingsStore } from './store/settingsStore';
 import ErrorBoundary from './components/ErrorBoundary';
 import { setupApi } from './lib/api';
@@ -124,10 +123,6 @@ function AppContent() {
         <Route
           path="/settings"
           element={isAuthenticated ? <SettingsPage /> : <Navigate to="/login" />}
-        />
-        <Route
-          path="/import"
-          element={isAuthenticated ? <EmailImportPage /> : <Navigate to="/login" />}
         />
         <Route
           path="/admin"

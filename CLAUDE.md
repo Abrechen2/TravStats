@@ -81,7 +81,29 @@ Zweck: Schnelle Orientierung für KI-Helfer. Fokus auf kurze Antworten, bewahre 
 - Airports: GET `/airports?query=...`
 - Achievements: GET `/achievements`, `/achievements/user`, POST `/achievements/check`
 - Settings: GET/PUT `/settings`
-- Uploads/Importe: POST `/uploads/receipts`, `/flight-lookup`, GET `/imports`
+- Uploads: POST `/uploads/receipts`
+- Parse: POST `/parse-email`, `/parse-boardingpass`, GET `/parse-boardingpass/check` (Ollama Vision)
+- Flight Lookup: GET `/flight-lookup/:flightNumber?date=...`
+
+## Import-Flow (Unified)
+
+- **Email Import**: Im "Add Flight" Dialog als Option integriert
+  - Upload: Drag & Drop (.eml/.txt/.msg) oder Text-Paste
+  - Parse: Ollama LLM (Primary) mit Regex Fallback
+  - Flow: Upload → Parse → Review (FlightReviewModal) → Confirm
+  - Multi-Flight: Hin-/Rückflug werden nacheinander im Review Modal präsentiert
+- **Boarding Pass**: Im "Add Flight" Dialog als Option integriert
+  - Upload: Foto hochladen
+  - Parse: Ollama Vision (Primary, Source of Truth) + optional API-Abgleich
+  - Flow: Upload → Ollama Vision Parse → Optional API Enrichment → Review → Confirm
+  - Kein DB-Zwischenspeicher mehr (altes ImportedFlight Model entfernt)
+
+## Ollama Integration
+
+- Email Parser: `llmParser.enhanced.ts` nutzt Ollama text models (llama3.2:3b, qwen2.5:7b)
+- Boarding Pass: `ollamaVisionParser.ts` nutzt Ollama Vision models (llava, bakllava)
+- Konfiguration: `OLLAMA_URL`, `OLLAMA_MODEL`, `OLLAMA_VISION_MODEL` in `.env`
+- Fallback: Bei Ollama-Fehler wird Regex-Parser (Email) bzw. Fehler (Boarding Pass) verwendet
 
 ## Wenn du nachrüstest
 - Neue Features: erst API/Schema planen, Migration + Zod-Schema + Tests; dann Frontend-API-Client und UI.

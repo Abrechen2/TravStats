@@ -1,21 +1,16 @@
 import { useState, useRef } from 'react';
-import jsQR from 'jsqr';
-import { BrowserMultiFormatReader } from '@zxing/browser';
-import { BarcodeFormat, DecodeHintType } from '@zxing/library';
-import { parseBCBP, BoardingPassData } from '../lib/bcbpParser';
+import { parseApi } from '../lib/api';
 import { useThemeStore } from '../store/themeStore';
-import Tesseract from 'tesseract.js';
-import { extractBoardingPassDataQuick } from '../lib/boardingPassOCR';
 
 interface BoardingPassScannerProps {
-  onScanSuccess: (data: BoardingPassData) => void;
+  onScanSuccess: (data: any) => void; // ParsedBooking from Ollama
   onClose: () => void;
 }
 
 interface ScanStep {
   id: string;
   label: string;
-  status: 'pending' | 'loading' | 'success' | 'error' | 'skipped';
+  status: 'pending' | 'loading' | 'success' | 'error';
   icon: string;
   detail?: string;
 }
@@ -24,11 +19,8 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState('');
   const [preview, setPreview] = useState<string | null>(null);
-  const [debugMode, setDebugMode] = useState(false);
-  const [scannedRawText, setScannedRawText] = useState<string | null>(null);
   const [scanSteps, setScanSteps] = useState<ScanStep[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDarkMode = useThemeStore((s) => s.isDarkMode);
 
   const updateScanStep = (id: string, updates: Partial<ScanStep>) => {
@@ -43,500 +35,257 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
 
     setError('');
     setScanning(true);
-    setScannedRawText(null);
 
     // Initialize scan steps
     const steps: ScanStep[] = [
       { id: 'load', label: 'Bild wird geladen', status: 'loading', icon: '📸' },
-      { id: 'barcode', label: 'Barcode wird gescannt', status: 'pending', icon: '🔲' },
-      { id: 'ocr', label: 'Textanalyse (OCR)', status: 'pending', icon: '🔍' },
+      { id: 'upload', label: 'Upload zum Server', status: 'pending', icon: '📤' },
+      { id: 'ollama', label: 'KI-Analyse mit Ollama Vision', status: 'pending', icon: '🤖' },
+      { id: 'api', label: 'API-Abgleich (optional)', status: 'pending', icon: '🔍' },
       { id: 'complete', label: 'Scan abgeschlossen', status: 'pending', icon: '✅' },
     ];
     setScanSteps(steps);
 
     try {
+      // Step 1: Load image
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = async (event) => {
         const dataUrl = event.target?.result as string;
         setPreview(dataUrl);
         updateScanStep('load', { status: 'success' });
-        scanImage(dataUrl);
+
+        // Step 2: Convert to base64 (remove data:image/...;base64, prefix)
+        updateScanStep('upload', { status: 'loading' });
+        const base64Data = dataUrl.split(',')[1];
+
+        try {
+          // Step 3: Send to Ollama Vision API
+          updateScanStep('upload', { status: 'success' });
+          updateScanStep('ollama', { status: 'loading', detail: 'Ollama Vision analysiert...' });
+
+          const result = await parseApi.parseBoardingpass(base64Data, true); // enrichWithApi = true
+
+          updateScanStep('ollama', {
+            status: 'success',
+            detail: `${result.flight.flightNumber || 'Flug'} ${result.flight.departureCode} → ${result.flight.arrivalCode}`,
+          });
+
+          // Step 4: API enrichment status
+          if (result.enriched) {
+            updateScanStep('api', { status: 'success', detail: 'Daten ergänzt' });
+          } else {
+            updateScanStep('api', { status: 'success', detail: 'Keine Ergänzung nötig' });
+          }
+
+          // Step 5: Complete
+          updateScanStep('complete', { status: 'success' });
+
+          // Wait a bit so user can see success
+          await new Promise((resolve) => setTimeout(resolve, 800));
+
+          // Return parsed data
+          onScanSuccess(result.flight);
+        } catch (err: any) {
+          console.error('Boarding pass parsing failed:', err);
+
+          const currentStep = steps.find((s) => s.status === 'loading');
+          if (currentStep) {
+            updateScanStep(currentStep.id, { status: 'error' });
+          }
+
+          if (err.response?.status === 503) {
+            setError(
+              'Ollama Vision ist nicht verfügbar. Bitte stellen Sie sicher, dass Ollama läuft und ein Vision-Model installiert ist (z.B. llava).'
+            );
+          } else {
+            setError(err.response?.data?.error || err.message || 'Fehler beim Scannen des Boarding Pass');
+          }
+
+          setScanning(false);
+        }
       };
+
+      reader.onerror = () => {
+        updateScanStep('load', { status: 'error' });
+        setError('Fehler beim Laden des Bildes');
+        setScanning(false);
+      };
+
       reader.readAsDataURL(file);
-    } catch (err) {
-      updateScanStep('load', { status: 'error' });
-      setError('Failed to read file');
+    } catch (err: any) {
+      setError('Fehler beim Verarbeiten des Bildes');
       setScanning(false);
     }
   };
 
-  const scanImage = async (dataUrl: string) => {
-    const img = new Image();
-
-    img.onload = async () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      // Start barcode scanning
-      updateScanStep('barcode', { status: 'loading', detail: 'ZXing/jsQR Barcode-Scan...' });
-
-      let barcodeText: string | null = null;
-      let debugInfo: string[] = [];
-
-      const scanAttempts = async () => {
-        // Try multiple resolutions - important for Aztec codes!
-        const resolutions = [
-          { scale: 1.0, name: 'Original' },
-          { scale: 0.5, name: '50%' },
-          { scale: 1.5, name: '150%' },
-          { scale: 2.0, name: '200%' },
-        ];
-
-        for (const resolution of resolutions) {
-          debugInfo.push(`\n=== Trying resolution: ${resolution.name} ===`);
-
-          // Set canvas size based on resolution
-          canvas.width = img.width * resolution.scale;
-          canvas.height = img.height * resolution.scale;
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-          const originalImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-          // Different preprocessing strategies
-          const preprocessingAttempts = [
-            { name: 'Original', enhance: false },
-            { name: 'High Contrast (Aztec optimized)', enhance: true, brightness: 1.3, contrast: 2.5, threshold: 128 },
-            { name: 'Brightness Boost', enhance: true, brightness: 1.8, contrast: 1.5 },
-            { name: 'Dark Mode Invert', enhance: true, invert: true, brightness: 1.2, contrast: 2.0 },
-            { name: 'Extreme Contrast', enhance: true, brightness: 1.0, contrast: 3.0, threshold: 100 },
-          ];
-
-          for (const attempt of preprocessingAttempts) {
-            debugInfo.push(`  → Preprocessing: ${attempt.name}`);
-            ctx.putImageData(originalImageData, 0, 0);
-
-            if (attempt.enhance) {
-              const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-              const data = imageData.data;
-
-              for (let i = 0; i < data.length; i += 4) {
-                let r = data[i];
-                let g = data[i + 1];
-                let b = data[i + 2];
-
-                // Convert to grayscale
-                let gray = 0.299 * r + 0.587 * g + 0.114 * b;
-
-                // Apply brightness and contrast
-                gray = ((gray / 255 - 0.5) * (attempt.contrast || 1) + 0.5) * 255;
-                gray *= attempt.brightness || 1;
-
-                // Apply inversion if needed (for white-on-black codes)
-                if (attempt.invert) {
-                  gray = 255 - gray;
-                }
-
-                // Apply threshold if specified (binary conversion)
-                if (attempt.threshold) {
-                  gray = gray > attempt.threshold ? 255 : 0;
-                }
-
-                gray = Math.min(255, Math.max(0, gray));
-                data[i] = data[i + 1] = data[i + 2] = gray;
-              }
-              ctx.putImageData(imageData, 0, 0);
-            }
-
-            // Try ZXing with comprehensive hints
-            try {
-              const hints = new Map();
-              hints.set(DecodeHintType.POSSIBLE_FORMATS, [
-                BarcodeFormat.AZTEC,         // Priority for Lufthansa
-                BarcodeFormat.PDF_417,       // Common paper boarding pass
-                BarcodeFormat.QR_CODE,       // Mobile boarding pass
-                BarcodeFormat.DATA_MATRIX,   // Alternative format
-              ]);
-              hints.set(DecodeHintType.TRY_HARDER, true);
-              hints.set(DecodeHintType.PURE_BARCODE, false); // Allow detection in noisy images
-
-              const codeReader = new BrowserMultiFormatReader(hints);
-              const result = await codeReader.decodeFromCanvas(canvas);
-              if (result && result.getText()) {
-                debugInfo.push(`    ✅ SUCCESS with ZXing: ${result.getBarcodeFormat()}`);
-                return { text: result.getText(), debugInfo: debugInfo.join('\n') };
-              }
-            } catch (e: any) {
-              debugInfo.push(`    ❌ ZXing failed: ${e.message || 'Unknown error'}`);
-            }
-
-            // Try jsQR as fallback (QR codes only)
-            if (attempt.name === 'Original' || attempt.name === 'High Contrast (Aztec optimized)') {
-              try {
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const code = jsQR(imageData.data, imageData.width, imageData.height, {
-                  inversionAttempts: 'attemptBoth',
-                });
-                if (code && code.data) {
-                  debugInfo.push(`    ✅ SUCCESS with jsQR`);
-                  return { text: code.data, debugInfo: debugInfo.join('\n') };
-                }
-              } catch (e: any) {
-                debugInfo.push(`    ❌ jsQR failed: ${e.message || 'Unknown error'}`);
-              }
-            }
-          }
-        }
-
-        return { text: null, debugInfo: debugInfo.join('\n') };
-      };
-
-      const result = await scanAttempts();
-      barcodeText = result.text;
-      console.log('Scan Debug Info:\n' + result.debugInfo);
-
-      if (barcodeText) {
-        setScannedRawText(barcodeText); // Save for debug mode
-        updateScanStep('barcode', { status: 'success', detail: 'Barcode erkannt (ZXing/jsQR)' });
-
-        const bcbpData = parseBCBP(barcodeText);
-        if (bcbpData) {
-          // ✨ Run OCR to extract gate, terminal, boarding time from visual text
-          console.log('✨ Barcode scan successful! Now running OCR to extract gate, terminal, and times from visual text...');
-          updateScanStep('ocr', { status: 'loading', detail: 'Tesseract.js OCR läuft...' });
-
-          try {
-            // Use original image for OCR (not the preprocessed barcode image)
-            // Create a fresh canvas with the original image at high resolution
-            const ocrCanvas = document.createElement('canvas');
-            ocrCanvas.width = img.width;
-            ocrCanvas.height = img.height;
-            const ocrCtx = ocrCanvas.getContext('2d');
-            if (ocrCtx) {
-              ocrCtx.drawImage(img, 0, 0);
-            }
-
-            // Run OCR with timeout (max 15 seconds - includes preprocessing)
-            const ocrData = await extractBoardingPassDataQuick(ocrCanvas.toDataURL(), 15000);
-
-            if (ocrData.gate || ocrData.terminal || ocrData.boardingTime) {
-              console.log('✅ OCR enhancement successful:', ocrData);
-              updateScanStep('ocr', {
-                status: 'success',
-                detail: `Gate/Terminal/Zeit gefunden`
-              });
-
-              // Merge OCR data into boarding pass data (OCR takes priority for gate/terminal/time)
-              const enhancedData: BoardingPassData = {
-                ...bcbpData,
-                gate: ocrData.gate || bcbpData.gate,
-                terminal: ocrData.terminal || bcbpData.terminal,
-                boardingTime: ocrData.boardingTime || bcbpData.boardingTime,
-              };
-
-              console.log('🎯 Final enhanced boarding pass data:', enhancedData);
-              updateScanStep('complete', { status: 'success' });
-              setScanning(false);
-
-              // Delay to show success state and allow user to read status
-              setTimeout(() => {
-                onScanSuccess(enhancedData);
-              }, 1000);
-            } else {
-              console.log('ℹ️ OCR did not find additional data - using barcode data only');
-              updateScanStep('ocr', { status: 'skipped', detail: 'Keine zusätzlichen Daten gefunden' });
-              updateScanStep('complete', { status: 'success' });
-              setScanning(false);
-
-              setTimeout(() => {
-                onScanSuccess(bcbpData);
-              }, 1000);
-            }
-          } catch (err) {
-            console.warn('⚠️ OCR enhancement failed, using barcode data only:', err);
-            updateScanStep('ocr', { status: 'error', detail: 'OCR fehlgeschlagen' });
-            updateScanStep('complete', { status: 'success' });
-            setScanning(false);
-
-            setTimeout(() => {
-              onScanSuccess(bcbpData);
-            }, 1000);
-          }
-        } else {
-          updateScanStep('barcode', { status: 'error', detail: 'Unbekanntes Format' });
-          setError(`Barcode found but format not recognized. Enable debug mode to see raw data.`);
-          setScanning(false);
-        }
-      } else {
-        // Fallback to OCR if barcode detection failed
-        console.log('🔍 Barcode detection failed, trying OCR fallback...');
-        updateScanStep('barcode', { status: 'error', detail: 'Kein Barcode gefunden' });
-        updateScanStep('ocr', { status: 'loading', detail: 'Fallback: Tesseract.js OCR läuft...' });
-
-        try {
-          const ocrResult = await Tesseract.recognize(canvas, 'eng', {
-            logger: (m) => console.log('OCR:', m),
-          });
-
-          const text = ocrResult.data.text;
-          console.log('OCR extracted text:', text);
-
-          if (text && text.length > 20) {
-            // Try to parse as BCBP first
-            const bcbpData = parseBCBP(text);
-            if (bcbpData) {
-              console.log('✅ OCR successfully extracted BCBP data');
-              updateScanStep('ocr', { status: 'success', detail: 'BCBP-Daten via OCR extrahiert' });
-              updateScanStep('complete', { status: 'success' });
-              setScanning(false);
-
-              setTimeout(() => {
-                onScanSuccess(bcbpData);
-              }, 1000);
-              return;
-            }
-
-            // If not BCBP, try to extract flight info from text
-            const flightInfoMatch = text.match(/([A-Z]{2})\s*(\d{1,4})/);
-            const airportMatch = text.match(/([A-Z]{3})\s*(?:TO|to|-|→)\s*([A-Z]{3})/);
-
-            if (flightInfoMatch || airportMatch) {
-              console.log('✅ OCR extracted flight information');
-              updateScanStep('ocr', { status: 'success', detail: 'Fluginfo via OCR extrahiert' });
-              updateScanStep('complete', { status: 'success' });
-
-              const partialData: Partial<BoardingPassData> = {
-                formatCode: 'FALLBACK',
-                operatingCarrierDesignator: flightInfoMatch?.[1],
-                flightNumber: flightInfoMatch?.[2],
-                departureAirport: airportMatch?.[1],
-                arrivalAirport: airportMatch?.[2],
-              };
-
-              setScanning(false);
-              setTimeout(() => {
-                onScanSuccess(partialData as BoardingPassData);
-              }, 1000);
-              return;
-            }
-          }
-
-          updateScanStep('ocr', { status: 'error', detail: 'Keine Flugdaten gefunden' });
-          setScannedRawText(`DEBUG INFO:\n${result.debugInfo}\n\nOCR TEXT:\n${text}\n\nNo barcode detected and OCR couldn't extract flight info.`);
-          setError('No barcode found and OCR couldn\'t extract flight information. Please try a clearer image or enter manually.');
-        } catch (ocrError) {
-          console.error('OCR failed:', ocrError);
-          updateScanStep('ocr', { status: 'error', detail: 'OCR fehlgeschlagen' });
-          setScannedRawText(`DEBUG INFO:\n${result.debugInfo}\n\nNo barcode detected in any attempt.`);
-          setError('No barcode found. Enable debug mode to see detailed scan attempts. Tips: good lighting, focus the 2D barcode (PDF417/QR/Aztec).');
-        }
-        setScanning(false);
-      }
-    };
-
-    img.onerror = () => {
-      setError('Failed to load image');
-      setScanning(false);
-    };
-
-    img.src = dataUrl;
-  };
-
-  const handleTryAgain = () => {
-    setError('');
-    setPreview(null);
-    setScanning(false);
-    setScannedRawText(null);
-    setScanSteps([]);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
-      <div className={`${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'} rounded-lg max-w-2xl w-full p-6 shadow-2xl`}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold">✈️ Boarding-Pass scannen</h2>
-          <button onClick={onClose} className={`${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-500 hover:text-gray-700'}`}>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className={`${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto`}>
+        {/* Header */}
+        <div className={`sticky top-0 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b px-6 py-4 flex items-center justify-between`}>
+          <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            Boarding Pass scannen
+          </h2>
+          <button
+            onClick={onClose}
+            disabled={scanning}
+            className={`p-2 ${isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-100'} rounded-lg transition-colors`}
+            aria-label="Schließen"
+          >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        {!preview && (
-          <div className="mb-6">
-            <p className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'} mb-4`}>
-              Laden Sie ein Foto Ihres Boarding-Passes hoch. Wir scannen sowohl den <strong>Barcode</strong> (für Flugdetails) als auch den <strong>gedruckten Text</strong> (für Gate, Terminal, Boarding-Zeit)!
-            </p>
-            <div className={`${isDarkMode ? 'bg-blue-900/40 border-blue-700 text-blue-100' : 'bg-blue-50 border-blue-200 text-gray-800'} border rounded-lg p-4`}>
-              <h3 className="font-semibold mb-2">✅ Dual-Scan-Technologie:</h3>
-              <ul className="text-sm space-y-1 mb-3">
-                <li>🔲 <strong>Barcode-Scan</strong>: Flugnummer, Route, Sitzplatz, Datum</li>
-                <li>🔍 <strong>OCR-Textanalyse</strong>: Gate, Terminal, Boarding-Zeit</li>
-                <li>🎯 Unterstützt: PDF417, QR, Aztec Codes</li>
-              </ul>
-              <h3 className="font-semibold mb-2">💡 Tipps für beste Ergebnisse:</h3>
-              <ul className="text-sm space-y-1">
-                <li>📸 Fotografieren Sie den <strong>gesamten Boarding-Pass</strong> (nicht nur den Barcode)</li>
-                <li>🎯 Zentrieren Sie den Barcode im Foto</li>
-                <li>🔲 Vermeiden Sie Blendung und Schatten</li>
-                <li>🔍 Bei Problemen: Debug-Modus für Details aktivieren</li>
-              </ul>
-            </div>
-          </div>
-        )}
-
-        {preview && (
-          <div className="mb-4">
-            <img
-              src={preview}
-              alt="Boarding pass preview"
-              className={`max-w-full max-h-80 object-contain rounded-lg border ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} mx-auto`}
-            />
-          </div>
-        )}
-
-        {error && (
-          <div className={`mb-4 px-4 py-3 rounded border ${isDarkMode ? 'bg-red-900 border-red-700 text-red-100' : 'bg-red-100 border-red-400 text-red-700'}`}>
-            {error}
-          </div>
-        )}
-
-        {/* Scan Steps Progress */}
-        {scanSteps.length > 0 && (
-          <div className="mb-4">
-            <div className="space-y-2">
-              {scanSteps.map((step) => (
-                <div
-                  key={step.id}
-                  className={`flex items-center p-3 rounded-lg transition-all ${
-                    step.status === 'success'
-                      ? isDarkMode ? 'bg-green-900/30' : 'bg-green-50'
-                      : step.status === 'loading'
-                      ? isDarkMode ? 'bg-blue-900/30' : 'bg-blue-50'
-                      : step.status === 'error'
-                      ? isDarkMode ? 'bg-red-900/30' : 'bg-red-50'
-                      : step.status === 'skipped'
-                      ? isDarkMode ? 'bg-yellow-900/30' : 'bg-yellow-50'
-                      : isDarkMode ? 'bg-gray-700/50' : 'bg-gray-50'
-                  }`}
-                >
-                  <span className="text-xl mr-3">{step.icon}</span>
-                  <div className="flex-1">
-                    <p className={`text-sm font-medium ${
-                      step.status === 'success'
-                        ? isDarkMode ? 'text-green-300' : 'text-green-800'
-                        : step.status === 'loading'
-                        ? isDarkMode ? 'text-blue-300' : 'text-blue-800'
-                        : step.status === 'error'
-                        ? isDarkMode ? 'text-red-300' : 'text-red-800'
-                        : step.status === 'skipped'
-                        ? isDarkMode ? 'text-yellow-300' : 'text-yellow-700'
-                        : isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                    }`}>
-                      {step.label}
-                    </p>
-                    {step.detail && (
-                      <p className={`text-xs mt-1 ${
-                        isDarkMode ? 'text-gray-400' : 'text-gray-500'
-                      }`}>
-                        {step.detail}
-                      </p>
-                    )}
-                  </div>
-                  {step.status === 'loading' && (
-                    <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
-                  )}
-                  {step.status === 'success' && (
-                    <span className={`text-lg ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>✓</span>
-                  )}
-                  {step.status === 'error' && (
-                    <span className={`text-lg ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>✗</span>
-                  )}
-                  {step.status === 'skipped' && (
-                    <span className={`text-lg ${isDarkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>⊘</span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {scannedRawText && (
-          <div className="mb-4">
-            <div className="flex items-center justify-between mb-2">
-              <label className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                🔍 Debug Mode
-              </label>
-              <button
-                type="button"
-                onClick={() => setDebugMode(!debugMode)}
-                className={`text-xs px-3 py-1 rounded ${
-                  debugMode
-                    ? 'bg-blue-500 text-white'
-                    : isDarkMode
-                    ? 'bg-gray-700 text-gray-300'
-                    : 'bg-gray-200 text-gray-700'
-                }`}
-              >
-                {debugMode ? 'Hide Raw Data' : 'Show Raw Data'}
-              </button>
-            </div>
-            {debugMode && (
-              <div className={`p-3 rounded border max-h-64 overflow-auto ${isDarkMode ? 'bg-gray-900 border-gray-700 text-gray-300' : 'bg-gray-50 border-gray-300 text-gray-800'}`}>
-                <div className="text-xs font-mono break-all whitespace-pre-wrap">
-                  {scannedRawText}
-                </div>
-                <div className="mt-2 pt-2 border-t border-gray-600">
-                  <div className="text-xs">
-                    <strong>Length:</strong> {scannedRawText.length} characters
-                  </div>
-                  <div className="text-xs">
-                    <strong>First 10 chars:</strong> {scannedRawText.substring(0, 10)}
-                  </div>
-                  <div className="text-xs">
-                    <strong>Format:</strong> {scannedRawText.startsWith('M') ? 'IATA BCBP' : scannedRawText.startsWith('http') ? 'URL/Web' : 'Unknown/Proprietary'}
-                  </div>
-                </div>
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          {error && (
+            <div className={`p-4 ${isDarkMode ? 'bg-red-900/20 border-red-800' : 'bg-red-50 border-red-200'} border rounded-lg`}>
+              <div className="flex items-start">
+                <span className="text-2xl mr-3">❌</span>
+                <p className={`${isDarkMode ? 'text-red-200' : 'text-red-800'}`}>{error}</p>
               </div>
-            )}
-          </div>
-        )}
-
-        <div className="space-y-3">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={handleFileSelect}
-            className="hidden"
-            id="boarding-pass-upload"
-          />
-
-          {!preview ? (
-            <label htmlFor="boarding-pass-upload" className="btn-primary w-full cursor-pointer text-center block">
-              📸 Foto aufnehmen / Bild hochladen
-            </label>
-          ) : (
-            <div className="flex gap-3">
-              <button onClick={handleTryAgain} className="btn-secondary flex-1" disabled={scanning}>
-                Erneut versuchen
-              </button>
             </div>
           )}
 
-          <button onClick={onClose} className="btn-secondary w-full">
-            Abbrechen
-          </button>
-        </div>
+          {/* Upload Area */}
+          {!scanning && !preview && (
+            <div>
+              <div
+                className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+                  isDarkMode
+                    ? 'border-gray-600 hover:border-gray-500 bg-gray-750'
+                    : 'border-gray-300 hover:border-gray-400 bg-gray-50'
+                }`}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                />
+                <div className="space-y-3">
+                  <div className="text-5xl">🎫</div>
+                  <div>
+                    <p className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                      Boarding Pass Foto hochladen
+                    </p>
+                    <p className={`text-sm mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      oder hier klicken zum Auswählen
+                    </p>
+                  </div>
+                  <p className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                    Unterstützt: JPG, PNG, GIF
+                  </p>
+                </div>
+              </div>
 
-        <canvas ref={canvasRef} className="hidden" />
+              {/* Info Box */}
+              <div className={`mt-4 p-4 ${isDarkMode ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'} border rounded-lg`}>
+                <h3 className={`text-sm font-semibold ${isDarkMode ? 'text-blue-200' : 'text-blue-900'} mb-2`}>
+                  🤖 KI-gestützte Analyse mit Ollama Vision
+                </h3>
+                <ul className={`text-sm ${isDarkMode ? 'text-blue-300' : 'text-blue-800'} space-y-1`}>
+                  <li>• Fotografieren Sie Ihren Boarding Pass (Barcode + Text)</li>
+                  <li>• Ollama Vision extrahiert automatisch alle Flugdaten</li>
+                  <li>• Optional: API-Abgleich für Zeiten & Terminal/Gate</li>
+                  <li>• Funktioniert mit allen gängigen Boarding Pass Formaten</li>
+                </ul>
+              </div>
+            </div>
+          )}
 
-        <div className={`mt-6 text-xs text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-          <p>🔒 Ihre Boarding-Pass-Daten werden lokal verarbeitet und niemals an einen Server gesendet.</p>
+          {/* Preview & Progress */}
+          {preview && (
+            <div className="space-y-4">
+              {/* Image Preview */}
+              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-2">
+                <img
+                  src={preview}
+                  alt="Boarding Pass Vorschau"
+                  className="max-w-full max-h-64 mx-auto object-contain rounded"
+                />
+              </div>
+
+              {/* Scan Steps */}
+              {scanSteps.length > 0 && (
+                <div className="space-y-2">
+                  {scanSteps.map((step) => (
+                    <div
+                      key={step.id}
+                      className={`flex items-center gap-3 p-3 rounded-lg ${
+                        step.status === 'success'
+                          ? isDarkMode
+                            ? 'bg-green-900/20 border border-green-800'
+                            : 'bg-green-50 border border-green-200'
+                          : step.status === 'error'
+                          ? isDarkMode
+                            ? 'bg-red-900/20 border border-red-800'
+                            : 'bg-red-50 border border-red-200'
+                          : step.status === 'loading'
+                          ? isDarkMode
+                            ? 'bg-blue-900/20 border border-blue-800'
+                            : 'bg-blue-50 border border-blue-200'
+                          : isDarkMode
+                          ? 'bg-gray-750 border border-gray-700'
+                          : 'bg-gray-50 border border-gray-200'
+                      }`}
+                    >
+                      <span className="text-2xl">{step.icon}</span>
+                      <div className="flex-1">
+                        <p
+                          className={`font-medium ${
+                            step.status === 'success'
+                              ? isDarkMode
+                                ? 'text-green-200'
+                                : 'text-green-800'
+                              : step.status === 'error'
+                              ? isDarkMode
+                                ? 'text-red-200'
+                                : 'text-red-800'
+                              : step.status === 'loading'
+                              ? isDarkMode
+                                ? 'text-blue-200'
+                                : 'text-blue-800'
+                              : isDarkMode
+                              ? 'text-gray-400'
+                              : 'text-gray-600'
+                          }`}
+                        >
+                          {step.label}
+                        </p>
+                        {step.detail && (
+                          <p
+                            className={`text-sm ${
+                              step.status === 'success'
+                                ? isDarkMode
+                                  ? 'text-green-300'
+                                  : 'text-green-700'
+                                : step.status === 'error'
+                                ? isDarkMode
+                                  ? 'text-red-300'
+                                  : 'text-red-700'
+                                : isDarkMode
+                                ? 'text-blue-300'
+                                : 'text-blue-700'
+                            }`}
+                          >
+                            {step.detail}
+                          </p>
+                        )}
+                      </div>
+                      {step.status === 'loading' && (
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
