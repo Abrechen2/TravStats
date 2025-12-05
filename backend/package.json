@@ -9,6 +9,7 @@
     "start": "node dist/index.js",
     "test": "jest",
     "test:watch": "jest --watch",
+    "test:parser": "tsx scripts/test-enhanced-parser.ts",
     "test:ollama": "tsx scripts/test-ollama-models.ts",
     "test:ollama:download": "tsx scripts/test-ollama-models.ts --download-missing",
     "init": "tsx src/init.ts",
@@ -25,7 +26,7 @@
     "api"
   ],
   "author": "",
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "dependencies": {
     "@kenjiuno/msgreader": "^1.27.0-alpha.3",
     "@prisma/client": "^5.7.0",

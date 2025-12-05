@@ -47,6 +47,7 @@ backend/test-imap.js
 backend/uploads/
 uploads/
 Sample Boardingpasses/
+Sample Emails/
 
 # Database
 *.db

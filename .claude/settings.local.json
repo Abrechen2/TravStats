@@ -9,7 +9,15 @@
       "Bash(npx kill-port:*)",
       "Bash(if exist test-parser.js del test-parser.js)",
       "Bash(npm install:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(curl:*)",
+      "Bash(npm run test:ollama:*)",
+      "Bash(npm run test:parser:*)",
+      "Bash(Select-String -Pattern \"(?i)sample\" -CaseSensitive:$false)",
+      "Bash(git rm:*)",
+      "Bash(if [ -d \"Sample Boardingpasses\" ])",
+      "Bash(else echo \"✗ Ordner nicht gefunden\")",
+      "Bash(fi)"
     ],
     "deny": [],
     "ask": []
