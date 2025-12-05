@@ -17,7 +17,11 @@
       "Bash(git rm:*)",
       "Bash(if [ -d \"Sample Boardingpasses\" ])",
       "Bash(else echo \"✗ Ordner nicht gefunden\")",
-      "Bash(fi)"
+      "Bash(fi)",
+      "Bash(OLLAMA_MODEL=qwen2.5:7b npm run test:parser:real:*)",
+      "Bash(if [ -f .env ])",
+      "Bash(then sed -i 's/OLLAMA_MODEL=llama3.2:3b/OLLAMA_MODEL=qwen2.5:7b/' .env)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []

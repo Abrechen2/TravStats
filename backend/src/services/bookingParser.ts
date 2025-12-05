@@ -315,8 +315,8 @@ export async function parseBookingEmail(
   try {
     console.log('[Parser] Running LLM parser...');
 
-    // Import LLM parser dynamically to avoid issues if not available
-    const { parseEmailWithLLM, isOllamaAvailable } = await import('./llmParser');
+    // Import Enhanced LLM parser dynamically to avoid issues if not available
+    const { parseEmailWithLLM, isOllamaAvailable } = await import('./llmParser.enhanced');
 
     // Check if Ollama is available
     const ollamaAvailable = await isOllamaAvailable();

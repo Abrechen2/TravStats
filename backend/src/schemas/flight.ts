@@ -87,9 +87,18 @@ const baseFlightSchema = z.object({
 });
 
 export const createFlightSchema = baseFlightSchema.refine(
-  data => new Date(data.departureTime) < new Date(data.arrivalTime),
+  data => {
+    const depTime = new Date(data.departureTime);
+    const arrTime = new Date(data.arrivalTime);
+    const diffHours = (arrTime.getTime() - depTime.getTime()) / (1000 * 60 * 60);
+
+    // Allow flights up to 24 hours duration (catches obvious errors)
+    // This handles timezone differences and overnight flights
+    // A negative difference up to -12 hours is acceptable (timezone crossing)
+    return diffHours >= -12 && diffHours <= 24;
+  },
   {
-    message: 'Departure time must be before arrival time',
+    message: 'Flight duration must be between -12 and +24 hours (check your times and timezones)',
     path: ['arrivalTime'],
   }
 );

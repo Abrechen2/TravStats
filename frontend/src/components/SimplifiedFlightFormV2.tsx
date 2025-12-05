@@ -482,8 +482,10 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
     setError('');
 
     try {
-      const departureDateTime = `${departureDate}T${departureTime}:00Z`;
-      const arrivalDateTime = `${arrivalDate}T${arrivalTime}:00Z`;
+      // Convert local times to ISO strings (properly handles timezone conversion)
+      // Note: This treats input times as local browser time and converts to UTC
+      const departureDateTime = new Date(`${departureDate}T${departureTime}:00`).toISOString();
+      const arrivalDateTime = new Date(`${arrivalDate}T${arrivalTime}:00`).toISOString();
 
       // Store historical flight time data for future estimations
       // (only if user manually verified/corrected the times)
