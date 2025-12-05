@@ -138,6 +138,7 @@ JSON:`;
         options: {
           temperature: 0.05,
           top_p: 0.9,
+          num_threads: 12,
         },
       },
       {
