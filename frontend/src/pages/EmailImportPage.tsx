@@ -43,18 +43,18 @@ export default function EmailImportPage() {
     setProcessingSteps(steps);
 
     try {
-      // Simulate upload step (instant, but show for UX)
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      // Upload step - show for better UX
+      await new Promise((resolve) => setTimeout(resolve, 600));
       updateStep('upload', { status: 'success' });
 
-      // Start parsing step
-      updateStep('parse', { status: 'loading' });
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      // Start parsing step - this is where the heavy LLM processing happens
+      updateStep('parse', { status: 'loading', detail: 'KI-Analyse läuft...' });
 
       // Use FormData for file upload (supports .eml, .txt, .msg)
       const formData = new FormData();
       formData.append('file', file);
 
+      // Call API - this may take 1-3 seconds with LLM parsing
       const response = await importsApi.uploadEmailFile(formData);
 
       // Extract parser info from response (if available)
@@ -63,16 +63,22 @@ export default function EmailImportPage() {
 
       updateStep('parse', {
         status: 'success',
-        detail: usedOllama ? 'KI-Analyse (Ollama)' : 'Regex-Analyse'
+        detail: usedOllama ? 'KI-Analyse (Ollama qwen2.5:7b)' : 'Regex-Analyse'
       });
 
-      // Extract step
+      // Show parse success longer so user can see which parser was used
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+
+      // Extract step - show flight count
       updateStep('extract', { status: 'loading' });
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      await new Promise((resolve) => setTimeout(resolve, 800));
       updateStep('extract', {
         status: 'success',
         detail: `${response.count} Flug${response.count !== 1 ? 'e' : ''} erkannt`
       });
+
+      // Show extract success longer
+      await new Promise((resolve) => setTimeout(resolve, 800));
 
       // Complete step
       updateStep('complete', { status: 'success' });
@@ -82,10 +88,10 @@ export default function EmailImportPage() {
       // Reset file input
       e.target.value = '';
 
-      // Redirect to pending imports after 3 seconds
+      // Redirect to pending imports after 4 seconds (longer to read results)
       setTimeout(() => {
         navigate('/');
-      }, 3000);
+      }, 4000);
     } catch (err: any) {
       const currentStep = steps.find((s) => s.status === 'loading');
       if (currentStep) {

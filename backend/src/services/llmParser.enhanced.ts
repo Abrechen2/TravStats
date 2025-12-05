@@ -203,8 +203,32 @@ JSON OUTPUT:`;
       throw new Error('LLM returned invalid JSON');
     }
 
-    // Ensure we have an array
-    const flightsArray = Array.isArray(parsedData) ? parsedData : [parsedData];
+    // Ensure we have an array - handle various JSON structures
+    let flightsArray: any[] = [];
+
+    if (Array.isArray(parsedData)) {
+      // Direct array: [flight1, flight2]
+      flightsArray = parsedData;
+    } else if (parsedData && typeof parsedData === 'object') {
+      // Check for nested arrays with common keys
+      const possibleKeys = ['flights', 'flightNumbers', 'data', 'results', 'items'];
+      let foundArray = false;
+
+      for (const key of possibleKeys) {
+        if (Array.isArray(parsedData[key])) {
+          flightsArray = parsedData[key];
+          foundArray = true;
+          console.log(`[Enhanced LLM Parser] Found nested array at key: ${key}`);
+          break;
+        }
+      }
+
+      if (!foundArray) {
+        // Single flight object: {flightNumber: ...}
+        flightsArray = [parsedData];
+      }
+    }
+
     console.log('[Enhanced LLM Parser] Found', flightsArray.length, 'flight(s)');
 
     // Validate and build ParsedBooking results

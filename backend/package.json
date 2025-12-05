@@ -10,6 +10,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:parser": "tsx scripts/test-enhanced-parser.ts",
+    "test:parser:real": "tsx scripts/test-real-emails.ts",
+    "test:parser:integration": "tsx scripts/test-integration.ts",
     "test:ollama": "tsx scripts/test-ollama-models.ts",
     "test:ollama:download": "tsx scripts/test-ollama-models.ts --download-missing",
     "init": "tsx src/init.ts",

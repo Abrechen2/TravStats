@@ -240,10 +240,10 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
               updateScanStep('complete', { status: 'success' });
               setScanning(false);
 
-              // Small delay to show success state
+              // Delay to show success state and allow user to read status
               setTimeout(() => {
                 onScanSuccess(enhancedData);
-              }, 500);
+              }, 1000);
             } else {
               console.log('ℹ️ OCR did not find additional data - using barcode data only');
               updateScanStep('ocr', { status: 'skipped', detail: 'Keine zusätzlichen Daten gefunden' });
@@ -252,7 +252,7 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
 
               setTimeout(() => {
                 onScanSuccess(bcbpData);
-              }, 500);
+              }, 1000);
             }
           } catch (err) {
             console.warn('⚠️ OCR enhancement failed, using barcode data only:', err);
@@ -262,7 +262,7 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
 
             setTimeout(() => {
               onScanSuccess(bcbpData);
-            }, 500);
+            }, 1000);
           }
         } else {
           updateScanStep('barcode', { status: 'error', detail: 'Unbekanntes Format' });
@@ -294,7 +294,7 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
 
               setTimeout(() => {
                 onScanSuccess(bcbpData);
-              }, 500);
+              }, 1000);
               return;
             }
 
@@ -318,7 +318,7 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
               setScanning(false);
               setTimeout(() => {
                 onScanSuccess(partialData as BoardingPassData);
-              }, 500);
+              }, 1000);
               return;
             }
           }
