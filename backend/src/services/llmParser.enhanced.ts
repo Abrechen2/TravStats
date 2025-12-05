@@ -53,8 +53,8 @@ CRITICAL RULES:
 
 FEW-SHOT EXAMPLES:
 
-Example 1 - Lufthansa Round Trip:
-Email: "Ihre Buchung 9RFAA7: München (MUC) nach Luxemburg (LUX) am 18.11.2025 um 11:00 mit LH103, Rückflug am 20.11.2025 um 09:30 mit LH442, Sitz 26F"
+Example 1 - Lufthansa Round Trip with Full Details:
+Email: "Ihre Buchung 9RFAA7: München (MUC) nach Luxemburg (LUX) am 18.11.2025 um 11:00 mit LH103, Airbus A321, Economy Light, Sitz 26F, Ankunft 12:55, Rückflug am 20.11.2025 um 09:30 mit LH442, Ticketnummer: 2202236084346, Preis: 513.47 EUR (Steuern: 45.67 EUR, Gebühren: 12.30 EUR)"
 Output:
 [
   {
@@ -62,11 +62,18 @@ Output:
     "departureCode": "MUC",
     "arrivalCode": "LUX",
     "departureTime": "2025-11-18T11:00",
-    "arrivalTime": null,
+    "arrivalTime": "2025-11-18T12:55",
     "pnr": "9RFAA7",
+    "bookingReference": "9RFAA7",
     "seat": "26F",
-    "price": null,
-    "currency": null,
+    "aircraft": "Airbus A321",
+    "seatClass": "Economy Light",
+    "ticketNumber": "2202236084346",
+    "boardingGroup": null,
+    "price": "513.47",
+    "currency": "EUR",
+    "taxes": "45.67",
+    "fees": "12.30",
     "terminal": null,
     "gate": null
   },
@@ -77,9 +84,16 @@ Output:
     "departureTime": "2025-11-20T09:30",
     "arrivalTime": null,
     "pnr": "9RFAA7",
+    "bookingReference": "9RFAA7",
     "seat": null,
+    "aircraft": null,
+    "seatClass": null,
+    "ticketNumber": "2202236084346",
+    "boardingGroup": null,
     "price": null,
     "currency": null,
+    "taxes": null,
+    "fees": null,
     "terminal": null,
     "gate": null
   }
@@ -96,9 +110,16 @@ Output:
     "departureTime": "2025-12-01T08:15",
     "arrivalTime": null,
     "pnr": null,
+    "bookingReference": null,
     "seat": null,
+    "aircraft": null,
+    "seatClass": null,
+    "ticketNumber": null,
+    "boardingGroup": null,
     "price": null,
     "currency": null,
+    "taxes": null,
+    "fees": null,
     "terminal": null,
     "gate": null
   },
@@ -109,9 +130,16 @@ Output:
     "departureTime": "2025-12-01T11:30",
     "arrivalTime": null,
     "pnr": null,
+    "bookingReference": null,
     "seat": null,
+    "aircraft": null,
+    "seatClass": null,
+    "ticketNumber": null,
+    "boardingGroup": null,
     "price": null,
     "currency": null,
+    "taxes": null,
+    "fees": null,
     "terminal": null,
     "gate": null
   }
@@ -137,6 +165,22 @@ EXTRACT THESE FIELDS FOR EACH FLIGHT:
 - gate: gate (e.g., "B12") or null
 - price: numeric string (e.g., "513.47") or null
 - currency: ISO currency code (e.g., "EUR") or null
+
+NEW FIELDS (extract if available):
+- aircraft: aircraft type (e.g., "Airbus A321", "Boeing 777-300ER") or null
+- seatClass: cabin class (e.g., "Economy Light", "Business", "First") or null
+- bookingReference: booking code/PNR (usually 6 alphanumeric, e.g., "9RFAA7") or null
+- ticketNumber: ticket number (typically 13 digits, e.g., "2202236084346") or null
+- boardingGroup: boarding group/zone (e.g., "1", "A", "Zone 3") or null
+- taxes: tax amount as numeric string (e.g., "45.67") or null
+- fees: fee amount as numeric string (e.g., "12.30") or null
+
+EXTRACTION TIPS:
+- Aircraft: Look for "Airbus", "Boeing", "Embraer", "A320", "B777", "Flugzeugtyp"
+- Seat Class: Look for "Economy", "Business", "First", "Premium", "Buchungsklasse"
+- Booking Reference: Usually near "Buchungscode:", "PNR:", "Buchung:"
+- Ticket Number: Usually near "Ticketnummer:", "E-Ticket:", 13 digits
+- Taxes/Fees: Only extract if itemized (labeled "Steuern", "Gebühren", "Taxes", "Fees")
 
 JSON OUTPUT:`;
 
@@ -259,12 +303,20 @@ JSON OUTPUT:`;
           arrivalCode: cleanIATA(flight.arrivalCode),
           departureTime: flight.departureTime || undefined,
           arrivalTime: flight.arrivalTime || undefined,
-          pnr: flight.pnr?.toUpperCase() || undefined,
+          pnr: flight.pnr?.toUpperCase() || flight.bookingReference?.toUpperCase() || undefined,
           seat: flight.seat?.toUpperCase() || undefined,
           terminal: flight.terminal || undefined,
           gate: flight.gate?.toUpperCase() || undefined,
           price: flight.price ? String(flight.price) : undefined,
           currency: flight.currency?.toUpperCase() || undefined,
+          // NEW FIELDS: Enhanced email parsing
+          aircraft: flight.aircraft || undefined,
+          seatClass: flight.seatClass || undefined,
+          bookingReference: flight.bookingReference?.toUpperCase() || flight.pnr?.toUpperCase() || undefined,
+          ticketNumber: flight.ticketNumber || undefined,
+          boardingGroup: flight.boardingGroup || undefined,
+          taxes: flight.taxes ? String(flight.taxes) : undefined,
+          fees: flight.fees ? String(flight.fees) : undefined,
           missing,
         };
 

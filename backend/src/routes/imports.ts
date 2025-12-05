@@ -323,6 +323,22 @@ router.post('/:id/accept', authenticate, async (req: AuthRequest, res: Response,
             : Number(parsed.price))
           : undefined,
         currency: parsed.currency,
+        // NEW FIELDS: Enhanced email parsing
+        aircraft: parsed.aircraft,
+        seatClass: parsed.seatClass,
+        bookingReference: parsed.bookingReference || parsed.pnr,
+        ticketNumber: parsed.ticketNumber,
+        boardingGroup: parsed.boardingGroup,
+        taxes: parsed.taxes
+          ? (typeof parsed.taxes === 'string'
+            ? Number(parsed.taxes.replace(',', '.'))
+            : Number(parsed.taxes))
+          : undefined,
+        fees: parsed.fees
+          ? (typeof parsed.fees === 'string'
+            ? Number(parsed.fees.replace(',', '.'))
+            : Number(parsed.fees))
+          : undefined,
         category: 'business',
       },
     });
