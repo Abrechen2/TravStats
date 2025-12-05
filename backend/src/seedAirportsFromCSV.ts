@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
 import { parse } from 'csv-parse/sync';
+import https from 'https';
 
 const prisma = new PrismaClient();
 
@@ -26,13 +27,53 @@ interface CSVAirport {
   keywords: string;
 }
 
+async function downloadCSV(url: string, destination: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const file = fs.createWriteStream(destination);
+    https.get(url, (response) => {
+      if (response.statusCode === 302 || response.statusCode === 301) {
+        // Follow redirect
+        file.close();
+        fs.unlinkSync(destination);
+        https.get(response.headers.location!, (redirectResponse) => {
+          redirectResponse.pipe(file);
+          file.on('finish', () => {
+            file.close();
+            resolve();
+          });
+        }).on('error', (err) => {
+          fs.unlinkSync(destination);
+          reject(err);
+        });
+      } else {
+        response.pipe(file);
+        file.on('finish', () => {
+          file.close();
+          resolve();
+        });
+      }
+    }).on('error', (err) => {
+      fs.unlinkSync(destination);
+      reject(err);
+    });
+  });
+}
+
 async function seedAirportsFromCSV() {
   console.log('🛫 Beginne Import der Flughäfen aus CSV...');
 
   const csvPath = path.join(__dirname, '..', 'airports.csv');
 
   if (!fs.existsSync(csvPath)) {
-    throw new Error(`CSV-Datei nicht gefunden: ${csvPath}`);
+    console.log('📥 CSV-Datei nicht gefunden, lade von OurAirports.com herunter...');
+    const downloadUrl = 'https://davidmegginson.github.io/ourairports-data/airports.csv';
+
+    try {
+      await downloadCSV(downloadUrl, csvPath);
+      console.log('✅ CSV-Datei erfolgreich heruntergeladen');
+    } catch (error: any) {
+      throw new Error(`Fehler beim Herunterladen der CSV-Datei: ${error.message}`);
+    }
   }
 
   const fileContent = fs.readFileSync(csvPath, 'utf-8');

@@ -292,7 +292,7 @@ In Unraid:
   - Screenshots (optional aber empfohlen)
 
 - [ ] **Lizenz im Repository**
-  - MIT, GPL, Apache, etc.
+  - AGPL-3.0 (liegt im Repo als LICENSE)
   - LICENSE Datei vorhanden
 
 - [ ] **Dokumentation**
