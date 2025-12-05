@@ -23,7 +23,6 @@ model User {
   userAchievements    UserAchievement[]
   settings            UserSettings?
   analyticsEvents     AnalyticsEvent[]
-  importedFlights     ImportedFlight[]
   createdInvitations  Invitation[]
 
   @@map("users")
@@ -157,31 +156,6 @@ model AnalyticsEvent {
   @@index([userId])
   @@index([type])
   @@map("analytics_events")
-}
-
-enum ImportStatus {
-  pending_review
-  accepted
-  rejected
-}
-
-model ImportedFlight {
-  id          String        @id @default(uuid())
-  userId      String        @map("user_id")
-  status      ImportStatus  @default(pending_review)
-  subject     String?
-  fromAddress String?
-  toAddress   String?
-  raw         String?
-  parsed      Json
-  notes       String?
-  createdAt   DateTime      @default(now()) @map("created_at")
-  updatedAt   DateTime      @updatedAt @map("updated_at")
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, status])
-  @@map("imported_flights")
 }
 
 model Invitation {

@@ -1,52 +1,266 @@
 import { useState, useEffect } from 'react';
+import { Airport, FlightInput } from '../types';
+import { airportsApi } from '../lib/api';
 
-interface ImportEditModalProps {
-  importData: any;
-  isOpen: boolean;
-  onClose: () => void;
-  onSave: (parsed: any) => Promise<void>;
+interface ParsedBooking {
+  airline?: string;
+  flightNumber?: string;
+  departureCode?: string;
+  arrivalCode?: string;
+  departureTime?: string;
+  arrivalTime?: string;
+  pnr?: string;
+  seat?: string;
+  terminal?: string;
+  gate?: string;
+  price?: string;
+  currency?: string;
+  aircraft?: string;
+  seatClass?: string;
+  bookingReference?: string;
+  ticketNumber?: string;
+  boardingGroup?: string;
+  taxes?: string;
+  fees?: string;
+  missing?: string[];
 }
 
-export default function ImportEditModal({ importData, isOpen, onClose, onSave }: ImportEditModalProps) {
-  const [parsed, setParsed] = useState<any>({});
+interface FlightReviewModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: (flight: FlightInput) => Promise<void>;
+  initialData: ParsedBooking;
+  source: 'email' | 'boardingpass';
+  flightIndex?: number; // For multi-flight: "Flight 1 of 3"
+  totalFlights?: number;
+}
+
+export default function FlightReviewModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  initialData,
+  source,
+  flightIndex,
+  totalFlights,
+}: FlightReviewModalProps) {
+  // Form state
+  const [flightNumber, setFlightNumber] = useState('');
+  const [airline, setAirline] = useState('');
+  const [departureCode, setDepartureCode] = useState('');
+  const [arrivalCode, setArrivalCode] = useState('');
+  const [departureTime, setDepartureTime] = useState('');
+  const [arrivalTime, setArrivalTime] = useState('');
+  const [aircraft, setAircraft] = useState('');
+  const [seatClass, setSeatClass] = useState<'economy' | 'premium_economy' | 'business' | 'first'>('economy');
+  const [seat, setSeat] = useState('');
+  const [terminal, setTerminal] = useState('');
+  const [gate, setGate] = useState('');
+  const [bookingReference, setBookingReference] = useState('');
+  const [boardingGroup, setBoardingGroup] = useState('');
+  const [ticketNumber, setTicketNumber] = useState('');
+  const [price, setPrice] = useState<number | undefined>(undefined);
+  const [currency, setCurrency] = useState<'EUR' | 'USD' | 'GBP' | 'CHF'>('EUR');
+  const [taxes, setTaxes] = useState<number | undefined>(undefined);
+  const [fees, setFees] = useState<number | undefined>(undefined);
+
+  // Airport lookup state
+  const [departureAirport, setDepartureAirport] = useState<Airport | null>(null);
+  const [arrivalAirport, setArrivalAirport] = useState<Airport | null>(null);
+  const [airportLoading, setAirportLoading] = useState(false);
+  const [airportError, setAirportError] = useState('');
+
+  // UI state
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Initialize form with parsed data
   useEffect(() => {
-    if (importData?.parsed) {
-      setParsed({ ...importData.parsed });
+    if (initialData) {
+      setFlightNumber(initialData.flightNumber || '');
+      setAirline(initialData.airline || '');
+      setDepartureCode(initialData.departureCode || '');
+      setArrivalCode(initialData.arrivalCode || '');
+      setDepartureTime(initialData.departureTime ? formatDateTimeLocal(initialData.departureTime) : '');
+      setArrivalTime(initialData.arrivalTime ? formatDateTimeLocal(initialData.arrivalTime) : '');
+      setAircraft(initialData.aircraft || '');
+      setSeat(initialData.seat || '');
+      setTerminal(initialData.terminal || '');
+      setGate(initialData.gate || '');
+      setBookingReference(initialData.bookingReference || initialData.pnr || '');
+      setBoardingGroup(initialData.boardingGroup || '');
+      setTicketNumber(initialData.ticketNumber || '');
+
+      // Parse price fields
+      if (initialData.price) {
+        const priceNum = parseFloat(initialData.price);
+        if (!isNaN(priceNum)) setPrice(priceNum);
+      }
+      if (initialData.taxes) {
+        const taxesNum = parseFloat(initialData.taxes);
+        if (!isNaN(taxesNum)) setTaxes(taxesNum);
+      }
+      if (initialData.fees) {
+        const feesNum = parseFloat(initialData.fees);
+        if (!isNaN(feesNum)) setFees(feesNum);
+      }
+      if (initialData.currency) {
+        setCurrency(initialData.currency.toUpperCase() as 'EUR' | 'USD' | 'GBP' | 'CHF');
+      }
+
+      // Map seat class
+      const mappedSeatClass = mapSeatClass(initialData.seatClass);
+      if (mappedSeatClass) {
+        setSeatClass(mappedSeatClass);
+      }
+
+      // Lookup airports
+      if (initialData.departureCode || initialData.arrivalCode) {
+        lookupAirports(initialData.departureCode, initialData.arrivalCode);
+      }
     }
-  }, [importData]);
+  }, [initialData]);
+
+  // Format datetime for datetime-local input
+  const formatDateTimeLocal = (isoString: string): string => {
+    try {
+      return new Date(isoString).toISOString().slice(0, 16);
+    } catch {
+      return '';
+    }
+  };
+
+  // Map parsed seat class to FlightInput format
+  const mapSeatClass = (seatClass?: string): 'economy' | 'premium_economy' | 'business' | 'first' | null => {
+    if (!seatClass) return null;
+    const lower = seatClass.toLowerCase();
+    if (lower.includes('first')) return 'first';
+    if (lower.includes('business')) return 'business';
+    if (lower.includes('premium')) return 'premium_economy';
+    if (lower.includes('economy')) return 'economy';
+    return null;
+  };
+
+  // Lookup airports by IATA code
+  const lookupAirports = async (depCode?: string, arrCode?: string) => {
+    if (!depCode && !arrCode) return;
+
+    setAirportLoading(true);
+    setAirportError('');
+
+    try {
+      if (depCode) {
+        const depResults = await airportsApi.search(depCode);
+        const depMatch = depResults.find(
+          (a: Airport) => a.iata?.toUpperCase() === depCode.toUpperCase()
+        );
+        if (depMatch) {
+          setDepartureAirport(depMatch);
+        } else {
+          setAirportError(`Abflughafen ${depCode} nicht gefunden`);
+        }
+      }
+
+      if (arrCode) {
+        const arrResults = await airportsApi.search(arrCode);
+        const arrMatch = arrResults.find(
+          (a: Airport) => a.iata?.toUpperCase() === arrCode.toUpperCase()
+        );
+        if (arrMatch) {
+          setArrivalAirport(arrMatch);
+        } else {
+          setAirportError((prev) =>
+            prev ? `${prev}, Ankunftsflughafen ${arrCode} nicht gefunden` : `Ankunftsflughafen ${arrCode} nicht gefunden`
+          );
+        }
+      }
+    } catch (err) {
+      setAirportError('Fehler beim Laden der Flughäfen');
+    } finally {
+      setAirportLoading(false);
+    }
+  };
+
+  // Retry airport lookup when codes change
+  useEffect(() => {
+    if (departureCode && !departureAirport) {
+      lookupAirports(departureCode, undefined);
+    }
+  }, [departureCode]);
+
+  useEffect(() => {
+    if (arrivalCode && !arrivalAirport) {
+      lookupAirports(undefined, arrivalCode);
+    }
+  }, [arrivalCode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Validation
+    if (!departureAirport || !arrivalAirport) {
+      setError('Bitte geben Sie gültige Flughafencodes ein');
+      return;
+    }
+
+    if (!departureTime || !arrivalTime) {
+      setError('Abflug- und Ankunftszeit sind erforderlich');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      await onSave(parsed);
-      onClose();
+      const flightInput: FlightInput = {
+        airline,
+        flightNumber,
+        aircraft,
+        departure: departureAirport,
+        arrival: arrivalAirport,
+        departureTime: new Date(departureTime).toISOString(),
+        arrivalTime: new Date(arrivalTime).toISOString(),
+        seatNumber: seat || undefined,
+        seatClass: seatClass || undefined,
+        boardingGroup: boardingGroup || undefined,
+        gate: gate || undefined,
+        terminal: terminal || undefined,
+        bookingReference: bookingReference || undefined,
+        ticketNumber: ticketNumber || undefined,
+        price,
+        currency,
+        taxes,
+        fees,
+        status: new Date(departureTime) < new Date() ? 'flown' : 'scheduled',
+      };
+
+      await onConfirm(flightInput);
+      // onConfirm handles closing the modal or moving to next flight
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Fehler beim Speichern');
+      setError(err.response?.data?.error || err.message || 'Fehler beim Speichern');
     } finally {
       setLoading(false);
     }
   };
 
-  const updateField = (field: string, value: any) => {
-    setParsed((prev: any) => ({ ...prev, [field]: value }));
-  };
-
   if (!isOpen) return null;
+
+  const title = source === 'email' ? 'Email-Import prüfen' : 'Boarding Pass prüfen';
+  const showProgress = totalFlights && totalFlights > 1 && flightIndex !== undefined;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b dark:border-gray-700 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-            Import bearbeiten
-          </h2>
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h2>
+            {showProgress && (
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Flug {flightIndex! + 1} von {totalFlights}
+              </p>
+            )}
+          </div>
           <button
             onClick={onClose}
             className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
@@ -66,6 +280,18 @@ export default function ImportEditModal({ importData, isOpen, onClose, onSave }:
             </div>
           )}
 
+          {airportError && (
+            <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+              <p className="text-yellow-800 dark:text-yellow-200">{airportError}</p>
+            </div>
+          )}
+
+          {airportLoading && (
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <p className="text-blue-800 dark:text-blue-200">Lade Flughäfen...</p>
+            </div>
+          )}
+
           {/* Flight Details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -74,8 +300,8 @@ export default function ImportEditModal({ importData, isOpen, onClose, onSave }:
               </label>
               <input
                 type="text"
-                value={parsed.flightNumber || ''}
-                onChange={(e) => updateField('flightNumber', e.target.value)}
+                value={flightNumber}
+                onChange={(e) => setFlightNumber(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                 placeholder="LH123"
                 required
@@ -88,8 +314,8 @@ export default function ImportEditModal({ importData, isOpen, onClose, onSave }:
               </label>
               <input
                 type="text"
-                value={parsed.airline || ''}
-                onChange={(e) => updateField('airline', e.target.value)}
+                value={airline}
+                onChange={(e) => setAirline(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                 placeholder="Lufthansa"
               />
@@ -100,30 +326,50 @@ export default function ImportEditModal({ importData, isOpen, onClose, onSave }:
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Abflughafen (IATA/ICAO) *
+                Abflughafen (IATA) *
               </label>
               <input
                 type="text"
-                value={parsed.departureCode || ''}
-                onChange={(e) => updateField('departureCode', e.target.value.toUpperCase())}
+                value={departureCode}
+                onChange={(e) => {
+                  const code = e.target.value.toUpperCase();
+                  setDepartureCode(code);
+                  setDepartureAirport(null);
+                }}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                placeholder="FRA oder EDDF"
+                placeholder="FRA"
+                maxLength={3}
                 required
               />
+              {departureAirport && (
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                  ✓ {departureAirport.name} ({departureAirport.iata})
+                </p>
+              )}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Ankunftsflughafen (IATA/ICAO) *
+                Ankunftsflughafen (IATA) *
               </label>
               <input
                 type="text"
-                value={parsed.arrivalCode || ''}
-                onChange={(e) => updateField('arrivalCode', e.target.value.toUpperCase())}
+                value={arrivalCode}
+                onChange={(e) => {
+                  const code = e.target.value.toUpperCase();
+                  setArrivalCode(code);
+                  setArrivalAirport(null);
+                }}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                placeholder="JFK oder KJFK"
+                placeholder="JFK"
+                maxLength={3}
                 required
               />
+              {arrivalAirport && (
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                  ✓ {arrivalAirport.name} ({arrivalAirport.iata})
+                </p>
+              )}
             </div>
           </div>
 
@@ -131,25 +377,27 @@ export default function ImportEditModal({ importData, isOpen, onClose, onSave }:
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Abflugzeit
+                Abflugzeit *
               </label>
               <input
                 type="datetime-local"
-                value={parsed.departureTime ? new Date(parsed.departureTime).toISOString().slice(0, 16) : ''}
-                onChange={(e) => updateField('departureTime', e.target.value ? new Date(e.target.value).toISOString() : '')}
+                value={departureTime}
+                onChange={(e) => setDepartureTime(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                required
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Ankunftszeit
+                Ankunftszeit *
               </label>
               <input
                 type="datetime-local"
-                value={parsed.arrivalTime ? new Date(parsed.arrivalTime).toISOString().slice(0, 16) : ''}
-                onChange={(e) => updateField('arrivalTime', e.target.value ? new Date(e.target.value).toISOString() : '')}
+                value={arrivalTime}
+                onChange={(e) => setArrivalTime(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                required
               />
             </div>
           </div>
@@ -162,8 +410,8 @@ export default function ImportEditModal({ importData, isOpen, onClose, onSave }:
               </label>
               <input
                 type="text"
-                value={parsed.aircraft || ''}
-                onChange={(e) => updateField('aircraft', e.target.value)}
+                value={aircraft}
+                onChange={(e) => setAircraft(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                 placeholder="z.B. Airbus A321"
               />
@@ -174,11 +422,10 @@ export default function ImportEditModal({ importData, isOpen, onClose, onSave }:
                 Sitzklasse
               </label>
               <select
-                value={parsed.seatClass || ''}
-                onChange={(e) => updateField('seatClass', e.target.value || undefined)}
+                value={seatClass}
+                onChange={(e) => setSeatClass(e.target.value as any)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">Nicht angegeben</option>
                 <option value="economy">Economy</option>
                 <option value="premium_economy">Premium Economy</option>
                 <option value="business">Business</option>
@@ -195,8 +442,8 @@ export default function ImportEditModal({ importData, isOpen, onClose, onSave }:
               </label>
               <input
                 type="text"
-                value={parsed.seat || ''}
-                onChange={(e) => updateField('seat', e.target.value)}
+                value={seat}
+                onChange={(e) => setSeat(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                 placeholder="12A"
               />
@@ -208,8 +455,8 @@ export default function ImportEditModal({ importData, isOpen, onClose, onSave }:
               </label>
               <input
                 type="text"
-                value={parsed.terminal || ''}
-                onChange={(e) => updateField('terminal', e.target.value)}
+                value={terminal}
+                onChange={(e) => setTerminal(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                 placeholder="1"
               />
@@ -221,8 +468,8 @@ export default function ImportEditModal({ importData, isOpen, onClose, onSave }:
               </label>
               <input
                 type="text"
-                value={parsed.gate || ''}
-                onChange={(e) => updateField('gate', e.target.value)}
+                value={gate}
+                onChange={(e) => setGate(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                 placeholder="A12"
               />
@@ -237,8 +484,8 @@ export default function ImportEditModal({ importData, isOpen, onClose, onSave }:
               </label>
               <input
                 type="text"
-                value={parsed.bookingReference || parsed.pnr || ''}
-                onChange={(e) => updateField('bookingReference', e.target.value.toUpperCase())}
+                value={bookingReference}
+                onChange={(e) => setBookingReference(e.target.value.toUpperCase())}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                 placeholder="z.B. 9RFAA7"
                 maxLength={6}
@@ -251,11 +498,11 @@ export default function ImportEditModal({ importData, isOpen, onClose, onSave }:
               </label>
               <input
                 type="text"
-                value={parsed.boardingGroup || ''}
-                onChange={(e) => updateField('boardingGroup', e.target.value)}
+                value={boardingGroup}
+                onChange={(e) => setBoardingGroup(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                 placeholder="z.B. 1 oder A"
-                maxLength={2}
+                maxLength={3}
               />
             </div>
           </div>
@@ -267,8 +514,8 @@ export default function ImportEditModal({ importData, isOpen, onClose, onSave }:
             </label>
             <input
               type="text"
-              value={parsed.ticketNumber || ''}
-              onChange={(e) => updateField('ticketNumber', e.target.value)}
+              value={ticketNumber}
+              onChange={(e) => setTicketNumber(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
               placeholder="z.B. 2202236084346"
               maxLength={13}
@@ -278,7 +525,7 @@ export default function ImportEditModal({ importData, isOpen, onClose, onSave }:
           {/* Cost Breakdown */}
           <div className="border dark:border-gray-700 rounded-lg p-4">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-              Kosten
+              Kosten (optional)
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -288,8 +535,8 @@ export default function ImportEditModal({ importData, isOpen, onClose, onSave }:
                 <input
                   type="number"
                   step="0.01"
-                  value={parsed.price || ''}
-                  onChange={(e) => updateField('price', e.target.value ? parseFloat(e.target.value) : '')}
+                  value={price || ''}
+                  onChange={(e) => setPrice(e.target.value ? parseFloat(e.target.value) : undefined)}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                   placeholder="513.47"
                 />
@@ -300,8 +547,8 @@ export default function ImportEditModal({ importData, isOpen, onClose, onSave }:
                   Währung
                 </label>
                 <select
-                  value={parsed.currency || 'EUR'}
-                  onChange={(e) => updateField('currency', e.target.value)}
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value as any)}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="EUR">EUR</option>
@@ -318,8 +565,8 @@ export default function ImportEditModal({ importData, isOpen, onClose, onSave }:
                 <input
                   type="number"
                   step="0.01"
-                  value={parsed.taxes || ''}
-                  onChange={(e) => updateField('taxes', e.target.value ? parseFloat(e.target.value) : '')}
+                  value={taxes || ''}
+                  onChange={(e) => setTaxes(e.target.value ? parseFloat(e.target.value) : undefined)}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                   placeholder="45.67"
                 />
@@ -332,8 +579,8 @@ export default function ImportEditModal({ importData, isOpen, onClose, onSave }:
                 <input
                   type="number"
                   step="0.01"
-                  value={parsed.fees || ''}
-                  onChange={(e) => updateField('fees', e.target.value ? parseFloat(e.target.value) : '')}
+                  value={fees || ''}
+                  onChange={(e) => setFees(e.target.value ? parseFloat(e.target.value) : undefined)}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                   placeholder="12.30"
                 />
@@ -349,14 +596,14 @@ export default function ImportEditModal({ importData, isOpen, onClose, onSave }:
               className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-semibold"
               disabled={loading}
             >
-              Abbrechen
+              {showProgress ? 'Abbrechen' : 'Verwerfen'}
             </button>
             <button
               type="submit"
               className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={loading}
+              disabled={loading || airportLoading || !departureAirport || !arrivalAirport}
             >
-              {loading ? 'Speichert...' : 'Speichern'}
+              {loading ? 'Speichert...' : showProgress ? 'Weiter' : 'Bestätigen'}
             </button>
           </div>
         </form>

@@ -14,12 +14,13 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { Airport, airportsApi } from '../lib/api';
 import AirportAutocomplete from './AirportAutocomplete';
 import BoardingPassScanner from './BoardingPassScanner';
-import { BoardingPassData, getAirlineName } from '../lib/bcbpParser';
+import EmailUploader from './EmailUploader';
+import FlightReviewModal from './FlightReviewModal';
 import type { FlightInput } from '../types';
 import { useSettingsStore } from '../store/settingsStore';
 import { useThemeStore } from '../store/themeStore';
 import { calculateDistance } from '../lib/geo';
-import { estimateFlightTimes, storeHistoricalFlightTime } from '../lib/timeEstimation';
+import { storeHistoricalFlightTime } from '../lib/timeEstimation';
 
 // Konsistente Error Messages (Deutsch)
 const ERROR_MESSAGES = {
@@ -66,6 +67,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showScanner, setShowScanner] = useState(false);
+  const [showEmailUploader, setShowEmailUploader] = useState(false);
   const [step, setStep] = useState<'input' | 'lookup' | 'select' | 'complete'>('input');
   const [timeEstimationWarning, setTimeEstimationWarning] = useState<{
     show: boolean;
@@ -73,6 +75,11 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
     confidence: 'high' | 'medium' | 'low';
     sampleCount?: number;
   } | null>(null);
+
+  // Email Import & Review State
+  const [parsedFlights, setParsedFlights] = useState<any[]>([]);
+  const [currentFlightIndex, setCurrentFlightIndex] = useState(0);
+  const [showFlightReview, setShowFlightReview] = useState(false);
 
   // Flight Lookup State
   const [flightNumber, setFlightNumber] = useState('');
@@ -161,15 +168,6 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
       }
     }
   }, [departureDate, departureTime, departure, arrival]);
-
-  const mapCompartmentToSeatClass = (code?: string) => {
-    if (!code) return undefined;
-    const c = code.toUpperCase();
-    if ('FAP'.includes(c)) return 'first';
-    if ('CJDZ'.includes(c)) return 'business';
-    if ('WPE'.includes(c)) return 'premium_economy';
-    return 'economy';
-  };
 
   // Flight Lookup Handler
   const handleFlightLookup = async () => {
@@ -273,195 +271,18 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
     }
   };
 
-  // Boarding Pass Scanner with Online Validation
-  const handleBoardingPassScan = async (bcbpData: BoardingPassData) => {
+  // Boarding Pass Scanner with Ollama Vision
+  // Now the scanner sends image to backend which uses Ollama + optional API enrichment
+  // Returns ParsedBooking that we display in FlightReviewModal
+  const handleBoardingPassScan = async (parsedData: any) => {
     setShowScanner(false);
     setError('');
-    setLoading(true);
 
-    try {
-      const isFallbackParsing = bcbpData.formatCode === 'FALLBACK';
-      const carrierCode = bcbpData.operatingCarrierDesignator;
-      const scannedFlightNumber = bcbpData.flightNumber ? `${carrierCode || ''}${bcbpData.flightNumber}` : '';
-
-      console.log('🎫 BOARDING PASS is SOURCE OF TRUTH - API only for optional enrichment');
-
-      // Step 1: Get airport data for the scanned airports
-      if (!bcbpData.departureAirport || !bcbpData.arrivalAirport) {
-        setError('Could not extract airport codes from boarding pass. Please check the barcode quality or enter manually.');
-        setLoading(false);
-        return;
-      }
-
-      const [depAirport, arrAirport] = await Promise.all([
-        airportsApi.getByCode(bcbpData.departureAirport).catch(() => null),
-        airportsApi.getByCode(bcbpData.arrivalAirport).catch(() => null),
-      ]);
-
-      if (!depAirport || !arrAirport) {
-        setError(`Airport lookup failed for ${!depAirport ? bcbpData.departureAirport : bcbpData.arrivalAirport}. Please verify the codes.`);
-        setLoading(false);
-        return;
-      }
-
-      setDeparture(depAirport);
-      setArrival(arrAirport);
-
-      // Step 2: Set all boarding pass data (SOURCE OF TRUTH)
-      if (carrierCode && bcbpData.flightNumber) {
-        setFlightNumber(scannedFlightNumber);
-        setAirline(bcbpData.airlineName || getAirlineName(carrierCode) || carrierCode);
-      }
-
-      if (bcbpData.dateOfFlight) {
-        setDepartureDate(bcbpData.dateOfFlight);
-        setArrivalDate(bcbpData.dateOfFlight);
-      }
-
-      if (bcbpData.seatNumber) {
-        setSeatNumber(bcbpData.seatNumber.toUpperCase());
-      }
-
-      const mappedSeatClass = mapCompartmentToSeatClass(bcbpData.compartmentCode);
-      if (mappedSeatClass) {
-        setSeatClass(mappedSeatClass);
-      } else if (bcbpData.seatClass) {
-        setSeatClass(bcbpData.seatClass);
-      }
-
-      if (bcbpData.passengerName) {
-        setNotes(`Passenger: ${bcbpData.passengerName}`);
-      }
-
-      // Set gate and terminal from boarding pass if available (SOURCE OF TRUTH)
-      if (bcbpData.gate) {
-        setGate(bcbpData.gate);
-        console.log('🚪 Gate from boarding pass:', bcbpData.gate);
-      }
-
-      if (bcbpData.terminal) {
-        setTerminal(bcbpData.terminal);
-        console.log('🏢 Terminal from boarding pass:', bcbpData.terminal);
-      }
-
-      // Step 3: Try API enrichment (terminal, gate, times) - only if data matches!
-      let apiTimesSet = false;
-      if (!isFallbackParsing && carrierCode && bcbpData.flightNumber && bcbpData.dateOfFlight) {
-        try {
-          const response = await fetch(
-            `/api/v1/flight-lookup/${carrierCode}${bcbpData.flightNumber}?date=${bcbpData.dateOfFlight}`
-          );
-          const data = await response.json();
-
-          if (data.success && data.flights && data.flights.length > 0) {
-            const apiFlight = data.flights[0];
-            const apiDepartureDate = apiFlight.departure.scheduledTime?.split('T')[0];
-
-            // Validate: API must match boarding pass
-            const airportsMatch =
-              apiFlight.departure.iata === bcbpData.departureAirport &&
-              apiFlight.arrival.iata === bcbpData.arrivalAirport;
-            const dateMatches = apiDepartureDate === bcbpData.dateOfFlight;
-
-            if (airportsMatch && dateMatches) {
-              console.log('✅ API data matches boarding pass - enriching with API times/terminal/gate');
-
-              // Enrich with API times (if available and reasonable)
-              if (apiFlight.departure.scheduledTime) {
-                const apiDepTime = new Date(apiFlight.departure.scheduledTime).toTimeString().slice(0, 5);
-                setDepartureTime(apiDepTime);
-                apiTimesSet = true;
-              }
-              if (apiFlight.arrival.scheduledTime) {
-                const apiArrTime = new Date(apiFlight.arrival.scheduledTime).toTimeString().slice(0, 5);
-                setArrivalTime(apiArrTime);
-              }
-
-              // Enrich with terminal/gate if NOT already set from boarding pass
-              if (apiFlight.departure.terminal && !bcbpData.terminal) {
-                setTerminal(apiFlight.departure.terminal);
-                console.log('🏢 Terminal from API (boarding pass had none):', apiFlight.departure.terminal);
-              }
-              if (apiFlight.departure.gate && !bcbpData.gate) {
-                setGate(apiFlight.departure.gate);
-                console.log('🚪 Gate from API (boarding pass had none):', apiFlight.departure.gate);
-              }
-
-              // Enrich with aircraft if available
-              if (apiFlight.aircraft) {
-                setAircraft(apiFlight.aircraft);
-              }
-
-              console.log('📊 API enrichment successful');
-            } else {
-              console.warn('⚠️ API data MISMATCH - ignoring API, using ONLY boarding pass data');
-              console.warn('  Boarding Pass:', bcbpData.departureAirport, '→', bcbpData.arrivalAirport, '@', bcbpData.dateOfFlight);
-              console.warn('  API Data:', apiFlight.departure.iata, '→', apiFlight.arrival.iata, '@', apiDepartureDate);
-            }
-          } else {
-            console.log('ℹ️ No API data available - using only boarding pass data');
-          }
-        } catch (err) {
-          console.warn('⚠️ API lookup failed - using only boarding pass data:', err);
-        }
-      }
-
-      // Step 4: Estimate times if API didn't provide them (Hybrid Time Estimation)
-      if (!apiTimesSet && bcbpData.dateOfFlight && depAirport && arrAirport && depAirport.iata && arrAirport.iata) {
-        console.log('🔮 API times not available - using hybrid time estimation');
-
-        // Use boarding time from boarding pass if available, otherwise default to 10:00 AM
-        const boardingTime = bcbpData.boardingTime || '10:00';
-        if (bcbpData.boardingTime) {
-          console.log('⏰ Using boarding time from boarding pass:', bcbpData.boardingTime);
-        } else {
-          console.log('⏰ No boarding time in boarding pass, using default:', boardingTime);
-        }
-
-        const estimation = estimateFlightTimes(
-          boardingTime,
-          bcbpData.dateOfFlight,
-          scannedFlightNumber,
-          depAirport.iata,
-          arrAirport.iata,
-          depAirport.lat,
-          depAirport.lon,
-          arrAirport.lat,
-          arrAirport.lon
-        );
-
-        setDepartureTime(estimation.departureTime);
-        setArrivalTime(estimation.arrivalTime);
-
-        // Show warning that times are estimated
-        setTimeEstimationWarning({
-          show: true,
-          source: estimation.source,
-          confidence: estimation.confidence,
-          sampleCount: estimation.sampleCount,
-        });
-
-        console.log(`📊 Times estimated using ${estimation.source} (confidence: ${estimation.confidence})`);
-        if (estimation.sampleCount !== undefined) {
-          console.log(`   Based on ${estimation.sampleCount} historical flight(s)`);
-        }
-      }
-
-      // Show success message
-      if (isFallbackParsing) {
-        console.log('✅ Used intelligent fallback parsing - please verify all data!');
-        setNotes((prev) => (prev ? `${prev}\n` : '') + '⚠️ Extracted via fallback parsing - please verify!');
-      } else {
-        console.log('✅ Successfully parsed IATA BCBP boarding pass');
-      }
-
-      setStep('complete');
-
-    } catch (err) {
-      setError('Failed to process boarding pass. Please enter manually.');
-    } finally {
-      setLoading(false);
-    }
+    // parsedData is now already a ParsedBooking from Ollama Vision
+    // Show it in the review modal
+    setParsedFlights([parsedData]);
+    setCurrentFlightIndex(0);
+    setShowFlightReview(true);
   };
 
   // Live validation
@@ -590,6 +411,23 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                     className="btn-primary"
                   >
                     📸 Scan Now
+                  </button>
+                </div>
+              </div>
+
+              {/* Email Import */}
+              <div className={`bg-gradient-to-r ${isDarkMode ? 'from-green-900 to-teal-900' : 'from-green-50 to-teal-50'} border ${isDarkMode ? 'border-green-700' : 'border-green-200'} rounded-lg p-4`}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className={`font-semibold text-lg ${textClass}`}>📧 Have a Booking Email?</h3>
+                    <p className={`text-sm ${mutedTextClass}`}>Import flights directly from confirmation emails!</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowEmailUploader(true)}
+                    className="btn-secondary"
+                  >
+                    📨 Import Email
                   </button>
                 </div>
               </div>
@@ -1001,6 +839,64 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
         <BoardingPassScanner
           onScanSuccess={handleBoardingPassScan}
           onClose={() => setShowScanner(false)}
+        />
+      )}
+
+      {/* Email Uploader Modal */}
+      {showEmailUploader && (
+        <EmailUploader
+          onEmailParsed={(flights) => {
+            setParsedFlights(flights);
+            setCurrentFlightIndex(0);
+            setShowEmailUploader(false);
+            if (flights.length > 0) {
+              setShowFlightReview(true);
+            } else {
+              setError('Keine Flüge in der Email gefunden');
+            }
+          }}
+          onError={(err) => {
+            setError(err);
+            setShowEmailUploader(false);
+          }}
+          onClose={() => setShowEmailUploader(false)}
+        />
+      )}
+
+      {/* Flight Review Modal (for Email & Boarding Pass) */}
+      {showFlightReview && parsedFlights.length > 0 && (
+        <FlightReviewModal
+          isOpen={showFlightReview}
+          onClose={() => {
+            setShowFlightReview(false);
+            setParsedFlights([]);
+            setCurrentFlightIndex(0);
+          }}
+          onConfirm={async (flightData) => {
+            try {
+              await onSubmit(flightData);
+
+              // Check if there are more flights to process
+              if (currentFlightIndex < parsedFlights.length - 1) {
+                // Move to next flight
+                setCurrentFlightIndex(currentFlightIndex + 1);
+                // Review modal stays open for next flight
+              } else {
+                // All flights processed - close everything
+                setShowFlightReview(false);
+                setParsedFlights([]);
+                setCurrentFlightIndex(0);
+                onCancel(); // Close Add Flight Dialog
+              }
+            } catch (err) {
+              // Error is handled in FlightReviewModal
+              throw err;
+            }
+          }}
+          initialData={parsedFlights[currentFlightIndex]}
+          source="email"
+          flightIndex={currentFlightIndex}
+          totalFlights={parsedFlights.length}
         />
       )}
     </div>

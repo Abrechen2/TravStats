@@ -223,18 +223,6 @@ export interface LeaderboardEntry {
   achievementCount: number;
 }
 
-export interface ImportedFlight {
-  id: string;
-  userId: string;
-  status: 'pending_review' | 'accepted' | 'rejected';
-  subject?: string;
-  fromAddress?: string;
-  toAddress?: string;
-  raw?: string;
-  parsed: Record<string, any>;
-  createdAt: string;
-}
-
 export interface OnboardingState {
   flightAdded: boolean;
   usedFilter: boolean;

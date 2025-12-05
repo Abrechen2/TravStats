@@ -13,7 +13,8 @@ import achievementRoutes from './routes/achievements';
 import settingsRoutes from './routes/settings';
 import analyticsRoutes from './routes/analytics';
 import uploadsRoutes from './routes/uploads';
-import importsRoutes from './routes/imports';
+import emailParseRoutes from './routes/emailParse';
+import boardingpassParseRoutes from './routes/boardingpassParse';
 import setupRoutes from './routes/setup';
 import adminRoutes from './routes/admin';
 import { errorHandler } from './middleware/errorHandler';
@@ -91,7 +92,8 @@ app.use('/api/v1/achievements', achievementRoutes);
 app.use('/api/v1/settings', settingsRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
 app.use('/api/v1/uploads', uploadsRoutes);
-app.use('/api/v1/imports', importsRoutes);
+app.use('/api/v1', emailParseRoutes);
+app.use('/api/v1', boardingpassParseRoutes);
 
 // Error handling
 app.use(errorHandler);
