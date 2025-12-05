@@ -12,9 +12,13 @@
   - Fehlermeldungen fuer fehlende API-Keys/Rate-Limits klaeren  
   - OpenSky/Aviationstack Fallback testen/dokumentieren  
   - Mobile/LAN Tests fuer relative API-URL/CORS
-- E-Mail-Import Feinschliff  
-  - Anleitung fuer IMAP/Webhook oder klarer Hinweis auf Upload-Flow  
+- E-Mail-Import Feinschliff
+  - Anleitung fuer IMAP/Webhook oder klarer Hinweis auf Upload-Flow
   - Bessere UI-States und Fehlermeldungen bei Mehrfach-Fluegen
+  - Enhanced Parser Optimierungen (Optional):
+    - Regex-Parser erweitern mit aircraft/seatClass patterns fuer besseren Fallback
+    - LLM-Prompt-Tuning fuer hoehere aircraft/seatClass Extraktionsrate (aktuell 60%)
+    - Groesseres LLM-Modell testen (qwen2.5:7b statt llama3.2:3b) fuer bessere Ergebnisse
 - Deploy & Qualitaet  
   - CI-Pipeline mit Lint + Tests + Build + Container-Smoke-Test  
   - Kleine E2E/Happy-Path fuer Auth + Flight-CRUD + Import-Akzeptanz

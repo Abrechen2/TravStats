@@ -13,6 +13,14 @@ export interface ParsedBooking {
   gate?: string;
   price?: string;
   currency?: string;
+  // NEW FIELDS: Enhanced email parsing
+  aircraft?: string;              // e.g., "Airbus A321", "Boeing 777-300ER"
+  seatClass?: string;             // e.g., "Economy Light", "Business", "First"
+  bookingReference?: string;      // Improved PNR detection (6 alphanumeric)
+  ticketNumber?: string;          // e.g., "2202236084346" (typically 13 digits)
+  boardingGroup?: string;         // e.g., "1", "A", "Zone 3"
+  taxes?: string;                 // Tax amount (separate from total price)
+  fees?: string;                  // Fees amount (separate from total price)
   missing: string[];
 }
 
