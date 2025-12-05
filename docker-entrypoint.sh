@@ -1,30 +1,31 @@
 #!/bin/sh
 set -e
 
-echo "🚀 Starting TravStats..."
+echo "[entrypoint] Starting TravStats..."
 
 # Auto-generate JWT_SECRET if not set
 if [ -z "$JWT_SECRET" ]; then
     JWT_SECRET_FILE="/app/data/jwt_secret"
 
     if [ -f "$JWT_SECRET_FILE" ]; then
-        echo "📝 Loading existing JWT_SECRET..."
-        export JWT_SECRET=$(cat "$JWT_SECRET_FILE")
+        echo "[entrypoint] Loading existing JWT_SECRET..."
+        JWT_SECRET=$(cat "$JWT_SECRET_FILE")
+        export JWT_SECRET
     else
-        echo "🔐 Generating new JWT_SECRET..."
-        export JWT_SECRET=$(openssl rand -hex 32)
+        echo "[entrypoint] Generating new JWT_SECRET..."
+        JWT_SECRET=$(openssl rand -hex 32)
+        export JWT_SECRET
         echo "$JWT_SECRET" > "$JWT_SECRET_FILE"
         chmod 600 "$JWT_SECRET_FILE"
-        echo "✅ JWT_SECRET generated and saved"
+        echo "[entrypoint] JWT_SECRET generated and saved"
     fi
 fi
 
 # Wait for database to be ready
 if [ -n "$DATABASE_URL" ]; then
-    echo "⏳ Waiting for database..."
+    echo "[entrypoint] Waiting for database..."
 
-    # Extract host and port from DATABASE_URL
-    # Format: postgresql://user:pass@host:port/database
+    # Extract host and port from DATABASE_URL (format: postgresql://user:pass@host:port/database)
     DB_HOST=$(echo "$DATABASE_URL" | sed -e 's|.*@\(.*\):.*|\1|')
     DB_PORT=$(echo "$DATABASE_URL" | sed -e 's|.*:\([0-9]*\)/.*|\1|')
 
@@ -38,58 +39,37 @@ if [ -n "$DATABASE_URL" ]; then
     done
 
     if [ $retry_count -eq $max_retries ]; then
-        echo "❌ Database connection timeout"
+        echo "[entrypoint] Database connection timeout"
         exit 1
     fi
 
-    echo "✅ Database is ready"
+    echo "[entrypoint] Database is ready"
 fi
 
 # Run database migrations
 cd /app/backend
-echo "📦 Running database migrations..."
+echo "[entrypoint] Running database migrations..."
 npx prisma migrate deploy || {
-    echo "❌ Migration failed!"
-    echo "   This might be the first run. Continuing..."
+    echo "[entrypoint] Migration failed (continuing, maybe first run)"
 }
 
 # Essential seeds - always run (idempotent)
-echo ""
-echo "🌱 Running essential initialization..."
-
-# Seed achievements (required for achievement system to work)
-echo "🏆 Seeding achievements..."
-if npm run seed:achievements; then
-    echo "   ✅ Achievements ready"
-else
-    echo "   ❌ Failed to seed achievements - achievement system may not work!"
-fi
+echo "[entrypoint] Seeding achievements..."
+npm run seed:achievements || echo "[entrypoint] Failed to seed achievements - achievement system may not work"
 
 # Optional seeds based on environment variables
 if [ "$SEED_AIRPORTS" = "true" ]; then
-    echo "✈️  Seeding airports database..."
-    if npm run seed:airports:csv; then
-        echo "   ✅ Airports database ready"
-    else
-        echo "   ⚠️  Failed to seed airports - autocomplete may not work"
-    fi
+    echo "[entrypoint] Seeding airports database..."
+    npm run seed:airports:csv || echo "[entrypoint] Failed to seed airports - autocomplete may not work"
 fi
 
 # Create demo user if requested (useful for testing)
 if [ "$CREATE_DEMO_USER" = "true" ]; then
-    echo "👤 Creating demo user with sample data..."
-    if npm run seed:demo; then
-        echo "   ✅ Demo user ready (username: demo, password: demo123)"
-    else
-        echo "   ⚠️  Demo user already exists or creation failed"
-    fi
+    echo "[entrypoint] Creating demo user with sample data..."
+    npm run seed:demo || echo "[entrypoint] Demo user already exists or creation failed"
 fi
 
-echo ""
-
-echo "✅ TravStats is ready!"
-echo "🌐 Web UI available on port 80"
-echo "🔌 API available at /api"
+echo "[entrypoint] TravStats is ready (nginx on :80, backend on :8000)"
 
 # Execute the main command (supervisord)
 exec "$@"

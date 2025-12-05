@@ -6,6 +6,7 @@ node_modules/
 # Environment
 .env
 .env.local
+.env.dev.local
 .env.development.local
 .env.test.local
 .env.production.local

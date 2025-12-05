@@ -4,18 +4,16 @@ services:
     image: postgis/postgis:15-3.4
     container_name: travstats-db-dev
     restart: unless-stopped
-    environment:
-      POSTGRES_DB: flights_dev
-      POSTGRES_USER: flights_dev
-      POSTGRES_PASSWORD: dev_password_change_me_123
+    env_file:
+      - .env.dev.local
     ports:
       - "5433:5432"  # Non-standard port: 5433 instead of 5432
     volumes:
-      - /mnt/user/appdata/travstats-db-dev:/var/lib/postgresql/data
+      - travstats-db-dev-data:/var/lib/postgresql/data
     networks:
       - travstats-dev-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U flights_dev -d flights_dev"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -25,10 +23,17 @@ services:
     image: ollama/ollama:latest
     container_name: travstats-ollama-dev
     restart: unless-stopped
+    env_file:
+      - .env.dev.local
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - MODEL=$${OLLAMA_MODEL:-qwen2.5:7b}; ollama serve & sleep 5 && ollama pull "$${MODEL}" && wait
+    environment:
+      OLLAMA_KEEP_ALIVE: 4h
     ports:
       - "11434:11434"
     volumes:
-      - /mnt/user/appdata/travstats-ollama-dev:/root/.ollama
+      - travstats-ollama-dev-data:/root/.ollama
     networks:
       - travstats-dev-network
     healthcheck:
@@ -57,50 +62,18 @@ services:
     depends_on:
       travstats-db-dev:
         condition: service_healthy
-    environment:
-      # Database connection
-      DATABASE_URL: postgresql://flights_dev:dev_password_change_me_123@travstats-db-dev:5432/flights_dev
-
-      # Node environment
-      NODE_ENV: production
-      PORT: 8000
-
-      # CORS - Allow any origin when behind nginx reverse proxy
-      CORS_ORIGIN: "*"
-
-      # Allow HTTP cookies (set to 'false' for HTTP, remove for HTTPS)
-      COOKIE_SECURE: "false"
-
-      # Auto-seed airports database on first start
-      SEED_AIRPORTS: "true"
-
-      # Create demo user (username: demo, password: demo123)
-      CREATE_DEMO_USER: "true"
-
-      # Admin & Instance Settings
-      INSTANCE_NAME: "TravStats Dev"
-      MAX_USERS: "50"
-      ALLOW_REGISTRATION: "true"
-      FRONTEND_URL: "http://localhost:3001"
-
-      # Optional: API Keys (uncomment and fill if needed)
-      # AIRLABS_API_KEY: your_airlabs_key_here
-      AIRLABS_API_KEY: ac977626-758e-4570-8eb2-c3ace7892a86
-      # OPENSKY_CLIENT_ID: your_opensky_client_id
-      # OPENSKY_CLIENT_SECRET: your_opensky_client_secret
-
-      # LLM Parser Settings
-      OLLAMA_URL: "http://ollama-dev:11434"
-      OLLAMA_MODEL: "llama3.2:3b"
-      USE_LLM_PARSER: "true"
+      ollama-dev:
+        condition: service_started
+    env_file:
+      - .env.dev.local
     ports:
       - "3004:80"  # Map to nginx internal port 80 (not 3000!)
     volumes:
-      - /mnt/user/appdata/travstats-dev:/app/data
+      - travstats-app-dev-data:/app/data
     networks:
       - travstats-dev-network
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/api/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -112,7 +85,9 @@ networks:
     name: travstats-dev-network
 
 volumes:
-  travstats-db-dev:
+  travstats-db-dev-data:
     driver: local
-  travstats-app-dev:
+  travstats-app-dev-data:
+    driver: local
+  travstats-ollama-dev-data:
     driver: local
