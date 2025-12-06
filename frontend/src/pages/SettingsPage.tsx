@@ -3,6 +3,7 @@ import DarkModeToggle from '../components/DarkModeToggle';
 import { useSettingsStore } from '../store/settingsStore';
 import { useThemeStore } from '../store/themeStore';
 import { useAuthStore } from '../store/authStore';
+import ParserConfiguration from '../components/Settings/ParserConfiguration';
 
 const timezoneOptions = [
   'Europe/Berlin',
@@ -567,6 +568,9 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+
+        {/* Parser Configuration */}
+        <ParserConfiguration />
 
         {/* Admin Panel Link - Only visible for admins */}
         {user?.isAdmin && (

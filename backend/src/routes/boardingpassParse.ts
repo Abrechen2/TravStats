@@ -1,10 +1,9 @@
-import { Router, Request, Response } from 'express';
-import { authenticate } from '../middleware/auth';
-import { parseWithOllamaVision, checkOllamaVisionAvailability } from '../services/ollamaVisionParser';
-import { lookupFlightByNumber } from '../services/flightLookup';
+import { Router, Response } from 'express';
+import { authenticate, AuthRequest } from '../middleware/auth';
 import { z } from 'zod';
 import logger from '../utils/logger';
-import { ParsedBooking } from '../services/bookingParser';
+import { getParserConfig, parseBoardingPass, getAvailableProviders } from '../services/parsers/factory';
+import db from '../db';
 
 const router = Router();
 
@@ -15,7 +14,7 @@ const parseBoardingpassSchema = z.object({
 
 /**
  * POST /api/v1/parse-boardingpass
- * Parse boarding pass image using Ollama Vision
+ * Parse boarding pass image using configured vision parser
  *
  * Body:
  * - imageBase64: string (required) - Base64-encoded image data
@@ -23,116 +22,100 @@ const parseBoardingpassSchema = z.object({
  *
  * Returns:
  * - flight: ParsedBooking - Extracted flight information
- * - source: 'ollama' - Parser source
+ * - provider: string - Parser provider used (ollama, openai, claude, tesseract, manual)
+ * - fallbackUsed: boolean - Whether fallback was used
  * - enriched: boolean - Whether data was enriched with API
  */
-router.post('/parse-boardingpass', authenticate, async (req: Request, res: Response) => {
+router.post('/parse-boardingpass', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const { imageBase64, enrichWithApi } = parseBoardingpassSchema.parse(req.body);
+    const userId = req.userId;
 
-    logger.info(`Parsing boarding pass for user ${(req as any).user?.id}`);
+    logger.info(`[Boarding Pass Parse] Starting parsing for user ${userId}`);
 
-    // Check if Ollama Vision is available
-    const isAvailable = await checkOllamaVisionAvailability();
-    if (!isAvailable) {
-      return res.status(503).json({
-        error: 'Ollama Vision service unavailable',
-        message: 'Please ensure Ollama is running with a vision model (e.g., llava)',
-        hint: 'Install with: ollama pull llava',
-      });
-    }
+    // Get user settings for parser configuration
+    const userSettings = await db.userSettings.findUnique({
+      where: { userId },
+      select: {
+        preferredVisionParser: true,
+        visionFallbackChain: true,
+        openaiApiKey: true,
+        claudeApiKey: true,
+      },
+    });
 
-    // Parse boarding pass with Ollama Vision
-    const ollamaResult = await parseWithOllamaVision(imageBase64);
+    // Get parser config
+    const config = getParserConfig(userSettings || undefined);
+
+    // Parse boarding pass
+    const result = await parseBoardingPass(imageBase64, config);
 
     logger.info({
-      flightNumber: ollamaResult.flightNumber,
-      route: `${ollamaResult.departureCode} → ${ollamaResult.arrivalCode}`,
-      missing: ollamaResult.missing,
-    }, 'Ollama Vision parsing complete');
-
-    let enriched = false;
-    let finalResult: ParsedBooking = { ...ollamaResult };
+      provider: result.provider,
+      fallbackUsed: result.fallbackUsed,
+      flightNumber: result.flights[0]?.flightNumber,
+      route: `${result.flights[0]?.departureCode} → ${result.flights[0]?.arrivalCode}`,
+    }, '[Boarding Pass Parse] Parsing complete');
 
     // Optional: Enrich with Flight Lookup API
+    let enriched = false;
+    const flight = result.flights[0];
+
     if (
       enrichWithApi &&
-      ollamaResult.flightNumber &&
-      ollamaResult.departureTime
+      flight.flightNumber &&
+      flight.departureTime &&
+      flight.departureCode &&
+      flight.arrivalCode
     ) {
       try {
-        const date = new Date(ollamaResult.departureTime);
-        const flights = await lookupFlightByNumber(ollamaResult.flightNumber, date);
+        const { lookupFlightByNumber } = await import('../services/flightLookup');
+        const date = new Date(flight.departureTime);
+        const flights = await lookupFlightByNumber(flight.flightNumber, date);
 
         if (flights.length > 0) {
           const apiData = flights[0];
 
           // Validate that API data matches boarding pass data
-          const departureDateMatch =
-            apiData.departure?.iata === ollamaResult.departureCode;
-          const arrivalDateMatch =
-            apiData.arrival?.iata === ollamaResult.arrivalCode;
+          const departureDateMatch = apiData.departure?.iata === flight.departureCode;
+          const arrivalDateMatch = apiData.arrival?.iata === flight.arrivalCode;
 
           if (departureDateMatch && arrivalDateMatch) {
-            logger.info('Enriching Ollama data with API data');
+            logger.info('[Boarding Pass Parse] Enriching with API data');
 
-            // Merge data: Ollama is Source of Truth, API fills gaps
-            // This means Ollama values take precedence
-            finalResult = {
-              // Start with API data (lower priority)
-              aircraft: apiData.aircraft || ollamaResult.aircraft,
-              terminal: apiData.departure?.terminal || ollamaResult.terminal,
-              gate: apiData.departure?.gate || ollamaResult.gate,
-              arrivalTime: apiData.arrival?.scheduledTime || ollamaResult.arrivalTime,
-              departureTime: apiData.departure?.scheduledTime || ollamaResult.departureTime,
-              airline: apiData.airline || ollamaResult.airline,
-
-              // Ollama data overrides (Source of Truth)
-              ...ollamaResult,
-
-              // Preserve non-conflicting API data only if Ollama didn't provide it
-              ...(ollamaResult.aircraft ? {} : { aircraft: apiData.aircraft }),
-              ...(ollamaResult.terminal ? {} : { terminal: apiData.departure?.terminal }),
-              ...(ollamaResult.gate ? {} : { gate: apiData.departure?.gate }),
-              ...(ollamaResult.arrivalTime ? {} : { arrivalTime: apiData.arrival?.scheduledTime }),
-            };
+            // Merge data: Vision parser is Source of Truth, API fills gaps
+            Object.assign(flight, {
+              aircraft: flight.aircraft || apiData.aircraft,
+              terminal: flight.terminal || apiData.departure?.terminal,
+              gate: flight.gate || apiData.departure?.gate,
+              arrivalTime: flight.arrivalTime || apiData.arrival?.scheduledTime,
+              airline: flight.airline || apiData.airline,
+            });
 
             enriched = true;
-
-            logger.info('Enrichment complete - Ollama values preserved as Source of Truth');
-          } else {
-            logger.warn('API data does not match boarding pass airports - skipping enrichment');
           }
         }
       } catch (apiError) {
-        // API enrichment is optional - don't fail if it errors
-        logger.warn({ error: apiError }, 'Flight lookup API failed, continuing with Ollama data only');
+        logger.warn({ error: apiError }, '[Boarding Pass Parse] Flight lookup API failed, continuing without enrichment');
       }
     }
 
     res.json({
-      flight: finalResult,
-      source: 'ollama',
+      flight,
+      provider: result.provider,
+      fallbackUsed: result.fallbackUsed,
       enriched,
-      ollamaAvailable: true,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      logger.warn({ errors: error.errors }, 'Boarding pass parsing validation error');
+      logger.warn({ errors: error.errors }, '[Boarding Pass Parse] Validation error');
       return res.status(400).json({
         error: 'Validation failed',
         details: error.errors,
       });
     }
 
-    logger.error({ error }, 'Boarding pass parsing failed');
-
-    if (error instanceof Error && error.message.includes('Ollama')) {
-      return res.status(503).json({
-        error: 'Boarding pass parsing failed',
-        message: error.message,
-      });
-    }
+    logger.error({ error }, '[Boarding Pass Parse] Parsing failed');
 
     res.status(500).json({
       error: 'Boarding pass parsing failed',
@@ -142,20 +125,73 @@ router.post('/parse-boardingpass', authenticate, async (req: Request, res: Respo
 });
 
 /**
- * GET /api/v1/parse-boardingpass/check
- * Check if Ollama Vision service is available
+ * GET /api/v1/parse-boardingpass/providers
+ * Get list of available vision parser providers
  */
-router.get('/check', authenticate, async (req: Request, res: Response) => {
+router.get('/parse-boardingpass/providers', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const isAvailable = await checkOllamaVisionAvailability();
+    const userId = req.userId;
+
+    // Get user settings
+    const userSettings = await db.userSettings.findUnique({
+      where: { userId },
+      select: {
+        openaiApiKey: true,
+        claudeApiKey: true,
+      },
+    });
+
+    // Get parser config
+    const config = getParserConfig(userSettings || undefined);
+
+    // Get available providers
+    const providers = await getAvailableProviders(config);
 
     res.json({
-      available: isAvailable,
-      service: 'Ollama Vision',
-      model: process.env.OLLAMA_VISION_MODEL || 'llava:latest',
+      vision: providers.vision,
+      text: providers.text,
     });
   } catch (error) {
-    logger.error({ error }, 'Ollama Vision check failed');
+    logger.error({ error }, '[Boarding Pass Parse] Failed to get providers');
+    res.status(500).json({
+      error: 'Failed to get providers',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+/**
+ * GET /api/v1/parse-boardingpass/check
+ * Check if current vision parser is available (legacy compatibility)
+ */
+router.get('/parse-boardingpass/check', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId;
+
+    const userSettings = await db.userSettings.findUnique({
+      where: { userId },
+      select: {
+        preferredVisionParser: true,
+        openaiApiKey: true,
+        claudeApiKey: true,
+      },
+    });
+
+    const config = getParserConfig(userSettings || undefined);
+    const providers = await getAvailableProviders(config);
+
+    // Find the preferred provider or first available
+    const preferred = config.visionProvider;
+    const preferredProvider = providers.vision.find((p) => p.provider === preferred);
+
+    res.json({
+      available: preferredProvider?.availability.available || false,
+      provider: preferred,
+      reason: preferredProvider?.availability.reason,
+      metadata: preferredProvider?.availability.metadata,
+    });
+  } catch (error) {
+    logger.error({ error }, '[Boarding Pass Parse] Check failed');
     res.json({
       available: false,
       error: error instanceof Error ? error.message : 'Unknown error',

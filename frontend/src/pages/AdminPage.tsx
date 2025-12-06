@@ -6,9 +6,11 @@ export default function AdminPage() {
   const [systemInfo, setSystemInfo] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
   const [invitations, setInvitations] = useState<any[]>([]);
+  const [parserSettings, setParserSettings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'users' | 'invitations' | 'system'>('system');
+  const [activeTab, setActiveTab] = useState<'users' | 'invitations' | 'system' | 'parsers'>('system');
   const [copiedUrl, setCopiedUrl] = useState(false);
+  const [savingParsers, setSavingParsers] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -17,14 +19,16 @@ export default function AdminPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [infoData, usersData, invitationsData] = await Promise.all([
+      const [infoData, usersData, invitationsData, parserData] = await Promise.all([
         adminApi.getSystemInfo(),
         adminApi.getUsers(),
         adminApi.getInvitations(),
+        adminApi.getAdminParserSettings(),
       ]);
       setSystemInfo(infoData);
       setUsers(usersData.users);
       setInvitations(invitationsData.invitations);
+      setParserSettings(parserData);
     } catch (error) {
       console.error('Failed to load admin data:', error);
     } finally {
@@ -71,6 +75,19 @@ export default function AdminPage() {
       URL.revokeObjectURL(url);
     } catch (error: any) {
       alert(error.response?.data?.error || 'Failed to export data');
+    }
+  };
+
+  const handleSaveParserSettings = async () => {
+    setSavingParsers(true);
+    try {
+      await adminApi.updateAdminParserSettings(parserSettings);
+      alert('Parser settings saved successfully!');
+    } catch (error: any) {
+      console.error('Failed to save parser settings:', error);
+      alert(error.response?.data?.error || 'Failed to save parser settings');
+    } finally {
+      setSavingParsers(false);
     }
   };
 
@@ -125,6 +142,16 @@ export default function AdminPage() {
           }`}
         >
           Invitations
+        </button>
+        <button
+          onClick={() => setActiveTab('parsers')}
+          className={`px-4 py-2 font-medium transition ${
+            activeTab === 'parsers'
+              ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+          }`}
+        >
+          Parser Settings
         </button>
       </div>
 
@@ -388,6 +415,213 @@ export default function AdminPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Parser Settings Tab */}
+      {activeTab === 'parsers' && parserSettings && (
+        <div className="space-y-6">
+          {/* Header with Save Button */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                Global Parser Configuration
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Configure default parser settings and API keys for all users
+              </p>
+            </div>
+            <button
+              onClick={handleSaveParserSettings}
+              disabled={savingParsers}
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-lg transition font-medium"
+            >
+              {savingParsers ? 'Saving...' : 'Save Settings'}
+            </button>
+          </div>
+
+          {/* Global API Keys */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Global API Keys
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              These API keys will be used system-wide unless users provide their own keys (if allowed below).
+              Keys are encrypted at the application level.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  OpenAI API Key
+                </label>
+                <input
+                  type="password"
+                  value={parserSettings.globalOpenaiApiKey || ''}
+                  onChange={(e) => setParserSettings({ ...parserSettings, globalOpenaiApiKey: e.target.value })}
+                  placeholder="sk-..."
+                  className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white font-mono text-sm"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Get from{' '}
+                  <a
+                    href="https://platform.openai.com/api-keys"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    platform.openai.com
+                  </a>
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Claude API Key
+                </label>
+                <input
+                  type="password"
+                  value={parserSettings.globalClaudeApiKey || ''}
+                  onChange={(e) => setParserSettings({ ...parserSettings, globalClaudeApiKey: e.target.value })}
+                  placeholder="sk-ant-..."
+                  className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white font-mono text-sm"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Get from{' '}
+                  <a
+                    href="https://console.anthropic.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    console.anthropic.com
+                  </a>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* User Permissions */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              User Permissions
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Control whether users can provide their own API keys for cloud-based parsers.
+            </p>
+            <div className="space-y-3">
+              <label className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={parserSettings.allowUserApiKeys}
+                  onChange={(e) => setParserSettings({ ...parserSettings, allowUserApiKeys: e.target.checked })}
+                  className="mt-1 h-4 w-4"
+                />
+                <div>
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    Allow users to provide their own API keys
+                  </span>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Users can enter their own OpenAI/Claude API keys in their settings. Their keys will take precedence over global keys.
+                  </p>
+                </div>
+              </label>
+
+              <label className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={parserSettings.requireUserApiKeys}
+                  onChange={(e) => setParserSettings({ ...parserSettings, requireUserApiKeys: e.target.checked })}
+                  className="mt-1 h-4 w-4"
+                />
+                <div>
+                  <span className="font-medium text-gray-900 dark:text-white">
+                    Require users to provide their own API keys
+                  </span>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Force users to provide their own API keys. Global keys will not be used. Only free parsers (Ollama, Tesseract, Regex) will work without user keys.
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            {parserSettings.requireUserApiKeys && !parserSettings.allowUserApiKeys && (
+              <div className="mt-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+                <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                  ⚠️ Warning: You have enabled "Require user API keys" but disabled "Allow user API keys".
+                  This means users cannot use cloud-based parsers (OpenAI, Claude).
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Default Parser Settings */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Default Parser Settings
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              These defaults will be applied to new user accounts. Users can change them in their settings.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Default Vision Parser (Boarding Pass)
+                </label>
+                <select
+                  value={parserSettings.defaultVisionParser}
+                  onChange={(e) => setParserSettings({ ...parserSettings, defaultVisionParser: e.target.value })}
+                  className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+                >
+                  <option value="auto">🤖 Auto (Recommended)</option>
+                  <option value="ollama">🖥️ Ollama Vision</option>
+                  <option value="openai">☁️ OpenAI GPT-4 Vision</option>
+                  <option value="claude">☁️ Claude 3.5 Vision</option>
+                  <option value="tesseract">📝 Tesseract OCR</option>
+                  <option value="manual">✋ Manual Entry</option>
+                </select>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Auto mode automatically selects the best available parser
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Default Text Parser (Email)
+                </label>
+                <select
+                  value={parserSettings.defaultTextParser}
+                  onChange={(e) => setParserSettings({ ...parserSettings, defaultTextParser: e.target.value })}
+                  className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+                >
+                  <option value="auto">🤖 Auto (Recommended)</option>
+                  <option value="ollama">🖥️ Ollama</option>
+                  <option value="openai">☁️ OpenAI GPT-4</option>
+                  <option value="claude">☁️ Claude 3.5</option>
+                  <option value="regex">🔤 Regex Fallback</option>
+                </select>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Auto mode automatically selects the best available parser
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Help Section */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+              <div className="text-sm text-blue-900 dark:text-blue-100">
+                <p className="font-medium mb-2">Parser Configuration Guide</p>
+                <ul className="space-y-1 text-xs">
+                  <li>• <strong>Free Options</strong>: Ollama (local AI, GPU recommended), Tesseract (OCR), Regex (pattern matching)</li>
+                  <li>• <strong>Cloud Options</strong>: OpenAI (~$0.01-0.05/image, $0.002-0.01/email), Claude (~$0.01-0.03/image, $0.003-0.015/email)</li>
+                  <li>• <strong>Auto Mode</strong>: System prioritizes cloud AI &gt; local AI &gt; OCR/regex based on availability</li>
+                  <li>• <strong>API Keys</strong>: Global keys are shared across all users unless users provide their own</li>
+                  <li>• <strong>Fallback Chain</strong>: Users can configure custom fallback sequences in their settings</li>
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -98,12 +98,33 @@ Zweck: Schnelle Orientierung für KI-Helfer. Fokus auf kurze Antworten, bewahre 
   - Flow: Upload → Ollama Vision Parse → Optional API Enrichment → Review → Confirm
   - Kein DB-Zwischenspeicher mehr (altes ImportedFlight Model entfernt)
 
-## Ollama Integration
+## Parser Provider System
 
-- Email Parser: `llmParser.enhanced.ts` nutzt Ollama text models (llama3.2:3b, qwen2.5:7b)
-- Boarding Pass: `ollamaVisionParser.ts` nutzt Ollama Vision models (llava, bakllava)
-- Konfiguration: `OLLAMA_URL`, `OLLAMA_MODEL`, `OLLAMA_VISION_MODEL` in `.env`
-- Fallback: Bei Ollama-Fehler wird Regex-Parser (Email) bzw. Fehler (Boarding Pass) verwendet
+TravStats nutzt ein flexibles Multi-Provider-System für Email- und Boarding Pass-Parsing. Jeder User kann seinen bevorzugten Parser wählen.
+
+### Vision Parser (Boarding Pass)
+
+- **Auto Mode** (Standard): Wählt automatisch besten verfügbaren Parser
+- **Ollama Vision**: Lokal, kostenlos, benötigt GPU (~4-7GB Model)
+- **OpenAI GPT-4 Vision**: Cloud, ~$0.01-0.05/Bild, sehr genau
+- **Claude 3.5 Sonnet**: Cloud, ~$0.01-0.03/Bild, exzellent
+- **Tesseract OCR**: Lokal, kostenlos, funktioniert ohne GPU
+- **Manual**: OCR + manuelle Eingabe (Ultimate Fallback)
+
+### Text Parser (Email)
+
+- **Auto Mode** (Standard): Wählt automatisch besten verfügbaren Parser
+- **Ollama**: Lokal, kostenlos, qwen2.5:7b empfohlen
+- **OpenAI GPT-4**: Cloud, ~$0.002-0.01/Email
+- **Claude 3.5**: Cloud, ~$0.003-0.015/Email
+- **Regex**: Lokal, kostenlos, Pattern-basiert (Fallback)
+
+### Konfiguration
+
+- **ENV**: `VISION_PARSER`, `TEXT_PARSER`, `*_API_KEY` in `.env`
+- **User Settings**: Jeder User kann Parser + Fallback Chain konfigurieren
+- **Admin Settings**: Admin kann globale API Keys setzen + User-Permissions
+- **Fallback Chain**: User-konfigurierbar, z.B. `ollama,openai,tesseract,manual`
 
 ## Wenn du nachrüstest
 - Neue Features: erst API/Schema planen, Migration + Zod-Schema + Tests; dann Frontend-API-Client und UI.

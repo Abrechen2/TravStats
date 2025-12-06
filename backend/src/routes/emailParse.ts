@@ -1,5 +1,5 @@
-import { Router, Request, Response } from 'express';
-import { authenticate } from '../middleware/auth';
+import { Router, Response } from 'express';
+import { authenticate, AuthRequest } from '../middleware/auth';
 import { parseBookingEmail } from '../services/bookingParser';
 import { z } from 'zod';
 import logger from '../utils/logger';
@@ -24,27 +24,45 @@ const parseEmailSchema = z.object({
  * - parserUsed: 'ollama' | 'regex' - Which parser was used
  * - ollamaAvailable: boolean - Whether Ollama was available
  */
-router.post('/parse-email', authenticate, async (req: Request, res: Response) => {
+router.post('/parse-email', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const { emailContent, subject } = parseEmailSchema.parse(req.body);
+    const userId = req.userId;
 
-    logger.info(`Parsing email for user ${(req as any).user?.id}`);
+    logger.info(`[Email Parse] Parsing email for user ${userId}`);
 
-    const result = await parseBookingEmail(emailContent, subject);
+    // Get user settings for parser configuration
+    const db = (await import('../db')).default;
+    const userSettings = await db.userSettings.findUnique({
+      where: { userId },
+      select: {
+        preferredTextParser: true,
+        textFallbackChain: true,
+        openaiApiKey: true,
+        claudeApiKey: true,
+      },
+    });
 
-    logger.info(`Email parsing complete: ${result.flights.length} flight(s) found using ${result.parserUsed}`);
+    const result = await parseBookingEmail(
+      subject,
+      emailContent,
+      undefined,
+      userSettings || undefined
+    );
+
+    logger.info(`[Email Parse] Parsing complete: ${result.flights.length} flight(s) found using ${result.parserUsed}`);
 
     res.json(result);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      logger.warn({ errors: error.errors }, 'Email parsing validation error');
+      logger.warn({ errors: error.errors }, '[Email Parse] Validation error');
       return res.status(400).json({
         error: 'Validation failed',
         details: error.errors,
       });
     }
 
-    logger.error({ error }, 'Email parsing failed');
+    logger.error({ error }, '[Email Parse] Parsing failed');
     res.status(500).json({
       error: 'Email parsing failed',
       message: error instanceof Error ? error.message : 'Unknown error',

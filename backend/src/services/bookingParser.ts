@@ -1,4 +1,4 @@
-import { parse } from 'node-html-parser';
+import { getParserConfig, parseEmail } from './parsers/factory';
 
 export interface ParsedBooking {
   airline?: string;
@@ -26,8 +26,9 @@ export interface ParsedBooking {
 
 export interface ParseResult {
   flights: ParsedBooking[];
-  parserUsed: 'ollama' | 'regex';
+  parserUsed: 'ollama' | 'openai' | 'claude' | 'regex';
   ollamaAvailable: boolean;
+  fallbackUsed?: boolean;
 }
 
 // City name to IATA code mapping (common German/European cities)
@@ -280,126 +281,56 @@ function parseBookingEmailRegex(subject: string | undefined, text: string | unde
 }
 
 /**
- * Dual email parser - runs BOTH regex and LLM parsers
+ * Parse booking email using configured text parser
  *
  * This is the main entry point for email parsing. It will:
- * 1. Always run regex-based parsing
- * 2. Always run LLM parsing (if enabled)
- * 3. Compare results and prefer LLM if available and complete
- * 4. Log both results for debugging
- * 5. Return ARRAY of flights (LLM can detect multiple flights in one email)
- * 6. Return metadata about which parser was used
+ * 1. Load user settings for parser preferences (if provided)
+ * 2. Use parser factory to get the best available parser
+ * 3. Parse email with selected parser (supports auto-mode and fallbacks)
+ * 4. Return results with metadata about which parser was used
+ *
+ * @param subject - Email subject
+ * @param text - Email plain text
+ * @param html - Email HTML (optional)
+ * @param userSettings - Optional user settings for parser configuration
  */
 export async function parseBookingEmail(
   subject: string | undefined,
   text: string | undefined,
-  html?: string
+  html?: string,
+  userSettings?: {
+    preferredTextParser?: string | null;
+    textFallbackChain?: string | null;
+    openaiApiKey?: string | null;
+    claudeApiKey?: string | null;
+  }
 ): Promise<ParseResult> {
-  const useLLM = process.env.USE_LLM_PARSER === 'true';
+  console.log('[Booking Parser] Starting email parsing with factory system');
 
-  console.log('[Parser] Starting dual parsing (Regex + LLM, LLM enabled:', useLLM, ')');
+  // Get parser config from settings
+  const config = getParserConfig(userSettings);
 
-  // ALWAYS run regex-based parsing
-  const regexResult = parseBookingEmailRegex(subject, text, html);
+  // Parse email using factory
+  const result = await parseEmail(
+    subject || '',
+    text || '',
+    html,
+    config
+  );
 
-  console.log('[Parser] Regex result:', {
-    departureCode: regexResult.departureCode,
-    arrivalCode: regexResult.arrivalCode,
-    flightNumber: regexResult.flightNumber,
-    missing: regexResult.missing,
+  console.log(`[Booking Parser] Parsing complete - ${result.flights.length} flight(s) found`, {
+    provider: result.provider,
+    fallbackUsed: result.fallbackUsed,
   });
 
-  // If LLM is disabled, return regex result immediately (wrapped in array)
-  if (!useLLM) {
-    console.log('[Parser] LLM disabled, using regex result');
-    return {
-      flights: [regexResult],
-      parserUsed: 'regex',
-      ollamaAvailable: false,
-    };
-  }
-
-  // ALWAYS try LLM parsing when enabled (regardless of regex success)
-  try {
-    console.log('[Parser] Running LLM parser...');
-
-    // Import Enhanced LLM parser dynamically to avoid issues if not available
-    const { parseEmailWithLLM, isOllamaAvailable } = await import('./llmParser.enhanced');
-
-    // Check if Ollama is available
-    const ollamaAvailable = await isOllamaAvailable();
-    if (!ollamaAvailable) {
-      console.log('[Parser] ❌ Ollama not available, using regex result');
-      return {
-        flights: [regexResult],
-        parserUsed: 'regex',
-        ollamaAvailable: false,
-      };
-    }
-
-    // Run LLM parsing (returns array)
-    const llmResults = await parseEmailWithLLM(subject || '', text || '', html);
-
-    console.log(`[Parser] LLM found ${llmResults.length} flight(s)`);
-    llmResults.forEach((result, i) => {
-      console.log(`[Parser] LLM Flight ${i + 1}:`, {
-        departureCode: result.departureCode,
-        arrivalCode: result.arrivalCode,
-        flightNumber: result.flightNumber,
-        missing: result.missing,
-      });
-    });
-
-    // Compare results
-    const regexHasCriticalFields =
-      regexResult.departureCode &&
-      regexResult.arrivalCode &&
-      regexResult.flightNumber;
-
-    // Check if any LLM result has critical fields
-    const llmHasValidFlight = llmResults.some(
-      (r) => r.departureCode && r.arrivalCode && r.flightNumber
-    );
-
-    // Prefer LLM results if at least one has critical fields
-    if (llmHasValidFlight) {
-      console.log(`[Parser] ✅ Using LLM results (${llmResults.length} flight(s) with critical fields)`);
-      if (regexHasCriticalFields) {
-        console.log('[Parser] 📊 Comparison: Both parsers succeeded');
-        console.log('[Parser] 📊 Regex:', regexResult.departureCode, '→', regexResult.arrivalCode, regexResult.flightNumber);
-        console.log(`[Parser] 📊 LLM: ${llmResults.length} flight(s)`);
-      }
-      return {
-        flights: llmResults,
-        parserUsed: 'ollama',
-        ollamaAvailable: true,
-      };
-    }
-
-    // If LLM failed but regex succeeded, use regex (wrapped in array)
-    if (regexHasCriticalFields) {
-      console.log('[Parser] ⚠️ LLM incomplete, using regex result (regex succeeded)');
-      return {
-        flights: [regexResult],
-        parserUsed: 'regex',
-        ollamaAvailable: true,
-      };
-    }
-
-    // Both failed, return regex result with more context (wrapped in array)
-    console.log('[Parser] ⚠️ Both parsers incomplete, using regex result');
-    return {
-      flights: [regexResult],
-      parserUsed: 'regex',
-      ollamaAvailable: true,
-    };
-  } catch (error) {
-    console.error('[Parser] LLM parsing error:', error);
-    console.log('[Parser] Using regex result due to LLM error');
-    return {
-      flights: [regexResult],
-      parserUsed: 'regex',
-      ollamaAvailable: false,
-    };
-  }
+  // Map to legacy format for backward compatibility
+  return {
+    flights: result.flights,
+    parserUsed: result.provider as any, // Map provider to legacy format
+    ollamaAvailable: result.provider === 'ollama' || !result.fallbackUsed,
+    fallbackUsed: result.fallbackUsed,
+  };
 }
+
+// Legacy function kept for backward compatibility (deprecated - remove old code below)
+// All the old regex/LLM parsing code can be removed in a future cleanup
