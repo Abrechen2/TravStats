@@ -164,7 +164,7 @@ export class OpenAIVisionParser implements IVisionParser {
       }
 
       if (error?.status === 400) {
-        logger.error('[OpenAI Vision Parser] Bad request', { error: error.message });
+        logger.error({ error: error.message }, '[OpenAI Vision Parser] Bad request');
         throw new Error(`OpenAI API error: ${error.message}`);
       }
 

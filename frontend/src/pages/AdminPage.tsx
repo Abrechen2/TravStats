@@ -94,7 +94,7 @@ export default function AdminPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-600 dark:text-gray-400">Loading admin panel...</div>
+          Admin Panel
       </div>
     );
   }
@@ -104,7 +104,7 @@ export default function AdminPage() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          ⚙️ Admin Panel
+          Admin Panel
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
           Manage your self-hosted TravStats instance
@@ -629,3 +629,4 @@ export default function AdminPage() {
     </div>
   );
 }
+

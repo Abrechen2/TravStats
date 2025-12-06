@@ -4,6 +4,7 @@ import { uploadReceipt, deleteReceiptFile, getUploadDir } from '../middleware/up
 import { AppError } from '../middleware/errorHandler';
 import path from 'path';
 import fs from 'fs';
+import { prisma } from '../db';
 
 const router = Router();
 
@@ -41,9 +42,10 @@ router.post(
  * GET /api/v1/uploads/receipts/:filename
  * Serve uploaded receipt files
  */
-router.get('/receipts/:filename', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get('/receipts/:filename', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { filename } = req.params;
+    const userId = req.userId!;
 
     // Sanitize filename to prevent directory traversal
     const sanitized = path.basename(filename);
@@ -54,7 +56,18 @@ router.get('/receipts/:filename', async (req: AuthRequest, res: Response, next: 
       throw new AppError('File not found', 404);
     }
 
-    // Send file
+    const receiptUrl = `/api/v1/uploads/receipts/${sanitized}`;
+
+    // Ensure the requesting user owns a flight referencing this receipt
+    const flight = await prisma.flight.findFirst({
+      where: { userId, receiptUrl },
+    });
+
+    if (!flight) {
+      throw new AppError('File not found or access denied', 404);
+    }
+
+    // Send file (only after ownership check)
     res.sendFile(filePath);
   } catch (error) {
     next(error);
@@ -77,7 +90,6 @@ router.delete(
       const sanitized = path.basename(filename);
 
       // Verify that the file belongs to the user (check if any of their flights reference it)
-      const { prisma } = require('../db');
       const receiptUrl = `/api/v1/uploads/receipts/${sanitized}`;
 
       const flight = await prisma.flight.findFirst({

@@ -7,19 +7,7 @@ import logger from '../../../utils/logger';
 /**
  * Tesseract OCR Vision Parser
  *
- * Provides free, local OCR-based boarding pass parsing without requiring
- * external APIs or GPU. Uses pattern matching on extracted text.
- *
- * Pros:
- * - Completely free and local
- * - No API keys required
- * - Works offline
- * - No privacy concerns
- *
- * Cons:
- * - Lower accuracy than AI models
- * - Depends on image quality
- * - Limited to well-formatted boarding passes
+ * Provides free, local OCR-based boarding pass parsing without requiring external APIs.
  */
 export class TesseractVisionParser implements IVisionParser {
   readonly provider: VisionProvider = 'tesseract';
@@ -95,11 +83,14 @@ export class TesseractVisionParser implements IVisionParser {
       const { data } = await worker.recognize(imageBuffer);
       const extractedText = data.text;
 
-      logger.info('[Tesseract Parser] OCR extraction complete', {
-        confidence: data.confidence,
-        textLength: extractedText.length,
-      });
-      logger.debug('[Tesseract Parser] Extracted text:', extractedText);
+      logger.info(
+        {
+          confidence: data.confidence,
+          textLength: extractedText.length,
+        },
+        '[Tesseract Parser] OCR extraction complete'
+      );
+      logger.debug({ extractedText }, '[Tesseract Parser] Extracted text');
 
       // Extract flight data using pattern matching
       const parsedData = this.parseOCRText(extractedText);
@@ -107,11 +98,14 @@ export class TesseractVisionParser implements IVisionParser {
       // Normalize and validate
       const result = normalizeParsedBooking(parsedData);
 
-      logger.info('[Tesseract Parser] Parsing complete', {
-        flightNumber: result.flightNumber,
-        route: `${result.departureCode} → ${result.arrivalCode}`,
-        missingFields: result.missing.length,
-      });
+      logger.info(
+        {
+          flightNumber: result.flightNumber,
+          route: `${result.departureCode} -> ${result.arrivalCode}`,
+          missingFields: result.missing.length,
+        },
+        '[Tesseract Parser] Parsing complete'
+      );
 
       return result;
     } catch (error) {
@@ -172,7 +166,7 @@ export class TesseractVisionParser implements IVisionParser {
     }
 
     // Look for "XXX -> YYY" or "XXX - YYY" pattern
-    const arrowPattern = /\b([A-Z]{3})\s*(?:->|-|→|TO)\s*([A-Z]{3})\b/;
+    const arrowPattern = /\b([A-Z]{3})\s*(?:->|-|TO)\s*([A-Z]{3})\b/;
     const arrowMatch = text.match(arrowPattern);
     if (arrowMatch) {
       result.departure = arrowMatch[1];
@@ -286,9 +280,18 @@ export class TesseractVisionParser implements IVisionParser {
    */
   private monthToNumber(month: string): string {
     const months: Record<string, string> = {
-      JAN: '01', FEB: '02', MAR: '03', APR: '04',
-      MAY: '05', JUN: '06', JUL: '07', AUG: '08',
-      SEP: '09', OCT: '10', NOV: '11', DEC: '12',
+      JAN: '01',
+      FEB: '02',
+      MAR: '03',
+      APR: '04',
+      MAY: '05',
+      JUN: '06',
+      JUL: '07',
+      AUG: '08',
+      SEP: '09',
+      OCT: '10',
+      NOV: '11',
+      DEC: '12',
     };
     return months[month.toUpperCase()] || '01';
   }

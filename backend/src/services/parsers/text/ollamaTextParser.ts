@@ -117,9 +117,7 @@ export class OllamaTextParser implements ITextParser {
       try {
         parsedData = JSON.parse(cleanedResponse);
       } catch (parseError) {
-        logger.error('[Ollama Text Parser] Failed to parse response', {
-          response: response.data.response,
-        });
+        logger.error({ response: response.data.response }, '[Ollama Text Parser] Failed to parse response');
         throw new Error('LLM returned invalid JSON');
       }
 
@@ -162,7 +160,7 @@ export class OllamaTextParser implements ITextParser {
           logger.error('[Ollama Text Parser] Cannot connect to Ollama');
           throw new Error('Ollama service is not available');
         }
-        logger.error('[Ollama Text Parser] Axios error', { error: error.message });
+        logger.error({ error: error.message }, '[Ollama Text Parser] Axios error');
         throw new Error(`Ollama API error: ${error.message}`);
       }
 

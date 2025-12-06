@@ -101,7 +101,7 @@ export class ClaudeTextParser implements ITextParser {
         throw new Error('Empty response from Claude API');
       }
 
-      logger.debug('[Claude Text Parser] Raw response', { response: rawResponse.substring(0, 200) });
+      logger.debug({ response: rawResponse.substring(0, 200) }, '[Claude Text Parser] Raw response');
 
       // Parse JSON
       const cleanedResponse = cleanLLMJsonResponse(rawResponse);
@@ -110,7 +110,7 @@ export class ClaudeTextParser implements ITextParser {
       try {
         parsedData = JSON.parse(cleanedResponse);
       } catch (parseError) {
-        logger.error('[Claude Text Parser] JSON parse error', { response: rawResponse });
+        logger.error({ response: rawResponse }, '[Claude Text Parser] JSON parse error');
         throw new Error('Failed to parse Claude response as JSON');
       }
 
@@ -142,9 +142,10 @@ export class ClaudeTextParser implements ITextParser {
         .filter((flight: any) => flight.flightNumber && flight.departureCode && flight.arrivalCode)
         .map((flight: any) => normalizeParsedBooking(flight));
 
-      logger.info(`[Claude Text Parser] Parsing complete - ${results.length} valid flight(s)`, {
-        tokensUsed: response.usage.input_tokens + response.usage.output_tokens,
-      });
+      logger.info(
+        { tokensUsed: response.usage.input_tokens + response.usage.output_tokens },
+        `[Claude Text Parser] Parsing complete - ${results.length} valid flight(s)`
+      );
 
       return results;
     } catch (error: any) {
