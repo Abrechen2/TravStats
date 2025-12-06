@@ -3,6 +3,7 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import { parseBookingEmail } from '../services/bookingParser';
 import { z } from 'zod';
 import logger from '../utils/logger';
+import { prisma } from '../db';
 
 const router = Router();
 
@@ -32,8 +33,7 @@ router.post('/parse-email', authenticate, async (req: AuthRequest, res: Response
     logger.info(`[Email Parse] Parsing email for user ${userId}`);
 
     // Get user settings for parser configuration
-    const db = (await import('../db')).default;
-    const userSettings = await db.userSettings.findUnique({
+    const userSettings = await prisma.userSettings.findUnique({
       where: { userId },
       select: {
         preferredTextParser: true,

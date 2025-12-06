@@ -163,7 +163,7 @@ export class ClaudeVisionParser implements IVisionParser {
       }
 
       if (error?.status === 400) {
-        logger.error('[Claude Vision Parser] Bad request', { error: error.message });
+        logger.error({ error: error.message }, '[Claude Vision Parser] Bad request');
         throw new Error(`Claude API error: ${error.message}`);
       }
 

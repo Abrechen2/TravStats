@@ -1,4 +1,5 @@
 import { getParserConfig, parseEmail } from './parsers/factory';
+import { parse } from 'node-html-parser';
 
 export interface ParsedBooking {
   airline?: string;

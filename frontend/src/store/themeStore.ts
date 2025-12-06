@@ -51,7 +51,7 @@ if (typeof window !== 'undefined') {
       if (state?.isDarkMode) {
         updateDarkMode(true);
       }
-    } catch (e) {
+    } catch {
       // Ignore parse errors
     }
   }

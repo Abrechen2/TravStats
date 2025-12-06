@@ -208,6 +208,7 @@ export const useSettingsStore = create<SettingsState>()(
       },
       saveRemoteSettings: async () => {
         try {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           const { resetSettings, loadRemoteSettings, saveRemoteSettings, ...rest } = get();
           await settingsApi.update(rest);
         } catch (error) {

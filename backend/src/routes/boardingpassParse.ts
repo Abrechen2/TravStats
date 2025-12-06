@@ -3,7 +3,7 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import { z } from 'zod';
 import logger from '../utils/logger';
 import { getParserConfig, parseBoardingPass, getAvailableProviders } from '../services/parsers/factory';
-import db from '../db';
+import { prisma } from '../db';
 
 const router = Router();
 
@@ -34,7 +34,7 @@ router.post('/parse-boardingpass', authenticate, async (req: AuthRequest, res: R
     logger.info(`[Boarding Pass Parse] Starting parsing for user ${userId}`);
 
     // Get user settings for parser configuration
-    const userSettings = await db.userSettings.findUnique({
+    const userSettings = await prisma.userSettings.findUnique({
       where: { userId },
       select: {
         preferredVisionParser: true,
@@ -133,7 +133,7 @@ router.get('/parse-boardingpass/providers', authenticate, async (req: AuthReques
     const userId = req.userId;
 
     // Get user settings
-    const userSettings = await db.userSettings.findUnique({
+    const userSettings = await prisma.userSettings.findUnique({
       where: { userId },
       select: {
         openaiApiKey: true,
@@ -168,7 +168,7 @@ router.get('/parse-boardingpass/check', authenticate, async (req: AuthRequest, r
   try {
     const userId = req.userId;
 
-    const userSettings = await db.userSettings.findUnique({
+    const userSettings = await prisma.userSettings.findUnique({
       where: { userId },
       select: {
         preferredVisionParser: true,

@@ -18,14 +18,14 @@ export interface IVisionParser {
   /**
    * Check if this parser is available (service running, API key configured, etc.)
    */
-  checkAvailability(): Promise<ProviderAvailability>;
+  checkAvailability(apiKey?: string): Promise<ProviderAvailability>;
 
   /**
    * Parse boarding pass image
    * @param imageBase64 - Base64-encoded image data
    * @returns Parsed flight data
    */
-  parseImage(imageBase64: string): Promise<ParsedBooking>;
+  parseImage(imageBase64: string, apiKey?: string): Promise<ParsedBooking>;
 }
 
 /**
@@ -40,7 +40,7 @@ export interface ITextParser {
   /**
    * Check if this parser is available
    */
-  checkAvailability(): Promise<ProviderAvailability>;
+  checkAvailability(apiKey?: string): Promise<ProviderAvailability>;
 
   /**
    * Parse email to extract flight information
@@ -49,7 +49,7 @@ export interface ITextParser {
    * @param html - Email HTML (optional)
    * @returns Array of parsed flights (multi-flight support)
    */
-  parseEmail(subject: string, text: string, html?: string): Promise<ParsedBooking[]>;
+  parseEmail(subject: string, text: string, html?: string, apiKey?: string): Promise<ParsedBooking[]>;
 }
 
 /**
@@ -79,12 +79,12 @@ export interface ParserConfig {
   /**
    * Preferred vision parser provider
    */
-  visionProvider: VisionProvider;
+  visionProvider: VisionProvider | 'auto';
 
   /**
    * Preferred text parser provider
    */
-  textProvider: TextProvider;
+  textProvider: TextProvider | 'auto';
 
   /**
    * Fallback chain for vision parsing

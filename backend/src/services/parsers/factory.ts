@@ -130,8 +130,8 @@ export function getParserConfig(userSettings?: {
   claudeApiKey?: string | null;
 }): ParserConfig {
   return {
-    visionProvider: (userSettings?.preferredVisionParser as VisionProvider) || 'auto',
-    textProvider: (userSettings?.preferredTextParser as TextProvider) || 'auto',
+    visionProvider: (userSettings?.preferredVisionParser as VisionProvider | 'auto') || 'auto',
+    textProvider: (userSettings?.preferredTextParser as TextProvider | 'auto') || 'auto',
     visionFallbacks: parseFallbackChain(
       userSettings?.visionFallbackChain || undefined,
       getDefaultVisionFallbackChain()
@@ -158,10 +158,13 @@ export function getParserConfig(userSettings?: {
 export async function getVisionParser(
   config: ParserConfig
 ): Promise<{ parser: IVisionParser; provider: VisionProvider; fallbackUsed: boolean }> {
-  logger.info('[Parser Factory] Resolving vision parser', {
-    preferred: config.visionProvider,
-    fallbackChain: config.visionFallbacks,
-  });
+  logger.info(
+    {
+      preferred: config.visionProvider,
+      fallbackChain: config.visionFallbacks,
+    },
+    '[Parser Factory] Resolving vision parser'
+  );
 
   // If specific provider requested (not auto)
   if (config.visionProvider !== 'auto') {
@@ -208,10 +211,13 @@ export async function getVisionParser(
 export async function getTextParser(
   config: ParserConfig
 ): Promise<{ parser: ITextParser; provider: TextProvider; fallbackUsed: boolean }> {
-  logger.info('[Parser Factory] Resolving text parser', {
-    preferred: config.textProvider,
-    fallbackChain: config.textFallbacks,
-  });
+  logger.info(
+    {
+      preferred: config.textProvider,
+      fallbackChain: config.textFallbacks,
+    },
+    '[Parser Factory] Resolving text parser'
+  );
 
   // If specific provider requested (not auto)
   if (config.textProvider !== 'auto') {

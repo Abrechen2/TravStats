@@ -108,7 +108,7 @@ export class OpenAITextParser implements ITextParser {
         throw new Error('Empty response from OpenAI API');
       }
 
-      logger.debug('[OpenAI Text Parser] Raw response', { response: rawResponse.substring(0, 200) });
+      logger.debug({ response: rawResponse.substring(0, 200) }, '[OpenAI Text Parser] Raw response');
 
       // Parse JSON
       const cleanedResponse = cleanLLMJsonResponse(rawResponse);
@@ -117,7 +117,7 @@ export class OpenAITextParser implements ITextParser {
       try {
         parsedData = JSON.parse(cleanedResponse);
       } catch (parseError) {
-        logger.error('[OpenAI Text Parser] JSON parse error', { response: rawResponse });
+        logger.error({ response: rawResponse }, '[OpenAI Text Parser] JSON parse error');
         throw new Error('Failed to parse OpenAI response as JSON');
       }
 
@@ -149,9 +149,10 @@ export class OpenAITextParser implements ITextParser {
         .filter((flight: any) => flight.flightNumber && flight.departureCode && flight.arrivalCode)
         .map((flight: any) => normalizeParsedBooking(flight));
 
-      logger.info(`[OpenAI Text Parser] Parsing complete - ${results.length} valid flight(s)`, {
-        tokensUsed: response.usage?.total_tokens,
-      });
+      logger.info(
+        { tokensUsed: response.usage?.total_tokens },
+        `[OpenAI Text Parser] Parsing complete - ${results.length} valid flight(s)`
+      );
 
       return results;
     } catch (error: any) {

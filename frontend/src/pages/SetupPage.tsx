@@ -56,8 +56,9 @@ export default function SetupPage() {
           }
         });
       }, 3000);
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Setup failed. Please try again.');
+    } catch (err: unknown) {
+      const apiError = err as { response?: { data?: { error?: string } } };
+      setError(apiError.response?.data?.error || 'Setup failed. Please try again.');
       setLoading(false);
     }
   };

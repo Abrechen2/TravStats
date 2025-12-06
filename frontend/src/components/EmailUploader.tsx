@@ -25,7 +25,10 @@ interface ParsedBooking {
 }
 
 interface EmailUploaderProps {
-  onEmailParsed: (flights: ParsedBooking[], parserUsed: 'ollama' | 'regex') => void;
+  onEmailParsed: (
+    flights: ParsedBooking[],
+    parserUsed: 'ollama' | 'regex' | 'openai' | 'claude'
+  ) => void;
   onError: (error: string) => void;
   onClose: () => void;
 }
@@ -75,7 +78,6 @@ export default function EmailUploader({ onEmailParsed, onError, onClose }: Email
     setLoading(true);
 
     try {
-      // Read file and parse with new parse-email API
       const reader = new FileReader();
       reader.onload = async (e) => {
         const content = e.target?.result as string;
@@ -125,42 +127,35 @@ export default function EmailUploader({ onEmailParsed, onError, onClose }: Email
       const data = await response.json();
 
       if (!data.flights || data.flights.length === 0) {
-        onError('Keine Flüge in der Email gefunden');
-        setLoading(false);
+        onError('Keine Fluege in der Email gefunden');
         return;
       }
 
-      // Success - call callback with parsed flights
       onEmailParsed(data.flights, data.parserUsed);
     } catch (err: any) {
       onError(err.message || 'Fehler beim Parsen der Email');
+    } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b dark:border-gray-700 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-            Email-Import
-          </h2>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Email-Import</h2>
           <button
             onClick={onClose}
             className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            aria-label="Schließen"
+            aria-label="Schliessen"
             disabled={loading}
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <span className="sr-only">Schliessen</span>
+            ✕
           </button>
         </div>
 
-        {/* Content */}
         <div className="p-6 space-y-6">
-          {/* Mode Toggle */}
           <div className="flex gap-2 border-b dark:border-gray-700">
             <button
               onClick={() => setUploadMode('file')}
@@ -171,7 +166,7 @@ export default function EmailUploader({ onEmailParsed, onError, onClose }: Email
               }`}
               disabled={loading}
             >
-              📎 Datei hochladen
+              Datei hochladen
             </button>
             <button
               onClick={() => setUploadMode('text')}
@@ -182,11 +177,10 @@ export default function EmailUploader({ onEmailParsed, onError, onClose }: Email
               }`}
               disabled={loading}
             >
-              📝 Text einfügen
+              Text einfuegen
             </button>
           </div>
 
-          {/* File Upload Mode */}
           {uploadMode === 'file' && (
             <div>
               <div
@@ -213,58 +207,45 @@ export default function EmailUploader({ onEmailParsed, onError, onClose }: Email
                 {loading ? (
                   <div className="space-y-3">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="text-gray-600 dark:text-gray-400">
-                      Email wird verarbeitet...
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-500">
-                      Dies kann einige Sekunden dauern
-                    </p>
+                    <p className="text-gray-600 dark:text-gray-400">Email wird verarbeitet...</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-500">Dies kann einige Sekunden dauern</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <div className="text-5xl">📧</div>
-                    <div>
-                      <p className="text-lg font-medium text-gray-900 dark:text-white">
-                        Email-Datei hier ablegen
-                      </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        oder klicken zum Auswählen
-                      </p>
+                    <div className="text-5xl" aria-hidden="true">
+                      📧
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-500">
-                      Unterstützt: .eml, .txt, .msg
-                    </p>
+                    <div>
+                      <p className="text-lg font-medium text-gray-900 dark:text-white">Email-Datei hier ablegen</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">oder klicken zum Auswaehlen</p>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-500">Unterstuetzt: .eml, .txt, .msg</p>
                   </div>
                 )}
               </div>
 
-              {/* Info Box */}
               <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-2">
-                  💡 So funktioniert's
-                </h3>
-                <ul className="text-sm text-blue-800 dark:text-blue-300 space-y-1">
-                  <li>• Buchungsbestätigung als .eml-Datei aus Email-Client exportieren</li>
-                  <li>• Oder Email-Text als .txt speichern</li>
-                  <li>• Ollama extrahiert automatisch Flugdaten (oder Regex als Fallback)</li>
-                  <li>• Mehrere Flüge (Hin-/Rückflug) werden einzeln erkannt</li>
+                <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-2">So funktioniert es</h3>
+                <ul className="text-sm text-blue-800 dark:text-blue-300 space-y-1 list-disc list-inside">
+                  <li>Buchungsbestaetigung als .eml-Datei exportieren oder Text speichern</li>
+                  <li>Parser erkennt automatisch einzelne Fluege</li>
+                  <li>Fallback-Kette: KI Parser (Ollama/OpenAI/Claude) → Regex</li>
                 </ul>
               </div>
             </div>
           )}
 
-          {/* Text Paste Mode */}
           {uploadMode === 'text' && (
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Email-Inhalt einfügen
+                  Email-Inhalt einfuegen
                 </label>
                 <textarea
                   value={emailText}
                   onChange={(e) => setEmailText(e.target.value)}
                   className="w-full h-64 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                  placeholder="Kopieren Sie hier den kompletten Email-Text Ihrer Buchungsbestätigung..."
+                  placeholder="Kopieren Sie hier den kompletten Email-Text Ihrer Buchungsbestaetigung..."
                   disabled={loading}
                 />
               </div>
@@ -280,13 +261,12 @@ export default function EmailUploader({ onEmailParsed, onError, onClose }: Email
                     Verarbeite Email...
                   </span>
                 ) : (
-                  '🔍 Flüge extrahieren'
+                  'Fluege extrahieren'
                 )}
               </button>
 
-              {/* Info */}
               <p className="text-xs text-gray-500 dark:text-gray-500 text-center">
-                Tipp: Kopieren Sie die gesamte Email inkl. Header für beste Ergebnisse
+                Tipp: Kopieren Sie die gesamte Email inkl. Header fuer beste Ergebnisse
               </p>
             </div>
           )}

@@ -72,12 +72,15 @@ export class RegexTextParser implements ITextParser {
     const source = [subject || '', text || '', this.extractText(html)].join('\n');
     const parsedFlight = this.parseBookingEmailRegex(source);
 
-    logger.info('[Regex Parser] Parsing complete', {
-      departureCode: parsedFlight.departureCode,
-      arrivalCode: parsedFlight.arrivalCode,
-      flightNumber: parsedFlight.flightNumber,
-      missing: parsedFlight.missing,
-    });
+    logger.info(
+      {
+        departureCode: parsedFlight.departureCode,
+        arrivalCode: parsedFlight.arrivalCode,
+        flightNumber: parsedFlight.flightNumber,
+        missing: parsedFlight.missing,
+      },
+      '[Regex Parser] Parsing complete'
+    );
 
     // Return as array for consistency with LLM parsers
     return [parsedFlight];
