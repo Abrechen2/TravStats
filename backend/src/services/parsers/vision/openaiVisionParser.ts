@@ -128,7 +128,7 @@ export class OpenAIVisionParser implements IVisionParser {
         throw new Error('Empty response from OpenAI API');
       }
 
-      logger.info({ rawResponse: rawResponse.substring(0, 200) }, '[OpenAI Vision Parser] Raw response');
+      logger.debug({ rawResponse }, '[OpenAI Vision Parser] Raw response (full)');
 
       // Clean and parse JSON
       const cleanedResponse = cleanLLMJsonResponse(rawResponse);

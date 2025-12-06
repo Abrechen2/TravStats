@@ -108,7 +108,7 @@ export class OpenAITextParser implements ITextParser {
         throw new Error('Empty response from OpenAI API');
       }
 
-      logger.debug({ response: rawResponse.substring(0, 200) }, '[OpenAI Text Parser] Raw response');
+      logger.debug({ rawResponse }, '[OpenAI Text Parser] Raw response (full)');
 
       // Parse JSON
       const cleanedResponse = cleanLLMJsonResponse(rawResponse);
@@ -144,10 +144,30 @@ export class OpenAITextParser implements ITextParser {
       }
 
       logger.info(`[OpenAI Text Parser] Found ${flightsArray.length} flight(s)`);
+      logger.debug({ rawFlights: flightsArray }, '[OpenAI Text Parser] Raw flights from LLM');
 
-      const results: ParsedBooking[] = flightsArray
-        .filter((flight: any) => flight.flightNumber && flight.departureCode && flight.arrivalCode)
-        .map((flight: any) => normalizeParsedBooking(flight));
+      // Filter out completely invalid flights (missing critical fields)
+      const filteredFlights = flightsArray.filter((flight: any) =>
+        flight.flightNumber && flight.departureCode && flight.arrivalCode
+      );
+
+      const filteredOut = flightsArray.filter((flight: any) =>
+        !flight.flightNumber || !flight.departureCode || !flight.arrivalCode
+      );
+
+      if (filteredOut.length > 0) {
+        logger.warn({
+          count: filteredOut.length,
+          filtered: filteredOut.map((f: any) => ({
+            flightNumber: f.flightNumber || 'MISSING',
+            departureCode: f.departureCode || 'MISSING',
+            arrivalCode: f.arrivalCode || 'MISSING',
+          }))
+        }, '[OpenAI Text Parser] Flights filtered out due to missing critical fields');
+      }
+
+      // Normalize remaining flights
+      const results: ParsedBooking[] = filteredFlights.map((flight: any) => normalizeParsedBooking(flight));
 
       logger.info(
         { tokensUsed: response.usage?.total_tokens },
