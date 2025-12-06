@@ -50,6 +50,7 @@ backend/uploads/
 uploads/
 Sample Boardingpasses/
 Sample Emails/
+Logo/
 
 # Database
 *.db

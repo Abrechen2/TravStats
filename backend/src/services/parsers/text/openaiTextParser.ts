@@ -4,7 +4,7 @@ import { ParsedBooking } from '../../bookingParser';
 import { normalizeParsedBooking, cleanLLMJsonResponse, getTextParserPrompt } from '../shared/utils';
 import logger from '../../../utils/logger';
 
-const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4-turbo';
+const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o';
 
 /**
  * OpenAI GPT-4 Text Parser

@@ -43,7 +43,7 @@ export default function RegisterPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
       <div className="card w-full max-w-md">
         <div className="flex flex-col items-center mb-6">
-          <img src="/logo.png" alt="TravStats Logo" className="h-24 w-auto mb-4" />
+          <img src="/logo-with-text.png" alt="TravStats Logo" className="h-24 w-auto mb-4" />
           <h1 className="text-3xl font-bold text-center">TravStats</h1>
         </div>
         <h2 className="text-xl text-gray-600 text-center mb-8">Create Account</h2>
