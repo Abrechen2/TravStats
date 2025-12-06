@@ -1,4 +1,4 @@
-# CLAUDE.md – Kurzleitfaden für TravStats
+# Agent.md – Kurzleitfaden für TravStats
 
 Zweck: Schnelle Orientierung für KI-Helfer. Fokus auf kurze Antworten, bewahre bestehende Konventionen.
 
@@ -131,5 +131,4 @@ TravStats nutzt ein flexibles Multi-Provider-System für Email- und Boarding Pas
 - Dokumentiere größere Änderungen hier kurz, halte Inhalt schlank.
 - Alle wichtigen Infos in diesem Dokument aktualisieren.
 - Alle Dokumente im Projekt aktuell halten (README, PRODUCTION_CHECKLIST, etc.).
-
 

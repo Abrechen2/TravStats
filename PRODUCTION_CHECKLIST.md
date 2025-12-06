@@ -195,7 +195,6 @@ Dieses Dokument enthält alle wichtigen Schritte und Überprüfungen vor dem Pro
 - [ ] Mobile (iPhone, Android Phone)
 
 ### Load Testing
-- [ ] Concurrent User-Test (z.B. 100 Users)
 - [ ] Database Query Performance
 - [ ] API Response Times < 200ms
 - [ ] Memory Leaks überprüft

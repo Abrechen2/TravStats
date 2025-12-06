@@ -1,9 +1,46 @@
 import { randomBytes } from 'crypto';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
-import { join } from 'path';
+import { dirname, join } from 'path';
 
-const SECRET_FILE_PATH = process.env.JWT_SECRET_FILE || '/app/data/jwt.secret';
-const DATA_DIR = process.env.DATA_DIR || '/app/data';
+const PROJECT_CWD = process.cwd();
+const DEV_DATA_DIR = join(PROJECT_CWD, '.travstats-data');
+const RESOLVED_DATA_DIR =
+  process.env.DATA_DIR || (process.env.NODE_ENV === 'production' ? '/app/data' : DEV_DATA_DIR);
+const RESOLVED_SECRET_FILE =
+  process.env.JWT_SECRET_FILE || join(RESOLVED_DATA_DIR, 'jwt.secret');
+
+function ensureDataDirectoryExists(directory: string) {
+  if (!existsSync(directory)) {
+    mkdirSync(directory, { recursive: true });
+  }
+}
+
+function readPersistedSecret(secretFilePath: string): string | null {
+  if (!existsSync(secretFilePath)) {
+    return null;
+  }
+
+  try {
+    const secret = readFileSync(secretFilePath, 'utf-8').trim();
+    return secret && secret.length >= 32 ? secret : null;
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('Failed to read JWT secret file:', error);
+    }
+    return null;
+  }
+}
+
+function persistSecret(secretFilePath: string, secret: string) {
+  try {
+    ensureDataDirectoryExists(dirname(secretFilePath));
+    writeFileSync(secretFilePath, secret, { mode: 0o600 });
+  } catch (error) {
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('Failed to save JWT secret file:', error);
+    }
+  }
+}
 
 /**
  * Gets or generates JWT secret silently
@@ -13,58 +50,43 @@ const DATA_DIR = process.env.DATA_DIR || '/app/data';
  * 3. Generate new random secret and save to file
  */
 export function getJWTSecret(): string {
-  // 1. Check environment variable
-  if (process.env.JWT_SECRET) {
-    return process.env.JWT_SECRET;
-  }
-
-  // 2. Check if secret file exists
-  if (existsSync(SECRET_FILE_PATH)) {
-    try {
-      const secret = readFileSync(SECRET_FILE_PATH, 'utf-8').trim();
-      if (secret && secret.length >= 32) {
-        return secret;
-      }
-    } catch (error) {
-      // Silent fail, will generate new secret
-      if (process.env.NODE_ENV === 'development') {
-        console.debug('Failed to read JWT secret file:', error);
-      }
+  const envSecret = process.env.JWT_SECRET?.trim();
+  if (envSecret) {
+    const validation = validateJWTSecret(envSecret);
+    if (validation.isValid) {
+      return envSecret;
     }
+
+    console.warn(`[auth] Ignoring weak JWT_SECRET from environment: ${validation.message}`);
   }
 
-  // 3. Generate new secret silently
+  const persistedSecret = readPersistedSecret(RESOLVED_SECRET_FILE);
+  if (persistedSecret) {
+    process.env.JWT_SECRET = persistedSecret;
+    return persistedSecret;
+  }
+
   const newSecret = randomBytes(32).toString('hex');
-
-  // Save to file for persistence
-  try {
-    // Ensure data directory exists
-    if (!existsSync(DATA_DIR)) {
-      mkdirSync(DATA_DIR, { recursive: true });
-    }
-
-    writeFileSync(SECRET_FILE_PATH, newSecret, { mode: 0o600 });
-  } catch (error) {
-    // Silent fail - secret will still work, just not persist
-    if (process.env.NODE_ENV === 'development') {
-      console.debug('Failed to save JWT secret file:', error);
-    }
-  }
-
+  persistSecret(RESOLVED_SECRET_FILE, newSecret);
+  process.env.JWT_SECRET = newSecret;
   return newSecret;
 }
 
 /**
  * List of known weak/default JWT secrets that should never be used in production
  */
-const KNOWN_WEAK_SECRETS = [
-  'your-secret-key-change-in-production-MINIMUM-32-chars',
-  'changeme-in-production',
-  'changeme',
-  'secret',
-  'jwt-secret',
-  'your-secret-key',
-];
+const KNOWN_WEAK_SECRETS = new Set(
+  [
+    'change-this-in-production-use-openssl-rand-hex-32',
+    'your-secret-key-change-in-production',
+    'your-secret-key-change-in-production-MINIMUM-32-chars',
+    'changeme-in-production',
+    'changeme',
+    'secret',
+    'jwt-secret',
+    'your-secret-key',
+  ].map((secret) => secret.toLowerCase()),
+);
 
 /**
  * Validates JWT secret strength
@@ -80,7 +102,7 @@ export function validateJWTSecret(secret: string): { isValid: boolean; message: 
   }
 
   // Check against known weak secrets
-  if (KNOWN_WEAK_SECRETS.includes(secret)) {
+  if (KNOWN_WEAK_SECRETS.has(secret.toLowerCase())) {
     return {
       isValid: false,
       message: 'JWT_SECRET is using a known default value. Generate a strong secret with: openssl rand -hex 32',
