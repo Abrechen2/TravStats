@@ -212,7 +212,7 @@ OLLAMA_MODEL=qwen2.5:7b
 
 ```env
 OPENAI_API_KEY=sk-...
-OPENAI_MODEL=gpt-4-turbo
+OPENAI_MODEL=gpt-4o
 ```
 
 **Kosten-Beispiel:**
