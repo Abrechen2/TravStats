@@ -23,7 +23,9 @@
       "Bash(then sed -i 's/OLLAMA_MODEL=llama3.2:3b/OLLAMA_MODEL=qwen2.5:7b/' .env)",
       "Bash(node:*)",
       "Bash(dir:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(mkdir:*)",
+      "Bash(tasklist:*)"
     ],
     "deny": [],
     "ask": []

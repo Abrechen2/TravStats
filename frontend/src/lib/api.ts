@@ -86,6 +86,29 @@ export const parseApi = {
     const { data } = await api.get('/parse-boardingpass/check');
     return data;
   },
+
+  // Get available parser providers
+  getProviders: async () => {
+    const { data } = await api.get<{
+      vision: Array<{
+        provider: string;
+        availability: {
+          available: boolean;
+          reason?: string;
+          metadata?: Record<string, any>;
+        };
+      }>;
+      text: Array<{
+        provider: string;
+        availability: {
+          available: boolean;
+          reason?: string;
+          metadata?: Record<string, any>;
+        };
+      }>;
+    }>('/parse-boardingpass/providers');
+    return data;
+  },
 };
 
 // Flights API
@@ -216,6 +239,28 @@ export const settingsApi = {
   },
   update: async (payload: any) => {
     const { data } = await api.put('/settings', payload);
+    return data;
+  },
+  getParserSettings: async () => {
+    const { data } = await api.get<{
+      preferredVisionParser?: string;
+      preferredTextParser?: string;
+      visionFallbackChain?: string;
+      textFallbackChain?: string;
+      openaiApiKey?: string;
+      claudeApiKey?: string;
+    }>('/settings/parser');
+    return data;
+  },
+  updateParserSettings: async (payload: {
+    preferredVisionParser?: string;
+    preferredTextParser?: string;
+    visionFallbackChain?: string;
+    textFallbackChain?: string;
+    openaiApiKey?: string;
+    claudeApiKey?: string;
+  }) => {
+    const { data } = await api.put('/settings/parser', payload);
     return data;
   },
 };
@@ -359,6 +404,30 @@ export const adminApi = {
 
   exportAllData: async () => {
     const { data } = await api.get('/admin/export/all-data');
+    return data;
+  },
+
+  getAdminParserSettings: async () => {
+    const { data } = await api.get<{
+      globalOpenaiApiKey?: string;
+      globalClaudeApiKey?: string;
+      allowUserApiKeys: boolean;
+      requireUserApiKeys: boolean;
+      defaultVisionParser: string;
+      defaultTextParser: string;
+    }>('/admin/parser-settings');
+    return data;
+  },
+
+  updateAdminParserSettings: async (settings: {
+    globalOpenaiApiKey?: string;
+    globalClaudeApiKey?: string;
+    allowUserApiKeys?: boolean;
+    requireUserApiKeys?: boolean;
+    defaultVisionParser?: string;
+    defaultTextParser?: string;
+  }) => {
+    const { data } = await api.put('/admin/parser-settings', settings);
     return data;
   },
 };

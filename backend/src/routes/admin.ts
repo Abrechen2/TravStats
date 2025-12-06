@@ -193,4 +193,109 @@ router.get('/export/all-data', async (req: AuthRequest, res: Response, next: Nex
   }
 });
 
+// Get admin parser settings
+router.get('/parser-settings', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    // Get or create admin settings (ID is always 1 for singleton)
+    let adminSettings = await prisma.adminSettings.findFirst();
+
+    if (!adminSettings) {
+      // Create default admin settings if they don't exist
+      adminSettings = await prisma.adminSettings.create({
+        data: {
+          allowUserApiKeys: true,
+          requireUserApiKeys: false,
+          defaultVisionParser: 'auto',
+          defaultTextParser: 'auto',
+        },
+      });
+    }
+
+    // Return settings (API keys are already encrypted in DB, frontend handles as-is)
+    res.json({
+      globalOpenaiApiKey: adminSettings.globalOpenaiApiKey || undefined,
+      globalClaudeApiKey: adminSettings.globalClaudeApiKey || undefined,
+      allowUserApiKeys: adminSettings.allowUserApiKeys,
+      requireUserApiKeys: adminSettings.requireUserApiKeys,
+      defaultVisionParser: adminSettings.defaultVisionParser,
+      defaultTextParser: adminSettings.defaultTextParser,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Update admin parser settings
+router.put('/parser-settings', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const {
+      globalOpenaiApiKey,
+      globalClaudeApiKey,
+      allowUserApiKeys,
+      requireUserApiKeys,
+      defaultVisionParser,
+      defaultTextParser,
+    } = req.body;
+
+    // Get or create admin settings
+    let adminSettings = await prisma.adminSettings.findFirst();
+
+    const updateData: any = {};
+
+    // Only update fields that are provided
+    if (globalOpenaiApiKey !== undefined) {
+      updateData.globalOpenaiApiKey = globalOpenaiApiKey || null;
+    }
+    if (globalClaudeApiKey !== undefined) {
+      updateData.globalClaudeApiKey = globalClaudeApiKey || null;
+    }
+    if (allowUserApiKeys !== undefined) {
+      updateData.allowUserApiKeys = allowUserApiKeys;
+    }
+    if (requireUserApiKeys !== undefined) {
+      updateData.requireUserApiKeys = requireUserApiKeys;
+    }
+    if (defaultVisionParser !== undefined) {
+      updateData.defaultVisionParser = defaultVisionParser;
+    }
+    if (defaultTextParser !== undefined) {
+      updateData.defaultTextParser = defaultTextParser;
+    }
+
+    if (adminSettings) {
+      // Update existing settings
+      adminSettings = await prisma.adminSettings.update({
+        where: { id: adminSettings.id },
+        data: updateData,
+      });
+    } else {
+      // Create new settings with provided data
+      adminSettings = await prisma.adminSettings.create({
+        data: {
+          globalOpenaiApiKey: globalOpenaiApiKey || null,
+          globalClaudeApiKey: globalClaudeApiKey || null,
+          allowUserApiKeys: allowUserApiKeys ?? true,
+          requireUserApiKeys: requireUserApiKeys ?? false,
+          defaultVisionParser: defaultVisionParser || 'auto',
+          defaultTextParser: defaultTextParser || 'auto',
+        },
+      });
+    }
+
+    res.json({
+      message: 'Parser settings updated successfully',
+      settings: {
+        globalOpenaiApiKey: adminSettings.globalOpenaiApiKey || undefined,
+        globalClaudeApiKey: adminSettings.globalClaudeApiKey || undefined,
+        allowUserApiKeys: adminSettings.allowUserApiKeys,
+        requireUserApiKeys: adminSettings.requireUserApiKeys,
+        defaultVisionParser: adminSettings.defaultVisionParser,
+        defaultTextParser: adminSettings.defaultTextParser,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;
