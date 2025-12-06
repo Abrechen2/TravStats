@@ -31,7 +31,7 @@ if (!process.env.DATABASE_URL) {
 }
 
 const app = express();
-const PORT = process.env.PORT || 8000;
+const PORT = parseInt(process.env.PORT || '8000', 10);
 
 // Trust proxy - we're behind exactly 1 proxy (nginx)
 app.set('trust proxy', 1);
@@ -113,9 +113,11 @@ process.on('SIGTERM', async () => {
 
 // Start server only if not in test mode
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, () => {
+  const HOST = process.env.HOST || '0.0.0.0'; // Bind to all interfaces for network access
+  app.listen(PORT, HOST, () => {
     logger.info({
       message: 'TravStats backend started',
+      host: HOST,
       port: PORT,
       environment: process.env.NODE_ENV,
       nodeVersion: process.version,
