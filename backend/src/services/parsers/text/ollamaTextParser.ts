@@ -145,11 +145,30 @@ export class OllamaTextParser implements ITextParser {
       }
 
       logger.info(`[Ollama Text Parser] Found ${flightsArray.length} flight(s)`);
+      logger.debug({ rawFlights: flightsArray }, '[Ollama Text Parser] Raw flights from LLM');
 
-      // Normalize and filter flights
-      const results: ParsedBooking[] = flightsArray
-        .filter((flight: any) => flight.flightNumber && flight.departureCode && flight.arrivalCode)
-        .map((flight: any) => normalizeParsedBooking(flight));
+      // Filter out completely invalid flights (missing critical fields)
+      const filteredFlights = flightsArray.filter((flight: any) =>
+        flight.flightNumber && flight.departureCode && flight.arrivalCode
+      );
+
+      const filteredOut = flightsArray.filter((flight: any) =>
+        !flight.flightNumber || !flight.departureCode || !flight.arrivalCode
+      );
+
+      if (filteredOut.length > 0) {
+        logger.warn({
+          count: filteredOut.length,
+          filtered: filteredOut.map((f: any) => ({
+            flightNumber: f.flightNumber || 'MISSING',
+            departureCode: f.departureCode || 'MISSING',
+            arrivalCode: f.arrivalCode || 'MISSING',
+          }))
+        }, '[Ollama Text Parser] Flights filtered out due to missing critical fields');
+      }
+
+      // Normalize remaining flights
+      const results: ParsedBooking[] = filteredFlights.map((flight: any) => normalizeParsedBooking(flight));
 
       logger.info(`[Ollama Text Parser] Parsing complete - ${results.length} valid flight(s)`);
 

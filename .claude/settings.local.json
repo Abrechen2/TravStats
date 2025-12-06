@@ -27,7 +27,8 @@
       "Bash(mkdir:*)",
       "Bash(tasklist:*)",
       "Bash(docker-compose ps:*)",
-      "Bash(docker-compose logs:*)"
+      "Bash(docker-compose logs:*)",
+      "Bash(powershell -Command:*)"
     ],
     "deny": [],
     "ask": []

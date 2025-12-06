@@ -32,6 +32,7 @@ Zweck: Schnelle Orientierung für KI-Helfer. Fokus auf kurze Antworten, bewahre 
   - Backend: `cd backend && npm install && cp .env.example .env && npx prisma generate && npm run dev` (Initialisierung automatisch)
   - Frontend: `cd frontend && npm install && cp .env.example .env && npm run dev`
   - Tipp: `npm run init` für manuelle Initialisierung ohne Dev-Server Start
+  - Nutze die Logs, um Fehler zu debuggen
 
 ## Automatische Initialisierung
 

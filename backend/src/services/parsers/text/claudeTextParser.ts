@@ -101,7 +101,7 @@ export class ClaudeTextParser implements ITextParser {
         throw new Error('Empty response from Claude API');
       }
 
-      logger.debug({ response: rawResponse.substring(0, 200) }, '[Claude Text Parser] Raw response');
+      logger.debug({ rawResponse }, '[Claude Text Parser] Raw response (full)');
 
       // Parse JSON
       const cleanedResponse = cleanLLMJsonResponse(rawResponse);
@@ -137,10 +137,30 @@ export class ClaudeTextParser implements ITextParser {
       }
 
       logger.info(`[Claude Text Parser] Found ${flightsArray.length} flight(s)`);
+      logger.debug({ rawFlights: flightsArray }, '[Claude Text Parser] Raw flights from LLM');
 
-      const results: ParsedBooking[] = flightsArray
-        .filter((flight: any) => flight.flightNumber && flight.departureCode && flight.arrivalCode)
-        .map((flight: any) => normalizeParsedBooking(flight));
+      // Filter out completely invalid flights (missing critical fields)
+      const filteredFlights = flightsArray.filter((flight: any) =>
+        flight.flightNumber && flight.departureCode && flight.arrivalCode
+      );
+
+      const filteredOut = flightsArray.filter((flight: any) =>
+        !flight.flightNumber || !flight.departureCode || !flight.arrivalCode
+      );
+
+      if (filteredOut.length > 0) {
+        logger.warn({
+          count: filteredOut.length,
+          filtered: filteredOut.map((f: any) => ({
+            flightNumber: f.flightNumber || 'MISSING',
+            departureCode: f.departureCode || 'MISSING',
+            arrivalCode: f.arrivalCode || 'MISSING',
+          }))
+        }, '[Claude Text Parser] Flights filtered out due to missing critical fields');
+      }
+
+      // Normalize remaining flights
+      const results: ParsedBooking[] = filteredFlights.map((flight: any) => normalizeParsedBooking(flight));
 
       logger.info(
         { tokensUsed: response.usage.input_tokens + response.usage.output_tokens },

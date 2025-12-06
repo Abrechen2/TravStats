@@ -1,4 +1,5 @@
 import { ParsedBooking } from '../../bookingParser';
+import logger from '../../../utils/logger';
 
 /**
  * Validate IATA airport code (must be exactly 3 uppercase letters)
@@ -52,7 +53,7 @@ export function getMissingFields(booking: Partial<ParsedBooking>): string[] {
 export function normalizeParsedBooking(data: any): ParsedBooking {
   const missing = getMissingFields(data);
 
-  return {
+  const result: ParsedBooking = {
     airline: data.airline || data.flightNumber?.slice(0, 2).toUpperCase() || undefined,
     flightNumber: validateFlightNumber(data.flightNumber),
     departureCode: validateIATACode(data.departureCode),
@@ -74,6 +75,23 @@ export function normalizeParsedBooking(data: any): ParsedBooking {
     fees: data.fees ? String(data.fees) : undefined,
     missing,
   };
+
+  // Log missing fields for debugging
+  if (missing.length > 0) {
+    logger.debug({
+      flightNumber: result.flightNumber || 'UNKNOWN',
+      missingFields: missing,
+      rawData: {
+        flightNumber: data.flightNumber,
+        departureCode: data.departureCode,
+        arrivalCode: data.arrivalCode,
+        departureTime: data.departureTime,
+        arrivalTime: data.arrivalTime,
+      }
+    }, '[Parser Utils] Normalized booking has missing fields');
+  }
+
+  return result;
 }
 
 /**

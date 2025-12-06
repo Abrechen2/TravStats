@@ -101,7 +101,7 @@ export class OllamaVisionParser implements IVisionParser {
           stream: false,
           options: {
             temperature: 0.1, // Low temperature for factual extraction
-            num_predict: 500,
+            num_predict: 1200, // Increased to ensure full JSON response including arrivalTime
           },
         },
         {
@@ -113,7 +113,7 @@ export class OllamaVisionParser implements IVisionParser {
       );
 
       const rawResponse = response.data.response.trim();
-      logger.info({ rawResponse: rawResponse.substring(0, 200) }, '[Ollama Vision Parser] Raw response');
+      logger.debug({ rawResponse }, '[Ollama Vision Parser] Raw response (full)');
 
       // Clean the response (remove markdown formatting if present)
       const cleanedResponse = cleanLLMJsonResponse(rawResponse);

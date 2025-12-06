@@ -127,7 +127,7 @@ export class ClaudeVisionParser implements IVisionParser {
         throw new Error('Empty response from Claude API');
       }
 
-      logger.info({ rawResponse: rawResponse.substring(0, 200) }, '[Claude Vision Parser] Raw response');
+      logger.debug({ rawResponse }, '[Claude Vision Parser] Raw response (full)');
 
       // Clean and parse JSON
       const cleanedResponse = cleanLLMJsonResponse(rawResponse);

@@ -259,28 +259,70 @@ export async function getTextParser(
 }
 
 /**
- * Parse boarding pass with automatic provider selection
+ * Parse boarding pass with automatic provider selection and fallback on errors
  */
 export async function parseBoardingPass(
   imageBase64: string,
   config: ParserConfig
 ): Promise<ParserResult> {
-  const { parser, provider, fallbackUsed } = await getVisionParser(config);
+  const errors: Array<{ provider: VisionProvider; error: string }> = [];
 
-  const apiKey = provider === 'openai' ? config.openaiApiKey :
-                 provider === 'claude' ? config.claudeApiKey : undefined;
+  // Build the provider chain: preferred (if not auto) + fallbacks
+  const providerChain: VisionProvider[] =
+    config.visionProvider !== 'auto'
+      ? [config.visionProvider, ...config.visionFallbacks.filter(p => p !== config.visionProvider)]
+      : config.visionFallbacks;
 
-  const flight = await parser.parseImage(imageBase64, apiKey);
+  // Try each provider in order
+  for (const provider of providerChain) {
+    try {
+      const parser = getVisionParserInstance(provider);
+      const apiKey = provider === 'openai' ? config.openaiApiKey :
+                     provider === 'claude' ? config.claudeApiKey : undefined;
 
-  return {
-    flights: [flight],
-    provider,
-    fallbackUsed,
-  };
+      // Check availability first
+      const availability = await checkProviderAvailability(parser, apiKey);
+      if (!availability.available) {
+        logger.debug(`[Parser Factory] Skipping unavailable vision parser: ${provider} - ${availability.reason}`);
+        errors.push({ provider, error: availability.reason || 'Unavailable' });
+        continue;
+      }
+
+      // Try parsing
+      logger.info(`[Parser Factory] Attempting vision parse with: ${provider}`);
+      const flight = await parser.parseImage(imageBase64, apiKey);
+
+      const fallbackUsed = config.visionProvider !== 'auto' && config.visionProvider !== provider;
+      logger.info(`[Parser Factory] Vision parse successful with: ${provider}${fallbackUsed ? ' (fallback)' : ''}`);
+
+      return {
+        flights: [flight],
+        provider,
+        fallbackUsed,
+      };
+    } catch (error: any) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      logger.warn(`[Parser Factory] Vision parser '${provider}' failed: ${errorMsg}`);
+      errors.push({ provider, error: errorMsg });
+
+      // Invalidate cache for this provider to prevent future attempts in this session
+      const cacheKey = `${provider}-${config.openaiApiKey || config.claudeApiKey || 'default'}`;
+      availabilityCache.delete(cacheKey);
+
+      // Continue to next provider
+      continue;
+    }
+  }
+
+  // All providers failed
+  logger.error({ errors }, '[Parser Factory] All vision parsers failed');
+  throw new Error(
+    `All vision parsers failed. Errors: ${errors.map(e => `${e.provider}: ${e.error}`).join('; ')}`
+  );
 }
 
 /**
- * Parse email with automatic provider selection
+ * Parse email with automatic provider selection and fallback on errors
  */
 export async function parseEmail(
   subject: string,
@@ -288,18 +330,64 @@ export async function parseEmail(
   html: string | undefined,
   config: ParserConfig
 ): Promise<ParserResult> {
-  const { parser, provider, fallbackUsed } = await getTextParser(config);
+  const errors: Array<{ provider: TextProvider; error: string }> = [];
 
-  const apiKey = provider === 'openai' ? config.openaiApiKey :
-                 provider === 'claude' ? config.claudeApiKey : undefined;
+  // Build the provider chain: preferred (if not auto) + fallbacks
+  const providerChain: TextProvider[] =
+    config.textProvider !== 'auto'
+      ? [config.textProvider, ...config.textFallbacks.filter(p => p !== config.textProvider)]
+      : config.textFallbacks;
 
-  const flights = await parser.parseEmail(subject, text, html, apiKey);
+  // Try each provider in order
+  for (const provider of providerChain) {
+    try {
+      const parser = getTextParserInstance(provider);
+      const apiKey = provider === 'openai' ? config.openaiApiKey :
+                     provider === 'claude' ? config.claudeApiKey : undefined;
 
-  return {
-    flights,
-    provider,
-    fallbackUsed,
-  };
+      // Check availability first
+      const availability = await checkProviderAvailability(parser, apiKey);
+      if (!availability.available) {
+        logger.debug(`[Parser Factory] Skipping unavailable text parser: ${provider} - ${availability.reason}`);
+        errors.push({ provider, error: availability.reason || 'Unavailable' });
+        continue;
+      }
+
+      // Try parsing
+      logger.info(`[Parser Factory] Attempting email parse with: ${provider}`);
+      const flights = await parser.parseEmail(subject, text, html, apiKey);
+
+      if (!flights || flights.length === 0) {
+        throw new Error('Parser returned no flights');
+      }
+
+      const fallbackUsed = config.textProvider !== 'auto' && config.textProvider !== provider;
+      logger.info(`[Parser Factory] Email parse successful with: ${provider}${fallbackUsed ? ' (fallback)' : ''}`);
+
+      return {
+        flights,
+        provider,
+        fallbackUsed,
+      };
+    } catch (error: any) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      logger.warn(`[Parser Factory] Text parser '${provider}' failed: ${errorMsg}`);
+      errors.push({ provider, error: errorMsg });
+
+      // Invalidate cache for this provider to prevent future attempts in this session
+      const cacheKey = `${provider}-${config.openaiApiKey || config.claudeApiKey || 'default'}`;
+      availabilityCache.delete(cacheKey);
+
+      // Continue to next provider
+      continue;
+    }
+  }
+
+  // All providers failed
+  logger.error({ errors }, '[Parser Factory] All text parsers failed');
+  throw new Error(
+    `All text parsers failed. Errors: ${errors.map(e => `${e.provider}: ${e.error}`).join('; ')}`
+  );
 }
 
 /**
