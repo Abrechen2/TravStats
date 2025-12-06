@@ -47,6 +47,7 @@
     "node-html-parser": "^7.0.1",
     "openai": "^6.10.0",
     "pino": "^9.6.0",
+    "rotating-file-stream": "^3.2.7",
     "tesseract.js": "^6.0.1",
     "uuid": "^13.0.0",
     "zod": "^3.22.4"

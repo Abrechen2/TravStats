@@ -18,6 +18,7 @@ import boardingpassParseRoutes from './routes/boardingpassParse';
 import setupRoutes from './routes/setup';
 import adminRoutes from './routes/admin';
 import { errorHandler } from './middleware/errorHandler';
+import { requestLoggerMiddleware } from './middleware/requestLogger';
 import { prisma } from './db';
 import logger from './utils/logger';
 import { DATABASE_URL } from './utils/database';
@@ -74,6 +75,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Cookie parsing (for HttpOnly JWT cookies)
 app.use(cookieParser());
+
+// Request logging middleware (with correlation IDs)
+app.use(requestLoggerMiddleware);
 
 // Health check
 app.get('/health', (req, res) => {

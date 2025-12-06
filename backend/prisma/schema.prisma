@@ -210,6 +210,31 @@ model AdminSettings {
   defaultVisionParser   String   @default("auto") @map("default_vision_parser")
   defaultTextParser     String   @default("auto") @map("default_text_parser")
 
+  // === LOGGING CONFIGURATION ===
+  // Enable enhanced debug logging (activates debug/trace levels + detailed instrumentation)
+  debugLoggingEnabled   Boolean  @default(false) @map("debug_logging_enabled")
+
+  // Log level for file output (error | warn | info | debug | trace)
+  logLevel              String   @default("info") @map("log_level")
+
+  // Maximum file size before rotation (in MB)
+  maxLogFileSize        Int      @default(10) @map("max_log_file_size")
+
+  // Number of rotated log files to keep
+  maxLogFiles           Int      @default(7) @map("max_log_files")
+
+  // Enable request/response logging (captures full HTTP traffic)
+  logHttpRequests       Boolean  @default(false) @map("log_http_requests")
+
+  // Enable database query logging (captures SQL with parameters)
+  logDatabaseQueries    Boolean  @default(false) @map("log_database_queries")
+
+  // Enable parser operation logging (captures LLM requests/responses)
+  logParserOperations   Boolean  @default(false) @map("log_parser_operations")
+
+  // Log retention in days (auto-delete older logs)
+  logRetentionDays      Int      @default(7) @map("log_retention_days")
+
   createdAt             DateTime @default(now()) @map("created_at")
   updatedAt             DateTime @updatedAt @map("updated_at")
 

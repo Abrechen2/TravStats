@@ -3,6 +3,26 @@ import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { AppError } from '../middleware/errorHandler';
 import crypto from 'crypto';
+import {
+  getLoggingConfig,
+  updateLoggingConfig,
+  toggleDebugLogging,
+} from '../services/loggingConfig';
+import {
+  listLogFiles,
+  readLogFile,
+  deleteLogFile,
+  cleanupOldLogs,
+  getLogStats,
+  searchLogs,
+  getLogFilePathForDownload,
+} from '../services/logManager';
+import {
+  loggingConfigSchema,
+  toggleDebugLoggingSchema,
+  readLogFileQuerySchema,
+  searchLogsQuerySchema,
+} from '../schemas/admin';
 
 const router = Router();
 
@@ -292,6 +312,141 @@ router.put('/parser-settings', async (req: AuthRequest, res: Response, next: Nex
         defaultVisionParser: adminSettings.defaultVisionParser,
         defaultTextParser: adminSettings.defaultTextParser,
       },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ========== LOGGING ENDPOINTS ==========
+
+// Get logging configuration
+router.get('/logging/config', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const config = await getLoggingConfig();
+    res.json(config);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Update logging configuration
+router.put('/logging/config', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const validatedData = loggingConfigSchema.parse(req.body);
+    const updated = await updateLoggingConfig(validatedData);
+    res.json({
+      message: 'Logging configuration updated successfully',
+      config: updated,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Toggle debug logging (convenience endpoint)
+router.post('/logging/toggle-debug', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { enabled } = toggleDebugLoggingSchema.parse(req.body);
+    await toggleDebugLogging(enabled);
+    res.json({
+      message: `Debug logging ${enabled ? 'enabled' : 'disabled'}`,
+      debugLoggingEnabled: enabled,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// List log files
+router.get('/logging/files', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const files = await listLogFiles();
+    res.json({ files });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Read specific log file with filters
+router.get('/logging/files/:filename', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { filename } = req.params;
+    const queryParams = readLogFileQuerySchema.parse(req.query);
+
+    const logs = await readLogFile(filename, queryParams);
+
+    res.json({
+      filename,
+      entries: logs,
+      count: logs.length,
+      filters: queryParams,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Download log file
+router.get('/logging/files/:filename/download', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { filename } = req.params;
+    const filepath = getLogFilePathForDownload(filename);
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.download(filepath);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Delete log file
+router.delete('/logging/files/:filename', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { filename } = req.params;
+    await deleteLogFile(filename);
+    res.json({
+      message: `Log file ${filename} deleted successfully`,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get logging statistics
+router.get('/logging/stats', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const stats = await getLogStats();
+    res.json(stats);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Cleanup old logs
+router.post('/logging/cleanup', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const deletedCount = await cleanupOldLogs();
+    res.json({
+      message: `Cleanup completed: ${deletedCount} file(s) deleted`,
+      deletedCount,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Search logs across all files
+router.get('/logging/search', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const queryParams = searchLogsQuerySchema.parse(req.query);
+    const results = await searchLogs(queryParams);
+
+    res.json({
+      results,
+      count: results.length,
+      query: queryParams,
     });
   } catch (error) {
     next(error);
