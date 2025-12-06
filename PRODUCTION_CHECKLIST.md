@@ -26,8 +26,8 @@ Dieses Dokument enthält alle wichtigen Schritte und Überprüfungen vor dem Pro
 - [x] Zod-Schema-Validierung für alle API-Endpunkte
 - [x] SQL-Injection-Schutz durch Prisma ORM
 - [x] XSS-Schutz durch React's automatisches Escaping
-- [ ] File-Upload-Validierung (falls implementiert)
-- [ ] Rate-Limiting für alle API-Endpunkte
+- [x] File-Upload-Validierung (falls implementiert)
+- [x] Rate-Limiting für alle API-Endpunkte
 
 ### Headers & Middleware
 - [x] Helmet.js für Security Headers aktiviert
@@ -61,7 +61,7 @@ Dieses Dokument enthält alle wichtigen Schritte und Überprüfungen vor dem Pro
 - [x] API-Versionierung (`/api/v1/...`)
 
 ### Logging & Monitoring
-- [ ] Strukturiertes Logging implementiert (Winston/Pino)
+- [x] Strukturiertes Logging implementiert (Winston/Pino)
 - [ ] Error Tracking konfiguriert (Sentry)
 - [ ] Application Metrics gesammelt
 - [ ] Uptime Monitoring eingerichtet
