@@ -9,6 +9,7 @@
 import { PrismaClient } from '@prisma/client';
 import { execSync } from 'child_process';
 import * as path from 'path';
+import * as fs from 'fs';
 
 const prisma = new PrismaClient();
 
@@ -27,8 +28,29 @@ async function init() {
       process.exit(1);
     }
 
-    // Step 2: Run migrations
-    console.log('2️⃣  Running database migrations...');
+    // Step 2: Create log directory
+    console.log('2️⃣  Creating log directory...');
+    try {
+      const dataDir = path.join(__dirname, '..', 'data');
+      const logsDir = path.join(dataDir, 'logs');
+
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true, mode: 0o755 });
+      }
+
+      if (!fs.existsSync(logsDir)) {
+        fs.mkdirSync(logsDir, { recursive: true, mode: 0o755 });
+        console.log('   ✅ Log directory created\n');
+      } else {
+        console.log('   ✅ Log directory exists\n');
+      }
+    } catch (error) {
+      console.error('   ⚠️  Could not create log directory');
+      console.error('   Logging to files may not work correctly.\n');
+    }
+
+    // Step 3: Run migrations
+    console.log('3️⃣  Running database migrations...');
     try {
       execSync('npx prisma migrate deploy', {
         stdio: 'inherit',
@@ -41,8 +63,8 @@ async function init() {
       process.exit(1);
     }
 
-    // Step 3: Seed achievements (essential)
-    console.log('3️⃣  Seeding achievements...');
+    // Step 4: Seed achievements (essential)
+    console.log('4️⃣  Seeding achievements...');
     try {
       execSync('npm run seed:achievements', {
         stdio: 'inherit',
@@ -55,12 +77,12 @@ async function init() {
       // Don't exit - non-critical
     }
 
-    // Step 4: Optional seeds based on environment
+    // Step 5: Optional seeds based on environment
     const seedAirports = process.env.SEED_AIRPORTS === 'true';
     const createDemoUser = process.env.CREATE_DEMO_USER === 'true';
 
     if (seedAirports) {
-      console.log('4️⃣  Seeding airports database...');
+      console.log('5️⃣  Seeding airports database...');
       try {
         execSync('npm run seed:airports:csv', {
           stdio: 'inherit',
@@ -72,11 +94,11 @@ async function init() {
         console.error('   Autocomplete may not work. You can seed later with: npm run seed:airports:csv\n');
       }
     } else {
-      console.log('4️⃣  Skipping airport seeding (set SEED_AIRPORTS=true to enable)\n');
+      console.log('5️⃣  Skipping airport seeding (set SEED_AIRPORTS=true to enable)\n');
     }
 
     if (createDemoUser) {
-      console.log('5️⃣  Creating demo user...');
+      console.log('6️⃣  Creating demo user...');
       try {
         execSync('npm run seed:demo', {
           stdio: 'inherit',
@@ -87,7 +109,7 @@ async function init() {
         console.error('   ⚠️  Demo user creation failed (may already exist)\n');
       }
     } else {
-      console.log('5️⃣  Skipping demo user creation (set CREATE_DEMO_USER=true to enable)\n');
+      console.log('6️⃣  Skipping demo user creation (set CREATE_DEMO_USER=true to enable)\n');
     }
 
     console.log('✅ Initialization complete!\n');

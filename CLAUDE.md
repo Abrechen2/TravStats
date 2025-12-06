@@ -126,6 +126,101 @@ TravStats nutzt ein flexibles Multi-Provider-System für Email- und Boarding Pas
 - **Admin Settings**: Admin kann globale API Keys setzen + User-Permissions
 - **Fallback Chain**: User-konfigurierbar, z.B. `ollama,openai,tesseract,manual`
 
+## Enhanced Debug Logging (Admin)
+
+TravStats verfügt über ein umfassendes Debug-Logging-System für Admins zur schnelleren Fehleranalyse.
+
+### Aktivierung
+
+- **API**: `POST /api/v1/admin/logging/toggle-debug` mit `{ "enabled": true }`
+- **Persistenz**: Settings werden in AdminSettings-Tabelle gespeichert
+- **Effekt**: Aktiviert debug/trace Log-Levels + detaillierte Instrumentation
+
+### Log-Kategorien
+
+- **HTTP**: Request/Response mit Timing, IP, User, Status (wenn `logHttpRequests` enabled)
+- **Database**: SQL-Queries mit Args & Performance (wenn `logDatabaseQueries` enabled)
+- **Parser**: LLM-Operations mit Provider-Details (wenn `logParserOperations` enabled)
+- **Security**: Auth-Failures, Rate-Limits, Admin-Actions (immer aktiv)
+- **Errors**: Alle Fehler mit Stack-Traces (in Debug-Mode)
+
+### Log-Files
+
+- **Location**: `/app/data/logs/` (Docker Volume `travstats-app-data`)
+- **Format**: AI-freundliches strukturiertes JSON mit Kontext, Performance, Request-IDs
+- **Rotation**: Täglich + größenbasiert (10MB default, konfigurierbar)
+- **Retention**: 7 Tage default (konfigurierbar via AdminSettings)
+- **Kategorien**: `app-*.log` (all logs), `error-*.log` (errors only)
+
+### API Endpoints (Admin-only)
+
+- **Config**:
+  - `GET /admin/logging/config` - Logging-Konfiguration lesen
+  - `PUT /admin/logging/config` - Config ändern (logLevel, maxLogFileSize, retention, etc.)
+  - `POST /admin/logging/toggle-debug` - Debug-Mode schnell an/aus
+- **Files**:
+  - `GET /admin/logging/files` - Log-Files auflisten (mit Metadata: Size, Date, Category)
+  - `GET /admin/logging/files/:filename` - Log lesen (mit Filters: level, category, search, offset, limit)
+  - `GET /admin/logging/files/:filename/download` - Vollständiges Log downloaden
+  - `DELETE /admin/logging/files/:filename` - Log-File löschen
+- **Management**:
+  - `GET /admin/logging/stats` - Statistiken (Total Size, File Count, Category Breakdown)
+  - `POST /admin/logging/cleanup` - Alte Logs manuell löschen
+  - `GET /admin/logging/search` - Logs durchsuchen (query, level, category, dateRange)
+
+### AI-Optimiertes Format
+
+Jeder Log-Entry enthält:
+
+- `timestamp`: ISO 8601
+- `level`: error/warn/info/debug/trace
+- `category`: http/database/parser/security/error/system
+- `message`: Kurzbeschreibung
+- `context`: User, Provider, Operation, IP, etc.
+- `performance`: Duration, Memory Delta
+- `requestId`: Correlation ID für zusammenhängende Operationen
+- `error`: Stack Trace, Message, Code (bei Fehlern)
+
+**Beispiel-Log-Entry**:
+
+```json
+{
+  "timestamp": "2025-12-06T14:32:15.234Z",
+  "level": "debug",
+  "category": "parser",
+  "message": "Ollama Vision Parser parsing boarding pass",
+  "context": {
+    "userId": "uuid-xxx",
+    "provider": "ollama",
+    "model": "llava:latest",
+    "operation": "boardingpass_parse"
+  },
+  "performance": {
+    "duration": 1250,
+    "memoryDelta": "2.34 MB"
+  },
+  "requestId": "req-abc12345"
+}
+```
+
+### Performance
+
+- **Async I/O**: Alle File-Operationen non-blocking
+- **Conditional**: Nur wenn enabled (minimaler Overhead im Normalbetrieb)
+- **Caching**: Config wird 5 Minuten gecached (reduziert DB-Load)
+- **Redaction**: Sensitive Daten (Passwords, API Keys, Tokens) werden automatisch entfernt
+
+### Für AI-Analyse optimiert
+
+Die Logs sind so strukturiert, dass eine AI einfach:
+
+- Fehlerursachen identifizieren kann (vollständiger Context)
+- Performance-Probleme erkennt (Timing-Metriken in jedem Log)
+- User-Flows nachvollziehen kann (Request Correlation IDs)
+- Provider-Fehler debuggen kann (LLM Request/Response Details)
+
+**Beispiel AI-Query**: "Analysiere app-2025-12-06.log und finde heraus warum Ollama Parser für User xyz fehlschlägt"
+
 ## Wenn du nachrüstest
 - Neue Features: erst API/Schema planen, Migration + Zod-Schema + Tests; dann Frontend-API-Client und UI.
 - Dokumentiere größere Änderungen hier kurz, halte Inhalt schlank.

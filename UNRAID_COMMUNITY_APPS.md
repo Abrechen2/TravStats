@@ -1,351 +1,151 @@
 # TravStats - Unraid Community Apps Submission
 
-Diese Anleitung erklärt, wie du TravStats in den Unraid Community Apps Store einreichst.
-
-## 🎯 Voraussetzungen
-
-Um TravStats in den Community Apps Store zu bekommen, brauchst du:
-
-1. **Docker Image auf Docker Hub oder GitHub Container Registry (GHCR)**
-2. **XML Template** (bereits vorhanden: `unraid-template.xml`)
-3. **GitHub Repository** (öffentlich)
-4. **Icon/Logo** für die App
+Guide, um TravStats in die Unraid Community Apps zu bringen. Prod-Deployment zielt auf eine Community-App mit user-managed **PostGIS**-Datenbank (Pflicht) und optionalem Ollama-Container. Standard ist LAN-only; optional kann die App per Nginx Proxy Manager + Cloudflare veroeffentlicht werden.
 
 ---
 
-## 📦 Schritt 1: Docker Image veröffentlichen
+## ÐYZî Voraussetzungen
+- Öffentliches Docker Image (GHCR oder Docker Hub)
+- XML-Template (`unraid-template.xml`)
+- Öffentliches GitHub-Repository
+- Icon/Logo (PNG, 256x256+)
 
-### Option A: GitHub Container Registry (GHCR) - Empfohlen
+---
 
-**Vorteile:**
-- Kostenlos
-- Unbegrenzte Images
-- Integriert mit GitHub
-- Private und öffentliche Images
+## ÐY"Ý Schritt 1: Docker Image veroeffentlichen
 
-**1. GitHub Personal Access Token erstellen:**
-
-1. GitHub → **Settings** → **Developer settings** → **Personal access tokens** → **Tokens (classic)**
-2. **Generate new token (classic)**
-3. Scopes auswählen:
-   - `write:packages`
-   - `read:packages`
-   - `delete:packages`
-4. Token kopieren und sicher speichern
-
-**2. Docker Login zu GHCR:**
-
+### GHCR (empfohlen)
 ```bash
-# Token als Umgebungsvariable
-export CR_PAT=YOUR_TOKEN
-
 # Login
 echo $CR_PAT | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
-```
 
-**3. Image bauen und pushen:**
-
-```bash
-# Zum Projekt-Verzeichnis
-cd D:\Projekte\TravStats
-
-# Image bauen mit GHCR Tag
+# Build & Push
 docker build -t ghcr.io/YOUR_GITHUB_USERNAME/travstats:latest .
-
-# Image pushen
 docker push ghcr.io/YOUR_GITHUB_USERNAME/travstats:latest
 
-# Auch mit Version-Tag
+# Version-Tag
 docker tag ghcr.io/YOUR_GITHUB_USERNAME/travstats:latest ghcr.io/YOUR_GITHUB_USERNAME/travstats:1.0.0
 docker push ghcr.io/YOUR_GITHUB_USERNAME/travstats:1.0.0
 ```
+Image auf "Public" stellen (GitHub → Packages → travstats → Settings → Change visibility).
 
-**4. Image öffentlich machen:**
-
-1. GitHub → Dein Profil → **Packages**
-2. `travstats` Package auswählen
-3. **Package settings** → **Change visibility** → **Public**
-
-### Option B: Docker Hub
-
-**1. Docker Hub Account erstellen:**
-- https://hub.docker.com/signup
-
-**2. Login:**
-
+### Docker Hub (Alternative)
 ```bash
 docker login
-```
-
-**3. Image bauen und pushen:**
-
-```bash
-cd D:\Projekte\TravStats
-
-# Image bauen
 docker build -t YOUR_DOCKERHUB_USERNAME/travstats:latest .
-
-# Image pushen
 docker push YOUR_DOCKERHUB_USERNAME/travstats:latest
-
-# Mit Version
-docker tag YOUR_DOCKERHUB_USERNAME/travstats:latest YOUR_DOCKERHUB_USERNAME/travstats:1.0.0
-docker push YOUR_DOCKERHUB_USERNAME/travstats:1.0.0
 ```
 
 ---
 
-## 🖼️ Schritt 2: Icon erstellen
-
-**Anforderungen:**
-- Format: PNG
-- Größe: 256x256 px oder höher
-- Transparenter Hintergrund (empfohlen)
-- Gute Sichtbarkeit in Hell- und Dunkelmodus
-
-**Icon hosten:**
-- Im GitHub Repository: `https://raw.githubusercontent.com/USERNAME/travstats/main/logo.png`
-- Oder: Externe Hosting-Dienste (imgur, etc.)
+## ÐY-¬‹÷? Schritt 2: Icon
+- PNG, 256x256+ (transparent empfohlen)
+- Beispiel-URL: `https://raw.githubusercontent.com/YOUR_USERNAME/travstats/main/AppLogo.png`
 
 ---
 
-## 📝 Schritt 3: XML Template anpassen
+## ÐY"? Schritt 3: XML-Template anpassen
 
-Die Datei `unraid-template.xml` muss angepasst werden:
+Wichtige Felder in `unraid-template.xml`:
+- `<Repository>`: dein Image (`ghcr.io/YOUR_USERNAME/travstats:latest`)
+- `<Support>`: Support-Thread-URL (Unraid Forum)
+- `<Project>`: GitHub-Repo
+- `<TemplateURL>`: Raw-URL deines Templates
+- `<Icon>`: Raw-URL deines Icons
+- `<Requires>`: klar formulieren: **PostGIS** muss separat installiert werden; **Ollama optional** (nicht enthalten). Standard: LAN-only, optional Publish via NPM + Cloudflare.
 
-### Wichtige Änderungen:
-
+Minimaler Auszug:
 ```xml
-<!-- Dein Docker Image Repository anpassen -->
-<Repository>ghcr.io/YOUR_USERNAME/travstats:latest</Repository>
-
-<!-- GitHub Links anpassen -->
-<Support>https://github.com/YOUR_USERNAME/travstats/issues</Support>
-<Project>https://github.com/YOUR_USERNAME/travstats</Project>
-
-<!-- Template URL anpassen -->
-<TemplateURL>https://raw.githubusercontent.com/YOUR_USERNAME/travstats/main/unraid-template.xml</TemplateURL>
-
-<!-- Icon URL anpassen -->
-<Icon>https://raw.githubusercontent.com/YOUR_USERNAME/travstats/main/logo.png</Icon>
-```
-
-### Vollständiges Beispiel:
-
-```xml
-<?xml version="1.0"?>
-<Container version="2">
-  <Name>TravStats</Name>
-  <Repository>ghcr.io/yourname/travstats:latest</Repository>
-  <Registry>https://ghcr.io</Registry>
-  <Network>bridge</Network>
-  <Shell>sh</Shell>
-  <Privileged>false</Privileged>
-  <Support>https://github.com/yourname/travstats/issues</Support>
-  <Project>https://github.com/yourname/travstats</Project>
-  <Overview>
-    TravStats - Flight Tracking &amp; Statistics Dashboard
-
-    Track your flights, visualize routes on an interactive map, and unlock achievements.
-
-    Features:
-    - Interactive world map with flight paths
-    - Airport statistics and visit tracking
-    - 58 achievements (Battlefield-style)
-    - Dark mode support
-    - Advanced statistics
-
-    REQUIRES: PostgreSQL database container (see setup guide)
-  </Overview>
-  <Category>Status:Stable Tools:</Category>
-  <WebUI>http://[IP]:[PORT:3000]/</WebUI>
-  <TemplateURL>https://raw.githubusercontent.com/yourname/travstats/main/unraid-template.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/yourname/travstats/main/logo.png</Icon>
-  <ExtraParams>--link travstats-db:db</ExtraParams>
-  <Requires>
-    PostgreSQL with PostGIS: Install "postgis/postgis" container first with name "travstats-db"
-  </Requires>
-
-  <!-- Port Configuration -->
-  <Config Name="WebUI Port" Target="80" Default="3000" Mode="tcp"
-          Description="Web interface port" Type="Port" Display="always"
-          Required="true" Mask="false">3000</Config>
-
-  <!-- Environment Variables -->
-  <Config Name="Database URL" Target="DATABASE_URL"
-          Default="postgresql://flights:your-password@db:5432/flights"
-          Mode="" Description="PostgreSQL connection string"
-          Type="Variable" Display="always" Required="true" Mask="false">
-    postgresql://flights:changeme@db:5432/flights
-  </Config>
-
-  <Config Name="JWT Secret" Target="JWT_SECRET" Default="" Mode=""
-          Description="Secret key for JWT tokens (generate with: openssl rand -hex 32)"
-          Type="Variable" Display="always" Required="true" Mask="true"></Config>
-
-  <Config Name="Seed Airports" Target="SEED_AIRPORTS" Default="true|false"
-          Mode="" Description="Auto-populate airports database on first start"
-          Type="Variable" Display="always" Required="false" Mask="false">true</Config>
-
-  <Config Name="Node Environment" Target="NODE_ENV" Default="production"
-          Mode="" Description="Node.js environment"
-          Type="Variable" Display="advanced" Required="false" Mask="false">production</Config>
-
-  <Config Name="Backend Port" Target="PORT" Default="8000" Mode=""
-          Description="Internal backend API port"
-          Type="Variable" Display="advanced" Required="false" Mask="false">8000</Config>
-</Container>
+<Repository>ghcr.io/yourname/travstats:latest</Repository>
+<Support>https://forums.unraid.net/topic/XXXXX-support-travstats</Support>
+<Project>https://github.com/yourname/travstats</Project>
+<TemplateURL>https://raw.githubusercontent.com/yourname/travstats/main/unraid-template.xml</TemplateURL>
+<Icon>https://raw.githubusercontent.com/yourname/travstats/main/AppLogo.png</Icon>
+<Requires>
+  Requires external PostGIS (postgis/postgis) container; optional Ollama container if LLM parser is enabled.
+  Default LAN-only; optional publish via Nginx Proxy Manager + Cloudflare.
+</Requires>
 ```
 
 ---
 
-## 🚀 Schritt 4: Template in GitHub hochladen
-
-**1. Dateien committen:**
-
-```bash
-cd D:\Projekte\TravStats
-
-git add unraid-template.xml
-git add logo.png  # Dein Icon
-git commit -m "Add Unraid Community Apps template"
-git push origin main
-```
-
-**2. Raw-URL testen:**
-
-Öffne im Browser:
-```
-https://raw.githubusercontent.com/YOUR_USERNAME/travstats/main/unraid-template.xml
-```
-
-Sollte das XML direkt anzeigen.
+## ÐYs? Schritt 4: Template & Repo vorbereiten
+- `unraid-template.xml`, Icon und Doku (README, UNRAID_SETUP/INSTALL) committen.
+- Hinweis in README/Docs: PostGIS Pflicht, Ollama optional, Standard LAN, optional Proxy/Cloudflare.
+- Push auf `main`; Raw-URLs testen.
 
 ---
 
-## 📤 Schritt 5: Bei Community Apps einreichen
+## ÐY"Ï Schritt 5: Support-Thread im Unraid Forum
+- Kategorie: **Docker Containers**
+- Titel: `[Support] TravStats - Flight Tracking Dashboard`
+- Inhalt sollte enthalten:
+  - Kurzbeschreibung + Featureliste
+  - Installationshinweis: PostGIS separat, optional Ollama
+  - Standard LAN, optional NPM + Cloudflare
+  - Links: README, Template-URL, GitHub, Issues
+  - Bekannte Issues/Changelog
 
-**Zwei Optionen:**
+Beispiel-Abschnitte (ohne Codebeispiele):
+- Anforderungen: Unraid 6.9+, PostGIS (postgis/postgis), optional Ollama
+- Quick Start: PostGIS installieren → TravStats installieren → `DATABASE_URL` setzen → Setup im LAN
+- Extern: nur ueber Proxy/Tunnel mit TLS
 
-### Option A: Pull Request im CA-Templates Repository (Offiziell)
-
-1. **Fork das Repository:**
-   - https://github.com/Squidly271/docker-templates
-
-2. **Dein Template hinzufügen:**
-   ```bash
-   git clone https://github.com/YOUR_USERNAME/docker-templates
-   cd docker-templates
-
-   # Template in den "templates" Ordner kopieren
-   mkdir -p templates/yourname
-   cp /path/to/unraid-template.xml templates/yourname/travstats.xml
-
-   git add templates/yourname/travstats.xml
-   git commit -m "Add TravStats - Flight Tracking Dashboard"
-   git push origin main
-   ```
-
-3. **Pull Request erstellen:**
-   - GitHub → Original Repository → **Pull Request**
-   - Beschreibe deine App
-   - Warte auf Review
-
-### Option B: Eigenes Template Repository (Schneller)
-
-**Nutzer können deine App hinzufügen ohne auf CA-Approval zu warten:**
-
-1. **Template-URL in GitHub veröffentlichen**
-2. **Nutzer fügen dein Repository in Unraid hinzu:**
-
-In Unraid:
-1. **Docker** Tab → **Add Template Repositories**
-2. Template URL hinzufügen:
-   ```
-   https://raw.githubusercontent.com/YOUR_USERNAME/travstats/main/unraid-template.xml
-   ```
-3. **Save**
-4. Container ist jetzt unter "Add Container" → "TravStats" verfügbar
+Thread-URL fuer `<Support>` im Template verwenden.
 
 ---
 
-## ✅ Checkliste vor Submission
+## ÐY"Ï Schritt 6: Submission bei Community Apps
 
-- [ ] **Docker Image ist öffentlich verfügbar**
-  - Auf GHCR oder Docker Hub
-  - Mit `latest` und Version-Tags
+**Option A: Offizielles CA-Templates-Repo (empfohlen)**
+1. Fork `https://github.com/Squidly271/docker-templates`
+2. Template nach `templates/<deinname>/travstats.xml` kopieren
+3. PR erstellen mit Beschreibung (Features, Links, PostGIS Pflicht, Ollama optional)
 
-- [ ] **XML Template ist vollständig**
-  - Alle URLs angepasst
-  - Repository URL korrekt
-  - Icon URL funktioniert
-  - Support/Project Links gesetzt
-
-- [ ] **Icon ist vorhanden**
-  - 256x256 px oder größer
-  - PNG Format
-  - Öffentlich zugänglich
-
-- [ ] **README.md im GitHub Repository**
-  - Installation-Anleitung
-  - Features beschrieben
-  - Screenshots (optional aber empfohlen)
-
-- [ ] **Lizenz im Repository**
-  - AGPL-3.0 (liegt im Repo als LICENSE)
-  - LICENSE Datei vorhanden
-
-- [ ] **Dokumentation**
-  - UNRAID_SETUP.md hochgeladen
-  - Klare Installations-Schritte
-
-- [ ] **Getestet**
-  - Container funktioniert aus Image
-  - Alle Environment Variables korrekt
-  - Datenbank-Verbindung funktioniert
+**Option B: Eigenes Template-Repo (bis Approval)**
+1. Template-URL in Unraid unter "Add Template Repositories" hinzufuegen
+2. Kommuniziere die URL im Forum-Thread/README
 
 ---
 
-## 🔄 GitHub Actions für automatische Builds (Optional)
+## ƒo. Checkliste vor Submission
+- [ ] Docker Image public (latest + Version-Tag)
+- [ ] unraid-template.xml mit korrekten URLs
+- [ ] Requires-Feld nennt PostGIS-Pflicht + optionales Ollama, LAN-default, Proxy/Cloudflare optional
+- [ ] Icon verfuegbar (HTTPS, 256x256+)
+- [ ] README/UNRAID-Dokus betonen PostGIS, optional Ollama, LAN/Proxy-Hinweis
+- [ ] Support-Thread im Unraid Forum erstellt (Link im Template)
+- [ ] Installation auf Unraid lokal getestet (PostGIS + App + optional Ollama)
 
-Automatisiere das Image-Building mit GitHub Actions:
+---
 
-**Datei:** `.github/workflows/docker-build.yml`
-
+## ÐY"" GitHub Actions (optional)
+Automatisches Build/Push nach GHCR:
 ```yaml
 name: Build and Push Docker Image
-
 on:
   push:
     branches: [ main ]
     tags: [ 'v*' ]
   pull_request:
     branches: [ main ]
-
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata
-        id: meta
+      - id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
@@ -355,9 +155,7 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+      - uses: docker/build-push-action@v5
         with:
           context: .
           push: true
@@ -365,80 +163,20 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 ```
 
-**Aktivierung:**
-1. Diese Datei in dein Repository committen
-2. GitHub Actions sind automatisch aktiviert
-3. Bei jedem Push auf `main` wird das Image automatisch gebaut
+---
+
+## ÐY"S Marketing (optional)
+- Unraid Forum Post pflegen (Screenshots, Release Notes)
+- Reddit r/unRAID, Self-Hosted Communities
+- README mit Badges (CA verfügbar, Docker Pulls) aktualisieren, sobald live
 
 ---
 
-## 📊 Marketing (Optional)
-
-**Um mehr Nutzer zu erreichen:**
-
-1. **Unraid Forums Post:**
-   - https://forums.unraid.net/
-   - Kategorie: "Docker Containers"
-   - Beschreibe Features, Screenshots, Download-Link
-
-2. **Reddit:**
-   - r/unRAID
-   - Post mit Screenshots und Link
-
-3. **GitHub README verbessern:**
-   - Badges hinzufügen (Docker Pulls, Version, etc.)
-   - Screenshots der UI
-   - Feature-Liste
-   - Demo-Video (optional)
+## ÐY"s Support
+- Issues: GitHub Issues
+- Fragen: Unraid Support-Thread
+- Doku: README + UNRAID_INSTALL.md / UNRAID_SETUP.md
 
 ---
 
-## 🛠️ Updates veröffentlichen
-
-**Neue Version releasen:**
-
-1. **Code ändern und testen**
-
-2. **Version taggen:**
-```bash
-git tag -a v1.1.0 -m "Version 1.1.0 - Added feature X"
-git push origin v1.1.0
-```
-
-3. **Docker Image bauen und pushen:**
-```bash
-docker build -t ghcr.io/yourname/travstats:1.1.0 .
-docker push ghcr.io/yourname/travstats:1.1.0
-
-docker tag ghcr.io/yourname/travstats:1.1.0 ghcr.io/yourname/travstats:latest
-docker push ghcr.io/yourname/travstats:latest
-```
-
-4. **GitHub Release erstellen:**
-   - GitHub → Releases → New Release
-   - Tag: v1.1.0
-   - Changelog schreiben
-   - Publish
-
----
-
-## 📞 Support
-
-**Wenn Nutzer Probleme haben:**
-
-1. **GitHub Issues** für Bug Reports
-2. **GitHub Discussions** für Fragen
-3. **Unraid Forum Thread** für Community-Support
-
----
-
-## ✨ Fertig!
-
-Nach erfolgreicher Submission ist TravStats im Unraid Community Apps Store verfügbar!
-
-**Nutzer können dann:**
-1. Community Apps öffnen
-2. Nach "TravStats" suchen
-3. Mit einem Klick installieren
-
-**Viel Erfolg! 🚀**
+Viel Erfolg bei der Submission! ÐYs?

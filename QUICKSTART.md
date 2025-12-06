@@ -1,272 +1,180 @@
 # TravStats - Quick Start Guide
 
-> **🚀 Get up and running in 5 minutes!**
+> **Get up and running in 5 minutes!**
 
-This guide shows you the fastest way to start using TravStats on your own server.
+This guide shows you the fastest way to start TravStats, with Unraid as the primary production path.
 
 ---
 
-## 📋 Prerequisites
+## ÐY"< Prerequisites
 
-**Option A: Docker (Recommended - Easiest)**
+**Option A: Unraid (Production, recommended)**
+- Unraid 6.9+ with Community Apps
+- Separate PostGIS database container (`postgis/postgis`)
+- Optional: Ollama container if you want the LLM parser
+
+**Option B: Docker Compose (Local testing/dev)**
 - Docker & Docker Compose installed
-- That's it! Everything else is included.
 
-**Option B: Manual Setup (Development)**
+**Option C: Manual Dev**
 - Node.js 20+
-- PostgreSQL 15+
+- Postgres 15+ with PostGIS extension
 - Git
 
 ---
 
-## 🎉 Production Setup (Docker - Recommended)
+## ÐYZ% Production Setup (Unraid)
 
-### Step 1: Get the Code
+### Step 1: PostGIS database
+- In Community Apps search for `postgis` and install `postgis/postgis`.
+- Suggested: Container name `travstats-db`, Port `5432`, DB/User `flights`, your own strong password.
+- Persist data to `/mnt/user/appdata/travstats-db`.
 
+### Step 2: (Optional) Ollama
+- Only if you need AI parsing: install an Ollama container in Unraid.
+- Point `OLLAMA_URL` to that container and set `USE_LLM_PARSER=true`.
+- If Ollama is not available, keep `USE_LLM_PARSER=false` and the app uses the Regex/standard parser.
+
+### Step 3: Install TravStats from Community Apps
+- Select template `TravStats`.
+- Set `DATABASE_URL` to your PostGIS instance (`postgresql://flights:<pw>@travstats-db:5432/flights`).
+- Keep `SEED_AIRPORTS=true` for the first start.
+- Choose your WebUI port (default 3000) and AppData path.
+
+### Step 4: Run the setup wizard (LAN)
+```
+http://<unraid-ip>:3000/setup
+```
+- Pick an instance name and create the first admin user.
+
+### Step 5: Keep it internal or publish intentionally
+- Default: stay inside your LAN (`http://<unraid-ip>:3000`).
+- Optional: publish via Nginx Proxy Manager + Cloudflare (DNS/Proxy/Tunnel) with proper TLS; leave the database closed to the internet.
+
+### Step 6: Updates & maintenance
+- Unraid Docker tab → TravStats → Check for Updates / Force Update.
+- Update PostGIS and optional Ollama separately; take regular DB backups.
+
+---
+
+## ÐYơ¦ Alternative: Docker Compose (Local Testing)
+
+### Step 1: Get the code
 ```bash
 git clone <repository-url>
 cd TravStats
 ```
 
-### Step 2: Configure Environment
-
+### Step 2: Configure environment
 ```bash
-# Copy environment template
 cp .env.prod.example .env
-
-# Edit configuration
-nano .env  # or use your favorite editor
+# Set DB_PASSWORD, adjust USE_LLM_PARSER/OLLAMA_URL if needed
 ```
 
-**Minimal configuration (required):**
-```env
-# REQUIRED: Change this to a strong password!
-DB_PASSWORD=<generate with: openssl rand -base64 32>
-
-# Port where TravStats will be accessible
-APP_PORT=3000
-
-# Instance name (shown in UI)
-INSTANCE_NAME=TravStats  # Or: "Smith Family Tracker"
-
-# Frontend URL for invitation links
-# Use your server's IP for LAN access
-FRONTEND_URL=http://localhost:3000  # Or: http://192.168.1.100:3000
-```
-
-**Security settings (recommended):**
-```env
-# Invite-only registration (recommended for self-hosting)
-ALLOW_REGISTRATION=false  # Users can only register via admin-created invitations
-
-# Max users (recommended for small instances)
-MAX_USERS=10
-```
-
-### Step 3: Start TravStats
-
+### Step 3: Start stack
 ```bash
 docker-compose -f docker-compose.prod.yml up -d
 ```
-
-This will:
-- Pull the Docker images
-- Start PostgreSQL database
-- Start the application (frontend + backend)
-- Automatically run database migrations
-
-### Step 4: Complete Setup Wizard
-
-Open your browser and navigate to:
-```
-http://localhost:3000/setup
-```
-
-**Setup Wizard will guide you through:**
-1. **Instance Name**: Choose a name (e.g., "Smith Family Tracker")
-2. **Admin Account**: Create the first admin user
-3. **Password**: Set a strong admin password
-
-After completing setup, you'll be redirected to the login page.
-
-### Step 5: Login as Admin
-
-```
-http://localhost:3000/login
-```
-
-Use the username and password you just created.
-
-### Step 6: Invite Other Users (Optional)
-
-1. Navigate to **Admin Panel**: http://localhost:3000/admin
-2. Go to **Invitations** tab
-3. Click **"Create Invitation"**
-4. Optionally enter an email
-5. Link is auto-copied to clipboard
-6. Send the link to your family/friends
-7. They can register using the invitation token
+- Starts PostGIS, the app, and optional Ollama locally.
+- Setup wizard: `http://localhost:3000/setup`
 
 ---
 
-## 🧪 Development Setup (Local without Docker)
+## ÐYơ¦ Development Setup (Local without Docker)
 
-### Step 1: Setup Backend
-
+### Step 1: Backend
 ```bash
 cd backend
-
-# Install dependencies
 npm install
-
-# Create environment file
 cp .env.example .env
-
-# Edit .env and set your DATABASE_URL
-nano .env
-# Example: DATABASE_URL=postgresql://user:password@localhost:5432/flights
-
-# Generate Prisma client
+# DATABASE_URL must point to a PostGIS instance
 npx prisma generate
-
-# Run migrations
 npx prisma migrate dev
-
-# Optional: Seed airports and achievements
+# Optional seeds
 npm run seed:airports:csv
 npm run seed:achievements
-
-# Start backend (Port 8000)
-npm run dev
+npm run dev   # Port 8000
 ```
 
-### Step 2: Setup Frontend
-
+### Step 2: Frontend
 ```bash
 cd frontend
-
-# Install dependencies
 npm install
-
-# Create environment file
-cp .env.example .env
-# Content: VITE_API_URL=http://localhost:8000
-
-# Start frontend (Port 3000)
-npm run dev
+cp .env.example .env   # VITE_API_URL=http://localhost:8000
+npm run dev            # Port 3000
 ```
 
-### Step 3: Complete Setup
-
+### Step 3: Setup
 1. Open http://localhost:3000/setup
-2. Create first admin account
-3. Login and start tracking flights!
+2. Create first admin
+3. Start tracking flights
 
 ---
 
-## 🌐 Access TravStats
+## ÐYO? Access TravStats
 
-### On Same Computer
+### Same device
 ```
 http://localhost:3000
 ```
 
-### From Other Devices on Local Network
+### Other devices in LAN
 ```
 http://192.168.1.XXX:3000
 ```
-*(Replace XXX with your server's IP address)*
 
-**To find your IP:**
-```bash
-# Windows
-ipconfig
-
-# Linux/Mac
-ip addr show
-# or
-ifconfig
-```
+### Optional external access
+- Use Nginx Proxy Manager + Cloudflare (DNS/Proxy/Tunnel) with TLS.
+- Do not expose the database; only forward the app port via the proxy.
 
 ---
 
-## 👤 Admin Features
+## ÐY'Ï Admin Features
 
-### Access Admin Panel
-```
-http://localhost:3000/admin
-```
+**Admin Panel:** `http://<host>:3000/admin`
 
-**Admin Panel Features:**
-- **System Info**: View user count, flight count, instance configuration
-- **User Management**: Activate/deactivate users, view statistics
-- **Invitations**: Create invitation links for new users
-- **Data Export**: Download full backup (JSON format, GDPR compliant)
-
-### Invite-Only Registration
-
-When `ALLOW_REGISTRATION=false` (default in production):
-1. Users cannot self-register
-2. Only admin can create invitation links
-3. Each link has a unique token
-4. Links expire after 7 days (default)
-5. Links can only be used once
-
-**To invite a user:**
-1. Go to Admin Panel → Invitations
-2. Click "Create Invitation"
-3. Enter email (optional)
-4. Link is generated: `http://localhost:3000/register?token=abc123...`
-5. Send link to user
-6. User registers via link
+- System info (users, flights, config)
+- User management (activate/deactivate)
+- Invitations (invite-only by default)
+- Data export (JSON)
 
 ---
 
-## 🛠️ Useful Commands
+## ÐY>ÿ‹÷? Useful Commands
 
-### Docker Commands
+### Unraid (GUI)
+- Logs: Docker tab → TravStats → Logs
+- Restart: Docker tab → TravStats → Restart
+- Update: Docker tab → TravStats → Check for Updates / Force Update
 
+### Docker Compose (local testing)
 ```bash
-# View logs
 docker-compose -f docker-compose.prod.yml logs -f
-
-# Stop TravStats
-docker-compose -f docker-compose.prod.yml down
-
-# Restart TravStats
 docker-compose -f docker-compose.prod.yml restart
-
-# Update to latest version
-docker-compose -f docker-compose.prod.yml pull
-docker-compose -f docker-compose.prod.yml up -d
-
-# Access database shell
+docker-compose -f docker-compose.prod.yml pull && docker-compose -f docker-compose.prod.yml up -d
 docker-compose -f docker-compose.prod.yml exec db psql -U flights -d flights
-
-# Run backend shell (for manual commands)
 docker-compose -f docker-compose.prod.yml exec app sh
 ```
 
-### Development Commands
-
+### Development
 ```bash
 # Backend
 cd backend
-npm run dev              # Start dev server
-npm test                 # Run tests
-npm run build            # Build for production
-npx prisma studio        # Open database GUI
+npm run dev
+npm test
+npm run build
+npx prisma studio
 
 # Frontend
 cd frontend
-npm run dev              # Start dev server
-npm run build            # Build for production
-npm run preview          # Preview production build
+npm run dev
+npm run build
+npm run preview
 ```
 
 ---
 
-## 📊 Default Settings
+## ÐY"S Default Settings
 
 | Setting | Production | Development |
 |---------|-----------|-------------|
@@ -279,133 +187,40 @@ npm run preview          # Preview production build
 
 ---
 
-## 🔍 Troubleshooting
+## ÐY"? Troubleshooting
 
-### Port already in use
-```bash
-# Check what's using port 3000
-# Windows
-netstat -ano | findstr :3000
-
-# Linux/Mac
-lsof -i :3000
-
-# Change port in .env
-APP_PORT=3001
-```
-
-### Database connection failed
-```bash
-# Check if database is running
-docker-compose -f docker-compose.prod.yml ps
-
-# Check logs
-docker-compose -f docker-compose.prod.yml logs db
-
-# Restart database
-docker-compose -f docker-compose.prod.yml restart db
-```
-
-### Setup page not showing
-```bash
-# Check if setup is already complete
-# If users exist, setup is complete
-# You must use /login instead
-
-# To reset (WARNING: deletes all data!)
-docker-compose -f docker-compose.prod.yml down -v
-docker-compose -f docker-compose.prod.yml up -d
-```
-
-### Cannot create admin account
-```bash
-# Make sure no users exist yet
-# Setup is only available on first run
-# If you need to reset, delete the database volume
-
-# View existing users (from database)
-docker-compose -f docker-compose.prod.yml exec db psql -U flights -d flights -c "SELECT * FROM users;"
-```
-
-### Invitation link not working
-```bash
-# Check FRONTEND_URL in .env
-# It must match the actual URL users access
-# Example: http://192.168.1.100:3000
-
-# Verify in Admin Panel that link is correct
-# Links expire after 7 days
-# Links can only be used once
-```
+- **Port already in use:** pick another WebUI port (e.g., 3001) in Unraid or set `APP_PORT` in Compose.
+- **Database connection failed:** ensure PostGIS container is running and `DATABASE_URL` uses the right host/user/password.
+- **Setup page not showing:** setup runs only once; use `/login` if a user already exists.
+- **Invitation link invalid:** `FRONTEND_URL` must match the URL users hit (LAN IP or your proxy hostname).
 
 ---
 
-## 📱 Next Steps
+## ÐY"' Security Recommendations
 
-### Add Your First Flight
-
-1. Navigate to Dashboard: http://localhost:3000
-2. Click **"Add Flight"** button
-3. Fill in flight details OR
-4. Use **Boarding Pass Scanner** to scan a QR code
-
-### Explore Features
-
-- **Map View**: See all your flights on an interactive map
-- **Stats**: View comprehensive statistics and analytics
-- **Achievements**: Unlock badges and track progress
-- **Settings**: Customize your experience (dark mode, units, etc.)
-
-### Invite Family & Friends
-
-1. Go to Admin Panel
-2. Create invitation links
-3. Share with family members
-4. They register and start tracking their flights!
+- Keep the app LAN-only by default; expose externally only via Nginx Proxy Manager + Cloudflare with TLS or via VPN (WireGuard/Tailscale).
+- Do not expose the PostGIS port to the internet.
+- Use strong passwords and keep `ALLOW_REGISTRATION=false` for production.
+- Follow [PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md) for hardening.
 
 ---
 
-## 🔒 Security Recommendations
+## ÐY"s Further Reading
 
-### For Local Network Only (Safest)
-- Keep `ALLOW_REGISTRATION=false`
-- Use strong passwords
-- No additional security needed
-- Access via `http://192.168.1.XXX:3000`
-
-### For Remote Access (via VPN)
-- Use Tailscale or WireGuard
-- Secure encrypted tunnel
-- No port forwarding needed
-- Access via VPN IP
-
-### For Public Internet (Advanced)
-- See [PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md)
-- Requires domain, SSL, reverse proxy
-- Strong firewall configuration
-- Regular security updates
+- **Full Documentation:** [README.md](README.md)
+- **Production Checklist:** [PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md)
+- **Unraid Install:** [UNRAID_INSTALL.md](UNRAID_INSTALL.md)
+- **Feature Roadmap:** [ROADMAP.md](ROADMAP.md)
 
 ---
 
-## 📚 Further Reading
+## ÐY'­ Tips
 
-- **Full Documentation**: [README.md](README.md)
-- **Production Deployment**: [PRODUCTION_CHECKLIST.md](PRODUCTION_CHECKLIST.md)
-- **unRAID Installation**: [UNRAID_INSTALL.md](UNRAID_INSTALL.md)
-- **Feature Roadmap**: [ROADMAP.md](ROADMAP.md)
-
----
-
-## 💡 Tips
-
-- **Backups**: Use Admin Panel → Data Export regularly
-- **Updates**: Pull latest Docker image periodically
-- **Performance**: Recommended for 1-10 users per instance
-- **Storage**: PostgreSQL database grows ~1MB per 100 flights
-- **Mobile**: Use responsive web UI on phone/tablet
+- Backups: dump the PostGIS DB regularly and/or use Admin export.
+- Updates: refresh TravStats, PostGIS, and optional Ollama images periodically.
+- Performance: ideal for 1-10 users per instance; database grows ~1MB per 100 flights.
+- Mobile: responsive web UI works well on phones/tablets.
 
 ---
 
-**Enjoy tracking your flights!** ✈️🌍
-
-*If you encounter any issues, check the [Troubleshooting](#-troubleshooting) section or open a GitHub issue.*
+**Enjoy tracking your flights!**

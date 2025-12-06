@@ -430,6 +430,131 @@ export const adminApi = {
     const { data } = await api.put('/admin/parser-settings', settings);
     return data;
   },
+
+  // Logging API
+  getLoggingConfig: async () => {
+    const { data } = await api.get<{
+      logLevel: string;
+      logHttpRequests: boolean;
+      logDatabaseQueries: boolean;
+      logParserOperations: boolean;
+      maxLogFileSize: number;
+      logRetentionDays: number;
+    }>('/admin/logging/config');
+    return data;
+  },
+
+  updateLoggingConfig: async (config: {
+    logLevel?: string;
+    logHttpRequests?: boolean;
+    logDatabaseQueries?: boolean;
+    logParserOperations?: boolean;
+    maxLogFileSize?: number;
+    logRetentionDays?: number;
+  }) => {
+    const { data } = await api.put('/admin/logging/config', config);
+    return data;
+  },
+
+  toggleDebugLogging: async (enabled: boolean) => {
+    const { data } = await api.post<{
+      enabled: boolean;
+      message: string;
+    }>('/admin/logging/toggle-debug', { enabled });
+    return data;
+  },
+
+  getLogFiles: async () => {
+    const { data } = await api.get<{
+      files: Array<{
+        filename: string;
+        size: number;
+        category: string;
+        created: string;
+        modified: string;
+      }>;
+    }>('/admin/logging/files');
+    return data;
+  },
+
+  getLogFileContent: async (filename: string, params?: {
+    level?: string;
+    category?: string;
+    search?: string;
+    offset?: number;
+    limit?: number;
+  }) => {
+    const { data } = await api.get<{
+      logs: Array<{
+        timestamp: string;
+        level: string;
+        category: string;
+        message: string;
+        context?: any;
+        performance?: any;
+        requestId?: string;
+        error?: any;
+      }>;
+      total: number;
+      offset: number;
+      limit: number;
+    }>(`/admin/logging/files/${filename}`, { params });
+    return data;
+  },
+
+  downloadLogFile: async (filename: string) => {
+    const response = await api.get(`/admin/logging/files/${filename}/download`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  deleteLogFile: async (filename: string) => {
+    const { data } = await api.delete(`/admin/logging/files/${filename}`);
+    return data;
+  },
+
+  getLogStats: async () => {
+    const { data } = await api.get<{
+      totalSize: number;
+      fileCount: number;
+      categories: Record<string, { fileCount: number; totalSize: number }>;
+      oldestLog: string;
+      newestLog: string;
+    }>('/admin/logging/stats');
+    return data;
+  },
+
+  cleanupLogs: async () => {
+    const { data } = await api.post<{
+      message: string;
+      filesDeleted: number;
+      spaceFreed: number;
+    }>('/admin/logging/cleanup');
+    return data;
+  },
+
+  searchLogs: async (params: {
+    query: string;
+    level?: string;
+    category?: string;
+    fromDate?: string;
+    toDate?: string;
+    limit?: number;
+  }) => {
+    const { data } = await api.get<{
+      results: Array<{
+        filename: string;
+        timestamp: string;
+        level: string;
+        category: string;
+        message: string;
+        context?: any;
+      }>;
+      total: number;
+    }>('/admin/logging/search', { params });
+    return data;
+  },
 };
 
 // Utility function: Calculate distance between two coordinates using Haversine formula

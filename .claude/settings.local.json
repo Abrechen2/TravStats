@@ -25,7 +25,9 @@
       "Bash(dir:*)",
       "Bash(cat:*)",
       "Bash(mkdir:*)",
-      "Bash(tasklist:*)"
+      "Bash(tasklist:*)",
+      "Bash(docker-compose ps:*)",
+      "Bash(docker-compose logs:*)"
     ],
     "deny": [],
     "ask": []
