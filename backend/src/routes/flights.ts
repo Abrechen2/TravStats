@@ -391,6 +391,55 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
       throw new AppError('Flight not found', 404);
     }
 
+    // Enrich airport data if departure or arrival is being updated
+    if (data.departure || data.arrival) {
+      const enriched = await enrichFlightAirports({
+        departure: data.departure ? {
+          iata: data.departure.iata ?? undefined,
+          icao: data.departure.icao ?? undefined,
+          name: data.departure.name ?? undefined,
+          lat: data.departure.lat,
+          lon: data.departure.lon,
+        } : {
+          iata: existingFlight.depIata ?? undefined,
+          icao: existingFlight.depIcao ?? undefined,
+          name: existingFlight.depName ?? undefined,
+          lat: existingFlight.depLat,
+          lon: existingFlight.depLon,
+        },
+        arrival: data.arrival ? {
+          iata: data.arrival.iata ?? undefined,
+          icao: data.arrival.icao ?? undefined,
+          name: data.arrival.name ?? undefined,
+          lat: data.arrival.lat,
+          lon: data.arrival.lon,
+        } : {
+          iata: existingFlight.arrIata ?? undefined,
+          icao: existingFlight.arrIcao ?? undefined,
+          name: existingFlight.arrName ?? undefined,
+          lat: existingFlight.arrLat,
+          lon: existingFlight.arrLon,
+        },
+      });
+
+      // Only update airport data if enrichment was performed
+      if (data.departure) {
+        data.departure.icao = enriched.departure.icao;
+        data.departure.iata = enriched.departure.iata;
+        data.departure.name = enriched.departure.name;
+        data.departure.lat = enriched.departure.lat;
+        data.departure.lon = enriched.departure.lon;
+      }
+
+      if (data.arrival) {
+        data.arrival.icao = enriched.arrival.icao;
+        data.arrival.iata = enriched.arrival.iata;
+        data.arrival.name = enriched.arrival.name;
+        data.arrival.lat = enriched.arrival.lat;
+        data.arrival.lon = enriched.arrival.lon;
+      }
+    }
+
     const updateData: any = {};
     if (data.airline) updateData.airline = data.airline;
     if (data.flightNumber) updateData.flightNumber = data.flightNumber;
