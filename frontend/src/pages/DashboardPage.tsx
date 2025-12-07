@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { flightsApi, analyticsApi } from '../lib/api';
+import { flightsApi, analyticsApi, settingsApi } from '../lib/api';
 import { logger } from '../lib/logger';
 import MapContainer3D from '../components/MapContainer3D';
 import SimplifiedFlightFormV2 from '../components/SimplifiedFlightFormV2';
@@ -43,6 +43,7 @@ export default function DashboardPage() {
   const settings = useSettingsStore();
   const [newAchievements, setNewAchievements] = useState<any[]>([]);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [developerModeEnabled, setDeveloperModeEnabled] = useState(false);
 
   // Load recent flights and total count (unfiltered) once on mount
   useEffect(() => {
@@ -76,6 +77,22 @@ export default function DashboardPage() {
       setRightOpen(true);
     }
   }, []);
+
+  useEffect(() => {
+    // Check if user has training access (admin or canTrainLLM)
+    const hasTrainingAccess = user?.isAdmin || false; // TODO: Add canTrainLLM check from user object
+    
+    if (hasTrainingAccess) {
+      settingsApi
+        .getDeveloperMode()
+        .then((data) => {
+          setDeveloperModeEnabled(data.enabled);
+        })
+        .catch((error) => {
+          logger.error('Failed to load developer mode status:', error);
+        });
+    }
+  }, [user]);
 
   const loadFlights = async () => {
     try {
@@ -573,6 +590,19 @@ export default function DashboardPage() {
             <button onClick={() => setShowFlightForm(true)} className="btn-primary w-full">
               + Add Flight
             </button>
+            
+            {/* Training Button - Only visible when Developer Mode is enabled */}
+            {developerModeEnabled && (
+              <Link
+                to="/training"
+                className="mt-2 w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-lg font-semibold transition-all shadow-sm hover:shadow-md"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+                LLM Training
+              </Link>
+            )}
           </div>
 
           {!onboarding.dismissed && (

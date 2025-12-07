@@ -69,6 +69,9 @@ services:
       OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2:3b}
       USE_LLM_PARSER: ${USE_LLM_PARSER:-true}
+      # Training Settings
+      PYTHON_CMD: python3
+      DOCKER: 'true'
     volumes:
       - travstats-app-data:/app/data
     depends_on:
