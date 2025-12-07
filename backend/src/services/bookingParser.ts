@@ -1,5 +1,6 @@
 import { getParserConfig, parseEmail } from './parsers/factory';
 import { parse } from 'node-html-parser';
+import logger from '../utils/logger';
 
 export interface ParsedBooking {
   airline?: string;
@@ -159,28 +160,46 @@ function extractAirportCodes(source: string): { departure?: string; arrival?: st
   const sourceLower = source.toLowerCase();
   const sourceUpper = source.toUpperCase();
 
-  console.log('[DEBUG] ==== AIRPORT CODE EXTRACTION ====');
-  console.log('[DEBUG] Source length:', source.length);
-  console.log('[DEBUG] Source preview:', source.substring(0, 200));
+  logger.debug({
+    operation: 'airport_code_extraction',
+    message: 'Starting airport code extraction',
+    context: { sourceLength: source.length, sourcePreview: source.substring(0, 200) },
+  });
 
   // Try city name mapping first (most reliable for German emails)
   // Pattern stops at "am" (date), "on", digits, or line break to avoid capturing date
   const cityPattern = /(?:von|ab|from)\s+([\p{L}\s-]+?)\s+(?:nach|to|bis)\s+([\p{L}\s-]+?)(?:\s+am|\s+on|\s+\d|$|\n)/iu;
   const cityMatch = cityPattern.exec(sourceLower);
 
-  console.log('[DEBUG] City pattern match:', cityMatch ? cityMatch[0] : 'NO MATCH');
+  logger.debug({
+    operation: 'airport_code_city_pattern',
+    message: cityMatch ? 'City pattern matched' : 'City pattern did not match',
+    context: { match: cityMatch ? cityMatch[0] : null },
+  });
 
   if (cityMatch) {
     const depCity = normalizeCityName(cityMatch[1]);
     const arrCity = normalizeCityName(cityMatch[2]);
-    console.log('[DEBUG] Normalized cities:', { depCity, arrCity });
+    logger.debug({
+      operation: 'airport_code_city_normalized',
+      message: 'Normalized city names',
+      context: { depCity, arrCity },
+    });
 
     const departure = CITY_TO_IATA[depCity];
     const arrival = CITY_TO_IATA[arrCity];
-    console.log('[DEBUG] City to IATA lookup:', { departure, arrival });
+    logger.debug({
+      operation: 'airport_code_city_lookup',
+      message: 'City to IATA lookup',
+      context: { departure, arrival },
+    });
 
     if (departure && arrival) {
-      console.log('[DEBUG] ✅ SUCCESS via city name mapping:', { departure, arrival });
+      logger.debug({
+        operation: 'airport_code_success_city',
+        message: 'Successfully extracted airport codes via city name mapping',
+        context: { departure, arrival },
+      });
       return { departure, arrival };
     }
   }
@@ -200,24 +219,43 @@ function extractAirportCodes(source: string): { departure?: string; arrival?: st
     }
   }
 
-  console.log('[DEBUG] IATA codes found:', codes);
+  logger.debug({
+    operation: 'airport_code_iata_found',
+    message: 'IATA codes found via pattern matching',
+    context: { codes },
+  });
 
   // Remove duplicates and filter out common false positives
   const falsePositives = ['UND', 'DER', 'DIE', 'DAS', 'VON', 'BIS', 'FUR', 'MIT', 'AUF', 'AUS'];
   const filtered = [...new Set(codes)].filter((code) => !falsePositives.includes(code));
 
-  console.log('[DEBUG] Filtered codes:', filtered);
+  logger.debug({
+    operation: 'airport_code_filtered',
+    message: 'Filtered IATA codes',
+    context: { filtered },
+  });
 
   if (filtered.length >= 2) {
-    console.log('[DEBUG] ✅ SUCCESS via IATA pattern:', { departure: filtered[0], arrival: filtered[1] });
+    logger.debug({
+      operation: 'airport_code_success_iata',
+      message: 'Successfully extracted airport codes via IATA pattern',
+      context: { departure: filtered[0], arrival: filtered[1] },
+    });
     return { departure: filtered[0], arrival: filtered[1] };
   }
   if (filtered.length === 1) {
-    console.log('[DEBUG] ⚠️ Only one code found:', filtered[0]);
+    logger.debug({
+      operation: 'airport_code_partial',
+      message: 'Only one airport code found',
+      context: { code: filtered[0] },
+    });
     return { departure: filtered[0] };
   }
 
-  console.log('[DEBUG] ❌ NO CODES FOUND');
+  logger.debug({
+    operation: 'airport_code_not_found',
+    message: 'No airport codes found',
+  });
   return {};
 }
 
@@ -304,12 +342,19 @@ export async function parseBookingEmail(
     textFallbackChain?: string | null;
     openaiApiKey?: string | null;
     claudeApiKey?: string | null;
+  },
+  adminSettings?: {
+    globalOpenaiApiKey?: string | null;
+    globalClaudeApiKey?: string | null;
   }
 ): Promise<ParseResult> {
-  console.log('[Booking Parser] Starting email parsing with factory system');
+  logger.debug({
+    operation: 'booking_parser_start',
+    message: 'Starting email parsing with factory system',
+  });
 
-  // Get parser config from settings
-  const config = getParserConfig(userSettings);
+  // Get parser config from settings (user settings take precedence over admin settings)
+  const config = getParserConfig(userSettings, adminSettings);
 
   // Parse email using factory
   const result = await parseEmail(
@@ -319,9 +364,14 @@ export async function parseBookingEmail(
     config
   );
 
-  console.log(`[Booking Parser] Parsing complete - ${result.flights.length} flight(s) found`, {
-    provider: result.provider,
-    fallbackUsed: result.fallbackUsed,
+  logger.info({
+    operation: 'booking_parser_complete',
+    message: `Parsing complete - ${result.flights.length} flight(s) found`,
+    context: {
+      flightCount: result.flights.length,
+      provider: result.provider,
+      fallbackUsed: result.fallbackUsed,
+    },
   });
 
   // Map to legacy format for backward compatibility

@@ -13,6 +13,8 @@ import type {
   FlightLookupResult
 } from '../types';
 
+import { API_TIMEOUTS } from '../config/constants';
+
 export const API_URL = (import.meta as any).env?.VITE_API_URL || '';
 
 // Standard API instance with 10s timeout for normal requests
@@ -21,7 +23,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // 10 second timeout
+  timeout: API_TIMEOUTS.DEFAULT,
   withCredentials: true, // Send cookies with every request (HttpOnly JWT)
 });
 
@@ -31,20 +33,26 @@ const parserApi = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 180000, // 180 second timeout (Ollama Vision/Text can take 30-90s)
+  timeout: API_TIMEOUTS.PARSER,
   withCredentials: true,
 });
 
 // Response interceptor for handling 401 errors (expired/invalid tokens)
+// Uses event-based approach to avoid circular dependencies
 const handle401Error = (error: any) => {
   if (error.response?.status === 401) {
-    // Token expired or invalid - redirect to login
-    // Import dynamically to avoid circular dependencies
-    import('../store/authStore').then(({ useAuthStore }) => {
-      const authStore = useAuthStore.getState();
-      authStore.logout();
-      window.location.href = '/login';
+    // Token expired or invalid - dispatch event for auth store to handle
+    // This avoids circular dependency between api.ts and authStore.ts
+    const event = new CustomEvent('auth:unauthorized', {
+      detail: { error },
     });
+    window.dispatchEvent(event);
+    
+    // Fallback: redirect to login if event handler doesn't work
+    // The auth store will listen to this event and handle logout
+    setTimeout(() => {
+      window.location.href = '/login';
+    }, 100);
   }
   return Promise.reject(error);
 };
@@ -504,6 +512,120 @@ export const adminApi = {
         modified: string;
       }>;
     }>('/admin/logging/files');
+    return data;
+  },
+
+  // Parser Feedback API
+  getParserFeedbackStats: async (params?: {
+    provider?: string;
+    sourceType?: 'email' | 'boardingpass';
+    days?: number;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.provider) queryParams.append('provider', params.provider);
+    if (params?.sourceType) queryParams.append('sourceType', params.sourceType);
+    if (params?.days) queryParams.append('days', params.days.toString());
+
+    const { data } = await api.get<{
+      total: number;
+      byProvider: Record<string, number>;
+      bySourceType: Record<string, number>;
+      avgQualityScore: number;
+      commonIssues: Array<{ issue: string; count: number }>;
+    }>(`/admin/parser-feedback/stats?${queryParams.toString()}`);
+    return data;
+  },
+
+  submitParserCorrection: async (correction: {
+    sourceType: 'email' | 'boardingpass';
+    provider: string;
+    originalResult: any[];
+    correctedResult: any[];
+    originalData?: {
+      subject?: string;
+      text?: string;
+      html?: string;
+    };
+  }) => {
+    const { data } = await api.post('/parser-feedback/correction', correction);
+    return data;
+  },
+
+  getParserPatterns: async (params?: { days?: number }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.days) queryParams.append('days', params.days.toString());
+
+    const { data } = await api.get<{
+      suggestions: Array<{
+        pattern: string;
+        field: string;
+        confidence: number;
+        examples: string[];
+        issue: string;
+      }>;
+      summary: {
+        totalIssues: number;
+        suggestions: number;
+        topIssues: Array<{ issue: string; count: number }>;
+      };
+      pendingSuggestions: Array<{
+        pattern: string;
+        field: string;
+        confidence: number;
+        examples: string[];
+        issue: string;
+      }>;
+      stats: {
+        total: number;
+        applied: number;
+        pending: number;
+        avgConfidence: number;
+        byField: Record<string, number>;
+      };
+    }>(`/admin/parser-feedback/patterns?${queryParams.toString()}`);
+    return data;
+  },
+
+  applyPatternSuggestion: async (patternId: string, autoApply?: boolean) => {
+    const { data } = await api.post<{
+      success: boolean;
+      message: string;
+    }>(`/admin/parser-feedback/patterns/${patternId}/apply`, { autoApply });
+    return data;
+  },
+
+  autoApplyPatterns: async (threshold?: number) => {
+    const { data } = await api.post<{
+      success: boolean;
+      appliedCount: number;
+      message: string;
+    }>('/admin/parser-feedback/patterns/auto-apply', { threshold });
+    return data;
+  },
+
+  getParserFeedbackDetails: async (params?: {
+    provider?: string;
+    sourceType?: 'email' | 'boardingpass';
+    days?: number;
+    limit?: number;
+    offset?: number;
+  }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.provider) queryParams.append('provider', params.provider);
+    if (params?.sourceType) queryParams.append('sourceType', params.sourceType);
+    if (params?.days) queryParams.append('days', params.days.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    if (params?.offset) queryParams.append('offset', params.offset.toString());
+
+    const { data } = await api.get<{
+      feedback: Array<{
+        id: string;
+        userId: string;
+        createdAt: string;
+        payload: any;
+      }>;
+      total: number;
+    }>(`/admin/parser-feedback/details?${queryParams.toString()}`);
     return data;
   },
 

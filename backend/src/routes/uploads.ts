@@ -5,6 +5,8 @@ import { AppError } from '../middleware/errorHandler';
 import path from 'path';
 import fs from 'fs';
 import { prisma } from '../db';
+import { validateReceiptFile } from '../utils/fileValidation';
+import logger from '../utils/logger';
 
 const router = Router();
 
@@ -17,9 +19,31 @@ router.post(
   authenticate,
   uploadReceipt.single('receipt'),
   async (req: AuthRequest, res: Response, next: NextFunction) => {
+    let filePath: string | undefined;
     try {
       if (!req.file) {
         throw new AppError('No file uploaded', 400);
+      }
+
+      filePath = req.file.path;
+
+      // Validate file using magic numbers
+      const validation = validateReceiptFile(filePath, req.file.mimetype);
+      if (!validation.valid) {
+        // Delete the uploaded file if validation fails
+        if (filePath && fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+        logger.warn({
+          operation: 'receipt_upload_validation_failed',
+          message: 'Receipt file validation failed',
+          context: {
+            filename: req.file.originalname,
+            mimetype: req.file.mimetype,
+            reason: validation.reason,
+          },
+        });
+        throw new AppError(`File validation failed: ${validation.reason}`, 400);
       }
 
       // Return the URL to access the uploaded file
@@ -33,6 +57,18 @@ router.post(
         mimetype: req.file.mimetype,
       });
     } catch (error) {
+      // Cleanup on error
+      if (filePath && fs.existsSync(filePath)) {
+        try {
+          fs.unlinkSync(filePath);
+        } catch (cleanupError) {
+          logger.error({
+            operation: 'receipt_upload_cleanup_error',
+            message: 'Failed to cleanup file after validation error',
+            context: { filePath },
+          });
+        }
+      }
       next(error);
     }
   }

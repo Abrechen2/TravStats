@@ -15,6 +15,7 @@ import analyticsRoutes from './routes/analytics';
 import uploadsRoutes from './routes/uploads';
 import emailParseRoutes from './routes/emailParse';
 import boardingpassParseRoutes from './routes/boardingpassParse';
+import parserFeedbackRoutes from './routes/parserFeedback';
 import setupRoutes from './routes/setup';
 import adminRoutes from './routes/admin';
 import { errorHandler } from './middleware/errorHandler';
@@ -37,8 +38,25 @@ const PORT = parseInt(process.env.PORT || '8000', 10);
 // Trust proxy - we're behind exactly 1 proxy (nginx)
 app.set('trust proxy', 1);
 
-// Security middleware
-app.use(helmet());
+// Security middleware with CSP configuration
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles for React
+      scriptSrc: ["'self'"], // Only allow scripts from same origin
+      imgSrc: ["'self'", "data:", "https:"], // Allow images from same origin, data URIs, and HTTPS
+      connectSrc: ["'self'"], // API calls to same origin
+      fontSrc: ["'self'", "data:"], // Fonts from same origin and data URIs
+      objectSrc: ["'none'"], // Disallow plugins
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"], // Disallow iframes
+      upgradeInsecureRequests: process.env.NODE_ENV === 'production' ? [] : null, // Upgrade HTTP to HTTPS in production
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Disable COEP to allow external resources if needed
+  crossOriginResourcePolicy: { policy: "cross-origin" }, // Allow cross-origin resources
+}));
 
 // CORS configuration to allow LAN/mobile clients
 const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:3000';
@@ -57,12 +75,14 @@ app.use(cors({
   credentials: true,
 }));
 
+import { RATE_LIMITS, FILE_LIMITS } from './config/constants';
+
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: RATE_LIMITS.GENERAL_WINDOW_MS,
   // Disable in non-production to avoid noisy 429s during local use;
   // otherwise allow a generous burst for dashboards/pagination.
-  max: process.env.NODE_ENV === 'production' ? 10000 : Number.MAX_SAFE_INTEGER,
+  max: process.env.NODE_ENV === 'production' ? RATE_LIMITS.GENERAL_MAX_REQUESTS : RATE_LIMITS.GENERAL_MAX_REQUESTS_DEV,
   standardHeaders: true,
   legacyHeaders: false,
   skip: () => process.env.NODE_ENV !== 'production',
@@ -70,8 +90,8 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // Body parsing with increased limits for email imports
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: FILE_LIMITS.JSON_BODY_MAX_SIZE }));
+app.use(express.urlencoded({ extended: true, limit: FILE_LIMITS.URLENCODED_BODY_MAX_SIZE }));
 
 // Cookie parsing (for HttpOnly JWT cookies)
 app.use(cookieParser());
@@ -98,6 +118,7 @@ app.use('/api/v1/analytics', analyticsRoutes);
 app.use('/api/v1/uploads', uploadsRoutes);
 app.use('/api/v1', emailParseRoutes);
 app.use('/api/v1', boardingpassParseRoutes);
+app.use('/api/v1/parser-feedback', parserFeedbackRoutes);
 
 // Error handling
 app.use(errorHandler);

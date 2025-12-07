@@ -2,6 +2,9 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
+import logger from '../utils/logger';
+import { validateReceiptFile, validateEmailFile, validateBoardingPassImage } from '../utils/fileValidation';
+import { FILE_LIMITS, CLEANUP } from '../config/constants';
 
 // Upload directories
 const UPLOAD_DIR = path.join(__dirname, '../../uploads/receipts');
@@ -10,11 +13,19 @@ const EMAIL_UPLOAD_DIR = path.join(__dirname, '../../uploads/emails');
 // Ensure upload directories exist
 if (!fs.existsSync(UPLOAD_DIR)) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-  console.log(`📁 Created upload directory: ${UPLOAD_DIR}`);
+  logger.info({
+    operation: 'upload_dir_created',
+    message: `Created upload directory: ${UPLOAD_DIR}`,
+    context: { directory: UPLOAD_DIR },
+  });
 }
 if (!fs.existsSync(EMAIL_UPLOAD_DIR)) {
   fs.mkdirSync(EMAIL_UPLOAD_DIR, { recursive: true });
-  console.log(`📁 Created email upload directory: ${EMAIL_UPLOAD_DIR}`);
+  logger.info({
+    operation: 'upload_email_dir_created',
+    message: `Created email upload directory: ${EMAIL_UPLOAD_DIR}`,
+    context: { directory: EMAIL_UPLOAD_DIR },
+  });
 }
 
 // Configure storage
@@ -32,7 +43,7 @@ const storage = multer.diskStorage({
   },
 });
 
-// File filter - only allow images and PDFs
+// File filter - only allow images and PDFs with magic number validation
 const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   const allowedMimeTypes = [
     'image/jpeg',
@@ -43,11 +54,13 @@ const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCa
     'application/pdf',
   ];
 
-  if (allowedMimeTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error(`Invalid file type. Allowed: ${allowedMimeTypes.join(', ')}`));
+  if (!allowedMimeTypes.includes(file.mimetype)) {
+    return cb(new Error(`Invalid file type. Allowed: ${allowedMimeTypes.join(', ')}`));
   }
+
+  // Note: Magic number validation happens after file is saved
+  // We'll validate in the route handler after multer processes the file
+  cb(null, true);
 };
 
 // Configure multer
@@ -55,7 +68,7 @@ export const uploadReceipt = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB max
+    fileSize: FILE_LIMITS.RECEIPT_MAX_SIZE,
   },
 });
 
@@ -66,25 +79,30 @@ export function deleteReceiptFile(filename: string): void {
   const filePath = path.join(UPLOAD_DIR, filename);
   if (fs.existsSync(filePath)) {
     fs.unlinkSync(filePath);
-    console.log(`🗑️  Deleted receipt file: ${filename}`);
+    logger.debug({
+      operation: 'upload_receipt_deleted',
+      message: `Deleted receipt file: ${filename}`,
+      context: { filename },
+    });
   }
 }
 
 /**
- * Clean up old receipt files (older than 90 days with no database reference)
+ * Clean up old receipt files (older than retention period with no database reference)
  * This should be run periodically (e.g., daily cron job)
  */
 export async function cleanupOldReceipts(prisma: any): Promise<number> {
   const files = fs.readdirSync(UPLOAD_DIR);
-  const ninetyDaysAgo = Date.now() - 90 * 24 * 60 * 60 * 1000;
+  const retentionMs = CLEANUP.RECEIPT_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+  const cutoffTime = Date.now() - retentionMs;
   let deletedCount = 0;
 
   for (const file of files) {
     const filePath = path.join(UPLOAD_DIR, file);
     const stats = fs.statSync(filePath);
 
-    // Skip if file is newer than 90 days
-    if (stats.mtimeMs > ninetyDaysAgo) {
+    // Skip if file is newer than retention period
+    if (stats.mtimeMs > cutoffTime) {
       continue;
     }
 
@@ -98,7 +116,11 @@ export async function cleanupOldReceipts(prisma: any): Promise<number> {
     if (!referencedFlight) {
       fs.unlinkSync(filePath);
       deletedCount++;
-      console.log(`🗑️  Cleaned up orphaned receipt: ${file}`);
+      logger.debug({
+        operation: 'upload_receipt_cleanup',
+        message: `Cleaned up orphaned receipt: ${file}`,
+        context: { filename: file },
+      });
     }
   }
 
@@ -139,6 +161,8 @@ const emailFileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFil
   const ext = path.extname(file.originalname).toLowerCase();
 
   if (allowedMimeTypes.includes(file.mimetype) || allowedExtensions.includes(ext)) {
+    // Note: Magic number validation happens after file is saved
+    // We'll validate in the route handler after multer processes the file
     cb(null, true);
   } else {
     cb(new Error(`Invalid file type. Allowed: .eml, .txt, .msg files`));
@@ -150,6 +174,6 @@ export const uploadEmailFile = multer({
   storage: emailStorage,
   fileFilter: emailFileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB max
+    fileSize: FILE_LIMITS.EMAIL_MAX_SIZE,
   },
 });

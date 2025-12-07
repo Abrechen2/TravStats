@@ -5,6 +5,7 @@ import { generateToken } from '../utils/jwt';
 import { registerSchema, loginSchema } from '../schemas/auth';
 import { AppError } from '../middleware/errorHandler';
 import { authLimiter } from '../middleware/rateLimit';
+import logger from '../utils/logger';
 
 const router = Router();
 const cookieMaxAgeMs = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -71,7 +72,11 @@ router.post('/register', authLimiter, async (req: Request, res: Response, next: 
 
     // Warning if approaching user limit
     if (userCount >= maxUsers) {
-      console.warn(`Warning: Instance has ${userCount} users (recommended max: ${maxUsers})`);
+      logger.warn({
+        operation: 'auth_user_limit_warning',
+        message: `Instance has ${userCount} users (recommended max: ${maxUsers})`,
+        context: { userCount, maxUsers },
+      });
     }
 
     // Create user (first user becomes admin)

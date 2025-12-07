@@ -2,12 +2,42 @@ import { ParsedBooking } from '../../bookingParser';
 import logger from '../../../utils/logger';
 
 /**
- * Validate IATA airport code (must be exactly 3 uppercase letters)
+ * Common valid IATA airport codes (whitelist for validation)
+ * This is a subset of the most common airports to filter out false positives
  */
-export function validateIATACode(code: string | null | undefined): string | undefined {
+const COMMON_VALID_IATA_CODES = new Set([
+  // Major European airports
+  'MUC', 'FRA', 'BER', 'HAM', 'DUS', 'CGN', 'STR', 'HAJ', 'NUE', 'LEJ', 'DRS', 'BRE',
+  'LUX', 'CDG', 'ORY', 'LHR', 'LGW', 'STN', 'AMS', 'BRU', 'VIE', 'ZRH', 'GVA',
+  'FCO', 'MXP', 'BCN', 'MAD', 'LIS', 'CPH', 'ARN', 'OSL', 'PRG', 'WAW', 'BUD', 'IST', 'ATH',
+  'HEL', 'DUB', 'EDI', 'MAN', 'BHX', 'BRS', 'NCL', 'LPL', 'EMA', 'SOU',
+  // Major US airports
+  'JFK', 'EWR', 'LGA', 'LAX', 'SFO', 'ORD', 'DFW', 'DEN', 'ATL', 'MIA', 'SEA', 'BOS', 'IAD', 'DCA',
+  'PHX', 'LAS', 'MCO', 'CLT', 'DTW', 'PHL', 'MSP', 'BWI', 'SLC', 'HNL',
+  // Major Asian airports
+  'NRT', 'HND', 'ICN', 'PEK', 'PVG', 'HKG', 'SIN', 'BKK', 'KUL', 'DXB', 'DOH', 'AUH',
+  'KIX', 'TPE', 'MNL', 'CGK', 'BOM', 'DEL', 'CCU', 'MAA', 'BLR', 'HYD',
+  // Major airports in other regions
+  'SYD', 'MEL', 'BNE', 'PER', 'ADL', 'AKL', 'WLG', 'YVR', 'YYZ', 'YUL', 'YOW', 'YEG', 'YYC',
+  'GRU', 'GIG', 'EZE', 'SCL', 'LIM', 'BOG', 'MEX', 'CUN', 'PTY', 'SJO',
+  'JNB', 'CPT', 'CAI', 'NBO', 'LOS', 'ACC', 'ADD', 'CMN', 'TUN', 'ALG',
+]);
+
+/**
+ * Validate IATA airport code (must be exactly 3 uppercase letters)
+ * Optionally check against whitelist of common valid codes
+ */
+export function validateIATACode(code: string | null | undefined, strict: boolean = false): string | undefined {
   if (!code) return undefined;
   const cleaned = code.toUpperCase().trim();
-  return /^[A-Z]{3}$/.test(cleaned) ? cleaned : undefined;
+  if (!/^[A-Z]{3}$/.test(cleaned)) return undefined;
+  
+  // If strict mode, check against whitelist of common valid codes
+  if (strict && !COMMON_VALID_IATA_CODES.has(cleaned)) {
+    return undefined;
+  }
+  
+  return cleaned;
 }
 
 /**
@@ -212,40 +242,57 @@ export function getVisionParserPrompt(): string {
   return `You are an expert boarding pass analyzer. Extract flight information from this boarding pass image with high accuracy.
 
 CRITICAL FIELDS (must be extracted if visible):
-- flightNumber: 2-3 letter airline code + 1-4 digits (e.g., LH103, FR8234, BA472)
-- departureCode: Departure airport IATA code (ALWAYS exactly 3 uppercase letters, e.g., MUC, FRA, LUX)
-- arrivalCode: Arrival airport IATA code (ALWAYS exactly 3 uppercase letters, e.g., CDG, FCO, BER)
+- flightNumber: 2-3 letter airline code + 1-4 digits (e.g., LH103, FR8234, BA472, EN8752, EN8409, LX754, LX1101, LH2465, LH2460, LH2415, LH2414, LH2319, LH2318, LH2317)
+  * Look for patterns like "LH 103", "LH103", "Flight LH103", or similar
+  * Usually displayed prominently near the top or center of the boarding pass
+  * May be in a large font or highlighted section
+- departureCode: Departure airport IATA code (ALWAYS exactly 3 uppercase letters, e.g., MUC, FRA, LUX, HEL, ARN, ZRH)
+  * Usually shown near the departure city name or in a route section (e.g., "LUX → MUC" or "MUC-MUC")
+- arrivalCode: Arrival airport IATA code (ALWAYS exactly 3 uppercase letters, e.g., CDG, FCO, BER, MUC, FRA, LUX)
+  * Usually shown near the arrival city name or in a route section
 - departureTime: Departure date and time in ISO 8601 format (YYYY-MM-DDTHH:MM)
+  * Extract the DATE from the boarding pass date field (often shown as "DD MMM YYYY" or "DAY MONTH YEAR")
+  * Combine date with departure time to create full ISO 8601 timestamp (e.g., 2025-11-18T14:30)
 
-IMPORTANT NOTES:
-1. Extract the DATE from the boarding pass date field (often shown as "DD MMM YYYY" or "DAY MONTH YEAR")
-2. Combine date with departure time to create full ISO 8601 timestamp (e.g., 2025-11-18T14:30)
-3. arrivalTime: Arrival time in ISO format. NOTE: Boarding passes RARELY show arrival time - only departure and boarding times are typically visible. If arrival time is NOT clearly shown on the boarding pass, return null. Do NOT guess or calculate - only extract if explicitly displayed.
+IMPORTANT FIELDS (extract if visible - these are often present):
+- seat: Seat number (e.g., "26F", "12A", "42C", "16F", "10A", "15C", "11C", "1C", "16C", "11A")
+  * Look for labels like "Seat", "Sitz", "Sitzplatz", "Place", or similar
+  * Format is usually 1-2 digits followed by a letter (A-F)
+- gate: Gate number (e.g., "B45", "A12", "G32", "B08", "G28", "029", "E06", "K18", "G29", "G35")
+  * Look for labels like "Gate", "Gate:", "Boarding Gate", "GATE", or similar
+  * May be numeric only (e.g., "029") or alphanumeric (e.g., "B08", "G32")
+- pnr: Booking reference/PNR (usually 6 alphanumeric characters, e.g., "9RFAA7", "85LMUN", "7RH6NS", "K6CH9R", "9C2R2U")
+  * Look for labels like "Booking Reference", "PNR", "Confirmation", "Reservation Code", "Buchungsreferenz", or similar
+  * Usually 6 characters, may be all letters, all numbers, or mixed
+- boardingGroup: Boarding group/zone (e.g., "1", "2", "3", "A", "Zone 3", "Group 5")
+  * Look for labels like "Group", "GRP", "Boarding Group", "Zone", or similar
+  * May be just a number or letter
 
 OPTIONAL FIELDS (extract if visible):
-- airline: Full airline name (e.g., "Lufthansa", "Ryanair", "British Airways")
-- seat: Seat number (e.g., "26F", "12A", "42C")
-- gate: Gate number (e.g., "B45", "A12", "G32")
+- airline: Full airline name (e.g., "Lufthansa", "Ryanair", "British Airways", "SWISS", "Eurowings")
 - terminal: Terminal (e.g., "1", "2", "A", "B")
-- pnr: Booking reference/PNR (usually 6 alphanumeric characters)
 - bookingReference: Same as PNR (use same value)
-- boardingGroup: Boarding group/zone (e.g., "1", "A", "Zone 3", "Group 5")
 - seatClass: Cabin class (e.g., "Economy", "Business", "First", "Premium Economy")
 - aircraft: Aircraft type if visible (e.g., "A321", "Boeing 737", "A320")
+- arrivalTime: Arrival time in ISO format. NOTE: Boarding passes RARELY show arrival time - only departure and boarding times are typically visible. If arrival time is NOT clearly shown on the boarding pass, return null. Do NOT guess or calculate - only extract if explicitly displayed.
 
 FIELDS NOT ON BOARDING PASS (always null):
 - price, currency, taxes, fees, ticketNumber (these are NOT shown on boarding passes)
 
-OCR-FIRST APPROACH (CRITICAL):
-STEP 1: First, carefully read and describe what text you can clearly see on the boarding pass.
-STEP 2: Extract ONLY the clearly visible information into JSON format.
-STEP 3: For any field that is unclear, blurry, or not visible, set it to null (not a guess, not a placeholder).
+EXTRACTION METHODOLOGY:
+1. SCAN THE ENTIRE BOARDING PASS: Look systematically from top to bottom, left to right
+2. IDENTIFY KEY SECTIONS: Find sections labeled with "Flight", "Gate", "Seat", "PNR", "Booking Reference", etc.
+3. READ CAREFULLY: Pay attention to small text, labels, and formatting
+4. EXTRACT EXACTLY: Copy the exact text you see - don't modify or guess
+5. VALIDATE FORMAT: Ensure flight numbers match pattern (2-3 letters + 1-4 digits), IATA codes are 3 letters
 
 ANTI-HALLUCINATION RULES (CRITICAL):
 ⚠️ The example values below are NEVER correct for your specific boarding pass image.
 ⚠️ ONLY extract information you can actually READ from the boarding pass in the image.
 ⚠️ NEVER use placeholder values like "ABC123", "XYZ789", "LH103", or "26F".
 ⚠️ If you cannot clearly read a field, return null - do NOT guess or use example values.
+⚠️ Flight numbers are CRITICAL - look carefully in the center/top area of the boarding pass
+⚠️ Seat, Gate, and PNR are usually in smaller text - scan carefully for these fields
 
 EXAMPLE OUTPUT FORMAT (use different values from your actual boarding pass):
 {

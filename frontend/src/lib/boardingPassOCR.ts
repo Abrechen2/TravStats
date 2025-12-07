@@ -6,6 +6,8 @@
  */
 
 import Tesseract from 'tesseract.js';
+import { logger } from './logger';
+import { BOARDING_PASS_OCR } from '../config/constants';
 
 export interface OCRExtractedData {
   gate?: string;
@@ -56,11 +58,11 @@ function preprocessImageForOCR(imageDataUrl: string): Promise<string> {
       avgG /= pixelCount;
       avgB /= pixelCount;
 
-      console.log(`🎨 Detected color cast: R=${avgR.toFixed(0)}, G=${avgG.toFixed(0)}, B=${avgB.toFixed(0)}`);
+      logger.debug(`Detected color cast: R=${avgR.toFixed(0)}, G=${avgG.toFixed(0)}, B=${avgB.toFixed(0)}`);
 
       // Step 2: Detect if dark background with light text (SAS, dark blue, etc.)
       const isDarkBackground = avgR < 100 && avgG < 100 && avgB < 150;
-      console.log(`🌓 Background type: ${isDarkBackground ? 'DARK (will invert)' : 'LIGHT'}`);
+      logger.debug(`Background type: ${isDarkBackground ? 'DARK (will invert)' : 'LIGHT'}`);
 
       // Step 3: Preprocessing with color cast removal
       for (let i = 0; i < data.length; i += 4) {
@@ -129,14 +131,14 @@ function preprocessImageForOCR(imageDataUrl: string): Promise<string> {
 
       ctx.putImageData(sharpenedData, 0, 0);
 
-      console.log('✅ Image preprocessed: 2.5x scale, color cast removed, high contrast B&W, sharpened');
+      logger.debug('Image preprocessed: 2.5x scale, color cast removed, high contrast B&W, sharpened');
 
       // Return preprocessed image as data URL
       resolve(canvas.toDataURL('image/png'));
     };
 
     img.onerror = () => {
-      console.warn('⚠️ Image preprocessing failed, using original');
+      logger.warn('Image preprocessing failed, using original');
       resolve(imageDataUrl);
     };
 
@@ -148,13 +150,13 @@ function preprocessImageForOCR(imageDataUrl: string): Promise<string> {
  * Extract text from boarding pass image using OCR
  */
 async function extractTextFromImage(imageFile: File | string): Promise<string> {
-  console.log('📸 Starting OCR text extraction...');
+  logger.debug('Starting OCR text extraction...');
 
   try {
     // Preprocess image for better OCR
     let imageToProcess = imageFile;
     if (typeof imageFile === 'string') {
-      console.log('🔧 Preprocessing image for better OCR...');
+      logger.debug('Preprocessing image for better OCR...');
       imageToProcess = await preprocessImageForOCR(imageFile);
     }
 
@@ -164,17 +166,17 @@ async function extractTextFromImage(imageFile: File | string): Promise<string> {
       {
         logger: (m) => {
           if (m.status === 'recognizing text') {
-            console.log(`OCR Progress: ${Math.round(m.progress * 100)}%`);
+            logger.debug(`OCR Progress: ${Math.round(m.progress * 100)}%`);
           }
         }
       }
     );
 
     const extractedText = result.data.text;
-    console.log('📄 OCR extracted text:', extractedText);
+    logger.debug('OCR extracted text:', extractedText);
     return extractedText;
   } catch (error) {
-    console.error('❌ OCR extraction failed:', error);
+    logger.error('OCR extraction failed:', error);
     return '';
   }
 }
@@ -188,7 +190,7 @@ function parseFieldsFromText(text: string): OCRExtractedData {
   // Normalize text: uppercase, remove extra spaces
   const normalizedText = text.toUpperCase().replace(/\s+/g, ' ');
 
-  console.log('🔍 Searching for patterns in OCR text...');
+  logger.debug('Searching for patterns in OCR text...');
 
   // Pattern 1: Gate (GATE B11, GATE 029, B11 gate, etc.)
   // OCR often misreads characters, so we use flexible patterns
@@ -217,7 +219,7 @@ function parseFieldsFromText(text: string): OCRExtractedData {
       // First pattern is placeholder-only (no capture group for gate code)
       if (match[0].includes('----') || match[0].includes('....') || match[0].includes('***') ||
           match[0].includes('TBA') || match[0].includes('TBD') || match[0].includes('N/A') || match[0].includes('-')) {
-        console.log('🚪 Gate placeholder detected (no gate assigned):', match[1] || match[0]);
+        logger.debug('Gate placeholder detected (no gate assigned):', match[1] || match[0]);
         break; // Don't set gate, leave undefined
       }
 
@@ -247,7 +249,7 @@ function parseFieldsFromText(text: string): OCRExtractedData {
       // - 1-3 digits only (029, 29, etc.)
       if (/^[A-Z]\d{1,3}$/.test(gateCode) || /^\d{1,3}$/.test(gateCode)) {
         data.gate = gateCode;
-        console.log('🚪 Found gate:', data.gate);
+        logger.debug('Found gate:', data.gate);
         break;
       }
     }
@@ -284,7 +286,7 @@ function parseFieldsFromText(text: string): OCRExtractedData {
     // (usually gates appear before seat numbers on boarding passes)
     if (potentialGates.length > 0) {
       data.gate = potentialGates[0];
-      console.log('🚪 Found gate (fallback pattern):', data.gate,
+      logger.debug('Found gate (fallback pattern):', data.gate,
                   potentialGates.length > 1 ? `(other candidates: ${potentialGates.slice(1).join(', ')})` : '');
     }
   }
@@ -305,7 +307,7 @@ function parseFieldsFromText(text: string): OCRExtractedData {
         terminal = `T${terminal}`;
       }
       data.terminal = terminal;
-      console.log('🏢 Found terminal:', data.terminal);
+      logger.debug('Found terminal:', data.terminal);
       break;
     }
   }
@@ -356,7 +358,7 @@ function parseFieldsFromText(text: string): OCRExtractedData {
 
         if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
           data.boardingTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-          console.log('⏰ Found boarding time:', data.boardingTime, isPM || isAM ? `(converted from ${match[0]})` : '');
+          logger.debug('Found boarding time:', data.boardingTime, isPM || isAM ? `(converted from ${match[0]})` : '');
           break;
         }
       } else if (match[1].length === 4) {
@@ -365,7 +367,7 @@ function parseFieldsFromText(text: string): OCRExtractedData {
         const minutes = parseInt(match[1].substring(2, 4));
         if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
           data.boardingTime = `${match[1].substring(0, 2)}:${match[1].substring(2, 4)}`;
-          console.log('⏰ Found boarding time:', data.boardingTime);
+          logger.debug('Found boarding time:', data.boardingTime);
           break;
         }
       } else if (isAM || isPM) {
@@ -378,7 +380,7 @@ function parseFieldsFromText(text: string): OCRExtractedData {
         }
         if (hours >= 0 && hours < 24) {
           data.boardingTime = `${String(hours).padStart(2, '0')}:00`;
-          console.log('⏰ Found boarding time:', data.boardingTime, `(converted from ${match[0]})`);
+          logger.debug('Found boarding time:', data.boardingTime, `(converted from ${match[0]})`);
           break;
         }
       }
@@ -410,7 +412,7 @@ function parseFieldsFromText(text: string): OCRExtractedData {
 
       if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
         data.gateCloseTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-        console.log('🚪⏱️ Found gate close time:', data.gateCloseTime, isPM || isAM ? `(converted from ${match[0]})` : '');
+        logger.debug('Found gate close time:', data.gateCloseTime, isPM || isAM ? `(converted from ${match[0]})` : '');
         break;
       }
     }
@@ -425,25 +427,25 @@ function parseFieldsFromText(text: string): OCRExtractedData {
 export async function extractBoardingPassDataFromImage(
   imageFile: File | string
 ): Promise<OCRExtractedData> {
-  console.log('🔍 Starting boarding pass OCR extraction...');
+  logger.debug('Starting boarding pass OCR extraction...');
 
   try {
     // Step 1: Extract text using OCR
     const text = await extractTextFromImage(imageFile);
 
     if (!text || text.trim().length === 0) {
-      console.warn('⚠️ OCR returned empty text');
+      logger.warn('OCR returned empty text');
       return {};
     }
 
     // Step 2: Parse fields from extracted text
     const extractedData = parseFieldsFromText(text);
 
-    console.log('✅ OCR extraction complete:', extractedData);
+    logger.debug('OCR extraction complete:', extractedData);
     return extractedData;
 
   } catch (error) {
-    console.error('❌ OCR processing failed:', error);
+    logger.error('OCR processing failed:', error);
     return {};
   }
 }
@@ -454,13 +456,13 @@ export async function extractBoardingPassDataFromImage(
  */
 export async function extractBoardingPassDataQuick(
   imageFile: File | string,
-  timeoutMs: number = 10000 // 10 seconds default
+  timeoutMs: number = BOARDING_PASS_OCR.DEFAULT_TIMEOUT_MS // 10 seconds default
 ): Promise<OCRExtractedData> {
   return Promise.race([
     extractBoardingPassDataFromImage(imageFile),
     new Promise<OCRExtractedData>((resolve) => {
       setTimeout(() => {
-        console.warn('⏱️ OCR timeout - returning empty result');
+        logger.warn('OCR timeout - returning empty result');
         resolve({});
       }, timeoutMs);
     })

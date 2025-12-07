@@ -2,6 +2,7 @@ import { Router, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { prisma } from '../db';
+import { encryptApiKey, decryptApiKey } from '../utils/encryption';
 
 const router = Router();
 
@@ -167,7 +168,12 @@ router.get('/parser', async (req: AuthRequest, res: Response, next: NextFunction
       };
     }
 
-    res.json(settings);
+    // Decrypt API keys before returning
+    res.json({
+      ...settings,
+      openaiApiKey: decryptApiKey(settings.openaiApiKey),
+      claudeApiKey: decryptApiKey(settings.claudeApiKey),
+    });
   } catch (error) {
     next(error);
   }
@@ -194,11 +200,12 @@ router.put('/parser', async (req: AuthRequest, res: Response, next: NextFunction
     if (payload.textFallbackChain !== undefined) {
       updateData.textFallbackChain = payload.textFallbackChain;
     }
+    // Encrypt API keys before storing
     if (payload.openaiApiKey !== undefined) {
-      updateData.openaiApiKey = payload.openaiApiKey || null;
+      updateData.openaiApiKey = encryptApiKey(payload.openaiApiKey);
     }
     if (payload.claudeApiKey !== undefined) {
-      updateData.claudeApiKey = payload.claudeApiKey || null;
+      updateData.claudeApiKey = encryptApiKey(payload.claudeApiKey);
     }
 
     // Get admin settings to check permissions
@@ -224,8 +231,8 @@ router.put('/parser', async (req: AuthRequest, res: Response, next: NextFunction
         preferredTextParser: updateData.preferredTextParser || 'auto',
         visionFallbackChain: updateData.visionFallbackChain || 'ollama,openai,claude,tesseract,manual',
         textFallbackChain: updateData.textFallbackChain || 'ollama,openai,claude,regex',
-        openaiApiKey: updateData.openaiApiKey || null,
-        claudeApiKey: updateData.claudeApiKey || null,
+        openaiApiKey: encryptApiKey(updateData.openaiApiKey),
+        claudeApiKey: encryptApiKey(updateData.claudeApiKey),
       },
       select: {
         preferredVisionParser: true,
@@ -237,9 +244,14 @@ router.put('/parser', async (req: AuthRequest, res: Response, next: NextFunction
       },
     });
 
+    // Decrypt API keys before returning
     res.json({
       message: 'Parser settings updated successfully',
-      settings: updated,
+      settings: {
+        ...updated,
+        openaiApiKey: decryptApiKey(updated.openaiApiKey),
+        claudeApiKey: decryptApiKey(updated.claudeApiKey),
+      },
     });
   } catch (error) {
     next(error);

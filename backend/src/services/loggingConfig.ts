@@ -1,5 +1,6 @@
 import { prisma } from '../db';
 import logger, { systemLogger } from '../utils/logger';
+import { CACHE_TTL, LOGGING_DEFAULTS } from '../config/constants';
 
 /**
  * Logging Configuration Service
@@ -22,7 +23,7 @@ export interface LogConfig {
 // Cache for logging config (5 minute TTL to reduce DB load)
 let configCache: LogConfig | null = null;
 let cacheTimestamp: number = 0;
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const LOGGING_CACHE_TTL = CACHE_TTL.LOGGING_CONFIG;
 
 /**
  * Get current logging configuration from database
@@ -32,7 +33,7 @@ export async function getLoggingConfig(): Promise<LogConfig> {
   const now = Date.now();
 
   // Return cached config if still valid
-  if (configCache && now - cacheTimestamp < CACHE_TTL) {
+  if (configCache && now - cacheTimestamp < LOGGING_CACHE_TTL) {
     return configCache;
   }
 
@@ -42,12 +43,12 @@ export async function getLoggingConfig(): Promise<LogConfig> {
     const config: LogConfig = {
       debugLoggingEnabled: settings?.debugLoggingEnabled ?? false,
       logLevel: settings?.logLevel ?? 'info',
-      maxLogFileSize: settings?.maxLogFileSize ?? 10,
-      maxLogFiles: settings?.maxLogFiles ?? 7,
+      maxLogFileSize: settings?.maxLogFileSize ?? LOGGING_DEFAULTS.MAX_LOG_FILE_SIZE_MB,
+      maxLogFiles: settings?.maxLogFiles ?? LOGGING_DEFAULTS.MAX_LOG_FILES,
       logHttpRequests: settings?.logHttpRequests ?? false,
       logDatabaseQueries: settings?.logDatabaseQueries ?? false,
       logParserOperations: settings?.logParserOperations ?? false,
-      logRetentionDays: settings?.logRetentionDays ?? 7,
+      logRetentionDays: settings?.logRetentionDays ?? LOGGING_DEFAULTS.LOG_RETENTION_DAYS,
     };
 
     // Update cache
@@ -68,12 +69,12 @@ export async function getLoggingConfig(): Promise<LogConfig> {
     return {
       debugLoggingEnabled: false,
       logLevel: 'info',
-      maxLogFileSize: 10,
-      maxLogFiles: 7,
+      maxLogFileSize: LOGGING_DEFAULTS.MAX_LOG_FILE_SIZE_MB,
+      maxLogFiles: LOGGING_DEFAULTS.MAX_LOG_FILES,
       logHttpRequests: false,
       logDatabaseQueries: false,
       logParserOperations: false,
-      logRetentionDays: 7,
+      logRetentionDays: LOGGING_DEFAULTS.LOG_RETENTION_DAYS,
     };
   }
 }
@@ -179,4 +180,16 @@ export async function shouldLogParserOperations(): Promise<boolean> {
 export function invalidateCache(): void {
   configCache = null;
   cacheTimestamp = 0;
+}
+
+/**
+ * Invalidate configuration cache and reinitialize logger streams
+ * Call this after updating logging config to apply changes immediately
+ */
+export async function invalidateCacheAndReinit(): Promise<void> {
+  invalidateCache();
+  
+  // Reinitialize logger streams with new config
+  const { reinitializeCategoryStreams } = await import('../utils/logger');
+  await reinitializeCategoryStreams();
 }

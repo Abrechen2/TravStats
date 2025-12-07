@@ -2,9 +2,10 @@ import Anthropic from '@anthropic-ai/sdk';
 import { IVisionParser, ProviderAvailability, VisionProvider } from '../types';
 import { ParsedBooking } from '../../bookingParser';
 import { normalizeParsedBooking, cleanLLMJsonResponse, getVisionParserPrompt } from '../shared/utils';
-import logger from '../../../utils/logger';
+import logger, { parserVisionLogger } from '../../../utils/logger';
+import { shouldLogParserOperations } from '../../loggingConfig';
 
-const CLAUDE_VISION_MODEL = process.env.CLAUDE_VISION_MODEL || 'claude-3-5-sonnet-20240620';
+const CLAUDE_VISION_MODEL = process.env.CLAUDE_VISION_MODEL || 'claude-3-5-sonnet-20241022';
 
 /**
  * Claude 3.5 Sonnet Vision Parser
@@ -85,8 +86,23 @@ export class ClaudeVisionParser implements IVisionParser {
   }
 
   async parseImage(imageBase64: string, apiKey?: string): Promise<ParsedBooking> {
-    logger.info('[Claude Vision Parser] Starting boarding pass parsing');
-    logger.info({ model: CLAUDE_VISION_MODEL }, '[Claude Vision Parser] Model');
+    const shouldLog = await shouldLogParserOperations();
+    const log = shouldLog ? parserVisionLogger : logger;
+    const startTime = Date.now();
+
+    if (shouldLog) {
+      log.info({
+        operation: 'claude_vision_parse_start',
+        context: {
+          model: CLAUDE_VISION_MODEL,
+          imageSize: imageBase64.length,
+          mediaType: this.detectMediaType(imageBase64),
+        },
+      });
+    } else {
+      logger.info('[Claude Vision Parser] Starting boarding pass parsing');
+      logger.info({ model: CLAUDE_VISION_MODEL }, '[Claude Vision Parser] Model');
+    }
 
     try {
       const client = this.getClient(apiKey);
@@ -95,6 +111,7 @@ export class ClaudeVisionParser implements IVisionParser {
       // Determine image media type from base64 prefix or assume JPEG
       const mediaType = this.detectMediaType(imageBase64);
 
+      const apiStartTime = Date.now();
       const response = await client.messages.create({
         model: CLAUDE_VISION_MODEL,
         max_tokens: 1024,
@@ -119,22 +136,59 @@ export class ClaudeVisionParser implements IVisionParser {
           },
         ],
       });
+      const apiDuration = Date.now() - apiStartTime;
 
       const rawResponse = response.content[0]?.type === 'text' ? response.content[0].text : '';
+      const inputTokens = response.usage.input_tokens;
+      const outputTokens = response.usage.output_tokens;
+      const totalTokens = inputTokens + outputTokens;
 
       if (!rawResponse) {
-        logger.error('[Claude Vision Parser] Empty response from API');
+        if (shouldLog) {
+          log.error({
+            operation: 'claude_vision_parse_empty_response',
+            context: {
+              apiDuration,
+              inputTokens,
+            },
+          });
+        } else {
+          logger.error('[Claude Vision Parser] Empty response from API');
+        }
         throw new Error('Empty response from Claude API');
       }
 
-      logger.debug({ rawResponse }, '[Claude Vision Parser] Raw response (full)');
+      if (shouldLog) {
+        log.debug({
+          operation: 'claude_vision_parse_raw_response',
+          context: {
+            rawResponseLength: rawResponse.length,
+            inputTokens,
+            outputTokens,
+            totalTokens,
+            apiDuration,
+          },
+        });
+      } else {
+        logger.debug({ rawResponse }, '[Claude Vision Parser] Raw response (full)');
+      }
 
       // Clean and parse JSON
       const cleanedResponse = cleanLLMJsonResponse(rawResponse);
 
       const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
-        logger.error('[Claude Vision Parser] No JSON found in response');
+        if (shouldLog) {
+          log.error({
+            operation: 'claude_vision_parse_no_json',
+            context: {
+              rawResponseLength: rawResponse.length,
+              cleanedResponseLength: cleanedResponse.length,
+            },
+          });
+        } else {
+          logger.error('[Claude Vision Parser] No JSON found in response');
+        }
         throw new Error('Invalid response format: No JSON found');
       }
 
@@ -142,37 +196,123 @@ export class ClaudeVisionParser implements IVisionParser {
 
       // Normalize and validate
       const result = normalizeParsedBooking(parsed);
+      const totalDuration = Date.now() - startTime;
 
-      logger.info({
-        flightNumber: result.flightNumber,
-        route: `${result.departureCode} → ${result.arrivalCode}`,
-        missingFields: result.missing.length,
-        tokensUsed: response.usage.input_tokens + response.usage.output_tokens,
-      }, '[Claude Vision Parser] Extraction complete');
+      if (shouldLog) {
+        log.info({
+          operation: 'claude_vision_parse_complete',
+          context: {
+            flightNumber: result.flightNumber,
+            route: `${result.departureCode} → ${result.arrivalCode}`,
+            missingFields: result.missing.length,
+            missingFieldsList: result.missing,
+            inputTokens,
+            outputTokens,
+            totalTokens,
+            apiDuration,
+            totalDuration,
+            performance: {
+              tokensPerSecond: totalTokens / (apiDuration / 1000),
+            },
+          },
+        });
+      } else {
+        logger.info({
+          flightNumber: result.flightNumber,
+          route: `${result.departureCode} → ${result.arrivalCode}`,
+          missingFields: result.missing.length,
+          tokensUsed: totalTokens,
+        }, '[Claude Vision Parser] Extraction complete');
+      }
 
       return result;
     } catch (error: any) {
+      const totalDuration = Date.now() - startTime;
+      const errorContext = {
+        model: CLAUDE_VISION_MODEL,
+        imageSize: imageBase64.length,
+        totalDuration,
+        status: error?.status,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorStack: error instanceof Error ? error.stack : undefined,
+      };
+
       if (error?.status === 401) {
-        logger.error('[Claude Vision Parser] Invalid API key');
+        if (shouldLog) {
+          log.error({
+            operation: 'claude_vision_parse_auth_error',
+            context: errorContext,
+          });
+        } else {
+          logger.error('[Claude Vision Parser] Invalid API key');
+        }
         throw new Error('Invalid Claude API key');
       }
 
+      if (error?.status === 404) {
+        const modelError = error?.error?.error?.message || '';
+        if (shouldLog) {
+          log.error({
+            operation: 'claude_vision_parse_model_not_found',
+            context: {
+              ...errorContext,
+              modelError,
+            },
+          });
+        } else {
+          logger.error({ 
+            error, 
+            model: CLAUDE_VISION_MODEL,
+            message: modelError 
+          }, '[Claude Vision Parser] Model not found - check CLAUDE_VISION_MODEL environment variable');
+        }
+        throw new Error(`Claude model not found: ${modelError || CLAUDE_VISION_MODEL}. Please check your CLAUDE_VISION_MODEL environment variable or API key permissions.`);
+      }
+
       if (error?.status === 429) {
-        logger.error('[Claude Vision Parser] Rate limit exceeded');
+        if (shouldLog) {
+          log.error({
+            operation: 'claude_vision_parse_rate_limit',
+            context: errorContext,
+          });
+        } else {
+          logger.error('[Claude Vision Parser] Rate limit exceeded');
+        }
         throw new Error('Claude API rate limit exceeded. Please try again later.');
       }
 
       if (error?.status === 400) {
-        logger.error({ error: error.message }, '[Claude Vision Parser] Bad request');
+        if (shouldLog) {
+          log.error({
+            operation: 'claude_vision_parse_bad_request',
+            context: errorContext,
+          });
+        } else {
+          logger.error({ error: error.message }, '[Claude Vision Parser] Bad request');
+        }
         throw new Error(`Claude API error: ${error.message}`);
       }
 
       if (error instanceof SyntaxError) {
-        logger.error({ error: error.message }, '[Claude Vision Parser] JSON parse error');
+        if (shouldLog) {
+          log.error({
+            operation: 'claude_vision_parse_json_error',
+            context: errorContext,
+          });
+        } else {
+          logger.error({ error: error.message }, '[Claude Vision Parser] JSON parse error');
+        }
         throw new Error('Failed to parse Claude response as JSON');
       }
 
-      logger.error({ error }, '[Claude Vision Parser] Unexpected error');
+      if (shouldLog) {
+        log.error({
+          operation: 'claude_vision_parse_unexpected_error',
+          context: errorContext,
+        });
+      } else {
+        logger.error({ error }, '[Claude Vision Parser] Unexpected error');
+      }
       throw new Error(`Claude Vision parsing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }

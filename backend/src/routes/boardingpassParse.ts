@@ -4,6 +4,8 @@ import { z } from 'zod';
 import logger from '../utils/logger';
 import { getParserConfig, parseBoardingPass, getAvailableProviders } from '../services/parsers/factory';
 import { prisma } from '../db';
+import { validateBoardingPassImageBase64 } from '../utils/fileValidation';
+import { AppError } from '../middleware/errorHandler';
 
 const router = Router();
 
@@ -29,23 +31,34 @@ const parseBoardingpassSchema = z.object({
 router.post('/parse-boardingpass', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const { imageBase64, enrichWithApi } = parseBoardingpassSchema.parse(req.body);
-    const userId = req.userId;
+    const userId = req.userId!;
+
+    // Validate image using magic numbers
+    const validation = validateBoardingPassImageBase64(imageBase64);
+    if (!validation.valid) {
+      logger.warn({
+        operation: 'boardingpass_validation_failed',
+        message: 'Boarding pass image validation failed',
+        context: {
+          userId,
+          reason: validation.reason,
+        },
+      });
+      return res.status(400).json({
+        error: 'Validation failed',
+        message: `Image validation failed: ${validation.reason}`,
+      });
+    }
 
     logger.info(`[Boarding Pass Parse] Starting parsing for user ${userId}`);
 
-    // Get user settings for parser configuration
-    const userSettings = await prisma.userSettings.findUnique({
-      where: { userId },
-      select: {
-        preferredVisionParser: true,
-        visionFallbackChain: true,
-        openaiApiKey: true,
-        claudeApiKey: true,
-      },
-    });
+    // Get user and admin settings for parser configuration (with decrypted API keys)
+    const { getUserParserSettings, getAdminParserSettings } = await import('../services/parserSettings');
+    const userSettings = await getUserParserSettings(userId);
+    const adminSettings = await getAdminParserSettings();
 
     // Get parser config
-    const config = getParserConfig(userSettings || undefined);
+    const config = getParserConfig(userSettings || undefined, adminSettings || undefined);
 
     // Parse boarding pass
     const result = await parseBoardingPass(imageBase64, config);
@@ -130,19 +143,15 @@ router.post('/parse-boardingpass', authenticate, async (req: AuthRequest, res: R
  */
 router.get('/parse-boardingpass/providers', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.userId;
+    const userId = req.userId!;
 
-    // Get user settings
-    const userSettings = await prisma.userSettings.findUnique({
-      where: { userId },
-      select: {
-        openaiApiKey: true,
-        claudeApiKey: true,
-      },
-    });
+    // Get user and admin settings (with decrypted API keys)
+    const { getUserParserSettings, getAdminParserSettings } = await import('../services/parserSettings');
+    const userSettings = await getUserParserSettings(userId);
+    const adminSettings = await getAdminParserSettings();
 
     // Get parser config
-    const config = getParserConfig(userSettings || undefined);
+    const config = getParserConfig(userSettings || undefined, adminSettings || undefined);
 
     // Get available providers
     const providers = await getAvailableProviders(config);
@@ -166,18 +175,14 @@ router.get('/parse-boardingpass/providers', authenticate, async (req: AuthReques
  */
 router.get('/parse-boardingpass/check', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.userId;
+    const userId = req.userId!;
 
-    const userSettings = await prisma.userSettings.findUnique({
-      where: { userId },
-      select: {
-        preferredVisionParser: true,
-        openaiApiKey: true,
-        claudeApiKey: true,
-      },
-    });
+    // Get user and admin settings (with decrypted API keys)
+    const { getUserParserSettings, getAdminParserSettings } = await import('../services/parserSettings');
+    const userSettings = await getUserParserSettings(userId);
+    const adminSettings = await getAdminParserSettings();
 
-    const config = getParserConfig(userSettings || undefined);
+    const config = getParserConfig(userSettings || undefined, adminSettings || undefined);
     const providers = await getAvailableProviders(config);
 
     // Find the preferred provider or first available

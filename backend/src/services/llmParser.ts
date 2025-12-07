@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { ParsedBooking } from './bookingParser';
+import logger from '../utils/logger';
 
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2:3b';
@@ -23,9 +24,11 @@ export async function parseEmailWithLLM(
   text: string,
   html?: string
 ): Promise<ParsedBooking[]> {
-  console.log('[LLM Parser] Starting email parsing with Ollama');
-  console.log('[LLM Parser] Model:', OLLAMA_MODEL);
-  console.log('[LLM Parser] URL:', OLLAMA_URL);
+  logger.debug({
+    operation: 'llm_parser_start',
+    message: 'Starting email parsing with Ollama',
+    context: { model: OLLAMA_MODEL, url: OLLAMA_URL },
+  });
 
   // Clean the text to remove excessive whitespace and null bytes
   const cleanText = text
@@ -89,7 +92,10 @@ Example for round trip (MUC→LUX and LUX→MUC):
 ]`;
 
   try {
-    console.log('[LLM Parser] Sending request to Ollama...');
+    logger.debug({
+      operation: 'llm_parser_request',
+      message: 'Sending request to Ollama',
+    });
     const startTime = Date.now();
 
     const response = await axios.post<OllamaResponse>(
@@ -110,7 +116,11 @@ Example for round trip (MUC→LUX and LUX→MUC):
     );
 
     const duration = Date.now() - startTime;
-    console.log(`[LLM Parser] Response received in ${duration}ms`);
+    logger.debug({
+      operation: 'llm_parser_response',
+      message: 'Response received from Ollama',
+      performance: { duration },
+    });
 
     // Parse the JSON response
     let parsedData: any;
@@ -121,15 +131,30 @@ Example for round trip (MUC→LUX and LUX→MUC):
         jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '');
       }
       parsedData = JSON.parse(jsonText);
-      console.log('[LLM Parser] Successfully parsed LLM response:', parsedData);
+      logger.debug({
+        operation: 'llm_parser_parse',
+        message: 'Successfully parsed LLM response',
+        context: { flightCount: Array.isArray(parsedData) ? parsedData.length : 1 },
+      });
     } catch (parseError) {
-      console.error('[LLM Parser] Failed to parse LLM response:', response.data.response);
+      logger.error({
+        operation: 'llm_parser_parse_error',
+        message: 'Failed to parse LLM response',
+        context: { responsePreview: response.data.response.substring(0, 500) },
+        error: {
+          message: parseError instanceof Error ? parseError.message : 'Unknown error',
+        },
+      });
       throw new Error('LLM returned invalid JSON');
     }
 
     // Ensure we have an array
     const flightsArray = Array.isArray(parsedData) ? parsedData : [parsedData];
-    console.log('[LLM Parser] Found', flightsArray.length, 'flight(s)');
+    logger.debug({
+      operation: 'llm_parser_flights_found',
+      message: `Found ${flightsArray.length} flight(s)`,
+      context: { flightCount: flightsArray.length },
+    });
 
     // Build ParsedBooking results for each flight
     const results: ParsedBooking[] = flightsArray.map((flight: any, index: number) => {
@@ -156,22 +181,59 @@ Example for round trip (MUC→LUX and LUX→MUC):
         missing,
       };
 
-      console.log(`[LLM Parser] Flight ${index + 1}/${flightsArray.length}:`, result);
+      logger.debug({
+        operation: 'llm_parser_flight_processed',
+        message: `Processed flight ${index + 1}/${flightsArray.length}`,
+        context: {
+          flightNumber: result.flightNumber,
+          departureCode: result.departureCode,
+          arrivalCode: result.arrivalCode,
+          missingFields: result.missing,
+        },
+      });
       return result;
     });
 
-    console.log('[LLM Parser] Final results:', results.length, 'flight(s) extracted');
+    logger.info({
+      operation: 'llm_parser_complete',
+      message: `Successfully extracted ${results.length} flight(s)`,
+      context: { flightCount: results.length },
+    });
     return results;
   } catch (error) {
     if (axios.isAxiosError(error)) {
       if (error.code === 'ECONNREFUSED') {
-        console.error('[LLM Parser] Cannot connect to Ollama. Is it running?');
+        logger.error({
+          operation: 'llm_parser_connection_error',
+          message: 'Cannot connect to Ollama service',
+          context: { url: OLLAMA_URL },
+          error: {
+            message: 'Ollama service is not available',
+            code: error.code,
+          },
+        });
         throw new Error('Ollama service is not available');
       }
-      console.error('[LLM Parser] Axios error:', error.message);
+      logger.error({
+        operation: 'llm_parser_axios_error',
+        message: 'Ollama API error',
+        context: { url: OLLAMA_URL },
+        error: {
+          message: error.message,
+          code: error.code,
+          status: error.response?.status,
+        },
+      });
       throw new Error(`Ollama API error: ${error.message}`);
     }
-    console.error('[LLM Parser] Unexpected error:', error);
+    logger.error({
+      operation: 'llm_parser_unexpected_error',
+      message: 'Unexpected error in LLM parser',
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      },
+    });
     throw error;
   }
 }
@@ -195,15 +257,22 @@ export async function isOllamaAvailable(): Promise<boolean> {
  */
 export async function ensureModelAvailable(): Promise<boolean> {
   try {
-    console.log(`[LLM Parser] Checking if model ${OLLAMA_MODEL} is available...`);
+    logger.debug({
+      operation: 'llm_parser_check_model',
+      message: `Checking if model ${OLLAMA_MODEL} is available`,
+      context: { model: OLLAMA_MODEL },
+    });
     const response = await axios.get(`${OLLAMA_URL}/api/tags`);
 
     const models = response.data.models || [];
     const modelExists = models.some((m: any) => m.name === OLLAMA_MODEL);
 
     if (!modelExists) {
-      console.log(`[LLM Parser] Model ${OLLAMA_MODEL} not found. Pulling...`);
-      console.log('[LLM Parser] This may take several minutes on first run.');
+      logger.info({
+        operation: 'llm_parser_pull_model',
+        message: `Model ${OLLAMA_MODEL} not found, pulling...`,
+        context: { model: OLLAMA_MODEL },
+      });
 
       // Pull the model (this can take a while)
       await axios.post(`${OLLAMA_URL}/api/pull`, {
@@ -213,14 +282,30 @@ export async function ensureModelAvailable(): Promise<boolean> {
         timeout: 600000, // 10 minute timeout for downloading
       });
 
-      console.log(`[LLM Parser] Model ${OLLAMA_MODEL} pulled successfully`);
+      logger.info({
+        operation: 'llm_parser_model_pulled',
+        message: `Model ${OLLAMA_MODEL} pulled successfully`,
+        context: { model: OLLAMA_MODEL },
+      });
     } else {
-      console.log(`[LLM Parser] Model ${OLLAMA_MODEL} is already available`);
+      logger.debug({
+        operation: 'llm_parser_model_available',
+        message: `Model ${OLLAMA_MODEL} is already available`,
+        context: { model: OLLAMA_MODEL },
+      });
     }
 
     return true;
   } catch (error) {
-    console.error('[LLM Parser] Failed to ensure model availability:', error);
+    logger.error({
+      operation: 'llm_parser_model_error',
+      message: 'Failed to ensure model availability',
+      context: { model: OLLAMA_MODEL },
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      },
+    });
     return false;
   }
 }

@@ -8,8 +8,11 @@ import {
   ParserResult,
 } from './types';
 import { ParsedBooking } from '../bookingParser';
-import logger from '../../utils/logger';
+import logger, { parserFactoryLogger, parserVisionLogger, parserTextLogger } from '../../utils/logger';
+import { shouldLogParserOperations } from '../loggingConfig';
+import { decryptApiKey } from '../../utils/encryption';
 import { extractFlightDataFromText } from './shared/utils';
+import { collectLowQualityFeedback } from '../parserFeedback';
 
 // Import all vision parsers
 import { getOllamaVisionParser } from './vision/ollamaVisionParser';
@@ -121,15 +124,25 @@ function parseFallbackChain<T extends string>(chain: string | undefined, default
 
 /**
  * Get parser configuration from environment and user settings
+ * @param userSettings - User settings (API keys should already be decrypted)
+ * @param adminSettings - Optional admin settings (API keys should already be decrypted)
  */
-export function getParserConfig(userSettings?: {
-  preferredVisionParser?: string | null;
-  preferredTextParser?: string | null;
-  visionFallbackChain?: string | null;
-  textFallbackChain?: string | null;
-  openaiApiKey?: string | null;
-  claudeApiKey?: string | null;
-}): ParserConfig {
+export function getParserConfig(
+  userSettings?: {
+    preferredVisionParser?: string | null;
+    preferredTextParser?: string | null;
+    visionFallbackChain?: string | null;
+    textFallbackChain?: string | null;
+    openaiApiKey?: string | null;
+    claudeApiKey?: string | null;
+  },
+  adminSettings?: {
+    globalOpenaiApiKey?: string | null;
+    globalClaudeApiKey?: string | null;
+  }
+): ParserConfig {
+  // Note: API keys in userSettings and adminSettings should already be decrypted when passed to this function
+  // Priority: userSettings API keys > adminSettings global keys > environment variables
   return {
     visionProvider: (userSettings?.preferredVisionParser as VisionProvider | 'auto') || 'auto',
     textProvider: (userSettings?.preferredTextParser as TextProvider | 'auto') || 'auto',
@@ -144,10 +157,10 @@ export function getParserConfig(userSettings?: {
     ollamaUrl: process.env.OLLAMA_URL,
     ollamaModel: process.env.OLLAMA_MODEL,
     ollamaVisionModel: process.env.OLLAMA_VISION_MODEL,
-    openaiApiKey: userSettings?.openaiApiKey || process.env.OPENAI_API_KEY,
+    openaiApiKey: userSettings?.openaiApiKey || adminSettings?.globalOpenaiApiKey || process.env.OPENAI_API_KEY,
     openaiModel: process.env.OPENAI_MODEL,
     openaiVisionModel: process.env.OPENAI_VISION_MODEL,
-    claudeApiKey: userSettings?.claudeApiKey || process.env.CLAUDE_API_KEY,
+    claudeApiKey: userSettings?.claudeApiKey || adminSettings?.globalClaudeApiKey || process.env.CLAUDE_API_KEY,
     claudeModel: process.env.CLAUDE_MODEL,
     claudeVisionModel: process.env.CLAUDE_VISION_MODEL,
   };
@@ -159,13 +172,28 @@ export function getParserConfig(userSettings?: {
 export async function getVisionParser(
   config: ParserConfig
 ): Promise<{ parser: IVisionParser; provider: VisionProvider; fallbackUsed: boolean }> {
-  logger.info(
-    {
-      preferred: config.visionProvider,
-      fallbackChain: config.visionFallbacks,
-    },
-    '[Parser Factory] Resolving vision parser'
-  );
+  const shouldLog = await shouldLogParserOperations();
+  const log = shouldLog ? parserFactoryLogger : logger;
+  const visionLog = shouldLog ? parserVisionLogger : logger;
+
+  if (shouldLog) {
+    log.info({
+      operation: 'get_vision_parser_start',
+      context: {
+        preferred: config.visionProvider,
+        fallbackChain: config.visionFallbacks,
+        mode: config.visionProvider === 'auto' ? 'auto' : 'manual',
+      },
+    });
+  } else {
+    logger.info(
+      {
+        preferred: config.visionProvider,
+        fallbackChain: config.visionFallbacks,
+      },
+      '[Parser Factory] Resolving vision parser'
+    );
+  }
 
   // If specific provider requested (not auto)
   if (config.visionProvider !== 'auto') {
@@ -176,11 +204,33 @@ export async function getVisionParser(
     const availability = await checkProviderAvailability(parser, apiKey);
 
     if (availability.available) {
-      logger.info(`[Parser Factory] Using requested vision parser: ${config.visionProvider}`);
+      if (shouldLog) {
+        visionLog.info({
+          operation: 'vision_parser_selected',
+          context: {
+            provider: config.visionProvider,
+            fallbackUsed: false,
+            availability: availability.status,
+          },
+        });
+      } else {
+        logger.info(`[Parser Factory] Using requested vision parser: ${config.visionProvider}`);
+      }
       return { parser, provider: config.visionProvider, fallbackUsed: false };
     }
 
-    logger.warn(`[Parser Factory] Requested vision parser '${config.visionProvider}' unavailable: ${availability.reason}`);
+    if (shouldLog) {
+      visionLog.warn({
+        operation: 'vision_parser_unavailable',
+        context: {
+          provider: config.visionProvider,
+          reason: availability.reason,
+          availability: availability.status,
+        },
+      });
+    } else {
+      logger.warn(`[Parser Factory] Requested vision parser '${config.visionProvider}' unavailable: ${availability.reason}`);
+    }
   }
 
   // Auto mode or fallback: try each provider in chain
@@ -193,15 +243,48 @@ export async function getVisionParser(
 
     if (availability.available) {
       const fallbackUsed = config.visionProvider !== 'auto' && config.visionProvider !== provider;
-      logger.info(`[Parser Factory] Using vision parser: ${provider}${fallbackUsed ? ' (fallback)' : ''}`);
+      if (shouldLog) {
+        visionLog.info({
+          operation: 'vision_parser_selected',
+          context: {
+            provider,
+            fallbackUsed,
+            availability: availability.status,
+            requestedProvider: config.visionProvider,
+          },
+        });
+      } else {
+        logger.info(`[Parser Factory] Using vision parser: ${provider}${fallbackUsed ? ' (fallback)' : ''}`);
+      }
       return { parser, provider, fallbackUsed };
     }
 
-    logger.debug(`[Parser Factory] Vision parser '${provider}' unavailable: ${availability.reason}`);
+    if (shouldLog) {
+      visionLog.debug({
+        operation: 'vision_parser_skipped',
+        context: {
+          provider,
+          reason: availability.reason,
+          availability: availability.status,
+        },
+      });
+    } else {
+      logger.debug(`[Parser Factory] Vision parser '${provider}' unavailable: ${availability.reason}`);
+    }
   }
 
   // Ultimate fallback: manual parser (always available)
-  logger.warn('[Parser Factory] All vision parsers unavailable, using manual fallback');
+  if (shouldLog) {
+    visionLog.warn({
+      operation: 'vision_parser_fallback_manual',
+      context: {
+        requestedProvider: config.visionProvider,
+        triedProviders: config.visionFallbacks,
+      },
+    });
+  } else {
+    logger.warn('[Parser Factory] All vision parsers unavailable, using manual fallback');
+  }
   const manualParser = getManualParser();
   return { parser: manualParser, provider: 'manual', fallbackUsed: true };
 }
@@ -212,13 +295,28 @@ export async function getVisionParser(
 export async function getTextParser(
   config: ParserConfig
 ): Promise<{ parser: ITextParser; provider: TextProvider; fallbackUsed: boolean }> {
-  logger.info(
-    {
-      preferred: config.textProvider,
-      fallbackChain: config.textFallbacks,
-    },
-    '[Parser Factory] Resolving text parser'
-  );
+  const shouldLog = await shouldLogParserOperations();
+  const log = shouldLog ? parserFactoryLogger : logger;
+  const textLog = shouldLog ? parserTextLogger : logger;
+
+  if (shouldLog) {
+    log.info({
+      operation: 'get_text_parser_start',
+      context: {
+        preferred: config.textProvider,
+        fallbackChain: config.textFallbacks,
+        mode: config.textProvider === 'auto' ? 'auto' : 'manual',
+      },
+    });
+  } else {
+    logger.info(
+      {
+        preferred: config.textProvider,
+        fallbackChain: config.textFallbacks,
+      },
+      '[Parser Factory] Resolving text parser'
+    );
+  }
 
   // If specific provider requested (not auto)
   if (config.textProvider !== 'auto') {
@@ -229,11 +327,33 @@ export async function getTextParser(
     const availability = await checkProviderAvailability(parser, apiKey);
 
     if (availability.available) {
-      logger.info(`[Parser Factory] Using requested text parser: ${config.textProvider}`);
+      if (shouldLog) {
+        textLog.info({
+          operation: 'text_parser_selected',
+          context: {
+            provider: config.textProvider,
+            fallbackUsed: false,
+            availability: availability.status,
+          },
+        });
+      } else {
+        logger.info(`[Parser Factory] Using requested text parser: ${config.textProvider}`);
+      }
       return { parser, provider: config.textProvider, fallbackUsed: false };
     }
 
-    logger.warn(`[Parser Factory] Requested text parser '${config.textProvider}' unavailable: ${availability.reason}`);
+    if (shouldLog) {
+      textLog.warn({
+        operation: 'text_parser_unavailable',
+        context: {
+          provider: config.textProvider,
+          reason: availability.reason,
+          availability: availability.status,
+        },
+      });
+    } else {
+      logger.warn(`[Parser Factory] Requested text parser '${config.textProvider}' unavailable: ${availability.reason}`);
+    }
   }
 
   // Auto mode or fallback: try each provider in chain
@@ -246,17 +366,113 @@ export async function getTextParser(
 
     if (availability.available) {
       const fallbackUsed = config.textProvider !== 'auto' && config.textProvider !== provider;
-      logger.info(`[Parser Factory] Using text parser: ${provider}${fallbackUsed ? ' (fallback)' : ''}`);
+      if (shouldLog) {
+        textLog.info({
+          operation: 'text_parser_selected',
+          context: {
+            provider,
+            fallbackUsed,
+            availability: availability.status,
+            requestedProvider: config.textProvider,
+          },
+        });
+      } else {
+        logger.info(`[Parser Factory] Using text parser: ${provider}${fallbackUsed ? ' (fallback)' : ''}`);
+      }
       return { parser, provider, fallbackUsed };
     }
 
-    logger.debug(`[Parser Factory] Text parser '${provider}' unavailable: ${availability.reason}`);
+    if (shouldLog) {
+      textLog.debug({
+        operation: 'text_parser_skipped',
+        context: {
+          provider,
+          reason: availability.reason,
+          availability: availability.status,
+        },
+      });
+    } else {
+      logger.debug(`[Parser Factory] Text parser '${provider}' unavailable: ${availability.reason}`);
+    }
   }
 
   // Ultimate fallback: regex parser (always available)
-  logger.warn('[Parser Factory] All text parsers unavailable, using regex fallback');
+  if (shouldLog) {
+    textLog.warn({
+      operation: 'text_parser_fallback_regex',
+      context: {
+        requestedProvider: config.textProvider,
+        triedProviders: config.textFallbacks,
+      },
+    });
+  } else {
+    logger.warn('[Parser Factory] All text parsers unavailable, using regex fallback');
+  }
   const regexParser = getRegexParser();
   return { parser: regexParser, provider: 'regex', fallbackUsed: true };
+}
+
+/**
+ * Calculate quality score for parsed booking (0-100)
+ * Higher score = better quality
+ */
+function calculateParserQuality(flights: ParsedBooking[]): number {
+  if (flights.length === 0) return 0;
+
+  let totalScore = 0;
+  for (const flight of flights) {
+    let score = 0;
+    const maxScore = 100;
+
+    // Critical fields (40 points total)
+    if (flight.flightNumber) score += 10;
+    if (flight.departureCode) score += 10;
+    if (flight.arrivalCode) score += 10;
+    if (flight.departureTime) score += 10;
+
+    // Important fields (30 points total)
+    if (flight.arrivalTime) score += 10;
+    if (flight.pnr || flight.bookingReference) score += 10;
+    if (flight.seat) score += 5;
+    if (flight.gate) score += 5;
+
+    // Optional fields (30 points total)
+    if (flight.airline) score += 5;
+    if (flight.terminal) score += 5;
+    if (flight.seatClass) score += 5;
+    if (flight.aircraft) score += 5;
+    if (flight.price) score += 5;
+    if (flight.ticketNumber) score += 5;
+
+    // Penalty for missing critical fields
+    const criticalMissing = ['flightNumber', 'departureCode', 'arrivalCode', 'departureTime']
+      .filter(f => flight.missing.includes(f)).length;
+    score -= criticalMissing * 10;
+
+    totalScore += Math.max(0, Math.min(100, score));
+  }
+
+  return Math.round(totalScore / flights.length);
+}
+
+/**
+ * Check if result quality is too low and should trigger LLM fallback
+ */
+function shouldUseLLMFallback(
+  flights: ParsedBooking[],
+  provider: TextProvider,
+  qualityThreshold: number = 40
+): boolean {
+  // Only check for regex parser (low quality expected)
+  if (provider !== 'regex') return false;
+
+  const quality = calculateParserQuality(flights);
+  logger.debug(
+    { quality, threshold: qualityThreshold, provider },
+    '[Parser Factory] Quality check for LLM fallback'
+  );
+
+  return quality < qualityThreshold;
 }
 
 function isSuspiciousBoardingPassResult(flight: ParsedBooking): boolean {
@@ -307,6 +523,21 @@ export async function parseBoardingPass(
   config: ParserConfig
 ): Promise<ParserResult> {
   const errors: Array<{ provider: VisionProvider; error: string }> = [];
+  const shouldLog = await shouldLogParserOperations();
+  const log = shouldLog ? parserFactoryLogger : logger;
+  const visionLog = shouldLog ? parserVisionLogger : logger;
+  const startTime = Date.now();
+
+  if (shouldLog) {
+    log.info({
+      operation: 'parse_boarding_pass_start',
+      context: {
+        imageSize: imageBase64.length,
+        requestedProvider: config.visionProvider,
+        fallbackChain: config.visionFallbacks,
+      },
+    });
+  }
 
   // Build the provider chain: preferred (if not auto) + fallbacks
   const providerChain: VisionProvider[] =
@@ -324,43 +555,110 @@ export async function parseBoardingPass(
       // Check availability first
       const availability = await checkProviderAvailability(parser, apiKey);
       if (!availability.available) {
-        logger.debug(`[Parser Factory] Skipping unavailable vision parser: ${provider} - ${availability.reason}`);
+        if (shouldLog) {
+          visionLog.debug({
+            operation: 'vision_parser_skipped',
+            context: {
+              provider,
+              reason: availability.reason,
+              availability: availability.status,
+            },
+          });
+        } else {
+          logger.debug(`[Parser Factory] Skipping unavailable vision parser: ${provider} - ${availability.reason}`);
+        }
         errors.push({ provider, error: availability.reason || 'Unavailable' });
         continue;
       }
 
       // Try parsing
-      logger.info(`[Parser Factory] Attempting vision parse with: ${provider}`);
+      const parseStartTime = Date.now();
+      if (shouldLog) {
+        visionLog.info({
+          operation: 'vision_parse_attempt',
+          context: {
+            provider,
+            imageSize: imageBase64.length,
+            availability: availability.status,
+          },
+        });
+      } else {
+        logger.info(`[Parser Factory] Attempting vision parse with: ${provider}`);
+      }
+      
       const flight = await parser.parseImage(imageBase64, apiKey);
+      const parseDuration = Date.now() - parseStartTime;
 
       const fallbackUsed = config.visionProvider !== 'auto' && config.visionProvider !== provider;
-      logger.info(`[Parser Factory] Vision parse successful with: ${provider}${fallbackUsed ? ' (fallback)' : ''}`);
+      
+      if (shouldLog) {
+        visionLog.info({
+          operation: 'vision_parse_success',
+          context: {
+            provider,
+            fallbackUsed,
+            parseDuration,
+            flightNumber: flight.flightNumber,
+            route: `${flight.departureCode} → ${flight.arrivalCode}`,
+            missingFields: flight.missing.length,
+            quality: calculateParserQuality([flight]),
+          },
+        });
+      } else {
+        logger.info(`[Parser Factory] Vision parse successful with: ${provider}${fallbackUsed ? ' (fallback)' : ''}`);
+      }
 
       let finalFlight = flight;
       let finalProvider: VisionProvider = provider;
       let finalFallbackUsed = fallbackUsed;
 
       if (provider !== 'tesseract' && isSuspiciousBoardingPassResult(flight)) {
-        logger.warn(
-          {
-            missingFields: flight.missing,
-            provider,
-          },
-          '[Parser Factory] Suspicious vision result detected, attempting Tesseract fallback'
-        );
+        if (shouldLog) {
+          visionLog.warn({
+            operation: 'vision_result_suspicious',
+            context: {
+              provider,
+              missingFields: flight.missing,
+              quality: calculateParserQuality([flight]),
+            },
+          });
+        } else {
+          logger.warn(
+            {
+              missingFields: flight.missing,
+              provider,
+            },
+            '[Parser Factory] Suspicious vision result detected, attempting Tesseract fallback'
+          );
+        }
 
         try {
           const tesseractParser = getVisionParserInstance('tesseract');
           const availability = await checkProviderAvailability(tesseractParser);
 
           if (availability.available) {
+            const tesseractStartTime = Date.now();
             const tesseractFlight = await tesseractParser.parseImage(imageBase64);
-            logger.info(
-              {
-                missingFields: tesseractFlight.missing,
-              },
-              '[Parser Factory] Tesseract fallback completed'
-            );
+            const tesseractDuration = Date.now() - tesseractStartTime;
+            
+            if (shouldLog) {
+              visionLog.info({
+                operation: 'tesseract_fallback_completed',
+                context: {
+                  originalMissing: flight.missing.length,
+                  tesseractMissing: tesseractFlight.missing.length,
+                  tesseractDuration,
+                  improved: tesseractFlight.missing.length < finalFlight.missing.length,
+                },
+              });
+            } else {
+              logger.info(
+                {
+                  missingFields: tesseractFlight.missing,
+                },
+                '[Parser Factory] Tesseract fallback completed'
+              );
+            }
 
             if (tesseractFlight.missing.length < finalFlight.missing.length) {
               finalFlight = tesseractFlight;
@@ -368,11 +666,43 @@ export async function parseBoardingPass(
               finalFallbackUsed = true;
             }
           } else {
-            logger.debug('[Parser Factory] Tesseract unavailable for fallback');
+            if (shouldLog) {
+              visionLog.debug({
+                operation: 'tesseract_unavailable',
+                context: {
+                  reason: availability.reason,
+                },
+              });
+            } else {
+              logger.debug('[Parser Factory] Tesseract unavailable for fallback');
+            }
           }
         } catch (fallbackError) {
-          logger.warn({ fallbackError }, '[Parser Factory] Tesseract fallback failed');
+          if (shouldLog) {
+            visionLog.warn({
+              operation: 'tesseract_fallback_failed',
+              context: {
+                error: fallbackError instanceof Error ? fallbackError.message : 'Unknown error',
+              },
+            });
+          } else {
+            logger.warn({ fallbackError }, '[Parser Factory] Tesseract fallback failed');
+          }
         }
+      }
+
+      const totalDuration = Date.now() - startTime;
+      if (shouldLog) {
+        log.info({
+          operation: 'parse_boarding_pass_complete',
+          context: {
+            provider: finalProvider,
+            fallbackUsed: finalFallbackUsed,
+            totalDuration,
+            quality: calculateParserQuality([finalFlight]),
+            missingFields: finalFlight.missing.length,
+          },
+        });
       }
 
       return {
@@ -382,7 +712,18 @@ export async function parseBoardingPass(
       };
     } catch (error: any) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      logger.warn(`[Parser Factory] Vision parser '${provider}' failed: ${errorMsg}`);
+      if (shouldLog) {
+        visionLog.warn({
+          operation: 'vision_parse_failed',
+          context: {
+            provider,
+            error: errorMsg,
+            stack: error instanceof Error ? error.stack : undefined,
+          },
+        });
+      } else {
+        logger.warn(`[Parser Factory] Vision parser '${provider}' failed: ${errorMsg}`);
+      }
       errors.push({ provider, error: errorMsg });
 
       // Invalidate cache for this provider to prevent future attempts in this session
@@ -395,7 +736,19 @@ export async function parseBoardingPass(
   }
 
   // All providers failed
-  logger.error({ errors }, '[Parser Factory] All vision parsers failed');
+  const totalDuration = Date.now() - startTime;
+  if (shouldLog) {
+    log.error({
+      operation: 'parse_boarding_pass_failed',
+      context: {
+        errors,
+        totalDuration,
+        triedProviders: providerChain,
+      },
+    });
+  } else {
+    logger.error({ errors }, '[Parser Factory] All vision parsers failed');
+  }
   throw new Error(
     `All vision parsers failed. Errors: ${errors.map(e => `${e.provider}: ${e.error}`).join('; ')}`
   );
@@ -411,6 +764,23 @@ export async function parseEmail(
   config: ParserConfig
 ): Promise<ParserResult> {
   const errors: Array<{ provider: TextProvider; error: string }> = [];
+  const shouldLog = await shouldLogParserOperations();
+  const log = shouldLog ? parserFactoryLogger : logger;
+  const textLog = shouldLog ? parserTextLogger : logger;
+  const startTime = Date.now();
+
+  if (shouldLog) {
+    log.info({
+      operation: 'parse_email_start',
+      context: {
+        subject,
+        textLength: text.length,
+        htmlLength: html ? html.length : 0,
+        requestedProvider: config.textProvider,
+        fallbackChain: config.textFallbacks,
+      },
+    });
+  }
 
   // Build the provider chain: preferred (if not auto) + fallbacks
   const providerChain: TextProvider[] =
@@ -428,14 +798,40 @@ export async function parseEmail(
       // Check availability first
       const availability = await checkProviderAvailability(parser, apiKey);
       if (!availability.available) {
-        logger.debug(`[Parser Factory] Skipping unavailable text parser: ${provider} - ${availability.reason}`);
+        if (shouldLog) {
+          textLog.debug({
+            operation: 'text_parser_skipped',
+            context: {
+              provider,
+              reason: availability.reason,
+              availability: availability.status,
+            },
+          });
+        } else {
+          logger.debug(`[Parser Factory] Skipping unavailable text parser: ${provider} - ${availability.reason}`);
+        }
         errors.push({ provider, error: availability.reason || 'Unavailable' });
         continue;
       }
 
       // Try parsing
-      logger.info(`[Parser Factory] Attempting email parse with: ${provider}`);
+      const parseStartTime = Date.now();
+      if (shouldLog) {
+        textLog.info({
+          operation: 'text_parse_attempt',
+          context: {
+            provider,
+            textLength: text.length,
+            htmlLength: html ? html.length : 0,
+            availability: availability.status,
+          },
+        });
+      } else {
+        logger.info(`[Parser Factory] Attempting email parse with: ${provider}`);
+      }
+      
       const flights = await parser.parseEmail(subject, text, html, apiKey);
+      const parseDuration = Date.now() - parseStartTime;
 
       if (!flights || flights.length === 0) {
         throw new Error('Parser returned no flights');
@@ -443,17 +839,203 @@ export async function parseEmail(
 
       const enhancedFlights = applyEmailRegexPostProcessing(flights, subject, text, html);
 
-      const fallbackUsed = config.textProvider !== 'auto' && config.textProvider !== provider;
-      logger.info(`[Parser Factory] Email parse successful with: ${provider}${fallbackUsed ? ' (fallback)' : ''}`);
+      // Check quality and auto-fallback to LLM if regex quality is too low
+      let finalFlights = enhancedFlights;
+      let finalProvider = provider;
+      let finalFallbackUsed = config.textProvider !== 'auto' && config.textProvider !== provider;
+
+      if (shouldUseLLMFallback(enhancedFlights, provider, 40)) {
+        const regexQuality = calculateParserQuality(enhancedFlights);
+        if (shouldLog) {
+          textLog.warn({
+            operation: 'text_parse_quality_low',
+            context: {
+              provider,
+              quality: regexQuality,
+              threshold: 40,
+              flightCount: enhancedFlights.length,
+            },
+          });
+        } else {
+          logger.warn(
+            {
+              quality: regexQuality,
+              provider,
+            },
+            '[Parser Factory] Regex parser quality too low, attempting LLM fallback'
+          );
+        }
+
+        // Try LLM parsers in order (skip regex)
+        const llmProviders: TextProvider[] = ['openai', 'claude', 'ollama'];
+        for (const llmProvider of llmProviders) {
+          try {
+            const llmParser = getTextParserInstance(llmProvider);
+            const llmApiKey = llmProvider === 'openai' ? config.openaiApiKey :
+                             llmProvider === 'claude' ? config.claudeApiKey : undefined;
+
+            const llmAvailability = await checkProviderAvailability(llmParser, llmApiKey);
+            if (!llmAvailability.available) {
+              if (shouldLog) {
+                textLog.debug({
+                  operation: 'llm_fallback_unavailable',
+                  context: {
+                    llmProvider,
+                    reason: llmAvailability.reason,
+                  },
+                });
+              } else {
+                logger.debug(`[Parser Factory] LLM provider ${llmProvider} unavailable for quality fallback`);
+              }
+              continue;
+            }
+
+            if (shouldLog) {
+              textLog.info({
+                operation: 'llm_fallback_attempt',
+                context: {
+                  llmProvider,
+                  originalProvider: provider,
+                  originalQuality: regexQuality,
+                },
+              });
+            } else {
+              logger.info(`[Parser Factory] Attempting LLM quality fallback with: ${llmProvider}`);
+            }
+            
+            const llmStartTime = Date.now();
+            const llmFlights = await llmParser.parseEmail(subject, text, html, llmApiKey);
+            const llmDuration = Date.now() - llmStartTime;
+
+            if (llmFlights && llmFlights.length > 0) {
+              const llmQuality = calculateParserQuality(llmFlights);
+
+              if (llmQuality > regexQuality) {
+                if (shouldLog) {
+                  textLog.info({
+                    operation: 'llm_fallback_success',
+                    context: {
+                      llmProvider,
+                      originalProvider: provider,
+                      regexQuality,
+                      llmQuality,
+                      improvement: llmQuality - regexQuality,
+                      llmDuration,
+                    },
+                  });
+                } else {
+                  logger.info(
+                    {
+                      regexQuality,
+                      llmQuality,
+                      llmProvider,
+                    },
+                    '[Parser Factory] LLM fallback successful, using LLM result'
+                  );
+                }
+                finalFlights = applyEmailRegexPostProcessing(llmFlights, subject, text, html);
+                finalProvider = llmProvider;
+                finalFallbackUsed = true;
+                break;
+              } else {
+                if (shouldLog) {
+                  textLog.debug({
+                    operation: 'llm_fallback_no_improvement',
+                    context: {
+                      llmProvider,
+                      regexQuality,
+                      llmQuality,
+                      llmDuration,
+                    },
+                  });
+                } else {
+                  logger.debug(
+                    {
+                      regexQuality,
+                      llmQuality,
+                    },
+                    '[Parser Factory] LLM quality not better, keeping regex result'
+                  );
+                }
+              }
+            }
+          } catch (llmError) {
+            if (shouldLog) {
+              textLog.warn({
+                operation: 'llm_fallback_failed',
+                context: {
+                  llmProvider,
+                  error: llmError instanceof Error ? llmError.message : 'Unknown error',
+                },
+              });
+            } else {
+              logger.warn(
+                { error: llmError, llmProvider },
+                '[Parser Factory] LLM quality fallback failed, keeping regex result'
+              );
+            }
+            // Continue to next LLM provider or keep regex result
+          }
+        }
+      }
+
+      const finalQuality = calculateParserQuality(finalFlights);
+      const totalDuration = Date.now() - startTime;
+      
+      if (shouldLog) {
+        log.info({
+          operation: 'parse_email_complete',
+          context: {
+            provider: finalProvider,
+            fallbackUsed: finalFallbackUsed,
+            quality: finalQuality,
+            flightCount: finalFlights.length,
+            totalDuration,
+            parseDuration,
+          },
+        });
+      } else {
+        logger.info(
+          {
+            provider: finalProvider,
+            fallbackUsed: finalFallbackUsed,
+            quality: finalQuality,
+            flightCount: finalFlights.length,
+          },
+          `[Parser Factory] Email parse complete with: ${finalProvider}${finalFallbackUsed ? ' (fallback)' : ''}`
+        );
+      }
+
+      // Collect feedback for low-quality results (async, don't await)
+      if (finalQuality < 50) {
+        collectLowQualityFeedback(
+          undefined, // userId - could be passed from route if available
+          'email',
+          finalProvider,
+          finalFlights,
+          { subject, text, html }
+        ).catch(err => logger.warn({ error: err }, '[Parser Factory] Failed to collect feedback'));
+      }
 
       return {
-        flights: enhancedFlights,
-        provider,
-        fallbackUsed,
+        flights: finalFlights,
+        provider: finalProvider,
+        fallbackUsed: finalFallbackUsed,
       };
     } catch (error: any) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      logger.warn(`[Parser Factory] Text parser '${provider}' failed: ${errorMsg}`);
+      if (shouldLog) {
+        textLog.warn({
+          operation: 'text_parse_failed',
+          context: {
+            provider,
+            error: errorMsg,
+            stack: error instanceof Error ? error.stack : undefined,
+          },
+        });
+      } else {
+        logger.warn(`[Parser Factory] Text parser '${provider}' failed: ${errorMsg}`);
+      }
       errors.push({ provider, error: errorMsg });
 
       // Invalidate cache for this provider to prevent future attempts in this session
@@ -466,7 +1048,19 @@ export async function parseEmail(
   }
 
   // All providers failed
-  logger.error({ errors }, '[Parser Factory] All text parsers failed');
+  const totalDuration = Date.now() - startTime;
+  if (shouldLog) {
+    log.error({
+      operation: 'parse_email_failed',
+      context: {
+        errors,
+        totalDuration,
+        triedProviders: providerChain,
+      },
+    });
+  } else {
+    logger.error({ errors }, '[Parser Factory] All text parsers failed');
+  }
   throw new Error(
     `All text parsers failed. Errors: ${errors.map(e => `${e.provider}: ${e.error}`).join('; ')}`
   );

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { flightsApi, analyticsApi } from '../lib/api';
+import { logger } from '../lib/logger';
 import MapContainer3D from '../components/MapContainer3D';
 import SimplifiedFlightFormV2 from '../components/SimplifiedFlightFormV2';
 import FlightEditModal from '../components/FlightEditModal';
@@ -52,7 +53,7 @@ export default function DashboardPage() {
         setRecentFlights(data.flights);
         setTotalFlightsCount(data.total); // Store total count
       } catch (error) {
-        console.error('Failed to load recent flights:', error);
+        logger.error('Failed to load recent flights:', error);
       } finally {
         setLoadingRecent(false);
       }
@@ -117,7 +118,7 @@ export default function DashboardPage() {
       setFlights(allFlights);
       setGeoFlights(allGeoFeatures);
     } catch (error) {
-      console.error('Failed to load flights:', error);
+      logger.error('Failed to load flights:', error);
     } finally {
       setLoadingMap(false);
     }
@@ -145,7 +146,7 @@ export default function DashboardPage() {
         analyticsApi.track('flight_created', { method: 'simplified_form' });
       }
     } catch (error) {
-      console.error('Failed to add flight:', error);
+      logger.error('Failed to add flight:', error);
       alert('Fehler beim Hinzufügen des Fluges. Bitte versuchen Sie es erneut.');
       throw error;
     }
@@ -176,7 +177,7 @@ export default function DashboardPage() {
         analyticsApi.track('flight_updated', { flightId: id });
       }
     } catch (error) {
-      console.error('Failed to update flight:', error);
+      logger.error('Failed to update flight:', error);
       alert('Fehler beim Aktualisieren des Fluges. Bitte versuchen Sie es erneut.');
       throw error;
     }
@@ -320,7 +321,7 @@ export default function DashboardPage() {
         }
       }
     } catch (error) {
-      console.error('Failed to export:', error);
+      logger.error('Failed to export:', error);
     }
   };
 
