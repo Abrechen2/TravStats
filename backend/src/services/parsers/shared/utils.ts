@@ -112,7 +112,7 @@ export const PATTERNS = {
   SEAT: /\b([0-9]{1,2}[A-F])\b/i,
   GATE: /(?:Gate|Boarding)\s*:?\s*([A-Z]?\d{1,3}[A-Z]?)/i,
   TERMINAL: /Terminal\s*:?\s*([A-Z0-9]+)/i,
-  DATE_ISO: /\b(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?)/,
+  DATE_ISO: /\b(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?)/g,
   PRICE_EUR: /(\d{1,5}[.,]\d{2})\s?(EUR|€)/i,
   TICKET_NUMBER: /\b(\d{13})\b/,
 };

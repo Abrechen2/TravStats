@@ -4,7 +4,7 @@ import { ParsedBooking } from '../../bookingParser';
 import { normalizeParsedBooking, cleanLLMJsonResponse, getVisionParserPrompt } from '../shared/utils';
 import logger from '../../../utils/logger';
 
-const CLAUDE_VISION_MODEL = process.env.CLAUDE_VISION_MODEL || 'claude-3-5-sonnet-20241022';
+const CLAUDE_VISION_MODEL = process.env.CLAUDE_VISION_MODEL || 'claude-3-5-sonnet-20240620';
 
 /**
  * Claude 3.5 Sonnet Vision Parser

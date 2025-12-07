@@ -16,7 +16,7 @@ Selbstgehostetes Flight-Tracking und Statistiken fuer kleine Gruppen (1-10 Accou
 ## Optionale Add-ons (per API-Key / Docker)
 - **Automatische Flug-Suche**: `AIRLABS_API_KEY` (free tier) fuer Flight-Number-Lookup im Formular. Optional `AVIATIONSTACK_API_KEY` (mehr Abdeckung) und `OPENSKY_CLIENT_ID`/`OPENSKY_CLIENT_SECRET` oder `OPENSKY_USERNAME`/`OPENSKY_PASSWORD` als Fallback. Ohne Keys laeuft alles manuell.
 - **E-Mail-Import mit KI**: Docker Compose startet zusaetzlich einen Ollama-Container. `USE_LLM_PARSER=true/false`, Modell ueber `OLLAMA_MODEL` (Standard: `llama3.2:3b`). Ohne LLM faellt der Parser auf Regex zurueck; wenn Ollama nicht gewuenscht ist, `USE_LLM_PARSER=false` setzen und den `ollama`-Service im Compose entfernen/auskommentieren. Erststart zieht das Modell (~1-2 GB).
-- **Seeds & Demo**: `SEED_AIRPORTS=true` fuer Autocomplete-Datenbank, `CREATE_DEMO_USER=true` fuer Demo-Account mit Beispieldaten (nur Test).
+- **Seeds & Demo**: `SEED_AIRPORTS=true` (Standard) fuellt die Airport-Datenbank beim ersten Install automatisch (~8000 Airports). Bei weiteren Starts wird das Seeding uebersprungen, wenn bereits Airports vorhanden sind. Fehlende Airports werden automatisch bei Bedarf nachgeladen. `CREATE_DEMO_USER=true` fuer Demo-Account mit Beispieldaten (nur Test).
 - **Sicherheit & UI**: `ALLOW_REGISTRATION=false` (Invite-only), `MAX_USERS` Warnschwelle, `COOKIE_SECURE` je nach HTTPS, `INSTANCE_NAME` fuer Branding, `FRONTEND_URL` fuer korrekte Invite-Links.
 
 ## Schnellstart (Prod auf Unraid)
@@ -24,7 +24,7 @@ Voraussetzung: Unraid mit Community Apps.
 
 1) In Community Apps **PostGIS-DB** installieren (`postgis/postgis`, z.B. Container `travstats-db`, Port 5432, DB/User `flights`, eigenes Passwort).  
 2) Optional: **Ollama** als separaten Container installieren, falls KI-Parser genutzt werden soll (`USE_LLM_PARSER=true`, `OLLAMA_URL` auf Container zeigen).  
-3) **TravStats** aus Community Apps installieren (Template `TravStats`), `DATABASE_URL` auf deine PostGIS-Instanz setzen, `SEED_AIRPORTS=true` lassen.  
+3) **TravStats** aus Community Apps installieren (Template `TravStats`), `DATABASE_URL` auf deine PostGIS-Instanz setzen. `SEED_AIRPORTS=true` (Standard) fuellt die Airport-Datenbank beim ersten Start automatisch.  
 4) Aufruf im LAN: `http://<unraid-ip>:3000/setup`, Admin anlegen.  
 5) Extern nur falls gewuenscht: Per Nginx Proxy Manager + Cloudflare (DNS/Proxy/Tunnel) veroeffentlichen, ansonsten im internen Netz lassen.
 
