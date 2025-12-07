@@ -29,7 +29,8 @@ try:
         AutoModelForCausalLM,
         TrainingArguments,
         Trainer,
-        DataCollatorForLanguageModeling
+        DataCollatorForLanguageModeling,
+        BitsAndBytesConfig
     )
     from peft import (
         LoraConfig,
@@ -41,7 +42,7 @@ try:
     import torch
 except ImportError as e:
     logger.error(f"Required packages not installed: {e}")
-    logger.error("Please install: pip install transformers peft datasets torch")
+    logger.error("Please install: pip install transformers peft datasets torch bitsandbytes")
     sys.exit(1)
 
 
@@ -169,7 +170,12 @@ def format_prompt(example: Dict[str, Any]) -> str:
                 for flight_index in sorted(highlights_grouped.keys()):
                     flight_highlights = highlights_grouped[flight_index]
                     if flight_highlights:
-                        annotation_section += f"\nFlug {flight_index + 1}:\n"
+                        # Convert flight_index to int if it's a string
+                        try:
+                            flight_num = int(flight_index) + 1
+                        except (ValueError, TypeError):
+                            flight_num = flight_index
+                        annotation_section += f"\nFlug {flight_num}:\n"
                         for highlight in flight_highlights:
                             label = highlight.get('label', '')
                             text = highlight.get('text', '')
@@ -476,6 +482,7 @@ def train_lora(
     
     tokenizer = None
     model = None
+    use_quantization = False
     
     for attempt in range(max_retries):
         try:
@@ -486,12 +493,18 @@ def train_lora(
             try:
                 tokenizer = AutoTokenizer.from_pretrained(
                     hf_model_name,
-                    trust_remote_code=True,
-                    timeout=60  # 60 second timeout
+                    trust_remote_code=True
                 )
                 if tokenizer.pad_token is None:
                     tokenizer.pad_token = tokenizer.eos_token
                 logger.info("Tokenizer loaded successfully")
+            except TypeError as e:
+                # TypeError usually means invalid arguments - don't retry
+                error_msg = str(e).lower()
+                if "unexpected keyword argument" in error_msg:
+                    raise ValueError(f"Invalid argument for tokenizer loading: {e}. This may be a compatibility issue with the transformers library version.")
+                else:
+                    raise ValueError(f"Type error loading tokenizer: {e}. Check tokenizer compatibility.")
             except Exception as e:
                 error_msg = str(e).lower()
                 if "connection" in error_msg or "timeout" in error_msg or "network" in error_msg:
@@ -506,17 +519,41 @@ def train_lora(
                 else:
                     raise ValueError(f"Failed to load tokenizer: {e}. Make sure the model name '{hf_model_name}' is correct and accessible.")
             
-            # Load model - use CPU if CUDA is not usable
+            # Load model - use 8-bit quantization for GPU to reduce memory usage
+            use_quantization = False
             try:
-                model = AutoModelForCausalLM.from_pretrained(
-                    hf_model_name,
-                    dtype=torch.float16 if cuda_usable else torch.float32,
-                    device_map="auto" if cuda_usable else None,
-                    trust_remote_code=True,
-                    timeout=300  # 5 minute timeout for model download
-                )
-                logger.info("Model loaded successfully")
+                if cuda_usable:
+                    # Use 8-bit quantization for GPU to reduce memory usage
+                    quantization_config = BitsAndBytesConfig(
+                        load_in_8bit=True,
+                        llm_int8_threshold=6.0,
+                        llm_int8_has_fp16_weight=False
+                    )
+                    model = AutoModelForCausalLM.from_pretrained(
+                        hf_model_name,
+                        quantization_config=quantization_config,
+                        device_map="auto",
+                        trust_remote_code=True
+                    )
+                    use_quantization = True
+                    logger.info("Model loaded successfully with 8-bit quantization (GPU)")
+                else:
+                    # CPU training - no quantization
+                    model = AutoModelForCausalLM.from_pretrained(
+                        hf_model_name,
+                        dtype=torch.float32,
+                        device_map=None,
+                        trust_remote_code=True
+                    )
+                    logger.info("Model loaded successfully (CPU)")
                 break  # Success, exit retry loop
+            except TypeError as e:
+                # TypeError usually means invalid arguments - don't retry
+                error_msg = str(e).lower()
+                if "unexpected keyword argument" in error_msg:
+                    raise ValueError(f"Invalid argument for model loading: {e}. This may be a compatibility issue with the transformers library version.")
+                else:
+                    raise ValueError(f"Type error loading model: {e}. Check model compatibility.")
             except Exception as e:
                 error_msg = str(e).lower()
                 if "connection" in error_msg or "timeout" in error_msg or "network" in error_msg:
@@ -549,67 +586,53 @@ def train_lora(
     
     if tokenizer is None or model is None:
         raise ValueError("Failed to load tokenizer or model after all retry attempts")
-        
-        # Log hardware information
-        cuda_available = torch.cuda.is_available()
-        cpu_count = multiprocessing.cpu_count()
-        
-        logger.info("=" * 60)
-        logger.info("Hardware Information:")
-        logger.info(f"  CPU Cores: {cpu_count}")
-        logger.info(f"  CUDA Available: {cuda_available}")
-        logger.info(f"  CUDA Usable: {cuda_usable}")
-        
-        if cuda_available:
-            gpu_count = torch.cuda.device_count()
-            logger.info(f"  GPU Count: {gpu_count}")
-            for i in range(gpu_count):
-                try:
-                    gpu_name = torch.cuda.get_device_name(i)
-                    gpu_props = torch.cuda.get_device_properties(i)
-                    gpu_memory = gpu_props.total_memory / (1024**3)  # GB
-                    logger.info(f"  GPU {i}: {gpu_name} ({gpu_memory:.2f} GB)")
-                except RuntimeError:
-                    logger.warning(f"  GPU {i}: Detected but not accessible (compatibility issue)")
+    
+    # Log hardware information
+    cuda_available = torch.cuda.is_available()
+    cpu_count = multiprocessing.cpu_count()
+    
+    logger.info("=" * 60)
+    logger.info("Hardware Information:")
+    logger.info(f"  CPU Cores: {cpu_count}")
+    logger.info(f"  CUDA Available: {cuda_available}")
+    logger.info(f"  CUDA Usable: {cuda_usable}")
+    
+    if cuda_available:
+        gpu_count = torch.cuda.device_count()
+        logger.info(f"  GPU Count: {gpu_count}")
+        for i in range(gpu_count):
             try:
-                cuda_version = torch.version.cuda
-                logger.info(f"  CUDA Version: {cuda_version}")
-            except:
-                pass
-        
-        if not cuda_usable:
-            logger.warning("=" * 60)
-            logger.warning("[WARNING] TRAINING WILL USE CPU (SLOWER)")
-            logger.warning("GPU is not usable - see compatibility warnings above")
-            logger.warning("For faster training, please update PyTorch to support your GPU")
-            logger.warning("=" * 60)
-        else:
-            logger.info("[OK] Training will use GPU (fast)")
-        logger.info("=" * 60)
-        
-    except ValueError as e:
-        # Re-raise our custom ValueError messages
-        logger.error(f"Model loading failed: {e}")
-        raise
-    except Exception as e:
-        error_msg = str(e).lower()
-        if "out of memory" in error_msg:
-            logger.error(f"Out of memory error: {e}")
-            logger.error("Try using a smaller model, reducing batch size, or using CPU training")
-            raise ValueError(f"Out of memory: {e}. Consider using a smaller model or reducing batch size.")
-        elif "cuda" in error_msg:
-            logger.error(f"CUDA error: {e}")
-            raise ValueError(f"CUDA error: {e}. Try using CPU training or check GPU compatibility.")
-        else:
-            logger.error(f"Failed to load model: {e}")
-            logger.error("Note: You may need to download the model first or use a different model name")
-            raise ValueError(f"Failed to load model: {e}. Check model name and ensure it's accessible.")
+                gpu_name = torch.cuda.get_device_name(i)
+                gpu_props = torch.cuda.get_device_properties(i)
+                gpu_memory = gpu_props.total_memory / (1024**3)  # GB
+                logger.info(f"  GPU {i}: {gpu_name} ({gpu_memory:.2f} GB)")
+            except RuntimeError:
+                logger.warning(f"  GPU {i}: Detected but not accessible (compatibility issue)")
+        try:
+            cuda_version = torch.version.cuda
+            logger.info(f"  CUDA Version: {cuda_version}")
+        except:
+            pass
+    
+    if not cuda_usable:
+        logger.warning("=" * 60)
+        logger.warning("[WARNING] TRAINING WILL USE CPU (SLOWER)")
+        logger.warning("GPU is not usable - see compatibility warnings above")
+        logger.warning("For faster training, please update PyTorch to support your GPU")
+        logger.warning("=" * 60)
+    else:
+        logger.info("[OK] Training will use GPU (fast)")
+    logger.info("=" * 60)
     
     # Prepare model for LoRA
     logger.info("Preparing model for LoRA training...")
     try:
-        model = prepare_model_for_kbit_training(model)
-        logger.info("Model prepared for LoRA training successfully")
+        # Only prepare for kbit training if using quantization (8-bit)
+        if use_quantization:
+            model = prepare_model_for_kbit_training(model)
+            logger.info("Model prepared for LoRA training with quantization successfully")
+        else:
+            logger.info("Model prepared for LoRA training successfully (no quantization)")
     except RuntimeError as e:
         error_msg = str(e).lower()
         if "no kernel image" in error_msg or "cuda error" in error_msg or "cuda out of memory" in error_msg:
@@ -649,14 +672,11 @@ def train_lora(
             
             # Disable CUDA for rest of training
             cuda_usable = False
+            use_quantization = False  # CPU training doesn't use quantization
             logger.warning("Switching to CPU training mode")
             
-            # Retry preparation on CPU
-            try:
-                model = prepare_model_for_kbit_training(model)
-                logger.info("Model prepared for LoRA training on CPU successfully")
-            except Exception as prep_error:
-                raise ValueError(f"Failed to prepare model for LoRA training on CPU: {prep_error}. Original error: {e}")
+            # Retry preparation on CPU (no quantization needed)
+            logger.info("Model prepared for LoRA training on CPU successfully")
         else:
             raise ValueError(f"Failed to prepare model for LoRA training: {e}")
     except Exception as e:
@@ -673,7 +693,15 @@ def train_lora(
     )
     
     model = get_peft_model(model, lora_config)
+    # Ensure model is in training mode
+    model.train()
     model.print_trainable_parameters()
+    
+    # Verify that LoRA parameters are trainable
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    if trainable_params == 0:
+        raise ValueError("No trainable parameters found! LoRA configuration may be incorrect.")
+    logger.info(f"Verified {trainable_params:,} trainable parameters")
     
     # Prepare dataset
     logger.info("Preparing dataset...")
@@ -682,9 +710,12 @@ def train_lora(
     # Determine optimal batch size if not provided
     # Use cuda_usable instead of cuda_available to ensure we use CPU if CUDA is not compatible
     if batch_size is None:
-        # Use larger batch size for CPU (more cores available)
-        batch_size = 8 if not cuda_usable else 4
+        # Be conservative on GPU to avoid OOM; CPU can handle a bit more
+        batch_size = 8 if not cuda_usable else 1
         logger.info(f"Auto-determined batch size: {batch_size} ({'CPU' if not cuda_usable else 'GPU'} mode)")
+
+    # Gradient accumulation (lower to reduce activation memory)
+    gradient_accum_steps = 1 if cuda_usable else 2
     
     # Determine optimal number of DataLoader workers
     cpu_count = multiprocessing.cpu_count()
@@ -694,12 +725,12 @@ def train_lora(
     logger.info(f"Training configuration:")
     logger.info(f"  Batch size: {batch_size}")
     logger.info(f"  DataLoader workers: {dataloader_num_workers}")
-    logger.info(f"  Gradient accumulation steps: 4")
-    logger.info(f"  Effective batch size: {batch_size * 4}")
+    logger.info(f"  Gradient accumulation steps: {gradient_accum_steps}")
+    logger.info(f"  Effective batch size: {batch_size * gradient_accum_steps}")
     
     # Calculate optimal save_steps based on dataset size
     # Save checkpoints more frequently for smaller datasets
-    total_steps = len(dataset) // (batch_size * 4) * num_epochs  # gradient_accumulation_steps = 4
+    total_steps = len(dataset) // (batch_size * gradient_accum_steps) * num_epochs  # adjusted for gradient_accum_steps
     if total_steps < 100:
         save_steps = max(10, total_steps // 10)  # Save 10 times during training
     elif total_steps < 500:
@@ -714,9 +745,9 @@ def train_lora(
         output_dir=output_dir,
         num_train_epochs=num_epochs,
         per_device_train_batch_size=batch_size,
-        gradient_accumulation_steps=4,
+        gradient_accumulation_steps=gradient_accum_steps,
         learning_rate=learning_rate,
-        fp16=cuda_usable,  # Mixed precision only for GPU
+        fp16=cuda_usable and not use_quantization,  # Mixed precision only for GPU, not with quantization
         logging_steps=1,  # Log every step for better progress tracking
         save_steps=save_steps,  # Save checkpoint every N steps
         save_total_limit=3,  # Keep last 3 checkpoints (for recovery)
@@ -730,7 +761,9 @@ def train_lora(
         # Enable checkpointing for recovery
         load_best_model_at_end=False,
         save_strategy="steps",
-        evaluation_strategy="no",  # No evaluation during training
+        # Gradient checkpointing disabled - not compatible with LoRA/PEFT
+        # LoRA is already memory-efficient, so checkpointing is not needed
+        gradient_checkpointing=False,
         # Resume from checkpoint if available
         resume_from_checkpoint=None,  # Can be set to checkpoint path to resume
     )
