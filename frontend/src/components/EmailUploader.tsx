@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { parseApi } from '../lib/api';
 import { useThemeStore } from '../store/themeStore';
+import { logger } from '../lib/logger';
 
 interface ParsedBooking {
   airline?: string;
@@ -28,7 +29,8 @@ interface ParsedBooking {
 interface EmailUploaderProps {
   onEmailParsed: (
     flights: ParsedBooking[],
-    parserUsed: 'ollama' | 'regex' | 'openai' | 'claude'
+    parserUsed: 'ollama' | 'regex' | 'openai' | 'claude',
+    originalData?: { subject?: string; text?: string; html?: string }
   ) => void;
   onError: (error: string) => void;
   onClose: () => void;
@@ -134,11 +136,19 @@ export default function EmailUploader({ onEmailParsed, onError, onClose }: Email
       // Wait a bit so user can see success
       await new Promise((resolve) => setTimeout(resolve, 800));
 
-      onEmailParsed(result.flights, result.parserUsed);
+      onEmailParsed(
+        result.flights,
+        result.parserUsed,
+        {
+          subject: result.subject,
+          text: result.text,
+          html: result.html,
+        }
+      );
       setLoading(false);
       onClose();
     } catch (err: any) {
-      console.error('Email parsing error:', err);
+      logger.error('Email parsing error:', err);
 
       const currentStep = steps.find((s) => s.status === 'loading');
       if (currentStep) {
@@ -196,11 +206,19 @@ export default function EmailUploader({ onEmailParsed, onError, onClose }: Email
       // Wait a bit so user can see success
       await new Promise((resolve) => setTimeout(resolve, 800));
 
-      onEmailParsed(result.flights, result.parserUsed);
+      onEmailParsed(
+        result.flights,
+        result.parserUsed,
+        {
+          subject: result.subject,
+          text: result.text,
+          html: result.html,
+        }
+      );
       setLoading(false);
       onClose();
     } catch (err: any) {
-      console.error('Email text parsing error:', err);
+      logger.error('Email text parsing error:', err);
 
       const currentStep = steps.find((s) => s.status === 'loading');
       if (currentStep) {

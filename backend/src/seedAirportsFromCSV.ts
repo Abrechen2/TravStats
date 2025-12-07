@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import logger from './utils/logger';
 import fs from 'fs';
 import path from 'path';
 import { parse } from 'csv-parse/sync';
@@ -61,17 +62,25 @@ async function downloadCSV(url: string, destination: string): Promise<void> {
 
 async function seedAirportsFromCSV() {
   console.log('🛫 Beginne Import der Flughäfen aus CSV...');
+  logger.info({ operation: 'seed_airports_start', message: 'Starting airport import from CSV' });
 
   const csvPath = path.join(__dirname, '..', 'airports.csv');
 
   if (!fs.existsSync(csvPath)) {
     console.log('📥 CSV-Datei nicht gefunden, lade von OurAirports.com herunter...');
+    logger.info({ operation: 'seed_airports_download', message: 'CSV file not found, downloading from OurAirports.com' });
     const downloadUrl = 'https://davidmegginson.github.io/ourairports-data/airports.csv';
 
     try {
       await downloadCSV(downloadUrl, csvPath);
       console.log('✅ CSV-Datei erfolgreich heruntergeladen');
+      logger.info({ operation: 'seed_airports_download_success', message: 'CSV file downloaded successfully' });
     } catch (error: any) {
+      logger.error({
+        operation: 'seed_airports_download_error',
+        message: 'Failed to download CSV file',
+        error: { message: error.message },
+      });
       throw new Error(`Fehler beim Herunterladen der CSV-Datei: ${error.message}`);
     }
   }
@@ -83,6 +92,11 @@ async function seedAirportsFromCSV() {
   });
 
   console.log(`📊 ${records.length} Flughäfen in CSV gefunden`);
+  logger.info({
+    operation: 'seed_airports_csv_parsed',
+    message: `Found ${records.length} airports in CSV`,
+    context: { recordCount: records.length },
+  });
 
   // Filtere nur große und mittlere Flughäfen mit scheduled service
   const filteredAirports = records.filter((airport) => {
@@ -105,6 +119,11 @@ async function seedAirportsFromCSV() {
   });
 
   console.log(`✅ ${filteredAirports.length} Flughäfen gefiltert (large + medium mit scheduled service)`);
+  logger.info({
+    operation: 'seed_airports_filtered',
+    message: `Filtered ${filteredAirports.length} airports`,
+    context: { filteredCount: filteredAirports.length },
+  });
 
   let imported = 0;
   let updated = 0;
@@ -171,10 +190,21 @@ async function seedAirportsFromCSV() {
       // Progress anzeigen
       if ((imported + updated) % 100 === 0) {
         console.log(`📍 Fortschritt: ${imported + updated} Flughäfen verarbeitet...`);
+        logger.debug({
+          operation: 'seed_airports_progress',
+          message: `Progress: ${imported + updated} airports processed`,
+          context: { processed: imported + updated },
+        });
       }
 
     } catch (error: any) {
       console.error(`❌ Fehler bei Flughafen ${airport.name}:`, error.message);
+      logger.error({
+        operation: 'seed_airports_airport_error',
+        message: `Error processing airport ${airport.name}`,
+        context: { airportName: airport.name },
+        error: { message: error.message },
+      });
       skipped++;
     }
   }
@@ -182,15 +212,33 @@ async function seedAirportsFromCSV() {
   console.log('\n✨ Import abgeschlossen!');
   console.log(`✅ Importiert/Aktualisiert: ${imported + updated}`);
   console.log(`⏭️  Übersprungen: ${skipped}`);
+  logger.info({
+    operation: 'seed_airports_complete',
+    message: 'Airport import completed',
+    context: { imported, updated, skipped, total: imported + updated },
+  });
 
   // Zeige Gesamtanzahl in DB
   const totalCount = await prisma.airport.count();
   console.log(`📊 Gesamt in DB: ${totalCount} Flughäfen`);
+  logger.info({
+    operation: 'seed_airports_total',
+    message: `Total airports in database: ${totalCount}`,
+    context: { totalCount },
+  });
 }
 
 seedAirportsFromCSV()
   .catch((error) => {
     console.error('❌ Fehler beim Seed:', error);
+    logger.error({
+      operation: 'seed_airports_failed',
+      message: 'Airport seeding failed',
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      },
+    });
     process.exit(1);
   })
   .finally(async () => {

@@ -1,0 +1,90 @@
+/**
+ * Helper functions for loading and decrypting parser settings
+ */
+
+import { prisma } from '../db';
+import { decryptApiKey } from '../utils/encryption';
+
+export interface UserParserSettings {
+  preferredVisionParser?: string | null;
+  preferredTextParser?: string | null;
+  visionFallbackChain?: string | null;
+  textFallbackChain?: string | null;
+  openaiApiKey?: string | null;
+  claudeApiKey?: string | null;
+}
+
+export interface AdminParserSettings {
+  globalOpenaiApiKey?: string | null;
+  globalClaudeApiKey?: string | null;
+  allowUserApiKeys?: boolean;
+  requireUserApiKeys?: boolean;
+  defaultVisionParser?: string | null;
+  defaultTextParser?: string | null;
+}
+
+/**
+ * Load user parser settings with decrypted API keys
+ */
+export async function getUserParserSettings(userId: string): Promise<UserParserSettings | null> {
+  const settings = await prisma.userSettings.findUnique({
+    where: { userId },
+    select: {
+      preferredVisionParser: true,
+      preferredTextParser: true,
+      visionFallbackChain: true,
+      textFallbackChain: true,
+      openaiApiKey: true,
+      claudeApiKey: true,
+    },
+  });
+
+  if (!settings) {
+    return null;
+  }
+
+  // Decrypt API keys
+  return {
+    ...settings,
+    openaiApiKey: decryptApiKey(settings.openaiApiKey),
+    claudeApiKey: decryptApiKey(settings.claudeApiKey),
+  };
+}
+
+/**
+ * Load admin parser settings with decrypted API keys
+ */
+export async function getAdminParserSettings(): Promise<AdminParserSettings | null> {
+  const settings = await prisma.adminSettings.findFirst();
+
+  if (!settings) {
+    return null;
+  }
+
+  // Decrypt API keys
+  return {
+    globalOpenaiApiKey: decryptApiKey(settings.globalOpenaiApiKey),
+    globalClaudeApiKey: decryptApiKey(settings.globalClaudeApiKey),
+    allowUserApiKeys: settings.allowUserApiKeys,
+    requireUserApiKeys: settings.requireUserApiKeys,
+    defaultVisionParser: settings.defaultVisionParser,
+    defaultTextParser: settings.defaultTextParser,
+  };
+}
+
+/**
+ * Get parser config with user and admin settings merged
+ * User settings take precedence over admin settings
+ * Returns config ready to pass to getParserConfig
+ */
+export async function getParserConfigWithSettings(userId: string) {
+  const userSettings = await getUserParserSettings(userId);
+  const adminSettings = await getAdminParserSettings();
+
+  // Return both userSettings and adminSettings for getParserConfig
+  return {
+    userSettings: userSettings || undefined,
+    adminSettings: adminSettings || undefined,
+  };
+}
+

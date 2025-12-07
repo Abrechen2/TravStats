@@ -1,5 +1,7 @@
 import { prisma } from '../db';
 import { calculateDistance } from './geo';
+import logger from './logger';
+import { getCachedAirports } from '../services/airportCache';
 
 interface FlightData {
   id: string;
@@ -21,86 +23,139 @@ interface FlightData {
 /**
  * Check and update achievements for a user
  * Returns newly unlocked achievements
+ * Uses transactions to prevent race conditions and ensure data consistency
  */
 export async function checkAndUpdateAchievements(userId: string) {
-  // Get all achievements
-  const allAchievements = await prisma.achievement.findMany();
+  try {
+    // Get all achievements
+    const allAchievements = await prisma.achievement.findMany();
 
-  // Get user's existing achievements
-  const existingAchievements = await prisma.userAchievement.findMany({
-    where: { userId },
-  });
+    // Get user's existing achievements
+    const existingAchievements = await prisma.userAchievement.findMany({
+      where: { userId },
+    });
 
-  const existingAchievementMap = new Map(
-    existingAchievements.map(ua => [ua.achievementId, ua])
-  );
+    const existingAchievementMap = new Map(
+      existingAchievements.map(ua => [ua.achievementId, ua])
+    );
 
-  // Get user's flights
-  const flights = await prisma.flight.findMany({
-    where: { userId, status: 'flown' },
-    orderBy: { departureTime: 'asc' },
-  });
+    // Get user's flights
+    const flights = await prisma.flight.findMany({
+      where: { userId, status: 'flown' },
+      orderBy: { departureTime: 'asc' },
+    });
 
-  // Calculate user stats
-  const stats = await calculateUserStats(flights);
-
-  // Check each achievement
-  const newlyUnlocked = [];
-
-  for (const achievement of allAchievements) {
-    const existing = existingAchievementMap.get(achievement.id);
-    const alreadyUnlocked =
-      existing && existing.progress >= achievement.requirement;
-
-    if (alreadyUnlocked) {
-      continue;
+    // Calculate user stats with error handling
+    let stats;
+    try {
+      stats = await calculateUserStats(flights);
+    } catch (error) {
+      logger.error({
+        operation: 'calculate_user_stats',
+        message: 'Failed to calculate user stats for achievements',
+        context: { userId, flightCount: flights.length },
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+      });
+      throw error;
     }
 
-    const { isUnlocked, progress } = checkAchievement(achievement, stats, flights);
+    // Prepare all updates/creates to execute in a single transaction
+    // Use callback-based transaction to prevent race conditions
+    const newlyUnlocked: any[] = [];
 
-    if (isUnlocked) {
-      if (existing) {
-        const updated = await prisma.userAchievement.update({
-          where: { id: existing.id },
-          data: {
-            progress: achievement.requirement,
-            unlockedAt: new Date(),
-          },
-          include: { achievement: true },
-        });
-        newlyUnlocked.push(updated);
-      } else {
-        const userAchievement = await prisma.userAchievement.create({
-          data: {
-            userId,
-            achievementId: achievement.id,
-            progress: achievement.requirement,
-          },
-          include: { achievement: true },
-        });
-        newlyUnlocked.push(userAchievement);
-      }
-    } else {
-      // Update or create progress for non-unlocked achievements
-      if (existing) {
-        await prisma.userAchievement.update({
-          where: { id: existing.id },
-          data: { progress },
-        });
-      } else if (progress > 0) {
-        // Create new entry only if there's some progress (avoid cluttering DB with 0 progress)
-        await prisma.userAchievement.create({
-          data: {
-            userId,
-            achievementId: achievement.id,
-            progress,
-          },
-        });
-      }
+    try {
+      await prisma.$transaction(async (tx) => {
+        for (const achievement of allAchievements) {
+          const existing = existingAchievementMap.get(achievement.id);
+          const alreadyUnlocked =
+            existing && existing.progress >= achievement.requirement;
+
+          if (alreadyUnlocked) {
+            continue;
+          }
+
+          const { isUnlocked, progress } = checkAchievement(achievement, stats, flights);
+
+          if (isUnlocked) {
+            if (existing) {
+              const updated = await tx.userAchievement.update({
+                where: { id: existing.id },
+                data: {
+                  progress: achievement.requirement,
+                  unlockedAt: new Date(),
+                },
+                include: { achievement: true },
+              });
+              newlyUnlocked.push(updated);
+            } else {
+              const userAchievement = await tx.userAchievement.create({
+                data: {
+                  userId,
+                  achievementId: achievement.id,
+                  progress: achievement.requirement,
+                },
+                include: { achievement: true },
+              });
+              newlyUnlocked.push(userAchievement);
+            }
+          } else {
+            // Update or create progress for non-unlocked achievements
+            if (existing) {
+              await tx.userAchievement.update({
+                where: { id: existing.id },
+                data: { progress },
+              });
+            } else if (progress > 0) {
+              // Create new entry only if there's some progress (avoid cluttering DB with 0 progress)
+              await tx.userAchievement.create({
+                data: {
+                  userId,
+                  achievementId: achievement.id,
+                  progress,
+                },
+              });
+            }
+          }
+        }
+      });
+    } catch (error) {
+      logger.error({
+        operation: 'update_achievements_transaction',
+        message: 'Failed to update achievements in transaction',
+        context: { userId, achievementCount: allAchievements.length },
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+      });
+      throw error;
     }
+
+    if (newlyUnlocked.length > 0) {
+      logger.info({
+        operation: 'achievements_unlocked',
+        message: `User unlocked ${newlyUnlocked.length} achievement(s)`,
+        context: { userId, achievementIds: newlyUnlocked.map(ua => ua.achievement.id) },
+      });
+    }
+
+    return newlyUnlocked;
+  } catch (error) {
+    logger.error({
+      operation: 'check_and_update_achievements',
+      message: 'Failed to check and update achievements',
+      context: { userId },
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      },
+    });
+    // Re-throw to allow caller to handle
+    throw error;
   }
-
-  return newlyUnlocked;
 }
 
 interface UserStats {
@@ -142,11 +197,43 @@ async function calculateUserStats(flights: FlightData[]): Promise<UserStats> {
     flightsByYear: new Map(),
   };
 
-  // Get all airports to map countries and continents
-  const allAirports = await prisma.airport.findMany();
-  const airportMap = new Map(
-    allAirports.map(a => [a.iata || a.icao, { country: a.country, lat: a.lat, lon: a.lon }])
-  );
+  // Collect all unique airport codes from flights
+  const airportCodes = new Set<string>();
+  for (const flight of flights) {
+    const depCode = flight.depIata || flight.depIcao;
+    const arrCode = flight.arrIata || flight.arrIcao;
+    if (depCode) airportCodes.add(depCode);
+    if (arrCode) airportCodes.add(arrCode);
+  }
+
+  // Batch fetch airports using cache
+  let airportMap: Map<string, { country: string | null; lat: number; lon: number }>;
+  try {
+    const cachedAirports = await getCachedAirports(Array.from(airportCodes));
+    airportMap = new Map();
+    
+    // Convert cached airports to the format we need
+    for (const [code, airport] of cachedAirports.entries()) {
+      if (airport) {
+        airportMap.set(code, {
+          country: airport.country || null,
+          lat: airport.lat,
+          lon: airport.lon,
+        });
+      }
+    }
+  } catch (error) {
+    logger.error({
+      operation: 'fetch_airports_for_stats',
+      message: 'Failed to fetch airports for user stats calculation',
+      context: { flightCount: flights.length, airportCodeCount: airportCodes.size },
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      },
+    });
+    throw error;
+  }
 
   for (const flight of flights) {
     // Distance

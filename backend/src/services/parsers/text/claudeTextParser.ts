@@ -2,9 +2,10 @@ import Anthropic from '@anthropic-ai/sdk';
 import { ITextParser, ProviderAvailability, TextProvider } from '../types';
 import { ParsedBooking } from '../../bookingParser';
 import { normalizeParsedBooking, cleanLLMJsonResponse, getTextParserPrompt } from '../shared/utils';
-import logger from '../../../utils/logger';
+import logger, { parserTextLogger } from '../../../utils/logger';
+import { shouldLogParserOperations } from '../../loggingConfig';
 
-const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-3-5-sonnet-20240620';
+const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-3-5-sonnet-20241022';
 
 /**
  * Claude 3.5 Sonnet Text Parser
@@ -75,13 +76,30 @@ export class ClaudeTextParser implements ITextParser {
   }
 
   async parseEmail(subject: string, text: string, html?: string, apiKey?: string): Promise<ParsedBooking[]> {
-    logger.info('[Claude Text Parser] Starting email parsing');
-    logger.info({ model: CLAUDE_MODEL }, '[Claude Text Parser] Model');
+    const shouldLog = await shouldLogParserOperations();
+    const log = shouldLog ? parserTextLogger : logger;
+    const startTime = Date.now();
+
+    if (shouldLog) {
+      log.info({
+        operation: 'claude_text_parse_start',
+        context: {
+          model: CLAUDE_MODEL,
+          subject,
+          textLength: text.length,
+          htmlLength: html ? html.length : 0,
+        },
+      });
+    } else {
+      logger.info('[Claude Text Parser] Starting email parsing');
+      logger.info({ model: CLAUDE_MODEL }, '[Claude Text Parser] Model');
+    }
 
     try {
       const client = this.getClient(apiKey);
       const prompt = getTextParserPrompt(subject, text);
 
+      const apiStartTime = Date.now();
       const response = await client.messages.create({
         model: CLAUDE_MODEL,
         max_tokens: 2048,
@@ -93,15 +111,42 @@ export class ClaudeTextParser implements ITextParser {
           },
         ],
       });
+      const apiDuration = Date.now() - apiStartTime;
 
       const rawResponse = response.content[0]?.type === 'text' ? response.content[0].text : '';
+      const inputTokens = response.usage.input_tokens;
+      const outputTokens = response.usage.output_tokens;
+      const totalTokens = inputTokens + outputTokens;
 
       if (!rawResponse) {
-        logger.error('[Claude Text Parser] Empty response');
+        if (shouldLog) {
+          log.error({
+            operation: 'claude_text_parse_empty_response',
+            context: {
+              apiDuration,
+              inputTokens,
+            },
+          });
+        } else {
+          logger.error('[Claude Text Parser] Empty response');
+        }
         throw new Error('Empty response from Claude API');
       }
 
-      logger.debug({ rawResponse }, '[Claude Text Parser] Raw response (full)');
+      if (shouldLog) {
+        log.debug({
+          operation: 'claude_text_parse_raw_response',
+          context: {
+            rawResponseLength: rawResponse.length,
+            inputTokens,
+            outputTokens,
+            totalTokens,
+            apiDuration,
+          },
+        });
+      } else {
+        logger.debug({ rawResponse }, '[Claude Text Parser] Raw response (full)');
+      }
 
       // Parse JSON
       const cleanedResponse = cleanLLMJsonResponse(rawResponse);
@@ -110,7 +155,18 @@ export class ClaudeTextParser implements ITextParser {
       try {
         parsedData = JSON.parse(cleanedResponse);
       } catch (parseError) {
-        logger.error({ response: rawResponse }, '[Claude Text Parser] JSON parse error');
+        if (shouldLog) {
+          log.error({
+            operation: 'claude_text_parse_json_error',
+            context: {
+              rawResponseLength: rawResponse.length,
+              cleanedResponseLength: cleanedResponse.length,
+              error: parseError instanceof Error ? parseError.message : 'Unknown error',
+            },
+          });
+        } else {
+          logger.error({ response: rawResponse }, '[Claude Text Parser] JSON parse error');
+        }
         throw new Error('Failed to parse Claude response as JSON');
       }
 
@@ -136,8 +192,18 @@ export class ClaudeTextParser implements ITextParser {
         }
       }
 
-      logger.info(`[Claude Text Parser] Found ${flightsArray.length} flight(s)`);
-      logger.debug({ rawFlights: flightsArray }, '[Claude Text Parser] Raw flights from LLM');
+      if (shouldLog) {
+        log.debug({
+          operation: 'claude_text_parse_flights_found',
+          context: {
+            flightCount: flightsArray.length,
+            rawFlights: flightsArray,
+          },
+        });
+      } else {
+        logger.info(`[Claude Text Parser] Found ${flightsArray.length} flight(s)`);
+        logger.debug({ rawFlights: flightsArray }, '[Claude Text Parser] Raw flights from LLM');
+      }
 
       // Filter out completely invalid flights (missing critical fields)
       const filteredFlights = flightsArray.filter((flight: any) =>
@@ -149,35 +215,116 @@ export class ClaudeTextParser implements ITextParser {
       );
 
       if (filteredOut.length > 0) {
-        logger.warn({
-          count: filteredOut.length,
-          filtered: filteredOut.map((f: any) => ({
-            flightNumber: f.flightNumber || 'MISSING',
-            departureCode: f.departureCode || 'MISSING',
-            arrivalCode: f.arrivalCode || 'MISSING',
-          }))
-        }, '[Claude Text Parser] Flights filtered out due to missing critical fields');
+        if (shouldLog) {
+          log.warn({
+            operation: 'claude_text_parse_flights_filtered',
+            context: {
+              filteredCount: filteredOut.length,
+              filtered: filteredOut.map((f: any) => ({
+                flightNumber: f.flightNumber || 'MISSING',
+                departureCode: f.departureCode || 'MISSING',
+                arrivalCode: f.arrivalCode || 'MISSING',
+              })),
+            },
+          });
+        } else {
+          logger.warn({
+            count: filteredOut.length,
+            filtered: filteredOut.map((f: any) => ({
+              flightNumber: f.flightNumber || 'MISSING',
+              departureCode: f.departureCode || 'MISSING',
+              arrivalCode: f.arrivalCode || 'MISSING',
+            }))
+          }, '[Claude Text Parser] Flights filtered out due to missing critical fields');
+        }
       }
 
       // Normalize remaining flights
       const results: ParsedBooking[] = filteredFlights.map((flight: any) => normalizeParsedBooking(flight));
+      const totalDuration = Date.now() - startTime;
 
-      logger.info(
-        { tokensUsed: response.usage.input_tokens + response.usage.output_tokens },
-        `[Claude Text Parser] Parsing complete - ${results.length} valid flight(s)`
-      );
+      if (shouldLog) {
+        log.info({
+          operation: 'claude_text_parse_complete',
+          context: {
+            flightCount: results.length,
+            inputTokens,
+            outputTokens,
+            totalTokens,
+            apiDuration,
+            totalDuration,
+            performance: {
+              tokensPerSecond: totalTokens / (apiDuration / 1000),
+            },
+          },
+        });
+      } else {
+        logger.info(
+          { tokensUsed: totalTokens },
+          `[Claude Text Parser] Parsing complete - ${results.length} valid flight(s)`
+        );
+      }
 
       return results;
     } catch (error: any) {
+      const totalDuration = Date.now() - startTime;
+      const errorContext = {
+        model: CLAUDE_MODEL,
+        textLength: text.length,
+        totalDuration,
+        status: error?.status,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorStack: error instanceof Error ? error.stack : undefined,
+      };
+
       if (error?.status === 401) {
+        if (shouldLog) {
+          log.error({
+            operation: 'claude_text_parse_auth_error',
+            context: errorContext,
+          });
+        }
         throw new Error('Invalid Claude API key');
       }
 
+      if (error?.status === 404) {
+        const modelError = error?.error?.error?.message || '';
+        if (shouldLog) {
+          log.error({
+            operation: 'claude_text_parse_model_not_found',
+            context: {
+              ...errorContext,
+              modelError,
+            },
+          });
+        } else {
+          logger.error({ 
+            error, 
+            model: CLAUDE_MODEL,
+            message: modelError 
+          }, '[Claude Text Parser] Model not found - check CLAUDE_MODEL environment variable');
+        }
+        throw new Error(`Claude model not found: ${modelError || CLAUDE_MODEL}. Please check your CLAUDE_MODEL environment variable or API key permissions.`);
+      }
+
       if (error?.status === 429) {
+        if (shouldLog) {
+          log.error({
+            operation: 'claude_text_parse_rate_limit',
+            context: errorContext,
+          });
+        }
         throw new Error('Claude API rate limit exceeded');
       }
 
-      logger.error({ error }, '[Claude Text Parser] Parsing failed');
+      if (shouldLog) {
+        log.error({
+          operation: 'claude_text_parse_unexpected_error',
+          context: errorContext,
+        });
+      } else {
+        logger.error({ error }, '[Claude Text Parser] Parsing failed');
+      }
       throw new Error(`Claude parsing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }

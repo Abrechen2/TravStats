@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { ParsedBooking } from './bookingParser';
+import logger from '../utils/logger';
 
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2:3b';
@@ -28,8 +29,11 @@ export async function parseEmailWithLLM(
   text: string,
   html?: string
 ): Promise<ParsedBooking[]> {
-  console.log('[Enhanced LLM Parser] Starting email parsing with Ollama');
-  console.log('[Enhanced LLM Parser] Model:', OLLAMA_MODEL);
+  logger.debug({
+    operation: 'enhanced_llm_parser_start',
+    message: 'Starting email parsing with Ollama',
+    context: { model: OLLAMA_MODEL },
+  });
 
   // Clean the text
   const cleanText = text
@@ -185,7 +189,10 @@ EXTRACTION TIPS:
 JSON OUTPUT:`;
 
   try {
-    console.log('[Enhanced LLM Parser] Sending request to Ollama...');
+    logger.debug({
+      operation: 'enhanced_llm_parser_request',
+      message: 'Sending request to Ollama',
+    });
     const startTime = Date.now();
 
     const response = await axios.post<OllamaResponse>(
@@ -209,7 +216,11 @@ JSON OUTPUT:`;
     );
 
     const duration = Date.now() - startTime;
-    console.log(`[Enhanced LLM Parser] Response received in ${duration}ms`);
+    logger.debug({
+      operation: 'enhanced_llm_parser_response',
+      message: 'Response received from Ollama',
+      performance: { duration },
+    });
 
     // Parse the JSON response
     let parsedData: any;
@@ -240,10 +251,25 @@ JSON OUTPUT:`;
       }
 
       parsedData = JSON.parse(jsonText);
-      console.log('[Enhanced LLM Parser] Successfully parsed LLM response:', parsedData);
+      logger.debug({
+        operation: 'enhanced_llm_parser_parse',
+        message: 'Successfully parsed LLM response',
+        context: { 
+          flightCount: Array.isArray(parsedData) 
+            ? parsedData.length 
+            : (parsedData && typeof parsedData === 'object' ? 1 : 0) 
+        },
+      });
     } catch (parseError) {
-      console.error('[Enhanced LLM Parser] Failed to parse LLM response:', response.data.response);
-      console.error('[Enhanced LLM Parser] Parse error:', parseError);
+      logger.error({
+        operation: 'enhanced_llm_parser_parse_error',
+        message: 'Failed to parse LLM response',
+        context: { responsePreview: response.data.response.substring(0, 500) },
+        error: {
+          message: parseError instanceof Error ? parseError.message : 'Unknown error',
+          stack: parseError instanceof Error ? parseError.stack : undefined,
+        },
+      });
       throw new Error('LLM returned invalid JSON');
     }
 
@@ -262,7 +288,11 @@ JSON OUTPUT:`;
         if (Array.isArray(parsedData[key])) {
           flightsArray = parsedData[key];
           foundArray = true;
-          console.log(`[Enhanced LLM Parser] Found nested array at key: ${key}`);
+          logger.debug({
+            operation: 'enhanced_llm_parser_nested_array',
+            message: `Found nested array at key: ${key}`,
+            context: { key },
+          });
           break;
         }
       }
@@ -273,7 +303,11 @@ JSON OUTPUT:`;
       }
     }
 
-    console.log('[Enhanced LLM Parser] Found', flightsArray.length, 'flight(s)');
+    logger.debug({
+      operation: 'enhanced_llm_parser_flights_found',
+      message: `Found ${flightsArray.length} flight(s)`,
+      context: { flightCount: flightsArray.length },
+    });
 
     // Validate and build ParsedBooking results
     const results: ParsedBooking[] = flightsArray
@@ -320,22 +354,59 @@ JSON OUTPUT:`;
           missing,
         };
 
-        console.log(`[Enhanced LLM Parser] Flight ${index + 1}/${flightsArray.length}:`, result);
+        logger.debug({
+          operation: 'enhanced_llm_parser_flight_processed',
+          message: `Processed flight ${index + 1}/${flightsArray.length}`,
+          context: {
+            flightNumber: result.flightNumber,
+            departureCode: result.departureCode,
+            arrivalCode: result.arrivalCode,
+            missingFields: result.missing,
+          },
+        });
         return result;
       });
 
-    console.log('[Enhanced LLM Parser] Final results:', results.length, 'valid flight(s) extracted');
+    logger.info({
+      operation: 'enhanced_llm_parser_complete',
+      message: `Successfully extracted ${results.length} valid flight(s)`,
+      context: { flightCount: results.length },
+    });
     return results;
   } catch (error) {
     if (axios.isAxiosError(error)) {
       if (error.code === 'ECONNREFUSED') {
-        console.error('[Enhanced LLM Parser] Cannot connect to Ollama. Is it running?');
+        logger.error({
+          operation: 'enhanced_llm_parser_connection_error',
+          message: 'Cannot connect to Ollama service',
+          context: { url: OLLAMA_URL },
+          error: {
+            message: 'Ollama service is not available',
+            code: error.code,
+          },
+        });
         throw new Error('Ollama service is not available');
       }
-      console.error('[Enhanced LLM Parser] Axios error:', error.message);
+      logger.error({
+        operation: 'enhanced_llm_parser_axios_error',
+        message: 'Ollama API error',
+        context: { url: OLLAMA_URL },
+        error: {
+          message: error.message,
+          code: error.code,
+          status: error.response?.status,
+        },
+      });
       throw new Error(`Ollama API error: ${error.message}`);
     }
-    console.error('[Enhanced LLM Parser] Unexpected error:', error);
+    logger.error({
+      operation: 'enhanced_llm_parser_unexpected_error',
+      message: 'Unexpected error in enhanced LLM parser',
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      },
+    });
     throw error;
   }
 }
@@ -396,15 +467,22 @@ export function getRecommendedModels(): Array<{
  */
 export async function ensureModelAvailable(): Promise<boolean> {
   try {
-    console.log(`[Enhanced LLM Parser] Checking if model ${OLLAMA_MODEL} is available...`);
+    logger.debug({
+      operation: 'enhanced_llm_parser_check_model',
+      message: `Checking if model ${OLLAMA_MODEL} is available`,
+      context: { model: OLLAMA_MODEL },
+    });
     const response = await axios.get(`${OLLAMA_URL}/api/tags`);
 
     const models = response.data.models || [];
     const modelExists = models.some((m: any) => m.name === OLLAMA_MODEL);
 
     if (!modelExists) {
-      console.log(`[Enhanced LLM Parser] Model ${OLLAMA_MODEL} not found. Pulling...`);
-      console.log('[Enhanced LLM Parser] This may take several minutes on first run.');
+      logger.info({
+        operation: 'enhanced_llm_parser_pull_model',
+        message: `Model ${OLLAMA_MODEL} not found, pulling...`,
+        context: { model: OLLAMA_MODEL },
+      });
 
       await axios.post(`${OLLAMA_URL}/api/pull`, {
         name: OLLAMA_MODEL,
@@ -413,14 +491,30 @@ export async function ensureModelAvailable(): Promise<boolean> {
         timeout: 600000, // 10 minute timeout
       });
 
-      console.log(`[Enhanced LLM Parser] Model ${OLLAMA_MODEL} pulled successfully`);
+      logger.info({
+        operation: 'enhanced_llm_parser_model_pulled',
+        message: `Model ${OLLAMA_MODEL} pulled successfully`,
+        context: { model: OLLAMA_MODEL },
+      });
     } else {
-      console.log(`[Enhanced LLM Parser] Model ${OLLAMA_MODEL} is already available`);
+      logger.debug({
+        operation: 'enhanced_llm_parser_model_available',
+        message: `Model ${OLLAMA_MODEL} is already available`,
+        context: { model: OLLAMA_MODEL },
+      });
     }
 
     return true;
   } catch (error) {
-    console.error('[Enhanced LLM Parser] Failed to ensure model availability:', error);
+    logger.error({
+      operation: 'enhanced_llm_parser_model_error',
+      message: 'Failed to ensure model availability',
+      context: { model: OLLAMA_MODEL },
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      },
+    });
     return false;
   }
 }

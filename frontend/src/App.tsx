@@ -1,18 +1,21 @@
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense, lazy } from 'react';
 import { useAuthStore } from './store/authStore';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import DashboardPage from './pages/DashboardPage';
-import FlightsTablePage from './pages/FlightsTablePage';
-import AchievementsPage from './pages/AchievementsPage';
-import AdvancedStatsPage from './pages/AdvancedStatsPage';
-import SettingsPage from './pages/SettingsPage';
-import SetupPage from './pages/SetupPage';
-import AdminPage from './pages/AdminPage';
+import { logger } from './lib/logger';
 import { useSettingsStore } from './store/settingsStore';
 import ErrorBoundary from './components/ErrorBoundary';
 import { setupApi } from './lib/api';
+
+// Lazy load pages for code splitting
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const RegisterPage = lazy(() => import('./pages/RegisterPage'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const FlightsTablePage = lazy(() => import('./pages/FlightsTablePage'));
+const AchievementsPage = lazy(() => import('./pages/AchievementsPage'));
+const AdvancedStatsPage = lazy(() => import('./pages/AdvancedStatsPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const SetupPage = lazy(() => import('./pages/SetupPage'));
+const AdminPage = lazy(() => import('./pages/AdminPage'));
 
 function AppContent() {
   const { user } = useAuthStore();
@@ -29,7 +32,7 @@ function AppContent() {
           navigate('/setup');
         }
       } catch (error) {
-        console.error('Setup status check failed:', error);
+        logger.error('Setup status check failed:', error);
       } finally {
         setSetupChecked(true);
       }
@@ -67,6 +70,19 @@ function AppContent() {
 
   const isAuthenticated = !!user;
 
+  const LoadingFallback = () => (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="text-center">
+        <div className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+          Loading...
+        </div>
+        <div className="text-gray-600 dark:text-gray-400">
+          Please wait
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <ErrorBoundary
       fallback={
@@ -91,48 +107,50 @@ function AppContent() {
         </div>
       }
     >
-      <Routes>
-        {/* Public routes */}
-        <Route path="/setup" element={<SetupPage />} />
-        <Route
-          path="/login"
-          element={isAuthenticated ? <Navigate to="/" /> : <LoginPage />}
-        />
-        <Route
-          path="/register"
-          element={isAuthenticated ? <Navigate to="/" /> : <RegisterPage />}
-        />
+      <Suspense fallback={<LoadingFallback />}>
+        <Routes>
+          {/* Public routes */}
+          <Route path="/setup" element={<SetupPage />} />
+          <Route
+            path="/login"
+            element={isAuthenticated ? <Navigate to="/" /> : <LoginPage />}
+          />
+          <Route
+            path="/register"
+            element={isAuthenticated ? <Navigate to="/" /> : <RegisterPage />}
+          />
 
-        {/* Protected routes */}
-        <Route
-          path="/"
-          element={isAuthenticated ? <DashboardPage /> : <Navigate to="/login" />}
-        />
-        <Route
-          path="/flights"
-          element={isAuthenticated ? <FlightsTablePage /> : <Navigate to="/login" />}
-        />
-        <Route
-          path="/achievements"
-          element={isAuthenticated ? <AchievementsPage /> : <Navigate to="/login" />}
-        />
-        <Route
-          path="/stats"
-          element={isAuthenticated ? <AdvancedStatsPage /> : <Navigate to="/login" />}
-        />
-        <Route
-          path="/settings"
-          element={isAuthenticated ? <SettingsPage /> : <Navigate to="/login" />}
-        />
-        <Route
-          path="/admin"
-          element={
-            isAuthenticated && user?.isAdmin
-              ? <AdminPage />
-              : <Navigate to={isAuthenticated ? "/" : "/login"} />
-          }
-        />
-      </Routes>
+          {/* Protected routes */}
+          <Route
+            path="/"
+            element={isAuthenticated ? <DashboardPage /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/flights"
+            element={isAuthenticated ? <FlightsTablePage /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/achievements"
+            element={isAuthenticated ? <AchievementsPage /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/stats"
+            element={isAuthenticated ? <AdvancedStatsPage /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/settings"
+            element={isAuthenticated ? <SettingsPage /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/admin"
+            element={
+              isAuthenticated && user?.isAdmin
+                ? <AdminPage />
+                : <Navigate to={isAuthenticated ? "/" : "/login"} />
+            }
+          />
+        </Routes>
+      </Suspense>
     </ErrorBoundary>
   );
 }

@@ -44,6 +44,7 @@ export interface BoardingPassData {
 
 // Import airline-specific parsers
 import { parseRyanairBoardingPass } from './airline-parsers/ryanairParser';
+import { logger } from './logger';
 
 /**
  * Enhanced parser that tries multiple boarding pass formats
@@ -52,23 +53,23 @@ import { parseRyanairBoardingPass } from './airline-parsers/ryanairParser';
  * This allows us to support any airline without duplicating scanner code.
  */
 export function parseBCBP(barcodeData: string): BoardingPassData | null {
-  console.log('🔍 BCBP PARSER: Raw barcode data:', barcodeData);
-  console.log('🔍 BCBP PARSER: Length:', barcodeData.length, 'chars');
+  logger.debug('BCBP PARSER: Raw barcode data:', barcodeData);
+  logger.debug('BCBP PARSER: Length:', barcodeData.length, 'chars');
 
   // Try 1: Standard IATA BCBP format (most common)
   const bcbpResult = parseBCBPStandard(barcodeData);
   if (bcbpResult) {
-    console.log('✅ BCBP PARSER: Standard IATA format successful');
-    console.log('📅 Parsed date:', bcbpResult.dateOfFlight);
-    console.log('✈️ Airline:', bcbpResult.operatingCarrierDesignator, '-', bcbpResult.airlineName);
-    console.log('🔢 Flight:', bcbpResult.flightNumber);
+    logger.debug('BCBP PARSER: Standard IATA format successful');
+    logger.debug('Parsed date:', bcbpResult.dateOfFlight);
+    logger.debug('Airline:', bcbpResult.operatingCarrierDesignator, '-', bcbpResult.airlineName);
+    logger.debug('Flight:', bcbpResult.flightNumber);
     return bcbpResult;
   }
 
   // Try 2: Airline-specific formats (proprietary encodings)
   const ryanairResult = parseRyanairBoardingPass(barcodeData);
   if (ryanairResult) {
-    console.log('✅ BCBP PARSER: Ryanair format successful');
+    logger.debug('BCBP PARSER: Ryanair format successful');
     return ryanairResult;
   }
 
@@ -79,19 +80,19 @@ export function parseBCBP(barcodeData: string): BoardingPassData | null {
   // Try 3: URL-based formats (e.g., Lufthansa, Ryanair web boarding passes)
   const urlResult = parseURLBoardingPass(barcodeData);
   if (urlResult) {
-    console.log('✅ BCBP PARSER: URL format successful');
+    logger.debug('BCBP PARSER: URL format successful');
     return urlResult;
   }
 
   // Try 4: Intelligent fallback - extract what we can from any text
   const fallbackResult = parseFallbackBoardingPass(barcodeData);
   if (fallbackResult) {
-    console.log('✅ BCBP PARSER: Fallback parsing successful');
-    console.log('📅 Parsed date:', fallbackResult.dateOfFlight);
+    logger.debug('BCBP PARSER: Fallback parsing successful');
+    logger.debug('Parsed date:', fallbackResult.dateOfFlight);
     return fallbackResult;
   }
 
-  console.error('❌ BCBP PARSER: All parsing methods failed');
+  logger.error('BCBP PARSER: All parsing methods failed');
   return null;
 }
 
@@ -150,7 +151,7 @@ function parseBCBPStandard(barcodeData: string): BoardingPassData | null {
     // Date of flight (3 chars - Julian date, day of year)
     const julianDate = barcodeData.substring(pos, pos + 3);
     pos += 3;
-    console.log('📅 Julian date from barcode:', julianDate);
+    logger.debug('Julian date from barcode:', julianDate);
 
     // Compartment code (1 char) - Y=Economy, J=Business, F=First
     const compartmentCode = barcodeData.charAt(pos);
@@ -177,7 +178,7 @@ function parseBCBPStandard(barcodeData: string): BoardingPassData | null {
     let boardingTime: string | undefined;
 
     try {
-      console.log(`🔍 Current position after mandatory: ${pos}, remaining string: "${barcodeData.substring(pos)}"`);
+      logger.debug(`Current position after mandatory: ${pos}, remaining string: "${barcodeData.substring(pos)}"`);
 
       // Skip any padding spaces
       while (pos < barcodeData.length && barcodeData.charAt(pos) === ' ') {
@@ -187,45 +188,45 @@ function parseBCBPStandard(barcodeData: string): BoardingPassData | null {
       // Beginning of variable size field (1 char) - version number/marker
       if (pos < barcodeData.length) {
         const versionByte = barcodeData.charAt(pos);
-        console.log('📌 Version/marker byte:', JSON.stringify(versionByte), 'at position', pos);
+        logger.debug('Version/marker byte:', JSON.stringify(versionByte), 'at position', pos);
         pos += 1;
 
         // Field size of structured message - Conditional (2 chars, hex)
         if (pos + 1 < barcodeData.length) {
           const lengthHex = barcodeData.substring(pos, pos + 2);
-          console.log('📏 Conditional length (raw HEX string):', JSON.stringify(lengthHex));
+          logger.debug('Conditional length (raw HEX string):', JSON.stringify(lengthHex));
 
           // Try to parse as hex
           let conditionalLength = 0;
           try {
             conditionalLength = parseInt(lengthHex.trim(), 16);
-            console.log('📦 Conditional items length (parsed as hex):', conditionalLength);
+            logger.debug('Conditional items length (parsed as hex):', conditionalLength);
           } catch {
-            console.warn('⚠️ Failed to parse conditional length as hex');
+            logger.warn('Failed to parse conditional length as hex');
           }
 
           pos += 2;
 
           if (conditionalLength > 0 && conditionalLength < 200 && pos + conditionalLength <= barcodeData.length) {
             const conditionalData = barcodeData.substring(pos, pos + conditionalLength);
-            console.log('📦 Full conditional data:', JSON.stringify(conditionalData));
-            console.log('📦 Conditional data length:', conditionalData.length);
+            logger.debug('Full conditional data:', JSON.stringify(conditionalData));
+            logger.debug('Conditional data length:', conditionalData.length);
 
             // NOTE: Gate, terminal, and boarding time are rarely in IATA barcodes
             // They will be extracted via OCR from the visual boarding pass text
             // We skip parsing airline-specific data here to avoid false positives
 
-            console.log('ℹ️ Conditional section parsed - airline-specific data will be extracted via OCR');
+            logger.debug('Conditional section parsed - airline-specific data will be extracted via OCR');
             pos += conditionalLength;
           } else if (conditionalLength === 0) {
-            console.log('ℹ️ No conditional data present in this boarding pass');
+            logger.debug('No conditional data present in this boarding pass');
           } else {
-            console.warn(`⚠️ Invalid conditional length: ${conditionalLength} or insufficient data`);
+            logger.warn(`Invalid conditional length: ${conditionalLength} or insufficient data`);
           }
         }
       }
     } catch (error) {
-      console.warn('⚠️ Failed to parse conditional items (non-critical):', error);
+      logger.warn('Failed to parse conditional items (non-critical):', error);
       // Continue anyway - conditional items are optional
     }
 
@@ -233,12 +234,12 @@ function parseBCBPStandard(barcodeData: string): BoardingPassData | null {
     // because it produces too many false positives (e.g., A220 from document numbers, TT from passenger names)
     // Gate, terminal, and boarding time should be extracted via OCR from the visual text instead
     if (!gate && !terminal) {
-      console.log('ℹ️ Gate/Terminal/Time not in barcode - will be extracted via OCR from visual text');
+      logger.debug('Gate/Terminal/Time not in barcode - will be extracted via OCR from visual text');
     }
 
     // Convert Julian date to actual date
     const dateOfFlight = julianDateToDate(julianDate);
-    console.log('📅 Converted to date:', dateOfFlight);
+    logger.debug('Converted to date:', dateOfFlight);
     const seatClass = mapCompartmentToSeatClass(compartmentCode);
     const airlineName = getAirlineName(operatingCarrierDesignator);
 
@@ -265,7 +266,7 @@ function parseBCBPStandard(barcodeData: string): BoardingPassData | null {
       raw: barcodeData,
     };
   } catch (error) {
-    console.error('Failed to parse BCBP:', error);
+    logger.error('Failed to parse BCBP:', error);
     return null;
   }
 }
@@ -276,22 +277,22 @@ function parseBCBPStandard(barcodeData: string): BoardingPassData | null {
  */
 function julianDateToDate(julianDate: string): string {
   const dayOfYear = parseInt(julianDate, 10);
-  console.log('📅 Julian day conversion: Input day of year =', dayOfYear);
+  logger.debug('Julian day conversion: Input day of year =', dayOfYear);
 
   let year = new Date().getFullYear();
-  console.log('📅 Current year:', year);
+  logger.debug('Current year:', year);
 
   // Create date from day of year using UTC to avoid timezone issues
   const date = new Date(Date.UTC(year, 0, dayOfYear));
 
-  console.log('📅 Calculated date (before year adjustment):', date.toISOString().split('T')[0]);
+  logger.debug('Calculated date (before year adjustment):', date.toISOString().split('T')[0]);
 
   // Calculate days difference from today
   const today = new Date();
   today.setHours(0, 0, 0, 0); // Normalize to midnight
   const diffDays = Math.floor((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
-  console.log('📅 Days difference from today:', diffDays);
+  logger.debug('Days difference from today:', diffDays);
 
   // Year adjustment logic:
   // - If date is far in the FUTURE (>300 days), it's probably from LAST year
@@ -302,19 +303,19 @@ function julianDateToDate(julianDate: string): string {
     // Date is way in the future (e.g., day 158 when we're at day 333)
     // This means it's actually from last year
     adjustedYear = year - 1;
-    console.log('📅 Date is >300 days in future, assuming PREVIOUS year');
+    logger.debug('Date is >300 days in future, assuming PREVIOUS year');
   } else if (diffDays < -365) {
     // Date is more than a year in the past - keep current year
-    console.log('📅 Date is >365 days in past, keeping current year');
+    logger.debug('Date is >365 days in past, keeping current year');
   } else {
     // Date is reasonable (within ±300 days) - keep current year
-    console.log('📅 Date is within reasonable range, keeping current year');
+    logger.debug('Date is within reasonable range, keeping current year');
   }
 
   // Recalculate with adjusted year
   const finalDate = new Date(Date.UTC(adjustedYear, 0, dayOfYear));
   const result = finalDate.toISOString().split('T')[0];
-  console.log('📅 Final converted date:', result);
+  logger.debug('Final converted date:', result);
   return result; // Return YYYY-MM-DD
 }
 
@@ -386,7 +387,7 @@ function parseURLBoardingPass(barcodeData: string): BoardingPassData | null {
 
     // For now, return null - URLs need to be fetched/decoded
     // This would require backend integration
-    console.warn('URL-based boarding pass detected, but parsing not yet implemented:', barcodeData);
+    logger.warn('URL-based boarding pass detected, but parsing not yet implemented:', barcodeData);
     return null;
   } catch (error) {
     return null;
@@ -398,7 +399,7 @@ function parseURLBoardingPass(barcodeData: string): BoardingPassData | null {
  */
 function parseFallbackBoardingPass(barcodeData: string): BoardingPassData | null {
   try {
-    console.log('🔍 Attempting fallback parsing on:', barcodeData);
+    logger.debug('Attempting fallback parsing on:', barcodeData);
 
     // Extract what we can using regex patterns
     const extracted: Partial<BoardingPassData> = {
@@ -445,12 +446,12 @@ function parseFallbackBoardingPass(barcodeData: string): BoardingPassData | null
     if (likelyAirports.length >= 2) {
       extracted.departureAirport = likelyAirports[0];
       extracted.arrivalAirport = likelyAirports[1];
-      console.log('✓ Airports found:', extracted.departureAirport, '→', extracted.arrivalAirport);
+      logger.debug('Airports found:', extracted.departureAirport, '→', extracted.arrivalAirport);
     } else if (airports.length >= 2) {
       // Fallback: just take first two 3-letter codes
       extracted.departureAirport = airports[0];
       extracted.arrivalAirport = airports[1];
-      console.log('✓ Airports found (fallback):', extracted.departureAirport, '→', extracted.arrivalAirport);
+      logger.debug('Airports found (fallback):', extracted.departureAirport, '→', extracted.arrivalAirport);
     }
 
     // Pattern 2: Flight number (airline code + digits)
@@ -460,7 +461,7 @@ function parseFallbackBoardingPass(barcodeData: string): BoardingPassData | null
       extracted.operatingCarrierDesignator = flights[0][1];
       extracted.flightNumber = flights[0][2];
       extracted.airlineName = getAirlineName(flights[0][1]);
-      console.log('✓ Flight found:', extracted.operatingCarrierDesignator + extracted.flightNumber);
+      logger.debug('Flight found:', extracted.operatingCarrierDesignator + extracted.flightNumber);
     }
 
     // Pattern 3: Date patterns (DDMMMYY, YYYYMMDD, DD.MM.YYYY, etc.)
@@ -479,7 +480,7 @@ function parseFallbackBoardingPass(barcodeData: string): BoardingPassData | null
       const year = '20' + match1[3]; // Assume 20xx
       if (month) {
         extracted.dateOfFlight = `${year}-${month}-${day}`;
-        console.log('✓ Date found:', match1[0], '→', extracted.dateOfFlight);
+        logger.debug('Date found:', match1[0], '→', extracted.dateOfFlight);
       }
     }
 
@@ -489,7 +490,7 @@ function parseFallbackBoardingPass(barcodeData: string): BoardingPassData | null
       const match2 = barcodeData.match(datePattern2);
       if (match2) {
         extracted.dateOfFlight = `${match2[1]}-${match2[2]}-${match2[3]}`;
-        console.log('✓ Date found:', match2[0]);
+        logger.debug('Date found:', match2[0]);
       }
     }
 
@@ -499,7 +500,7 @@ function parseFallbackBoardingPass(barcodeData: string): BoardingPassData | null
       const match3 = barcodeData.match(datePattern3);
       if (match3) {
         extracted.dateOfFlight = `${match3[3]}-${match3[2]}-${match3[1]}`;
-        console.log('✓ Date found:', match3[0]);
+        logger.debug('Date found:', match3[0]);
       }
     }
 
@@ -508,7 +509,7 @@ function parseFallbackBoardingPass(barcodeData: string): BoardingPassData | null
     const nameMatch = barcodeData.match(namePattern);
     if (nameMatch) {
       extracted.passengerName = `${nameMatch[1]}/${nameMatch[2]}`;
-      console.log('✓ Passenger name found:', extracted.passengerName);
+      logger.debug('Passenger name found:', extracted.passengerName);
     }
 
     // Pattern 5: Seat number (e.g., 12A, 3F, 16F)
@@ -516,7 +517,7 @@ function parseFallbackBoardingPass(barcodeData: string): BoardingPassData | null
     const seatMatch = barcodeData.match(seatPattern);
     if (seatMatch) {
       extracted.seatNumber = seatMatch[1];
-      console.log('✓ Seat found:', extracted.seatNumber);
+      logger.debug('Seat found:', extracted.seatNumber);
     }
 
     // Pattern 6: Class indicators
@@ -531,7 +532,7 @@ function parseFallbackBoardingPass(barcodeData: string): BoardingPassData | null
       if (barcodeData.includes(keyword)) {
         extracted.compartmentCode = code;
         extracted.seatClass = mapCompartmentToSeatClass(code);
-        console.log('✓ Class found:', keyword);
+        logger.debug('Class found:', keyword);
         break;
       }
     }
@@ -540,12 +541,12 @@ function parseFallbackBoardingPass(barcodeData: string): BoardingPassData | null
     const timePattern = /\b(\d{2}):(\d{2})\b/g;
     const times = [...barcodeData.matchAll(timePattern)];
     if (times.length > 0) {
-      console.log('✓ Times found:', times.map(t => t[0]).join(', '));
+      logger.debug('Times found:', times.map(t => t[0]).join(', '));
     }
 
     // Validation: We need at minimum departure and arrival airports
     if (!extracted.departureAirport || !extracted.arrivalAirport) {
-      console.warn('⚠️ Fallback parsing failed: missing required airports');
+      logger.warn('Fallback parsing failed: missing required airports');
       return null;
     }
 
@@ -554,11 +555,11 @@ function parseFallbackBoardingPass(barcodeData: string): BoardingPassData | null
       extracted.dateOfFlight = new Date().toISOString().split('T')[0];
     }
 
-    console.log('✅ Fallback parsing successful!', extracted);
+    logger.debug('Fallback parsing successful!', extracted);
 
     return extracted as BoardingPassData;
   } catch (error) {
-    console.error('❌ Fallback parsing error:', error);
+    logger.error('Fallback parsing error:', error);
     return null;
   }
 }

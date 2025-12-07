@@ -7,6 +7,10 @@ import { z } from 'zod';
 import logger from '../utils/logger';
 import { prisma } from '../db';
 import fs from 'fs';
+import path from 'path';
+import { validateEmailFile } from '../utils/fileValidation';
+import { AppError } from '../middleware/errorHandler';
+import { collectLowQualityFeedback } from '../services/parserFeedback';
 
 const router = Router();
 
@@ -35,25 +39,37 @@ router.post('/parse-email', authenticate, async (req: AuthRequest, res: Response
 
     logger.info(`[Email Parse] Parsing email for user ${userId}`);
 
-    // Get user settings for parser configuration
-    const userSettings = await prisma.userSettings.findUnique({
-      where: { userId },
-      select: {
-        preferredTextParser: true,
-        textFallbackChain: true,
-        openaiApiKey: true,
-        claudeApiKey: true,
-      },
-    });
+    // Get user and admin settings for parser configuration (with decrypted API keys)
+    const { getUserParserSettings, getAdminParserSettings } = await import('../services/parserSettings');
+    const userSettings = await getUserParserSettings(userId);
+    const adminSettings = await getAdminParserSettings();
 
     const result = await parseBookingEmail(
       subject,
       emailContent,
       undefined,
-      userSettings || undefined
+      userSettings || undefined,
+      adminSettings || undefined
     );
 
     logger.info(`[Email Parse] Parsing complete: ${result.flights.length} flight(s) found using ${result.parserUsed}`);
+
+    // Collect feedback for low-quality results (async, don't await)
+    const qualityScore = result.flights.reduce((sum, f) => {
+      const criticalFields = ['flightNumber', 'departureCode', 'arrivalCode', 'departureTime'];
+      const missingCritical = criticalFields.filter(field => f.missing.includes(field)).length;
+      return sum + (100 - missingCritical * 25);
+    }, 0) / Math.max(1, result.flights.length);
+
+    if (qualityScore < 50 && userId) {
+      collectLowQualityFeedback(
+        userId,
+        'email',
+        result.parserUsed,
+        result.flights,
+        { subject, text: emailContent }
+      ).catch(err => logger.warn({ error: err }, '[Email Parse] Failed to collect feedback'));
+    }
 
     res.json(result);
   } catch (error) {
@@ -104,6 +120,30 @@ router.post(
       const userId = req.userId;
       filePath = file.path;
 
+      // Validate file using magic numbers
+      const ext = path.extname(file.originalname).toLowerCase();
+      const validation = validateEmailFile(filePath, file.mimetype, ext);
+      if (!validation.valid) {
+        // Delete the uploaded file if validation fails
+        if (filePath && fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+        logger.warn({
+          operation: 'email_upload_validation_failed',
+          message: 'Email file validation failed',
+          context: {
+            filename: file.originalname,
+            mimetype: file.mimetype,
+            extension: ext,
+            reason: validation.reason,
+          },
+        });
+        return res.status(400).json({
+          error: 'Validation failed',
+          message: `File validation failed: ${validation.reason}`,
+        });
+      }
+
       logger.info({
         filename: file.originalname,
         size: file.size,
@@ -120,23 +160,18 @@ router.post(
         hasHtml: !!extracted.html,
       }, '[Email Parse File] Email extracted from file');
 
-      // Get user settings for parser configuration
-      const userSettings = await prisma.userSettings.findUnique({
-        where: { userId },
-        select: {
-          preferredTextParser: true,
-          textFallbackChain: true,
-          openaiApiKey: true,
-          claudeApiKey: true,
-        },
-      });
+      // Get user and admin settings for parser configuration (with decrypted API keys)
+      const { getUserParserSettings, getAdminParserSettings } = await import('../services/parserSettings');
+      const userSettings = await getUserParserSettings(userId);
+      const adminSettings = await getAdminParserSettings();
 
       // Parse email with configured parser
       const result = await parseBookingEmail(
         extracted.subject,
         extracted.text,
         extracted.html,
-        userSettings || undefined
+        userSettings || undefined,
+        adminSettings || undefined
       );
 
       logger.info(
@@ -152,6 +187,8 @@ router.post(
       res.json({
         ...result,
         subject: extracted.subject,
+        text: extracted.text.substring(0, 1000), // Truncate for feedback (first 1000 chars)
+        html: extracted.html ? extracted.html.substring(0, 1000) : undefined, // Truncate for feedback
       });
     } catch (error) {
       // Cleanup: Delete temporary file on error

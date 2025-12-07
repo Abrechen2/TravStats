@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Airport, airportsApi, flightsApi } from '../lib/api';
 import AirportAutocomplete from './AirportAutocomplete';
-import BoardingPassScanner from './BoardingPassScanner';
+
+// Lazy load BoardingPassScanner as it's heavy (Tesseract.js)
+const BoardingPassScanner = lazy(() => import('./BoardingPassScanner'));
 import { BoardingPassData, getAirlineName } from '../lib/bcbpParser';
 import type { FlightInput, FlightLookupResult } from '../types';
 import { useSettingsStore } from '../store/settingsStore';
@@ -614,10 +616,21 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
 
       {/* Boarding Pass Scanner Modal */}
       {showScanner && (
-        <BoardingPassScanner
-          onScanSuccess={handleBoardingPassScan}
-          onClose={() => setShowScanner(false)}
-        />
+        <Suspense fallback={
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-8">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto mb-2"></div>
+                <p className="text-gray-600 dark:text-gray-300">Loading scanner...</p>
+              </div>
+            </div>
+          </div>
+        }>
+          <BoardingPassScanner
+            onScanSuccess={handleBoardingPassScan}
+            onClose={() => setShowScanner(false)}
+          />
+        </Suspense>
       )}
     </div>
   );

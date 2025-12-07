@@ -3,10 +3,12 @@ import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { AppError } from '../middleware/errorHandler';
 import crypto from 'crypto';
+import { decryptApiKey } from '../utils/encryption';
 import {
   getLoggingConfig,
   updateLoggingConfig,
   toggleDebugLogging,
+  invalidateCacheAndReinit,
 } from '../services/loggingConfig';
 import {
   listLogFiles,
@@ -23,6 +25,14 @@ import {
   readLogFileQuerySchema,
   searchLogsQuerySchema,
 } from '../schemas/admin';
+import { getParserFeedbackStats } from '../services/parserFeedback';
+import { analyzeFeedbackForPatterns, getPatternAnalysisSummary } from '../services/patternAnalyzer';
+import {
+  getPendingPatternSuggestions,
+  applyPatternSuggestion,
+  autoApplyHighConfidencePatterns,
+  getPatternUpdateStats,
+} from '../services/patternUpdater';
 
 const router = Router();
 
@@ -231,10 +241,10 @@ router.get('/parser-settings', async (req: AuthRequest, res: Response, next: Nex
       });
     }
 
-    // Return settings (API keys are already encrypted in DB, frontend handles as-is)
+    // Return settings (API keys are decrypted for frontend)
     res.json({
-      globalOpenaiApiKey: adminSettings.globalOpenaiApiKey || undefined,
-      globalClaudeApiKey: adminSettings.globalClaudeApiKey || undefined,
+      globalOpenaiApiKey: decryptApiKey(adminSettings.globalOpenaiApiKey) || undefined,
+      globalClaudeApiKey: decryptApiKey(adminSettings.globalClaudeApiKey) || undefined,
       allowUserApiKeys: adminSettings.allowUserApiKeys,
       requireUserApiKeys: adminSettings.requireUserApiKeys,
       defaultVisionParser: adminSettings.defaultVisionParser,
@@ -263,11 +273,12 @@ router.put('/parser-settings', async (req: AuthRequest, res: Response, next: Nex
     const updateData: any = {};
 
     // Only update fields that are provided
+    // Encrypt API keys before storing
     if (globalOpenaiApiKey !== undefined) {
-      updateData.globalOpenaiApiKey = globalOpenaiApiKey || null;
+      updateData.globalOpenaiApiKey = encryptApiKey(globalOpenaiApiKey);
     }
     if (globalClaudeApiKey !== undefined) {
-      updateData.globalClaudeApiKey = globalClaudeApiKey || null;
+      updateData.globalClaudeApiKey = encryptApiKey(globalClaudeApiKey);
     }
     if (allowUserApiKeys !== undefined) {
       updateData.allowUserApiKeys = allowUserApiKeys;
@@ -292,8 +303,8 @@ router.put('/parser-settings', async (req: AuthRequest, res: Response, next: Nex
       // Create new settings with provided data
       adminSettings = await prisma.adminSettings.create({
         data: {
-          globalOpenaiApiKey: globalOpenaiApiKey || null,
-          globalClaudeApiKey: globalClaudeApiKey || null,
+          globalOpenaiApiKey: encryptApiKey(globalOpenaiApiKey),
+          globalClaudeApiKey: encryptApiKey(globalClaudeApiKey),
           allowUserApiKeys: allowUserApiKeys ?? true,
           requireUserApiKeys: requireUserApiKeys ?? false,
           defaultVisionParser: defaultVisionParser || 'auto',
@@ -305,8 +316,8 @@ router.put('/parser-settings', async (req: AuthRequest, res: Response, next: Nex
     res.json({
       message: 'Parser settings updated successfully',
       settings: {
-        globalOpenaiApiKey: adminSettings.globalOpenaiApiKey || undefined,
-        globalClaudeApiKey: adminSettings.globalClaudeApiKey || undefined,
+        globalOpenaiApiKey: decryptApiKey(adminSettings.globalOpenaiApiKey) || undefined,
+        globalClaudeApiKey: decryptApiKey(adminSettings.globalClaudeApiKey) || undefined,
         allowUserApiKeys: adminSettings.allowUserApiKeys,
         requireUserApiKeys: adminSettings.requireUserApiKeys,
         defaultVisionParser: adminSettings.defaultVisionParser,
@@ -335,6 +346,10 @@ router.put('/logging/config', async (req: AuthRequest, res: Response, next: Next
   try {
     const validatedData = loggingConfigSchema.parse(req.body);
     const updated = await updateLoggingConfig(validatedData);
+    
+    // Reinitialize logger streams with new config
+    await invalidateCacheAndReinit();
+    
     res.json({
       message: 'Logging configuration updated successfully',
       config: updated,
@@ -349,6 +364,10 @@ router.post('/logging/toggle-debug', async (req: AuthRequest, res: Response, nex
   try {
     const { enabled } = toggleDebugLoggingSchema.parse(req.body);
     await toggleDebugLogging(enabled);
+    
+    // Reinitialize logger streams with new config
+    await invalidateCacheAndReinit();
+    
     res.json({
       message: `Debug logging ${enabled ? 'enabled' : 'disabled'}`,
       debugLoggingEnabled: enabled,
@@ -447,6 +466,121 @@ router.get('/logging/search', async (req: AuthRequest, res: Response, next: Next
       results,
       count: results.length,
       query: queryParams,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get parser feedback statistics
+router.get('/parser-feedback/stats', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const provider = req.query.provider as string | undefined;
+    const sourceType = req.query.sourceType as 'email' | 'boardingpass' | undefined;
+    const days = parseInt(req.query.days as string) || 30;
+
+    const stats = await getParserFeedbackStats(provider, sourceType, days);
+    res.json(stats);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get pattern analysis and suggestions
+router.get('/parser-feedback/patterns', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const days = parseInt(req.query.days as string) || 30;
+    const [suggestions, summary, pendingSuggestions, stats] = await Promise.all([
+      analyzeFeedbackForPatterns(days),
+      getPatternAnalysisSummary(days),
+      getPendingPatternSuggestions(),
+      getPatternUpdateStats(),
+    ]);
+    res.json({
+      suggestions,
+      summary,
+      pendingSuggestions,
+      stats,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Apply a pattern suggestion
+router.post('/parser-feedback/patterns/:id/apply', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const { autoApply } = req.body;
+    const result = await applyPatternSuggestion(id, autoApply === true);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Auto-apply high-confidence patterns
+router.post('/parser-feedback/patterns/auto-apply', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const threshold = parseFloat(req.body.threshold as string) || 0.9;
+    const appliedCount = await autoApplyHighConfidencePatterns(threshold);
+    res.json({
+      success: true,
+      appliedCount,
+      message: `Applied ${appliedCount} high-confidence pattern(s)`,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get detailed feedback entries
+router.get('/parser-feedback/details', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const provider = req.query.provider as string | undefined;
+    const sourceType = req.query.sourceType as 'email' | 'boardingpass' | undefined;
+    const days = parseInt(req.query.days as string) || 30;
+    const limit = parseInt(req.query.limit as string) || 50;
+    const offset = parseInt(req.query.offset as string) || 0;
+
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+
+    const where: any = {
+      type: 'parser_feedback',
+      createdAt: {
+        gte: since,
+      },
+    };
+
+    const events = await prisma.analyticsEvent.findMany({
+      where,
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: limit,
+      skip: offset,
+      select: {
+        id: true,
+        userId: true,
+        createdAt: true,
+        payload: true,
+      },
+    });
+
+    // Filter by provider and sourceType if provided
+    const filtered = events.filter((event) => {
+      const payload = event.payload as any;
+      if (provider && payload.provider !== provider) return false;
+      if (sourceType && payload.sourceType !== sourceType) return false;
+      return true;
+    });
+
+    const total = await prisma.analyticsEvent.count({ where });
+
+    res.json({
+      feedback: filtered,
+      total,
     });
   } catch (error) {
     next(error);

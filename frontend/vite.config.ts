@@ -20,4 +20,21 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Vendor chunks
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          // Heavy libraries
+          'globe-vendor': ['react-globe.gl', 'three'],
+          'parser-vendor': ['tesseract.js'],
+          'charts-vendor': ['recharts'],
+          // Zustand stores
+          'store-vendor': ['zustand'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 1000, // Increase limit to 1MB
+  },
 })

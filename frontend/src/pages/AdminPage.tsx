@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { adminApi } from '../lib/api';
 import { format } from 'date-fns';
+import { logger } from '../lib/logger';
 
 export default function AdminPage() {
   const [systemInfo, setSystemInfo] = useState<any>(null);
@@ -10,11 +11,16 @@ export default function AdminPage() {
   const [loggingConfig, setLoggingConfig] = useState<any>(null);
   const [logFiles, setLogFiles] = useState<any[]>([]);
   const [logStats, setLogStats] = useState<any>(null);
+  const [feedbackStats, setFeedbackStats] = useState<any>(null);
+  const [patternData, setPatternData] = useState<any>(null);
+  const [feedbackDetails, setFeedbackDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'users' | 'invitations' | 'system' | 'parsers' | 'logging'>('system');
+  const [activeTab, setActiveTab] = useState<'users' | 'invitations' | 'system' | 'parsers' | 'logging' | 'feedback' | 'patterns'>('system');
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [savingParsers, setSavingParsers] = useState(false);
   const [savingLogging, setSavingLogging] = useState(false);
+  const [feedbackDays, setFeedbackDays] = useState(30);
+  const [selectedFeedbackId, setSelectedFeedbackId] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -23,8 +29,12 @@ export default function AdminPage() {
   useEffect(() => {
     if (activeTab === 'logging') {
       loadLoggingData();
+    } else if (activeTab === 'feedback') {
+      loadFeedbackData();
+    } else if (activeTab === 'patterns') {
+      loadPatternData();
     }
-  }, [activeTab]);
+  }, [activeTab, feedbackDays]);
 
   const loadData = async () => {
     setLoading(true);
@@ -40,7 +50,7 @@ export default function AdminPage() {
       setInvitations(invitationsData.invitations);
       setParserSettings(parserData);
     } catch (error) {
-      console.error('Failed to load admin data:', error);
+      logger.error('Failed to load admin data:', error);
     } finally {
       setLoading(false);
     }
@@ -57,7 +67,51 @@ export default function AdminPage() {
       setLogFiles(filesData.files);
       setLogStats(statsData);
     } catch (error) {
-      console.error('Failed to load logging data:', error);
+      logger.error('Failed to load logging data:', error);
+    }
+  };
+
+  const loadFeedbackData = async () => {
+    try {
+      const [stats, details] = await Promise.all([
+        adminApi.getParserFeedbackStats({ days: feedbackDays }),
+        adminApi.getParserFeedbackDetails({ days: feedbackDays, limit: 100 }),
+      ]);
+      setFeedbackStats(stats);
+      setFeedbackDetails(details);
+    } catch (error) {
+      logger.error('Failed to load feedback data:', error);
+    }
+  };
+
+  const loadPatternData = async () => {
+    try {
+      const data = await adminApi.getParserPatterns({ days: feedbackDays });
+      setPatternData(data);
+    } catch (error) {
+      logger.error('Failed to load pattern data:', error);
+    }
+  };
+
+  const handleApplyPattern = async (eventId: string) => {
+    if (!confirm('Möchten Sie dieses Pattern wirklich anwenden? Hinweis: Dies erfordert manuelle Code-Updates.')) return;
+    try {
+      const result = await adminApi.applyPatternSuggestion(eventId, false);
+      alert(result.message);
+      await loadPatternData();
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Fehler beim Anwenden des Patterns');
+    }
+  };
+
+  const handleAutoApplyPatterns = async () => {
+    if (!confirm('Möchten Sie alle hochwertigen Patterns automatisch anwenden?')) return;
+    try {
+      const result = await adminApi.autoApplyPatterns(0.9);
+      alert(result.message);
+      await loadPatternData();
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Fehler beim automatischen Anwenden');
     }
   };
 
@@ -109,7 +163,7 @@ export default function AdminPage() {
       await adminApi.updateAdminParserSettings(parserSettings);
       alert('Parser settings saved successfully!');
     } catch (error: any) {
-      console.error('Failed to save parser settings:', error);
+      logger.error('Failed to save parser settings:', error);
       alert(error.response?.data?.error || 'Failed to save parser settings');
     } finally {
       setSavingParsers(false);
@@ -124,7 +178,7 @@ export default function AdminPage() {
       await loadLoggingData();
       alert(`Debug logging ${newState ? 'enabled' : 'disabled'} successfully!`);
     } catch (error: any) {
-      console.error('Failed to toggle debug logging:', error);
+      logger.error('Failed to toggle debug logging:', error);
       alert(error.response?.data?.error || 'Failed to toggle debug logging');
     }
   };
@@ -136,7 +190,7 @@ export default function AdminPage() {
       alert('Logging configuration saved successfully!');
       await loadLoggingData();
     } catch (error: any) {
-      console.error('Failed to save logging config:', error);
+      logger.error('Failed to save logging config:', error);
       alert(error.response?.data?.error || 'Failed to save logging config');
     } finally {
       setSavingLogging(false);
@@ -153,7 +207,7 @@ export default function AdminPage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (error: any) {
-      console.error('Failed to download log file:', error);
+      logger.error('Failed to download log file:', error);
       alert(error.response?.data?.error || 'Failed to download log file');
     }
   };
@@ -167,7 +221,7 @@ export default function AdminPage() {
       alert('Log file deleted successfully!');
       await loadLoggingData();
     } catch (error: any) {
-      console.error('Failed to delete log file:', error);
+      logger.error('Failed to delete log file:', error);
       alert(error.response?.data?.error || 'Failed to delete log file');
     }
   };
@@ -181,7 +235,7 @@ export default function AdminPage() {
       alert(`Cleanup complete! Deleted ${result.filesDeleted} files, freed ${(result.spaceFreed / 1024 / 1024).toFixed(2)} MB`);
       await loadLoggingData();
     } catch (error: any) {
-      console.error('Failed to cleanup logs:', error);
+      logger.error('Failed to cleanup logs:', error);
       alert(error.response?.data?.error || 'Failed to cleanup logs');
     }
   };
@@ -257,6 +311,36 @@ export default function AdminPage() {
           }`}
         >
           Logging
+        </button>
+        <button
+          onClick={() => setActiveTab('feedback')}
+          className={`px-4 py-2 font-medium transition ${
+            activeTab === 'feedback'
+              ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+          }`}
+        >
+          Parser Feedback
+          {feedbackStats && feedbackStats.total > 0 && (
+            <span className="ml-2 px-2 py-0.5 text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full">
+              {feedbackStats.total}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab('patterns')}
+          className={`px-4 py-2 font-medium transition ${
+            activeTab === 'patterns'
+              ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+          }`}
+        >
+          Pattern Updates
+          {patternData && patternData.pendingSuggestions && patternData.pendingSuggestions.length > 0 && (
+            <span className="ml-2 px-2 py-0.5 text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full">
+              {patternData.pendingSuggestions.length}
+            </span>
+          )}
         </button>
       </div>
 
@@ -1010,6 +1094,457 @@ export default function AdminPage() {
                   <li>• <strong>Privacy</strong>: Sensitive data (passwords, API keys, tokens) automatically redacted from logs</li>
                 </ul>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Parser Feedback Tab */}
+      {activeTab === 'feedback' && (
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                Parser Feedback Statistics
+              </h2>
+              <div className="flex items-center gap-4">
+                <label className="text-sm text-gray-600 dark:text-gray-400">
+                  Time Period:
+                  <select
+                    value={feedbackDays}
+                    onChange={(e) => setFeedbackDays(Number(e.target.value))}
+                    className="ml-2 px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value={7}>Last 7 days</option>
+                    <option value={30}>Last 30 days</option>
+                    <option value={90}>Last 90 days</option>
+                    <option value={365}>Last year</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+
+            {feedbackStats ? (
+              <div className="space-y-6">
+                {/* Overview Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                    <div className="text-blue-600 dark:text-blue-400 text-sm font-medium mb-1">
+                      Total Feedback Entries
+                    </div>
+                    <div className="text-3xl font-bold text-blue-900 dark:text-blue-100">
+                      {feedbackStats.total}
+                    </div>
+                  </div>
+                  <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
+                    <div className="text-green-600 dark:text-green-400 text-sm font-medium mb-1">
+                      Average Quality Score
+                    </div>
+                    <div className="text-3xl font-bold text-green-900 dark:text-green-100">
+                      {feedbackStats.avgQualityScore}%
+                    </div>
+                  </div>
+                  <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
+                    <div className="text-purple-600 dark:text-purple-400 text-sm font-medium mb-1">
+                      Common Issues
+                    </div>
+                    <div className="text-3xl font-bold text-purple-900 dark:text-purple-100">
+                      {feedbackStats.commonIssues.length}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Provider Distribution */}
+                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                    Distribution by Parser Provider
+                  </h3>
+                  {Object.keys(feedbackStats.byProvider).length > 0 ? (
+                    <div className="space-y-3">
+                      {Object.entries(feedbackStats.byProvider)
+                        .sort(([, a], [, b]) => (b as number) - (a as number))
+                        .map(([provider, count]) => {
+                          const percentage = feedbackStats.total > 0
+                            ? Math.round(((count as number) / feedbackStats.total) * 100)
+                            : 0;
+                          return (
+                            <div key={provider}>
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                  {provider.toUpperCase()}
+                                </span>
+                                <span className="text-sm text-gray-600 dark:text-gray-400">
+                                  {count} ({percentage}%)
+                                </span>
+                              </div>
+                              <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                                <div
+                                  className="bg-blue-600 h-2 rounded-full transition-all"
+                                  style={{ width: `${percentage}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 dark:text-gray-400">No data available</p>
+                  )}
+                </div>
+
+                {/* Source Type Distribution */}
+                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                    Distribution by Source Type
+                  </h3>
+                  {Object.keys(feedbackStats.bySourceType).length > 0 ? (
+                    <div className="grid grid-cols-2 gap-4">
+                      {Object.entries(feedbackStats.bySourceType).map(([type, count]) => {
+                        const percentage = feedbackStats.total > 0
+                          ? Math.round(((count as number) / feedbackStats.total) * 100)
+                          : 0;
+                        return (
+                          <div key={type} className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                            <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                              {type === 'email' ? '📧 Email' : '🎫 Boarding Pass'}
+                            </div>
+                            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                              {count}
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              {percentage}% of total
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 dark:text-gray-400">No data available</p>
+                  )}
+                </div>
+
+                  {/* Common Issues */}
+                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                      Most Common Issues
+                    </h3>
+                    {feedbackStats.commonIssues.length > 0 ? (
+                      <div className="space-y-2">
+                        {feedbackStats.commonIssues.map((issue: any, index: number) => (
+                          <div
+                            key={index}
+                            className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700"
+                          >
+                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                              {issue.issue}
+                            </span>
+                            <span className="px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded-full text-sm font-medium">
+                              {issue.count}x
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-gray-500 dark:text-gray-400">No issues reported</p>
+                    )}
+                  </div>
+
+                  {/* Feedback Details List */}
+                  {feedbackDetails && feedbackDetails.feedback && feedbackDetails.feedback.length > 0 && (
+                    <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                        Recent Feedback Entries ({feedbackDetails.total})
+                      </h3>
+                      <div className="space-y-2 max-h-96 overflow-y-auto">
+                        {feedbackDetails.feedback.map((entry: any) => {
+                          const payload = entry.payload;
+                          return (
+                            <div
+                              key={entry.id}
+                              className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                              onClick={() => setSelectedFeedbackId(entry.id)}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded text-xs font-medium">
+                                      {payload.provider}
+                                    </span>
+                                    <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 rounded text-xs font-medium">
+                                      {payload.sourceType}
+                                    </span>
+                                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                      payload.qualityScore >= 50
+                                        ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                                        : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+                                    }`}>
+                                      {payload.qualityScore}% quality
+                                    </span>
+                                  </div>
+                                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                                    {format(new Date(entry.createdAt), 'PPp')}
+                                  </div>
+                                  {payload.issues && payload.issues.length > 0 && (
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                      {payload.issues.slice(0, 3).join(', ')}
+                                      {payload.issues.length > 3 && ` (+${payload.issues.length - 3} more)`}
+                                    </div>
+                                  )}
+                                </div>
+                                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="text-gray-400 dark:text-gray-500 mb-2">Loading feedback statistics...</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Pattern Updates Tab */}
+      {activeTab === 'patterns' && (
+        <div className="space-y-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                Pattern Updates & Suggestions
+              </h2>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={handleAutoApplyPatterns}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
+                >
+                  Auto-Apply High Confidence (≥90%)
+                </button>
+                <label className="text-sm text-gray-600 dark:text-gray-400">
+                  Time Period:
+                  <select
+                    value={feedbackDays}
+                    onChange={(e) => setFeedbackDays(Number(e.target.value))}
+                    className="ml-2 px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value={7}>Last 7 days</option>
+                    <option value={30}>Last 30 days</option>
+                    <option value={90}>Last 90 days</option>
+                    <option value={365}>Last year</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+
+            {patternData ? (
+              <div className="space-y-6">
+                {/* Statistics */}
+                {patternData.stats && (
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                      <div className="text-blue-600 dark:text-blue-400 text-sm font-medium mb-1">
+                        Total Patterns
+                      </div>
+                      <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+                        {patternData.stats.total}
+                      </div>
+                    </div>
+                    <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
+                      <div className="text-green-600 dark:text-green-400 text-sm font-medium mb-1">
+                        Applied
+                      </div>
+                      <div className="text-2xl font-bold text-green-900 dark:text-green-100">
+                        {patternData.stats.applied}
+                      </div>
+                    </div>
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800">
+                      <div className="text-yellow-600 dark:text-yellow-400 text-sm font-medium mb-1">
+                        Pending
+                      </div>
+                      <div className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">
+                        {patternData.stats.pending}
+                      </div>
+                    </div>
+                    <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
+                      <div className="text-purple-600 dark:text-purple-400 text-sm font-medium mb-1">
+                        Avg Confidence
+                      </div>
+                      <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+                        {Math.round(patternData.stats.avgConfidence * 100)}%
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Pending Suggestions */}
+                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                    Pending Pattern Suggestions ({patternData.pendingSuggestions?.length || 0})
+                  </h3>
+                  {patternData.pendingSuggestions && patternData.pendingSuggestions.length > 0 ? (
+                    <div className="space-y-4">
+                      {patternData.pendingSuggestions.map((suggestion: any) => (
+                        <div
+                          key={suggestion.id}
+                          className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded text-sm font-medium">
+                                  {suggestion.field}
+                                </span>
+                                <span className={`px-2 py-1 rounded text-sm font-medium ${
+                                  suggestion.confidence >= 0.9
+                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                                    : suggestion.confidence >= 0.8
+                                    ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
+                                    : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
+                                }`}>
+                                  {Math.round(suggestion.confidence * 100)}% confidence
+                                </span>
+                              </div>
+                              <div className="mb-2">
+                                <span className="text-sm text-gray-600 dark:text-gray-400">Pattern: </span>
+                                <code className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-sm font-mono">
+                                  {suggestion.pattern}
+                                </code>
+                              </div>
+                              <div className="mb-2">
+                                <span className="text-sm text-gray-600 dark:text-gray-400">Issue: </span>
+                                <span className="text-sm text-gray-700 dark:text-gray-300">{suggestion.issue}</span>
+                              </div>
+                              {suggestion.examples && suggestion.examples.length > 0 && (
+                                <div>
+                                  <span className="text-sm text-gray-600 dark:text-gray-400">Examples: </span>
+                                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                                    {suggestion.examples.slice(0, 5).join(', ')}
+                                    {suggestion.examples.length > 5 && ` (+${suggestion.examples.length - 5} more)`}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => handleApplyPattern(suggestion.id)}
+                              className="ml-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors text-sm"
+                            >
+                              Apply
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 dark:text-gray-400">No pending pattern suggestions</p>
+                  )}
+                </div>
+
+                {/* Summary */}
+                {patternData.summary && (
+                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                      Analysis Summary
+                    </h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Total Issues:</span>
+                        <span className="font-medium text-gray-900 dark:text-white">{patternData.summary.totalIssues}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Pattern Suggestions:</span>
+                        <span className="font-medium text-gray-900 dark:text-white">{patternData.summary.suggestions}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="text-gray-400 dark:text-gray-500 mb-2">Loading pattern data...</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Feedback Details Modal */}
+      {selectedFeedbackId && feedbackDetails && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white dark:bg-gray-800 border-b dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Feedback Details</h2>
+              <button
+                onClick={() => setSelectedFeedbackId(null)}
+                className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6">
+              {(() => {
+                const feedback = feedbackDetails.feedback.find((f: any) => f.id === selectedFeedbackId);
+                if (!feedback) return <p>Feedback not found</p>;
+                const payload = feedback.payload;
+                return (
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Provider</h3>
+                      <p className="text-gray-700 dark:text-gray-300">{payload.provider}</p>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Quality Score</h3>
+                      <p className="text-gray-700 dark:text-gray-300">{payload.qualityScore}%</p>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Issues</h3>
+                      <ul className="list-disc list-inside text-gray-700 dark:text-gray-300">
+                        {payload.issues?.map((issue: string, i: number) => (
+                          <li key={i}>{issue}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    {payload.parsedResult && (
+                      <div>
+                        <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Parsed Result</h3>
+                        <pre className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg overflow-x-auto text-sm">
+                          {JSON.stringify(payload.parsedResult, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                    {payload.correctedResult && (
+                      <div>
+                        <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Corrected Result</h3>
+                        <pre className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg overflow-x-auto text-sm">
+                          {JSON.stringify(payload.correctedResult, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                    {payload.userCorrections && payload.userCorrections.length > 0 && (
+                      <div>
+                        <h3 className="font-semibold text-gray-900 dark:text-white mb-2">User Corrections</h3>
+                        <div className="space-y-2">
+                          {payload.userCorrections.map((correction: any, i: number) => (
+                            <div key={i} className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg">
+                              <div className="font-medium text-gray-900 dark:text-white">{correction.field}</div>
+                              <div className="text-sm text-gray-600 dark:text-gray-400">
+                                {String(correction.original)} → {String(correction.corrected)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>

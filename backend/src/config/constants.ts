@@ -1,0 +1,153 @@
+/**
+ * Application configuration constants
+ * All hardcoded values should be moved here for easier maintenance
+ */
+
+// ========== TIME OUTS ==========
+export const TIMEOUTS = {
+  // API timeouts (in milliseconds)
+  API_DEFAULT: 10000, // 10 seconds
+  API_PARSER: 180000, // 3 minutes for parser operations (Ollama can be slow)
+  
+  // LLM/Parser timeouts
+  LLM_TEXT: 60000, // 60 seconds for text parsing
+  LLM_TEXT_COMPLEX: 90000, // 90 seconds for complex emails
+  LLM_VISION: 60000, // 60 seconds for vision parsing
+  LLM_MODEL_DOWNLOAD: 600000, // 10 minutes for model downloads
+  LLM_HEALTH_CHECK: 3000, // 3 seconds for health checks
+  LLM_AVAILABILITY_CHECK: 5000, // 5 seconds for availability checks
+  
+  // External API timeouts
+  FLIGHT_LOOKUP: 5000, // 5 seconds for flight lookup APIs
+  FLIGHT_LOOKUP_BULK: 6000, // 6 seconds for bulk flight lookups
+  AIRPORT_LOOKUP: 5000, // 5 seconds for airport lookups
+} as const;
+
+// ========== FILE UPLOAD LIMITS ==========
+export const FILE_LIMITS = {
+  // File size limits (in bytes)
+  RECEIPT_MAX_SIZE: 10 * 1024 * 1024, // 10 MB
+  EMAIL_MAX_SIZE: 5 * 1024 * 1024, // 5 MB
+  BOARDING_PASS_MAX_SIZE: 10 * 1024 * 1024, // 10 MB (for base64 images)
+  
+  // Body parsing limits
+  JSON_BODY_MAX_SIZE: '10mb',
+  URLENCODED_BODY_MAX_SIZE: '10mb',
+  
+  // Text processing limits
+  EMAIL_TEXT_MAX_LENGTH: 4000, // characters for basic parser
+  EMAIL_TEXT_MAX_LENGTH_ENHANCED: 6000, // characters for enhanced parser
+} as const;
+
+// ========== RATE LIMITING ==========
+export const RATE_LIMITS = {
+  // General API rate limits
+  GENERAL_WINDOW_MS: 15 * 60 * 1000, // 15 minutes
+  GENERAL_MAX_REQUESTS: 10000, // per window in production
+  GENERAL_MAX_REQUESTS_DEV: Number.MAX_SAFE_INTEGER, // unlimited in dev
+  
+  // Authentication rate limits
+  AUTH_WINDOW_MS: 15 * 60 * 1000, // 15 minutes
+  AUTH_MAX_ATTEMPTS: 10, // login/register attempts per window
+  
+  // Flight creation rate limits
+  FLIGHT_CREATION_WINDOW_MS: 60 * 60 * 1000, // 1 hour
+  FLIGHT_CREATION_MAX: 20, // flight creations per hour
+  
+  // Flight lookup rate limits
+  FLIGHT_LOOKUP_WINDOW_MS: 15 * 60 * 1000, // 15 minutes
+  FLIGHT_LOOKUP_MAX: 30, // lookups per window
+  
+  // Airport search rate limits
+  AIRPORT_SEARCH_WINDOW_MS: 15 * 60 * 1000, // 15 minutes
+  AIRPORT_SEARCH_MAX: 100, // searches per window
+} as const;
+
+// ========== DATABASE & QUERY LIMITS ==========
+export const QUERY_LIMITS = {
+  // Default pagination
+  DEFAULT_LIMIT: 100,
+  MAX_LIMIT: 500,
+  
+  // Search limits
+  SEARCH_DEFAULT_LIMIT: 100,
+  SEARCH_MAX_LIMIT: 1000,
+  SEARCH_MAX_FILES: 10, // max files to search in log search
+  
+  // Stats limits
+  STATS_TOP_LIMIT: 10, // default top N for stats
+  STATS_MAX_LIMIT: 100, // max top N for stats
+  
+  // Achievement limits
+  ACHIEVEMENT_DEFAULT_LIMIT: 10,
+  ACHIEVEMENT_MAX_LIMIT: 100,
+} as const;
+
+// ========== CACHE SETTINGS ==========
+export const CACHE_TTL = {
+  // Logging config cache
+  LOGGING_CONFIG: 5 * 60 * 1000, // 5 minutes
+  
+  // Airport cache
+  AIRPORT_CACHE: 60 * 60, // 1 hour (in seconds for node-cache)
+  AIRPORT_CACHE_NULL: 5 * 60, // 5 minutes for null results
+  
+  // CSV cache (OurAirports)
+  CSV_CACHE: 24 * 60 * 60 * 1000, // 24 hours
+} as const;
+
+// ========== SECURITY SETTINGS ==========
+export const SECURITY = {
+  // Encryption
+  PBKDF2_ITERATIONS: 100000, // PBKDF2 iterations for key derivation
+  
+  // JWT
+  JWT_SECRET_MIN_LENGTH: 32, // minimum length for JWT secret
+  
+  // File validation
+  MAGIC_NUMBER_READ_BYTES: 32, // bytes to read for magic number validation
+  MAGIC_NUMBER_READ_BYTES_TEXT: 512, // bytes to read for text file validation
+} as const;
+
+// ========== ACHIEVEMENT REQUIREMENTS ==========
+export const ACHIEVEMENT_REQUIREMENTS = {
+  DISTANCE_10000: 10000, // km
+  DISTANCE_100000: 100000, // km
+  LONG_HAUL_10000: 10000, // km for long-haul flights
+} as const;
+
+// ========== LOGGING DEFAULTS ==========
+export const LOGGING_DEFAULTS = {
+  MAX_LOG_FILE_SIZE_MB: 10,
+  MAX_LOG_FILES: 7,
+  LOG_RETENTION_DAYS: 7,
+} as const;
+
+// ========== USER LIMITS ==========
+export const USER_LIMITS = {
+  MAX_USERS_WARNING_THRESHOLD: 6, // warn when approaching this many users
+  MAX_USERS: 10, // maximum number of users (can be overridden by admin)
+} as const;
+
+// ========== PARSER SETTINGS ==========
+export const PARSER_SETTINGS = {
+  // LLM temperature settings
+  LLM_TEMPERATURE_LOW: 0.05, // for consistent extraction
+  LLM_TEMPERATURE_FACTUAL: 0.1, // for factual extraction
+  
+  // LLM token limits
+  LLM_NUM_PREDICT_TEXT: 2000, // tokens for text parsing
+  LLM_NUM_PREDICT_VISION: 1200, // tokens for vision parsing
+  LLM_NUM_PREDICT_VISION_LEGACY: 500, // tokens for legacy vision parser
+  
+  // LLM other settings
+  LLM_TOP_P: 0.9,
+  LLM_TOP_K: 40,
+  LLM_REPEAT_PENALTY: 1.1,
+} as const;
+
+// ========== FILE CLEANUP ==========
+export const CLEANUP = {
+  RECEIPT_RETENTION_DAYS: 90, // days before cleaning up orphaned receipts
+} as const;
+

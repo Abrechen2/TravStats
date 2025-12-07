@@ -1,6 +1,7 @@
 import { randomBytes } from 'crypto';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { dirname, join } from 'path';
+import logger from './logger';
 
 const PROJECT_CWD = process.cwd();
 const DEV_DATA_DIR = join(PROJECT_CWD, '.travstats-data');
@@ -24,9 +25,13 @@ function readPersistedSecret(secretFilePath: string): string | null {
     const secret = readFileSync(secretFilePath, 'utf-8').trim();
     return secret && secret.length >= 32 ? secret : null;
   } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
-      console.debug('Failed to read JWT secret file:', error);
-    }
+    logger.debug({
+      operation: 'jwt_secret_read_error',
+      message: 'Failed to read JWT secret file',
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+      },
+    });
     return null;
   }
 }
@@ -36,9 +41,13 @@ function persistSecret(secretFilePath: string, secret: string) {
     ensureDataDirectoryExists(dirname(secretFilePath));
     writeFileSync(secretFilePath, secret, { mode: 0o600 });
   } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
-      console.debug('Failed to save JWT secret file:', error);
-    }
+    logger.debug({
+      operation: 'jwt_secret_save_error',
+      message: 'Failed to save JWT secret file',
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+      },
+    });
   }
 }
 
@@ -57,7 +66,11 @@ export function getJWTSecret(): string {
       return envSecret;
     }
 
-    console.warn(`[auth] Ignoring weak JWT_SECRET from environment: ${validation.message}`);
+    logger.warn({
+      operation: 'jwt_secret_weak_env',
+      message: 'Ignoring weak JWT_SECRET from environment',
+      context: { reason: validation.message },
+    });
   }
 
   const persistedSecret = readPersistedSecret(RESOLVED_SECRET_FILE);
@@ -150,13 +163,27 @@ if (!validation.isValid) {
   if (process.env.NODE_ENV === 'production') {
     console.error(errorMessage);
     console.error('⛔ SERVER START BLOCKED - Fix JWT_SECRET to continue');
+    logger.error({
+      operation: 'jwt_secret_validation_failed',
+      message: 'JWT_SECRET validation failed - server start blocked',
+      context: { reason: validation.message },
+    });
     process.exit(1);
   } else {
     console.warn(errorMessage);
     console.warn('⚠️  Continuing in development mode, but this MUST be fixed before production!');
+    logger.warn({
+      operation: 'jwt_secret_validation_failed_dev',
+      message: 'JWT_SECRET validation failed - continuing in development mode',
+      context: { reason: validation.message },
+    });
   }
 } else if (process.env.NODE_ENV === 'production') {
   console.log('✅ JWT_SECRET validation passed');
+  logger.info({
+    operation: 'jwt_secret_validation_passed',
+    message: 'JWT_SECRET validation passed',
+  });
 }
 
 // Export for use in other modules

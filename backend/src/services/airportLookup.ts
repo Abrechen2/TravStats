@@ -1,4 +1,6 @@
 import { prisma } from '../db';
+import logger from '../utils/logger';
+import { getCachedAirport, invalidateAirportCache } from './airportCache';
 
 export interface AirportData {
   iata?: string | null;
@@ -96,7 +98,14 @@ function calculateDistance(
 export async function findOrCreateAirport(code: string): Promise<any> {
   const upperCode = code.toUpperCase();
 
-  // 1. Zuerst in lokaler DB suchen
+  // 1. Try cache first
+  const cachedAirport = await getCachedAirport(upperCode);
+  if (cachedAirport) {
+    return cachedAirport;
+  }
+
+  // 2. If not in cache, check database (cache will be populated by getCachedAirport if found)
+  // This handles the case where cache returned null but airport might exist
   const existingAirport = await prisma.airport.findFirst({
     where: {
       OR: [
@@ -110,7 +119,11 @@ export async function findOrCreateAirport(code: string): Promise<any> {
     return existingAirport;
   }
 
-  console.log(`Airport ${code} not found locally, searching external sources...`);
+  logger.debug({
+    operation: 'airport_lookup_external',
+    message: `Airport ${code} not found locally, searching external sources`,
+    context: { code },
+  });
 
   // 2. Von externer API laden
   const externalData = await fetchFromExternalAPI(upperCode);
@@ -120,7 +133,11 @@ export async function findOrCreateAirport(code: string): Promise<any> {
   }
 
   // 3. In DB speichern
-  console.log(`Storing new airport: ${externalData.name} (${code})`);
+  logger.info({
+    operation: 'airport_lookup_store',
+    message: `Storing new airport: ${externalData.name} (${code})`,
+    context: { code, airportName: externalData.name },
+  });
 
   const newAirport = await prisma.airport.create({
     data: {
@@ -134,6 +151,14 @@ export async function findOrCreateAirport(code: string): Promise<any> {
       altitude: externalData.altitude || null,
     },
   });
+
+  // Invalidate cache so new airport is cached on next lookup
+  if (newAirport.iata) {
+    invalidateAirportCache(newAirport.iata);
+  }
+  if (newAirport.icao) {
+    invalidateAirportCache(newAirport.icao);
+  }
 
   return newAirport;
 }
@@ -166,7 +191,14 @@ async function fetchFromExternalAPI(code: string): Promise<ExternalAirportData |
       }
     }
   } catch (error) {
-    console.log(`Airport-data.com API failed for ${code}`);
+    logger.debug({
+      operation: 'airport_lookup_api_failed',
+      message: `Airport-data.com API failed for ${code}`,
+      context: { code },
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+      },
+    });
   }
 
   // Fallback: Versuche OurAirports direkten Lookup mit Cache
@@ -176,10 +208,18 @@ async function fetchFromExternalAPI(code: string): Promise<ExternalAirportData |
 
     // Check if cache is valid
     if (csvCache.data && (now - csvCache.timestamp) < CSV_CACHE_TTL) {
-      console.log(`Using cached OurAirports data (age: ${Math.round((now - csvCache.timestamp) / 1000 / 60)}min)`);
+      const cacheAge = Math.round((now - csvCache.timestamp) / 1000 / 60);
+      logger.debug({
+        operation: 'airport_lookup_csv_cache',
+        message: `Using cached OurAirports data (age: ${cacheAge}min)`,
+        context: { cacheAgeMinutes: cacheAge },
+      });
       csvText = csvCache.data;
     } else {
-      console.log('Downloading OurAirports CSV data (this may take a moment)...');
+      logger.info({
+        operation: 'airport_lookup_csv_download',
+        message: 'Downloading OurAirports CSV data',
+      });
       const response = await fetch(
         `https://davidmegginson.github.io/ourairports-data/airports.csv`
       );
@@ -195,11 +235,20 @@ async function fetchFromExternalAPI(code: string): Promise<ExternalAirportData |
         data: csvText,
         timestamp: now,
       };
-      console.log(`CSV data cached (${(csvText.length / 1024 / 1024).toFixed(2)}MB)`);
+      const csvSizeMB = (csvText.length / 1024 / 1024).toFixed(2);
+      logger.info({
+        operation: 'airport_lookup_csv_cached',
+        message: `CSV data cached (${csvSizeMB}MB)`,
+        context: { sizeMB: parseFloat(csvSizeMB) },
+      });
     }
 
     const lines = csvText.split('\n');
-    console.log(`Searching ${lines.length} airports for code: ${code}`);
+    logger.debug({
+      operation: 'airport_lookup_csv_search',
+      message: `Searching ${lines.length} airports for code: ${code}`,
+      context: { code, lineCount: lines.length },
+    });
 
     // Finde die Zeile mit dem gesuchten Code
     let foundLine = 0;
@@ -223,17 +272,30 @@ async function fetchFromExternalAPI(code: string): Promise<ExternalAirportData |
       // Case-insensitive comparison
       if (iataCode.toUpperCase() === code || icaoCode.toUpperCase() === code) {
         foundLine = i + 1;
-        console.log(`Found airport in CSV (line ${foundLine}):`);
-        console.log(`   IATA: ${iataCode}, ICAO: ${icaoCode}`);
-        console.log(`   Name: ${parts[3]}`);
-        console.log(`   City: ${parts[10]}, Country: ${parts[8]}`);
-        console.log(`   Coordinates: ${parts[4]}, ${parts[5]}`);
+        logger.debug({
+          operation: 'airport_lookup_csv_found',
+          message: `Found airport in CSV (line ${foundLine})`,
+          context: {
+            code,
+            line: foundLine,
+            iata: iataCode,
+            icao: icaoCode,
+            name: parts[3],
+            city: parts[10],
+            country: parts[8],
+            coordinates: `${parts[4]}, ${parts[5]}`,
+          },
+        });
 
         const lat = parseFloat(parts[4]);
         const lon = parseFloat(parts[5]);
 
         if (isNaN(lat) || isNaN(lon)) {
-          console.log(`Invalid coordinates for ${code}, skipping`);
+          logger.warn({
+            operation: 'airport_lookup_csv_invalid_coords',
+            message: `Invalid coordinates for ${code}, skipping`,
+            context: { code, lat: parts[4], lon: parts[5] },
+          });
           continue;
         }
 
@@ -251,13 +313,29 @@ async function fetchFromExternalAPI(code: string): Promise<ExternalAirportData |
     }
 
     if (foundLine === 0) {
-      console.log(`Code ${code} not found in CSV (checked ${lines.length} lines)`);
+      logger.debug({
+        operation: 'airport_lookup_csv_not_found',
+        message: `Code ${code} not found in CSV`,
+        context: { code, linesChecked: lines.length },
+      });
     }
   } catch (error) {
-    console.log(`OurAirports CSV lookup failed for ${code}:`, error);
+    logger.error({
+      operation: 'airport_lookup_csv_error',
+      message: `OurAirports CSV lookup failed for ${code}`,
+      context: { code },
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      },
+    });
   }
 
-  console.log(`No external match for ${code}`);
+  logger.debug({
+    operation: 'airport_lookup_no_match',
+    message: `No external match for ${code}`,
+    context: { code },
+  });
   return null;
 }
 

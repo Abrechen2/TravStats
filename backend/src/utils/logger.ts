@@ -3,6 +3,7 @@ import { createStream } from 'rotating-file-stream';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { Request } from 'express';
+import { getLoggingConfig } from '../services/loggingConfig';
 
 /**
  * AI-Optimized Structured Logger with Rolling File Support
@@ -20,15 +21,19 @@ import { Request } from 'express';
 const LOG_DIR = path.join(process.cwd(), '..', 'data', 'logs');
 
 // Create rotating file stream
-function createRotatingStream(category: string) {
+function createRotatingStream(category: string, maxSizeMB: number = 10, maxFiles: number = 7) {
   return createStream(`${category}.log`, {
-    size: '10M',  // Rotate at 10MB (will be overridden by config)
+    size: `${maxSizeMB}M`,  // Rotate at configured size
     interval: '1d',  // Daily rotation
     path: LOG_DIR,
     compress: 'gzip',  // Compress rotated files
-    maxFiles: 7,  // Keep 7 files (will be overridden by config)
+    maxFiles,  // Keep configured number of files
   });
 }
+
+// Cache for dynamic category streams
+const categoryStreams: Map<string, pino.StreamEntry> = new Map();
+let streamsInitialized = false;
 
 // Pino configuration for AI-optimized output
 const pinoConfig: pino.LoggerOptions = {
@@ -118,19 +123,19 @@ try {
     fs.mkdirSync(LOG_DIR, { recursive: true, mode: 0o755 });
   }
 
-  // App log (all levels)
+  // App log (all levels) - always enabled
   streams.push({
     level: 'trace',
     stream: createRotatingStream('app'),
   });
 
-  // Error log (errors only)
+  // Error log (errors only) - always enabled
   streams.push({
     level: 'error',
     stream: createRotatingStream('error'),
   });
 
-  // Debug-specific logs will be added dynamically
+  // Category-specific logs will be added dynamically via initializeCategoryStreams()
 } catch (error) {
   console.warn('Could not create log file streams:', error);
 }
@@ -141,14 +146,184 @@ const logger = pino(pinoConfig, pino.multistream(streams));
 export default logger;
 
 /**
+ * Initialize category-based log streams based on configuration
+ * Called on startup and when config changes
+ */
+export async function initializeCategoryStreams(): Promise<void> {
+  try {
+    const config = await getLoggingConfig();
+    const fs = require('fs');
+    
+    // Ensure log directory exists
+    if (!fs.existsSync(LOG_DIR)) {
+      fs.mkdirSync(LOG_DIR, { recursive: true, mode: 0o755 });
+    }
+
+    // Clear existing category streams
+    categoryStreams.clear();
+
+    // Always create security log (security events should always be logged)
+    categoryStreams.set('security', {
+      level: 'warn', // Only warnings and errors for security
+      stream: createRotatingStream('security', config.maxLogFileSize, config.maxLogFiles),
+    });
+
+    // Parser logs (if enabled)
+    if (config.logParserOperations && config.debugLoggingEnabled) {
+      // Main parser log (all parser operations)
+      categoryStreams.set('parser', {
+        level: 'debug',
+        stream: createRotatingStream('parser', config.maxLogFileSize, config.maxLogFiles),
+      });
+
+      // Detailed parser category logs
+      categoryStreams.set('parser-vision', {
+        level: 'debug',
+        stream: createRotatingStream('parser-vision', config.maxLogFileSize, config.maxLogFiles),
+      });
+
+      categoryStreams.set('parser-text', {
+        level: 'debug',
+        stream: createRotatingStream('parser-text', config.maxLogFileSize, config.maxLogFiles),
+      });
+
+      categoryStreams.set('parser-factory', {
+        level: 'debug',
+        stream: createRotatingStream('parser-factory', config.maxLogFileSize, config.maxLogFiles),
+      });
+    }
+
+    // HTTP logs (if enabled)
+    if (config.logHttpRequests && config.debugLoggingEnabled) {
+      categoryStreams.set('http', {
+        level: 'debug',
+        stream: createRotatingStream('http', config.maxLogFileSize, config.maxLogFiles),
+      });
+    }
+
+    // Database logs (if enabled)
+    if (config.logDatabaseQueries && config.debugLoggingEnabled) {
+      categoryStreams.set('database', {
+        level: 'debug',
+        stream: createRotatingStream('database', config.maxLogFileSize, config.maxLogFiles),
+      });
+    }
+
+    streamsInitialized = true;
+  } catch (error) {
+    console.warn('Could not initialize category streams:', error);
+    streamsInitialized = false;
+  }
+}
+
+/**
+ * Reinitialize category streams (called after config changes)
+ * This will reset the logger cache so new loggers are created with updated streams
+ */
+export async function reinitializeCategoryStreams(): Promise<void> {
+  // Close existing streams before creating new ones
+  for (const streamEntry of categoryStreams.values()) {
+    if (streamEntry.stream && typeof (streamEntry.stream as any).end === 'function') {
+      (streamEntry.stream as any).end();
+    }
+  }
+  
+  // Reset logger cache
+  resetCategoryLoggerCache();
+  
+  // Initialize new streams
+  await initializeCategoryStreams();
+}
+
+/**
+ * Create streams array for a category logger
+ * Includes console, category-specific file stream (if enabled), and base app/error streams
+ */
+function createCategoryStreams(category: string): pino.StreamEntry[] {
+  const categoryStreamsArray: pino.StreamEntry[] = [
+    // Always include console
+    {
+      level: 'trace',
+      stream: process.env.NODE_ENV === 'development'
+        ? pino.transport({
+            target: 'pino-pretty',
+            options: {
+              colorize: true,
+              translateTime: 'HH:MM:ss Z',
+              ignore: 'pid,hostname',
+            },
+          })
+        : process.stdout,
+    },
+  ];
+
+  // Add category-specific file stream if available
+  const categoryStream = categoryStreams.get(category);
+  if (categoryStream) {
+    categoryStreamsArray.push(categoryStream);
+  }
+
+  // Also add to main app.log and error.log (always available)
+  try {
+    const fs = require('fs');
+    if (fs.existsSync(LOG_DIR)) {
+      categoryStreamsArray.push(
+        { level: 'trace', stream: createRotatingStream('app') },
+        { level: 'error', stream: createRotatingStream('error') }
+      );
+    }
+  } catch (error) {
+    // Ignore errors for base streams
+  }
+
+  return categoryStreamsArray;
+}
+
+/**
+ * Category logger cache - stores created loggers
+ */
+const categoryLoggerCache = new Map<string, pino.Logger>();
+
+/**
+ * Get or create a category logger
+ * Loggers are created lazily and cached
+ */
+function getCategoryLogger(category: string): pino.Logger {
+  if (!categoryLoggerCache.has(category)) {
+    const streams = createCategoryStreams(category);
+    const categoryLogger = pino(pinoConfig, pino.multistream(streams));
+    categoryLoggerCache.set(category, categoryLogger.child({ category }));
+  }
+  return categoryLoggerCache.get(category)!;
+}
+
+/**
+ * Reset category logger cache (called after stream reinitialization)
+ */
+function resetCategoryLoggerCache(): void {
+  categoryLoggerCache.clear();
+}
+
+/**
  * Category-specific loggers
  * These provide structured logging with automatic category tagging
+ * and dedicated file streams when enabled in config
+ * 
+ * Loggers are created lazily on first use and cached.
+ * After reinitializeCategoryStreams(), the cache is cleared and new loggers
+ * will be created with updated streams on next use.
+ * 
+ * These loggers use the base logger but will also write to category-specific
+ * files when streams are initialized via initializeCategoryStreams().
  */
-export const httpLogger = logger.child({ category: 'http' });
-export const dbLogger = logger.child({ category: 'database' });
-export const parserLogger = logger.child({ category: 'parser' });
-export const securityLogger = logger.child({ category: 'security' });
-export const systemLogger = logger.child({ category: 'system' });
+export const httpLogger = getCategoryLogger('http');
+export const dbLogger = getCategoryLogger('database');
+export const parserLogger = getCategoryLogger('parser');
+export const parserVisionLogger = getCategoryLogger('parser-vision');
+export const parserTextLogger = getCategoryLogger('parser-text');
+export const parserFactoryLogger = getCategoryLogger('parser-factory');
+export const securityLogger = getCategoryLogger('security');
+export const systemLogger = getCategoryLogger('system');
 
 /**
  * Performance Tracker for measuring operation duration

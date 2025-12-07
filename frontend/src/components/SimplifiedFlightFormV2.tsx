@@ -10,11 +10,13 @@
  * - Auto-Arrival Time Suggestion
  */
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import { Airport, airportsApi } from '../lib/api';
 import AirportAutocomplete from './AirportAutocomplete';
-import BoardingPassScanner from './BoardingPassScanner';
 import EmailUploader from './EmailUploader';
+
+// Lazy load BoardingPassScanner as it's heavy (Tesseract.js)
+const BoardingPassScanner = lazy(() => import('./BoardingPassScanner'));
 import FlightReviewModal from './FlightReviewModal';
 import type { FlightInput } from '../types';
 import { useSettingsStore } from '../store/settingsStore';
@@ -80,6 +82,8 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
   const [parsedFlights, setParsedFlights] = useState<any[]>([]);
   const [currentFlightIndex, setCurrentFlightIndex] = useState(0);
   const [showFlightReview, setShowFlightReview] = useState(false);
+  const [parserProvider, setParserProvider] = useState<string>('unknown');
+  const [originalEmailData, setOriginalEmailData] = useState<{ subject?: string; text?: string; html?: string } | undefined>();
 
   // Flight Lookup State
   const [flightNumber, setFlightNumber] = useState('');
@@ -836,17 +840,30 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
 
       {/* Boarding Pass Scanner Modal */}
       {showScanner && (
-        <BoardingPassScanner
-          onScanSuccess={handleBoardingPassScan}
-          onClose={() => setShowScanner(false)}
-        />
+        <Suspense fallback={
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-8">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto mb-2"></div>
+                <p className="text-gray-600 dark:text-gray-300">Loading scanner...</p>
+              </div>
+            </div>
+          </div>
+        }>
+          <BoardingPassScanner
+            onScanSuccess={handleBoardingPassScan}
+            onClose={() => setShowScanner(false)}
+          />
+        </Suspense>
       )}
 
       {/* Email Uploader Modal */}
       {showEmailUploader && (
         <EmailUploader
-          onEmailParsed={(flights) => {
+          onEmailParsed={(flights, parserUsed, originalData) => {
             setParsedFlights(flights);
+            setParserProvider(parserUsed);
+            setOriginalEmailData(originalData);
             setCurrentFlightIndex(0);
             setShowEmailUploader(false);
             if (flights.length > 0) {
@@ -897,6 +914,8 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
           source="email"
           flightIndex={currentFlightIndex}
           totalFlights={parsedFlights.length}
+          parserProvider={parserProvider}
+          originalData={originalEmailData}
         />
       )}
     </div>
