@@ -9,6 +9,7 @@ import {
 } from './types';
 import { ParsedBooking } from '../bookingParser';
 import logger from '../../utils/logger';
+import { extractFlightDataFromText } from './shared/utils';
 
 // Import all vision parsers
 import { getOllamaVisionParser } from './vision/ollamaVisionParser';
@@ -258,6 +259,46 @@ export async function getTextParser(
   return { parser: regexParser, provider: 'regex', fallbackUsed: true };
 }
 
+function isSuspiciousBoardingPassResult(flight: ParsedBooking): boolean {
+  const criticalFields = ['flightNumber', 'departureCode', 'arrivalCode', 'departureTime'];
+  const missingCritical = criticalFields.filter((field) => flight.missing.includes(field)).length;
+
+  return missingCritical >= 2 || !flight.flightNumber || flight.missing.length >= 3;
+}
+
+function applyEmailRegexPostProcessing(
+  flights: ParsedBooking[],
+  subject: string,
+  text: string,
+  html?: string
+): ParsedBooking[] {
+  const combinedText = `${subject}\n${text || ''}\n${html || ''}`;
+  const regexData = extractFlightDataFromText(combinedText.toUpperCase());
+
+  return flights.map((flight) => {
+    const enhanced = { ...flight };
+
+    if (!enhanced.pnr && regexData.pnr) {
+      enhanced.pnr = regexData.pnr;
+      enhanced.bookingReference = regexData.pnr;
+    }
+
+    if (!enhanced.gate && regexData.gate) {
+      enhanced.gate = regexData.gate;
+    }
+
+    if (!enhanced.terminal && regexData.terminal) {
+      enhanced.terminal = regexData.terminal;
+    }
+
+    if (flights.length === 1 && !enhanced.seat && regexData.seat) {
+      enhanced.seat = regexData.seat;
+    }
+
+    return enhanced;
+  });
+}
+
 /**
  * Parse boarding pass with automatic provider selection and fallback on errors
  */
@@ -295,10 +336,49 @@ export async function parseBoardingPass(
       const fallbackUsed = config.visionProvider !== 'auto' && config.visionProvider !== provider;
       logger.info(`[Parser Factory] Vision parse successful with: ${provider}${fallbackUsed ? ' (fallback)' : ''}`);
 
+      let finalFlight = flight;
+      let finalProvider: VisionProvider = provider;
+      let finalFallbackUsed = fallbackUsed;
+
+      if (provider !== 'tesseract' && isSuspiciousBoardingPassResult(flight)) {
+        logger.warn(
+          {
+            missingFields: flight.missing,
+            provider,
+          },
+          '[Parser Factory] Suspicious vision result detected, attempting Tesseract fallback'
+        );
+
+        try {
+          const tesseractParser = getVisionParserInstance('tesseract');
+          const availability = await checkProviderAvailability(tesseractParser);
+
+          if (availability.available) {
+            const tesseractFlight = await tesseractParser.parseImage(imageBase64);
+            logger.info(
+              {
+                missingFields: tesseractFlight.missing,
+              },
+              '[Parser Factory] Tesseract fallback completed'
+            );
+
+            if (tesseractFlight.missing.length < finalFlight.missing.length) {
+              finalFlight = tesseractFlight;
+              finalProvider = 'tesseract';
+              finalFallbackUsed = true;
+            }
+          } else {
+            logger.debug('[Parser Factory] Tesseract unavailable for fallback');
+          }
+        } catch (fallbackError) {
+          logger.warn({ fallbackError }, '[Parser Factory] Tesseract fallback failed');
+        }
+      }
+
       return {
-        flights: [flight],
-        provider,
-        fallbackUsed,
+        flights: [finalFlight],
+        provider: finalProvider,
+        fallbackUsed: finalFallbackUsed,
       };
     } catch (error: any) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -361,11 +441,13 @@ export async function parseEmail(
         throw new Error('Parser returned no flights');
       }
 
+      const enhancedFlights = applyEmailRegexPostProcessing(flights, subject, text, html);
+
       const fallbackUsed = config.textProvider !== 'auto' && config.textProvider !== provider;
       logger.info(`[Parser Factory] Email parse successful with: ${provider}${fallbackUsed ? ' (fallback)' : ''}`);
 
       return {
-        flights,
+        flights: enhancedFlights,
         provider,
         fallbackUsed,
       };
