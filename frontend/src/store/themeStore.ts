@@ -15,10 +15,34 @@ const updateDarkMode = (isDark: boolean) => {
   }
 };
 
+// Initialize immediately to prevent flash
+if (typeof window !== 'undefined') {
+  try {
+    const stored = localStorage.getItem('theme-storage');
+    let isDark = false;
+
+    if (stored) {
+      const { state } = JSON.parse(stored);
+      // Check if state exists and has isDarkMode property
+      if (state && typeof state.isDarkMode === 'boolean') {
+        isDark = state.isDarkMode;
+      }
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      // Default to system preference if no storage
+      isDark = true;
+    }
+
+    updateDarkMode(isDark);
+  } catch (e) {
+    // Ignore errors
+    console.warn('Error initializing theme:', e);
+  }
+}
+
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set) => ({
-      isDarkMode: false,
+      isDarkMode: false, // Default value, will be overwritten by persist
       toggleDarkMode: () =>
         set((state) => {
           const newMode = !state.isDarkMode;
@@ -33,26 +57,11 @@ export const useThemeStore = create<ThemeState>()(
     {
       name: 'theme-storage',
       onRehydrateStorage: () => (state) => {
-        // Apply dark mode immediately after hydration
-        if (state?.isDarkMode) {
-          updateDarkMode(true);
+        // Ensure DOM matches state after hydration
+        if (state) {
+          updateDarkMode(state.isDarkMode);
         }
       },
     }
   )
 );
-
-// Initialize dark mode on load (sync)
-if (typeof window !== 'undefined') {
-  const stored = localStorage.getItem('theme-storage');
-  if (stored) {
-    try {
-      const { state } = JSON.parse(stored);
-      if (state?.isDarkMode) {
-        updateDarkMode(true);
-      }
-    } catch {
-      // Ignore parse errors
-    }
-  }
-}

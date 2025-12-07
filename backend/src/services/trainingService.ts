@@ -74,7 +74,7 @@ export async function prepareTrainingData(trainingDataIds: string[]): Promise<st
       const extractedData = data.extractedData as unknown as ParsedBooking[];
 
       const example = createTrainingExample(annotation, extractedData);
-      
+
       // Format for LoRA training (instruction-following format)
       examples.push({
         instruction: `Extract flight information from the following ${annotation.type === 'email' ? 'email' : 'boarding pass'}:`,
@@ -100,7 +100,7 @@ export async function prepareTrainingData(trainingDataIds: string[]): Promise<st
   // Write to JSONL file
   const timestamp = Date.now();
   const jsonlPath = path.join(TRAINING_DATA_DIR, `training-${timestamp}.jsonl`);
-  
+
   const jsonlContent = examples.map((ex) => JSON.stringify(ex)).join('\n');
   fs.writeFileSync(jsonlPath, jsonlContent, 'utf-8');
 
@@ -164,11 +164,11 @@ export async function trainModel(
   const pythonScript = IS_DOCKER
     ? path.join(__dirname, '../scripts/trainLora.py')  // Docker: dist/scripts/trainLora.py
     : path.join(__dirname, '../scripts/trainLora.py'); // Local: dist/scripts/trainLora.py (after build)
-  
+
   // Fallback to source location for development
   const devScriptPath = path.join(__dirname, '../../src/scripts/trainLora.py');
   const finalScriptPath = fs.existsSync(pythonScript) ? pythonScript : devScriptPath;
-  
+
   if (!fs.existsSync(finalScriptPath)) {
     throw new Error(`LoRA training script not found at ${finalScriptPath} or ${pythonScript}. Please ensure trainLora.py exists.`);
   }
@@ -182,7 +182,7 @@ export async function trainModel(
     let batchSizeArg = '';
     try {
       hardwareInfo = await getHardwareInfo();
-      
+
       // Log hardware info
       await logTrainingEvent(trainingJobId, 'info', 'Hardware information', {
         cpu: hardwareInfo.cpu,
@@ -224,7 +224,7 @@ export async function trainModel(
     // Run Python training script with log file parameter for real-time logging
     // Batch size will be auto-determined by Python script if not provided
     const command = `${PYTHON_CMD} "${finalScriptPath}" --input "${jsonlPath}" --output "${outputDir}" --base-model "${OLLAMA_MODEL}" --job-id "${trainingJobId}" --log-file "${logFile}"${batchSizeArg ? ' ' + batchSizeArg : ''}`;
-    
+
     await logTrainingEvent(trainingJobId, 'info', 'Executing training command', {
       command,
       pythonCmd: PYTHON_CMD,
@@ -263,7 +263,7 @@ export async function trainModel(
           resolve({ stdout, stderr });
         }
       });
-      
+
       // Store process for potential cancellation (with PID for better tracking)
       if (childProcess && childProcess.pid) {
         runningProcesses.set(trainingJobId, childProcess);
@@ -277,7 +277,7 @@ export async function trainModel(
           },
         });
       }
-      
+
       // Set timeout
       const os = require('os');
       const platform = os.platform();
@@ -314,7 +314,7 @@ export async function trainModel(
           reject(new Error('Training timeout after 30 minutes'));
         }
       }, 30 * 60 * 1000); // 30 minutes timeout
-      
+
       // Clear timeout if process completes
       if (childProcess) {
         childProcess.on('exit', () => {
@@ -398,12 +398,12 @@ SYSTEM """You are a specialized flight booking email and boarding pass parser. E
     // Import to Ollama (this would need the actual GGUF file)
     // For now, we'll just log the command that would be run
     const command = `ollama create ${TRAINING_MODEL_NAME} -f "${modelfilePath}"`;
-    
+
     await logTrainingEvent(trainingJobId, 'info', 'Ollama import command prepared', { command });
 
     // In production, this would actually run:
     // await execAsync(command);
-    
+
     // For now, we'll just log it
     logger.info({
       operation: 'export_to_ollama',
@@ -562,19 +562,19 @@ async function processTrainingJob(trainingJobId: string): Promise<void> {
   } catch (error) {
     // Clean up process tracking on error
     runningProcesses.delete(trainingJobId);
-    
+
     // Check if job was cancelled
     const job = await prisma.trainingJob.findUnique({
       where: { id: trainingJobId },
     });
-    
+
     if (job?.status === 'cancelled') {
       // Job was cancelled, don't update to failed
       return;
     }
-    
+
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
+
     await prisma.trainingJob.update({
       where: { id: trainingJobId },
       data: {
@@ -635,7 +635,7 @@ export async function cancelTraining(trainingJobId: string): Promise<void> {
       } else {
         // Unix-like: Try graceful shutdown first (SIGTERM)
         process.kill('SIGTERM');
-        
+
         // Force kill after 2 seconds if still running
         setTimeout(() => {
           if (process && !process.killed && process.pid) {
@@ -658,7 +658,7 @@ export async function cancelTraining(trainingJobId: string): Promise<void> {
         },
       });
     }
-    
+
     runningProcesses.delete(trainingJobId);
   } else {
     // Process not in map - might be running but not tracked
@@ -670,7 +670,7 @@ export async function cancelTraining(trainingJobId: string): Promise<void> {
         trainingJobId,
       },
     });
-    
+
     try {
       const { execSync } = require('child_process');
       const platform = require('os').platform();
@@ -717,11 +717,53 @@ export async function cancelTraining(trainingJobId: string): Promise<void> {
   await logTrainingEvent(trainingJobId, 'info', 'Training cancelled by user', {});
 
   logger.info({
-    operation: 'cancel_training',
-    message: 'Training job cancelled',
-    context: {
-      trainingJobId,
-    },
   });
 }
+
+/**
+ * Cleanup stale jobs that were running when the server shut down
+ */
+export async function cleanupStaleJobs(): Promise<void> {
+  try {
+    const staleJobs = await prisma.trainingJob.findMany({
+      where: {
+        status: { in: ['running', 'pending'] },
+      },
+    });
+
+    if (staleJobs.length > 0) {
+      logger.info({
+        operation: 'cleanup_stale_jobs',
+        message: `Found ${staleJobs.length} stale jobs`,
+        context: {
+          jobIds: staleJobs.map((j) => j.id),
+        },
+      });
+
+      for (const job of staleJobs) {
+        // Double check if process is actually running using local map
+        // If we just restarted, the map is empty, so this is correct.
+        if (runningProcesses.has(job.id)) {
+          continue;
+        }
+
+        await prisma.trainingJob.update({
+          where: { id: job.id },
+          data: {
+            status: 'failed',
+            completedAt: new Date(),
+            errorMessage: 'Training interrupted (server restart)',
+          },
+        });
+
+        await logTrainingEvent(job.id, 'error', 'Training interrupted by server restart', {});
+      }
+    }
+  } catch (error) {
+    logger.error('Failed to cleanup stale jobs:', error);
+  }
+}
+
+// Run cleanup on startup to catch jobs that were abandoned
+cleanupStaleJobs().catch(e => console.error('Failed to cleanup stale jobs:', e));
 

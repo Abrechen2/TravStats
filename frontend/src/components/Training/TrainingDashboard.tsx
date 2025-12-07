@@ -24,7 +24,7 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
 
   useEffect(() => {
     loadData();
-    
+
     // Cleanup polling on unmount
     return () => {
       if (pollingIntervalRef.current) {
@@ -36,20 +36,20 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
   // Poll for running jobs - only update jobs and logs, not the whole page
   useEffect(() => {
     const runningJobs = jobs.filter((job) => job.status === 'running' || job.status === 'pending');
-    
+
     if (runningJobs.length > 0) {
       // Start polling every 3 seconds for running jobs
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
       }
-      
+
       const jobIds = runningJobs.map((job) => job.id);
       pollingIntervalRef.current = setInterval(async () => {
         // Only update jobs status and logs, not the whole page
         try {
           const jobsResult = await trainingApi.getJobs();
           setJobs(jobsResult.jobs);
-          
+
           // Update logs for running jobs
           jobIds.forEach((jobId) => {
             loadJobLogs(jobId);
@@ -82,7 +82,7 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
       ]);
       setTrainingData(dataResult.trainingData);
       setJobs(jobsResult.jobs);
-      
+
       // Load logs for running jobs
       const runningJobs = jobsResult.jobs.filter((job: any) => job.status === 'running' || job.status === 'pending');
       for (const job of runningJobs) {
@@ -131,46 +131,46 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
 
     // Check for different phases - improved pattern matching
     // Check for completion first
-    if (logFileContent.includes('training completed successfully') || 
-        logFileContent.includes('training completed') ||
-        logMessages.some((m) => m.includes('training completed'))) {
+    if (logFileContent.includes('training completed successfully') ||
+      logFileContent.includes('training completed') ||
+      logMessages.some((m) => m.includes('training completed'))) {
       phase = 'Abgeschlossen';
       progress = 100;
-    } 
+    }
     // Check for saving model
-    else if (logFileContent.includes('saving model') || 
-             logFileContent.includes('save_model') ||
-             logMessages.some((m) => m.includes('saving model'))) {
+    else if (logFileContent.includes('saving model') ||
+      logFileContent.includes('save_model') ||
+      logMessages.some((m) => m.includes('saving model'))) {
       phase = 'Speichere Modell';
       progress = 90;
-    } 
+    }
     // Check for training progress with epoch information
-    else if (logFileContent.includes('epoch') || 
-             logFileContent.includes('step') ||
-             logFileContent.includes('training') ||
-             logFileContent.includes('loss')) {
+    else if (logFileContent.includes('epoch') ||
+      logFileContent.includes('step') ||
+      logFileContent.includes('training') ||
+      logFileContent.includes('loss')) {
       // Try to extract epoch information - multiple patterns
       const epochPatterns = [
         /epoch\s+(\d+)\s*\/\s*(\d+)/i,
         /epoch\s+(\d+)\s+of\s+(\d+)/i,
         /epoch:\s*(\d+)\s*\/\s*(\d+)/i,
       ];
-      
+
       let epochMatch = null;
       for (const pattern of epochPatterns) {
         epochMatch = logFileContent.match(pattern);
         if (epochMatch) break;
       }
-      
+
       if (epochMatch) {
         const currentEpoch = parseInt(epochMatch[1]);
         const totalEpochs = parseInt(epochMatch[2]);
         const epochProgress = (currentEpoch / totalEpochs) * 100;
-        
+
         // Try to extract step information for more granular progress
-        const stepMatch = logFileContent.match(/step\s+(\d+)\s*\/\s*(\d+)/i) || 
-                         logFileContent.match(/step:\s*(\d+)\s*\/\s*(\d+)/i);
-        
+        const stepMatch = logFileContent.match(/step\s+(\d+)\s*\/\s*(\d+)/i) ||
+          logFileContent.match(/step:\s*(\d+)\s*\/\s*(\d+)/i);
+
         if (stepMatch) {
           const currentStep = parseInt(stepMatch[1]);
           const totalSteps = parseInt(stepMatch[2]);
@@ -182,11 +182,11 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
           phase = `Training (Epoche ${currentEpoch}/${totalEpochs})`;
           progress = 30 + epochProgress * 0.5;
         }
-      } 
+      }
       // Check for step information without epoch
       else {
-        const stepMatch = logFileContent.match(/step\s+(\d+)\s*\/\s*(\d+)/i) || 
-                         logFileContent.match(/step:\s*(\d+)\s*\/\s*(\d+)/i);
+        const stepMatch = logFileContent.match(/step\s+(\d+)\s*\/\s*(\d+)/i) ||
+          logFileContent.match(/step:\s*(\d+)\s*\/\s*(\d+)/i);
         if (stepMatch) {
           const currentStep = parseInt(stepMatch[1]);
           const totalSteps = parseInt(stepMatch[2]);
@@ -198,38 +198,38 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
           progress = 50;
         }
       }
-    } 
+    }
     // Check for dataset preparation
-    else if (logFileContent.includes('preparing dataset') || 
-             logFileContent.includes('preparing dataset') ||
-             logFileContent.includes('tokenize') ||
-             logMessages.some((m) => m.includes('preparing dataset'))) {
+    else if (logFileContent.includes('preparing dataset') ||
+      logFileContent.includes('preparing dataset') ||
+      logFileContent.includes('tokenize') ||
+      logMessages.some((m) => m.includes('preparing dataset'))) {
       phase = 'Bereite Datensatz vor';
       progress = 25;
-    } 
+    }
     // Check for model preparation
-    else if (logFileContent.includes('preparing model') || 
-             logFileContent.includes('prepare_model') ||
-             logFileContent.includes('lora') ||
-             logMessages.some((m) => m.includes('preparing model'))) {
+    else if (logFileContent.includes('preparing model') ||
+      logFileContent.includes('prepare_model') ||
+      logFileContent.includes('lora') ||
+      logMessages.some((m) => m.includes('preparing model'))) {
       phase = 'Bereite Modell vor';
       progress = 20;
-    } 
+    }
     // Check for loading model
-    else if (logFileContent.includes('loading tokenizer') || 
-             logFileContent.includes('loading model') ||
-             logFileContent.includes('from_pretrained') ||
-             logMessages.some((m) => m.includes('loading'))) {
+    else if (logFileContent.includes('loading tokenizer') ||
+      logFileContent.includes('loading model') ||
+      logFileContent.includes('from_pretrained') ||
+      logMessages.some((m) => m.includes('loading'))) {
       phase = 'Lade Modell';
       progress = 15;
-    } 
+    }
     // Check for training start
-    else if (logMessages.some((m) => m.includes('starting lora training')) || 
-             logMessages.some((m) => m.includes('executing training')) ||
-             logFileContent.includes('starting lora training')) {
+    else if (logMessages.some((m) => m.includes('starting lora training')) ||
+      logMessages.some((m) => m.includes('executing training')) ||
+      logFileContent.includes('starting lora training')) {
       phase = 'Starte Training';
       progress = 10;
-    } 
+    }
     // Default
     else {
       phase = 'Initialisierung';
@@ -243,7 +243,7 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
       const currentTime = Date.now();
       const elapsed = currentTime - startTime; // in milliseconds
       const progressDecimal = progress / 100;
-      
+
       if (progressDecimal > 0) {
         const totalEstimated = elapsed / progressDecimal;
         const remaining = totalEstimated - elapsed;
@@ -273,7 +273,7 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
   };
 
   const handleTriggerTraining = async () => {
-    if (!confirm('Training jetzt starten?')) return;
+    // if (!confirm('Training jetzt starten?')) return;
 
     setTriggering(true);
     try {
@@ -303,6 +303,24 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
   const handleEditTrainingData = (id: string, type: string) => {
     if (onEditTrainingData) {
       onEditTrainingData(id, type);
+    }
+  };
+
+  const handleCancelTraining = async (jobId: string) => {
+    // if (!confirm('Training wirklich abbrechen?')) return;
+
+    setCancelling(jobId);
+    try {
+      await trainingApi.cancelTraining(jobId);
+      // Wait a bit and then reload data to reflect status change
+      setTimeout(() => {
+        loadData();
+      }, 1000);
+    } catch (error: any) {
+      logger.error('Failed to cancel training:', error);
+      alert(error.response?.data?.message || 'Fehler beim Abbrechen des Trainings');
+    } finally {
+      setCancelling(null);
     }
   };
 
@@ -490,13 +508,12 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
                             {logs.logs.map((log: any, index: number) => (
                               <div
                                 key={index}
-                                className={`text-xs font-mono ${
-                                  log.level === 'error'
-                                    ? 'text-red-600 dark:text-red-400'
-                                    : log.level === 'warn'
+                                className={`text-xs font-mono ${log.level === 'error'
+                                  ? 'text-red-600 dark:text-red-400'
+                                  : log.level === 'warn'
                                     ? 'text-yellow-600 dark:text-yellow-400'
                                     : 'text-gray-700 dark:text-gray-300'
-                                }`}
+                                  }`}
                               >
                                 <span className="text-gray-500 dark:text-gray-500">
                                   {new Date(log.timestamp).toLocaleTimeString()}
@@ -539,7 +556,7 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
             trainingData.map((data) => {
               const isInUse = runningJobDataIds.has(data.id);
               const canEdit = data.status === 'pending' && !isInUse;
-              
+
               return (
                 <div key={data.id} className="p-6">
                   <div className="flex items-center justify-between">
