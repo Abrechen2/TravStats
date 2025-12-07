@@ -236,22 +236,33 @@ OPTIONAL FIELDS (extract if visible):
 FIELDS NOT ON BOARDING PASS (always null):
 - price, currency, taxes, fees, ticketNumber (these are NOT shown on boarding passes)
 
-EXAMPLE OUTPUT (VALID JSON):
+OCR-FIRST APPROACH (CRITICAL):
+STEP 1: First, carefully read and describe what text you can clearly see on the boarding pass.
+STEP 2: Extract ONLY the clearly visible information into JSON format.
+STEP 3: For any field that is unclear, blurry, or not visible, set it to null (not a guess, not a placeholder).
+
+ANTI-HALLUCINATION RULES (CRITICAL):
+⚠️ The example values below are NEVER correct for your specific boarding pass image.
+⚠️ ONLY extract information you can actually READ from the boarding pass in the image.
+⚠️ NEVER use placeholder values like "ABC123", "XYZ789", "LH103", or "26F".
+⚠️ If you cannot clearly read a field, return null - do NOT guess or use example values.
+
+EXAMPLE OUTPUT FORMAT (use different values from your actual boarding pass):
 {
-  "airline": "Lufthansa",
-  "flightNumber": "LH103",
-  "departureCode": "MUC",
-  "arrivalCode": "FRA",
-  "departureTime": "2025-11-18T10:30",
+  "airline": "British Airways",
+  "flightNumber": "BA456",
+  "departureCode": "LHR",
+  "arrivalCode": "CDG",
+  "departureTime": "2025-12-15T09:45",
   "arrivalTime": null,
-  "seat": "26F",
-  "gate": "G32",
-  "terminal": "2",
-  "pnr": "ABC123",
-  "bookingReference": "ABC123",
-  "boardingGroup": "3",
+  "seat": "12A",
+  "gate": "B22",
+  "terminal": "5",
+  "pnr": "XYZ789",
+  "bookingReference": "XYZ789",
+  "boardingGroup": "2",
   "seatClass": "Economy",
-  "aircraft": "A320",
+  "aircraft": "A319",
   "price": null,
   "currency": null,
   "taxes": null,
@@ -271,11 +282,17 @@ export function getTextParserPrompt(subject: string, text: string): string {
     .replace(/\uFFFD/g, '')
     .replace(/\s+/g, ' ')
     .trim()
-    .substring(0, 6000);
+    .substring(0, 15000); // Increased from 6000 to support multi-flight emails
 
   return `You are an expert flight booking email parser with deep knowledge of airline booking formats worldwide.
 
 TASK: Extract ALL flights from the email below. Each flight is a separate leg of the journey (outbound, return, connections).
+
+CRITICAL MULTI-FLIGHT RULE:
+⚠️ Count all unique flight numbers in the email text.
+⚠️ If you find N different flight numbers, your JSON array MUST contain N flight objects (one per flight number).
+⚠️ Example: If "LH103" and "LH2317" both appear in the email → return 2 separate flight objects, not 1.
+⚠️ Round-trip bookings = 2 flights (outbound + return). Multi-city = 3+ flights (with connections).
 
 CRITICAL RULES:
 1. IATA codes are ALWAYS 3 uppercase letters (e.g., MUC, FRA, LUX, CDG, FCO)
@@ -303,11 +320,13 @@ CRITICAL FIELDS (must be extracted from booking emails):
 - departureTime: ISO 8601 format. Extract from "Departure: 18.11.2025 14:30" → "2025-11-18T14:30"
 - arrivalTime: EXPECTED in booking emails! Most confirmation emails contain BOTH departure AND arrival times in the itinerary section. Extract from "Arrival: 18 Nov 2025, 16:15" or similar. If genuinely not visible, use null.
 
-OPTIONAL FIELDS (extract if available):
+IMPORTANT FIELDS (extract if present in email):
+- pnr: Booking code/PNR (usually 6 alphanumeric characters, e.g., "7RH6NS", "K6CH9R"). Usually SAME for all flights in one booking.
+- bookingReference: Same as PNR (use same value)
+- seat: Seat assignment if pre-selected (e.g., "16F", "24A"). May differ per flight leg.
 - airline: Full airline name (e.g., "Lufthansa", "Ryanair")
-- pnr: Booking code/PNR (usually 6 alphanumeric characters)
-- bookingReference: Same as PNR
-- seat: Seat assignment if pre-selected (e.g., "16F", "24A")
+
+OPTIONAL FIELDS (extract if available):
 - terminal: Departure terminal (e.g., "1", "2", "B")
 - gate: Boarding gate (often not in confirmation emails)
 - price: Total price (e.g., "189.50")
@@ -344,18 +363,39 @@ British Airways emails:
 - Reference: "Booking reference" field
 - Times with timezone info (convert to local departure time)
 
-EXAMPLE OUTPUT (VALID JSON ARRAY):
+EXAMPLE OUTPUT FOR ROUND-TRIP (VALID JSON ARRAY WITH 2 FLIGHTS):
 [
   {
     "airline": "Lufthansa",
-    "flightNumber": "LH2317",
-    "departureCode": "LUX",
+    "flightNumber": "LH2460",
+    "departureCode": "MUC",
+    "arrivalCode": "HEL",
+    "departureTime": "2025-09-18T08:25",
+    "arrivalTime": "2025-09-18T11:55",
+    "pnr": "7RH6NS",
+    "bookingReference": "7RH6NS",
+    "seat": "10C",
+    "terminal": "2",
+    "gate": null,
+    "price": "189.50",
+    "currency": "EUR",
+    "taxes": "42.30",
+    "fees": "15.20",
+    "aircraft": "A319",
+    "seatClass": "Economy Light",
+    "ticketNumber": null,
+    "boardingGroup": null
+  },
+  {
+    "airline": "Lufthansa",
+    "flightNumber": "LH2465",
+    "departureCode": "HEL",
     "arrivalCode": "MUC",
-    "departureTime": "2025-11-18T09:00",
-    "arrivalTime": "2025-11-18T10:15",
-    "pnr": "XYZ789",
-    "bookingReference": "XYZ789",
-    "seat": "16F",
+    "departureTime": "2025-09-21T19:10",
+    "arrivalTime": "2025-09-21T21:25",
+    "pnr": "7RH6NS",
+    "bookingReference": "7RH6NS",
+    "seat": "18C",
     "terminal": "2",
     "gate": null,
     "price": "189.50",
@@ -363,13 +403,13 @@ EXAMPLE OUTPUT (VALID JSON ARRAY):
     "taxes": "42.30",
     "fees": "15.20",
     "aircraft": "A320",
-    "seatClass": "Economy",
+    "seatClass": "Economy Light",
     "ticketNumber": null,
     "boardingGroup": null
   }
 ]
 
-For round-trip, return TWO objects (one for outbound, one for return).
+Note: PNR is the SAME for both flights (shared booking). Seats may differ per leg.
 
 OUTPUT FORMAT: Return ONLY a valid JSON array. No explanations, no markdown code blocks, no additional text - just the JSON array starting with [ and ending with ].
 
