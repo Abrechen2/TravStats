@@ -1,0 +1,158 @@
+[
+  {
+    "filename": "München nach Helsinki am 18 September 2025.msg",
+    "path": "test-samples/emails/München nach Helsinki am 18 September 2025.msg",
+    "expected": [
+      {
+        "flightNumber": "LH2460",
+        "departureCode": "MUC",
+        "arrivalCode": "HEL",
+        "departureTime": "2025-09-18T08:25",
+        "arrivalTime": "2025-09-18T11:55",
+        "pnr": "7RH6NS",
+        "seat": "10C",
+        "airline": "Lufthansa"
+      },
+      {
+        "flightNumber": "LH2465",
+        "departureCode": "HEL",
+        "arrivalCode": "MUC",
+        "departureTime": "2025-09-21T19:40",
+        "arrivalTime": "2025-09-21T21:20",
+        "pnr": "7RH6NS",
+        "seat": "10D",
+        "airline": "Lufthansa"
+      }
+    ],
+    "notes": "Round-trip München–Helsinki booking. Outbound LH2460 18.09.2025 08:25–11:55, return LH2465 21.09.2025 19:40–21:20, PNR 7RH6NS, seats 10C/10D."
+  },
+  {
+    "filename": "München nach Luxemburg am 18 November 2025.msg",
+    "path": "test-samples/emails/München nach Luxemburg am 18 November 2025.msg",
+    "expected": [
+      {
+        "flightNumber": "LH103",
+        "departureCode": "MUC",
+        "arrivalCode": "FRA",
+        "departureTime": "2025-11-18T11:00",
+        "arrivalTime": "2025-11-18T12:00",
+        "pnr": "9RFAA7",
+        "seat": "26F",
+        "airline": "Lufthansa"
+      },
+      {
+        "flightNumber": "LH5642",
+        "departureCode": "FRA",
+        "arrivalCode": "LUX",
+        "departureTime": "2025-11-18T13:05",
+        "arrivalTime": "2025-11-18T13:55",
+        "pnr": "9RFAA7",
+        "seat": "12A",
+        "airline": "Lufthansa"
+      },
+      {
+        "flightNumber": "LH2317",
+        "departureCode": "LUX",
+        "arrivalCode": "MUC",
+        "departureTime": "2025-11-20T09:30",
+        "arrivalTime": "2025-11-20T10:35",
+        "pnr": "9RFAA7",
+        "seat": "16F",
+        "airline": "Lufthansa Cityline"
+      }
+    ],
+    "notes": "München–Luxemburg return with one-stop outbound via Frankfurt. MUC–FRA LH103 18.11.2025 11:00–12:00 (seat 26F), FRA–LUX LH5642 13:05–13:55 (seat 12A), LUX–MUC LH2317 20.11.2025 09:30–10:35 (seat 16F). PNR 9RFAA7."
+  },
+  {
+    "filename": "München nach Luxemburg am 29 Oktober 2025.msg",
+    "path": "test-samples/emails/München nach Luxemburg am 29 Oktober 2025.msg",
+    "expected": [
+      {
+        "flightNumber": "LX1101",
+        "departureCode": "MUC",
+        "arrivalCode": "ZRH",
+        "departureTime": "2025-10-29T09:10",
+        "arrivalTime": "2025-10-29T10:10",
+        "pnr": "85LMUN",
+        "seat": "10D",
+        "airline": "SWISS"
+      },
+      {
+        "flightNumber": "LX754",
+        "departureCode": "ZRH",
+        "arrivalCode": "LUX",
+        "departureTime": "2025-10-29T12:15",
+        "arrivalTime": "2025-10-29T13:20",
+        "pnr": "85LMUN",
+        "seat": "12C",
+        "airline": "SWISS"
+      },
+      {
+        "flightNumber": "EN8409",
+        "departureCode": "LUX",
+        "arrivalCode": "MUC",
+        "departureTime": "2025-10-31T09:30",
+        "arrivalTime": "2025-10-31T10:35",
+        "pnr": "85LMUN",
+        "seat": "15C",
+        "airline": "Air Dolomiti"
+      }
+    ],
+    "notes": "München–Luxemburg return with one-stop outbound via Zürich. MUC–ZRH LX1101 29.10.2025 09:10–10:10 (seat 10D), ZRH–LUX LX754 12:15–13:20 (seat 12C), LUX–MUC EN8409 31.10.2025 09:30–10:35 (seat 15C). PNR 85LMUN."
+  },
+  {
+    "filename": "München nach Osaka am 23 Mai 2025.msg",
+    "path": "test-samples/emails/München nach Osaka am 23 Mai 2025.msg",
+    "expected": [
+      {
+        "flightNumber": "LH742",
+        "departureCode": "MUC",
+        "arrivalCode": "KIX",
+        "departureTime": "2025-05-23T12:25",
+        "arrivalTime": "2025-05-24T07:15",
+        "pnr": "K6CH9R",
+        "seat": "27B",
+        "airline": "Lufthansa"
+      },
+      {
+        "flightNumber": "LH715",
+        "departureCode": "HND",
+        "arrivalCode": "MUC",
+        "departureTime": "2025-06-06T09:30",
+        "arrivalTime": "2025-06-06T16:45",
+        "pnr": "K6CH9R",
+        "seat": "19C",
+        "airline": "Lufthansa"
+      }
+    ],
+    "notes": "München–Osaka (KIX) out and Tokio Haneda–München return. Outbound LH742 23.05.2025 12:25–24.05.2025 07:15 (seat 27B), inbound LH715 06.06.2025 09:30–16:45 (seat 19C). PNR K6CH9R."
+  },
+  {
+    "filename": "München nach Singapur am 07 Juni 2025.msg",
+    "path": "test-samples/emails/München nach Singapur am 07 Juni 2025.msg",
+    "expected": [
+      {
+        "flightNumber": "LH9790",
+        "departureCode": "MUC",
+        "arrivalCode": "SIN",
+        "departureTime": "2025-06-07T12:30",
+        "arrivalTime": "2025-06-08T06:40",
+        "pnr": "9C2R2U",
+        "seat": "59G",
+        "airline": "Lufthansa (operated by Singapore Airlines)"
+      },
+      {
+        "flightNumber": "LH769",
+        "departureCode": "SIN",
+        "arrivalCode": "MUC",
+        "departureTime": "2025-06-13T23:25",
+        "arrivalTime": "2025-06-14T06:00",
+        "pnr": "9C2R2U",
+        "seat": "28A",
+        "airline": "Lufthansa"
+      }
+    ],
+    "notes": "München–Singapur return. MUC–SIN LH9790 07.06.2025 12:30–08.06.2025 06:40 (seat 59G, operated by Singapore Airlines), SIN–MUC LH769 13.06.2025 23:25–14.06.2025 06:00 (seat 28A). PNR 9C2R2U."
+  }
+]
+

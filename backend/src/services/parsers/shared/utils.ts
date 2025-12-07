@@ -209,52 +209,57 @@ export function cleanLLMJsonResponse(response: string): string {
  * Standard prompt for vision models (boarding pass parsing)
  */
 export function getVisionParserPrompt(): string {
-  return `You are an expert boarding pass analyzer. Extract flight information from this boarding pass image.
+  return `You are an expert boarding pass analyzer. Extract flight information from this boarding pass image with high accuracy.
 
-CRITICAL RULES:
-1. IATA airport codes are ALWAYS exactly 3 uppercase letters (e.g., MUC, FRA, LUX, BER)
-2. Flight numbers format: 2-letter airline code + 1-4 digits (e.g., LH103, FR8234, BA472)
-3. Dates in ISO 8601 format: YYYY-MM-DDTHH:MM (e.g., 2025-12-05T14:30)
-4. Extract the date from the boarding pass (often shown as DAY MONTH YEAR or DD MMM)
-5. If a field is not visible or readable, use null
+CRITICAL FIELDS (must be extracted if visible):
+- flightNumber: 2-3 letter airline code + 1-4 digits (e.g., LH103, FR8234, BA472)
+- departureCode: Departure airport IATA code (ALWAYS exactly 3 uppercase letters, e.g., MUC, FRA, LUX)
+- arrivalCode: Arrival airport IATA code (ALWAYS exactly 3 uppercase letters, e.g., CDG, FCO, BER)
+- departureTime: Departure date and time in ISO 8601 format (YYYY-MM-DDTHH:MM)
 
-FIELDS TO EXTRACT:
-- airline: Full airline name (e.g., "Lufthansa", "Ryanair")
-- flightNumber: e.g., "LH103"
-- departureCode: Departure airport IATA code (3 letters)
-- arrivalCode: Arrival airport IATA code (3 letters)
-- departureTime: Departure date and time in ISO format
-- arrivalTime: Arrival date and time in ISO format (if available)
-- seat: Seat number (e.g., "26F", "12A")
-- gate: Gate number (e.g., "B45", "A12")
-- terminal: Terminal (e.g., "1", "2", "A")
+IMPORTANT NOTES:
+1. Extract the DATE from the boarding pass date field (often shown as "DD MMM YYYY" or "DAY MONTH YEAR")
+2. Combine date with departure time to create full ISO 8601 timestamp (e.g., 2025-11-18T14:30)
+3. arrivalTime: Arrival time in ISO format. NOTE: Boarding passes RARELY show arrival time - only departure and boarding times are typically visible. If arrival time is NOT clearly shown on the boarding pass, return null. Do NOT guess or calculate - only extract if explicitly displayed.
+
+OPTIONAL FIELDS (extract if visible):
+- airline: Full airline name (e.g., "Lufthansa", "Ryanair", "British Airways")
+- seat: Seat number (e.g., "26F", "12A", "42C")
+- gate: Gate number (e.g., "B45", "A12", "G32")
+- terminal: Terminal (e.g., "1", "2", "A", "B")
 - pnr: Booking reference/PNR (usually 6 alphanumeric characters)
-- boardingGroup: Boarding group/zone (e.g., "1", "A", "Zone 3")
-- seatClass: e.g., "Economy", "Business", "First"
-- aircraft: Aircraft type if visible (e.g., "A321", "Boeing 737")
+- bookingReference: Same as PNR (use same value)
+- boardingGroup: Boarding group/zone (e.g., "1", "A", "Zone 3", "Group 5")
+- seatClass: Cabin class (e.g., "Economy", "Business", "First", "Premium Economy")
+- aircraft: Aircraft type if visible (e.g., "A321", "Boeing 737", "A320")
 
-Return ONLY valid JSON (no markdown formatting) in this exact structure:
+FIELDS NOT ON BOARDING PASS (always null):
+- price, currency, taxes, fees, ticketNumber (these are NOT shown on boarding passes)
+
+EXAMPLE OUTPUT (VALID JSON):
 {
-  "airline": "string or null",
-  "flightNumber": "string or null",
-  "departureCode": "string or null",
-  "arrivalCode": "string or null",
-  "departureTime": "string or null",
-  "arrivalTime": "string or null",
-  "seat": "string or null",
-  "gate": "string or null",
-  "terminal": "string or null",
-  "pnr": "string or null",
-  "bookingReference": "string or null",
-  "boardingGroup": "string or null",
-  "seatClass": "string or null",
-  "aircraft": "string or null",
+  "airline": "Lufthansa",
+  "flightNumber": "LH103",
+  "departureCode": "MUC",
+  "arrivalCode": "FRA",
+  "departureTime": "2025-11-18T10:30",
+  "arrivalTime": null,
+  "seat": "26F",
+  "gate": "G32",
+  "terminal": "2",
+  "pnr": "ABC123",
+  "bookingReference": "ABC123",
+  "boardingGroup": "3",
+  "seatClass": "Economy",
+  "aircraft": "A320",
   "price": null,
   "currency": null,
   "taxes": null,
   "fees": null,
   "ticketNumber": null
-}`;
+}
+
+Return ONLY valid JSON (no markdown, no code blocks, no explanations). Use null for fields that are not visible or readable on the boarding pass.`;
 }
 
 /**
@@ -268,27 +273,109 @@ export function getTextParserPrompt(subject: string, text: string): string {
     .trim()
     .substring(0, 6000);
 
-  return `You are an expert flight booking email parser with deep knowledge of airline booking formats.
+  return `You are an expert flight booking email parser with deep knowledge of airline booking formats worldwide.
 
-TASK: Extract ALL flights from the email below. Each flight is a separate leg of the journey.
+TASK: Extract ALL flights from the email below. Each flight is a separate leg of the journey (outbound, return, connections).
 
 CRITICAL RULES:
-1. Extract EACH flight separately (outbound, return, connections)
-2. IATA codes are ALWAYS 3 uppercase letters (e.g., MUC, FRA, LUX)
-3. Flight numbers format: 2-letter airline code + 1-4 digits (e.g., LH103, FR8234)
-4. Dates in ISO 8601 format: YYYY-MM-DDTHH:MM (e.g., 2025-11-18T11:00)
-5. If a field is not found, use null (not empty string)
+1. IATA codes are ALWAYS 3 uppercase letters (e.g., MUC, FRA, LUX, CDG, FCO)
+2. Flight numbers: 2-3 letter airline code + 1-4 digits (e.g., LH103, FR8234, BA472)
+3. Dates in ISO 8601 format: YYYY-MM-DDTHH:MM (e.g., 2025-11-18T11:00)
+4. If a field is genuinely not found in the email, use null (not empty string)
+5. Extract EACH flight leg as a separate object (round-trip = 2 objects, multi-leg = multiple objects)
 
-OUTPUT FORMAT: Return ONLY a valid JSON array. No explanations, no markdown, just the JSON array.
+IMPORTANT - CHECK EMAIL SUBJECT FOR ROUTE INFORMATION:
+The email subject often contains critical route information when IATA codes are not in the body.
+Examples of common patterns to extract:
+- "München nach Luxemburg am 18 November 2025" → departureCode: MUC, arrivalCode: LUX, date: 2025-11-18
+- "Frankfurt nach Rom" → departureCode: FRA, arrivalCode: FCO
+- "von Paris nach Berlin" → departureCode: CDG (or ORY), arrivalCode: BER (or TXL/SXF)
 
-EXTRACT THESE FIELDS FOR EACH FLIGHT:
-- flightNumber, departureCode, arrivalCode, departureTime, arrivalTime
-- pnr, seat, terminal, gate, price, currency
-- aircraft, seatClass, bookingReference, ticketNumber, boardingGroup, taxes, fees
+Common city-to-IATA conversions:
+München/Munich → MUC, Frankfurt → FRA, Berlin → BER, Hamburg → HAM, Köln/Cologne → CGN
+Paris → CDG (or ORY), London → LHR (or LGW/STN), Rom/Rome → FCO, Barcelona → BCN
+New York → JFK (or EWR/LGA), Los Angeles → LAX, Tokyo → NRT (or HND)
+
+CRITICAL FIELDS (must be extracted from booking emails):
+- flightNumber: Extract from "Flight LH 103" or "LH103" → return as "LH103" (no spaces)
+- departureCode: 3-letter IATA code (check subject if not in body!)
+- arrivalCode: 3-letter IATA code (check subject if not in body!)
+- departureTime: ISO 8601 format. Extract from "Departure: 18.11.2025 14:30" → "2025-11-18T14:30"
+- arrivalTime: EXPECTED in booking emails! Most confirmation emails contain BOTH departure AND arrival times in the itinerary section. Extract from "Arrival: 18 Nov 2025, 16:15" or similar. If genuinely not visible, use null.
+
+OPTIONAL FIELDS (extract if available):
+- airline: Full airline name (e.g., "Lufthansa", "Ryanair")
+- pnr: Booking code/PNR (usually 6 alphanumeric characters)
+- bookingReference: Same as PNR
+- seat: Seat assignment if pre-selected (e.g., "16F", "24A")
+- terminal: Departure terminal (e.g., "1", "2", "B")
+- gate: Boarding gate (often not in confirmation emails)
+- price: Total price (e.g., "189.50")
+- currency: Currency code (e.g., "EUR", "USD")
+- taxes: Tax amount if itemized
+- fees: Fees amount if itemized
+- aircraft: Aircraft type (e.g., "A320", "Boeing 737")
+- seatClass: Cabin class (e.g., "Economy", "Business")
+- ticketNumber: E-ticket number (usually 13 digits)
+- boardingGroup: Boarding group (often not in confirmation emails)
+
+MULTI-FLIGHT HANDLING:
+If the email contains ROUND-TRIP or MULTI-LEG flights:
+- Extract EACH flight leg separately
+- Outbound flight first, then return flight
+- Each leg must have its own departureTime and arrivalTime
+- Example: Frankfurt → Tokyo (outbound), Tokyo → Frankfurt (return) = 2 separate objects in the array
+
+AIRLINE-SPECIFIC FORMATS (Common patterns):
+
+Lufthansa emails:
+- Flight: "LH 103" or "LH103" → extract as "LH103"
+- Route: "MUC-FRA" or "MUC → FRA"
+- Time: "18.11.2025 14:30" → convert to "2025-11-18T14:30"
+- PNR/Booking Code: 6 alphanumeric characters (e.g., "ABC123")
+
+Ryanair emails:
+- Flight: "FR 8234"
+- Route often in subject line
+- Times in 24h format
+
+British Airways emails:
+- Flight: "BA 472"
+- Reference: "Booking reference" field
+- Times with timezone info (convert to local departure time)
+
+EXAMPLE OUTPUT (VALID JSON ARRAY):
+[
+  {
+    "airline": "Lufthansa",
+    "flightNumber": "LH2317",
+    "departureCode": "LUX",
+    "arrivalCode": "MUC",
+    "departureTime": "2025-11-18T09:00",
+    "arrivalTime": "2025-11-18T10:15",
+    "pnr": "XYZ789",
+    "bookingReference": "XYZ789",
+    "seat": "16F",
+    "terminal": "2",
+    "gate": null,
+    "price": "189.50",
+    "currency": "EUR",
+    "taxes": "42.30",
+    "fees": "15.20",
+    "aircraft": "A320",
+    "seatClass": "Economy",
+    "ticketNumber": null,
+    "boardingGroup": null
+  }
+]
+
+For round-trip, return TWO objects (one for outbound, one for return).
+
+OUTPUT FORMAT: Return ONLY a valid JSON array. No explanations, no markdown code blocks, no additional text - just the JSON array starting with [ and ending with ].
 
 EMAIL SUBJECT: ${subject}
 
 EMAIL BODY: ${cleanText}
 
-JSON OUTPUT:`;
+JSON ARRAY OUTPUT:`;
 }
