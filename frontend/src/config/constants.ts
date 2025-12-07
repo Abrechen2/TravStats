@@ -13,3 +13,4 @@ export const BOARDING_PASS_OCR = {
   DEFAULT_TIMEOUT_MS: 10000, // 10 seconds
 } as const;
 
+
