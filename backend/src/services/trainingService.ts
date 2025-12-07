@@ -612,40 +612,149 @@ export async function cancelTraining(trainingJobId: string): Promise<void> {
     throw new Error(`Cannot cancel job with status: ${job.status}`);
   }
 
+  // First, update status to indicate cancellation is in progress
+  await prisma.trainingJob.update({
+    where: { id: trainingJobId },
+    data: {
+      status: 'cancelled',
+      completedAt: new Date(),
+      errorMessage: 'Training cancelled by user',
+    },
+  });
+
+  await logTrainingEvent(trainingJobId, 'info', 'Training cancellation initiated by user', {});
+
   // Kill the process if it's running
-  const process = runningProcesses.get(trainingJobId);
-  if (process) {
+  const trackedProcess = runningProcesses.get(trainingJobId);
+  let processKilled = false;
+
+  if (trackedProcess && trackedProcess.pid) {
     try {
-      // On Windows, we need to kill the process tree (Python spawns child processes)
-      const platform = require('os').platform();
+      const os = require('os');
+      const platform = os.platform();
+      const { execSync, spawn } = require('child_process');
+
       if (platform === 'win32') {
-        // Windows: Kill process tree
-        if (process.pid) {
+        // Windows: Kill process tree using taskkill
+        try {
+          // First try graceful shutdown with SIGTERM (if supported)
           try {
-            // Use taskkill on Windows to kill process tree
-            const { execSync } = require('child_process');
-            execSync(`taskkill /F /T /PID ${process.pid}`, { stdio: 'ignore' });
-          } catch (killError) {
-            // Fallback to regular kill
-            process.kill('SIGKILL');
+            trackedProcess.kill('SIGTERM');
+            // Wait a bit for graceful shutdown
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          } catch (e) {
+            // SIGTERM might not work on Windows, continue to force kill
           }
-        } else {
-          process.kill('SIGKILL');
+
+          // Force kill process tree
+          execSync(`taskkill /F /T /PID ${trackedProcess.pid}`, { 
+            stdio: 'ignore',
+            timeout: 5000,
+          });
+          processKilled = true;
+          logger.info({
+            operation: 'cancel_training_process_killed',
+            message: 'Training process killed successfully (Windows)',
+            context: {
+              trainingJobId,
+              pid: trackedProcess.pid,
+            },
+          });
+        } catch (killError: any) {
+          // If taskkill fails, try alternative methods
+          logger.warn({
+            operation: 'cancel_training_taskkill_failed',
+            message: 'taskkill failed, trying alternative methods',
+            context: {
+              trainingJobId,
+              pid: trackedProcess.pid,
+              error: killError instanceof Error ? killError.message : 'Unknown error',
+            },
+          });
+
+          // Try wmic as fallback
+          try {
+            execSync(`wmic process where "ProcessId=${trackedProcess.pid}" delete`, { 
+              stdio: 'ignore',
+              timeout: 5000,
+            });
+            processKilled = true;
+          } catch (wmicError) {
+            // Last resort: try to kill directly
+            try {
+              trackedProcess.kill('SIGKILL');
+              processKilled = true;
+            } catch (finalError) {
+              logger.warn({
+                operation: 'cancel_training_all_methods_failed',
+                message: 'All kill methods failed for tracked process',
+                context: {
+                  trainingJobId,
+                  pid: trackedProcess.pid,
+                },
+              });
+            }
+          }
         }
       } else {
         // Unix-like: Try graceful shutdown first (SIGTERM)
-        process.kill('SIGTERM');
+        try {
+          trackedProcess.kill('SIGTERM');
+          processKilled = true;
 
-        // Force kill after 2 seconds if still running
-        setTimeout(() => {
-          if (process && !process.killed && process.pid) {
-            try {
-              process.kill('SIGKILL');
-            } catch (e) {
-              // Process already dead
-            }
+          // Wait for graceful shutdown, then force kill if still running
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          // Check if process is still alive and force kill if needed
+          try {
+            // Try to send signal 0 to check if process exists
+            process.kill(0);
+            // Process still exists, force kill
+            trackedProcess.kill('SIGKILL');
+            logger.info({
+              operation: 'cancel_training_force_killed',
+              message: 'Training process force killed after SIGTERM (Unix)',
+              context: {
+                trainingJobId,
+                pid: trackedProcess.pid,
+              },
+            });
+          } catch (checkError) {
+            // Process already dead, good
+            logger.info({
+              operation: 'cancel_training_graceful_shutdown',
+              message: 'Training process shut down gracefully (Unix)',
+              context: {
+                trainingJobId,
+                pid: trackedProcess.pid,
+              },
+            });
           }
-        }, 2000);
+        } catch (error) {
+          logger.warn({
+            operation: 'cancel_training_sigterm_failed',
+            message: 'SIGTERM failed, trying SIGKILL',
+            context: {
+              trainingJobId,
+              pid: trackedProcess.pid,
+              error: error instanceof Error ? error.message : 'Unknown error',
+            },
+          });
+          
+          try {
+            trackedProcess.kill('SIGKILL');
+            processKilled = true;
+          } catch (killError) {
+            logger.warn({
+              operation: 'cancel_training_kill_failed',
+              message: 'Failed to kill tracked process',
+              context: {
+                trainingJobId,
+                pid: trackedProcess.pid,
+              },
+            });
+          }
+        }
       }
     } catch (error) {
       logger.warn({
@@ -653,19 +762,20 @@ export async function cancelTraining(trainingJobId: string): Promise<void> {
         message: 'Failed to kill training process',
         context: {
           trainingJobId,
-          pid: process.pid,
+          pid: trackedProcess.pid,
           error: error instanceof Error ? error.message : 'Unknown error',
         },
       });
     }
 
     runningProcesses.delete(trainingJobId);
-  } else {
-    // Process not in map - might be running but not tracked
-    // Try to find and kill Python processes for this job
+  }
+
+  // If process wasn't in tracking map or kill failed, try to find and kill by job ID
+  if (!processKilled) {
     logger.warn({
       operation: 'cancel_training_process_not_found',
-      message: 'Training process not found in tracking map, attempting to find and kill',
+      message: 'Training process not found in tracking map, attempting to find and kill by job ID',
       context: {
         trainingJobId,
       },
@@ -673,26 +783,109 @@ export async function cancelTraining(trainingJobId: string): Promise<void> {
 
     try {
       const { execSync } = require('child_process');
-      const platform = require('os').platform();
+      const os = require('os');
+      const platform = os.platform();
+
       if (platform === 'win32') {
         // Windows: Find Python processes with the job ID in command line
-        // Try to find processes by searching for the training job ID in the command
-        try {
-          execSync(`wmic process where "commandline like '%${trainingJobId}%'" delete`, { stdio: 'ignore' });
-        } catch (e) {
-          // Fallback: try taskkill with filter
-          try {
-            execSync(`taskkill /F /FI "IMAGENAME eq python.exe" /FI "COMMANDLINE eq *${trainingJobId}*" /T`, { stdio: 'ignore' });
-          } catch (e2) {
-            // Ignore - process might not exist
+        // Try multiple methods to find and kill the process
+        const methods = [
+          // Method 1: wmic with job ID
+          () => {
+            try {
+              execSync(`wmic process where "commandline like '%${trainingJobId}%'" delete`, { 
+                stdio: 'ignore',
+                timeout: 5000,
+              });
+              return true;
+            } catch {
+              return false;
+            }
+          },
+          // Method 2: taskkill with filter
+          () => {
+            try {
+              execSync(`taskkill /F /FI "IMAGENAME eq python.exe" /FI "COMMANDLINE eq *${trainingJobId}*" /T`, { 
+                stdio: 'ignore',
+                timeout: 5000,
+              });
+              return true;
+            } catch {
+              return false;
+            }
+          },
+          // Method 3: taskkill with py.exe
+          () => {
+            try {
+              execSync(`taskkill /F /FI "IMAGENAME eq py.exe" /FI "COMMANDLINE eq *${trainingJobId}*" /T`, { 
+                stdio: 'ignore',
+                timeout: 5000,
+              });
+              return true;
+            } catch {
+              return false;
+            }
+          },
+        ];
+
+        for (const method of methods) {
+          if (method()) {
+            processKilled = true;
+            logger.info({
+              operation: 'cancel_training_found_and_killed',
+              message: 'Training process found and killed by job ID (Windows)',
+              context: {
+                trainingJobId,
+              },
+            });
+            break;
           }
         }
       } else {
         // Unix: Find and kill Python processes
-        execSync(`pkill -f "trainLora.py.*${trainingJobId}"`, { stdio: 'ignore' });
+        try {
+          execSync(`pkill -f "trainLora.py.*${trainingJobId}"`, { 
+            stdio: 'ignore',
+            timeout: 5000,
+          });
+          processKilled = true;
+          logger.info({
+            operation: 'cancel_training_found_and_killed',
+            message: 'Training process found and killed by job ID (Unix)',
+            context: {
+              trainingJobId,
+            },
+          });
+        } catch (pkillError) {
+          // Try with pgrep first to find PID, then kill
+          try {
+            const { execSync } = require('child_process');
+            const pids = execSync(`pgrep -f "trainLora.py.*${trainingJobId}"`, { encoding: 'utf-8' })
+              .trim()
+              .split('\n')
+              .filter(pid => pid.trim());
+            
+            for (const pid of pids) {
+              try {
+                execSync(`kill -TERM ${pid}`, { stdio: 'ignore', timeout: 2000 });
+                setTimeout(() => {
+                  try {
+                    execSync(`kill -KILL ${pid}`, { stdio: 'ignore', timeout: 2000 });
+                  } catch {
+                    // Process already dead
+                  }
+                }, 2000);
+                processKilled = true;
+              } catch {
+                // Continue to next PID
+              }
+            }
+          } catch {
+            // All methods failed
+          }
+        }
       }
     } catch (findError) {
-      // Ignore errors - process might not exist
       logger.warn({
         operation: 'cancel_training_find_process_error',
         message: 'Failed to find and kill process by job ID',
@@ -704,19 +897,17 @@ export async function cancelTraining(trainingJobId: string): Promise<void> {
     }
   }
 
-  // Update job status
-  await prisma.trainingJob.update({
-    where: { id: trainingJobId },
-    data: {
-      status: 'cancelled',
-      completedAt: new Date(),
-      errorMessage: 'Training cancelled by user',
-    },
+  await logTrainingEvent(trainingJobId, 'info', 'Training cancellation completed', {
+    processKilled,
   });
 
-  await logTrainingEvent(trainingJobId, 'info', 'Training cancelled by user', {});
-
   logger.info({
+    operation: 'cancel_training',
+    message: 'Training cancelled successfully',
+    context: {
+      trainingJobId,
+      processKilled,
+    },
   });
 }
 

@@ -10,11 +10,18 @@ import os
 import sys
 import logging
 import multiprocessing
+import signal
+import atexit
 from pathlib import Path
-from typing import Dict, List, Any, Tuple
+from typing import Dict, List, Any, Tuple, Optional
 
 # Setup logging - will be configured after parsing args to write to log file
 logger = logging.getLogger(__name__)
+
+# Global flag for cancellation
+_cancellation_requested = False
+_trainer_instance: Optional[Any] = None
+_output_dir: Optional[str] = None
 
 try:
     from transformers import (
@@ -38,14 +45,102 @@ except ImportError as e:
     sys.exit(1)
 
 
+def validate_training_data(examples: List[Dict[str, Any]]) -> Tuple[bool, str]:
+    """Validate training data format and structure
+    
+    Returns:
+        tuple: (is_valid, error_message)
+    """
+    if len(examples) == 0:
+        return False, "No training examples found in file"
+    
+    if len(examples) < 3:
+        return False, f"Insufficient training examples: {len(examples)}. Need at least 3 examples for meaningful training."
+    
+    # Validate each example
+    required_fields = ['instruction', 'input', 'output']
+    for i, example in enumerate(examples):
+        if not isinstance(example, dict):
+            return False, f"Example {i} is not a dictionary"
+        
+        # Check required fields
+        for field in required_fields:
+            if field not in example:
+                return False, f"Example {i} is missing required field: {field}"
+            
+            if not isinstance(example[field], str):
+                return False, f"Example {i} field '{field}' must be a string"
+            
+            if len(example[field].strip()) == 0:
+                return False, f"Example {i} field '{field}' is empty"
+        
+        # Check metadata (optional but should be dict if present)
+        if 'metadata' in example and not isinstance(example['metadata'], dict):
+            return False, f"Example {i} metadata must be a dictionary"
+    
+    # Check data quality
+    total_length = sum(len(ex['input']) + len(ex['output']) for ex in examples)
+    avg_length = total_length / len(examples)
+    
+    if avg_length < 50:
+        logger.warning(f"Average example length is very short ({avg_length:.1f} chars). Training may not be effective.")
+    
+    if avg_length > 10000:
+        logger.warning(f"Average example length is very long ({avg_length:.1f} chars). This may cause memory issues.")
+    
+    return True, ""
+
+
 def load_training_data(jsonl_path: str) -> List[Dict[str, Any]]:
-    """Load training data from JSONL file"""
+    """Load and validate training data from JSONL file"""
+    if not os.path.exists(jsonl_path):
+        raise FileNotFoundError(f"Training data file not found: {jsonl_path}")
+    
+    # Check file size
+    file_size = os.path.getsize(jsonl_path)
+    if file_size == 0:
+        raise ValueError(f"Training data file is empty: {jsonl_path}")
+    
+    if file_size > 100 * 1024 * 1024:  # 100MB
+        logger.warning(f"Training data file is very large ({file_size / (1024*1024):.1f} MB). This may cause memory issues.")
+    
     examples = []
-    with open(jsonl_path, 'r', encoding='utf-8') as f:
-        for line in f:
-            if line.strip():
-                examples.append(json.loads(line))
-    logger.info(f"Loaded {len(examples)} training examples")
+    line_number = 0
+    errors = []
+    
+    try:
+        with open(jsonl_path, 'r', encoding='utf-8') as f:
+            for line_number, line in enumerate(f, 1):
+                line = line.strip()
+                if not line:
+                    continue
+                
+                try:
+                    example = json.loads(line)
+                    examples.append(example)
+                except json.JSONDecodeError as e:
+                    errors.append(f"Line {line_number}: Invalid JSON - {str(e)}")
+                    if len(errors) > 10:  # Limit error messages
+                        break
+    except UnicodeDecodeError as e:
+        raise ValueError(f"File encoding error at line {line_number}: {str(e)}. File must be UTF-8 encoded.")
+    except Exception as e:
+        raise ValueError(f"Error reading training data file: {str(e)}")
+    
+    if errors:
+        error_msg = f"Found {len(errors)} JSON parsing errors:\n" + "\n".join(errors[:10])
+        if len(errors) > 10:
+            error_msg += f"\n... and {len(errors) - 10} more errors"
+        raise ValueError(error_msg)
+    
+    logger.info(f"Loaded {len(examples)} training examples from {jsonl_path}")
+    
+    # Validate data structure
+    is_valid, error_message = validate_training_data(examples)
+    if not is_valid:
+        raise ValueError(f"Training data validation failed: {error_message}")
+    
+    logger.info("Training data validation passed")
     return examples
 
 
@@ -193,6 +288,94 @@ def prepare_dataset(examples: List[Dict[str, Any]], tokenizer, max_length: int =
     return tokenized
 
 
+def signal_handler(signum, frame):
+    """Handle SIGTERM and SIGINT signals for graceful shutdown"""
+    global _cancellation_requested, _trainer_instance, _output_dir
+    
+    signal_name = signal.Signals(signum).name
+    logger.warning(f"Received {signal_name} signal. Initiating graceful shutdown...")
+    
+    _cancellation_requested = True
+    
+    # If trainer is available, try to save checkpoint
+    if _trainer_instance is not None and _output_dir is not None:
+        try:
+            logger.info("Saving checkpoint before shutdown...")
+            checkpoint_dir = os.path.join(_output_dir, "checkpoint-cancelled")
+            os.makedirs(checkpoint_dir, exist_ok=True)
+            _trainer_instance.save_model(checkpoint_dir)
+            logger.info(f"Checkpoint saved to {checkpoint_dir}")
+        except Exception as e:
+            logger.error(f"Failed to save checkpoint: {e}")
+    
+    # Cleanup resources
+    cleanup_resources()
+    
+    logger.warning("Training cancelled by user signal")
+    sys.exit(130 if signum == signal.SIGINT else 143)  # Standard exit codes for SIGINT/SIGTERM
+
+
+def cleanup_resources():
+    """Clean up GPU memory and other resources"""
+    global _trainer_instance, _output_dir
+    
+    try:
+        # Clear GPU cache if available
+        if 'torch' in sys.modules:
+            import torch
+            import gc
+            
+            # Clear trainer references
+            if _trainer_instance is not None:
+                try:
+                    # Delete trainer to free model references
+                    del _trainer_instance
+                    _trainer_instance = None
+                except Exception as e:
+                    logger.warning(f"Error deleting trainer instance: {e}")
+            
+            # Clear CUDA cache
+            if torch.cuda.is_available():
+                try:
+                    # Synchronize all CUDA operations
+                    torch.cuda.synchronize()
+                    # Clear cache
+                    torch.cuda.empty_cache()
+                    # Reset peak memory stats
+                    torch.cuda.reset_peak_memory_stats()
+                    logger.info("GPU memory cache cleared and synchronized")
+                except Exception as e:
+                    logger.warning(f"Error clearing GPU cache: {e}")
+            
+            # Force garbage collection
+            gc.collect()
+            
+            # Additional cleanup for CUDA
+            if torch.cuda.is_available():
+                try:
+                    # Run another garbage collection after CUDA cleanup
+                    gc.collect()
+                    torch.cuda.empty_cache()
+                except Exception:
+                    pass
+            
+            logger.info("Resource cleanup completed")
+    except Exception as e:
+        logger.warning(f"Error during resource cleanup: {e}")
+
+
+def register_signal_handlers():
+    """Register signal handlers for graceful shutdown"""
+    # Register handlers for SIGTERM and SIGINT
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
+    
+    # Also register atexit handler for cleanup
+    atexit.register(cleanup_resources)
+    
+    logger.info("Signal handlers registered for graceful shutdown")
+
+
 def test_cuda_compatibility() -> Tuple[bool, str]:
     """Test if CUDA is actually usable (not just available)
     
@@ -248,16 +431,26 @@ def train_lora(
     max_length: int = 2048
 ):
     """Train LoRA adapter"""
+    global _cancellation_requested, _trainer_instance, _output_dir
+    
+    # Set global variables for signal handler
+    _output_dir = output_dir
+    _cancellation_requested = False
+    
+    # Register signal handlers
+    register_signal_handlers()
     
     logger.info(f"Starting LoRA training for job {job_id}")
     logger.info(f"Base model: {base_model}")
     logger.info(f"Input: {input_path}")
     logger.info(f"Output: {output_dir}")
     
-    # Load training data
-    examples = load_training_data(input_path)
-    if len(examples) == 0:
-        raise ValueError("No training examples found")
+    # Load and validate training data
+    try:
+        examples = load_training_data(input_path)
+    except (FileNotFoundError, ValueError, json.JSONDecodeError) as e:
+        logger.error(f"Failed to load or validate training data: {e}")
+        raise
     
     # Load tokenizer and model
     logger.info("Loading tokenizer and model...")
@@ -277,18 +470,85 @@ def train_lora(
     # to HuggingFace model names or use a different approach
     hf_model_name = map_ollama_to_hf(base_model)
     
-    try:
-        tokenizer = AutoTokenizer.from_pretrained(hf_model_name)
-        if tokenizer.pad_token is None:
-            tokenizer.pad_token = tokenizer.eos_token
+    # Retry logic for model loading (handles network issues)
+    max_retries = 3
+    retry_delay = 5  # seconds
+    
+    tokenizer = None
+    model = None
+    
+    for attempt in range(max_retries):
+        try:
+            logger.info(f"Loading tokenizer and model (attempt {attempt + 1}/{max_retries})...")
+            logger.info(f"HuggingFace model: {hf_model_name}")
+            
+            # Load tokenizer
+            try:
+                tokenizer = AutoTokenizer.from_pretrained(
+                    hf_model_name,
+                    trust_remote_code=True,
+                    timeout=60  # 60 second timeout
+                )
+                if tokenizer.pad_token is None:
+                    tokenizer.pad_token = tokenizer.eos_token
+                logger.info("Tokenizer loaded successfully")
+            except Exception as e:
+                error_msg = str(e).lower()
+                if "connection" in error_msg or "timeout" in error_msg or "network" in error_msg:
+                    if attempt < max_retries - 1:
+                        logger.warning(f"Network error loading tokenizer (attempt {attempt + 1}): {e}")
+                        logger.info(f"Retrying in {retry_delay} seconds...")
+                        import time
+                        time.sleep(retry_delay)
+                        continue
+                    else:
+                        raise ValueError(f"Failed to load tokenizer after {max_retries} attempts. Network error: {e}")
+                else:
+                    raise ValueError(f"Failed to load tokenizer: {e}. Make sure the model name '{hf_model_name}' is correct and accessible.")
+            
+            # Load model - use CPU if CUDA is not usable
+            try:
+                model = AutoModelForCausalLM.from_pretrained(
+                    hf_model_name,
+                    dtype=torch.float16 if cuda_usable else torch.float32,
+                    device_map="auto" if cuda_usable else None,
+                    trust_remote_code=True,
+                    timeout=300  # 5 minute timeout for model download
+                )
+                logger.info("Model loaded successfully")
+                break  # Success, exit retry loop
+            except Exception as e:
+                error_msg = str(e).lower()
+                if "connection" in error_msg or "timeout" in error_msg or "network" in error_msg:
+                    if attempt < max_retries - 1:
+                        logger.warning(f"Network error loading model (attempt {attempt + 1}): {e}")
+                        logger.info(f"Retrying in {retry_delay} seconds...")
+                        import time
+                        time.sleep(retry_delay)
+                        continue
+                    else:
+                        raise ValueError(f"Failed to load model after {max_retries} attempts. Network error: {e}. Please check your internet connection and try again.")
+                elif "out of memory" in error_msg or "cuda" in error_msg:
+                    raise ValueError(f"GPU memory error: {e}. Try using a smaller model or reduce batch size.")
+                elif "not found" in error_msg or "does not exist" in error_msg:
+                    raise ValueError(f"Model not found: {e}. The model '{hf_model_name}' may not exist or may not be accessible. Check the model name.")
+                else:
+                    raise ValueError(f"Failed to load model: {e}. Check model name and compatibility.")
         
-        # Load model - use CPU if CUDA is not usable
-        model = AutoModelForCausalLM.from_pretrained(
-            hf_model_name,
-            dtype=torch.float16 if cuda_usable else torch.float32,
-            device_map="auto" if cuda_usable else None,
-            trust_remote_code=True
-        )
+        except ValueError:
+            # Re-raise ValueError (these are our custom errors)
+            raise
+        except Exception as e:
+            if attempt < max_retries - 1:
+                logger.warning(f"Unexpected error loading model (attempt {attempt + 1}): {e}")
+                logger.info(f"Retrying in {retry_delay} seconds...")
+                import time
+                time.sleep(retry_delay)
+            else:
+                raise ValueError(f"Failed to load model after {max_retries} attempts: {e}")
+    
+    if tokenizer is None or model is None:
+        raise ValueError("Failed to load tokenizer or model after all retry attempts")
         
         # Log hardware information
         cuda_available = torch.cuda.is_available()
@@ -327,46 +587,80 @@ def train_lora(
             logger.info("[OK] Training will use GPU (fast)")
         logger.info("=" * 60)
         
-    except Exception as e:
-        logger.error(f"Failed to load model: {e}")
-        logger.error("Note: You may need to download the model first or use a different model name")
+    except ValueError as e:
+        # Re-raise our custom ValueError messages
+        logger.error(f"Model loading failed: {e}")
         raise
+    except Exception as e:
+        error_msg = str(e).lower()
+        if "out of memory" in error_msg:
+            logger.error(f"Out of memory error: {e}")
+            logger.error("Try using a smaller model, reducing batch size, or using CPU training")
+            raise ValueError(f"Out of memory: {e}. Consider using a smaller model or reducing batch size.")
+        elif "cuda" in error_msg:
+            logger.error(f"CUDA error: {e}")
+            raise ValueError(f"CUDA error: {e}. Try using CPU training or check GPU compatibility.")
+        else:
+            logger.error(f"Failed to load model: {e}")
+            logger.error("Note: You may need to download the model first or use a different model name")
+            raise ValueError(f"Failed to load model: {e}. Check model name and ensure it's accessible.")
     
     # Prepare model for LoRA
     logger.info("Preparing model for LoRA training...")
     try:
         model = prepare_model_for_kbit_training(model)
+        logger.info("Model prepared for LoRA training successfully")
     except RuntimeError as e:
         error_msg = str(e).lower()
-        if "no kernel image" in error_msg or "cuda error" in error_msg:
-            logger.warning("CUDA error during model preparation - moving to CPU")
+        if "no kernel image" in error_msg or "cuda error" in error_msg or "cuda out of memory" in error_msg:
+            logger.warning("CUDA error during model preparation - attempting to move to CPU")
+            logger.warning(f"Error details: {e}")
+            
             # Move model to CPU - handle both regular models and models with device_map
             try:
                 if hasattr(model, 'to'):
                     model = model.to('cpu')
+                    logger.info("Model moved to CPU successfully")
                 elif hasattr(model, 'cpu'):
                     model = model.cpu()
-                # Also try to move all parameters to CPU
-                if hasattr(model, 'parameters'):
-                    for param in model.parameters():
-                        if param.is_cuda:
-                            param.data = param.data.cpu()
+                    logger.info("Model moved to CPU successfully")
+                else:
+                    # Try to move all parameters to CPU
+                    if hasattr(model, 'parameters'):
+                        for param in model.parameters():
+                            if param.is_cuda:
+                                param.data = param.data.cpu()
+                        logger.info("Model parameters moved to CPU successfully")
             except Exception as move_error:
                 logger.warning(f"Could not move model to CPU: {move_error}")
                 logger.warning("Attempting to reload model on CPU...")
-                # Reload model on CPU as last resort
-                model = AutoModelForCausalLM.from_pretrained(
-                    hf_model_name,
-                    dtype=torch.float32,
-                    device_map=None,
-                    trust_remote_code=True
-                )
+                try:
+                    # Reload model on CPU as last resort
+                    model = AutoModelForCausalLM.from_pretrained(
+                        hf_model_name,
+                        dtype=torch.float32,
+                        device_map=None,
+                        trust_remote_code=True,
+                        timeout=300
+                    )
+                    logger.info("Model reloaded on CPU successfully")
+                except Exception as reload_error:
+                    raise ValueError(f"Failed to move model to CPU and reload failed: {reload_error}. Original error: {e}")
+            
             # Disable CUDA for rest of training
             cuda_usable = False
+            logger.warning("Switching to CPU training mode")
+            
             # Retry preparation on CPU
-            model = prepare_model_for_kbit_training(model)
+            try:
+                model = prepare_model_for_kbit_training(model)
+                logger.info("Model prepared for LoRA training on CPU successfully")
+            except Exception as prep_error:
+                raise ValueError(f"Failed to prepare model for LoRA training on CPU: {prep_error}. Original error: {e}")
         else:
-            raise
+            raise ValueError(f"Failed to prepare model for LoRA training: {e}")
+    except Exception as e:
+        raise ValueError(f"Unexpected error preparing model for LoRA training: {e}")
     
     # Configure LoRA
     lora_config = LoraConfig(
@@ -403,6 +697,18 @@ def train_lora(
     logger.info(f"  Gradient accumulation steps: 4")
     logger.info(f"  Effective batch size: {batch_size * 4}")
     
+    # Calculate optimal save_steps based on dataset size
+    # Save checkpoints more frequently for smaller datasets
+    total_steps = len(dataset) // (batch_size * 4) * num_epochs  # gradient_accumulation_steps = 4
+    if total_steps < 100:
+        save_steps = max(10, total_steps // 10)  # Save 10 times during training
+    elif total_steps < 500:
+        save_steps = 50  # Default
+    else:
+        save_steps = max(50, total_steps // 20)  # Save 20 times during training
+    
+    logger.info(f"Training will save checkpoints every {save_steps} steps (total steps: ~{total_steps})")
+    
     # Training arguments
     training_args = TrainingArguments(
         output_dir=output_dir,
@@ -412,8 +718,8 @@ def train_lora(
         learning_rate=learning_rate,
         fp16=cuda_usable,  # Mixed precision only for GPU
         logging_steps=1,  # Log every step for better progress tracking
-        save_steps=50,
-        save_total_limit=2,
+        save_steps=save_steps,  # Save checkpoint every N steps
+        save_total_limit=3,  # Keep last 3 checkpoints (for recovery)
         warmup_steps=10,
         report_to="none",  # Disable wandb/tensorboard
         log_level="info",  # Ensure info level logging
@@ -421,6 +727,12 @@ def train_lora(
         dataloader_num_workers=dataloader_num_workers,
         dataloader_pin_memory=cuda_usable,  # Only pin memory for GPU
         dataloader_prefetch_factor=2 if not cuda_usable else None,  # Prefetch for CPU
+        # Enable checkpointing for recovery
+        load_best_model_at_end=False,
+        save_strategy="steps",
+        evaluation_strategy="no",  # No evaluation during training
+        # Resume from checkpoint if available
+        resume_from_checkpoint=None,  # Can be set to checkpoint path to resume
     )
     
     # Data collator
@@ -437,14 +749,82 @@ def train_lora(
         data_collator=data_collator,
     )
     
-    # Train
-    logger.info("Starting training...")
-    trainer.train()
+    # Store trainer instance globally for signal handler
+    _trainer_instance = trainer
     
-    # Save model
-    logger.info(f"Saving model to {output_dir}")
-    trainer.save_model()
-    tokenizer.save_pretrained(output_dir)
+    # Train with cancellation check
+    logger.info("Starting training...")
+    logger.info(f"Checkpoints will be saved to: {output_dir}")
+    logger.info("Training can be resumed from the latest checkpoint if interrupted")
+    
+    try:
+        trainer.train()
+        
+        # Check if cancellation was requested
+        if _cancellation_requested:
+            logger.warning("Training was cancelled, saving final checkpoint...")
+            checkpoint_dir = os.path.join(output_dir, "checkpoint-cancelled")
+            os.makedirs(checkpoint_dir, exist_ok=True)
+            try:
+                trainer.save_model(checkpoint_dir)
+                tokenizer.save_pretrained(checkpoint_dir)
+                logger.info(f"Final checkpoint saved to {checkpoint_dir}")
+                logger.info("You can resume training from this checkpoint if needed")
+            except Exception as save_error:
+                logger.error(f"Failed to save cancellation checkpoint: {save_error}")
+            raise KeyboardInterrupt("Training cancelled by user")
+        
+        # Save final model
+        logger.info(f"Saving final model to {output_dir}")
+        trainer.save_model()
+        tokenizer.save_pretrained(output_dir)
+        logger.info("Final model saved successfully")
+    except KeyboardInterrupt:
+        # Handle keyboard interrupt gracefully
+        if _cancellation_requested:
+            logger.warning("Training cancelled by user signal")
+            checkpoint_dir = os.path.join(output_dir, "checkpoint-cancelled")
+            os.makedirs(checkpoint_dir, exist_ok=True)
+            try:
+                trainer.save_model(checkpoint_dir)
+                tokenizer.save_pretrained(checkpoint_dir)
+                logger.info(f"Checkpoint saved to {checkpoint_dir}")
+            except Exception as e:
+                logger.error(f"Failed to save checkpoint: {e}")
+        raise
+    except Exception as e:
+        # Log error and cleanup
+        logger.error(f"Training failed with error: {e}", exc_info=True)
+        raise
+    finally:
+        # Always cleanup resources, even on error
+        logger.info("Cleaning up resources...")
+        try:
+            # Delete model and trainer references before cleanup
+            if 'model' in locals():
+                try:
+                    del model
+                except:
+                    pass
+            if 'trainer' in locals():
+                try:
+                    del trainer
+                except:
+                    pass
+            if 'tokenizer' in locals():
+                try:
+                    del tokenizer
+                except:
+                    pass
+            
+            # Run cleanup
+            cleanup_resources()
+        except Exception as cleanup_error:
+            logger.warning(f"Error during final cleanup: {cleanup_error}")
+        finally:
+            # Reset global variables
+            _trainer_instance = None
+            _output_dir = None
     
     # Save training info
     cuda_available = torch.cuda.is_available()
