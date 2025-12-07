@@ -14,6 +14,10 @@ node_modules/
 Agent.md
 CLAUDE.md
 
+# All markdown files except root README.md (keep docs local only)
+*.md
+!README.md
+
 
 # Build outputs
 dist/
@@ -55,6 +59,18 @@ Sample Boardingpasses/
 Sample Emails/
 Logo/
 
+# Test samples (privacy - actual sample files should not be committed)
+test-samples/**/*.msg
+test-samples/**/*.eml
+test-samples/**/*.txt
+test-samples/**/*.jpg
+test-samples/**/*.png
+test-samples/**/*.gif
+test-samples/**/results/*.json
+# But keep directory structure and README
+!test-samples/README.md
+!test-samples/**/.gitkeep
+
 # Database
 *.db
 *.sqlite
@@ -62,3 +78,9 @@ pgdata/
 
 # Docker
 .dockerignore
+
+# Large binary files (users can download separately)
+backend/eng.traineddata
+
+# Dev scripts
+backend/scripts/test-parser-samples.ts
