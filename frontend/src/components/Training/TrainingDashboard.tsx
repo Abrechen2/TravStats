@@ -307,18 +307,42 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
   };
 
   const handleCancelTraining = async (jobId: string) => {
-    // if (!confirm('Training wirklich abbrechen?')) return;
+    // Show confirmation dialog
+    if (!confirm('Möchten Sie das Training wirklich abbrechen? Der Fortschritt geht verloren.')) {
+      return;
+    }
 
     setCancelling(jobId);
     try {
       await trainingApi.cancelTraining(jobId);
-      // Wait a bit and then reload data to reflect status change
+      
+      // Immediately update the job status optimistically
+      setJobs((prevJobs) =>
+        prevJobs.map((job) =>
+          job.id === jobId
+            ? { ...job, status: 'cancelled', completedAt: new Date().toISOString() }
+            : job
+        )
+      );
+
+      // Remove from job logs
+      setJobLogs((prev) => {
+        const updated = { ...prev };
+        delete updated[jobId];
+        return updated;
+      });
+
+      // Reload data after a short delay to get the latest status from server
       setTimeout(() => {
         loadData();
-      }, 1000);
+      }, 500);
     } catch (error: any) {
       logger.error('Failed to cancel training:', error);
-      alert(error.response?.data?.message || 'Fehler beim Abbrechen des Trainings');
+      const errorMessage = error.response?.data?.message || error.message || 'Fehler beim Abbrechen des Trainings';
+      alert(errorMessage);
+      
+      // Reload data to get actual status
+      loadData();
     } finally {
       setCancelling(null);
     }
