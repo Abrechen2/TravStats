@@ -85,6 +85,7 @@ Gesamtpreis: 1.249,00 EUR`,
 ];
 
 const MODELS_TO_TEST = [
+  'qwen2.5:14b',
   'llama3.2:3b',
   'qwen2.5:7b',
   'mistral:7b',

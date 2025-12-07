@@ -5,7 +5,7 @@ import { normalizeParsedBooking, cleanLLMJsonResponse, getVisionParserPrompt } f
 import logger from '../../../utils/logger';
 
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
-const OLLAMA_VISION_MODEL = process.env.OLLAMA_VISION_MODEL || 'llava:latest';
+const OLLAMA_VISION_MODEL = process.env.OLLAMA_VISION_MODEL || 'llama3.2-vision';
 
 interface OllamaVisionResponse {
   model: string;
