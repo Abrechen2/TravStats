@@ -33,6 +33,7 @@ import {
   autoApplyHighConfidencePatterns,
   getPatternUpdateStats,
 } from '../services/patternUpdater';
+import { getHardwareInfo } from '../services/hardwareService';
 
 const router = Router();
 
@@ -72,6 +73,16 @@ router.get('/system/info', async (req: AuthRequest, res: Response, next: NextFun
   }
 });
 
+// Get hardware information
+router.get('/system/hardware', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const hardwareInfo = await getHardwareInfo();
+    res.json(hardwareInfo);
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Get all users
 router.get('/users', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -81,6 +92,7 @@ router.get('/users', async (req: AuthRequest, res: Response, next: NextFunction)
         username: true,
         isAdmin: true,
         isActive: true,
+        canTrainLLM: true,
         invitedBy: true,
         createdAt: true,
         _count: {
@@ -130,6 +142,56 @@ router.patch('/users/:id/toggle-active', async (req: AuthRequest, res: Response,
     });
 
     res.json({ user: updatedUser });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Update user training access
+router.put('/users/:id/training-access', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const { canTrainLLM } = req.body;
+
+    if (typeof canTrainLLM !== 'boolean') {
+      throw new AppError('canTrainLLM must be a boolean', 400);
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, username: true, isAdmin: true },
+    });
+
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    // Admins always have training access, so this is only for non-admins
+    if (user.isAdmin) {
+      return res.json({
+        message: 'Admin users always have training access',
+        user: {
+          ...user,
+          canTrainLLM: true,
+        },
+      });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: { canTrainLLM },
+      select: {
+        id: true,
+        username: true,
+        isAdmin: true,
+        canTrainLLM: true,
+      },
+    });
+
+    res.json({
+      message: `Training access ${canTrainLLM ? 'granted' : 'revoked'} for user`,
+      user: updatedUser,
+    });
   } catch (error) {
     next(error);
   }

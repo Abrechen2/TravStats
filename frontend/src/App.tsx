@@ -16,6 +16,7 @@ const AdvancedStatsPage = lazy(() => import('./pages/AdvancedStatsPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const SetupPage = lazy(() => import('./pages/SetupPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
+const TrainingPage = lazy(() => import('./pages/TrainingPage'));
 
 function AppContent() {
   const { user } = useAuthStore();
@@ -148,6 +149,10 @@ function AppContent() {
                 ? <AdminPage />
                 : <Navigate to={isAuthenticated ? "/" : "/login"} />
             }
+          />
+          <Route
+            path="/training"
+            element={isAuthenticated ? <TrainingPage /> : <Navigate to="/login" />}
           />
         </Routes>
       </Suspense>

@@ -66,6 +66,10 @@ services:
         condition: service_started
     env_file:
       - .env.dev.local
+    environment:
+      # Training Settings (can be overridden in .env.dev.local)
+      PYTHON_CMD: ${PYTHON_CMD:-python3}
+      DOCKER: ${DOCKER:-true}
     ports:
       - "3004:80"  # Map to nginx internal port 80 (not 3000!)
     volumes:
