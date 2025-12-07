@@ -1,0 +1,1346 @@
+[
+  {
+    "filename": "IMG_0279.PNG",
+    "path": "test-samples/boarding-passes/IMG_0279.PNG",
+    "expected": {
+      "flightNumber": "LH2317",
+      "departureCode": "LUX",
+      "arrivalCode": "MUC",
+      "departureTime": "2025-11-20T09:00",
+      "seat": "16F",
+      "gate": "B08",
+      "terminal": null,
+      "pnr": "9RFAA7",
+      "boardingGroup": "3"
+    },
+    "notes": "Lufthansa LUX–MUC on 20NOV25. Boarding 09:00, gate B08, seat 16F, boarding group 3, PNR 9RFAA7."
+  },
+  {
+    "filename": "IMG_0280.PNG",
+    "path": "test-samples/boarding-passes/IMG_0280.PNG",
+    "expected": {
+      "flightNumber": "LH103",
+      "departureCode": "MUC",
+      "arrivalCode": "FRA",
+      "departureTime": "2025-11-18T10:30",
+      "seat": "26F",
+      "gate": "G32",
+      "terminal": null,
+      "pnr": "9RFAA7",
+      "boardingGroup": "3"
+    },
+    "notes": "Lufthansa MUC–FRA on 18NOV25. Boarding 10:30, gate G32, gate closes 10:45, seat 26F, boarding group 3, PNR 9RFAA7."
+  },
+  {
+    "filename": "IMG_0281.PNG",
+    "path": "test-samples/boarding-passes/IMG_0281.PNG",
+    "expected": {
+      "flightNumber": "EN8752",
+      "departureCode": "FRA",
+      "arrivalCode": "LUX",
+      "departureTime": "2025-11-18T12:25",
+      "seat": "10A",
+      "gate": "B11",
+      "terminal": null,
+      "pnr": "9RFAA7",
+      "boardingGroup": "3"
+    },
+    "notes": "Air Dolomiti FRA–LUX on 18NOV25. Boarding 12:25, gate B11, gate closes 12:50, seat 10A, boarding group 3, PNR 9RFAA7."
+  },
+  {
+    "filename": "IMG_0282.PNG",
+    "path": "test-samples/boarding-passes/IMG_0282.PNG",
+    "expected": {
+      "flightNumber": "EN8409",
+      "departureCode": "LUX",
+      "arrivalCode": "MUC",
+      "departureTime": "2025-10-31T09:00",
+      "seat": "15C",
+      "gate": null,
+      "terminal": null,
+      "pnr": "85LMUN",
+      "boardingGroup": "3"
+    },
+    "notes": "Air Dolomiti LUX–MUC on 31OCT25. Boarding 09:00, gate closes 09:15, seat 15C, boarding group 3, PNR 85LMUN."
+  },
+  {
+    "filename": "IMG_0283.PNG",
+    "path": "test-samples/boarding-passes/IMG_0283.PNG",
+    "expected": {
+      "flightNumber": "LX754",
+      "departureCode": "ZRH",
+      "arrivalCode": "LUX",
+      "departureTime": "2025-10-29T12:15",
+      "seat": "10C",
+      "gate": "A58",
+      "terminal": null,
+      "pnr": "85LMUN",
+      "boardingGroup": "3"
+    },
+    "notes": "SWISS ZRH–LUX on 29OCT25. Boarding 12:15, gate A58, gate closes 12:30, seat 10C, boarding group 3, PNR 85LMUN."
+  },
+  {
+    "filename": "IMG_0284.PNG",
+    "path": "test-samples/boarding-passes/IMG_0284.PNG",
+    "expected": {
+      "flightNumber": "LX1101",
+      "departureCode": "MUC",
+      "arrivalCode": "ZRH",
+      "departureTime": "2025-10-29T08:40",
+      "seat": "12D",
+      "gate": "G28",
+      "terminal": null,
+      "pnr": "85LMUN",
+      "boardingGroup": "3"
+    },
+    "notes": "SWISS MUC–ZRH on 29OCT25. Boarding 08:40, gate G28, gate closes 08:55, seat 12D, boarding group 3, PNR 85LMUN."
+  },
+  {
+    "filename": "IMG_0285.PNG",
+    "path": "test-samples/boarding-passes/IMG_0285.PNG",
+    "expected": {
+      "flightNumber": "LH2465",
+      "departureCode": "HEL",
+      "arrivalCode": "MUC",
+      "departureTime": "2025-09-21T19:10",
+      "seat": "18C",
+      "gate": "029",
+      "terminal": null,
+      "pnr": "7RH6NS",
+      "boardingGroup": "3"
+    },
+    "notes": "Lufthansa HEL–MUC on 21SEP25. Boarding 19:10, gate 029, gate closes 19:25, seat 18C, boarding group 3, PNR 7RH6NS."
+  },
+  {
+    "filename": "IMG_0286.PNG",
+    "path": "test-samples/boarding-passes/IMG_0286.PNG",
+    "expected": {
+      "flightNumber": "LH2460",
+      "departureCode": "MUC",
+      "arrivalCode": "HEL",
+      "departureTime": "2025-09-18T07:55",
+      "seat": "11C",
+      "gate": "G35",
+      "terminal": null,
+      "pnr": "7RH6NS",
+      "boardingGroup": "3"
+    },
+    "notes": "Lufthansa MUC–HEL on 18SEP25. Boarding 07:55, gate G35, gate closes 08:10, seat 11C, boarding group 3, PNR 7RH6NS."
+  },
+  {
+    "filename": "IMG_0287.PNG",
+    "path": "test-samples/boarding-passes/IMG_0287.PNG",
+    "expected": {
+      "flightNumber": "LH2415",
+      "departureCode": "ARN",
+      "arrivalCode": "MUC",
+      "departureTime": "2025-09-06T11:15",
+      "seat": "1C",
+      "gate": "E06",
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": "2"
+    },
+    "notes": "Lufthansa ARN–MUC on 06SEP25. Boarding 11:15, gate E06, gate closes 11:30, seat 1C, boarding group 2, Business class."
+  },
+  {
+    "filename": "IMG_0288.PNG",
+    "path": "test-samples/boarding-passes/IMG_0288.PNG",
+    "expected": {
+      "flightNumber": "LH2414",
+      "departureCode": "MUC",
+      "arrivalCode": "ARN",
+      "departureTime": "2025-09-02T08:20",
+      "seat": "1C",
+      "gate": "K18",
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": "2"
+    },
+    "notes": "Lufthansa MUC–ARN on 02SEP25. Boarding 08:20, gate K18, gate closes 08:35, seat 1C, boarding group 2, Business class."
+  },
+  {
+    "filename": "IMG_0289.PNG",
+    "path": "test-samples/boarding-passes/IMG_0289.PNG",
+    "expected": {
+      "flightNumber": "LH2319",
+      "departureCode": "LUX",
+      "arrivalCode": "MUC",
+      "departureTime": "2025-07-22T13:00",
+      "seat": "16C",
+      "gate": "B08",
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": "3"
+    },
+    "notes": "Lufthansa LUX–MUC on 22JUL25. Boarding 13:00, gate B08, gate closes 13:15, seat 16C, boarding group 3."
+  },
+  {
+    "filename": "IMG_0290.PNG",
+    "path": "test-samples/boarding-passes/IMG_0290.PNG",
+    "expected": {
+      "flightNumber": "LH2318",
+      "departureCode": "MUC",
+      "arrivalCode": "LUX",
+      "departureTime": "2025-07-21T10:35",
+      "seat": "11A",
+      "gate": "G29",
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": "3"
+    },
+    "notes": "Lufthansa MUC–LUX on 21JUL25. Boarding 10:35, gate G29, gate closes 10:50, seat 11A, boarding group 3."
+  },
+  {
+    "filename": "IMG_0291.PNG",
+    "path": "test-samples/boarding-passes/IMG_0291.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0292.PNG",
+    "path": "test-samples/boarding-passes/IMG_0292.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0293.PNG",
+    "path": "test-samples/boarding-passes/IMG_0293.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0294.PNG",
+    "path": "test-samples/boarding-passes/IMG_0294.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0295.PNG",
+    "path": "test-samples/boarding-passes/IMG_0295.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0296.PNG",
+    "path": "test-samples/boarding-passes/IMG_0296.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0297.PNG",
+    "path": "test-samples/boarding-passes/IMG_0297.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0298.PNG",
+    "path": "test-samples/boarding-passes/IMG_0298.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0299.PNG",
+    "path": "test-samples/boarding-passes/IMG_0299.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0300.PNG",
+    "path": "test-samples/boarding-passes/IMG_0300.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0301.PNG",
+    "path": "test-samples/boarding-passes/IMG_0301.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0302.PNG",
+    "path": "test-samples/boarding-passes/IMG_0302.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0303.PNG",
+    "path": "test-samples/boarding-passes/IMG_0303.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0304.PNG",
+    "path": "test-samples/boarding-passes/IMG_0304.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0305.PNG",
+    "path": "test-samples/boarding-passes/IMG_0305.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0306.PNG",
+    "path": "test-samples/boarding-passes/IMG_0306.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0307.PNG",
+    "path": "test-samples/boarding-passes/IMG_0307.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0308.PNG",
+    "path": "test-samples/boarding-passes/IMG_0308.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0309.PNG",
+    "path": "test-samples/boarding-passes/IMG_0309.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0310.PNG",
+    "path": "test-samples/boarding-passes/IMG_0310.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0311.PNG",
+    "path": "test-samples/boarding-passes/IMG_0311.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0312.PNG",
+    "path": "test-samples/boarding-passes/IMG_0312.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0313.PNG",
+    "path": "test-samples/boarding-passes/IMG_0313.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0314.PNG",
+    "path": "test-samples/boarding-passes/IMG_0314.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0315.PNG",
+    "path": "test-samples/boarding-passes/IMG_0315.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0316.PNG",
+    "path": "test-samples/boarding-passes/IMG_0316.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0317.PNG",
+    "path": "test-samples/boarding-passes/IMG_0317.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0318.PNG",
+    "path": "test-samples/boarding-passes/IMG_0318.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0319.PNG",
+    "path": "test-samples/boarding-passes/IMG_0319.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0320.PNG",
+    "path": "test-samples/boarding-passes/IMG_0320.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0321.PNG",
+    "path": "test-samples/boarding-passes/IMG_0321.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0322.PNG",
+    "path": "test-samples/boarding-passes/IMG_0322.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0323.PNG",
+    "path": "test-samples/boarding-passes/IMG_0323.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0324.PNG",
+    "path": "test-samples/boarding-passes/IMG_0324.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0325.PNG",
+    "path": "test-samples/boarding-passes/IMG_0325.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0326.PNG",
+    "path": "test-samples/boarding-passes/IMG_0326.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0327.PNG",
+    "path": "test-samples/boarding-passes/IMG_0327.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0328.PNG",
+    "path": "test-samples/boarding-passes/IMG_0328.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0329.PNG",
+    "path": "test-samples/boarding-passes/IMG_0329.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0330.PNG",
+    "path": "test-samples/boarding-passes/IMG_0330.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0331.PNG",
+    "path": "test-samples/boarding-passes/IMG_0331.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0332.PNG",
+    "path": "test-samples/boarding-passes/IMG_0332.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0333.PNG",
+    "path": "test-samples/boarding-passes/IMG_0333.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0334.PNG",
+    "path": "test-samples/boarding-passes/IMG_0334.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0335.PNG",
+    "path": "test-samples/boarding-passes/IMG_0335.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0336.PNG",
+    "path": "test-samples/boarding-passes/IMG_0336.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0337.PNG",
+    "path": "test-samples/boarding-passes/IMG_0337.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0338.PNG",
+    "path": "test-samples/boarding-passes/IMG_0338.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0339.PNG",
+    "path": "test-samples/boarding-passes/IMG_0339.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0340.PNG",
+    "path": "test-samples/boarding-passes/IMG_0340.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0341.PNG",
+    "path": "test-samples/boarding-passes/IMG_0341.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0342.PNG",
+    "path": "test-samples/boarding-passes/IMG_0342.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0343.PNG",
+    "path": "test-samples/boarding-passes/IMG_0343.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0344.PNG",
+    "path": "test-samples/boarding-passes/IMG_0344.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0345.PNG",
+    "path": "test-samples/boarding-passes/IMG_0345.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0346.PNG",
+    "path": "test-samples/boarding-passes/IMG_0346.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0347.PNG",
+    "path": "test-samples/boarding-passes/IMG_0347.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0348.PNG",
+    "path": "test-samples/boarding-passes/IMG_0348.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0349.PNG",
+    "path": "test-samples/boarding-passes/IMG_0349.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0350.PNG",
+    "path": "test-samples/boarding-passes/IMG_0350.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0351.PNG",
+    "path": "test-samples/boarding-passes/IMG_0351.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0352.PNG",
+    "path": "test-samples/boarding-passes/IMG_0352.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0353.PNG",
+    "path": "test-samples/boarding-passes/IMG_0353.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0354.PNG",
+    "path": "test-samples/boarding-passes/IMG_0354.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0355.PNG",
+    "path": "test-samples/boarding-passes/IMG_0355.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0356.PNG",
+    "path": "test-samples/boarding-passes/IMG_0356.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0357.PNG",
+    "path": "test-samples/boarding-passes/IMG_0357.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0358.PNG",
+    "path": "test-samples/boarding-passes/IMG_0358.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0359.PNG",
+    "path": "test-samples/boarding-passes/IMG_0359.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0360.PNG",
+    "path": "test-samples/boarding-passes/IMG_0360.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0361.PNG",
+    "path": "test-samples/boarding-passes/IMG_0361.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  },
+  {
+    "filename": "IMG_0362.PNG",
+    "path": "test-samples/boarding-passes/IMG_0362.PNG",
+    "expected": {
+      "flightNumber": "TODO",
+      "departureCode": "XXX",
+      "arrivalCode": "XXX",
+      "departureTime": "2025-01-01T00:00",
+      "seat": null,
+      "gate": null,
+      "terminal": null,
+      "pnr": null,
+      "boardingGroup": null
+    },
+    "notes": "TODO: Extract actual data from boarding pass image"
+  }
+]

@@ -15,6 +15,7 @@ import type {
 
 export const API_URL = (import.meta as any).env?.VITE_API_URL || '';
 
+// Standard API instance with 10s timeout for normal requests
 const api = axios.create({
   baseURL: API_URL ? `${API_URL}/api/v1` : '/api/v1',
   headers: {
@@ -24,21 +25,38 @@ const api = axios.create({
   withCredentials: true, // Send cookies with every request (HttpOnly JWT)
 });
 
+// Parser API instance with 180s timeout for long-running parser operations
+const parserApi = axios.create({
+  baseURL: API_URL ? `${API_URL}/api/v1` : '/api/v1',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  timeout: 180000, // 180 second timeout (Ollama Vision/Text can take 30-90s)
+  withCredentials: true,
+});
+
 // Response interceptor for handling 401 errors (expired/invalid tokens)
+const handle401Error = (error: any) => {
+  if (error.response?.status === 401) {
+    // Token expired or invalid - redirect to login
+    // Import dynamically to avoid circular dependencies
+    import('../store/authStore').then(({ useAuthStore }) => {
+      const authStore = useAuthStore.getState();
+      authStore.logout();
+      window.location.href = '/login';
+    });
+  }
+  return Promise.reject(error);
+};
+
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Token expired or invalid - redirect to login
-      // Import dynamically to avoid circular dependencies
-      import('../store/authStore').then(({ useAuthStore }) => {
-        const authStore = useAuthStore.getState();
-        authStore.logout();
-        window.location.href = '/login';
-      });
-    }
-    return Promise.reject(error);
-  }
+  handle401Error
+);
+
+parserApi.interceptors.response.use(
+  (response) => response,
+  handle401Error
 );
 
 // Auth API
@@ -64,18 +82,30 @@ export const authApi = {
   },
 };
 
-// Parse API (Email & Boarding Pass)
+// Parse API (Email & Boarding Pass) - Uses parserApi with 180s timeout
 export const parseApi = {
   parseEmail: async (emailContent: string, subject?: string) => {
-    const { data } = await api.post('/parse-email', {
+    const { data } = await parserApi.post('/parse-email', {
       emailContent,
       subject,
     });
     return data;
   },
 
+  parseEmailFile: async (file: File) => {
+    const formData = new FormData();
+    formData.append('email', file);
+
+    const { data } = await parserApi.post('/parse-email-file', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return data;
+  },
+
   parseBoardingpass: async (imageBase64: string, enrichWithApi = true) => {
-    const { data } = await api.post('/parse-boardingpass', {
+    const { data } = await parserApi.post('/parse-boardingpass', {
       imageBase64,
       enrichWithApi,
     });
@@ -83,13 +113,13 @@ export const parseApi = {
   },
 
   checkOllamaVision: async () => {
-    const { data } = await api.get('/parse-boardingpass/check');
+    const { data } = await parserApi.get('/parse-boardingpass/check');
     return data;
   },
 
   // Get available parser providers
   getProviders: async () => {
-    const { data } = await api.get<{
+    const { data } = await parserApi.get<{
       vision: Array<{
         provider: string;
         availability: {

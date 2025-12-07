@@ -1,9 +1,12 @@
 import { Router, Response } from 'express';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { parseBookingEmail } from '../services/bookingParser';
+import { extractEmailFromFile } from '../services/emailExtractor';
+import { uploadEmailFile } from '../middleware/upload';
 import { z } from 'zod';
 import logger from '../utils/logger';
 import { prisma } from '../db';
+import fs from 'fs';
 
 const router = Router();
 
@@ -69,5 +72,104 @@ router.post('/parse-email', authenticate, async (req: AuthRequest, res: Response
     });
   }
 });
+
+/**
+ * POST /api/v1/parse-email-file
+ * Parse flight booking information from email file (.msg, .eml, .txt)
+ *
+ * Body: multipart/form-data
+ * - email: File (required) - Email file (.msg, .eml, or .txt)
+ *
+ * Returns:
+ * - flights: ParsedBooking[] - Array of extracted flight information
+ * - parserUsed: 'ollama' | 'regex' | 'openai' | 'claude' - Which parser was used
+ * - subject: string - Extracted email subject
+ */
+router.post(
+  '/parse-email-file',
+  authenticate,
+  uploadEmailFile.single('email'),
+  async (req: AuthRequest, res: Response) => {
+    const file = req.file;
+    let filePath: string | undefined;
+
+    try {
+      if (!file) {
+        return res.status(400).json({
+          error: 'Validation failed',
+          message: 'Email file is required',
+        });
+      }
+
+      const userId = req.userId;
+      filePath = file.path;
+
+      logger.info({
+        filename: file.originalname,
+        size: file.size,
+        mimetype: file.mimetype,
+      }, `[Email Parse File] Parsing email file for user ${userId}`);
+
+      // Extract email content from file
+      const fileBuffer = fs.readFileSync(filePath);
+      const extracted = extractEmailFromFile(fileBuffer, file.originalname);
+
+      logger.debug({
+        subject: extracted.subject,
+        textLength: extracted.text.length,
+        hasHtml: !!extracted.html,
+      }, '[Email Parse File] Email extracted from file');
+
+      // Get user settings for parser configuration
+      const userSettings = await prisma.userSettings.findUnique({
+        where: { userId },
+        select: {
+          preferredTextParser: true,
+          textFallbackChain: true,
+          openaiApiKey: true,
+          claudeApiKey: true,
+        },
+      });
+
+      // Parse email with configured parser
+      const result = await parseBookingEmail(
+        extracted.subject,
+        extracted.text,
+        extracted.html,
+        userSettings || undefined
+      );
+
+      logger.info(
+        `[Email Parse File] Parsing complete: ${result.flights.length} flight(s) found using ${result.parserUsed}`
+      );
+
+      // Cleanup: Delete temporary file
+      if (filePath && fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        logger.debug({ filePath }, '[Email Parse File] Temporary file deleted');
+      }
+
+      res.json({
+        ...result,
+        subject: extracted.subject,
+      });
+    } catch (error) {
+      // Cleanup: Delete temporary file on error
+      if (filePath && fs.existsSync(filePath)) {
+        try {
+          fs.unlinkSync(filePath);
+        } catch (cleanupError) {
+          logger.warn({ cleanupError, filePath }, '[Email Parse File] Failed to cleanup temp file');
+        }
+      }
+
+      logger.error({ error }, '[Email Parse File] Parsing failed');
+      res.status(500).json({
+        error: 'Email file parsing failed',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
 
 export default router;
