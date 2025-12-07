@@ -20,7 +20,13 @@ export interface ExtractedEmail {
  */
 function extractFromMsg(buffer: Buffer): ExtractedEmail {
   try {
-    const msgReader = new MsgReader(buffer);
+    // Convert Buffer to ArrayBuffer for MsgReader
+    // MsgReader accepts Buffer in runtime but TypeScript types expect ArrayBuffer
+    const arrayBuffer = buffer.buffer.slice(
+      buffer.byteOffset,
+      buffer.byteOffset + buffer.byteLength
+    );
+    const msgReader = new MsgReader(arrayBuffer as ArrayBuffer);
     const fileData = msgReader.getFileData();
 
     if (!fileData) {
@@ -29,7 +35,7 @@ function extractFromMsg(buffer: Buffer): ExtractedEmail {
 
     const subject = fileData.subject || '';
     const body = fileData.body || '';
-    const bodyHtml = fileData.bodyHTML || undefined;
+    const bodyHtml = fileData.bodyHtml || undefined;
 
     logger.debug({
       subject,

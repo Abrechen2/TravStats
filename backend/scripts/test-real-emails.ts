@@ -46,12 +46,14 @@ function printFlight(flight: any, index: number, total: number) {
 
 async function readMsgFile(filePath: string): Promise<{ subject: string; text: string; html?: string }> {
   const fileBuffer = fs.readFileSync(filePath);
-  const msgReader = new MsgReader(fileBuffer);
+  // Convert Buffer to ArrayBuffer for MsgReader
+  const arrayBuffer = fileBuffer.buffer.slice(fileBuffer.byteOffset, fileBuffer.byteOffset + fileBuffer.byteLength);
+  const msgReader = new MsgReader(arrayBuffer);
   const fileData = msgReader.getFileData();
 
   const subject = sanitizeForPostgres(fileData.subject);
   const body = sanitizeForPostgres(fileData.body);
-  const bodyHTML = fileData.bodyHTML ? sanitizeForPostgres(fileData.bodyHTML) : undefined;
+  const bodyHTML = fileData.bodyHtml ? sanitizeForPostgres(fileData.bodyHtml) : undefined;
 
   return {
     subject,
