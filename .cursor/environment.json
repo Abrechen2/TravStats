@@ -1,0 +1,4 @@
+{
+  "agentCanUpdateSnapshot": true,
+  "start": "npm run dev"
+}

@@ -57,10 +57,19 @@ npx prisma migrate deploy || {
 echo "[entrypoint] Seeding achievements..."
 npm run seed:achievements || echo "[entrypoint] Failed to seed achievements - achievement system may not work"
 
-# Optional seeds based on environment variables
-if [ "$SEED_AIRPORTS" = "true" ]; then
-    echo "[entrypoint] Seeding airports database..."
-    npm run seed:airports:csv || echo "[entrypoint] Failed to seed airports - autocomplete may not work"
+# Seed airports on first install only (if database is empty)
+# Skip if explicitly disabled, otherwise check if airports exist
+if [ "$SEED_AIRPORTS" != "false" ]; then
+    # Check if airports already exist in database
+    AIRPORT_COUNT=$(node dist/scripts/checkAirports.js 2>/dev/null || echo "0")
+    if [ "$AIRPORT_COUNT" -gt 0 ] 2>/dev/null; then
+        echo "[entrypoint] Airports already exist in database (${AIRPORT_COUNT} airports), skipping seed"
+    else
+        echo "[entrypoint] Seeding airports database (first install)..."
+        npm run seed:airports:csv || echo "[entrypoint] Failed to seed airports - airports will be loaded automatically when needed"
+    fi
+else
+    echo "[entrypoint] Airport seeding disabled (SEED_AIRPORTS=false)"
 fi
 
 # Create demo user if requested (useful for testing)

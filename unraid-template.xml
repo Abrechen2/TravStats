@@ -89,7 +89,7 @@
 
   <Config Name="AppData Volume" Target="/app/data" Default="/mnt/user/appdata/travstats" Mode="rw" Description="Persistent storage for auto-generated JWT secret and configuration files" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/travstats</Config>
 
-  <Config Name="Seed Airports Database" Target="SEED_AIRPORTS" Default="true" Mode="" Description="Automatically populate airports database with ~8000 airports on first start (recommended). Takes 1-2 minutes on first boot." Type="Variable" Display="always" Required="false" Mask="false">true</Config>
+  <Config Name="Seed Airports Database" Target="SEED_AIRPORTS" Default="true" Mode="" Description="Automatically populate airports database with ~8000 airports on first install only. Airports are automatically loaded on-demand when needed. Set to 'false' to disable initial seeding." Type="Variable" Display="always" Required="false" Mask="false">true</Config>
 
   <Config Name="Create Demo User" Target="CREATE_DEMO_USER" Default="false" Mode="" Description="Create a demo user account on first start. Username: demo, Password: demo123. Recommended for testing only!" Type="Variable" Display="always" Required="false" Mask="false">false</Config>
 

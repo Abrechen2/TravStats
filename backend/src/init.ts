@@ -77,25 +77,35 @@ async function init() {
       // Don't exit - non-critical
     }
 
-    // Step 5: Optional seeds based on environment
-    const seedAirports = process.env.SEED_AIRPORTS === 'true';
-    const createDemoUser = process.env.CREATE_DEMO_USER === 'true';
-
-    if (seedAirports) {
-      console.log('5️⃣  Seeding airports database...');
-      try {
-        execSync('npm run seed:airports:csv', {
-          stdio: 'inherit',
-          cwd: path.join(__dirname, '..')
-        });
-        console.log('   ✅ Airports database ready\n');
-      } catch (error) {
-        console.error('   ⚠️  Failed to seed airports');
-        console.error('   Autocomplete may not work. You can seed later with: npm run seed:airports:csv\n');
+    // Step 5: Seed airports on first install only (if database is empty)
+    const seedAirportsEnv = process.env.SEED_AIRPORTS;
+    const shouldSeedAirports = seedAirportsEnv !== 'false'; // Default: true, unless explicitly disabled
+    
+    if (shouldSeedAirports) {
+      // Check if airports already exist in database
+      const airportCount = await prisma.airport.count();
+      
+      if (airportCount === 0) {
+        console.log('5️⃣  Seeding airports database (first install)...');
+        try {
+          execSync('npm run seed:airports:csv', {
+            stdio: 'inherit',
+            cwd: path.join(__dirname, '..')
+          });
+          console.log('   ✅ Airports database ready\n');
+        } catch (error) {
+          console.error('   ⚠️  Failed to seed airports');
+          console.error('   Airports will be loaded automatically when needed.\n');
+        }
+      } else {
+        console.log(`5️⃣  Skipping airport seeding (${airportCount} airports already in database)\n`);
       }
     } else {
-      console.log('5️⃣  Skipping airport seeding (set SEED_AIRPORTS=true to enable)\n');
+      console.log('5️⃣  Skipping airport seeding (SEED_AIRPORTS=false)\n');
     }
+
+    // Step 6: Optional demo user
+    const createDemoUser = process.env.CREATE_DEMO_USER === 'true';
 
     if (createDemoUser) {
       console.log('6️⃣  Creating demo user...');

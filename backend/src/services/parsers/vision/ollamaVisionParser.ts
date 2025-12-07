@@ -99,6 +99,7 @@ export class OllamaVisionParser implements IVisionParser {
           prompt,
           images: [imageBase64],
           stream: false,
+          format: 'json', // Request JSON format from Ollama
           options: {
             temperature: 0.1, // Low temperature for factual extraction
             num_predict: 1200, // Increased to ensure full JSON response including arrivalTime
@@ -112,20 +113,53 @@ export class OllamaVisionParser implements IVisionParser {
         }
       );
 
-      const rawResponse = response.data.response.trim();
-      logger.debug({ rawResponse }, '[Ollama Vision Parser] Raw response (full)');
+      const rawResponse = response.data.response?.trim() || '';
+      
+      if (!rawResponse) {
+        logger.error('[Ollama Vision Parser] Empty response from Ollama');
+        throw new Error('Ollama returned empty response');
+      }
+
+      logger.debug({ rawResponse: rawResponse.substring(0, 500) }, '[Ollama Vision Parser] Raw response (first 500 chars)');
 
       // Clean the response (remove markdown formatting if present)
       const cleanedResponse = cleanLLMJsonResponse(rawResponse);
 
       // Try to find JSON in the response
-      const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
+      let jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
+      
+      // If no JSON object found, try to parse the entire cleaned response as JSON
       if (!jsonMatch) {
-        logger.error('[Ollama Vision Parser] No JSON found in response');
-        throw new Error('Invalid response format: No JSON found');
+        logger.warn('[Ollama Vision Parser] No JSON object found, attempting to parse entire response');
+        try {
+          const parsed = JSON.parse(cleanedResponse);
+          // Normalize and validate
+          const result = normalizeParsedBooking(parsed);
+          logger.info({
+            flightNumber: result.flightNumber,
+            route: `${result.departureCode} → ${result.arrivalCode}`,
+            missingFields: result.missing.length,
+          }, '[Ollama Vision Parser] Extraction complete');
+          return result;
+        } catch (parseError) {
+          logger.error({ 
+            cleanedResponse: cleanedResponse.substring(0, 500),
+            error: parseError instanceof Error ? parseError.message : 'Unknown parse error'
+          }, '[Ollama Vision Parser] Failed to parse response as JSON');
+          throw new Error(`Invalid response format: No JSON found. Response: ${cleanedResponse.substring(0, 200)}`);
+        }
       }
 
-      const parsed = JSON.parse(jsonMatch[0]);
+      let parsed;
+      try {
+        parsed = JSON.parse(jsonMatch[0]);
+      } catch (parseError) {
+        logger.error({ 
+          jsonMatch: jsonMatch[0].substring(0, 500),
+          error: parseError instanceof Error ? parseError.message : 'Unknown parse error'
+        }, '[Ollama Vision Parser] Failed to parse JSON match');
+        throw new Error(`Failed to parse JSON from response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+      }
 
       // Normalize and validate
       const result = normalizeParsedBooking(parsed);
