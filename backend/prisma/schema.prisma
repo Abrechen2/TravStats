@@ -255,6 +255,7 @@ model TrainingData {
   annotations   Json     // Markierte Bereiche (Text-Selections oder Bounding Boxes)
   extractedData Json     // Extrahierte Flight-Daten (als Ground Truth)
   status        String   @default("pending") // "pending" | "trained" | "failed"
+  tags          String[] @default([]) // Tags for filtering and organization
   trainedAt     DateTime? @map("trained_at")
   createdAt     DateTime @default(now()) @map("created_at")
   

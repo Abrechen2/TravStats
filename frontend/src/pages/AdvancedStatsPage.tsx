@@ -5,7 +5,9 @@ import { flightsApi } from '../lib/api';
 import DarkModeToggle from '../components/DarkModeToggle';
 import FlightCalendar from '../components/FlightCalendar';
 import YearHeatmap from '../components/YearHeatmap';
+import ContextualHint from '../components/Onboarding/ContextualHint';
 import type { Flight } from '../types';
+import { STORAGE_KEYS } from '../lib/constants';
 import {
   BarChart,
   Bar,
@@ -27,6 +29,14 @@ export default function AdvancedStatsPage() {
 
   useEffect(() => {
     loadFlights();
+    // Mark stats as viewed in onboarding
+    const onboarding = JSON.parse(
+      localStorage.getItem(STORAGE_KEYS.ONBOARDING_CHECKLIST) || '{}'
+    );
+    if (!onboarding.statsViewed) {
+      onboarding.statsViewed = true;
+      localStorage.setItem(STORAGE_KEYS.ONBOARDING_CHECKLIST, JSON.stringify(onboarding));
+    }
   }, []);
 
   const loadFlights = async () => {
@@ -135,8 +145,8 @@ export default function AdvancedStatsPage() {
     flight: f,
     duration: calculateDuration(f.departureTime, f.arrivalTime)
   }));
-  const longestFlight = flightDurations.sort((a, b) => b.duration - a.duration)[0];
-  const shortestFlight = flightDurations.sort((a, b) => a.duration - b.duration)[0];
+  const longestFlight = flightDurations.length > 0 ? flightDurations.sort((a, b) => b.duration - a.duration)[0] : undefined;
+  const shortestFlight = flightDurations.length > 0 ? flightDurations.sort((a, b) => a.duration - b.duration)[0] : undefined;
 
   // Distance calculations
   const flightDistances = flights.map(f => ({
@@ -146,8 +156,8 @@ export default function AdvancedStatsPage() {
 
   const totalDistance = flightDistances.reduce((sum, f) => sum + f.distance, 0);
   const avgDistance = flights.length > 0 ? totalDistance / flights.length : 0;
-  const longestDistance = flightDistances.sort((a, b) => b.distance - a.distance)[0];
-  const shortestDistance = flightDistances.sort((a, b) => a.distance - b.distance)[0];
+  const longestDistance = flightDistances.length > 0 ? flightDistances.sort((a, b) => b.distance - a.distance)[0] : undefined;
+  const shortestDistance = flightDistances.length > 0 ? flightDistances.sort((a, b) => a.distance - b.distance)[0] : undefined;
 
   // Distance equivalents
   const earthCircumference = 40075; // km
@@ -286,6 +296,13 @@ export default function AdvancedStatsPage() {
 
       {/* Main Content */}
       <div className="container mx-auto px-6 py-8">
+        <ContextualHint
+          id="stats-page-hint"
+          title="Willkommen bei den Statistiken!"
+          message="Hier finden Sie detaillierte Analysen Ihrer Flüge: Charts, Trends, Top-Routen und mehr. Scrollen Sie nach unten, um alle Statistiken zu sehen."
+          linkTo="/"
+          linkText="Zurück zum Dashboard"
+        />
         {/* Overview Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">

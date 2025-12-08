@@ -37,6 +37,16 @@ const parserApi = axios.create({
   withCredentials: true,
 });
 
+// Hardware API instance with 35s timeout for hardware info operations
+const hardwareApi = axios.create({
+  baseURL: API_URL ? `${API_URL}/api/v1` : '/api/v1',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  timeout: API_TIMEOUTS.HARDWARE,
+  withCredentials: true,
+});
+
 // Response interceptor for handling 401 errors (expired/invalid tokens)
 // Uses event-based approach to avoid circular dependencies
 const handle401Error = (error: any) => {
@@ -63,6 +73,11 @@ api.interceptors.response.use(
 );
 
 parserApi.interceptors.response.use(
+  (response) => response,
+  handle401Error
+);
+
+hardwareApi.interceptors.response.use(
   (response) => response,
   handle401Error
 );
@@ -145,6 +160,21 @@ export const parseApi = {
         };
       }>;
     }>('/parse-boardingpass/providers');
+    return data;
+  },
+
+  submitParserCorrection: async (correction: {
+    sourceType: 'email' | 'boardingpass';
+    provider: string;
+    originalResult: any[];
+    correctedResult: any[];
+    originalData?: {
+      subject?: string;
+      text?: string;
+      html?: string;
+    };
+  }) => {
+    const { data } = await api.post('/parser-feedback/correction', correction);
     return data;
   },
 };
@@ -334,17 +364,19 @@ export const trainingApi = {
     });
     return data;
   },
-  annotate: async (id: string, annotations: any, extractedData: any[]) => {
+  annotate: async (id: string, annotations: any, extractedData: any[], tags?: string[]) => {
     const { data } = await api.post(`/training/${id}/annotate`, {
       annotations,
       extractedData,
+      tags: tags || [],
     });
     return data;
   },
-  saveAndTrain: async (id: string, annotations: any, extractedData: any[]) => {
+  saveAndTrain: async (id: string, annotations: any, extractedData: any[], tags?: string[]) => {
     const { data } = await api.post(`/training/${id}/save-and-train`, {
       annotations,
       extractedData,
+      tags: tags || [],
     });
     return data;
   },
@@ -356,8 +388,9 @@ export const trainingApi = {
     const { data } = await api.get(`/training/${id}`);
     return data;
   },
-  getData: async () => {
-    const { data } = await api.get<{ trainingData: any[] }>('/training/data');
+  getData: async (queryString?: string) => {
+    const url = `/training/data${queryString ? `?${queryString}` : ''}`;
+    const { data } = await api.get<{ trainingData: any[] }>(url);
     return data;
   },
   getJobs: async () => {
@@ -453,7 +486,7 @@ export const adminApi = {
   },
 
   getHardwareInfo: async () => {
-    const { data } = await api.get<{
+    const { data } = await hardwareApi.get<{
       cpu: {
         cores: number;
         model: string;

@@ -123,6 +123,8 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
   const [annotations, setAnnotations] = useState<Array<{ start: number; end: number; text: string; label: string; flightIndex?: number }>>([]);
   const [flights, setFlights] = useState<Flight[]>([{}]);
   const [selectedFlightIndex, setSelectedFlightIndex] = useState<number>(0); // Flug-Auswahl vor dem Labeln
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const textContainerRef = useRef<HTMLDivElement>(null);
@@ -149,6 +151,10 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
         
         if (data.extractedData && Array.isArray(data.extractedData) && data.extractedData.length > 0) {
           setFlights(data.extractedData);
+        }
+        
+        if (data.tags && Array.isArray(data.tags)) {
+          setTags(data.tags);
         }
       } catch (error) {
         logger.error('Failed to load training data:', error);
@@ -263,6 +269,17 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
     setFlights(updatedFlights);
   };
 
+  const handleAddTag = () => {
+    const clean = tagInput.trim();
+    if (!clean || tags.includes(clean)) return;
+    setTags([...tags, clean]);
+    setTagInput('');
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setTags(tags.filter((t) => t !== tagToRemove));
+  };
+
   const handleSave = async (andTrain: boolean) => {
     setSaving(true);
     try {
@@ -273,9 +290,9 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
       };
 
       if (andTrain) {
-        await trainingApi.saveAndTrain(trainingDataId, annotationData, flights);
+        await trainingApi.saveAndTrain(trainingDataId, annotationData, flights, tags);
       } else {
-        await trainingApi.annotate(trainingDataId, annotationData, flights);
+        await trainingApi.annotate(trainingDataId, annotationData, flights, tags);
       }
 
       onComplete();
@@ -598,6 +615,55 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Tags */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Tags
+          </label>
+          <div className="flex gap-2 mb-2">
+            <input
+              type="text"
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddTag();
+                }
+              }}
+              className="input flex-1"
+              placeholder="Tag hinzufügen..."
+            />
+            <button
+              type="button"
+              onClick={handleAddTag}
+              className="btn-secondary whitespace-nowrap"
+            >
+              Tag hinzufügen
+            </button>
+          </div>
+          {tags.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded text-sm"
+                >
+                  {tag}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveTag(tag)}
+                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
+                    aria-label={`Tag ${tag} entfernen`}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="flex gap-3">

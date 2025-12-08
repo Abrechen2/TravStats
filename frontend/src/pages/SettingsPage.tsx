@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import DarkModeToggle from '../components/DarkModeToggle';
+import InlineHelp from '../components/Help/InlineHelp';
 import { useSettingsStore } from '../store/settingsStore';
 import { useThemeStore } from '../store/themeStore';
 import { useAuthStore } from '../store/authStore';
@@ -46,7 +47,7 @@ export default function SettingsPage() {
   const [loadingDeveloperMode, setLoadingDeveloperMode] = useState(false);
 
   // Check if user has training access (admin or canTrainLLM)
-  const hasTrainingAccess = user?.isAdmin || false; // TODO: Add canTrainLLM check from user object
+  const hasTrainingAccess = user?.isAdmin || (user as any)?.canTrainLLM || false;
 
   // Load developer mode status
   useEffect(() => {
@@ -56,9 +57,19 @@ export default function SettingsPage() {
         .then((data) => {
           setDeveloperModeEnabled(data.enabled);
         })
-        .catch((error) => {
-          logger.error('Failed to load developer mode status:', error);
+        .catch((error: any) => {
+          // Handle 403 (forbidden) or 401 (unauthorized) errors gracefully
+          if (error.response?.status === 403 || error.response?.status === 401) {
+            logger.warn('Training access denied or not available:', error);
+            // Don't show error to user, just don't enable developer mode
+            setDeveloperModeEnabled(false);
+          } else {
+            logger.error('Failed to load developer mode status:', error);
+          }
         });
+    } else {
+      // Reset developer mode if user doesn't have access
+      setDeveloperModeEnabled(false);
     }
   }, [hasTrainingAccess]);
 
@@ -216,6 +227,29 @@ export default function SettingsPage() {
                 {display.theme === 'dark' ? 'Dark Mode aktiv' : 'Light Mode aktiv'}
               </button>
             </div>
+
+            <InlineHelp
+              title="Theme-Einstellungen"
+              category="basic"
+              content={
+                <div className="space-y-2">
+                  <p>
+                    Das Theme bestimmt das Farbschema der Anwendung. Dark Mode ist bei schlechten Lichtverhältnissen angenehmer für die Augen.
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
+                    <li>
+                      <strong>Light Mode:</strong> Helles Farbschema, ideal bei Tageslicht
+                    </li>
+                    <li>
+                      <strong>Dark Mode:</strong> Dunkles Farbschema, reduziert Augenbelastung bei wenig Licht
+                    </li>
+                    <li>
+                      Die Einstellung wird automatisch gespeichert und bleibt bei zukünftigen Besuchen erhalten
+                    </li>
+                  </ul>
+                </div>
+              }
+            />
 
             <div>
               <label className="label">Sprache</label>
@@ -633,7 +667,39 @@ export default function SettingsPage() {
               Experimentelle Funktionen für LLM-Training und erweiterte Features
             </p>
 
-            <div className="space-y-4">
+            <InlineHelp
+              title="Developer Mode"
+              category="expert"
+              content={
+                <div className="space-y-3">
+                  <p>
+                    Der Developer Mode aktiviert erweiterte Funktionen für das Training von LLM-Modellen.
+                  </p>
+                  <div>
+                    <p className="font-semibold mb-1">Funktionen:</p>
+                    <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
+                      <li>Zugriff auf die Training-Page zum Trainieren von Ollama-Modellen</li>
+                      <li>Upload und Annotation von Trainingsdaten (E-Mails, Boarding Passes)</li>
+                      <li>LoRA-Training mit eigenen Daten</li>
+                      <li>Verbesserung der Parser-Genauigkeit durch Training</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="font-semibold mb-1">Voraussetzungen:</p>
+                    <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
+                      <li>Ollama muss installiert und erreichbar sein</li>
+                      <li>Ausreichend Hardware-Ressourcen (CPU/GPU, RAM)</li>
+                      <li>Mindestens 5 annotierte Trainingsdaten</li>
+                    </ul>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <strong>Hinweis:</strong> Diese Funktion ist experimentell und kann Systemressourcen stark belasten.
+                  </p>
+                </div>
+              }
+            />
+
+            <div className="space-y-4 mt-4">
               <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-1">

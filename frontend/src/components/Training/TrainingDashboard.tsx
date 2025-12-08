@@ -1,6 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { trainingApi } from '../../lib/api';
 import { logger } from '../../lib/logger';
+import HelpIcon from '../Help/HelpIcon';
+import ConfirmModal from './ConfirmModal';
+import TrainingDataFilters from './TrainingDataFilters';
+import TrainingDataPreview from './TrainingDataPreview';
 
 interface TrainingDashboardProps {
   onEditTrainingData?: (id: string, type: string) => void;
@@ -21,6 +25,84 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   const [jobLogs, setJobLogs] = useState<Record<string, JobLogs>>({});
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [cancelJobId, setCancelJobId] = useState<string | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteDataId, setDeleteDataId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [previewDataId, setPreviewDataId] = useState<string | null>(null);
+  const [filters, setFilters] = useState<{
+    status?: string;
+    type?: string;
+    tags?: string[];
+    search?: string;
+  }>({});
+  
+  // Memoize filters string to prevent unnecessary re-renders
+  const filtersKey = useMemo(() => {
+    return JSON.stringify({
+      status: filters.status || '',
+      type: filters.type || '',
+      tags: (filters.tags || []).sort().join(','),
+      search: filters.search || '',
+    });
+  }, [filters.status, filters.type, filters.tags, filters.search]);
+  
+  const [filteredTrainingData, setFilteredTrainingData] = useState<any[]>([]);
+  const [viewMode, setViewMode] = useState<'list' | 'table'>('list');
+  const [sortField, setSortField] = useState<'createdAt' | 'type' | 'status'>('createdAt');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
+  // Define loadJobLogs first since it's used by loadData
+  const loadJobLogs = useCallback(async (jobId: string) => {
+    try {
+      const logsData = await trainingApi.getJobLogs(jobId);
+      setJobLogs((prev) => ({
+        ...prev,
+        [jobId]: logsData,
+      }));
+    } catch (error) {
+      logger.error('Failed to load job logs:', error);
+    }
+  }, []);
+
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      // Build query params for filtering
+      const queryParams = new URLSearchParams();
+      if (filters.status) queryParams.append('status', filters.status);
+      if (filters.type) queryParams.append('type', filters.type);
+      if (filters.tags && filters.tags.length > 0) {
+        queryParams.append('tags', filters.tags.join(','));
+      }
+      if (filters.search) queryParams.append('search', filters.search);
+
+      const queryString = queryParams.toString();
+      const dataUrl = `/training/data${queryString ? `?${queryString}` : ''}`;
+
+      const [dataResult, jobsResult] = await Promise.all([
+        trainingApi.getData(queryString),
+        trainingApi.getJobs(),
+      ]);
+      setTrainingData(dataResult.trainingData);
+      setFilteredTrainingData(dataResult.trainingData);
+      setJobs(jobsResult.jobs);
+
+      // Load logs for running jobs
+      const runningJobs = jobsResult.jobs.filter((job: any) => job.status === 'running' || job.status === 'pending');
+      for (const job of runningJobs) {
+        await loadJobLogs(job.id);
+      }
+    } catch (error) {
+      logger.error('Failed to load training data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [filters, loadJobLogs]);
 
   useEffect(() => {
     loadData();
@@ -31,19 +113,30 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
         clearInterval(pollingIntervalRef.current);
       }
     };
-  }, []);
+  }, [loadData]);
 
   // Poll for running jobs - only update jobs and logs, not the whole page
-  useEffect(() => {
-    const runningJobs = jobs.filter((job) => job.status === 'running' || job.status === 'pending');
+  // Use running job IDs as dependency instead of entire jobs array to prevent infinite loop
+  const runningJobIdsArray = useMemo(
+    () =>
+      jobs
+        .filter((job) => job.status === 'running' || job.status === 'pending')
+        .map((job) => job.id)
+        .sort(),
+    [jobs]
+  );
 
-    if (runningJobs.length > 0) {
+  const runningJobIds = runningJobIdsArray.join(',');
+
+  useEffect(() => {
+    if (runningJobIdsArray.length > 0) {
       // Start polling every 3 seconds for running jobs
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
       }
 
-      const jobIds = runningJobs.map((job) => job.id);
+      // Store job IDs in a variable to use in the interval
+      const jobIds = [...runningJobIdsArray];
       pollingIntervalRef.current = setInterval(async () => {
         // Only update jobs status and logs, not the whole page
         try {
@@ -71,41 +164,38 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
         clearInterval(pollingIntervalRef.current);
       }
     };
-  }, [jobs]);
+  }, [runningJobIds, loadJobLogs]);
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const [dataResult, jobsResult] = await Promise.all([
-        trainingApi.getData(),
-        trainingApi.getJobs(),
-      ]);
-      setTrainingData(dataResult.trainingData);
-      setJobs(jobsResult.jobs);
-
-      // Load logs for running jobs
-      const runningJobs = jobsResult.jobs.filter((job: any) => job.status === 'running' || job.status === 'pending');
-      for (const job of runningJobs) {
-        await loadJobLogs(job.id);
+  const handleFilterChange = useCallback((newFilters: {
+    status?: string;
+    type?: string;
+    tags?: string[];
+    search?: string;
+  }) => {
+    setFilters((prevFilters) => {
+      // Only update if filters actually changed
+      const prevStatus = prevFilters.status || '';
+      const prevType = prevFilters.type || '';
+      const prevTags = (prevFilters.tags || []).sort().join(',');
+      const prevSearch = prevFilters.search || '';
+      
+      const newStatus = newFilters.status || '';
+      const newType = newFilters.type || '';
+      const newTags = (newFilters.tags || []).sort().join(',');
+      const newSearch = newFilters.search || '';
+      
+      if (
+        prevStatus === newStatus &&
+        prevType === newType &&
+        prevTags === newTags &&
+        prevSearch === newSearch
+      ) {
+        return prevFilters; // No change, return previous to prevent re-render
       }
-    } catch (error) {
-      logger.error('Failed to load training data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadJobLogs = async (jobId: string) => {
-    try {
-      const logsData = await trainingApi.getJobLogs(jobId);
-      setJobLogs((prev) => ({
-        ...prev,
-        [jobId]: logsData,
-      }));
-    } catch (error) {
-      logger.error('Failed to load job logs:', error);
-    }
-  };
+      
+      return newFilters;
+    });
+  }, []);
 
   const toggleJobExpanded = async (jobId: string) => {
     if (expandedJobId === jobId) {
@@ -288,8 +378,18 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
     }
   };
 
-  const handleDeleteTrainingData = async (id: string) => {
-    if (!confirm('Möchten Sie diesen Eintrag wirklich löschen?')) return;
+  const handleDeleteTrainingDataClick = (id: string) => {
+    setDeleteDataId(id);
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteTrainingData = async () => {
+    if (!deleteDataId) return;
+
+    setDeleteModalOpen(false);
+    setDeleting(deleteDataId);
+    const id = deleteDataId;
+    setDeleteDataId(null);
 
     try {
       await trainingApi.deleteTrainingData(id);
@@ -297,6 +397,52 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
     } catch (error: any) {
       logger.error('Failed to delete training data:', error);
       alert(error.response?.data?.message || 'Fehler beim Löschen');
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedItems((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    const deletableItems = displayTrainingData.filter(
+      (data) => data.status === 'pending' && !runningJobDataIds.has(data.id)
+    );
+    if (selectedItems.size === deletableItems.length) {
+      setSelectedItems(new Set());
+    } else {
+      setSelectedItems(new Set(deletableItems.map((d) => d.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedItems.size === 0) return;
+
+    setBulkDeleteModalOpen(false);
+    setBulkDeleting(true);
+
+    try {
+      // Delete all selected items
+      await Promise.all(
+        Array.from(selectedItems).map((id) => trainingApi.deleteTrainingData(id))
+      );
+      setSelectedItems(new Set());
+      await loadData();
+    } catch (error: any) {
+      logger.error('Failed to bulk delete training data:', error);
+      alert('Fehler beim Löschen einiger Einträge');
+    } finally {
+      setBulkDeleting(false);
     }
   };
 
@@ -306,13 +452,18 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
     }
   };
 
-  const handleCancelTraining = async (jobId: string) => {
-    // Show confirmation dialog
-    if (!confirm('Möchten Sie das Training wirklich abbrechen? Der Fortschritt geht verloren.')) {
-      return;
-    }
+  const handleCancelTrainingClick = (jobId: string) => {
+    setCancelJobId(jobId);
+    setCancelModalOpen(true);
+  };
 
-    setCancelling(jobId);
+  const handleCancelTraining = async () => {
+    if (!cancelJobId) return;
+
+    setCancelModalOpen(false);
+    setCancelling(cancelJobId);
+    const jobId = cancelJobId;
+    setCancelJobId(null);
     try {
       await trainingApi.cancelTraining(jobId);
       
@@ -373,6 +524,36 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
   }
 
   const pendingCount = trainingData.filter((d) => d.status === 'pending').length;
+  let displayTrainingData = filteredTrainingData.length > 0 ? filteredTrainingData : trainingData;
+
+  // Sort training data
+  displayTrainingData = [...displayTrainingData].sort((a, b) => {
+    let aValue: any = a[sortField];
+    let bValue: any = b[sortField];
+
+    if (sortField === 'createdAt') {
+      aValue = new Date(aValue).getTime();
+      bValue = new Date(bValue).getTime();
+    } else {
+      aValue = String(aValue || '').toLowerCase();
+      bValue = String(bValue || '').toLowerCase();
+    }
+
+    if (sortDirection === 'asc') {
+      return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
+    } else {
+      return aValue < bValue ? 1 : aValue > bValue ? -1 : 0;
+    }
+  });
+
+  const handleSort = (field: 'createdAt' | 'type' | 'status') => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
 
   // Get training data IDs that are currently being used in running jobs
   const runningJobDataIds = new Set<string>();
@@ -384,17 +565,69 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
       }
     });
 
+  // Calculate statistics
+  // Helper function to get extracted data count
+  const getExtractedDataCount = (data: any): number => {
+    // Prefer extractedDataCount if available (from API)
+    if (typeof data.extractedDataCount === 'number') {
+      return data.extractedDataCount;
+    }
+    // Fallback to extractedData array length
+    if (data.extractedData && Array.isArray(data.extractedData)) {
+      return data.extractedData.length;
+    }
+    return 0;
+  };
+
+  const stats = {
+    total: trainingData.length,
+    pending: trainingData.filter((d) => d.status === 'pending').length,
+    trained: trainingData.filter((d) => d.status === 'trained').length,
+    failed: trainingData.filter((d) => d.status === 'failed').length,
+    emails: trainingData.filter((d) => d.type === 'email').length,
+    boardingPasses: trainingData.filter((d) => d.type === 'boarding_pass').length,
+    totalFlights: trainingData.reduce((sum, d) => {
+      return sum + getExtractedDataCount(d);
+    }, 0),
+    avgFlightsPerEmail: (() => {
+      const emails = trainingData.filter((d) => d.type === 'email');
+      if (emails.length === 0) return 0;
+      const totalFlights = emails.reduce((sum, d) => sum + getExtractedDataCount(d), 0);
+      return (totalFlights / emails.length).toFixed(2);
+    })(),
+    totalTags: Array.from(new Set(trainingData.flatMap((d) => d.tags || []))).length,
+    jobsCompleted: jobs.filter((j) => j.status === 'completed').length,
+    jobsRunning: jobs.filter((j) => j.status === 'running' || j.status === 'pending').length,
+    jobsFailed: jobs.filter((j) => j.status === 'failed').length,
+  };
+
   return (
     <div className="space-y-6">
       {/* Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <div className="text-sm text-gray-600 dark:text-gray-400">Total Training Data</div>
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">{trainingData.length}</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="text-sm text-gray-600 dark:text-gray-400">Pending</div>
-          <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{pendingCount}</div>
+          <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+            Pending
+            <HelpIcon
+              content="Anzahl der annotierten Einträge, die noch nicht trainiert wurden."
+              position="top"
+            />
+          </div>
+          <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{stats.pending}</div>
+        </div>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+          <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+            Trained
+            <HelpIcon
+              content="Anzahl der Einträge, die bereits erfolgreich trainiert wurden."
+              position="top"
+            />
+          </div>
+          <div className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.trained}</div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <div className="text-sm text-gray-600 dark:text-gray-400">Training Jobs</div>
@@ -402,13 +635,48 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
         </div>
       </div>
 
+      {/* Detailed Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+          <div className="text-sm text-gray-600 dark:text-gray-400">Emails</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.emails}</div>
+        </div>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+          <div className="text-sm text-gray-600 dark:text-gray-400">Boarding Passes</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.boardingPasses}</div>
+        </div>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+          <div className="text-sm text-gray-600 dark:text-gray-400">Total Flights</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalFlights}</div>
+        </div>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+          <div className="text-sm text-gray-600 dark:text-gray-400">Ø Flights/Email</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.avgFlightsPerEmail}</div>
+        </div>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+          <div className="text-sm text-gray-600 dark:text-gray-400">Unique Tags</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalTags}</div>
+        </div>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+          <div className="text-sm text-gray-600 dark:text-gray-400">Jobs Completed</div>
+          <div className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.jobsCompleted}</div>
+        </div>
+      </div>
+
       {/* Actions */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
         <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-              Training starten
-            </h3>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Training starten
+              </h3>
+              <HelpIcon
+                content="Starten Sie das LoRA-Training mit allen pending Einträgen. Mindestens 5 Einträge sind erforderlich."
+                expandedContent="Das Training verwendet LoRA (Low-Rank Adaptation) zum Fine-Tuning des Base-Modells. Je nach Hardware (CPU/GPU) kann das Training mehrere Stunden dauern. Der Fortschritt wird in Echtzeit angezeigt."
+                position="right"
+              />
+            </div>
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {pendingCount >= 5
                 ? `Bereit für Training (${pendingCount} Einträge)`
@@ -428,7 +696,14 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
       {/* Training Jobs */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Training Jobs</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Training Jobs</h3>
+            <HelpIcon
+              content="Übersicht aller Training-Jobs mit Status und Fortschritt."
+              expandedContent="Jobs können verschiedene Status haben: pending (wartet), running (läuft), completed (erfolgreich), failed (fehlgeschlagen). Klicken Sie auf 'Details', um Logs und detaillierten Fortschritt zu sehen."
+              position="right"
+            />
+          </div>
         </div>
         <div className="divide-y divide-gray-200 dark:divide-gray-700">
           {jobs.length === 0 ? (
@@ -452,12 +727,18 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(job.status)}`}>
-                        {job.status}
-                      </span>
+                      <div className="flex items-center gap-1">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(job.status)}`}>
+                          {job.status}
+                        </span>
+                        <HelpIcon
+                          content={`Status: ${job.status === 'pending' ? 'Wartet auf Start' : job.status === 'running' ? 'Training läuft' : job.status === 'completed' ? 'Erfolgreich abgeschlossen' : job.status === 'failed' ? 'Fehlgeschlagen' : job.status}`}
+                          position="left"
+                        />
+                      </div>
                       {isRunning && (
                         <button
-                          onClick={() => handleCancelTraining(job.id)}
+                          onClick={() => handleCancelTrainingClick(job.id)}
                           disabled={cancelling === job.id}
                           className="px-3 py-1 text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
@@ -477,9 +758,16 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
                   {isRunning && (
                     <div className="mt-4">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          {progress.phase}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            {progress.phase}
+                          </span>
+                          <HelpIcon
+                            content="Aktuelle Phase des Trainings. Der Fortschritt wird basierend auf den Logs berechnet."
+                            expandedContent="Training-Phasen: Initialisierung → Modell laden → Datensatz vorbereiten → Training (Epochen/Steps) → Modell speichern → Export zu Ollama. Die geschätzte verbleibende Zeit wird basierend auf dem aktuellen Fortschritt berechnet."
+                            position="top"
+                          />
+                        </div>
                         <div className="flex items-center gap-2">
                           {progress.estimatedTimeRemaining !== undefined && (
                             <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -566,28 +854,281 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
         </div>
       </div>
 
+      {/* Filters */}
+      <TrainingDataFilters trainingData={trainingData} onFilterChange={handleFilterChange} />
+
       {/* Training Data */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Training Data</h3>
-        </div>
-        <div className="divide-y divide-gray-200 dark:divide-gray-700">
-          {trainingData.length === 0 ? (
-            <div className="p-6 text-center text-gray-500 dark:text-gray-400">
-              Noch keine Training Data
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 border border-gray-300 dark:border-gray-600 rounded-md">
+              <button
+                onClick={() => setViewMode('list')}
+                className={`px-3 py-1 text-sm font-medium rounded-l-md ${
+                  viewMode === 'list'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+              >
+                Liste
+              </button>
+              <button
+                onClick={() => setViewMode('table')}
+                className={`px-3 py-1 text-sm font-medium rounded-r-md ${
+                  viewMode === 'table'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+              >
+                Tabelle
+              </button>
             </div>
-          ) : (
-            trainingData.map((data) => {
+            {displayTrainingData.length > 0 && (
+              <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={
+                    displayTrainingData.filter(
+                      (data) => data.status === 'pending' && !runningJobDataIds.has(data.id)
+                    ).length > 0 &&
+                    selectedItems.size ===
+                      displayTrainingData.filter(
+                        (data) => data.status === 'pending' && !runningJobDataIds.has(data.id)
+                      ).length
+                  }
+                  onChange={handleSelectAll}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                Alle auswählen
+              </label>
+            )}
+          </div>
+        </div>
+        {selectedItems.size > 0 && (
+          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <span className="text-sm font-medium text-blue-900 dark:text-blue-300">
+              {selectedItems.size} Eintrag{selectedItems.size !== 1 ? 'e' : ''} ausgewählt
+            </span>
+            <button
+              onClick={() => setBulkDeleteModalOpen(true)}
+              disabled={bulkDeleting}
+              className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {bulkDeleting ? 'Wird gelöscht...' : 'Ausgewählte löschen'}
+            </button>
+          </div>
+        )}
+        {viewMode === 'table' ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-12">
+                    <input
+                      type="checkbox"
+                      checked={
+                        displayTrainingData.filter(
+                          (data) => data.status === 'pending' && !runningJobDataIds.has(data.id)
+                        ).length > 0 &&
+                        selectedItems.size ===
+                          displayTrainingData.filter(
+                            (data) => data.status === 'pending' && !runningJobDataIds.has(data.id)
+                          ).length
+                      }
+                      onChange={handleSelectAll}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
+                    onClick={() => handleSort('type')}
+                  >
+                    <div className="flex items-center gap-2">
+                      Typ
+                      {sortField === 'type' && (
+                        <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                      )}
+                    </div>
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
+                    onClick={() => handleSort('status')}
+                  >
+                    <div className="flex items-center gap-2">
+                      Status
+                      {sortField === 'status' && (
+                        <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                      )}
+                    </div>
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Tags
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
+                    onClick={() => handleSort('createdAt')}
+                  >
+                    <div className="flex items-center gap-2">
+                      Erstellt
+                      {sortField === 'createdAt' && (
+                        <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                      )}
+                    </div>
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Aktionen
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {displayTrainingData.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                      {trainingData.length === 0
+                        ? 'Noch keine Training Data'
+                        : 'Keine Einträge entsprechen den Filtern'}
+                    </td>
+                  </tr>
+                ) : (
+                  displayTrainingData.map((data) => {
+                    const isInUse = runningJobDataIds.has(data.id);
+                    const canEdit = data.status === 'pending' && !isInUse;
+
+                    return (
+                      <tr key={data.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {canEdit && (
+                            <input
+                              type="checkbox"
+                              checked={selectedItems.has(data.id)}
+                              onChange={() => handleToggleSelect(data.id)}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                            {data.type === 'email' ? '📧 Email' : '🎫 Boarding Pass'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            {isInUse && (
+                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
+                                Wird trainiert
+                              </span>
+                            )}
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(data.status)}`}>
+                              {data.status}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          {data.tags && data.tags.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {data.tags.map((tag: string) => (
+                                <span
+                                  key={tag}
+                                  className="inline-flex items-center px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded text-xs"
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-sm text-gray-400 dark:text-gray-500">-</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          {new Date(data.createdAt).toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex items-center justify-end gap-2">
+                            {canEdit && (
+                              <>
+                                <button
+                                  onClick={() => setPreviewDataId(data.id)}
+                                  className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300"
+                                >
+                                  Vorschau
+                                </button>
+                                {onEditTrainingData && (
+                                  <button
+                                    onClick={() => handleEditTrainingData(data.id, data.type)}
+                                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                                  >
+                                    Bearbeiten
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => handleDeleteTrainingDataClick(data.id)}
+                                  disabled={deleting === data.id}
+                                  className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  {deleting === data.id ? 'Löschen...' : 'Löschen'}
+                                </button>
+                              </>
+                            )}
+                            {!canEdit && data.status === 'pending' && (
+                              <span className="text-xs text-gray-500 dark:text-gray-400 italic">
+                                In Verwendung
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-200 dark:divide-gray-700">
+            {displayTrainingData.length === 0 ? (
+              <div className="p-6 text-center text-gray-500 dark:text-gray-400">
+                {trainingData.length === 0
+                  ? 'Noch keine Training Data'
+                  : 'Keine Einträge entsprechen den Filtern'}
+              </div>
+            ) : (
+              displayTrainingData.map((data) => {
               const isInUse = runningJobDataIds.has(data.id);
               const canEdit = data.status === 'pending' && !isInUse;
 
               return (
                 <div key={data.id} className="p-6">
                   <div className="flex items-center justify-between">
-                    <div className="flex-1">
+                    <div className="flex items-center gap-3 flex-1">
+                      {canEdit && (
+                        <input
+                          type="checkbox"
+                          checked={selectedItems.has(data.id)}
+                          onChange={() => handleToggleSelect(data.id)}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                      )}
+                      <div className="flex-1">
                       <div className="font-medium text-gray-900 dark:text-white">{data.type}</div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">
                         {new Date(data.createdAt).toLocaleString()}
+                      </div>
+                      {data.tags && data.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {data.tags.map((tag: string) => (
+                            <span
+                              key={tag}
+                              className="inline-flex items-center px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded text-xs"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
@@ -601,6 +1142,12 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
                       </span>
                       {canEdit && (
                         <>
+                          <button
+                            onClick={() => setPreviewDataId(data.id)}
+                            className="px-3 py-1 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300"
+                          >
+                            Vorschau
+                          </button>
                           {onEditTrainingData && (
                             <button
                               onClick={() => handleEditTrainingData(data.id, data.type)}
@@ -610,10 +1157,11 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
                             </button>
                           )}
                           <button
-                            onClick={() => handleDeleteTrainingData(data.id)}
-                            className="px-3 py-1 text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+                            onClick={() => handleDeleteTrainingDataClick(data.id)}
+                            disabled={deleting === data.id}
+                            className="px-3 py-1 text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            Löschen
+                            {deleting === data.id ? 'Wird gelöscht...' : 'Löschen'}
                           </button>
                         </>
                       )}
@@ -629,7 +1177,62 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
             })
           )}
         </div>
+        )}
       </div>
+
+      {/* Cancel Training Modal */}
+      <ConfirmModal
+        isOpen={cancelModalOpen}
+        onClose={() => {
+          setCancelModalOpen(false);
+          setCancelJobId(null);
+        }}
+        onConfirm={handleCancelTraining}
+        title="Training abbrechen?"
+        message="Möchten Sie das Training wirklich abbrechen?\n\nDer aktuelle Fortschritt geht verloren und kann nicht wiederhergestellt werden."
+        confirmText="Ja, abbrechen"
+        cancelText="Nein, weiterlaufen lassen"
+        confirmButtonClass="bg-red-600 hover:bg-red-700 focus:ring-red-500"
+        isLoading={cancelling !== null}
+      />
+
+      {/* Delete Training Data Modal */}
+      <ConfirmModal
+        isOpen={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setDeleteDataId(null);
+        }}
+        onConfirm={handleDeleteTrainingData}
+        title="Training-Daten löschen?"
+        message="Möchten Sie diesen Eintrag wirklich löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden."
+        confirmText="Ja, löschen"
+        cancelText="Abbrechen"
+        confirmButtonClass="bg-red-600 hover:bg-red-700 focus:ring-red-500"
+        isLoading={deleting !== null}
+      />
+
+      {/* Bulk Delete Modal */}
+      <ConfirmModal
+        isOpen={bulkDeleteModalOpen}
+        onClose={() => setBulkDeleteModalOpen(false)}
+        onConfirm={handleBulkDelete}
+        title="Mehrere Einträge löschen?"
+        message={`Möchten Sie wirklich ${selectedItems.size} Eintrag${selectedItems.size !== 1 ? 'e' : ''} löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden.`}
+        confirmText="Ja, alle löschen"
+        cancelText="Abbrechen"
+        confirmButtonClass="bg-red-600 hover:bg-red-700 focus:ring-red-500"
+        isLoading={bulkDeleting}
+      />
+
+      {/* Preview Modal */}
+      {previewDataId && (
+        <TrainingDataPreview
+          trainingDataId={previewDataId}
+          isOpen={!!previewDataId}
+          onClose={() => setPreviewDataId(null)}
+        />
+      )}
     </div>
   );
 }

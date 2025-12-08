@@ -7,6 +7,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { flightsApi } from '../lib/api';
+import ContextualHint from '../components/Onboarding/ContextualHint';
 import type { Flight, FlightFilters } from '../types';
 import Filters from '../components/Filters';
 import FlightEditModal from '../components/FlightEditModal';
@@ -145,6 +146,13 @@ export default function FlightsTablePage() {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-6 max-w-7xl">
+        <ContextualHint
+          id="flights-table-page-hint"
+          title="Willkommen zur Flugtabelle!"
+          message="Hier sehen Sie alle Ihre Flüge in einer übersichtlichen Tabelle. Sie können sortieren, filtern und Flüge bearbeiten oder löschen."
+          linkTo="/"
+          linkText="Zurück zum Dashboard"
+        />
         {/* Filters */}
         <div className="mb-6">
           <Filters onFilterChange={setFilters} />

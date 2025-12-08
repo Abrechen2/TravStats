@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { adminApi } from '../lib/api';
 import { format } from 'date-fns';
 import { logger } from '../lib/logger';
+import InlineHelp from '../components/Help/InlineHelp';
 
 export default function AdminPage() {
   const [systemInfo, setSystemInfo] = useState<any>(null);
@@ -16,6 +17,7 @@ export default function AdminPage() {
   const [patternData, setPatternData] = useState<any>(null);
   const [feedbackDetails, setFeedbackDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingHardwareInfo, setLoadingHardwareInfo] = useState(false);
   const [activeTab, setActiveTab] = useState<'users' | 'invitations' | 'system' | 'parsers' | 'logging' | 'feedback' | 'patterns'>('system');
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [savingParsers, setSavingParsers] = useState(false);
@@ -101,6 +103,12 @@ export default function AdminPage() {
   };
 
   const loadHardwareInfo = async () => {
+    // Prevent multiple parallel requests
+    if (loadingHardwareInfo) {
+      return;
+    }
+    
+    setLoadingHardwareInfo(true);
     try {
       console.log('Loading hardware info...');
       const data = await adminApi.getHardwareInfo();
@@ -117,6 +125,8 @@ export default function AdminPage() {
         docker: false,
         trainingAccess: { accessible: false, error: 'Failed to load' }
       });
+    } finally {
+      setLoadingHardwareInfo(false);
     }
   };
 
@@ -448,15 +458,16 @@ export default function AdminPage() {
               </h2>
               <button
                 onClick={loadHardwareInfo}
-                className="px-3 py-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                disabled={loadingHardwareInfo}
+                className="px-3 py-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                🔄 Aktualisieren
+                {loadingHardwareInfo ? '⏳ Lade...' : '🔄 Aktualisieren'}
               </button>
             </div>
 
             {!hardwareInfo && (
               <div className="text-center py-8 text-gray-600 dark:text-gray-400">
-                {loading ? 'Lade Hardware-Informationen...' : 'Klicken Sie auf "Aktualisieren", um Hardware-Informationen zu laden.'}
+                {loadingHardwareInfo ? 'Lade Hardware-Informationen...' : 'Klicken Sie auf "Aktualisieren", um Hardware-Informationen zu laden.'}
               </div>
             )}
 
@@ -727,6 +738,31 @@ export default function AdminPage() {
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
               Export all user data for backup purposes (GDPR compliant)
             </p>
+            <InlineHelp
+              title="Daten-Export"
+              category="advanced"
+              content={
+                <div className="space-y-2 mt-2">
+                  <p>
+                    Exportieren Sie alle Benutzerdaten als JSON-Datei für Backup-Zwecke.
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
+                    <li>
+                      <strong>Vollständiger Export:</strong> Enthält alle Flüge, Achievements, Einstellungen und Benutzerdaten
+                    </li>
+                    <li>
+                      <strong>GDPR-konform:</strong> Alle Daten werden in einem strukturierten Format exportiert
+                    </li>
+                    <li>
+                      <strong>Backup:</strong> Regelmäßige Exports werden empfohlen, um Datenverlust zu vermeiden
+                    </li>
+                    <li>
+                      <strong>Format:</strong> JSON-Datei, die einfach importiert oder analysiert werden kann
+                    </li>
+                  </ul>
+                </div>
+              }
+            />
           </div>
         </div>
       )}
@@ -734,6 +770,28 @@ export default function AdminPage() {
       {/* Users Tab */}
       {activeTab === 'users' && (
         <div className="space-y-4">
+          <InlineHelp
+            title="User Management"
+            category="advanced"
+            content={
+              <div className="space-y-2">
+                <p>
+                  Verwalten Sie alle Benutzer Ihrer TravStats-Instanz. Hier können Sie Benutzer anzeigen, Rollen ändern und Benutzer löschen.
+                </p>
+                <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
+                  <li>
+                    <strong>Admin:</strong> Vollzugriff auf alle Funktionen, einschließlich Admin-Panel
+                  </li>
+                  <li>
+                    <strong>User:</strong> Standard-Benutzer mit Zugriff auf Flüge, Statistiken und Achievements
+                  </li>
+                  <li>
+                    <strong>Löschen:</strong> Vorsicht! Beim Löschen werden alle Daten des Benutzers entfernt
+                  </li>
+                </ul>
+              </div>
+            }
+          />
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
             <table className="w-full">
               <thead className="bg-gray-50 dark:bg-gray-900">
@@ -816,6 +874,31 @@ export default function AdminPage() {
       {/* Invitations Tab */}
       {activeTab === 'invitations' && (
         <div className="space-y-4">
+          <InlineHelp
+            title="Einladungen verwalten"
+            category="advanced"
+            content={
+              <div className="space-y-2">
+                <p>
+                  Erstellen Sie Einladungslinks, um neue Benutzer zu Ihrer TravStats-Instanz einzuladen.
+                </p>
+                <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
+                  <li>
+                    <strong>Einladung erstellen:</strong> Generiert einen eindeutigen Link, der zum Registrieren verwendet werden kann
+                  </li>
+                  <li>
+                    <strong>Ablaufdatum:</strong> Einladungen laufen nach 7 Tagen ab (standardmäßig)
+                  </li>
+                  <li>
+                    <strong>Einmalige Nutzung:</strong> Jeder Link kann nur einmal verwendet werden
+                  </li>
+                  <li>
+                    <strong>E-Mail (optional):</strong> Sie können eine E-Mail-Adresse zuordnen, um die Einladung zu verfolgen
+                  </li>
+                </ul>
+              </div>
+            }
+          />
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
               Invitation Links
@@ -1356,25 +1439,7 @@ export default function AdminPage() {
             )}
           </div>
 
-          {/* Help Section */}
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
-            <div className="flex items-start gap-3">
-              <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-              </svg>
-              <div className="text-sm text-blue-900 dark:text-blue-100">
-                <p className="font-medium mb-2">Debug Logging Guide</p>
-                <ul className="space-y-1 text-xs">
-                  <li>• <strong>Debug Mode</strong>: Enables debug/trace log levels with detailed instrumentation (performance impact)</li>
-                  <li>• <strong>Categories</strong>: http (requests), database (SQL), parser (LLM), security (auth), error (all errors), system (general)</li>
-                  <li>• <strong>Log Format</strong>: AI-friendly structured JSON with context, performance metrics, and request correlation IDs</li>
-                  <li>• <strong>Location</strong>: Logs stored in /app/data/logs/ (Docker volume travstats-app-data)</li>
-                  <li>• <strong>Retention</strong>: Logs auto-rotate daily and by size (10MB default), cleaned up based on retention policy</li>
-                  <li>• <strong>Privacy</strong>: Sensitive data (passwords, API keys, tokens) automatically redacted from logs</li>
-                </ul>
-              </div>
-            </div>
-          </div>
+          {/* Help Section - Replaced with InlineHelp above */}
         </div>
       )}
 

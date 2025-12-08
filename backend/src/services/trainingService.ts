@@ -20,19 +20,8 @@ const TRAINING_DATA_DIR = path.join(__dirname, '../../data/training');
 const TRAINING_LOGS_DIR = path.join(__dirname, '../../data/logs/training');
 
 // Python command detection - works both locally and in Docker
-// On Windows, prefer Python 3.12 (with CUDA support) if available, otherwise use python3
-let defaultPythonCmd = 'python3';
-if (process.platform === 'win32' && !fs.existsSync('/.dockerenv')) {
-  // On Windows (local), try to use Python 3.12 first (has CUDA support)
-  try {
-    const { execSync } = require('child_process');
-    execSync('py -3.12 --version', { stdio: 'ignore' });
-    defaultPythonCmd = 'py -3.12';
-  } catch {
-    // Python 3.12 not available, fall back to default
-  }
-}
-const PYTHON_CMD = process.env.PYTHON_CMD || defaultPythonCmd;
+// Use environment variable if set, otherwise use generic python3/python
+const PYTHON_CMD = process.env.PYTHON_CMD || 'python3';
 const IS_DOCKER = fs.existsSync('/.dockerenv') || process.env.DOCKER === 'true';
 
 // Ensure directories exist
@@ -147,6 +136,57 @@ async function logTrainingEvent(
 }
 
 /**
+ * Find the last successful training job and return its model path
+ * Returns null if no successful training exists
+ */
+async function findLastSuccessfulTraining(): Promise<string | null> {
+  try {
+    const lastJob = await prisma.trainingJob.findFirst({
+      where: {
+        status: 'completed',
+      },
+      orderBy: {
+        completedAt: 'desc',
+      },
+      select: {
+        id: true,
+        metrics: true,
+      },
+    });
+
+    if (!lastJob) {
+      return null;
+    }
+
+    // Try to get modelPath from metrics first
+    const metrics = lastJob.metrics as any;
+    if (metrics && metrics.modelPath && typeof metrics.modelPath === 'string') {
+      const modelPath = metrics.modelPath;
+      if (fs.existsSync(modelPath)) {
+        return modelPath;
+      }
+    }
+
+    // Fallback: construct path from job ID
+    const modelPath = path.join(TRAINING_DATA_DIR, `output-${lastJob.id}`);
+    if (fs.existsSync(modelPath)) {
+      return modelPath;
+    }
+
+    return null;
+  } catch (error) {
+    logger.warn({
+      operation: 'find_last_successful_training_error',
+      message: 'Failed to find last successful training',
+      context: {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+    });
+    return null;
+  }
+}
+
+/**
  * Train model using LoRA
  */
 export async function trainModel(
@@ -177,9 +217,38 @@ export async function trainModel(
   const outputDir = path.join(TRAINING_DATA_DIR, `output-${trainingJobId}`);
 
   try {
-    // Get hardware info before training
+    // Find previous successful training to continue from
+    const previousModelPath = await findLastSuccessfulTraining();
+    const isContinuingTraining = previousModelPath !== null;
+
+    if (isContinuingTraining) {
+      await logTrainingEvent(trainingJobId, 'info', 'Continuing training from previous model', {
+        previousModelPath,
+      });
+      logger.info({
+        operation: 'training_continue',
+        message: 'Continuing training from previous model',
+        context: {
+          trainingJobId,
+          previousModelPath,
+        },
+      });
+    } else {
+      await logTrainingEvent(trainingJobId, 'info', 'Starting new training from base model', {
+        baseModel: OLLAMA_MODEL,
+      });
+      logger.info({
+        operation: 'training_new',
+        message: 'Starting new training from base model',
+        context: {
+          trainingJobId,
+          baseModel: OLLAMA_MODEL,
+        },
+      });
+    }
+
+    // Get hardware info before training (for logging only)
     let hardwareInfo;
-    let batchSizeArg = '';
     try {
       hardwareInfo = await getHardwareInfo();
 
@@ -200,16 +269,6 @@ export async function trainModel(
           hardwareInfo,
         },
       });
-
-      // Adjust batch size based on hardware if GPU is available
-      // The Python script will auto-determine if not provided, but we can optimize here
-      if (hardwareInfo.gpu.available) {
-        // GPU available - use default (4) or let Python script decide
-        // batchSizeArg = '--batch-size 4'; // Optional: explicitly set
-      } else {
-        // CPU only - use larger batch size for better CPU utilization
-        // batchSizeArg = '--batch-size 8'; // Optional: explicitly set
-      }
     } catch (error) {
       logger.warn({
         operation: 'training_hardware_info_error',
@@ -222,8 +281,9 @@ export async function trainModel(
     }
 
     // Run Python training script with log file parameter for real-time logging
-    // Batch size will be auto-determined by Python script if not provided
-    const command = `${PYTHON_CMD} "${finalScriptPath}" --input "${jsonlPath}" --output "${outputDir}" --base-model "${OLLAMA_MODEL}" --job-id "${trainingJobId}" --log-file "${logFile}"${batchSizeArg ? ' ' + batchSizeArg : ''}`;
+    // Batch size will be auto-determined by Python script
+    const previousModelArg = previousModelPath ? ` --previous-model-path "${previousModelPath}"` : '';
+    const command = `${PYTHON_CMD} "${finalScriptPath}" --input "${jsonlPath}" --output "${outputDir}" --base-model "${OLLAMA_MODEL}" --job-id "${trainingJobId}" --log-file "${logFile}"${previousModelArg}`;
 
     await logTrainingEvent(trainingJobId, 'info', 'Executing training command', {
       command,
@@ -231,6 +291,8 @@ export async function trainModel(
       isDocker: IS_DOCKER,
       scriptPath: finalScriptPath,
       logFile,
+      previousModelPath: previousModelPath || undefined,
+      isContinuingTraining,
       hardwareInfo: hardwareInfo ? {
         cpu: hardwareInfo.cpu,
         gpu: hardwareInfo.gpu,
@@ -459,6 +521,18 @@ export async function triggerTraining(): Promise<string> {
     const pendingCount = await prisma.trainingData.count({
       where: { status: 'pending' },
     });
+    
+    // Check if there's already a running or pending job
+    const activeJob = await prisma.trainingJob.findFirst({
+      where: {
+        status: { in: ['pending', 'running'] },
+      },
+    });
+    
+    if (activeJob) {
+      throw new Error(`Training job already in progress (status: ${activeJob.status}). Please wait for it to complete.`);
+    }
+    
     throw new Error(`Not enough training data. Need at least 5, have ${pendingCount}`);
   }
 

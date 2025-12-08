@@ -45,12 +45,14 @@ const upload = multer({
 // Upload schema
 const uploadSchema = z.object({
   type: z.enum(['email', 'boarding_pass']),
+  tags: z.array(z.string()).optional().default([]), // Optional tags array
 });
 
 // Annotation schema
 const annotationSchema = z.object({
   annotations: z.any(), // JSON object with text selections or bounding boxes
   extractedData: z.array(z.any()), // Array of ParsedBooking
+  tags: z.array(z.string()).optional(), // Optional tags array
 });
 
 /**
@@ -99,6 +101,7 @@ router.post(
           annotations,
           extractedData: [],
           status: 'pending',
+          tags: body.tags || [],
         },
       });
 
@@ -153,6 +156,7 @@ router.post(
         data: {
           annotations: payload.annotations,
           extractedData: payload.extractedData,
+          ...(payload.tags !== undefined && { tags: payload.tags }),
         },
       });
 
@@ -207,6 +211,7 @@ router.post(
         data: {
           annotations: payload.annotations,
           extractedData: payload.extractedData,
+          ...(payload.tags !== undefined && { tags: payload.tags }),
         },
       });
 
@@ -300,24 +305,65 @@ router.post(
 /**
  * GET /api/v1/training/data
  * Get list of training data (only own entries)
+ * Query params: status, type, tags (comma-separated), search
  */
 router.get('/data', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
+    const { status, type, tags, search } = req.query;
+
+    // Build where clause
+    const where: any = { userId };
+
+    if (status && typeof status === 'string') {
+      where.status = status;
+    }
+
+    if (type && typeof type === 'string') {
+      where.type = type;
+    }
+
+    if (tags && typeof tags === 'string') {
+      const tagArray = tags.split(',').map((t) => t.trim()).filter(Boolean);
+      if (tagArray.length > 0) {
+        where.tags = {
+          hasSome: tagArray, // PostgreSQL array contains any of these tags
+        };
+      }
+    }
+
+    if (search && typeof search === 'string') {
+      where.OR = [
+        { id: { contains: search, mode: 'insensitive' } },
+        { originalFile: { contains: search, mode: 'insensitive' } },
+      ];
+    }
 
     const trainingData = await prisma.trainingData.findMany({
-      where: { userId },
+      where,
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,
         type: true,
         status: true,
+        tags: true,
         createdAt: true,
         trainedAt: true,
+        extractedData: true, // Include extractedData for statistics
       },
     });
 
-    res.json({ trainingData });
+    // Map to include extractedData count for performance
+    const trainingDataWithCount = trainingData.map((data) => {
+      const extractedData = data.extractedData as any;
+      const extractedDataCount = Array.isArray(extractedData) ? extractedData.length : 0;
+      return {
+        ...data,
+        extractedDataCount,
+      };
+    });
+
+    res.json({ trainingData: trainingDataWithCount });
   } catch (error) {
     next(error);
   }

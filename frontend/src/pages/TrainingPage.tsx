@@ -1,13 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { trainingApi, settingsApi } from '../lib/api';
 import { logger } from '../lib/logger';
 import TrainingDashboard from '../components/Training/TrainingDashboard';
 import EmailAnnotation from '../components/Training/EmailAnnotation';
 import BoardingPassAnnotation from '../components/Training/BoardingPassAnnotation';
+import TrainingGuide from '../components/Training/TrainingGuide';
+import InlineHelp from '../components/Help/InlineHelp';
 
 export default function TrainingPage() {
-  const [activeTab, setActiveTab] = useState<'upload' | 'dashboard'>('upload');
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<'upload' | 'dashboard' | 'guide'>('upload');
   const [uploadedFile, setUploadedFile] = useState<{ id: string; type: string } | null>(null);
   const [developerModeEnabled, setDeveloperModeEnabled] = useState(false);
   const emailFileInputRef = useRef<HTMLInputElement>(null);
@@ -21,13 +24,13 @@ export default function TrainingPage() {
         setDeveloperModeEnabled(data.enabled);
         if (!data.enabled) {
           // Redirect to settings if not enabled
-          window.location.href = '/settings';
+          navigate('/settings');
         }
       })
       .catch((error) => {
         logger.error('Failed to check developer mode:', error);
       });
-  }, []);
+  }, [navigate]);
 
   const handleFileUpload = async (file: File, type: 'email' | 'boarding_pass') => {
     try {
@@ -119,12 +122,47 @@ export default function TrainingPage() {
             >
               Training Dashboard
             </button>
+            <button
+              onClick={() => setActiveTab('guide')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'guide'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+              }`}
+            >
+              Guide
+            </button>
           </nav>
         </div>
 
         {/* Content */}
         {activeTab === 'upload' && (
           <div className="space-y-6">
+            <InlineHelp
+              title="Upload & Annotation"
+              category="basic"
+              content={
+                <div className="space-y-2">
+                  <p>
+                    Laden Sie E-Mails oder Boarding Passes hoch, um Trainingsdaten zu erstellen.
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 ml-2">
+                    <li>
+                      <strong>E-Mails:</strong> Unterstützte Formate: .eml, .msg, .txt
+                    </li>
+                    <li>
+                      <strong>Boarding Passes:</strong> Unterstützte Formate: .png, .jpg, .jpeg, .webp
+                    </li>
+                    <li>
+                      <strong>Annotation:</strong> Nach dem Upload müssen Sie die Flugdaten extrahieren und korrigieren
+                    </li>
+                    <li>
+                      <strong>Mindestanzahl:</strong> Sie benötigen mindestens 5 annotierte Einträge, um ein Training zu starten
+                    </li>
+                  </ul>
+                </div>
+              }
+            />
             {!uploadedFile ? (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
@@ -212,6 +250,8 @@ export default function TrainingPage() {
         {activeTab === 'dashboard' && (
           <TrainingDashboard onEditTrainingData={handleEditTrainingData} />
         )}
+
+        {activeTab === 'guide' && <TrainingGuide />}
       </main>
     </div>
   );

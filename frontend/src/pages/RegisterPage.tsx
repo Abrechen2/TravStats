@@ -46,7 +46,7 @@ export default function RegisterPage() {
           <img src="/logo-with-text.png" alt="TravStats Logo" className="h-24 w-auto mb-4" />
           <h1 className="text-3xl font-bold text-center">TravStats</h1>
         </div>
-        <h2 className="text-xl text-gray-600 text-center mb-8">Create Account</h2>
+        <h2 className="text-xl text-gray-600 dark:text-gray-300 text-center mb-8">Create Account</h2>
 
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -56,8 +56,9 @@ export default function RegisterPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="label">Username</label>
+            <label htmlFor="username" className="label">Username</label>
             <input
+              id="username"
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -69,8 +70,9 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="label">Password</label>
+            <label htmlFor="password" className="label">Password</label>
             <input
+              id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -81,8 +83,9 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="label">Confirm Password</label>
+            <label htmlFor="confirmPassword" className="label">Confirm Password</label>
             <input
+              id="confirmPassword"
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
@@ -100,9 +103,9 @@ export default function RegisterPage() {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-gray-600">
+        <p className="mt-6 text-center text-gray-600 dark:text-gray-400">
           Already have an account?{' '}
-          <Link to="/login" className="text-blue-600 hover:underline">
+          <Link to="/login" className="text-blue-600 dark:text-blue-400 hover:underline">
             Sign in
           </Link>
         </p>

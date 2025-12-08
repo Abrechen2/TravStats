@@ -143,9 +143,11 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
   useEffect(() => {
     if (globeRef.current) {
       const interval = setInterval(() => {
-        const pov = globeRef.current.pointOfView();
-        if (pov && pov.altitude !== cameraAltitudeRef.current) {
-          setCameraAltitude(pov.altitude);
+        if (globeRef.current) {
+          const pov = globeRef.current.pointOfView();
+          if (pov && pov.altitude !== cameraAltitudeRef.current) {
+            setCameraAltitude(pov.altitude);
+          }
         }
       }, 100);
       return () => clearInterval(interval);

@@ -8,19 +8,8 @@ import logger from '../utils/logger';
 const execAsync = promisify(exec);
 
 // Python command detection - works both locally and in Docker
-// On Windows, prefer Python 3.12 (with CUDA support) if available, otherwise use python3
-let defaultPythonCmd = 'python3';
-if (process.platform === 'win32' && !fs.existsSync('/.dockerenv')) {
-  // On Windows (local), try to use Python 3.12 first (has CUDA support)
-  try {
-    const { execSync } = require('child_process');
-    execSync('py -3.12 --version', { stdio: 'ignore' });
-    defaultPythonCmd = 'py -3.12';
-  } catch {
-    // Python 3.12 not available, fall back to default
-  }
-}
-const PYTHON_CMD = process.env.PYTHON_CMD || defaultPythonCmd;
+// Use environment variable if set, otherwise use generic python3/python
+const PYTHON_CMD = process.env.PYTHON_CMD || 'python3';
 const IS_DOCKER = fs.existsSync('/.dockerenv') || process.env.DOCKER === 'true';
 
 interface CPUInfo {

@@ -14,6 +14,7 @@ import { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import { Airport, airportsApi } from '../lib/api';
 import AirportAutocomplete from './AirportAutocomplete';
 import EmailUploader from './EmailUploader';
+import HelpIcon from './Help/HelpIcon';
 
 // Lazy load BoardingPassScanner as it's heavy (Tesseract.js)
 const BoardingPassScanner = lazy(() => import('./BoardingPassScanner'));
@@ -213,10 +214,13 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
 
     try {
       // Fetch full airport data
-      const [depAirport, arrAirport] = await Promise.all([
-        flight.departure.iata ? airportsApi.getByCode(flight.departure.iata) : null,
-        flight.arrival.iata ? airportsApi.getByCode(flight.arrival.iata) : null,
+      const results = await Promise.allSettled([
+        flight.departure.iata ? airportsApi.getByCode(flight.departure.iata) : Promise.resolve(null),
+        flight.arrival.iata ? airportsApi.getByCode(flight.arrival.iata) : Promise.resolve(null),
       ]);
+
+      const depAirport = results[0].status === 'fulfilled' ? results[0].value : null;
+      const arrAirport = results[1].status === 'fulfilled' ? results[1].value : null;
 
       if (depAirport) setDeparture(depAirport);
       if (arrAirport) setArrival(arrAirport);
@@ -438,7 +442,14 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
 
               {/* Flight Number Input */}
               <div>
-                <label className={`label ${textClass}`}>Flight Number (e.g., LH400, BA1234)</label>
+                <label className={`label ${textClass} flex items-center gap-2`}>
+                  Flight Number (e.g., LH400, BA1234)
+                  <HelpIcon
+                    content="Geben Sie die Flugnummer ein (z.B. LH400). Mit dem Lookup-Button können Sie automatisch Flugdaten abrufen, wenn ein API-Schlüssel konfiguriert ist."
+                    expandedContent="Die automatische Flugsuche verwendet externe APIs (AirLabs, AviationStack, OpenSky) um Flugdaten abzurufen. Ohne API-Schlüssel müssen Sie die Daten manuell eingeben."
+                    position="top"
+                  />
+                </label>
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -585,26 +596,50 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
 
               {/* Airports */}
               <div className="grid grid-cols-2 gap-4">
-                <AirportAutocomplete
-                  value={departure}
-                  onChange={setDeparture}
-                  label="From *"
-                  placeholder="FRA, Frankfurt"
-                  required
-                />
-                <AirportAutocomplete
-                  value={arrival}
-                  onChange={setArrival}
-                  label="To *"
-                  placeholder="LHR, London"
-                  required
-                />
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <label className={`label ${textClass}`}>From *</label>
+                    <HelpIcon
+                      content="Wählen Sie den Abflughafen aus. Sie können nach IATA-Code (z.B. FRA) oder Name suchen."
+                      position="top"
+                    />
+                  </div>
+                  <AirportAutocomplete
+                    value={departure}
+                    onChange={setDeparture}
+                    label=""
+                    placeholder="FRA, Frankfurt"
+                    required
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <label className={`label ${textClass}`}>To *</label>
+                    <HelpIcon
+                      content="Wählen Sie den Zielflughafen aus. Sie können nach IATA-Code (z.B. LHR) oder Name suchen."
+                      position="top"
+                    />
+                  </div>
+                  <AirportAutocomplete
+                    value={arrival}
+                    onChange={setArrival}
+                    label=""
+                    placeholder="LHR, London"
+                    required
+                  />
+                </div>
               </div>
 
               {/* Date & Time */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className={`label ${textClass}`}>Departure Date *</label>
+                  <label className={`label ${textClass} flex items-center gap-2`}>
+                    Departure Date *
+                    <HelpIcon
+                      content="Wählen Sie das Abflugdatum aus."
+                      position="top"
+                    />
+                  </label>
                   <input
                     type="date"
                     value={departureDate}
@@ -614,7 +649,14 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                   />
                 </div>
                 <div>
-                  <label className={`label ${textClass}`}>Departure Time</label>
+                  <label className={`label ${textClass} flex items-center gap-2`}>
+                    Departure Time
+                    <HelpIcon
+                      content="Geben Sie die Abflugzeit ein (lokale Zeit des Abflughafens)."
+                      expandedContent="Die Zeit sollte in der lokalen Zeitzone des Abflughafens angegeben werden. Das System konvertiert automatisch bei Bedarf."
+                      position="top"
+                    />
+                  </label>
                   <input
                     type="time"
                     value={departureTime}
@@ -627,7 +669,13 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
               {/* Arrival Date & Time */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className={`label ${textClass}`}>Arrival Date *</label>
+                  <label className={`label ${textClass} flex items-center gap-2`}>
+                    Arrival Date *
+                    <HelpIcon
+                      content="Wählen Sie das Ankunftsdatum aus."
+                      position="top"
+                    />
+                  </label>
                   <input
                     type="date"
                     value={arrivalDate}
@@ -637,7 +685,14 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                   />
                 </div>
                 <div>
-                  <label className={`label ${textClass}`}>Arrival Time</label>
+                  <label className={`label ${textClass} flex items-center gap-2`}>
+                    Arrival Time
+                    <HelpIcon
+                      content="Geben Sie die Ankunftszeit ein (lokale Zeit des Zielflughafens)."
+                      expandedContent="Die Zeit sollte in der lokalen Zeitzone des Zielflughafens angegeben werden. Das System konvertiert automatisch bei Bedarf."
+                      position="top"
+                    />
+                  </label>
                   <input
                     type="time"
                     value={arrivalTime}
@@ -761,7 +816,14 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
               {/* Price & Currency */}
               <div className="grid grid-cols-3 gap-4">
                 <div className="col-span-2">
-                  <label className={`label ${textClass}`}>Ticket Price</label>
+                  <label className={`label ${textClass} flex items-center gap-2`}>
+                    Ticket Price
+                    <HelpIcon
+                      content="Geben Sie den Ticketpreis ein. Unterstützt verschiedene Währungen."
+                      expandedContent="Der Preis wird zusammen mit der Währung gespeichert. Sie können später nach Preisen filtern und Statistiken anzeigen."
+                      position="top"
+                    />
+                  </label>
                   <input
                     type="number"
                     step="0.01"
@@ -789,7 +851,14 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
 
               {/* Tags */}
               <div>
-                <label className={`label ${textClass}`}>Tags</label>
+                <label className={`label ${textClass} flex items-center gap-2`}>
+                  Tags
+                  <HelpIcon
+                    content="Fügen Sie Tags hinzu, um Flüge später zu kategorisieren und zu filtern (z.B. 'business', 'international')."
+                    expandedContent="Tags werden durch Kommas getrennt. Sie können später nach Tags filtern und Statistiken nach Tags gruppieren. Beispiele: 'business', 'vacation', 'lufthansa', 'long-haul'."
+                    position="top"
+                  />
+                </label>
                 <input
                   type="text"
                   value={tags.join(', ')}
