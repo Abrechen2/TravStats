@@ -18,6 +18,7 @@ import boardingpassParseRoutes from './routes/boardingpassParse';
 import parserFeedbackRoutes from './routes/parserFeedback';
 import setupRoutes from './routes/setup';
 import adminRoutes from './routes/admin';
+import trainingRoutes from './routes/training';
 import { errorHandler } from './middleware/errorHandler';
 import { requestLoggerMiddleware } from './middleware/requestLogger';
 import { prisma } from './db';
@@ -119,6 +120,7 @@ app.use('/api/v1/uploads', uploadsRoutes);
 app.use('/api/v1', emailParseRoutes);
 app.use('/api/v1', boardingpassParseRoutes);
 app.use('/api/v1/parser-feedback', parserFeedbackRoutes);
+app.use('/api/v1/training', trainingRoutes);
 
 // Error handling
 app.use(errorHandler);

@@ -37,6 +37,16 @@ const parserApi = axios.create({
   withCredentials: true,
 });
 
+// Hardware API instance with 35s timeout for hardware info operations
+const hardwareApi = axios.create({
+  baseURL: API_URL ? `${API_URL}/api/v1` : '/api/v1',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  timeout: API_TIMEOUTS.HARDWARE,
+  withCredentials: true,
+});
+
 // Response interceptor for handling 401 errors (expired/invalid tokens)
 // Uses event-based approach to avoid circular dependencies
 const handle401Error = (error: any) => {
@@ -63,6 +73,11 @@ api.interceptors.response.use(
 );
 
 parserApi.interceptors.response.use(
+  (response) => response,
+  handle401Error
+);
+
+hardwareApi.interceptors.response.use(
   (response) => response,
   handle401Error
 );
@@ -145,6 +160,21 @@ export const parseApi = {
         };
       }>;
     }>('/parse-boardingpass/providers');
+    return data;
+  },
+
+  submitParserCorrection: async (correction: {
+    sourceType: 'email' | 'boardingpass';
+    provider: string;
+    originalResult: any[];
+    correctedResult: any[];
+    originalData?: {
+      subject?: string;
+      text?: string;
+      html?: string;
+    };
+  }) => {
+    const { data } = await api.post('/parser-feedback/correction', correction);
     return data;
   },
 };
@@ -301,12 +331,87 @@ export const settingsApi = {
     const { data } = await api.put('/settings/parser', payload);
     return data;
   },
+  getDeveloperMode: async () => {
+    const { data } = await api.get<{
+      enabled: boolean;
+      confirmedAt: string | null;
+    }>('/settings/developer-mode');
+    return data;
+  },
+  updateDeveloperMode: async (payload: { enabled: boolean; confirmed?: boolean }) => {
+    const { data } = await api.put('/settings/developer-mode', payload);
+    return data;
+  },
 };
 
 // Analytics API
 export const analyticsApi = {
   track: async (type: string, payload?: Record<string, any>) => {
     await api.post('/analytics/events', { type, payload });
+  },
+};
+
+// Training API
+export const trainingApi = {
+  upload: async (file: File, type: 'email' | 'boarding_pass') => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('type', type);
+    const { data } = await api.post('/training/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return data;
+  },
+  annotate: async (id: string, annotations: any, extractedData: any[], tags?: string[]) => {
+    const { data } = await api.post(`/training/${id}/annotate`, {
+      annotations,
+      extractedData,
+      tags: tags || [],
+    });
+    return data;
+  },
+  saveAndTrain: async (id: string, annotations: any, extractedData: any[], tags?: string[]) => {
+    const { data } = await api.post(`/training/${id}/save-and-train`, {
+      annotations,
+      extractedData,
+      tags: tags || [],
+    });
+    return data;
+  },
+  trainOnly: async (id: string) => {
+    const { data } = await api.post(`/training/${id}/train-only`);
+    return data;
+  },
+  getById: async (id: string) => {
+    const { data } = await api.get(`/training/${id}`);
+    return data;
+  },
+  getData: async (queryString?: string) => {
+    const url = `/training/data${queryString ? `?${queryString}` : ''}`;
+    const { data } = await api.get<{ trainingData: any[] }>(url);
+    return data;
+  },
+  getJobs: async () => {
+    const { data } = await api.get<{ jobs: any[] }>('/training/jobs');
+    return data;
+  },
+  getJobLogs: async (jobId: string) => {
+    const { data } = await api.get(`/training/jobs/${jobId}/logs`);
+    return data;
+  },
+  triggerTraining: async () => {
+    const { data } = await api.post<{ trainingJobId: string; message: string }>('/training/trigger');
+    return data;
+  },
+  cancelTraining: async (jobId: string) => {
+    const { data } = await api.post<{ message: string }>(`/training/jobs/${jobId}/cancel`);
+    return data;
+  },
+  deleteTrainingData: async (id: string) => {
+    const { data } = await api.delete(`/training/${id}`);
+    return data;
   },
 };
 
@@ -377,6 +482,56 @@ export const adminApi = {
       registrationEnabled: boolean;
       version: string;
     }>('/admin/system/info');
+    return data;
+  },
+
+  getHardwareInfo: async () => {
+    const { data } = await hardwareApi.get<{
+      cpu: {
+        cores: number;
+        model: string;
+        architecture: string;
+        error?: string;
+      };
+      gpu: {
+        available: boolean;
+        count?: number;
+        name?: string;
+        memory?: number;
+        cudaVersion?: string;
+        deviceId?: number;
+        error?: string;
+        reason?: string;
+        diagnosis?: string[];
+        pytorchHasCuda?: boolean;
+        gpuDetected?: boolean;
+        gpuNameDetected?: string;
+        gpus?: Array<{
+          id: number;
+          name: string;
+          memory: number;
+        }>;
+      };
+      python: {
+        available: boolean;
+        version?: string;
+        pytorch?: {
+          available: boolean;
+          version?: string;
+        };
+        error?: string;
+      };
+      docker: boolean;
+      platform?: {
+        system: string;
+        release: string;
+        version: string;
+      };
+      trainingAccess: {
+        accessible: boolean;
+        error?: string;
+      };
+    }>('/admin/system/hardware');
     return data;
   },
 

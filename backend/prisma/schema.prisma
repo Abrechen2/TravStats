@@ -17,6 +17,7 @@ model User {
   passwordHash        String              @map("password_hash")
   isAdmin             Boolean             @default(false) @map("is_admin")
   isActive            Boolean             @default(true) @map("is_active")
+  canTrainLLM         Boolean             @default(false) @map("can_train_llm")
   invitedBy           String?             @map("invited_by")
   createdAt           DateTime            @default(now()) @map("created_at")
   flights             Flight[]
@@ -24,6 +25,7 @@ model User {
   settings            UserSettings?
   analyticsEvents     AnalyticsEvent[]
   createdInvitations  Invitation[]
+  trainingData        TrainingData[]
 
   @@map("users")
 }
@@ -147,6 +149,10 @@ model UserSettings {
   openaiApiKey           String? @map("openai_api_key")
   claudeApiKey           String? @map("claude_api_key")
 
+  // Developer mode settings
+  developerModeEnabled   Boolean  @default(false) @map("developer_mode_enabled")
+  developerModeConfirmedAt DateTime? @map("developer_mode_confirmed_at")
+
   updatedAt DateTime @updatedAt @map("updated_at")
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -239,4 +245,56 @@ model AdminSettings {
   updatedAt             DateTime @updatedAt @map("updated_at")
 
   @@map("admin_settings")
+}
+
+model TrainingData {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  type          String   // "email" | "boarding_pass"
+  originalFile  String   @map("original_file") // Path to uploaded file
+  annotations   Json     // Markierte Bereiche (Text-Selections oder Bounding Boxes)
+  extractedData Json     // Extrahierte Flight-Daten (als Ground Truth)
+  status        String   @default("pending") // "pending" | "trained" | "failed"
+  tags          String[] @default([]) // Tags for filtering and organization
+  trainedAt     DateTime? @map("trained_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([status])
+  @@map("training_data")
+}
+
+model TrainingJob {
+  id            String   @id @default(uuid())
+  status        String   // "pending" | "running" | "completed" | "failed"
+  trainingDataIds String[] @map("training_data_ids") // Array of TrainingData IDs
+  modelName     String   @map("model_name") // z.B. "travstats-custom"
+  startedAt     DateTime? @map("started_at")
+  completedAt   DateTime? @map("completed_at")
+  errorMessage  String?  @map("error_message")
+  logFile       String?  @map("log_file") // Path to detailed log file
+  metrics       Json?    // Training metrics (loss, accuracy, etc.)
+  createdAt     DateTime @default(now()) @map("created_at")
+  
+  logs          TrainingLog[]
+  
+  @@index([status])
+  @@map("training_jobs")
+}
+
+model TrainingLog {
+  id            String   @id @default(uuid())
+  trainingJobId String   @map("training_job_id")
+  level         String   // "info" | "warn" | "error" | "debug"
+  message       String
+  metadata      Json?    // Zusätzliche strukturierte Daten
+  timestamp     DateTime @default(now())
+  
+  trainingJob   TrainingJob @relation(fields: [trainingJobId], references: [id], onDelete: Cascade)
+  
+  @@index([trainingJobId])
+  @@index([timestamp])
+  @@map("training_logs")
 }
