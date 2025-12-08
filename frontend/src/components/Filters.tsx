@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useThemeStore } from '../store/themeStore';
 import { flightsApi } from '../lib/api';
+import HelpIcon from './Help/HelpIcon';
 import type { Flight, FlightFilters } from '../types';
 import { API_LIMITS } from '../lib/constants';
 
@@ -236,8 +237,13 @@ export default function Filters({ onFilterChange }: FiltersProps) {
 
             {/* Zeit-Filter */}
             <div className="mb-4">
-              <h4 className={`text-sm font-semibold mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+              <h4 className={`text-sm font-semibold mb-2 flex items-center gap-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                 📅 Zeitraum
+                <HelpIcon
+                  content="Filtern Sie Flüge nach Jahr und/oder Monat. Wählen Sie ein Jahr und optional einen Monat aus."
+                  expandedContent="Der Zeitraum-Filter zeigt nur Flüge an, die im ausgewählten Zeitraum stattgefunden haben. Sie können nach Jahr allein oder nach Jahr und Monat filtern."
+                  position="right"
+                />
               </h4>
               <select
                 value={yearFilter ?? ''}
@@ -296,8 +302,13 @@ export default function Filters({ onFilterChange }: FiltersProps) {
             {availableAirlines.length > 0 && (
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-2">
-                  <h4 className={`text-sm font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <h4 className={`text-sm font-semibold flex items-center gap-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                     🏢 Airlines
+                    <HelpIcon
+                      content="Filtern Sie Flüge nach Airlines. Sie können mehrere Airlines gleichzeitig auswählen."
+                      expandedContent="Wählen Sie eine oder mehrere Airlines aus, um nur Flüge dieser Airlines anzuzeigen. Klicken Sie auf 'Alle' oder 'Keine', um alle Airlines auszuwählen oder die Auswahl zu löschen."
+                      position="right"
+                    />
                   </h4>
                   <button
                     onClick={toggleAllAirlines}

@@ -36,6 +36,7 @@ try:
         LoraConfig,
         get_peft_model,
         prepare_model_for_kbit_training,
+        PeftModel,
         TaskType
     )
     from datasets import Dataset
@@ -434,7 +435,8 @@ def train_lora(
     num_epochs: int = 3,
     batch_size: int = None,  # Will be auto-determined if None
     learning_rate: float = 2e-4,
-    max_length: int = 2048
+    max_length: int = 2048,
+    previous_model_path: Optional[str] = None
 ):
     """Train LoRA adapter"""
     global _cancellation_requested, _trainer_instance, _output_dir
@@ -450,6 +452,12 @@ def train_lora(
     logger.info(f"Base model: {base_model}")
     logger.info(f"Input: {input_path}")
     logger.info(f"Output: {output_dir}")
+    if previous_model_path:
+        logger.info(f"Continuing training from previous model: {previous_model_path}")
+        if not os.path.exists(previous_model_path):
+            raise ValueError(f"Previous model path does not exist: {previous_model_path}")
+    else:
+        logger.info("Starting new training from base model")
     
     # Load and validate training data
     try:
@@ -682,20 +690,35 @@ def train_lora(
     except Exception as e:
         raise ValueError(f"Unexpected error preparing model for LoRA training: {e}")
     
-    # Configure LoRA
-    lora_config = LoraConfig(
-        task_type=TaskType.CAUSAL_LM,
-        r=lora_rank,
-        lora_alpha=lora_alpha,
-        lora_dropout=lora_dropout,
-        target_modules=["q_proj", "v_proj", "k_proj", "o_proj"],  # Common for LLMs
-        bias="none",
-    )
-    
-    model = get_peft_model(model, lora_config)
-    # Ensure model is in training mode
-    model.train()
-    model.print_trainable_parameters()
+    # Load previous LoRA adapter if continuing training, otherwise create new LoRA config
+    if previous_model_path:
+        logger.info(f"Loading previous LoRA adapter from {previous_model_path}")
+        try:
+            # Load the previous LoRA adapter
+            model = PeftModel.from_pretrained(model, previous_model_path)
+            logger.info("Previous LoRA adapter loaded successfully")
+            # Ensure model is in training mode
+            model.train()
+            model.print_trainable_parameters()
+        except Exception as e:
+            logger.error(f"Failed to load previous LoRA adapter: {e}")
+            raise ValueError(f"Failed to load previous LoRA adapter from {previous_model_path}: {e}")
+    else:
+        # Configure new LoRA adapter
+        logger.info("Creating new LoRA adapter")
+        lora_config = LoraConfig(
+            task_type=TaskType.CAUSAL_LM,
+            r=lora_rank,
+            lora_alpha=lora_alpha,
+            lora_dropout=lora_dropout,
+            target_modules=["q_proj", "v_proj", "k_proj", "o_proj"],  # Common for LLMs
+            bias="none",
+        )
+        
+        model = get_peft_model(model, lora_config)
+        # Ensure model is in training mode
+        model.train()
+        model.print_trainable_parameters()
     
     # Verify that LoRA parameters are trainable
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -941,6 +964,7 @@ def main():
     parser.add_argument("--learning-rate", type=float, default=2e-4, help="Learning rate")
     parser.add_argument("--max-length", type=int, default=2048, help="Max sequence length")
     parser.add_argument("--log-file", help="Path to log file for real-time logging")
+    parser.add_argument("--previous-model-path", default=None, help="Path to previous trained model to continue training from")
     
     args = parser.parse_args()
     
@@ -984,7 +1008,8 @@ def main():
             num_epochs=args.num_epochs,
             batch_size=args.batch_size,
             learning_rate=args.learning_rate,
-            max_length=args.max_length
+            max_length=args.max_length,
+            previous_model_path=args.previous_model_path
         )
         logger.info("Training completed successfully")
         sys.exit(0)

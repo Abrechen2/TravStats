@@ -227,5 +227,8 @@ export interface OnboardingState {
   flightAdded: boolean;
   usedFilter: boolean;
   exported: boolean;
+  mapExplored: boolean;
+  statsViewed: boolean;
+  achievementsViewed: boolean;
   dismissed: boolean;
 }

@@ -26,6 +26,8 @@ export default function BoardingPassAnnotation({ trainingDataId, onComplete, onC
   const [extractedData, setExtractedData] = useState<any>({
     flight: {},
   });
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [imageBase64, setImageBase64] = useState<string>('');
@@ -94,6 +96,10 @@ export default function BoardingPassAnnotation({ trainingDataId, onComplete, onC
         
         if (data.extractedData && Array.isArray(data.extractedData) && data.extractedData.length > 0) {
           setExtractedData({ flight: data.extractedData[0] || {} });
+        }
+        
+        if (data.tags && Array.isArray(data.tags)) {
+          setTags(data.tags);
         }
       } catch (error) {
         logger.error('Failed to load training data:', error);
@@ -286,6 +292,17 @@ export default function BoardingPassAnnotation({ trainingDataId, onComplete, onC
     drawCanvas();
   }, [boundingBoxes, currentBox, image, selectedBoxIndex]);
 
+  const handleAddTag = () => {
+    const clean = tagInput.trim();
+    if (!clean || tags.includes(clean)) return;
+    setTags([...tags, clean]);
+    setTagInput('');
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setTags(tags.filter((t) => t !== tagToRemove));
+  };
+
   const handleSave = async (andTrain: boolean) => {
     setSaving(true);
     try {
@@ -296,9 +313,9 @@ export default function BoardingPassAnnotation({ trainingDataId, onComplete, onC
       };
 
       if (andTrain) {
-        await trainingApi.saveAndTrain(trainingDataId, annotationData, [extractedData.flight]);
+        await trainingApi.saveAndTrain(trainingDataId, annotationData, [extractedData.flight], tags);
       } else {
-        await trainingApi.annotate(trainingDataId, annotationData, [extractedData.flight]);
+        await trainingApi.annotate(trainingDataId, annotationData, [extractedData.flight], tags);
       }
 
       onComplete();
@@ -427,6 +444,55 @@ export default function BoardingPassAnnotation({ trainingDataId, onComplete, onC
             className="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-mono text-sm min-h-[200px]"
             placeholder='{"flight": {"flightNumber": "LH103", ...}}'
           />
+        </div>
+
+        {/* Tags */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Tags
+          </label>
+          <div className="flex gap-2 mb-2">
+            <input
+              type="text"
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddTag();
+                }
+              }}
+              className="input flex-1"
+              placeholder="Tag hinzufügen..."
+            />
+            <button
+              type="button"
+              onClick={handleAddTag}
+              className="btn-secondary whitespace-nowrap"
+            >
+              Tag hinzufügen
+            </button>
+          </div>
+          {tags.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded text-sm"
+                >
+                  {tag}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveTag(tag)}
+                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
+                    aria-label={`Tag ${tag} entfernen`}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="flex gap-3">

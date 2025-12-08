@@ -11,7 +11,9 @@ import Filters from '../components/Filters';
 import ErrorBoundary from '../components/ErrorBoundary';
 import DarkModeToggle from '../components/DarkModeToggle';
 import AchievementPopup from '../components/AchievementPopup';
-import type { Flight, FlightInput, FlightFilters, GeoJSONFeature } from '../types';
+import OnboardingGuide from '../components/Onboarding/OnboardingGuide';
+import HelpIcon from '../components/Help/HelpIcon';
+import type { Flight, FlightInput, FlightFilters, GeoJSONFeature, OnboardingState } from '../types';
 import { useSettingsStore } from '../store/settingsStore';
 import { API_LIMITS, UI_CONFIG, STORAGE_KEYS } from '../lib/constants';
 import { toCsv, escapeHtml, escapeXml, downloadBlob } from '../lib/export';
@@ -34,11 +36,30 @@ export default function DashboardPage() {
   const [navOpen, setNavOpen] = useState(false);
   const [leftOpen, setLeftOpen] = useState(false);
   const [rightOpen, setRightOpen] = useState(false);
-  const [onboarding, setOnboarding] = useState(() => {
+  const [onboarding, setOnboarding] = useState<OnboardingState>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.ONBOARDING_CHECKLIST);
-    return saved
-      ? JSON.parse(saved)
-      : { flightAdded: false, usedFilter: false, exported: false, dismissed: false };
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Ensure all fields exist for backward compatibility
+      return {
+        flightAdded: parsed.flightAdded || false,
+        usedFilter: parsed.usedFilter || false,
+        exported: parsed.exported || false,
+        mapExplored: parsed.mapExplored || false,
+        statsViewed: parsed.statsViewed || false,
+        achievementsViewed: parsed.achievementsViewed || false,
+        dismissed: parsed.dismissed || false,
+      };
+    }
+    return {
+      flightAdded: false,
+      usedFilter: false,
+      exported: false,
+      mapExplored: false,
+      statsViewed: false,
+      achievementsViewed: false,
+      dismissed: false,
+    };
   });
   const settings = useSettingsStore();
   const [newAchievements, setNewAchievements] = useState<any[]>([]);
@@ -65,6 +86,44 @@ export default function DashboardPage() {
   useEffect(() => {
     loadFlights();
   }, [filters]);
+
+  // Auto-detect onboarding steps
+  useEffect(() => {
+    // Check if flights have been added
+    if (totalFlightsCount > 0 && !onboarding.flightAdded) {
+      setOnboarding((prev) => ({ ...prev, flightAdded: true }));
+    }
+
+    // Check if filters are being used
+    const hasActiveFilters = Object.keys(filters).length > 0 && (
+      filters.airlines?.length > 0 ||
+      filters.airports?.length > 0 ||
+      filters.tags?.length > 0 ||
+      filters.dateFrom ||
+      filters.dateTo ||
+      filters.class ||
+      filters.reason
+    );
+    if (hasActiveFilters && !onboarding.usedFilter) {
+      setOnboarding((prev) => ({ ...prev, usedFilter: true }));
+    }
+  }, [totalFlightsCount, filters, onboarding.flightAdded, onboarding.usedFilter]);
+
+  // Detect map exploration (2D/3D toggle or map interaction)
+  const handleMapToggle = () => {
+    setIs3DView((prev) => {
+      const newValue = !prev;
+      if (!onboarding.mapExplored) {
+        setOnboarding((prevOnboarding) => ({ ...prevOnboarding, mapExplored: true }));
+      }
+      return newValue;
+    });
+  };
+
+  // Save onboarding state to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.ONBOARDING_CHECKLIST, JSON.stringify(onboarding));
+  }, [onboarding]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.ONBOARDING_CHECKLIST, JSON.stringify(onboarding));
@@ -202,7 +261,7 @@ export default function DashboardPage() {
 
   const handleFilterChange = (newFilters: FlightFilters) => {
     setFilters(newFilters);
-    setOnboarding((prev: any) => ({ ...prev, usedFilter: true }));
+    setOnboarding((prev) => ({ ...prev, usedFilter: true }));
     if (settings.privacy.analyticsOptIn) {
       analyticsApi.track('filter_applied', { filters: newFilters });
     }
@@ -210,7 +269,7 @@ export default function DashboardPage() {
 
   const handleExport = async (format: 'csv' | 'geojson' | 'pdf' | 'kml') => {
     try {
-      setOnboarding((prev: any) => ({ ...prev, exported: true }));
+      setOnboarding((prev) => ({ ...prev, exported: true }));
       if (settings.privacy.analyticsOptIn) {
         analyticsApi.track('export', { format });
       }
@@ -273,7 +332,9 @@ export default function DashboardPage() {
           const blob = new Blob([csvContent], { type: 'text/csv' });
           downloadBlob(blob, `flights-${new Date().toISOString()}.csv`);
         } else if (format === 'pdf') {
-          // Note: This creates an HTML file, not a PDF. For real PDFs, use a library like jspdf or pdfmake
+          // Note: This creates an HTML file with .pdf extension that can be opened in browsers.
+          // For true PDF generation with proper formatting, consider using a library like jsPDF or pdfmake.
+          // The HTML file can be converted to PDF using browser's print-to-PDF functionality.
           const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -305,7 +366,7 @@ export default function DashboardPage() {
 </body>
 </html>`;
           const blob = new Blob([html], { type: 'text/html' });
-          downloadBlob(blob, `flights-${new Date().toISOString()}.html`);
+          downloadBlob(blob, `flights-${new Date().toISOString()}.pdf`);
         } else if (format === 'kml') {
           const placemarks = data.flights
             .map((f) => {
@@ -607,49 +668,10 @@ export default function DashboardPage() {
 
           {!onboarding.dismissed && (
             <div className="p-4 border-b dark:border-gray-700">
-              <div className="card space-y-2 bg-gradient-to-r from-blue-50 to-amber-50 dark:from-gray-800 dark:to-gray-700">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">Onboarding</p>
-                  </div>
-                  <button
-                    onClick={() => setOnboarding((prev: any) => ({ ...prev, dismissed: true }))}
-                    className="text-gray-500 hover:text-gray-700"
-                  >
-                    ×
-                  </button>
-                </div>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={onboarding.flightAdded}
-                    onChange={(e) => setOnboarding((prev: any) => ({ ...prev, flightAdded: e.target.checked }))}
-                  />
-                  Flug anlegen
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={onboarding.usedFilter}
-                    onChange={(e) => setOnboarding((prev: any) => ({ ...prev, usedFilter: e.target.checked }))}
-                  />
-                  Filter nutzen
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={onboarding.exported}
-                    onChange={(e) => setOnboarding((prev: any) => ({ ...prev, exported: e.target.checked }))}
-                  />
-                  Export testen
-                </label>
-                <button
-                  className="btn-secondary w-full"
-                  onClick={() => navigate('/stats')}
-                >
-                  Guided Tour starten
-                </button>
-              </div>
+              <OnboardingGuide
+                onboarding={onboarding}
+                onUpdate={(updates) => setOnboarding((prev) => ({ ...prev, ...updates }))}
+              />
             </div>
           )}
 
@@ -864,19 +886,20 @@ export default function DashboardPage() {
               </div>
 
               {/* 2D/3D Toggle */}
-              <button
-                onClick={() => setIs3DView((prev) => !prev)}
-                className="
-                  inline-flex items-center gap-2 px-4 py-2
-                  bg-white dark:bg-gray-800
-                  text-gray-800 dark:text-gray-100
-                  border border-gray-300 dark:border-gray-600
-                  rounded-lg shadow-sm
-                  hover:bg-gray-50 dark:hover:bg-gray-700
-                  transition-colors font-semibold text-sm
-                "
-                title={is3DView ? 'Zur 2D-Karte wechseln' : 'Zum 3D-Globus wechseln'}
-              >
+              <div className="inline-flex items-center gap-2">
+                <button
+                  onClick={handleMapToggle}
+                  className="
+                    inline-flex items-center gap-2 px-4 py-2
+                    bg-white dark:bg-gray-800
+                    text-gray-800 dark:text-gray-100
+                    border border-gray-300 dark:border-gray-600
+                    rounded-lg shadow-sm
+                    hover:bg-gray-50 dark:hover:bg-gray-700
+                    transition-colors font-semibold text-sm
+                  "
+                  title={is3DView ? 'Zur 2D-Karte wechseln' : 'Zum 3D-Globus wechseln'}
+                >
                 {is3DView ? (
                   <>
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -902,7 +925,13 @@ export default function DashboardPage() {
                     <span className="hidden sm:inline">3D-Globus</span>
                   </>
                 )}
-              </button>
+                </button>
+                <HelpIcon
+                  content={is3DView ? 'Wechseln Sie zur 2D-Kartenansicht für eine flache, klassische Kartenansicht.' : 'Wechseln Sie zum 3D-Globus für eine interaktive 3D-Ansicht Ihrer Flugrouten.'}
+                  expandedContent="Die 2D-Karte zeigt Ihre Flugrouten auf einer flachen Karte an. Der 3D-Globus bietet eine interaktive 3D-Ansicht, in der Sie die Kugel drehen und zoomen können. Beide Ansichten zeigen Ihre Flugrouten und Airport-Marker an."
+                  position="bottom"
+                />
+              </div>
             </div>
           </div>
 

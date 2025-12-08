@@ -70,4 +70,5 @@ export const STORAGE_KEYS = {
   ONBOARDING_CHECKLIST: 'onboarding-checklist',
   THEME: 'theme',
   USER_SETTINGS: 'user-settings',
+  CONTEXTUAL_HINTS: 'contextual-hints',
 } as const;
