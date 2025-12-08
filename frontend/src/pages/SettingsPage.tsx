@@ -1,9 +1,13 @@
 import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import DarkModeToggle from '../components/DarkModeToggle';
+import InlineHelp from '../components/Help/InlineHelp';
 import { useSettingsStore } from '../store/settingsStore';
 import { useThemeStore } from '../store/themeStore';
 import { useAuthStore } from '../store/authStore';
 import ParserConfiguration from '../components/Settings/ParserConfiguration';
+import { settingsApi } from '../lib/api';
+import { logger } from '../lib/logger';
 
 const timezoneOptions = [
   'Europe/Berlin',
@@ -38,6 +42,36 @@ export default function SettingsPage() {
   } = useSettingsStore();
 
   const { isDarkMode, setDarkMode } = useThemeStore();
+  const [developerModeEnabled, setDeveloperModeEnabled] = useState(false);
+  const [showDeveloperConfirm, setShowDeveloperConfirm] = useState(false);
+  const [loadingDeveloperMode, setLoadingDeveloperMode] = useState(false);
+
+  // Check if user has training access (admin or canTrainLLM)
+  const hasTrainingAccess = user?.isAdmin || (user as any)?.canTrainLLM || false;
+
+  // Load developer mode status
+  useEffect(() => {
+    if (hasTrainingAccess) {
+      settingsApi
+        .getDeveloperMode()
+        .then((data) => {
+          setDeveloperModeEnabled(data.enabled);
+        })
+        .catch((error: any) => {
+          // Handle 403 (forbidden) or 401 (unauthorized) errors gracefully
+          if (error.response?.status === 403 || error.response?.status === 401) {
+            logger.warn('Training access denied or not available:', error);
+            // Don't show error to user, just don't enable developer mode
+            setDeveloperModeEnabled(false);
+          } else {
+            logger.error('Failed to load developer mode status:', error);
+          }
+        });
+    } else {
+      // Reset developer mode if user doesn't have access
+      setDeveloperModeEnabled(false);
+    }
+  }, [hasTrainingAccess]);
 
   const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -51,6 +85,34 @@ export default function SettingsPage() {
     const nextIsDark = !isDarkMode;
     setDarkMode(nextIsDark);
     setDisplay({ theme: nextIsDark ? 'dark' : 'light' });
+  };
+
+  const handleDeveloperModeToggle = () => {
+    if (!developerModeEnabled) {
+      // Show confirmation dialog
+      setShowDeveloperConfirm(true);
+    } else {
+      // Disable directly
+      handleDeveloperModeConfirm(false);
+    }
+  };
+
+  const handleDeveloperModeConfirm = async (enabled: boolean) => {
+    setLoadingDeveloperMode(true);
+    setShowDeveloperConfirm(false);
+
+    try {
+      await settingsApi.updateDeveloperMode({
+        enabled,
+        confirmed: enabled,
+      });
+      setDeveloperModeEnabled(enabled);
+    } catch (error) {
+      logger.error('Failed to update developer mode:', error);
+      alert('Fehler beim Aktualisieren des Developer Mode');
+    } finally {
+      setLoadingDeveloperMode(false);
+    }
   };
 
   return (
@@ -165,6 +227,29 @@ export default function SettingsPage() {
                 {display.theme === 'dark' ? 'Dark Mode aktiv' : 'Light Mode aktiv'}
               </button>
             </div>
+
+            <InlineHelp
+              title="Theme-Einstellungen"
+              category="basic"
+              content={
+                <div className="space-y-2">
+                  <p>
+                    Das Theme bestimmt das Farbschema der Anwendung. Dark Mode ist bei schlechten Lichtverhältnissen angenehmer für die Augen.
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
+                    <li>
+                      <strong>Light Mode:</strong> Helles Farbschema, ideal bei Tageslicht
+                    </li>
+                    <li>
+                      <strong>Dark Mode:</strong> Dunkles Farbschema, reduziert Augenbelastung bei wenig Licht
+                    </li>
+                    <li>
+                      Die Einstellung wird automatisch gespeichert und bleibt bei zukünftigen Besuchen erhalten
+                    </li>
+                  </ul>
+                </div>
+              }
+            />
 
             <div>
               <label className="label">Sprache</label>
@@ -571,6 +656,114 @@ export default function SettingsPage() {
 
         {/* Parser Configuration */}
         <ParserConfiguration />
+
+        {/* Developer Options - Only visible for users with training access */}
+        {hasTrainingAccess && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+              <span>⚙️</span> Developer Options
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
+              Experimentelle Funktionen für LLM-Training und erweiterte Features
+            </p>
+
+            <InlineHelp
+              title="Developer Mode"
+              category="expert"
+              content={
+                <div className="space-y-3">
+                  <p>
+                    Der Developer Mode aktiviert erweiterte Funktionen für das Training von LLM-Modellen.
+                  </p>
+                  <div>
+                    <p className="font-semibold mb-1">Funktionen:</p>
+                    <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
+                      <li>Zugriff auf die Training-Page zum Trainieren von Ollama-Modellen</li>
+                      <li>Upload und Annotation von Trainingsdaten (E-Mails, Boarding Passes)</li>
+                      <li>LoRA-Training mit eigenen Daten</li>
+                      <li>Verbesserung der Parser-Genauigkeit durch Training</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="font-semibold mb-1">Voraussetzungen:</p>
+                    <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
+                      <li>Ollama muss installiert und erreichbar sein</li>
+                      <li>Ausreichend Hardware-Ressourcen (CPU/GPU, RAM)</li>
+                      <li>Mindestens 5 annotierte Trainingsdaten</li>
+                    </ul>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <strong>Hinweis:</strong> Diese Funktion ist experimentell und kann Systemressourcen stark belasten.
+                  </p>
+                </div>
+              }
+            />
+
+            <div className="space-y-4 mt-4">
+              <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
+                    LLM Training Mode
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Aktiviert die Möglichkeit, lokale Ollama LLMs zu trainieren
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={developerModeEnabled}
+                    onChange={handleDeveloperModeToggle}
+                    disabled={loadingDeveloperMode}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+            </div>
+
+            {/* Confirmation Dialog */}
+            {showDeveloperConfirm && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                    ⚠️ Developer Mode aktivieren?
+                  </h3>
+                  <div className="space-y-3 mb-6">
+                    <p className="text-gray-700 dark:text-gray-300">
+                      Diese Funktion ist <strong>experimentell</strong> und sollte nur von erfahrenen Benutzern verwendet werden.
+                    </p>
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                      <p className="text-sm font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
+                        Risiken und Hinweise:
+                      </p>
+                      <ul className="text-sm text-yellow-700 dark:text-yellow-300 space-y-1 list-disc list-inside">
+                        <li>Kann Systemressourcen stark belasten</li>
+                        <li>Erfordert technisches Verständnis</li>
+                        <li>Kann zu unerwarteten Ergebnissen führen</li>
+                        <li>Training kann lange dauern</li>
+                      </ul>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowDeveloperConfirm(false)}
+                      className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                    >
+                      Abbrechen
+                    </button>
+                    <button
+                      onClick={() => handleDeveloperModeConfirm(true)}
+                      className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                    >
+                      Aktivieren
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Admin Panel Link - Only visible for admins */}
         {user?.isAdmin && (

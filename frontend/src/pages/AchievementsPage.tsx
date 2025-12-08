@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { achievementsApi } from '../lib/api';
+import ContextualHint from '../components/Onboarding/ContextualHint';
 import type { Achievement, AchievementSummary, LeaderboardEntry } from '../types';
 import { Link } from 'react-router-dom';
+import { STORAGE_KEYS } from '../lib/constants';
 
 const tierColors = {
   bronze: 'from-amber-700 to-amber-900',
@@ -40,6 +42,14 @@ export default function AchievementsPage() {
   useEffect(() => {
     loadAchievements();
     loadLeaderboard();
+    // Mark achievements as viewed in onboarding
+    const onboarding = JSON.parse(
+      localStorage.getItem(STORAGE_KEYS.ONBOARDING_CHECKLIST) || '{}'
+    );
+    if (!onboarding.achievementsViewed) {
+      onboarding.achievementsViewed = true;
+      localStorage.setItem(STORAGE_KEYS.ONBOARDING_CHECKLIST, JSON.stringify(onboarding));
+    }
   }, []);
 
   const loadAchievements = async () => {
@@ -102,9 +112,16 @@ export default function AchievementsPage() {
   }
 
   if (showLeaderboard) {
-    return (
-      <div className="min-h-screen bg-gray-900 text-white p-6">
-        <div className="max-w-6xl mx-auto">
+  return (
+    <div className="min-h-screen bg-gray-900 text-white p-6">
+      <div className="max-w-6xl mx-auto">
+        <ContextualHint
+          id="achievements-page-hint"
+          title="Willkommen bei den Achievements!"
+          message="Sammeln Sie Achievements, indem Sie Flüge hinzufügen und verschiedene Ziele erreichen. Schauen Sie sich auch das Leaderboard an, um zu sehen, wie Sie im Vergleich zu anderen abschneiden."
+          linkTo="/"
+          linkText="Zurück zum Dashboard"
+        />
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
               <button
@@ -176,6 +193,14 @@ export default function AchievementsPage() {
             ← Dashboard
           </Link>
         </div>
+
+        <ContextualHint
+          id="achievements-page-hint"
+          title="Willkommen bei den Achievements!"
+          message="Sammeln Sie Achievements, indem Sie Flüge hinzufügen und verschiedene Ziele erreichen. Schauen Sie sich auch das Leaderboard an, um zu sehen, wie Sie im Vergleich zu anderen abschneiden."
+          linkTo="/"
+          linkText="Zurück zum Dashboard"
+        />
 
         {/* Summary Stats */}
         {summary && (

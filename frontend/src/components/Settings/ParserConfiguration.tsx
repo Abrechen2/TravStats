@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { parseApi, settingsApi } from '../../lib/api';
+import InlineHelp from '../Help/InlineHelp';
 
 const parserProviderOptions = {
   vision: [
@@ -260,22 +261,40 @@ export default function ParserConfiguration({ className = '' }: ParserConfigurat
       </div>
 
       {/* Help Section */}
-      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
-        <div className="flex items-start gap-3">
-          <svg className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-          </svg>
-          <div className="text-sm text-blue-900 dark:text-blue-100">
-            <p className="font-medium mb-1">Parser Help</p>
-            <ul className="space-y-1 text-xs">
-              <li>• <strong>Auto mode</strong> automatically chooses the best available parser</li>
-              <li>• <strong>Ollama</strong> runs locally (free, but needs good hardware)</li>
-              <li>• <strong>OpenAI/Claude</strong> are cloud-based (paid, but work on any device)</li>
-              <li>• <strong>Tesseract/Regex</strong> are free fallbacks (lower accuracy)</li>
-            </ul>
+      <InlineHelp
+        title="Parser-Konfiguration"
+        category="advanced"
+        content={
+          <div className="space-y-3">
+            <div>
+              <p className="font-semibold mb-1">Parser-Modi:</p>
+              <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
+                <li>
+                  <strong>Auto:</strong> Wählt automatisch den besten verfügbaren Parser
+                </li>
+                <li>
+                  <strong>Ollama:</strong> Läuft lokal (kostenlos, benötigt gute Hardware)
+                </li>
+                <li>
+                  <strong>OpenAI/Claude:</strong> Cloud-basiert (kostenpflichtig, funktioniert auf jedem Gerät)
+                </li>
+                <li>
+                  <strong>Tesseract/Regex:</strong> Kostenlose Fallback-Optionen (niedrigere Genauigkeit)
+                </li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-semibold mb-1">Best Practices:</p>
+              <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
+                <li>Verwenden Sie "Auto" für die beste Balance zwischen Genauigkeit und Kosten</li>
+                <li>Ollama ist ideal, wenn Sie eine GPU haben und lokale Verarbeitung bevorzugen</li>
+                <li>Cloud-Parser sind am genauesten, aber erfordern API-Keys und verursachen Kosten</li>
+                <li>Trainierte Ollama-Modelle (über Training-Page) verbessern die Genauigkeit erheblich</li>
+              </ul>
+            </div>
           </div>
-        </div>
-      </div>
+        }
+      />
     </div>
   );
 }

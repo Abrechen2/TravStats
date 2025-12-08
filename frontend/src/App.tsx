@@ -3,6 +3,7 @@ import { useEffect, useState, Suspense, lazy } from 'react';
 import { useAuthStore } from './store/authStore';
 import { logger } from './lib/logger';
 import { useSettingsStore } from './store/settingsStore';
+import { useThemeStore } from './store/themeStore';
 import ErrorBoundary from './components/ErrorBoundary';
 import { setupApi } from './lib/api';
 
@@ -16,12 +17,25 @@ const AdvancedStatsPage = lazy(() => import('./pages/AdvancedStatsPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const SetupPage = lazy(() => import('./pages/SetupPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
+const TrainingPage = lazy(() => import('./pages/TrainingPage'));
 
 function AppContent() {
   const { user } = useAuthStore();
   const loadRemoteSettings = useSettingsStore((s) => s.loadRemoteSettings);
+  const isDarkMode = useThemeStore((s) => s.isDarkMode);
   const navigate = useNavigate();
   const [setupChecked, setSetupChecked] = useState(false);
+
+  // Ensure theme is applied after store rehydration
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      if (isDarkMode) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+  }, [isDarkMode]);
 
   // Check setup status on app load
   useEffect(() => {
@@ -148,6 +162,10 @@ function AppContent() {
                 ? <AdminPage />
                 : <Navigate to={isAuthenticated ? "/" : "/login"} />
             }
+          />
+          <Route
+            path="/training"
+            element={isAuthenticated ? <TrainingPage /> : <Navigate to="/login" />}
           />
         </Routes>
       </Suspense>

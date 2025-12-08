@@ -84,3 +84,9 @@ backend/eng.traineddata
 
 # Dev scripts
 backend/scripts/test-parser-samples.ts
+
+# Training data and outputs (should not be committed)
+backend/data/training/training-*.jsonl
+backend/data/training/output-*/
+backend/data/training/test-output/
+backend/data/logs/training/

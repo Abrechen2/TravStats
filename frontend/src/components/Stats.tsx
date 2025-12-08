@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { statsApi, flightsApi } from '../lib/api';
+import HelpIcon from './Help/HelpIcon';
 import type { Stats as StatsType, Route, FlightFilters } from '../types';
 import { calculateDistance } from '../lib/geo';
 import { API_LIMITS } from '../lib/constants';
@@ -56,6 +57,10 @@ export default function Stats({ filters = {} }: StatsProps) {
     const flownFlights = flights.filter(f => f.status === 'flown');
     const totalDistance = flownFlights.reduce((sum, f) => {
       // Use accurate Haversine formula for distance calculation
+      // Skip flights with missing coordinates
+      if (f.depLat == null || f.depLon == null || f.arrLat == null || f.arrLon == null) {
+        return sum;
+      }
       const dist = calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon);
       return sum + dist;
     }, 0);
@@ -102,7 +107,14 @@ export default function Stats({ filters = {} }: StatsProps) {
           <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{stats.totalFlights}</p>
         </div>
         <div className="card">
-          <p className="text-sm text-gray-600 dark:text-gray-400">Total Distance</p>
+          <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+            Total Distance
+            <HelpIcon
+              content="Die Gesamtdistanz aller geflogenen Flüge in Kilometern."
+              expandedContent="Berechnet mit der Haversine-Formel basierend auf den Koordinaten der Abflug- und Zielflughäfen. Nur Flüge mit Status 'flown' werden berücksichtigt."
+              position="top"
+            />
+          </div>
           <p className="text-3xl font-bold text-green-600 dark:text-green-400">
             {stats.totalDistance.toLocaleString()} km
           </p>
@@ -114,7 +126,14 @@ export default function Stats({ filters = {} }: StatsProps) {
           </p>
         </div>
         <div className="card">
-          <p className="text-sm text-gray-600 dark:text-gray-400">Total Flight Time</p>
+          <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+            Total Flight Time
+            <HelpIcon
+              content="Die Gesamtflugzeit aller geflogenen Flüge in Stunden."
+              expandedContent="Berechnet als Differenz zwischen Ankunfts- und Abflugzeit. Nur Flüge mit Status 'flown' werden berücksichtigt. Die Zeit wird in Minuten gespeichert und hier in Stunden angezeigt."
+              position="top"
+            />
+          </div>
           <p className="text-3xl font-bold text-orange-600 dark:text-orange-400">
             {Math.round(stats.totalFlightTime / 60)} hrs
           </p>
