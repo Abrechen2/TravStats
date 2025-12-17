@@ -53,19 +53,16 @@ function AppContent() {
       }
     };
 
-    // Only check if not logged in
-    if (!user) {
-      checkSetup();
-    } else {
-      setSetupChecked(true);
-    }
-  }, [user, navigate]);
+    // Always check setup status first
+    checkSetup();
+  }, [navigate]);
 
+  // Load remote settings only after setup check is complete and user is logged in
   useEffect(() => {
-    if (user) {
+    if (setupChecked && user) {
       loadRemoteSettings();
     }
-  }, [user, loadRemoteSettings]);
+  }, [setupChecked, user, loadRemoteSettings]);
 
   // Show loading while checking setup status
   if (!setupChecked) {

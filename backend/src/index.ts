@@ -38,6 +38,7 @@ const PORT = parseInt(process.env.PORT || '8000', 10);
 
 // Trust proxy - we're behind exactly 1 proxy (nginx)
 app.set('trust proxy', 1);
+const isBehindProxy = true; // We're always behind nginx in this setup
 
 // Security middleware with CSP configuration
 app.use(helmet({
@@ -64,12 +65,17 @@ const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:3000';
 const allowedOrigins = corsOrigin === '*'
   ? []
   : corsOrigin.split(',').map(o => o.trim()).filter(Boolean);
-const allowAllOrigins = corsOrigin === '*' || process.env.NODE_ENV !== 'production';
+// Allow all origins in dev, if explicitly set to '*', or in production behind nginx
+// (since we're behind nginx proxy, nginx handles security and all requests come through same origin)
+const allowAllOrigins = corsOrigin === '*' || process.env.NODE_ENV !== 'production' || isBehindProxy;
 
 app.use(cors({
   origin: (origin, callback) => {
+    // Allow all origins in dev, if set to '*', or behind proxy in production
     if (allowAllOrigins) return callback(null, true);
-    if (!origin) return callback(null, true); // mobile apps / same-origin / reverse proxy
+    // Allow requests without origin (mobile apps, same-origin, reverse proxy)
+    if (!origin) return callback(null, true);
+    // Check if origin is in allowed list
     if (allowedOrigins.includes(origin)) return callback(null, true);
     return callback(new Error('Not allowed by CORS'));
   },

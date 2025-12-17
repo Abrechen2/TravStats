@@ -46,7 +46,7 @@
   <Category>Productivity: Status:Stable</Category>
   <WebUI>http://[IP]:[PORT:3000]/</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/Abrechen2/TravStats/main/unraid-template.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/Abrechen2/TravStats/main/AppLogo.png</Icon>
+  <Icon>https://raw.githubusercontent.com/Abrechen2/TravStats/Main/AppLogo.png</Icon>
   <ExtraParams></ExtraParams>
   <PostArgs></PostArgs>
   <CPUset></CPUset>
