@@ -222,6 +222,18 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
       const depAirport = results[0].status === 'fulfilled' ? results[0].value : null;
       const arrAirport = results[1].status === 'fulfilled' ? results[1].value : null;
 
+      // Handle errors: if one airport lookup failed, show warning but continue
+      if (results[0].status === 'rejected' || results[1].status === 'rejected') {
+        const failedAirports: string[] = [];
+        if (results[0].status === 'rejected') {
+          failedAirports.push(flight.departure.iata || 'departure');
+        }
+        if (results[1].status === 'rejected') {
+          failedAirports.push(flight.arrival.iata || 'arrival');
+        }
+        // Don't set error, just log - user can still manually select airports
+      }
+
       if (depAirport) setDeparture(depAirport);
       if (arrAirport) setArrival(arrAirport);
 
