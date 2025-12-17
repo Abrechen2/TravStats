@@ -9,29 +9,38 @@ const router = Router();
 router.get('/status', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userCount = await prisma.user.count();
-    const setupComplete = userCount > 0;
+    const adminCount = await prisma.user.count({
+      where: { isAdmin: true },
+    });
+    
+    // Setup is complete if at least one admin user exists
+    const setupComplete = adminCount > 0;
 
     res.json({
       setupComplete,
       requiresSetup: !setupComplete,
       message: setupComplete
         ? 'Instance is configured'
-        : 'Please create the first admin account',
+        : userCount === 0
+        ? 'Please create the first admin account'
+        : 'Please create an admin account',
     });
   } catch (error) {
     next(error);
   }
 });
 
-// Initialize instance (only works if no users exist)
+// Initialize instance (only works if no admin users exist)
 router.post('/initialize', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { username, password, instanceName } = req.body;
 
-    // Check if setup already completed
-    const userCount = await prisma.user.count();
-    if (userCount > 0) {
-      throw new AppError('Setup already completed', 400);
+    // Check if setup already completed (admin exists)
+    const adminCount = await prisma.user.count({
+      where: { isAdmin: true },
+    });
+    if (adminCount > 0) {
+      throw new AppError('Setup already completed - admin user exists', 400);
     }
 
     // Validate input
