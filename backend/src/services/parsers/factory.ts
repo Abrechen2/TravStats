@@ -210,7 +210,7 @@ export async function getVisionParser(
           context: {
             provider: config.visionProvider,
             fallbackUsed: false,
-            availability: availability.status,
+            availability,
           },
         });
       } else {
@@ -225,7 +225,7 @@ export async function getVisionParser(
         context: {
           provider: config.visionProvider,
           reason: availability.reason,
-          availability: availability.status,
+          availability,
         },
       });
     } else {
@@ -249,7 +249,7 @@ export async function getVisionParser(
           context: {
             provider,
             fallbackUsed,
-            availability: availability.status,
+            availability,
             requestedProvider: config.visionProvider,
           },
         });
@@ -265,7 +265,7 @@ export async function getVisionParser(
         context: {
           provider,
           reason: availability.reason,
-          availability: availability.status,
+          availability,
         },
       });
     } else {
@@ -333,7 +333,7 @@ export async function getTextParser(
           context: {
             provider: config.textProvider,
             fallbackUsed: false,
-            availability: availability.status,
+            availability,
           },
         });
       } else {
@@ -348,7 +348,7 @@ export async function getTextParser(
         context: {
           provider: config.textProvider,
           reason: availability.reason,
-          availability: availability.status,
+          availability,
         },
       });
     } else {
@@ -372,7 +372,7 @@ export async function getTextParser(
           context: {
             provider,
             fallbackUsed,
-            availability: availability.status,
+            availability,
             requestedProvider: config.textProvider,
           },
         });
@@ -388,7 +388,7 @@ export async function getTextParser(
         context: {
           provider,
           reason: availability.reason,
-          availability: availability.status,
+          availability,
         },
       });
     } else {
@@ -561,7 +561,7 @@ export async function parseBoardingPass(
             context: {
               provider,
               reason: availability.reason,
-              availability: availability.status,
+              availability,
             },
           });
         } else {
@@ -579,7 +579,7 @@ export async function parseBoardingPass(
           context: {
             provider,
             imageSize: imageBase64.length,
-            availability: availability.status,
+            availability,
           },
         });
       } else {
@@ -804,7 +804,7 @@ export async function parseEmail(
             context: {
               provider,
               reason: availability.reason,
-              availability: availability.status,
+              availability,
             },
           });
         } else {
@@ -823,7 +823,7 @@ export async function parseEmail(
             provider,
             textLength: text.length,
             htmlLength: html ? html.length : 0,
-            availability: availability.status,
+            availability,
           },
         });
       } else {

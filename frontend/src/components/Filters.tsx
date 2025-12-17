@@ -172,10 +172,12 @@ export default function Filters({ onFilterChange }: FiltersProps) {
   };
 
   const toggleAllAirlines = () => {
-    if (selectedAirlines.length === availableAirlines.length || selectedAirlines.length === 0) {
-      setSelectedAirlines(availableAirlines.map(a => a.name));
-    } else {
+    // If all airlines are selected, deselect all
+    // Otherwise, select all
+    if (selectedAirlines.length === availableAirlines.length) {
       setSelectedAirlines([]);
+    } else {
+      setSelectedAirlines(availableAirlines.map(a => a.name));
     }
   };
 
@@ -314,7 +316,7 @@ export default function Filters({ onFilterChange }: FiltersProps) {
                     onClick={toggleAllAirlines}
                     className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
                   >
-                    {selectedAirlines.length === availableAirlines.length || selectedAirlines.length === 0 ? 'Alle' : 'Keine'}
+                    {selectedAirlines.length === availableAirlines.length ? 'Alle abwählen' : 'Alle auswählen'}
                   </button>
                 </div>
                 <div className={`max-h-32 overflow-y-auto border rounded p-2 ${

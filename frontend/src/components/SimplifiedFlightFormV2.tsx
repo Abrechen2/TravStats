@@ -23,7 +23,7 @@ import type { FlightInput } from '../types';
 import { useSettingsStore } from '../store/settingsStore';
 import { useThemeStore } from '../store/themeStore';
 import { calculateDistance } from '../lib/geo';
-import { storeHistoricalFlightTime } from '../lib/timeEstimation';
+import { storeHistoricalFlightTime, estimateFlightTimes } from '../lib/timeEstimation';
 
 // Konsistente Error Messages (Deutsch)
 const ERROR_MESSAGES = {
@@ -148,21 +148,36 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
     // Only auto-suggest if arrival date hasn't been set yet
     if (departureDate && departureTime && departure && arrival && !arrivalDateSetRef.current) {
       try {
-        // Simple heuristic: ~1 hour per 800km + 30min buffer
-        const distance = calculateDistance(
+        // Use hybrid estimation system (historical data or heuristics)
+        // Assume boarding time is 30 minutes before departure
+        const depDateTime = new Date(`${departureDate}T${departureTime}`);
+        depDateTime.setMinutes(depDateTime.getMinutes() - 30);
+        const boardingTime = `${String(depDateTime.getHours()).padStart(2, '0')}:${String(depDateTime.getMinutes()).padStart(2, '0')}`;
+
+        const estimation = estimateFlightTimes(
+          boardingTime,
+          departureDate,
+          flightNumber || undefined,
+          departure.iata || '',
+          arrival.iata || '',
           departure.lat,
           departure.lon,
           arrival.lat,
           arrival.lon
         );
-        const estimatedHours = Math.max(0.5, distance / 800 + 0.5);
 
-        const depDateTime = new Date(`${departureDate}T${departureTime}`);
-        const arrDateTime = new Date(depDateTime.getTime() + estimatedHours * 60 * 60 * 1000);
-
-        setArrivalDate(arrDateTime.toISOString().split('T')[0]);
-        setArrivalTime(arrDateTime.toTimeString().slice(0, 5));
+        // Set estimated times
+        setArrivalDate(departureDate); // Same day for now (could be next day for long flights)
+        setArrivalTime(estimation.arrivalTime);
         arrivalDateSetRef.current = true;
+
+        // Set warning to show user that times are estimated
+        setTimeEstimationWarning({
+          show: true,
+          source: estimation.source,
+          confidence: estimation.confidence,
+          sampleCount: estimation.sampleCount,
+        });
       } catch (err) {
         // If calculation fails, use same day + 2 hours as fallback
         const depDateTime = new Date(`${departureDate}T${departureTime}`);
@@ -170,9 +185,16 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
         setArrivalDate(arrDateTime.toISOString().split('T')[0]);
         setArrivalTime(arrDateTime.toTimeString().slice(0, 5));
         arrivalDateSetRef.current = true;
+
+        // Set warning for fallback estimation
+        setTimeEstimationWarning({
+          show: true,
+          source: 'heuristic',
+          confidence: 'low',
+        });
       }
     }
-  }, [departureDate, departureTime, departure, arrival]);
+  }, [departureDate, departureTime, departure, arrival, flightNumber]);
 
   // Flight Lookup Handler
   const handleFlightLookup = async () => {
@@ -346,6 +368,9 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
           departureDate
         );
       }
+
+      // Clear time estimation warning after successful submit
+      setTimeEstimationWarning(null);
 
       await onSubmit({
         departure: {

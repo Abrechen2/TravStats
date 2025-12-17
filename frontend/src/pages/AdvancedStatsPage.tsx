@@ -141,12 +141,19 @@ export default function AdvancedStatsPage() {
   const avgFlightDuration = flights.length > 0 ? totalFlightTime / flights.length : 0;
 
   // Longest and shortest flights
-  const flightDurations = flights.map(f => ({
-    flight: f,
-    duration: calculateDuration(f.departureTime, f.arrivalTime)
-  }));
-  const longestFlight = flightDurations.length > 0 ? flightDurations.sort((a, b) => b.duration - a.duration)[0] : undefined;
-  const shortestFlight = flightDurations.length > 0 ? flightDurations.sort((a, b) => a.duration - b.duration)[0] : undefined;
+  const flightDurations = flights
+    .map(f => ({
+      flight: f,
+      duration: calculateDuration(f.departureTime, f.arrivalTime)
+    }))
+    .filter(fd => !isNaN(fd.duration) && fd.duration > 0); // Filter out invalid durations
+  
+  const longestFlight = flightDurations.length > 0 
+    ? flightDurations.sort((a, b) => b.duration - a.duration)[0] 
+    : undefined;
+  const shortestFlight = flightDurations.length > 0 
+    ? flightDurations.sort((a, b) => a.duration - b.duration)[0] 
+    : undefined;
 
   // Distance calculations
   const flightDistances = flights.map(f => {
@@ -404,55 +411,69 @@ export default function AdvancedStatsPage() {
           )}
 
           {/* Seasonal Patterns and Weekday Analysis */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            {/* Seasonal Pattern */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-200 dark:border-gray-700">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                Saisonale Muster
-              </h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={seasonalData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="month" stroke="#9ca3af" />
-                  <YAxis stroke="#9ca3af" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#1f2937',
-                      border: '1px solid #374151',
-                      borderRadius: '0.5rem',
-                      color: '#fff',
-                    }}
-                  />
-                  <Legend />
-                  <Bar dataKey="flights" fill="#f59e0b" name="Flüge" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+          {flights.length > 0 && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              {/* Seasonal Pattern */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                  Saisonale Muster
+                </h3>
+                {seasonalData.some(d => d.flights > 0) ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={seasonalData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                      <XAxis dataKey="month" stroke="#9ca3af" />
+                      <YAxis stroke="#9ca3af" />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#1f2937',
+                          border: '1px solid #374151',
+                          borderRadius: '0.5rem',
+                          color: '#fff',
+                        }}
+                      />
+                      <Legend />
+                      <Bar dataKey="flights" fill="#f59e0b" name="Flüge" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-[300px] text-gray-500 dark:text-gray-400">
+                    <p>Keine Daten verfügbar</p>
+                  </div>
+                )}
+              </div>
 
-            {/* Weekday Analysis */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-200 dark:border-gray-700">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                Wochentags-Analyse
-              </h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={weekdayData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="day" stroke="#9ca3af" />
-                  <YAxis stroke="#9ca3af" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#1f2937',
-                      border: '1px solid #374151',
-                      borderRadius: '0.5rem',
-                      color: '#fff',
-                    }}
-                  />
-                  <Legend />
-                  <Bar dataKey="flights" fill="#8b5cf6" name="Flüge" />
-                </BarChart>
-              </ResponsiveContainer>
+              {/* Weekday Analysis */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                  Wochentags-Analyse
+                </h3>
+                {weekdayData.some(d => d.flights > 0) ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={weekdayData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                      <XAxis dataKey="day" stroke="#9ca3af" />
+                      <YAxis stroke="#9ca3af" />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#1f2937',
+                          border: '1px solid #374151',
+                          borderRadius: '0.5rem',
+                          color: '#fff',
+                        }}
+                      />
+                      <Legend />
+                      <Bar dataKey="flights" fill="#8b5cf6" name="Flüge" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-[300px] text-gray-500 dark:text-gray-400">
+                    <p>Keine Daten verfügbar</p>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Calendar Views Section */}
@@ -728,7 +749,7 @@ export default function AdvancedStatsPage() {
         </div>
 
         {/* Longest/Shortest Flights */}
-        {longestFlight && shortestFlight && (
+        {longestFlight && shortestFlight && longestFlight.flight && shortestFlight.flight && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
@@ -736,15 +757,15 @@ export default function AdvancedStatsPage() {
               </h2>
               <div className="space-y-2">
                 <p className="text-gray-900 dark:text-white">
-                  <span className="font-medium">{longestFlight.flight.airline}</span>{' '}
-                  {longestFlight.flight.flightNumber}
+                  <span className="font-medium">{longestFlight.flight.airline || 'Unbekannt'}</span>{' '}
+                  {longestFlight.flight.flightNumber || ''}
                 </p>
                 <p className="text-gray-600 dark:text-gray-300">
-                  {longestFlight.flight.depIata || longestFlight.flight.depIcao} →{' '}
-                  {longestFlight.flight.arrIata || longestFlight.flight.arrIcao}
+                  {longestFlight.flight.depIata || longestFlight.flight.depIcao || 'N/A'} →{' '}
+                  {longestFlight.flight.arrIata || longestFlight.flight.arrIcao || 'N/A'}
                 </p>
                 <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                  {longestFlight.duration.toFixed(1)}h
+                  {longestFlight.duration?.toFixed(1) || '0.0'}h
                 </p>
               </div>
             </div>
@@ -755,15 +776,15 @@ export default function AdvancedStatsPage() {
               </h2>
               <div className="space-y-2">
                 <p className="text-gray-900 dark:text-white">
-                  <span className="font-medium">{shortestFlight.flight.airline}</span>{' '}
-                  {shortestFlight.flight.flightNumber}
+                  <span className="font-medium">{shortestFlight.flight.airline || 'Unbekannt'}</span>{' '}
+                  {shortestFlight.flight.flightNumber || ''}
                 </p>
                 <p className="text-gray-600 dark:text-gray-300">
-                  {shortestFlight.flight.depIata || shortestFlight.flight.depIcao} →{' '}
-                  {shortestFlight.flight.arrIata || shortestFlight.flight.arrIcao}
+                  {shortestFlight.flight.depIata || shortestFlight.flight.depIcao || 'N/A'} →{' '}
+                  {shortestFlight.flight.arrIata || shortestFlight.flight.arrIcao || 'N/A'}
                 </p>
                 <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                  {shortestFlight.duration.toFixed(1)}h
+                  {shortestFlight.duration?.toFixed(1) || '0.0'}h
                 </p>
               </div>
             </div>

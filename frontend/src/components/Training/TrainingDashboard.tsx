@@ -24,7 +24,7 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   const [jobLogs, setJobLogs] = useState<Record<string, JobLogs>>({});
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingIntervalRef = useRef<number | null>(null);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [cancelJobId, setCancelJobId] = useState<string | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -41,15 +41,6 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
     search?: string;
   }>({});
   
-  // Memoize filters string to prevent unnecessary re-renders
-  const filtersKey = useMemo(() => {
-    return JSON.stringify({
-      status: filters.status || '',
-      type: filters.type || '',
-      tags: (filters.tags || []).sort().join(','),
-      search: filters.search || '',
-    });
-  }, [filters.status, filters.type, filters.tags, filters.search]);
   
   const [filteredTrainingData, setFilteredTrainingData] = useState<any[]>([]);
   const [viewMode, setViewMode] = useState<'list' | 'table'>('list');
@@ -82,7 +73,6 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
       if (filters.search) queryParams.append('search', filters.search);
 
       const queryString = queryParams.toString();
-      const dataUrl = `/training/data${queryString ? `?${queryString}` : ''}`;
 
       const [dataResult, jobsResult] = await Promise.all([
         trainingApi.getData(queryString),

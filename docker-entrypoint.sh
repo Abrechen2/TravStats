@@ -3,6 +3,29 @@ set -e
 
 echo "[entrypoint] Starting TravStats..."
 
+# Ensure data directory structure exists with proper permissions
+echo "[entrypoint] Ensuring data directory structure..."
+# Create directories if they don't exist
+mkdir -p /app/data/logs 2>/dev/null || echo "[entrypoint] Warning: Could not create /app/data/logs (may be permission issue)"
+
+# Get node user UID/GID (usually 1000:1000 in node images)
+NODE_UID=$(id -u node 2>/dev/null || echo "1000")
+NODE_GID=$(id -g node 2>/dev/null || echo "1000")
+
+# Try to set ownership and permissions (may fail if volume is mounted from host with different permissions)
+# This works if we have write access to the parent directory
+if [ -w /app/data ] 2>/dev/null; then
+    echo "[entrypoint] Setting permissions for /app/data..."
+    chown -R ${NODE_UID}:${NODE_GID} /app/data 2>/dev/null || true
+    chmod -R 755 /app/data 2>/dev/null || true
+    # Ensure logs directory is writable
+    chmod 777 /app/data/logs 2>/dev/null || true
+    echo "[entrypoint] Permissions set successfully"
+else
+    echo "[entrypoint] Warning: Cannot write to /app/data (volume may be mounted from host)"
+    echo "[entrypoint] Logging to files may be disabled - using console only"
+fi
+
 # Auto-generate JWT_SECRET if not set
 if [ -z "$JWT_SECRET" ]; then
     JWT_SECRET_FILE="/app/data/jwt_secret"
@@ -26,8 +49,16 @@ if [ -n "$DATABASE_URL" ]; then
     echo "[entrypoint] Waiting for database..."
 
     # Extract host and port from DATABASE_URL (format: postgresql://user:pass@host:port/database)
-    DB_HOST=$(echo "$DATABASE_URL" | sed -e 's|.*@\(.*\):.*|\1|')
-    DB_PORT=$(echo "$DATABASE_URL" | sed -e 's|.*:\([0-9]*\)/.*|\1|')
+    # Handle both IP addresses and hostnames
+    DB_HOST=$(echo "$DATABASE_URL" | sed -e 's|.*@\([^:]*\):.*|\1|' | sed -e 's|/.*||')
+    DB_PORT=$(echo "$DATABASE_URL" | sed -e 's|.*:\([0-9]*\)/.*|\1|' | sed -e 's|/.*||')
+    
+    # Fallback to default port if extraction failed
+    if [ -z "$DB_PORT" ] || [ "$DB_PORT" = "$DATABASE_URL" ]; then
+        DB_PORT="5432"
+    fi
+
+    echo "[entrypoint] Connecting to database at $DB_HOST:$DB_PORT..."
 
     max_retries=30
     retry_count=0
@@ -39,19 +70,29 @@ if [ -n "$DATABASE_URL" ]; then
     done
 
     if [ $retry_count -eq $max_retries ]; then
-        echo "[entrypoint] Database connection timeout"
+        echo "[entrypoint] ❌ Database connection timeout after $max_retries attempts"
+        echo "[entrypoint] Please check:"
+        echo "[entrypoint]   1. Database container is running"
+        echo "[entrypoint]   2. DATABASE_URL is correct: $DATABASE_URL"
+        echo "[entrypoint]   3. Network connectivity to $DB_HOST:$DB_PORT"
         exit 1
     fi
 
-    echo "[entrypoint] Database is ready"
+    echo "[entrypoint] ✅ Database is ready"
+else
+    echo "[entrypoint] ⚠️  Warning: DATABASE_URL not set, skipping database wait"
 fi
 
 # Run database migrations
 cd /app/backend
 echo "[entrypoint] Running database migrations..."
-npx prisma migrate deploy || {
-    echo "[entrypoint] Migration failed (continuing, maybe first run)"
-}
+if npx prisma migrate deploy; then
+    echo "[entrypoint] ✅ Migrations applied successfully"
+else
+    echo "[entrypoint] ⚠️  Migration failed or database not ready"
+    echo "[entrypoint] This may be normal on first run - migrations will retry on next start"
+    # Don't exit - let the application try to connect and show better error messages
+fi
 
 # Essential seeds - always run (idempotent)
 echo "[entrypoint] Seeding achievements..."

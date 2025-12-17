@@ -41,7 +41,7 @@ router.post('/parse-email', authenticate, async (req: AuthRequest, res: Response
 
     // Get user and admin settings for parser configuration (with decrypted API keys)
     const { getUserParserSettings, getAdminParserSettings } = await import('../services/parserSettings');
-    const userSettings = await getUserParserSettings(userId);
+    const userSettings = userId ? await getUserParserSettings(userId) : null;
     const adminSettings = await getAdminParserSettings();
 
     const result = await parseBookingEmail(
@@ -162,7 +162,7 @@ router.post(
 
       // Get user and admin settings for parser configuration (with decrypted API keys)
       const { getUserParserSettings, getAdminParserSettings } = await import('../services/parserSettings');
-      const userSettings = await getUserParserSettings(userId);
+      const userSettings = userId ? await getUserParserSettings(userId) : null;
       const adminSettings = await getAdminParserSettings();
 
       // Parse email with configured parser
