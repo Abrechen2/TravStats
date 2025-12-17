@@ -3,7 +3,7 @@ import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { AppError } from '../middleware/errorHandler';
 import crypto from 'crypto';
-import { decryptApiKey } from '../utils/encryption';
+import { decryptApiKey, encryptApiKey } from '../utils/encryption';
 import {
   getLoggingConfig,
   updateLoggingConfig,

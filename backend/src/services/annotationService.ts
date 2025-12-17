@@ -1,4 +1,4 @@
-import { ParsedBooking } from '../bookingParser';
+import { ParsedBooking } from './bookingParser';
 import logger from '../utils/logger';
 
 export interface TextSelection {

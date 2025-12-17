@@ -64,13 +64,17 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Startup script
 COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
+# Fix line endings (CRLF -> LF) and make executable
+RUN sed -i 's/\r$//' /docker-entrypoint.sh && \
+    chmod +x /docker-entrypoint.sh
 
 # Create data directory for persistent config (JWT secret, etc.)
-RUN mkdir -p /app/data && \
+# Note: When /app/data is mounted as a volume, these permissions may be overridden by host
+RUN mkdir -p /app/data/logs && \
     mkdir -p /var/log/supervisor /var/log/nginx /var/lib/nginx && \
     chown -R www-data:www-data /var/log/nginx /var/lib/nginx && \
-    chown -R node:node /app
+    chown -R node:node /app && \
+    chmod -R 755 /app/data
 
 # Volume for persistent data (JWT secret, future configs)
 VOLUME ["/app/data"]

@@ -1,7 +1,7 @@
 import { prisma } from '../db';
 import logger from '../utils/logger';
 import { createTrainingExample, Annotation } from './annotationService';
-import { ParsedBooking } from '../bookingParser';
+import { ParsedBooking } from './bookingParser';
 import { getHardwareInfo } from './hardwareService';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -937,7 +937,7 @@ export async function cancelTraining(trainingJobId: string): Promise<void> {
             const pids = execSync(`pgrep -f "trainLora.py.*${trainingJobId}"`, { encoding: 'utf-8' })
               .trim()
               .split('\n')
-              .filter(pid => pid.trim());
+              .filter((pid: string) => pid.trim());
             
             for (const pid of pids) {
               try {
@@ -1025,7 +1025,11 @@ export async function cleanupStaleJobs(): Promise<void> {
       }
     }
   } catch (error) {
-    logger.error('Failed to cleanup stale jobs:', error);
+    logger.error({
+      operation: 'cleanup_stale_jobs_error',
+      message: 'Failed to cleanup stale jobs',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
   }
 }
 

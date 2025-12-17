@@ -119,21 +119,47 @@ const streams: pino.StreamEntry[] = [
 try {
   // Ensure log directory exists
   const fs = require('fs');
-  if (!fs.existsSync(LOG_DIR)) {
-    fs.mkdirSync(LOG_DIR, { recursive: true, mode: 0o755 });
+  try {
+    if (!fs.existsSync(LOG_DIR)) {
+      fs.mkdirSync(LOG_DIR, { recursive: true, mode: 0o755 });
+    }
+  } catch (mkdirError: any) {
+    // If directory creation fails (e.g., permission denied), log warning but continue
+    // The application will still work with console-only logging
+    console.warn(`Could not create log directory ${LOG_DIR}:`, mkdirError?.message || mkdirError);
+    console.warn('Logging to files disabled - using console only');
+    // Don't throw - allow application to continue with console logging
   }
 
-  // App log (all levels) - always enabled
-  streams.push({
-    level: 'trace',
-    stream: createRotatingStream('app'),
-  });
+  // Only add file streams if directory exists and is writable
+  if (fs.existsSync(LOG_DIR)) {
+    try {
+      // Test write permissions by creating a test file
+      const testFile = require('path').join(LOG_DIR, '.write-test');
+      try {
+        fs.writeFileSync(testFile, 'test');
+        fs.unlinkSync(testFile);
+      } catch {
+        // Directory exists but not writable - skip file streams
+        throw new Error('Log directory is not writable');
+      }
 
-  // Error log (errors only) - always enabled
-  streams.push({
-    level: 'error',
-    stream: createRotatingStream('error'),
-  });
+      // App log (all levels) - always enabled
+      streams.push({
+        level: 'trace',
+        stream: createRotatingStream('app'),
+      });
+
+      // Error log (errors only) - always enabled
+      streams.push({
+        level: 'error',
+        stream: createRotatingStream('error'),
+      });
+    } catch (streamError: any) {
+      console.warn('Could not create log file streams:', streamError?.message || streamError);
+      console.warn('Logging to files disabled - using console only');
+    }
+  }
 
   // Category-specific logs will be added dynamically via initializeCategoryStreams()
 } catch (error) {
@@ -155,8 +181,19 @@ export async function initializeCategoryStreams(): Promise<void> {
     const fs = require('fs');
     
     // Ensure log directory exists
+    try {
+      if (!fs.existsSync(LOG_DIR)) {
+        fs.mkdirSync(LOG_DIR, { recursive: true, mode: 0o755 });
+      }
+    } catch (mkdirError: any) {
+      // If directory creation fails, skip category streams
+      console.warn(`Could not create log directory ${LOG_DIR}:`, mkdirError?.message || mkdirError);
+      return;
+    }
+
+    // Only proceed if directory exists and is writable
     if (!fs.existsSync(LOG_DIR)) {
-      fs.mkdirSync(LOG_DIR, { recursive: true, mode: 0o755 });
+      return;
     }
 
     // Clear existing category streams

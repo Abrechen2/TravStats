@@ -181,8 +181,6 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
     }
 
     const container = textContainerRef.current;
-    const selectedTextStr = selection.toString();
-    const fullText = container.textContent || '';
     
     // Finde die Positionen im ursprünglichen Text
     // Suche nach dem ersten Vorkommen des ausgewählten Textes

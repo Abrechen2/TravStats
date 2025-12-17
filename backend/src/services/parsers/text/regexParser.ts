@@ -258,11 +258,13 @@ export class RegexTextParser implements ITextParser {
         
         // Try to find route for this flight (use airport pairs in order)
         if (airportPairs.length > i) {
-          flightData.departureCode = airportPairs[i].departure && this.isValidIATACode(airportPairs[i].departure) 
-            ? airportPairs[i].departure 
+          const departure = airportPairs[i].departure;
+          const arrival = airportPairs[i].arrival;
+          flightData.departureCode = departure && this.isValidIATACode(departure) 
+            ? departure 
             : undefined;
-          flightData.arrivalCode = airportPairs[i].arrival && this.isValidIATACode(airportPairs[i].arrival)
-            ? airportPairs[i].arrival
+          flightData.arrivalCode = arrival && this.isValidIATACode(arrival)
+            ? arrival
             : undefined;
         }
         

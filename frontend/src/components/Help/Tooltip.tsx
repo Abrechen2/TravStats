@@ -56,7 +56,7 @@ export default function Tooltip({
       <div
         ref={triggerRef}
         onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsExpanded ? undefined : () => setIsHovered(false)}
+        onMouseLeave={() => !isExpanded && setIsHovered(false)}
         onClick={handleClick}
         className="cursor-help"
       >

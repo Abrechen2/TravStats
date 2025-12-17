@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <Container version="2">
   <Name>TravStats</Name>
-  <Repository>ghcr.io/abrechen2/travstats:latest</Repository>
-  <Registry>https://ghcr.io</Registry>
+  <Repository>abrechen2/travstats:latest</Repository>
+  <Registry>https://hub.docker.com</Registry>
   <Network>bridge</Network>
   <Privileged>false</Privileged>
   <Support>https://github.com/Abrechen2/TravStats/issues</Support>
@@ -80,6 +80,16 @@
     - AirLabs API Key (free tier: 1000 req/month)
       Get at: https://airlabs.co/
 
+    🤖 OPTIONAL: Ollama LLM Server
+    ===============================
+    For AI-powered email parsing, install Ollama:
+    - Search for "ollama" in Community Apps
+    - Container Name: ollama (or travstats-ollama)
+    - Port: 11434 (internal, no mapping needed)
+    - Volume: /mnt/user/appdata/ollama → /root/.ollama
+    - Set "Ollama URL" in TravStats config to: http://ollama:11434
+    - Models will auto-download on first use (~2-4GB per model)
+
     📚 Full documentation:
     https://github.com/Abrechen2/TravStats/blob/main/README.md
   </Requires>
@@ -104,6 +114,24 @@
   <Config Name="Cookie Secure Flag" Target="COOKIE_SECURE" Default="false" Mode="" Description="Set to 'false' for HTTP access (no SSL). Set to 'true' only if using HTTPS reverse proxy." Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
 
   <Config Name="Backend Port" Target="PORT" Default="8000" Mode="" Description="Internal backend API port. Do not change." Type="Variable" Display="advanced" Required="false" Mask="false">8000</Config>
+
+  <Config Name="Instance Name" Target="INSTANCE_NAME" Default="TravStats" Mode="" Description="Display name for your TravStats instance (shown in UI)" Type="Variable" Display="normal" Required="false" Mask="false">TravStats</Config>
+
+  <Config Name="Max Users" Target="MAX_USERS" Default="10" Mode="" Description="Maximum number of user accounts allowed. Set to 0 for unlimited." Type="Variable" Display="normal" Required="false" Mask="false">10</Config>
+
+  <Config Name="Allow Registration" Target="ALLOW_REGISTRATION" Default="false" Mode="" Description="Allow new users to register accounts. Set to 'true' to enable public registration." Type="Variable" Display="normal" Required="false" Mask="false">false</Config>
+
+  <Config Name="Frontend URL" Target="FRONTEND_URL" Default="http://localhost:3000" Mode="" Description="Public URL of your TravStats instance (for email links, etc.). Update with your actual domain/IP and port." Type="Variable" Display="normal" Required="false" Mask="false">http://localhost:3000</Config>
+
+  <Config Name="CORS Origin" Target="CORS_ORIGIN" Default="http://localhost:3000" Mode="" Description="Allowed CORS origins (comma-separated). Update with your actual frontend URL(s)." Type="Variable" Display="advanced" Required="false" Mask="false">http://localhost:3000</Config>
+
+  <Config Name="JWT Expires In" Target="JWT_EXPIRES_IN" Default="7d" Mode="" Description="JWT token expiration time (e.g., '7d', '24h', '30m')" Type="Variable" Display="advanced" Required="false" Mask="false">7d</Config>
+
+  <Config Name="Ollama URL" Target="OLLAMA_URL" Default="http://ollama:11434" Mode="" Description="Optional: Ollama LLM server URL for AI-powered email parsing. Requires separate Ollama container." Type="Variable" Display="advanced" Required="false" Mask="false">http://ollama:11434</Config>
+
+  <Config Name="Ollama Model" Target="OLLAMA_MODEL" Default="llama3.2:3b" Mode="" Description="Optional: Ollama model name for text parsing (e.g., 'llama3.2:3b', 'llama3.2:1b')" Type="Variable" Display="advanced" Required="false" Mask="false">llama3.2:3b</Config>
+
+  <Config Name="Use LLM Parser" Target="USE_LLM_PARSER" Default="true" Mode="" Description="Enable AI-powered email parsing using Ollama. Requires Ollama container and model download." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
 
   <Changes>
     ### Version 1.0.0 (2025-01-24)

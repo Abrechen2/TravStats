@@ -7,6 +7,7 @@ import { useThemeStore } from '../store/themeStore';
 import { useAuthStore } from '../store/authStore';
 import ParserConfiguration from '../components/Settings/ParserConfiguration';
 import { settingsApi } from '../lib/api';
+import { useToastStore } from '../store/toastStore';
 import { logger } from '../lib/logger';
 
 const timezoneOptions = [
@@ -42,9 +43,20 @@ export default function SettingsPage() {
   } = useSettingsStore();
 
   const { isDarkMode, setDarkMode } = useThemeStore();
+  const addToast = useToastStore((state) => state.addToast);
   const [developerModeEnabled, setDeveloperModeEnabled] = useState(false);
   const [showDeveloperConfirm, setShowDeveloperConfirm] = useState(false);
   const [loadingDeveloperMode, setLoadingDeveloperMode] = useState(false);
+  const [uploadingProfilePicture, setUploadingProfilePicture] = useState(false);
+  // Password change functionality - commented out as UI is not yet implemented
+  // const [changingPassword, setChangingPassword] = useState(false);
+  // const [showPasswordModal, setShowPasswordModal] = useState(false);
+  // const [passwordForm, setPasswordForm] = useState({
+  //   oldPassword: '',
+  //   newPassword: '',
+  //   confirmPassword: '',
+  // });
+  // const handlePasswordChange = async () => { ... };
 
   // Check if user has training access (admin or canTrainLLM)
   const hasTrainingAccess = user?.isAdmin || (user as any)?.canTrainLLM || false;
@@ -73,12 +85,40 @@ export default function SettingsPage() {
     }
   }, [hasTrainingAccess]);
 
-  const handleAvatarUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const url = URL.createObjectURL(file);
-    setProfile({ profilePicture: url });
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      addToast('error', 'Bitte wählen Sie eine Bilddatei aus');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      addToast('error', 'Bilddatei ist zu groß (max. 5MB)');
+      return;
+    }
+
+    setUploadingProfilePicture(true);
+    try {
+      const result = await settingsApi.uploadProfilePicture(file);
+      setProfile({ profilePicture: result.profilePictureUrl });
+      addToast('success', 'Profilbild erfolgreich hochgeladen');
+    } catch (error: any) {
+      logger.error('Failed to upload profile picture:', error);
+      addToast('error', error.response?.data?.error || 'Fehler beim Hochladen des Profilbilds');
+      // Fallback: show local preview
+      const url = URL.createObjectURL(file);
+      setProfile({ profilePicture: url });
+    } finally {
+      setUploadingProfilePicture(false);
+      // Reset input
+      if (event.target) {
+        event.target.value = '';
+      }
+    }
   };
 
   const handleThemeToggle = () => {
@@ -144,12 +184,13 @@ export default function SettingsPage() {
                   Passe Benutzername, Kontaktinformationen und dein Profilbild an.
                 </p>
               </div>
-              <button
-                onClick={() => alert('Passwort-Änderung wird bald unterstützt.')}
+              {/* Password change button - functionality not yet implemented */}
+              {/* <button
+                onClick={() => setShowPasswordModal(true)}
                 className="btn-secondary"
               >
                 Passwort ändern
-              </button>
+              </button> */}
             </div>
 
             <div className="flex items-center gap-4">
@@ -170,6 +211,7 @@ export default function SettingsPage() {
                   type="file"
                   accept="image/*"
                   onChange={handleAvatarUpload}
+                  disabled={uploadingProfilePicture}
                   className="text-sm text-gray-600 dark:text-gray-300"
                 />
               </div>

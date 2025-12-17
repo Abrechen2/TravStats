@@ -4,7 +4,7 @@
  * In development, all logs are shown
  */
 
-const isDevelopment = import.meta.env.DEV;
+const isDevelopment = import.meta.env?.DEV ?? import.meta.env?.MODE === 'development';
 
 export const logger = {
   debug: (...args: any[]) => {
