@@ -6,7 +6,7 @@ import { useSettingsStore } from '../store/settingsStore';
 import { useThemeStore } from '../store/themeStore';
 import { useAuthStore } from '../store/authStore';
 import ParserConfiguration from '../components/Settings/ParserConfiguration';
-import { settingsApi } from '../lib/api';
+import { settingsApi, authApi } from '../lib/api';
 import { useToastStore } from '../store/toastStore';
 import { logger } from '../lib/logger';
 
@@ -48,15 +48,14 @@ export default function SettingsPage() {
   const [showDeveloperConfirm, setShowDeveloperConfirm] = useState(false);
   const [loadingDeveloperMode, setLoadingDeveloperMode] = useState(false);
   const [uploadingProfilePicture, setUploadingProfilePicture] = useState(false);
-  // Password change functionality - commented out as UI is not yet implemented
-  // const [changingPassword, setChangingPassword] = useState(false);
-  // const [showPasswordModal, setShowPasswordModal] = useState(false);
-  // const [passwordForm, setPasswordForm] = useState({
-  //   oldPassword: '',
-  //   newPassword: '',
-  //   confirmPassword: '',
-  // });
-  // const handlePasswordChange = async () => { ... };
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    oldPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [passwordError, setPasswordError] = useState('');
 
   // Check if user has training access (admin or canTrainLLM)
   const hasTrainingAccess = user?.isAdmin || (user as any)?.canTrainLLM || false;
@@ -155,6 +154,49 @@ export default function SettingsPage() {
     }
   };
 
+  const handlePasswordChange = async () => {
+    setPasswordError('');
+
+    // Validation
+    if (!passwordForm.oldPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      setPasswordError('Bitte füllen Sie alle Felder aus');
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 6) {
+      setPasswordError('Das neue Passwort muss mindestens 6 Zeichen lang sein');
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError('Die neuen Passwörter stimmen nicht überein');
+      return;
+    }
+
+    if (passwordForm.oldPassword === passwordForm.newPassword) {
+      setPasswordError('Das neue Passwort muss sich vom alten unterscheiden');
+      return;
+    }
+
+    setChangingPassword(true);
+
+    try {
+      await authApi.changePassword(passwordForm.oldPassword, passwordForm.newPassword);
+      addToast('success', 'Passwort erfolgreich geändert');
+      setShowPasswordModal(false);
+      setPasswordForm({
+        oldPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
+    } catch (error: any) {
+      logger.error('Failed to change password:', error);
+      setPasswordError(error.response?.data?.error || 'Fehler beim Ändern des Passworts. Bitte überprüfen Sie Ihr aktuelles Passwort.');
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
@@ -184,13 +226,12 @@ export default function SettingsPage() {
                   Passe Benutzername, Kontaktinformationen und dein Profilbild an.
                 </p>
               </div>
-              {/* Password change button - functionality not yet implemented */}
-              {/* <button
+              <button
                 onClick={() => setShowPasswordModal(true)}
                 className="btn-secondary"
               >
                 Passwort ändern
-              </button> */}
+              </button>
             </div>
 
             <div className="flex items-center gap-4">
@@ -804,6 +845,81 @@ export default function SettingsPage() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Password Change Modal */}
+        {showPasswordModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                Passwort ändern
+              </h3>
+              <div className="space-y-4">
+                {passwordError && (
+                  <div className="bg-red-100 dark:bg-red-900/20 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded">
+                    {passwordError}
+                  </div>
+                )}
+                <div>
+                  <label className="label">Aktuelles Passwort</label>
+                  <input
+                    type="password"
+                    value={passwordForm.oldPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, oldPassword: e.target.value })}
+                    className="input"
+                    placeholder="Aktuelles Passwort eingeben"
+                    disabled={changingPassword}
+                  />
+                </div>
+                <div>
+                  <label className="label">Neues Passwort</label>
+                  <input
+                    type="password"
+                    value={passwordForm.newPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                    className="input"
+                    placeholder="Mindestens 6 Zeichen"
+                    disabled={changingPassword}
+                  />
+                </div>
+                <div>
+                  <label className="label">Neues Passwort bestätigen</label>
+                  <input
+                    type="password"
+                    value={passwordForm.confirmPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                    className="input"
+                    placeholder="Passwort wiederholen"
+                    disabled={changingPassword}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    setShowPasswordModal(false);
+                    setPasswordError('');
+                    setPasswordForm({
+                      oldPassword: '',
+                      newPassword: '',
+                      confirmPassword: '',
+                    });
+                  }}
+                  className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                  disabled={changingPassword}
+                >
+                  Abbrechen
+                </button>
+                <button
+                  onClick={handlePasswordChange}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={changingPassword}
+                >
+                  {changingPassword ? 'Wird geändert...' : 'Passwort ändern'}
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
