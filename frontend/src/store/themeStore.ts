@@ -51,7 +51,7 @@ if (typeof window !== 'undefined') {
 
 export const useThemeStore = create<ThemeState>()(
   persist(
-    (set, get) => {
+    (set) => {
       // Initialize with the value from localStorage or system preference
       const initialTheme = getInitialTheme();
       

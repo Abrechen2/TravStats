@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { flightsApi, analyticsApi, settingsApi } from '../lib/api';
+import { useToastStore } from '../store/toastStore';
 import { logger } from '../lib/logger';
 import MapContainer3D from '../components/MapContainer3D';
 import SimplifiedFlightFormV2 from '../components/SimplifiedFlightFormV2';
@@ -13,10 +14,13 @@ import DarkModeToggle from '../components/DarkModeToggle';
 import AchievementPopup from '../components/AchievementPopup';
 import OnboardingGuide from '../components/Onboarding/OnboardingGuide';
 import HelpIcon from '../components/Help/HelpIcon';
+import { useClickOutside } from '../hooks/useClickOutside';
 import type { Flight, FlightInput, FlightFilters, GeoJSONFeature, OnboardingState } from '../types';
 import { useSettingsStore } from '../store/settingsStore';
 import { API_LIMITS, UI_CONFIG, STORAGE_KEYS } from '../lib/constants';
-import { toCsv, escapeHtml, escapeXml, downloadBlob } from '../lib/export';
+import { toCsv, escapeXml, downloadBlob } from '../lib/export';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function DashboardPage() {
   const { user, logout } = useAuthStore();
@@ -36,50 +40,81 @@ export default function DashboardPage() {
   const [navOpen, setNavOpen] = useState(false);
   const [leftOpen, setLeftOpen] = useState(false);
   const [rightOpen, setRightOpen] = useState(false);
-  const [onboarding, setOnboarding] = useState<OnboardingState>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.ONBOARDING_CHECKLIST);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      // Ensure all fields exist for backward compatibility
-      return {
-        flightAdded: parsed.flightAdded || false,
-        usedFilter: parsed.usedFilter || false,
-        exported: parsed.exported || false,
-        mapExplored: parsed.mapExplored || false,
-        statsViewed: parsed.statsViewed || false,
-        achievementsViewed: parsed.achievementsViewed || false,
-        dismissed: parsed.dismissed || false,
-      };
-    }
-    return {
-      flightAdded: false,
-      usedFilter: false,
-      exported: false,
-      mapExplored: false,
-      statsViewed: false,
-      achievementsViewed: false,
-      dismissed: false,
-    };
+  const [onboarding, setOnboarding] = useState<OnboardingState>({
+    flightAdded: false,
+    usedFilter: false,
+    exported: false,
+    mapExplored: false,
+    statsViewed: false,
+    achievementsViewed: false,
+    dismissed: false,
   });
-  const settings = useSettingsStore();
-  const [newAchievements, setNewAchievements] = useState<any[]>([]);
-  const [showExportMenu, setShowExportMenu] = useState(false);
-  const [developerModeEnabled, setDeveloperModeEnabled] = useState(false);
 
-  // Load recent flights and total count (unfiltered) once on mount
+  // Load onboarding state from server (with localStorage fallback)
   useEffect(() => {
-    const loadRecentFlights = async () => {
+    const loadOnboardingState = async () => {
       try {
-        setLoadingRecent(true);
-        const data = await flightsApi.getAll({ limit: API_LIMITS.RECENT_FLIGHTS, offset: 0 });
-        setRecentFlights(data.flights);
-        setTotalFlightsCount(data.total); // Store total count
+        const serverState = await settingsApi.getOnboardingState();
+        setOnboarding(serverState);
+        // Also sync to localStorage for offline access
+        localStorage.setItem(STORAGE_KEYS.ONBOARDING_CHECKLIST, JSON.stringify(serverState));
       } catch (error) {
-        logger.error('Failed to load recent flights:', error);
+        // Fallback to localStorage if server request fails
+        logger.warn('Failed to load onboarding state from server, using localStorage:', error);
+        const saved = localStorage.getItem(STORAGE_KEYS.ONBOARDING_CHECKLIST);
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            setOnboarding({
+              flightAdded: parsed.flightAdded || false,
+              usedFilter: parsed.usedFilter || false,
+              exported: parsed.exported || false,
+              mapExplored: parsed.mapExplored || false,
+              statsViewed: parsed.statsViewed || false,
+              achievementsViewed: parsed.achievementsViewed || false,
+              dismissed: parsed.dismissed || false,
+            });
+          } catch (e) {
+            logger.error('Failed to parse localStorage onboarding state:', e);
+          }
+        }
       } finally {
-        setLoadingRecent(false);
+        setLoadingOnboarding(false);
       }
     };
+    loadOnboardingState();
+  }, []);
+  const settings = useSettingsStore();
+  const addToast = useToastStore((state) => state.addToast);
+  const [newAchievements, setNewAchievements] = useState<any[]>([]);
+  const [loadingOnboarding, setLoadingOnboarding] = useState(true);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+  const [developerModeEnabled, setDeveloperModeEnabled] = useState(false);
+  const [_importing, setImporting] = useState(false);
+
+  // Close export menu when clicking outside
+  useClickOutside(exportMenuRef, () => {
+    if (showExportMenu) {
+      setShowExportMenu(false);
+    }
+  });
+
+  // Load recent flights and total count (unfiltered) once on mount
+  const loadRecentFlights = async () => {
+    try {
+      setLoadingRecent(true);
+      const data = await flightsApi.getAll({ limit: API_LIMITS.RECENT_FLIGHTS, offset: 0 });
+      setRecentFlights(data.flights);
+      setTotalFlightsCount(data.total); // Store total count
+    } catch (error) {
+      logger.error('Failed to load recent flights:', error);
+    } finally {
+      setLoadingRecent(false);
+    }
+  };
+
+  useEffect(() => {
     loadRecentFlights();
   }, []);
 
@@ -96,13 +131,13 @@ export default function DashboardPage() {
 
     // Check if filters are being used
     const hasActiveFilters = Object.keys(filters).length > 0 && (
-      filters.airlines?.length > 0 ||
-      filters.airports?.length > 0 ||
-      filters.tags?.length > 0 ||
-      filters.dateFrom ||
-      filters.dateTo ||
-      filters.class ||
-      filters.reason
+      (Array.isArray(filters.airline) ? filters.airline.length > 0 : !!filters.airline) ||
+      !!filters.departureAirport ||
+      !!filters.arrivalAirport ||
+      (filters.tags && filters.tags.length > 0) ||
+      !!filters.fromDate ||
+      !!filters.toDate ||
+      !!filters.category
     );
     if (hasActiveFilters && !onboarding.usedFilter) {
       setOnboarding((prev) => ({ ...prev, usedFilter: true }));
@@ -120,14 +155,19 @@ export default function DashboardPage() {
     });
   };
 
-  // Save onboarding state to localStorage whenever it changes
+  // Save onboarding state to server and localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.ONBOARDING_CHECKLIST, JSON.stringify(onboarding));
-  }, [onboarding]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.ONBOARDING_CHECKLIST, JSON.stringify(onboarding));
-  }, [onboarding]);
+    if (!loadingOnboarding) {
+      // Save to localStorage immediately for fast access
+      localStorage.setItem(STORAGE_KEYS.ONBOARDING_CHECKLIST, JSON.stringify(onboarding));
+      
+      // Save to server (async, don't block UI)
+      settingsApi.updateOnboardingState(onboarding).catch((error) => {
+        logger.warn('Failed to save onboarding state to server:', error);
+        // Continue with localStorage only if server fails
+      });
+    }
+  }, [onboarding, loadingOnboarding]);
 
   useEffect(() => {
     // Only open sidebars by default on XL screens
@@ -139,7 +179,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     // Check if user has training access (admin or canTrainLLM)
-    const hasTrainingAccess = user?.isAdmin || false; // TODO: Add canTrainLLM check from user object
+    const hasTrainingAccess = user?.isAdmin || (user as any)?.canTrainLLM || false;
     
     if (hasTrainingAccess) {
       settingsApi
@@ -332,41 +372,37 @@ export default function DashboardPage() {
           const blob = new Blob([csvContent], { type: 'text/csv' });
           downloadBlob(blob, `flights-${new Date().toISOString()}.csv`);
         } else if (format === 'pdf') {
-          // Note: This creates an HTML file with .pdf extension that can be opened in browsers.
-          // For true PDF generation with proper formatting, consider using a library like jsPDF or pdfmake.
-          // The HTML file can be converted to PDF using browser's print-to-PDF functionality.
-          const html = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>TravStats Flight Report</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    h1 { color: #333; }
-    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-    th { background-color: #f2f2f2; font-weight: bold; }
-    tr:nth-child(even) { background-color: #f9f9f9; }
-  </style>
-</head>
-<body>
-  <h1>TravStats Flight Report</h1>
-  <p>Exported: ${escapeHtml(new Date().toLocaleString())}</p>
-  <p>Total Flights: ${data.flights.length}</p>
-  <table>
-    <thead>
-      <tr>${rowsData[0].map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr>
-    </thead>
-    <tbody>
-      ${rowsData.slice(1).map(row =>
-            `<tr>${row.map(cell => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`
-          ).join('')}
-    </tbody>
-  </table>
-</body>
-</html>`;
-          const blob = new Blob([html], { type: 'text/html' });
-          downloadBlob(blob, `flights-${new Date().toISOString()}.pdf`);
+          // Generate real PDF using jsPDF
+          const doc = new jsPDF('landscape');
+          
+          // Add title
+          doc.setFontSize(18);
+          doc.text('TravStats Flight Report', 14, 15);
+          
+          // Add export date and total flights
+          doc.setFontSize(10);
+          doc.text(`Exported: ${new Date().toLocaleString()}`, 14, 22);
+          doc.text(`Total Flights: ${data.flights.length}`, 14, 27);
+          
+          // Prepare table data
+          const tableData = rowsData.slice(1).map(row => 
+            row.map(cell => String(cell || ''))
+          );
+          
+          // Generate table
+          autoTable(doc, {
+            head: [rowsData[0].map(h => String(h))],
+            body: tableData,
+            startY: 32,
+            styles: { fontSize: 8, cellPadding: 2 },
+            headStyles: { fillColor: [66, 139, 202], textColor: 255, fontStyle: 'bold' },
+            alternateRowStyles: { fillColor: [245, 245, 245] },
+            margin: { top: 32, left: 14, right: 14 },
+            tableWidth: 'auto',
+          });
+          
+          // Save PDF
+          doc.save(`flights-${new Date().toISOString()}.pdf`);
         } else if (format === 'kml') {
           const placemarks = data.flights
             .map((f) => {
@@ -407,14 +443,19 @@ export default function DashboardPage() {
     importInputRef.current?.click();
   };
 
-  const handleImportFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    
+    setImporting(true);
     const reader = new FileReader();
     reader.onload = async (e) => {
       try {
         const content = e.target?.result;
-        if (!content || typeof content !== 'string') return;
+        if (!content || typeof content !== 'string') {
+          addToast('error', 'Datei konnte nicht gelesen werden');
+          return;
+        }
 
         let parsed: any[] = [];
         if (file.name.endsWith('.json')) {
@@ -431,14 +472,67 @@ export default function DashboardPage() {
             }, {} as Record<string, string>);
           });
         }
-        console.info(`Imported ${parsed.length} records (beta preview only)`);
-        if (settings.privacy.analyticsOptIn) {
-          analyticsApi.track('import_preview', { count: parsed.length });
+
+        if (parsed.length === 0) {
+          addToast('warning', 'Keine Datensätze in der Datei gefunden');
+          return;
         }
-        alert(`Import (Beta): ${parsed.length} Datensätze erkannt. Bitte Backend-Import integrieren bevor Persistenz aktiv ist.`);
+
+        // Convert parsed data to FlightInput format and import
+        let successCount = 0;
+        let errorCount = 0;
+
+        for (const item of parsed) {
+          try {
+            // Map CSV/JSON fields to FlightInput
+            const flightInput: FlightInput = {
+              airline: item.airline || item.Airline || '',
+              flightNumber: item.flightNumber || item['Flight Number'] || item.flight_number || '',
+              departure: {
+                iata: item.depIata || item['Departure Airport'] || item.departure_airport || '',
+                icao: item.depIcao || item.departure_icao || '',
+                name: item.depName || item.departure_name || '',
+                lat: item.depLat || item.departure_lat || 0,
+                lon: item.depLon || item.departure_lon || 0,
+              },
+              arrival: {
+                iata: item.arrIata || item['Arrival Airport'] || item.arrival_airport || '',
+                icao: item.arrIcao || item.arrival_icao || '',
+                name: item.arrName || item.arrival_name || '',
+                lat: item.arrLat || item.arrival_lat || 0,
+                lon: item.arrLon || item.arrival_lon || 0,
+              },
+              departureTime: item.departureTime || item['Departure Time'] || item.departure_time || '',
+              arrivalTime: item.arrivalTime || item['Arrival Time'] || item.arrival_time || '',
+              status: (item.status || item.Status || 'flown') as 'scheduled' | 'flown' | 'cancelled',
+              aircraft: item.aircraft || item.Aircraft || '',
+            };
+
+            await flightsApi.create(flightInput);
+            successCount++;
+          } catch (err) {
+            errorCount++;
+            logger.error('Failed to import flight:', err);
+          }
+        }
+
+        if (successCount > 0) {
+          addToast('success', `${successCount} Flug${successCount !== 1 ? 'e' : ''} erfolgreich importiert${errorCount > 0 ? `, ${errorCount} Fehler` : ''}`);
+          // Reload flights
+          loadRecentFlights();
+          loadFlights();
+        } else {
+          addToast('error', `Import fehlgeschlagen: ${errorCount} Fehler`);
+        }
+
+        if (settings.privacy.analyticsOptIn) {
+          analyticsApi.track('import', { count: parsed.length, success: successCount, errors: errorCount });
+        }
       } catch (err) {
-        alert('Import fehlgeschlagen. Bitte gültige CSV oder JSON Datei verwenden.');
+        logger.error('Import failed:', err);
+        addToast('error', 'Import fehlgeschlagen. Bitte gültige CSV oder JSON Datei verwenden.');
       } finally {
+        setImporting(false);
         if (importInputRef.current) {
           importInputRef.current.value = '';
         }
@@ -815,7 +909,7 @@ export default function DashboardPage() {
 
             <div className="flex items-center gap-2">
               {/* Export Menu */}
-              <div className="relative">
+              <div className="relative" ref={exportMenuRef}>
                 <button
                   onClick={() => setShowExportMenu(!showExportMenu)}
                   className="
