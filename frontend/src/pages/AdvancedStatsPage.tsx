@@ -149,10 +149,19 @@ export default function AdvancedStatsPage() {
   const shortestFlight = flightDurations.length > 0 ? flightDurations.sort((a, b) => a.duration - b.duration)[0] : undefined;
 
   // Distance calculations
-  const flightDistances = flights.map(f => ({
-    flight: f,
-    distance: calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon)
-  }));
+  const flightDistances = flights.map(f => {
+    // Skip flights with missing coordinates
+    const hasCoords = f.depLat != null && f.depLon != null && f.arrLat != null && f.arrLon != null;
+    if (!hasCoords) {
+      return { flight: f, distance: 0 };
+    }
+    try {
+      const dist = calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon);
+      return { flight: f, distance: dist };
+    } catch (err) {
+      return { flight: f, distance: 0 };
+    }
+  });
 
   const totalDistance = flightDistances.reduce((sum, f) => sum + f.distance, 0);
   const avgDistance = flights.length > 0 ? totalDistance / flights.length : 0;
