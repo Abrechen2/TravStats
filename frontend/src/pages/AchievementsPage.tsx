@@ -141,8 +141,17 @@ export default function AchievementsPage() {
           </div>
 
           <div className="bg-gray-800 rounded-xl p-6">
-            <div className="space-y-2">
-              {leaderboard.map((entry) => (
+            {leaderboard.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">🏆</div>
+                <h3 className="text-2xl font-bold text-white mb-2">Noch kein Leaderboard</h3>
+                <p className="text-gray-400">
+                  Das Leaderboard wird angezeigt, sobald mehrere Benutzer Achievements gesammelt haben.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {leaderboard.map((entry) => (
                 <div
                   key={entry.rank}
                   className="flex items-center gap-4 p-4 bg-gray-700 rounded-lg hover:bg-gray-650 transition-colors"
@@ -173,7 +182,8 @@ export default function AchievementsPage() {
                   </div>
                 </div>
               ))}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

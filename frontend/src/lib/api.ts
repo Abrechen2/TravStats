@@ -10,7 +10,8 @@ import type {
   AchievementsResponse,
   UserAchievement,
   LeaderboardEntry,
-  FlightLookupResult
+  FlightLookupResult,
+  OnboardingState
 } from '../types';
 
 import { API_TIMEOUTS } from '../config/constants';
@@ -102,6 +103,13 @@ export const authApi = {
 
   logout: async () => {
     await api.post('/auth/logout');
+  },
+  changePassword: async (oldPassword: string, newPassword: string) => {
+    const { data } = await api.post<{ message: string }>('/auth/change-password', {
+      oldPassword,
+      newPassword,
+    });
+    return data;
   },
 };
 
@@ -340,6 +348,24 @@ export const settingsApi = {
   },
   updateDeveloperMode: async (payload: { enabled: boolean; confirmed?: boolean }) => {
     const { data } = await api.put('/settings/developer-mode', payload);
+    return data;
+  },
+  uploadProfilePicture: async (file: File) => {
+    const formData = new FormData();
+    formData.append('profilePicture', file);
+    const { data } = await api.post<{ profilePictureUrl: string }>('/settings/profile-picture', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return data;
+  },
+  getOnboardingState: async () => {
+    const { data } = await api.get<OnboardingState>('/settings/onboarding-state');
+    return data;
+  },
+  updateOnboardingState: async (state: OnboardingState) => {
+    const { data } = await api.put<OnboardingState>('/settings/onboarding-state', state);
     return data;
   },
 };

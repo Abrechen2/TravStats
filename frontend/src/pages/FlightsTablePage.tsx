@@ -11,7 +11,9 @@ import ContextualHint from '../components/Onboarding/ContextualHint';
 import type { Flight, FlightFilters } from '../types';
 import Filters from '../components/Filters';
 import FlightEditModal from '../components/FlightEditModal';
+import ConfirmModal from '../components/Training/ConfirmModal';
 import { useThemeStore } from '../store/themeStore';
+import { useToastStore } from '../store/toastStore';
 import DarkModeToggle from '../components/DarkModeToggle';
 import { API_LIMITS, DATE_FORMATS } from '../lib/constants';
 
@@ -21,8 +23,11 @@ export default function FlightsTablePage() {
   const [filters, setFilters] = useState<FlightFilters>({});
   const [loading, setLoading] = useState(true);
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [flightToDelete, setFlightToDelete] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'departureTime' | 'airline' | 'status' | 'duration'>('departureTime');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const addToast = useToastStore((state) => state.addToast);
 
   useEffect(() => {
     loadFlights();
@@ -54,26 +59,37 @@ export default function FlightsTablePage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this flight?')) return;
+  const handleDeleteClick = (id: string) => {
+    setFlightToDelete(id);
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!flightToDelete) return;
 
     try {
-      await flightsApi.delete(id);
+      await flightsApi.delete(flightToDelete);
+      addToast('success', 'Flug erfolgreich gelöscht');
+      setDeleteConfirmOpen(false);
+      setFlightToDelete(null);
       loadFlights();
     } catch (error) {
       console.error('Failed to delete flight:', error);
-      alert('Fehler beim Löschen des Fluges. Bitte versuchen Sie es erneut.');
+      addToast('error', 'Fehler beim Löschen des Fluges. Bitte versuchen Sie es erneut.');
+      setDeleteConfirmOpen(false);
+      setFlightToDelete(null);
     }
   };
 
   const handleUpdate = async (id: string, updates: Partial<Flight>) => {
     try {
       await flightsApi.update(id, updates);
+      addToast('success', 'Flug erfolgreich aktualisiert');
       setEditingFlight(null);
       loadFlights();
     } catch (error) {
       console.error('Failed to update flight:', error);
-      alert('Fehler beim Aktualisieren des Fluges. Bitte versuchen Sie es erneut.');
+      addToast('error', 'Fehler beim Aktualisieren des Fluges. Bitte versuchen Sie es erneut.');
       throw error;
     }
   };
@@ -279,7 +295,7 @@ export default function FlightsTablePage() {
                             Edit
                           </button>
                           <button
-                            onClick={() => handleDelete(flight.id)}
+                            onClick={() => handleDeleteClick(flight.id)}
                             className={`px-3 py-1 text-xs font-medium rounded ${
                               isDarkMode
                                 ? 'bg-red-900 text-red-200 hover:bg-red-800'
@@ -322,6 +338,21 @@ export default function FlightsTablePage() {
           onSave={handleUpdate}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteConfirmOpen}
+        onClose={() => {
+          setDeleteConfirmOpen(false);
+          setFlightToDelete(null);
+        }}
+        onConfirm={handleDelete}
+        title="Flug löschen?"
+        message="Möchten Sie diesen Flug wirklich löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden."
+        confirmText="Ja, löschen"
+        cancelText="Abbrechen"
+        confirmButtonClass="bg-red-600 hover:bg-red-700 focus:ring-red-500"
+      />
     </div>
   );
 }

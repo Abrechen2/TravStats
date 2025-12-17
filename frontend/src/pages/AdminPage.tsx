@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useToastStore } from '../store/toastStore';
 import { adminApi } from '../lib/api';
 import { format } from 'date-fns';
 import { logger } from '../lib/logger';
 import InlineHelp from '../components/Help/InlineHelp';
 
 export default function AdminPage() {
+  const addToast = useToastStore((state) => state.addToast);
   const [systemInfo, setSystemInfo] = useState<any>(null);
   const [hardwareInfo, setHardwareInfo] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
@@ -27,11 +29,14 @@ export default function AdminPage() {
 
   useEffect(() => {
     loadData();
-    // Load hardware info if system tab is active (default tab)
+  }, []);
+
+  // Load hardware info when system tab becomes active
+  useEffect(() => {
     if (activeTab === 'system') {
       loadHardwareInfo();
     }
-  }, []);
+  }, [activeTab]);
 
   useEffect(() => {
     if (activeTab === 'logging') {
@@ -134,10 +139,10 @@ export default function AdminPage() {
     if (!confirm('Möchten Sie dieses Pattern wirklich anwenden? Hinweis: Dies erfordert manuelle Code-Updates.')) return;
     try {
       const result = await adminApi.applyPatternSuggestion(eventId, false);
-      alert(result.message);
+      addToast('success', result.message);
       await loadPatternData();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Fehler beim Anwenden des Patterns');
+      addToast('error', error.response?.data?.message || 'Fehler beim Anwenden des Patterns');
     }
   };
 
@@ -145,19 +150,20 @@ export default function AdminPage() {
     if (!confirm('Möchten Sie alle hochwertigen Patterns automatisch anwenden?')) return;
     try {
       const result = await adminApi.autoApplyPatterns(0.9);
-      alert(result.message);
+      addToast('success', result.message);
       await loadPatternData();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Fehler beim automatischen Anwenden');
+      addToast('error', error.response?.data?.message || 'Fehler beim automatischen Anwenden');
     }
   };
 
   const handleToggleUserActive = async (userId: string) => {
     try {
       await adminApi.toggleUserActive(userId);
+      addToast('success', 'Benutzer erfolgreich aktualisiert');
       await loadData(); // Reload
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to update user');
+      addToast('error', error.response?.data?.error || 'Failed to update user');
     }
   };
 
@@ -168,10 +174,10 @@ export default function AdminPage() {
       await navigator.clipboard.writeText(inviteUrl);
       setCopiedUrl(true);
       setTimeout(() => setCopiedUrl(false), 3000);
-      alert(`Invitation link copied to clipboard!\n\n${inviteUrl}`);
+      addToast('success', `Invitation link copied to clipboard!\n\n${inviteUrl}`);
       await loadData(); // Reload
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to create invitation');
+      addToast('error', error.response?.data?.error || 'Failed to create invitation');
     }
   };
 
@@ -190,7 +196,7 @@ export default function AdminPage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Failed to export data');
+      addToast('error', error.response?.data?.error || 'Failed to export data');
     }
   };
 
@@ -198,10 +204,10 @@ export default function AdminPage() {
     setSavingParsers(true);
     try {
       await adminApi.updateAdminParserSettings(parserSettings);
-      alert('Parser settings saved successfully!');
+      addToast('success', 'Parser settings saved successfully!');
     } catch (error: any) {
       logger.error('Failed to save parser settings:', error);
-      alert(error.response?.data?.error || 'Failed to save parser settings');
+      addToast('error', error.response?.data?.error || 'Failed to save parser settings');
     } finally {
       setSavingParsers(false);
     }
@@ -213,10 +219,10 @@ export default function AdminPage() {
     try {
       await adminApi.toggleDebugLogging(newState);
       await loadLoggingData();
-      alert(`Debug logging ${newState ? 'enabled' : 'disabled'} successfully!`);
+      addToast('success', `Debug logging ${newState ? 'enabled' : 'disabled'} successfully!`);
     } catch (error: any) {
       logger.error('Failed to toggle debug logging:', error);
-      alert(error.response?.data?.error || 'Failed to toggle debug logging');
+      addToast('error', error.response?.data?.error || 'Failed to toggle debug logging');
     }
   };
 
@@ -224,11 +230,11 @@ export default function AdminPage() {
     setSavingLogging(true);
     try {
       await adminApi.updateLoggingConfig(loggingConfig);
-      alert('Logging configuration saved successfully!');
+      addToast('success', 'Logging configuration saved successfully!');
       await loadLoggingData();
     } catch (error: any) {
       logger.error('Failed to save logging config:', error);
-      alert(error.response?.data?.error || 'Failed to save logging config');
+      addToast('error', error.response?.data?.error || 'Failed to save logging config');
     } finally {
       setSavingLogging(false);
     }
@@ -245,7 +251,7 @@ export default function AdminPage() {
       URL.revokeObjectURL(url);
     } catch (error: any) {
       logger.error('Failed to download log file:', error);
-      alert(error.response?.data?.error || 'Failed to download log file');
+      addToast('error', error.response?.data?.error || 'Failed to download log file');
     }
   };
 
@@ -255,11 +261,11 @@ export default function AdminPage() {
     }
     try {
       await adminApi.deleteLogFile(filename);
-      alert('Log file deleted successfully!');
+      addToast('success', 'Log file deleted successfully!');
       await loadLoggingData();
     } catch (error: any) {
       logger.error('Failed to delete log file:', error);
-      alert(error.response?.data?.error || 'Failed to delete log file');
+      addToast('error', error.response?.data?.error || 'Failed to delete log file');
     }
   };
 
@@ -269,11 +275,11 @@ export default function AdminPage() {
     }
     try {
       const result = await adminApi.cleanupLogs();
-      alert(`Cleanup complete! Deleted ${result.filesDeleted} files, freed ${(result.spaceFreed / 1024 / 1024).toFixed(2)} MB`);
+      addToast('success', `Cleanup complete! Deleted ${result.filesDeleted} files, freed ${(result.spaceFreed / 1024 / 1024).toFixed(2)} MB`);
       await loadLoggingData();
     } catch (error: any) {
       logger.error('Failed to cleanup logs:', error);
-      alert(error.response?.data?.error || 'Failed to cleanup logs');
+      addToast('error', error.response?.data?.error || 'Failed to cleanup logs');
     }
   };
 
@@ -548,7 +554,7 @@ export default function AdminPage() {
                         <div>
                           <dt className="text-xs text-gray-500 dark:text-gray-400">GPUs</dt>
                           <dd className="text-sm font-medium text-gray-900 dark:text-white">
-                            {hardwareInfo.gpu.gpus.map((gpu) => (
+                            {hardwareInfo.gpu.gpus.map((gpu: any) => (
                               <div key={gpu.id} className="mb-1">
                                 GPU {gpu.id}: {gpu.name} ({gpu.memory} GB)
                               </div>
@@ -598,7 +604,7 @@ export default function AdminPage() {
                             💡 Lösung:
                           </div>
                           <ul className="text-xs text-yellow-800 dark:text-yellow-200 space-y-1 list-disc list-inside">
-                            {hardwareInfo.gpu.diagnosis.map((msg, idx) => (
+                            {hardwareInfo.gpu.diagnosis.map((msg: any, idx: number) => (
                               <li key={idx}>{msg}</li>
                             ))}
                           </ul>
@@ -1508,8 +1514,9 @@ export default function AdminPage() {
                       {Object.entries(feedbackStats.byProvider)
                         .sort(([, a], [, b]) => (b as number) - (a as number))
                         .map(([provider, count]) => {
+                          const countNum = count as number;
                           const percentage = feedbackStats.total > 0
-                            ? Math.round(((count as number) / feedbackStats.total) * 100)
+                            ? Math.round((countNum / feedbackStats.total) * 100)
                             : 0;
                           return (
                             <div key={provider}>
@@ -1518,7 +1525,7 @@ export default function AdminPage() {
                                   {provider.toUpperCase()}
                                 </span>
                                 <span className="text-sm text-gray-600 dark:text-gray-400">
-                                  {count} ({percentage}%)
+                                  {String(countNum)} ({percentage}%)
                                 </span>
                               </div>
                               <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
@@ -1544,8 +1551,9 @@ export default function AdminPage() {
                   {Object.keys(feedbackStats.bySourceType).length > 0 ? (
                     <div className="grid grid-cols-2 gap-4">
                       {Object.entries(feedbackStats.bySourceType).map(([type, count]) => {
+                        const countNum = count as number;
                         const percentage = feedbackStats.total > 0
-                          ? Math.round(((count as number) / feedbackStats.total) * 100)
+                          ? Math.round((countNum / feedbackStats.total) * 100)
                           : 0;
                         return (
                           <div key={type} className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
@@ -1553,7 +1561,7 @@ export default function AdminPage() {
                               {type === 'email' ? '📧 Email' : '🎫 Boarding Pass'}
                             </div>
                             <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                              {count}
+                              {String(countNum)}
                             </div>
                             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                               {percentage}% of total

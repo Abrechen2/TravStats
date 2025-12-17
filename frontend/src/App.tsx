@@ -5,6 +5,7 @@ import { logger } from './lib/logger';
 import { useSettingsStore } from './store/settingsStore';
 import { useThemeStore } from './store/themeStore';
 import ErrorBoundary from './components/ErrorBoundary';
+import Toast from './components/Toast';
 import { setupApi } from './lib/api';
 
 // Lazy load pages for code splitting
@@ -121,6 +122,7 @@ function AppContent() {
         </div>
       }
     >
+      <Toast />
       <Suspense fallback={<LoadingFallback />}>
         <Routes>
           {/* Public routes */}
