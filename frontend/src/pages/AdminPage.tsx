@@ -26,6 +26,8 @@ export default function AdminPage() {
   const [savingLogging, setSavingLogging] = useState(false);
   const [feedbackDays, setFeedbackDays] = useState(30);
   const [selectedFeedbackId, setSelectedFeedbackId] = useState<string | null>(null);
+  const [showPatternConfirm, setShowPatternConfirm] = useState<string | null>(null);
+  const [showAutoApplyConfirm, setShowAutoApplyConfirm] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -136,7 +138,13 @@ export default function AdminPage() {
   };
 
   const handleApplyPattern = async (eventId: string) => {
-    if (!confirm('Möchten Sie dieses Pattern wirklich anwenden? Hinweis: Dies erfordert manuelle Code-Updates.')) return;
+    setShowPatternConfirm(eventId);
+  };
+
+  const handleApplyPatternConfirm = async () => {
+    if (!showPatternConfirm) return;
+    const eventId = showPatternConfirm;
+    setShowPatternConfirm(null);
     try {
       const result = await adminApi.applyPatternSuggestion(eventId, false);
       addToast('success', result.message);
@@ -147,7 +155,11 @@ export default function AdminPage() {
   };
 
   const handleAutoApplyPatterns = async () => {
-    if (!confirm('Möchten Sie alle hochwertigen Patterns automatisch anwenden?')) return;
+    setShowAutoApplyConfirm(true);
+  };
+
+  const handleAutoApplyPatternsConfirm = async () => {
+    setShowAutoApplyConfirm(false);
     try {
       const result = await adminApi.autoApplyPatterns(0.9);
       addToast('success', result.message);
@@ -1897,6 +1909,62 @@ export default function AdminPage() {
                   </div>
                 );
               })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pattern Apply Confirmation Modal */}
+      {showPatternConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+              Pattern anwenden?
+            </h3>
+            <p className="text-gray-700 dark:text-gray-300 mb-6">
+              Möchten Sie dieses Pattern wirklich anwenden? Hinweis: Dies erfordert manuelle Code-Updates.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowPatternConfirm(null)}
+                className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={handleApplyPatternConfirm}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              >
+                Anwenden
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Auto Apply Patterns Confirmation Modal */}
+      {showAutoApplyConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+              Alle Patterns automatisch anwenden?
+            </h3>
+            <p className="text-gray-700 dark:text-gray-300 mb-6">
+              Möchten Sie alle hochwertigen Patterns automatisch anwenden? Dies kann mehrere Patterns gleichzeitig betreffen.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowAutoApplyConfirm(false)}
+                className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={handleAutoApplyPatternsConfirm}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              >
+                Anwenden
+              </button>
             </div>
           </div>
         </div>

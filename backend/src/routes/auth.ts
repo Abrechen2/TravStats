@@ -2,9 +2,10 @@ import { Router, Request, Response, NextFunction, CookieOptions } from 'express'
 import { prisma } from '../db';
 import { hashPassword, comparePassword } from '../utils/password';
 import { generateToken } from '../utils/jwt';
-import { registerSchema, loginSchema } from '../schemas/auth';
+import { registerSchema, loginSchema, changePasswordSchema } from '../schemas/auth';
 import { AppError } from '../middleware/errorHandler';
 import { authLimiter } from '../middleware/rateLimit';
+import { authenticate, AuthRequest } from '../middleware/auth';
 import logger from '../utils/logger';
 
 const router = Router();
@@ -169,6 +170,48 @@ router.post('/logout', (req: Request, res: Response) => {
   });
 
   res.json({ message: 'Logged out successfully' });
+});
+
+// Change Password (requires authentication)
+router.post('/change-password', authenticate, authLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { oldPassword, newPassword } = changePasswordSchema.parse(req.body);
+    const userId = req.userId!;
+
+    // Find user
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    // Verify old password
+    const isValid = await comparePassword(oldPassword, user.passwordHash);
+    if (!isValid) {
+      throw new AppError('Current password is incorrect', 401);
+    }
+
+    // Hash new password
+    const newPasswordHash = await hashPassword(newPassword);
+
+    // Update password
+    await prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash: newPasswordHash },
+    });
+
+    logger.info({
+      operation: 'password_changed',
+      message: 'User changed password',
+      context: { userId },
+    });
+
+    res.json({ message: 'Password changed successfully' });
+  } catch (error) {
+    next(error);
+  }
 });
 
 export default router;

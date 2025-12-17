@@ -341,4 +341,99 @@ router.put('/developer-mode', requireTrainingAccess, async (req: AuthRequest, re
   }
 });
 
+// Onboarding state schema
+const onboardingStateSchema = z.object({
+  flightAdded: z.boolean().optional(),
+  usedFilter: z.boolean().optional(),
+  exported: z.boolean().optional(),
+  mapExplored: z.boolean().optional(),
+  statsViewed: z.boolean().optional(),
+  achievementsViewed: z.boolean().optional(),
+  dismissed: z.boolean().optional(),
+}).partial();
+
+const defaultOnboardingState = {
+  flightAdded: false,
+  usedFilter: false,
+  exported: false,
+  mapExplored: false,
+  statsViewed: false,
+  achievementsViewed: false,
+  dismissed: false,
+};
+
+// Get onboarding state
+router.get('/onboarding-state', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId!;
+
+    const settings = await prisma.userSettings.findUnique({
+      where: { userId },
+      select: { data: true },
+    });
+
+    if (!settings || !settings.data || typeof settings.data !== 'object') {
+      return res.json(defaultOnboardingState);
+    }
+
+    const data = settings.data as any;
+    const onboardingState = data.onboarding || defaultOnboardingState;
+
+    // Merge with defaults to ensure all fields are present
+    const merged = {
+      ...defaultOnboardingState,
+      ...onboardingState,
+    };
+
+    res.json(merged);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Update onboarding state
+router.put('/onboarding-state', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId!;
+    const payload = onboardingStateSchema.parse(req.body);
+
+    const existing = await prisma.userSettings.findUnique({
+      where: { userId },
+      select: { data: true },
+    });
+
+    const currentData = existing?.data && typeof existing.data === 'object' 
+      ? (existing.data as any) 
+      : {};
+
+    const currentOnboarding = currentData.onboarding || defaultOnboardingState;
+    const updatedOnboarding = {
+      ...defaultOnboardingState,
+      ...currentOnboarding,
+      ...payload,
+    };
+
+    const updatedData = {
+      ...currentData,
+      onboarding: updatedOnboarding,
+    };
+
+    await prisma.userSettings.upsert({
+      where: { userId },
+      update: { data: updatedData as any },
+      create: {
+        userId,
+        data: {
+          ...defaultSettings,
+          onboarding: updatedOnboarding,
+        } as any,
+      },
+    });
+
+    res.json(updatedOnboarding);
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;
