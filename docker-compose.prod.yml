@@ -49,7 +49,7 @@ services:
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
       # Database connection
       DATABASE_URL: postgresql://flights:${DB_PASSWORD:-changeme}@db:5432/flights
-      # JWT will be auto-generated and persisted to /app/data/jwt.secret
+      # JWT will be auto-generated and persisted to /app/secrets/jwt.secret (not in mounted volume)
       # Optional: Set custom JWT_SECRET here
       # JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: 7d
@@ -72,6 +72,18 @@ services:
       # Training Settings
       PYTHON_CMD: python3
       DOCKER: 'true'
+      # Backup Settings
+      BACKUP_PATH: /app/data/backups
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      AUTO_BACKUP_ENABLED: ${AUTO_BACKUP_ENABLED:-false}
+      BACKUP_INTERVAL: ${BACKUP_INTERVAL:-weekly}
+      DOCKER_DB_CONTAINER: ${DOCKER_DB_CONTAINER:-travstats-db}
+      # WebDAV Sync Settings
+      WEBDAV_SYNC_ENABLED: ${WEBDAV_SYNC_ENABLED:-false}
+      WEBDAV_URL: ${WEBDAV_URL:-}
+      WEBDAV_USERNAME: ${WEBDAV_USERNAME:-}
+      WEBDAV_PASSWORD: ${WEBDAV_PASSWORD:-}
+      WEBDAV_BACKUP_PATH: ${WEBDAV_BACKUP_PATH:-/TravStats/backups/}
     volumes:
       - travstats-app-data:/app/data
     depends_on:

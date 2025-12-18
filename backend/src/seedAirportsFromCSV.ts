@@ -61,19 +61,16 @@ async function downloadCSV(url: string, destination: string): Promise<void> {
 }
 
 async function seedAirportsFromCSV() {
-  console.log('🛫 Beginne Import der Flughäfen aus CSV...');
   logger.info({ operation: 'seed_airports_start', message: 'Starting airport import from CSV' });
 
   const csvPath = path.join(__dirname, '..', 'airports.csv');
 
   if (!fs.existsSync(csvPath)) {
-    console.log('📥 CSV-Datei nicht gefunden, lade von OurAirports.com herunter...');
     logger.info({ operation: 'seed_airports_download', message: 'CSV file not found, downloading from OurAirports.com' });
     const downloadUrl = 'https://davidmegginson.github.io/ourairports-data/airports.csv';
 
     try {
       await downloadCSV(downloadUrl, csvPath);
-      console.log('✅ CSV-Datei erfolgreich heruntergeladen');
       logger.info({ operation: 'seed_airports_download_success', message: 'CSV file downloaded successfully' });
     } catch (error: any) {
       logger.error({
@@ -91,7 +88,6 @@ async function seedAirportsFromCSV() {
     skip_empty_lines: true,
   });
 
-  console.log(`📊 ${records.length} Flughäfen in CSV gefunden`);
   logger.info({
     operation: 'seed_airports_csv_parsed',
     message: `Found ${records.length} airports in CSV`,
@@ -118,7 +114,6 @@ async function seedAirportsFromCSV() {
     return true;
   });
 
-  console.log(`✅ ${filteredAirports.length} Flughäfen gefiltert (large + medium mit scheduled service)`);
   logger.info({
     operation: 'seed_airports_filtered',
     message: `Filtered ${filteredAirports.length} airports`,
@@ -189,7 +184,6 @@ async function seedAirportsFromCSV() {
 
       // Progress anzeigen
       if ((imported + updated) % 100 === 0) {
-        console.log(`📍 Fortschritt: ${imported + updated} Flughäfen verarbeitet...`);
         logger.debug({
           operation: 'seed_airports_progress',
           message: `Progress: ${imported + updated} airports processed`,
@@ -197,21 +191,18 @@ async function seedAirportsFromCSV() {
         });
       }
 
-    } catch (error: any) {
-      console.error(`❌ Fehler bei Flughafen ${airport.name}:`, error.message);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       logger.error({
         operation: 'seed_airports_airport_error',
         message: `Error processing airport ${airport.name}`,
         context: { airportName: airport.name },
-        error: { message: error.message },
+        error: { message: errorMessage },
       });
       skipped++;
     }
   }
 
-  console.log('\n✨ Import abgeschlossen!');
-  console.log(`✅ Importiert/Aktualisiert: ${imported + updated}`);
-  console.log(`⏭️  Übersprungen: ${skipped}`);
   logger.info({
     operation: 'seed_airports_complete',
     message: 'Airport import completed',
@@ -220,7 +211,6 @@ async function seedAirportsFromCSV() {
 
   // Zeige Gesamtanzahl in DB
   const totalCount = await prisma.airport.count();
-  console.log(`📊 Gesamt in DB: ${totalCount} Flughäfen`);
   logger.info({
     operation: 'seed_airports_total',
     message: `Total airports in database: ${totalCount}`,
@@ -230,7 +220,6 @@ async function seedAirportsFromCSV() {
 
 seedAirportsFromCSV()
   .catch((error) => {
-    console.error('❌ Fehler beim Seed:', error);
     logger.error({
       operation: 'seed_airports_failed',
       message: 'Airport seeding failed',

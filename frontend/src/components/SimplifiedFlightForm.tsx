@@ -7,6 +7,7 @@ const BoardingPassScanner = lazy(() => import('./BoardingPassScanner'));
 import { BoardingPassData, getAirlineName } from '../lib/bcbpParser';
 import type { FlightInput, FlightLookupResult } from '../types';
 import { useSettingsStore } from '../store/settingsStore';
+import { logger } from '../lib/logger';
 
 interface SimplifiedFlightFormProps {
   onSubmit: (flight: FlightInput) => Promise<void>;
@@ -143,7 +144,7 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
         setAutoFillMessage('✈️ Daten automatisch ergänzt');
       } catch (lookupError) {
         if (!cancelled) {
-          console.warn('Flight lookup failed', lookupError);
+          logger.warn('Flight lookup failed', lookupError);
           setAutoFillMessage('');
         }
       }
@@ -174,7 +175,7 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
         arrAirport = arr;
       } catch (airportError) {
         // If airports not found even with external lookup, create placeholder objects
-        console.warn('Airports not found anywhere, using IATA codes directly');
+        logger.warn('Airports not found anywhere, using IATA codes directly');
         depAirport = {
           id: 0,
           iata: bcbpData.departureAirport,

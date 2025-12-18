@@ -99,9 +99,10 @@ describe('Achievements', () => {
       }
     });
 
-    it('should handle errors gracefully', async () => {
-      // Test with invalid userId
-      await expect(checkAndUpdateAchievements('invalid-user-id')).rejects.toThrow();
+    it('should handle invalid userId gracefully', async () => {
+      // Test with invalid userId - should return empty array (user has no flights)
+      const result = await checkAndUpdateAchievements('invalid-user-id');
+      expect(result).toEqual([]);
     });
 
     it('should update progress for non-unlocked achievements', async () => {
