@@ -6,7 +6,7 @@ import { useSettingsStore } from '../store/settingsStore';
 import { useThemeStore } from '../store/themeStore';
 import { useAuthStore } from '../store/authStore';
 import ParserConfiguration from '../components/Settings/ParserConfiguration';
-import { settingsApi, authApi } from '../lib/api';
+import { settingsApi, authApi, backupApi } from '../lib/api';
 import { useToastStore } from '../store/toastStore';
 import { logger } from '../lib/logger';
 
@@ -56,9 +56,37 @@ export default function SettingsPage() {
     confirmPassword: '',
   });
   const [passwordError, setPasswordError] = useState('');
+  const [lastBackup, setLastBackup] = useState<any>(null);
+  const [backupStatus, setBackupStatus] = useState<{ running: boolean } | null>(null);
+  const [retentionDays, setRetentionDays] = useState(30);
 
   // Check if user has training access (admin or canTrainLLM)
   const hasTrainingAccess = user?.isAdmin || (user as any)?.canTrainLLM || false;
+
+  // Load backup info
+  useEffect(() => {
+    if (user?.isAdmin) {
+      const loadBackupInfo = async () => {
+        try {
+          const [backupsData, statusData] = await Promise.all([
+            backupApi.list(),
+            backupApi.getStatus(),
+          ]);
+          
+          const completedBackups = backupsData.backups.filter((b: any) => b.status === 'completed');
+          if (completedBackups.length > 0) {
+            setLastBackup(completedBackups[0]);
+          }
+          setBackupStatus(statusData);
+        } catch (error) {
+          logger.error('Failed to load backup info:', error);
+        }
+      };
+      loadBackupInfo();
+      const interval = setInterval(loadBackupInfo, 30000); // Refresh every 30 seconds
+      return () => clearInterval(interval);
+    }
+  }, [user]);
 
   // Load developer mode status
   useEffect(() => {
@@ -733,6 +761,52 @@ export default function SettingsPage() {
                 />
                 <span>Cloud-Sync aktivieren</span>
               </label>
+
+              <div>
+                <label className="label">Aufbewahrungsdauer (Tage)</label>
+                <input
+                  type="number"
+                  value={retentionDays}
+                  onChange={(e) => setRetentionDays(parseInt(e.target.value, 10) || 30)}
+                  min="1"
+                  max="365"
+                  className="input"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Backups älter als {retentionDays} Tage werden automatisch gelöscht
+                </p>
+              </div>
+
+              {user?.isAdmin && (
+                <>
+                  <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Backup-Status</p>
+                    {backupStatus?.running ? (
+                      <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                        <span className="animate-pulse">●</span>
+                        <span>Backup läuft...</span>
+                      </div>
+                    ) : lastBackup ? (
+                      <div className="space-y-1">
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Letztes Backup: {new Date(lastBackup.completedAt).toLocaleString('de-DE')}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-500">
+                          Größe: {(parseInt(lastBackup.size, 10) / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Noch kein Backup erstellt</p>
+                    )}
+                  </div>
+
+                  <div className="pt-2">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Backup-Pfad: /app/data/backups
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

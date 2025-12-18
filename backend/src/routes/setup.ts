@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { prisma } from '../db';
 import { hashPassword } from '../utils/password';
 import { AppError } from '../middleware/errorHandler';
+import { getSeedingStatus } from '../services/airportSeedingService';
 
 const router = Router();
 
@@ -71,6 +72,26 @@ router.post('/initialize', async (req: Request, res: Response, next: NextFunctio
         isAdmin: user.isAdmin,
       },
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get airport seeding status
+router.get('/airport-seeding-status', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const status = await getSeedingStatus();
+    
+    if (!status) {
+      // No seeding needed or no status record
+      return res.json({
+        status: 'completed',
+        progress: 1,
+        estimatedSecondsRemaining: 0,
+      });
+    }
+
+    res.json(status);
   } catch (error) {
     next(error);
   }

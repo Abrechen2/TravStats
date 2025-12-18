@@ -9,11 +9,11 @@ export const prisma = new PrismaClient({
 /**
  * Sanitize Prisma query arguments to remove sensitive data
  */
-function sanitizeArgs(args: any): any {
+function sanitizeArgs(args: unknown): unknown {
   if (!args) return args;
 
   // Clone to avoid mutating original
-  const sanitized = JSON.parse(JSON.stringify(args));
+  const sanitized = JSON.parse(JSON.stringify(args)) as Record<string, unknown>;
 
   // Redact sensitive fields
   const sensitiveFields = [
@@ -29,15 +29,15 @@ function sanitizeArgs(args: any): any {
     'globalClaudeApiKey',
   ];
 
-  function redactRecursive(obj: any): any {
+  function redactRecursive(obj: unknown): unknown {
     if (typeof obj !== 'object' || obj === null) return obj;
 
     if (Array.isArray(obj)) {
       return obj.map(redactRecursive);
     }
 
-    const result: any = {};
-    for (const [key, value] of Object.entries(obj)) {
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
       if (sensitiveFields.includes(key)) {
         result[key] = '[REDACTED]';
       } else {

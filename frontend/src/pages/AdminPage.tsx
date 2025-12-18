@@ -4,6 +4,7 @@ import { adminApi } from '../lib/api';
 import { format } from 'date-fns';
 import { logger } from '../lib/logger';
 import InlineHelp from '../components/Help/InlineHelp';
+import BackupManagement from '../components/Admin/BackupManagement';
 
 export default function AdminPage() {
   const addToast = useToastStore((state) => state.addToast);
@@ -20,7 +21,7 @@ export default function AdminPage() {
   const [feedbackDetails, setFeedbackDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [loadingHardwareInfo, setLoadingHardwareInfo] = useState(false);
-  const [activeTab, setActiveTab] = useState<'users' | 'invitations' | 'system' | 'parsers' | 'logging' | 'feedback' | 'patterns'>('system');
+  const [activeTab, setActiveTab] = useState<'users' | 'invitations' | 'system' | 'parsers' | 'logging' | 'feedback' | 'patterns' | 'backups'>('system');
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [savingParsers, setSavingParsers] = useState(false);
   const [savingLogging, setSavingLogging] = useState(false);
@@ -396,6 +397,16 @@ export default function AdminPage() {
               {patternData.pendingSuggestions.length}
             </span>
           )}
+        </button>
+        <button
+          onClick={() => setActiveTab('backups')}
+          className={`px-4 py-2 font-medium transition ${
+            activeTab === 'backups'
+              ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+          }`}
+        >
+          Backups
         </button>
       </div>
 
@@ -1968,6 +1979,11 @@ export default function AdminPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Backups Tab */}
+      {activeTab === 'backups' && (
+        <BackupManagement />
       )}
 
     </div>

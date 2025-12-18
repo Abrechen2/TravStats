@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { airportsApi, Airport } from '../lib/api';
+import { airportsApi, Airport, setupApi } from '../lib/api';
+import { logger } from '../lib/logger';
 
 interface AirportAutocompleteProps {
   value?: Airport | null;
@@ -20,7 +21,26 @@ export default function AirportAutocomplete({
   const [results, setResults] = useState<Airport[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // Check if airport seeding is in progress
+  useEffect(() => {
+    const checkSeedingStatus = async () => {
+      try {
+        const status = await setupApi.getAirportSeedingStatus();
+        setIsSeeding(status.status === 'running' || status.status === 'pending');
+      } catch (error) {
+        // If check fails, assume not seeding
+        setIsSeeding(false);
+      }
+    };
+
+    checkSeedingStatus();
+    // Check periodically while component is mounted
+    const interval = setInterval(checkSeedingStatus, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Update display when value changes
   useEffect(() => {
@@ -50,7 +70,7 @@ export default function AirportAutocomplete({
 
   // Debounced search
   useEffect(() => {
-    if (query.length < 2) {
+    if (isSeeding || query.length < 2) {
       setResults([]);
       return;
     }
@@ -65,12 +85,12 @@ export default function AirportAutocomplete({
         // If no results and query looks like an airport code (3-4 uppercase letters)
         // try direct lookup which will fetch from external API if needed
         if (airports.length === 0 && /^[A-Z]{3,4}$/i.test(query.trim())) {
-          console.log(`🔍 Keine Ergebnisse für "${query}", versuche externe Suche...`);
+          logger.debug(`Keine Ergebnisse für "${query}", versuche externe Suche...`);
           try {
             const airport = await airportsApi.getByCode(query.trim().toUpperCase());
             setResults([airport]);
           } catch (lookupError) {
-            console.log('Auch externe Suche fand nichts');
+            logger.debug('Auch externe Suche fand nichts');
             setResults([]);
           }
         } else {
@@ -79,7 +99,7 @@ export default function AirportAutocomplete({
 
         setIsOpen(true);
       } catch (error) {
-        console.error('Airport search failed:', error);
+        logger.error('Airport search failed:', error);
         setResults([]);
       } finally {
         setLoading(false);
@@ -115,11 +135,13 @@ export default function AirportAutocomplete({
         type="text"
         value={query}
         onChange={handleInputChange}
-        onFocus={() => query.length >= 2 && setIsOpen(true)}
-        placeholder={placeholder}
+        onFocus={() => !isSeeding && query.length >= 2 && setIsOpen(true)}
+        placeholder={isSeeding ? 'Airport-Datenbank wird noch geladen...' : placeholder}
         className="input"
         required={required}
         autoComplete="off"
+        disabled={isSeeding}
+        title={isSeeding ? 'Airport-Datenbank wird noch geladen. Bitte warten Sie, bis das Seeding abgeschlossen ist.' : undefined}
       />
 
       {/* Dropdown */}

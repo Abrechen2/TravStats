@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { statsApi, flightsApi } from '../lib/api';
 import HelpIcon from './Help/HelpIcon';
-import type { Stats as StatsType, Route, FlightFilters } from '../types';
+import type { Stats as StatsType, Route, FlightFilters, Flight } from '../types';
 import { calculateDistance } from '../lib/geo';
 import { API_LIMITS } from '../lib/constants';
+import { logger } from '../lib/logger';
 
 interface StatsProps {
   filters?: FlightFilters;
@@ -20,12 +21,12 @@ export default function Stats({ filters = {} }: StatsProps) {
 
   const loadStats = async () => {
     try {
-      const { minRouteCount, ...apiFilters } = filters as any;
+      const { minRouteCount, ...apiFilters } = filters;
       const hasBackendFilters = Object.keys(apiFilters).length > 0;
       // If filters are applied, calculate stats from filtered flights
       if (hasBackendFilters) {
         const limit = API_LIMITS.MAX_PAGE_SIZE;
-        let allFlights: any[] = [];
+        let allFlights: Flight[] = [];
         let offset = 0;
 
         while (true) {
@@ -47,13 +48,13 @@ export default function Stats({ filters = {} }: StatsProps) {
         setRoutes(routesData.routes);
       }
     } catch (error) {
-      console.error('Failed to load stats:', error);
+      logger.error('Failed to load stats:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const calculateStats = (flights: any[]): StatsType => {
+  const calculateStats = (flights: Flight[]): StatsType => {
     const flownFlights = flights.filter(f => f.status === 'flown');
     const totalDistance = flownFlights.reduce((sum, f) => {
       // Use accurate Haversine formula for distance calculation

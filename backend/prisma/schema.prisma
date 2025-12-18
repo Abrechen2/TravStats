@@ -12,20 +12,20 @@ datasource db {
 }
 
 model User {
-  id                  String              @id @default(uuid())
-  username            String              @unique
-  passwordHash        String              @map("password_hash")
-  isAdmin             Boolean             @default(false) @map("is_admin")
-  isActive            Boolean             @default(true) @map("is_active")
-  canTrainLLM         Boolean             @default(false) @map("can_train_llm")
-  invitedBy           String?             @map("invited_by")
-  createdAt           DateTime            @default(now()) @map("created_at")
-  flights             Flight[]
-  userAchievements    UserAchievement[]
-  settings            UserSettings?
-  analyticsEvents     AnalyticsEvent[]
-  createdInvitations  Invitation[]
-  trainingData        TrainingData[]
+  id                 String            @id @default(uuid())
+  username           String            @unique
+  passwordHash       String            @map("password_hash")
+  isAdmin            Boolean           @default(false) @map("is_admin")
+  isActive           Boolean           @default(true) @map("is_active")
+  canTrainLLM        Boolean           @default(false) @map("can_train_llm")
+  invitedBy          String?           @map("invited_by")
+  createdAt          DateTime          @default(now()) @map("created_at")
+  flights            Flight[]
+  userAchievements   UserAchievement[]
+  settings           UserSettings?
+  analyticsEvents    AnalyticsEvent[]
+  createdInvitations Invitation[]
+  trainingData       TrainingData[]
 
   @@map("users")
 }
@@ -50,44 +50,44 @@ model Airport {
 }
 
 model Flight {
-  id                String   @id @default(uuid())
-  userId            String   @map("user_id")
-  airline           String?
-  flightNumber      String?  @map("flight_number")
-  callsign          String?
-  aircraft          String?
-  depIcao           String?  @map("dep_icao")
-  depIata           String?  @map("dep_iata")
-  depName           String?  @map("dep_name")
-  depLat            Float    @map("dep_lat")
-  depLon            Float    @map("dep_lon")
-  arrIcao           String?  @map("arr_icao")
-  arrIata           String?  @map("arr_iata")
-  arrName           String?  @map("arr_name")
-  arrLat            Float    @map("arr_lat")
-  arrLon            Float    @map("arr_lon")
-  departureTime     DateTime @map("departure_time")
-  arrivalTime       DateTime @map("arrival_time")
-  status            String   @default("scheduled") // scheduled, flown, cancelled
-  notes             String?
+  id               String   @id @default(uuid())
+  userId           String   @map("user_id")
+  airline          String?
+  flightNumber     String?  @map("flight_number")
+  callsign         String?
+  aircraft         String?
+  depIcao          String?  @map("dep_icao")
+  depIata          String?  @map("dep_iata")
+  depName          String?  @map("dep_name")
+  depLat           Float    @map("dep_lat")
+  depLon           Float    @map("dep_lon")
+  arrIcao          String?  @map("arr_icao")
+  arrIata          String?  @map("arr_iata")
+  arrName          String?  @map("arr_name")
+  arrLat           Float    @map("arr_lat")
+  arrLon           Float    @map("arr_lon")
+  departureTime    DateTime @map("departure_time")
+  arrivalTime      DateTime @map("arrival_time")
+  status           String   @default("scheduled") // scheduled, flown, cancelled
+  notes            String?
   // Boarding Pass Information
-  seatNumber        String?  @map("seat_number")
-  seatClass         String?  @map("seat_class") // economy, premium_economy, business, first
-  boardingGroup     String?  @map("boarding_group")
-  gate              String?
-  terminal          String?
-  bookingReference  String?  @map("booking_reference")
-  ticketNumber      String?  @map("ticket_number")
+  seatNumber       String?  @map("seat_number")
+  seatClass        String?  @map("seat_class") // economy, premium_economy, business, first
+  boardingGroup    String?  @map("boarding_group")
+  gate             String?
+  terminal         String?
+  bookingReference String?  @map("booking_reference")
+  ticketNumber     String?  @map("ticket_number")
   // Costs & categorization
-  price             Float?   @map("price")
-  currency          String?  @default("EUR") @map("currency")
-  taxes             Float?   @map("taxes")
-  fees              Float?   @map("fees")
-  category          String?  @default("private") @map("category") // business, private, vacation
-  tags              String[] @default([]) @map("tags")
-  receiptUrl        String?  @map("receipt_url")
-  ticketPrice       Float?   @map("ticket_price")
-  createdAt         DateTime @default(now()) @map("created_at")
+  price            Float?   @map("price")
+  currency         String?  @default("EUR") @map("currency")
+  taxes            Float?   @map("taxes")
+  fees             Float?   @map("fees")
+  category         String?  @default("private") @map("category") // business, private, vacation
+  tags             String[] @default([]) @map("tags")
+  receiptUrl       String?  @map("receipt_url")
+  ticketPrice      Float?   @map("ticket_price")
+  createdAt        DateTime @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -103,11 +103,11 @@ model Achievement {
   code             String            @unique
   name             String
   description      String
-  category         String            // explorer, distance, collector, social, elite, special
-  icon             String            // icon identifier
+  category         String // explorer, distance, collector, social, elite, special
+  icon             String // icon identifier
   tier             String            @default("bronze") // bronze, silver, gold, platinum, diamond
-  requirement      Int               // numeric requirement for achievement
-  requirementType  String            // flights_count, distance_km, countries, airlines, airports, continents, etc.
+  requirement      Int // numeric requirement for achievement
+  requirementType  String // flights_count, distance_km, countries, airlines, airports, continents, etc.
   points           Int               @default(10)
   isHidden         Boolean           @default(false) @map("is_hidden")
   createdAt        DateTime          @default(now()) @map("created_at")
@@ -119,14 +119,14 @@ model Achievement {
 }
 
 model UserAchievement {
-  id            String      @id @default(uuid())
-  userId        String      @map("user_id")
-  achievementId String      @map("achievement_id")
-  unlockedAt    DateTime    @default(now()) @map("unlocked_at")
-  progress      Int         @default(0) // current progress towards achievement
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  achievementId String   @map("achievement_id")
+  unlockedAt    DateTime @default(now()) @map("unlocked_at")
+  progress      Int      @default(0) // current progress towards achievement
 
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
 
   @@unique([userId, achievementId])
   @@index([userId])
@@ -135,22 +135,22 @@ model UserAchievement {
 }
 
 model UserSettings {
-  id        String   @id @default(uuid())
-  userId    String   @unique @map("user_id")
-  data      Json     @map("data")
+  id     String @id @default(uuid())
+  userId String @unique @map("user_id")
+  data   Json   @map("data")
 
   // Parser preferences
-  preferredVisionParser  String? @default("auto") @map("preferred_vision_parser")
-  preferredTextParser    String? @default("auto") @map("preferred_text_parser")
-  visionFallbackChain    String? @default("ollama,openai,claude,tesseract,manual") @map("vision_fallback_chain")
-  textFallbackChain      String? @default("ollama,openai,claude,regex") @map("text_fallback_chain")
+  preferredVisionParser String? @default("auto") @map("preferred_vision_parser")
+  preferredTextParser   String? @default("auto") @map("preferred_text_parser")
+  visionFallbackChain   String? @default("ollama,openai,claude,tesseract,manual") @map("vision_fallback_chain")
+  textFallbackChain     String? @default("ollama,openai,claude,regex") @map("text_fallback_chain")
 
   // User-specific API keys (encrypted at application level)
-  openaiApiKey           String? @map("openai_api_key")
-  claudeApiKey           String? @map("claude_api_key")
+  openaiApiKey String? @map("openai_api_key")
+  claudeApiKey String? @map("claude_api_key")
 
   // Developer mode settings
-  developerModeEnabled   Boolean  @default(false) @map("developer_mode_enabled")
+  developerModeEnabled     Boolean   @default(false) @map("developer_mode_enabled")
   developerModeConfirmedAt DateTime? @map("developer_mode_confirmed_at")
 
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -202,84 +202,84 @@ model SystemSettings {
 }
 
 model AdminSettings {
-  id                    Int      @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
   // Global API keys (encrypted at application level)
-  globalOpenaiApiKey    String?  @map("global_openai_api_key")
-  globalClaudeApiKey    String?  @map("global_claude_api_key")
+  globalOpenaiApiKey String? @map("global_openai_api_key")
+  globalClaudeApiKey String? @map("global_claude_api_key")
 
   // User permissions
-  allowUserApiKeys      Boolean  @default(true) @map("allow_user_api_keys")
-  requireUserApiKeys    Boolean  @default(false) @map("require_user_api_keys")
+  allowUserApiKeys   Boolean @default(true) @map("allow_user_api_keys")
+  requireUserApiKeys Boolean @default(false) @map("require_user_api_keys")
 
   // Default parser settings for new users
-  defaultVisionParser   String   @default("auto") @map("default_vision_parser")
-  defaultTextParser     String   @default("auto") @map("default_text_parser")
+  defaultVisionParser String @default("auto") @map("default_vision_parser")
+  defaultTextParser   String @default("auto") @map("default_text_parser")
 
   // === LOGGING CONFIGURATION ===
   // Enable enhanced debug logging (activates debug/trace levels + detailed instrumentation)
-  debugLoggingEnabled   Boolean  @default(false) @map("debug_logging_enabled")
+  debugLoggingEnabled Boolean @default(false) @map("debug_logging_enabled")
 
   // Log level for file output (error | warn | info | debug | trace)
-  logLevel              String   @default("info") @map("log_level")
+  logLevel String @default("info") @map("log_level")
 
   // Maximum file size before rotation (in MB)
-  maxLogFileSize        Int      @default(10) @map("max_log_file_size")
+  maxLogFileSize Int @default(10) @map("max_log_file_size")
 
   // Number of rotated log files to keep
-  maxLogFiles           Int      @default(7) @map("max_log_files")
+  maxLogFiles Int @default(7) @map("max_log_files")
 
   // Enable request/response logging (captures full HTTP traffic)
-  logHttpRequests       Boolean  @default(false) @map("log_http_requests")
+  logHttpRequests Boolean @default(false) @map("log_http_requests")
 
   // Enable database query logging (captures SQL with parameters)
-  logDatabaseQueries    Boolean  @default(false) @map("log_database_queries")
+  logDatabaseQueries Boolean @default(false) @map("log_database_queries")
 
   // Enable parser operation logging (captures LLM requests/responses)
-  logParserOperations   Boolean  @default(false) @map("log_parser_operations")
+  logParserOperations Boolean @default(false) @map("log_parser_operations")
 
   // Log retention in days (auto-delete older logs)
-  logRetentionDays      Int      @default(7) @map("log_retention_days")
+  logRetentionDays Int @default(7) @map("log_retention_days")
 
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("admin_settings")
 }
 
 model TrainingData {
-  id            String   @id @default(uuid())
-  userId        String   @map("user_id")
-  type          String   // "email" | "boarding_pass"
-  originalFile  String   @map("original_file") // Path to uploaded file
-  annotations   Json     // Markierte Bereiche (Text-Selections oder Bounding Boxes)
-  extractedData Json     // Extrahierte Flight-Daten (als Ground Truth)
-  status        String   @default("pending") // "pending" | "trained" | "failed"
-  tags          String[] @default([]) // Tags for filtering and organization
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")
+  type          String // "email" | "boarding_pass"
+  originalFile  String    @map("original_file") // Path to uploaded file
+  annotations   Json // Markierte Bereiche (Text-Selections oder Bounding Boxes)
+  extractedData Json // Extrahierte Flight-Daten (als Ground Truth)
+  status        String    @default("pending") // "pending" | "trained" | "failed"
+  tags          String[]  @default([]) // Tags for filtering and organization
   trainedAt     DateTime? @map("trained_at")
-  createdAt     DateTime @default(now()) @map("created_at")
-  
+  createdAt     DateTime  @default(now()) @map("created_at")
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   @@index([userId])
   @@index([status])
   @@map("training_data")
 }
 
 model TrainingJob {
-  id            String   @id @default(uuid())
-  status        String   // "pending" | "running" | "completed" | "failed"
-  trainingDataIds String[] @map("training_data_ids") // Array of TrainingData IDs
-  modelName     String   @map("model_name") // z.B. "travstats-custom"
-  startedAt     DateTime? @map("started_at")
-  completedAt   DateTime? @map("completed_at")
-  errorMessage  String?  @map("error_message")
-  logFile       String?  @map("log_file") // Path to detailed log file
-  metrics       Json?    // Training metrics (loss, accuracy, etc.)
-  createdAt     DateTime @default(now()) @map("created_at")
-  
-  logs          TrainingLog[]
-  
+  id              String    @id @default(uuid())
+  status          String // "pending" | "running" | "completed" | "failed"
+  trainingDataIds String[]  @map("training_data_ids") // Array of TrainingData IDs
+  modelName       String    @map("model_name") // z.B. "travstats-custom"
+  startedAt       DateTime? @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+  errorMessage    String?   @map("error_message")
+  logFile         String?   @map("log_file") // Path to detailed log file
+  metrics         Json? // Training metrics (loss, accuracy, etc.)
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  logs TrainingLog[]
+
   @@index([status])
   @@map("training_jobs")
 }
@@ -287,14 +287,54 @@ model TrainingJob {
 model TrainingLog {
   id            String   @id @default(uuid())
   trainingJobId String   @map("training_job_id")
-  level         String   // "info" | "warn" | "error" | "debug"
+  level         String // "info" | "warn" | "error" | "debug"
   message       String
-  metadata      Json?    // Zusätzliche strukturierte Daten
+  metadata      Json? // Zusätzliche strukturierte Daten
   timestamp     DateTime @default(now())
-  
-  trainingJob   TrainingJob @relation(fields: [trainingJobId], references: [id], onDelete: Cascade)
-  
+
+  trainingJob TrainingJob @relation(fields: [trainingJobId], references: [id], onDelete: Cascade)
+
   @@index([trainingJobId])
   @@index([timestamp])
   @@map("training_logs")
+}
+
+model AirportSeedingStatus {
+  id                     String    @id @default(uuid())
+  status                 String // "pending" | "running" | "completed" | "failed"
+  startedAt              DateTime? @map("started_at")
+  completedAt            DateTime? @map("completed_at")
+  totalAirports          Int       @default(0) @map("total_airports")
+  processedAirports      Int       @default(0) @map("processed_airports")
+  estimatedTimeRemaining Int?      @map("estimated_time_remaining") // in seconds
+  error                  String?   @map("error")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@map("airport_seeding_status")
+}
+
+model Backup {
+  id              String    @id @default(uuid())
+  type            String    @default("full") // "full" | "partial"
+  status          String    @default("pending") // "pending" | "running" | "completed" | "failed"
+  backupPath      String    @map("backup_path") // Path to backup archive
+  dbBackupPath    String?   @map("db_backup_path") // Path to database dump
+  filesBackupPath String?   @map("files_backup_path") // Path to files archive
+  size            BigInt    @default(0) // Size in bytes
+  retentionDays   Int       @default(30) @map("retention_days")
+  startedAt       DateTime? @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+  errorMessage    String?   @map("error_message")
+  metadata        Json? // JSON: userCount, flightCount, etc.
+  syncedToCloud   Boolean   @default(false) @map("synced_to_cloud")
+  cloudSyncAt     DateTime? @map("cloud_sync_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+  @@map("backups")
 }
