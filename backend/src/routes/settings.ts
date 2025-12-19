@@ -82,7 +82,15 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
 
     if (!existing) {
       const created = await prisma.userSettings.create({
-        data: { userId, data: defaultSettings },
+        data: { 
+          userId, 
+          data: defaultSettings,
+          // Initialize training settings with defaults
+          useTrainedModels: true,
+          preferredEmailModel: 'auto',
+          preferredVisionModel: 'auto',
+          trainingSeparateModels: true,
+        },
       });
       return res.json(created.data);
     }
@@ -111,7 +119,15 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
     const saved = await prisma.userSettings.upsert({
       where: { userId },
       update: { data: merged as any },
-      create: { userId, data: merged as any },
+      create: { 
+        userId, 
+        data: merged as any,
+        // Initialize training settings with defaults
+        useTrainedModels: true,
+        preferredEmailModel: 'auto',
+        preferredVisionModel: 'auto',
+        trainingSeparateModels: true,
+      },
     });
 
     res.json(saved.data);
@@ -258,6 +274,14 @@ router.put('/parser', async (req: AuthRequest, res: Response, next: NextFunction
   } catch (error) {
     next(error);
   }
+});
+
+// Training settings schema
+const trainingSettingsSchema = z.object({
+  useTrainedModels: z.boolean().optional(),
+  preferredEmailModel: z.enum(['auto', 'trained', 'base']).optional(),
+  preferredVisionModel: z.enum(['auto', 'trained', 'base']).optional(),
+  trainingSeparateModels: z.boolean().optional(),
 });
 
 // Developer mode settings schema
@@ -431,6 +455,90 @@ router.put('/onboarding-state', async (req: AuthRequest, res: Response, next: Ne
     });
 
     res.json(updatedOnboarding);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get training settings
+router.get('/training', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId!;
+
+    const settings = await prisma.userSettings.findUnique({
+      where: { userId },
+      select: {
+        useTrainedModels: true,
+        preferredEmailModel: true,
+        preferredVisionModel: true,
+        trainingSeparateModels: true,
+      },
+    });
+
+    res.json({
+      useTrainedModels: settings?.useTrainedModels ?? true,
+      preferredEmailModel: settings?.preferredEmailModel ?? 'auto',
+      preferredVisionModel: settings?.preferredVisionModel ?? 'auto',
+      trainingSeparateModels: settings?.trainingSeparateModels ?? true,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Update training settings
+router.put('/training', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId!;
+    const payload = trainingSettingsSchema.parse(req.body);
+
+    const updateData: any = {};
+
+    if (payload.useTrainedModels !== undefined) {
+      updateData.useTrainedModels = payload.useTrainedModels;
+    }
+    if (payload.preferredEmailModel !== undefined) {
+      updateData.preferredEmailModel = payload.preferredEmailModel;
+    }
+    if (payload.preferredVisionModel !== undefined) {
+      updateData.preferredVisionModel = payload.preferredVisionModel;
+    }
+    if (payload.trainingSeparateModels !== undefined) {
+      updateData.trainingSeparateModels = payload.trainingSeparateModels;
+    }
+
+    const updated = await prisma.userSettings.upsert({
+      where: { userId },
+      update: updateData,
+      create: {
+        userId,
+        data: defaultSettings,
+        useTrainedModels: payload.useTrainedModels ?? true,
+        preferredEmailModel: payload.preferredEmailModel ?? 'auto',
+        preferredVisionModel: payload.preferredVisionModel ?? 'auto',
+        trainingSeparateModels: payload.trainingSeparateModels ?? true,
+      },
+      select: {
+        useTrainedModels: true,
+        preferredEmailModel: true,
+        preferredVisionModel: true,
+        trainingSeparateModels: true,
+      },
+    });
+
+    logger.info({
+      operation: 'training_settings_updated',
+      message: 'Training settings updated',
+      context: {
+        userId,
+        settings: updated,
+      },
+    });
+
+    res.json({
+      message: 'Training settings updated successfully',
+      settings: updated,
+    });
   } catch (error) {
     next(error);
   }

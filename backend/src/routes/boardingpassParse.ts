@@ -58,7 +58,7 @@ router.post('/parse-boardingpass', authenticate, async (req: AuthRequest, res: R
     const adminSettings = await getAdminParserSettings();
 
     // Get parser config
-    const config = getParserConfig(userSettings || undefined, adminSettings || undefined);
+    const config = await getParserConfig(userSettings || undefined, adminSettings || undefined, userId);
 
     // Parse boarding pass
     const result = await parseBoardingPass(imageBase64, config);
@@ -151,7 +151,7 @@ router.get('/parse-boardingpass/providers', authenticate, async (req: AuthReques
     const adminSettings = await getAdminParserSettings();
 
     // Get parser config
-    const config = getParserConfig(userSettings || undefined, adminSettings || undefined);
+    const config = await getParserConfig(userSettings || undefined, adminSettings || undefined, userId);
 
     // Get available providers
     const providers = await getAvailableProviders(config);
@@ -182,7 +182,7 @@ router.get('/parse-boardingpass/check', authenticate, async (req: AuthRequest, r
     const userSettings = await getUserParserSettings(userId);
     const adminSettings = await getAdminParserSettings();
 
-    const config = getParserConfig(userSettings || undefined, adminSettings || undefined);
+    const config = await getParserConfig(userSettings || undefined, adminSettings || undefined, userId);
     const providers = await getAvailableProviders(config);
 
     // Find the preferred provider or first available

@@ -350,6 +350,24 @@ export const settingsApi = {
     const { data } = await api.put('/settings/developer-mode', payload);
     return data;
   },
+  getTrainingSettings: async () => {
+    const { data } = await api.get<{
+      useTrainedModels: boolean;
+      preferredEmailModel: 'auto' | 'trained' | 'base';
+      preferredVisionModel: 'auto' | 'trained' | 'base';
+      trainingSeparateModels: boolean;
+    }>('/settings/training');
+    return data;
+  },
+  updateTrainingSettings: async (payload: {
+    useTrainedModels?: boolean;
+    preferredEmailModel?: 'auto' | 'trained' | 'base';
+    preferredVisionModel?: 'auto' | 'trained' | 'base';
+    trainingSeparateModels?: boolean;
+  }) => {
+    const { data } = await api.put('/settings/training', payload);
+    return data;
+  },
   uploadProfilePicture: async (file: File) => {
     const formData = new FormData();
     formData.append('profilePicture', file);
@@ -659,6 +677,30 @@ export const adminApi = {
     defaultTextParser?: string;
   }) => {
     const { data } = await api.put('/admin/parser-settings', settings);
+    return data;
+  },
+
+  getTrainingConfig: async () => {
+    const { data } = await api.get<{
+      trainingModelOutputDir: string | null;
+      trainingEmailModelName: string | null;
+      trainingVisionModelName: string | null;
+      currentTrainingModelOutputDir: string;
+      currentTrainingEmailModelName: string;
+      currentTrainingVisionModelName: string;
+      envTrainingModelOutputDir: string;
+      envTrainingEmailModelName: string;
+      envTrainingVisionModelName: string;
+    }>('/admin/training-config');
+    return data;
+  },
+
+  updateTrainingConfig: async (config: {
+    trainingModelOutputDir?: string | null;
+    trainingEmailModelName?: string | null;
+    trainingVisionModelName?: string | null;
+  }) => {
+    const { data } = await api.put('/admin/training-config', config);
     return data;
   },
 

@@ -48,7 +48,7 @@ router.post('/parse-email', authenticate, async (req: AuthRequest, res: Response
       subject,
       emailContent,
       undefined,
-      userSettings || undefined,
+      userId ? { ...userSettings, userId } : userSettings || undefined,
       adminSettings || undefined
     );
 
@@ -170,7 +170,7 @@ router.post(
         extracted.subject,
         extracted.text,
         extracted.html,
-        userSettings || undefined,
+        userId ? { ...userSettings, userId } : userSettings || undefined,
         adminSettings || undefined
       );
 

@@ -3,6 +3,7 @@ import logger from '../utils/logger';
 import { createTrainingExample, Annotation } from './annotationService';
 import { ParsedBooking } from './bookingParser';
 import { getHardwareInfo } from './hardwareService';
+import { archivePreviousModel, validateModel } from './modelManager';
 import * as fs from 'fs';
 import * as path from 'path';
 import { exec, ChildProcess } from 'child_process';
@@ -15,6 +16,14 @@ const runningProcesses = new Map<string, ChildProcess>();
 
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen2.5:7b';
+const OLLAMA_VISION_MODEL = process.env.OLLAMA_VISION_MODEL || 'llama3.2-vision';
+
+// ENV variables with defaults
+const TRAINING_MODEL_OUTPUT_DIR_ENV = process.env.TRAINING_MODEL_OUTPUT_DIR || './data/training/models';
+const TRAINING_EMAIL_MODEL_NAME_ENV = process.env.TRAINING_EMAIL_MODEL_NAME || 'travstats-email-custom';
+const TRAINING_VISION_MODEL_NAME_ENV = process.env.TRAINING_VISION_MODEL_NAME || 'travstats-vision-custom';
+
+// Legacy constants (for backward compatibility)
 const TRAINING_MODEL_NAME = 'travstats-custom';
 const TRAINING_DATA_DIR = path.join(__dirname, '../../data/training');
 const TRAINING_LOGS_DIR = path.join(__dirname, '../../data/logs/training');
@@ -33,14 +42,91 @@ if (!fs.existsSync(TRAINING_LOGS_DIR)) {
 }
 
 /**
- * Prepare training data in LoRA format (JSONL)
+ * Training configuration interface
  */
-export async function prepareTrainingData(trainingDataIds: string[]): Promise<string> {
+export interface TrainingConfig {
+  modelOutputDir: string;
+  emailModelName: string;
+  visionModelName: string;
+}
+
+/**
+ * Get training configuration from AdminSettings → ENV → Defaults
+ * Priority: AdminSettings > ENV > Defaults
+ */
+export async function getTrainingConfig(): Promise<TrainingConfig> {
+  try {
+    const adminSettings = await prisma.adminSettings.findFirst();
+    
+    // Resolve model output directory
+    const modelOutputDir = adminSettings?.trainingModelOutputDir 
+      || TRAINING_MODEL_OUTPUT_DIR_ENV;
+    
+    // Resolve absolute path (relative to backend directory)
+    const absoluteOutputDir = path.isAbsolute(modelOutputDir)
+      ? modelOutputDir
+      : path.join(__dirname, '../../', modelOutputDir);
+    
+    // Ensure directory exists
+    if (!fs.existsSync(absoluteOutputDir)) {
+      fs.mkdirSync(absoluteOutputDir, { recursive: true });
+    }
+    
+    // Resolve model names
+    const emailModelName = adminSettings?.trainingEmailModelName 
+      || TRAINING_EMAIL_MODEL_NAME_ENV;
+    const visionModelName = adminSettings?.trainingVisionModelName 
+      || TRAINING_VISION_MODEL_NAME_ENV;
+    
+    return {
+      modelOutputDir: absoluteOutputDir,
+      emailModelName,
+      visionModelName,
+    };
+  } catch (error) {
+    logger.warn({
+      operation: 'get_training_config_error',
+      message: 'Failed to load training config, using defaults',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    
+    // Fallback to defaults
+    const absoluteOutputDir = path.isAbsolute(TRAINING_MODEL_OUTPUT_DIR_ENV)
+      ? TRAINING_MODEL_OUTPUT_DIR_ENV
+      : path.join(__dirname, '../../', TRAINING_MODEL_OUTPUT_DIR_ENV);
+    
+    if (!fs.existsSync(absoluteOutputDir)) {
+      fs.mkdirSync(absoluteOutputDir, { recursive: true });
+    }
+    
+    return {
+      modelOutputDir: absoluteOutputDir,
+      emailModelName: TRAINING_EMAIL_MODEL_NAME_ENV,
+      visionModelName: TRAINING_VISION_MODEL_NAME_ENV,
+    };
+  }
+}
+
+/**
+ * Prepare training data in LoRA format (JSONL)
+ * @param trainingDataIds - Array of training data IDs
+ * @param typeFilter - Optional filter by type ('email' | 'boarding_pass')
+ */
+export async function prepareTrainingData(
+  trainingDataIds: string[],
+  typeFilter?: 'email' | 'boarding_pass'
+): Promise<string> {
+  const whereClause: any = {
+    id: { in: trainingDataIds },
+    status: 'pending',
+  };
+  
+  if (typeFilter) {
+    whereClause.type = typeFilter;
+  }
+  
   const trainingData = await prisma.trainingData.findMany({
-    where: {
-      id: { in: trainingDataIds },
-      status: 'pending',
-    },
+    where: whereClause,
     include: {
       user: {
         select: {
@@ -137,20 +223,28 @@ async function logTrainingEvent(
 
 /**
  * Find the last successful training job and return its model path
+ * @param modelType - Optional filter by model type
  * Returns null if no successful training exists
  */
-async function findLastSuccessfulTraining(): Promise<string | null> {
+async function findLastSuccessfulTraining(modelType?: 'email' | 'vision' | 'combined'): Promise<string | null> {
   try {
+    const whereClause: any = {
+      status: 'completed',
+    };
+    
+    if (modelType) {
+      whereClause.modelType = modelType;
+    }
+    
     const lastJob = await prisma.trainingJob.findFirst({
-      where: {
-        status: 'completed',
-      },
+      where: whereClause,
       orderBy: {
         completedAt: 'desc',
       },
       select: {
         id: true,
         metrics: true,
+        modelType: true,
       },
     });
 
@@ -167,10 +261,25 @@ async function findLastSuccessfulTraining(): Promise<string | null> {
       }
     }
 
-    // Fallback: construct path from job ID
-    const modelPath = path.join(TRAINING_DATA_DIR, `output-${lastJob.id}`);
+    // Fallback: construct path from job ID and model type
+    // Use configured output directory
+    const config = await getTrainingConfig();
+    const jobModelType = (lastJob.modelType as 'email' | 'vision' | 'combined') || 'combined';
+    const modelName = jobModelType === 'email' 
+      ? config.emailModelName 
+      : jobModelType === 'vision'
+      ? config.visionModelName
+      : config.emailModelName; // Combined uses email model name
+    
+    const modelPath = path.join(config.modelOutputDir, modelName);
     if (fs.existsSync(modelPath)) {
       return modelPath;
+    }
+    
+    // Legacy fallback: old path structure
+    const legacyPath = path.join(TRAINING_DATA_DIR, `output-${lastJob.id}`);
+    if (fs.existsSync(legacyPath)) {
+      return legacyPath;
     }
 
     return null;
@@ -188,14 +297,39 @@ async function findLastSuccessfulTraining(): Promise<string | null> {
 
 /**
  * Train model using LoRA
+ * @param trainingJobId - Training job ID
+ * @param jsonlPath - Path to JSONL training data file
+ * @param modelType - Type of model to train ('email' | 'vision' | 'combined')
  */
 export async function trainModel(
   trainingJobId: string,
-  jsonlPath: string
+  jsonlPath: string,
+  modelType: 'email' | 'vision' | 'combined' = 'combined'
 ): Promise<{ modelPath: string; metrics: Record<string, any> }> {
+  // Get training configuration
+  const config = await getTrainingConfig();
+  
+  // Determine model name and base model based on type
+  let modelName: string;
+  let baseModel: string;
+  
+  if (modelType === 'email') {
+    modelName = config.emailModelName;
+    baseModel = OLLAMA_MODEL;
+  } else if (modelType === 'vision') {
+    modelName = config.visionModelName;
+    baseModel = OLLAMA_VISION_MODEL;
+  } else {
+    // Combined: use email model name for backward compatibility
+    modelName = config.emailModelName;
+    baseModel = OLLAMA_MODEL;
+  }
+  
   await logTrainingEvent(trainingJobId, 'info', 'Starting LoRA training', {
     jsonlPath,
-    baseModel: OLLAMA_MODEL,
+    baseModel,
+    modelName,
+    modelType,
   });
 
   // Python script path - works both in development and production (Docker)
@@ -214,11 +348,31 @@ export async function trainModel(
   }
 
   const logFile = path.join(TRAINING_LOGS_DIR, `training-${trainingJobId}.log`);
-  const outputDir = path.join(TRAINING_DATA_DIR, `output-${trainingJobId}`);
+  // Use configured output directory
+  const outputDir = path.join(config.modelOutputDir, modelName);
+  
+  // Archive previous model if it exists
+  if (fs.existsSync(outputDir)) {
+    const archivedPath = await archivePreviousModel(modelName, outputDir);
+    if (archivedPath) {
+      await logTrainingEvent(trainingJobId, 'info', 'Previous model archived', {
+        archivedPath,
+        modelName,
+      });
+    }
+    
+    // Remove old model directory (will be replaced by new training)
+    fs.rmSync(outputDir, { recursive: true, force: true });
+  }
+  
+  // Ensure output directory exists
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true });
+  }
 
   try {
-    // Find previous successful training to continue from
-    const previousModelPath = await findLastSuccessfulTraining();
+    // Find previous successful training to continue from (same model type)
+    const previousModelPath = await findLastSuccessfulTraining(modelType);
     const isContinuingTraining = previousModelPath !== null;
 
     if (isContinuingTraining) {
@@ -235,14 +389,14 @@ export async function trainModel(
       });
     } else {
       await logTrainingEvent(trainingJobId, 'info', 'Starting new training from base model', {
-        baseModel: OLLAMA_MODEL,
+        baseModel,
       });
       logger.info({
         operation: 'training_new',
         message: 'Starting new training from base model',
         context: {
           trainingJobId,
-          baseModel: OLLAMA_MODEL,
+          baseModel,
         },
       });
     }
@@ -283,7 +437,7 @@ export async function trainModel(
     // Run Python training script with log file parameter for real-time logging
     // Batch size will be auto-determined by Python script
     const previousModelArg = previousModelPath ? ` --previous-model-path "${previousModelPath}"` : '';
-    const command = `${PYTHON_CMD} "${finalScriptPath}" --input "${jsonlPath}" --output "${outputDir}" --base-model "${OLLAMA_MODEL}" --job-id "${trainingJobId}" --log-file "${logFile}"${previousModelArg}`;
+    const command = `${PYTHON_CMD} "${finalScriptPath}" --input "${jsonlPath}" --output "${outputDir}" --base-model "${baseModel}" --job-id "${trainingJobId}" --log-file "${logFile}"${previousModelArg}`;
 
     await logTrainingEvent(trainingJobId, 'info', 'Executing training command', {
       command,
@@ -404,10 +558,20 @@ export async function trainModel(
       } : undefined,
     });
 
+    // Validate model after training
+    const isValid = validateModel(outputDir);
+    if (!isValid) {
+      throw new Error('Trained model validation failed');
+    }
+    
     // Parse metrics from output (would need to be implemented in Python script)
     const metrics: Record<string, any> = {
       status: 'completed',
       logFile,
+      modelPath: outputDir,
+      modelName,
+      modelType,
+      isValid,
       hardwareInfo: hardwareInfo ? {
         cpu: hardwareInfo.cpu,
         gpu: hardwareInfo.gpu,
@@ -437,29 +601,58 @@ export async function trainModel(
 
 /**
  * Export trained model to Ollama
+ * @param trainingJobId - Training job ID
+ * @param modelPath - Path to trained model directory
+ * @param modelType - Type of model ('email' | 'vision' | 'combined')
  */
 export async function exportToOllama(
   trainingJobId: string,
-  modelPath: string
+  modelPath: string,
+  modelType: 'email' | 'vision' | 'combined' = 'combined'
 ): Promise<void> {
-  await logTrainingEvent(trainingJobId, 'info', 'Exporting model to Ollama', { modelPath });
+  await logTrainingEvent(trainingJobId, 'info', 'Exporting model to Ollama', { modelPath, modelType });
 
   try {
+    // Get training configuration to determine model name
+    const config = await getTrainingConfig();
+    
+    // Determine model name and base model based on type
+    let modelName: string;
+    let baseModel: string;
+    
+    if (modelType === 'email') {
+      modelName = config.emailModelName;
+      baseModel = OLLAMA_MODEL;
+    } else if (modelType === 'vision') {
+      modelName = config.visionModelName;
+      baseModel = OLLAMA_VISION_MODEL;
+    } else {
+      // Combined: use email model name for backward compatibility
+      modelName = config.emailModelName;
+      baseModel = OLLAMA_MODEL;
+    }
+    
     // Create Modelfile for Ollama
     const modelfilePath = path.join(modelPath, 'Modelfile');
-    const modelfileContent = `FROM ${OLLAMA_MODEL}
+    const systemPrompt = modelType === 'email'
+      ? 'You are a specialized flight booking email parser. Extract flight information accurately from emails. Return JSON format with flight details.'
+      : modelType === 'vision'
+      ? 'You are a specialized boarding pass parser. Extract flight information accurately from boarding pass images. Return JSON format with flight details.'
+      : 'You are a specialized flight booking email and boarding pass parser. Extract flight information accurately from emails and boarding passes. Return JSON format with flight details.';
+    
+    const modelfileContent = `FROM ${baseModel}
 
 PARAMETER temperature 0.1
 PARAMETER top_p 0.9
 
-SYSTEM """You are a specialized flight booking email and boarding pass parser. Extract flight information accurately from emails and boarding passes. Return JSON format with flight details."""
+SYSTEM """${systemPrompt}"""
 `;
 
     fs.writeFileSync(modelfilePath, modelfileContent, 'utf-8');
 
     // Import to Ollama (this would need the actual GGUF file)
     // For now, we'll just log the command that would be run
-    const command = `ollama create ${TRAINING_MODEL_NAME} -f "${modelfilePath}"`;
+    const command = `ollama create ${modelName} -f "${modelfilePath}"`;
 
     await logTrainingEvent(trainingJobId, 'info', 'Ollama import command prepared', { command });
 
@@ -477,7 +670,8 @@ SYSTEM """You are a specialized flight booking email and boarding pass parser. E
     });
 
     await logTrainingEvent(trainingJobId, 'info', 'Model exported to Ollama', {
-      modelName: TRAINING_MODEL_NAME,
+      modelName,
+      modelType,
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -514,8 +708,9 @@ export async function shouldTriggerTraining(): Promise<boolean> {
 
 /**
  * Trigger training job
+ * @param userId - Optional user ID to check user settings for separate models
  */
-export async function triggerTraining(): Promise<string> {
+export async function triggerTraining(userId?: string): Promise<string> {
   // Check if training should be triggered
   if (!(await shouldTriggerTraining())) {
     const pendingCount = await prisma.trainingData.count({
@@ -536,39 +731,140 @@ export async function triggerTraining(): Promise<string> {
     throw new Error(`Not enough training data. Need at least 5, have ${pendingCount}`);
   }
 
-  // Get pending training data
-  const pendingData = await prisma.trainingData.findMany({
-    where: { status: 'pending' },
-    take: 10, // Limit to 10 entries per batch
-    orderBy: { createdAt: 'asc' },
-  });
-
-  if (pendingData.length === 0) {
-    throw new Error('No pending training data found');
+  // Get training configuration to check if separate models are enabled
+  const config = await getTrainingConfig();
+  
+  // Check user settings for separate models (default: true)
+  let useSeparateModels = true; // Default
+  if (userId) {
+    try {
+      const userSettings = await prisma.userSettings.findUnique({
+        where: { userId },
+        select: { trainingSeparateModels: true },
+      });
+      useSeparateModels = userSettings?.trainingSeparateModels ?? true;
+    } catch (error) {
+      logger.warn({
+        operation: 'trigger_training_user_settings_error',
+        message: 'Failed to load user settings, using default',
+        context: {
+          userId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+    }
   }
+  
+  if (useSeparateModels) {
+    // Separate jobs for email and vision
+    const emailData = await prisma.trainingData.findMany({
+      where: { 
+        status: 'pending',
+        type: 'email',
+      },
+      take: 10,
+      orderBy: { createdAt: 'asc' },
+    });
+    
+    const visionData = await prisma.trainingData.findMany({
+      where: { 
+        status: 'pending',
+        type: 'boarding_pass',
+      },
+      take: 10,
+      orderBy: { createdAt: 'asc' },
+    });
+    
+    const jobs: string[] = [];
+    
+    // Create email training job if we have at least 5 email entries
+    if (emailData.length >= 5) {
+      const emailJob = await prisma.trainingJob.create({
+        data: {
+          status: 'pending',
+          trainingDataIds: emailData.map((d) => d.id),
+          modelName: config.emailModelName,
+          modelType: 'email',
+        },
+      });
+      jobs.push(emailJob.id);
+      processTrainingJob(emailJob.id).catch((error) => {
+        logger.error({
+          operation: 'trigger_training_error',
+          message: 'Failed to process email training job',
+          context: {
+            trainingJobId: emailJob.id,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          },
+        });
+      });
+    }
+    
+    // Create vision training job if we have at least 5 vision entries
+    if (visionData.length >= 5) {
+      const visionJob = await prisma.trainingJob.create({
+        data: {
+          status: 'pending',
+          trainingDataIds: visionData.map((d) => d.id),
+          modelName: config.visionModelName,
+          modelType: 'vision',
+        },
+      });
+      jobs.push(visionJob.id);
+      processTrainingJob(visionJob.id).catch((error) => {
+        logger.error({
+          operation: 'trigger_training_error',
+          message: 'Failed to process vision training job',
+          context: {
+            trainingJobId: visionJob.id,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          },
+        });
+      });
+    }
+    
+    if (jobs.length === 0) {
+      throw new Error('Not enough training data for separate models. Need at least 5 entries of each type.');
+    }
+    
+    // Return first job ID (or we could return array of IDs)
+    return jobs[0];
+  } else {
+    // Combined model (backward compatibility)
+    const pendingData = await prisma.trainingData.findMany({
+      where: { status: 'pending' },
+      take: 10, // Limit to 10 entries per batch
+      orderBy: { createdAt: 'asc' },
+    });
 
-  // Create training job
-  const trainingJob = await prisma.trainingJob.create({
-    data: {
-      status: 'pending',
-      trainingDataIds: pendingData.map((d) => d.id),
-      modelName: TRAINING_MODEL_NAME,
-    },
-  });
+    if (pendingData.length === 0) {
+      throw new Error('No pending training data found');
+    }
 
-  // Start training asynchronously
-  processTrainingJob(trainingJob.id).catch((error) => {
-    logger.error({
-      operation: 'trigger_training_error',
-      message: 'Failed to process training job',
-      context: {
-        trainingJobId: trainingJob.id,
-        error: error instanceof Error ? error.message : 'Unknown error',
+    // Create training job
+    const trainingJob = await prisma.trainingJob.create({
+      data: {
+        status: 'pending',
+        trainingDataIds: pendingData.map((d) => d.id),
+        modelName: config.emailModelName, // Use email model name for combined
+        modelType: 'combined',
       },
     });
-  });
 
-  return trainingJob.id;
+    // Start training asynchronously
+    processTrainingJob(trainingJob.id).catch((error) => {
+      logger.error({
+        operation: 'trigger_training_error',
+        message: 'Failed to process training job',
+        context: {
+          trainingJobId: trainingJob.id,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+    });
+
+    return trainingJob.id;
+  }
 }
 
 /**
@@ -593,14 +889,38 @@ async function processTrainingJob(trainingJobId: string): Promise<void> {
       throw new Error('Training job not found');
     }
 
-    // Prepare training data
-    const jsonlPath = await prepareTrainingData(job.trainingDataIds);
+    // Determine model type from job or infer from training data
+    let modelType: 'email' | 'vision' | 'combined' = (job.modelType as 'email' | 'vision' | 'combined') || 'combined';
+    
+    // If modelType is not set, infer from training data
+    if (modelType === 'combined') {
+      const trainingData = await prisma.trainingData.findMany({
+        where: { id: { in: job.trainingDataIds } },
+        select: { type: true },
+      });
+      
+      const hasEmail = trainingData.some((d) => d.type === 'email');
+      const hasVision = trainingData.some((d) => d.type === 'boarding_pass');
+      
+      if (hasEmail && !hasVision) {
+        modelType = 'email';
+      } else if (hasVision && !hasEmail) {
+        modelType = 'vision';
+      }
+      // Otherwise keep 'combined'
+    }
+
+    // Prepare training data with type filter if separate models
+    const typeFilter = modelType !== 'combined' 
+      ? (modelType === 'email' ? 'email' : 'boarding_pass')
+      : undefined;
+    const jsonlPath = await prepareTrainingData(job.trainingDataIds, typeFilter);
 
     // Train model
-    const { modelPath, metrics } = await trainModel(trainingJobId, jsonlPath);
+    const { modelPath, metrics } = await trainModel(trainingJobId, jsonlPath, modelType);
 
     // Export to Ollama
-    await exportToOllama(trainingJobId, modelPath);
+    await exportToOllama(trainingJobId, modelPath, modelType);
 
     // Update training data status
     await prisma.trainingData.updateMany({

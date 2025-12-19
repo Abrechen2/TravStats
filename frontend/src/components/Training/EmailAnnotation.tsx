@@ -1,23 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { trainingApi } from '../../lib/api';
 import { logger } from '../../lib/logger';
+import { Flight, getFlightColorClass, combineDateTime, splitDateTime } from './types';
 
 interface EmailAnnotationProps {
   trainingDataId: string;
   onComplete: () => void;
   onCancel?: () => void;
-}
-
-interface Flight {
-  flightNumber?: string;
-  departureCode?: string;
-  arrivalCode?: string;
-  departureTime?: string;
-  arrivalTime?: string;
-  pnr?: string;
-  price?: string;
-  currency?: string;
-  [key: string]: any;
 }
 
 /**
@@ -150,7 +139,26 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
         }
         
         if (data.extractedData && Array.isArray(data.extractedData) && data.extractedData.length > 0) {
-          setFlights(data.extractedData);
+          // Convert old format (with departureTime/arrivalTime as ISO) to new format (separate date/time)
+          const convertedFlights = data.extractedData.map((flight: any) => {
+            const converted = { ...flight };
+            if (flight.departureTime && !flight.departureDate) {
+              const { date, time } = splitDateTime(flight.departureTime);
+              if (date) converted.departureDate = date;
+              if (time) converted.departureTime = time;
+            }
+            if (flight.arrivalTime && !flight.arrivalDate) {
+              const { date, time } = splitDateTime(flight.arrivalTime);
+              if (date) converted.arrivalDate = date;
+              if (time) converted.arrivalTime = time;
+            }
+            // Migrate price to aircraftType if needed (backward compatibility)
+            if (flight.price && !flight.aircraftType) {
+              converted.aircraftType = flight.price;
+            }
+            return converted;
+          });
+          setFlights(convertedFlights);
         }
         
         if (data.tags && Array.isArray(data.tags)) {
@@ -220,22 +228,53 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
         const flight = updatedFlights[flightIndex];
         
         // Mappe Label zu Flight-Feld
-        const labelToField: Record<string, keyof Flight> = {
-          flightNumber: 'flightNumber',
-          departureCode: 'departureCode',
-          arrivalCode: 'arrivalCode',
-          departureTime: 'departureTime',
-          arrivalTime: 'arrivalTime',
-          pnr: 'pnr',
-          price: 'price',
-          currency: 'currency',
-        };
+        // Note: For date/time labels, we try to parse and split intelligently
+        const label = selectedText.label;
         
-        const field = labelToField[selectedText.label];
-        if (field) {
-          flight[field] = text as any;
-          setFlights(updatedFlights);
+        if (label === 'departureDate' || label === 'departureTime') {
+          // Try to parse ISO format or separate date/time
+          const { date, time } = splitDateTime(text);
+          if (label === 'departureDate' && date) {
+            flight.departureDate = date;
+          } else if (label === 'departureDate' && !date) {
+            // Assume it's just a date string
+            flight.departureDate = text;
+          }
+          if (label === 'departureTime' && time) {
+            flight.departureTime = time;
+          } else if (label === 'departureTime' && !time) {
+            // Assume it's just a time string
+            flight.departureTime = text;
+          }
+        } else if (label === 'arrivalDate' || label === 'arrivalTime') {
+          const { date, time } = splitDateTime(text);
+          if (label === 'arrivalDate' && date) {
+            flight.arrivalDate = date;
+          } else if (label === 'arrivalDate' && !date) {
+            flight.arrivalDate = text;
+          }
+          if (label === 'arrivalTime' && time) {
+            flight.arrivalTime = time;
+          } else if (label === 'arrivalTime' && !time) {
+            flight.arrivalTime = text;
+          }
+        } else {
+          // Simple field mapping
+          const labelToField: Record<string, keyof Flight> = {
+            flightNumber: 'flightNumber',
+            departureCode: 'departureCode',
+            arrivalCode: 'arrivalCode',
+            pnr: 'pnr',
+            aircraftType: 'aircraftType',
+          };
+          
+          const field = labelToField[label];
+          if (field) {
+            flight[field] = text as any;
+          }
         }
+        
+        setFlights(updatedFlights);
       }
       
       setSelectedText(null);
@@ -287,10 +326,32 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
         textSelections: annotations,
       };
 
+      // Convert flights to backend format: combine date+time to ISO 8601
+      const flightsForBackend = flights.map(flight => {
+        const converted = { ...flight };
+        // Combine departureDate + departureTime to departureTime (ISO 8601)
+        if (flight.departureDate || flight.departureTime) {
+          const combined = combineDateTime(flight.departureDate, flight.departureTime);
+          if (combined) {
+            converted.departureTime = combined;
+          }
+          delete converted.departureDate;
+        }
+        // Combine arrivalDate + arrivalTime to arrivalTime (ISO 8601)
+        if (flight.arrivalDate || flight.arrivalTime) {
+          const combined = combineDateTime(flight.arrivalDate, flight.arrivalTime);
+          if (combined) {
+            converted.arrivalTime = combined;
+          }
+          delete converted.arrivalDate;
+        }
+        return converted;
+      });
+
       if (andTrain) {
-        await trainingApi.saveAndTrain(trainingDataId, annotationData, flights, tags);
+        await trainingApi.saveAndTrain(trainingDataId, annotationData, flightsForBackend, tags);
       } else {
-        await trainingApi.annotate(trainingDataId, annotationData, flights, tags);
+        await trainingApi.annotate(trainingDataId, annotationData, flightsForBackend, tags);
       }
 
       onComplete();
@@ -359,10 +420,12 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
     return segments.map((segment, segmentIndex) => {
       if (segment.isHighlight) {
         const flightLabel = segment.flightIndex !== undefined ? ` (Flug ${segment.flightIndex + 1})` : '';
+        const flightIndex = segment.flightIndex ?? 0;
+        const colorClass = getFlightColorClass(flightIndex);
         return (
           <mark
             key={`highlight-${segmentIndex}`}
-            className="bg-yellow-300 dark:bg-yellow-600 px-1 rounded"
+            className={`${colorClass} px-1 rounded`}
             title={`${segment.label}${flightLabel}`}
           >
             {segment.text}
@@ -436,11 +499,12 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
                   <option value="flightNumber">Flight Number</option>
                   <option value="departureCode">Departure Code</option>
                   <option value="arrivalCode">Arrival Code</option>
+                  <option value="departureDate">Departure Date</option>
                   <option value="departureTime">Departure Time</option>
+                  <option value="arrivalDate">Arrival Date</option>
                   <option value="arrivalTime">Arrival Time</option>
                   <option value="pnr">PNR</option>
-                  <option value="price">Price</option>
-                  <option value="currency">Currency</option>
+                  <option value="aircraftType">Aircraft Type</option>
                 </select>
               </div>
               <button onClick={handleSaveAnnotation} className="btn-primary" disabled={!selectedText.label || selectedText.label === ''}>
@@ -562,14 +626,35 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Departure Date
+                    </label>
+                    <input
+                      type="date"
+                      value={flight.departureDate || ''}
+                      onChange={(e) => handleFlightChange(index, 'departureDate', e.target.value)}
+                      className="input w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Departure Time
                     </label>
                     <input
-                      type="text"
+                      type="time"
                       value={flight.departureTime || ''}
                       onChange={(e) => handleFlightChange(index, 'departureTime', e.target.value)}
                       className="input w-full"
-                      placeholder="2025-11-18T14:30"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Arrival Date
+                    </label>
+                    <input
+                      type="date"
+                      value={flight.arrivalDate || ''}
+                      onChange={(e) => handleFlightChange(index, 'arrivalDate', e.target.value)}
+                      className="input w-full"
                     />
                   </div>
                   <div>
@@ -577,36 +662,22 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
                       Arrival Time
                     </label>
                     <input
-                      type="text"
+                      type="time"
                       value={flight.arrivalTime || ''}
                       onChange={(e) => handleFlightChange(index, 'arrivalTime', e.target.value)}
                       className="input w-full"
-                      placeholder="2025-11-18T16:15"
                     />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Price
+                      Aircraft Type
                     </label>
                     <input
                       type="text"
-                      value={flight.price || ''}
-                      onChange={(e) => handleFlightChange(index, 'price', e.target.value)}
+                      value={flight.aircraftType || ''}
+                      onChange={(e) => handleFlightChange(index, 'aircraftType', e.target.value)}
                       className="input w-full"
-                      placeholder="189.50"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Currency
-                    </label>
-                    <input
-                      type="text"
-                      value={flight.currency || ''}
-                      onChange={(e) => handleFlightChange(index, 'currency', e.target.value.toUpperCase())}
-                      className="input w-full"
-                      placeholder="EUR"
-                      maxLength={3}
+                      placeholder="A320, Boeing 737"
                     />
                   </div>
                 </div>
