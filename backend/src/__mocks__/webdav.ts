@@ -7,3 +7,4 @@ export function createClient(url: string, options?: any) {
     createDirectory: jest.fn().mockResolvedValue(undefined),
   };
 }
+
