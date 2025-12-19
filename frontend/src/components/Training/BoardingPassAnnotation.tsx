@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { trainingApi } from '../../lib/api';
 import { logger } from '../../lib/logger';
+import Tesseract from 'tesseract.js';
+import { Flight, combineDateTime, splitDateTime } from './types';
 
 interface BoardingPassAnnotationProps {
   trainingDataId: string;
@@ -16,6 +18,92 @@ interface BoundingBox {
   label: string;
 }
 
+/**
+ * Extract text from a bounding box region using OCR
+ */
+async function extractTextFromBoundingBox(
+  imageBase64: string,
+  box: BoundingBox,
+  canvasWidth: number,
+  canvasHeight: number,
+  originalImageWidth: number,
+  originalImageHeight: number
+): Promise<string> {
+  try {
+    // Convert base64 to image
+    const img = new Image();
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+      img.src = imageBase64;
+    });
+
+    // Box coordinates are in canvas space (which may be scaled with DPR)
+    // We need to convert them to original image coordinates
+    // The canvas is scaled: canvas = originalImage * displayScale * DPR
+    // So: originalImage = canvas / (displayScale * DPR)
+    // But we don't have displayScale stored, so we calculate it:
+    // displayScale = Math.min(maxDisplayWidth/originalWidth, maxDisplayHeight/originalHeight, 1)
+    // Actually, we can calculate it from canvas and image dimensions:
+    // The canvas width includes DPR scaling, so: canvasWidth = originalWidth * displayScale * DPR
+    
+    // Calculate scale from canvas to original image
+    // Canvas dimensions already include DPR scaling
+    const scaleX = originalImageWidth / canvasWidth;
+    const scaleY = originalImageHeight / canvasHeight;
+
+    // Convert box coordinates from canvas space to original image space
+    const imageBox = {
+      x: Math.max(0, Math.floor(box.x * scaleX)),
+      y: Math.max(0, Math.floor(box.y * scaleY)),
+      width: Math.min(originalImageWidth - Math.floor(box.x * scaleX), Math.floor(box.width * scaleX)),
+      height: Math.min(originalImageHeight - Math.floor(box.y * scaleY), Math.floor(box.height * scaleY)),
+    };
+
+    // Ensure minimum size
+    if (imageBox.width < 1 || imageBox.height < 1) {
+      logger.warn('Bounding box too small for OCR');
+      return '';
+    }
+
+    // Create a temporary canvas to crop the region
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = imageBox.width;
+    tempCanvas.height = imageBox.height;
+    const tempCtx = tempCanvas.getContext('2d');
+    
+    if (!tempCtx) {
+      logger.error('Failed to get canvas context for OCR');
+      return '';
+    }
+
+    // Draw the cropped region from the original image
+    tempCtx.drawImage(
+      img,
+      imageBox.x, imageBox.y, imageBox.width, imageBox.height,
+      0, 0, imageBox.width, imageBox.height
+    );
+
+    // Perform OCR on the cropped region
+    const { data: { text } } = await Tesseract.recognize(
+      tempCanvas,
+      'eng',
+      {
+        logger: (m) => {
+          if (m.status === 'recognizing text') {
+            logger.debug(`OCR Progress: ${Math.round(m.progress * 100)}%`);
+          }
+        }
+      }
+    );
+
+    return text.trim();
+  } catch (error) {
+    logger.error('OCR extraction failed:', error);
+    return '';
+  }
+}
+
 export default function BoardingPassAnnotation({ trainingDataId, onComplete, onCancel }: BoardingPassAnnotationProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [image, setImage] = useState<HTMLImageElement | null>(null);
@@ -23,9 +111,8 @@ export default function BoardingPassAnnotation({ trainingDataId, onComplete, onC
   const [currentBox, setCurrentBox] = useState<{ startX: number; startY: number; endX: number; endY: number } | null>(null);
   const [selectedLabel, setSelectedLabel] = useState('');
   const [selectedBoxIndex, setSelectedBoxIndex] = useState<number | null>(null); // Für Bearbeitung
-  const [extractedData, setExtractedData] = useState<any>({
-    flight: {},
-  });
+  const [flights, setFlights] = useState<Flight[]>([{}]);
+  const [ocrLoading, setOcrLoading] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [saving, setSaving] = useState(false);
@@ -95,7 +182,22 @@ export default function BoardingPassAnnotation({ trainingDataId, onComplete, onC
         }
         
         if (data.extractedData && Array.isArray(data.extractedData) && data.extractedData.length > 0) {
-          setExtractedData({ flight: data.extractedData[0] || {} });
+          // Convert old format (with departureTime/arrivalTime as ISO) to new format (separate date/time)
+          const convertedFlights = data.extractedData.map((flight: any) => {
+            const converted = { ...flight };
+            if (flight.departureTime && !flight.departureDate) {
+              const { date, time } = splitDateTime(flight.departureTime);
+              if (date) converted.departureDate = date;
+              if (time) converted.departureTime = time;
+            }
+            if (flight.arrivalTime && !flight.arrivalDate) {
+              const { date, time } = splitDateTime(flight.arrivalTime);
+              if (date) converted.arrivalDate = date;
+              if (time) converted.arrivalTime = time;
+            }
+            return converted;
+          });
+          setFlights(convertedFlights);
         }
         
         if (data.tags && Array.isArray(data.tags)) {
@@ -164,8 +266,8 @@ export default function BoardingPassAnnotation({ trainingDataId, onComplete, onC
     drawCanvas();
   };
 
-  const handleMouseUp = () => {
-    if (!currentBox) return;
+  const handleMouseUp = async () => {
+    if (!currentBox || !image) return;
     
     // Wenn keine Label ausgewählt ist, abbrechen
     if (!selectedLabel) {
@@ -188,9 +290,84 @@ export default function BoardingPassAnnotation({ trainingDataId, onComplete, onC
       return;
     }
 
+    // Add box first
     setBoundingBoxes([...boundingBoxes, box]);
     setCurrentBox(null);
-    setSelectedLabel('');
+    
+    // Extract text using OCR and auto-fill ground truth
+    setOcrLoading(true);
+    try {
+      const canvas = canvasRef.current;
+      if (canvas && imageBase64 && image) {
+        // Get original image dimensions (before scaling)
+        // The image object already has the correct dimensions
+        const extractedText = await extractTextFromBoundingBox(
+          imageBase64,
+          box,
+          canvas.width,
+          canvas.height,
+          image.width,
+          image.height
+        );
+
+        if (extractedText) {
+          // Auto-fill ground truth field
+          const updatedFlights = [...flights];
+          const flight = updatedFlights[0] || {};
+          
+          // Map label to field (similar to EmailAnnotation)
+          const label = selectedLabel;
+          if (label === 'departureDate' || label === 'departureTime') {
+            const { date, time } = splitDateTime(extractedText);
+            if (label === 'departureDate' && date) {
+              flight.departureDate = date;
+            } else if (label === 'departureTime' && time) {
+              flight.departureTime = time;
+            } else if (label === 'departureDate') {
+              flight.departureDate = extractedText;
+            } else if (label === 'departureTime') {
+              flight.departureTime = extractedText;
+            }
+          } else if (label === 'arrivalDate' || label === 'arrivalTime') {
+            const { date, time } = splitDateTime(extractedText);
+            if (label === 'arrivalDate' && date) {
+              flight.arrivalDate = date;
+            } else if (label === 'arrivalTime' && time) {
+              flight.arrivalTime = time;
+            } else if (label === 'arrivalDate') {
+              flight.arrivalDate = extractedText;
+            } else if (label === 'arrivalTime') {
+              flight.arrivalTime = extractedText;
+            }
+          } else {
+            // Simple field mapping
+            const labelToField: Record<string, keyof Flight> = {
+              flightNumber: 'flightNumber',
+              departureCode: 'departureCode',
+              arrivalCode: 'arrivalCode',
+              pnr: 'pnr',
+              seat: 'seat',
+              gate: 'gate',
+              terminal: 'terminal',
+              aircraftType: 'aircraftType',
+            };
+            
+            const field = labelToField[label];
+            if (field) {
+              flight[field] = extractedText as any;
+            }
+          }
+          
+          updatedFlights[0] = flight;
+          setFlights(updatedFlights);
+        }
+      }
+    } catch (error) {
+      logger.error('Failed to extract text from bounding box:', error);
+    } finally {
+      setOcrLoading(false);
+      setSelectedLabel('');
+    }
   };
   
   // ESC-Taste zum Abbrechen
@@ -312,10 +489,32 @@ export default function BoardingPassAnnotation({ trainingDataId, onComplete, onC
         boundingBoxes,
       };
 
+      // Convert flights to backend format: combine date+time to ISO 8601
+      const flightsForBackend = flights.map(flight => {
+        const converted = { ...flight };
+        // Combine departureDate + departureTime to departureTime (ISO 8601)
+        if (flight.departureDate || flight.departureTime) {
+          const combined = combineDateTime(flight.departureDate, flight.departureTime);
+          if (combined) {
+            converted.departureTime = combined;
+          }
+          delete converted.departureDate;
+        }
+        // Combine arrivalDate + arrivalTime to arrivalTime (ISO 8601)
+        if (flight.arrivalDate || flight.arrivalTime) {
+          const combined = combineDateTime(flight.arrivalDate, flight.arrivalTime);
+          if (combined) {
+            converted.arrivalTime = combined;
+          }
+          delete converted.arrivalDate;
+        }
+        return converted;
+      });
+
       if (andTrain) {
-        await trainingApi.saveAndTrain(trainingDataId, annotationData, [extractedData.flight], tags);
+        await trainingApi.saveAndTrain(trainingDataId, annotationData, flightsForBackend, tags);
       } else {
-        await trainingApi.annotate(trainingDataId, annotationData, [extractedData.flight], tags);
+        await trainingApi.annotate(trainingDataId, annotationData, flightsForBackend, tags);
       }
 
       onComplete();
@@ -365,11 +564,15 @@ export default function BoardingPassAnnotation({ trainingDataId, onComplete, onC
               <option value="flightNumber">Flight Number</option>
               <option value="departureCode">Departure Code</option>
               <option value="arrivalCode">Arrival Code</option>
+              <option value="departureDate">Departure Date</option>
               <option value="departureTime">Departure Time</option>
+              <option value="arrivalDate">Arrival Date</option>
               <option value="arrivalTime">Arrival Time</option>
+              <option value="pnr">PNR</option>
               <option value="seat">Seat</option>
               <option value="gate">Gate</option>
               <option value="terminal">Terminal</option>
+              <option value="aircraftType">Aircraft Type</option>
             </select>
             {selectedBoxIndex !== null && (
               <>
@@ -428,22 +631,223 @@ export default function BoardingPassAnnotation({ trainingDataId, onComplete, onC
           />
         </div>
 
+        {/* OCR Loading Indicator */}
+        {ocrLoading && (
+          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-300 dark:border-blue-700">
+            <p className="text-sm text-blue-700 dark:text-blue-300">
+              🔍 OCR läuft... Text wird extrahiert...
+            </p>
+          </div>
+        )}
+
+        {/* Flight Data (Ground Truth) */}
         <div>
-          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Flight Data (Ground Truth)
-          </h3>
-          <textarea
-            value={JSON.stringify(extractedData, null, 2)}
-            onChange={(e) => {
-              try {
-                setExtractedData(JSON.parse(e.target.value));
-              } catch {
-                // Invalid JSON, ignore
-              }
-            }}
-            className="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-mono text-sm min-h-[200px]"
-            placeholder='{"flight": {"flightNumber": "LH103", ...}}'
-          />
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Flight Data (Ground Truth)
+            </h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Felder werden automatisch durch OCR ausgefüllt
+            </p>
+          </div>
+          <div className="p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+            {flights.map((flight, index) => (
+              <div key={index} className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Flight Number
+                    </label>
+                    <input
+                      type="text"
+                      value={flight.flightNumber || ''}
+                      onChange={(e) => {
+                        const updatedFlights = [...flights];
+                        updatedFlights[index] = { ...updatedFlights[index], flightNumber: e.target.value };
+                        setFlights(updatedFlights);
+                      }}
+                      className="input w-full"
+                      placeholder="LH103"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      PNR
+                    </label>
+                    <input
+                      type="text"
+                      value={flight.pnr || ''}
+                      onChange={(e) => {
+                        const updatedFlights = [...flights];
+                        updatedFlights[index] = { ...updatedFlights[index], pnr: e.target.value };
+                        setFlights(updatedFlights);
+                      }}
+                      className="input w-full"
+                      placeholder="ABC123"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Departure Code
+                    </label>
+                    <input
+                      type="text"
+                      value={flight.departureCode || ''}
+                      onChange={(e) => {
+                        const updatedFlights = [...flights];
+                        updatedFlights[index] = { ...updatedFlights[index], departureCode: e.target.value.toUpperCase() };
+                        setFlights(updatedFlights);
+                      }}
+                      className="input w-full"
+                      placeholder="MUC"
+                      maxLength={3}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Arrival Code
+                    </label>
+                    <input
+                      type="text"
+                      value={flight.arrivalCode || ''}
+                      onChange={(e) => {
+                        const updatedFlights = [...flights];
+                        updatedFlights[index] = { ...updatedFlights[index], arrivalCode: e.target.value.toUpperCase() };
+                        setFlights(updatedFlights);
+                      }}
+                      className="input w-full"
+                      placeholder="FRA"
+                      maxLength={3}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Departure Date
+                    </label>
+                    <input
+                      type="date"
+                      value={flight.departureDate || ''}
+                      onChange={(e) => {
+                        const updatedFlights = [...flights];
+                        updatedFlights[index] = { ...updatedFlights[index], departureDate: e.target.value };
+                        setFlights(updatedFlights);
+                      }}
+                      className="input w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Departure Time
+                    </label>
+                    <input
+                      type="time"
+                      value={flight.departureTime || ''}
+                      onChange={(e) => {
+                        const updatedFlights = [...flights];
+                        updatedFlights[index] = { ...updatedFlights[index], departureTime: e.target.value };
+                        setFlights(updatedFlights);
+                      }}
+                      className="input w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Arrival Date
+                    </label>
+                    <input
+                      type="date"
+                      value={flight.arrivalDate || ''}
+                      onChange={(e) => {
+                        const updatedFlights = [...flights];
+                        updatedFlights[index] = { ...updatedFlights[index], arrivalDate: e.target.value };
+                        setFlights(updatedFlights);
+                      }}
+                      className="input w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Arrival Time
+                    </label>
+                    <input
+                      type="time"
+                      value={flight.arrivalTime || ''}
+                      onChange={(e) => {
+                        const updatedFlights = [...flights];
+                        updatedFlights[index] = { ...updatedFlights[index], arrivalTime: e.target.value };
+                        setFlights(updatedFlights);
+                      }}
+                      className="input w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Seat
+                    </label>
+                    <input
+                      type="text"
+                      value={flight.seat || ''}
+                      onChange={(e) => {
+                        const updatedFlights = [...flights];
+                        updatedFlights[index] = { ...updatedFlights[index], seat: e.target.value };
+                        setFlights(updatedFlights);
+                      }}
+                      className="input w-full"
+                      placeholder="16F"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Gate
+                    </label>
+                    <input
+                      type="text"
+                      value={flight.gate || ''}
+                      onChange={(e) => {
+                        const updatedFlights = [...flights];
+                        updatedFlights[index] = { ...updatedFlights[index], gate: e.target.value };
+                        setFlights(updatedFlights);
+                      }}
+                      className="input w-full"
+                      placeholder="A12"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Terminal
+                    </label>
+                    <input
+                      type="text"
+                      value={flight.terminal || ''}
+                      onChange={(e) => {
+                        const updatedFlights = [...flights];
+                        updatedFlights[index] = { ...updatedFlights[index], terminal: e.target.value };
+                        setFlights(updatedFlights);
+                      }}
+                      className="input w-full"
+                      placeholder="2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Aircraft Type
+                    </label>
+                    <input
+                      type="text"
+                      value={flight.aircraftType || ''}
+                      onChange={(e) => {
+                        const updatedFlights = [...flights];
+                        updatedFlights[index] = { ...updatedFlights[index], aircraftType: e.target.value };
+                        setFlights(updatedFlights);
+                      }}
+                      className="input w-full"
+                      placeholder="A320, Boeing 737"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Tags */}

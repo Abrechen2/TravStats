@@ -5,7 +5,7 @@ import { normalizeParsedBooking, cleanLLMJsonResponse, getVisionParserPrompt } f
 import logger from '../../../utils/logger';
 
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
-const OLLAMA_VISION_MODEL = process.env.OLLAMA_VISION_MODEL || 'llama3.2-vision';
+const OLLAMA_VISION_MODEL_DEFAULT = process.env.OLLAMA_VISION_MODEL || 'llama3.2-vision';
 
 interface OllamaVisionResponse {
   model: string;
@@ -37,6 +37,11 @@ interface OllamaVisionResponse {
  */
 export class OllamaVisionParser implements IVisionParser {
   readonly provider: VisionProvider = 'ollama';
+  private modelName: string;
+
+  constructor(modelName?: string) {
+    this.modelName = modelName || OLLAMA_VISION_MODEL_DEFAULT;
+  }
 
   async checkAvailability(): Promise<ProviderAvailability> {
     try {
@@ -46,16 +51,16 @@ export class OllamaVisionParser implements IVisionParser {
 
       const models = response.data.models || [];
       const hasVisionModel = models.some((m: any) =>
-        m.name.includes('llava') || m.name.includes('bakllava') || m.name === OLLAMA_VISION_MODEL
+        m.name.includes('llava') || m.name.includes('bakllava') || m.name === this.modelName
       );
 
       if (!hasVisionModel) {
         return {
           available: false,
-          reason: `Vision model '${OLLAMA_VISION_MODEL}' not found. Install with: ollama pull ${OLLAMA_VISION_MODEL}`,
+          reason: `Vision model '${this.modelName}' not found. Install with: ollama pull ${this.modelName}`,
           metadata: {
             ollamaUrl: OLLAMA_URL,
-            requestedModel: OLLAMA_VISION_MODEL,
+            requestedModel: this.modelName,
             availableModels: models.map((m: any) => m.name),
           },
         };
@@ -65,7 +70,7 @@ export class OllamaVisionParser implements IVisionParser {
         available: true,
         metadata: {
           provider: 'ollama',
-          model: OLLAMA_VISION_MODEL,
+          model: this.modelName,
           url: OLLAMA_URL,
           cost: 'free',
         },
@@ -87,7 +92,7 @@ export class OllamaVisionParser implements IVisionParser {
 
   async parseImage(imageBase64: string): Promise<ParsedBooking> {
     logger.info('[Ollama Vision Parser] Starting boarding pass parsing');
-    logger.info({ model: OLLAMA_VISION_MODEL }, '[Ollama Vision Parser] Model');
+    logger.info({ model: this.modelName }, '[Ollama Vision Parser] Model');
 
     const prompt = getVisionParserPrompt();
 
@@ -95,7 +100,7 @@ export class OllamaVisionParser implements IVisionParser {
       const response = await axios.post<OllamaVisionResponse>(
         `${OLLAMA_URL}/api/generate`,
         {
-          model: OLLAMA_VISION_MODEL,
+          model: this.modelName,
           prompt,
           images: [imageBase64],
           stream: false,
@@ -178,8 +183,8 @@ export class OllamaVisionParser implements IVisionParser {
           throw new Error('Ollama Vision service unavailable. Please ensure Ollama is running with a vision model.');
         }
         if (error.response?.status === 404) {
-          logger.error(`[Ollama Vision Parser] Model ${OLLAMA_VISION_MODEL} not found`);
-          throw new Error(`Vision model '${OLLAMA_VISION_MODEL}' not found. Please install it with: ollama pull ${OLLAMA_VISION_MODEL}`);
+          logger.error(`[Ollama Vision Parser] Model ${this.modelName} not found`);
+          throw new Error(`Vision model '${this.modelName}' not found. Please install it with: ollama pull ${this.modelName}`);
         }
         logger.error({ error: error.message }, '[Ollama Vision Parser] HTTP error');
         throw new Error(`Ollama Vision API error: ${error.message}`);
@@ -196,12 +201,7 @@ export class OllamaVisionParser implements IVisionParser {
   }
 }
 
-// Singleton instance
-let instance: OllamaVisionParser | null = null;
-
-export function getOllamaVisionParser(): OllamaVisionParser {
-  if (!instance) {
-    instance = new OllamaVisionParser();
-  }
-  return instance;
+// Factory function - creates new instance with model name
+export function getOllamaVisionParser(modelName?: string): OllamaVisionParser {
+  return new OllamaVisionParser(modelName);
 }

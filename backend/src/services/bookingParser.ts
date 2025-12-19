@@ -342,6 +342,7 @@ export async function parseBookingEmail(
     textFallbackChain?: string | null;
     openaiApiKey?: string | null;
     claudeApiKey?: string | null;
+    userId?: string;
   },
   adminSettings?: {
     globalOpenaiApiKey?: string | null;
@@ -354,7 +355,7 @@ export async function parseBookingEmail(
   });
 
   // Get parser config from settings (user settings take precedence over admin settings)
-  const config = getParserConfig(userSettings, adminSettings);
+  const config = await getParserConfig(userSettings, adminSettings, userSettings?.userId);
 
   // Parse email using factory
   const result = await parseEmail(

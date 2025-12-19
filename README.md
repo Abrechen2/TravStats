@@ -81,6 +81,12 @@ abrechen2/travstats:latest
 | `ALLOW_REGISTRATION` | Öffentliche Registrierung erlauben | `false` |
 | `MAX_USERS` | Maximale Anzahl Benutzer | `10` |
 | `INSTANCE_NAME` | Name der Instanz | `TravStats` |
+| `OLLAMA_URL` | Ollama Service URL | `http://localhost:11434` |
+| `OLLAMA_MODEL` | Basis-Modell für Email-Parsing | `qwen2.5:7b` |
+| `OLLAMA_VISION_MODEL` | Basis-Modell für Vision-Parsing | `llama3.2-vision` |
+| `TRAINING_MODEL_OUTPUT_DIR` | Speicherort für trainierte Modelle | `./data/training/models` |
+| `TRAINING_EMAIL_MODEL_NAME` | Name für trainiertes Email-Modell | `travstats-email-custom` |
+| `TRAINING_VISION_MODEL_NAME` | Name für trainiertes Vision-Modell | `travstats-vision-custom` |
 
 ### Optionale API-Keys
 
@@ -101,8 +107,13 @@ docker run -d --name ollama -v ollama-data:/root/.ollama ollama/ollama:latest
 2. Umgebungsvariablen setzen:
 ```bash
 OLLAMA_URL=http://ollama:11434
-USE_LLM_PARSER=true
 OLLAMA_MODEL=llama3.2:3b
+OLLAMA_VISION_MODEL=llama3.2-vision
+
+# Training-Konfiguration (optional, kann auch in Admin-UI gesetzt werden)
+TRAINING_MODEL_OUTPUT_DIR=./data/training/models
+TRAINING_EMAIL_MODEL_NAME=travstats-email-custom
+TRAINING_VISION_MODEL_NAME=travstats-vision-custom
 ```
 
 ## 📖 Verwendung

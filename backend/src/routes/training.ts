@@ -220,7 +220,7 @@ router.post(
       let trainingJobId: string | null = null;
       if (await shouldTriggerTraining()) {
         try {
-          trainingJobId = await triggerTraining();
+          trainingJobId = await triggerTraining(userId);
         } catch (error) {
           logger.warn({
             operation: 'training_trigger_failed',
@@ -281,7 +281,7 @@ router.post(
       }
 
       // Trigger training with just this one entry
-      const trainingJobId = await triggerTraining();
+      const trainingJobId = await triggerTraining(userId);
 
       logger.info({
         operation: 'training_train_only',
@@ -572,7 +572,8 @@ router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction
  */
 router.post('/trigger', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const trainingJobId = await triggerTraining();
+    const userId = req.userId!;
+    const trainingJobId = await triggerTraining(userId);
 
     logger.info({
       operation: 'training_trigger_manual',

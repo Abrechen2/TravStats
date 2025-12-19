@@ -137,8 +137,9 @@ interface ArcData {
 interface PointData {
   lat: number;
   lng: number;
-  airportCount: number;
+  size: number;
   name: string;
+  code: string;
   iata?: string;
 }
 
@@ -204,8 +205,8 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
       endLat: number;
       endLng: number;
       flights: typeof flights;
-      departure: { iata?: string; name?: string; lat: number; lon: number };
-      arrival: { iata?: string; name?: string; lat: number; lon: number };
+      departure: { iata?: string; name?: string; icao?: string };
+      arrival: { iata?: string; name?: string; icao?: string };
     }
     
     // First, aggregate flights by route
