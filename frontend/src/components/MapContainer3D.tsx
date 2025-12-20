@@ -1,10 +1,53 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import Map from './Map';
 import type { GeoJSONFeature } from '../types';
 import { useTranslation } from '../hooks/useTranslation';
 
-// Lazy load GlobeView as it's heavy (Three.js, react-globe.gl)
-const GlobeView = lazy(() => import('./GlobeView'));
+// #region agent log
+const debugLog = (location: string, message: string, data: any = {}, hypothesisId?: string) => {
+  const logEntry = {
+    location,
+    message,
+    data,
+    timestamp: Date.now(),
+    sessionId: 'debug-session',
+    runId: 'run1',
+    hypothesisId,
+  };
+  fetch('http://127.0.0.1:7243/ingest/0704fdb1-689b-416e-9f08-7a10e884bebd', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(logEntry),
+  }).catch(() => {});
+  console.log(`[DEBUG ${hypothesisId || '?'}] ${location}: ${message}`, data);
+  try {
+    const stored = localStorage.getItem('debug-logs') || '[]';
+    const logs = JSON.parse(stored);
+    logs.push(logEntry);
+    if (logs.length > 100) logs.shift();
+    localStorage.setItem('debug-logs', JSON.stringify(logs));
+  } catch (e) {}
+};
+// #endregion
+
+// #region agent log
+// Lazy load GlobeView with logging
+const GlobeView = lazy(() => {
+  debugLog('MapContainer3D.tsx:lazy-import', 'Starting GlobeView lazy import', {}, 'E');
+  return import('./GlobeView').then((module) => {
+    debugLog('MapContainer3D.tsx:lazy-import', 'GlobeView module loaded successfully', {
+      hasDefault: !!module.default,
+    }, 'E');
+    return module;
+  }).catch((error) => {
+    debugLog('MapContainer3D.tsx:lazy-import', 'GlobeView import failed', {
+      error: error?.toString(),
+      stack: error?.stack,
+    }, 'E');
+    throw error;
+  });
+});
+// #endregion
 
 interface MapContainer3DProps {
   flights: GeoJSONFeature[];
@@ -22,6 +65,17 @@ export default function MapContainer3D({
   minRouteCount = 1,
 }: MapContainer3DProps) {
   const { t } = useTranslation(['common', 'map']);
+  
+  // #region agent log
+  useEffect(() => {
+    debugLog('MapContainer3D.tsx:render', 'MapContainer3D rendered', {
+      is3D,
+      flightsCount: flights.length,
+      minRouteCount,
+    }, is3D ? 'E' : undefined);
+  }, [is3D, flights.length, minRouteCount]);
+  // #endregion
+  
   return (
     <div className="relative h-full w-full rounded-lg shadow overflow-hidden bg-white dark:bg-gray-900 flex items-center justify-center" style={{ touchAction: 'pan-x pan-y pinch-zoom' }}>
       <div className="h-full w-full max-w-[1200px] flex items-center justify-center px-4" style={{ touchAction: 'pan-x pan-y pinch-zoom' }}>

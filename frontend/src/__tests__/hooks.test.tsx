@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useClickOutside } from '../hooks/useClickOutside';
-import { useRef, RefObject } from 'react';
+import { RefObject } from 'react';
 
 describe('Custom Hooks', () => {
   describe('useClickOutside', () => {
