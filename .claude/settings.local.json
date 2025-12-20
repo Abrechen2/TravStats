@@ -33,6 +33,7 @@
       "Bash(git commit:*)",
       "Bash(ls:*)",
       "Bash(find:*)",
+      "Bash(npm run lint)",
       "Bash(npm test:*)"
     ],
     "deny": [],

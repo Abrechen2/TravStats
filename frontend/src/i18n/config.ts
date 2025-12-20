@@ -60,6 +60,8 @@ const resources = {
   },
 };
 
+// Initialize i18n synchronously with initImmediate: false
+// This ensures resources are available immediately
 i18n
   .use(initReactI18next)
   .init({
@@ -73,18 +75,25 @@ i18n
     },
     react: {
       useSuspense: false, // Disable suspense for better compatibility
+      bindI18n: 'languageChanged loaded', // Re-render on language change
+      bindI18nStore: 'added removed', // Re-render when resources change
     },
-    debug: false, // Set to true for debugging translation issues
+    // Critical: Initialize synchronously so resources are available immediately
+    initImmediate: false,
     // Ensure translations are available immediately
     load: 'languageOnly',
-    // Prevent missing translation keys from showing
+    // Return key if translation is missing (for debugging)
     returnEmptyString: false,
     returnNull: false,
+    // Key separator for nested keys
+    keySeparator: '.',
+    // Namespace separator
+    nsSeparator: ':',
   });
 
 // Function to change language and update settings store
-export const changeLanguage = (lng: 'en' | 'de') => {
-  i18n.changeLanguage(lng);
+export const changeLanguage = async (lng: 'en' | 'de'): Promise<void> => {
+  await i18n.changeLanguage(lng);
   const settingsStore = useSettingsStore.getState();
   settingsStore.setDisplay({ language: lng });
   settingsStore.saveRemoteSettings().catch(() => {
