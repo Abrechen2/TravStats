@@ -134,5 +134,9 @@
       "cancel": "Abbrechen"
     }
   },
-  "loading": "Laden..."
+  "loading": "Laden...",
+  "errors": {
+    "loadFailed": "Fehler beim Laden der Training-Daten",
+    "saveFailed": "Fehler beim Speichern"
+  }
 }

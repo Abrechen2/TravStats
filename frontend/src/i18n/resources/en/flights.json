@@ -1,7 +1,8 @@
-{
+﻿{
   "form": {
     "title": "Add Flight",
     "flightNumber": "Flight Number",
+    "flightNumberExample": "(e.g., LH400, BA1234)",
     "searchFlight": "Search Flight",
     "searching": "Searching...",
     "departure": "Departure",
@@ -34,12 +35,15 @@
     "scanBoardingPass": "Scan Boarding Pass",
     "uploadEmail": "Upload Email",
     "manualEntry": "Manual Entry",
+    "manualEntryAction": "Skip lookup and enter manually",
+    "lookupHint": "We'll automatically fill in all flight details!",
+    "lookupLoaded": "Flight details loaded from {{airline}} {{flightNumber}}",
     "estimatedTimes": "Estimated Flight Times",
     "estimatedTimesHistorical": "Based on {{count}} {{count, plural, one {historical flight} other {historical flights}}} of this route.",
     "estimatedTimesCalculated": "Departure and arrival times were calculated from your previous flights.",
     "estimatedTimesAutomatic": "Automatically estimated based on boarding time and flight distance.",
-    "estimatedTimesAssumption": "Assumption: Departure = Boarding + 30min, flight duration ≈ {{minutes}} minutes.",
-    "reviewTimes": "→ Please review and correct the times if necessary.",
+    "estimatedTimesAssumption": "Assumption: Departure = Boarding + 30min, flight duration -> {{minutes}} minutes.",
+    "reviewTimes": "Please review and correct the times if necessary.",
     "hideWarning": "Hide warning",
     "help": {
       "departureAirport": "Select the departure airport. You can search by IATA code (e.g. FRA) or name.",
@@ -47,6 +51,9 @@
       "departureDate": "Select the departure date.",
       "departureTime": "Enter the departure time (local time of the departure airport).",
       "departureTimeExpanded": "The time should be specified in the local timezone of the departure airport. The system automatically converts if necessary.",
+      "arrivalDate": "Select the arrival date.",
+      "arrivalTime": "Enter the arrival time (local time of the arrival airport).",
+      "arrivalTimeExpanded": "The time should be specified in the local timezone of the arrival airport. The system automatically converts if necessary.",
       "price": "The price is saved together with the currency. You can filter by prices later and display statistics.",
       "tags": "Add tags to categorize and filter flights later (e.g. 'business', 'international').",
       "tagsExpanded": "Tags are separated by commas. You can filter by tags later and group statistics by tags. Examples: 'business', 'vacation', 'lufthansa', 'long-haul'.",
@@ -66,25 +73,52 @@
     "email": {
       "title": "Have a Booking Email?",
       "description": "Import flights directly from confirmation emails!",
-      "import": "Import Email"
+      "import": "Import Email",
+      "notImplemented": "Email import is not yet implemented. Please use manual entry or boarding pass scan."
     },
     "placeholders": {
-      "tags": "business, vacation, conference"
+      "tags": "business, vacation, conference",
+      "flightNumber": "LH400",
+      "airline": "Lufthansa",
+      "departureAirport": "FRA, Frankfurt",
+      "arrivalAirport": "LHR, London",
+      "departureCode": "FRA",
+      "arrivalCode": "JFK",
+      "aircraft": "A320, B737",
+      "terminal": "T1",
+      "gate": "A12",
+      "seat": "12A",
+      "price": "249.99",
+      "notes": "Additional information...",
+      "bookingReference": "9RFAA7",
+      "boardingGroup": "1 or A",
+      "ticketNumber": "2202236084346",
+      "taxes": "45.67",
+      "fees": "12.30"
     },
     "validation": {
       "selectAirportsAndDates": "Please select both airports and dates"
-    }
+    },
+    "tagsHint": "Comma-separated tags for filtering.",
+    "loadingScanner": "Loading scanner...",
+    "noFlightsInEmail": "No flights found in the email.",
+    "departureAirportCode": "Departure airport (IATA) *",
+    "arrivalAirportCode": "Arrival airport (IATA) *"
   },
   "list": {
     "title": "Flights",
     "noFlights": "No flights found",
     "edit": "Edit",
     "delete": "Delete",
-    "viewDetails": "View Details"
+    "viewDetails": "View Details",
+    "from": "From",
+    "to": "To",
+    "aircraft": "Aircraft",
+    "deleteConfirm": "Are you sure you want to delete this flight?"
   },
   "table": {
     "title": "Flight List",
-    "backToMap": "← Back to Map",
+    "backToMap": "Back to Map",
     "welcome": "Welcome to the Flight Table!",
     "description": "Here you can see all your flights in a clear table. You can sort, filter and edit or delete flights.",
     "backToDashboard": "Back to Dashboard",
@@ -106,6 +140,20 @@
       "message": "Are you sure you want to delete this flight?\n\nThis action cannot be undone.",
       "confirm": "Yes, delete",
       "cancel": "Cancel"
+    },
+    "toast": {
+      "deleted": "Flight deleted",
+      "updated": "Flight updated"
+    },
+    "sort": {
+      "departure": "Departure",
+      "airline": "Airline",
+      "status": "Status",
+      "duration": "Duration"
+    },
+    "footer": {
+      "showing": "Showing {{count}} flights",
+      "sortedBy": "Sorted by {{field}} ({{order}})"
     }
   },
   "review": {
@@ -114,12 +162,26 @@
     "flightIndex": "Flight {{index}} of {{total}}",
     "confirm": "Confirm",
     "edit": "Edit",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "discard": "Discard",
+    "saving": "Saving...",
+    "next": "Next",
+    "costsTitle": "Costs (optional)",
+    "loadingAirports": "Loading airports...",
+    "departureNotFound": "Departure airport {{code}} not found",
+    "arrivalNotFound": "Arrival airport {{code}} not found",
+    "selectedAirport": "Selected: {{name}} ({{code}})"
+  },
+  "lookup": {
+    "resultsTitle": "Found {{count}} {{count, plural, one {flight} other {flights}}}",
+    "departs": "Departs",
+    "backToSearch": "Back to search"
   },
   "status": {
     "scheduled": "Scheduled",
     "flown": "Flown",
-    "cancelled": "Cancelled"
+    "cancelled": "Cancelled",
+    "landed": "Landed"
   },
   "category": {
     "business": "Business",
@@ -138,11 +200,57 @@
     "GBP": "GBP",
     "CHF": "CHF"
   },
-  "review": {
-    "discard": "Discard",
-    "saving": "Saving...",
-    "next": "Next",
-    "confirm": "Confirm"
+  "edit": {
+    "title": "Edit Flight",
+    "saveChanges": "Save Changes"
+  },
+  "scanner": {
+    "title": "Scan Boarding Pass",
+    "uploadTitle": "Upload Boarding Pass Photo",
+    "clickToSelect": "or click here to select",
+    "supportedFormats": "Supported: JPG, PNG, GIF",
+    "previewAlt": "Boarding Pass Preview",
+    "analyzing": "Ollama Vision analyzing...",
+    "flight": "Flight",
+    "enriched": "Data enriched",
+    "noEnrichment": "No enrichment needed",
+    "loadError": "Error loading image",
+    "processError": "Error processing image",
+    "ollamaUnavailable": "Ollama Vision is not available. Please make sure Ollama is running and a Vision model is installed (e.g. llava).",
+    "steps": {
+      "load": "Loading image",
+      "upload": "Upload to server",
+      "ollama": "AI analysis with Ollama Vision",
+      "api": "API lookup (optional)",
+      "complete": "Scan complete"
+    },
+    "info": {
+      "title": "AI-powered analysis with Ollama Vision",
+      "step1": "Take a photo of your boarding pass (barcode + text)",
+      "step2": "Ollama Vision automatically extracts all flight data",
+      "step3": "Optional: API lookup for times & terminal/gate",
+      "step4": "Works with all common boarding pass formats"
+    }
+  },
+  "receipt": {
+    "label": "Receipt",
+    "viewReceipt": "View Receipt",
+    "uploadFile": "Upload a file",
+    "dragAndDrop": "or drag and drop",
+    "fileFormats": "PNG, JPG, GIF, WebP, PDF up to 10MB",
+    "uploading": "Uploading... {{progress}}%",
+    "invalidFileType": "Invalid file type. Allowed: JPEG, PNG, GIF, WebP, PDF",
+    "fileTooLarge": "File too large. Maximum size: 10MB",
+    "uploadFailed": "Failed to upload receipt",
+    "deleteConfirm": "Delete this receipt?"
+  },
+  "airportAutocomplete": {
+    "placeholder": "Search by IATA, name or city...",
+    "seeding": "Airport database is still loading...",
+    "seedingTitle": "Airport database is still loading. Please wait until seeding is complete.",
+    "searching": "Searching...",
+    "searchingWorldwide": "🔍 Searching worldwide...",
+    "noResults": "No airports found",
+    "notFound": "❌ Airport \"{{code}}\" not found"
   }
 }
-

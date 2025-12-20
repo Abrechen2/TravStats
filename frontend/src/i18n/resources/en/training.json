@@ -134,5 +134,9 @@
       "cancel": "Cancel"
     }
   },
-  "loading": "Loading..."
+  "loading": "Loading...",
+  "errors": {
+    "loadFailed": "Failed to load training data",
+    "saveFailed": "Failed to save"
+  }
 }

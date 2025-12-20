@@ -26,6 +26,37 @@
     "yes": "Yes",
     "no": "No"
   },
+  "app": {
+    "name": "TravStats",
+    "logoAlt": "TravStats Logo"
+  },
+  "accessibility": {
+    "close": "Close",
+    "showHelp": "Show help",
+    "closeHint": "Close hint"
+  },
+  "help": {
+    "more": "Learn more",
+    "less": "Less"
+  },
+  "theme": {
+    "toggle": "Toggle dark mode",
+    "enableLight": "Switch to light mode",
+    "enableDark": "Switch to dark mode"
+  },
+  "loading": {
+    "title": "Loading...",
+    "checkingSystem": "Checking system status",
+    "pleaseWait": "Please wait"
+  },
+  "errorBoundary": {
+    "title": "Oops! Something went wrong",
+    "message": "The application encountered an unexpected error. Please try refreshing the page.",
+    "refresh": "Refresh Page",
+    "fallbackTitle": "Something went wrong",
+    "fallbackMessage": "An unexpected error occurred",
+    "tryAgain": "Try Again"
+  },
   "labels": {
     "username": "Username",
     "password": "Password",
@@ -41,7 +72,9 @@
     "required": "Required",
     "price": "Price",
     "taxes": "Taxes",
-    "fees": "Fees"
+    "fees": "Fees",
+    "routeSeparator": "→",
+    "unknown": "Unknown"
   },
   "messages": {
     "success": "Success",

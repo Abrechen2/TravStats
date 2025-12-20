@@ -1,5 +1,7 @@
 # ✈️ TravStats
 
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+
 > **⚠️ BETA APPLICATION** - This application is currently in beta. Features may be incomplete, and there may be bugs. Use at your own risk.
 
 Self-hosted flight tracking and statistics app for small groups (1-10 accounts). Track your flights, visualize routes on interactive maps, and collect achievements.
@@ -152,7 +154,15 @@ npm run dev
 
 ## 📝 License
 
-AGPL-3.0 - See [LICENSE](LICENSE)
+Copyright (C) 2025 Dennis Wittke
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+
+**TL;DR:** You can use, modify, and distribute this software, but if you run it as a web service (even modified), you must make the complete source code (including your modifications) available under AGPL-3.0.
+
+See [LICENSE](LICENSE) for full details.
 
 ## 🔗 Links
 
@@ -161,4 +171,4 @@ AGPL-3.0 - See [LICENSE](LICENSE)
 
 ---
 
-**Made with ❤️ for flight enthusiasts**
+**Made with ❤️ and a bit AI for flight enthusiasts**

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Simplified Flight Form V2
  *
  * Features:
@@ -13,7 +13,6 @@
 import { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import { Airport, airportsApi } from '../lib/api';
 import AirportAutocomplete from './AirportAutocomplete';
-import EmailUploader from './EmailUploader';
 import HelpIcon from './Help/HelpIcon';
 import { useTranslation } from '../hooks/useTranslation';
 
@@ -55,7 +54,7 @@ interface SimplifiedFlightFormProps {
 }
 
 export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: SimplifiedFlightFormProps) {
-  const { t } = useTranslation(['flights', 'errors']);
+  const { t } = useTranslation(['flights', 'errors', 'common']);
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
   const settings = useSettingsStore();
 
@@ -76,8 +75,8 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
   const [parsedFlights, setParsedFlights] = useState<any[]>([]);
   const [currentFlightIndex, setCurrentFlightIndex] = useState(0);
   const [showFlightReview, setShowFlightReview] = useState(false);
-  const [parserProvider, setParserProvider] = useState<string>('unknown');
-  const [originalEmailData, setOriginalEmailData] = useState<{ subject?: string; text?: string; html?: string } | undefined>();
+  const [parserProvider] = useState<string>('unknown');
+  const [originalEmailData] = useState<{ subject?: string; text?: string; html?: string } | undefined>();
 
   // Flight Lookup State
   const [flightNumber, setFlightNumber] = useState('');
@@ -192,7 +191,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
   // Flight Lookup Handler
   const handleFlightLookup = async () => {
     if (!flightNumber.trim()) {
-      setError(t('errors.noFlightNumber'));
+      setError(t('errors:noFlightNumber'));
       return;
     }
 
@@ -206,7 +205,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
       const data = await response.json();
 
       if (!data.success || !data.flights || data.flights.length === 0) {
-        setError(t('errors.noFlightsFound'));
+        setError(t('errors:noFlightsFound'));
         setStep('complete'); // Skip to manual entry
         return;
       }
@@ -215,7 +214,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
       setStep('select');
     } catch (err) {
       console.error('Flight lookup error:', err);
-      setError(`${t('errors.lookupUnavailable')} ${t('errors.apiKeyInfo')}`);
+      setError(`${t('errors:lookupUnavailable')} ${t('errors:apiKeyInfo')}`);
       setStep('complete');
     } finally {
       setLoading(false);
@@ -300,7 +299,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
 
       setStep('complete');
     } catch (err) {
-      setError(t('errors.failedToLoadAirport'));
+      setError(t('errors:failedToLoadAirport'));
     } finally {
       setLoading(false);
     }
@@ -330,7 +329,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
     e.preventDefault();
 
     if (!departure || !arrival) {
-      setError(t('errors.missingAirports'));
+      setError(t('errors:missingAirports'));
       return;
     }
 
@@ -397,7 +396,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
         tags: tags.length ? tags : undefined,
       });
     } catch (err: any) {
-      setError(err.response?.data?.error || t('flights:errors.saveFailed'));
+      setError(err.response?.data?.error || t('errors:saveFailed'));
     } finally {
       setLoading(false);
     }
@@ -418,11 +417,11 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
       <div className={`${bgClass} rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto`}>
         {/* Header */}
         <div className={`sticky top-0 ${bgClass} border-b ${borderClass} px-6 py-4`}>
-          <h2 className={`text-2xl font-bold ${textClass}`}>✈️ {t('flights.form.title')}</h2>
+          <h2 className={`text-2xl font-bold ${textClass}`}>{t('flights:form.title')}</h2>
           <p className={`text-sm ${mutedTextClass} mt-1`}>
-            {step === 'input' && t('flights.form.steps.input')}
-            {step === 'select' && t('flights.form.steps.select')}
-            {step === 'complete' && t('flights.form.steps.complete')}
+            {step === 'input' && t('flights:form.steps.input')}
+            {step === 'select' && t('flights:form.steps.select')}
+            {step === 'complete' && t('flights:form.steps.complete')}
           </p>
         </div>
 
@@ -440,15 +439,15 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
               <div className={`bg-gradient-to-r ${isDarkMode ? 'from-blue-900 to-purple-900' : 'from-blue-50 to-purple-50'} border ${isDarkMode ? 'border-blue-700' : 'border-blue-200'} rounded-lg p-4`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className={`font-semibold text-lg ${textClass}`}>🎫 {t('flights.form.boardingPass.title')}</h3>
-                    <p className={`text-sm ${mutedTextClass}`}>{t('flights.form.boardingPass.description')}</p>
+                    <h3 className={`font-semibold text-lg ${textClass}`}>{t('flights:form.boardingPass.title')}</h3>
+                    <p className={`text-sm ${mutedTextClass}`}>{t('flights:form.boardingPass.description')}</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setShowScanner(true)}
                     className="btn-primary"
                   >
-                    📸 {t('flights.form.boardingPass.scan')}
+                    {t('flights:form.boardingPass.scan')}
                   </button>
                 </div>
               </div>
@@ -457,15 +456,15 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
               <div className={`bg-gradient-to-r ${isDarkMode ? 'from-green-900 to-teal-900' : 'from-green-50 to-teal-50'} border ${isDarkMode ? 'border-green-700' : 'border-green-200'} rounded-lg p-4`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className={`font-semibold text-lg ${textClass}`}>📧 {t('flights.form.email.title')}</h3>
-                    <p className={`text-sm ${mutedTextClass}`}>{t('flights.form.email.description')}</p>
+                    <h3 className={`font-semibold text-lg ${textClass}`}>{t('flights:form.email.title')}</h3>
+                    <p className={`text-sm ${mutedTextClass}`}>{t('flights:form.email.description')}</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setShowEmailUploader(true)}
                     className="btn-secondary"
                   >
-                    📨 {t('flights.form.email.import')}
+                    {t('flights:form.email.import')}
                   </button>
                 </div>
               </div>
@@ -473,10 +472,10 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
               {/* Flight Number Input */}
               <div>
                 <label className={`label ${textClass} flex items-center gap-2`}>
-                  {t('flights.form.flightNumber')} (e.g., LH400, BA1234)
+                  {t('flights:form.flightNumber')} {t('flights:form.flightNumberExample')}
                   <HelpIcon
-                    content={t('flights.form.help.flightNumber')}
-                    expandedContent={t('flights.form.help.flightNumberExpanded')}
+                    content={t('flights:form.help.flightNumber')}
+                    expandedContent={t('flights:form.help.flightNumberExpanded')}
                     position="top"
                   />
                 </label>
@@ -486,7 +485,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                     value={flightNumber}
                     onChange={(e) => setFlightNumber(e.target.value.toUpperCase())}
                     className={`input flex-1 ${sizedInputClass}`}
-                    placeholder="LH400"
+                    placeholder={t('flights:form.placeholders.flightNumber')}
                     maxLength={10}
                   />
                   <input
@@ -501,11 +500,11 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                     disabled={loading || !flightNumber.trim()}
                     className="btn-primary whitespace-nowrap px-6"
                   >
-                    {loading ? '🔍 Searching...' : '🔍 Lookup'}
+                    {loading ? t('flights:form.searching') : t('flights:form.searchFlight')}
                   </button>
                 </div>
                 <p className={`text-xs ${mutedTextClass} mt-1`}>
-                  We'll automatically fill in all flight details!
+                  {t('flights:form.lookupHint')}
                 </p>
               </div>
 
@@ -516,7 +515,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                   onClick={() => setStep('complete')}
                   className={`text-sm ${isDarkMode ? 'text-blue-400' : 'text-blue-600'} hover:underline`}
                 >
-                  Or skip and enter manually →
+                  {t('flights:form.manualEntryAction')}
                 </button>
               </div>
             </div>
@@ -526,7 +525,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
           {step === 'select' && lookupResults.length > 0 && (
             <div className="space-y-4">
               <h3 className={`font-semibold text-lg ${textClass}`}>
-                Found {lookupResults.length} flight{lookupResults.length > 1 ? 's' : ''}
+                {t('flights:lookup.resultsTitle', { count: lookupResults.length })}
               </h3>
               {lookupResults.map((flight, idx) => (
                 <button
@@ -544,11 +543,11 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                         {flight.airline} {flight.flightNumber}
                       </div>
                       <div className={`text-sm ${mutedTextClass}`}>
-                        {flight.departure.iata} → {flight.arrival.iata}
+                        {flight.departure.iata} {t('common:labels.routeSeparator')} {flight.arrival.iata}
                       </div>
                       {flight.departure.scheduledTime && (
                         <div className={`text-xs ${mutedTextClass} mt-1`}>
-                          Departs: {new Date(flight.departure.scheduledTime).toLocaleString()}
+                          {t('flights:lookup.departs')}: {new Date(flight.departure.scheduledTime).toLocaleString()}
                         </div>
                       )}
                     </div>
@@ -557,7 +556,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                         flight.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
                           'bg-gray-100 text-gray-800'
                         }`}>
-                        {flight.status}
+                        {t('flights:status.' + flight.status, { defaultValue: flight.status })}
                       </span>
                     )}
                   </div>
@@ -568,7 +567,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                 onClick={() => setStep('input')}
                 className="w-full text-center text-sm text-gray-500 hover:text-gray-700"
               >
-                ← Back to search
+                {t('flights:lookup.backToSearch')}
               </button>
             </div>
           )}
@@ -580,7 +579,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
               {selectedFlight && (
                 <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-green-900' : 'bg-green-50'} border ${isDarkMode ? 'border-green-700' : 'border-green-200'}`}>
                   <div className={`text-sm font-medium ${isDarkMode ? 'text-green-200' : 'text-green-800'}`}>
-                    ✓ Flight details loaded from {selectedFlight.airline} {selectedFlight.flightNumber}
+                    {t('flights:form.lookupLoaded', { airline: selectedFlight.airline, flightNumber: selectedFlight.flightNumber })}
                   </div>
                 </div>
               )}
@@ -589,20 +588,20 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
               {timeEstimationWarning?.show && (
                 <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-yellow-900' : 'bg-yellow-50'} border ${isDarkMode ? 'border-yellow-700' : 'border-yellow-200'}`}>
                   <div className={`font-medium ${isDarkMode ? 'text-yellow-200' : 'text-yellow-800'} flex items-center gap-2`}>
-                    ⚠️ {t('flights.form.estimatedTimes')}
+                    {t('flights:form.estimatedTimes')}
                   </div>
                   <div className={`text-sm ${isDarkMode ? 'text-yellow-300' : 'text-yellow-700'} mt-2`}>
                     {timeEstimationWarning.source === 'historical' ? (
                       <>
-                        <strong>{t('flights.form.estimatedTimesHistorical', { count: timeEstimationWarning.sampleCount })}</strong>
+                        <strong>{t('flights:form.estimatedTimesHistorical', { count: timeEstimationWarning.sampleCount })}</strong>
                         <br />
-                        {t('flights.form.estimatedTimesCalculated')}
+                        {t('flights:form.estimatedTimesCalculated')}
                       </>
                     ) : (
                       <>
-                        <strong>{t('flights.form.estimatedTimesAutomatic')}</strong>
+                        <strong>{t('flights:form.estimatedTimesAutomatic')}</strong>
                         <br />
-                        {t('flights.form.estimatedTimesAssumption', { minutes: Math.round((calculateDistance(
+                        {t('flights:form.estimatedTimesAssumption', { minutes: Math.round((calculateDistance(
                           departure?.lat || 0,
                           departure?.lon || 0,
                           arrival?.lat || 0,
@@ -612,14 +611,14 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                     )}
                   </div>
                   <div className={`text-sm ${isDarkMode ? 'text-yellow-300' : 'text-yellow-700'} mt-2 font-semibold`}>
-                    {t('flights.form.reviewTimes')}
+                    {t('flights:form.reviewTimes')}
                   </div>
                   <button
                     type="button"
                     onClick={() => setTimeEstimationWarning(null)}
                     className={`text-xs ${isDarkMode ? 'text-yellow-400 hover:text-yellow-300' : 'text-yellow-600 hover:text-yellow-800'} mt-2 underline`}
                   >
-                    {t('flights.form.hideWarning')}
+                    {t('flights:form.hideWarning')}
                   </button>
                 </div>
               )}
@@ -628,9 +627,9 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <label className={`label ${textClass}`}>{t('flights.form.from')}</label>
+                    <label className={`label ${textClass}`}>{t('flights:form.from')}</label>
                     <HelpIcon
-                      content={t('flights.form.help.departureAirport')}
+                      content={t('flights:form.help.departureAirport')}
                       position="top"
                     />
                   </div>
@@ -638,15 +637,15 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                     value={departure}
                     onChange={setDeparture}
                     label=""
-                    placeholder="FRA, Frankfurt"
+                    placeholder={t('flights:form.placeholders.departureAirport')}
                     required
                   />
                 </div>
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <label className={`label ${textClass}`}>{t('flights.form.to')}</label>
+                    <label className={`label ${textClass}`}>{t('flights:form.to')}</label>
                     <HelpIcon
-                      content={t('flights.form.help.arrivalAirport')}
+                      content={t('flights:form.help.arrivalAirport')}
                       position="top"
                     />
                   </div>
@@ -654,7 +653,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                     value={arrival}
                     onChange={setArrival}
                     label=""
-                    placeholder="LHR, London"
+                    placeholder={t('flights:form.placeholders.arrivalAirport')}
                     required
                   />
                 </div>
@@ -664,9 +663,9 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className={`label ${textClass} flex items-center gap-2`}>
-                    {t('flights.form.departureDate')}
+                    {t('flights:form.departureDate')}
                     <HelpIcon
-                      content={t('flights.form.help.departureDate')}
+                      content={t('flights:form.help.departureDate')}
                       position="top"
                     />
                   </label>
@@ -680,10 +679,10 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                 </div>
                 <div>
                   <label className={`label ${textClass} flex items-center gap-2`}>
-                    {t('flights.form.departureTime')}
+                    {t('flights:form.departureTime')}
                     <HelpIcon
-                      content={t('flights.form.help.departureTime')}
-                      expandedContent={t('flights.form.help.departureTimeExpanded')}
+                      content={t('flights:form.help.departureTime')}
+                      expandedContent={t('flights:form.help.departureTimeExpanded')}
                       position="top"
                     />
                   </label>
@@ -696,13 +695,13 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                 </div>
               </div>
 
-              {/* Arrival Date & Time */}
+                            {/* Arrival Date & Time */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className={`label ${textClass} flex items-center gap-2`}>
-                    Arrival Date *
+                    {t('flights:form.arrivalDate')} *
                     <HelpIcon
-                      content="Wählen Sie das Ankunftsdatum aus."
+                      content={t('flights:form.help.arrivalDate')}
                       position="top"
                     />
                   </label>
@@ -716,10 +715,10 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                 </div>
                 <div>
                   <label className={`label ${textClass} flex items-center gap-2`}>
-                    Arrival Time
+                    {t('flights:form.arrivalTime')}
                     <HelpIcon
-                      content="Geben Sie die Ankunftszeit ein (lokale Zeit des Zielflughafens)."
-                      expandedContent="Die Zeit sollte in der lokalen Zeitzone des Zielflughafens angegeben werden. Das System konvertiert automatisch bei Bedarf."
+                      content={t('flights:form.help.arrivalTime')}
+                      expandedContent={t('flights:form.help.arrivalTimeExpanded')}
                       position="top"
                     />
                   </label>
@@ -735,36 +734,36 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
               {/* Additional Fields */}
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className={`label ${textClass}`}>Airline</label>
+                  <label className={`label ${textClass}`}>{t('flights:form.airline')}</label>
                   <input
                     type="text"
                     value={airline}
                     onChange={(e) => setAirline(e.target.value)}
                     className={`input ${sizedInputClass}`}
-                    placeholder="Lufthansa"
+                    placeholder={t('flights:form.placeholders.airline')}
                   />
                 </div>
                 <div>
-                  <label className={`label ${textClass}`}>Flight Number</label>
+                  <label className={`label ${textClass}`}>{t('flights:form.flightNumber')}</label>
                   <input
                     type="text"
                     value={flightNumber}
                     onChange={(e) => setFlightNumber(e.target.value.toUpperCase())}
                     className={`input ${sizedInputClass}`}
-                    placeholder="LH400"
+                    placeholder={t('flights:form.placeholders.flightNumber')}
                     maxLength={10}
                   />
                 </div>
                 <div>
-                  <label className={`label ${textClass}`}>Status</label>
+                  <label className={`label ${textClass}`}>{t('flights:form.status')}</label>
                   <select
                     value={status}
-                    onChange={(e) => setStatus(e.target.value as any)}
+                    onChange={(e) => setStatus(e.target.value as 'scheduled' | 'flown' | 'cancelled')}
                     className={`input ${sizedInputClass}`}
                   >
-                    <option value="flown">Flown</option>
-                    <option value="scheduled">Scheduled</option>
-                    <option value="cancelled">Cancelled</option>
+                    <option value="flown">{t('flights:status.flown')}</option>
+                    <option value="scheduled">{t('flights:status.scheduled')}</option>
+                    <option value="cancelled">{t('flights:status.cancelled')}</option>
                   </select>
                 </div>
               </div>
@@ -772,34 +771,34 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
               {/* Equipment / Gate / Seat / Category */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className={`label ${textClass}`}>Aircraft</label>
+                  <label className={`label ${textClass}`}>{t('flights:form.aircraft')}</label>
                   <input
                     type="text"
                     value={aircraft}
                     onChange={(e) => setAircraft(e.target.value)}
                     className={`input ${sizedInputClass}`}
-                    placeholder="A320, B737"
+                    placeholder={t('flights:form.placeholders.aircraft')}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className={`label ${textClass}`}>Terminal</label>
+                    <label className={`label ${textClass}`}>{t('flights:form.terminal')}</label>
                     <input
                       type="text"
                       value={terminal}
                       onChange={(e) => setTerminal(e.target.value)}
                       className={`input ${sizedInputClass}`}
-                      placeholder="T1"
+                      placeholder={t('flights:form.placeholders.terminal')}
                     />
                   </div>
                   <div>
-                    <label className={`label ${textClass}`}>Gate</label>
+                    <label className={`label ${textClass}`}>{t('flights:form.gate')}</label>
                     <input
                       type="text"
                       value={gate}
                       onChange={(e) => setGate(e.target.value)}
                       className={`input ${sizedInputClass}`}
-                      placeholder="A12"
+                      placeholder={t('flights:form.placeholders.gate')}
                     />
                   </div>
                 </div>
@@ -807,38 +806,38 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
 
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className={`label ${textClass}`}>Seat Number</label>
+                  <label className={`label ${textClass}`}>{t('flights:form.seat')}</label>
                   <input
                     type="text"
                     value={seatNumber}
                     onChange={(e) => setSeatNumber(e.target.value.toUpperCase())}
                     className={`input ${sizedInputClass}`}
-                    placeholder="12A"
+                    placeholder={t('flights:form.placeholders.seat')}
                   />
                 </div>
                 <div>
-                  <label className={`label ${textClass}`}>{t('flights.form.seatClass')}</label>
+                  <label className={`label ${textClass}`}>{t('flights:form.seatClass')}</label>
                   <select
                     value={seatClass}
-                    onChange={(e) => setSeatClass(e.target.value as any)}
+                    onChange={(e) => setSeatClass(e.target.value as 'economy' | 'premium_economy' | 'business' | 'first')}
                     className={`input ${sizedInputClass}`}
                   >
-                    <option value="economy">{t('flights.seatClass.economy')}</option>
-                    <option value="premium_economy">{t('flights.seatClass.premium_economy')}</option>
-                    <option value="business">{t('flights.seatClass.business')}</option>
-                    <option value="first">{t('flights.seatClass.first')}</option>
+                    <option value="economy">{t('flights:seatClass.economy')}</option>
+                    <option value="premium_economy">{t('flights:seatClass.premium_economy')}</option>
+                    <option value="business">{t('flights:seatClass.business')}</option>
+                    <option value="first">{t('flights:seatClass.first')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className={`label ${textClass}`}>{t('flights.form.category')}</label>
+                  <label className={`label ${textClass}`}>{t('flights:form.category')}</label>
                   <select
                     value={category}
-                    onChange={(e) => setCategory(e.target.value as any)}
+                    onChange={(e) => setCategory(e.target.value as 'business' | 'private' | 'vacation')}
                     className={`input ${sizedInputClass}`}
                   >
-                    <option value="business">{t('flights.category.business')}</option>
-                    <option value="private">{t('flights.category.private')}</option>
-                    <option value="vacation">{t('flights.category.vacation')}</option>
+                    <option value="business">{t('flights:category.business')}</option>
+                    <option value="private">{t('flights:category.private')}</option>
+                    <option value="vacation">{t('flights:category.vacation')}</option>
                   </select>
                 </div>
               </div>
@@ -847,10 +846,10 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
               <div className="grid grid-cols-3 gap-4">
                 <div className="col-span-2">
                   <label className={`label ${textClass} flex items-center gap-2`}>
-                    {t('flights.form.price')}
+                    {t('flights:form.price')}
                     <HelpIcon
-                      content={t('flights.form.help.price')}
-                      expandedContent={t('flights.form.help.price')}
+                      content={t('flights:form.help.price')}
+                      expandedContent={t('flights:form.help.price')}
                       position="top"
                     />
                   </label>
@@ -861,20 +860,20 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                     value={price ?? ''}
                     onChange={(e) => setPrice(e.target.value ? parseFloat(e.target.value) : undefined)}
                     className={`input ${sizedInputClass}`}
-                    placeholder="249.99"
+                    placeholder={t('flights:form.placeholders.price')}
                   />
                 </div>
                 <div>
-                  <label className={`label ${textClass}`}>{t('flights.form.currency')}</label>
+                  <label className={`label ${textClass}`}>{t('flights:form.currency')}</label>
                   <select
                     value={currency}
                     onChange={(e) => setCurrency(e.target.value as 'EUR' | 'USD' | 'GBP' | 'CHF')}
                     className={`input ${sizedInputClass}`}
                   >
-                    <option value="EUR">{t('settings.units.options.EUR')}</option>
-                    <option value="USD">{t('settings.units.options.USD')}</option>
-                    <option value="GBP">{t('settings.units.options.GBP')}</option>
-                    <option value="CHF">{t('settings.units.options.CHF')}</option>
+                    <option value="EUR">{t('flights:currency.EUR')}</option>
+                    <option value="USD">{t('flights:currency.USD')}</option>
+                    <option value="GBP">{t('flights:currency.GBP')}</option>
+                    <option value="CHF">{t('flights:currency.CHF')}</option>
                   </select>
                 </div>
               </div>
@@ -882,10 +881,10 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
               {/* Tags */}
               <div>
                 <label className={`label ${textClass} flex items-center gap-2`}>
-                  {t('flights.form.tags')}
+                  {t('flights:form.tags')}
                   <HelpIcon
-                    content={t('flights.form.help.tags')}
-                    expandedContent={t('flights.form.help.tagsExpanded')}
+                    content={t('flights:form.help.tags')}
+                    expandedContent={t('flights:form.help.tagsExpanded')}
                     position="top"
                   />
                 </label>
@@ -894,20 +893,20 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                   value={tags.join(', ')}
                   onChange={(e) => setTags(e.target.value.split(',').map(t => t.trim()).filter(Boolean))}
                   className={`input ${sizedInputClass}`}
-                  placeholder={t('flights.form.placeholders.tags')}
+                  placeholder={t('flights:form.placeholders.tags')}
                 />
-                <p className={`text-xs ${mutedTextClass} mt-1`}>Comma-separated tags for filtering</p>
+                <p className={`text-xs ${mutedTextClass} mt-1`}>{t('flights:form.tagsHint')}</p>
               </div>
 
               {/* Notes */}
               <div>
-                <label className={`label ${textClass}`}>Notes</label>
+                <label className={`label ${textClass}`}>{t('flights:form.notes')}</label>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   className={`input ${sizedInputClass}`}
                   rows={3}
-                  placeholder="Additional information..."
+                  placeholder={t('flights:form.placeholders.notes')}
                 />
               </div>
             </div>
@@ -921,16 +920,16 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
               className="btn-secondary"
               disabled={loading}
             >
-              {t('flights.form.cancel')}
+              {t('flights:form.cancel')}
             </button>
             {step === 'complete' && (
               <button
                 type="submit"
                 className={`btn-primary ${!canSubmit ? 'opacity-50 cursor-not-allowed' : ''}`}
                 disabled={loading || !canSubmit}
-                title={!canSubmit ? t('flights.form.validation.selectAirportsAndDates') : t('flights.form.submit')}
+                title={!canSubmit ? t('flights:form.validation.selectAirportsAndDates') : t('flights:form.submit')}
               >
-                {loading ? t('flights.form.saving') : t('flights.form.submit')}
+                {loading ? t('flights:form.saving') : t('flights:form.submit')}
               </button>
             )}
           </div>
@@ -944,7 +943,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
             <div className="bg-white dark:bg-gray-800 rounded-lg p-8">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto mb-2"></div>
-                <p className="text-gray-600 dark:text-gray-300">Loading scanner...</p>
+                <p className="text-gray-600 dark:text-gray-300">{t('flights:form.loadingScanner')}</p>
               </div>
             </div>
           </div>
@@ -956,27 +955,20 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
         </Suspense>
       )}
 
-      {/* Email Uploader Modal */}
+      {/* Email Uploader Modal - TODO: Implement EmailUploader component */}
       {showEmailUploader && (
-        <EmailUploader
-          onEmailParsed={(flights, parserUsed, originalData) => {
-            setParsedFlights(flights);
-            setParserProvider(parserUsed);
-            setOriginalEmailData(originalData);
-            setCurrentFlightIndex(0);
-            setShowEmailUploader(false);
-            if (flights.length > 0) {
-              setShowFlightReview(true);
-            } else {
-              setError('Keine Flüge in der Email gefunden');
-            }
-          }}
-          onError={(err) => {
-            setError(err);
-            setShowEmailUploader(false);
-          }}
-          onClose={() => setShowEmailUploader(false)}
-        />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md">
+            <h3 className="text-lg font-bold mb-4">{t('flights:form.email.title')}</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">{t('flights:form.email.notImplemented')}</p>
+            <button
+              onClick={() => setShowEmailUploader(false)}
+              className="btn-primary"
+            >
+              {t('common:buttons.close')}
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Flight Review Modal (for Email & Boarding Pass) */}
@@ -1020,6 +1012,16 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
 
 
 

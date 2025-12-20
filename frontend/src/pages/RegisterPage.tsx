@@ -5,7 +5,7 @@ import { useAuthStore } from '../store/authStore';
 import { useTranslation } from '../hooks/useTranslation';
 
 export default function RegisterPage() {
-  const { t } = useTranslation('auth');
+  const { t } = useTranslation(['auth', 'common']);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -45,8 +45,8 @@ export default function RegisterPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
       <div className="card w-full max-w-md">
         <div className="flex flex-col items-center mb-6">
-          <img src="/logo-with-text.png" alt="TravStats Logo" className="h-24 w-auto mb-4" />
-          <h1 className="text-3xl font-bold text-center">TravStats</h1>
+          <img src="/logo-with-text.png" alt={t('common:app.logoAlt')} className="h-24 w-auto mb-4" />
+          <h1 className="text-3xl font-bold text-center">{t('common:app.name')}</h1>
         </div>
         <h2 className="text-xl text-gray-600 dark:text-gray-300 text-center mb-8">{t('register.title')}</h2>
 

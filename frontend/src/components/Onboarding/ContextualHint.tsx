@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { STORAGE_KEYS } from '../../lib/constants';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface ContextualHintProps {
   id: string;
@@ -12,6 +13,7 @@ interface ContextualHintProps {
 
 export default function ContextualHint({ id, title, message, linkTo, linkText }: ContextualHintProps) {
   const [dismissed, setDismissed] = useState(false);
+  const { t } = useTranslation('common');
 
   useEffect(() => {
     const dismissedHints = JSON.parse(
@@ -44,27 +46,19 @@ export default function ContextualHint({ id, title, message, linkTo, linkText }:
               to={linkTo}
               className="text-sm text-blue-600 dark:text-blue-400 hover:underline mt-2 inline-block"
             >
-              {linkText} →
+              {linkText} {'→'}
             </Link>
           )}
         </div>
         <button
           onClick={handleDismiss}
           className="ml-4 text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-200"
-          aria-label="Hinweis schließen"
+          aria-label={t('accessibility.closeHint')}
         >
-          ×
+          x
         </button>
       </div>
     </div>
   );
 }
-
-
-
-
-
-
-
-
 

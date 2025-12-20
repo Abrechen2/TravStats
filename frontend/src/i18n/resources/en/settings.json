@@ -229,6 +229,52 @@
     "title": "Auto-saved",
     "description": "All settings are saved locally and are immediately active."
   },
-  "scrollToTop": "Scroll to top"
+  "scrollToTop": "Scroll to top",
+  "parser": {
+    "title": "Parser Configuration",
+    "description": "Configure how boarding passes and emails are parsed. Auto mode automatically selects the best available parser.",
+    "saveSettings": "Save Settings",
+    "saved": "Parser settings saved successfully!",
+    "saveFailed": "Failed to save settings",
+    "available": "Available",
+    "unavailable": "Unavailable",
+    "preferred": "Preferred Parser",
+    "providerStatus": "Provider Status:",
+    "vision": {
+      "title": "Vision Parser (Boarding Pass)",
+      "description": "Parse uploaded boarding pass images"
+    },
+    "text": {
+      "title": "Text Parser (Email)",
+      "description": "Parse flight booking emails"
+    },
+    "apiKeys": {
+      "title": "API Keys (Optional)",
+      "openai": "OpenAI API Key",
+      "claude": "Claude API Key",
+      "optional": "Optional. Get from"
+    },
+    "help": {
+      "title": "Parser Configuration",
+      "modes": {
+        "title": "Parser Modes:",
+        "auto": "Auto",
+        "autoDesc": "Automatically selects the best available parser",
+        "ollama": "Ollama",
+        "ollamaDesc": "Runs locally (free, requires good hardware)",
+        "cloud": "OpenAI/Claude",
+        "cloudDesc": "Cloud-based (paid, works on any device)",
+        "fallback": "Tesseract/Regex",
+        "fallbackDesc": "Free fallback options (lower accuracy)"
+      },
+      "bestPractices": {
+        "title": "Best Practices:",
+        "auto": "Use \"Auto\" for the best balance between accuracy and cost",
+        "ollama": "Ollama is ideal if you have a GPU and prefer local processing",
+        "cloud": "Cloud parsers are most accurate but require API keys and incur costs",
+        "trained": "Trained Ollama models (via Training page) significantly improve accuracy"
+      }
+    }
+  }
 }
 

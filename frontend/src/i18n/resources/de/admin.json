@@ -1,6 +1,7 @@
 {
   "title": "Admin",
   "description": "Verwalte deine selbst gehostete TravStats-Instanz",
+  "loading": "Lade...",
   "tabs": {
     "users": "Benutzer",
     "invitations": "Einladungen",
@@ -15,13 +16,15 @@
   "trainingConfig": "Training Config",
   "parserFeedback": "Parser Feedback",
   "patternUpdates": "Pattern Updates",
-  "instance": "Instance",
-  "totalUsers": "Total Users",
-  "activeUsers": "Active Users",
-  "totalFlights": "Total Flights",
+  "instance": "Instanz",
+  "totalUsers": "Gesamt Benutzer",
+  "activeUsers": "Aktive Benutzer",
+  "totalFlights": "Gesamt Flüge",
   "saveConfiguration": "Konfiguration speichern",
   "saveSettings": "Einstellungen speichern",
   "saveConfig": "Konfiguration speichern",
+  "refresh": "🔄 Aktualisieren",
+  "refreshing": "⏳ Lade...",
   "users": {
     "title": "Benutzerverwaltung"
   },
@@ -29,8 +32,193 @@
     "title": "Einladungen verwalten"
   },
   "userLimitWarning": {
-    "title": "⚠️ User Limit Warning",
-    "message": "Sie haben die empfohlene Benutzerobergrenze ({{maxUsers}} Benutzer) erreicht. Die Leistung kann bei mehr Benutzern beeinträchtigt werden. Berücksichtigen Sie die Kapazität des Systems."
+    "title": "⚠️ Benutzerlimit-Warnung",
+    "message": "Sie haben die empfohlene Benutzerobergrenze ({{maxUsers}} Benutzer) erreicht. Die Leistung kann bei mehr Benutzern beeinträchtigt werden."
+  },
+  "demoWarning": {
+    "title": "🔓 Demo-Konto aktiv",
+    "message": "Das Demo-Benutzerkonto (Benutzername: \"demo\", Passwort: \"demo123\") ist derzeit aktiv.",
+    "button": "Demo-Konto deaktivieren"
+  },
+  "hardware": {
+    "title": "💻 Hardware-Informationen",
+    "loading": "Lade Hardware-Informationen...",
+    "clickToLoad": "Klicken Sie auf \"Aktualisieren\", um Hardware-Informationen zu laden.",
+    "cpu": "🖥️ CPU",
+    "cores": "Kerne",
+    "model": "Modell",
+    "architecture": "Architektur",
+    "gpu": "🎮 GPU",
+    "available": "Verfügbar",
+    "detected": "Erkannt (nicht verfügbar)",
+    "notAvailable": "Nicht verfügbar",
+    "count": "Anzahl",
+    "gpus": "GPUs",
+    "name": "Name",
+    "memory": "Speicher",
+    "cudaVersion": "CUDA Version",
+    "noGpuDetected": "Keine GPU erkannt",
+    "gpuDetected": "⚠️ GPU erkannt: {{gpuName}}",
+    "solution": "💡 Lösung:",
+    "possibleReasons": "Mögliche Ursachen:",
+    "gpuReasons": {
+      "noGpu": "Keine GPU im System installiert",
+      "noDrivers": "NVIDIA-Treiber nicht installiert",
+      "noCuda": "CUDA nicht installiert oder nicht konfiguriert"
+    },
+    "python": "🐍 Python",
+    "version": "Version",
+    "pytorch": "PyTorch",
+    "notAvailableShort": "❌ Nicht verfügbar",
+    "pythonNotFound": "Python nicht gefunden",
+    "docker": "🐳 Docker",
+    "yes": "✅ Ja",
+    "no": "❌ Nein (Lokal)",
+    "system": "System",
+    "environment": "Umgebung",
+    "trainingAccess": "Training Zugriff",
+    "trainingAvailable": "✅ Verfügbar",
+    "trainingNotAvailable": "❌ Nicht verfügbar"
+  },
+  "systemInfo": {
+    "title": "Systeminformationen",
+    "configuration": "Konfiguration",
+    "dataManagement": "Datenverwaltung",
+    "registration": "Registrierung",
+    "enabled": "✅ Aktiviert",
+    "disabled": "❌ Deaktiviert",
+    "version": "Version"
+  },
+  "export": {
+    "button": "📥 Daten exportieren",
+    "description": "Exportieren Sie alle Benutzerdaten als JSON-Datei.",
+    "title": "Daten-Export",
+    "help": {
+      "title": "Was wird exportiert?",
+      "items": {
+        "users": "Alle Benutzerkonten",
+        "flights": "Alle Flugdaten",
+        "settings": "Systemeinstellungen"
+      }
+    },
+    "confirmTitle": "Alle Daten exportieren?",
+    "confirmMessage": "Dies lädt eine JSON-Datei mit allen Benutzerdaten herunter."
+  },
+  "trainingConfig": {
+    "title": "Training-Konfiguration",
+    "description": "Konfiguriere Modell-Namen und Speicherort für LLM-Training",
+    "saving": "Speichern...",
+    "helpTitle": "Training-Konfiguration",
+    "helpContent": {
+      "description": "Diese Einstellungen überschreiben ENV-Variablen und bestimmen, wo trainierte Modelle gespeichert werden und wie sie heißen.",
+      "priorityTitle": "Priorität:",
+      "priority1": "Admin-Settings (hier konfiguriert)",
+      "priority2": "ENV-Variablen (Fallback)",
+      "priority3": "Standard-Werte (wenn nichts gesetzt)",
+      "note": "<strong>Hinweis:</strong> Leere Felder verwenden ENV-Variablen oder Standard-Werte."
+    },
+    "modelStorage": {
+      "title": "Modell-Speicherort",
+      "label": "Speicherort für trainierte Modelle",
+      "currentlyUsed": "Aktuell verwendet:",
+      "envFallback": "ENV-Fallback:"
+    },
+    "modelNames": {
+      "title": "Modell-Namen",
+      "emailModel": "Email-Modell-Name",
+      "visionModel": "Vision-Modell-Name",
+      "currently": "Aktuell:",
+      "env": "ENV:"
+    }
+  },
+  "toasts": {
+    "trainingConfigSaved": "Training-Konfiguration erfolgreich gespeichert!",
+    "trainingConfigFailed": "Fehler beim Speichern der Training-Konfiguration",
+    "userUpdated": "Benutzer erfolgreich aktualisiert",
+    "userUpdateFailed": "Fehler beim Aktualisieren des Benutzers",
+    "invitationCopied": "Einladungslink in die Zwischenablage kopiert!\n\n{{inviteUrl}}",
+    "invitationFailed": "Fehler beim Erstellen der Einladung",
+    "exportFailed": "Fehler beim Exportieren der Daten",
+    "parserSettingsSaved": "Parser-Einstellungen erfolgreich gespeichert!",
+    "parserSettingsFailed": "Fehler beim Speichern der Parser-Einstellungen",
+    "debugLoggingToggled": "Debug-Logging {{state}} erfolgreich!",
+    "debugLoggingFailed": "Fehler beim Umschalten des Debug-Loggings",
+    "loggingConfigSaved": "Logging-Konfiguration erfolgreich gespeichert!",
+    "loggingConfigFailed": "Fehler beim Speichern der Logging-Konfiguration",
+    "logFileDownloadFailed": "Fehler beim Herunterladen der Log-Datei",
+    "logFileDeleted": "Log-Datei erfolgreich gelöscht!",
+    "logFileDeletFailed": "Fehler beim Löschen der Log-Datei",
+    "cleanupComplete": "Aufräumen abgeschlossen! {{filesDeleted}} Dateien gelöscht, {{spaceFreed}} MB freigegeben",
+    "cleanupFailed": "Fehler beim Aufräumen der Logs",
+    "patternApplyError": "Fehler beim Anwenden des Patterns",
+    "autoApplyError": "Fehler beim automatischen Anwenden",
+    "enabled": "aktiviert",
+    "disabled": "deaktiviert"
+  },
+  "prompts": {
+    "enterEmail": "E-Mail eingeben (optional):",
+    "confirmExport": "Alle Daten exportieren? Dies lädt eine JSON-Datei mit allen Benutzerdaten herunter.",
+    "confirmDeleteLog": "Log-Datei \"{{filename}}\" löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "confirmCleanupLogs": "Alte Log-Dateien basierend auf der Aufbewahrungsrichtlinie löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "confirmDeactivateDemo": "Demo-Benutzerkonto deaktivieren? Dies verhindert die Anmeldung mit Demo-Anmeldedaten."
+  },
+  "backup": {
+    "title": "Backup-Verwaltung",
+    "description": "Verwalten Sie Ihre Backups und stellen Sie sie bei Bedarf wieder her",
+    "loading": "Lade Backups...",
+    "creating": "Erstelle Backup...",
+    "running": "Backup läuft",
+    "createNow": "Backup jetzt erstellen",
+    "startedAt": "Gestartet um {{date}}",
+    "noBackups": "Keine Backups vorhanden",
+    "deleteConfirm": "Möchten Sie das Backup vom {{date}} wirklich löschen?",
+    "type": {
+      "full": "Vollständig",
+      "partial": "Teilweise"
+    },
+    "status": {
+      "completed": "Abgeschlossen",
+      "running": "Läuft...",
+      "failed": "Fehlgeschlagen",
+      "pending": "Ausstehend"
+    },
+    "table": {
+      "date": "Datum",
+      "status": "Status",
+      "size": "Größe",
+      "type": "Typ",
+      "cloud": "Cloud"
+    },
+    "actions": {
+      "download": "Download",
+      "restore": "Wiederherstellen"
+    },
+    "restore": {
+      "title": "Backup wiederherstellen",
+      "warning": "Warnung: Diese Aktion wird alle aktuellen Daten ersetzen!",
+      "backupFrom": "Backup vom: {{date}}",
+      "scope": "Wiederherstellungs-Umfang",
+      "scopeFull": "Vollständig (Datenbank + Dateien)",
+      "scopeDatabase": "Nur Datenbank",
+      "scopeFiles": "Nur Dateien",
+      "createBackupBefore": "Backup vor Wiederherstellung erstellen (empfohlen)",
+      "targetDatabaseUrl": "Ziel-Datenbank-URL (optional, für Migration)",
+      "targetDatabaseUrlPlaceholder": "postgresql://user:pass@host:port/database",
+      "targetDatabaseUrlHelp": "Leer lassen für aktuelle Instanz",
+      "confirmLabel": "Zur Bestätigung geben Sie \"{{text}}\" ein:",
+      "confirmText": "Wiederherstellen",
+      "confirmButton": "Wiederherstellen"
+    },
+    "toasts": {
+      "loadFailed": "Fehler beim Laden der Backups",
+      "started": "Backup gestartet",
+      "createFailed": "Fehler beim Erstellen des Backups",
+      "downloading": "Backup wird heruntergeladen",
+      "downloadFailed": "Fehler beim Herunterladen des Backups",
+      "restoring": "Backup wird wiederhergestellt",
+      "restoreFailed": "Fehler beim Wiederherstellen des Backups",
+      "deleted": "Backup gelöscht",
+      "deleteFailed": "Fehler beim Löschen des Backups"
+    }
   }
 }
-

@@ -8,6 +8,7 @@ import YearHeatmap from '../components/YearHeatmap';
 import ContextualHint from '../components/Onboarding/ContextualHint';
 import type { Flight } from '../types';
 import { STORAGE_KEYS } from '../lib/constants';
+import { useTranslation } from '../hooks/useTranslation';
 import {
   BarChart,
   Bar,
@@ -24,6 +25,7 @@ import {
 export default function AdvancedStatsPage() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
+  const { t } = useTranslation(['stats', 'common']);
   const [flights, setFlights] = useState<Flight[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -207,13 +209,13 @@ export default function AdvancedStatsPage() {
   }, {} as Record<string, number>);
 
   // Seat class translation
-  const seatClassLabel = (key: string) => {
+  const seatClassLabel = (key: string): string => {
     const labels: Record<string, string> = {
-      economy: 'Economy',
-      premium_economy: 'Premium Economy',
-      business: 'Business',
-      first: 'First Class',
-      unknown: 'Nicht angegeben',
+      economy: t('stats:seatClasses.economy'),
+      premium_economy: t('stats:seatClasses.premiumEconomy'),
+      business: t('stats:seatClasses.business'),
+      first: t('stats:seatClasses.first'),
+      unknown: t('stats:seatClasses.unknown'),
     };
     return labels[key] || key;
   };
@@ -249,7 +251,15 @@ export default function AdvancedStatsPage() {
     }));
 
   // Weekday analysis
-  const weekdayNames = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+  const weekdayNames = [
+    t('stats:weekdays.sunday'),
+    t('stats:weekdays.monday'),
+    t('stats:weekdays.tuesday'),
+    t('stats:weekdays.wednesday'),
+    t('stats:weekdays.thursday'),
+    t('stats:weekdays.friday'),
+    t('stats:weekdays.saturday'),
+  ];
   const flightsPerWeekday = flights.reduce((acc, flight) => {
     const weekday = new Date(flight.departureTime).getDay();
     acc[weekday] = (acc[weekday] || 0) + 1;
@@ -262,7 +272,20 @@ export default function AdvancedStatsPage() {
   }));
 
   // Seasonal patterns (by month name)
-  const monthNames = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+  const monthNames = [
+    t('stats:months.jan'),
+    t('stats:months.feb'),
+    t('stats:months.mar'),
+    t('stats:months.apr'),
+    t('stats:months.may'),
+    t('stats:months.jun'),
+    t('stats:months.jul'),
+    t('stats:months.aug'),
+    t('stats:months.sep'),
+    t('stats:months.oct'),
+    t('stats:months.nov'),
+    t('stats:months.dec'),
+  ];
   const flightsPerMonthOfYear = flights.reduce((acc, flight) => {
     const month = new Date(flight.departureTime).getMonth();
     acc[month] = (acc[month] || 0) + 1;
@@ -278,7 +301,7 @@ export default function AdvancedStatsPage() {
     return (
       <div className="h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
-          <div className="text-gray-600 dark:text-gray-300">Lade Statistiken...</div>
+          <div className="text-gray-600 dark:text-gray-300">{t('stats:loading')}</div>
         </div>
       </div>
     );
@@ -294,17 +317,19 @@ export default function AdvancedStatsPage() {
               onClick={() => navigate('/')}
               className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
             >
-              ← Zurück
+              {t('stats:back')}
             </button>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Erweiterte Statistiken
+              {t('stats:title')}
             </h1>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-gray-600 dark:text-gray-300">Welcome, {user?.username}!</span>
+            <span className="text-gray-600 dark:text-gray-300">
+              {t('stats:welcome', { username: user?.username })}
+            </span>
             <DarkModeToggle />
             <button onClick={logout} className="btn-secondary">
-              Logout
+              {t('stats:logout')}
             </button>
           </div>
         </div>
@@ -314,31 +339,39 @@ export default function AdvancedStatsPage() {
       <div className="container mx-auto px-6 py-8">
         <ContextualHint
           id="stats-page-hint"
-          title="Willkommen bei den Statistiken!"
-          message="Hier finden Sie detaillierte Analysen Ihrer Flüge: Charts, Trends, Top-Routen und mehr. Scrollen Sie nach unten, um alle Statistiken zu sehen."
+          title={t('stats:hint.title')}
+          message={t('stats:hint.message')}
           linkTo="/"
-          linkText="Zurück zum Dashboard"
+          linkText={t('stats:hint.linkText')}
         />
         {/* Overview Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Gesamt Flüge</h3>
+            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+              {t('stats:overview.totalFlights')}
+            </h3>
             <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">{flights.length}</p>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Gesamt Flugzeit</h3>
+            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+              {t('stats:overview.totalFlightTime')}
+            </h3>
             <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
               {totalFlightTime.toFixed(1)}h
             </p>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Durchschn. Flugdauer</h3>
+            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+              {t('stats:overview.avgFlightDuration')}
+            </h3>
             <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
               {avgFlightDuration.toFixed(1)}h
             </p>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Fluggesellschaften</h3>
+            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
+              {t('stats:overview.airlines')}
+            </h3>
             <p className="text-3xl font-bold text-gray-900 dark:text-white mt-2">
               {Object.keys(airlineStats).length}
             </p>
@@ -348,14 +381,14 @@ export default function AdvancedStatsPage() {
         {/* Time-based Charts Section */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
-            📊 Zeitbasierte Analysen
+            {t('stats:timeBasedAnalytics.title')}
           </h2>
 
           {/* Yearly Trend */}
           {yearlyData.length > 0 && (
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6 border border-gray-200 dark:border-gray-700">
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                Flüge pro Jahr - Trend-Analyse
+                {t('stats:timeBasedAnalytics.yearlyTrend')}
               </h3>
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={yearlyData}>
@@ -376,7 +409,7 @@ export default function AdvancedStatsPage() {
                     dataKey="flights"
                     stroke="#3b82f6"
                     strokeWidth={3}
-                    name="Flüge"
+                    name={t('stats:timeBasedAnalytics.flightsLabel')}
                     dot={{ fill: '#3b82f6', r: 5 }}
                   />
                 </LineChart>
@@ -388,7 +421,7 @@ export default function AdvancedStatsPage() {
           {monthlyData.length > 0 && (
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6 border border-gray-200 dark:border-gray-700">
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                Flüge pro Monat
+                {t('stats:timeBasedAnalytics.monthlyFlights')}
               </h3>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={monthlyData}>
@@ -404,7 +437,7 @@ export default function AdvancedStatsPage() {
                     }}
                   />
                   <Legend />
-                  <Bar dataKey="flights" fill="#10b981" name="Flüge" />
+                  <Bar dataKey="flights" fill="#10b981" name={t('stats:timeBasedAnalytics.flightsLabel')} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -416,7 +449,7 @@ export default function AdvancedStatsPage() {
               {/* Seasonal Pattern */}
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-200 dark:border-gray-700">
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                  Saisonale Muster
+                  {t('stats:timeBasedAnalytics.seasonalPatterns')}
                 </h3>
                 {seasonalData.some(d => d.flights > 0) ? (
                   <ResponsiveContainer width="100%" height={300}>
@@ -433,12 +466,12 @@ export default function AdvancedStatsPage() {
                         }}
                       />
                       <Legend />
-                      <Bar dataKey="flights" fill="#f59e0b" name="Flüge" />
+                      <Bar dataKey="flights" fill="#f59e0b" name={t('stats:timeBasedAnalytics.flightsLabel')} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
                   <div className="flex items-center justify-center h-[300px] text-gray-500 dark:text-gray-400">
-                    <p>Keine Daten verfügbar</p>
+                    <p>{t('stats:timeBasedAnalytics.noData')}</p>
                   </div>
                 )}
               </div>
@@ -446,7 +479,7 @@ export default function AdvancedStatsPage() {
               {/* Weekday Analysis */}
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-200 dark:border-gray-700">
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                  Wochentags-Analyse
+                  {t('stats:timeBasedAnalytics.weekdayAnalysis')}
                 </h3>
                 {weekdayData.some(d => d.flights > 0) ? (
                   <ResponsiveContainer width="100%" height={300}>
@@ -463,12 +496,12 @@ export default function AdvancedStatsPage() {
                         }}
                       />
                       <Legend />
-                      <Bar dataKey="flights" fill="#8b5cf6" name="Flüge" />
+                      <Bar dataKey="flights" fill="#8b5cf6" name={t('stats:timeBasedAnalytics.flightsLabel')} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
                   <div className="flex items-center justify-center h-[300px] text-gray-500 dark:text-gray-400">
-                    <p>Keine Daten verfügbar</p>
+                    <p>{t('stats:timeBasedAnalytics.noData')}</p>
                   </div>
                 )}
               </div>
@@ -479,7 +512,7 @@ export default function AdvancedStatsPage() {
         {/* Calendar Views Section */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
-            📅 Kalender-Ansichten
+            {t('stats:calendar.title')}
           </h2>
 
           {/* Year Heatmap */}
@@ -495,32 +528,42 @@ export default function AdvancedStatsPage() {
 
         {/* Distance Visualization */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 mb-8 border border-gray-200 dark:border-gray-700">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Geflogene Distanz</h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+            {t('stats:distance.title')}
+          </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <div className="bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-700 dark:to-blue-800 rounded-lg p-6 text-white shadow-md">
-              <h3 className="text-sm font-medium opacity-90 mb-2">Gesamt-Distanz</h3>
+              <h3 className="text-sm font-medium opacity-90 mb-2">
+                {t('stats:distance.totalDistance')}
+              </h3>
               <p className="text-4xl font-bold">{totalDistance.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, '.')}</p>
-              <p className="text-sm opacity-75 mt-1">Kilometer</p>
+              <p className="text-sm opacity-75 mt-1">{t('stats:distance.kilometers')}</p>
             </div>
 
             <div className="bg-gradient-to-br from-purple-500 to-purple-600 dark:from-purple-700 dark:to-purple-800 rounded-lg p-6 text-white shadow-md">
-              <h3 className="text-sm font-medium opacity-90 mb-2">Durchschnitt pro Flug</h3>
+              <h3 className="text-sm font-medium opacity-90 mb-2">
+                {t('stats:distance.avgPerFlight')}
+              </h3>
               <p className="text-4xl font-bold">{avgDistance.toFixed(0)}</p>
-              <p className="text-sm opacity-75 mt-1">Kilometer</p>
+              <p className="text-sm opacity-75 mt-1">{t('stats:distance.kilometers')}</p>
             </div>
 
             <div className="bg-gradient-to-br from-green-500 to-green-600 dark:from-green-700 dark:to-green-800 rounded-lg p-6 text-white shadow-md">
-              <h3 className="text-sm font-medium opacity-90 mb-2">Erdumrundungen</h3>
+              <h3 className="text-sm font-medium opacity-90 mb-2">
+                {t('stats:distance.earthCircumnavigations')}
+              </h3>
               <p className="text-4xl font-bold">{earthCircumnavigations.toFixed(2)}</p>
-              <p className="text-sm opacity-75 mt-1">× um die Erde</p>
+              <p className="text-sm opacity-75 mt-1">{t('stats:distance.timesAroundEarth')}</p>
             </div>
           </div>
 
           <div className="space-y-4">
             <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-gray-900 dark:text-white font-medium">🌍 Erde-Umrundung</span>
+                <span className="text-gray-900 dark:text-white font-medium">
+                  {t('stats:distance.earthCircumnavigation')}
+                </span>
                 <span className="text-gray-900 dark:text-white font-bold">{earthCircumnavigations.toFixed(2)}×</span>
               </div>
               <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3">
@@ -530,13 +573,15 @@ export default function AdvancedStatsPage() {
                 />
               </div>
               <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-                40.075 km Erdumfang
+                {t('stats:distance.earthCircumferenceKm')}
               </p>
             </div>
 
             <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-gray-900 dark:text-white font-medium">🌙 Weg zum Mond</span>
+                <span className="text-gray-900 dark:text-white font-medium">
+                  {t('stats:distance.pathToMoon')}
+                </span>
                 <span className="text-gray-900 dark:text-white font-bold">{moonPercentage.toFixed(2)}%</span>
               </div>
               <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3">
@@ -546,14 +591,16 @@ export default function AdvancedStatsPage() {
                 />
               </div>
               <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-                384.400 km Entfernung
+                {t('stats:distance.moonDistanceKm')}
               </p>
             </div>
 
             {marsPercentage > 0.01 && (
               <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-gray-900 dark:text-white font-medium">🔴 Weg zum Mars</span>
+                  <span className="text-gray-900 dark:text-white font-medium">
+                    {t('stats:distance.pathToMars')}
+                  </span>
                   <span className="text-gray-900 dark:text-white font-bold">{marsPercentage.toFixed(4)}%</span>
                 </div>
                 <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3">
@@ -563,7 +610,7 @@ export default function AdvancedStatsPage() {
                   />
                 </div>
                 <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-                  ~225 Millionen km Entfernung (Durchschnitt)
+                  {t('stats:distance.marsDistanceKm')}
                 </p>
               </div>
             )}
@@ -571,7 +618,9 @@ export default function AdvancedStatsPage() {
             {voyagerPercentage > 0.00001 && (
               <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-gray-900 dark:text-white font-medium">🚀 Weg zu Voyager 1</span>
+                  <span className="text-gray-900 dark:text-white font-medium">
+                    {t('stats:distance.pathToVoyager')}
+                  </span>
                   <span className="text-gray-900 dark:text-white font-bold">{voyagerPercentage.toFixed(6)}%</span>
                 </div>
                 <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3">
@@ -581,7 +630,7 @@ export default function AdvancedStatsPage() {
                   />
                 </div>
                 <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-                  ~24 Milliarden km von der Erde entfernt
+                  {t('stats:distance.voyagerDistanceKm')}
                 </p>
               </div>
             )}
@@ -591,7 +640,9 @@ export default function AdvancedStatsPage() {
           {longestDistance && shortestDistance && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
               <div className="bg-gradient-to-br from-orange-500 to-orange-600 dark:from-orange-700 dark:to-orange-800 rounded-lg p-4 text-white shadow-md">
-                <h3 className="text-sm font-medium opacity-90 mb-2">Längste Strecke</h3>
+                <h3 className="text-sm font-medium opacity-90 mb-2">
+                  {t('stats:distance.longestDistance')}
+                </h3>
                 <p className="text-2xl font-bold mb-1">{longestDistance.distance.toFixed(0)} km</p>
                 <p className="text-sm opacity-75">
                   {longestDistance.flight.depIata || longestDistance.flight.depIcao} → {longestDistance.flight.arrIata || longestDistance.flight.arrIcao}
@@ -599,7 +650,9 @@ export default function AdvancedStatsPage() {
               </div>
 
               <div className="bg-gradient-to-br from-teal-500 to-teal-600 dark:from-teal-700 dark:to-teal-800 rounded-lg p-4 text-white shadow-md">
-                <h3 className="text-sm font-medium opacity-90 mb-2">Kürzeste Strecke</h3>
+                <h3 className="text-sm font-medium opacity-90 mb-2">
+                  {t('stats:distance.shortestDistance')}
+                </h3>
                 <p className="text-2xl font-bold mb-1">{shortestDistance.distance.toFixed(0)} km</p>
                 <p className="text-sm opacity-75">
                   {shortestDistance.flight.depIata || shortestDistance.flight.depIcao} → {shortestDistance.flight.arrIata || shortestDistance.flight.arrIcao}
@@ -614,7 +667,7 @@ export default function AdvancedStatsPage() {
           {/* Airlines */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-              Top Fluggesellschaften
+              {t('stats:airlines.title')}
             </h2>
             <div className="space-y-3">
               {sortedAirlines.map(([airline, data]) => (
@@ -622,7 +675,10 @@ export default function AdvancedStatsPage() {
                   <div className="flex-1">
                     <div className="text-gray-900 dark:text-white font-medium">{airline}</div>
                     <div className="text-sm text-gray-500 dark:text-gray-400">
-                      {data.count} Flüge • {data.totalDuration.toFixed(1)}h gesamt
+                      {t('stats:airlines.flightsTotal', {
+                        count: data.count,
+                        hours: data.totalDuration.toFixed(1),
+                      })}
                     </div>
                   </div>
                   <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
@@ -636,7 +692,7 @@ export default function AdvancedStatsPage() {
           {/* Airports */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-              Meistbesuchte Flughäfen
+              {t('stats:airports.title')}
             </h2>
             <div className="space-y-3">
               {sortedAirports.map(([airport, count]) => (
@@ -653,7 +709,7 @@ export default function AdvancedStatsPage() {
           {/* Seat Classes */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-              Sitzklassen
+              {t('stats:seatClasses.title')}
             </h2>
             <div className="space-y-3">
               {Object.entries(seatClassStats).map(([seatClass, count]) => (
@@ -677,7 +733,7 @@ export default function AdvancedStatsPage() {
           {/* Aircraft Types */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-              Top Flugzeugtypen
+              {t('stats:aircraft.title')}
             </h2>
             <div className="space-y-3">
               {sortedAircraft.map(([aircraft, count]) => (
@@ -694,7 +750,7 @@ export default function AdvancedStatsPage() {
           {/* Status Distribution */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-              Flugstatus
+              {t('stats:flightStatus.title')}
             </h2>
             <div className="space-y-3">
               {Object.entries(statusStats).map(([status, count]) => (
@@ -730,14 +786,16 @@ export default function AdvancedStatsPage() {
           {Object.keys(boardingGroupStats).length > 0 && (
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                Boarding-Gruppen
+                {t('stats:boardingGroups.title')}
               </h2>
               <div className="space-y-3">
                 {Object.entries(boardingGroupStats)
                   .sort(([, a], [, b]) => b - a)
                   .map(([group, count]) => (
                     <div key={group} className="flex items-center justify-between">
-                      <div className="text-gray-900 dark:text-white font-medium">Gruppe {group}</div>
+                      <div className="text-gray-900 dark:text-white font-medium">
+                        {t('stats:boardingGroups.group', { group })}
+                      </div>
                       <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
                         {count}
                       </div>
@@ -753,11 +811,13 @@ export default function AdvancedStatsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                Längster Flug
+                {t('stats:flights.longest')}
               </h2>
               <div className="space-y-2">
                 <p className="text-gray-900 dark:text-white">
-                  <span className="font-medium">{longestFlight.flight.airline || 'Unbekannt'}</span>{' '}
+                  <span className="font-medium">
+                    {longestFlight.flight.airline || t('stats:flights.unknown')}
+                  </span>{' '}
                   {longestFlight.flight.flightNumber || ''}
                 </p>
                 <p className="text-gray-600 dark:text-gray-300">
@@ -772,11 +832,13 @@ export default function AdvancedStatsPage() {
 
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                Kürzester Flug
+                {t('stats:flights.shortest')}
               </h2>
               <div className="space-y-2">
                 <p className="text-gray-900 dark:text-white">
-                  <span className="font-medium">{shortestFlight.flight.airline || 'Unbekannt'}</span>{' '}
+                  <span className="font-medium">
+                    {shortestFlight.flight.airline || t('stats:flights.unknown')}
+                  </span>{' '}
                   {shortestFlight.flight.flightNumber || ''}
                 </p>
                 <p className="text-gray-600 dark:text-gray-300">

@@ -1,0 +1,147 @@
+{
+  "loading": "Lade Statistiken...",
+  "back": "← Zurück",
+  "title": "Erweiterte Statistiken",
+  "welcome": "Willkommen, {{username}}!",
+  "logout": "Abmelden",
+  "hint": {
+    "title": "Willkommen bei den Statistiken!",
+    "message": "Hier finden Sie detaillierte Analysen Ihrer Flüge: Charts, Trends, Top-Routen und mehr. Scrollen Sie nach unten, um alle Statistiken zu sehen.",
+    "linkText": "Zurück zum Dashboard"
+  },
+  "overview": {
+    "totalFlights": "Gesamt Flüge",
+    "totalDistance": "Gesamt-Distanz",
+    "avgDistance": "Durchschn. Distanz",
+    "totalFlightTime": "Gesamt Flugzeit",
+    "hours": "Std",
+    "totalCost": "Gesamtkosten"
+  },
+  "noStatsAvailable": "Keine Statistiken verfügbar",
+  "byStatus": {
+    "title": "Nach Status"
+  },
+  "byCategory": {
+    "title": "Nach Kategorie"
+  },
+  "topRoutes": {
+    "title": "Top Routen"
+  },
+  "help": {
+    "totalDistance": "Die Gesamtdistanz aller geflogenen Flüge in Kilometern.",
+    "totalDistanceExpanded": "Berechnet mit der Haversine-Formel basierend auf den Koordinaten der Abflug- und Zielflughäfen. Nur Flüge mit Status 'flown' werden berücksichtigt.",
+    "totalFlightTime": "Die Gesamtflugzeit aller geflogenen Flüge in Stunden.",
+    "totalFlightTimeExpanded": "Berechnet als Differenz zwischen Ankunfts- und Abflugzeit. Nur Flüge mit Status 'flown' werden berücksichtigt. Die Zeit wird in Minuten gespeichert und hier in Stunden angezeigt."
+  },
+  "timeBasedAnalytics": {
+    "title": "📊 Zeitbasierte Analysen",
+    "yearlyTrend": "Flüge pro Jahr - Trend-Analyse",
+    "monthlyFlights": "Flüge pro Monat",
+    "seasonalPatterns": "Saisonale Muster",
+    "weekdayAnalysis": "Wochentags-Analyse",
+    "noData": "Keine Daten verfügbar",
+    "flightsLabel": "Flüge"
+  },
+  "calendar": {
+    "title": "📅 Kalender-Ansichten"
+  },
+  "distance": {
+    "title": "Geflogene Distanz",
+    "totalDistance": "Gesamt-Distanz",
+    "avgPerFlight": "Durchschnitt pro Flug",
+    "earthCircumnavigations": "Erdumrundungen",
+    "timesAroundEarth": "× um die Erde",
+    "kilometers": "Kilometer",
+    "earthCircumnavigation": "🌍 Erde-Umrundung",
+    "earthCircumferenceKm": "40.075 km Erdumfang",
+    "pathToMoon": "🌙 Weg zum Mond",
+    "moonDistanceKm": "384.400 km Entfernung",
+    "pathToMars": "🔴 Weg zum Mars",
+    "marsDistanceKm": "~225 Millionen km Entfernung (Durchschnitt)",
+    "pathToVoyager": "🚀 Weg zu Voyager 1",
+    "voyagerDistanceKm": "~24 Milliarden km von der Erde entfernt",
+    "longestDistance": "Längste Strecke",
+    "shortestDistance": "Kürzeste Strecke"
+  },
+  "airlines": {
+    "title": "Top Fluggesellschaften",
+    "flightsTotal": "{{count}} Flüge • {{hours}}h gesamt"
+  },
+  "airports": {
+    "title": "Meistbesuchte Flughäfen"
+  },
+  "seatClasses": {
+    "title": "Sitzklassen",
+    "economy": "Economy",
+    "premiumEconomy": "Premium Economy",
+    "business": "Business",
+    "first": "First Class",
+    "unknown": "Nicht angegeben"
+  },
+  "aircraft": {
+    "title": "Top Flugzeugtypen"
+  },
+  "flightStatus": {
+    "title": "Flugstatus"
+  },
+  "boardingGroups": {
+    "title": "Boarding-Gruppen",
+    "group": "Gruppe {{group}}"
+  },
+  "flights": {
+    "longest": "Längster Flug",
+    "shortest": "Kürzester Flug",
+    "unknown": "Unbekannt"
+  },
+  "weekdays": {
+    "sunday": "Sonntag",
+    "monday": "Montag",
+    "tuesday": "Dienstag",
+    "wednesday": "Mittwoch",
+    "thursday": "Donnerstag",
+    "friday": "Freitag",
+    "saturday": "Samstag"
+  },
+  "months": {
+    "jan": "Jan",
+    "feb": "Feb",
+    "mar": "Mär",
+    "apr": "Apr",
+    "may": "Mai",
+    "jun": "Jun",
+    "jul": "Jul",
+    "aug": "Aug",
+    "sep": "Sep",
+    "oct": "Okt",
+    "nov": "Nov",
+    "dec": "Dez"
+  },
+  "heatmap": {
+    "title": "Jahresübersicht - Reiseintensität",
+    "dayTooltip": "{{date}}: {{count}} {{count, plural, one {Flug} other {Flüge}}}",
+    "flightsInYear": "Flüge in {{year}}",
+    "daysWithFlights": "Tage mit Flügen",
+    "maxFlightsPerDay": "Max. Flüge/Tag",
+    "legend": {
+      "less": "Weniger",
+      "more": "Mehr"
+    }
+  },
+  "calendar": {
+    "intensity": "Reiseintensität",
+    "months": {
+      "january": "Januar",
+      "february": "Februar",
+      "march": "März",
+      "april": "April",
+      "may": "Mai",
+      "june": "Juni",
+      "july": "Juli",
+      "august": "August",
+      "september": "September",
+      "october": "Oktober",
+      "november": "November",
+      "december": "Dezember"
+    }
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "title": "Achievements",
+  "loading": "Loading achievements...",
+  "checkNew": "Check for New Achievements",
+  "categories": {
+    "explorer": "Explorer",
+    "distance": "Distance",
+    "collector": "Collector",
+    "elite": "Elite",
+    "special": "Special"
+  },
+  "tiers": {
+    "bronze": "Bronze",
+    "silver": "Silver",
+    "gold": "Gold",
+    "platinum": "Platinum",
+    "diamond": "Diamond"
+  },
+  "summary": {
+    "totalPoints": "Total Points",
+    "unlocked": "Unlocked",
+    "progress": "Progress",
+    "leaderboard": "Leaderboard",
+    "view": "View"
+  },
+  "filters": {
+    "category": "Category",
+    "tier": "Tier",
+    "allCategories": "All Categories",
+    "allTiers": "All Tiers",
+    "showUnlockedOnly": "Show unlocked only"
+  },
+  "progress": {
+    "label": "Progress",
+    "unlocked": "Unlocked on {{date}}"
+  },
+  "alerts": {
+    "unlocked": "You unlocked {{count}} new achievement(s)!",
+    "none": "No new achievements unlocked."
+  },
+  "hint": {
+    "title": "Welcome to Achievements!",
+    "message": "Complete flights and reach milestones to unlock achievements. Each achievement gives you points and shows your progress.",
+    "linkText": "Back to Dashboard"
+  },
+  "leaderboard": {
+    "title": "Leaderboard",
+    "backToAchievements": "← Back to Achievements",
+    "backToDashboard": "Back to Dashboard",
+    "emptyTitle": "No Leaderboard Yet",
+    "emptyMessage": "Be the first to unlock achievements and appear on the leaderboard!",
+    "achievementCount": "{{count}} achievements",
+    "points": "Points"
+  },
+  "empty": {
+    "title": "No Achievements Found",
+    "message": "Try adjusting your filters to see more achievements."
+  },
+  "popup": {
+    "unlocked": "Achievement Unlocked!",
+    "tier": "Tier",
+    "points": "Points",
+    "progress": "{{current}} of {{total}} new achievements",
+    "closeAll": "Close All",
+    "next": "Next Achievement",
+    "awesome": "Awesome!"
+  }
+}

@@ -24,7 +24,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 export default function DashboardPage() {
-  const { t } = useTranslation(['dashboard', 'common', 'flights']);
+  const { t } = useTranslation(['dashboard', 'common', 'flights', 'training']);
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const [flights, setFlights] = useState<Flight[]>([]); // Filtered flights for map
@@ -265,7 +265,7 @@ export default function DashboardPage() {
       }
     } catch (error) {
       logger.error('Failed to add flight:', error);
-      alert(t('dashboard.errors.addFlight'));
+      alert(t('dashboard:errors.addFlight'));
       throw error;
     }
   };
@@ -296,7 +296,7 @@ export default function DashboardPage() {
       }
     } catch (error) {
       logger.error('Failed to update flight:', error);
-      alert(t('dashboard.errors.updateFlight'));
+      alert(t('dashboard:errors.updateFlight'));
       throw error;
     }
   };
@@ -455,7 +455,7 @@ export default function DashboardPage() {
       try {
         const content = e.target?.result;
         if (!content || typeof content !== 'string') {
-          addToast('error', t('dashboard.errors.exportFailed'));
+          addToast('error', t('dashboard:errors.exportFailed'));
           return;
         }
 
@@ -476,7 +476,7 @@ export default function DashboardPage() {
         }
 
         if (parsed.length === 0) {
-          addToast('warning', t('common.messages.noData'));
+          addToast('warning', t('common:messages.noData'));
           return;
         }
 
@@ -519,12 +519,12 @@ export default function DashboardPage() {
         }
 
         if (successCount > 0) {
-          addToast('success', t('dashboard.success.flightAdded'));
+          addToast('success', t('dashboard:success.flightAdded'));
           // Reload flights
           loadRecentFlights();
           loadFlights();
         } else {
-          addToast('error', t('dashboard.errors.exportFailed'));
+          addToast('error', t('dashboard:errors.exportFailed'));
         }
 
         if (settings.privacy.analyticsOptIn) {
@@ -532,7 +532,7 @@ export default function DashboardPage() {
         }
       } catch (err) {
         logger.error('Import failed:', err);
-        addToast('error', t('dashboard.errors.exportFailed'));
+        addToast('error', t('dashboard:errors.exportFailed'));
       } finally {
         setImporting(false);
         if (importInputRef.current) {
@@ -560,14 +560,16 @@ export default function DashboardPage() {
             <button
               onClick={() => setNavOpen(!navOpen)}
               className="xl:hidden p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              aria-label="Toggle menu"
+              aria-label={t('common:accessibility.toggleMenu')}
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <img src="/logo.png" alt="TravStats Logo" className="h-8 xl:h-10 w-auto" />
-            <h1 className="text-xl xl:text-2xl font-bold text-gray-900 dark:text-white">TravStats</h1>
+            <img src="/logo.png" alt={t('common:app.logoAlt')} className="h-8 xl:h-10 w-auto" />
+            <h1 className="text-xl xl:text-2xl font-bold text-gray-900 dark:text-white">
+              {t('common:app.name')}
+            </h1>
           </div>
           <div className="flex items-center gap-2 xl:gap-4">
 
@@ -576,27 +578,29 @@ export default function DashboardPage() {
               to="/achievements"
               className="hidden xl:flex px-3 xl:px-4 py-2 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white rounded-lg font-semibold transition-all shadow-sm hover:shadow-md text-sm xl:text-base"
             >
-              🏆 Achievements
+              🏆 {t('dashboard:achievements')}
             </Link>
 
             <button
               onClick={() => navigate('/stats')}
               className="hidden xl:block px-3 xl:px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
             >
-              {t('dashboard.stats')}
+              {t('dashboard:stats')}
             </button>
 
             <Link
               to="/settings"
               className="hidden xl:flex px-3 xl:px-4 py-2 text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
             >
-              ⚙️ {t('dashboard.settings')}
+              ⚙️ {t('dashboard:settings')}
             </Link>
 
-            <span className="hidden xl:inline text-sm xl:text-base text-gray-600 dark:text-gray-300">Welcome, {user?.username}!</span>
+            <span className="hidden xl:inline text-sm xl:text-base text-gray-600 dark:text-gray-300">
+              {t('dashboard:welcome', { username: user?.username || '' })}
+            </span>
             <DarkModeToggle />
             <button onClick={logout} className="btn-secondary text-sm xl:text-base px-3 xl:px-4">
-              {t('dashboard.logout')}
+              {t('dashboard:logout')}
             </button>
           </div>
         </div>
@@ -621,11 +625,13 @@ export default function DashboardPage() {
           <div className="xl:hidden fixed inset-y-0 left-0 w-80 bg-white dark:bg-gray-800 z-50 flex flex-col shadow-xl">
             <div className="p-4 border-b dark:border-gray-700">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Navigation</h2>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {t('dashboard:navigation.title')}
+                </h2>
                 <button
                   onClick={() => setNavOpen(false)}
                   className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                  aria-label="Close navigation"
+                  aria-label={t('common:accessibility.close')}
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -643,7 +649,7 @@ export default function DashboardPage() {
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
-                  {t('dashboard.addFlight')}
+                  {t('dashboard:addFlight')}
                 </button>
 
                 <div className="border-t dark:border-gray-700 my-3"></div>
@@ -656,7 +662,7 @@ export default function DashboardPage() {
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
                   </svg>
-                  Achievements
+                  {t('dashboard:achievements')}
                 </Link>
                 <button
                   onClick={() => { navigate('/stats'); setNavOpen(false); }}
@@ -665,7 +671,7 @@ export default function DashboardPage() {
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
-                  {t('dashboard.stats')}
+                  {t('dashboard:stats')}
                 </button>
                 <Link
                   to="/settings"
@@ -676,7 +682,7 @@ export default function DashboardPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  {t('dashboard.settings')}
+                  {t('dashboard:settings')}
                 </Link>
 
                 <div className="border-t dark:border-gray-700 my-3"></div>
@@ -688,7 +694,7 @@ export default function DashboardPage() {
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                   </svg>
-                  Flugliste anzeigen
+                  {t('dashboard:showFlightList')}
                 </button>
 
                 <button
@@ -698,7 +704,7 @@ export default function DashboardPage() {
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
-                  Statistiken anzeigen
+                  {t('dashboard:showStats')}
                 </button>
               </div>
             </div>
@@ -711,7 +717,7 @@ export default function DashboardPage() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
-                Logout
+                {t('dashboard:logout')}
               </button>
             </div>
           </div>
@@ -733,11 +739,13 @@ export default function DashboardPage() {
         `}>
           <div className="p-4 border-b dark:border-gray-700">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Flugliste</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                {t('flights:list.title')}
+              </h2>
               <button
                 onClick={() => setLeftOpen(false)}
                 className="xl:hidden p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                aria-label="Close flight list"
+                aria-label={t('common:accessibility.close')}
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -745,7 +753,7 @@ export default function DashboardPage() {
               </button>
             </div>
             <button onClick={() => setShowFlightForm(true)} className="btn-primary w-full">
-              + {t('dashboard.addFlight')}
+              + {t('dashboard:addFlight')}
             </button>
             
             {/* Training Button - Only visible when Developer Mode is enabled */}
@@ -757,7 +765,7 @@ export default function DashboardPage() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                 </svg>
-                LLM Training
+                {t('training:llmTraining')}
               </Link>
             )}
           </div>
@@ -775,11 +783,11 @@ export default function DashboardPage() {
             {/* Quick Stats */}
             <div className="grid grid-cols-2 gap-3">
               <div className="card">
-                <p className="text-xs text-gray-600 dark:text-gray-400">{t('dashboard.totalFlights')}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">{t('dashboard:totalFlights')}</p>
                 <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{totalFlightsCount}</p>
               </div>
               <div className="card">
-                <p className="text-xs text-gray-600 dark:text-gray-400">Filtered</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">{t('dashboard:filtered')}</p>
                 <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                   {flights.length}
                 </p>
@@ -795,18 +803,18 @@ export default function DashboardPage() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                 </svg>
-                {t('dashboard.viewAll')}
+                {t('dashboard:viewAll')}
               </Link>
             </div>
 
             {/* Recent Flights */}
             <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('dashboard.recentFlights')}</h3>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('dashboard:recentFlights')}</h3>
               {loadingRecent ? (
-                <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">{t('dashboard.loading')}</div>
+                <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">{t('dashboard:loading')}</div>
               ) : recentFlights.slice(0, 5).length === 0 ? (
                 <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
-                  {t('dashboard.noFlights')}
+                  {t('dashboard:noFlights')}
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -820,7 +828,7 @@ export default function DashboardPage() {
                       <div className="flex items-center justify-between">
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                            {flight.airline || 'Unknown'} {flight.flightNumber}
+                            {flight.airline || t('common:labels.unknown')} {flight.flightNumber}
                           </div>
                           <div className="text-xs text-gray-600 dark:text-gray-400">
                             {flight.depIata || flight.depIcao} → {flight.arrIata || flight.arrIcao}
@@ -856,7 +864,7 @@ export default function DashboardPage() {
               <button
                 onClick={() => setLeftOpen(prev => !prev)}
                 className="p-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                title={leftOpen ? t('dashboard.toggleList.hide') : t('dashboard.toggleList.show')}
+                title={leftOpen ? t('dashboard:toggleList.hide') : t('dashboard:toggleList.show')}
               >
                 <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   {leftOpen ? (
@@ -869,7 +877,7 @@ export default function DashboardPage() {
               <button
                 onClick={() => setRightOpen(prev => !prev)}
                 className="p-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                title={rightOpen ? t('dashboard.toggleStats.hide') : t('dashboard.toggleStats.show')}
+                title={rightOpen ? t('dashboard:toggleStats.hide') : t('dashboard:toggleStats.show')}
               >
                 <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   {rightOpen ? (
@@ -886,7 +894,7 @@ export default function DashboardPage() {
               <button
                 onClick={() => setLeftOpen(prev => !prev)}
                 className="p-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                title={t('dashboard.showFlightList')}
+                title={t('dashboard:showFlightList')}
               >
                 <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
@@ -895,7 +903,7 @@ export default function DashboardPage() {
               <button
                 onClick={() => setRightOpen(prev => !prev)}
                 className="p-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                title={t('dashboard.showStats')}
+                title={t('dashboard:showStats')}
               >
                 <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -903,7 +911,7 @@ export default function DashboardPage() {
               </button>
             </div>
             <div className="flex items-center gap-3 flex-1">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{t('dashboard.flightMap')}</h2>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{t('dashboard:flightMap')}</h2>
               <div className="relative">
                 <Filters onFilterChange={handleFilterChange} />
               </div>
@@ -923,12 +931,12 @@ export default function DashboardPage() {
                     hover:bg-gray-50 dark:hover:bg-gray-700
                     transition-colors font-semibold text-sm
                   "
-                  title={t('dashboard.exportData')}
+                  title={t('dashboard:exportData')}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
-                  <span className="hidden sm:inline">{t('dashboard.export')}</span>
+                  <span className="hidden sm:inline">{t('dashboard:export')}</span>
                 </button>
                 {showExportMenu && (
                   <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-gray-800 rounded-lg shadow-xl z-50 border border-gray-200 dark:border-gray-700">
@@ -939,7 +947,7 @@ export default function DashboardPage() {
                       }}
                       className="block w-full text-left px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg text-gray-900 dark:text-white text-sm"
                     >
-                      {t('dashboard.exportCSV')}
+                      {t('dashboard:exportCSV')}
                     </button>
                     <button
                       onClick={() => {
@@ -948,7 +956,7 @@ export default function DashboardPage() {
                       }}
                       className="block w-full text-left px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm"
                     >
-                      🗺️ {t('dashboard.exportMenu.geojson')}
+                      🗺️ {t('dashboard:exportMenu.geojson')}
                     </button>
                     <button
                       onClick={() => {
@@ -957,7 +965,7 @@ export default function DashboardPage() {
                       }}
                       className="block w-full text-left px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm"
                     >
-                      📄 {t('dashboard.exportMenu.pdf')}
+                      📄 {t('dashboard:exportMenu.pdf')}
                     </button>
                     <button
                       onClick={() => {
@@ -966,7 +974,7 @@ export default function DashboardPage() {
                       }}
                       className="block w-full text-left px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm"
                     >
-                      🌐 {t('dashboard.exportMenu.kml')}
+                      🌐 {t('dashboard:exportMenu.kml')}
                     </button>
                     <button
                       onClick={() => {
@@ -975,7 +983,7 @@ export default function DashboardPage() {
                       }}
                       className="block w-full text-left px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 border-t border-gray-200 dark:border-gray-700 rounded-b-lg text-gray-900 dark:text-white text-sm"
                     >
-                      📥 Import CSV/JSON (Beta)
+                      📥 {t('dashboard:importBeta')}
                     </button>
                   </div>
                 )}
@@ -994,7 +1002,7 @@ export default function DashboardPage() {
                     hover:bg-gray-50 dark:hover:bg-gray-700
                     transition-colors font-semibold text-sm
                   "
-                  title={is3DView ? 'Zur 2D-Karte wechseln' : 'Zum 3D-Globus wechseln'}
+                  title={is3DView ? t('dashboard:map.toggleTo2d') : t('dashboard:map.toggleTo3d')}
                 >
                 {is3DView ? (
                   <>
@@ -1006,7 +1014,7 @@ export default function DashboardPage() {
                         d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
                       />
                     </svg>
-                    <span className="hidden sm:inline">2D-Karte</span>
+                    <span className="hidden sm:inline">{t('dashboard:map.view2d')}</span>
                   </>
                 ) : (
                   <>
@@ -1018,13 +1026,13 @@ export default function DashboardPage() {
                         d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                       />
                     </svg>
-                    <span className="hidden sm:inline">3D-Globus</span>
+                    <span className="hidden sm:inline">{t('dashboard:map.view3d')}</span>
                   </>
                 )}
                 </button>
                 <HelpIcon
-                  content={is3DView ? 'Wechseln Sie zur 2D-Kartenansicht für eine flache, klassische Kartenansicht.' : 'Wechseln Sie zum 3D-Globus für eine interaktive 3D-Ansicht Ihrer Flugrouten.'}
-                  expandedContent="Die 2D-Karte zeigt Ihre Flugrouten auf einer flachen Karte an. Der 3D-Globus bietet eine interaktive 3D-Ansicht, in der Sie die Kugel drehen und zoomen können. Beide Ansichten zeigen Ihre Flugrouten und Airport-Marker an."
+                  content={is3DView ? t('dashboard:map.help2d') : t('dashboard:map.help3d')}
+                  expandedContent={t('dashboard:map.helpExpanded')}
                   position="bottom"
                 />
               </div>
@@ -1036,7 +1044,7 @@ export default function DashboardPage() {
               <div className="absolute inset-0 bg-gray-100 dark:bg-gray-800 flex items-center justify-center z-10 rounded-lg">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto mb-2"></div>
-                  <p className="text-gray-600 dark:text-gray-300 text-sm">Karte wird geladen...</p>
+                  <p className="text-gray-600 dark:text-gray-300 text-sm">{t('dashboard:map.loading')}</p>
                 </div>
               </div>
             )}
@@ -1044,8 +1052,8 @@ export default function DashboardPage() {
               fallback={
                 <div className="h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
                   <div className="text-center">
-                    <p className="text-gray-600 dark:text-gray-300 mb-2">Unable to display map</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Please check your flight data</p>
+                    <p className="text-gray-600 dark:text-gray-300 mb-2">{t('dashboard:map.errorTitle')}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{t('dashboard:map.errorMessage')}</p>
                   </div>
                 </div>
               }
@@ -1079,11 +1087,11 @@ export default function DashboardPage() {
           ${!rightOpen && 'xl:hidden'}
         `}>
           <div className="p-4 flex items-center justify-between border-b dark:border-gray-700 xl:border-0">
-            <h2 className="text-xl font-bold dark:text-white">Statistics</h2>
+            <h2 className="text-xl font-bold dark:text-white">{t('dashboard:stats')}</h2>
             <button
               onClick={() => setRightOpen(false)}
               className="xl:hidden p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-              aria-label="Close statistics"
+              aria-label={t('common:accessibility.close')}
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

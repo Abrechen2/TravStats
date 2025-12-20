@@ -5,12 +5,14 @@ import type { Stats as StatsType, Route, FlightFilters, Flight } from '../types'
 import { calculateDistance } from '../lib/geo';
 import { API_LIMITS } from '../lib/constants';
 import { logger } from '../lib/logger';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface StatsProps {
   filters?: FlightFilters;
 }
 
 export default function Stats({ filters = {} }: StatsProps) {
+  const { t } = useTranslation(['stats', 'common']);
   const [stats, setStats] = useState<StatsType | null>(null);
   const [routes, setRoutes] = useState<Route[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,11 +94,11 @@ export default function Stats({ filters = {} }: StatsProps) {
   };
 
   if (loading) {
-    return <div className="text-center py-4 dark:text-gray-300">Loading statistics...</div>;
+    return <div className="text-center py-4 dark:text-gray-300">{t('stats:loading')}</div>;
   }
 
   if (!stats) {
-    return <div className="text-center py-4 text-gray-500 dark:text-gray-400">No statistics available</div>;
+    return <div className="text-center py-4 text-gray-500 dark:text-gray-400">{t('stats:noStatsAvailable')}</div>;
   }
 
   return (
@@ -104,44 +106,44 @@ export default function Stats({ filters = {} }: StatsProps) {
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-4">
         <div className="card">
-          <p className="text-sm text-gray-600 dark:text-gray-400">Total Flights</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">{t('stats:overview.totalFlights')}</p>
           <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{stats.totalFlights}</p>
         </div>
         <div className="card">
           <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
-            Total Distance
+            {t('stats:overview.totalDistance')}
             <HelpIcon
-              content="Die Gesamtdistanz aller geflogenen Flüge in Kilometern."
-              expandedContent="Berechnet mit der Haversine-Formel basierend auf den Koordinaten der Abflug- und Zielflughäfen. Nur Flüge mit Status 'flown' werden berücksichtigt."
+              content={t('stats:help.totalDistance')}
+              expandedContent={t('stats:help.totalDistanceExpanded')}
               position="top"
             />
           </div>
           <p className="text-3xl font-bold text-green-600 dark:text-green-400">
-            {stats.totalDistance.toLocaleString()} km
+            {stats.totalDistance.toLocaleString()} {t('stats:distance.kilometers')}
           </p>
         </div>
         <div className="card">
-          <p className="text-sm text-gray-600 dark:text-gray-400">Avg Distance</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">{t('stats:overview.avgDistance')}</p>
           <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">
-            {stats.avgDistance.toLocaleString()} km
+            {stats.avgDistance.toLocaleString()} {t('stats:distance.kilometers')}
           </p>
         </div>
         <div className="card">
           <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
-            Total Flight Time
+            {t('stats:overview.totalFlightTime')}
             <HelpIcon
-              content="Die Gesamtflugzeit aller geflogenen Flüge in Stunden."
-              expandedContent="Berechnet als Differenz zwischen Ankunfts- und Abflugzeit. Nur Flüge mit Status 'flown' werden berücksichtigt. Die Zeit wird in Minuten gespeichert und hier in Stunden angezeigt."
+              content={t('stats:help.totalFlightTime')}
+              expandedContent={t('stats:help.totalFlightTimeExpanded')}
               position="top"
             />
           </div>
           <p className="text-3xl font-bold text-orange-600 dark:text-orange-400">
-            {Math.round(stats.totalFlightTime / 60)} hrs
+            {Math.round(stats.totalFlightTime / 60)} {t('stats:overview.hours')}
           </p>
         </div>
         {typeof stats.totalCost === 'number' && (
           <div className="card">
-            <p className="text-sm text-gray-600 dark:text-gray-400">Total Cost</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">{t('stats:overview.totalCost')}</p>
             <p className="text-3xl font-bold text-amber-600 dark:text-amber-400">
               {stats.totalCost.toLocaleString(undefined, { style: 'currency', currency: 'EUR' })}
             </p>
@@ -151,11 +153,11 @@ export default function Stats({ filters = {} }: StatsProps) {
 
       {/* By Status */}
       <div className="card">
-        <h3 className="font-semibold mb-3 dark:text-gray-100">By Status</h3>
+        <h3 className="font-semibold mb-3 dark:text-gray-100">{t('stats:byStatus.title')}</h3>
         <div className="space-y-2">
           {Object.entries(stats.byStatus).map(([status, count]) => (
             <div key={status} className="flex justify-between items-center dark:text-gray-200">
-              <span className="capitalize">{status}</span>
+              <span>{t(`flights:status.${status}`, { defaultValue: status })}</span>
               <span className="font-semibold">{count}</span>
             </div>
           ))}
@@ -164,7 +166,7 @@ export default function Stats({ filters = {} }: StatsProps) {
 
       {/* By Airline */}
       <div className="card">
-        <h3 className="font-semibold mb-3 dark:text-gray-100">By Airline</h3>
+        <h3 className="font-semibold mb-3 dark:text-gray-100">{t('stats:airlines.title')}</h3>
         <div className="space-y-2">
           {Object.entries(stats.byAirline)
             .sort(([, a], [, b]) => b - a)
@@ -181,11 +183,11 @@ export default function Stats({ filters = {} }: StatsProps) {
       {/* By Category */}
       {stats.byCategory && (
         <div className="card">
-          <h3 className="font-semibold mb-3 dark:text-gray-100">By Category</h3>
+          <h3 className="font-semibold mb-3 dark:text-gray-100">{t('stats:byCategory.title')}</h3>
           <div className="space-y-2">
             {Object.entries(stats.byCategory).map(([category, count]) => (
               <div key={category} className="flex justify-between items-center dark:text-gray-200">
-                <span className="capitalize">{category}</span>
+                <span>{t(`flights:category.${category}`, { defaultValue: category })}</span>
                 <span className="font-semibold">{count}</span>
               </div>
             ))}
@@ -196,7 +198,7 @@ export default function Stats({ filters = {} }: StatsProps) {
       {/* Top Routes */}
       {routes.length > 0 && (
         <div className="card">
-          <h3 className="font-semibold mb-3 dark:text-gray-100">Top Routes</h3>
+          <h3 className="font-semibold mb-3 dark:text-gray-100">{t('stats:topRoutes.title')}</h3>
           <div className="space-y-3">
             {routes.map((route, index) => (
               <div key={route.route} className="border-b dark:border-gray-700 pb-2 last:border-0">

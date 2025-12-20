@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { trainingApi } from '../../lib/api';
 import { logger } from '../../lib/logger';
 import { Flight, getFlightColorClass, combineDateTime, splitDateTime } from './types';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface EmailAnnotationProps {
   trainingDataId: string;
@@ -105,6 +106,7 @@ function filterEmailText(text: string): string {
 }
 
 export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }: EmailAnnotationProps) {
+  const { t } = useTranslation(['training', 'common']);
   const [originalEmailText, setOriginalEmailText] = useState('');
   const [emailText, setEmailText] = useState('');
   const [showFiltered, setShowFiltered] = useState(true);
@@ -166,7 +168,7 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
         }
       } catch (error) {
         logger.error('Failed to load training data:', error);
-        alert('Fehler beim Laden der Training-Daten');
+        alert(t('training:errors.loadFailed'));
       } finally {
         setLoading(false);
       }
@@ -357,7 +359,7 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
       onComplete();
     } catch (error) {
       logger.error('Failed to save annotation:', error);
-      alert('Fehler beim Speichern');
+      alert(t('training:errors.saveFailed'));
     } finally {
       setSaving(false);
     }

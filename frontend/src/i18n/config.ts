@@ -11,6 +11,11 @@ import enAuth from './resources/en/auth.json';
 import enAdmin from './resources/en/admin.json';
 import enTraining from './resources/en/training.json';
 import enErrors from './resources/en/errors.json';
+import enAchievements from './resources/en/achievements.json';
+import enStats from './resources/en/stats.json';
+import enSetup from './resources/en/setup.json';
+import enOnboarding from './resources/en/onboarding.json';
+import enMap from './resources/en/map.json';
 
 import deCommon from './resources/de/common.json';
 import deDashboard from './resources/de/dashboard.json';
@@ -20,6 +25,11 @@ import deAuth from './resources/de/auth.json';
 import deAdmin from './resources/de/admin.json';
 import deTraining from './resources/de/training.json';
 import deErrors from './resources/de/errors.json';
+import deAchievements from './resources/de/achievements.json';
+import deStats from './resources/de/stats.json';
+import deSetup from './resources/de/setup.json';
+import deOnboarding from './resources/de/onboarding.json';
+import deMap from './resources/de/map.json';
 
 // Get initial language from settings store
 const getInitialLanguage = (): string => {
@@ -47,6 +57,11 @@ const resources = {
     admin: enAdmin,
     training: enTraining,
     errors: enErrors,
+    achievements: enAchievements,
+    stats: enStats,
+    setup: enSetup,
+    onboarding: enOnboarding,
+    map: enMap,
   },
   de: {
     common: deCommon,
@@ -57,6 +72,11 @@ const resources = {
     admin: deAdmin,
     training: deTraining,
     errors: deErrors,
+    achievements: deAchievements,
+    stats: deStats,
+    setup: deSetup,
+    onboarding: deOnboarding,
+    map: deMap,
   },
 };
 
@@ -69,7 +89,21 @@ i18n
     lng: getInitialLanguage(),
     fallbackLng: 'en',
     defaultNS: 'common',
-    ns: ['common', 'dashboard', 'settings', 'flights', 'auth', 'admin', 'training', 'errors'],
+    ns: [
+      'common',
+      'dashboard',
+      'settings',
+      'flights',
+      'auth',
+      'admin',
+      'training',
+      'errors',
+      'achievements',
+      'stats',
+      'setup',
+      'onboarding',
+      'map',
+    ],
     interpolation: {
       escapeValue: false, // React already escapes values
     },

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface HelpIconProps {
   content: string;
@@ -17,6 +18,7 @@ export default function HelpIcon({
   const [isExpanded, setIsExpanded] = useState(false);
   const iconRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation('common');
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -57,7 +59,7 @@ export default function HelpIcon({
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         onClick={handleClick}
-        aria-label="Hilfe anzeigen"
+        aria-label={t('accessibility.showHelp')}
       >
         <svg
           className="w-4 h-4"
@@ -94,7 +96,7 @@ export default function HelpIcon({
                 onClick={() => setIsExpanded(false)}
                 className="mt-2 text-xs text-blue-400 hover:text-blue-300 underline"
               >
-                Schließen
+                {t('buttons.close')}
               </button>
             )}
           </div>
@@ -115,12 +117,4 @@ export default function HelpIcon({
     </div>
   );
 }
-
-
-
-
-
-
-
-
 

@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { useTranslation } from '../hooks/useTranslation';
 
 export interface FilterState {
   // Zeit
@@ -36,20 +37,7 @@ interface GlobeFiltersProps {
   onToggleCollapse: () => void;
 }
 
-const MONTHS = [
-  { value: 1, label: 'Januar' },
-  { value: 2, label: 'Februar' },
-  { value: 3, label: 'März' },
-  { value: 4, label: 'April' },
-  { value: 5, label: 'Mai' },
-  { value: 6, label: 'Juni' },
-  { value: 7, label: 'Juli' },
-  { value: 8, label: 'August' },
-  { value: 9, label: 'September' },
-  { value: 10, label: 'Oktober' },
-  { value: 11, label: 'November' },
-  { value: 12, label: 'Dezember' },
-];
+// MONTHS will be generated dynamically using translations
 
 function GlobeFilters({
   filters,
@@ -59,6 +47,23 @@ function GlobeFilters({
   isCollapsed,
   onToggleCollapse,
 }: GlobeFiltersProps) {
+  const { t } = useTranslation(['map', 'common', 'flights']);
+  
+  const MONTHS = [
+    { value: 1, label: t('stats:calendar.months.january') },
+    { value: 2, label: t('stats:calendar.months.february') },
+    { value: 3, label: t('stats:calendar.months.march') },
+    { value: 4, label: t('stats:calendar.months.april') },
+    { value: 5, label: t('stats:calendar.months.may') },
+    { value: 6, label: t('stats:calendar.months.june') },
+    { value: 7, label: t('stats:calendar.months.july') },
+    { value: 8, label: t('stats:calendar.months.august') },
+    { value: 9, label: t('stats:calendar.months.september') },
+    { value: 10, label: t('stats:calendar.months.october') },
+    { value: 11, label: t('stats:calendar.months.november') },
+    { value: 12, label: t('stats:calendar.months.december') },
+  ];
+  
   const handleReset = () => {
     onChange(defaultFilterState);
   };
@@ -87,7 +92,7 @@ function GlobeFilters({
         style={{ touchAction: 'auto', pointerEvents: 'auto' }}
       >
         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          {isCollapsed ? '▶' : '▼'} Filter
+          {isCollapsed ? '▶' : '▼'} {t('map:filters.title')}
         </span>
       </button>
 
@@ -100,7 +105,7 @@ function GlobeFilters({
           {/* Zeit-Filter */}
           <div className="mb-4">
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-              📅 Zeitraum
+              📅 {t('map:filters.timePeriod')}
             </h3>
 
             <select
@@ -108,7 +113,7 @@ function GlobeFilters({
               onChange={(e) => onChange({ ...filters, yearFilter: e.target.value ? Number(e.target.value) : null })}
               className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">Alle Jahre</option>
+              <option value="">{t('map:filters.allYears')}</option>
               {availableYears.map(year => (
                 <option key={year} value={year}>{year}</option>
               ))}
@@ -119,7 +124,7 @@ function GlobeFilters({
               onChange={(e) => onChange({ ...filters, monthFilter: e.target.value ? Number(e.target.value) : null })}
               className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 mt-2 focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">Alle Monate</option>
+              <option value="">{t('map:filters.allMonths')}</option>
               {MONTHS.map(month => (
                 <option key={month.value} value={month.value}>{month.label}</option>
               ))}
@@ -129,10 +134,10 @@ function GlobeFilters({
           {/* Routen-Frequenz Filter */}
           <div className="mb-4">
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-              🛫 Routenfrequenz
+              🛫 {t('map:filters.routeFrequency')}
             </h3>
             <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">
-              Mindestens {filters.minRouteCount}x geflogen
+              {t('map:filters.minFlown', { count: filters.minRouteCount })}
             </label>
             <input
               type="range"
@@ -153,13 +158,13 @@ function GlobeFilters({
             <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  🏢 Airlines
+                  🏢 {t('map:filters.airlines')}
                 </h3>
                 <button
                   onClick={toggleAllAirlines}
                   className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
                 >
-                  {filters.selectedAirlines.length === availableAirlines.length ? 'Keine' : 'Alle'}
+                  {filters.selectedAirlines.length === availableAirlines.length ? t('map:filters.none') : t('map:filters.all')}
                 </button>
               </div>
               <div className="max-h-32 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded p-2 bg-gray-50 dark:bg-gray-700">
@@ -171,12 +176,12 @@ function GlobeFilters({
                       onChange={() => toggleAirline(airline)}
                       className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                     />
-                    <span className="truncate">{airline || 'Unbekannt'}</span>
+                    <span className="truncate">{airline || t('common:labels.unknown')}</span>
                   </label>
                 ))}
                 {availableAirlines.length > 15 && (
                   <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 italic">
-                    +{availableAirlines.length - 15} weitere...
+                    {t('map:filters.moreAirlines', { count: availableAirlines.length - 15 })}
                   </div>
                 )}
               </div>
@@ -186,7 +191,7 @@ function GlobeFilters({
           {/* Status-Filter */}
           <div className="mb-4">
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-              ✈️ Status
+              ✈️ {t('map:filters.status')}
             </h3>
             <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 mb-1 cursor-pointer">
               <input
@@ -195,7 +200,7 @@ function GlobeFilters({
                 onChange={(e) => onChange({ ...filters, showFlown: e.target.checked })}
                 className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
               />
-              Geflogen
+              {t('flights:status.flown')}
             </label>
             <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 mb-1 cursor-pointer">
               <input
@@ -204,7 +209,7 @@ function GlobeFilters({
                 onChange={(e) => onChange({ ...filters, showScheduled: e.target.checked })}
                 className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
               />
-              Geplant
+              {t('flights:status.scheduled')}
             </label>
             <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
               <input
@@ -213,7 +218,7 @@ function GlobeFilters({
                 onChange={(e) => onChange({ ...filters, showCancelled: e.target.checked })}
                 className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
               />
-              Storniert
+              {t('flights:status.cancelled')}
             </label>
           </div>
 
@@ -222,7 +227,7 @@ function GlobeFilters({
             onClick={handleReset}
             className="w-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 p-2 rounded hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-medium transition-colors"
           >
-            Filter zurücksetzen
+            {t('map:filters.reset')}
           </button>
         </div>
       )}

@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+﻿import { Link } from 'react-router-dom';
 
 interface OnboardingStepProps {
   id: string;
@@ -18,7 +18,7 @@ export default function OnboardingStep({
   description,
   linkTo,
   linkText,
-}: OnboardingStepProps) {
+}: OnboardingStepProps): JSX.Element {
   return (
     <div className="flex items-start gap-3">
       <input
@@ -44,19 +44,11 @@ export default function OnboardingStep({
             className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-1 inline-block"
             onClick={(e) => e.stopPropagation()}
           >
-            {linkText} →
+            {linkText} {'→'}
           </Link>
         )}
       </div>
     </div>
   );
 }
-
-
-
-
-
-
-
-
 

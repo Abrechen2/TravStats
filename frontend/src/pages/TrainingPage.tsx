@@ -40,7 +40,7 @@ export default function TrainingPage() {
       setUploadedFile({ id: result.id, type: result.type });
     } catch (error) {
       logger.error('Failed to upload file:', error);
-      alert('Fehler beim Hochladen der Datei');
+      alert(t('training:errors.uploadFailed'));
     }
   };
 
@@ -71,13 +71,13 @@ export default function TrainingPage() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-            {t('training.developerModeNotEnabled')}
+            {t('training:developerModeNotEnabled')}
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
-            {t('training.enableDeveloperMode')}
+            {t('training:enableDeveloperMode')}
           </p>
           <Link to="/settings" className="btn-primary">
-            {t('training.goToSettings')}
+            {t('training:goToSettings')}
           </Link>
         </div>
       </div>
@@ -89,13 +89,13 @@ export default function TrainingPage() {
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('training.llmTraining')}</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('training:llmTraining')}</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              {t('training.trainLocalOllama')}
+              {t('training:trainLocalOllama')}
             </p>
           </div>
           <Link to="/" className="btn-secondary">
-            {t('training.backToDashboard')}
+            {t('training:backToDashboard')}
           </Link>
         </div>
       </header>
@@ -112,7 +112,7 @@ export default function TrainingPage() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
               }`}
             >
-              {t('training.uploadAnnotation')}
+              {t('training:uploadAnnotation')}
             </button>
             <button
               onClick={() => setActiveTab('dashboard')}
@@ -122,7 +122,7 @@ export default function TrainingPage() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
               }`}
             >
-              {t('training.dashboard')}
+              {t('training:dashboard')}
             </button>
             <button
               onClick={() => setActiveTab('guide')}
@@ -132,7 +132,7 @@ export default function TrainingPage() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
               }`}
             >
-              {t('training.guide')}
+              {t('training:guide')}
             </button>
           </nav>
         </div>
@@ -141,25 +141,25 @@ export default function TrainingPage() {
         {activeTab === 'upload' && (
           <div className="space-y-6">
             <InlineHelp
-              title={t('training.uploadAnnotation')}
+              title={t('training:uploadAnnotation')}
               category="basic"
               content={
                 <div className="space-y-2">
                   <p>
-                    {t('training.uploadHelp.description')}
+                    {t('training:uploadHelp.description')}
                   </p>
                   <ul className="list-disc list-inside space-y-1 ml-2">
                     <li>
-                      <strong>{t('training.uploadHelp.emails.title')}</strong> {t('training.uploadHelp.emails.formats')}
+                      <strong>{t('training:uploadHelp.emails.title')}</strong> {t('training:uploadHelp.emails.formats')}
                     </li>
                     <li>
-                      <strong>{t('training.uploadHelp.boardingPasses.title')}</strong> {t('training.uploadHelp.boardingPasses.formats')}
+                      <strong>{t('training:uploadHelp.boardingPasses.title')}</strong> {t('training:uploadHelp.boardingPasses.formats')}
                     </li>
                     <li>
-                      <strong>{t('training.uploadHelp.annotation.title')}</strong> {t('training.uploadHelp.annotation.description')}
+                      <strong>{t('training:uploadHelp.annotation.title')}</strong> {t('training:uploadHelp.annotation.description')}
                     </li>
                     <li>
-                      <strong>{t('training.uploadHelp.minimum.title')}</strong> {t('training.uploadHelp.minimum.description')}
+                      <strong>{t('training:uploadHelp.minimum.title')}</strong> {t('training:uploadHelp.minimum.description')}
                     </li>
                   </ul>
                 </div>
@@ -168,7 +168,7 @@ export default function TrainingPage() {
             {!uploadedFile ? (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                  {t('training.uploadFile')}
+                  {t('training:uploadFile')}
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -189,9 +189,9 @@ export default function TrainingPage() {
                       className="w-full p-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 transition-colors text-center"
                     >
                       <div className="text-4xl mb-2">📧</div>
-                      <div className="font-semibold text-gray-900 dark:text-white">{t('training.email')}</div>
+                      <div className="font-semibold text-gray-900 dark:text-white">{t('training:email')}</div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">
-                        {t('training.emailFormats')}
+                        {t('training:emailFormats')}
                       </div>
                     </button>
                   </div>
@@ -213,9 +213,9 @@ export default function TrainingPage() {
                       className="w-full p-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 transition-colors text-center"
                     >
                       <div className="text-4xl mb-2">🎫</div>
-                      <div className="font-semibold text-gray-900 dark:text-white">{t('training.boardingPass')}</div>
+                      <div className="font-semibold text-gray-900 dark:text-white">{t('training:boardingPass')}</div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">
-                        {t('training.boardingPassFormats')}
+                        {t('training:boardingPassFormats')}
                       </div>
                     </button>
                   </div>
@@ -228,7 +228,7 @@ export default function TrainingPage() {
                     onClick={handleCancel}
                     className="btn-secondary"
                   >
-                    ← {t('common.buttons.cancel')}
+                    ← {t('common:buttons.cancel')}
                   </button>
                 </div>
                 {uploadedFile.type === 'email' ? (

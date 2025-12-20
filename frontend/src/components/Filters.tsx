@@ -4,6 +4,7 @@ import { flightsApi } from '../lib/api';
 import HelpIcon from './Help/HelpIcon';
 import type { Flight, FlightFilters } from '../types';
 import { API_LIMITS } from '../lib/constants';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface FiltersProps {
   onFilterChange: (filters: FlightFilters & { minRouteCount?: number }) => void;
@@ -14,23 +15,24 @@ interface AirlineOption {
   count: number;
 }
 
-const MONTHS = [
-  { value: 1, label: 'Januar' },
-  { value: 2, label: 'Februar' },
-  { value: 3, label: 'März' },
-  { value: 4, label: 'April' },
-  { value: 5, label: 'Mai' },
-  { value: 6, label: 'Juni' },
-  { value: 7, label: 'Juli' },
-  { value: 8, label: 'August' },
-  { value: 9, label: 'September' },
-  { value: 10, label: 'Oktober' },
-  { value: 11, label: 'November' },
-  { value: 12, label: 'Dezember' },
-];
-
 export default function Filters({ onFilterChange }: FiltersProps) {
+  const { t } = useTranslation(['map', 'common', 'flights']);
   const isDarkMode = useThemeStore((s) => s.isDarkMode);
+  
+  const MONTHS = [
+    { value: 1, label: t('stats:months.jan') },
+    { value: 2, label: t('stats:months.feb') },
+    { value: 3, label: t('stats:months.mar') },
+    { value: 4, label: t('stats:months.apr') },
+    { value: 5, label: t('stats:months.may') },
+    { value: 6, label: t('stats:months.jun') },
+    { value: 7, label: t('stats:months.jul') },
+    { value: 8, label: t('stats:months.aug') },
+    { value: 9, label: t('stats:months.sep') },
+    { value: 10, label: t('stats:months.oct') },
+    { value: 11, label: t('stats:months.nov') },
+    { value: 12, label: t('stats:months.dec') },
+  ];
   const [showFilters, setShowFilters] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
 
@@ -204,7 +206,7 @@ export default function Filters({ onFilterChange }: FiltersProps) {
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
         </svg>
-        <span className="font-semibold text-sm">Filter</span>
+        <span className="font-semibold text-sm">{t('map:filters.title')}</span>
         {activeFilterCount() > 0 && (
           <span className="bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
             {activeFilterCount()}
@@ -223,7 +225,7 @@ export default function Filters({ onFilterChange }: FiltersProps) {
           <div className="p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                Filter Optionen
+                {t('map:filters.title')}
               </h3>
               <button
                 onClick={() => setShowFilters(false)}
@@ -240,10 +242,10 @@ export default function Filters({ onFilterChange }: FiltersProps) {
             {/* Zeit-Filter */}
             <div className="mb-4">
               <h4 className={`text-sm font-semibold mb-2 flex items-center gap-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                📅 Zeitraum
+                📅 {t('map:filters.timePeriod')}
                 <HelpIcon
-                  content="Filtern Sie Flüge nach Jahr und/oder Monat. Wählen Sie ein Jahr und optional einen Monat aus."
-                  expandedContent="Der Zeitraum-Filter zeigt nur Flüge an, die im ausgewählten Zeitraum stattgefunden haben. Sie können nach Jahr allein oder nach Jahr und Monat filtern."
+                  content={t('map:filters.help.timePeriod')}
+                  expandedContent={t('map:filters.help.timePeriodExpanded')}
                   position="right"
                 />
               </h4>
@@ -256,7 +258,7 @@ export default function Filters({ onFilterChange }: FiltersProps) {
                     : 'bg-white border-gray-300 text-gray-700'
                 }`}
               >
-                <option value="">Alle Jahre</option>
+                <option value="">{t('map:filters.allYears')}</option>
                 {availableYears.map(year => (
                   <option key={year} value={year}>{year}</option>
                 ))}
@@ -271,7 +273,7 @@ export default function Filters({ onFilterChange }: FiltersProps) {
                     : 'bg-white border-gray-300 text-gray-700'
                 }`}
               >
-                <option value="">Alle Monate</option>
+                <option value="">{t('map:filters.allMonths')}</option>
                 {MONTHS.map(month => (
                   <option key={month.value} value={month.value}>{month.label}</option>
                 ))}
@@ -281,10 +283,10 @@ export default function Filters({ onFilterChange }: FiltersProps) {
             {/* Routen-Frequenz Filter */}
             <div className="mb-4">
               <h4 className={`text-sm font-semibold mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                🛫 Routenfrequenz
+                🛫 {t('map:filters.routeFrequency')}
               </h4>
               <label className={`text-xs block mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                Mindestens {minRouteCount}x geflogen
+                {t('map:filters.minFlown', { count: minRouteCount })}
               </label>
               <input
                 type="range"
@@ -305,10 +307,10 @@ export default function Filters({ onFilterChange }: FiltersProps) {
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className={`text-sm font-semibold flex items-center gap-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                    🏢 Airlines
+                    🏢 {t('map:filters.airlines')}
                     <HelpIcon
-                      content="Filtern Sie Flüge nach Airlines. Sie können mehrere Airlines gleichzeitig auswählen."
-                      expandedContent="Wählen Sie eine oder mehrere Airlines aus, um nur Flüge dieser Airlines anzuzeigen. Klicken Sie auf 'Alle' oder 'Keine', um alle Airlines auszuwählen oder die Auswahl zu löschen."
+                      content={t('map:filters.help.airlines')}
+                      expandedContent={t('map:filters.help.airlinesExpanded')}
                       position="right"
                     />
                   </h4>
@@ -316,7 +318,7 @@ export default function Filters({ onFilterChange }: FiltersProps) {
                     onClick={toggleAllAirlines}
                     className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
                   >
-                    {selectedAirlines.length === availableAirlines.length ? 'Alle abwählen' : 'Alle auswählen'}
+                    {selectedAirlines.length === availableAirlines.length ? t('map:filters.none') : t('map:filters.all')}
                   </button>
                 </div>
                 <div className={`max-h-32 overflow-y-auto border rounded p-2 ${
@@ -339,7 +341,7 @@ export default function Filters({ onFilterChange }: FiltersProps) {
                         onChange={() => toggleAirline(airline.name)}
                         className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                       />
-                      <span className="truncate flex-1">{airline.name || 'Unbekannt'}</span>
+                      <span className="truncate flex-1">{airline.name || t('common:labels.unknown')}</span>
                       <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                         ({airline.count})
                       </span>
@@ -347,7 +349,7 @@ export default function Filters({ onFilterChange }: FiltersProps) {
                   ))}
                   {availableAirlines.length > API_LIMITS.MAX_FILTER_AIRLINES && (
                     <div className={`text-xs mt-2 italic ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                      +{availableAirlines.length - API_LIMITS.MAX_FILTER_AIRLINES} weitere...
+                      {t('map:filters.moreAirlines', { count: availableAirlines.length - API_LIMITS.MAX_FILTER_AIRLINES })}
                     </div>
                   )}
                 </div>
@@ -357,7 +359,7 @@ export default function Filters({ onFilterChange }: FiltersProps) {
             {/* Status-Filter */}
             <div className="mb-4">
               <h4 className={`text-sm font-semibold mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                ✈️ Status
+                ✈️ {t('map:filters.status')}
               </h4>
               <label className={`flex items-center gap-2 text-sm mb-1 cursor-pointer ${
                 isDarkMode ? 'text-gray-300' : 'text-gray-700'
@@ -368,7 +370,7 @@ export default function Filters({ onFilterChange }: FiltersProps) {
                   onChange={(e) => setShowFlown(e.target.checked)}
                   className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                 />
-                Geflogen
+                {t('flights:status.flown')}
               </label>
               <label className={`flex items-center gap-2 text-sm mb-1 cursor-pointer ${
                 isDarkMode ? 'text-gray-300' : 'text-gray-700'
@@ -379,7 +381,7 @@ export default function Filters({ onFilterChange }: FiltersProps) {
                   onChange={(e) => setShowScheduled(e.target.checked)}
                   className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                 />
-                Geplant
+                {t('flights:status.scheduled')}
               </label>
               <label className={`flex items-center gap-2 text-sm cursor-pointer ${
                 isDarkMode ? 'text-gray-300' : 'text-gray-700'
@@ -390,7 +392,7 @@ export default function Filters({ onFilterChange }: FiltersProps) {
                   onChange={(e) => setShowCancelled(e.target.checked)}
                   className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                 />
-                Storniert
+                {t('flights:status.cancelled')}
               </label>
             </div>
 
@@ -403,7 +405,7 @@ export default function Filters({ onFilterChange }: FiltersProps) {
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
             >
-              Filter zurücksetzen
+              {t('map:filters.reset')}
             </button>
           </div>
         </div>

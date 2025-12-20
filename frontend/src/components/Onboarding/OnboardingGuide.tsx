@@ -1,4 +1,5 @@
-import { OnboardingState } from '../../types';
+﻿import { OnboardingState } from '../../types';
+import { useTranslation } from '../../hooks/useTranslation';
 import OnboardingStep from './OnboardingStep';
 
 interface OnboardingGuideProps {
@@ -6,57 +7,67 @@ interface OnboardingGuideProps {
   onUpdate: (updates: Partial<OnboardingState>) => void;
 }
 
-export default function OnboardingGuide({ onboarding, onUpdate }: OnboardingGuideProps) {
-  const steps = [
+type OnboardingStepConfig = {
+  id: keyof OnboardingState;
+  label: string;
+  description: string;
+  linkTo: string;
+  linkText: string;
+};
+
+export default function OnboardingGuide({ onboarding, onUpdate }: OnboardingGuideProps): JSX.Element {
+  const { t } = useTranslation('onboarding');
+
+  const steps: OnboardingStepConfig[] = [
     {
       id: 'flightAdded',
-      label: 'Flug anlegen',
-      description: 'Fügen Sie Ihren ersten Flug hinzu (manuell oder per Import)',
+      label: t('steps.flightAdded.label'),
+      description: t('steps.flightAdded.description'),
       linkTo: '/',
-      linkText: 'Zum Formular',
+      linkText: t('steps.flightAdded.linkText'),
     },
     {
       id: 'usedFilter',
-      label: 'Filter nutzen',
-      description: 'Verwenden Sie die Filter, um Flüge nach verschiedenen Kriterien zu filtern',
+      label: t('steps.usedFilter.label'),
+      description: t('steps.usedFilter.description'),
       linkTo: '/',
-      linkText: 'Filter öffnen',
+      linkText: t('steps.usedFilter.linkText'),
     },
     {
       id: 'mapExplored',
-      label: 'Karte erkunden',
-      description: 'Erkunden Sie die interaktive Karte mit Ihren Flugrouten',
+      label: t('steps.mapExplored.label'),
+      description: t('steps.mapExplored.description'),
       linkTo: '/',
-      linkText: 'Zur Karte',
+      linkText: t('steps.mapExplored.linkText'),
     },
     {
       id: 'statsViewed',
-      label: 'Statistiken ansehen',
-      description: 'Besuchen Sie die erweiterten Statistiken',
+      label: t('steps.statsViewed.label'),
+      description: t('steps.statsViewed.description'),
       linkTo: '/stats',
-      linkText: 'Zu Statistiken',
+      linkText: t('steps.statsViewed.linkText'),
     },
     {
       id: 'achievementsViewed',
-      label: 'Achievements entdecken',
-      description: 'Schauen Sie sich Ihre Achievements und das Leaderboard an',
+      label: t('steps.achievementsViewed.label'),
+      description: t('steps.achievementsViewed.description'),
       linkTo: '/achievements',
-      linkText: 'Zu Achievements',
+      linkText: t('steps.achievementsViewed.linkText'),
     },
     {
       id: 'exported',
-      label: 'Export testen',
-      description: 'Testen Sie den Export Ihrer Flugdaten (CSV, GeoJSON, KML)',
+      label: t('steps.exported.label'),
+      description: t('steps.exported.description'),
       linkTo: '/',
-      linkText: 'Export öffnen',
+      linkText: t('steps.exported.linkText'),
     },
   ];
 
-  const completedSteps = steps.filter((step) => onboarding[step.id as keyof OnboardingState] as boolean).length;
+  const completedSteps = steps.filter((step) => onboarding[step.id]).length;
   const totalSteps = steps.length;
   const progressPercentage = (completedSteps / totalSteps) * 100;
 
-  const handleStepChange = (stepId: string, checked: boolean) => {
+  const handleStepChange = (stepId: keyof OnboardingState, checked: boolean): void => {
     onUpdate({ [stepId]: checked } as Partial<OnboardingState>);
   };
 
@@ -64,17 +75,17 @@ export default function OnboardingGuide({ onboarding, onUpdate }: OnboardingGuid
     <div className="card space-y-4 bg-gradient-to-r from-blue-50 to-amber-50 dark:from-gray-800 dark:to-gray-700">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">Onboarding</p>
+          <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{t('title')}</p>
           <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-            {completedSteps} von {totalSteps} Schritten abgeschlossen
+            {t('progress', { completed: completedSteps, total: totalSteps })}
           </p>
         </div>
         <button
           onClick={() => onUpdate({ dismissed: true })}
           className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-xl leading-none"
-          aria-label="Onboarding schließen"
+          aria-label={t('dismissAria')}
         >
-          ×
+          x
         </button>
       </div>
 
@@ -87,7 +98,7 @@ export default function OnboardingGuide({ onboarding, onUpdate }: OnboardingGuid
           ></div>
         </div>
         <p className="text-xs text-gray-600 dark:text-gray-400 text-right">
-          {Math.round(progressPercentage)}% abgeschlossen
+          {t('progressPercent', { percent: Math.round(progressPercentage) })}
         </p>
       </div>
 
@@ -97,7 +108,7 @@ export default function OnboardingGuide({ onboarding, onUpdate }: OnboardingGuid
           <OnboardingStep
             key={step.id}
             id={step.id}
-            checked={onboarding[step.id as keyof OnboardingState] as boolean}
+            checked={onboarding[step.id]}
             onChange={(checked) => handleStepChange(step.id, checked)}
             label={step.label}
             description={step.description}
@@ -110,19 +121,11 @@ export default function OnboardingGuide({ onboarding, onUpdate }: OnboardingGuid
       {completedSteps === totalSteps && (
         <div className="pt-2 border-t border-gray-300 dark:border-gray-600">
           <p className="text-sm font-medium text-green-700 dark:text-green-400 text-center">
-            🎉 Glückwunsch! Sie haben alle Schritte abgeschlossen!
+            {t('complete')}
           </p>
         </div>
       )}
     </div>
   );
 }
-
-
-
-
-
-
-
-
 

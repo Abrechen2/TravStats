@@ -1,14 +1,15 @@
-{
+﻿{
   "form": {
-    "title": "Flug hinzufügen",
+    "title": "Flug hinzuf\u00fcgen",
     "flightNumber": "Flugnummer",
+    "flightNumberExample": "(z. B. LH400, BA1234)",
     "searchFlight": "Flug suchen",
     "searching": "Suche...",
     "departure": "Abflug",
     "arrival": "Ankunft",
     "from": "Von *",
     "to": "Nach *",
-    "departureDate": "Abflugdatum",
+    "departureDate": "Abflugdatum *",
     "departureTime": "Abflugzeit",
     "arrivalDate": "Ankunftsdatum",
     "arrivalTime": "Ankunftszeit",
@@ -25,7 +26,7 @@
     "status": "Status",
     "category": "Kategorie",
     "price": "Preis",
-    "currency": "Währung",
+    "currency": "W\u00e4hrung",
     "notes": "Notizen",
     "tags": "Tags",
     "submit": "Flug speichern",
@@ -34,63 +35,95 @@
     "scanBoardingPass": "Boarding Pass scannen",
     "uploadEmail": "E-Mail hochladen",
     "manualEntry": "Manuelle Eingabe",
-    "estimatedTimes": "Geschätzte Flugzeiten",
-    "estimatedTimesHistorical": "Basierend auf {{count}} {{count, plural, one {historischen Flug} other {historischen Flügen}}} dieser Route.",
-    "estimatedTimesCalculated": "Abflug- und Ankunftszeiten wurden aus Ihren früheren Flügen berechnet.",
-    "estimatedTimesAutomatic": "Automatisch geschätzt basierend auf Boarding-Zeit und Flugdistanz.",
-    "estimatedTimesAssumption": "Annahme: Abflug = Boarding + 30min, Flugdauer ≈ {{minutes}} Minuten.",
-    "reviewTimes": "→ Bitte überprüfen und korrigieren Sie die Zeiten bei Bedarf.",
+    "manualEntryAction": "Suche \u00fcberspringen und manuell eingeben",
+    "lookupHint": "Wir f\u00fcllen alle Flugdaten automatisch aus!",
+    "lookupLoaded": "Flugdaten geladen von {{airline}} {{flightNumber}}",
+    "estimatedTimes": "Gesch\u00e4tzte Flugzeiten",
+    "estimatedTimesHistorical": "Basierend auf {{count}} {{count, plural, one {historischen Flug} other {historischen Fl\u00fcgen}}} dieser Route.",
+    "estimatedTimesCalculated": "Abflug- und Ankunftszeiten wurden aus Ihren fr\u00fcheren Fl\u00fcgen berechnet.",
+    "estimatedTimesAutomatic": "Automatisch gesch\u00e4tzt basierend auf Boarding-Zeit und Flugdistanz.",
+    "estimatedTimesAssumption": "Annahme: Abflug = Boarding + 30min, Flugdauer -> {{minutes}} Minuten.",
+    "reviewTimes": "Bitte \u00fcberpr\u00fcfen und korrigieren Sie die Zeiten bei Bedarf.",
     "hideWarning": "Warnung ausblenden",
     "help": {
-      "departureAirport": "Wählen Sie den Abflughafen aus. Sie können nach IATA-Code (z.B. FRA) oder Name suchen.",
-      "arrivalAirport": "Wählen Sie den Zielflughafen aus. Sie können nach IATA-Code (z.B. LHR) oder Name suchen.",
-      "departureDate": "Wählen Sie das Abflugdatum aus.",
+      "departureAirport": "W\u00e4hlen Sie den Abflughafen aus. Sie k\u00f6nnen nach IATA-Code (z.B. FRA) oder Name suchen.",
+      "arrivalAirport": "W\u00e4hlen Sie den Zielflughafen aus. Sie k\u00f6nnen nach IATA-Code (z.B. LHR) oder Name suchen.",
+      "departureDate": "W\u00e4hlen Sie das Abflugdatum aus.",
       "departureTime": "Geben Sie die Abflugzeit ein (lokale Zeit des Abflughafens).",
       "departureTimeExpanded": "Die Zeit sollte in der lokalen Zeitzone des Abflughafens angegeben werden. Das System konvertiert automatisch bei Bedarf.",
-      "price": "Der Preis wird zusammen mit der Währung gespeichert. Sie können später nach Preisen filtern und Statistiken anzeigen.",
-      "tags": "Fügen Sie Tags hinzu, um Flüge später zu kategorisieren und zu filtern (z.B. 'business', 'international').",
-      "tagsExpanded": "Tags werden durch Kommas getrennt. Sie können später nach Tags filtern und Statistiken nach Tags gruppieren. Beispiele: 'business', 'vacation', 'lufthansa', 'long-haul'.",
-      "flightNumber": "Geben Sie die Flugnummer ein (z.B. LH400). Mit dem Lookup-Button können Sie automatisch Flugdaten abrufen, wenn ein API-Schlüssel konfiguriert ist.",
-      "flightNumberExpanded": "Die automatische Flugsuche verwendet externe APIs (AirLabs, AviationStack, OpenSky) um Flugdaten abzurufen. Ohne API-Schlüssel müssen Sie die Daten manuell eingeben."
+      "arrivalDate": "W\u00e4hlen Sie das Ankunftsdatum aus.",
+      "arrivalTime": "Geben Sie die Ankunftszeit ein (lokale Zeit des Zielflughafens).",
+      "arrivalTimeExpanded": "Die Zeit sollte in der lokalen Zeitzone des Zielflughafens angegeben werden. Das System konvertiert automatisch bei Bedarf.",
+      "price": "Der Preis wird zusammen mit der W\u00e4hrung gespeichert. Sie k\u00f6nnen sp\u00e4ter nach Preisen filtern und Statistiken anzeigen.",
+      "tags": "F\u00fcgen Sie Tags hinzu, um Fl\u00fcge sp\u00e4ter zu kategorisieren und zu filtern (z.B. 'business', 'international').",
+      "tagsExpanded": "Tags werden durch Kommas getrennt. Sie k\u00f6nnen sp\u00e4ter nach Tags filtern und Statistiken nach Tags gruppieren. Beispiele: 'business', 'vacation', 'lufthansa', 'long-haul'.",
+      "flightNumber": "Geben Sie die Flugnummer ein (z.B. LH400). Mit dem Lookup-Button k\u00f6nnen Sie automatisch Flugdaten abrufen, wenn ein API-Schl\u00fcssel konfiguriert ist.",
+      "flightNumberExpanded": "Die automatische Flugsuche verwendet externe APIs (AirLabs, AviationStack, OpenSky), um Flugdaten abzurufen. Ohne API-Schl\u00fcssel m\u00fcssen Sie die Daten manuell eingeben."
     },
     "steps": {
-      "input": "Flugnummer für automatische Suche eingeben",
-      "select": "Wählen Sie Ihren Flug aus den Ergebnissen",
-      "complete": "Flugdetails überprüfen und vervollständigen"
+      "input": "Flugnummer f\u00fcr automatische Suche eingeben",
+      "select": "W\u00e4hlen Sie Ihren Flug aus den Ergebnissen",
+      "complete": "Flugdetails \u00fcberpr\u00fcfen und vervollst\u00e4ndigen"
     },
     "boardingPass": {
       "title": "Haben Sie einen Boarding Pass?",
-      "description": "Scannen Sie ihn für sofortiges Auto-Ausfüllen!",
+      "description": "Scannen Sie ihn f\u00fcr sofortiges Auto-Ausf\u00fcllen!",
       "scan": "Jetzt scannen"
     },
     "email": {
       "title": "Haben Sie eine Buchungs-E-Mail?",
-      "description": "Importieren Sie Flüge direkt aus Bestätigungs-E-Mails!",
+      "description": "Importieren Sie Fl\u00fcge direkt aus Best\u00e4tigungs-E-Mails!",
       "import": "E-Mail importieren"
     },
     "placeholders": {
-      "tags": "business, vacation, conference"
+      "tags": "business, vacation, conference",
+      "flightNumber": "LH400",
+      "airline": "Lufthansa",
+      "departureAirport": "FRA, Frankfurt",
+      "arrivalAirport": "LHR, London",
+      "departureCode": "FRA",
+      "arrivalCode": "JFK",
+      "aircraft": "A320, B737",
+      "terminal": "T1",
+      "gate": "A12",
+      "seat": "12A",
+      "price": "249.99",
+      "notes": "Zus\u00e4tzliche Informationen...",
+      "bookingReference": "9RFAA7",
+      "boardingGroup": "1 oder A",
+      "ticketNumber": "2202236084346",
+      "taxes": "45.67",
+      "fees": "12.30"
     },
     "validation": {
-      "selectAirportsAndDates": "Bitte wählen Sie beide Flughäfen und Daten aus"
-    }
+      "selectAirportsAndDates": "Bitte w\u00e4hlen Sie beide Flugh\u00e4fen und Daten aus"
+    },
+    "tagsHint": "Durch Kommas getrennte Tags zum Filtern.",
+    "loadingScanner": "Scanner wird geladen...",
+    "noFlightsInEmail": "Keine Fl\u00fcge in der E-Mail gefunden.",
+    "departureAirportCode": "Abflughafen (IATA) *",
+    "arrivalAirportCode": "Ankunftsflughafen (IATA) *"
   },
   "list": {
-    "title": "Flüge",
-    "noFlights": "Keine Flüge gefunden",
+    "title": "Fl\u00fcge",
+    "noFlights": "Keine Fl\u00fcge gefunden",
     "edit": "Bearbeiten",
-    "delete": "Löschen",
-    "viewDetails": "Details anzeigen"
+    "delete": "L\u00f6schen",
+    "viewDetails": "Details anzeigen",
+    "from": "Von",
+    "to": "Nach",
+    "aircraft": "Flugzeug",
+    "deleteConfirm": "M\u00f6chten Sie diesen Flug wirklich l\u00f6schen?"
   },
   "table": {
     "title": "Flugliste",
-    "backToMap": "← Zurück zur Karte",
+    "backToMap": "Zur\u00fcck zur Karte",
     "welcome": "Willkommen zur Flugtabelle!",
-    "description": "Hier sehen Sie alle Ihre Flüge in einer übersichtlichen Tabelle. Sie können sortieren, filtern und Flüge bearbeiten oder löschen.",
-    "backToDashboard": "Zurück zum Dashboard",
-    "loading": "Flüge werden geladen...",
-    "noFlights": "Keine Flüge gefunden",
-    "noFlightsHint": "Versuchen Sie, Ihre Filter anzupassen oder fügen Sie Ihren ersten Flug hinzu.",
+    "description": "Hier sehen Sie alle Ihre Fl\u00fcge in einer \u00fcbersichtlichen Tabelle. Sie k\u00f6nnen sortieren, filtern und Fl\u00fcge bearbeiten oder l\u00f6schen.",
+    "backToDashboard": "Zur\u00fcck zum Dashboard",
+    "loading": "Fl\u00fcge werden geladen...",
+    "noFlights": "Keine Fl\u00fcge gefunden",
+    "noFlightsHint": "Versuchen Sie, Ihre Filter anzupassen oder f\u00fcgen Sie Ihren ersten Flug hinzu.",
     "airline": "Airline",
     "flightNumber": "Flugnummer",
     "route": "Route",
@@ -102,27 +135,55 @@
     "price": "Preis",
     "actions": "Aktionen",
     "deleteConfirm": {
-      "title": "Flug löschen?",
-      "message": "Möchten Sie diesen Flug wirklich löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden.",
-      "confirm": "Ja, löschen",
+      "title": "Flug l\u00f6schen?",
+      "message": "M\u00f6chten Sie diesen Flug wirklich l\u00f6schen?\n\nDiese Aktion kann nicht r\u00fcckg\u00e4ngig gemacht werden.",
+      "confirm": "Ja, l\u00f6schen",
       "cancel": "Abbrechen"
+    },
+    "toast": {
+      "deleted": "Flug gel\u00f6scht",
+      "updated": "Flug aktualisiert"
+    },
+    "sort": {
+      "departure": "Abflug",
+      "airline": "Airline",
+      "status": "Status",
+      "duration": "Dauer"
+    },
+    "footer": {
+      "showing": "Zeige {{count}} Fl\u00fcge",
+      "sortedBy": "Sortiert nach {{field}} ({{order}})"
     }
   },
   "review": {
-    "title": "Flug überprüfen",
+    "title": "Flug \u00fcberpr\u00fcfen",
     "source": "Quelle",
     "flightIndex": "Flug {{index}} von {{total}}",
-    "confirm": "Bestätigen",
+    "confirm": "Best\u00e4tigen",
     "edit": "Bearbeiten",
-    "cancel": "Abbrechen"
+    "cancel": "Abbrechen",
+    "discard": "Verwerfen",
+    "saving": "Speichert...",
+    "next": "Weiter",
+    "costsTitle": "Kosten (optional)",
+    "loadingAirports": "Flugh\u00e4fen werden geladen...",
+    "departureNotFound": "Abflughafen {{code}} nicht gefunden",
+    "arrivalNotFound": "Ankunftsflughafen {{code}} nicht gefunden",
+    "selectedAirport": "Ausgew\u00e4hlt: {{name}} ({{code}})"
+  },
+  "lookup": {
+    "resultsTitle": "{{count}} {{count, plural, one {Flug} other {Fl\u00fcge}}} gefunden",
+    "departs": "Abflug",
+    "backToSearch": "Zur\u00fcck zur Suche"
   },
   "status": {
     "scheduled": "Geplant",
     "flown": "Geflogen",
-    "cancelled": "Storniert"
+    "cancelled": "Storniert",
+    "landed": "Gelandet"
   },
   "category": {
-    "business": "Geschäftlich",
+    "business": "Gesch\u00e4ftlich",
     "private": "Privat",
     "vacation": "Urlaub"
   },
@@ -138,11 +199,57 @@
     "GBP": "GBP",
     "CHF": "CHF"
   },
-  "review": {
-    "discard": "Verwerfen",
-    "saving": "Speichert...",
-    "next": "Weiter",
-    "confirm": "Bestätigen"
+  "edit": {
+    "title": "Flug bearbeiten",
+    "saveChanges": "Änderungen speichern"
+  },
+  "scanner": {
+    "title": "Boarding Pass scannen",
+    "uploadTitle": "Boarding Pass Foto hochladen",
+    "clickToSelect": "oder hier klicken zum Auswählen",
+    "supportedFormats": "Unterstützt: JPG, PNG, GIF",
+    "previewAlt": "Boarding Pass Vorschau",
+    "analyzing": "Ollama Vision analysiert...",
+    "flight": "Flug",
+    "enriched": "Daten ergänzt",
+    "noEnrichment": "Keine Ergänzung nötig",
+    "loadError": "Fehler beim Laden des Bildes",
+    "processError": "Fehler beim Verarbeiten des Bildes",
+    "ollamaUnavailable": "Ollama Vision ist nicht verfügbar. Bitte stellen Sie sicher, dass Ollama läuft und ein Vision-Model installiert ist (z.B. llava).",
+    "steps": {
+      "load": "Bild wird geladen",
+      "upload": "Upload zum Server",
+      "ollama": "KI-Analyse mit Ollama Vision",
+      "api": "API-Abgleich (optional)",
+      "complete": "Scan abgeschlossen"
+    },
+    "info": {
+      "title": "KI-gestützte Analyse mit Ollama Vision",
+      "step1": "Fotografieren Sie Ihren Boarding Pass (Barcode + Text)",
+      "step2": "Ollama Vision extrahiert automatisch alle Flugdaten",
+      "step3": "Optional: API-Abgleich für Zeiten & Terminal/Gate",
+      "step4": "Funktioniert mit allen gängigen Boarding Pass Formaten"
+    }
+  },
+  "receipt": {
+    "label": "Beleg",
+    "viewReceipt": "Beleg ansehen",
+    "uploadFile": "Datei hochladen",
+    "dragAndDrop": "oder hier ablegen",
+    "fileFormats": "PNG, JPG, GIF, WebP, PDF bis zu 10MB",
+    "uploading": "Wird hochgeladen... {{progress}}%",
+    "invalidFileType": "Ungültiger Dateityp. Erlaubt: JPEG, PNG, GIF, WebP, PDF",
+    "fileTooLarge": "Datei zu groß. Maximale Größe: 10MB",
+    "uploadFailed": "Fehler beim Hochladen des Belegs",
+    "deleteConfirm": "Diesen Beleg löschen?"
+  },
+  "airportAutocomplete": {
+    "placeholder": "Suche nach IATA, Name oder Stadt...",
+    "seeding": "Airport-Datenbank wird noch geladen...",
+    "seedingTitle": "Airport-Datenbank wird noch geladen. Bitte warten Sie, bis das Seeding abgeschlossen ist.",
+    "searching": "Suche...",
+    "searchingWorldwide": "🔍 Suche weltweit...",
+    "noResults": "Keine Flughäfen gefunden",
+    "notFound": "❌ Flughafen \"{{code}}\" nicht gefunden"
   }
 }
-

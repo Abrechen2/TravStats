@@ -1,7 +1,9 @@
 import { useToastStore, type Toast } from '../store/toastStore';
+import { useTranslation } from '../hooks/useTranslation';
 
 const ToastItem = ({ toast }: { toast: Toast }) => {
   const removeToast = useToastStore((state) => state.removeToast);
+  const { t } = useTranslation('common');
 
   const bgColors = {
     success: 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800',
@@ -42,7 +44,7 @@ const ToastItem = ({ toast }: { toast: Toast }) => {
       <button
         onClick={() => removeToast(toast.id)}
         className="flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-        aria-label="Close"
+        aria-label={t('buttons.close')}
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

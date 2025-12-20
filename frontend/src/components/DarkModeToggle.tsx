@@ -1,14 +1,16 @@
 import { useThemeStore } from '../store/themeStore';
+import { useTranslation } from '../hooks/useTranslation';
 
 export default function DarkModeToggle() {
   const { isDarkMode, toggleDarkMode } = useThemeStore();
+  const { t } = useTranslation('common');
 
   return (
     <button
       onClick={toggleDarkMode}
       className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-      aria-label="Toggle dark mode"
-      title={isDarkMode ? 'Light Mode aktivieren' : 'Dark Mode aktivieren'}
+      aria-label={t('theme.toggle')}
+      title={isDarkMode ? t('theme.enableLight') : t('theme.enableDark')}
     >
       {isDarkMode ? (
         // Sun icon for light mode

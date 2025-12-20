@@ -86,6 +86,29 @@ export interface FlightInput {
   receiptUrl?: string;
 }
 
+export interface ParsedBooking {
+  airline?: string;
+  flightNumber?: string;
+  departureCode?: string;
+  arrivalCode?: string;
+  departureTime?: string;
+  arrivalTime?: string;
+  pnr?: string;
+  seat?: string;
+  terminal?: string;
+  gate?: string;
+  price?: string;
+  currency?: string;
+  aircraft?: string;
+  seatClass?: string;
+  bookingReference?: string;
+  ticketNumber?: string;
+  boardingGroup?: string;
+  taxes?: string;
+  fees?: string;
+  missing?: string[];
+}
+
 export interface FlightLookupResult {
   airline?: string;
   flightNumber?: string;

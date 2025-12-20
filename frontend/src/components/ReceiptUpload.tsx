@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { uploadsApi } from '../lib/api';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface ReceiptUploadProps {
   currentReceiptUrl?: string | null;
@@ -12,6 +13,7 @@ export default function ReceiptUpload({
   onUploadSuccess,
   onDelete,
 }: ReceiptUploadProps) {
+  const { t } = useTranslation(['flights', 'common', 'errors']);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState('');
@@ -22,13 +24,13 @@ export default function ReceiptUpload({
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
     if (!allowedTypes.includes(file.type)) {
-      setError('Invalid file type. Allowed: JPEG, PNG, GIF, WebP, PDF');
+      setError(t('flights:receipt.invalidFileType'));
       return;
     }
 
     // Validate file size (10MB max)
     if (file.size > 10 * 1024 * 1024) {
-      setError('File too large. Maximum size: 10MB');
+      setError(t('flights:receipt.fileTooLarge'));
       return;
     }
 
@@ -41,7 +43,7 @@ export default function ReceiptUpload({
       onUploadSuccess(receiptUrl);
       setUploadProgress(0);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to upload receipt');
+      setError(err.response?.data?.error || t('flights:receipt.uploadFailed'));
     } finally {
       setUploading(false);
     }
@@ -68,14 +70,14 @@ export default function ReceiptUpload({
   };
 
   const handleDelete = () => {
-    if (confirm('Delete this receipt?')) {
+    if (confirm(t('flights:receipt.deleteConfirm'))) {
       onDelete();
     }
   };
 
   return (
     <div className="space-y-3">
-      <label className="label">Receipt</label>
+      <label className="label">{t('flights:receipt.label')}</label>
 
       {currentReceiptUrl && !uploading ? (
         <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
@@ -86,7 +88,7 @@ export default function ReceiptUpload({
               rel="noopener noreferrer"
               className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
             >
-              View Receipt
+              {t('flights:receipt.viewReceipt')}
             </a>
           </div>
           <button
@@ -94,7 +96,7 @@ export default function ReceiptUpload({
             onClick={handleDelete}
             className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-sm"
           >
-            Remove
+            {t('common:buttons.remove')}
           </button>
         </div>
       ) : (
@@ -120,7 +122,7 @@ export default function ReceiptUpload({
 
           {uploading ? (
             <div className="space-y-2">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Uploading... {uploadProgress}%</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{t('flights:receipt.uploading', { progress: uploadProgress })}</p>
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                 <div
                   className="bg-blue-600 h-2 rounded-full transition-all duration-300"
@@ -149,12 +151,12 @@ export default function ReceiptUpload({
                   onClick={() => fileInputRef.current?.click()}
                   className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
                 >
-                  Upload a file
+                  {t('flights:receipt.uploadFile')}
                 </button>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">or drag and drop</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('flights:receipt.dragAndDrop')}</p>
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
-                PNG, JPG, GIF, WebP, PDF up to 10MB
+                {t('flights:receipt.fileFormats')}
               </p>
             </>
           )}

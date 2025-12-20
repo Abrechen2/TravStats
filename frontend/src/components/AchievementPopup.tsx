@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from 'react';
 import { useThemeStore } from '../store/themeStore';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface Achievement {
   id: string;
@@ -48,6 +49,7 @@ const tierGlow = {
 };
 
 export default function AchievementPopup({ achievements, onClose }: AchievementPopupProps) {
+  const { t } = useTranslation(['achievements', 'common']);
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
@@ -113,9 +115,10 @@ export default function AchievementPopup({ achievements, onClose }: AchievementP
         </div>
 
         {/* Close Button */}
-        <button
+          <button
           onClick={handleClose}
           className={`absolute top-4 right-4 p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}
+          aria-label={t('common:buttons.close')}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -140,7 +143,7 @@ export default function AchievementPopup({ achievements, onClose }: AchievementP
             <div className={`text-sm font-semibold uppercase tracking-wider mb-2 ${
               isDarkMode ? 'text-gray-400' : 'text-gray-600'
             }`}>
-              🏆 Achievement Unlocked!
+              🏆 {t('achievements:popup.unlocked')}
             </div>
             <h2 className={`text-3xl font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
               {currentAchievement.achievement.name}
@@ -157,13 +160,13 @@ export default function AchievementPopup({ achievements, onClose }: AchievementP
               bg-gradient-to-r ${tierColors[tier]}
               text-white shadow-lg
             `}>
-              {tier} Tier
+              {t(`achievements:tiers.${tier}`)} {t('achievements:popup.tier')}
             </span>
             <span className={`
               px-3 py-1 rounded-full text-xs font-semibold
               ${isDarkMode ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-800'}
             `}>
-              +{currentAchievement.achievement.points} Points
+              +{currentAchievement.achievement.points} {t('achievements:popup.points')}
             </span>
           </div>
 
@@ -171,7 +174,7 @@ export default function AchievementPopup({ achievements, onClose }: AchievementP
           {achievements.length > 1 && (
             <div className="pt-4">
               <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mb-2`}>
-                {currentIndex + 1} of {achievements.length} new achievements
+                {t('achievements:popup.progress', { current: currentIndex + 1, total: achievements.length })}
               </div>
               <div className="flex gap-1 justify-center">
                 {achievements.map((_, idx) => (
@@ -202,13 +205,13 @@ export default function AchievementPopup({ achievements, onClose }: AchievementP
                       : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
                   }`}
                 >
-                  Close All
+                  {t('achievements:popup.closeAll')}
                 </button>
                 <button
                   onClick={handleNext}
                   className={`flex-1 px-4 py-2 rounded-lg font-medium bg-gradient-to-r ${tierColors[tier]} text-white shadow-lg hover:shadow-xl transition-all`}
                 >
-                  Next Achievement →
+                  {t('achievements:popup.next')} →
                 </button>
               </>
             ) : (
@@ -216,7 +219,7 @@ export default function AchievementPopup({ achievements, onClose }: AchievementP
                 onClick={handleClose}
                 className={`w-full px-4 py-2 rounded-lg font-medium bg-gradient-to-r ${tierColors[tier]} text-white shadow-lg hover:shadow-xl transition-all`}
               >
-                Awesome! 🎉
+                {t('achievements:popup.awesome')} 🎉
               </button>
             )}
           </div>

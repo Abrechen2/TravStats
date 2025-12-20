@@ -1,0 +1,98 @@
+{
+  "title": "Willkommen zur {{appName}} Einrichtung",
+  "subtitle": "Erstellen Sie Ihr Admin-Konto, um zu beginnen",
+  "privacy": {
+    "title": "Datenschutz & Sicherheit",
+    "items": {
+      "dataStays": "Alle Daten bleiben auf Ihrem Server - nichts wird an externe Dienste gesendet",
+      "firstUserAdmin": "Der erste Benutzer, den Sie erstellen, wird der Administrator sein",
+      "inviteLater": "Sie können später Familie und Freunde über das Admin-Panel einladen",
+      "designedFor": "Entworfen für kleine Gruppen (1-10 Konten)"
+    }
+  },
+  "form": {
+    "instanceName": {
+      "label": "Instanz-Name",
+      "placeholder": "Meine TravStats Instanz",
+      "help": "Dieser Name erscheint in E-Mails und Benachrichtigungen"
+    },
+    "adminUsername": {
+      "label": "Admin-Benutzername",
+      "placeholder": "admin"
+    },
+    "password": {
+      "label": "Passwort",
+      "placeholder": "Geben Sie ein sicheres Passwort ein",
+      "help": "Mindestens 8 Zeichen"
+    },
+    "confirmPassword": {
+      "label": "Passwort bestätigen",
+      "placeholder": "Bestätigen Sie Ihr Passwort"
+    },
+    "submit": {
+      "create": "Admin-Konto erstellen",
+      "creating": "Wird erstellt..."
+    }
+  },
+  "validation": {
+    "usernamePasswordRequired": "Benutzername und Passwort sind erforderlich",
+    "passwordTooShort": "Das Passwort muss mindestens 8 Zeichen lang sein",
+    "passwordsDoNotMatch": "Die Passwörter stimmen nicht überein"
+  },
+  "success": {
+    "title": "Einrichtung abgeschlossen!",
+    "adminCreated": "Admin-Konto '{{username}}' wurde erfolgreich erstellt.",
+    "redirecting": "Weiterleitung zur Anmeldeseite..."
+  },
+  "errors": {
+    "failed": "Fehler beim Erstellen des Admin-Kontos. Bitte versuchen Sie es erneut."
+  },
+  "loginPrompt": "Bitte melden Sie sich mit Ihrem neuen Admin-Konto an",
+  "footer": {
+    "title": "Was passiert als Nächstes?",
+    "steps": {
+      "one": "Melden Sie sich mit Ihrem Admin-Konto an",
+      "two": "Laden Sie Familie und Freunde über das Admin-Panel ein",
+      "three": "Beginnen Sie, Ihre Flüge zu verfolgen!"
+    }
+  },
+  "tips": {
+    "title": "💡 Tipps",
+    "items": {
+      "localNetwork": {
+        "label": "Lokaler Netzwerkzugriff",
+        "value": "Greifen Sie von anderen Geräten in Ihrem lokalen Netzwerk mit http://IHRE_IP:3000 auf Ihre Instanz zu"
+      },
+      "vpn": {
+        "label": "Fernzugriff",
+        "value": "Verwenden Sie ein VPN oder Reverse Proxy (nginx) für sicheren Fernzugriff"
+      },
+      "backups": {
+        "label": "Backups",
+        "value": "Richten Sie automatisierte Backups mit {{command}} ein"
+      }
+    }
+  },
+  "airportSeeding": {
+    "calculating": "Berechne...",
+    "estimatedSeconds": "ca. {{seconds}} Sekunden",
+    "estimatedMinute": "ca. 1 Minute",
+    "estimatedMinutes": "ca. {{minutes}} Minuten",
+    "banner": {
+      "loading": "Airport-Datenbank wird geladen...",
+      "failed": "Fehler beim Laden der Airport-Datenbank",
+      "preparing": "Airport-Datenbank wird vorbereitet...",
+      "limitedFeatures": "Einige Funktionen sind während des ersten Starts eingeschränkt",
+      "errorOccurred": "Ein Fehler ist aufgetreten",
+      "pleaseWait": "Bitte warten Sie einen Moment...",
+      "progress": "{{percent}}% abgeschlossen"
+    },
+    "modal": {
+      "title": "Airport-Datenbank wird geladen",
+      "description": "Wir laden gerade die Flughafendatenbank für Sie. Dies kann einige Minuten dauern. Sie können die Anwendung bereits verwenden, während der Import im Hintergrund läuft.",
+      "progress": "{{percent}}% abgeschlossen",
+      "airportsCount": "{{processed}} / {{total}} Flughäfen",
+      "understood": "Verstanden"
+    }
+  }
+}

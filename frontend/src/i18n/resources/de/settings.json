@@ -229,6 +229,52 @@
     "title": "Automatisch gespeichert",
     "description": "Alle Einstellungen werden lokal gespeichert und sind sofort aktiv."
   },
-  "scrollToTop": "Nach oben"
+  "scrollToTop": "Nach oben",
+  "parser": {
+    "title": "Parser-Konfiguration",
+    "description": "Konfigurieren Sie, wie Bordkarten und E-Mails geparst werden. Der Auto-Modus wählt automatisch den besten verfügbaren Parser aus.",
+    "saveSettings": "Einstellungen speichern",
+    "saved": "Parser-Einstellungen erfolgreich gespeichert!",
+    "saveFailed": "Fehler beim Speichern der Einstellungen",
+    "available": "Verfügbar",
+    "unavailable": "Nicht verfügbar",
+    "preferred": "Bevorzugter Parser",
+    "providerStatus": "Provider-Status:",
+    "vision": {
+      "title": "Vision Parser (Bordkarte)",
+      "description": "Hochgeladene Bordkarten-Bilder parsen"
+    },
+    "text": {
+      "title": "Text Parser (E-Mail)",
+      "description": "Flugbuchungs-E-Mails parsen"
+    },
+    "apiKeys": {
+      "title": "API-Schlüssel (Optional)",
+      "openai": "OpenAI API-Schlüssel",
+      "claude": "Claude API-Schlüssel",
+      "optional": "Optional. Erhalten von"
+    },
+    "help": {
+      "title": "Parser-Konfiguration",
+      "modes": {
+        "title": "Parser-Modi:",
+        "auto": "Auto",
+        "autoDesc": "Wählt automatisch den besten verfügbaren Parser",
+        "ollama": "Ollama",
+        "ollamaDesc": "Läuft lokal (kostenlos, benötigt gute Hardware)",
+        "cloud": "OpenAI/Claude",
+        "cloudDesc": "Cloud-basiert (kostenpflichtig, funktioniert auf jedem Gerät)",
+        "fallback": "Tesseract/Regex",
+        "fallbackDesc": "Kostenlose Fallback-Optionen (niedrigere Genauigkeit)"
+      },
+      "bestPractices": {
+        "title": "Best Practices:",
+        "auto": "Verwenden Sie \"Auto\" für die beste Balance zwischen Genauigkeit und Kosten",
+        "ollama": "Ollama ist ideal, wenn Sie eine GPU haben und lokale Verarbeitung bevorzugen",
+        "cloud": "Cloud-Parser sind am genauesten, aber erfordern API-Keys und verursachen Kosten",
+        "trained": "Trainierte Ollama-Modelle (über Training-Page) verbessern die Genauigkeit erheblich"
+      }
+    }
+  }
 }
 

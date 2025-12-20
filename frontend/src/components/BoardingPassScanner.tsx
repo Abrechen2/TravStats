@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { parseApi } from '../lib/api';
 import { useThemeStore } from '../store/themeStore';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface BoardingPassScannerProps {
   onScanSuccess: (data: any) => void; // ParsedBooking from Ollama
@@ -16,6 +17,7 @@ interface ScanStep {
 }
 
 export default function BoardingPassScanner({ onScanSuccess, onClose }: BoardingPassScannerProps) {
+  const { t } = useTranslation(['flights', 'common', 'errors']);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState('');
   const [preview, setPreview] = useState<string | null>(null);
@@ -38,11 +40,11 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
 
     // Initialize scan steps
     const steps: ScanStep[] = [
-      { id: 'load', label: 'Bild wird geladen', status: 'loading', icon: '📸' },
-      { id: 'upload', label: 'Upload zum Server', status: 'pending', icon: '📤' },
-      { id: 'ollama', label: 'KI-Analyse mit Ollama Vision', status: 'pending', icon: '🤖' },
-      { id: 'api', label: 'API-Abgleich (optional)', status: 'pending', icon: '🔍' },
-      { id: 'complete', label: 'Scan abgeschlossen', status: 'pending', icon: '✅' },
+      { id: 'load', label: t('flights:scanner.steps.load'), status: 'loading', icon: '📸' },
+      { id: 'upload', label: t('flights:scanner.steps.upload'), status: 'pending', icon: '📤' },
+      { id: 'ollama', label: t('flights:scanner.steps.ollama'), status: 'pending', icon: '🤖' },
+      { id: 'api', label: t('flights:scanner.steps.api'), status: 'pending', icon: '🔍' },
+      { id: 'complete', label: t('flights:scanner.steps.complete'), status: 'pending', icon: '✅' },
     ];
     setScanSteps(steps);
 
@@ -61,20 +63,20 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
         try {
           // Step 3: Send to Ollama Vision API
           updateScanStep('upload', { status: 'success' });
-          updateScanStep('ollama', { status: 'loading', detail: 'Ollama Vision analysiert...' });
+          updateScanStep('ollama', { status: 'loading', detail: t('flights:scanner.analyzing') });
 
           const result = await parseApi.parseBoardingpass(base64Data, true); // enrichWithApi = true
 
           updateScanStep('ollama', {
             status: 'success',
-            detail: `${result.flight.flightNumber || 'Flug'} ${result.flight.departureCode} → ${result.flight.arrivalCode}`,
+            detail: `${result.flight.flightNumber || t('flights:scanner.flight')} ${result.flight.departureCode} ${t('common:labels.routeSeparator')} ${result.flight.arrivalCode}`,
           });
 
           // Step 4: API enrichment status
           if (result.enriched) {
-            updateScanStep('api', { status: 'success', detail: 'Daten ergänzt' });
+            updateScanStep('api', { status: 'success', detail: t('flights:scanner.enriched') });
           } else {
-            updateScanStep('api', { status: 'success', detail: 'Keine Ergänzung nötig' });
+            updateScanStep('api', { status: 'success', detail: t('flights:scanner.noEnrichment') });
           }
 
           // Step 5: Complete
@@ -94,11 +96,9 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
           }
 
           if (err.response?.status === 503) {
-            setError(
-              'Ollama Vision ist nicht verfügbar. Bitte stellen Sie sicher, dass Ollama läuft und ein Vision-Model installiert ist (z.B. llava).'
-            );
+            setError(t('flights:scanner.ollamaUnavailable'));
           } else {
-            setError(err.response?.data?.error || err.message || 'Fehler beim Scannen des Boarding Pass');
+            setError(err.response?.data?.error || err.message || t('errors:boardingPassError'));
           }
 
           setScanning(false);
@@ -107,13 +107,13 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
 
       reader.onerror = () => {
         updateScanStep('load', { status: 'error' });
-        setError('Fehler beim Laden des Bildes');
+        setError(t('flights:scanner.loadError'));
         setScanning(false);
       };
 
       reader.readAsDataURL(file);
     } catch (err: any) {
-      setError('Fehler beim Verarbeiten des Bildes');
+      setError(t('flights:scanner.processError'));
       setScanning(false);
     }
   };
@@ -124,13 +124,13 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
         {/* Header */}
         <div className={`sticky top-0 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b px-6 py-4 flex items-center justify-between`}>
           <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-            Boarding Pass scannen
+            {t('flights:scanner.title')}
           </h2>
           <button
             onClick={onClose}
             disabled={scanning}
             className={`p-2 ${isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-100'} rounded-lg transition-colors`}
-            aria-label="Schließen"
+            aria-label={t('common:buttons.close')}
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -171,14 +171,14 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
                   <div className="text-5xl">🎫</div>
                   <div>
                     <p className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                      Boarding Pass Foto hochladen
+                      {t('flights:scanner.uploadTitle')}
                     </p>
                     <p className={`text-sm mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      oder hier klicken zum Auswählen
+                      {t('flights:scanner.clickToSelect')}
                     </p>
                   </div>
                   <p className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-                    Unterstützt: JPG, PNG, GIF
+                    {t('flights:scanner.supportedFormats')}
                   </p>
                 </div>
               </div>
@@ -186,13 +186,13 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
               {/* Info Box */}
               <div className={`mt-4 p-4 ${isDarkMode ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'} border rounded-lg`}>
                 <h3 className={`text-sm font-semibold ${isDarkMode ? 'text-blue-200' : 'text-blue-900'} mb-2`}>
-                  🤖 KI-gestützte Analyse mit Ollama Vision
+                  🤖 {t('flights:scanner.info.title')}
                 </h3>
                 <ul className={`text-sm ${isDarkMode ? 'text-blue-300' : 'text-blue-800'} space-y-1`}>
-                  <li>• Fotografieren Sie Ihren Boarding Pass (Barcode + Text)</li>
-                  <li>• Ollama Vision extrahiert automatisch alle Flugdaten</li>
-                  <li>• Optional: API-Abgleich für Zeiten & Terminal/Gate</li>
-                  <li>• Funktioniert mit allen gängigen Boarding Pass Formaten</li>
+                  <li>• {t('flights:scanner.info.step1')}</li>
+                  <li>• {t('flights:scanner.info.step2')}</li>
+                  <li>• {t('flights:scanner.info.step3')}</li>
+                  <li>• {t('flights:scanner.info.step4')}</li>
                 </ul>
               </div>
             </div>
@@ -205,7 +205,7 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
               <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-2">
                 <img
                   src={preview}
-                  alt="Boarding Pass Vorschau"
+                  alt={t('flights:scanner.previewAlt')}
                   className="max-w-full max-h-64 mx-auto object-contain rounded"
                 />
               </div>

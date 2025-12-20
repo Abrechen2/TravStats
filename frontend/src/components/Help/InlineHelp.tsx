@@ -1,4 +1,5 @@
 import { useState, ReactNode } from 'react';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface InlineHelpProps {
   title: string;
@@ -26,6 +27,7 @@ export default function InlineHelp({
   className = '',
 }: InlineHelpProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { t } = useTranslation('common');
 
   return (
     <div className={`rounded-lg border p-4 ${categoryColors[category]} ${className}`}>
@@ -47,12 +49,13 @@ export default function InlineHelp({
           onClick={() => setIsExpanded(!isExpanded)}
           className="ml-4 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 whitespace-nowrap"
         >
-          {isExpanded ? 'Weniger' : 'Mehr erfahren'}
+          {isExpanded ? t('help.less') : t('help.more')}
         </button>
       </div>
     </div>
   );
 }
+
 
 
 
