@@ -45,3 +45,5 @@ UPDATE "training_jobs" SET "model_type" = 'combined' WHERE "model_type" IS NULL;
 -- Now set NOT NULL constraint with default
 ALTER TABLE "training_jobs" ALTER COLUMN "model_type" SET NOT NULL;
 ALTER TABLE "training_jobs" ALTER COLUMN "model_type" SET DEFAULT 'combined';
+
+

@@ -17,3 +17,5 @@ CREATE TABLE "airport_seeding_status" (
 -- CreateIndex
 CREATE INDEX "airport_seeding_status_status_idx" ON "airport_seeding_status"("status");
 
+
+
