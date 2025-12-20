@@ -33,6 +33,106 @@
       "title": "Minimum:",
       "description": "You need at least 5 annotated entries to start a training"
     }
-  }
+  },
+  "stats": {
+    "totalTrainingData": "Total Training Data",
+    "pending": "Pending",
+    "pendingHelp": "Number of annotated entries that have not been trained yet.",
+    "trained": "Trained",
+    "trainedHelp": "Number of entries that have been successfully trained.",
+    "trainingJobs": "Training Jobs",
+    "emails": "Emails",
+    "boardingPasses": "Boarding Passes",
+    "totalFlights": "Total Flights",
+    "avgFlightsPerEmail": "Ø Flights/Email",
+    "uniqueTags": "Unique Tags",
+    "jobsCompleted": "Jobs Completed"
+  },
+  "actions": {
+    "startTraining": "Start Training",
+    "starting": "Starting...",
+    "startTrainingHelp": "Start LoRA training with all pending entries. At least 5 entries are required.",
+    "startTrainingHelpExpanded": "Training uses LoRA (Low-Rank Adaptation) to fine-tune the base model. Depending on hardware (CPU/GPU), training may take several hours. Progress is displayed in real-time.",
+    "readyForTraining": "Ready for training ({{count}} entries)",
+    "minimumEntriesRequired": "At least 5 entries needed (current: {{count}})"
+  },
+  "jobs": {
+    "title": "Training Jobs",
+    "titleHelp": "Overview of all training jobs with status and progress.",
+    "titleHelpExpanded": "Jobs can have different statuses: pending (waiting), running (in progress), completed (successful), failed. Click 'Details' to see logs and detailed progress.",
+    "noJobs": "No Training Jobs yet",
+    "hide": "Hide",
+    "details": "Details",
+    "cancel": "Cancel",
+    "cancelling": "Cancelling...",
+    "started": "Started:",
+    "completed": "Completed:",
+    "logsAndProgress": "Logs & Progress",
+    "noLogsAvailable": "No logs available yet",
+    "statusPending": "Waiting to start",
+    "statusRunning": "Training in progress",
+    "statusCompleted": "Completed successfully",
+    "statusFailed": "Failed"
+  },
+  "progress": {
+    "initialization": "Initialization",
+    "completed": "Completed",
+    "savingModel": "Saving Model",
+    "trainingRunning": "Training running",
+    "trainingEpoch": "Training (Epoch {{current}}/{{total}})",
+    "trainingStep": "Training (Step {{current}}/{{total}})",
+    "trainingEpochStep": "Training (Epoch {{currentEpoch}}/{{totalEpoch}}, Step {{currentStep}}/{{totalStep}})",
+    "preparingDataset": "Preparing Dataset",
+    "preparingModel": "Preparing Model",
+    "loadingModel": "Loading Model",
+    "startingTraining": "Starting Training",
+    "remaining": "remaining",
+    "phaseHelp": "Current phase of training. Progress is calculated based on logs.",
+    "phaseHelpExpanded": "Training phases: Initialization → Load Model → Prepare Dataset → Training (Epochs/Steps) → Save Model → Export to Ollama. Estimated remaining time is calculated based on current progress."
+  },
+  "data": {
+    "title": "Training Data",
+    "list": "List",
+    "table": "Table",
+    "selectAll": "Select all",
+    "selectedCount": "{{count}} entry selected",
+    "selectedCountPlural": "{{count}} entries selected",
+    "deleteSelected": "Delete selected",
+    "deleting": "Deleting...",
+    "noData": "No Training Data yet",
+    "noMatchingData": "No entries match the filters",
+    "type": "Type",
+    "status": "Status",
+    "tags": "Tags",
+    "created": "Created",
+    "actions": "Actions",
+    "preview": "Preview",
+    "edit": "Edit",
+    "delete": "Delete",
+    "inUse": "In use",
+    "beingTrained": "Being trained",
+    "usedForTraining": "Used for training"
+  },
+  "modal": {
+    "cancelTraining": {
+      "title": "Cancel Training?",
+      "message": "Do you really want to cancel the training?\n\nCurrent progress will be lost and cannot be recovered.",
+      "confirm": "Yes, cancel",
+      "cancel": "No, keep running"
+    },
+    "deleteTrainingData": {
+      "title": "Delete Training Data?",
+      "message": "Do you really want to delete this entry?\n\nThis action cannot be undone.",
+      "confirm": "Yes, delete",
+      "cancel": "Cancel"
+    },
+    "bulkDelete": {
+      "title": "Delete multiple entries?",
+      "message": "Do you really want to delete {{count}} entry?\n\nThis action cannot be undone.",
+      "messagePlural": "Do you really want to delete {{count}} entries?\n\nThis action cannot be undone.",
+      "confirm": "Yes, delete all",
+      "cancel": "Cancel"
+    }
+  },
+  "loading": "Loading..."
 }
-
