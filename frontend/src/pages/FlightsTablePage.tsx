@@ -15,9 +15,11 @@ import ConfirmModal from '../components/Training/ConfirmModal';
 import { useThemeStore } from '../store/themeStore';
 import { useToastStore } from '../store/toastStore';
 import DarkModeToggle from '../components/DarkModeToggle';
-import { API_LIMITS, DATE_FORMATS } from '../lib/constants';
+import { API_LIMITS, DATE_FORMATS, getDateLocale } from '../lib/constants';
+import { useTranslation } from '../hooks/useTranslation';
 
 export default function FlightsTablePage() {
+  const { t } = useTranslation(['flights', 'common']);
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
   const [flights, setFlights] = useState<Flight[]>([]);
   const [filters, setFilters] = useState<FlightFilters>({});
@@ -75,7 +77,7 @@ export default function FlightsTablePage() {
       loadFlights();
     } catch (error) {
       console.error('Failed to delete flight:', error);
-      addToast('error', 'Fehler beim Löschen des Fluges. Bitte versuchen Sie es erneut.');
+      addToast('error', t('dashboard.errors.deleteFlight'));
       setDeleteConfirmOpen(false);
       setFlightToDelete(null);
     }
@@ -89,7 +91,7 @@ export default function FlightsTablePage() {
       loadFlights();
     } catch (error) {
       console.error('Failed to update flight:', error);
-      addToast('error', 'Fehler beim Aktualisieren des Fluges. Bitte versuchen Sie es erneut.');
+      addToast('error', t('dashboard.errors.updateFlight'));
       throw error;
     }
   };
@@ -128,7 +130,7 @@ export default function FlightsTablePage() {
   };
 
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString(DATE_FORMATS.LOCALE, DATE_FORMATS.DEFAULT);
+    return new Date(date).toLocaleDateString(getDateLocale(), DATE_FORMATS.DEFAULT);
   };
 
   const formatDurationHours = (departure: string, arrival: string) => {
@@ -149,11 +151,11 @@ export default function FlightsTablePage() {
                 TravStats
               </h1>
             </Link>
-            <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>/ Flugliste</span>
+            <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>/ {t('flights.table.title')}</span>
           </div>
           <div className="flex items-center gap-3">
             <Link to="/" className="btn-secondary text-sm px-3 py-2">
-              ← Zurück zur Karte
+              {t('flights.table.backToMap')}
             </Link>
             <DarkModeToggle />
           </div>
@@ -164,10 +166,10 @@ export default function FlightsTablePage() {
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         <ContextualHint
           id="flights-table-page-hint"
-          title="Willkommen zur Flugtabelle!"
-          message="Hier sehen Sie alle Ihre Flüge in einer übersichtlichen Tabelle. Sie können sortieren, filtern und Flüge bearbeiten oder löschen."
+          title={t('flights.table.welcome')}
+          message={t('flights.table.description')}
           linkTo="/"
-          linkText="Zurück zum Dashboard"
+          linkText={t('flights.table.backToDashboard')}
         />
         {/* Filters */}
         <div className="mb-6">
@@ -179,12 +181,12 @@ export default function FlightsTablePage() {
           <div className="overflow-x-auto">
             {loading ? (
               <div className={`text-center py-12 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                Loading flights...
+                {t('flights.table.loading')}
               </div>
             ) : sortedFlights.length === 0 ? (
               <div className={`text-center py-12 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                <p className="text-lg mb-2">No flights found</p>
-                <p className="text-sm">Try adjusting your filters or add your first flight.</p>
+                <p className="text-lg mb-2">{t('flights.table.noFlights')}</p>
+                <p className="text-sm">{t('flights.table.noFlightsHint')}</p>
               </div>
             ) : (
               <table className="w-full">
@@ -192,45 +194,45 @@ export default function FlightsTablePage() {
                   <tr>
                     <th className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                       <button onClick={() => handleSort('airline')} className="flex items-center gap-1 hover:text-blue-500">
-                        Airline
+                        {t('flights.table.airline')}
                         {sortBy === 'airline' && (sortOrder === 'asc' ? '▼' : '▲')}
                       </button>
                     </th>
                     <th className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Flight #
+                      {t('flights.table.flightNumber')}
                     </th>
                     <th className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Route
+                      {t('flights.table.route')}
                     </th>
                     <th className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                       <button onClick={() => handleSort('departureTime')} className="flex items-center gap-1 hover:text-blue-500">
-                        Departure
+                        {t('flights.table.departure')}
                         {sortBy === 'departureTime' && (sortOrder === 'asc' ? '▼' : '▲')}
                       </button>
                     </th>
                     <th className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Arrival
+                      {t('flights.table.arrival')}
                     </th>
                     <th className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                       <button onClick={() => handleSort('status')} className="flex items-center gap-1 hover:text-blue-500">
-                        Status
+                        {t('flights.table.status')}
                         {sortBy === 'status' && (sortOrder === 'asc' ? '▼' : '▲')}
                       </button>
                     </th>
                     <th className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                       <button onClick={() => handleSort('duration')} className="flex items-center gap-1 hover:text-blue-500">
-                        Flight Time (h)
+                        {t('flights.table.flightTime')}
                         {sortBy === 'duration' && (sortOrder === 'asc' ? '▼' : '▲')}
                       </button>
                     </th>
                     <th className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Aircraft
+                      {t('flights.table.aircraft')}
                     </th>
                     <th className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Price
+                      {t('flights.table.price')}
                     </th>
                     <th className={`px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                      Actions
+                      {t('flights.table.actions')}
                     </th>
                   </tr>
                 </thead>
@@ -270,7 +272,7 @@ export default function FlightsTablePage() {
                             ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
                             : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                         }`}>
-                          {flight.status}
+                          {t(`flights.status.${flight.status}`, { defaultValue: flight.status })}
                         </span>
                       </td>
                       <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -292,7 +294,7 @@ export default function FlightsTablePage() {
                                 : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                             }`}
                           >
-                            Edit
+                            {t('common.buttons.edit')}
                           </button>
                           <button
                             onClick={() => handleDeleteClick(flight.id)}
@@ -302,7 +304,7 @@ export default function FlightsTablePage() {
                                 : 'bg-red-100 text-red-700 hover:bg-red-200'
                             }`}
                           >
-                            Delete
+                            {t('common.buttons.delete')}
                           </button>
                         </div>
                       </td>
@@ -347,10 +349,10 @@ export default function FlightsTablePage() {
           setFlightToDelete(null);
         }}
         onConfirm={handleDelete}
-        title="Flug löschen?"
-        message="Möchten Sie diesen Flug wirklich löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden."
-        confirmText="Ja, löschen"
-        cancelText="Abbrechen"
+        title={t('flights.table.deleteConfirm.title')}
+        message={t('flights.table.deleteConfirm.message')}
+        confirmText={t('flights.table.deleteConfirm.confirm')}
+        cancelText={t('flights.table.deleteConfirm.cancel')}
         confirmButtonClass="bg-red-600 hover:bg-red-700 focus:ring-red-500"
       />
     </div>

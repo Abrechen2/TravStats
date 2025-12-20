@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import { flightsApi, analyticsApi, settingsApi } from '../lib/api';
 import { useToastStore } from '../store/toastStore';
 import { logger } from '../lib/logger';
+import { useTranslation } from '../hooks/useTranslation';
 import MapContainer3D from '../components/MapContainer3D';
 import SimplifiedFlightFormV2 from '../components/SimplifiedFlightFormV2';
 import FlightEditModal from '../components/FlightEditModal';
@@ -23,6 +24,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 export default function DashboardPage() {
+  const { t } = useTranslation(['dashboard', 'common', 'flights']);
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const [flights, setFlights] = useState<Flight[]>([]); // Filtered flights for map
@@ -263,7 +265,7 @@ export default function DashboardPage() {
       }
     } catch (error) {
       logger.error('Failed to add flight:', error);
-      alert('Fehler beim Hinzufügen des Fluges. Bitte versuchen Sie es erneut.');
+      alert(t('dashboard.errors.addFlight'));
       throw error;
     }
   };
@@ -294,7 +296,7 @@ export default function DashboardPage() {
       }
     } catch (error) {
       logger.error('Failed to update flight:', error);
-      alert('Fehler beim Aktualisieren des Fluges. Bitte versuchen Sie es erneut.');
+      alert(t('dashboard.errors.updateFlight'));
       throw error;
     }
   };
@@ -453,7 +455,7 @@ export default function DashboardPage() {
       try {
         const content = e.target?.result;
         if (!content || typeof content !== 'string') {
-          addToast('error', 'Datei konnte nicht gelesen werden');
+          addToast('error', t('dashboard.errors.exportFailed'));
           return;
         }
 
@@ -474,7 +476,7 @@ export default function DashboardPage() {
         }
 
         if (parsed.length === 0) {
-          addToast('warning', 'Keine Datensätze in der Datei gefunden');
+          addToast('warning', t('common.messages.noData'));
           return;
         }
 
@@ -517,12 +519,12 @@ export default function DashboardPage() {
         }
 
         if (successCount > 0) {
-          addToast('success', `${successCount} Flug${successCount !== 1 ? 'e' : ''} erfolgreich importiert${errorCount > 0 ? `, ${errorCount} Fehler` : ''}`);
+          addToast('success', t('dashboard.success.flightAdded'));
           // Reload flights
           loadRecentFlights();
           loadFlights();
         } else {
-          addToast('error', `Import fehlgeschlagen: ${errorCount} Fehler`);
+          addToast('error', t('dashboard.errors.exportFailed'));
         }
 
         if (settings.privacy.analyticsOptIn) {
@@ -530,7 +532,7 @@ export default function DashboardPage() {
         }
       } catch (err) {
         logger.error('Import failed:', err);
-        addToast('error', 'Import fehlgeschlagen. Bitte gültige CSV oder JSON Datei verwenden.');
+        addToast('error', t('dashboard.errors.exportFailed'));
       } finally {
         setImporting(false);
         if (importInputRef.current) {
@@ -581,20 +583,20 @@ export default function DashboardPage() {
               onClick={() => navigate('/stats')}
               className="hidden xl:block px-3 xl:px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
             >
-              Erweiterte Statistiken
+              {t('dashboard.stats')}
             </button>
 
             <Link
               to="/settings"
               className="hidden xl:flex px-3 xl:px-4 py-2 text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
             >
-              ⚙️ Einstellungen
+              ⚙️ {t('dashboard.settings')}
             </Link>
 
             <span className="hidden xl:inline text-sm xl:text-base text-gray-600 dark:text-gray-300">Welcome, {user?.username}!</span>
             <DarkModeToggle />
             <button onClick={logout} className="btn-secondary text-sm xl:text-base px-3 xl:px-4">
-              Logout
+              {t('dashboard.logout')}
             </button>
           </div>
         </div>
@@ -641,7 +643,7 @@ export default function DashboardPage() {
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
-                  Flug hinzufügen
+                  {t('dashboard.addFlight')}
                 </button>
 
                 <div className="border-t dark:border-gray-700 my-3"></div>
@@ -663,7 +665,7 @@ export default function DashboardPage() {
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
-                  Erweiterte Statistiken
+                  {t('dashboard.stats')}
                 </button>
                 <Link
                   to="/settings"
@@ -674,7 +676,7 @@ export default function DashboardPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  Einstellungen
+                  {t('dashboard.settings')}
                 </Link>
 
                 <div className="border-t dark:border-gray-700 my-3"></div>
@@ -743,7 +745,7 @@ export default function DashboardPage() {
               </button>
             </div>
             <button onClick={() => setShowFlightForm(true)} className="btn-primary w-full">
-              + Add Flight
+              + {t('dashboard.addFlight')}
             </button>
             
             {/* Training Button - Only visible when Developer Mode is enabled */}
@@ -773,7 +775,7 @@ export default function DashboardPage() {
             {/* Quick Stats */}
             <div className="grid grid-cols-2 gap-3">
               <div className="card">
-                <p className="text-xs text-gray-600 dark:text-gray-400">Total Flights</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">{t('dashboard.totalFlights')}</p>
                 <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{totalFlightsCount}</p>
               </div>
               <div className="card">
@@ -793,18 +795,18 @@ export default function DashboardPage() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                 </svg>
-                View All Flights
+                {t('dashboard.viewAll')}
               </Link>
             </div>
 
             {/* Recent Flights */}
             <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Recent Flights</h3>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('dashboard.recentFlights')}</h3>
               {loadingRecent ? (
-                <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">Loading...</div>
+                <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">{t('dashboard.loading')}</div>
               ) : recentFlights.slice(0, 5).length === 0 ? (
                 <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
-                  No flights yet
+                  {t('dashboard.noFlights')}
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -854,7 +856,7 @@ export default function DashboardPage() {
               <button
                 onClick={() => setLeftOpen(prev => !prev)}
                 className="p-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                title={leftOpen ? 'Liste ausblenden' : 'Liste anzeigen'}
+                title={leftOpen ? t('dashboard.toggleList.hide') : t('dashboard.toggleList.show')}
               >
                 <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   {leftOpen ? (
@@ -867,7 +869,7 @@ export default function DashboardPage() {
               <button
                 onClick={() => setRightOpen(prev => !prev)}
                 className="p-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                title={rightOpen ? 'Stats ausblenden' : 'Stats anzeigen'}
+                title={rightOpen ? t('dashboard.toggleStats.hide') : t('dashboard.toggleStats.show')}
               >
                 <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   {rightOpen ? (
@@ -884,7 +886,7 @@ export default function DashboardPage() {
               <button
                 onClick={() => setLeftOpen(prev => !prev)}
                 className="p-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                title="Flugliste anzeigen"
+                title={t('dashboard.showFlightList')}
               >
                 <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
@@ -893,7 +895,7 @@ export default function DashboardPage() {
               <button
                 onClick={() => setRightOpen(prev => !prev)}
                 className="p-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                title="Statistiken anzeigen"
+                title={t('dashboard.showStats')}
               >
                 <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -901,7 +903,7 @@ export default function DashboardPage() {
               </button>
             </div>
             <div className="flex items-center gap-3 flex-1">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Flugkarte</h2>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{t('dashboard.flightMap')}</h2>
               <div className="relative">
                 <Filters onFilterChange={handleFilterChange} />
               </div>
@@ -921,12 +923,12 @@ export default function DashboardPage() {
                     hover:bg-gray-50 dark:hover:bg-gray-700
                     transition-colors font-semibold text-sm
                   "
-                  title="Daten exportieren"
+                  title={t('dashboard.exportData')}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
-                  <span className="hidden sm:inline">Export</span>
+                  <span className="hidden sm:inline">{t('dashboard.export')}</span>
                 </button>
                 {showExportMenu && (
                   <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-gray-800 rounded-lg shadow-xl z-50 border border-gray-200 dark:border-gray-700">
@@ -937,7 +939,7 @@ export default function DashboardPage() {
                       }}
                       className="block w-full text-left px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-t-lg text-gray-900 dark:text-white text-sm"
                     >
-                      📊 Export als CSV
+                      {t('dashboard.exportCSV')}
                     </button>
                     <button
                       onClick={() => {
@@ -946,7 +948,7 @@ export default function DashboardPage() {
                       }}
                       className="block w-full text-left px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm"
                     >
-                      🗺️ Export als GeoJSON
+                      🗺️ {t('dashboard.exportMenu.geojson')}
                     </button>
                     <button
                       onClick={() => {
@@ -955,7 +957,7 @@ export default function DashboardPage() {
                       }}
                       className="block w-full text-left px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm"
                     >
-                      📄 Export als PDF (Beta)
+                      📄 {t('dashboard.exportMenu.pdf')}
                     </button>
                     <button
                       onClick={() => {
@@ -964,7 +966,7 @@ export default function DashboardPage() {
                       }}
                       className="block w-full text-left px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm"
                     >
-                      🌐 Export als KML
+                      🌐 {t('dashboard.exportMenu.kml')}
                     </button>
                     <button
                       onClick={() => {

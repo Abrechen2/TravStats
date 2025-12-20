@@ -3,6 +3,7 @@ import { Airport, FlightInput } from '../types';
 import { airportsApi, parseApi } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { logger } from '../lib/logger';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface ParsedBooking {
   airline?: string;
@@ -54,6 +55,7 @@ export default function FlightReviewModal({
   parserProvider = 'unknown',
   originalData,
 }: FlightReviewModalProps) {
+  const { t } = useTranslation(['flights', 'common']);
   const { user } = useAuthStore();
   // Form state
   const [flightNumber, setFlightNumber] = useState('');
@@ -211,12 +213,12 @@ export default function FlightReviewModal({
 
     // Validation
     if (!departureAirport || !arrivalAirport) {
-      setError('Bitte geben Sie gültige Flughafencodes ein');
+      setError(t('flights:errors.missingAirports'));
       return;
     }
 
     if (!departureTime || !arrivalTime) {
-      setError('Abflug- und Ankunftszeit sind erforderlich');
+      setError(t('common.messages.error'));
       return;
     }
 
@@ -258,7 +260,7 @@ export default function FlightReviewModal({
       // onConfirm handles closing the modal or moving to next flight
     } catch (err: unknown) {
       const error = err as { response?: { data?: { error?: string } }; message?: string };
-      setError(error.response?.data?.error || error.message || 'Fehler beim Speichern');
+      setError(error.response?.data?.error || error.message || t('flights:errors.saveFailed'));
     } finally {
       setLoading(false);
     }
@@ -324,7 +326,7 @@ export default function FlightReviewModal({
 
   if (!isOpen) return null;
 
-  const title = source === 'email' ? 'Email-Import prüfen' : 'Boarding Pass prüfen';
+  const title = t('flights:review.title');
   const showProgress = totalFlights && totalFlights > 1 && flightIndex !== undefined;
 
   return (
@@ -336,14 +338,14 @@ export default function FlightReviewModal({
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h2>
             {showProgress && (
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                Flug {flightIndex! + 1} von {totalFlights}
+                {t('flights.review.flightIndex', { index: flightIndex! + 1, total: totalFlights })}
               </p>
             )}
           </div>
           <button
             onClick={onClose}
             className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            aria-label="Schließen"
+            aria-label={t('common.buttons.close')}
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -498,17 +500,17 @@ export default function FlightReviewModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Sitzklasse
+                {t('flights.form.seatClass')}
               </label>
               <select
                 value={seatClass}
                 onChange={(e) => setSeatClass(e.target.value as 'economy' | 'premium_economy' | 'business' | 'first')}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
               >
-                <option value="economy">Economy</option>
-                <option value="premium_economy">Premium Economy</option>
-                <option value="business">Business</option>
-                <option value="first">First Class</option>
+                <option value="economy">{t('flights.seatClass.economy')}</option>
+                <option value="premium_economy">{t('flights.seatClass.premium_economy')}</option>
+                <option value="business">{t('flights.seatClass.business')}</option>
+                <option value="first">{t('flights.seatClass.first')}</option>
               </select>
             </div>
           </div>
@@ -517,7 +519,7 @@ export default function FlightReviewModal({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Sitzplatz
+                {t('flights.form.seat')}
               </label>
               <input
                 type="text"
@@ -530,7 +532,7 @@ export default function FlightReviewModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Terminal
+                {t('flights.form.terminal')}
               </label>
               <input
                 type="text"
@@ -543,7 +545,7 @@ export default function FlightReviewModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Gate
+                {t('flights.form.gate')}
               </label>
               <input
                 type="text"
@@ -559,7 +561,7 @@ export default function FlightReviewModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Buchungsreferenz (PNR)
+                {t('flights.form.bookingReference')}
               </label>
               <input
                 type="text"
@@ -573,7 +575,7 @@ export default function FlightReviewModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Boarding-Gruppe
+                {t('flights.form.boardingGroup')}
               </label>
               <input
                 type="text"
@@ -589,7 +591,7 @@ export default function FlightReviewModal({
           {/* Ticket Number */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Ticketnummer
+              {t('flights.form.ticketNumber')}
             </label>
             <input
               type="text"
@@ -623,17 +625,17 @@ export default function FlightReviewModal({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Währung
+                  {t('flights.form.currency')}
                 </label>
                 <select
                   value={currency}
                   onChange={(e) => setCurrency(e.target.value as 'EUR' | 'USD' | 'GBP' | 'CHF')}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="EUR">EUR</option>
-                  <option value="USD">USD</option>
-                  <option value="GBP">GBP</option>
-                  <option value="CHF">CHF</option>
+                  <option value="EUR">{t('flights.currency.EUR')}</option>
+                  <option value="USD">{t('flights.currency.USD')}</option>
+                  <option value="GBP">{t('flights.currency.GBP')}</option>
+                  <option value="CHF">{t('flights.currency.CHF')}</option>
                 </select>
               </div>
 
@@ -675,14 +677,14 @@ export default function FlightReviewModal({
               className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-semibold"
               disabled={loading}
             >
-              {showProgress ? 'Abbrechen' : 'Verwerfen'}
+              {showProgress ? t('common.buttons.cancel') : t('flights.review.discard')}
             </button>
             <button
               type="submit"
               className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={loading || airportLoading || !departureAirport || !arrivalAirport}
             >
-              {loading ? 'Speichert...' : showProgress ? 'Weiter' : 'Bestätigen'}
+              {loading ? t('flights.review.saving') : showProgress ? t('common.buttons.next') : t('flights.review.confirm')}
             </button>
           </div>
         </form>

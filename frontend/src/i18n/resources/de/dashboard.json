@@ -1,0 +1,54 @@
+{
+  "title": "Dashboard",
+  "addFlight": "Flug hinzufügen",
+  "recentFlights": "Letzte Flüge",
+  "totalFlights": "Gesamt Flüge",
+  "viewAll": "Alle anzeigen",
+  "noFlights": "Noch keine Flüge. Füge deinen ersten Flug hinzu, um zu beginnen!",
+  "loading": "Flüge werden geladen...",
+  "mapView": "Kartenansicht",
+  "3DView": "3D-Ansicht",
+  "2DView": "2D-Ansicht",
+  "export": "Exportieren",
+  "exportData": "Daten exportieren",
+  "exportMenu": {
+    "csv": "Als CSV exportieren",
+    "json": "Als JSON exportieren",
+    "geojson": "Als GeoJSON exportieren",
+    "pdf": "Als PDF exportieren",
+    "kml": "Als KML exportieren"
+  },
+  "exportCSV": "📊 Export als CSV",
+  "toggleList": {
+    "hide": "Liste ausblenden",
+    "show": "Liste anzeigen"
+  },
+  "toggleStats": {
+    "hide": "Stats ausblenden",
+    "show": "Stats anzeigen"
+  },
+  "showFlightList": "Flugliste anzeigen",
+  "showStats": "Statistiken anzeigen",
+  "flightMap": "Flugkarte",
+  "import": "Importieren",
+  "filters": "Filter",
+  "stats": "Statistiken",
+  "achievements": "Erfolge",
+  "settings": "Einstellungen",
+  "admin": "Admin",
+  "training": "Training",
+  "logout": "Abmelden",
+  "errors": {
+    "addFlight": "Fehler beim Hinzufügen des Fluges. Bitte versuchen Sie es erneut.",
+    "updateFlight": "Fehler beim Aktualisieren des Fluges. Bitte versuchen Sie es erneut.",
+    "deleteFlight": "Fehler beim Löschen des Fluges. Bitte versuchen Sie es erneut.",
+    "loadFlights": "Fehler beim Laden der Flüge",
+    "exportFailed": "Export fehlgeschlagen"
+  },
+  "success": {
+    "flightAdded": "Flug erfolgreich hinzugefügt",
+    "flightUpdated": "Flug erfolgreich aktualisiert",
+    "flightDeleted": "Flug erfolgreich gelöscht"
+  }
+}
+

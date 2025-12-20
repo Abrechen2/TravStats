@@ -5,8 +5,10 @@ import { format } from 'date-fns';
 import { logger } from '../lib/logger';
 import InlineHelp from '../components/Help/InlineHelp';
 import BackupManagement from '../components/Admin/BackupManagement';
+import { useTranslation } from '../hooks/useTranslation';
 
 export default function AdminPage() {
+  const { t } = useTranslation(['admin', 'common']);
   const addToast = useToastStore((state) => state.addToast);
   const [systemInfo, setSystemInfo] = useState<any>(null);
   const [hardwareInfo, setHardwareInfo] = useState<any>(null);
@@ -345,10 +347,10 @@ export default function AdminPage() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          Admin Panel
+          {t('admin.title')}
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
-          Manage your self-hosted TravStats instance
+          {t('admin.description')}
         </p>
       </div>
 
@@ -402,7 +404,7 @@ export default function AdminPage() {
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
           }`}
         >
-          Training Config
+          {t('admin.trainingConfig')}
         </button>
         <button
           onClick={() => setActiveTab('logging')}
@@ -412,7 +414,7 @@ export default function AdminPage() {
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
           }`}
         >
-          Logging
+          {t('admin.tabs.logging')}
         </button>
         <button
           onClick={() => setActiveTab('feedback')}
@@ -422,7 +424,7 @@ export default function AdminPage() {
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
           }`}
         >
-          Parser Feedback
+          {t('admin.parserFeedback')}
           {feedbackStats && feedbackStats.total > 0 && (
             <span className="ml-2 px-2 py-0.5 text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full">
               {feedbackStats.total}
@@ -437,7 +439,7 @@ export default function AdminPage() {
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
           }`}
         >
-          Pattern Updates
+          {t('admin.patternUpdates')}
           {patternData && patternData.pendingSuggestions && patternData.pendingSuggestions.length > 0 && (
             <span className="ml-2 px-2 py-0.5 text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full">
               {patternData.pendingSuggestions.length}
@@ -452,7 +454,7 @@ export default function AdminPage() {
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
           }`}
         >
-          Backups
+          {t('admin.tabs.backups')}
         </button>
       </div>
 
@@ -462,25 +464,25 @@ export default function AdminPage() {
           {/* Overview Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <div className="text-gray-600 dark:text-gray-400 text-sm mb-1">Instance</div>
+              <div className="text-gray-600 dark:text-gray-400 text-sm mb-1">{t('admin.instance')}</div>
               <div className="text-2xl font-bold text-gray-900 dark:text-white">
                 {systemInfo.instanceName}
               </div>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <div className="text-gray-600 dark:text-gray-400 text-sm mb-1">Total Users</div>
+              <div className="text-gray-600 dark:text-gray-400 text-sm mb-1">{t('admin.totalUsers')}</div>
               <div className="text-2xl font-bold text-gray-900 dark:text-white">
                 {systemInfo.userCount} / {systemInfo.maxUsers}
               </div>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <div className="text-gray-600 dark:text-gray-400 text-sm mb-1">Active Users</div>
+              <div className="text-gray-600 dark:text-gray-400 text-sm mb-1">{t('admin.activeUsers')}</div>
               <div className="text-2xl font-bold text-gray-900 dark:text-white">
                 {systemInfo.activeUserCount}
               </div>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <div className="text-gray-600 dark:text-gray-400 text-sm mb-1">Total Flights</div>
+              <div className="text-gray-600 dark:text-gray-400 text-sm mb-1">{t('admin.totalFlights')}</div>
               <div className="text-2xl font-bold text-gray-900 dark:text-white">
                 {systemInfo.flightCount}
               </div>
@@ -491,11 +493,10 @@ export default function AdminPage() {
           {systemInfo.warningThreshold && (
             <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
               <h3 className="font-semibold text-yellow-900 dark:text-yellow-100 mb-2">
-                ⚠️ User Limit Warning
+                {t('admin.userLimitWarning.title')}
               </h3>
               <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                You have reached the recommended user limit ({systemInfo.maxUsers} users).
-                Performance may be affected with more users. Consider the system's capacity.
+                {t('admin.userLimitWarning.message', { maxUsers: systemInfo.maxUsers })}
               </p>
             </div>
           )}
@@ -846,7 +847,7 @@ export default function AdminPage() {
       {activeTab === 'users' && (
         <div className="space-y-4">
           <InlineHelp
-            title="User Management"
+            title={t('admin.users.title')}
             category="advanced"
             content={
               <div className="space-y-2">
@@ -950,7 +951,7 @@ export default function AdminPage() {
       {activeTab === 'invitations' && (
         <div className="space-y-4">
           <InlineHelp
-            title="Einladungen verwalten"
+            title={t('admin.invitations.title')}
             category="advanced"
             content={
               <div className="space-y-2">
@@ -1179,7 +1180,7 @@ export default function AdminPage() {
               disabled={savingParsers}
               className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-lg transition font-medium"
             >
-              {savingParsers ? 'Saving...' : 'Save Settings'}
+              {savingParsers ? t('common.buttons.saving') : t('admin.saveSettings')}
             </button>
           </div>
 
@@ -1397,7 +1398,7 @@ export default function AdminPage() {
                 disabled={savingLogging}
                 className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-lg transition font-medium"
               >
-                {savingLogging ? 'Saving...' : 'Save Config'}
+                {savingLogging ? t('common.buttons.saving') : t('admin.saveConfig')}
               </button>
             </div>
           </div>

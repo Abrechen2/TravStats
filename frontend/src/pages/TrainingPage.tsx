@@ -7,8 +7,10 @@ import EmailAnnotation from '../components/Training/EmailAnnotation';
 import BoardingPassAnnotation from '../components/Training/BoardingPassAnnotation';
 import TrainingGuide from '../components/Training/TrainingGuide';
 import InlineHelp from '../components/Help/InlineHelp';
+import { useTranslation } from '../hooks/useTranslation';
 
 export default function TrainingPage() {
+  const { t } = useTranslation(['training', 'common']);
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'upload' | 'dashboard' | 'guide'>('upload');
   const [uploadedFile, setUploadedFile] = useState<{ id: string; type: string } | null>(null);
@@ -69,13 +71,13 @@ export default function TrainingPage() {
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-            Developer Mode nicht aktiviert
+            {t('training.developerModeNotEnabled')}
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Bitte aktivieren Sie den Developer Mode in den Einstellungen.
+            {t('training.enableDeveloperMode')}
           </p>
           <Link to="/settings" className="btn-primary">
-            Zu den Einstellungen
+            {t('training.goToSettings')}
           </Link>
         </div>
       </div>
@@ -87,13 +89,13 @@ export default function TrainingPage() {
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">LLM Training</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('training.llmTraining')}</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Trainiere lokale Ollama LLMs mit eigenen Daten
+              {t('training.trainLocalOllama')}
             </p>
           </div>
           <Link to="/" className="btn-secondary">
-            ← Zurück zum Dashboard
+            {t('training.backToDashboard')}
           </Link>
         </div>
       </header>
@@ -110,7 +112,7 @@ export default function TrainingPage() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
               }`}
             >
-              Upload & Annotation
+              {t('training.uploadAnnotation')}
             </button>
             <button
               onClick={() => setActiveTab('dashboard')}
@@ -120,7 +122,7 @@ export default function TrainingPage() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
               }`}
             >
-              Training Dashboard
+              {t('training.dashboard')}
             </button>
             <button
               onClick={() => setActiveTab('guide')}
@@ -130,7 +132,7 @@ export default function TrainingPage() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
               }`}
             >
-              Guide
+              {t('training.guide')}
             </button>
           </nav>
         </div>
@@ -139,25 +141,25 @@ export default function TrainingPage() {
         {activeTab === 'upload' && (
           <div className="space-y-6">
             <InlineHelp
-              title="Upload & Annotation"
+              title={t('training.uploadAnnotation')}
               category="basic"
               content={
                 <div className="space-y-2">
                   <p>
-                    Laden Sie E-Mails oder Boarding Passes hoch, um Trainingsdaten zu erstellen.
+                    {t('training.uploadHelp.description')}
                   </p>
                   <ul className="list-disc list-inside space-y-1 ml-2">
                     <li>
-                      <strong>E-Mails:</strong> Unterstützte Formate: .eml, .msg, .txt
+                      <strong>{t('training.uploadHelp.emails.title')}</strong> {t('training.uploadHelp.emails.formats')}
                     </li>
                     <li>
-                      <strong>Boarding Passes:</strong> Unterstützte Formate: .png, .jpg, .jpeg, .webp
+                      <strong>{t('training.uploadHelp.boardingPasses.title')}</strong> {t('training.uploadHelp.boardingPasses.formats')}
                     </li>
                     <li>
-                      <strong>Annotation:</strong> Nach dem Upload müssen Sie die Flugdaten extrahieren und korrigieren
+                      <strong>{t('training.uploadHelp.annotation.title')}</strong> {t('training.uploadHelp.annotation.description')}
                     </li>
                     <li>
-                      <strong>Mindestanzahl:</strong> Sie benötigen mindestens 5 annotierte Einträge, um ein Training zu starten
+                      <strong>{t('training.uploadHelp.minimum.title')}</strong> {t('training.uploadHelp.minimum.description')}
                     </li>
                   </ul>
                 </div>
@@ -166,7 +168,7 @@ export default function TrainingPage() {
             {!uploadedFile ? (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                  Datei hochladen
+                  {t('training.uploadFile')}
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -187,9 +189,9 @@ export default function TrainingPage() {
                       className="w-full p-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 transition-colors text-center"
                     >
                       <div className="text-4xl mb-2">📧</div>
-                      <div className="font-semibold text-gray-900 dark:text-white">Email</div>
+                      <div className="font-semibold text-gray-900 dark:text-white">{t('training.email')}</div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">
-                        .eml, .msg, .txt
+                        {t('training.emailFormats')}
                       </div>
                     </button>
                   </div>
@@ -211,9 +213,9 @@ export default function TrainingPage() {
                       className="w-full p-6 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 transition-colors text-center"
                     >
                       <div className="text-4xl mb-2">🎫</div>
-                      <div className="font-semibold text-gray-900 dark:text-white">Boarding Pass</div>
+                      <div className="font-semibold text-gray-900 dark:text-white">{t('training.boardingPass')}</div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">
-                        .png, .jpg, .jpeg
+                        {t('training.boardingPassFormats')}
                       </div>
                     </button>
                   </div>
@@ -226,7 +228,7 @@ export default function TrainingPage() {
                     onClick={handleCancel}
                     className="btn-secondary"
                   >
-                    ← Abbrechen
+                    ← {t('common.buttons.cancel')}
                   </button>
                 </div>
                 {uploadedFile.type === 'email' ? (

@@ -15,6 +15,7 @@ import { Airport, airportsApi } from '../lib/api';
 import AirportAutocomplete from './AirportAutocomplete';
 import EmailUploader from './EmailUploader';
 import HelpIcon from './Help/HelpIcon';
+import { useTranslation } from '../hooks/useTranslation';
 
 // Lazy load BoardingPassScanner as it's heavy (Tesseract.js)
 const BoardingPassScanner = lazy(() => import('./BoardingPassScanner'));
@@ -25,16 +26,7 @@ import { useThemeStore } from '../store/themeStore';
 import { calculateDistance } from '../lib/geo';
 import { storeHistoricalFlightTime, estimateFlightTimes } from '../lib/timeEstimation';
 
-// Konsistente Error Messages (Deutsch)
-const ERROR_MESSAGES = {
-  NO_FLIGHT_NUMBER: 'Bitte geben Sie eine Flugnummer ein',
-  NO_FLIGHTS_FOUND: 'Keine Flüge gefunden. Bitte versuchen Sie ein anderes Datum oder geben Sie die Daten manuell ein.',
-  LOOKUP_UNAVAILABLE: 'Flugsuche momentan nicht verfügbar. Bitte geben Sie die Daten manuell ein.',
-  BOARDING_PASS_ERROR: 'Boarding Pass konnte nicht gescannt werden. Bitte versuchen Sie es erneut oder geben Sie die Daten manuell ein.',
-  MISSING_AIRPORTS: 'Bitte wählen Sie Start- und Zielflughafen aus',
-  SAVE_FAILED: 'Flug konnte nicht gespeichert werden. Bitte überprüfen Sie Ihre Eingaben.',
-  API_KEY_INFO: 'Hinweis: Für die automatische Flugsuche wird ein API-Schlüssel benötigt.',
-};
+// Error messages will be handled via i18n
 
 interface FlightLookupResult {
   flightNumber: string;
@@ -63,6 +55,7 @@ interface SimplifiedFlightFormProps {
 }
 
 export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: SimplifiedFlightFormProps) {
+  const { t } = useTranslation(['flights', 'errors']);
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
   const settings = useSettingsStore();
 
@@ -199,7 +192,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
   // Flight Lookup Handler
   const handleFlightLookup = async () => {
     if (!flightNumber.trim()) {
-      setError(ERROR_MESSAGES.NO_FLIGHT_NUMBER);
+      setError(t('errors.noFlightNumber'));
       return;
     }
 
@@ -213,7 +206,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
       const data = await response.json();
 
       if (!data.success || !data.flights || data.flights.length === 0) {
-        setError(ERROR_MESSAGES.NO_FLIGHTS_FOUND);
+        setError(t('errors.noFlightsFound'));
         setStep('complete'); // Skip to manual entry
         return;
       }
@@ -222,7 +215,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
       setStep('select');
     } catch (err) {
       console.error('Flight lookup error:', err);
-      setError(`${ERROR_MESSAGES.LOOKUP_UNAVAILABLE} ${ERROR_MESSAGES.API_KEY_INFO}`);
+      setError(`${t('errors.lookupUnavailable')} ${t('errors.apiKeyInfo')}`);
       setStep('complete');
     } finally {
       setLoading(false);
@@ -307,7 +300,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
 
       setStep('complete');
     } catch (err) {
-      setError('Failed to load airport data');
+      setError(t('errors.failedToLoadAirport'));
     } finally {
       setLoading(false);
     }
@@ -337,7 +330,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
     e.preventDefault();
 
     if (!departure || !arrival) {
-      setError(ERROR_MESSAGES.MISSING_AIRPORTS);
+      setError(t('errors.missingAirports'));
       return;
     }
 
@@ -404,7 +397,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
         tags: tags.length ? tags : undefined,
       });
     } catch (err: any) {
-      setError(err.response?.data?.error || ERROR_MESSAGES.SAVE_FAILED);
+      setError(err.response?.data?.error || t('flights:errors.saveFailed'));
     } finally {
       setLoading(false);
     }
@@ -425,11 +418,11 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
       <div className={`${bgClass} rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto`}>
         {/* Header */}
         <div className={`sticky top-0 ${bgClass} border-b ${borderClass} px-6 py-4`}>
-          <h2 className={`text-2xl font-bold ${textClass}`}>✈️ Add Flight</h2>
+          <h2 className={`text-2xl font-bold ${textClass}`}>✈️ {t('flights.form.title')}</h2>
           <p className={`text-sm ${mutedTextClass} mt-1`}>
-            {step === 'input' && 'Enter flight number for automatic lookup'}
-            {step === 'select' && 'Select your flight from the results'}
-            {step === 'complete' && 'Review and complete flight details'}
+            {step === 'input' && t('flights.form.steps.input')}
+            {step === 'select' && t('flights.form.steps.select')}
+            {step === 'complete' && t('flights.form.steps.complete')}
           </p>
         </div>
 
@@ -447,15 +440,15 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
               <div className={`bg-gradient-to-r ${isDarkMode ? 'from-blue-900 to-purple-900' : 'from-blue-50 to-purple-50'} border ${isDarkMode ? 'border-blue-700' : 'border-blue-200'} rounded-lg p-4`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className={`font-semibold text-lg ${textClass}`}>🎫 Have a Boarding Pass?</h3>
-                    <p className={`text-sm ${mutedTextClass}`}>Scan it for instant auto-fill!</p>
+                    <h3 className={`font-semibold text-lg ${textClass}`}>🎫 {t('flights.form.boardingPass.title')}</h3>
+                    <p className={`text-sm ${mutedTextClass}`}>{t('flights.form.boardingPass.description')}</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setShowScanner(true)}
                     className="btn-primary"
                   >
-                    📸 Scan Now
+                    📸 {t('flights.form.boardingPass.scan')}
                   </button>
                 </div>
               </div>
@@ -464,15 +457,15 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
               <div className={`bg-gradient-to-r ${isDarkMode ? 'from-green-900 to-teal-900' : 'from-green-50 to-teal-50'} border ${isDarkMode ? 'border-green-700' : 'border-green-200'} rounded-lg p-4`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className={`font-semibold text-lg ${textClass}`}>📧 Have a Booking Email?</h3>
-                    <p className={`text-sm ${mutedTextClass}`}>Import flights directly from confirmation emails!</p>
+                    <h3 className={`font-semibold text-lg ${textClass}`}>📧 {t('flights.form.email.title')}</h3>
+                    <p className={`text-sm ${mutedTextClass}`}>{t('flights.form.email.description')}</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setShowEmailUploader(true)}
                     className="btn-secondary"
                   >
-                    📨 Import Email
+                    📨 {t('flights.form.email.import')}
                   </button>
                 </div>
               </div>
@@ -480,10 +473,10 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
               {/* Flight Number Input */}
               <div>
                 <label className={`label ${textClass} flex items-center gap-2`}>
-                  Flight Number (e.g., LH400, BA1234)
+                  {t('flights.form.flightNumber')} (e.g., LH400, BA1234)
                   <HelpIcon
-                    content="Geben Sie die Flugnummer ein (z.B. LH400). Mit dem Lookup-Button können Sie automatisch Flugdaten abrufen, wenn ein API-Schlüssel konfiguriert ist."
-                    expandedContent="Die automatische Flugsuche verwendet externe APIs (AirLabs, AviationStack, OpenSky) um Flugdaten abzurufen. Ohne API-Schlüssel müssen Sie die Daten manuell eingeben."
+                    content={t('flights.form.help.flightNumber')}
+                    expandedContent={t('flights.form.help.flightNumberExpanded')}
                     position="top"
                   />
                 </label>
@@ -596,37 +589,37 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
               {timeEstimationWarning?.show && (
                 <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-yellow-900' : 'bg-yellow-50'} border ${isDarkMode ? 'border-yellow-700' : 'border-yellow-200'}`}>
                   <div className={`font-medium ${isDarkMode ? 'text-yellow-200' : 'text-yellow-800'} flex items-center gap-2`}>
-                    ⚠️ Geschätzte Flugzeiten
+                    ⚠️ {t('flights.form.estimatedTimes')}
                   </div>
                   <div className={`text-sm ${isDarkMode ? 'text-yellow-300' : 'text-yellow-700'} mt-2`}>
                     {timeEstimationWarning.source === 'historical' ? (
                       <>
-                        <strong>Basierend auf {timeEstimationWarning.sampleCount} {timeEstimationWarning.sampleCount === 1 ? 'historischen Flug' : 'historischen Flügen'}</strong> dieser Route.
+                        <strong>{t('flights.form.estimatedTimesHistorical', { count: timeEstimationWarning.sampleCount })}</strong>
                         <br />
-                        Abflug- und Ankunftszeiten wurden aus Ihren früheren Flügen berechnet.
+                        {t('flights.form.estimatedTimesCalculated')}
                       </>
                     ) : (
                       <>
-                        <strong>Automatisch geschätzt</strong> basierend auf Boarding-Zeit und Flugdistanz.
+                        <strong>{t('flights.form.estimatedTimesAutomatic')}</strong>
                         <br />
-                        Annahme: Abflug = Boarding + 30min, Flugdauer ≈ {Math.round((calculateDistance(
+                        {t('flights.form.estimatedTimesAssumption', { minutes: Math.round((calculateDistance(
                           departure?.lat || 0,
                           departure?.lon || 0,
                           arrival?.lat || 0,
                           arrival?.lon || 0
-                        ) / 800) * 60 + 15)} Minuten.
+                        ) / 800) * 60 + 15) })}
                       </>
                     )}
                   </div>
                   <div className={`text-sm ${isDarkMode ? 'text-yellow-300' : 'text-yellow-700'} mt-2 font-semibold`}>
-                    → Bitte überprüfen und korrigieren Sie die Zeiten bei Bedarf.
+                    {t('flights.form.reviewTimes')}
                   </div>
                   <button
                     type="button"
                     onClick={() => setTimeEstimationWarning(null)}
                     className={`text-xs ${isDarkMode ? 'text-yellow-400 hover:text-yellow-300' : 'text-yellow-600 hover:text-yellow-800'} mt-2 underline`}
                   >
-                    Warnung ausblenden
+                    {t('flights.form.hideWarning')}
                   </button>
                 </div>
               )}
@@ -635,9 +628,9 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <label className={`label ${textClass}`}>From *</label>
+                    <label className={`label ${textClass}`}>{t('flights.form.from')}</label>
                     <HelpIcon
-                      content="Wählen Sie den Abflughafen aus. Sie können nach IATA-Code (z.B. FRA) oder Name suchen."
+                      content={t('flights.form.help.departureAirport')}
                       position="top"
                     />
                   </div>
@@ -651,9 +644,9 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                 </div>
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <label className={`label ${textClass}`}>To *</label>
+                    <label className={`label ${textClass}`}>{t('flights.form.to')}</label>
                     <HelpIcon
-                      content="Wählen Sie den Zielflughafen aus. Sie können nach IATA-Code (z.B. LHR) oder Name suchen."
+                      content={t('flights.form.help.arrivalAirport')}
                       position="top"
                     />
                   </div>
@@ -671,9 +664,9 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className={`label ${textClass} flex items-center gap-2`}>
-                    Departure Date *
+                    {t('flights.form.departureDate')}
                     <HelpIcon
-                      content="Wählen Sie das Abflugdatum aus."
+                      content={t('flights.form.help.departureDate')}
                       position="top"
                     />
                   </label>
@@ -687,10 +680,10 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                 </div>
                 <div>
                   <label className={`label ${textClass} flex items-center gap-2`}>
-                    Departure Time
+                    {t('flights.form.departureTime')}
                     <HelpIcon
-                      content="Geben Sie die Abflugzeit ein (lokale Zeit des Abflughafens)."
-                      expandedContent="Die Zeit sollte in der lokalen Zeitzone des Abflughafens angegeben werden. Das System konvertiert automatisch bei Bedarf."
+                      content={t('flights.form.help.departureTime')}
+                      expandedContent={t('flights.form.help.departureTimeExpanded')}
                       position="top"
                     />
                   </label>
@@ -824,28 +817,28 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                   />
                 </div>
                 <div>
-                  <label className={`label ${textClass}`}>Seat Class</label>
+                  <label className={`label ${textClass}`}>{t('flights.form.seatClass')}</label>
                   <select
                     value={seatClass}
                     onChange={(e) => setSeatClass(e.target.value as any)}
                     className={`input ${sizedInputClass}`}
                   >
-                    <option value="economy">Economy</option>
-                    <option value="premium_economy">Premium Economy</option>
-                    <option value="business">Business</option>
-                    <option value="first">First</option>
+                    <option value="economy">{t('flights.seatClass.economy')}</option>
+                    <option value="premium_economy">{t('flights.seatClass.premium_economy')}</option>
+                    <option value="business">{t('flights.seatClass.business')}</option>
+                    <option value="first">{t('flights.seatClass.first')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className={`label ${textClass}`}>Category</label>
+                  <label className={`label ${textClass}`}>{t('flights.form.category')}</label>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value as any)}
                     className={`input ${sizedInputClass}`}
                   >
-                    <option value="business">Business</option>
-                    <option value="private">Private</option>
-                    <option value="vacation">Vacation</option>
+                    <option value="business">{t('flights.category.business')}</option>
+                    <option value="private">{t('flights.category.private')}</option>
+                    <option value="vacation">{t('flights.category.vacation')}</option>
                   </select>
                 </div>
               </div>
@@ -854,10 +847,10 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
               <div className="grid grid-cols-3 gap-4">
                 <div className="col-span-2">
                   <label className={`label ${textClass} flex items-center gap-2`}>
-                    Ticket Price
+                    {t('flights.form.price')}
                     <HelpIcon
-                      content="Geben Sie den Ticketpreis ein. Unterstützt verschiedene Währungen."
-                      expandedContent="Der Preis wird zusammen mit der Währung gespeichert. Sie können später nach Preisen filtern und Statistiken anzeigen."
+                      content={t('flights.form.help.price')}
+                      expandedContent={t('flights.form.help.price')}
                       position="top"
                     />
                   </label>
@@ -872,16 +865,16 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                   />
                 </div>
                 <div>
-                  <label className={`label ${textClass}`}>Currency</label>
+                  <label className={`label ${textClass}`}>{t('flights.form.currency')}</label>
                   <select
                     value={currency}
                     onChange={(e) => setCurrency(e.target.value as 'EUR' | 'USD' | 'GBP' | 'CHF')}
                     className={`input ${sizedInputClass}`}
                   >
-                    <option value="EUR">EUR (€)</option>
-                    <option value="USD">USD ($)</option>
-                    <option value="GBP">GBP (£)</option>
-                    <option value="CHF">CHF (Fr)</option>
+                    <option value="EUR">{t('settings.units.options.EUR')}</option>
+                    <option value="USD">{t('settings.units.options.USD')}</option>
+                    <option value="GBP">{t('settings.units.options.GBP')}</option>
+                    <option value="CHF">{t('settings.units.options.CHF')}</option>
                   </select>
                 </div>
               </div>
@@ -889,10 +882,10 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
               {/* Tags */}
               <div>
                 <label className={`label ${textClass} flex items-center gap-2`}>
-                  Tags
+                  {t('flights.form.tags')}
                   <HelpIcon
-                    content="Fügen Sie Tags hinzu, um Flüge später zu kategorisieren und zu filtern (z.B. 'business', 'international')."
-                    expandedContent="Tags werden durch Kommas getrennt. Sie können später nach Tags filtern und Statistiken nach Tags gruppieren. Beispiele: 'business', 'vacation', 'lufthansa', 'long-haul'."
+                    content={t('flights.form.help.tags')}
+                    expandedContent={t('flights.form.help.tagsExpanded')}
                     position="top"
                   />
                 </label>
@@ -901,7 +894,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                   value={tags.join(', ')}
                   onChange={(e) => setTags(e.target.value.split(',').map(t => t.trim()).filter(Boolean))}
                   className={`input ${sizedInputClass}`}
-                  placeholder="business, vacation, conference"
+                  placeholder={t('flights.form.placeholders.tags')}
                 />
                 <p className={`text-xs ${mutedTextClass} mt-1`}>Comma-separated tags for filtering</p>
               </div>
@@ -928,16 +921,16 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
               className="btn-secondary"
               disabled={loading}
             >
-              Cancel
+              {t('flights.form.cancel')}
             </button>
             {step === 'complete' && (
               <button
                 type="submit"
                 className={`btn-primary ${!canSubmit ? 'opacity-50 cursor-not-allowed' : ''}`}
                 disabled={loading || !canSubmit}
-                title={!canSubmit ? 'Bitte wählen Sie beide Flughäfen und Daten aus' : 'Flug speichern'}
+                title={!canSubmit ? t('flights.form.validation.selectAirportsAndDates') : t('flights.form.submit')}
               >
-                {loading ? 'Speichere...' : 'Flug speichern'}
+                {loading ? t('flights.form.saving') : t('flights.form.submit')}
               </button>
             )}
           </div>

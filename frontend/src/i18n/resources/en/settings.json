@@ -1,0 +1,234 @@
+{
+  "title": "Settings",
+  "subtitle": "Profile, preferences and security in one place.",
+  "roadmap": "Roadmap · Point 9",
+  "backToDashboard": "← Back to Dashboard",
+  "profile": {
+    "title": "User Profile",
+    "description": "Adjust username, contact information and your profile picture.",
+    "changePassword": "Change Password",
+    "uploadAvatar": "Upload profile picture",
+    "username": "Username",
+    "email": "Email Address",
+    "deleteAccount": "Delete Account",
+    "deletionRequested": "Deletion request pending",
+    "invalidFileType": "Please select an image file",
+    "fileTooLarge": "Image file is too large (max. 5MB)",
+    "uploadSuccess": "Profile picture uploaded successfully",
+    "uploadError": "Error uploading profile picture"
+  },
+  "display": {
+    "title": "Display & Language",
+    "description": "Control mode, language and timezone centrally.",
+    "language": "Language",
+    "timezone": "Timezone",
+    "dateFormat": "Date Format",
+    "timeFormat": "Time Format",
+    "theme": {
+      "title": "Theme Settings",
+      "description": "The theme determines the color scheme of the application. Dark Mode is more pleasant for the eyes in poor lighting conditions.",
+      "lightMode": "Light Mode",
+      "darkMode": "Dark Mode",
+      "lightDescription": "Bright color scheme, ideal in daylight",
+      "darkDescription": "Dark color scheme, reduces eye strain in low light",
+      "autoSave": "The setting is automatically saved and remains for future visits",
+      "active": "active"
+    }
+  },
+  "units": {
+    "title": "Units & Formats",
+    "description": "Define the standard units for statistics.",
+    "distance": "Distance",
+    "currency": "Currency",
+    "temperature": "Temperature",
+    "options": {
+      "kilometers": "Kilometers",
+      "miles": "Miles",
+      "nautical_miles": "Nautical Miles",
+      "EUR": "EUR (€)",
+      "USD": "USD ($)",
+      "GBP": "GBP (£)",
+      "CHF": "CHF (Fr)",
+      "celsius": "Celsius",
+      "fahrenheit": "Fahrenheit"
+    }
+  },
+  "defaults": {
+    "title": "Default Values",
+    "description": "New flights will be created with these defaults.",
+    "flightStatus": "Status",
+    "seatClass": "Seat Class",
+    "favoriteAirline": "Favorite Airline",
+    "flightCategory": "Flight Category",
+    "options": {
+      "scheduled": "Scheduled",
+      "flown": "Flown",
+      "economy": "Economy",
+      "premium_economy": "Premium Economy",
+      "business": "Business",
+      "first": "First",
+      "private": "Private",
+      "vacation": "Vacation"
+    }
+  },
+  "map": {
+    "title": "Map Settings",
+    "description": "Control base map, zoom, and markers.",
+    "mapStyle": "Map View",
+    "zoomLevel": "Start Zoom",
+    "markerStyle": "Marker Style",
+    "routeColor": "Route Color",
+    "options": {
+      "osm": "OpenStreetMap",
+      "satellite": "Satellite",
+      "pin": "Pin",
+      "circle": "Circle",
+      "custom": "Custom"
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "description": "Control reminders and updates.",
+    "emailNotifications": "Enable email notifications",
+    "flightReminder": "Flight Reminder",
+    "checkInReminder": "Check-in Reminder",
+    "featureUpdates": "New Feature Updates",
+    "options": {
+      "off": "Off",
+      "24h": "24h before",
+      "48h": "48h before"
+    }
+  },
+  "privacy": {
+    "title": "Privacy & Security",
+    "description": "Manage login protection and data requests.",
+    "twoFactorAuth": "Enable two-factor authentication",
+    "loginAlerts": "Login history & alert emails",
+    "dataExport": "Request data export",
+    "dataExportRequested": "Request pending",
+    "accountDeletion": "Account Deletion",
+    "analyticsOptIn": "Analytics opt-in (anonymous)"
+  },
+  "backup": {
+    "title": "Backup & Sync",
+    "description": "Control regular backups and cloud sync.",
+    "autoBackup": "Enable automatic backups",
+    "backupInterval": "Backup Interval",
+    "exportFormat": "Export Format",
+    "cloudSync": "Enable cloud sync",
+    "retentionDays": "Retention Period (Days)",
+    "retentionDaysDescription": "Backups older than {{days}} days will be automatically deleted",
+    "status": {
+      "title": "Backup Status",
+      "running": "Backup running...",
+      "lastBackup": "Last backup: {{date}}",
+      "size": "Size: {{size}} MB",
+      "noBackup": "No backup created yet",
+      "path": "Backup path: {{path}}"
+    },
+    "intervals": {
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly"
+    },
+    "formats": {
+      "json": "JSON",
+      "csv": "CSV",
+      "pdf": "PDF"
+    }
+  },
+  "password": {
+    "title": "Change Password",
+    "oldPassword": "Current Password",
+    "newPassword": "New Password",
+    "confirmPassword": "Confirm New Password",
+    "submit": "Change Password",
+    "changing": "Changing password...",
+    "error": "Error changing password. Please check your current password.",
+    "success": "Password changed successfully"
+  },
+  "training": {
+    "title": "Training Settings",
+    "description": "Configure the use of trained LLM models for better parsing accuracy",
+    "useTrainedModels": "Use Trained Models",
+    "useTrainedModelsDescription": "Automatically use trained models when available",
+    "preferredEmailModel": "Email Model Preference",
+    "preferredEmailModelDescription": "Determines which model is used for email parsing",
+    "preferredVisionModel": "Vision Model Preference",
+    "preferredVisionModelDescription": "Determines which model is used for boarding pass parsing",
+    "trainingSeparateModels": "Separate Models for Email/Vision",
+    "trainingSeparateModelsDescription": "Uses separate models for better specialization (recommended)",
+    "saveSettings": "Save Settings",
+    "savingSettings": "Saving...",
+    "updated": "Training settings updated successfully",
+    "updateFailed": "Error updating training settings",
+    "modelOptions": {
+      "auto": "Auto (trained if available, else base)",
+      "trained": "Trained model only",
+      "base": "Base model only"
+    },
+    "help": {
+      "title": "Training Settings",
+      "description": "These settings control whether and how trained LLM models are used.",
+      "options": {
+        "useTrainedModels": "Enables automatic use of trained models when available",
+        "preferredEmailModel": "Choose between Auto (trained if available), Trained (trained only) or Base (base model only)",
+        "preferredVisionModel": "Same options for boarding pass parsing",
+        "trainingSeparateModels": "Uses separate models for email and vision (recommended for better specialization)"
+      }
+    }
+  },
+  "developer": {
+    "title": "Developer Options",
+    "description": "Experimental features for LLM training and advanced features",
+    "modeTitle": "LLM Training Mode",
+    "modeDescription": "Enables the ability to train local Ollama LLMs",
+    "confirmTitle": "⚠️ Activate Developer Mode?",
+    "confirmMessage": "This feature is experimental and should only be used by experienced users.",
+    "updateError": "Error updating Developer Mode",
+    "risks": {
+      "title": "Risks and Notes:",
+      "items": {
+        "resourceUsage": "May heavily load system resources",
+        "technicalKnowledge": "Requires technical understanding",
+        "unexpectedResults": "May lead to unexpected results",
+        "longTraining": "Training may take a long time"
+      }
+    },
+    "cancel": "Cancel",
+    "activate": "Activate",
+    "help": {
+      "title": "Developer Mode",
+      "description": "Developer Mode enables advanced features for training LLM models.",
+      "features": {
+        "title": "Features:",
+        "items": {
+          "trainingPage": "Access to the training page for training Ollama models",
+          "uploadAnnotation": "Upload and annotation of training data (emails, boarding passes)",
+          "loraTraining": "LoRA training with own data",
+          "parserAccuracy": "Improve parser accuracy through training"
+        }
+      },
+      "requirements": {
+        "title": "Requirements:",
+        "items": {
+          "ollama": "Ollama must be installed and accessible",
+          "hardware": "Sufficient hardware resources (CPU/GPU, RAM)",
+          "trainingData": "At least 5 annotated training data"
+        }
+      },
+      "note": "Note: This feature is experimental and may heavily load system resources."
+    }
+  },
+  "admin": {
+    "title": "Administration",
+    "description": "Manage users, invitations, and system settings",
+    "openAdminPanel": "Open Admin Panel"
+  },
+  "autoSaved": {
+    "title": "Auto-saved",
+    "description": "All settings are saved locally and are immediately active."
+  },
+  "scrollToTop": "Scroll to top"
+}
+

@@ -1,137 +1,139 @@
 # ✈️ TravStats
 
-Selbstgehostete Flight-Tracking und Statistiken-App für kleine Gruppen (1-10 Accounts). Tracke deine Flüge, visualisiere Routen auf interaktiven Karten und sammle Achievements.
+> **⚠️ BETA APPLICATION** - This application is currently in beta. Features may be incomplete, and there may be bugs. Use at your own risk.
+
+Self-hosted flight tracking and statistics app for small groups (1-10 accounts). Track your flights, visualize routes on interactive maps, and collect achievements.
 
 ## 🚀 Features
 
-- **Flug-Tracking**: Erfasse Flüge mit Kategorien, Tags und Kosten
-- **Interaktive Karten**: 2D/3D Visualisierung von Flugrouten und Airports
-- **Statistiken**: Umfassende Analysen (Distanz, Flugzeit, Kosten, Top-Routen)
-- **Achievements**: 58 Battlefield-Style Achievements in 5 Kategorien
-- **Boarding-Pass Scanner**: QR-Code und Barcode-Scanning
-- **E-Mail Import**: Automatischer Import von Flugbestätigungen (optional mit KI)
+- **Flight Tracking**: Record flights with categories, tags, and costs
+- **Interactive Maps**: 2D/3D visualization of flight routes and airports
+- **Statistics**: Comprehensive analyses (distance, flight time, costs, top routes)
+- **Achievements**: 58 Battlefield-style achievements in 5 categories
+- **Boarding Pass Scanner**: QR code and barcode scanning
+- **Email Import**: Automatic import of flight confirmations (optional with AI)
 - **Export**: CSV, GeoJSON, KML (Google Earth)
-- **Admin-Panel**: User-Verwaltung, Einladungen, Datenexport
+- **Admin Panel**: User management, invitations, data export
 
-## 📦 Installation mit Docker
+## 📦 Installation with Docker
 
-### Voraussetzungen
+### Prerequisites
 
 - Docker & Docker Compose
-- PostgreSQL 15 mit PostGIS Extension (separater Container)
+- PostgreSQL 15 with PostGIS extension (separate container)
 
-### Schnellstart
+### Quick Start
 
-1. **PostgreSQL/PostGIS Container starten:**
+1. **Start PostgreSQL/PostGIS container:**
 ```bash
 docker run -d \
   --name travstats-db \
   -e POSTGRES_DB=flights \
   -e POSTGRES_USER=flights \
-  -e POSTGRES_PASSWORD=dein_sicheres_passwort \
+  -e POSTGRES_PASSWORD=your_secure_password \
   -v travstats-db-data:/var/lib/postgresql/data \
   postgis/postgis:15-3.4
 ```
 
-2. **TravStats Container starten:**
+2. **Start TravStats container:**
 ```bash
 docker run -d \
   --name travstats-app \
   -p 3000:80 \
-  -e DATABASE_URL=postgresql://flights:dein_sicheres_passwort@travstats-db:5432/flights \
+  -e DATABASE_URL=postgresql://flights:your_secure_password@travstats-db:5432/flights \
   -e SEED_AIRPORTS=true \
   -v travstats-app-data:/app/data \
   --link travstats-db:db \
   abrechen2/travstats:latest
 ```
 
-3. **App öffnen:**
-   - Navigiere zu `http://localhost:3000/setup`
-   - Erstelle deinen Admin-Account
-   - Starte mit dem Tracking!
+3. **Open the app:**
+   - Navigate to `http://localhost:3000/setup`
+   - Create your admin account
+   - Start tracking!
 
-### Docker Compose (empfohlen)
+### Docker Compose (recommended)
 
 ```bash
-# .env Datei erstellen
+# Create .env file
 cp .env.prod.example .env
 
-# Passwörter und Optionen anpassen
+# Adjust passwords and options
 nano .env
 
-# Container starten
+# Start containers
 docker-compose -f docker-compose.prod.yml up -d
 ```
 
 ## 🐳 Docker Hub
 
-Das Image ist verfügbar auf Docker Hub:
+The image is available on Docker Hub:
 ```
 abrechen2/travstats:latest
 ```
 
-## ⚙️ Konfiguration
+## ⚙️ Configuration
 
-### Wichtige Umgebungsvariablen
+### Important Environment Variables
 
-| Variable | Beschreibung | Standard |
-|----------|-------------|----------|
-| `DATABASE_URL` | PostgreSQL Verbindungsstring | **Erforderlich** |
-| `SEED_AIRPORTS` | Airport-Datenbank beim Start füllen | `true` |
-| `ALLOW_REGISTRATION` | Öffentliche Registrierung erlauben | `false` |
-| `MAX_USERS` | Maximale Anzahl Benutzer | `10` |
-| `INSTANCE_NAME` | Name der Instanz | `TravStats` |
-| `OLLAMA_URL` | Ollama Service URL | `http://localhost:11434` |
-| `OLLAMA_MODEL` | Basis-Modell für Email-Parsing | `qwen2.5:7b` |
-| `OLLAMA_VISION_MODEL` | Basis-Modell für Vision-Parsing | `llama3.2-vision` |
-| `TRAINING_MODEL_OUTPUT_DIR` | Speicherort für trainierte Modelle | `./data/training/models` |
-| `TRAINING_EMAIL_MODEL_NAME` | Name für trainiertes Email-Modell | `travstats-email-custom` |
-| `TRAINING_VISION_MODEL_NAME` | Name für trainiertes Vision-Modell | `travstats-vision-custom` |
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DATABASE_URL` | PostgreSQL connection string | **Required** |
+| `SEED_AIRPORTS` | Fill airport database on startup | `true` |
+| `ALLOW_REGISTRATION` | Allow public registration | `false` |
+| `MAX_USERS` | Maximum number of users | `10` |
+| `INSTANCE_NAME` | Instance name | `TravStats` |
+| `OLLAMA_URL` | Ollama service URL | `http://localhost:11434` |
+| `OLLAMA_MODEL` | Base model for email parsing | `qwen2.5:7b` |
+| `OLLAMA_VISION_MODEL` | Base model for vision parsing | `llama3.2-vision` |
+| `TRAINING_MODEL_OUTPUT_DIR` | Storage location for trained models | `./data/training/models` |
+| `TRAINING_EMAIL_MODEL_NAME` | Name for trained email model | `travstats-email-custom` |
+| `TRAINING_VISION_MODEL_NAME` | Name for trained vision model | `travstats-vision-custom` |
 
-### Optionale API-Keys
+### Optional API Keys
 
-- **AirLabs API Key**: Automatische Flugdaten-Suche (Free Tier: 1000 req/month)
-  - `AIRLABS_API_KEY=dein_key`
-- **OpenSky Network**: Fallback für Flugdaten
+- **AirLabs API Key**: Automatic flight data search (Free Tier: 1000 req/month)
+  - `AIRLABS_API_KEY=your_key`
+- **OpenSky Network**: Fallback for flight data
   - `OPENSKY_CLIENT_ID` / `OPENSKY_CLIENT_SECRET`
 
-### KI-Parser (Ollama)
+### AI Parser (Ollama)
 
-Für KI-gestützten E-Mail-Import:
+For AI-powered email import:
 
-1. Ollama Container installieren:
+1. Install Ollama container:
 ```bash
 docker run -d --name ollama -v ollama-data:/root/.ollama ollama/ollama:latest
 ```
 
-2. Umgebungsvariablen setzen:
+2. Set environment variables:
 ```bash
 OLLAMA_URL=http://ollama:11434
 OLLAMA_MODEL=llama3.2:3b
 OLLAMA_VISION_MODEL=llama3.2-vision
 
-# Training-Konfiguration (optional, kann auch in Admin-UI gesetzt werden)
+# Training configuration (optional, can also be set in Admin UI)
 TRAINING_MODEL_OUTPUT_DIR=./data/training/models
 TRAINING_EMAIL_MODEL_NAME=travstats-email-custom
 TRAINING_VISION_MODEL_NAME=travstats-vision-custom
 ```
 
-## 📖 Verwendung
+## 📖 Usage
 
-1. **Ersten Flug erfassen**: Dashboard → "Neuer Flug"
-2. **Boarding-Pass scannen**: Upload-Funktion nutzen
-3. **Statistiken ansehen**: Dashboard & Stats-Seite
-4. **Achievements freischalten**: Automatisch beim Erreichen von Meilensteinen
-5. **Daten exportieren**: Admin-Panel → Export
+1. **Record first flight**: Dashboard → "New Flight"
+2. **Scan boarding pass**: Use upload function
+3. **View statistics**: Dashboard & Stats page
+4. **Unlock achievements**: Automatically when reaching milestones
+5. **Export data**: Admin Panel → Export
 
-## 🔒 Sicherheit
+## 🔒 Security
 
-- **Invite-only**: Standardmäßig keine öffentliche Registrierung
-- **JWT-Authentifizierung**: Automatisch generierte sichere Secrets
-- **Rate Limiting**: Schutz vor Missbrauch
-- **Lokale Daten**: Alle Daten bleiben auf deinem Server
+- **Invite-only**: No public registration by default
+- **JWT Authentication**: Automatically generated secure secrets
+- **Rate Limiting**: Protection against abuse
+- **Local Data**: All data stays on your server
 
-## 🛠️ Entwicklung
+## 🛠️ Development
 
 ```bash
 # Backend
@@ -148,9 +150,9 @@ cp .env.example .env
 npm run dev
 ```
 
-## 📝 Lizenz
+## 📝 License
 
-AGPL-3.0 - Siehe [LICENSE](LICENSE)
+AGPL-3.0 - See [LICENSE](LICENSE)
 
 ## 🔗 Links
 
