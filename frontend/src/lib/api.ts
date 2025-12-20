@@ -58,12 +58,25 @@ const handle401Error = (error: any) => {
       detail: { error },
     });
     window.dispatchEvent(event);
-    
-    // Fallback: redirect to login if event handler doesn't work
-    // The auth store will listen to this event and handle logout
+
+    // Fallback: only redirect if the app didn't clear the persisted user state.
+    // In normal flow, authStore will logout (clears user) and route guards will navigate.
     setTimeout(() => {
-      window.location.href = '/login';
-    }, 100);
+      try {
+        const publicPaths = new Set(['/login', '/register', '/setup']);
+        if (publicPaths.has(window.location.pathname)) return;
+
+        const raw = localStorage.getItem('auth-storage');
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        const hasUser = !!parsed?.state?.user;
+        if (hasUser) {
+          window.location.href = '/login';
+        }
+      } catch {
+        window.location.href = '/login';
+      }
+    }, 200);
   }
   return Promise.reject(error);
 };

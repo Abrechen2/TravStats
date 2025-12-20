@@ -68,7 +68,7 @@ export default function SettingsPage() {
   const [loadingTrainingSettings, setLoadingTrainingSettings] = useState(false);
 
   // Check if user has training access (admin or canTrainLLM)
-  const hasTrainingAccess = user?.isAdmin || (user as any)?.canTrainLLM || false;
+  const hasTrainingAccess = user?.isAdmin || user?.canTrainLLM || false;
 
   // Load training settings
   useEffect(() => {

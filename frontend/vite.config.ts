@@ -34,6 +34,10 @@ export default defineConfig({
             if (id.includes('react-globe.gl')) {
               return 'globe-vendor';
             }
+            // PDF libraries (jsPDF) in separate chunk
+            if (id.includes('jspdf')) {
+              return 'pdf-vendor';
+            }
             // React core libraries
             if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
               return 'react-vendor';
@@ -65,5 +69,10 @@ export default defineConfig({
     // Reduce source map size in production (set to true if you need debugging)
     sourcemap: false,
     chunkSizeWarningLimit: 1000, // Keep warning at 1MB to track large chunks
+    // Ensure proper handling of CommonJS modules
+    commonjsOptions: {
+      include: [/node_modules/],
+      transformMixedEsModules: true,
+    },
   },
 })
