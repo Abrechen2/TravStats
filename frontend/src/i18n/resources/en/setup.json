@@ -1,0 +1,99 @@
+{
+  "title": "Welcome to {{appName}} Setup",
+  "subtitle": "Create your admin account to get started",
+  "privacy": {
+    "title": "Privacy & Security",
+    "items": {
+      "dataStays": "All data stays on your server - nothing is sent to external services",
+      "firstUserAdmin": "The first user you create will be the administrator",
+      "inviteLater": "You can invite family and friends later via the Admin Panel",
+      "designedFor": "Designed for small groups (1-10 accounts)"
+    }
+  },
+  "form": {
+    "instanceName": {
+      "label": "Instance Name",
+      "placeholder": "My TravStats Instance",
+      "help": "This name will appear in emails and notifications"
+    },
+    "adminUsername": {
+      "label": "Admin Username",
+      "placeholder": "admin"
+    },
+    "password": {
+      "label": "Password",
+      "placeholder": "Enter a secure password",
+      "help": "Minimum 8 characters"
+    },
+    "confirmPassword": {
+      "label": "Confirm Password",
+      "placeholder": "Confirm your password"
+    },
+    "submit": {
+      "create": "Create Admin Account",
+      "creating": "Creating..."
+    }
+  },
+  "validation": {
+    "usernamePasswordRequired": "Username and password are required",
+    "passwordTooShort": "Password must be at least 8 characters long",
+    "passwordsDoNotMatch": "Passwords do not match"
+  },
+  "success": {
+    "title": "Setup Complete!",
+    "adminCreated": "Admin account '{{username}}' has been created successfully.",
+    "redirecting": "Redirecting to login page..."
+  },
+  "errors": {
+    "failed": "Failed to create admin account. Please try again."
+  },
+  "loginPrompt": "Please log in with your new admin account",
+  "footer": {
+    "title": "What happens next?",
+    "steps": {
+      "one": "Log in with your admin account",
+      "two": "Invite family and friends via the Admin Panel",
+      "three": "Start tracking your flights!"
+    }
+  },
+  "tips": {
+    "title": "💡 Tips",
+    "items": {
+      "localNetwork": {
+        "label": "Local Network Access",
+        "value": "Access your instance from other devices on your local network using http://YOUR_IP:3000"
+      },
+      "vpn": {
+        "label": "Remote Access",
+        "value": "Use a VPN or reverse proxy (nginx) for secure remote access"
+      },
+      "backups": {
+        "label": "Backups",
+        "value": "Set up automated backups using {{command}}"
+      }
+    }
+  },
+  "airportSeeding": {
+    "calculating": "Calculating...",
+    "estimatedSeconds": "approx. {{seconds}} seconds",
+    "estimatedMinute": "approx. 1 minute",
+    "estimatedMinutes": "approx. {{minutes}} minutes",
+    "banner": {
+      "loading": "Airport database is loading...",
+      "failed": "Error loading airport database",
+      "preparing": "Airport database is being prepared...",
+      "limitedFeatures": "Some features are limited during first startup",
+      "errorOccurred": "An error occurred",
+      "pleaseWait": "Please wait a moment...",
+      "progress": "{{percent}}% complete"
+    },
+    "modal": {
+      "title": "Airport Database is Loading",
+      "description": "We are currently loading the airport database for you. This may take a few minutes. You can already use the application while the import runs in the background.",
+      "progress": "{{percent}}% complete",
+      "airportsCount": "{{processed}} / {{total}} airports",
+      "understood": "Got it"
+    }
+  }
+}
+

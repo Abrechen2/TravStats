@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { parseApi, settingsApi } from '../../lib/api';
 import InlineHelp from '../Help/InlineHelp';
+import { useTranslation } from '../../hooks/useTranslation';
 
 const parserProviderOptions = {
   vision: [
@@ -25,6 +26,7 @@ interface ParserConfigurationProps {
 }
 
 export default function ParserConfiguration({ className = '' }: ParserConfigurationProps) {
+  const { t } = useTranslation(['settings', 'common']);
   const [providers, setProviders] = useState<any>(null);
   const [loadingProviders, setLoadingProviders] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -69,7 +71,7 @@ export default function ParserConfiguration({ className = '' }: ParserConfigurat
 
   const renderProviderStatus = (providerType: 'vision' | 'text', providerName: string) => {
     if (loadingProviders) {
-      return <span className="text-xs text-gray-400">Loading...</span>;
+      return <span className="text-xs text-gray-400">{t('common:buttons.loading')}</span>;
     }
 
     const status = getProviderStatus(providerType, providerName);
@@ -81,7 +83,7 @@ export default function ParserConfiguration({ className = '' }: ParserConfigurat
           <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
           </svg>
-          <span>Available</span>
+          <span>{t('settings:parser.available')}</span>
         </div>
       );
     }
@@ -91,7 +93,7 @@ export default function ParserConfiguration({ className = '' }: ParserConfigurat
         <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
           <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
         </svg>
-        <span>Unavailable</span>
+        <span>{t('settings:parser.unavailable')}</span>
       </div>
     );
   };
@@ -105,10 +107,10 @@ export default function ParserConfiguration({ className = '' }: ParserConfigurat
         openaiApiKey: settings.openaiApiKey || undefined,
         claudeApiKey: settings.claudeApiKey || undefined,
       });
-      alert('Parser settings saved successfully!');
+      alert(t('settings:parser.saved'));
     } catch (error: any) {
       console.error('Failed to save settings:', error);
-      const errorMessage = error.response?.data?.error || 'Failed to save settings';
+      const errorMessage = error.response?.data?.error || t('settings:parser.saveFailed');
       alert(errorMessage);
     } finally {
       setSaving(false);
@@ -120,17 +122,17 @@ export default function ParserConfiguration({ className = '' }: ParserConfigurat
       {/* Header */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-xl font-semibold">Parser Configuration</h2>
+          <h2 className="text-xl font-semibold">{t('settings:parser.title')}</h2>
           <button
             onClick={handleSave}
             disabled={saving}
             className="btn-primary text-sm"
           >
-            {saving ? 'Saving...' : 'Save Settings'}
+            {saving ? t('common:buttons.saving') : t('settings:parser.saveSettings')}
           </button>
         </div>
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          Configure how boarding passes and emails are parsed. Auto mode automatically selects the best available parser.
+          {t('settings:parser.description')}
         </p>
       </div>
 
@@ -138,12 +140,12 @@ export default function ParserConfiguration({ className = '' }: ParserConfigurat
         {/* Vision Parser (Boarding Pass) */}
         <div className="space-y-4">
           <div>
-            <h3 className="font-medium text-gray-900 dark:text-white mb-1">Vision Parser (Boarding Pass)</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Parse uploaded boarding pass images</p>
+            <h3 className="font-medium text-gray-900 dark:text-white mb-1">{t('settings:parser.vision.title')}</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{t('settings:parser.vision.description')}</p>
           </div>
 
           <div>
-            <label className="label">Preferred Parser</label>
+            <label className="label">{t('settings:parser.preferred')}</label>
             <select
               value={settings.preferredVisionParser}
               onChange={(e) => setSettings({ ...settings, preferredVisionParser: e.target.value })}
@@ -175,12 +177,12 @@ export default function ParserConfiguration({ className = '' }: ParserConfigurat
         {/* Text Parser (Email) */}
         <div className="space-y-4">
           <div>
-            <h3 className="font-medium text-gray-900 dark:text-white mb-1">Text Parser (Email)</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Parse flight booking emails</p>
+            <h3 className="font-medium text-gray-900 dark:text-white mb-1">{t('settings:parser.text.title')}</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{t('settings:parser.text.description')}</p>
           </div>
 
           <div>
-            <label className="label">Preferred Parser</label>
+            <label className="label">{t('settings:parser.preferred')}</label>
             <select
               value={settings.preferredTextParser}
               onChange={(e) => setSettings({ ...settings, preferredTextParser: e.target.value })}
@@ -212,10 +214,10 @@ export default function ParserConfiguration({ className = '' }: ParserConfigurat
 
       {/* API Keys Section */}
       <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-        <h3 className="font-medium text-gray-900 dark:text-white mb-4">API Keys (Optional)</h3>
+        <h3 className="font-medium text-gray-900 dark:text-white mb-4">{t('settings:parser.apiKeys.title')}</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="label">OpenAI API Key</label>
+            <label className="label">{t('settings:parser.apiKeys.openai')}</label>
             <input
               type="password"
               value={settings.openaiApiKey}
@@ -224,7 +226,7 @@ export default function ParserConfiguration({ className = '' }: ParserConfigurat
               className="input font-mono text-sm"
             />
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Optional. Get from{' '}
+              {t('settings:parser.apiKeys.optional')}{' '}
               <a
                 href="https://platform.openai.com/api-keys"
                 target="_blank"
@@ -237,7 +239,7 @@ export default function ParserConfiguration({ className = '' }: ParserConfigurat
           </div>
 
           <div>
-            <label className="label">Claude API Key</label>
+            <label className="label">{t('settings:parser.apiKeys.claude')}</label>
             <input
               type="password"
               value={settings.claudeApiKey}
@@ -246,7 +248,7 @@ export default function ParserConfiguration({ className = '' }: ParserConfigurat
               className="input font-mono text-sm"
             />
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Optional. Get from{' '}
+              {t('settings:parser.apiKeys.optional')}{' '}
               <a
                 href="https://console.anthropic.com/"
                 target="_blank"
@@ -262,34 +264,34 @@ export default function ParserConfiguration({ className = '' }: ParserConfigurat
 
       {/* Help Section */}
       <InlineHelp
-        title="Parser-Konfiguration"
+        title={t('settings:parser.help.title')}
         category="advanced"
         content={
           <div className="space-y-3">
             <div>
-              <p className="font-semibold mb-1">Parser-Modi:</p>
+              <p className="font-semibold mb-1">{t('settings:parser.help.modes.title')}</p>
               <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
                 <li>
-                  <strong>Auto:</strong> Wählt automatisch den besten verfügbaren Parser
+                  <strong>{t('settings:parser.help.modes.auto')}:</strong> {t('settings:parser.help.modes.autoDesc')}
                 </li>
                 <li>
-                  <strong>Ollama:</strong> Läuft lokal (kostenlos, benötigt gute Hardware)
+                  <strong>{t('settings:parser.help.modes.ollama')}:</strong> {t('settings:parser.help.modes.ollamaDesc')}
                 </li>
                 <li>
-                  <strong>OpenAI/Claude:</strong> Cloud-basiert (kostenpflichtig, funktioniert auf jedem Gerät)
+                  <strong>{t('settings:parser.help.modes.cloud')}:</strong> {t('settings:parser.help.modes.cloudDesc')}
                 </li>
                 <li>
-                  <strong>Tesseract/Regex:</strong> Kostenlose Fallback-Optionen (niedrigere Genauigkeit)
+                  <strong>{t('settings:parser.help.modes.fallback')}:</strong> {t('settings:parser.help.modes.fallbackDesc')}
                 </li>
               </ul>
             </div>
             <div>
-              <p className="font-semibold mb-1">Best Practices:</p>
+              <p className="font-semibold mb-1">{t('settings:parser.help.bestPractices.title')}</p>
               <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
-                <li>Verwenden Sie "Auto" für die beste Balance zwischen Genauigkeit und Kosten</li>
-                <li>Ollama ist ideal, wenn Sie eine GPU haben und lokale Verarbeitung bevorzugen</li>
-                <li>Cloud-Parser sind am genauesten, aber erfordern API-Keys und verursachen Kosten</li>
-                <li>Trainierte Ollama-Modelle (über Training-Page) verbessern die Genauigkeit erheblich</li>
+                <li>{t('settings:parser.help.bestPractices.auto')}</li>
+                <li>{t('settings:parser.help.bestPractices.ollama')}</li>
+                <li>{t('settings:parser.help.bestPractices.cloud')}</li>
+                <li>{t('settings:parser.help.bestPractices.trained')}</li>
               </ul>
             </div>
           </div>

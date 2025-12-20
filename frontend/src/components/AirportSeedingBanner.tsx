@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { setupApi } from '../lib/api';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface SeedingStatus {
   status: 'pending' | 'running' | 'completed' | 'failed';
@@ -15,6 +16,7 @@ interface AirportSeedingBannerProps {
 }
 
 export default function AirportSeedingBanner({ onStatusChange }: AirportSeedingBannerProps) {
+  const { t } = useTranslation(['common', 'setup']);
   const [status, setStatus] = useState<SeedingStatus | null>(null);
   const [isPolling, setIsPolling] = useState(false);
 
@@ -63,18 +65,18 @@ export default function AirportSeedingBanner({ onStatusChange }: AirportSeedingB
   // Format estimated time
   const formatEstimatedTime = (seconds?: number): string => {
     if (!seconds || seconds < 10) {
-      return 'Berechne...';
+      return t('setup:airportSeeding.calculating');
     }
 
     if (seconds < 60) {
-      return `ca. ${seconds} Sekunden`;
+      return t('setup:airportSeeding.estimatedSeconds', { seconds });
     }
 
     const minutes = Math.ceil(seconds / 60);
     if (minutes === 1) {
-      return 'ca. 1 Minute';
+      return t('setup:airportSeeding.estimatedMinute');
     }
-    return `ca. ${minutes} Minuten`;
+    return t('setup:airportSeeding.estimatedMinutes', { minutes });
   };
 
   const progress = status.progress ?? 0;
@@ -139,17 +141,17 @@ export default function AirportSeedingBanner({ onStatusChange }: AirportSeedingB
               <div>
                 <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
                   {status.status === 'running'
-                    ? 'Airport-Datenbank wird geladen...'
+                    ? t('setup:airportSeeding.banner.loading')
                     : status.status === 'failed'
-                    ? 'Fehler beim Laden der Airport-Datenbank'
-                    : 'Airport-Datenbank wird vorbereitet...'}
+                    ? t('setup:airportSeeding.banner.failed')
+                    : t('setup:airportSeeding.banner.preparing')}
                 </h3>
                 <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">
                   {status.status === 'running'
-                    ? 'Einige Funktionen sind während des ersten Starts eingeschränkt'
+                    ? t('setup:airportSeeding.banner.limitedFeatures')
                     : status.status === 'failed'
-                    ? status.error || 'Ein Fehler ist aufgetreten'
-                    : 'Bitte warten Sie einen Moment...'}
+                    ? status.error || t('setup:airportSeeding.banner.errorOccurred')
+                    : t('setup:airportSeeding.banner.pleaseWait')}
                 </p>
               </div>
 
@@ -181,7 +183,7 @@ export default function AirportSeedingBanner({ onStatusChange }: AirportSeedingB
                 </div>
                 <div className="flex items-center justify-between">
                   <p className="text-xs text-blue-600 dark:text-blue-400">
-                    {progressPercent}% abgeschlossen
+                    {t('setup:airportSeeding.banner.progress', { percent: progressPercent })}
                   </p>
                 </div>
               </div>
@@ -192,6 +194,8 @@ export default function AirportSeedingBanner({ onStatusChange }: AirportSeedingB
     </div>
   );
 }
+
+
 
 
 

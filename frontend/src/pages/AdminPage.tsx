@@ -77,11 +77,11 @@ export default function AdminPage() {
         trainingEmailModelName: trainingConfig.trainingEmailModelName || null,
         trainingVisionModelName: trainingConfig.trainingVisionModelName || null,
       });
-      addToast('success', 'Training configuration saved successfully!');
+      addToast('success', t('admin:toasts.trainingConfigSaved'));
       await loadTrainingConfig();
     } catch (error: any) {
       logger.error('Failed to save training config:', error);
-      addToast('error', error.response?.data?.error || 'Failed to save training configuration');
+      addToast('error', error.response?.data?.error || t('admin:toasts.trainingConfigFailed'));
     } finally {
       setSavingTrainingConfig(false);
     }
@@ -189,7 +189,7 @@ export default function AdminPage() {
       addToast('success', result.message);
       await loadPatternData();
     } catch (error: any) {
-      addToast('error', error.response?.data?.message || 'Fehler beim Anwenden des Patterns');
+      addToast('error', error.response?.data?.message || t('admin:toasts.patternApplyError'));
     }
   };
 
@@ -204,36 +204,36 @@ export default function AdminPage() {
       addToast('success', result.message);
       await loadPatternData();
     } catch (error: any) {
-      addToast('error', error.response?.data?.message || 'Fehler beim automatischen Anwenden');
+      addToast('error', error.response?.data?.message || t('admin:toasts.autoApplyError'));
     }
   };
 
   const handleToggleUserActive = async (userId: string) => {
     try {
       await adminApi.toggleUserActive(userId);
-      addToast('success', 'Benutzer erfolgreich aktualisiert');
+      addToast('success', t('admin:toasts.userUpdated'));
       await loadData(); // Reload
     } catch (error: any) {
-      addToast('error', error.response?.data?.error || 'Failed to update user');
+      addToast('error', error.response?.data?.error || t('admin:toasts.userUpdateFailed'));
     }
   };
 
   const handleCreateInvitation = async () => {
-    const email = prompt('Enter email (optional):');
+    const email = prompt(t('admin:prompts.enterEmail'));
     try {
       const { inviteUrl } = await adminApi.createInvitation(email || undefined, 7);
       await navigator.clipboard.writeText(inviteUrl);
       setCopiedUrl(true);
       setTimeout(() => setCopiedUrl(false), 3000);
-      addToast('success', `Invitation link copied to clipboard!\n\n${inviteUrl}`);
+      addToast('success', t('admin:toasts.invitationCopied', { inviteUrl }));
       await loadData(); // Reload
     } catch (error: any) {
-      addToast('error', error.response?.data?.error || 'Failed to create invitation');
+      addToast('error', error.response?.data?.error || t('admin:toasts.invitationFailed'));
     }
   };
 
   const handleExportData = async () => {
-    if (!confirm('Export all data? This will download a JSON file with all user data.')) {
+    if (!confirm(t('admin:prompts.confirmExport'))) {
       return;
     }
 
@@ -247,7 +247,7 @@ export default function AdminPage() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (error: any) {
-      addToast('error', error.response?.data?.error || 'Failed to export data');
+      addToast('error', error.response?.data?.error || t('admin:toasts.exportFailed'));
     }
   };
 
@@ -255,10 +255,10 @@ export default function AdminPage() {
     setSavingParsers(true);
     try {
       await adminApi.updateAdminParserSettings(parserSettings);
-      addToast('success', 'Parser settings saved successfully!');
+      addToast('success', t('admin:toasts.parserSettingsSaved'));
     } catch (error: any) {
       logger.error('Failed to save parser settings:', error);
-      addToast('error', error.response?.data?.error || 'Failed to save parser settings');
+      addToast('error', error.response?.data?.error || t('admin:toasts.parserSettingsFailed'));
     } finally {
       setSavingParsers(false);
     }
@@ -270,10 +270,12 @@ export default function AdminPage() {
     try {
       await adminApi.toggleDebugLogging(newState);
       await loadLoggingData();
-      addToast('success', `Debug logging ${newState ? 'enabled' : 'disabled'} successfully!`);
+      addToast('success', t('admin:toasts.debugLoggingToggled', {
+        state: newState ? t('admin:toasts.enabled') : t('admin:toasts.disabled')
+      }));
     } catch (error: any) {
       logger.error('Failed to toggle debug logging:', error);
-      addToast('error', error.response?.data?.error || 'Failed to toggle debug logging');
+      addToast('error', error.response?.data?.error || t('admin:toasts.debugLoggingFailed'));
     }
   };
 
@@ -281,11 +283,11 @@ export default function AdminPage() {
     setSavingLogging(true);
     try {
       await adminApi.updateLoggingConfig(loggingConfig);
-      addToast('success', 'Logging configuration saved successfully!');
+      addToast('success', t('admin:toasts.loggingConfigSaved'));
       await loadLoggingData();
     } catch (error: any) {
       logger.error('Failed to save logging config:', error);
-      addToast('error', error.response?.data?.error || 'Failed to save logging config');
+      addToast('error', error.response?.data?.error || t('admin:toasts.loggingConfigFailed'));
     } finally {
       setSavingLogging(false);
     }
@@ -302,35 +304,38 @@ export default function AdminPage() {
       URL.revokeObjectURL(url);
     } catch (error: any) {
       logger.error('Failed to download log file:', error);
-      addToast('error', error.response?.data?.error || 'Failed to download log file');
+      addToast('error', error.response?.data?.error || t('admin:toasts.logFileDownloadFailed'));
     }
   };
 
   const handleDeleteLogFile = async (filename: string) => {
-    if (!confirm(`Delete log file "${filename}"? This action cannot be undone.`)) {
+    if (!confirm(t('admin:prompts.confirmDeleteLog', { filename }))) {
       return;
     }
     try {
       await adminApi.deleteLogFile(filename);
-      addToast('success', 'Log file deleted successfully!');
+      addToast('success', t('admin:toasts.logFileDeleted'));
       await loadLoggingData();
     } catch (error: any) {
       logger.error('Failed to delete log file:', error);
-      addToast('error', error.response?.data?.error || 'Failed to delete log file');
+      addToast('error', error.response?.data?.error || t('admin:toasts.logFileDeletFailed'));
     }
   };
 
   const handleCleanupLogs = async () => {
-    if (!confirm('Delete old log files based on retention policy? This action cannot be undone.')) {
+    if (!confirm(t('admin:prompts.confirmCleanupLogs'))) {
       return;
     }
     try {
       const result = await adminApi.cleanupLogs();
-      addToast('success', `Cleanup complete! Deleted ${result.filesDeleted} files, freed ${(result.spaceFreed / 1024 / 1024).toFixed(2)} MB`);
+      addToast('success', t('admin:toasts.cleanupComplete', {
+        filesDeleted: result.filesDeleted,
+        spaceFreed: (result.spaceFreed / 1024 / 1024).toFixed(2)
+      }));
       await loadLoggingData();
     } catch (error: any) {
       logger.error('Failed to cleanup logs:', error);
-      addToast('error', error.response?.data?.error || 'Failed to cleanup logs');
+      addToast('error', error.response?.data?.error || t('admin:toasts.cleanupFailed'));
     }
   };
 
@@ -347,10 +352,10 @@ export default function AdminPage() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          {t('admin.title')}
+          {t('admin:title')}
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
-          {t('admin.description')}
+          {t('admin:description')}
         </p>
       </div>
 
@@ -404,7 +409,7 @@ export default function AdminPage() {
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
           }`}
         >
-          {t('admin.trainingConfig')}
+          {t('admin:trainingConfig')}
         </button>
         <button
           onClick={() => setActiveTab('logging')}
@@ -414,7 +419,7 @@ export default function AdminPage() {
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
           }`}
         >
-          {t('admin.tabs.logging')}
+          {t('admin:tabs.logging')}
         </button>
         <button
           onClick={() => setActiveTab('feedback')}
@@ -424,7 +429,7 @@ export default function AdminPage() {
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
           }`}
         >
-          {t('admin.parserFeedback')}
+          {t('admin:parserFeedback')}
           {feedbackStats && feedbackStats.total > 0 && (
             <span className="ml-2 px-2 py-0.5 text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full">
               {feedbackStats.total}
@@ -439,7 +444,7 @@ export default function AdminPage() {
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
           }`}
         >
-          {t('admin.patternUpdates')}
+          {t('admin:patternUpdates')}
           {patternData && patternData.pendingSuggestions && patternData.pendingSuggestions.length > 0 && (
             <span className="ml-2 px-2 py-0.5 text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full">
               {patternData.pendingSuggestions.length}
@@ -454,7 +459,7 @@ export default function AdminPage() {
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
           }`}
         >
-          {t('admin.tabs.backups')}
+          {t('admin:tabs.backups')}
         </button>
       </div>
 
@@ -464,25 +469,25 @@ export default function AdminPage() {
           {/* Overview Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <div className="text-gray-600 dark:text-gray-400 text-sm mb-1">{t('admin.instance')}</div>
+              <div className="text-gray-600 dark:text-gray-400 text-sm mb-1">{t('admin:instance')}</div>
               <div className="text-2xl font-bold text-gray-900 dark:text-white">
                 {systemInfo.instanceName}
               </div>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <div className="text-gray-600 dark:text-gray-400 text-sm mb-1">{t('admin.totalUsers')}</div>
+              <div className="text-gray-600 dark:text-gray-400 text-sm mb-1">{t('admin:totalUsers')}</div>
               <div className="text-2xl font-bold text-gray-900 dark:text-white">
                 {systemInfo.userCount} / {systemInfo.maxUsers}
               </div>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <div className="text-gray-600 dark:text-gray-400 text-sm mb-1">{t('admin.activeUsers')}</div>
+              <div className="text-gray-600 dark:text-gray-400 text-sm mb-1">{t('admin:activeUsers')}</div>
               <div className="text-2xl font-bold text-gray-900 dark:text-white">
                 {systemInfo.activeUserCount}
               </div>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <div className="text-gray-600 dark:text-gray-400 text-sm mb-1">{t('admin.totalFlights')}</div>
+              <div className="text-gray-600 dark:text-gray-400 text-sm mb-1">{t('admin:totalFlights')}</div>
               <div className="text-2xl font-bold text-gray-900 dark:text-white">
                 {systemInfo.flightCount}
               </div>
@@ -493,10 +498,10 @@ export default function AdminPage() {
           {systemInfo.warningThreshold && (
             <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
               <h3 className="font-semibold text-yellow-900 dark:text-yellow-100 mb-2">
-                {t('admin.userLimitWarning.title')}
+                {t('admin:userLimitWarning.title')}
               </h3>
               <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                {t('admin.userLimitWarning.message', { maxUsers: systemInfo.maxUsers })}
+                {t('admin:userLimitWarning.message', { maxUsers: systemInfo.maxUsers })}
               </p>
             </div>
           )}
@@ -537,13 +542,13 @@ export default function AdminPage() {
                 disabled={loadingHardwareInfo}
                 className="px-3 py-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loadingHardwareInfo ? '⏳ Lade...' : '🔄 Aktualisieren'}
+                {loadingHardwareInfo ? t('admin:refreshing') : t('admin:refresh')}
               </button>
             </div>
 
             {!hardwareInfo && (
               <div className="text-center py-8 text-gray-600 dark:text-gray-400">
-                {loadingHardwareInfo ? 'Lade Hardware-Informationen...' : 'Klicken Sie auf "Aktualisieren", um Hardware-Informationen zu laden.'}
+                {loadingHardwareInfo ? t('admin:hardware.loading') : t('admin:hardware.clickToLoad')}
               </div>
             )}
 
@@ -565,19 +570,19 @@ export default function AdminPage() {
                   </h3>
                   <dl className="space-y-2">
                     <div>
-                      <dt className="text-xs text-gray-500 dark:text-gray-400">Kerne</dt>
+                      <dt className="text-xs text-gray-500 dark:text-gray-400">{t('admin:hardware.cores')}</dt>
                       <dd className="text-sm font-medium text-gray-900 dark:text-white">
                         {hardwareInfo.cpu.cores}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-gray-500 dark:text-gray-400">Modell</dt>
+                      <dt className="text-xs text-gray-500 dark:text-gray-400">{t('admin:hardware.model')}</dt>
                       <dd className="text-sm font-medium text-gray-900 dark:text-white break-words">
                         {hardwareInfo.cpu.model}
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-gray-500 dark:text-gray-400">Architektur</dt>
+                      <dt className="text-xs text-gray-500 dark:text-gray-400">{t('admin:hardware.architecture')}</dt>
                       <dd className="text-sm font-medium text-gray-900 dark:text-white">
                         {hardwareInfo.cpu.architecture}
                       </dd>
@@ -614,7 +619,7 @@ export default function AdminPage() {
                     <dl className="space-y-2">
                       {hardwareInfo.gpu.count && (
                         <div>
-                          <dt className="text-xs text-gray-500 dark:text-gray-400">Anzahl</dt>
+                          <dt className="text-xs text-gray-500 dark:text-gray-400">{t('admin:hardware.count')}</dt>
                           <dd className="text-sm font-medium text-gray-900 dark:text-white">
                             {hardwareInfo.gpu.count}
                           </dd>
@@ -622,7 +627,7 @@ export default function AdminPage() {
                       )}
                       {hardwareInfo.gpu.gpus && hardwareInfo.gpu.gpus.length > 0 ? (
                         <div>
-                          <dt className="text-xs text-gray-500 dark:text-gray-400">GPUs</dt>
+                          <dt className="text-xs text-gray-500 dark:text-gray-400">{t('admin:hardware.gpus')}</dt>
                           <dd className="text-sm font-medium text-gray-900 dark:text-white">
                             {hardwareInfo.gpu.gpus.map((gpu: any) => (
                               <div key={gpu.id} className="mb-1">
@@ -634,7 +639,7 @@ export default function AdminPage() {
                       ) : (
                         hardwareInfo.gpu.name && (
                           <div>
-                            <dt className="text-xs text-gray-500 dark:text-gray-400">Name</dt>
+                            <dt className="text-xs text-gray-500 dark:text-gray-400">{t('admin:hardware.name')}</dt>
                             <dd className="text-sm font-medium text-gray-900 dark:text-white break-words">
                               {hardwareInfo.gpu.name}
                             </dd>
@@ -643,7 +648,7 @@ export default function AdminPage() {
                       )}
                       {hardwareInfo.gpu.memory && !hardwareInfo.gpu.gpus && (
                         <div>
-                          <dt className="text-xs text-gray-500 dark:text-gray-400">Speicher</dt>
+                          <dt className="text-xs text-gray-500 dark:text-gray-400">{t('admin:hardware.memory')}</dt>
                           <dd className="text-sm font-medium text-gray-900 dark:text-white">
                             {hardwareInfo.gpu.memory} GB
                           </dd>
@@ -651,7 +656,7 @@ export default function AdminPage() {
                       )}
                       {hardwareInfo.gpu.cudaVersion && (
                         <div>
-                          <dt className="text-xs text-gray-500 dark:text-gray-400">CUDA Version</dt>
+                          <dt className="text-xs text-gray-500 dark:text-gray-400">{t('admin:hardware.cudaVersion')}</dt>
                           <dd className="text-sm font-medium text-gray-900 dark:text-white">
                             {hardwareInfo.gpu.cudaVersion}
                           </dd>
@@ -662,16 +667,16 @@ export default function AdminPage() {
                     <div className="space-y-2">
                       {hardwareInfo.gpu.gpuDetected && hardwareInfo.gpu.gpuNameDetected && (
                         <div className="text-sm font-medium text-yellow-700 dark:text-yellow-400">
-                          ⚠️ GPU erkannt: {hardwareInfo.gpu.gpuNameDetected}
+                          {t('admin:hardware.gpuDetected', { gpuName: hardwareInfo.gpu.gpuNameDetected })}
                         </div>
                       )}
                       <div className="text-sm text-gray-600 dark:text-gray-400">
-                        {hardwareInfo.gpu.reason || hardwareInfo.gpu.error || 'Keine GPU erkannt'}
+                        {hardwareInfo.gpu.reason || hardwareInfo.gpu.error || t('admin:hardware.noGpuDetected')}
                       </div>
                       {hardwareInfo.gpu.diagnosis && hardwareInfo.gpu.diagnosis.length > 0 && (
                         <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded">
                           <div className="text-xs font-semibold text-yellow-900 dark:text-yellow-100 mb-2">
-                            💡 Lösung:
+                            {t('admin:hardware.solution')}
                           </div>
                           <ul className="text-xs text-yellow-800 dark:text-yellow-200 space-y-1 list-disc list-inside">
                             {hardwareInfo.gpu.diagnosis.map((msg: any, idx: number) => (
@@ -687,7 +692,7 @@ export default function AdminPage() {
                 {/* Python Info */}
                 <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                   <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
-                    <span className="mr-2">🐍</span> Python
+                    <span className="mr-2">🐍</span> {t('admin:hardware.python')}
                     <span
                       className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
                         hardwareInfo.python.available
@@ -695,14 +700,14 @@ export default function AdminPage() {
                           : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
                       }`}
                     >
-                      {hardwareInfo.python.available ? 'Verfügbar' : 'Nicht verfügbar'}
+                      {hardwareInfo.python.available ? t('admin:hardware.available') : t('admin:hardware.notAvailable')}
                     </span>
                   </h3>
                   {hardwareInfo.python.available ? (
                     <dl className="space-y-2">
                       {hardwareInfo.python.version && (
                         <div>
-                          <dt className="text-xs text-gray-500 dark:text-gray-400">Version</dt>
+                          <dt className="text-xs text-gray-500 dark:text-gray-400">{t('admin:hardware.version')}</dt>
                           <dd className="text-sm font-medium text-gray-900 dark:text-white">
                             {hardwareInfo.python.version}
                           </dd>
@@ -710,14 +715,14 @@ export default function AdminPage() {
                       )}
                       {hardwareInfo.python.pytorch && (
                         <div>
-                          <dt className="text-xs text-gray-500 dark:text-gray-400">PyTorch</dt>
+                          <dt className="text-xs text-gray-500 dark:text-gray-400">{t('admin:hardware.pytorch')}</dt>
                           <dd className="text-sm font-medium text-gray-900 dark:text-white">
                             {hardwareInfo.python.pytorch.available ? (
                               <span className="text-green-600 dark:text-green-400">
-                                ✅ {hardwareInfo.python.pytorch.version || 'Verfügbar'}
+                                ✅ {hardwareInfo.python.pytorch.version || t('admin:hardware.available')}
                               </span>
                             ) : (
-                              <span className="text-red-600 dark:text-red-400">❌ Nicht verfügbar</span>
+                              <span className="text-red-600 dark:text-red-400">{t('admin:hardware.notAvailableShort')}</span>
                             )}
                           </dd>
                         </div>
@@ -725,7 +730,7 @@ export default function AdminPage() {
                     </dl>
                   ) : (
                     <div className="text-sm text-red-600 dark:text-red-400">
-                      ⚠️ {hardwareInfo.python.error || 'Python nicht gefunden'}
+                      ⚠️ {hardwareInfo.python.error || t('admin:hardware.pythonNotFound')}
                     </div>
                   )}
                 </div>
@@ -733,23 +738,23 @@ export default function AdminPage() {
                 {/* Environment & Training Access */}
                 <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                   <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
-                    <span className="mr-2">⚙️</span> Umgebung
+                    <span className="mr-2">⚙️</span> {t('admin:hardware.environment')}
                   </h3>
                   <dl className="space-y-2">
                     <div>
-                      <dt className="text-xs text-gray-500 dark:text-gray-400">Docker</dt>
+                      <dt className="text-xs text-gray-500 dark:text-gray-400">{t('admin:hardware.docker')}</dt>
                       <dd className="text-sm font-medium text-gray-900 dark:text-white">
                         {hardwareInfo.docker ? (
-                          <span className="text-blue-600 dark:text-blue-400">✅ Ja</span>
+                          <span className="text-blue-600 dark:text-blue-400">{t('admin:hardware.yes')}</span>
                         ) : (
-                          <span className="text-gray-600 dark:text-gray-400">❌ Nein (Lokal)</span>
+                          <span className="text-gray-600 dark:text-gray-400">{t('admin:hardware.no')}</span>
                         )}
                       </dd>
                     </div>
                     {hardwareInfo.platform && (
                       <>
                         <div>
-                          <dt className="text-xs text-gray-500 dark:text-gray-400">System</dt>
+                          <dt className="text-xs text-gray-500 dark:text-gray-400">{t('admin:hardware.system')}</dt>
                           <dd className="text-sm font-medium text-gray-900 dark:text-white">
                             {hardwareInfo.platform.system} {hardwareInfo.platform.release}
                           </dd>
@@ -757,13 +762,13 @@ export default function AdminPage() {
                       </>
                     )}
                     <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                      <dt className="text-xs text-gray-500 dark:text-gray-400 mb-1">Training Zugriff</dt>
+                      <dt className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t('admin:hardware.trainingAccess')}</dt>
                       <dd className="text-sm font-medium">
                         {hardwareInfo.trainingAccess.accessible ? (
-                          <span className="text-green-600 dark:text-green-400">✅ Verfügbar</span>
+                          <span className="text-green-600 dark:text-green-400">{t('admin:hardware.trainingAvailable')}</span>
                         ) : (
                           <span className="text-red-600 dark:text-red-400">
-                            ❌ Nicht verfügbar
+                            {t('admin:hardware.trainingNotAvailable')}
                             {hardwareInfo.trainingAccess.error && (
                               <div className="text-xs mt-1 text-red-500 dark:text-red-400">
                                 {hardwareInfo.trainingAccess.error}
@@ -782,17 +787,17 @@ export default function AdminPage() {
           {/* Configuration */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              Configuration
+              {t('admin:systemInfo.configuration')}
             </h2>
             <dl className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <dt className="text-sm text-gray-600 dark:text-gray-400">Registration</dt>
+                <dt className="text-sm text-gray-600 dark:text-gray-400">{t('admin:systemInfo.registration')}</dt>
                 <dd className="text-lg font-medium text-gray-900 dark:text-white">
-                  {systemInfo.registrationEnabled ? '✅ Enabled' : '❌ Disabled'}
+                  {systemInfo.registrationEnabled ? t('admin:systemInfo.enabled') : t('admin:systemInfo.disabled')}
                 </dd>
               </div>
               <div>
-                <dt className="text-sm text-gray-600 dark:text-gray-400">Version</dt>
+                <dt className="text-sm text-gray-600 dark:text-gray-400">{t('admin:systemInfo.version')}</dt>
                 <dd className="text-lg font-medium text-gray-900 dark:text-white">
                   {systemInfo.version}
                 </dd>
@@ -803,7 +808,7 @@ export default function AdminPage() {
           {/* Actions */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              Data Management
+              {t('admin:systemInfo.dataManagement')}
             </h2>
             <button
               onClick={handleExportData}
@@ -847,7 +852,7 @@ export default function AdminPage() {
       {activeTab === 'users' && (
         <div className="space-y-4">
           <InlineHelp
-            title={t('admin.users.title')}
+            title={t('admin:users.title')}
             category="advanced"
             content={
               <div className="space-y-2">
@@ -951,7 +956,7 @@ export default function AdminPage() {
       {activeTab === 'invitations' && (
         <div className="space-y-4">
           <InlineHelp
-            title={t('admin.invitations.title')}
+            title={t('admin:invitations.title')}
             category="advanced"
             content={
               <div className="space-y-2">
@@ -1052,10 +1057,10 @@ export default function AdminPage() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                Training-Konfiguration
+                {t('admin:trainingConfig.title')}
               </h2>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                Konfiguriere Modell-Namen und Speicherort für LLM-Training
+                {t('admin:trainingConfig.description')}
               </p>
             </div>
             <button
@@ -1063,41 +1068,39 @@ export default function AdminPage() {
               disabled={savingTrainingConfig}
               className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-lg transition font-medium"
             >
-              {savingTrainingConfig ? 'Saving...' : 'Save Configuration'}
+              {savingTrainingConfig ? t('admin:trainingConfig.saving') : t('admin:saveConfiguration')}
             </button>
           </div>
 
           <InlineHelp
-            title="Training-Konfiguration"
+            title={t('admin:trainingConfig.helpTitle')}
             category="expert"
             content={
               <div className="space-y-3">
                 <p>
-                  Diese Einstellungen überschreiben ENV-Variablen und bestimmen, wo trainierte Modelle gespeichert werden und wie sie heißen.
+                  {t('admin:trainingConfig.helpContent.description')}
                 </p>
                 <div>
-                  <p className="font-semibold mb-1">Priorität:</p>
+                  <p className="font-semibold mb-1">{t('admin:trainingConfig.helpContent.priorityTitle')}</p>
                   <ol className="list-decimal list-inside space-y-1 ml-2 text-sm">
-                    <li>Admin-Settings (hier konfiguriert)</li>
-                    <li>ENV-Variablen (Fallback)</li>
-                    <li>Standard-Werte (wenn nichts gesetzt)</li>
+                    <li>{t('admin:trainingConfig.helpContent.priority1')}</li>
+                    <li>{t('admin:trainingConfig.helpContent.priority2')}</li>
+                    <li>{t('admin:trainingConfig.helpContent.priority3')}</li>
                   </ol>
                 </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  <strong>Hinweis:</strong> Leere Felder verwenden ENV-Variablen oder Standard-Werte.
-                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400" dangerouslySetInnerHTML={{ __html: t('admin:trainingConfig.helpContent.note') }} />
               </div>
             }
           />
 
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              Modell-Speicherort
+              {t('admin:trainingConfig.modelStorage.title')}
             </h3>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Speicherort für trainierte Modelle
+                  {t('admin:trainingConfig.modelStorage.label')}
                 </label>
                 <input
                   type="text"
@@ -1107,10 +1110,10 @@ export default function AdminPage() {
                   className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Aktuell verwendet: <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">{trainingConfig.currentTrainingModelOutputDir}</code>
+                  {t('admin:trainingConfig.modelStorage.currentlyUsed')} <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">{trainingConfig.currentTrainingModelOutputDir}</code>
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  ENV-Fallback: <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">{trainingConfig.envTrainingModelOutputDir}</code>
+                  {t('admin:trainingConfig.modelStorage.envFallback')} <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">{trainingConfig.envTrainingModelOutputDir}</code>
                 </p>
               </div>
             </div>
@@ -1118,12 +1121,12 @@ export default function AdminPage() {
 
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              Modell-Namen
+              {t('admin:trainingConfig.modelNames.title')}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Email-Modell-Name
+                  {t('admin:trainingConfig.modelNames.emailModel')}
                 </label>
                 <input
                   type="text"
@@ -1133,15 +1136,15 @@ export default function AdminPage() {
                   className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Aktuell: <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">{trainingConfig.currentTrainingEmailModelName}</code>
+                  {t('admin:trainingConfig.modelNames.currently')} <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">{trainingConfig.currentTrainingEmailModelName}</code>
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  ENV: <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">{trainingConfig.envTrainingEmailModelName}</code>
+                  {t('admin:trainingConfig.modelNames.env')} <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">{trainingConfig.envTrainingEmailModelName}</code>
                 </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Vision-Modell-Name
+                  {t('admin:trainingConfig.modelNames.visionModel')}
                 </label>
                 <input
                   type="text"
@@ -1151,10 +1154,10 @@ export default function AdminPage() {
                   className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Aktuell: <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">{trainingConfig.currentTrainingVisionModelName}</code>
+                  {t('admin:trainingConfig.modelNames.currently')} <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">{trainingConfig.currentTrainingVisionModelName}</code>
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  ENV: <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">{trainingConfig.envTrainingVisionModelName}</code>
+                  {t('admin:trainingConfig.modelNames.env')} <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">{trainingConfig.envTrainingVisionModelName}</code>
                 </p>
               </div>
             </div>
@@ -1180,7 +1183,7 @@ export default function AdminPage() {
               disabled={savingParsers}
               className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-lg transition font-medium"
             >
-              {savingParsers ? t('common.buttons.saving') : t('admin.saveSettings')}
+              {savingParsers ? t('common:buttons.saving') : t('admin:saveSettings')}
             </button>
           </div>
 
@@ -1398,7 +1401,7 @@ export default function AdminPage() {
                 disabled={savingLogging}
                 className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-lg transition font-medium"
               >
-                {savingLogging ? t('common.buttons.saving') : t('admin.saveConfig')}
+                {savingLogging ? t('common:buttons.saving') : t('admin:saveConfig')}
               </button>
             </div>
           </div>

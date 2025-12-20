@@ -1,6 +1,7 @@
 {
   "title": "Admin",
   "description": "Manage your self-hosted TravStats instance",
+  "loading": "Loading...",
   "tabs": {
     "users": "Users",
     "invitations": "Invitations",
@@ -22,6 +23,8 @@
   "saveConfiguration": "Save Configuration",
   "saveSettings": "Save Settings",
   "saveConfig": "Save Config",
+  "refresh": "🔄 Refresh",
+  "refreshing": "⏳ Loading...",
   "users": {
     "title": "User Management"
   },
@@ -30,7 +33,192 @@
   },
   "userLimitWarning": {
     "title": "⚠️ User Limit Warning",
-    "message": "You have reached the recommended user limit ({{maxUsers}} users). Performance may be affected with more users. Consider the system's capacity."
+    "message": "You have reached the recommended user limit ({{maxUsers}} users). Performance may be affected with more users."
+  },
+  "demoWarning": {
+    "title": "🔓 Demo Account Active",
+    "message": "The demo user account (username: \"demo\", password: \"demo123\") is currently active.",
+    "button": "Deactivate Demo Account"
+  },
+  "hardware": {
+    "title": "💻 Hardware Information",
+    "loading": "Loading hardware information...",
+    "clickToLoad": "Click \"Refresh\" to load hardware information.",
+    "cpu": "🖥️ CPU",
+    "cores": "Cores",
+    "model": "Model",
+    "architecture": "Architecture",
+    "gpu": "🎮 GPU",
+    "available": "Available",
+    "detected": "Detected (not available)",
+    "notAvailable": "Not available",
+    "count": "Count",
+    "gpus": "GPUs",
+    "name": "Name",
+    "memory": "Memory",
+    "cudaVersion": "CUDA Version",
+    "noGpuDetected": "No GPU detected",
+    "gpuDetected": "⚠️ GPU detected: {{gpuName}}",
+    "solution": "💡 Solution:",
+    "possibleReasons": "Possible reasons:",
+    "gpuReasons": {
+      "noGpu": "No GPU installed in the system",
+      "noDrivers": "NVIDIA drivers not installed",
+      "noCuda": "CUDA not installed or not configured"
+    },
+    "python": "🐍 Python",
+    "version": "Version",
+    "pytorch": "PyTorch",
+    "notAvailableShort": "❌ Not available",
+    "pythonNotFound": "Python not found",
+    "docker": "🐳 Docker",
+    "yes": "✅ Yes",
+    "no": "❌ No (Local)",
+    "system": "System",
+    "environment": "Environment",
+    "trainingAccess": "Training Access",
+    "trainingAvailable": "✅ Available",
+    "trainingNotAvailable": "❌ Not available"
+  },
+  "systemInfo": {
+    "title": "System Information",
+    "configuration": "Configuration",
+    "dataManagement": "Data Management",
+    "registration": "Registration",
+    "enabled": "✅ Enabled",
+    "disabled": "❌ Disabled",
+    "version": "Version"
+  },
+  "export": {
+    "button": "📥 Export Data",
+    "description": "Export all user data as a JSON file.",
+    "title": "Data Export",
+    "help": {
+      "title": "What will be exported?",
+      "items": {
+        "users": "All user accounts",
+        "flights": "All flight data",
+        "settings": "System settings"
+      }
+    },
+    "confirmTitle": "Export all data?",
+    "confirmMessage": "This will download a JSON file with all user data."
+  },
+  "trainingConfig": {
+    "title": "Training Configuration",
+    "description": "Configure model names and storage location for LLM training",
+    "saving": "Saving...",
+    "helpTitle": "Training Configuration",
+    "helpContent": {
+      "description": "These settings override environment variables and determine where trained models are stored and what they are named.",
+      "priorityTitle": "Priority:",
+      "priority1": "Admin Settings (configured here)",
+      "priority2": "ENV Variables (fallback)",
+      "priority3": "Default Values (if nothing is set)",
+      "note": "<strong>Note:</strong> Empty fields use ENV variables or default values."
+    },
+    "modelStorage": {
+      "title": "Model Storage Location",
+      "label": "Storage location for trained models",
+      "currentlyUsed": "Currently used:",
+      "envFallback": "ENV Fallback:"
+    },
+    "modelNames": {
+      "title": "Model Names",
+      "emailModel": "Email Model Name",
+      "visionModel": "Vision Model Name",
+      "currently": "Currently:",
+      "env": "ENV:"
+    }
+  },
+  "toasts": {
+    "trainingConfigSaved": "Training configuration saved successfully!",
+    "trainingConfigFailed": "Failed to save training configuration",
+    "userUpdated": "User updated successfully",
+    "userUpdateFailed": "Failed to update user",
+    "invitationCopied": "Invitation link copied to clipboard!\n\n{{inviteUrl}}",
+    "invitationFailed": "Failed to create invitation",
+    "exportFailed": "Failed to export data",
+    "parserSettingsSaved": "Parser settings saved successfully!",
+    "parserSettingsFailed": "Failed to save parser settings",
+    "debugLoggingToggled": "Debug logging {{state}} successfully!",
+    "debugLoggingFailed": "Failed to toggle debug logging",
+    "loggingConfigSaved": "Logging configuration saved successfully!",
+    "loggingConfigFailed": "Failed to save logging configuration",
+    "logFileDownloadFailed": "Failed to download log file",
+    "logFileDeleted": "Log file deleted successfully!",
+    "logFileDeletFailed": "Failed to delete log file",
+    "cleanupComplete": "Cleanup complete! Deleted {{filesDeleted}} files, freed {{spaceFreed}} MB",
+    "cleanupFailed": "Failed to cleanup logs",
+    "patternApplyError": "Error applying pattern",
+    "autoApplyError": "Error auto-applying patterns",
+    "enabled": "enabled",
+    "disabled": "disabled"
+  },
+  "prompts": {
+    "enterEmail": "Enter email (optional):",
+    "confirmExport": "Export all data? This will download a JSON file with all user data.",
+    "confirmDeleteLog": "Delete log file \"{{filename}}\"? This action cannot be undone.",
+    "confirmCleanupLogs": "Delete old log files based on retention policy? This action cannot be undone.",
+    "confirmDeactivateDemo": "Deactivate the demo user account? This will prevent login with demo credentials."
+  },
+  "backup": {
+    "title": "Backup Management",
+    "description": "Manage your backups and restore them if needed",
+    "loading": "Loading backups...",
+    "creating": "Creating backup...",
+    "running": "Backup running",
+    "createNow": "Create Backup Now",
+    "startedAt": "Started at {{date}}",
+    "noBackups": "No backups available",
+    "deleteConfirm": "Do you really want to delete the backup from {{date}}?",
+    "type": {
+      "full": "Full",
+      "partial": "Partial"
+    },
+    "status": {
+      "completed": "Completed",
+      "running": "Running...",
+      "failed": "Failed",
+      "pending": "Pending"
+    },
+    "table": {
+      "date": "Date",
+      "status": "Status",
+      "size": "Size",
+      "type": "Type",
+      "cloud": "Cloud"
+    },
+    "actions": {
+      "download": "Download",
+      "restore": "Restore"
+    },
+    "restore": {
+      "title": "Restore Backup",
+      "warning": "Warning: This action will replace all current data!",
+      "backupFrom": "Backup from: {{date}}",
+      "scope": "Restore Scope",
+      "scopeFull": "Full (Database + Files)",
+      "scopeDatabase": "Database Only",
+      "scopeFiles": "Files Only",
+      "createBackupBefore": "Create backup before restore (recommended)",
+      "targetDatabaseUrl": "Target Database URL (optional, for migration)",
+      "targetDatabaseUrlPlaceholder": "postgresql://user:pass@host:port/database",
+      "targetDatabaseUrlHelp": "Leave empty for current instance",
+      "confirmLabel": "To confirm, type \"{{text}}\":",
+      "confirmText": "Restore",
+      "confirmButton": "Restore"
+    },
+    "toasts": {
+      "loadFailed": "Failed to load backups",
+      "started": "Backup started",
+      "createFailed": "Failed to create backup",
+      "downloading": "Backup is being downloaded",
+      "downloadFailed": "Failed to download backup",
+      "restoring": "Backup is being restored",
+      "restoreFailed": "Failed to restore backup",
+      "deleted": "Backup deleted",
+      "deleteFailed": "Failed to delete backup"
+    }
   }
 }
-

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, ReactNode } from 'react';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface TooltipProps {
   content: string | ReactNode;
@@ -19,6 +20,7 @@ export default function Tooltip({
   const [isExpanded, setIsExpanded] = useState(false);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLDivElement>(null);
+  const { t } = useTranslation('common');
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -94,7 +96,7 @@ export default function Tooltip({
                 }}
                 className="mt-2 text-xs text-blue-400 hover:text-blue-300 underline"
               >
-                {isExpanded ? 'Weniger' : 'Mehr erfahren'}
+                {isExpanded ? t('help.less') : t('help.more')}
               </button>
             )}
           </div>
@@ -115,6 +117,7 @@ export default function Tooltip({
     </div>
   );
 }
+
 
 
 

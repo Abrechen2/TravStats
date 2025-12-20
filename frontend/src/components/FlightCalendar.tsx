@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Flight } from '../types';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface FlightCalendarProps {
   flights: Flight[];
@@ -12,6 +13,7 @@ interface DayData {
 }
 
 export default function FlightCalendar({ flights }: FlightCalendarProps) {
+  const { t } = useTranslation(['stats', 'common']);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<DayData | null>(null);
 
@@ -93,21 +95,29 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
   };
 
   const monthNames = [
-    'Januar',
-    'Februar',
-    'März',
-    'April',
-    'Mai',
-    'Juni',
-    'Juli',
-    'August',
-    'September',
-    'Oktober',
-    'November',
-    'Dezember',
+    t('stats:calendar.months.january'),
+    t('stats:calendar.months.february'),
+    t('stats:calendar.months.march'),
+    t('stats:calendar.months.april'),
+    t('stats:calendar.months.may'),
+    t('stats:calendar.months.june'),
+    t('stats:calendar.months.july'),
+    t('stats:calendar.months.august'),
+    t('stats:calendar.months.september'),
+    t('stats:calendar.months.october'),
+    t('stats:calendar.months.november'),
+    t('stats:calendar.months.december'),
   ];
 
-  const weekDays = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+  const weekDays = [
+    t('stats:weekdays.sunday'),
+    t('stats:weekdays.monday'),
+    t('stats:weekdays.tuesday'),
+    t('stats:weekdays.wednesday'),
+    t('stats:weekdays.thursday'),
+    t('stats:weekdays.friday'),
+    t('stats:weekdays.saturday'),
+  ];
 
   const calendarDays = getCalendarDays();
 
@@ -248,7 +258,7 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
       {/* Legend */}
       <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-          Reiseintensität:
+          {t('stats:calendar.intensity')}:
         </p>
         <div className="flex gap-2 items-center">
           <div className="flex items-center gap-1">

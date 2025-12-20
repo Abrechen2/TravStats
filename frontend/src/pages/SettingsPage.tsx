@@ -95,10 +95,10 @@ export default function SettingsPage() {
     setLoadingTrainingSettings(true);
     try {
       await settingsApi.updateTrainingSettings(trainingSettings);
-      addToast('success', t('settings.training.updated'));
+      addToast('success', t('settings:training.updated'));
     } catch (error) {
       logger.error('Failed to update training settings:', error);
-      addToast('error', t('settings.training.updateFailed'));
+      addToast('error', t('settings:training.updateFailed'));
     } finally {
       setLoadingTrainingSettings(false);
     }
@@ -159,13 +159,13 @@ export default function SettingsPage() {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      addToast('error', t('settings.profile.invalidFileType'));
+      addToast('error', t('settings:profile.invalidFileType'));
       return;
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      addToast('error', t('settings.profile.fileTooLarge'));
+      addToast('error', t('settings:profile.fileTooLarge'));
       return;
     }
 
@@ -173,10 +173,10 @@ export default function SettingsPage() {
     try {
       const result = await settingsApi.uploadProfilePicture(file);
       setProfile({ profilePicture: result.profilePictureUrl });
-      addToast('success', t('settings.profile.uploadSuccess'));
+      addToast('success', t('settings:profile.uploadSuccess'));
     } catch (error: any) {
       logger.error('Failed to upload profile picture:', error);
-      addToast('error', error.response?.data?.error || t('settings.profile.uploadError'));
+      addToast('error', error.response?.data?.error || t('settings:profile.uploadError'));
       // Fallback: show local preview
       const url = URL.createObjectURL(file);
       setProfile({ profilePicture: url });
@@ -217,7 +217,7 @@ export default function SettingsPage() {
       setDeveloperModeEnabled(enabled);
     } catch (error) {
       logger.error('Failed to update developer mode:', error);
-      alert(t('settings.developer.updateError'));
+      alert(t('settings:developer.updateError'));
     } finally {
       setLoadingDeveloperMode(false);
     }
@@ -228,22 +228,22 @@ export default function SettingsPage() {
 
     // Validation
     if (!passwordForm.oldPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
-      setPasswordError(t('common.messages.error'));
+      setPasswordError(t('common:messages.error'));
       return;
     }
 
     if (passwordForm.newPassword.length < 6) {
-      setPasswordError(t('common.messages.error'));
+      setPasswordError(t('common:messages.error'));
       return;
     }
 
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      setPasswordError(t('common.messages.error'));
+      setPasswordError(t('common:messages.error'));
       return;
     }
 
     if (passwordForm.oldPassword === passwordForm.newPassword) {
-      setPasswordError(t('common.messages.error'));
+      setPasswordError(t('common:messages.error'));
       return;
     }
 
@@ -251,7 +251,7 @@ export default function SettingsPage() {
 
     try {
       await authApi.changePassword(passwordForm.oldPassword, passwordForm.newPassword);
-      addToast('success', t('settings.password.success'));
+      addToast('success', t('settings:password.success'));
       setShowPasswordModal(false);
       setPasswordForm({
         oldPassword: '',
@@ -260,7 +260,7 @@ export default function SettingsPage() {
       });
     } catch (error: any) {
       logger.error('Failed to change password:', error);
-      setPasswordError(error.response?.data?.error || t('settings.password.error'));
+      setPasswordError(error.response?.data?.error || t('settings:password.error'));
     } finally {
       setChangingPassword(false);
     }
@@ -271,14 +271,14 @@ export default function SettingsPage() {
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings.roadmap')}</p>
-            <h1 className="text-3xl font-bold">{t('settings.title')}</h1>
-            <p className="text-gray-500 dark:text-gray-400">{t('settings.subtitle')}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings:roadmap')}</p>
+            <h1 className="text-3xl font-bold">{t('settings:title')}</h1>
+            <p className="text-gray-500 dark:text-gray-400">{t('settings:subtitle')}</p>
           </div>
           <div className="flex items-center gap-3">
             <DarkModeToggle />
             <Link to="/" className="btn-secondary">
-              {t('settings.backToDashboard')}
+              {t('settings:backToDashboard')}
             </Link>
           </div>
         </div>
@@ -290,16 +290,16 @@ export default function SettingsPage() {
           <div className="card lg:col-span-2 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold">{t('settings.profile.title')}</h2>
+                <h2 className="text-xl font-semibold">{t('settings:profile.title')}</h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {t('settings.profile.description')}
+                  {t('settings:profile.description')}
                 </p>
               </div>
               <button
                 onClick={() => setShowPasswordModal(true)}
                 className="btn-secondary"
               >
-                {t('settings.profile.changePassword')}
+                {t('settings:profile.changePassword')}
               </button>
             </div>
 
@@ -308,7 +308,7 @@ export default function SettingsPage() {
                 {profile.profilePicture ? (
                   <img
                     src={profile.profilePicture}
-                    alt={t('settings.profile.title')}
+                    alt={t('settings:profile.title')}
                     className="w-full h-full object-cover rounded-full"
                   />
                 ) : (
@@ -316,7 +316,7 @@ export default function SettingsPage() {
                 )}
               </div>
               <div>
-                <label className="label">{t('settings.profile.uploadAvatar')}</label>
+                <label className="label">{t('settings:profile.uploadAvatar')}</label>
                 <input
                   type="file"
                   accept="image/*"
@@ -329,7 +329,7 @@ export default function SettingsPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="label">{t('settings.profile.username')}</label>
+                <label className="label">{t('settings:profile.username')}</label>
                 <input
                   type="text"
                   value={profile.username}
@@ -338,7 +338,7 @@ export default function SettingsPage() {
                 />
               </div>
               <div>
-                <label className="label">{t('settings.profile.email')}</label>
+                <label className="label">{t('settings:profile.email')}</label>
                 <input
                   type="email"
                   value={profile.email}
@@ -353,10 +353,10 @@ export default function SettingsPage() {
                 className="btn-danger"
                 onClick={() => setPrivacy({ accountDeletionRequested: true })}
               >
-                {t('settings.profile.deleteAccount')}
+                {t('settings:profile.deleteAccount')}
               </button>
               {privacy.accountDeletionRequested && (
-                <span className="text-sm text-red-500">{t('settings.profile.deletionRequested')}</span>
+                <span className="text-sm text-red-500">{t('settings:profile.deletionRequested')}</span>
               )}
             </div>
           </div>
@@ -365,8 +365,8 @@ export default function SettingsPage() {
           <div className="card space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold">{t('settings.display.title')}</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings.display.description')}</p>
+                <h2 className="text-xl font-semibold">{t('settings:display.title')}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings:display.description')}</p>
               </div>
               <button
                 onClick={handleThemeToggle}
@@ -377,29 +377,29 @@ export default function SettingsPage() {
                 }`}
               >
                 {display.theme === 'dark' 
-                  ? `${t('settings.display.theme.darkMode')} ${t('settings.display.theme.active')}`
-                  : `${t('settings.display.theme.lightMode')} ${t('settings.display.theme.active')}`
+                  ? `${t('settings:display.theme.darkMode')} ${t('settings:display.theme.active')}`
+                  : `${t('settings:display.theme.lightMode')} ${t('settings:display.theme.active')}`
                 }
               </button>
             </div>
 
             <InlineHelp
-              title={t('settings.display.theme.title')}
+              title={t('settings:display.theme.title')}
               category="basic"
               content={
                 <div className="space-y-2">
                   <p>
-                    {t('settings.display.theme.description')}
+                    {t('settings:display.theme.description')}
                   </p>
                   <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
                     <li>
-                      <strong>{t('settings.display.theme.lightMode')}:</strong> {t('settings.display.theme.lightDescription')}
+                      <strong>{t('settings:display.theme.lightMode')}:</strong> {t('settings:display.theme.lightDescription')}
                     </li>
                     <li>
-                      <strong>{t('settings.display.theme.darkMode')}:</strong> {t('settings.display.theme.darkDescription')}
+                      <strong>{t('settings:display.theme.darkMode')}:</strong> {t('settings:display.theme.darkDescription')}
                     </li>
                     <li>
-                      {t('settings.display.theme.autoSave')}
+                      {t('settings:display.theme.autoSave')}
                     </li>
                   </ul>
                 </div>
@@ -407,7 +407,7 @@ export default function SettingsPage() {
             />
 
             <div>
-              <label className="label">{t('settings.display.language')}</label>
+              <label className="label">{t('settings:display.language')}</label>
               <select
                 value={display.language}
                 onChange={(e) => {
@@ -418,13 +418,13 @@ export default function SettingsPage() {
                 }}
                 className="input"
               >
-                <option value="de">Deutsch</option>
-                <option value="en">English</option>
+                <option value="de">{t('settings:display.languages.de')}</option>
+                <option value="en">{t('settings:display.languages.en')}</option>
               </select>
             </div>
 
             <div>
-              <label className="label">{t('settings.display.timezone')}</label>
+              <label className="label">{t('settings:display.timezone')}</label>
               <select
                 value={display.timezone}
                 onChange={(e) => setDisplay({ timezone: e.target.value })}
@@ -440,7 +440,7 @@ export default function SettingsPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="label">{t('settings.display.dateFormat')}</label>
+                <label className="label">{t('settings:display.dateFormat')}</label>
                 <select
                   value={display.dateFormat}
                   onChange={(e) => setDisplay({ dateFormat: e.target.value as typeof display.dateFormat })}
@@ -452,7 +452,7 @@ export default function SettingsPage() {
                 </select>
               </div>
               <div>
-                <label className="label">{t('settings.display.timeFormat')}</label>
+                <label className="label">{t('settings:display.timeFormat')}</label>
                 <select
                   value={display.timeFormat}
                   onChange={(e) => setDisplay({ timeFormat: e.target.value as typeof display.timeFormat })}
@@ -471,46 +471,46 @@ export default function SettingsPage() {
           <div className="card space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold">{t('settings.units.title')}</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings.units.description')}</p>
+                <h2 className="text-xl font-semibold">{t('settings:units.title')}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings:units.description')}</p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="label">{t('settings.units.distance')}</label>
+                <label className="label">{t('settings:units.distance')}</label>
                 <select
                   value={units.distanceUnit}
                   onChange={(e) => setUnits({ distanceUnit: e.target.value as typeof units.distanceUnit })}
                   className="input"
                 >
-                  <option value="kilometers">{t('settings.units.options.kilometers')}</option>
-                  <option value="miles">{t('settings.units.options.miles')}</option>
-                  <option value="nautical_miles">{t('settings.units.options.nautical_miles')}</option>
+                  <option value="kilometers">{t('settings:units.options.kilometers')}</option>
+                  <option value="miles">{t('settings:units.options.miles')}</option>
+                  <option value="nautical_miles">{t('settings:units.options.nautical_miles')}</option>
                 </select>
               </div>
               <div>
-                <label className="label">{t('settings.units.currency')}</label>
+                <label className="label">{t('settings:units.currency')}</label>
                 <select
                   value={units.currency}
                   onChange={(e) => setUnits({ currency: e.target.value as typeof units.currency })}
                   className="input"
                 >
-                  <option value="EUR">{t('settings.units.options.EUR')}</option>
-                  <option value="USD">{t('settings.units.options.USD')}</option>
-                  <option value="GBP">{t('settings.units.options.GBP')}</option>
-                  <option value="CHF">{t('settings.units.options.CHF')}</option>
+                  <option value="EUR">{t('settings:units.options.EUR')}</option>
+                  <option value="USD">{t('settings:units.options.USD')}</option>
+                  <option value="GBP">{t('settings:units.options.GBP')}</option>
+                  <option value="CHF">{t('settings:units.options.CHF')}</option>
                 </select>
               </div>
               <div>
-                <label className="label">{t('settings.units.temperature')}</label>
+                <label className="label">{t('settings:units.temperature')}</label>
                 <select
                   value={units.temperature}
                   onChange={(e) => setUnits({ temperature: e.target.value as typeof units.temperature })}
                   className="input"
                 >
-                  <option value="celsius">{t('settings.units.options.celsius')}</option>
-                  <option value="fahrenheit">{t('settings.units.options.fahrenheit')}</option>
+                  <option value="celsius">{t('settings:units.options.celsius')}</option>
+                  <option value="fahrenheit">{t('settings:units.options.fahrenheit')}</option>
                 </select>
               </div>
             </div>
@@ -520,38 +520,38 @@ export default function SettingsPage() {
           <div className="card space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold">{t('settings.defaults.title')}</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings.defaults.description')}</p>
+                <h2 className="text-xl font-semibold">{t('settings:defaults.title')}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings:defaults.description')}</p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="label">{t('settings.defaults.flightStatus')}</label>
+                <label className="label">{t('settings:defaults.flightStatus')}</label>
                 <select
                   value={defaults.flightStatus}
                   onChange={(e) => setDefaults({ flightStatus: e.target.value as typeof defaults.flightStatus })}
                   className="input"
                 >
-                  <option value="scheduled">{t('settings.defaults.options.scheduled')}</option>
-                  <option value="flown">{t('settings.defaults.options.flown')}</option>
+                  <option value="scheduled">{t('settings:defaults.options.scheduled')}</option>
+                  <option value="flown">{t('settings:defaults.options.flown')}</option>
                 </select>
               </div>
               <div>
-                <label className="label">{t('settings.defaults.seatClass')}</label>
+                <label className="label">{t('settings:defaults.seatClass')}</label>
                 <select
                   value={defaults.seatClass}
                   onChange={(e) => setDefaults({ seatClass: e.target.value as typeof defaults.seatClass })}
                   className="input"
                 >
-                  <option value="economy">{t('settings.defaults.options.economy')}</option>
-                  <option value="premium_economy">{t('settings.defaults.options.premium_economy')}</option>
-                  <option value="business">{t('settings.defaults.options.business')}</option>
-                  <option value="first">{t('settings.defaults.options.first')}</option>
+                  <option value="economy">{t('settings:defaults.options.economy')}</option>
+                  <option value="premium_economy">{t('settings:defaults.options.premium_economy')}</option>
+                  <option value="business">{t('settings:defaults.options.business')}</option>
+                  <option value="first">{t('settings:defaults.options.first')}</option>
                 </select>
               </div>
               <div>
-                <label className="label">{t('settings.defaults.favoriteAirline')}</label>
+                <label className="label">{t('settings:defaults.favoriteAirline')}</label>
                 <input
                   type="text"
                   value={defaults.favoriteAirline}
@@ -560,15 +560,15 @@ export default function SettingsPage() {
                 />
               </div>
               <div>
-                <label className="label">{t('settings.defaults.flightCategory')}</label>
+                <label className="label">{t('settings:defaults.flightCategory')}</label>
                 <select
                   value={defaults.flightCategory}
                   onChange={(e) => setDefaults({ flightCategory: e.target.value as typeof defaults.flightCategory })}
                   className="input"
                 >
-                  <option value="business">{t('settings.defaults.options.business')}</option>
-                  <option value="private">{t('settings.defaults.options.private')}</option>
-                  <option value="vacation">{t('settings.defaults.options.vacation')}</option>
+                  <option value="business">{t('settings:defaults.options.business')}</option>
+                  <option value="private">{t('settings:defaults.options.private')}</option>
+                  <option value="vacation">{t('settings:defaults.options.vacation')}</option>
                 </select>
               </div>
             </div>
@@ -580,25 +580,25 @@ export default function SettingsPage() {
           <div className="card space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold">{t('settings.map.title')}</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings.map.description')}</p>
+                <h2 className="text-xl font-semibold">{t('settings:map.title')}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings:map.description')}</p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="label">{t('settings.map.mapStyle')}</label>
+                <label className="label">{t('settings:map.mapStyle')}</label>
                 <select
                   value={map.mapStyle}
                   onChange={(e) => setMap({ mapStyle: e.target.value as typeof map.mapStyle })}
                   className="input"
                 >
-                  <option value="osm">{t('settings.map.options.osm')}</option>
-                  <option value="satellite">{t('settings.map.options.satellite')}</option>
+                  <option value="osm">{t('settings:map.options.osm')}</option>
+                  <option value="satellite">{t('settings:map.options.satellite')}</option>
                 </select>
               </div>
               <div>
-                <label className="label">{t('settings.map.zoomLevel')}</label>
+                <label className="label">{t('settings:map.zoomLevel')}</label>
                 <input
                   type="number"
                   min={1}
@@ -609,19 +609,19 @@ export default function SettingsPage() {
                 />
               </div>
               <div>
-                <label className="label">{t('settings.map.markerStyle')}</label>
+                <label className="label">{t('settings:map.markerStyle')}</label>
                 <select
                   value={map.markerStyle}
                   onChange={(e) => setMap({ markerStyle: e.target.value as typeof map.markerStyle })}
                   className="input"
                 >
-                  <option value="pin">{t('settings.map.options.pin')}</option>
-                  <option value="circle">{t('settings.map.options.circle')}</option>
-                  <option value="custom">{t('settings.map.options.custom')}</option>
+                  <option value="pin">{t('settings:map.options.pin')}</option>
+                  <option value="circle">{t('settings:map.options.circle')}</option>
+                  <option value="custom">{t('settings:map.options.custom')}</option>
                 </select>
               </div>
               <div>
-                <label className="label">{t('settings.map.routeColor')}</label>
+                <label className="label">{t('settings:map.routeColor')}</label>
                 <div className="flex items-center gap-2">
                   <input
                     type="color"
@@ -649,8 +649,8 @@ export default function SettingsPage() {
           <div className="card space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold">{t('settings.notifications.title')}</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings.notifications.description')}</p>
+                <h2 className="text-xl font-semibold">{t('settings:notifications.title')}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings:notifications.description')}</p>
               </div>
             </div>
 
@@ -662,7 +662,7 @@ export default function SettingsPage() {
                   onChange={(e) => setNotifications({ emailNotifications: e.target.checked })}
                   className="h-4 w-4"
                 />
-                <span>{t('settings.notifications.emailNotifications')}</span>
+                <span>{t('settings:notifications.emailNotifications')}</span>
               </label>
 
               <label className="flex items-center gap-3">
@@ -672,19 +672,19 @@ export default function SettingsPage() {
                   onChange={(e) => setNotifications({ checkInReminder: e.target.checked })}
                   className="h-4 w-4"
                 />
-                <span>{t('settings.notifications.checkInReminder')}</span>
+                <span>{t('settings:notifications.checkInReminder')}</span>
               </label>
 
               <div>
-                <label className="label">{t('settings.notifications.flightReminder')}</label>
+                <label className="label">{t('settings:notifications.flightReminder')}</label>
                 <select
                   value={notifications.flightReminder}
                   onChange={(e) => setNotifications({ flightReminder: e.target.value as typeof notifications.flightReminder })}
                   className="input"
                 >
-                  <option value="off">{t('settings.notifications.options.off')}</option>
-                  <option value="24h">{t('settings.notifications.options.24h')}</option>
-                  <option value="48h">{t('settings.notifications.options.48h')}</option>
+                  <option value="off">{t('settings:notifications.options.off')}</option>
+                  <option value="24h">{t('settings:notifications.options.24h')}</option>
+                  <option value="48h">{t('settings:notifications.options.48h')}</option>
                 </select>
               </div>
 
@@ -695,7 +695,7 @@ export default function SettingsPage() {
                   onChange={(e) => setNotifications({ featureUpdates: e.target.checked })}
                   className="h-4 w-4"
                 />
-                <span>{t('settings.notifications.featureUpdates')}</span>
+                <span>{t('settings:notifications.featureUpdates')}</span>
               </label>
             </div>
           </div>
@@ -706,8 +706,8 @@ export default function SettingsPage() {
           <div className="card space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold">{t('settings.privacy.title')}</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings.privacy.description')}</p>
+                <h2 className="text-xl font-semibold">{t('settings:privacy.title')}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings:privacy.description')}</p>
               </div>
             </div>
 
@@ -719,7 +719,7 @@ export default function SettingsPage() {
                   onChange={(e) => setPrivacy({ twoFactorAuth: e.target.checked })}
                   className="h-4 w-4"
                 />
-                <span>{t('settings.privacy.twoFactorAuth')}</span>
+                <span>{t('settings:privacy.twoFactorAuth')}</span>
               </label>
 
               <label className="flex items-center gap-3">
@@ -729,7 +729,7 @@ export default function SettingsPage() {
                   onChange={(e) => setPrivacy({ loginAlerts: e.target.checked })}
                   className="h-4 w-4"
                 />
-                <span>{t('settings.privacy.loginAlerts')}</span>
+                <span>{t('settings:privacy.loginAlerts')}</span>
               </label>
 
               <label className="flex items-center gap-3">
@@ -739,7 +739,7 @@ export default function SettingsPage() {
                   onChange={(e) => setPrivacy({ analyticsOptIn: e.target.checked })}
                   className="h-4 w-4"
                 />
-                <span>{t('settings.privacy.analyticsOptIn')}</span>
+                <span>{t('settings:privacy.analyticsOptIn')}</span>
               </label>
 
               <div className="flex items-center gap-3">
@@ -747,9 +747,9 @@ export default function SettingsPage() {
                   className="btn-secondary"
                   onClick={() => setPrivacy({ dataExportRequested: true })}
                 >
-                  {t('settings.privacy.dataExport')}
+                  {t('settings:privacy.dataExport')}
                 </button>
-                {privacy.dataExportRequested && <span className="text-sm text-green-500">{t('settings.privacy.dataExportRequested')}</span>}
+                {privacy.dataExportRequested && <span className="text-sm text-green-500">{t('settings:privacy.dataExportRequested')}</span>}
               </div>
             </div>
           </div>
@@ -758,8 +758,8 @@ export default function SettingsPage() {
           <div className="card space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold">{t('settings.backup.title')}</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings.backup.description')}</p>
+                <h2 className="text-xl font-semibold">{t('settings:backup.title')}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings:backup.description')}</p>
               </div>
             </div>
 
@@ -771,32 +771,32 @@ export default function SettingsPage() {
                   onChange={(e) => setBackup({ autoBackup: e.target.checked })}
                   className="h-4 w-4"
                 />
-                <span>{t('settings.backup.autoBackup')}</span>
+                <span>{t('settings:backup.autoBackup')}</span>
               </label>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="label">{t('settings.backup.backupInterval')}</label>
+                  <label className="label">{t('settings:backup.backupInterval')}</label>
                   <select
                     value={backup.backupInterval}
                     onChange={(e) => setBackup({ backupInterval: e.target.value as typeof backup.backupInterval })}
                     className="input"
                   >
-                    <option value="daily">{t('settings.backup.intervals.daily')}</option>
-                    <option value="weekly">{t('settings.backup.intervals.weekly')}</option>
-                    <option value="monthly">{t('settings.backup.intervals.monthly')}</option>
+                    <option value="daily">{t('settings:backup.intervals.daily')}</option>
+                    <option value="weekly">{t('settings:backup.intervals.weekly')}</option>
+                    <option value="monthly">{t('settings:backup.intervals.monthly')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="label">{t('settings.backup.exportFormat')}</label>
+                  <label className="label">{t('settings:backup.exportFormat')}</label>
                   <select
                     value={backup.exportFormat}
                     onChange={(e) => setBackup({ exportFormat: e.target.value as typeof backup.exportFormat })}
                     className="input"
                   >
-                    <option value="json">{t('settings.backup.formats.json')}</option>
-                    <option value="csv">{t('settings.backup.formats.csv')}</option>
-                    <option value="pdf">{t('settings.backup.formats.pdf')}</option>
+                    <option value="json">{t('settings:backup.formats.json')}</option>
+                    <option value="csv">{t('settings:backup.formats.csv')}</option>
+                    <option value="pdf">{t('settings:backup.formats.pdf')}</option>
                   </select>
                 </div>
               </div>
@@ -808,11 +808,11 @@ export default function SettingsPage() {
                   onChange={(e) => setBackup({ cloudSync: e.target.checked })}
                   className="h-4 w-4"
                 />
-                <span>{t('settings.backup.cloudSync')}</span>
+                <span>{t('settings:backup.cloudSync')}</span>
               </label>
 
               <div>
-                <label className="label">{t('settings.backup.retentionDays')}</label>
+                <label className="label">{t('settings:backup.retentionDays')}</label>
                 <input
                   type="number"
                   value={retentionDays}
@@ -822,36 +822,36 @@ export default function SettingsPage() {
                   className="input"
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {t('settings.backup.retentionDaysDescription', { days: retentionDays })}
+                  {t('settings:backup.retentionDaysDescription', { days: retentionDays })}
                 </p>
               </div>
 
               {user?.isAdmin && (
                 <>
                   <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('settings.backup.status.title')}</p>
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('settings:backup.status.title')}</p>
                     {backupStatus?.running ? (
                       <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
                         <span className="animate-pulse">●</span>
-                        <span>{t('settings.backup.status.running')}</span>
+                        <span>{t('settings:backup.status.running')}</span>
                       </div>
                     ) : lastBackup ? (
                       <div className="space-y-1">
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {t('settings.backup.status.lastBackup', { date: new Date(lastBackup.completedAt).toLocaleString('de-DE') })}
+                          {t('settings:backup.status.lastBackup', { date: new Date(lastBackup.completedAt).toLocaleString('de-DE') })}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-500">
-                          {t('settings.backup.status.size', { size: (parseInt(lastBackup.size, 10) / 1024 / 1024).toFixed(2) })}
+                          {t('settings:backup.status.size', { size: (parseInt(lastBackup.size, 10) / 1024 / 1024).toFixed(2) })}
                         </p>
                       </div>
                     ) : (
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings.backup.status.noBackup')}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings:backup.status.noBackup')}</p>
                     )}
                   </div>
 
                   <div className="pt-2">
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {t('settings.backup.status.path', { path: '/app/data/backups' })}
+                      {t('settings:backup.status.path', { path: '/app/data/backups' })}
                     </p>
                   </div>
                 </>
@@ -866,27 +866,27 @@ export default function SettingsPage() {
         {/* Training Settings */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-            <span>🤖</span> {t('settings.training.title')}
+            <span>🤖</span> {t('settings:training.title')}
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mb-4">
-            {t('settings.training.description')}
+            {t('settings:training.description')}
           </p>
 
           <InlineHelp
-            title={t('settings.training.help.title')}
+            title={t('settings:training.help.title')}
             category="expert"
             content={
               <div className="space-y-3">
                 <p>
-                  {t('settings.training.help.description')}
+                  {t('settings:training.help.description')}
                 </p>
                 <div>
-                  <p className="font-semibold mb-1">Optionen:</p>
+                  <p className="font-semibold mb-1">{t('settings:training.help.optionsTitle')}</p>
                   <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
-                    <li><strong>{t('settings.training.useTrainedModels')}:</strong> {t('settings.training.help.options.useTrainedModels')}</li>
-                    <li><strong>{t('settings.training.preferredEmailModel')}:</strong> {t('settings.training.help.options.preferredEmailModel')}</li>
-                    <li><strong>{t('settings.training.preferredVisionModel')}:</strong> {t('settings.training.help.options.preferredVisionModel')}</li>
-                    <li><strong>{t('settings.training.trainingSeparateModels')}:</strong> {t('settings.training.help.options.trainingSeparateModels')}</li>
+                    <li><strong>{t('settings:training.useTrainedModels')}:</strong> {t('settings:training.help.options.useTrainedModels')}</li>
+                    <li><strong>{t('settings:training.preferredEmailModel')}:</strong> {t('settings:training.help.options.preferredEmailModel')}</li>
+                    <li><strong>{t('settings:training.preferredVisionModel')}:</strong> {t('settings:training.help.options.preferredVisionModel')}</li>
+                    <li><strong>{t('settings:training.trainingSeparateModels')}:</strong> {t('settings:training.help.options.trainingSeparateModels')}</li>
                   </ul>
                 </div>
               </div>
@@ -897,10 +897,10 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
               <div className="flex-1">
                 <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
-                  {t('settings.training.useTrainedModels')}
+                  {t('settings:training.useTrainedModels')}
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {t('settings.training.useTrainedModelsDescription')}
+                  {t('settings:training.useTrainedModelsDescription')}
                 </p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -915,44 +915,44 @@ export default function SettingsPage() {
             </div>
 
             <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-              <label className="label">{t('settings.training.preferredEmailModel')}</label>
+              <label className="label">{t('settings:training.preferredEmailModel')}</label>
               <select
                 value={trainingSettings.preferredEmailModel}
                 onChange={(e) => setTrainingSettings({ ...trainingSettings, preferredEmailModel: e.target.value as 'auto' | 'trained' | 'base' })}
                 className="input"
               >
-                <option value="auto">{t('settings.training.modelOptions.auto')}</option>
-                <option value="trained">{t('settings.training.modelOptions.trained')}</option>
-                <option value="base">{t('settings.training.modelOptions.base')}</option>
+                <option value="auto">{t('settings:training.modelOptions.auto')}</option>
+                <option value="trained">{t('settings:training.modelOptions.trained')}</option>
+                <option value="base">{t('settings:training.modelOptions.base')}</option>
               </select>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {t('settings.training.preferredEmailModelDescription')}
+                {t('settings:training.preferredEmailModelDescription')}
               </p>
             </div>
 
             <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-              <label className="label">{t('settings.training.preferredVisionModel')}</label>
+              <label className="label">{t('settings:training.preferredVisionModel')}</label>
               <select
                 value={trainingSettings.preferredVisionModel}
                 onChange={(e) => setTrainingSettings({ ...trainingSettings, preferredVisionModel: e.target.value as 'auto' | 'trained' | 'base' })}
                 className="input"
               >
-                <option value="auto">{t('settings.training.modelOptions.auto')}</option>
-                <option value="trained">{t('settings.training.modelOptions.trained')}</option>
-                <option value="base">{t('settings.training.modelOptions.base')}</option>
+                <option value="auto">{t('settings:training.modelOptions.auto')}</option>
+                <option value="trained">{t('settings:training.modelOptions.trained')}</option>
+                <option value="base">{t('settings:training.modelOptions.base')}</option>
               </select>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {t('settings.training.preferredVisionModelDescription')}
+                {t('settings:training.preferredVisionModelDescription')}
               </p>
             </div>
 
             <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
               <div className="flex-1">
                 <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
-                  {t('settings.training.trainingSeparateModels')}
+                  {t('settings:training.trainingSeparateModels')}
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {t('settings.training.trainingSeparateModelsDescription')}
+                  {t('settings:training.trainingSeparateModelsDescription')}
                 </p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -972,7 +972,7 @@ export default function SettingsPage() {
                 disabled={loadingTrainingSettings}
                 className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loadingTrainingSettings ? t('settings.training.savingSettings') : t('settings.training.saveSettings')}
+                {loadingTrainingSettings ? t('settings:training.savingSettings') : t('settings:training.saveSettings')}
               </button>
             </div>
           </div>
@@ -982,39 +982,39 @@ export default function SettingsPage() {
         {hasTrainingAccess && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-              <span>⚙️</span> {t('settings.developer.title')}
+              <span>⚙️</span> {t('settings:developer.title')}
             </h2>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
-              {t('settings.developer.description')}
+              {t('settings:developer.description')}
             </p>
 
             <InlineHelp
-              title={t('settings.developer.help.title')}
+              title={t('settings:developer.help.title')}
               category="expert"
               content={
                 <div className="space-y-3">
                   <p>
-                    {t('settings.developer.help.description')}
+                    {t('settings:developer.help.description')}
                   </p>
                   <div>
-                    <p className="font-semibold mb-1">{t('settings.developer.help.features.title')}</p>
+                    <p className="font-semibold mb-1">{t('settings:developer.help.features.title')}</p>
                     <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
-                      <li>{t('settings.developer.help.features.items.trainingPage')}</li>
-                      <li>{t('settings.developer.help.features.items.uploadAnnotation')}</li>
-                      <li>{t('settings.developer.help.features.items.loraTraining')}</li>
-                      <li>{t('settings.developer.help.features.items.parserAccuracy')}</li>
+                      <li>{t('settings:developer.help.features.items.trainingPage')}</li>
+                      <li>{t('settings:developer.help.features.items.uploadAnnotation')}</li>
+                      <li>{t('settings:developer.help.features.items.loraTraining')}</li>
+                      <li>{t('settings:developer.help.features.items.parserAccuracy')}</li>
                     </ul>
                   </div>
                   <div>
-                    <p className="font-semibold mb-1">{t('settings.developer.help.requirements.title')}</p>
+                    <p className="font-semibold mb-1">{t('settings:developer.help.requirements.title')}</p>
                     <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
-                      <li>{t('settings.developer.help.requirements.items.ollama')}</li>
-                      <li>{t('settings.developer.help.requirements.items.hardware')}</li>
-                      <li>{t('settings.developer.help.requirements.items.trainingData')}</li>
+                      <li>{t('settings:developer.help.requirements.items.ollama')}</li>
+                      <li>{t('settings:developer.help.requirements.items.hardware')}</li>
+                      <li>{t('settings:developer.help.requirements.items.trainingData')}</li>
                     </ul>
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    <strong>Hinweis:</strong> {t('settings.developer.help.note')}
+                    <strong>{t('settings:developer.help.noteLabel')}:</strong> {t('settings:developer.help.note')}
                   </p>
                 </div>
               }
@@ -1024,10 +1024,10 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
-                    {t('settings.developer.modeTitle')}
+                    {t('settings:developer.modeTitle')}
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {t('settings.developer.modeDescription')}
+                    {t('settings:developer.modeDescription')}
                   </p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
@@ -1048,21 +1048,21 @@ export default function SettingsPage() {
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
                   <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                    {t('settings.developer.confirmTitle')}
+                    {t('settings:developer.confirmTitle')}
                   </h3>
                   <div className="space-y-3 mb-6">
                     <p className="text-gray-700 dark:text-gray-300">
-                      {t('settings.developer.confirmMessage')}
+                      {t('settings:developer.confirmMessage')}
                     </p>
                     <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
                       <p className="text-sm font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
-                        {t('settings.developer.risks.title')}
+                        {t('settings:developer.risks.title')}
                       </p>
                       <ul className="text-sm text-yellow-700 dark:text-yellow-300 space-y-1 list-disc list-inside">
-                        <li>{t('settings.developer.risks.items.resourceUsage')}</li>
-                        <li>{t('settings.developer.risks.items.technicalKnowledge')}</li>
-                        <li>{t('settings.developer.risks.items.unexpectedResults')}</li>
-                        <li>{t('settings.developer.risks.items.longTraining')}</li>
+                        <li>{t('settings:developer.risks.items.resourceUsage')}</li>
+                        <li>{t('settings:developer.risks.items.technicalKnowledge')}</li>
+                        <li>{t('settings:developer.risks.items.unexpectedResults')}</li>
+                        <li>{t('settings:developer.risks.items.longTraining')}</li>
                       </ul>
                     </div>
                   </div>
@@ -1071,13 +1071,13 @@ export default function SettingsPage() {
                       onClick={() => setShowDeveloperConfirm(false)}
                       className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                     >
-                      {t('settings.developer.cancel')}
+                      {t('settings:developer.cancel')}
                     </button>
                     <button
                       onClick={() => handleDeveloperModeConfirm(true)}
                       className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
                     >
-                      {t('settings.developer.activate')}
+                      {t('settings:developer.activate')}
                     </button>
                   </div>
                 </div>
@@ -1091,7 +1091,7 @@ export default function SettingsPage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                {t('settings.password.title')}
+                {t('settings:password.title')}
               </h3>
               <div className="space-y-4">
                 {passwordError && (
@@ -1100,35 +1100,35 @@ export default function SettingsPage() {
                   </div>
                 )}
                 <div>
-                  <label className="label">{t('settings.password.oldPassword')}</label>
+                  <label className="label">{t('settings:password.oldPassword')}</label>
                   <input
                     type="password"
                     value={passwordForm.oldPassword}
                     onChange={(e) => setPasswordForm({ ...passwordForm, oldPassword: e.target.value })}
                     className="input"
-                    placeholder={t('settings.password.oldPassword')}
+                    placeholder={t('settings:password.oldPassword')}
                     disabled={changingPassword}
                   />
                 </div>
                 <div>
-                  <label className="label">{t('settings.password.newPassword')}</label>
+                  <label className="label">{t('settings:password.newPassword')}</label>
                   <input
                     type="password"
                     value={passwordForm.newPassword}
                     onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
                     className="input"
-                    placeholder={t('settings.password.newPassword')}
+                    placeholder={t('settings:password.newPassword')}
                     disabled={changingPassword}
                   />
                 </div>
                 <div>
-                  <label className="label">{t('settings.password.confirmPassword')}</label>
+                  <label className="label">{t('settings:password.confirmPassword')}</label>
                   <input
                     type="password"
                     value={passwordForm.confirmPassword}
                     onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
                     className="input"
-                    placeholder={t('settings.password.confirmPassword')}
+                    placeholder={t('settings:password.confirmPassword')}
                     disabled={changingPassword}
                   />
                 </div>
@@ -1147,14 +1147,14 @@ export default function SettingsPage() {
                   className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                   disabled={changingPassword}
                 >
-                  {t('common.buttons.cancel')}
+                  {t('common:buttons.cancel')}
                 </button>
                 <button
                   onClick={handlePasswordChange}
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={changingPassword}
                 >
-                  {changingPassword ? t('settings.password.changing') : t('settings.password.submit')}
+                  {changingPassword ? t('settings:password.changing') : t('settings:password.submit')}
                 </button>
               </div>
             </div>
@@ -1165,10 +1165,10 @@ export default function SettingsPage() {
         {user?.isAdmin && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-              <span>👑</span> {t('settings.admin.title')}
+              <span>👑</span> {t('settings:admin.title')}
             </h2>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
-              {t('settings.admin.description')}
+              {t('settings:admin.description')}
             </p>
             <Link
               to="/admin"
@@ -1178,19 +1178,54 @@ export default function SettingsPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-              {t('settings.admin.openAdminPanel')}
+              {t('settings:admin.openAdminPanel')}
             </Link>
           </div>
         )}
 
+        {/* About & License */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+            <span>ℹ️</span> About TravStats
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            TravStats - Flight Statistics Tracking Application
+          </p>
+          <div className="space-y-3">
+            <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+              <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
+                <strong>License:</strong> GNU Affero General Public License v3.0 (AGPL-3.0)
+              </p>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
+                Copyright © 2025 Dennis Wittke
+              </p>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
+                This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License.
+                If you run this software as a web service, you must make the complete source code available under AGPL-3.0.
+              </p>
+              <a
+                href="https://github.com/Abrechen2/TravStats"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center px-4 py-2 bg-gray-800 dark:bg-gray-700 hover:bg-gray-900 dark:hover:bg-gray-600 text-white font-medium rounded-lg transition-colors text-sm"
+              >
+                <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                  <path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd" />
+                </svg>
+                View Source Code on GitHub
+              </a>
+            </div>
+          </div>
+        </div>
+
         <div className="bg-blue-50 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-700 rounded-lg p-4 text-sm text-blue-900 dark:text-blue-100 flex items-center justify-between">
           <div>
-            <p className="font-semibold">{t('settings.autoSaved.title')}</p>
-            <p className="text-blue-800 dark:text-blue-200">{t('settings.autoSaved.description')}</p>
+            <p className="font-semibold">{t('settings:autoSaved.title')}</p>
+            <p className="text-blue-800 dark:text-blue-200">{t('settings:autoSaved.description')}</p>
           </div>
           <div className="flex items-center gap-2">
             <button className="btn-secondary" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-              {t('settings.scrollToTop')}
+              {t('settings:scrollToTop')}
             </button>
           </div>
         </div>

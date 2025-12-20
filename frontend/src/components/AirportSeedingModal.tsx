@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { setupApi } from '../lib/api';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface AirportSeedingModalProps {
   isOpen: boolean;
@@ -7,6 +8,7 @@ interface AirportSeedingModalProps {
 }
 
 export default function AirportSeedingModal({ isOpen, onClose }: AirportSeedingModalProps) {
+  const { t } = useTranslation(['common', 'setup']);
   const [status, setStatus] = useState<any>(null);
 
   useEffect(() => {
@@ -59,12 +61,11 @@ export default function AirportSeedingModal({ isOpen, onClose }: AirportSeedingM
               </div>
               <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
                 <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
-                  Airport-Datenbank wird geladen
+                  {t('setup:airportSeeding.modal.title')}
                 </h3>
                 <div className="mt-2">
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Wir laden gerade die Flughafendatenbank für Sie. Dies kann einige Minuten dauern.
-                    Sie können die Anwendung bereits verwenden, während der Import im Hintergrund läuft.
+                    {t('setup:airportSeeding.modal.description')}
                   </p>
                   
                   {status.status === 'running' && (
@@ -76,9 +77,9 @@ export default function AirportSeedingModal({ isOpen, onClose }: AirportSeedingM
                         ></div>
                       </div>
                       <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400">
-                        <span>{progressPercent}% abgeschlossen</span>
+                        <span>{t('setup:airportSeeding.modal.progress', { percent: progressPercent })}</span>
                         {status.processedAirports !== undefined && status.totalAirports !== undefined && (
-                          <span>{status.processedAirports} / {status.totalAirports} Flughäfen</span>
+                          <span>{t('setup:airportSeeding.modal.airportsCount', { processed: status.processedAirports, total: status.totalAirports })}</span>
                         )}
                       </div>
                     </div>
@@ -93,7 +94,7 @@ export default function AirportSeedingModal({ isOpen, onClose }: AirportSeedingM
               onClick={onClose}
               className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
             >
-              Verstanden
+              {t('setup:airportSeeding.modal.understood')}
             </button>
           </div>
         </div>
@@ -101,6 +102,8 @@ export default function AirportSeedingModal({ isOpen, onClose }: AirportSeedingM
     </div>
   );
 }
+
+
 
 
 

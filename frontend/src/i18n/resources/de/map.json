@@ -1,0 +1,33 @@
+{
+  "loading3DGlobe": "3D-Globus wird geladen...",
+  "filters": {
+    "title": "Filter",
+    "timePeriod": "Zeitraum",
+    "allYears": "Alle Jahre",
+    "allMonths": "Alle Monate",
+    "routeFrequency": "Routenfrequenz",
+    "minFlown": "Mindestens {{count}}x geflogen",
+    "airlines": "Airlines",
+    "none": "Keine",
+    "all": "Alle",
+    "moreAirlines": "+{{count}} weitere...",
+    "status": "Status",
+    "reset": "Filter zurücksetzen",
+    "help": {
+      "timePeriod": "Filtern Sie Flüge nach Jahr und/oder Monat. Wählen Sie ein Jahr und optional einen Monat aus.",
+      "timePeriodExpanded": "Der Zeitraum-Filter zeigt nur Flüge an, die im ausgewählten Zeitraum stattgefunden haben. Sie können nach Jahr allein oder nach Jahr und Monat filtern.",
+      "airlines": "Filtern Sie Flüge nach Airlines. Sie können mehrere Airlines gleichzeitig auswählen.",
+      "airlinesExpanded": "Wählen Sie eine oder mehrere Airlines aus, um nur Flüge dieser Airlines anzuzeigen. Klicken Sie auf 'Alle' oder 'Keine', um alle Airlines auszuwählen oder die Auswahl zu löschen."
+    }
+  },
+  "airportMarkers": {
+    "visits": "Besuche",
+    "airlines": "Airlines",
+    "departures": "Abflüge",
+    "arrivals": "Ankünfte",
+    "lastVisit": "Letzter Besuch",
+    "firstVisit": "Erster Besuch",
+    "moreAirlines": "+{{count}} mehr"
+  }
+}
+

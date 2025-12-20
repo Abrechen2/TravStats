@@ -4,6 +4,7 @@ import ContextualHint from '../components/Onboarding/ContextualHint';
 import type { Achievement, AchievementSummary, LeaderboardEntry } from '../types';
 import { Link } from 'react-router-dom';
 import { STORAGE_KEYS } from '../lib/constants';
+import { useTranslation } from '../hooks/useTranslation';
 
 const tierColors = {
   bronze: 'from-amber-700 to-amber-900',
@@ -21,15 +22,8 @@ const tierTextColors = {
   diamond: 'text-purple-400',
 };
 
-const categoryNames: Record<string, string> = {
-  explorer: '🗺️ Explorer',
-  distance: '📏 Distance',
-  collector: '📦 Collector',
-  elite: '⭐ Elite',
-  special: '🌟 Special',
-};
-
 export default function AchievementsPage() {
+  const { t } = useTranslation(['achievements', 'common']);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [summary, setSummary] = useState<AchievementSummary | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -38,6 +32,14 @@ export default function AchievementsPage() {
   const [selectedTier, setSelectedTier] = useState<string>('all');
   const [showUnlockedOnly, setShowUnlockedOnly] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+
+  const categoryNames: Record<string, string> = {
+    explorer: t('achievements:categories.explorer'),
+    distance: t('achievements:categories.distance'),
+    collector: t('achievements:categories.collector'),
+    elite: t('achievements:categories.elite'),
+    special: t('achievements:categories.special'),
+  };
 
   useEffect(() => {
     loadAchievements();
@@ -78,10 +80,10 @@ export default function AchievementsPage() {
     try {
       const result = await achievementsApi.checkAchievements();
       if (result.newlyUnlocked > 0) {
-        alert(`🎉 Congratulations! You unlocked ${result.newlyUnlocked} new achievement(s)!`);
+        alert(t('achievements:alerts.unlocked', { count: result.newlyUnlocked }));
         loadAchievements();
       } else {
-        alert('No new achievements unlocked. Keep flying!');
+        alert(t('achievements:alerts.none'));
       }
     } catch (error) {
       console.error('Failed to check achievements:', error);
@@ -106,37 +108,37 @@ export default function AchievementsPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-white text-xl">Loading achievements...</div>
+        <div className="text-white text-xl">{t('achievements:loading')}</div>
       </div>
     );
   }
 
   if (showLeaderboard) {
-  return (
-    <div className="min-h-screen bg-gray-900 text-white p-6">
-      <div className="max-w-6xl mx-auto">
-        <ContextualHint
-          id="achievements-page-hint"
-          title="Willkommen bei den Achievements!"
-          message="Sammeln Sie Achievements, indem Sie Flüge hinzufügen und verschiedene Ziele erreichen. Schauen Sie sich auch das Leaderboard an, um zu sehen, wie Sie im Vergleich zu anderen abschneiden."
-          linkTo="/"
-          linkText="Zurück zum Dashboard"
-        />
+    return (
+      <div className="min-h-screen bg-gray-900 text-white p-6">
+        <div className="max-w-6xl mx-auto">
+          <ContextualHint
+            id="achievements-page-hint"
+            title={t('achievements:hint.title')}
+            message={t('achievements:hint.message')}
+            linkTo="/"
+            linkText={t('achievements:hint.linkText')}
+          />
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setShowLeaderboard(false)}
                 className="text-gray-400 hover:text-white transition-colors"
               >
-                ← Back to Achievements
+                {t('achievements:leaderboard.backToAchievements')}
               </button>
-              <h1 className="text-4xl font-bold">🏆 Leaderboard</h1>
+              <h1 className="text-4xl font-bold">🏆 {t('achievements:leaderboard.title')}</h1>
             </div>
             <Link
               to="/"
               className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
             >
-              ← Dashboard
+              {t('achievements:leaderboard.backToDashboard')}
             </Link>
           </div>
 
@@ -144,44 +146,48 @@ export default function AchievementsPage() {
             {leaderboard.length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-6xl mb-4">🏆</div>
-                <h3 className="text-2xl font-bold text-white mb-2">Noch kein Leaderboard</h3>
+                <h3 className="text-2xl font-bold text-white mb-2">
+                  {t('achievements:leaderboard.emptyTitle')}
+                </h3>
                 <p className="text-gray-400">
-                  Das Leaderboard wird angezeigt, sobald mehrere Benutzer Achievements gesammelt haben.
+                  {t('achievements:leaderboard.emptyMessage')}
                 </p>
               </div>
             ) : (
               <div className="space-y-2">
                 {leaderboard.map((entry) => (
-                <div
-                  key={entry.rank}
-                  className="flex items-center gap-4 p-4 bg-gray-700 rounded-lg hover:bg-gray-650 transition-colors"
-                >
                   <div
-                    className={`text-3xl font-bold w-12 text-center ${entry.rank === 1
-                        ? 'text-yellow-400'
-                        : entry.rank === 2
-                          ? 'text-gray-400'
-                          : entry.rank === 3
-                            ? 'text-amber-600'
-                            : 'text-gray-500'
-                      }`}
+                    key={entry.rank}
+                    className="flex items-center gap-4 p-4 bg-gray-700 rounded-lg hover:bg-gray-650 transition-colors"
                   >
-                    {entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : entry.rank === 3 ? '🥉' : `#${entry.rank}`}
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-xl font-semibold">{entry.username}</div>
-                    <div className="text-sm text-gray-400">
-                      {entry.achievementCount} achievements
+                    <div
+                      className={`text-3xl font-bold w-12 text-center ${entry.rank === 1
+                          ? 'text-yellow-400'
+                          : entry.rank === 2
+                            ? 'text-gray-400'
+                            : entry.rank === 3
+                              ? 'text-amber-600'
+                              : 'text-gray-500'
+                        }`}
+                    >
+                      {entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : entry.rank === 3 ? '🥉' : `#${entry.rank}`}
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-xl font-semibold">{entry.username}</div>
+                      <div className="text-sm text-gray-400">
+                        {t('achievements:leaderboard.achievementCount', { count: entry.achievementCount })}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-yellow-400">
+                        {entry.totalPoints.toLocaleString()}
+                      </div>
+                      <div className="text-sm text-gray-400">
+                        {t('achievements:leaderboard.points')}
+                      </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-yellow-400">
-                      {entry.totalPoints.toLocaleString()}
-                    </div>
-                    <div className="text-sm text-gray-400">points</div>
-                  </div>
-                </div>
-              ))}
+                ))}
               </div>
             )}
           </div>
@@ -195,38 +201,38 @@ export default function AchievementsPage() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-4xl font-bold">🏆 Achievements</h1>
+          <h1 className="text-4xl font-bold">🏆 {t('achievements:title')}</h1>
           <Link
             to="/"
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
           >
-            ← Dashboard
+            {t('achievements:leaderboard.backToDashboard')}
           </Link>
         </div>
 
         <ContextualHint
           id="achievements-page-hint"
-          title="Willkommen bei den Achievements!"
-          message="Sammeln Sie Achievements, indem Sie Flüge hinzufügen und verschiedene Ziele erreichen. Schauen Sie sich auch das Leaderboard an, um zu sehen, wie Sie im Vergleich zu anderen abschneiden."
+          title={t('achievements:hint.title')}
+          message={t('achievements:hint.message')}
           linkTo="/"
-          linkText="Zurück zum Dashboard"
+          linkText={t('achievements:hint.linkText')}
         />
 
         {/* Summary Stats */}
         {summary && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl p-6">
-              <div className="text-sm text-blue-200 mb-1">Total Points</div>
+              <div className="text-sm text-blue-200 mb-1">{t('achievements:summary.totalPoints')}</div>
               <div className="text-3xl font-bold">{summary.totalPoints.toLocaleString()}</div>
             </div>
             <div className="bg-gradient-to-br from-green-600 to-green-800 rounded-xl p-6">
-              <div className="text-sm text-green-200 mb-1">Unlocked</div>
+              <div className="text-sm text-green-200 mb-1">{t('achievements:summary.unlocked')}</div>
               <div className="text-3xl font-bold">
                 {summary.unlockedAchievements} / {summary.totalAchievements}
               </div>
             </div>
             <div className="bg-gradient-to-br from-purple-600 to-purple-800 rounded-xl p-6">
-              <div className="text-sm text-purple-200 mb-1">Progress</div>
+              <div className="text-sm text-purple-200 mb-1">{t('achievements:summary.progress')}</div>
               <div className="text-3xl font-bold">
                 {summary.totalAchievements > 0
                   ? Math.round((summary.unlockedAchievements / summary.totalAchievements) * 100)
@@ -237,8 +243,8 @@ export default function AchievementsPage() {
               onClick={() => setShowLeaderboard(true)}
               className="bg-gradient-to-br from-yellow-600 to-yellow-800 rounded-xl p-6 hover:from-yellow-500 hover:to-yellow-700 transition-all text-left"
             >
-              <div className="text-sm text-yellow-200 mb-1">Leaderboard</div>
-              <div className="text-3xl font-bold">View →</div>
+              <div className="text-sm text-yellow-200 mb-1">{t('achievements:summary.leaderboard')}</div>
+              <div className="text-3xl font-bold">{t('achievements:summary.view')}</div>
             </button>
           </div>
         )}
@@ -249,7 +255,7 @@ export default function AchievementsPage() {
             onClick={handleCheckAchievements}
             className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 rounded-lg font-semibold transition-all"
           >
-            🔄 Check for New Achievements
+            {t('achievements:checkNew')}
           </button>
         </div>
 
@@ -257,13 +263,13 @@ export default function AchievementsPage() {
         <div className="bg-gray-800 rounded-xl p-6 mb-6">
           <div className="flex flex-wrap gap-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-2">Category</label>
+              <label className="block text-sm text-gray-400 mb-2">{t('achievements:filters.category')}</label>
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 className="px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="all">All Categories</option>
+                <option value="all">{t('achievements:filters.allCategories')}</option>
                 {Object.entries(categoryNames).map(([key, name]) => (
                   <option key={key} value={key}>
                     {name}
@@ -273,18 +279,18 @@ export default function AchievementsPage() {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-400 mb-2">Tier</label>
+              <label className="block text-sm text-gray-400 mb-2">{t('achievements:filters.tier')}</label>
               <select
                 value={selectedTier}
                 onChange={(e) => setSelectedTier(e.target.value)}
                 className="px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="all">All Tiers</option>
-                <option value="bronze">Bronze</option>
-                <option value="silver">Silver</option>
-                <option value="gold">Gold</option>
-                <option value="platinum">Platinum</option>
-                <option value="diamond">Diamond</option>
+                <option value="all">{t('achievements:filters.allTiers')}</option>
+                <option value="bronze">{t('achievements:tiers.bronze')}</option>
+                <option value="silver">{t('achievements:tiers.silver')}</option>
+                <option value="gold">{t('achievements:tiers.gold')}</option>
+                <option value="platinum">{t('achievements:tiers.platinum')}</option>
+                <option value="diamond">{t('achievements:tiers.diamond')}</option>
               </select>
             </div>
 
@@ -296,7 +302,7 @@ export default function AchievementsPage() {
                   onChange={(e) => setShowUnlockedOnly(e.target.checked)}
                   className="w-5 h-5 rounded bg-gray-700 border-gray-600 text-blue-600 focus:ring-2 focus:ring-blue-500"
                 />
-                <span className="text-sm">Show unlocked only</span>
+                <span className="text-sm">{t('achievements:filters.showUnlockedOnly')}</span>
               </label>
             </div>
           </div>
@@ -325,7 +331,7 @@ export default function AchievementsPage() {
                               : 'text-gray-500'
                             }`}
                         >
-                          {achievement.tier}
+                          {t(`achievements:tiers.${achievement.tier}`)}
                         </div>
                       </div>
 
@@ -335,7 +341,7 @@ export default function AchievementsPage() {
                       {!achievement.isUnlocked && (
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm">
-                            <span>Progress</span>
+                            <span>{t('achievements:progress.label')}</span>
                             <span className="font-semibold">
                               {achievement.progress} / {achievement.requirement}
                             </span>
@@ -352,7 +358,9 @@ export default function AchievementsPage() {
                       {achievement.isUnlocked && (
                         <div className="flex items-center justify-between mt-4">
                           <span className="text-sm text-gray-200">
-                            ✓ Unlocked {achievement.unlockedAt && new Date(achievement.unlockedAt).toLocaleDateString()}
+                            {t('achievements:progress.unlocked', {
+                              date: achievement.unlockedAt && new Date(achievement.unlockedAt).toLocaleDateString(),
+                            })}
                           </span>
                           <span className="text-lg font-bold text-yellow-400">
                             +{achievement.points}
@@ -370,8 +378,8 @@ export default function AchievementsPage() {
         {filteredAchievements.length === 0 && (
           <div className="text-center py-12">
             <div className="text-6xl mb-4">🏆</div>
-            <h3 className="text-2xl font-bold mb-2">No achievements found</h3>
-            <p className="text-gray-400">Try adjusting your filters</p>
+            <h3 className="text-2xl font-bold mb-2">{t('achievements:empty.title')}</h3>
+            <p className="text-gray-400">{t('achievements:empty.message')}</p>
           </div>
         )}
       </div>

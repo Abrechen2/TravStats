@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import Map from './Map';
 import type { GeoJSONFeature } from '../types';
+import { useTranslation } from '../hooks/useTranslation';
 
 // Lazy load GlobeView as it's heavy (Three.js, react-globe.gl)
 const GlobeView = lazy(() => import('./GlobeView'));
@@ -20,6 +21,7 @@ export default function MapContainer3D({
   is3D,
   minRouteCount = 1,
 }: MapContainer3DProps) {
+  const { t } = useTranslation(['common', 'map']);
   return (
     <div className="relative h-full w-full rounded-lg shadow overflow-hidden bg-white dark:bg-gray-900 flex items-center justify-center" style={{ touchAction: 'pan-x pan-y pinch-zoom' }}>
       <div className="h-full w-full max-w-[1200px] flex items-center justify-center px-4" style={{ touchAction: 'pan-x pan-y pinch-zoom' }}>
@@ -28,7 +30,7 @@ export default function MapContainer3D({
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto mb-2"></div>
-                <p className="text-gray-600 dark:text-gray-300 text-sm">Loading 3D globe...</p>
+                <p className="text-gray-600 dark:text-gray-300 text-sm">{t('map:loading3DGlobe')}</p>
               </div>
             </div>
           }>

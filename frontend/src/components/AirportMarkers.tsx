@@ -1,6 +1,7 @@
 import { useMemo, memo } from 'react';
 import { CircleMarker, Popup } from 'react-leaflet';
 import type { GeoJSONFeature } from '../types';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface AirportMarkersProps {
   flights: GeoJSONFeature[];
@@ -20,6 +21,7 @@ interface AirportStats {
 }
 
 function AirportMarkers({ flights }: AirportMarkersProps) {
+  const { t } = useTranslation(['map', 'common']);
   const airportStats = useMemo(() => {
     const statsMap = new Map<string, AirportStats>();
 
@@ -159,27 +161,27 @@ function AirportMarkers({ flights }: AirportMarkersProps) {
 
                 <div className="grid grid-cols-2 gap-2 pt-2 border-t">
                   <div>
-                    <div className="text-xs text-gray-500">Besuche</div>
+                    <div className="text-xs text-gray-500">{t('map:airportMarkers.visits')}</div>
                     <div className="font-semibold text-blue-600">{airport.visits}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500">Airlines</div>
+                    <div className="text-xs text-gray-500">{t('map:airportMarkers.airlines')}</div>
                     <div className="font-semibold text-purple-600">{airport.airlines.length}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500">Abflüge</div>
+                    <div className="text-xs text-gray-500">{t('map:airportMarkers.departures')}</div>
                     <div className="font-semibold text-green-600">{airport.departures}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500">Ankünfte</div>
+                    <div className="text-xs text-gray-500">{t('map:airportMarkers.arrivals')}</div>
                     <div className="font-semibold text-orange-600">{airport.arrivals}</div>
                   </div>
                 </div>
 
                 <div className="pt-2 border-t">
-                  <div className="text-xs text-gray-500 mb-1">Letzter Besuch</div>
+                  <div className="text-xs text-gray-500 mb-1">{t('map:airportMarkers.lastVisit')}</div>
                   <div className="text-xs text-gray-600">
-                    {new Date(airport.lastVisit).toLocaleDateString('de-DE', {
+                    {new Date(airport.lastVisit).toLocaleDateString(undefined, {
                       year: 'numeric',
                       month: 'short',
                       day: 'numeric'
@@ -188,9 +190,9 @@ function AirportMarkers({ flights }: AirportMarkersProps) {
                 </div>
 
                 <div className="pt-2 border-t">
-                  <div className="text-xs text-gray-500 mb-1">Erster Besuch</div>
+                  <div className="text-xs text-gray-500 mb-1">{t('map:airportMarkers.firstVisit')}</div>
                   <div className="text-xs text-gray-600">
-                    {new Date(airport.firstVisit).toLocaleDateString('de-DE', {
+                    {new Date(airport.firstVisit).toLocaleDateString(undefined, {
                       year: 'numeric',
                       month: 'short',
                       day: 'numeric'
@@ -200,10 +202,10 @@ function AirportMarkers({ flights }: AirportMarkersProps) {
 
                 {airport.airlines.length > 0 && (
                   <div className="pt-2 border-t">
-                    <div className="text-xs text-gray-500 mb-1">Airlines</div>
+                    <div className="text-xs text-gray-500 mb-1">{t('map:airportMarkers.airlines')}</div>
                     <div className="text-xs text-gray-600">
                       {airport.airlines.slice(0, 3).join(', ')}
-                      {airport.airlines.length > 3 && ` +${airport.airlines.length - 3} mehr`}
+                      {airport.airlines.length > 3 && ` ${t('map:airportMarkers.moreAirlines', { count: airport.airlines.length - 3 })}`}
                     </div>
                   </div>
                 )}

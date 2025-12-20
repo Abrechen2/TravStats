@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { Flight } from '../types';
 import ReceiptUpload from './ReceiptUpload';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface FlightEditModalProps {
   flight: Flight;
@@ -15,6 +16,7 @@ export default function FlightEditModal({
   onClose,
   onSave,
 }: FlightEditModalProps) {
+  const { t } = useTranslation(['flights', 'common', 'errors']);
   const [formData, setFormData] = useState({
     airline: flight.airline || '',
     flightNumber: flight.flightNumber || '',
@@ -82,7 +84,7 @@ export default function FlightEditModal({
       await onSave(flight.id, updates);
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Failed to update flight');
+      setError(err.message || t('errors:updateFailed'));
     } finally {
       setLoading(false);
     }
@@ -95,10 +97,11 @@ export default function FlightEditModal({
       <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
           <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold dark:text-gray-100">Edit Flight</h2>
+            <h2 className="text-2xl font-bold dark:text-gray-100">{t('flights:edit.title')}</h2>
             <button
               onClick={onClose}
               className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              aria-label={t('common:buttons.close')}
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -106,7 +109,7 @@ export default function FlightEditModal({
             </button>
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            {flight.depIata || flight.depIcao} → {flight.arrIata || flight.arrIcao}
+            {flight.depIata || flight.depIcao} {t('common:labels.routeSeparator')} {flight.arrIata || flight.arrIcao}
           </p>
         </div>
 
@@ -119,95 +122,97 @@ export default function FlightEditModal({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="label">Airline</label>
+              <label className="label">{t('flights:form.airline')}</label>
               <input
                 type="text"
                 value={formData.airline}
                 onChange={(e) => setFormData({ ...formData, airline: e.target.value })}
                 className="input"
+                placeholder={t('flights:form.placeholders.airline')}
               />
             </div>
 
             <div>
-              <label className="label">Flight Number</label>
+              <label className="label">{t('flights:form.flightNumber')}</label>
               <input
                 type="text"
                 value={formData.flightNumber}
                 onChange={(e) => setFormData({ ...formData, flightNumber: e.target.value })}
                 className="input"
+                placeholder={t('flights:form.placeholders.flightNumber')}
               />
             </div>
           </div>
 
           <div>
-            <label className="label">Aircraft</label>
+            <label className="label">{t('flights:form.aircraft')}</label>
             <input
               type="text"
               value={formData.aircraft}
               onChange={(e) => setFormData({ ...formData, aircraft: e.target.value })}
               className="input"
-              placeholder="e.g., A320, B737"
+              placeholder={t('flights:form.placeholders.aircraft')}
             />
           </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="label">Status</label>
+              <label className="label">{t('flights:form.status')}</label>
               <select
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value as 'scheduled' | 'flown' | 'cancelled' })}
                 className="input"
               >
-                <option value="scheduled">Scheduled</option>
-                <option value="flown">Flown</option>
-                <option value="cancelled">Cancelled</option>
+                <option value="scheduled">{t('flights:status.scheduled')}</option>
+                <option value="flown">{t('flights:status.flown')}</option>
+                <option value="cancelled">{t('flights:status.cancelled')}</option>
               </select>
             </div>
 
             <div>
-              <label className="label">Category</label>
+              <label className="label">{t('flights:form.category')}</label>
               <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 className="input"
               >
-                <option value="">None</option>
-                <option value="business">Business</option>
-                <option value="private">Private</option>
-                <option value="vacation">Vacation</option>
+                <option value="">{t('common:labels.optional')}</option>
+                <option value="business">{t('flights:category.business')}</option>
+                <option value="private">{t('flights:category.private')}</option>
+                <option value="vacation">{t('flights:category.vacation')}</option>
               </select>
             </div>
 
             <div>
-              <label className="label">Seat Class</label>
+              <label className="label">{t('flights:form.seatClass')}</label>
               <select
                 value={formData.seatClass}
                 onChange={(e) => setFormData({ ...formData, seatClass: e.target.value })}
                 className="input"
               >
-                <option value="">None</option>
-                <option value="economy">Economy</option>
-                <option value="premium_economy">Premium Economy</option>
-                <option value="business">Business</option>
-                <option value="first">First</option>
+                <option value="">{t('common:labels.optional')}</option>
+                <option value="economy">{t('flights:seatClass.economy')}</option>
+                <option value="premium_economy">{t('flights:seatClass.premium_economy')}</option>
+                <option value="business">{t('flights:seatClass.business')}</option>
+                <option value="first">{t('flights:seatClass.first')}</option>
               </select>
             </div>
           </div>
 
           <div>
-            <label className="label">Seat Number</label>
+            <label className="label">{t('flights:form.seat')}</label>
             <input
               type="text"
               value={formData.seatNumber}
               onChange={(e) => setFormData({ ...formData, seatNumber: e.target.value })}
               className="input"
-              placeholder="e.g., 12A"
+              placeholder={t('flights:form.placeholders.seat')}
             />
           </div>
 
           <div className="grid grid-cols-4 gap-4">
             <div className="col-span-2">
-              <label className="label">Price</label>
+              <label className="label">{t('common:labels.price')}</label>
               <input
                 type="number"
                 step="0.01"
@@ -215,27 +220,28 @@ export default function FlightEditModal({
                 value={formData.price}
                 onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
                 className="input"
+                placeholder={t('flights:form.placeholders.price')}
               />
             </div>
 
             <div>
-              <label className="label">Currency</label>
+              <label className="label">{t('flights:form.currency')}</label>
               <select
                 value={formData.currency}
                 onChange={(e) => setFormData({ ...formData, currency: e.target.value as 'EUR' | 'USD' | 'GBP' | 'CHF' })}
                 className="input"
               >
-                <option value="EUR">EUR</option>
-                <option value="USD">USD</option>
-                <option value="GBP">GBP</option>
-                <option value="CHF">CHF</option>
+                <option value="EUR">{t('flights:currency.EUR')}</option>
+                <option value="USD">{t('flights:currency.USD')}</option>
+                <option value="GBP">{t('flights:currency.GBP')}</option>
+                <option value="CHF">{t('flights:currency.CHF')}</option>
               </select>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="label">Taxes</label>
+              <label className="label">{t('common:labels.taxes')}</label>
               <input
                 type="number"
                 step="0.01"
@@ -243,11 +249,12 @@ export default function FlightEditModal({
                 value={formData.taxes}
                 onChange={(e) => setFormData({ ...formData, taxes: parseFloat(e.target.value) || 0 })}
                 className="input"
+                placeholder={t('flights:form.placeholders.taxes')}
               />
             </div>
 
             <div>
-              <label className="label">Fees</label>
+              <label className="label">{t('common:labels.fees')}</label>
               <input
                 type="number"
                 step="0.01"
@@ -255,29 +262,30 @@ export default function FlightEditModal({
                 value={formData.fees}
                 onChange={(e) => setFormData({ ...formData, fees: parseFloat(e.target.value) || 0 })}
                 className="input"
+                placeholder={t('flights:form.placeholders.fees')}
               />
             </div>
           </div>
 
           <div>
-            <label className="label">Tags (comma separated)</label>
+            <label className="label">{t('flights:form.tags')}</label>
             <input
               type="text"
               value={formData.tags}
               onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
               className="input"
-              placeholder="e.g., work, vacation, business trip"
+              placeholder={t('flights:form.placeholders.tags')}
             />
           </div>
 
           <div>
-            <label className="label">Notes</label>
+            <label className="label">{t('common:labels.notes')}</label>
             <textarea
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               className="input"
               rows={3}
-              placeholder="Any additional notes..."
+              placeholder={t('flights:form.placeholders.notes')}
             />
           </div>
 
@@ -293,7 +301,7 @@ export default function FlightEditModal({
               disabled={loading}
               className="btn-primary flex-1"
             >
-              {loading ? 'Saving...' : 'Save Changes'}
+              {loading ? t('common:buttons.saving') : t('flights:edit.saveChanges')}
             </button>
             <button
               type="button"
@@ -301,7 +309,7 @@ export default function FlightEditModal({
               className="btn-secondary flex-1"
               disabled={loading}
             >
-              Cancel
+              {t('common:buttons.cancel')}
             </button>
           </div>
         </form>

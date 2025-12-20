@@ -1,0 +1,68 @@
+{
+  "title": "Errungenschaften",
+  "loading": "Lade Errungenschaften...",
+  "checkNew": "Auf neue Errungenschaften prüfen",
+  "categories": {
+    "explorer": "Entdecker",
+    "distance": "Distanz",
+    "collector": "Sammler",
+    "elite": "Elite",
+    "special": "Spezial"
+  },
+  "tiers": {
+    "bronze": "Bronze",
+    "silver": "Silber",
+    "gold": "Gold",
+    "platinum": "Platin",
+    "diamond": "Diamant"
+  },
+  "summary": {
+    "totalPoints": "Gesamtpunkte",
+    "unlocked": "Freigeschaltet",
+    "progress": "Fortschritt",
+    "leaderboard": "Bestenliste",
+    "view": "Ansehen"
+  },
+  "filters": {
+    "category": "Kategorie",
+    "tier": "Stufe",
+    "allCategories": "Alle Kategorien",
+    "allTiers": "Alle Stufen",
+    "showUnlockedOnly": "Nur freigeschaltete anzeigen"
+  },
+  "progress": {
+    "label": "Fortschritt",
+    "unlocked": "Freigeschaltet am {{date}}"
+  },
+  "alerts": {
+    "unlocked": "Sie haben {{count}} neue Errungenschaft(en) freigeschaltet!",
+    "none": "Keine neuen Errungenschaften freigeschaltet."
+  },
+  "hint": {
+    "title": "Willkommen bei den Errungenschaften!",
+    "message": "Vervollständigen Sie Flüge und erreichen Sie Meilensteine, um Errungenschaften freizuschalten. Jede Errungenschaft gibt Ihnen Punkte und zeigt Ihren Fortschritt.",
+    "linkText": "Zurück zum Dashboard"
+  },
+  "leaderboard": {
+    "title": "Bestenliste",
+    "backToAchievements": "← Zurück zu Errungenschaften",
+    "backToDashboard": "Zurück zum Dashboard",
+    "emptyTitle": "Noch keine Bestenliste",
+    "emptyMessage": "Seien Sie der Erste, der Errungenschaften freischaltet und in der Bestenliste erscheint!",
+    "achievementCount": "{{count}} Errungenschaften",
+    "points": "Punkte"
+  },
+  "empty": {
+    "title": "Keine Errungenschaften gefunden",
+    "message": "Versuchen Sie, Ihre Filter anzupassen, um mehr Errungenschaften zu sehen."
+  },
+  "popup": {
+    "unlocked": "Errungenschaft freigeschaltet!",
+    "tier": "Stufe",
+    "points": "Punkte",
+    "progress": "{{current}} von {{total}} neuen Errungenschaften",
+    "closeAll": "Alle schließen",
+    "next": "Nächste Errungenschaft",
+    "awesome": "Großartig!"
+  }
+}

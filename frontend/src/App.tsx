@@ -10,6 +10,7 @@ import AirportSeedingBanner from './components/AirportSeedingBanner';
 import AirportSeedingModal from './components/AirportSeedingModal';
 import { setupApi } from './lib/api';
 import i18n from './i18n/config';
+import { useTranslation } from './hooks/useTranslation';
 
 // Lazy load pages for code splitting
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -29,6 +30,7 @@ function AppContent() {
   const language = useSettingsStore((s) => s.display.language);
   const isDarkMode = useThemeStore((s) => s.isDarkMode);
   const navigate = useNavigate();
+  const { t } = useTranslation('common');
   const [setupChecked, setSetupChecked] = useState(false);
   const [showSeedingModal, setShowSeedingModal] = useState(false);
 
@@ -119,10 +121,10 @@ function AppContent() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-            Loading...
+            {t('loading.title')}
           </div>
           <div className="text-gray-600 dark:text-gray-400">
-            Checking system status
+            {t('loading.checkingSystem')}
           </div>
         </div>
       </div>
@@ -135,10 +137,10 @@ function AppContent() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
       <div className="text-center">
         <div className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-          Loading...
+          {t('loading.title')}
         </div>
         <div className="text-gray-600 dark:text-gray-400">
-          Please wait
+          {t('loading.pleaseWait')}
         </div>
       </div>
     </div>
@@ -152,16 +154,16 @@ function AppContent() {
             <div className="text-center">
               <div className="text-6xl mb-4">💥</div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                Oops! Something went wrong
+                {t('errorBoundary.title')}
               </h1>
               <p className="text-gray-600 dark:text-gray-400 mb-6">
-                The application encountered an unexpected error. Please try refreshing the page.
+                {t('errorBoundary.message')}
               </p>
               <button
                 onClick={() => window.location.reload()}
                 className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
               >
-                Refresh Page
+                {t('errorBoundary.refresh')}
               </button>
             </div>
           </div>

@@ -12,7 +12,9 @@
   "lookupUnavailable": "Flight search currently unavailable. Please enter the data manually.",
   "boardingPassError": "Boarding pass could not be scanned. Please try again or enter the data manually.",
   "missingAirports": "Please select departure and arrival airports",
+  "missingTimes": "Please enter departure and arrival times",
   "saveFailed": "Flight could not be saved. Please check your inputs.",
+  "updateFailed": "Failed to update flight",
   "apiKeyInfo": "Note: An API key is required for automatic flight search.",
   "failedToLoadAirport": "Failed to load airport data"
 }

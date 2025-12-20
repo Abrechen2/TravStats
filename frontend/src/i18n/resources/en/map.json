@@ -1,0 +1,33 @@
+{
+  "loading3DGlobe": "Loading 3D globe...",
+  "filters": {
+    "title": "Filter",
+    "timePeriod": "Time Period",
+    "allYears": "All Years",
+    "allMonths": "All Months",
+    "routeFrequency": "Route Frequency",
+    "minFlown": "Flown at least {{count}}x",
+    "airlines": "Airlines",
+    "none": "None",
+    "all": "All",
+    "moreAirlines": "+{{count}} more...",
+    "status": "Status",
+    "reset": "Reset Filters",
+    "help": {
+      "timePeriod": "Filter flights by year and/or month. Select a year and optionally a month.",
+      "timePeriodExpanded": "The time period filter shows only flights that occurred in the selected period. You can filter by year alone or by year and month.",
+      "airlines": "Filter flights by airlines. You can select multiple airlines at once.",
+      "airlinesExpanded": "Select one or more airlines to show only flights from those airlines. Click 'All' or 'None' to select all airlines or clear the selection."
+    }
+  },
+  "airportMarkers": {
+    "visits": "Visits",
+    "airlines": "Airlines",
+    "departures": "Departures",
+    "arrivals": "Arrivals",
+    "lastVisit": "Last Visit",
+    "firstVisit": "First Visit",
+    "moreAirlines": "+{{count}} more"
+  }
+}
+

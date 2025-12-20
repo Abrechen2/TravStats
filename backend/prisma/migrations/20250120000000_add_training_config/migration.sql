@@ -48,3 +48,4 @@ ALTER TABLE "training_jobs" ALTER COLUMN "model_type" SET DEFAULT 'combined';
 
 
 
+

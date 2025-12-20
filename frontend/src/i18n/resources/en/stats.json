@@ -1,0 +1,147 @@
+{
+  "loading": "Loading statistics...",
+  "back": "← Back",
+  "title": "Advanced Statistics",
+  "welcome": "Welcome, {{username}}!",
+  "logout": "Logout",
+  "hint": {
+    "title": "Welcome to Statistics!",
+    "message": "Here you'll find detailed analysis of your flights: charts, trends, top routes and more. Scroll down to see all statistics.",
+    "linkText": "Back to Dashboard"
+  },
+  "overview": {
+    "totalFlights": "Total Flights",
+    "totalDistance": "Total Distance",
+    "avgDistance": "Avg Distance",
+    "totalFlightTime": "Total Flight Time",
+    "hours": "hrs",
+    "totalCost": "Total Cost"
+  },
+  "noStatsAvailable": "No statistics available",
+  "byStatus": {
+    "title": "By Status"
+  },
+  "byCategory": {
+    "title": "By Category"
+  },
+  "topRoutes": {
+    "title": "Top Routes"
+  },
+  "help": {
+    "totalDistance": "The total distance of all flown flights in kilometers.",
+    "totalDistanceExpanded": "Calculated using the Haversine formula based on the coordinates of departure and arrival airports. Only flights with status 'flown' are considered.",
+    "totalFlightTime": "The total flight time of all flown flights in hours.",
+    "totalFlightTimeExpanded": "Calculated as the difference between arrival and departure time. Only flights with status 'flown' are considered. Time is stored in minutes and displayed here in hours."
+  },
+  "timeBasedAnalytics": {
+    "title": "📊 Time-Based Analytics",
+    "yearlyTrend": "Flights per Year - Trend Analysis",
+    "monthlyFlights": "Flights per Month",
+    "seasonalPatterns": "Seasonal Patterns",
+    "weekdayAnalysis": "Weekday Analysis",
+    "noData": "No data available",
+    "flightsLabel": "Flights"
+  },
+  "calendar": {
+    "title": "📅 Calendar Views"
+  },
+  "distance": {
+    "title": "Distance Flown",
+    "totalDistance": "Total Distance",
+    "avgPerFlight": "Average per Flight",
+    "earthCircumnavigations": "Earth Circumnavigations",
+    "timesAroundEarth": "× around Earth",
+    "kilometers": "Kilometers",
+    "earthCircumnavigation": "🌍 Earth Circumnavigation",
+    "earthCircumferenceKm": "40,075 km circumference",
+    "pathToMoon": "🌙 Path to the Moon",
+    "moonDistanceKm": "384,400 km distance",
+    "pathToMars": "🔴 Path to Mars",
+    "marsDistanceKm": "~225 million km distance (average)",
+    "pathToVoyager": "🚀 Path to Voyager 1",
+    "voyagerDistanceKm": "~24 billion km from Earth",
+    "longestDistance": "Longest Distance",
+    "shortestDistance": "Shortest Distance"
+  },
+  "airlines": {
+    "title": "Top Airlines",
+    "flightsTotal": "{{count}} flights • {{hours}}h total"
+  },
+  "airports": {
+    "title": "Most Visited Airports"
+  },
+  "seatClasses": {
+    "title": "Seat Classes",
+    "economy": "Economy",
+    "premiumEconomy": "Premium Economy",
+    "business": "Business",
+    "first": "First Class",
+    "unknown": "Not specified"
+  },
+  "aircraft": {
+    "title": "Top Aircraft Types"
+  },
+  "flightStatus": {
+    "title": "Flight Status"
+  },
+  "boardingGroups": {
+    "title": "Boarding Groups",
+    "group": "Group {{group}}"
+  },
+  "flights": {
+    "longest": "Longest Flight",
+    "shortest": "Shortest Flight",
+    "unknown": "Unknown"
+  },
+  "weekdays": {
+    "sunday": "Sunday",
+    "monday": "Monday",
+    "tuesday": "Tuesday",
+    "wednesday": "Wednesday",
+    "thursday": "Thursday",
+    "friday": "Friday",
+    "saturday": "Saturday"
+  },
+  "months": {
+    "jan": "Jan",
+    "feb": "Feb",
+    "mar": "Mar",
+    "apr": "Apr",
+    "may": "May",
+    "jun": "Jun",
+    "jul": "Jul",
+    "aug": "Aug",
+    "sep": "Sep",
+    "oct": "Oct",
+    "nov": "Nov",
+    "dec": "Dec"
+  },
+  "heatmap": {
+    "title": "Year Overview - Travel Intensity",
+    "dayTooltip": "{{date}}: {{count}} {{count, plural, one {flight} other {flights}}}",
+    "flightsInYear": "Flights in {{year}}",
+    "daysWithFlights": "Days with flights",
+    "maxFlightsPerDay": "Max. flights/day",
+    "legend": {
+      "less": "Less",
+      "more": "More"
+    }
+  },
+  "calendar": {
+    "intensity": "Travel Intensity",
+    "months": {
+      "january": "January",
+      "february": "February",
+      "march": "March",
+      "april": "April",
+      "may": "May",
+      "june": "June",
+      "july": "July",
+      "august": "August",
+      "september": "September",
+      "october": "October",
+      "november": "November",
+      "december": "December"
+    }
+  }
+}

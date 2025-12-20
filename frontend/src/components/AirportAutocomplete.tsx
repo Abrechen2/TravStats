@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { airportsApi, Airport, setupApi } from '../lib/api';
 import { logger } from '../lib/logger';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface AirportAutocompleteProps {
   value?: Airport | null;
@@ -14,15 +15,18 @@ export default function AirportAutocomplete({
   value,
   onChange,
   label,
-  placeholder = 'Search by IATA, name or city...',
+  placeholder,
   required = false,
 }: AirportAutocompleteProps) {
+  const { t } = useTranslation(['flights', 'common']);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Airport[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  
+  const defaultPlaceholder = placeholder || t('flights:airportAutocomplete.placeholder');
 
   // Check if airport seeding is in progress
   useEffect(() => {
@@ -85,12 +89,12 @@ export default function AirportAutocomplete({
         // If no results and query looks like an airport code (3-4 uppercase letters)
         // try direct lookup which will fetch from external API if needed
         if (airports.length === 0 && /^[A-Z]{3,4}$/i.test(query.trim())) {
-          logger.debug(`Keine Ergebnisse für "${query}", versuche externe Suche...`);
+          logger.debug(`No results for "${query}", trying external search...`);
           try {
             const airport = await airportsApi.getByCode(query.trim().toUpperCase());
             setResults([airport]);
           } catch (lookupError) {
-            logger.debug('Auch externe Suche fand nichts');
+            logger.debug('External search also found nothing');
             setResults([]);
           }
         } else {
@@ -136,12 +140,12 @@ export default function AirportAutocomplete({
         value={query}
         onChange={handleInputChange}
         onFocus={() => !isSeeding && query.length >= 2 && setIsOpen(true)}
-        placeholder={isSeeding ? 'Airport-Datenbank wird noch geladen...' : placeholder}
+        placeholder={isSeeding ? t('flights:airportAutocomplete.seeding') : defaultPlaceholder}
         className="input"
         required={required}
         autoComplete="off"
         disabled={isSeeding}
-        title={isSeeding ? 'Airport-Datenbank wird noch geladen. Bitte warten Sie, bis das Seeding abgeschlossen ist.' : undefined}
+        title={isSeeding ? t('flights:airportAutocomplete.seedingTitle') : undefined}
       />
 
       {/* Dropdown */}
@@ -150,16 +154,16 @@ export default function AirportAutocomplete({
           {loading && (
             <div className="px-4 py-3 text-sm text-gray-500">
               {/^[A-Z]{3,4}$/i.test(query.trim())
-                ? '🔍 Suche weltweit...'
-                : 'Suche...'}
+                ? t('flights:airportAutocomplete.searchingWorldwide')
+                : t('flights:airportAutocomplete.searching')}
             </div>
           )}
 
           {!loading && results.length === 0 && query.length >= 2 && (
             <div className="px-4 py-3 text-sm text-gray-500">
               {/^[A-Z]{3,4}$/i.test(query.trim())
-                ? `❌ Flughafen "${query.toUpperCase()}" nicht gefunden`
-                : 'Keine Flughäfen gefunden'}
+                ? t('flights:airportAutocomplete.notFound', { code: query.toUpperCase() })
+                : t('flights:airportAutocomplete.noResults')}
             </div>
           )}
 

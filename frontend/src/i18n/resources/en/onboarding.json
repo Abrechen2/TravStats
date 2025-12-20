@@ -1,0 +1,39 @@
+﻿{
+  "title": "Onboarding",
+  "progress": "{{completed}} of {{total}} steps completed",
+  "progressPercent": "{{percent}}% complete",
+  "dismissAria": "Dismiss onboarding",
+  "complete": "Congratulations! You completed all steps!",
+  "steps": {
+    "flightAdded": {
+      "label": "Add a flight",
+      "description": "Add your first flight (manual or import)",
+      "linkText": "Open form"
+    },
+    "usedFilter": {
+      "label": "Use filters",
+      "description": "Use filters to narrow flights by different criteria",
+      "linkText": "Open filters"
+    },
+    "mapExplored": {
+      "label": "Explore the map",
+      "description": "Explore the interactive map with your routes",
+      "linkText": "Open map"
+    },
+    "statsViewed": {
+      "label": "View stats",
+      "description": "Visit the advanced statistics view",
+      "linkText": "Open stats"
+    },
+    "achievementsViewed": {
+      "label": "Discover achievements",
+      "description": "Review your achievements and the leaderboard",
+      "linkText": "Open achievements"
+    },
+    "exported": {
+      "label": "Try export",
+      "description": "Test exporting your flight data (CSV, GeoJSON, KML)",
+      "linkText": "Open export"
+    }
+  }
+}
