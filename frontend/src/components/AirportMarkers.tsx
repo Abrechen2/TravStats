@@ -2,6 +2,7 @@ import { useMemo, memo } from 'react';
 import { CircleMarker, Popup } from 'react-leaflet';
 import type { GeoJSONFeature } from '../types';
 import { useTranslation } from '../hooks/useTranslation';
+import { getDateLocale } from '../lib/constants';
 
 interface AirportMarkersProps {
   flights: GeoJSONFeature[];
@@ -181,7 +182,7 @@ function AirportMarkers({ flights }: AirportMarkersProps) {
                 <div className="pt-2 border-t">
                   <div className="text-xs text-gray-500 mb-1">{t('map:airportMarkers.lastVisit')}</div>
                   <div className="text-xs text-gray-600">
-                    {new Date(airport.lastVisit).toLocaleDateString(undefined, {
+                    {new Date(airport.lastVisit).toLocaleDateString(getDateLocale(), {
                       year: 'numeric',
                       month: 'short',
                       day: 'numeric'
@@ -192,7 +193,7 @@ function AirportMarkers({ flights }: AirportMarkersProps) {
                 <div className="pt-2 border-t">
                   <div className="text-xs text-gray-500 mb-1">{t('map:airportMarkers.firstVisit')}</div>
                   <div className="text-xs text-gray-600">
-                    {new Date(airport.firstVisit).toLocaleDateString(undefined, {
+                    {new Date(airport.firstVisit).toLocaleDateString(getDateLocale(), {
                       year: 'numeric',
                       month: 'short',
                       day: 'numeric'
