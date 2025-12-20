@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { authApi } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
+import { useTranslation } from '../hooks/useTranslation';
 
 export default function LoginPage() {
+  const { t } = useTranslation('auth');
   const location = useLocation();
   const state = location.state as { message?: string; username?: string } | null;
 
@@ -24,7 +26,7 @@ export default function LoginPage() {
       setAuth(user);
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Login failed');
+      setError(err.response?.data?.error || t('login.failed'));
     } finally {
       setLoading(false);
     }
@@ -37,7 +39,7 @@ export default function LoginPage() {
           <img src="/logo-with-text.png" alt="TravStats Logo" className="h-24 w-auto mb-4" />
           <h1 className="text-3xl font-bold text-center">TravStats</h1>
         </div>
-        <h2 className="text-xl text-gray-600 dark:text-gray-300 text-center mb-8">Sign In</h2>
+        <h2 className="text-xl text-gray-600 dark:text-gray-300 text-center mb-8">{t('login.title')}</h2>
 
         {state?.message && (
           <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
@@ -53,7 +55,7 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="login-username" className="label">Username</label>
+            <label htmlFor="login-username" className="label">{t('login.username')}</label>
             <input
               id="login-username"
               type="text"
@@ -65,7 +67,7 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label htmlFor="login-password" className="label">Password</label>
+            <label htmlFor="login-password" className="label">{t('login.password')}</label>
             <input
               id="login-password"
               type="password"
@@ -81,14 +83,14 @@ export default function LoginPage() {
             disabled={loading}
             className={`btn-primary w-full ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? t('login.submitting') : t('login.submit')}
           </button>
         </form>
 
         <p className="mt-6 text-center text-gray-600 dark:text-gray-400">
-          Don't have an account?{' '}
+          {t('login.noAccount')}{' '}
           <Link to="/register" className="text-blue-600 dark:text-blue-400 hover:underline">
-            Register
+            {t('login.register')}
           </Link>
         </p>
       </div>

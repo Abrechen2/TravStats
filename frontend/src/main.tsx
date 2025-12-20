@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
+import './i18n/config'
 
 // Initialize theme before React renders to prevent flash
 // This ensures the theme is applied immediately when the page loads

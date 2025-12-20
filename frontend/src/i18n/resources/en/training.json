@@ -1,0 +1,38 @@
+{
+  "title": "Training",
+  "description": "Train and improve LLM models",
+  "developerModeNotEnabled": "Developer Mode not enabled",
+  "enableDeveloperMode": "Please enable Developer Mode in settings.",
+  "goToSettings": "Go to Settings",
+  "backToDashboard": "← Back to Dashboard",
+  "uploadAnnotation": "Upload & Annotation",
+  "dashboard": "Training Dashboard",
+  "guide": "Guide",
+  "llmTraining": "LLM Training",
+  "trainLocalOllama": "Train local Ollama LLMs with your own data",
+  "uploadFile": "Upload File",
+  "email": "Email",
+  "emailFormats": ".eml, .msg, .txt",
+  "boardingPass": "Boarding Pass",
+  "boardingPassFormats": ".png, .jpg, .jpeg",
+  "uploadHelp": {
+    "description": "Upload emails or boarding passes to create training data.",
+    "emails": {
+      "title": "Emails:",
+      "formats": "Supported formats: .eml, .msg, .txt"
+    },
+    "boardingPasses": {
+      "title": "Boarding Passes:",
+      "formats": "Supported formats: .png, .jpg, .jpeg, .webp"
+    },
+    "annotation": {
+      "title": "Annotation:",
+      "description": "After uploading, you must extract and correct the flight data"
+    },
+    "minimum": {
+      "title": "Minimum:",
+      "description": "You need at least 5 annotated entries to start a training"
+    }
+  }
+}
+

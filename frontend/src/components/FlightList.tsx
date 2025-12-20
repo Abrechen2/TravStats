@@ -1,5 +1,6 @@
 import { format } from 'date-fns';
 import type { Flight } from '../types';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface FlightListProps {
   flights: Flight[];
@@ -16,6 +17,7 @@ export default function FlightList({
   onEditFlight,
   onDeleteFlight,
 }: FlightListProps) {
+  const { t } = useTranslation(['flights', 'common']);
   const getStatusBadge = (status: string) => {
     const colors = {
       scheduled: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
@@ -37,9 +39,10 @@ export default function FlightList({
       private: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
       vacation: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
     };
+    const categoryKey = category as 'business' | 'private' | 'vacation';
     return (
-      <span className={`px-2 py-1 rounded text-xs font-medium ${colors[category as keyof typeof colors]}`}>
-        {category}
+      <span className={`px-2 py-1 rounded text-xs font-medium ${colors[categoryKey]}`}>
+        {t(`flights:category.${categoryKey}`)}
       </span>
     );
   };
@@ -61,7 +64,7 @@ export default function FlightList({
   if (flights.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-        No flights found. Add your first flight!
+        {t('flights:list.noFlights')}
       </div>
     );
   }
@@ -119,11 +122,7 @@ export default function FlightList({
               <div className="flex flex-wrap items-center gap-3 mt-3 text-sm">
                 {flight.category && (
                   <span className="px-2 py-1 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-100">
-                    {flight.category === 'business'
-                      ? 'Geschäftlich'
-                      : flight.category === 'vacation'
-                      ? 'Urlaub'
-                      : 'Privat'}
+                    {t(`flights:category.${flight.category}`)}
                   </span>
                 )}
                 {flight.price != null && (
@@ -153,9 +152,9 @@ export default function FlightList({
 
               {(flight.price || flight.taxes || flight.fees) && (
                 <p className="text-sm text-gray-700 dark:text-gray-200 mt-2">
-                  Kosten: {formatCurrency(flight.price, flight.currency)}
-                  {flight.taxes ? `  •  Steuern ${formatCurrency(flight.taxes, flight.currency)}` : ''}
-                  {flight.fees ? `  •  Gebühren ${formatCurrency(flight.fees, flight.currency)}` : ''}
+                  {t('common.labels.price')}: {formatCurrency(flight.price, flight.currency)}
+                  {flight.taxes ? `  •  ${t('common.labels.taxes')} ${formatCurrency(flight.taxes, flight.currency)}` : ''}
+                  {flight.fees ? `  •  ${t('common.labels.fees')} ${formatCurrency(flight.fees, flight.currency)}` : ''}
                 </p>
               )}
 
@@ -186,7 +185,7 @@ export default function FlightList({
                   onEditFlight(flight);
                 }}
                 className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                title="Edit flight"
+                title={t('flights:list.edit')}
               >
                 <svg
                   className="w-5 h-5"
@@ -206,12 +205,12 @@ export default function FlightList({
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (confirm('Are you sure you want to delete this flight?')) {
+                    if (confirm(t('common.messages.warning'))) {
                     onDeleteFlight(flight.id);
                   }
                 }}
                 className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                title="Delete flight"
+                title={t('flights:list.delete')}
               >
                 <svg
                   className="w-5 h-5"

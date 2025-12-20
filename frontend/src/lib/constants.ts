@@ -29,10 +29,10 @@ export const UI_CONFIG = {
 
 /**
  * Date & Time Formats
+ * Note: LOCALE is now dynamic based on user language setting
+ * Use getDateLocale() helper function to get the current locale
  */
 export const DATE_FORMATS = {
-  /** Locale for date formatting */
-  LOCALE: 'de-DE',
   /** Default date format options */
   DEFAULT: {
     year: 'numeric' as const,
@@ -42,6 +42,24 @@ export const DATE_FORMATS = {
     minute: '2-digit' as const,
   },
 } as const;
+
+/**
+ * Get the current date locale based on user language setting
+ */
+export function getDateLocale(): string {
+  try {
+    const stored = localStorage.getItem('settings-storage');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (parsed?.state?.display?.language) {
+        return parsed.state.display.language === 'de' ? 'de-DE' : 'en-US';
+      }
+    }
+  } catch (e) {
+    // Fallback to default
+  }
+  return 'en-US'; // Default to English
+}
 
 /**
  * Export Formats
