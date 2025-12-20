@@ -1,0 +1,234 @@
+{
+  "title": "Einstellungen",
+  "subtitle": "Profile, Präferenzen und Sicherheit an einem Ort.",
+  "roadmap": "Roadmap · Punkt 9",
+  "backToDashboard": "← Zurück zum Dashboard",
+  "profile": {
+    "title": "Benutzer-Profil",
+    "description": "Passe Benutzername, Kontaktinformationen und dein Profilbild an.",
+    "changePassword": "Passwort ändern",
+    "uploadAvatar": "Profilbild hochladen",
+    "username": "Benutzername",
+    "email": "E-Mail-Adresse",
+    "deleteAccount": "Account löschen",
+    "deletionRequested": "Löschanfrage vorgemerkt",
+    "invalidFileType": "Bitte wählen Sie eine Bilddatei aus",
+    "fileTooLarge": "Bilddatei ist zu groß (max. 5MB)",
+    "uploadSuccess": "Profilbild erfolgreich hochgeladen",
+    "uploadError": "Fehler beim Hochladen des Profilbilds"
+  },
+  "display": {
+    "title": "Anzeige & Sprache",
+    "description": "Modus, Sprache und Zeitzone zentral steuern.",
+    "language": "Sprache",
+    "timezone": "Zeitzone",
+    "dateFormat": "Datumsformat",
+    "timeFormat": "Zeitformat",
+    "theme": {
+      "title": "Theme-Einstellungen",
+      "description": "Das Theme bestimmt das Farbschema der Anwendung. Dark Mode ist bei schlechten Lichtverhältnissen angenehmer für die Augen.",
+      "lightMode": "Light Mode",
+      "darkMode": "Dark Mode",
+      "lightDescription": "Helles Farbschema, ideal bei Tageslicht",
+      "darkDescription": "Dunkles Farbschema, reduziert Augenbelastung bei wenig Licht",
+      "autoSave": "Die Einstellung wird automatisch gespeichert und bleibt bei zukünftigen Besuchen erhalten",
+      "active": "aktiv"
+    }
+  },
+  "units": {
+    "title": "Einheiten & Formate",
+    "description": "Definiere die Standard-Einheiten für Statistiken.",
+    "distance": "Distanz",
+    "currency": "Währung",
+    "temperature": "Temperatur",
+    "options": {
+      "kilometers": "Kilometer",
+      "miles": "Meilen",
+      "nautical_miles": "Nautische Meilen",
+      "EUR": "EUR (€)",
+      "USD": "USD ($)",
+      "GBP": "GBP (£)",
+      "CHF": "CHF (Fr)",
+      "celsius": "Celsius",
+      "fahrenheit": "Fahrenheit"
+    }
+  },
+  "defaults": {
+    "title": "Standard-Werte",
+    "description": "Neue Flüge werden mit diesen Vorgaben angelegt.",
+    "flightStatus": "Status",
+    "seatClass": "Sitzklasse",
+    "favoriteAirline": "Lieblings-Airline",
+    "flightCategory": "Flugkategorie",
+    "options": {
+      "scheduled": "Geplant",
+      "flown": "Geflogen",
+      "economy": "Economy",
+      "premium_economy": "Premium Economy",
+      "business": "Business",
+      "first": "First",
+      "private": "Privat",
+      "vacation": "Urlaub"
+    }
+  },
+  "map": {
+    "title": "Karten-Einstellungen",
+    "description": "Steuere Basiskarte, Zoom und Marker.",
+    "mapStyle": "Kartenansicht",
+    "zoomLevel": "Start-Zoom",
+    "markerStyle": "Marker-Stil",
+    "routeColor": "Routenfarbe",
+    "options": {
+      "osm": "OpenStreetMap",
+      "satellite": "Satellite",
+      "pin": "Pin",
+      "circle": "Kreis",
+      "custom": "Custom"
+    }
+  },
+  "notifications": {
+    "title": "Benachrichtigungen",
+    "description": "Erinnerungen und Updates steuern.",
+    "emailNotifications": "E-Mail-Benachrichtigungen aktivieren",
+    "flightReminder": "Flug-Erinnerung",
+    "checkInReminder": "Check-in Reminder",
+    "featureUpdates": "Neue Feature-Updates",
+    "options": {
+      "off": "Aus",
+      "24h": "24h vorher",
+      "48h": "48h vorher"
+    }
+  },
+  "privacy": {
+    "title": "Datenschutz & Sicherheit",
+    "description": "Verwalte Login-Schutz und Datenanfragen.",
+    "twoFactorAuth": "Zwei-Faktor-Authentifizierung aktivieren",
+    "loginAlerts": "Login-Historie & Alarm-E-Mails",
+    "dataExport": "Daten-Export anfordern",
+    "dataExportRequested": "Anfrage vorgemerkt",
+    "accountDeletion": "Account-Löschung",
+    "analyticsOptIn": "Analytics Opt-in (anonymisiert)"
+  },
+  "backup": {
+    "title": "Backup & Sync",
+    "description": "Regelmäßige Sicherungen und Cloud-Sync steuern.",
+    "autoBackup": "Automatische Backups aktivieren",
+    "backupInterval": "Backup-Intervall",
+    "exportFormat": "Export-Format",
+    "cloudSync": "Cloud-Sync aktivieren",
+    "retentionDays": "Aufbewahrungsdauer (Tage)",
+    "retentionDaysDescription": "Backups älter als {{days}} Tage werden automatisch gelöscht",
+    "status": {
+      "title": "Backup-Status",
+      "running": "Backup läuft...",
+      "lastBackup": "Letztes Backup: {{date}}",
+      "size": "Größe: {{size}} MB",
+      "noBackup": "Noch kein Backup erstellt",
+      "path": "Backup-Pfad: {{path}}"
+    },
+    "intervals": {
+      "daily": "Täglich",
+      "weekly": "Wöchentlich",
+      "monthly": "Monatlich"
+    },
+    "formats": {
+      "json": "JSON",
+      "csv": "CSV",
+      "pdf": "PDF"
+    }
+  },
+  "password": {
+    "title": "Passwort ändern",
+    "oldPassword": "Aktuelles Passwort",
+    "newPassword": "Neues Passwort",
+    "confirmPassword": "Neues Passwort bestätigen",
+    "submit": "Passwort ändern",
+    "changing": "Passwort wird geändert...",
+    "error": "Fehler beim Ändern des Passworts. Bitte überprüfen Sie Ihr aktuelles Passwort.",
+    "success": "Passwort erfolgreich geändert"
+  },
+  "training": {
+    "title": "Training-Einstellungen",
+    "description": "Konfiguriere die Verwendung trainierter LLM-Modelle für bessere Parsing-Genauigkeit",
+    "useTrainedModels": "Trainierte Modelle verwenden",
+    "useTrainedModelsDescription": "Automatisch trainierte Modelle verwenden, wenn verfügbar",
+    "preferredEmailModel": "Email-Modell-Präferenz",
+    "preferredEmailModelDescription": "Bestimmt welches Modell für Email-Parsing verwendet wird",
+    "preferredVisionModel": "Vision-Modell-Präferenz",
+    "preferredVisionModelDescription": "Bestimmt welches Modell für Boarding-Pass-Parsing verwendet wird",
+    "trainingSeparateModels": "Separate Modelle für Email/Vision",
+    "trainingSeparateModelsDescription": "Verwendet getrennte Modelle für bessere Spezialisierung (empfohlen)",
+    "saveSettings": "Einstellungen speichern",
+    "savingSettings": "Wird gespeichert...",
+    "updated": "Training-Einstellungen erfolgreich aktualisiert",
+    "updateFailed": "Fehler beim Aktualisieren der Training-Einstellungen",
+    "modelOptions": {
+      "auto": "Auto (trainiert wenn verfügbar, sonst Base)",
+      "trained": "Nur trainiertes Modell",
+      "base": "Nur Basis-Modell"
+    },
+    "help": {
+      "title": "Training-Einstellungen",
+      "description": "Diese Einstellungen steuern, ob und wie trainierte LLM-Modelle verwendet werden.",
+      "options": {
+        "useTrainedModels": "Aktiviert automatische Verwendung trainierter Modelle wenn verfügbar",
+        "preferredEmailModel": "Wähle zwischen Auto (trainiert wenn verfügbar), Trained (nur trainiert) oder Base (nur Basis-Modell)",
+        "preferredVisionModel": "Gleiche Optionen für Boarding-Pass-Parsing",
+        "trainingSeparateModels": "Verwendet getrennte Modelle für Email und Vision (empfohlen für bessere Spezialisierung)"
+      }
+    }
+  },
+  "developer": {
+    "title": "Developer Options",
+    "description": "Experimentelle Funktionen für LLM-Training und erweiterte Features",
+    "modeTitle": "LLM Training Mode",
+    "modeDescription": "Aktiviert die Möglichkeit, lokale Ollama LLMs zu trainieren",
+    "confirmTitle": "⚠️ Developer Mode aktivieren?",
+    "confirmMessage": "Diese Funktion ist experimentell und sollte nur von erfahrenen Benutzern verwendet werden.",
+    "updateError": "Fehler beim Aktualisieren des Developer Mode",
+    "risks": {
+      "title": "Risiken und Hinweise:",
+      "items": {
+        "resourceUsage": "Kann Systemressourcen stark belasten",
+        "technicalKnowledge": "Erfordert technisches Verständnis",
+        "unexpectedResults": "Kann zu unerwarteten Ergebnissen führen",
+        "longTraining": "Training kann lange dauern"
+      }
+    },
+    "cancel": "Abbrechen",
+    "activate": "Aktivieren",
+    "help": {
+      "title": "Developer Mode",
+      "description": "Der Developer Mode aktiviert erweiterte Funktionen für das Training von LLM-Modellen.",
+      "features": {
+        "title": "Funktionen:",
+        "items": {
+          "trainingPage": "Zugriff auf die Training-Page zum Trainieren von Ollama-Modellen",
+          "uploadAnnotation": "Upload und Annotation von Trainingsdaten (E-Mails, Boarding Passes)",
+          "loraTraining": "LoRA-Training mit eigenen Daten",
+          "parserAccuracy": "Verbesserung der Parser-Genauigkeit durch Training"
+        }
+      },
+      "requirements": {
+        "title": "Voraussetzungen:",
+        "items": {
+          "ollama": "Ollama muss installiert und erreichbar sein",
+          "hardware": "Ausreichend Hardware-Ressourcen (CPU/GPU, RAM)",
+          "trainingData": "Mindestens 5 annotierte Trainingsdaten"
+        }
+      },
+      "note": "Hinweis: Diese Funktion ist experimentell und kann Systemressourcen stark belasten."
+    }
+  },
+  "admin": {
+    "title": "Administration",
+    "description": "Verwalte Benutzer, Einladungen und Systemeinstellungen",
+    "openAdminPanel": "Admin-Panel öffnen"
+  },
+  "autoSaved": {
+    "title": "Automatisch gespeichert",
+    "description": "Alle Einstellungen werden lokal gespeichert und sind sofort aktiv."
+  },
+  "scrollToTop": "Nach oben"
+}
+

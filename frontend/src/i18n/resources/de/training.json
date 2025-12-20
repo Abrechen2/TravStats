@@ -1,0 +1,138 @@
+{
+  "title": "Training",
+  "description": "Trainiere und verbessere LLM-Modelle",
+  "developerModeNotEnabled": "Developer Mode nicht aktiviert",
+  "enableDeveloperMode": "Bitte aktivieren Sie den Developer Mode in den Einstellungen.",
+  "goToSettings": "Zu den Einstellungen",
+  "backToDashboard": "← Zurück zum Dashboard",
+  "uploadAnnotation": "Upload & Annotation",
+  "dashboard": "Training Dashboard",
+  "guide": "Guide",
+  "llmTraining": "LLM Training",
+  "trainLocalOllama": "Trainiere lokale Ollama LLMs mit eigenen Daten",
+  "uploadFile": "Datei hochladen",
+  "email": "Email",
+  "emailFormats": ".eml, .msg, .txt",
+  "boardingPass": "Boarding Pass",
+  "boardingPassFormats": ".png, .jpg, .jpeg",
+  "uploadHelp": {
+    "description": "Laden Sie E-Mails oder Boarding Passes hoch, um Trainingsdaten zu erstellen.",
+    "emails": {
+      "title": "E-Mails:",
+      "formats": "Unterstützte Formate: .eml, .msg, .txt"
+    },
+    "boardingPasses": {
+      "title": "Boarding Passes:",
+      "formats": "Unterstützte Formate: .png, .jpg, .jpeg, .webp"
+    },
+    "annotation": {
+      "title": "Annotation:",
+      "description": "Nach dem Upload müssen Sie die Flugdaten extrahieren und korrigieren"
+    },
+    "minimum": {
+      "title": "Mindestanzahl:",
+      "description": "Sie benötigen mindestens 5 annotierte Einträge, um ein Training zu starten"
+    }
+  },
+  "stats": {
+    "totalTrainingData": "Trainingsdaten gesamt",
+    "pending": "Ausstehend",
+    "pendingHelp": "Anzahl der annotierten Einträge, die noch nicht trainiert wurden.",
+    "trained": "Trainiert",
+    "trainedHelp": "Anzahl der Einträge, die bereits erfolgreich trainiert wurden.",
+    "trainingJobs": "Training Jobs",
+    "emails": "E-Mails",
+    "boardingPasses": "Boarding Passes",
+    "totalFlights": "Flüge gesamt",
+    "avgFlightsPerEmail": "Ø Flüge/E-Mail",
+    "uniqueTags": "Einzigartige Tags",
+    "jobsCompleted": "Jobs abgeschlossen"
+  },
+  "actions": {
+    "startTraining": "Training starten",
+    "starting": "Starte...",
+    "startTrainingHelp": "Starten Sie das LoRA-Training mit allen ausstehenden Einträgen. Mindestens 5 Einträge sind erforderlich.",
+    "startTrainingHelpExpanded": "Das Training verwendet LoRA (Low-Rank Adaptation) zum Fine-Tuning des Base-Modells. Je nach Hardware (CPU/GPU) kann das Training mehrere Stunden dauern. Der Fortschritt wird in Echtzeit angezeigt.",
+    "readyForTraining": "Bereit für Training ({{count}} Einträge)",
+    "minimumEntriesRequired": "Mindestens 5 Einträge benötigt (aktuell: {{count}})"
+  },
+  "jobs": {
+    "title": "Training Jobs",
+    "titleHelp": "Übersicht aller Training-Jobs mit Status und Fortschritt.",
+    "titleHelpExpanded": "Jobs können verschiedene Status haben: pending (wartet), running (läuft), completed (erfolgreich), failed (fehlgeschlagen). Klicken Sie auf 'Details', um Logs und detaillierten Fortschritt zu sehen.",
+    "noJobs": "Noch keine Training Jobs",
+    "hide": "Ausblenden",
+    "details": "Details",
+    "cancel": "Abbrechen",
+    "cancelling": "Wird abgebrochen...",
+    "started": "Gestartet:",
+    "completed": "Abgeschlossen:",
+    "logsAndProgress": "Logs & Fortschritt",
+    "noLogsAvailable": "Noch keine Logs verfügbar",
+    "statusPending": "Wartet auf Start",
+    "statusRunning": "Training läuft",
+    "statusCompleted": "Erfolgreich abgeschlossen",
+    "statusFailed": "Fehlgeschlagen"
+  },
+  "progress": {
+    "initialization": "Initialisierung",
+    "completed": "Abgeschlossen",
+    "savingModel": "Speichere Modell",
+    "trainingRunning": "Training läuft",
+    "trainingEpoch": "Training (Epoche {{current}}/{{total}})",
+    "trainingStep": "Training (Step {{current}}/{{total}})",
+    "trainingEpochStep": "Training (Epoche {{currentEpoch}}/{{totalEpoch}}, Step {{currentStep}}/{{totalStep}})",
+    "preparingDataset": "Bereite Datensatz vor",
+    "preparingModel": "Bereite Modell vor",
+    "loadingModel": "Lade Modell",
+    "startingTraining": "Starte Training",
+    "remaining": "verbleibend",
+    "phaseHelp": "Aktuelle Phase des Trainings. Der Fortschritt wird basierend auf den Logs berechnet.",
+    "phaseHelpExpanded": "Training-Phasen: Initialisierung → Modell laden → Datensatz vorbereiten → Training (Epochen/Steps) → Modell speichern → Export zu Ollama. Die geschätzte verbleibende Zeit wird basierend auf dem aktuellen Fortschritt berechnet."
+  },
+  "data": {
+    "title": "Trainingsdaten",
+    "list": "Liste",
+    "table": "Tabelle",
+    "selectAll": "Alle auswählen",
+    "selectedCount": "{{count}} Eintrag ausgewählt",
+    "selectedCountPlural": "{{count}} Einträge ausgewählt",
+    "deleteSelected": "Ausgewählte löschen",
+    "deleting": "Wird gelöscht...",
+    "noData": "Noch keine Trainingsdaten",
+    "noMatchingData": "Keine Einträge entsprechen den Filtern",
+    "type": "Typ",
+    "status": "Status",
+    "tags": "Tags",
+    "created": "Erstellt",
+    "actions": "Aktionen",
+    "preview": "Vorschau",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "inUse": "In Verwendung",
+    "beingTrained": "Wird trainiert",
+    "usedForTraining": "Wird für Training verwendet"
+  },
+  "modal": {
+    "cancelTraining": {
+      "title": "Training abbrechen?",
+      "message": "Möchten Sie das Training wirklich abbrechen?\n\nDer aktuelle Fortschritt geht verloren und kann nicht wiederhergestellt werden.",
+      "confirm": "Ja, abbrechen",
+      "cancel": "Nein, weiterlaufen lassen"
+    },
+    "deleteTrainingData": {
+      "title": "Training-Daten löschen?",
+      "message": "Möchten Sie diesen Eintrag wirklich löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden.",
+      "confirm": "Ja, löschen",
+      "cancel": "Abbrechen"
+    },
+    "bulkDelete": {
+      "title": "Mehrere Einträge löschen?",
+      "message": "Möchten Sie wirklich {{count}} Eintrag löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden.",
+      "messagePlural": "Möchten Sie wirklich {{count}} Einträge löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden.",
+      "confirm": "Ja, alle löschen",
+      "cancel": "Abbrechen"
+    }
+  },
+  "loading": "Laden..."
+}

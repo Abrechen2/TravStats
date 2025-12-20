@@ -1,0 +1,148 @@
+{
+  "form": {
+    "title": "Add Flight",
+    "flightNumber": "Flight Number",
+    "searchFlight": "Search Flight",
+    "searching": "Searching...",
+    "departure": "Departure",
+    "arrival": "Arrival",
+    "from": "From *",
+    "to": "To *",
+    "departureDate": "Departure Date *",
+    "departureTime": "Departure Time",
+    "arrivalDate": "Arrival Date",
+    "arrivalTime": "Arrival Time",
+    "airline": "Airline",
+    "aircraft": "Aircraft",
+    "terminal": "Terminal",
+    "gate": "Gate",
+    "seat": "Seat",
+    "seatClass": "Seat Class",
+    "pnr": "PNR",
+    "bookingReference": "Booking Reference (PNR)",
+    "boardingGroup": "Boarding Group",
+    "ticketNumber": "Ticket Number",
+    "status": "Status",
+    "category": "Category",
+    "price": "Price",
+    "currency": "Currency",
+    "notes": "Notes",
+    "tags": "Tags",
+    "submit": "Save Flight",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "scanBoardingPass": "Scan Boarding Pass",
+    "uploadEmail": "Upload Email",
+    "manualEntry": "Manual Entry",
+    "estimatedTimes": "Estimated Flight Times",
+    "estimatedTimesHistorical": "Based on {{count}} {{count, plural, one {historical flight} other {historical flights}}} of this route.",
+    "estimatedTimesCalculated": "Departure and arrival times were calculated from your previous flights.",
+    "estimatedTimesAutomatic": "Automatically estimated based on boarding time and flight distance.",
+    "estimatedTimesAssumption": "Assumption: Departure = Boarding + 30min, flight duration ≈ {{minutes}} minutes.",
+    "reviewTimes": "→ Please review and correct the times if necessary.",
+    "hideWarning": "Hide warning",
+    "help": {
+      "departureAirport": "Select the departure airport. You can search by IATA code (e.g. FRA) or name.",
+      "arrivalAirport": "Select the destination airport. You can search by IATA code (e.g. LHR) or name.",
+      "departureDate": "Select the departure date.",
+      "departureTime": "Enter the departure time (local time of the departure airport).",
+      "departureTimeExpanded": "The time should be specified in the local timezone of the departure airport. The system automatically converts if necessary.",
+      "price": "The price is saved together with the currency. You can filter by prices later and display statistics.",
+      "tags": "Add tags to categorize and filter flights later (e.g. 'business', 'international').",
+      "tagsExpanded": "Tags are separated by commas. You can filter by tags later and group statistics by tags. Examples: 'business', 'vacation', 'lufthansa', 'long-haul'.",
+      "flightNumber": "Enter the flight number (e.g. LH400). With the lookup button you can automatically retrieve flight data if an API key is configured.",
+      "flightNumberExpanded": "The automatic flight search uses external APIs (AirLabs, AviationStack, OpenSky) to retrieve flight data. Without an API key, you must enter the data manually."
+    },
+    "steps": {
+      "input": "Enter flight number for automatic lookup",
+      "select": "Select your flight from the results",
+      "complete": "Review and complete flight details"
+    },
+    "boardingPass": {
+      "title": "Have a Boarding Pass?",
+      "description": "Scan it for instant auto-fill!",
+      "scan": "Scan Now"
+    },
+    "email": {
+      "title": "Have a Booking Email?",
+      "description": "Import flights directly from confirmation emails!",
+      "import": "Import Email"
+    },
+    "placeholders": {
+      "tags": "business, vacation, conference"
+    },
+    "validation": {
+      "selectAirportsAndDates": "Please select both airports and dates"
+    }
+  },
+  "list": {
+    "title": "Flights",
+    "noFlights": "No flights found",
+    "edit": "Edit",
+    "delete": "Delete",
+    "viewDetails": "View Details"
+  },
+  "table": {
+    "title": "Flight List",
+    "backToMap": "← Back to Map",
+    "welcome": "Welcome to the Flight Table!",
+    "description": "Here you can see all your flights in a clear table. You can sort, filter and edit or delete flights.",
+    "backToDashboard": "Back to Dashboard",
+    "loading": "Loading flights...",
+    "noFlights": "No flights found",
+    "noFlightsHint": "Try adjusting your filters or add your first flight.",
+    "airline": "Airline",
+    "flightNumber": "Flight #",
+    "route": "Route",
+    "departure": "Departure",
+    "arrival": "Arrival",
+    "status": "Status",
+    "flightTime": "Flight Time (h)",
+    "aircraft": "Aircraft",
+    "price": "Price",
+    "actions": "Actions",
+    "deleteConfirm": {
+      "title": "Delete flight?",
+      "message": "Are you sure you want to delete this flight?\n\nThis action cannot be undone.",
+      "confirm": "Yes, delete",
+      "cancel": "Cancel"
+    }
+  },
+  "review": {
+    "title": "Review Flight",
+    "source": "Source",
+    "flightIndex": "Flight {{index}} of {{total}}",
+    "confirm": "Confirm",
+    "edit": "Edit",
+    "cancel": "Cancel"
+  },
+  "status": {
+    "scheduled": "Scheduled",
+    "flown": "Flown",
+    "cancelled": "Cancelled"
+  },
+  "category": {
+    "business": "Business",
+    "private": "Private",
+    "vacation": "Vacation"
+  },
+  "seatClass": {
+    "economy": "Economy",
+    "premium_economy": "Premium Economy",
+    "business": "Business",
+    "first": "First Class"
+  },
+  "currency": {
+    "EUR": "EUR",
+    "USD": "USD",
+    "GBP": "GBP",
+    "CHF": "CHF"
+  },
+  "review": {
+    "discard": "Discard",
+    "saving": "Saving...",
+    "next": "Next",
+    "confirm": "Confirm"
+  }
+}
+

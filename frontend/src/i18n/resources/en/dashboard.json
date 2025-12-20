@@ -1,0 +1,54 @@
+{
+  "title": "Dashboard",
+  "addFlight": "Add Flight",
+  "recentFlights": "Recent Flights",
+  "totalFlights": "Total Flights",
+  "viewAll": "View All",
+  "noFlights": "No flights yet. Add your first flight to get started!",
+  "loading": "Loading flights...",
+  "mapView": "Map View",
+  "3DView": "3D View",
+  "2DView": "2D View",
+  "export": "Export",
+  "exportData": "Export data",
+  "exportMenu": {
+    "csv": "Export as CSV",
+    "json": "Export as JSON",
+    "geojson": "Export as GeoJSON",
+    "pdf": "Export as PDF",
+    "kml": "Export as KML"
+  },
+  "exportCSV": "📊 Export as CSV",
+  "toggleList": {
+    "hide": "Hide list",
+    "show": "Show list"
+  },
+  "toggleStats": {
+    "hide": "Hide stats",
+    "show": "Show stats"
+  },
+  "showFlightList": "Show flight list",
+  "showStats": "Show statistics",
+  "flightMap": "Flight Map",
+  "import": "Import",
+  "filters": "Filters",
+  "stats": "Stats",
+  "achievements": "Achievements",
+  "settings": "Settings",
+  "admin": "Admin",
+  "training": "Training",
+  "logout": "Logout",
+  "errors": {
+    "addFlight": "Error adding flight. Please try again.",
+    "updateFlight": "Error updating flight. Please try again.",
+    "deleteFlight": "Error deleting flight. Please try again.",
+    "loadFlights": "Failed to load flights",
+    "exportFailed": "Export failed"
+  },
+  "success": {
+    "flightAdded": "Flight added successfully",
+    "flightUpdated": "Flight updated successfully",
+    "flightDeleted": "Flight deleted successfully"
+  }
+}
+
