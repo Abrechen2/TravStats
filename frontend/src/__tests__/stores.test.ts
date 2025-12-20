@@ -35,10 +35,8 @@ describe('Zustand Stores', () => {
       const { result } = renderHook(() => useAuthStore());
       const mockUser: User = {
         id: 'test-user-id',
-        email: 'test@example.com',
         username: 'testuser',
         isAdmin: false,
-        createdAt: new Date().toISOString(),
       };
 
       act(() => {
@@ -52,10 +50,8 @@ describe('Zustand Stores', () => {
       const { result } = renderHook(() => useAuthStore());
       const mockUser: User = {
         id: 'test-user-id',
-        email: 'test@example.com',
         username: 'testuser',
         isAdmin: false,
-        createdAt: new Date().toISOString(),
       };
 
       act(() => {
@@ -79,10 +75,8 @@ describe('Zustand Stores', () => {
       const { result } = renderHook(() => useAuthStore());
       const mockUser: User = {
         id: 'test-user-id',
-        email: 'test@example.com',
         username: 'testuser',
         isAdmin: false,
-        createdAt: new Date().toISOString(),
       };
 
       act(() => {

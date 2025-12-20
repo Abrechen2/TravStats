@@ -3,6 +3,39 @@ import Globe from 'react-globe.gl';
 import type { GeoJSONFeature } from '../types';
 import { useThemeStore } from '../store/themeStore';
 
+// #region agent log
+const debugLog = (location: string, message: string, data: any = {}, hypothesisId?: string) => {
+  const logEntry = {
+    location,
+    message,
+    data,
+    timestamp: Date.now(),
+    sessionId: 'debug-session',
+    runId: 'run1',
+    hypothesisId,
+  };
+  fetch('http://127.0.0.1:7243/ingest/0704fdb1-689b-416e-9f08-7a10e884bebd', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(logEntry),
+  }).catch(() => {});
+  console.log(`[DEBUG ${hypothesisId || '?'}] ${location}: ${message}`, data);
+  try {
+    const stored = localStorage.getItem('debug-logs') || '[]';
+    const logs = JSON.parse(stored);
+    logs.push(logEntry);
+    if (logs.length > 100) logs.shift();
+    localStorage.setItem('debug-logs', JSON.stringify(logs));
+  } catch (e) {}
+};
+
+// Log before Globe import
+debugLog('GlobeView.tsx:import', 'GlobeView module loading', {
+  hasGlobe: typeof Globe !== 'undefined',
+  threeAvailable: typeof window !== 'undefined' && (window as any).THREE !== undefined,
+}, 'D');
+// #endregion
+
 interface GlobeViewProps {
   flights: GeoJSONFeature[];
   selectedFlightId?: string;
@@ -144,11 +177,28 @@ interface PointData {
 }
 
 export default function GlobeView({ flights = [], selectedFlightId: _selectedFlightId, onFlightClick, minRouteCount = 1 }: GlobeViewProps) {
+  // #region agent log
+  debugLog('GlobeView.tsx:render-start', 'GlobeView component rendering', {
+    flightsCount: flights.length,
+    minRouteCount,
+    hasGlobe: typeof Globe !== 'undefined',
+    threeAvailable: typeof window !== 'undefined' && (window as any).THREE !== undefined,
+  }, 'D');
+  // #endregion
+  
   const globeRef = useRef<GlobeInstance | null>(null);
   const themeStore = useThemeStore();
   const isDarkMode = themeStore?.isDarkMode ?? false;
   const [autoRotate, setAutoRotate] = useState(false);
   const [cameraAltitude, setCameraAltitude] = useState(2.2);
+  
+  // #region agent log
+  useEffect(() => {
+    debugLog('GlobeView.tsx:mounted', 'GlobeView component mounted', {
+      hasGlobeRef: !!globeRef.current,
+    }, 'D');
+  }, []);
+  // #endregion
 
   // Center globe initially
   useEffect(() => {

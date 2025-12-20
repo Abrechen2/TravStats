@@ -1,6 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
 
 // Mock the stats component (adjust path as needed)
 // This is a template that should be adapted to your actual Stats component
