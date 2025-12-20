@@ -133,6 +133,26 @@
 
   <Config Name="Use LLM Parser" Target="USE_LLM_PARSER" Default="true" Mode="" Description="Enable AI-powered email parsing using Ollama. Requires Ollama container and model download." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
 
+  <Config Name="Backup Path" Target="BACKUP_PATH" Default="/app/data/backups" Mode="" Description="Path where backups are stored inside the container. Should be within /app/data volume." Type="Variable" Display="advanced" Required="false" Mask="false">/app/data/backups</Config>
+
+  <Config Name="Backup Retention Days" Target="BACKUP_RETENTION_DAYS" Default="30" Mode="" Description="Number of days to keep backups before automatic deletion." Type="Variable" Display="normal" Required="false" Mask="false">30</Config>
+
+  <Config Name="Auto Backup Enabled" Target="AUTO_BACKUP_ENABLED" Default="false" Mode="" Description="Enable automatic scheduled backups (daily/weekly/monthly). Configure interval via BACKUP_INTERVAL." Type="Variable" Display="normal" Required="false" Mask="false">false</Config>
+
+  <Config Name="Backup Interval" Target="BACKUP_INTERVAL" Default="weekly" Mode="" Description="Backup schedule interval: daily, weekly, or monthly." Type="Variable" Display="normal" Required="false" Mask="false">weekly</Config>
+
+  <Config Name="Docker DB Container" Target="DOCKER_DB_CONTAINER" Default="travstats-db" Mode="" Description="Name of the PostgreSQL Docker container for backup operations." Type="Variable" Display="advanced" Required="false" Mask="false">travstats-db</Config>
+
+  <Config Name="WebDAV Sync Enabled" Target="WEBDAV_SYNC_ENABLED" Default="false" Mode="" Description="Enable automatic backup sync to WebDAV server (Nextcloud/ownCloud)." Type="Variable" Display="normal" Required="false" Mask="false">false</Config>
+
+  <Config Name="WebDAV URL" Target="WEBDAV_URL" Default="" Mode="" Description="WebDAV server URL (e.g., https://nextcloud.example.com/remote.php/dav/files/username/)" Type="Variable" Display="normal" Required="false" Mask="false"></Config>
+
+  <Config Name="WebDAV Username" Target="WEBDAV_USERNAME" Default="" Mode="" Description="WebDAV server username" Type="Variable" Display="normal" Required="false" Mask="false"></Config>
+
+  <Config Name="WebDAV Password" Target="WEBDAV_PASSWORD" Default="" Mode="" Description="WebDAV server password" Type="Variable" Display="normal" Required="false" Mask="true"></Config>
+
+  <Config Name="WebDAV Backup Path" Target="WEBDAV_BACKUP_PATH" Default="/TravStats/backups/" Mode="" Description="Path on WebDAV server where backups are stored" Type="Variable" Display="advanced" Required="false" Mask="false">/TravStats/backups/</Config>
+
   <Changes>
     ### Version 1.0.0 (2025-01-24)
     🎉 INITIAL PRODUCTION RELEASE

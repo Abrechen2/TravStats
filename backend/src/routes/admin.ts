@@ -1,9 +1,11 @@
 import { Router, Response, NextFunction } from 'express';
+import { z } from 'zod';
 import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { AppError } from '../middleware/errorHandler';
 import crypto from 'crypto';
 import { decryptApiKey, encryptApiKey } from '../utils/encryption';
+import logger from '../utils/logger';
 import {
   getLoggingConfig,
   updateLoggingConfig,
@@ -317,6 +319,103 @@ router.get('/parser-settings', async (req: AuthRequest, res: Response, next: Nex
   }
 });
 
+// Training configuration schema (defined once at module level)
+const trainingConfigSchema = z.object({
+  trainingModelOutputDir: z.string().optional().nullable(),
+  trainingEmailModelName: z.string().optional().nullable(),
+  trainingVisionModelName: z.string().optional().nullable(),
+});
+
+// Get training configuration
+router.get('/training-config', requireAdmin, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const adminSettings = await prisma.adminSettings.findFirst();
+    const { getTrainingConfig } = await import('../services/trainingService');
+    const trainingConfig = await getTrainingConfig();
+    
+    res.json({
+      trainingModelOutputDir: adminSettings?.trainingModelOutputDir || null,
+      trainingEmailModelName: adminSettings?.trainingEmailModelName || null,
+      trainingVisionModelName: adminSettings?.trainingVisionModelName || null,
+      // Current effective values (from ENV if not set in admin)
+      currentTrainingModelOutputDir: trainingConfig.modelOutputDir,
+      currentTrainingEmailModelName: trainingConfig.emailModelName,
+      currentTrainingVisionModelName: trainingConfig.visionModelName,
+      // ENV fallback values
+      envTrainingModelOutputDir: process.env.TRAINING_MODEL_OUTPUT_DIR || './data/training/models',
+      envTrainingEmailModelName: process.env.TRAINING_EMAIL_MODEL_NAME || 'travstats-email-custom',
+      envTrainingVisionModelName: process.env.TRAINING_VISION_MODEL_NAME || 'travstats-vision-custom',
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Update training configuration
+router.put('/training-config', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const payload = trainingConfigSchema.parse(req.body);
+    
+    const updateData: any = {};
+    
+    if (payload.trainingModelOutputDir !== undefined) {
+      updateData.trainingModelOutputDir = payload.trainingModelOutputDir || null;
+    }
+    if (payload.trainingEmailModelName !== undefined) {
+      updateData.trainingEmailModelName = payload.trainingEmailModelName || null;
+    }
+    if (payload.trainingVisionModelName !== undefined) {
+      updateData.trainingVisionModelName = payload.trainingVisionModelName || null;
+    }
+    
+    let adminSettings = await prisma.adminSettings.findFirst();
+    
+    if (adminSettings) {
+      adminSettings = await prisma.adminSettings.update({
+        where: { id: adminSettings.id },
+        data: updateData,
+      });
+    } else {
+      adminSettings = await prisma.adminSettings.create({
+        data: {
+          allowUserApiKeys: true,
+          requireUserApiKeys: false,
+          defaultVisionParser: 'auto',
+          defaultTextParser: 'auto',
+          ...updateData,
+        },
+      });
+    }
+    
+    logger.info({
+      operation: 'training_config_updated',
+      message: 'Training configuration updated',
+      context: {
+        userId: req.userId,
+        settings: updateData,
+      },
+    });
+    
+    // Get updated effective values
+    const { getTrainingConfig } = await import('../services/trainingService');
+    const trainingConfig = await getTrainingConfig();
+    
+    res.json({
+      message: 'Training configuration updated successfully',
+      settings: {
+        trainingModelOutputDir: adminSettings.trainingModelOutputDir,
+        trainingEmailModelName: adminSettings.trainingEmailModelName,
+        trainingVisionModelName: adminSettings.trainingVisionModelName,
+        currentTrainingModelOutputDir: trainingConfig.modelOutputDir,
+        currentTrainingEmailModelName: trainingConfig.emailModelName,
+        currentTrainingVisionModelName: trainingConfig.visionModelName,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Update admin parser settings
 router.put('/parser-settings', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -384,6 +483,96 @@ router.put('/parser-settings', async (req: AuthRequest, res: Response, next: Nex
         requireUserApiKeys: adminSettings.requireUserApiKeys,
         defaultVisionParser: adminSettings.defaultVisionParser,
         defaultTextParser: adminSettings.defaultTextParser,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get training configuration
+router.get('/training-config', requireAdmin, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const adminSettings = await prisma.adminSettings.findFirst();
+    const { getTrainingConfig } = await import('../services/trainingService');
+    const trainingConfig = await getTrainingConfig();
+    
+    res.json({
+      trainingModelOutputDir: adminSettings?.trainingModelOutputDir || null,
+      trainingEmailModelName: adminSettings?.trainingEmailModelName || null,
+      trainingVisionModelName: adminSettings?.trainingVisionModelName || null,
+      // Current effective values (from ENV if not set in admin)
+      currentTrainingModelOutputDir: trainingConfig.modelOutputDir,
+      currentTrainingEmailModelName: trainingConfig.emailModelName,
+      currentTrainingVisionModelName: trainingConfig.visionModelName,
+      // ENV fallback values
+      envTrainingModelOutputDir: process.env.TRAINING_MODEL_OUTPUT_DIR || './data/training/models',
+      envTrainingEmailModelName: process.env.TRAINING_EMAIL_MODEL_NAME || 'travstats-email-custom',
+      envTrainingVisionModelName: process.env.TRAINING_VISION_MODEL_NAME || 'travstats-vision-custom',
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Update training configuration
+router.put('/training-config', requireAdmin, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const payload = trainingConfigSchema.parse(req.body);
+    
+    const updateData: any = {};
+    
+    if (payload.trainingModelOutputDir !== undefined) {
+      updateData.trainingModelOutputDir = payload.trainingModelOutputDir || null;
+    }
+    if (payload.trainingEmailModelName !== undefined) {
+      updateData.trainingEmailModelName = payload.trainingEmailModelName || null;
+    }
+    if (payload.trainingVisionModelName !== undefined) {
+      updateData.trainingVisionModelName = payload.trainingVisionModelName || null;
+    }
+    
+    let adminSettings = await prisma.adminSettings.findFirst();
+    
+    if (adminSettings) {
+      adminSettings = await prisma.adminSettings.update({
+        where: { id: adminSettings.id },
+        data: updateData,
+      });
+    } else {
+      adminSettings = await prisma.adminSettings.create({
+        data: {
+          allowUserApiKeys: true,
+          requireUserApiKeys: false,
+          defaultVisionParser: 'auto',
+          defaultTextParser: 'auto',
+          ...updateData,
+        },
+      });
+    }
+    
+    logger.info({
+      operation: 'training_config_updated',
+      message: 'Training configuration updated',
+      context: {
+        userId: req.userId,
+        settings: updateData,
+      },
+    });
+    
+    // Get updated effective values
+    const { getTrainingConfig } = await import('../services/trainingService');
+    const trainingConfig = await getTrainingConfig();
+    
+    res.json({
+      message: 'Training configuration updated successfully',
+      settings: {
+        trainingModelOutputDir: adminSettings.trainingModelOutputDir,
+        trainingEmailModelName: adminSettings.trainingEmailModelName,
+        trainingVisionModelName: adminSettings.trainingVisionModelName,
+        currentTrainingModelOutputDir: trainingConfig.modelOutputDir,
+        currentTrainingEmailModelName: trainingConfig.emailModelName,
+        currentTrainingVisionModelName: trainingConfig.visionModelName,
       },
     });
   } catch (error) {

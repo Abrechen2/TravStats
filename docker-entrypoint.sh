@@ -7,6 +7,7 @@ echo "[entrypoint] Starting TravStats..."
 echo "[entrypoint] Ensuring data directory structure..."
 # Create directories if they don't exist
 mkdir -p /app/data/logs 2>/dev/null || echo "[entrypoint] Warning: Could not create /app/data/logs (may be permission issue)"
+mkdir -p /app/data/backups 2>/dev/null || echo "[entrypoint] Warning: Could not create /app/data/backups (may be permission issue)"
 
 # Get node user UID/GID (usually 1000:1000 in node images)
 NODE_UID=$(id -u node 2>/dev/null || echo "1000")
@@ -20,6 +21,8 @@ if [ -w /app/data ] 2>/dev/null; then
     chmod -R 755 /app/data 2>/dev/null || true
     # Ensure logs directory is writable
     chmod 777 /app/data/logs 2>/dev/null || true
+    # Ensure backups directory is writable
+    chmod 755 /app/data/backups 2>/dev/null || true
     echo "[entrypoint] Permissions set successfully"
 else
     echo "[entrypoint] Warning: Cannot write to /app/data (volume may be mounted from host)"
@@ -27,8 +30,27 @@ else
 fi
 
 # Auto-generate JWT_SECRET if not set
+# Store in /app/secrets (not in /app/data) to prevent exposure via mounted volumes
 if [ -z "$JWT_SECRET" ]; then
-    JWT_SECRET_FILE="/app/data/jwt_secret"
+    SECRETS_DIR="/app/secrets"
+    mkdir -p "$SECRETS_DIR" 2>/dev/null || echo "[entrypoint] Warning: Could not create $SECRETS_DIR"
+    chmod 700 "$SECRETS_DIR" 2>/dev/null || true
+    JWT_SECRET_FILE="$SECRETS_DIR/jwt.secret"
+    OLD_JWT_SECRET_FILE="/app/data/jwt.secret"
+    OLD_JWT_SECRET_FILE_ALT="/app/data/jwt_secret"
+    
+    # Migrate from old location if it exists (for backward compatibility)
+    if [ -f "$OLD_JWT_SECRET_FILE" ] && [ ! -f "$JWT_SECRET_FILE" ]; then
+        echo "[entrypoint] Migrating JWT_SECRET from old location..."
+        mv "$OLD_JWT_SECRET_FILE" "$JWT_SECRET_FILE"
+        chmod 600 "$JWT_SECRET_FILE"
+        echo "[entrypoint] JWT_SECRET migrated successfully"
+    elif [ -f "$OLD_JWT_SECRET_FILE_ALT" ] && [ ! -f "$JWT_SECRET_FILE" ]; then
+        echo "[entrypoint] Migrating JWT_SECRET from old filename..."
+        mv "$OLD_JWT_SECRET_FILE_ALT" "$JWT_SECRET_FILE"
+        chmod 600 "$JWT_SECRET_FILE"
+        echo "[entrypoint] JWT_SECRET migrated successfully"
+    fi
 
     if [ -f "$JWT_SECRET_FILE" ]; then
         echo "[entrypoint] Loading existing JWT_SECRET..."

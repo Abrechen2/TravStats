@@ -19,6 +19,7 @@ import parserFeedbackRoutes from './routes/parserFeedback';
 import setupRoutes from './routes/setup';
 import adminRoutes from './routes/admin';
 import trainingRoutes from './routes/training';
+import backupRoutes from './routes/backup';
 import { errorHandler } from './middleware/errorHandler';
 import { requestLoggerMiddleware } from './middleware/requestLogger';
 import { prisma } from './db';
@@ -27,6 +28,21 @@ import { DATABASE_URL } from './utils/database';
 
 // Load environment variables
 dotenv.config();
+
+// Validate environment variables
+import { validateEnv } from './config/env';
+try {
+  validateEnv();
+} catch (error) {
+  logger.error({
+    operation: 'server_start_env_validation_failed',
+    message: 'Failed to start server due to environment variable validation errors',
+    error: {
+      message: error instanceof Error ? error.message : 'Unknown error',
+    },
+  });
+  process.exit(1);
+}
 
 // Set DATABASE_URL from individual components if not already set
 if (!process.env.DATABASE_URL) {
@@ -127,6 +143,7 @@ app.use('/api/v1', emailParseRoutes);
 app.use('/api/v1', boardingpassParseRoutes);
 app.use('/api/v1/parser-feedback', parserFeedbackRoutes);
 app.use('/api/v1/training', trainingRoutes);
+app.use('/api/v1/backup', backupRoutes);
 
 // Error handling
 app.use(errorHandler);
@@ -134,12 +151,16 @@ app.use(errorHandler);
 // Graceful shutdown
 process.on('SIGINT', async () => {
   logger.info('Received SIGINT, shutting down gracefully...');
+  const { stopScheduler } = await import('./services/backupScheduler');
+  stopScheduler();
   await prisma.$disconnect();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
   logger.info('Received SIGTERM, shutting down gracefully...');
+  const { stopScheduler } = await import('./services/backupScheduler');
+  stopScheduler();
   await prisma.$disconnect();
   process.exit(0);
 });
@@ -147,7 +168,7 @@ process.on('SIGTERM', async () => {
 // Start server only if not in test mode
 if (process.env.NODE_ENV !== 'test') {
   const HOST = process.env.HOST || '0.0.0.0'; // Bind to all interfaces for network access
-  app.listen(PORT, HOST, () => {
+  app.listen(PORT, HOST, async () => {
     logger.info({
       message: 'TravStats backend started',
       host: HOST,
@@ -155,6 +176,23 @@ if (process.env.NODE_ENV !== 'test') {
       environment: process.env.NODE_ENV,
       nodeVersion: process.version,
     });
+
+    // Airport seeding is now started after first login (not on server start)
+    // This prevents CORS issues and ensures the server is fully ready
+
+    // Initialize backup scheduler
+    try {
+      const { startScheduler } = await import('./services/backupScheduler');
+      await startScheduler();
+    } catch (error) {
+      logger.warn({
+        operation: 'server_start_backup_scheduler_error',
+        message: 'Failed to start backup scheduler',
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+    }
   });
 }
 

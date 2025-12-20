@@ -4,8 +4,8 @@ import { getManualParser } from '../services/parsers/vision/manualParser';
 
 describe('Parser Factory', () => {
   describe('getParserConfig', () => {
-    it('should return default config when no user settings provided', () => {
-      const config = getParserConfig();
+    it('should return default config when no user settings provided', async () => {
+      const config = await getParserConfig();
 
       expect(config).toBeDefined();
       expect(config.visionProvider).toBe('auto');
@@ -14,8 +14,8 @@ describe('Parser Factory', () => {
       expect(config.textFallbacks).toBeDefined();
     });
 
-    it('should use user settings when provided', () => {
-      const config = getParserConfig({
+    it('should use user settings when provided', async () => {
+      const config = await getParserConfig({
         preferredVisionParser: 'ollama',
         preferredTextParser: 'regex',
         openaiApiKey: 'test-key',
@@ -26,8 +26,8 @@ describe('Parser Factory', () => {
       expect(config.openaiApiKey).toBe('test-key');
     });
 
-    it('should merge admin settings with user settings', () => {
-      const config = getParserConfig(
+    it('should merge admin settings with user settings', async () => {
+      const config = await getParserConfig(
         {
           preferredVisionParser: 'auto',
         },
@@ -39,8 +39,8 @@ describe('Parser Factory', () => {
       expect(config.openaiApiKey).toBe('admin-key');
     });
 
-    it('should prioritize user settings over admin settings', () => {
-      const config = getParserConfig(
+    it('should prioritize user settings over admin settings', async () => {
+      const config = await getParserConfig(
         {
           preferredVisionParser: 'ollama',
           openaiApiKey: 'user-key',
@@ -56,7 +56,7 @@ describe('Parser Factory', () => {
 
   describe('getAvailableProviders', () => {
     it('should return available providers', async () => {
-      const config = getParserConfig();
+      const config = await getParserConfig();
       const providers = await getAvailableProviders(config);
 
       expect(providers).toBeDefined();
@@ -67,7 +67,7 @@ describe('Parser Factory', () => {
     });
 
     it('should include always-available parsers', async () => {
-      const config = getParserConfig();
+      const config = await getParserConfig();
       const providers = await getAvailableProviders(config);
 
       // Manual parser should always be available
@@ -96,6 +96,9 @@ describe('Parser Factory', () => {
     });
   });
 });
+
+
+
 
 
 

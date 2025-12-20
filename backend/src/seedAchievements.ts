@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import logger from './utils/logger';
 
 const prisma = new PrismaClient();
 
@@ -690,19 +691,27 @@ const achievements: AchievementDefinition[] = [
 ];
 
 async function seedAchievements() {
-  console.log('🏆 Starting achievement seeding...');
+  logger.info({ operation: 'seed_achievements_start', message: 'Starting achievement seeding' });
 
   try {
     // Check if achievements already exist
     const existingCount = await prisma.achievement.count();
 
     if (existingCount === achievements.length) {
-      console.log(`✅ Achievements already seeded (${existingCount} achievements)`);
+      logger.info({
+        operation: 'seed_achievements_already_seeded',
+        message: `Achievements already seeded (${existingCount} achievements)`,
+        context: { existingCount },
+      });
       return;
     }
 
     if (existingCount > 0) {
-      console.log(`⚠️  Found ${existingCount} existing achievements, updating...`);
+      logger.info({
+        operation: 'seed_achievements_updating',
+        message: `Found ${existingCount} existing achievements, updating...`,
+        context: { existingCount },
+      });
     }
 
     // Upsert all achievements
@@ -738,7 +747,11 @@ async function seedAchievements() {
       }
     }
 
-    console.log(`✅ Processed ${achievements.length} achievements (${created} created, ${updated} updated)`);
+    logger.info({
+      operation: 'seed_achievements_processed',
+      message: `Processed ${achievements.length} achievements`,
+      context: { total: achievements.length, created, updated },
+    });
 
     // Show summary by category
     const categoryCounts = achievements.reduce((acc, ach) => {
@@ -746,14 +759,25 @@ async function seedAchievements() {
       return acc;
     }, {} as Record<string, number>);
 
-    console.log('\n📊 Achievements by category:');
-    Object.entries(categoryCounts).forEach(([category, count]) => {
-      console.log(`   ${category}: ${count}`);
+    logger.info({
+      operation: 'seed_achievements_by_category',
+      message: 'Achievements by category',
+      context: { categoryCounts },
     });
 
-    console.log('\n✅ Achievement seeding completed successfully!');
+    logger.info({
+      operation: 'seed_achievements_complete',
+      message: 'Achievement seeding completed successfully',
+    });
   } catch (error) {
-    console.error('❌ Error seeding achievements:', error);
+    logger.error({
+      operation: 'seed_achievements_error',
+      message: 'Error seeding achievements',
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      },
+    });
     throw error;
   } finally {
     await prisma.$disconnect();

@@ -10,16 +10,33 @@ import logger from '../utils/logger';
 
 const router = Router();
 const cookieMaxAgeMs = 7 * 24 * 60 * 60 * 1000; // 7 days
-const cookieSecure = process.env.COOKIE_SECURE
-  ? process.env.COOKIE_SECURE !== 'false'
-  : process.env.NODE_ENV === 'production';
-const authCookieOptions: CookieOptions = {
+
+// Determine if cookies should be secure
+// If COOKIE_SECURE is explicitly set, use that value
+// Otherwise, use secure cookies only if explicitly in production AND behind HTTPS
+function getCookieSecure(req: Request): boolean {
+  // If COOKIE_SECURE is explicitly set in env, use it
+  if (process.env.COOKIE_SECURE !== undefined) {
+    return process.env.COOKIE_SECURE !== 'false';
+  }
+  
+  // Auto-detect: Check if request is over HTTPS (via proxy header)
+  // req.protocol is automatically set by Express when trust proxy is enabled
+  if (process.env.NODE_ENV === 'production') {
+    return req.protocol === 'https' || req.get('x-forwarded-proto') === 'https';
+  }
+  
+  // In development, default to false (allow HTTP)
+  return false;
+}
+
+const getAuthCookieOptions = (req: Request): CookieOptions => ({
   httpOnly: true, // Prevents JavaScript access (XSS protection)
-  secure: cookieSecure, // Allow HTTP in dev if COOKIE_SECURE=false
+  secure: getCookieSecure(req), // Auto-detect HTTPS or use COOKIE_SECURE env var
   sameSite: 'lax',
   maxAge: cookieMaxAgeMs,
   path: '/',
-};
+});
 
 // Register
 router.post('/register', authLimiter, async (req: Request, res: Response, next: NextFunction) => {
@@ -106,7 +123,7 @@ router.post('/register', authLimiter, async (req: Request, res: Response, next: 
     const token = generateToken(user.id);
 
     // Set HttpOnly cookie for security (XSS protection)
-    res.cookie('auth_token', token, authCookieOptions);
+    res.cookie('auth_token', token, getAuthCookieOptions(req));
 
     res.status(201).json({
       user: {
@@ -145,7 +162,43 @@ router.post('/login', authLimiter, async (req: Request, res: Response, next: Nex
     const token = generateToken(user.id);
 
     // Set HttpOnly cookie for security (XSS protection)
-    res.cookie('auth_token', token, authCookieOptions);
+    res.cookie('auth_token', token, getAuthCookieOptions(req));
+
+    // Start airport seeding if needed (only on first login, if no airports exist)
+    try {
+      const airportCount = await prisma.airport.count();
+      const seedAirportsEnv = process.env.SEED_AIRPORTS;
+      const shouldSeedAirports = seedAirportsEnv !== 'false';
+      
+      if (shouldSeedAirports && airportCount === 0) {
+        // Check if seeding is already running
+        const existingStatus = await prisma.airportSeedingStatus.findFirst({
+          where: {
+            status: { in: ['pending', 'running'] },
+          },
+          orderBy: { createdAt: 'desc' },
+        });
+
+        if (!existingStatus) {
+          const { startAirportSeeding } = await import('../services/airportSeedingService');
+          await startAirportSeeding();
+          logger.info({
+            operation: 'login_start_airport_seeding',
+            message: 'Airport seeding started after first login',
+            context: { userId: user.id, username: user.username },
+          });
+        }
+      }
+    } catch (error) {
+      // Log error but don't fail login
+      logger.warn({
+        operation: 'login_airport_seeding_error',
+        message: 'Failed to start airport seeding after login',
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+    }
 
     res.json({
       user: {
@@ -161,13 +214,8 @@ router.post('/login', authLimiter, async (req: Request, res: Response, next: Nex
 
 // Logout
 router.post('/logout', (req: Request, res: Response) => {
-  // Clear the auth cookie
-  res.clearCookie('auth_token', {
-    httpOnly: true,
-    secure: cookieSecure,
-    sameSite: 'lax',
-    path: '/',
-  });
+  // Clear the auth cookie (use same options as when setting it)
+  res.clearCookie('auth_token', getAuthCookieOptions(req));
 
   res.json({ message: 'Logged out successfully' });
 });

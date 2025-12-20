@@ -350,6 +350,24 @@ export const settingsApi = {
     const { data } = await api.put('/settings/developer-mode', payload);
     return data;
   },
+  getTrainingSettings: async () => {
+    const { data } = await api.get<{
+      useTrainedModels: boolean;
+      preferredEmailModel: 'auto' | 'trained' | 'base';
+      preferredVisionModel: 'auto' | 'trained' | 'base';
+      trainingSeparateModels: boolean;
+    }>('/settings/training');
+    return data;
+  },
+  updateTrainingSettings: async (payload: {
+    useTrainedModels?: boolean;
+    preferredEmailModel?: 'auto' | 'trained' | 'base';
+    preferredVisionModel?: 'auto' | 'trained' | 'base';
+    trainingSeparateModels?: boolean;
+  }) => {
+    const { data } = await api.put('/settings/training', payload);
+    return data;
+  },
   uploadProfilePicture: async (file: File) => {
     const formData = new FormData();
     formData.append('profilePicture', file);
@@ -492,6 +510,18 @@ export const setupApi = {
       password,
       instanceName,
     });
+    return data;
+  },
+
+  getAirportSeedingStatus: async () => {
+    const { data } = await api.get<{
+      status: 'pending' | 'running' | 'completed' | 'failed';
+      progress?: number; // 0-1
+      estimatedSecondsRemaining?: number;
+      totalAirports?: number;
+      processedAirports?: number;
+      error?: string;
+    }>('/setup/airport-seeding-status');
     return data;
   },
 };
@@ -647,6 +677,30 @@ export const adminApi = {
     defaultTextParser?: string;
   }) => {
     const { data } = await api.put('/admin/parser-settings', settings);
+    return data;
+  },
+
+  getTrainingConfig: async () => {
+    const { data } = await api.get<{
+      trainingModelOutputDir: string | null;
+      trainingEmailModelName: string | null;
+      trainingVisionModelName: string | null;
+      currentTrainingModelOutputDir: string;
+      currentTrainingEmailModelName: string;
+      currentTrainingVisionModelName: string;
+      envTrainingModelOutputDir: string;
+      envTrainingEmailModelName: string;
+      envTrainingVisionModelName: string;
+    }>('/admin/training-config');
+    return data;
+  },
+
+  updateTrainingConfig: async (config: {
+    trainingModelOutputDir?: string | null;
+    trainingEmailModelName?: string | null;
+    trainingVisionModelName?: string | null;
+  }) => {
+    const { data } = await api.put('/admin/training-config', config);
     return data;
   },
 
@@ -886,6 +940,151 @@ export const adminApi = {
       }>;
       total: number;
     }>('/admin/logging/search', { params });
+    return data;
+  },
+};
+
+export const backupApi = {
+  list: async () => {
+    const { data } = await api.get<{
+      backups: Array<{
+        id: string;
+        type: string;
+        status: string;
+        backupPath: string;
+        dbBackupPath: string | null;
+        filesBackupPath: string | null;
+        size: string;
+        retentionDays: number;
+        startedAt: string | null;
+        completedAt: string | null;
+        errorMessage: string | null;
+        metadata: any;
+        syncedToCloud: boolean;
+        cloudSyncAt: string | null;
+        createdAt: string;
+        updatedAt: string;
+        fileExists?: boolean;
+      }>;
+    }>('/backup');
+    return data;
+  },
+
+  get: async (id: string) => {
+    const { data } = await api.get<{
+      backup: {
+        id: string;
+        type: string;
+        status: string;
+        backupPath: string;
+        dbBackupPath: string | null;
+        filesBackupPath: string | null;
+        size: string;
+        retentionDays: number;
+        startedAt: string | null;
+        completedAt: string | null;
+        errorMessage: string | null;
+        metadata: any;
+        syncedToCloud: boolean;
+        cloudSyncAt: string | null;
+        createdAt: string;
+        updatedAt: string;
+        fileExists?: boolean;
+      };
+    }>(`/backup/${id}`);
+    return data;
+  },
+
+  create: async (options?: { type?: 'full' | 'partial'; retentionDays?: number }) => {
+    const { data } = await api.post<{
+      success: boolean;
+      backupId: string;
+      message: string;
+    }>('/backup', options || {});
+    return data;
+  },
+
+  download: async (id: string) => {
+    const response = await api.get(`/backup/${id}/download`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  restore: async (id: string, options: {
+    scope: 'full' | 'database' | 'files';
+    createBackupBefore?: boolean;
+    targetDatabaseUrl?: string;
+  }) => {
+    const { data } = await api.post<{
+      success: boolean;
+      message: string;
+    }>(`/backup/${id}/restore`, options);
+    return data;
+  },
+
+  delete: async (id: string) => {
+    const { data } = await api.delete<{
+      success: boolean;
+      message: string;
+    }>(`/backup/${id}`);
+    return data;
+  },
+
+  getStatus: async () => {
+    const { data } = await api.get<{
+      running: boolean;
+      currentBackup: {
+        id: string;
+        status: string;
+        startedAt: string | null;
+      } | null;
+    }>('/backup/status');
+    return data;
+  },
+
+  cleanup: async () => {
+    const { data } = await api.post<{
+      success: boolean;
+      deletedCount: number;
+      message: string;
+    }>('/backup/cleanup');
+    return data;
+  },
+
+  syncToCloud: async (id: string) => {
+    const { data } = await api.post<{
+      success: boolean;
+      message: string;
+    }>(`/backup/${id}/sync`);
+    return data;
+  },
+
+  listCloudBackups: async () => {
+    const { data } = await api.get<{
+      backups: Array<{
+        name: string;
+        size: number;
+        lastModified: string;
+      }>;
+    }>('/backup/cloud/list');
+    return data;
+  },
+
+  testCloudConnection: async () => {
+    const { data } = await api.post<{
+      success: boolean;
+      message: string;
+    }>('/backup/cloud/test');
+    return data;
+  },
+
+  downloadFromCloud: async (backupName: string) => {
+    const { data } = await api.post<{
+      success: boolean;
+      message: string;
+      localPath: string;
+    }>('/backup/cloud/download', { backupName });
     return data;
   },
 };

@@ -18,7 +18,7 @@ export async function parseBoardingPass(
   imageBase64: string,
   _useApiEnrichment: boolean = false
 ): Promise<BoardingPassParseResult> {
-  const config = getParserConfig();
+  const config = await getParserConfig();
   const result = await parseBoardingPassFromFactory(imageBase64, config);
 
   const flight = result.flights[0];

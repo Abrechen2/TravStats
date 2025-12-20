@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Airport, FlightInput } from '../types';
 import { airportsApi, parseApi } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
+import { logger } from '../lib/logger';
 
 interface ParsedBooking {
   airline?: string;
@@ -249,14 +250,15 @@ export default function FlightReviewModal({
       if (hasCorrections && user) {
         // Collect feedback asynchronously (don't await to avoid blocking)
         collectFeedback(initialData, flightInput).catch(err => {
-          console.warn('Failed to collect feedback:', err);
+          logger.warn('Failed to collect feedback:', err);
         });
       }
 
       await onConfirm(flightInput);
       // onConfirm handles closing the modal or moving to next flight
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Fehler beim Speichern');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } }; message?: string };
+      setError(error.response?.data?.error || error.message || 'Fehler beim Speichern');
     } finally {
       setLoading(false);
     }
@@ -316,7 +318,7 @@ export default function FlightReviewModal({
       });
     } catch (error) {
       // Silently fail - feedback collection should not break the flow
-      console.warn('Failed to submit parser correction feedback:', error);
+      logger.warn('Failed to submit parser correction feedback:', error);
     }
   };
 
@@ -500,7 +502,7 @@ export default function FlightReviewModal({
               </label>
               <select
                 value={seatClass}
-                onChange={(e) => setSeatClass(e.target.value as any)}
+                onChange={(e) => setSeatClass(e.target.value as 'economy' | 'premium_economy' | 'business' | 'first')}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
               >
                 <option value="economy">Economy</option>
@@ -625,7 +627,7 @@ export default function FlightReviewModal({
                 </label>
                 <select
                   value={currency}
-                  onChange={(e) => setCurrency(e.target.value as any)}
+                  onChange={(e) => setCurrency(e.target.value as 'EUR' | 'USD' | 'GBP' | 'CHF')}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="EUR">EUR</option>

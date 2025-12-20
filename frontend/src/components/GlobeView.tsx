@@ -114,8 +114,37 @@ const getStaticArcAltitude = (
 };
 
 // Note: selectedFlightId is available for future implementation (e.g., highlighting selected flight on globe)
+// Type for react-globe.gl component ref
+type GlobeInstance = {
+  pointOfView: (point?: { lat: number; lng: number; altitude: number }, transitionDuration?: number) => { lat: number; lng: number; altitude: number } | void;
+  controls: () => { autoRotate: boolean; autoRotateSpeed: number };
+};
+
+// Types for Globe arc and point data
+interface ArcData {
+  startLat: number;
+  startLng: number;
+  endLat: number;
+  endLng: number;
+  color: string;
+  altitude: number;
+  count: number;
+  departure: { iata?: string; name?: string };
+  arrival: { iata?: string; name?: string };
+  flights: GeoJSONFeature[];
+}
+
+interface PointData {
+  lat: number;
+  lng: number;
+  size: number;
+  name: string;
+  code: string;
+  iata?: string;
+}
+
 export default function GlobeView({ flights = [], selectedFlightId: _selectedFlightId, onFlightClick, minRouteCount = 1 }: GlobeViewProps) {
-  const globeRef = useRef<any>();
+  const globeRef = useRef<GlobeInstance | null>(null);
   const themeStore = useThemeStore();
   const isDarkMode = themeStore?.isDarkMode ?? false;
   const [autoRotate, setAutoRotate] = useState(false);
@@ -168,17 +197,20 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
 
   // Convert flights to arcs format with route aggregation and dynamic heatmap colors
   const { arcsData, heatmapThresholds } = useMemo(() => {
-    // First, aggregate flights by route
-    const routeMap = new Map<string, {
+    // Define types for route aggregation
+    interface RouteData {
       count: number;
       startLat: number;
       startLng: number;
       endLat: number;
       endLng: number;
-      flights: any[];
-      departure: any;
-      arrival: any;
-    }>();
+      flights: typeof flights;
+      departure: { iata?: string; name?: string; icao?: string };
+      arrival: { iata?: string; name?: string; icao?: string };
+    }
+    
+    // First, aggregate flights by route
+    const routeMap = new Map<string, RouteData>();
 
     (flights || []).forEach(flight => {
       if (!flight?.properties || !flight?.geometry) return;
@@ -389,15 +421,15 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
         backgroundImageUrl={null}
         // Arcs (Flight paths) - Dynamic lines that adjust with zoom
         arcsData={arcsData}
-        arcColor={(arc: any) => arc.color}
+        arcColor={(arc: ArcData) => arc.color}
         arcStroke={dynamicStroke}
         arcStrokeOpacity={0.6}
-        arcAltitude={(arc: any) => arc.altitude}
+        arcAltitude={(arc: ArcData) => arc.altitude}
         arcCurveResolution={64}
         arcDashLength={1}
         arcDashGap={0}
         arcDashInitialGap={() => 0}
-        arcLabel={(arc: any) => `
+        arcLabel={(arc: ArcData) => `
           <div style="
             background: rgba(0, 0, 0, 0.8);
             color: white;
@@ -417,7 +449,7 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
             </div>
           </div>
         `}
-        onArcClick={(arc: any) => {
+        onArcClick={(arc: ArcData) => {
           if (onFlightClick && arc.flights && arc.flights.length > 0) {
             // Click on most recent flight in route
             const mostRecentFlight = arc.flights[arc.flights.length - 1];
@@ -436,7 +468,7 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
           const baseRadius = Math.sqrt(point.size) * 0.08;
           return Math.min(baseRadius, 0.3); // Maximum size capped at 0.4
         }}
-        pointLabel={(point: any) => `
+        pointLabel={(point: PointData) => `
           <div style="
             background: rgba(0, 0, 0, 0.8);
             color: white;
