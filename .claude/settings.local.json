@@ -31,7 +31,9 @@
       "Bash(powershell -Command:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(npm run lint)",
+      "Bash(npm test:*)"
     ],
     "deny": [],
     "ask": []
