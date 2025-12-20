@@ -19,6 +19,7 @@ import {
   testConnection,
 } from '../services/cloudSyncService';
 import logger from '../utils/logger';
+import { serializeBigInt } from '../utils/serializeBigInt';
 
 const router = Router();
 
@@ -45,7 +46,7 @@ const restoreBackupSchema = z.object({
 router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const backups = await listBackups();
-    res.json({ backups });
+    res.json({ backups: serializeBigInt(backups) });
   } catch (error) {
     next(error);
   }
@@ -66,7 +67,7 @@ router.get('/status', async (req: AuthRequest, res: Response, next: NextFunction
 
     res.json({
       running: !!running,
-      currentBackup: running || null,
+      currentBackup: running ? serializeBigInt(running) : null,
     });
   } catch (error) {
     next(error);
@@ -113,7 +114,7 @@ router.get('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
   try {
     const { id } = req.params;
     const backup = await getBackup(id);
-    res.json({ backup });
+    res.json({ backup: serializeBigInt(backup) });
   } catch (error) {
     if (error instanceof Error && error.message === 'Backup not found') {
       next(new AppError('Backup not found', 404));
@@ -255,7 +256,7 @@ router.post('/:id/sync', async (req: AuthRequest, res: Response, next: NextFunct
 router.get('/cloud/list', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const backups = await listCloudBackups();
-    res.json({ backups });
+    res.json({ backups: serializeBigInt(backups) });
   } catch (error) {
     next(error);
   }
@@ -280,20 +281,36 @@ router.post('/cloud/test', async (req: AuthRequest, res: Response, next: NextFun
  */
 router.post('/cloud/download', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { backupName } = req.body;
-    if (!backupName) {
-      throw new AppError('backupName is required', 400);
+    const cloudDownloadSchema = z.object({
+      // Only allow simple filenames. This prevents directory traversal like ../../etc/passwd.
+      // Backups created by TravStats are `backup-<timestamp>.tar.gz`.
+      backupName: z
+        .string()
+        .min(1)
+        .max(255)
+        .regex(/^[a-zA-Z0-9._-]+\.tar\.gz$/, 'backupName must be a .tar.gz filename'),
+    });
+
+    const { backupName } = cloudDownloadSchema.parse(req.body);
+    const sanitized = path.basename(backupName);
+    if (sanitized !== backupName) {
+      throw new AppError('Invalid backupName', 400);
     }
 
     const BACKUP_BASE_DIR = process.env.BACKUP_PATH || '/app/data/backups';
-    const localPath = path.join(BACKUP_BASE_DIR, backupName);
+    const baseDirResolved = path.resolve(BACKUP_BASE_DIR);
+    const localPath = path.join(BACKUP_BASE_DIR, sanitized);
+    const localPathResolved = path.resolve(localPath);
+    if (!localPathResolved.startsWith(baseDirResolved + path.sep)) {
+      throw new AppError('Invalid backupName', 400);
+    }
 
-    await downloadFromCloud(backupName, localPath);
+    await downloadFromCloud(sanitized, localPathResolved);
 
     res.json({
       success: true,
       message: 'Backup downloaded from cloud successfully',
-      localPath,
+      localPath: localPathResolved,
     });
   } catch (error) {
     next(error);
@@ -301,6 +318,7 @@ router.post('/cloud/download', async (req: AuthRequest, res: Response, next: Nex
 });
 
 export default router;
+
 
 
 

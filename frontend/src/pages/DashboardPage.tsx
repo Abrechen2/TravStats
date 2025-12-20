@@ -19,7 +19,7 @@ import type { Flight, FlightInput, FlightFilters, GeoJSONFeature, OnboardingStat
 import { useSettingsStore } from '../store/settingsStore';
 import { API_LIMITS, UI_CONFIG, STORAGE_KEYS } from '../lib/constants';
 import { toCsv, escapeXml, downloadBlob } from '../lib/export';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 export default function DashboardPage() {
@@ -179,7 +179,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     // Check if user has training access (admin or canTrainLLM)
-    const hasTrainingAccess = user?.isAdmin || (user as any)?.canTrainLLM || false;
+    const hasTrainingAccess = user?.isAdmin || user?.canTrainLLM || false;
     
     if (hasTrainingAccess) {
       settingsApi
