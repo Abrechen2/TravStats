@@ -1,0 +1,36 @@
+{
+  "title": "Admin",
+  "description": "Verwalte deine selbst gehostete TravStats-Instanz",
+  "tabs": {
+    "users": "Benutzer",
+    "invitations": "Einladungen",
+    "system": "System",
+    "parsers": "Parser",
+    "training": "Training Config",
+    "logging": "Logging",
+    "feedback": "Parser Feedback",
+    "patterns": "Pattern Updates",
+    "backups": "Backups"
+  },
+  "trainingConfig": "Training Config",
+  "parserFeedback": "Parser Feedback",
+  "patternUpdates": "Pattern Updates",
+  "instance": "Instance",
+  "totalUsers": "Total Users",
+  "activeUsers": "Active Users",
+  "totalFlights": "Total Flights",
+  "saveConfiguration": "Konfiguration speichern",
+  "saveSettings": "Einstellungen speichern",
+  "saveConfig": "Konfiguration speichern",
+  "users": {
+    "title": "Benutzerverwaltung"
+  },
+  "invitations": {
+    "title": "Einladungen verwalten"
+  },
+  "userLimitWarning": {
+    "title": "⚠️ User Limit Warning",
+    "message": "Sie haben die empfohlene Benutzerobergrenze ({{maxUsers}} Benutzer) erreicht. Die Leistung kann bei mehr Benutzern beeinträchtigt werden. Berücksichtigen Sie die Kapazität des Systems."
+  }
+}
+

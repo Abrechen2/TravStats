@@ -113,7 +113,7 @@ const defaultSettings: Omit<
   },
   display: {
     theme: 'light',
-    language: 'de',
+    language: 'en',
     timezone: 'Europe/Berlin',
     dateFormat: 'DD.MM.YYYY',
     timeFormat: '24h',
@@ -197,10 +197,18 @@ export const useSettingsStore = create<SettingsState>()(
         try {
           const remote = await settingsApi.get();
           if (remote) {
-            set((state) => ({
-              ...state,
-              ...remote,
-            }));
+            set((state) => {
+              const newState = {
+                ...state,
+                ...remote,
+              };
+              // Sync language to i18n if it changed (will be handled by App.tsx useEffect, but we do it here too for immediate update)
+              if (remote.display?.language && remote.display.language !== state.display.language) {
+                // The language sync will be handled by the useEffect in App.tsx
+                // No need to import i18n here to avoid circular dependencies
+              }
+              return newState;
+            });
           }
         } catch (error) {
           console.warn('Failed to load remote settings, using local defaults', error);

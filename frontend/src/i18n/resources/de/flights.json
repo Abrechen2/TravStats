@@ -1,0 +1,148 @@
+{
+  "form": {
+    "title": "Flug hinzufügen",
+    "flightNumber": "Flugnummer",
+    "searchFlight": "Flug suchen",
+    "searching": "Suche...",
+    "departure": "Abflug",
+    "arrival": "Ankunft",
+    "from": "Von *",
+    "to": "Nach *",
+    "departureDate": "Abflugdatum",
+    "departureTime": "Abflugzeit",
+    "arrivalDate": "Ankunftsdatum",
+    "arrivalTime": "Ankunftszeit",
+    "airline": "Fluggesellschaft",
+    "aircraft": "Flugzeug",
+    "terminal": "Terminal",
+    "gate": "Gate",
+    "seat": "Sitzplatz",
+    "seatClass": "Sitzklasse",
+    "pnr": "PNR",
+    "bookingReference": "Buchungsreferenz (PNR)",
+    "boardingGroup": "Boarding-Gruppe",
+    "ticketNumber": "Ticketnummer",
+    "status": "Status",
+    "category": "Kategorie",
+    "price": "Preis",
+    "currency": "Währung",
+    "notes": "Notizen",
+    "tags": "Tags",
+    "submit": "Flug speichern",
+    "saving": "Speichert...",
+    "cancel": "Abbrechen",
+    "scanBoardingPass": "Boarding Pass scannen",
+    "uploadEmail": "E-Mail hochladen",
+    "manualEntry": "Manuelle Eingabe",
+    "estimatedTimes": "Geschätzte Flugzeiten",
+    "estimatedTimesHistorical": "Basierend auf {{count}} {{count, plural, one {historischen Flug} other {historischen Flügen}}} dieser Route.",
+    "estimatedTimesCalculated": "Abflug- und Ankunftszeiten wurden aus Ihren früheren Flügen berechnet.",
+    "estimatedTimesAutomatic": "Automatisch geschätzt basierend auf Boarding-Zeit und Flugdistanz.",
+    "estimatedTimesAssumption": "Annahme: Abflug = Boarding + 30min, Flugdauer ≈ {{minutes}} Minuten.",
+    "reviewTimes": "→ Bitte überprüfen und korrigieren Sie die Zeiten bei Bedarf.",
+    "hideWarning": "Warnung ausblenden",
+    "help": {
+      "departureAirport": "Wählen Sie den Abflughafen aus. Sie können nach IATA-Code (z.B. FRA) oder Name suchen.",
+      "arrivalAirport": "Wählen Sie den Zielflughafen aus. Sie können nach IATA-Code (z.B. LHR) oder Name suchen.",
+      "departureDate": "Wählen Sie das Abflugdatum aus.",
+      "departureTime": "Geben Sie die Abflugzeit ein (lokale Zeit des Abflughafens).",
+      "departureTimeExpanded": "Die Zeit sollte in der lokalen Zeitzone des Abflughafens angegeben werden. Das System konvertiert automatisch bei Bedarf.",
+      "price": "Der Preis wird zusammen mit der Währung gespeichert. Sie können später nach Preisen filtern und Statistiken anzeigen.",
+      "tags": "Fügen Sie Tags hinzu, um Flüge später zu kategorisieren und zu filtern (z.B. 'business', 'international').",
+      "tagsExpanded": "Tags werden durch Kommas getrennt. Sie können später nach Tags filtern und Statistiken nach Tags gruppieren. Beispiele: 'business', 'vacation', 'lufthansa', 'long-haul'.",
+      "flightNumber": "Geben Sie die Flugnummer ein (z.B. LH400). Mit dem Lookup-Button können Sie automatisch Flugdaten abrufen, wenn ein API-Schlüssel konfiguriert ist.",
+      "flightNumberExpanded": "Die automatische Flugsuche verwendet externe APIs (AirLabs, AviationStack, OpenSky) um Flugdaten abzurufen. Ohne API-Schlüssel müssen Sie die Daten manuell eingeben."
+    },
+    "steps": {
+      "input": "Flugnummer für automatische Suche eingeben",
+      "select": "Wählen Sie Ihren Flug aus den Ergebnissen",
+      "complete": "Flugdetails überprüfen und vervollständigen"
+    },
+    "boardingPass": {
+      "title": "Haben Sie einen Boarding Pass?",
+      "description": "Scannen Sie ihn für sofortiges Auto-Ausfüllen!",
+      "scan": "Jetzt scannen"
+    },
+    "email": {
+      "title": "Haben Sie eine Buchungs-E-Mail?",
+      "description": "Importieren Sie Flüge direkt aus Bestätigungs-E-Mails!",
+      "import": "E-Mail importieren"
+    },
+    "placeholders": {
+      "tags": "business, vacation, conference"
+    },
+    "validation": {
+      "selectAirportsAndDates": "Bitte wählen Sie beide Flughäfen und Daten aus"
+    }
+  },
+  "list": {
+    "title": "Flüge",
+    "noFlights": "Keine Flüge gefunden",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "viewDetails": "Details anzeigen"
+  },
+  "table": {
+    "title": "Flugliste",
+    "backToMap": "← Zurück zur Karte",
+    "welcome": "Willkommen zur Flugtabelle!",
+    "description": "Hier sehen Sie alle Ihre Flüge in einer übersichtlichen Tabelle. Sie können sortieren, filtern und Flüge bearbeiten oder löschen.",
+    "backToDashboard": "Zurück zum Dashboard",
+    "loading": "Flüge werden geladen...",
+    "noFlights": "Keine Flüge gefunden",
+    "noFlightsHint": "Versuchen Sie, Ihre Filter anzupassen oder fügen Sie Ihren ersten Flug hinzu.",
+    "airline": "Airline",
+    "flightNumber": "Flugnummer",
+    "route": "Route",
+    "departure": "Abflug",
+    "arrival": "Ankunft",
+    "status": "Status",
+    "flightTime": "Flugzeit (h)",
+    "aircraft": "Flugzeug",
+    "price": "Preis",
+    "actions": "Aktionen",
+    "deleteConfirm": {
+      "title": "Flug löschen?",
+      "message": "Möchten Sie diesen Flug wirklich löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden.",
+      "confirm": "Ja, löschen",
+      "cancel": "Abbrechen"
+    }
+  },
+  "review": {
+    "title": "Flug überprüfen",
+    "source": "Quelle",
+    "flightIndex": "Flug {{index}} von {{total}}",
+    "confirm": "Bestätigen",
+    "edit": "Bearbeiten",
+    "cancel": "Abbrechen"
+  },
+  "status": {
+    "scheduled": "Geplant",
+    "flown": "Geflogen",
+    "cancelled": "Storniert"
+  },
+  "category": {
+    "business": "Geschäftlich",
+    "private": "Privat",
+    "vacation": "Urlaub"
+  },
+  "seatClass": {
+    "economy": "Economy",
+    "premium_economy": "Premium Economy",
+    "business": "Business",
+    "first": "First Class"
+  },
+  "currency": {
+    "EUR": "EUR",
+    "USD": "USD",
+    "GBP": "GBP",
+    "CHF": "CHF"
+  },
+  "review": {
+    "discard": "Verwerfen",
+    "saving": "Speichert...",
+    "next": "Weiter",
+    "confirm": "Bestätigen"
+  }
+}
+

@@ -1,0 +1,19 @@
+{
+  "generic": "An error occurred",
+  "network": "Network error. Please check your connection.",
+  "unauthorized": "You are not authorized to perform this action.",
+  "forbidden": "Access denied.",
+  "notFound": "Resource not found.",
+  "validation": "Validation error",
+  "server": "Server error. Please try again later.",
+  "unknown": "Unknown error occurred",
+  "noFlightNumber": "Please enter a flight number",
+  "noFlightsFound": "No flights found. Please try a different date or enter the data manually.",
+  "lookupUnavailable": "Flight search currently unavailable. Please enter the data manually.",
+  "boardingPassError": "Boarding pass could not be scanned. Please try again or enter the data manually.",
+  "missingAirports": "Please select departure and arrival airports",
+  "saveFailed": "Flight could not be saved. Please check your inputs.",
+  "apiKeyInfo": "Note: An API key is required for automatic flight search.",
+  "failedToLoadAirport": "Failed to load airport data"
+}
+

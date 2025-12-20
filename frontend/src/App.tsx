@@ -9,6 +9,7 @@ import Toast from './components/Toast';
 import AirportSeedingBanner from './components/AirportSeedingBanner';
 import AirportSeedingModal from './components/AirportSeedingModal';
 import { setupApi } from './lib/api';
+import i18n from './i18n/config';
 
 // Lazy load pages for code splitting
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -25,10 +26,24 @@ const TrainingPage = lazy(() => import('./pages/TrainingPage'));
 function AppContent() {
   const { user } = useAuthStore();
   const loadRemoteSettings = useSettingsStore((s) => s.loadRemoteSettings);
+  const language = useSettingsStore((s) => s.display.language);
   const isDarkMode = useThemeStore((s) => s.isDarkMode);
   const navigate = useNavigate();
   const [setupChecked, setSetupChecked] = useState(false);
   const [showSeedingModal, setShowSeedingModal] = useState(false);
+
+  // Sync language from settings store to i18n
+  useEffect(() => {
+    if (language) {
+      // Always sync, even if it seems to match, to handle edge cases
+      const currentLang = i18n.language || i18n.resolvedLanguage;
+      if (currentLang !== language) {
+        i18n.changeLanguage(language).catch((err) => {
+          console.warn('Failed to change language:', err);
+        });
+      }
+    }
+  }, [language]);
 
   // Ensure theme is applied after store rehydration
   useEffect(() => {
