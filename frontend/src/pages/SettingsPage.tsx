@@ -412,8 +412,9 @@ export default function SettingsPage() {
                 value={display.language}
                 onChange={(e) => {
                   const newLang = e.target.value as 'de' | 'en';
-                  changeLanguage(newLang);
-                  setDisplay({ language: newLang });
+                  // changeLanguage is async but we don't need to await here
+                  // as the UI will re-render automatically when i18n updates
+                  void changeLanguage(newLang);
                 }}
                 className="input"
               >

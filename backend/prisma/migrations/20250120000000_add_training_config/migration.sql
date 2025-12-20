@@ -47,3 +47,4 @@ ALTER TABLE "training_jobs" ALTER COLUMN "model_type" SET NOT NULL;
 ALTER TABLE "training_jobs" ALTER COLUMN "model_type" SET DEFAULT 'combined';
 
 
+
