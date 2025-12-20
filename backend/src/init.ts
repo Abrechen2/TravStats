@@ -71,6 +71,31 @@ async function init() {
       });
     }
 
+    // Step 2.5: Create backup directory
+    console.log('2️⃣.5 Creating backup directory...');
+    logger.info({ operation: 'init_backup_dir', message: 'Creating backup directory' });
+    try {
+      const backupPath = process.env.BACKUP_PATH || '/app/data/backups';
+      if (!fs.existsSync(backupPath)) {
+        fs.mkdirSync(backupPath, { recursive: true, mode: 0o755 });
+        console.log('   ✅ Backup directory created\n');
+        logger.info({ operation: 'init_backup_dir_created', message: 'Backup directory created', path: backupPath });
+      } else {
+        console.log('   ✅ Backup directory exists\n');
+        logger.debug({ operation: 'init_backup_dir_exists', message: 'Backup directory already exists', path: backupPath });
+      }
+    } catch (error) {
+      console.error('   ⚠️  Could not create backup directory');
+      console.error('   Backups may not work correctly.\n');
+      logger.warn({
+        operation: 'init_backup_dir_error',
+        message: 'Could not create backup directory',
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+    }
+
     // Step 3: Run migrations
     console.log('3️⃣  Running database migrations...');
     logger.info({ operation: 'init_migrations', message: 'Running database migrations' });
@@ -117,47 +142,10 @@ async function init() {
       // Don't exit - non-critical
     }
 
-    // Step 5: Seed airports on first install only (if database is empty)
-    const seedAirportsEnv = process.env.SEED_AIRPORTS;
-    const shouldSeedAirports = seedAirportsEnv !== 'false'; // Default: true, unless explicitly disabled
-    
-    if (shouldSeedAirports) {
-      // Check if airports already exist in database
-      const airportCount = await prisma.airport.count();
-      
-      if (airportCount === 0) {
-        console.log('5️⃣  Seeding airports database (first install)...');
-        logger.info({ operation: 'init_seed_airports', message: 'Seeding airports database' });
-        try {
-          execSync('npm run seed:airports:csv', {
-            stdio: 'inherit',
-            cwd: path.join(__dirname, '..')
-          });
-          console.log('   ✅ Airports database ready\n');
-          logger.info({ operation: 'init_seed_airports_success', message: 'Airports seeded successfully' });
-        } catch (error) {
-          console.error('   ⚠️  Failed to seed airports');
-          console.error('   Airports will be loaded automatically when needed.\n');
-          logger.warn({
-            operation: 'init_seed_airports_error',
-            message: 'Failed to seed airports',
-            error: {
-              message: error instanceof Error ? error.message : 'Unknown error',
-            },
-          });
-        }
-      } else {
-        console.log(`5️⃣  Skipping airport seeding (${airportCount} airports already in database)\n`);
-        logger.debug({
-          operation: 'init_seed_airports_skip',
-          message: 'Skipping airport seeding - airports already exist',
-          context: { airportCount },
-        });
-      }
-    } else {
-      console.log('5️⃣  Skipping airport seeding (SEED_AIRPORTS=false)\n');
-      logger.debug({ operation: 'init_seed_airports_disabled', message: 'Airport seeding disabled via SEED_AIRPORTS=false' });
-    }
+    // Step 5: Airport seeding is now started after first login (not during init)
+    // This prevents CORS issues during login and ensures the server is fully ready
+    console.log('5️⃣  Airport seeding will start after first login\n');
+    logger.debug({ operation: 'init_airport_seeding_info', message: 'Airport seeding will start after first login' });
 
     // Step 6: Optional demo user
     const createDemoUser = process.env.CREATE_DEMO_USER === 'true';

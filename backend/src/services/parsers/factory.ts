@@ -40,11 +40,13 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 /**
  * Get vision parser instance by provider
+ * @param provider - Vision provider
+ * @param modelName - Optional model name (for Ollama)
  */
-function getVisionParserInstance(provider: VisionProvider): IVisionParser {
+function getVisionParserInstance(provider: VisionProvider, modelName?: string): IVisionParser {
   switch (provider) {
     case 'ollama':
-      return getOllamaVisionParser();
+      return getOllamaVisionParser(modelName);
     case 'openai':
       return getOpenAIVisionParser();
     case 'claude':
@@ -60,11 +62,13 @@ function getVisionParserInstance(provider: VisionProvider): IVisionParser {
 
 /**
  * Get text parser instance by provider
+ * @param provider - Text provider
+ * @param modelName - Optional model name (for Ollama)
  */
-function getTextParserInstance(provider: TextProvider): ITextParser {
+function getTextParserInstance(provider: TextProvider, modelName?: string): ITextParser {
   switch (provider) {
     case 'ollama':
-      return getOllamaTextParser();
+      return getOllamaTextParser(modelName);
     case 'openai':
       return getOpenAITextParser();
     case 'claude':
@@ -127,7 +131,7 @@ function parseFallbackChain<T extends string>(chain: string | undefined, default
  * @param userSettings - User settings (API keys should already be decrypted)
  * @param adminSettings - Optional admin settings (API keys should already be decrypted)
  */
-export function getParserConfig(
+export async function getParserConfig(
   userSettings?: {
     preferredVisionParser?: string | null;
     preferredTextParser?: string | null;
@@ -139,8 +143,15 @@ export function getParserConfig(
   adminSettings?: {
     globalOpenaiApiKey?: string | null;
     globalClaudeApiKey?: string | null;
-  }
-): ParserConfig {
+  },
+  userId?: string
+): Promise<ParserConfig> {
+  // Import here to avoid circular dependency
+  const { selectModelForParsing } = await import('../modelManager');
+  
+  // Select models based on user settings and availability
+  const selectedEmailModel = await selectModelForParsing('email', userId);
+  const selectedVisionModel = await selectModelForParsing('vision', userId);
   // Note: API keys in userSettings and adminSettings should already be decrypted when passed to this function
   // Priority: userSettings API keys > adminSettings global keys > environment variables
   return {
@@ -155,8 +166,8 @@ export function getParserConfig(
       getDefaultTextFallbackChain()
     ),
     ollamaUrl: process.env.OLLAMA_URL,
-    ollamaModel: process.env.OLLAMA_MODEL,
-    ollamaVisionModel: process.env.OLLAMA_VISION_MODEL,
+    ollamaModel: selectedEmailModel,
+    ollamaVisionModel: selectedVisionModel,
     openaiApiKey: userSettings?.openaiApiKey || adminSettings?.globalOpenaiApiKey || process.env.OPENAI_API_KEY,
     openaiModel: process.env.OPENAI_MODEL,
     openaiVisionModel: process.env.OPENAI_VISION_MODEL,
@@ -197,7 +208,10 @@ export async function getVisionParser(
 
   // If specific provider requested (not auto)
   if (config.visionProvider !== 'auto') {
-    const parser = getVisionParserInstance(config.visionProvider);
+    const parser = getVisionParserInstance(
+      config.visionProvider,
+      config.visionProvider === 'ollama' ? config.ollamaVisionModel : undefined
+    );
     const apiKey = config.visionProvider === 'openai' ? config.openaiApiKey :
                    config.visionProvider === 'claude' ? config.claudeApiKey : undefined;
 
@@ -235,7 +249,10 @@ export async function getVisionParser(
 
   // Auto mode or fallback: try each provider in chain
   for (const provider of config.visionFallbacks) {
-    const parser = getVisionParserInstance(provider);
+    const parser = getVisionParserInstance(
+      provider,
+      provider === 'ollama' ? config.ollamaVisionModel : undefined
+    );
     const apiKey = provider === 'openai' ? config.openaiApiKey :
                    provider === 'claude' ? config.claudeApiKey : undefined;
 
@@ -320,7 +337,10 @@ export async function getTextParser(
 
   // If specific provider requested (not auto)
   if (config.textProvider !== 'auto') {
-    const parser = getTextParserInstance(config.textProvider);
+    const parser = getTextParserInstance(
+      config.textProvider,
+      config.textProvider === 'ollama' ? config.ollamaModel : undefined
+    );
     const apiKey = config.textProvider === 'openai' ? config.openaiApiKey :
                    config.textProvider === 'claude' ? config.claudeApiKey : undefined;
 
@@ -358,7 +378,10 @@ export async function getTextParser(
 
   // Auto mode or fallback: try each provider in chain
   for (const provider of config.textFallbacks) {
-    const parser = getTextParserInstance(provider);
+    const parser = getTextParserInstance(
+      provider,
+      provider === 'ollama' ? config.ollamaModel : undefined
+    );
     const apiKey = provider === 'openai' ? config.openaiApiKey :
                    provider === 'claude' ? config.claudeApiKey : undefined;
 
@@ -548,7 +571,10 @@ export async function parseBoardingPass(
   // Try each provider in order
   for (const provider of providerChain) {
     try {
-      const parser = getVisionParserInstance(provider);
+      const parser = getVisionParserInstance(
+        provider,
+        provider === 'ollama' ? config.ollamaVisionModel : undefined
+      );
       const apiKey = provider === 'openai' ? config.openaiApiKey :
                      provider === 'claude' ? config.claudeApiKey : undefined;
 
@@ -633,7 +659,7 @@ export async function parseBoardingPass(
         }
 
         try {
-          const tesseractParser = getVisionParserInstance('tesseract');
+          const tesseractParser = getVisionParserInstance('tesseract', undefined);
           const availability = await checkProviderAvailability(tesseractParser);
 
           if (availability.available) {
@@ -870,7 +896,10 @@ export async function parseEmail(
         const llmProviders: TextProvider[] = ['openai', 'claude', 'ollama'];
         for (const llmProvider of llmProviders) {
           try {
-            const llmParser = getTextParserInstance(llmProvider);
+            const llmParser = getTextParserInstance(
+              llmProvider,
+              llmProvider === 'ollama' ? config.ollamaModel : undefined
+            );
             const llmApiKey = llmProvider === 'openai' ? config.openaiApiKey :
                              llmProvider === 'claude' ? config.claudeApiKey : undefined;
 
@@ -1078,7 +1107,10 @@ export async function getAvailableProviders(config: ParserConfig): Promise<{
 
   const visionResults = await Promise.all(
     allVisionProviders.map(async (provider) => {
-      const parser = getVisionParserInstance(provider);
+      const parser = getVisionParserInstance(
+        provider,
+        provider === 'ollama' ? config.ollamaVisionModel : undefined
+      );
       const apiKey = provider === 'openai' ? config.openaiApiKey :
                      provider === 'claude' ? config.claudeApiKey : undefined;
       const availability = await checkProviderAvailability(parser, apiKey);
@@ -1088,7 +1120,10 @@ export async function getAvailableProviders(config: ParserConfig): Promise<{
 
   const textResults = await Promise.all(
     allTextProviders.map(async (provider) => {
-      const parser = getTextParserInstance(provider);
+      const parser = getTextParserInstance(
+        provider,
+        provider === 'ollama' ? config.ollamaModel : undefined
+      );
       const apiKey = provider === 'openai' ? config.openaiApiKey :
                      provider === 'claude' ? config.claudeApiKey : undefined;
       const availability = await checkProviderAvailability(parser, apiKey);

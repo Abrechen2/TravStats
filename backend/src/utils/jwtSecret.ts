@@ -7,8 +7,11 @@ const PROJECT_CWD = process.cwd();
 const DEV_DATA_DIR = join(PROJECT_CWD, '.travstats-data');
 const RESOLVED_DATA_DIR =
   process.env.DATA_DIR || (process.env.NODE_ENV === 'production' ? '/app/data' : DEV_DATA_DIR);
+// Store JWT secret in a separate, non-mounted directory for security
+// This prevents the secret from being accessible via mounted volumes
+const SECRETS_DIR = process.env.SECRETS_DIR || (process.env.NODE_ENV === 'production' ? '/app/secrets' : join(DEV_DATA_DIR, 'secrets'));
 const RESOLVED_SECRET_FILE =
-  process.env.JWT_SECRET_FILE || join(RESOLVED_DATA_DIR, 'jwt.secret');
+  process.env.JWT_SECRET_FILE || join(SECRETS_DIR, 'jwt.secret');
 
 /**
  * List of known weak/default JWT secrets that should never be used in production
@@ -196,30 +199,46 @@ if (!validation.isValid) {
 ║  1. Generate a strong secret: openssl rand -hex 32           ║
 ║  2. Set JWT_SECRET environment variable                       ║
 ║     OR                                                        ║
-║  3. Delete /app/data/jwt.secret and restart (will auto-gen)   ║
+║  3. Delete /app/secrets/jwt.secret and restart (will auto-gen) ║
 ║                                                               ║
 ║  Current secret source: ${(process.env.JWT_SECRET ? 'JWT_SECRET env var' : 'Auto-generated').padEnd(36)}║
 ╚═══════════════════════════════════════════════════════════════╝
 `;
 
-  console.error(errorMessage);
-  console.error('⛔ SERVER START BLOCKED - This is a critical error');
   logger.error({
     operation: 'jwt_secret_validation_failed',
     message: 'JWT_SECRET validation failed - server start blocked',
-    context: { reason: validation.message },
+    context: { 
+      reason: validation.message,
+      errorMessage: errorMessage.trim(),
+    },
   });
+  // Use console.error here as logger might not be fully initialized in this critical error case
+  console.error(errorMessage);
+  console.error('⛔ SERVER START BLOCKED - This is a critical error');
   process.exit(1);
-} else if (process.env.NODE_ENV === 'production') {
-  if (retryCount > 0) {
-    console.log(`✅ JWT_SECRET validation passed (regenerated ${retryCount} time(s))`);
+} else {
+  // Log success (in both production and development)
+  if (process.env.NODE_ENV === 'production') {
+    if (retryCount > 0) {
+      logger.info({
+        operation: 'jwt_secret_validation_passed',
+        message: `JWT_SECRET validation passed (regenerated ${retryCount} time(s))`,
+      });
+    } else {
+      logger.info({
+        operation: 'jwt_secret_validation_passed',
+        message: 'JWT_SECRET validation passed',
+      });
+    }
   } else {
-    console.log('✅ JWT_SECRET validation passed');
+    // In development, still log but don't spam console
+    logger.info({
+      operation: 'jwt_secret_validation_passed',
+      message: 'JWT_SECRET validation passed',
+      context: { retryCount },
+    });
   }
-  logger.info({
-    operation: 'jwt_secret_validation_passed',
-    message: 'JWT_SECRET validation passed',
-  });
 }
 
 // Export the validated secret

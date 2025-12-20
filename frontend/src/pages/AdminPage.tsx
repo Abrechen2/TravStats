@@ -4,6 +4,7 @@ import { adminApi } from '../lib/api';
 import { format } from 'date-fns';
 import { logger } from '../lib/logger';
 import InlineHelp from '../components/Help/InlineHelp';
+import BackupManagement from '../components/Admin/BackupManagement';
 
 export default function AdminPage() {
   const addToast = useToastStore((state) => state.addToast);
@@ -20,7 +21,9 @@ export default function AdminPage() {
   const [feedbackDetails, setFeedbackDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [loadingHardwareInfo, setLoadingHardwareInfo] = useState(false);
-  const [activeTab, setActiveTab] = useState<'users' | 'invitations' | 'system' | 'parsers' | 'logging' | 'feedback' | 'patterns'>('system');
+  const [activeTab, setActiveTab] = useState<'users' | 'invitations' | 'system' | 'parsers' | 'training' | 'logging' | 'feedback' | 'patterns' | 'backups'>('system');
+  const [trainingConfig, setTrainingConfig] = useState<any>(null);
+  const [savingTrainingConfig, setSavingTrainingConfig] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [savingParsers, setSavingParsers] = useState(false);
   const [savingLogging, setSavingLogging] = useState(false);
@@ -49,22 +52,56 @@ export default function AdminPage() {
       loadPatternData();
     } else if (activeTab === 'system') {
       loadHardwareInfo();
+    } else if (activeTab === 'training') {
+      loadTrainingConfig();
     }
   }, [activeTab, feedbackDays]);
+
+  const loadTrainingConfig = async () => {
+    try {
+      const data = await adminApi.getTrainingConfig();
+      setTrainingConfig(data);
+    } catch (error) {
+      logger.error('Failed to load training config:', error);
+    }
+  };
+
+  const handleSaveTrainingConfig = async () => {
+    if (!trainingConfig) return;
+    setSavingTrainingConfig(true);
+    try {
+      await adminApi.updateTrainingConfig({
+        trainingModelOutputDir: trainingConfig.trainingModelOutputDir || null,
+        trainingEmailModelName: trainingConfig.trainingEmailModelName || null,
+        trainingVisionModelName: trainingConfig.trainingVisionModelName || null,
+      });
+      addToast('success', 'Training configuration saved successfully!');
+      await loadTrainingConfig();
+    } catch (error: any) {
+      logger.error('Failed to save training config:', error);
+      addToast('error', error.response?.data?.error || 'Failed to save training configuration');
+    } finally {
+      setSavingTrainingConfig(false);
+    }
+  };
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [infoData, usersData, invitationsData, parserData] = await Promise.all([
+      const [infoData, usersData, invitationsData, parserData, trainingData] = await Promise.all([
         adminApi.getSystemInfo(),
         adminApi.getUsers(),
         adminApi.getInvitations(),
         adminApi.getAdminParserSettings(),
+        adminApi.getTrainingConfig().catch(() => null), // Optional, may fail if not implemented yet
       ]);
       setSystemInfo(infoData);
       setUsers(usersData.users);
       setInvitations(invitationsData.invitations);
       setParserSettings(parserData);
+      if (trainingData) {
+        setTrainingConfig(trainingData);
+      }
     } catch (error) {
       logger.error('Failed to load admin data:', error);
     } finally {
@@ -358,6 +395,16 @@ export default function AdminPage() {
           Parser Settings
         </button>
         <button
+          onClick={() => setActiveTab('training')}
+          className={`px-4 py-2 font-medium transition ${
+            activeTab === 'training'
+              ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+          }`}
+        >
+          Training Config
+        </button>
+        <button
           onClick={() => setActiveTab('logging')}
           className={`px-4 py-2 font-medium transition ${
             activeTab === 'logging'
@@ -396,6 +443,16 @@ export default function AdminPage() {
               {patternData.pendingSuggestions.length}
             </span>
           )}
+        </button>
+        <button
+          onClick={() => setActiveTab('backups')}
+          className={`px-4 py-2 font-medium transition ${
+            activeTab === 'backups'
+              ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+          }`}
+        >
+          Backups
         </button>
       </div>
 
@@ -984,6 +1041,122 @@ export default function AdminPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Training Configuration Tab */}
+      {activeTab === 'training' && trainingConfig && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                Training-Konfiguration
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Konfiguriere Modell-Namen und Speicherort für LLM-Training
+              </p>
+            </div>
+            <button
+              onClick={handleSaveTrainingConfig}
+              disabled={savingTrainingConfig}
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-lg transition font-medium"
+            >
+              {savingTrainingConfig ? 'Saving...' : 'Save Configuration'}
+            </button>
+          </div>
+
+          <InlineHelp
+            title="Training-Konfiguration"
+            category="expert"
+            content={
+              <div className="space-y-3">
+                <p>
+                  Diese Einstellungen überschreiben ENV-Variablen und bestimmen, wo trainierte Modelle gespeichert werden und wie sie heißen.
+                </p>
+                <div>
+                  <p className="font-semibold mb-1">Priorität:</p>
+                  <ol className="list-decimal list-inside space-y-1 ml-2 text-sm">
+                    <li>Admin-Settings (hier konfiguriert)</li>
+                    <li>ENV-Variablen (Fallback)</li>
+                    <li>Standard-Werte (wenn nichts gesetzt)</li>
+                  </ol>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <strong>Hinweis:</strong> Leere Felder verwenden ENV-Variablen oder Standard-Werte.
+                </p>
+              </div>
+            }
+          />
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Modell-Speicherort
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Speicherort für trainierte Modelle
+                </label>
+                <input
+                  type="text"
+                  value={trainingConfig.trainingModelOutputDir || ''}
+                  onChange={(e) => setTrainingConfig({ ...trainingConfig, trainingModelOutputDir: e.target.value })}
+                  placeholder={trainingConfig.envTrainingModelOutputDir || './data/training/models'}
+                  className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Aktuell verwendet: <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">{trainingConfig.currentTrainingModelOutputDir}</code>
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  ENV-Fallback: <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">{trainingConfig.envTrainingModelOutputDir}</code>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Modell-Namen
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Email-Modell-Name
+                </label>
+                <input
+                  type="text"
+                  value={trainingConfig.trainingEmailModelName || ''}
+                  onChange={(e) => setTrainingConfig({ ...trainingConfig, trainingEmailModelName: e.target.value })}
+                  placeholder={trainingConfig.envTrainingEmailModelName || 'travstats-email-custom'}
+                  className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Aktuell: <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">{trainingConfig.currentTrainingEmailModelName}</code>
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  ENV: <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">{trainingConfig.envTrainingEmailModelName}</code>
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Vision-Modell-Name
+                </label>
+                <input
+                  type="text"
+                  value={trainingConfig.trainingVisionModelName || ''}
+                  onChange={(e) => setTrainingConfig({ ...trainingConfig, trainingVisionModelName: e.target.value })}
+                  placeholder={trainingConfig.envTrainingVisionModelName || 'travstats-vision-custom'}
+                  className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Aktuell: <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">{trainingConfig.currentTrainingVisionModelName}</code>
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  ENV: <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">{trainingConfig.envTrainingVisionModelName}</code>
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -1968,6 +2141,11 @@ export default function AdminPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Backups Tab */}
+      {activeTab === 'backups' && (
+        <BackupManagement />
       )}
 
     </div>

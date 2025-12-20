@@ -32,7 +32,7 @@ FROM node:20-slim AS production
 
 WORKDIR /app
 
-# Install nginx, supervisor, and other dependencies
+# Install nginx, supervisor, Python, and other dependencies
 RUN apt-get update && apt-get install -y \
     nginx \
     supervisor \
@@ -40,6 +40,9 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     wget \
     netcat-openbsd \
+    python3 \
+    python3-pip \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # Setup Backend
@@ -49,6 +52,15 @@ COPY backend/prisma ./prisma/
 RUN npm ci --only=production
 COPY --from=backend-builder /app/backend/dist ./dist
 RUN npx prisma generate
+
+# Install Python dependencies for training (PyTorch, etc.)
+COPY backend/requirements-training.txt ./
+RUN pip3 install --no-cache-dir -r requirements-training.txt || echo "Warning: Some Python packages may not be available"
+
+# Copy Python scripts (checkHardware.py and trainLora.py)
+COPY --from=backend-builder /app/backend/src/scripts/checkHardware.py ./dist/scripts/checkHardware.py
+COPY --from=backend-builder /app/backend/src/scripts/trainLora.py ./dist/scripts/trainLora.py
+RUN chmod +x ./dist/scripts/*.py
 
 # Setup Frontend (nginx will serve these files)
 WORKDIR /app/frontend
@@ -68,13 +80,16 @@ COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN sed -i 's/\r$//' /docker-entrypoint.sh && \
     chmod +x /docker-entrypoint.sh
 
-# Create data directory for persistent config (JWT secret, etc.)
+# Create data directory for persistent config (logs, etc.)
 # Note: When /app/data is mounted as a volume, these permissions may be overridden by host
+# Create separate secrets directory (NOT mounted) for JWT secret
 RUN mkdir -p /app/data/logs && \
+    mkdir -p /app/secrets && \
     mkdir -p /var/log/supervisor /var/log/nginx /var/lib/nginx && \
     chown -R www-data:www-data /var/log/nginx /var/lib/nginx && \
     chown -R node:node /app && \
-    chmod -R 755 /app/data
+    chmod -R 755 /app/data && \
+    chmod 700 /app/secrets
 
 # Volume for persistent data (JWT secret, future configs)
 VOLUME ["/app/data"]

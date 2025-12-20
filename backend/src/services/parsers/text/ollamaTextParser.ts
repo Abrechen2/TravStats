@@ -5,7 +5,7 @@ import { normalizeParsedBooking, cleanLLMJsonResponse, getTextParserPrompt } fro
 import logger from '../../../utils/logger';
 
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen2.5:14b';
+const OLLAMA_MODEL_DEFAULT = process.env.OLLAMA_MODEL || 'qwen2.5:14b';
 
 interface OllamaResponse {
   model: string;
@@ -32,6 +32,11 @@ interface OllamaResponse {
  */
 export class OllamaTextParser implements ITextParser {
   readonly provider: TextProvider = 'ollama';
+  private modelName: string;
+
+  constructor(modelName?: string) {
+    this.modelName = modelName || OLLAMA_MODEL_DEFAULT;
+  }
 
   async checkAvailability(): Promise<ProviderAvailability> {
     try {
@@ -40,15 +45,15 @@ export class OllamaTextParser implements ITextParser {
       });
 
       const models = response.data.models || [];
-      const hasModel = models.some((m: any) => m.name === OLLAMA_MODEL || m.name.startsWith(OLLAMA_MODEL.split(':')[0]));
+      const hasModel = models.some((m: any) => m.name === this.modelName || m.name.startsWith(this.modelName.split(':')[0]));
 
       if (!hasModel) {
         return {
           available: false,
-          reason: `Model '${OLLAMA_MODEL}' not found. Install with: ollama pull ${OLLAMA_MODEL}`,
+          reason: `Model '${this.modelName}' not found. Install with: ollama pull ${this.modelName}`,
           metadata: {
             ollamaUrl: OLLAMA_URL,
-            requestedModel: OLLAMA_MODEL,
+            requestedModel: this.modelName,
             availableModels: models.map((m: any) => m.name),
           },
         };
@@ -58,7 +63,7 @@ export class OllamaTextParser implements ITextParser {
         available: true,
         metadata: {
           provider: 'ollama',
-          model: OLLAMA_MODEL,
+          model: this.modelName,
           url: OLLAMA_URL,
           cost: 'free',
         },
@@ -80,7 +85,7 @@ export class OllamaTextParser implements ITextParser {
 
   async parseEmail(subject: string, text: string, html?: string): Promise<ParsedBooking[]> {
     logger.info('[Ollama Text Parser] Starting email parsing');
-    logger.info({ model: OLLAMA_MODEL }, '[Ollama Text Parser] Model');
+    logger.info({ model: this.modelName }, '[Ollama Text Parser] Model');
 
     const prompt = getTextParserPrompt(subject, text);
 
@@ -90,7 +95,7 @@ export class OllamaTextParser implements ITextParser {
       const response = await axios.post<OllamaResponse>(
         `${OLLAMA_URL}/api/generate`,
         {
-          model: OLLAMA_MODEL,
+          model: this.modelName,
           prompt,
           stream: false,
           format: 'json',
@@ -189,12 +194,7 @@ export class OllamaTextParser implements ITextParser {
   }
 }
 
-// Singleton instance
-let instance: OllamaTextParser | null = null;
-
-export function getOllamaTextParser(): OllamaTextParser {
-  if (!instance) {
-    instance = new OllamaTextParser();
-  }
-  return instance;
+// Factory function - creates new instance with model name
+export function getOllamaTextParser(modelName?: string): OllamaTextParser {
+  return new OllamaTextParser(modelName);
 }

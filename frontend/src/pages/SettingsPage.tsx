@@ -6,7 +6,7 @@ import { useSettingsStore } from '../store/settingsStore';
 import { useThemeStore } from '../store/themeStore';
 import { useAuthStore } from '../store/authStore';
 import ParserConfiguration from '../components/Settings/ParserConfiguration';
-import { settingsApi, authApi } from '../lib/api';
+import { settingsApi, authApi, backupApi } from '../lib/api';
 import { useToastStore } from '../store/toastStore';
 import { logger } from '../lib/logger';
 
@@ -56,9 +56,75 @@ export default function SettingsPage() {
     confirmPassword: '',
   });
   const [passwordError, setPasswordError] = useState('');
+  const [lastBackup, setLastBackup] = useState<any>(null);
+  const [backupStatus, setBackupStatus] = useState<{ running: boolean } | null>(null);
+  const [retentionDays, setRetentionDays] = useState(30);
+  const [trainingSettings, setTrainingSettings] = useState({
+    useTrainedModels: true,
+    preferredEmailModel: 'auto' as 'auto' | 'trained' | 'base',
+    preferredVisionModel: 'auto' as 'auto' | 'trained' | 'base',
+    trainingSeparateModels: true,
+  });
+  const [loadingTrainingSettings, setLoadingTrainingSettings] = useState(false);
 
   // Check if user has training access (admin or canTrainLLM)
   const hasTrainingAccess = user?.isAdmin || (user as any)?.canTrainLLM || false;
+
+  // Load training settings
+  useEffect(() => {
+    const loadTrainingSettings = async () => {
+      try {
+        const data = await settingsApi.getTrainingSettings();
+        setTrainingSettings({
+          useTrainedModels: data.useTrainedModels,
+          preferredEmailModel: data.preferredEmailModel,
+          preferredVisionModel: data.preferredVisionModel,
+          trainingSeparateModels: data.trainingSeparateModels,
+        });
+      } catch (error) {
+        logger.error('Failed to load training settings:', error);
+      }
+    };
+    loadTrainingSettings();
+  }, []);
+
+  const handleTrainingSettingsUpdate = async () => {
+    setLoadingTrainingSettings(true);
+    try {
+      await settingsApi.updateTrainingSettings(trainingSettings);
+      addToast('success', 'Training-Einstellungen erfolgreich aktualisiert');
+    } catch (error) {
+      logger.error('Failed to update training settings:', error);
+      addToast('error', 'Fehler beim Aktualisieren der Training-Einstellungen');
+    } finally {
+      setLoadingTrainingSettings(false);
+    }
+  };
+
+  // Load backup info
+  useEffect(() => {
+    if (user?.isAdmin) {
+      const loadBackupInfo = async () => {
+        try {
+          const [backupsData, statusData] = await Promise.all([
+            backupApi.list(),
+            backupApi.getStatus(),
+          ]);
+          
+          const completedBackups = backupsData.backups.filter((b: any) => b.status === 'completed');
+          if (completedBackups.length > 0) {
+            setLastBackup(completedBackups[0]);
+          }
+          setBackupStatus(statusData);
+        } catch (error) {
+          logger.error('Failed to load backup info:', error);
+        }
+      };
+      loadBackupInfo();
+      const interval = setInterval(loadBackupInfo, 30000); // Refresh every 30 seconds
+      return () => clearInterval(interval);
+    }
+  }, [user]);
 
   // Load developer mode status
   useEffect(() => {
@@ -733,12 +799,173 @@ export default function SettingsPage() {
                 />
                 <span>Cloud-Sync aktivieren</span>
               </label>
+
+              <div>
+                <label className="label">Aufbewahrungsdauer (Tage)</label>
+                <input
+                  type="number"
+                  value={retentionDays}
+                  onChange={(e) => setRetentionDays(parseInt(e.target.value, 10) || 30)}
+                  min="1"
+                  max="365"
+                  className="input"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Backups älter als {retentionDays} Tage werden automatisch gelöscht
+                </p>
+              </div>
+
+              {user?.isAdmin && (
+                <>
+                  <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Backup-Status</p>
+                    {backupStatus?.running ? (
+                      <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                        <span className="animate-pulse">●</span>
+                        <span>Backup läuft...</span>
+                      </div>
+                    ) : lastBackup ? (
+                      <div className="space-y-1">
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Letztes Backup: {new Date(lastBackup.completedAt).toLocaleString('de-DE')}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-500">
+                          Größe: {(parseInt(lastBackup.size, 10) / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Noch kein Backup erstellt</p>
+                    )}
+                  </div>
+
+                  <div className="pt-2">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Backup-Pfad: /app/data/backups
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
 
         {/* Parser Configuration */}
         <ParserConfiguration />
+
+        {/* Training Settings */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+            <span>🤖</span> Training-Einstellungen
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            Konfiguriere die Verwendung trainierter LLM-Modelle für bessere Parsing-Genauigkeit
+          </p>
+
+          <InlineHelp
+            title="Training-Einstellungen"
+            category="expert"
+            content={
+              <div className="space-y-3">
+                <p>
+                  Diese Einstellungen steuern, ob und wie trainierte LLM-Modelle verwendet werden.
+                </p>
+                <div>
+                  <p className="font-semibold mb-1">Optionen:</p>
+                  <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
+                    <li><strong>Trainierte Modelle verwenden:</strong> Aktiviert automatische Verwendung trainierter Modelle wenn verfügbar</li>
+                    <li><strong>Email-Modell-Präferenz:</strong> Wähle zwischen Auto (trainiert wenn verfügbar), Trained (nur trainiert) oder Base (nur Basis-Modell)</li>
+                    <li><strong>Vision-Modell-Präferenz:</strong> Gleiche Optionen für Boarding-Pass-Parsing</li>
+                    <li><strong>Separate Modelle:</strong> Verwendet getrennte Modelle für Email und Vision (empfohlen für bessere Spezialisierung)</li>
+                  </ul>
+                </div>
+              </div>
+            }
+          />
+
+          <div className="space-y-4 mt-4">
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
+                  Trainierte Modelle verwenden
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Automatisch trainierte Modelle verwenden, wenn verfügbar
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={trainingSettings.useTrainedModels}
+                  onChange={(e) => setTrainingSettings({ ...trainingSettings, useTrainedModels: e.target.checked })}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+
+            <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+              <label className="label">Email-Modell-Präferenz</label>
+              <select
+                value={trainingSettings.preferredEmailModel}
+                onChange={(e) => setTrainingSettings({ ...trainingSettings, preferredEmailModel: e.target.value as 'auto' | 'trained' | 'base' })}
+                className="input"
+              >
+                <option value="auto">Auto (trainiert wenn verfügbar, sonst Base)</option>
+                <option value="trained">Nur trainiertes Modell</option>
+                <option value="base">Nur Basis-Modell</option>
+              </select>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Bestimmt welches Modell für Email-Parsing verwendet wird
+              </p>
+            </div>
+
+            <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+              <label className="label">Vision-Modell-Präferenz</label>
+              <select
+                value={trainingSettings.preferredVisionModel}
+                onChange={(e) => setTrainingSettings({ ...trainingSettings, preferredVisionModel: e.target.value as 'auto' | 'trained' | 'base' })}
+                className="input"
+              >
+                <option value="auto">Auto (trainiert wenn verfügbar, sonst Base)</option>
+                <option value="trained">Nur trainiertes Modell</option>
+                <option value="base">Nur Basis-Modell</option>
+              </select>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Bestimmt welches Modell für Boarding-Pass-Parsing verwendet wird
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
+                  Separate Modelle für Email/Vision
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Verwendet getrennte Modelle für bessere Spezialisierung (empfohlen)
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={trainingSettings.trainingSeparateModels}
+                  onChange={(e) => setTrainingSettings({ ...trainingSettings, trainingSeparateModels: e.target.checked })}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={handleTrainingSettingsUpdate}
+                disabled={loadingTrainingSettings}
+                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loadingTrainingSettings ? 'Wird gespeichert...' : 'Einstellungen speichern'}
+              </button>
+            </div>
+          </div>
+        </div>
 
         {/* Developer Options - Only visible for users with training access */}
         {hasTrainingAccess && (

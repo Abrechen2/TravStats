@@ -11,6 +11,7 @@ import * as fs from 'fs';
 import { triggerTraining, shouldTriggerTraining, cancelTraining } from '../services/trainingService';
 import { ParsedBooking } from '../services/bookingParser';
 import { extractEmailFromFile } from '../services/emailExtractor';
+import { Prisma } from '@prisma/client';
 
 const router = Router();
 
@@ -219,7 +220,7 @@ router.post(
       let trainingJobId: string | null = null;
       if (await shouldTriggerTraining()) {
         try {
-          trainingJobId = await triggerTraining();
+          trainingJobId = await triggerTraining(userId);
         } catch (error) {
           logger.warn({
             operation: 'training_trigger_failed',
@@ -280,7 +281,7 @@ router.post(
       }
 
       // Trigger training with just this one entry
-      const trainingJobId = await triggerTraining();
+      const trainingJobId = await triggerTraining(userId);
 
       logger.info({
         operation: 'training_train_only',
@@ -313,7 +314,7 @@ router.get('/data', async (req: AuthRequest, res: Response, next: NextFunction) 
     const { status, type, tags, search } = req.query;
 
     // Build where clause
-    const where: any = { userId };
+    const where: Prisma.TrainingDataWhereInput = { userId };
 
     if (status && typeof status === 'string') {
       where.status = status;
@@ -355,8 +356,13 @@ router.get('/data', async (req: AuthRequest, res: Response, next: NextFunction) 
 
     // Map to include extractedData count for performance
     const trainingDataWithCount = trainingData.map((data) => {
-      const extractedData = data.extractedData as any;
-      const extractedDataCount = Array.isArray(extractedData) ? extractedData.length : 0;
+      // extractedData is stored as JSON and can be an array or object
+      const extractedData = data.extractedData as ParsedBooking[] | ParsedBooking | null;
+      const extractedDataCount = Array.isArray(extractedData) 
+        ? extractedData.length 
+        : extractedData !== null 
+        ? 1 
+        : 0;
       return {
         ...data,
         extractedDataCount,
@@ -566,7 +572,8 @@ router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction
  */
 router.post('/trigger', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const trainingJobId = await triggerTraining();
+    const userId = req.userId!;
+    const trainingJobId = await triggerTraining(userId);
 
     logger.info({
       operation: 'training_trigger_manual',

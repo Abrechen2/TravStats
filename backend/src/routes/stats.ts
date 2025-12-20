@@ -2,6 +2,7 @@ import { Router, Response, NextFunction } from 'express';
 import { prisma } from '../db';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { calculateDistance } from '../utils/geo';
+import { Prisma } from '@prisma/client';
 
 const router = Router();
 
@@ -14,7 +15,7 @@ router.get('/summary', async (req: AuthRequest, res: Response, next: NextFunctio
     const userId = req.userId!;
     const { fromDate, toDate } = req.query;
 
-    const where: any = { userId };
+    const where: Prisma.FlightWhereInput = { userId };
 
     if (fromDate || toDate) {
       where.departureTime = {};
