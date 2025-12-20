@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { trainingApi } from '../../lib/api';
 import { logger } from '../../lib/logger';
+import { useTranslation } from '../../hooks/useTranslation';
 import HelpIcon from '../Help/HelpIcon';
 import ConfirmModal from './ConfirmModal';
 import TrainingDataFilters from './TrainingDataFilters';
@@ -17,6 +18,7 @@ interface JobLogs {
 }
 
 export default function TrainingDashboard({ onEditTrainingData }: TrainingDashboardProps) {
+  const { t } = useTranslation('training');
   const [trainingData, setTrainingData] = useState<any[]>([]);
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,8 +42,8 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
     tags?: string[];
     search?: string;
   }>({});
-  
-  
+
+
   const [filteredTrainingData, setFilteredTrainingData] = useState<any[]>([]);
   const [viewMode, setViewMode] = useState<'list' | 'table'>('list');
   const [sortField, setSortField] = useState<'createdAt' | 'type' | 'status'>('createdAt');
@@ -168,12 +170,12 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
       const prevType = prevFilters.type || '';
       const prevTags = (prevFilters.tags || []).sort().join(',');
       const prevSearch = prevFilters.search || '';
-      
+
       const newStatus = newFilters.status || '';
       const newType = newFilters.type || '';
       const newTags = (newFilters.tags || []).sort().join(',');
       const newSearch = newFilters.search || '';
-      
+
       if (
         prevStatus === newStatus &&
         prevType === newType &&
@@ -182,7 +184,7 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
       ) {
         return prevFilters; // No change, return previous to prevent re-render
       }
-      
+
       return newFilters;
     });
   }, []);
@@ -456,7 +458,7 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
     setCancelJobId(null);
     try {
       await trainingApi.cancelTraining(jobId);
-      
+
       // Immediately update the job status optimistically
       setJobs((prevJobs) =>
         prevJobs.map((job) =>
@@ -481,7 +483,7 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
       logger.error('Failed to cancel training:', error);
       const errorMessage = error.response?.data?.message || error.message || 'Fehler beim Abbrechen des Trainings';
       alert(errorMessage);
-      
+
       // Reload data to get actual status
       loadData();
     } finally {
@@ -508,7 +510,7 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
     return (
       <div className="text-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">Laden...</p>
+        <p className="mt-2 text-gray-600 dark:text-gray-400">{t('loading')}</p>
       </div>
     );
   }
@@ -596,14 +598,14 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
       {/* Summary */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="text-sm text-gray-600 dark:text-gray-400">Total Training Data</div>
+          <div className="text-sm text-gray-600 dark:text-gray-400">{t('stats.totalTrainingData')}</div>
           <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
-            Pending
+            {t('stats.pending')}
             <HelpIcon
-              content="Anzahl der annotierten Einträge, die noch nicht trainiert wurden."
+              content={t('stats.pendingHelp')}
               position="top"
             />
           </div>
@@ -611,16 +613,16 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
-            Trained
+            {t('stats.trained')}
             <HelpIcon
-              content="Anzahl der Einträge, die bereits erfolgreich trainiert wurden."
+              content={t('stats.trainedHelp')}
               position="top"
             />
           </div>
           <div className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.trained}</div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="text-sm text-gray-600 dark:text-gray-400">Training Jobs</div>
+          <div className="text-sm text-gray-600 dark:text-gray-400">{t('stats.trainingJobs')}</div>
           <div className="text-2xl font-bold text-gray-900 dark:text-white">{jobs.length}</div>
         </div>
       </div>
@@ -628,27 +630,27 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
       {/* Detailed Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="text-sm text-gray-600 dark:text-gray-400">Emails</div>
+          <div className="text-sm text-gray-600 dark:text-gray-400">{t('stats.emails')}</div>
           <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.emails}</div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="text-sm text-gray-600 dark:text-gray-400">Boarding Passes</div>
+          <div className="text-sm text-gray-600 dark:text-gray-400">{t('stats.boardingPasses')}</div>
           <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.boardingPasses}</div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="text-sm text-gray-600 dark:text-gray-400">Total Flights</div>
+          <div className="text-sm text-gray-600 dark:text-gray-400">{t('stats.totalFlights')}</div>
           <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalFlights}</div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="text-sm text-gray-600 dark:text-gray-400">Ø Flights/Email</div>
+          <div className="text-sm text-gray-600 dark:text-gray-400">{t('stats.avgFlightsPerEmail')}</div>
           <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.avgFlightsPerEmail}</div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="text-sm text-gray-600 dark:text-gray-400">Unique Tags</div>
+          <div className="text-sm text-gray-600 dark:text-gray-400">{t('stats.uniqueTags')}</div>
           <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalTags}</div>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="text-sm text-gray-600 dark:text-gray-400">Jobs Completed</div>
+          <div className="text-sm text-gray-600 dark:text-gray-400">{t('stats.jobsCompleted')}</div>
           <div className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.jobsCompleted}</div>
         </div>
       </div>
@@ -659,18 +661,18 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Training starten
+                {t('actions.startTraining')}
               </h3>
               <HelpIcon
-                content="Starten Sie das LoRA-Training mit allen pending Einträgen. Mindestens 5 Einträge sind erforderlich."
-                expandedContent="Das Training verwendet LoRA (Low-Rank Adaptation) zum Fine-Tuning des Base-Modells. Je nach Hardware (CPU/GPU) kann das Training mehrere Stunden dauern. Der Fortschritt wird in Echtzeit angezeigt."
+                content={t('actions.startTrainingHelp')}
+                expandedContent={t('actions.startTrainingHelpExpanded')}
                 position="right"
               />
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {pendingCount >= 5
-                ? `Bereit für Training (${pendingCount} Einträge)`
-                : `Mindestens 5 Einträge benötigt (aktuell: ${pendingCount})`}
+                ? t('actions.readyForTraining', { count: pendingCount })
+                : t('actions.minimumEntriesRequired', { count: pendingCount })}
             </p>
           </div>
           <button
@@ -678,7 +680,7 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
             disabled={triggering || pendingCount < 5}
             className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {triggering ? 'Starte...' : 'Training starten'}
+            {triggering ? t('actions.starting') : t('actions.startTraining')}
           </button>
         </div>
       </div>
@@ -687,10 +689,10 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-2">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Training Jobs</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('jobs.title')}</h3>
             <HelpIcon
-              content="Übersicht aller Training-Jobs mit Status und Fortschritt."
-              expandedContent="Jobs können verschiedene Status haben: pending (wartet), running (läuft), completed (erfolgreich), failed (fehlgeschlagen). Klicken Sie auf 'Details', um Logs und detaillierten Fortschritt zu sehen."
+              content={t('jobs.titleHelp')}
+              expandedContent={t('jobs.titleHelpExpanded')}
               position="right"
             />
           </div>
@@ -698,7 +700,7 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
         <div className="divide-y divide-gray-200 dark:divide-gray-700">
           {jobs.length === 0 ? (
             <div className="p-6 text-center text-gray-500 dark:text-gray-400">
-              Noch keine Training Jobs
+              {t('jobs.noJobs')}
             </div>
           ) : (
             jobs.map((job) => {
@@ -722,7 +724,7 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
                           {job.status}
                         </span>
                         <HelpIcon
-                          content={`Status: ${job.status === 'pending' ? 'Wartet auf Start' : job.status === 'running' ? 'Training läuft' : job.status === 'completed' ? 'Erfolgreich abgeschlossen' : job.status === 'failed' ? 'Fehlgeschlagen' : job.status}`}
+                          content={`Status: ${job.status === 'pending' ? t('jobs.statusPending') : job.status === 'running' ? t('jobs.statusRunning') : job.status === 'completed' ? t('jobs.statusCompleted') : job.status === 'failed' ? t('jobs.statusFailed') : job.status}`}
                           position="left"
                         />
                       </div>
@@ -732,14 +734,14 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
                           disabled={cancelling === job.id}
                           className="px-3 py-1 text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {cancelling === job.id ? 'Wird abgebrochen...' : 'Abbrechen'}
+                          {cancelling === job.id ? t('jobs.cancelling') : t('jobs.cancel')}
                         </button>
                       )}
                       <button
                         onClick={() => toggleJobExpanded(job.id)}
                         className="px-3 py-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
                       >
-                        {isExpanded ? 'Ausblenden' : 'Details'}
+                        {isExpanded ? t('jobs.hide') : t('jobs.details')}
                       </button>
                     </div>
                   </div>
@@ -753,15 +755,15 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
                             {progress.phase}
                           </span>
                           <HelpIcon
-                            content="Aktuelle Phase des Trainings. Der Fortschritt wird basierend auf den Logs berechnet."
-                            expandedContent="Training-Phasen: Initialisierung → Modell laden → Datensatz vorbereiten → Training (Epochen/Steps) → Modell speichern → Export zu Ollama. Die geschätzte verbleibende Zeit wird basierend auf dem aktuellen Fortschritt berechnet."
+                            content={t('progress.phaseHelp')}
+                            expandedContent={t('progress.phaseHelpExpanded')}
                             position="top"
                           />
                         </div>
                         <div className="flex items-center gap-2">
                           {progress.estimatedTimeRemaining !== undefined && (
                             <span className="text-xs text-gray-500 dark:text-gray-400">
-                              {formatEstimatedTime(progress.estimatedTimeRemaining)} verbleibend
+                              {formatEstimatedTime(progress.estimatedTimeRemaining)} {t('progress.remaining')}
                             </span>
                           )}
                           <span className="text-sm text-gray-500 dark:text-gray-400">
@@ -785,12 +787,12 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
                   )}
                   {job.startedAt && (
                     <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                      Gestartet: {new Date(job.startedAt).toLocaleString()}
+                      {t('jobs.started')} {new Date(job.startedAt).toLocaleString()}
                     </div>
                   )}
                   {job.completedAt && (
                     <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                      Abgeschlossen: {new Date(job.completedAt).toLocaleString()}
+                      {t('jobs.completed')} {new Date(job.completedAt).toLocaleString()}
                     </div>
                   )}
 
@@ -798,7 +800,7 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
                   {isExpanded && logs && (
                     <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                       <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                        Logs & Fortschritt
+                        {t('jobs.logsAndProgress')}
                       </h4>
                       <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 max-h-96 overflow-y-auto">
                         {logs.logFileContent ? (
@@ -831,7 +833,7 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
                           </div>
                         ) : (
                           <div className="text-sm text-gray-500 dark:text-gray-400">
-                            Noch keine Logs verfügbar
+                            {t('jobs.noLogsAvailable')}
                           </div>
                         )}
                       </div>
@@ -850,28 +852,26 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
       {/* Training Data */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
         <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Training Data</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('data.title')}</h3>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 border border-gray-300 dark:border-gray-600 rounded-md">
               <button
                 onClick={() => setViewMode('list')}
-                className={`px-3 py-1 text-sm font-medium rounded-l-md ${
-                  viewMode === 'list'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                }`}
+                className={`px-3 py-1 text-sm font-medium rounded-l-md ${viewMode === 'list'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
               >
-                Liste
+                {t('data.list')}
               </button>
               <button
                 onClick={() => setViewMode('table')}
-                className={`px-3 py-1 text-sm font-medium rounded-r-md ${
-                  viewMode === 'table'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                }`}
+                className={`px-3 py-1 text-sm font-medium rounded-r-md ${viewMode === 'table'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
               >
-                Tabelle
+                {t('data.table')}
               </button>
             </div>
             {displayTrainingData.length > 0 && (
@@ -883,9 +883,9 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
                       (data) => data.status === 'pending' && !runningJobDataIds.has(data.id)
                     ).length > 0 &&
                     selectedItems.size ===
-                      displayTrainingData.filter(
-                        (data) => data.status === 'pending' && !runningJobDataIds.has(data.id)
-                      ).length
+                    displayTrainingData.filter(
+                      (data) => data.status === 'pending' && !runningJobDataIds.has(data.id)
+                    ).length
                   }
                   onChange={handleSelectAll}
                   className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
@@ -898,14 +898,16 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
         {selectedItems.size > 0 && (
           <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
             <span className="text-sm font-medium text-blue-900 dark:text-blue-300">
-              {selectedItems.size} Eintrag{selectedItems.size !== 1 ? 'e' : ''} ausgewählt
+              {selectedItems.size === 1
+                ? t('data.selectedCount', { count: selectedItems.size })
+                : t('data.selectedCountPlural', { count: selectedItems.size })}
             </span>
             <button
               onClick={() => setBulkDeleteModalOpen(true)}
               disabled={bulkDeleting}
               className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {bulkDeleting ? 'Wird gelöscht...' : 'Ausgewählte löschen'}
+              {bulkDeleting ? t('data.deleting') : t('data.deleteSelected')}
             </button>
           </div>
         )}
@@ -922,9 +924,9 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
                           (data) => data.status === 'pending' && !runningJobDataIds.has(data.id)
                         ).length > 0 &&
                         selectedItems.size ===
-                          displayTrainingData.filter(
-                            (data) => data.status === 'pending' && !runningJobDataIds.has(data.id)
-                          ).length
+                        displayTrainingData.filter(
+                          (data) => data.status === 'pending' && !runningJobDataIds.has(data.id)
+                        ).length
                       }
                       onChange={handleSelectAll}
                       className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
@@ -936,7 +938,7 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
                     onClick={() => handleSort('type')}
                   >
                     <div className="flex items-center gap-2">
-                      Typ
+                      {t('data.type')}
                       {sortField === 'type' && (
                         <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
                       )}
@@ -948,14 +950,14 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
                     onClick={() => handleSort('status')}
                   >
                     <div className="flex items-center gap-2">
-                      Status
+                      {t('data.status')}
                       {sortField === 'status' && (
                         <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
                       )}
                     </div>
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Tags
+                    {t('data.tags')}
                   </th>
                   <th
                     scope="col"
@@ -963,14 +965,14 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
                     onClick={() => handleSort('createdAt')}
                   >
                     <div className="flex items-center gap-2">
-                      Erstellt
+                      {t('data.created')}
                       {sortField === 'createdAt' && (
                         <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
                       )}
                     </div>
                   </th>
                   <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Aktionen
+                    {t('data.actions')}
                   </th>
                 </tr>
               </thead>
@@ -979,8 +981,8 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
                   <tr>
                     <td colSpan={6} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                       {trainingData.length === 0
-                        ? 'Noch keine Training Data'
-                        : 'Keine Einträge entsprechen den Filtern'}
+                        ? t('data.noData')
+                        : t('data.noMatchingData')}
                     </td>
                   </tr>
                 ) : (
@@ -1009,7 +1011,7 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
                           <div className="flex items-center gap-2">
                             {isInUse && (
                               <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
-                                Wird trainiert
+                                {t('data.beingTrained')}
                               </span>
                             )}
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(data.status)}`}>
@@ -1044,14 +1046,14 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
                                   onClick={() => setPreviewDataId(data.id)}
                                   className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300"
                                 >
-                                  Vorschau
+                                  {t('data.preview')}
                                 </button>
                                 {onEditTrainingData && (
                                   <button
                                     onClick={() => handleEditTrainingData(data.id, data.type)}
                                     className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
                                   >
-                                    Bearbeiten
+                                    {t('data.edit')}
                                   </button>
                                 )}
                                 <button
@@ -1059,13 +1061,13 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
                                   disabled={deleting === data.id}
                                   className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                  {deleting === data.id ? 'Löschen...' : 'Löschen'}
+                                  {deleting === data.id ? t('data.deleting') : t('data.delete')}
                                 </button>
                               </>
                             )}
                             {!canEdit && data.status === 'pending' && (
                               <span className="text-xs text-gray-500 dark:text-gray-400 italic">
-                                In Verwendung
+                                {t('data.inUse')}
                               </span>
                             )}
                           </div>
@@ -1082,91 +1084,91 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
             {displayTrainingData.length === 0 ? (
               <div className="p-6 text-center text-gray-500 dark:text-gray-400">
                 {trainingData.length === 0
-                  ? 'Noch keine Training Data'
-                  : 'Keine Einträge entsprechen den Filtern'}
+                  ? t('data.noData')
+                  : t('data.noMatchingData')}
               </div>
             ) : (
               displayTrainingData.map((data) => {
-              const isInUse = runningJobDataIds.has(data.id);
-              const canEdit = data.status === 'pending' && !isInUse;
+                const isInUse = runningJobDataIds.has(data.id);
+                const canEdit = data.status === 'pending' && !isInUse;
 
-              return (
-                <div key={data.id} className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 flex-1">
-                      {canEdit && (
-                        <input
-                          type="checkbox"
-                          checked={selectedItems.has(data.id)}
-                          onChange={() => handleToggleSelect(data.id)}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                      )}
-                      <div className="flex-1">
-                      <div className="font-medium text-gray-900 dark:text-white">{data.type}</div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
-                        {new Date(data.createdAt).toLocaleString()}
-                      </div>
-                      {data.tags && data.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {data.tags.map((tag: string) => (
-                            <span
-                              key={tag}
-                              className="inline-flex items-center px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded text-xs"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {isInUse && (
-                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
-                          Wird trainiert
-                        </span>
-                      )}
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(data.status)}`}>
-                        {data.status}
-                      </span>
-                      {canEdit && (
-                        <>
-                          <button
-                            onClick={() => setPreviewDataId(data.id)}
-                            className="px-3 py-1 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300"
-                          >
-                            Vorschau
-                          </button>
-                          {onEditTrainingData && (
-                            <button
-                              onClick={() => handleEditTrainingData(data.id, data.type)}
-                              className="px-3 py-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
-                            >
-                              Bearbeiten
-                            </button>
+                return (
+                  <div key={data.id} className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 flex-1">
+                        {canEdit && (
+                          <input
+                            type="checkbox"
+                            checked={selectedItems.has(data.id)}
+                            onChange={() => handleToggleSelect(data.id)}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                        )}
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900 dark:text-white">{data.type}</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                            {new Date(data.createdAt).toLocaleString()}
+                          </div>
+                          {data.tags && data.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {data.tags.map((tag: string) => (
+                                <span
+                                  key={tag}
+                                  className="inline-flex items-center px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded text-xs"
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
                           )}
-                          <button
-                            onClick={() => handleDeleteTrainingDataClick(data.id)}
-                            disabled={deleting === data.id}
-                            className="px-3 py-1 text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {deleting === data.id ? 'Wird gelöscht...' : 'Löschen'}
-                          </button>
-                        </>
-                      )}
-                      {!canEdit && data.status === 'pending' && (
-                        <span className="text-xs text-gray-500 dark:text-gray-400 italic">
-                          Wird für Training verwendet
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {isInUse && (
+                          <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
+                            {t('data.beingTrained')}
+                          </span>
+                        )}
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(data.status)}`}>
+                          {data.status}
                         </span>
-                      )}
+                        {canEdit && (
+                          <>
+                            <button
+                              onClick={() => setPreviewDataId(data.id)}
+                              className="px-3 py-1 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300"
+                            >
+                              {t('data.preview')}
+                            </button>
+                            {onEditTrainingData && (
+                              <button
+                                onClick={() => handleEditTrainingData(data.id, data.type)}
+                                className="px-3 py-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                              >
+                                {t('data.edit')}
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleDeleteTrainingDataClick(data.id)}
+                              disabled={deleting === data.id}
+                              className="px-3 py-1 text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {deleting === data.id ? t('data.deleting') : t('data.delete')}
+                            </button>
+                          </>
+                        )}
+                        {!canEdit && data.status === 'pending' && (
+                          <span className="text-xs text-gray-500 dark:text-gray-400 italic">
+                            {t('data.usedForTraining')}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })
-          )}
-        </div>
+                );
+              })
+            )}
+          </div>
         )}
       </div>
 
@@ -1178,10 +1180,10 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
           setCancelJobId(null);
         }}
         onConfirm={handleCancelTraining}
-        title="Training abbrechen?"
-        message="Möchten Sie das Training wirklich abbrechen?\n\nDer aktuelle Fortschritt geht verloren und kann nicht wiederhergestellt werden."
-        confirmText="Ja, abbrechen"
-        cancelText="Nein, weiterlaufen lassen"
+        title={t('modal.cancelTraining.title')}
+        message={t('modal.cancelTraining.message')}
+        confirmText={t('modal.cancelTraining.confirm')}
+        cancelText={t('modal.cancelTraining.cancel')}
         confirmButtonClass="bg-red-600 hover:bg-red-700 focus:ring-red-500"
         isLoading={cancelling !== null}
       />
@@ -1194,10 +1196,10 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
           setDeleteDataId(null);
         }}
         onConfirm={handleDeleteTrainingData}
-        title="Training-Daten löschen?"
-        message="Möchten Sie diesen Eintrag wirklich löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden."
-        confirmText="Ja, löschen"
-        cancelText="Abbrechen"
+        title={t('modal.deleteTrainingData.title')}
+        message={t('modal.deleteTrainingData.message')}
+        confirmText={t('modal.deleteTrainingData.confirm')}
+        cancelText={t('modal.deleteTrainingData.cancel')}
         confirmButtonClass="bg-red-600 hover:bg-red-700 focus:ring-red-500"
         isLoading={deleting !== null}
       />
@@ -1207,10 +1209,12 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
         isOpen={bulkDeleteModalOpen}
         onClose={() => setBulkDeleteModalOpen(false)}
         onConfirm={handleBulkDelete}
-        title="Mehrere Einträge löschen?"
-        message={`Möchten Sie wirklich ${selectedItems.size} Eintrag${selectedItems.size !== 1 ? 'e' : ''} löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden.`}
-        confirmText="Ja, alle löschen"
-        cancelText="Abbrechen"
+        title={t('modal.bulkDelete.title')}
+        message={selectedItems.size === 1
+          ? t('modal.bulkDelete.message', { count: selectedItems.size })
+          : t('modal.bulkDelete.messagePlural', { count: selectedItems.size })}
+        confirmText={t('modal.bulkDelete.confirm')}
+        cancelText={t('modal.bulkDelete.cancel')}
         confirmButtonClass="bg-red-600 hover:bg-red-700 focus:ring-red-500"
         isLoading={bulkDeleting}
       />
