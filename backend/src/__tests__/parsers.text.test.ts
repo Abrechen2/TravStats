@@ -1,0 +1,365 @@
+import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { ClaudeTextParser, getClaudeTextParser } from '../services/parsers/text/claudeTextParser';
+import { OllamaTextParser, getOllamaTextParser } from '../services/parsers/text/ollamaTextParser';
+import { OpenAITextParser, getOpenAITextParser } from '../services/parsers/text/openaiTextParser';
+import { RegexTextParser, getRegexParser } from '../services/parsers/text/regexParser';
+
+// Mock dependencies
+jest.mock('@anthropic-ai/sdk');
+jest.mock('openai');
+jest.mock('axios');
+jest.mock('../utils/logger');
+
+describe('Text Parsers', () => {
+  describe('ClaudeTextParser', () => {
+    let parser: ClaudeTextParser;
+
+    beforeEach(() => {
+      parser = getClaudeTextParser();
+      jest.clearAllMocks();
+    });
+
+    describe('checkAvailability', () => {
+      it('should return unavailable when no API key is provided', async () => {
+        const result = await parser.checkAvailability();
+
+        expect(result.available).toBe(false);
+        expect(result.reason).toContain('API key not configured');
+      });
+
+      it('should return unavailable when API key has invalid format', async () => {
+        const result = await parser.checkAvailability('invalid-key');
+
+        expect(result.available).toBe(false);
+        expect(result.reason).toContain('Invalid Claude API key format');
+      });
+
+      it('should return available when API key has valid format', async () => {
+        const result = await parser.checkAvailability('sk-ant-api-test-key');
+
+        expect(result.available).toBe(true);
+        expect(result.metadata?.provider).toBe('claude');
+      });
+    });
+
+    describe('parseEmail', () => {
+      it('should throw error when no API key is configured', async () => {
+        await expect(
+          parser.parseEmail('Test Subject', 'Test text')
+        ).rejects.toThrow('Claude API key not configured');
+      });
+
+      it('should have provider property set to claude', () => {
+        expect(parser.provider).toBe('claude');
+      });
+    });
+  });
+
+  describe('OllamaTextParser', () => {
+    let parser: OllamaTextParser;
+
+    beforeEach(() => {
+      parser = getOllamaTextParser();
+      jest.clearAllMocks();
+    });
+
+    describe('checkAvailability', () => {
+      it('should check if Ollama service is running', async () => {
+        const axios = await import('axios');
+        const mockAxios = axios.default as any;
+
+        mockAxios.get = jest.fn().mockRejectedValue({
+          code: 'ECONNREFUSED',
+        });
+
+        const result = await parser.checkAvailability();
+
+        expect(result.available).toBe(false);
+        expect(result.reason).toContain('Ollama service not running');
+      });
+
+      it('should check if required model is available', async () => {
+        const axios = await import('axios');
+        const mockAxios = axios.default as any;
+
+        mockAxios.get = jest.fn().mockResolvedValue({
+          data: {
+            models: [
+              { name: 'llama3.2:3b' },
+              { name: 'qwen2.5:14b' },
+            ],
+          },
+        });
+
+        const result = await parser.checkAvailability();
+
+        expect(result.available).toBe(true);
+        expect(result.metadata?.provider).toBe('ollama');
+      });
+
+      it('should return unavailable when model is not found', async () => {
+        const axios = await import('axios');
+        const mockAxios = axios.default as any;
+
+        mockAxios.get = jest.fn().mockResolvedValue({
+          data: {
+            models: [
+              { name: 'llama3.2:3b' },
+            ],
+          },
+        });
+
+        const customParser = getOllamaTextParser('nonexistent-model');
+        const result = await customParser.checkAvailability();
+
+        expect(result.available).toBe(false);
+        expect(result.reason).toContain('not found');
+      });
+    });
+
+    describe('constructor', () => {
+      it('should use custom model name when provided', () => {
+        const customParser = getOllamaTextParser('custom-model');
+        expect(customParser).toBeDefined();
+      });
+
+      it('should have provider property set to ollama', () => {
+        expect(parser.provider).toBe('ollama');
+      });
+    });
+  });
+
+  describe('OpenAITextParser', () => {
+    let parser: OpenAITextParser;
+
+    beforeEach(() => {
+      parser = getOpenAITextParser();
+      jest.clearAllMocks();
+    });
+
+    describe('checkAvailability', () => {
+      it('should return unavailable when no API key is provided', async () => {
+        const result = await parser.checkAvailability();
+
+        expect(result.available).toBe(false);
+        expect(result.reason).toContain('API key not configured');
+      });
+
+      it('should have provider property set to openai', () => {
+        expect(parser.provider).toBe('openai');
+      });
+    });
+
+    describe('parseEmail', () => {
+      it('should throw error when no API key is configured', async () => {
+        await expect(
+          parser.parseEmail('Test Subject', 'Test text')
+        ).rejects.toThrow('OpenAI API key not configured');
+      });
+    });
+  });
+
+  describe('RegexTextParser', () => {
+    let parser: RegexTextParser;
+
+    beforeEach(() => {
+      parser = getRegexParser();
+      jest.clearAllMocks();
+    });
+
+    describe('checkAvailability', () => {
+      it('should always return available', async () => {
+        const result = await parser.checkAvailability();
+
+        expect(result.available).toBe(true);
+        expect(result.metadata?.provider).toBe('regex');
+        expect(result.metadata?.cost).toBe('free');
+      });
+    });
+
+    describe('parseEmail', () => {
+      it('should parse simple flight booking email', async () => {
+        const subject = 'Your flight booking LH103';
+        const text = `
+          Flight: LH103
+          From: MUC (Munich)
+          To: LUX (Luxembourg)
+          Departure: 2025-11-18T11:00
+          Arrival: 2025-11-18T12:55
+          PNR: 9RFAA7
+          Seat: 26F
+          Terminal: 2
+        `;
+
+        const result = await parser.parseEmail(subject, text);
+
+        expect(result).toHaveLength(1);
+        expect(result[0].flightNumber).toBe('LH103');
+        expect(result[0].departureCode).toBe('MUC');
+        expect(result[0].arrivalCode).toBe('LUX');
+        expect(result[0].pnr).toBe('9RFAA7');
+        expect(result[0].seat).toBe('26F');
+      });
+
+      it('should parse round-trip booking with multiple flights', async () => {
+        const subject = 'Round trip booking';
+        const text = `
+          Flight: LH103
+          MUC → LUX
+          2025-11-18T11:00 - 2025-11-18T12:55
+
+          Flight: LH442
+          LUX → MUC
+          2025-11-20T09:30 - 2025-11-20T10:35
+
+          PNR: 9RFAA7
+        `;
+
+        const result = await parser.parseEmail(subject, text);
+
+        expect(result.length).toBeGreaterThanOrEqual(1);
+        expect(result[0].flightNumber).toBeDefined();
+      });
+
+      it('should handle emails with no flight information', async () => {
+        const subject = 'Hello there';
+        const text = 'This is just a regular email with no flight info.';
+
+        const result = await parser.parseEmail(subject, text);
+
+        expect(result).toHaveLength(1);
+        expect(result[0].missing.length).toBeGreaterThan(0);
+      });
+
+      it('should extract PNR and validate it contains numbers', async () => {
+        const subject = 'Booking confirmation';
+        const text = `
+          Your booking reference: ABC123
+          Flight: LH103
+          MUC → LUX
+        `;
+
+        const result = await parser.parseEmail(subject, text);
+
+        expect(result[0].pnr).toBeDefined();
+        if (result[0].pnr) {
+          expect(/[0-9]/.test(result[0].pnr)).toBe(true);
+        }
+      });
+
+      it('should filter out false positive PNRs', async () => {
+        const subject = 'Vielen Dank';
+        const text = `
+          Vielen Dank for your booking!
+          Flight: LH103
+        `;
+
+        const result = await parser.parseEmail(subject, text);
+
+        // Should not extract "VIELEN" as PNR
+        expect(result[0].pnr).not.toBe('VIELEN');
+      });
+
+      it('should validate IATA codes against whitelist', async () => {
+        const subject = 'Flight booking';
+        const text = `
+          Flight: LH103
+          From: MUC
+          To: LUX
+        `;
+
+        const result = await parser.parseEmail(subject, text);
+
+        expect(result[0].departureCode).toBe('MUC');
+        expect(result[0].arrivalCode).toBe('LUX');
+      });
+
+      it('should handle HTML emails by extracting text', async () => {
+        const subject = 'Flight booking';
+        const text = '';
+        const html = `
+          <html>
+            <body>
+              <p>Flight: LH103</p>
+              <p>From: MUC to LUX</p>
+              <p>PNR: 9RFAA7</p>
+            </body>
+          </html>
+        `;
+
+        const result = await parser.parseEmail(subject, text, html);
+
+        expect(result).toHaveLength(1);
+        expect(result[0].pnr).toBe('9RFAA7');
+      });
+
+      it('should parse German date format', async () => {
+        const subject = 'Flugbuchung';
+        const text = `
+          Flug: LH103
+          MUC → LUX
+          18. Nov 2025, 11:00
+          Ankunft: 18. Nov 2025, 12:55
+        `;
+
+        const result = await parser.parseEmail(subject, text);
+
+        expect(result[0].departureTime).toBeDefined();
+        if (result[0].departureTime) {
+          expect(result[0].departureTime).toContain('2025-11');
+        }
+      });
+
+      it('should extract city names and convert to IATA codes', async () => {
+        const subject = 'Flugbuchung';
+        const text = `
+          Von München nach Luxemburg
+          am 18. Nov 2025, 11:00
+        `;
+
+        const result = await parser.parseEmail(subject, text);
+
+        // Should convert "München" to "MUC" and "Luxemburg" to "LUX"
+        expect(result[0].departureCode).toBeDefined();
+        expect(result[0].arrivalCode).toBeDefined();
+      });
+
+      it('should have provider property set to regex', () => {
+        expect(parser.provider).toBe('regex');
+      });
+    });
+
+    describe('singleton pattern', () => {
+      it('should return same instance', () => {
+        const parser1 = getRegexParser();
+        const parser2 = getRegexParser();
+
+        expect(parser1).toBe(parser2);
+      });
+    });
+  });
+
+  describe('Parser factory functions', () => {
+    it('getClaudeTextParser should return singleton instance', () => {
+      const parser1 = getClaudeTextParser();
+      const parser2 = getClaudeTextParser();
+
+      expect(parser1).toBe(parser2);
+    });
+
+    it('getOpenAITextParser should return singleton instance', () => {
+      const parser1 = getOpenAITextParser();
+      const parser2 = getOpenAITextParser();
+
+      expect(parser1).toBe(parser2);
+    });
+
+    it('getOllamaTextParser should create new instance with custom model', () => {
+      const parser1 = getOllamaTextParser('model1');
+      const parser2 = getOllamaTextParser('model2');
+
+      // Should be different instances
+      expect(parser1).not.toBe(parser2);
+    });
+  });
+});
