@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface AccordionSection {
   id: string;
@@ -7,6 +8,7 @@ interface AccordionSection {
 }
 
 export default function TrainingGuide() {
+  const { t } = useTranslation('training');
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['introduction']));
 
   const toggleSection = (sectionId: string) => {
@@ -343,11 +345,11 @@ export default function TrainingGuide() {
           {/* Schritt 6 */}
           <div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              Schritt 6: Training abbrechen/fortsetzen
+              {t('training:guide.step6.title')}
             </h3>
             <div className="space-y-2 text-gray-700 dark:text-gray-300">
               <p>
-                <strong>Wann abbrechen?</strong>
+                <strong>{t('training:guide.step6.whenCancel')}</strong>
               </p>
               <ul className="list-disc list-inside ml-4 space-y-1">
                 <li>Wenn Sie einen Fehler in den Logs sehen</li>

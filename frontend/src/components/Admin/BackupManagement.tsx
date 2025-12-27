@@ -89,7 +89,23 @@ function RestoreModal({ backup, onClose, onConfirm }: RestoreModalProps) {
             <input
               type="text"
               value={targetDatabaseUrl}
-              onChange={(e) => setTargetDatabaseUrl(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                // Validate URL format if provided
+                if (value) {
+                  try {
+                    // Use URL class for robust validation
+                    const testUrl = value.replace(/^postgresql:\/\//, 'http://');
+                    new URL(testUrl);
+                    setTargetDatabaseUrl(value);
+                  } catch {
+                    // Invalid URL format - don't update
+                    return;
+                  }
+                } else {
+                  setTargetDatabaseUrl(value);
+                }
+              }}
               placeholder={t('admin:backup.restore.targetDatabaseUrlPlaceholder')}
               className="input"
             />

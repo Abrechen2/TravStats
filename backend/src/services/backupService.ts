@@ -27,25 +27,47 @@ const DB_NAME = process.env.POSTGRES_DB || 'flights';
 const DB_USER = process.env.POSTGRES_USER || 'flights';
 
 // Ensure backup directory exists
-if (!fs.existsSync(BACKUP_BASE_DIR)) {
-  fs.mkdirSync(BACKUP_BASE_DIR, { recursive: true });
+// Wrap in try-catch to prevent startup failures if permissions are missing
+try {
+  if (!fs.existsSync(BACKUP_BASE_DIR)) {
+    fs.mkdirSync(BACKUP_BASE_DIR, { recursive: true });
+    logger.info({
+      operation: 'backup_dir_created',
+      message: `Created backup directory: ${BACKUP_BASE_DIR}`,
+      context: { directory: BACKUP_BASE_DIR },
+    });
+  }
+} catch (error: any) {
+  // Log warning but don't prevent startup - directory will be created on first backup attempt
+  console.warn(`[Backup] Could not create backup directory ${BACKUP_BASE_DIR}:`, error?.message || error);
+  console.warn('[Backup] Backups may fail until directory permissions are fixed');
+  logger.warn({
+    operation: 'backup_dir_creation_failed',
+    message: `Could not create backup directory: ${BACKUP_BASE_DIR}`,
+    context: { directory: BACKUP_BASE_DIR, error: error?.message || 'Unknown error' },
+  });
 }
 
 /**
  * Extract database connection info from DATABASE_URL
+ * Uses URL class for robust parsing, especially with special characters in passwords
  */
 function parseDatabaseUrl(url: string): { host: string; port: string; user: string; password: string; database: string } {
-  const match = url.match(/postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
-  if (!match) {
-    throw new Error('Invalid DATABASE_URL format');
+  try {
+    // Replace postgresql:// with http:// for URL parsing (URL class doesn't support postgresql://)
+    const httpUrl = url.replace(/^postgresql:\/\//, 'http://');
+    const dbUrl = new URL(httpUrl);
+    
+    return {
+      user: decodeURIComponent(dbUrl.username),
+      password: decodeURIComponent(dbUrl.password),
+      host: dbUrl.hostname,
+      port: dbUrl.port || '5432',
+      database: dbUrl.pathname.slice(1), // Remove leading /
+    };
+  } catch (error) {
+    throw new Error(`Invalid DATABASE_URL format: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
-  return {
-    user: match[1],
-    password: match[2],
-    host: match[3],
-    port: match[4],
-    database: match[5],
-  };
 }
 
 /**
@@ -524,6 +546,8 @@ export async function cleanupOldBackups(): Promise<number> {
 
   return deletedCount;
 }
+
+
 
 
 

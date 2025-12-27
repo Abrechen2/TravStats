@@ -4,7 +4,7 @@
  * Displays a celebration popup when user unlocks new achievements
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useThemeStore } from '../store/themeStore';
 import { useTranslation } from '../hooks/useTranslation';
 
@@ -53,6 +53,7 @@ export default function AchievementPopup({ achievements, onClose }: AchievementP
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
+  const timeoutRefs = useRef<number[]>([]);
 
   const currentAchievement = achievements[currentIndex];
 
@@ -61,26 +62,40 @@ export default function AchievementPopup({ achievements, onClose }: AchievementP
     const timer = setTimeout(() => {
       handleNext();
     }, 8000);
+    timeoutRefs.current.push(timer);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      // Clear all timeouts on unmount
+      timeoutRefs.current.forEach((t) => clearTimeout(t));
+      timeoutRefs.current = [];
+    };
   }, [currentIndex]);
 
   const handleNext = () => {
     if (currentIndex < achievements.length - 1) {
       setIsExiting(true);
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         setIsExiting(false);
         setCurrentIndex(currentIndex + 1);
       }, 300);
+      timeoutRefs.current.push(timer);
     } else {
       setIsExiting(true);
-      setTimeout(onClose, 300);
+      const timer = setTimeout(onClose, 300);
+      timeoutRefs.current.push(timer);
     }
   };
 
   const handleClose = () => {
     setIsExiting(true);
-    setTimeout(onClose, 300);
+    const timer = setTimeout(() => {
+      // Clear all timeouts before closing
+      timeoutRefs.current.forEach((t) => clearTimeout(t));
+      timeoutRefs.current = [];
+      onClose();
+    }, 300);
+    timeoutRefs.current.push(timer);
   };
 
   if (!currentAchievement) return null;

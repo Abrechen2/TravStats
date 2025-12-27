@@ -257,6 +257,21 @@ export const statsApi = {
     });
     return data;
   },
+
+  getFunStats: async (filters?: { fromDate?: string; toDate?: string }) => {
+    const { data } = await api.get<import('../types').FunStats>('/stats/fun', { params: filters });
+    return data;
+  },
+
+  getBusinessStats: async (filters?: { fromDate?: string; toDate?: string }) => {
+    const { data } = await api.get<import('../types').BusinessStats>('/stats/business', { params: filters });
+    return data;
+  },
+
+  getUniqueStats: async (filters?: { fromDate?: string; toDate?: string }) => {
+    const { data } = await api.get<import('../types').UniqueStats>('/stats/unique', { params: filters });
+    return data;
+  },
 };
 
 // Airport API

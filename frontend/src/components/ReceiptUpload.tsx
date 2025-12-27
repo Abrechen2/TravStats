@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { uploadsApi } from '../lib/api';
+import { uploadsApi, API_URL } from '../lib/api';
 import { useTranslation } from '../hooks/useTranslation';
 
 interface ReceiptUploadProps {
@@ -83,7 +83,7 @@ export default function ReceiptUpload({
         <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
           <div className="flex-1">
             <a
-              href={currentReceiptUrl.startsWith('http') ? currentReceiptUrl : `http://localhost:8000${currentReceiptUrl}`}
+              href={currentReceiptUrl.startsWith('http') ? currentReceiptUrl : `${API_URL || window.location.origin}${currentReceiptUrl}`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-blue-600 dark:text-blue-400 hover:underline text-sm"

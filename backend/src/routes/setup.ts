@@ -1,6 +1,8 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { prisma } from '../db';
 import { hashPassword } from '../utils/password';
+import { generateToken } from '../utils/jwt';
+import { getAuthCookieOptions } from './auth';
 import { AppError } from '../middleware/errorHandler';
 import { getSeedingStatus } from '../services/airportSeedingService';
 
@@ -62,6 +64,10 @@ router.post('/initialize', async (req: Request, res: Response, next: NextFunctio
         isAdmin: true,
       },
     });
+
+    // Generate token and set HttpOnly cookie for automatic login
+    const token = generateToken(user.id);
+    res.cookie('auth_token', token, getAuthCookieOptions(req));
 
     res.json({
       success: true,

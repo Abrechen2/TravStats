@@ -1,3 +1,4 @@
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -17,11 +18,14 @@ export default function ConfirmModal({
   onConfirm,
   title,
   message,
-  confirmText = 'Bestätigen',
-  cancelText = 'Abbrechen',
+  confirmText,
+  cancelText,
   confirmButtonClass = 'btn-primary',
   isLoading = false,
 }: ConfirmModalProps) {
+  const { t } = useTranslation(['training', 'common']);
+  const defaultConfirmText = confirmText || t('common:buttons.confirm');
+  const defaultCancelText = cancelText || t('common:buttons.cancel');
   if (!isOpen) return null;
 
   return (
@@ -60,7 +64,7 @@ export default function ConfirmModal({
               disabled={isLoading}
               className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white sm:ml-3 sm:w-auto sm:text-sm ${confirmButtonClass} disabled:opacity-50 disabled:cursor-not-allowed`}
             >
-              {isLoading ? 'Wird verarbeitet...' : confirmText}
+              {isLoading ? t('training:modal.processing') : defaultConfirmText}
             </button>
             <button
               type="button"
@@ -68,7 +72,7 @@ export default function ConfirmModal({
               disabled={isLoading}
               className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {cancelText}
+              {defaultCancelText}
             </button>
           </div>
         </div>
@@ -76,6 +80,11 @@ export default function ConfirmModal({
     </div>
   );
 }
+
+
+
+
+
 
 
 

@@ -5,7 +5,6 @@ import { settingsApi } from '../lib/api';
 type ThemePreference = 'light' | 'dark';
 type LanguagePreference = 'de' | 'en';
 type DistanceUnit = 'kilometers' | 'miles' | 'nautical_miles';
-type TemperatureUnit = 'celsius' | 'fahrenheit';
 type Currency = 'EUR' | 'USD' | 'GBP' | 'CHF';
 type FlightCategory = 'business' | 'private' | 'vacation';
 type SeatClass = 'economy' | 'premium_economy' | 'business' | 'first';
@@ -41,7 +40,6 @@ export interface DisplaySettings {
 export interface UnitsSettings {
   distanceUnit: DistanceUnit;
   currency: Currency;
-  temperature: TemperatureUnit;
 }
 
 export interface DefaultsSettings {
@@ -121,7 +119,6 @@ const defaultSettings: Omit<
   units: {
     distanceUnit: 'kilometers',
     currency: 'EUR',
-    temperature: 'celsius',
   },
   defaults: {
     flightStatus: 'scheduled',

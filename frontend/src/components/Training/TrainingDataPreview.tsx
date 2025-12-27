@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { trainingApi } from '../../lib/api';
 import { logger } from '../../lib/logger';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface TrainingDataPreviewProps {
   trainingDataId: string;
@@ -9,6 +10,7 @@ interface TrainingDataPreviewProps {
 }
 
 export default function TrainingDataPreview({ trainingDataId, isOpen, onClose }: TrainingDataPreviewProps) {
+  const { t } = useTranslation('training');
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
@@ -25,7 +27,7 @@ export default function TrainingDataPreview({ trainingDataId, isOpen, onClose }:
       setData(trainingData);
     } catch (error) {
       logger.error('Failed to load training data:', error);
-      alert('Fehler beim Laden der Daten');
+      alert(t('training:errors.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -51,13 +53,13 @@ export default function TrainingDataPreview({ trainingDataId, isOpen, onClose }:
           <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
-                Training-Daten Vorschau
+                {t('training:preview.title')}
               </h3>
               <button
                 onClick={onClose}
                 className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
               >
-                <span className="sr-only">Schließen</span>
+                <span className="sr-only">{t('training:preview.closeAria')}</span>
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -67,31 +69,31 @@ export default function TrainingDataPreview({ trainingDataId, isOpen, onClose }:
             {loading ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-                <p className="mt-2 text-gray-600 dark:text-gray-400">Laden...</p>
+                <p className="mt-2 text-gray-600 dark:text-gray-400">{t('training:preview.loading')}</p>
               </div>
             ) : data ? (
               <div className="space-y-6">
                 {/* Basic Info */}
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Grundinformationen</h4>
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">{t('training:preview.basicInfo')}</h4>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="text-gray-500 dark:text-gray-400">Typ:</span>{' '}
+                      <span className="text-gray-500 dark:text-gray-400">{t('training:preview.type')}:</span>{' '}
                       <span className="text-gray-900 dark:text-white">{data.type}</span>
                     </div>
                     <div>
-                      <span className="text-gray-500 dark:text-gray-400">Status:</span>{' '}
+                      <span className="text-gray-500 dark:text-gray-400">{t('training:preview.status')}:</span>{' '}
                       <span className="text-gray-900 dark:text-white">{data.status}</span>
                     </div>
                     <div>
-                      <span className="text-gray-500 dark:text-gray-400">Erstellt:</span>{' '}
+                      <span className="text-gray-500 dark:text-gray-400">{t('training:preview.created')}:</span>{' '}
                       <span className="text-gray-900 dark:text-white">
                         {new Date(data.createdAt).toLocaleString()}
                       </span>
                     </div>
                     {data.trainedAt && (
                       <div>
-                        <span className="text-gray-500 dark:text-gray-400">Trainiert:</span>{' '}
+                        <span className="text-gray-500 dark:text-gray-400">{t('training:preview.trained')}:</span>{' '}
                         <span className="text-gray-900 dark:text-white">
                           {new Date(data.trainedAt).toLocaleString()}
                         </span>
@@ -103,7 +105,7 @@ export default function TrainingDataPreview({ trainingDataId, isOpen, onClose }:
                 {/* Tags */}
                 {data.tags && data.tags.length > 0 && (
                   <div>
-                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Tags</h4>
+                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">{t('training:preview.tags')}</h4>
                     <div className="flex flex-wrap gap-2">
                       {data.tags.map((tag: string) => (
                         <span
@@ -120,7 +122,7 @@ export default function TrainingDataPreview({ trainingDataId, isOpen, onClose }:
                 {/* Annotations */}
                 {data.annotations && (
                   <div>
-                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Annotationen</h4>
+                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">{t('training:preview.annotations')}</h4>
                     <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 max-h-64 overflow-y-auto">
                       <pre className="text-xs text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-mono">
                         {JSON.stringify(data.annotations, null, 2)}
@@ -133,7 +135,7 @@ export default function TrainingDataPreview({ trainingDataId, isOpen, onClose }:
                 {data.extractedData && Array.isArray(data.extractedData) && data.extractedData.length > 0 && (
                   <div>
                     <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
-                      Extrahierte Daten ({data.extractedData.length} Flug{data.extractedData.length !== 1 ? 'e' : ''})
+                      {t('training:preview.extractedDataCount', { count: data.extractedData.length })}
                     </h4>
                     <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 max-h-64 overflow-y-auto">
                       <pre className="text-xs text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-mono">
@@ -145,7 +147,7 @@ export default function TrainingDataPreview({ trainingDataId, isOpen, onClose }:
               </div>
             ) : (
               <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                Keine Daten verfügbar
+                {t('training:preview.noDataAvailable')}
               </div>
             )}
           </div>
@@ -155,7 +157,7 @@ export default function TrainingDataPreview({ trainingDataId, isOpen, onClose }:
               onClick={onClose}
               className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 sm:ml-3 sm:w-auto sm:text-sm"
             >
-              Schließen
+              {t('training:preview.close')}
             </button>
           </div>
         </div>
@@ -163,6 +165,11 @@ export default function TrainingDataPreview({ trainingDataId, isOpen, onClose }:
     </div>
   );
 }
+
+
+
+
+
 
 
 

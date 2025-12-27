@@ -49,6 +49,17 @@
     "flightAdded": "Flug erfolgreich hinzugefügt",
     "flightUpdated": "Flug erfolgreich aktualisiert",
     "flightDeleted": "Flug erfolgreich gelöscht"
+  },
+  "navigation": {
+    "title": "Navigation"
+  },
+  "welcome": "Willkommen, {{username}}!",
+  "map": {
+    "view2d": "2D-Ansicht",
+    "view3d": "3D-Ansicht",
+    "help2d": "Zur 2D-Ansicht wechseln",
+    "help3d": "Zur 3D-Ansicht wechseln",
+    "helpExpanded": "Wechseln Sie zwischen 2D- und 3D-Kartenansicht. Die 3D-Ansicht zeigt die Flugrouten mit Höheninformationen."
   }
 }
 

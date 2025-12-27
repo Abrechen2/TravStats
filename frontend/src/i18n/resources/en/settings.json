@@ -21,6 +21,10 @@
     "title": "Display & Language",
     "description": "Control mode, language and timezone centrally.",
     "language": "Language",
+    "languages": {
+      "de": "Deutsch",
+      "en": "English"
+    },
     "timezone": "Timezone",
     "dateFormat": "Date Format",
     "timeFormat": "Time Format",

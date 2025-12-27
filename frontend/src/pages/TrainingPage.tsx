@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { trainingApi, settingsApi } from '../lib/api';
 import { logger } from '../lib/logger';
+import NavigationBar from '../components/NavigationBar';
 import TrainingDashboard from '../components/Training/TrainingDashboard';
 import EmailAnnotation from '../components/Training/EmailAnnotation';
 import BoardingPassAnnotation from '../components/Training/BoardingPassAnnotation';
@@ -86,17 +87,15 @@ export default function TrainingPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <NavigationBar />
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-6 py-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('training:llmTraining')}</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {t('training:trainLocalOllama')}
             </p>
           </div>
-          <Link to="/" className="btn-secondary">
-            {t('training:backToDashboard')}
-          </Link>
         </div>
       </header>
 

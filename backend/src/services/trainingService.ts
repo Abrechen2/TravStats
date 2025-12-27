@@ -34,11 +34,45 @@ const PYTHON_CMD = process.env.PYTHON_CMD || 'python3';
 const IS_DOCKER = fs.existsSync('/.dockerenv') || process.env.DOCKER === 'true';
 
 // Ensure directories exist
-if (!fs.existsSync(TRAINING_DATA_DIR)) {
-  fs.mkdirSync(TRAINING_DATA_DIR, { recursive: true });
+// Wrap in try-catch to prevent startup failures if permissions are missing
+try {
+  if (!fs.existsSync(TRAINING_DATA_DIR)) {
+    fs.mkdirSync(TRAINING_DATA_DIR, { recursive: true });
+    logger.info({
+      operation: 'training_data_dir_created',
+      message: `Created training data directory: ${TRAINING_DATA_DIR}`,
+      context: { directory: TRAINING_DATA_DIR },
+    });
+  }
+} catch (error: any) {
+  // Log warning but don't prevent startup - directory will be created on first training attempt
+  console.warn(`[Training] Could not create training data directory ${TRAINING_DATA_DIR}:`, error?.message || error);
+  console.warn('[Training] Training may fail until directory permissions are fixed');
+  logger.warn({
+    operation: 'training_data_dir_creation_failed',
+    message: `Could not create training data directory: ${TRAINING_DATA_DIR}`,
+    context: { directory: TRAINING_DATA_DIR, error: error?.message || 'Unknown error' },
+  });
 }
-if (!fs.existsSync(TRAINING_LOGS_DIR)) {
-  fs.mkdirSync(TRAINING_LOGS_DIR, { recursive: true });
+
+try {
+  if (!fs.existsSync(TRAINING_LOGS_DIR)) {
+    fs.mkdirSync(TRAINING_LOGS_DIR, { recursive: true });
+    logger.info({
+      operation: 'training_logs_dir_created',
+      message: `Created training logs directory: ${TRAINING_LOGS_DIR}`,
+      context: { directory: TRAINING_LOGS_DIR },
+    });
+  }
+} catch (error: any) {
+  // Log warning but don't prevent startup - directory will be created on first training attempt
+  console.warn(`[Training] Could not create training logs directory ${TRAINING_LOGS_DIR}:`, error?.message || error);
+  console.warn('[Training] Training logs may not be saved until directory permissions are fixed');
+  logger.warn({
+    operation: 'training_logs_dir_creation_failed',
+    message: `Could not create training logs directory: ${TRAINING_LOGS_DIR}`,
+    context: { directory: TRAINING_LOGS_DIR, error: error?.message || 'Unknown error' },
+  });
 }
 
 /**
@@ -596,6 +630,9 @@ export async function trainModel(
     }
 
     throw error;
+  } finally {
+    // Always clean up process tracking, even on errors
+    runningProcesses.delete(trainingJobId);
   }
 }
 
@@ -1332,24 +1369,58 @@ export async function cleanupStaleJobs(): Promise<void> {
           continue;
         }
 
-        await prisma.trainingJob.update({
-          where: { id: job.id },
-          data: {
-            status: 'failed',
-            completedAt: new Date(),
-            errorMessage: 'Training interrupted (server restart)',
-          },
-        });
+        try {
+          await prisma.trainingJob.update({
+            where: { id: job.id },
+            data: {
+              status: 'failed',
+              completedAt: new Date(),
+              errorMessage: 'Training interrupted (server restart)',
+            },
+          });
 
-        await logTrainingEvent(job.id, 'error', 'Training interrupted by server restart', {});
+          await logTrainingEvent(job.id, 'error', 'Training interrupted by server restart', {});
+        } catch (updateError) {
+          // Log error for individual job update but continue with other jobs
+          logger.warn({
+            operation: 'cleanup_stale_job_update_failed',
+            message: `Failed to update stale job ${job.id}`,
+            context: { jobId: job.id },
+            error: updateError instanceof Error ? updateError.message : 'Unknown error',
+          });
+        }
       }
     }
   } catch (error) {
+    // Check if it's a database connection error
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const isConnectionError = 
+      errorMessage.includes('Can\'t reach database server') ||
+      errorMessage.includes('database system is shutting down') ||
+      errorMessage.includes('Connection refused') ||
+      errorMessage.includes('ECONNREFUSED') ||
+      errorMessage.includes('P1001'); // Prisma connection error code
+
+    if (isConnectionError) {
+      // Database is not available - this is expected during startup/shutdown
+      // Log as info/warning instead of error to reduce noise
+      logger.warn({
+        operation: 'cleanup_stale_jobs_db_unavailable',
+        message: 'Cannot cleanup stale jobs - database not available (this is normal during startup/shutdown)',
+        error: errorMessage,
+      });
+      // Don't throw - gracefully handle the case where DB is not ready yet
+      return;
+    }
+
+    // For other errors, log as error
     logger.error({
       operation: 'cleanup_stale_jobs_error',
       message: 'Failed to cleanup stale jobs',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined,
     });
+    // Don't throw - we don't want cleanup failures to crash the server
   }
 }
 

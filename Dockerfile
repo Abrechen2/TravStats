@@ -58,9 +58,11 @@ COPY backend/requirements-training.txt ./
 RUN pip3 install --no-cache-dir -r requirements-training.txt || echo "Warning: Some Python packages may not be available"
 
 # Copy Python scripts (checkHardware.py and trainLora.py)
+# Ensure scripts directory exists before copying
+RUN mkdir -p ./dist/scripts
 COPY --from=backend-builder /app/backend/src/scripts/checkHardware.py ./dist/scripts/checkHardware.py
 COPY --from=backend-builder /app/backend/src/scripts/trainLora.py ./dist/scripts/trainLora.py
-RUN chmod +x ./dist/scripts/*.py
+RUN chmod +x ./dist/scripts/*.py 2>/dev/null || true
 
 # Setup Frontend (nginx will serve these files)
 WORKDIR /app/frontend
@@ -91,8 +93,8 @@ RUN mkdir -p /app/data/logs && \
     chmod -R 755 /app/data && \
     chmod 700 /app/secrets
 
-# Volume for persistent data (JWT secret, future configs)
-VOLUME ["/app/data"]
+# Volumes for persistent data and secrets
+VOLUME ["/app/data", "/app/secrets"]
 
 EXPOSE 80
 

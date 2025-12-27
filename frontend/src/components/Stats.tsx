@@ -6,6 +6,8 @@ import { calculateDistance } from '../lib/geo';
 import { API_LIMITS } from '../lib/constants';
 import { logger } from '../lib/logger';
 import { useTranslation } from '../hooks/useTranslation';
+import { useSettingsStore } from '../store/settingsStore';
+import { formatDistance, getDistanceLabel, formatCurrency as formatCurrencyUtil } from '../lib/units';
 
 interface StatsProps {
   filters?: FlightFilters;
@@ -13,6 +15,7 @@ interface StatsProps {
 
 export default function Stats({ filters = {} }: StatsProps) {
   const { t } = useTranslation(['stats', 'common']);
+  const { units } = useSettingsStore();
   const [stats, setStats] = useState<StatsType | null>(null);
   const [routes, setRoutes] = useState<Route[]>([]);
   const [loading, setLoading] = useState(true);
@@ -119,13 +122,13 @@ export default function Stats({ filters = {} }: StatsProps) {
             />
           </div>
           <p className="text-3xl font-bold text-green-600 dark:text-green-400">
-            {stats.totalDistance.toLocaleString()} {t('stats:distance.kilometers')}
+            {formatDistance(stats.totalDistance, units.distanceUnit, t)}
           </p>
         </div>
         <div className="card">
           <p className="text-sm text-gray-600 dark:text-gray-400">{t('stats:overview.avgDistance')}</p>
           <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">
-            {stats.avgDistance.toLocaleString()} {t('stats:distance.kilometers')}
+            {formatDistance(stats.avgDistance, units.distanceUnit, t)}
           </p>
         </div>
         <div className="card">
@@ -145,7 +148,7 @@ export default function Stats({ filters = {} }: StatsProps) {
           <div className="card">
             <p className="text-sm text-gray-600 dark:text-gray-400">{t('stats:overview.totalCost')}</p>
             <p className="text-3xl font-bold text-amber-600 dark:text-amber-400">
-              {stats.totalCost.toLocaleString(undefined, { style: 'currency', currency: 'EUR' })}
+              {formatCurrencyUtil(stats.totalCost, units.currency)}
             </p>
           </div>
         )}
@@ -208,7 +211,7 @@ export default function Stats({ filters = {} }: StatsProps) {
                       {index + 1}. {route.route}
                     </p>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {Math.round(route.distance)} km
+                      {formatDistance(route.distance, units.distanceUnit, t)}
                     </p>
                   </div>
                   <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">

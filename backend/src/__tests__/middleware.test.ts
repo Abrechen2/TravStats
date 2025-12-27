@@ -5,6 +5,7 @@ import { ZodError, z } from 'zod';
 
 // Mock logger
 jest.mock('../utils/logger', () => ({
+  __esModule: true,
   default: {
     error: jest.fn(),
     warn: jest.fn(),
@@ -12,9 +13,12 @@ jest.mock('../utils/logger', () => ({
   },
 }));
 
-jest.mock('../services/loggingConfig', () => ({
-  isDebugEnabled: jest.fn().mockResolvedValue(false),
-}));
+jest.mock('../services/loggingConfig', () => {
+  const isDebugEnabled = jest.fn(() => Promise.resolve(false)) as jest.MockedFunction<
+    () => Promise<boolean>
+  >;
+  return { isDebugEnabled };
+});
 
 describe('Middleware Tests', () => {
   describe('Error Handler', () => {
@@ -34,7 +38,10 @@ describe('Middleware Tests', () => {
         path: '/api/test',
         query: {},
         ip: '127.0.0.1',
-        get: jest.fn().mockReturnValue('test-user-agent'),
+        get: jest
+          .fn((header: string) =>
+            header === 'set-cookie' ? ([] as string[]) : 'test-user-agent'
+          ) as unknown as Request['get'],
       };
       mockRes = {
         status: statusMock,

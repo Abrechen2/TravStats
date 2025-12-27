@@ -114,6 +114,7 @@
     "usedForTraining": "Wird für Training verwendet"
   },
   "modal": {
+    "processing": "Wird verarbeitet...",
     "cancelTraining": {
       "title": "Training abbrechen?",
       "message": "Möchten Sie das Training wirklich abbrechen?\n\nDer aktuelle Fortschritt geht verloren und kann nicht wiederhergestellt werden.",
@@ -137,6 +138,51 @@
   "loading": "Laden...",
   "errors": {
     "loadFailed": "Fehler beim Laden der Training-Daten",
-    "saveFailed": "Fehler beim Speichern"
+    "saveFailed": "Fehler beim Speichern",
+    "loadImageFailed": "Fehler beim Laden des Bildes",
+    "startTrainingFailed": "Fehler beim Starten des Trainings",
+    "deleteFailed": "Fehler beim Löschen",
+    "bulkDeleteFailed": "Fehler beim Löschen einiger Einträge",
+    "cancelTrainingFailed": "Fehler beim Abbrechen des Trainings"
+  },
+  "toasts": {
+    "trainingStarted": "Training gestartet!"
+  },
+  "annotation": {
+    "cancelDrawing": "Zeichnen abbrechen (ESC)",
+    "drawingInstructions": "Zeichne eine Box. Drücke ESC oder klicke \"Abbrechen\" zum Abbrechen.",
+    "selectLabel": "Label wählen...",
+    "showFiltered": "Gefiltert anzeigen",
+    "imageLoading": "Bild wird geladen...",
+    "emailTextLoading": "Email Text wird geladen...",
+    "changeLabelForSelected": "Label für ausgewählte Box ändern",
+    "selectLabelBeforeDrawing": "Label wählen (vor dem Zeichnen)",
+    "boxSelected": "Box {{index}} ausgewählt. Klicke auf eine andere Box oder ändere das Label.",
+    "drawBoundingBoxes": "Zeichne Bounding Boxes um relevante Bereiche",
+    "saving": "Speichern...",
+    "saveOnly": "Nur speichern",
+    "saveAndTrain": "Speichern & Trainieren"
+  },
+  "preview": {
+    "title": "Training-Daten Vorschau",
+    "loading": "Laden...",
+    "close": "Schließen",
+    "closeAria": "Schließen",
+    "basicInfo": "Grundinformationen",
+    "type": "Typ",
+    "status": "Status",
+    "created": "Erstellt",
+    "trained": "Trainiert",
+    "tags": "Tags",
+    "annotations": "Annotationen",
+    "extractedData": "Extrahierte Daten",
+    "extractedDataCount": "Extrahierte Daten ({{count}} {{count, plural, one {Flug} other {Flüge}}})",
+    "noDataAvailable": "Keine Daten verfügbar"
+  },
+  "guide": {
+    "step6": {
+      "title": "Schritt 6: Training abbrechen/fortsetzen",
+      "whenCancel": "Wann abbrechen?"
+    }
   }
 }

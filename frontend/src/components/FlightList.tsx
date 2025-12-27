@@ -49,18 +49,13 @@ export default function FlightList({
     );
   };
 
+  const { units } = useSettingsStore();
+  
   const formatCurrency = (value?: number, currency?: string): string => {
     if (value === undefined || value === null) return '';
-    try {
-      return new Intl.NumberFormat('de-DE', {
-        style: 'currency',
-        currency: currency || 'EUR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
-      }).format(value);
-    } catch {
-      return `${value} ${currency || ''}`.trim();
-    }
+    // Use currency from settings if not specified
+    const currencyToUse = (currency || units.currency) as 'EUR' | 'USD' | 'GBP' | 'CHF';
+    return formatCurrencyUtil(value, currencyToUse);
   };
 
   if (flights.length === 0) {
@@ -141,7 +136,7 @@ export default function FlightList({
                   )}
                   {flight.price != null && (
                     <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100">
-                      {flight.price.toFixed(2)} {flight.currency || 'EUR'}
+                      {formatCurrency(flight.price, flight.currency || units.currency)}
                     </span>
                   )}
                   {flight.tags && flight.tags.length > 0 && (

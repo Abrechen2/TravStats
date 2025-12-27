@@ -114,6 +114,7 @@
     "usedForTraining": "Used for training"
   },
   "modal": {
+    "processing": "Processing...",
     "cancelTraining": {
       "title": "Cancel Training?",
       "message": "Do you really want to cancel the training?\n\nCurrent progress will be lost and cannot be recovered.",
@@ -137,6 +138,51 @@
   "loading": "Loading...",
   "errors": {
     "loadFailed": "Failed to load training data",
-    "saveFailed": "Failed to save"
+    "saveFailed": "Failed to save",
+    "loadImageFailed": "Failed to load image",
+    "startTrainingFailed": "Failed to start training",
+    "deleteFailed": "Failed to delete",
+    "bulkDeleteFailed": "Failed to delete some entries",
+    "cancelTrainingFailed": "Failed to cancel training"
+  },
+  "toasts": {
+    "trainingStarted": "Training started!"
+  },
+  "annotation": {
+    "cancelDrawing": "Cancel drawing (ESC)",
+    "drawingInstructions": "Draw a box. Press ESC or click \"Cancel\" to cancel.",
+    "selectLabel": "Select label...",
+    "showFiltered": "Show filtered",
+    "imageLoading": "Loading image...",
+    "emailTextLoading": "Loading email text...",
+    "changeLabelForSelected": "Change label for selected box",
+    "selectLabelBeforeDrawing": "Select label (before drawing)",
+    "boxSelected": "Box {{index}} selected. Click on another box or change the label.",
+    "drawBoundingBoxes": "Draw bounding boxes around relevant areas",
+    "saving": "Saving...",
+    "saveOnly": "Save only",
+    "saveAndTrain": "Save & Train"
+  },
+  "preview": {
+    "title": "Training Data Preview",
+    "loading": "Loading...",
+    "close": "Close",
+    "closeAria": "Close",
+    "basicInfo": "Basic Information",
+    "type": "Type",
+    "status": "Status",
+    "created": "Created",
+    "trained": "Trained",
+    "tags": "Tags",
+    "annotations": "Annotations",
+    "extractedData": "Extracted Data",
+    "extractedDataCount": "Extracted Data ({{count}} {{count, plural, one {flight} other {flights}}})",
+    "noDataAvailable": "No data available"
+  },
+  "guide": {
+    "step6": {
+      "title": "Step 6: Cancel/Resume Training",
+      "whenCancel": "When to cancel?"
+    }
   }
 }

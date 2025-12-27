@@ -7,6 +7,12 @@ import { prisma } from '../db';
 
 // Mock dependencies
 jest.mock('../utils/logger', () => ({
+  __esModule: true,
+  default: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+  },
   securityLogger: {
     warn: jest.fn(),
     info: jest.fn(),
@@ -151,7 +157,10 @@ describe('Security Tests', () => {
         cookies: {},
         headers: {},
         ip: '127.0.0.1',
-        get: jest.fn((header: string) => 'test-user-agent'),
+        get: jest
+          .fn((header: string) =>
+            header === 'set-cookie' ? ([] as string[]) : 'test-user-agent'
+          ) as unknown as Request['get'],
         url: '/api/test',
       };
       mockRes = {};

@@ -92,22 +92,54 @@ prisma.$use(async (params, next) => {
 
     // Always log errors, regardless of logging settings (except adminSettings to avoid recursion)
     if (params.model !== 'AdminSettings') {
-      dbLogger.error({
-        operation: 'database_query_error',
-        message: `${params.model}.${params.action} failed`,
-        context: {
-          model: params.model,
-          action: params.action,
-          args: sanitizeArgs(params.args),
-        },
-        performance: {
-          duration,
-        },
-        error: {
-          message: error instanceof Error ? error.message : 'Unknown error',
-          stack: error instanceof Error ? error.stack : undefined,
-        },
-      });
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      // Check if it's a database connection error (expected during startup/shutdown)
+      const isConnectionError = 
+        errorMessage.includes('Can\'t reach database server') ||
+        errorMessage.includes('database system is shutting down') ||
+        errorMessage.includes('Connection refused') ||
+        errorMessage.includes('ECONNREFUSED') ||
+        errorMessage.includes('P1001') || // Prisma connection error code
+        errorMessage.includes('P1000') || // Prisma authentication error (can happen during connection)
+        errorMessage.includes('P1017');   // Prisma server closed connection
+
+      if (isConnectionError) {
+        // Log connection errors as warning - these are expected during startup/shutdown
+        dbLogger.warn({
+          operation: 'database_connection_error',
+          message: `${params.model}.${params.action} - database not available (this is normal during startup/shutdown)`,
+          context: {
+            model: params.model,
+            action: params.action,
+            args: sanitizeArgs(params.args),
+          },
+          performance: {
+            duration,
+          },
+          error: {
+            message: errorMessage,
+          },
+        });
+      } else {
+        // Log other errors as error
+        dbLogger.error({
+          operation: 'database_query_error',
+          message: `${params.model}.${params.action} failed`,
+          context: {
+            model: params.model,
+            action: params.action,
+            args: sanitizeArgs(params.args),
+          },
+          performance: {
+            duration,
+          },
+          error: {
+            message: errorMessage,
+            stack: error instanceof Error ? error.stack : undefined,
+          },
+        });
+      }
     }
 
     throw error;

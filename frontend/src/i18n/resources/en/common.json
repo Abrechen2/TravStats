@@ -33,11 +33,14 @@
   "accessibility": {
     "close": "Close",
     "showHelp": "Show help",
-    "closeHint": "Close hint"
+    "closeHint": "Close hint",
+    "toggleMenu": "Toggle menu",
+    "back": "Back"
   },
   "help": {
     "more": "Learn more",
-    "less": "Less"
+    "less": "Less",
+    "clickForMore": "Click for more info"
   },
   "theme": {
     "toggle": "Toggle dark mode",

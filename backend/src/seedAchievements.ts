@@ -694,8 +694,20 @@ async function seedAchievements() {
   logger.info({ operation: 'seed_achievements_start', message: 'Starting achievement seeding' });
 
   try {
+    // #region agent log - Hypothesis C: Log before Prisma query
+    if (process.env.NODE_ENV === 'development') {
+      fetch('http://127.0.0.1:7243/ingest/0704fdb1-689b-416e-9f08-7a10e884bebd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'seedAchievements.ts:698',message:'Before prisma.achievement.count()',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    }
+    // #endregion
+    
     // Check if achievements already exist
     const existingCount = await prisma.achievement.count();
+    
+    // #region agent log - Hypothesis C: Log after Prisma query
+    if (process.env.NODE_ENV === 'development') {
+      fetch('http://127.0.0.1:7243/ingest/0704fdb1-689b-416e-9f08-7a10e884bebd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'seedAchievements.ts:700',message:'After prisma.achievement.count()',data:{existingCount,timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    }
+    // #endregion
 
     if (existingCount === achievements.length) {
       logger.info({
@@ -770,12 +782,25 @@ async function seedAchievements() {
       message: 'Achievement seeding completed successfully',
     });
   } catch (error) {
+    // #region agent log - Hypothesis A, C, E: Log detailed error information
+    if (process.env.NODE_ENV === 'development') {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      fetch('http://127.0.0.1:7243/ingest/0704fdb1-689b-416e-9f08-7a10e884bebd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'seedAchievements.ts:780',message:'Error in seedAchievements',data:{errorMessage,errorStack:errorStack?.substring(0,500),timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7243/ingest/0704fdb1-689b-416e-9f08-7a10e884bebd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'seedAchievements.ts:780',message:'Error in seedAchievements',data:{errorMessage,errorStack:errorStack?.substring(0,500),timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7243/ingest/0704fdb1-689b-416e-9f08-7a10e884bebd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'seedAchievements.ts:780',message:'Error in seedAchievements',data:{errorMessage,errorStack:errorStack?.substring(0,500),timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    }
+    // #endregion
+    
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
     logger.error({
       operation: 'seed_achievements_error',
       message: 'Error seeding achievements',
       error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
+        message: errorMessage,
+        stack: errorStack,
       },
     });
     throw error;

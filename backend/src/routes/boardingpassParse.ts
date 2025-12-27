@@ -10,7 +10,7 @@ import { AppError } from '../middleware/errorHandler';
 const router = Router();
 
 const parseBoardingpassSchema = z.object({
-  imageBase64: z.string().min(1, 'Image data is required'),
+  imageBase64: z.string().min(1, 'Image data is required').max(20 * 1024 * 1024, 'Image too large (max 20MB)'),
   enrichWithApi: z.boolean().optional().default(true),
 });
 

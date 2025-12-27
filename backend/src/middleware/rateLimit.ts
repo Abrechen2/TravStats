@@ -65,3 +65,16 @@ export const flightLookupLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+/**
+ * Rate limiter for analytics events
+ * Protects against DoS attacks via large payloads
+ * Allows 100 requests per 15 minutes per IP
+ */
+export const analyticsLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // 100 requests per window
+  message: 'Too many analytics requests, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});

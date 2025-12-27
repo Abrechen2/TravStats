@@ -10,18 +10,22 @@ interface AuthState {
   logout: () => Promise<void>;
 }
 
+// Event listener cleanup function
+let unauthorizedEventListener: ((event: Event) => void) | null = null;
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => {
       // Listen for unauthorized events from API interceptor
       if (typeof window !== 'undefined') {
-        window.addEventListener('auth:unauthorized', async () => {
+        unauthorizedEventListener = async () => {
           const store = get();
           if (store.user) {
             // User is logged in but got 401 - logout
             await store.logout();
           }
-        });
+        };
+        window.addEventListener('auth:unauthorized', unauthorizedEventListener);
       }
 
       return {
@@ -47,6 +51,15 @@ export const useAuthStore = create<AuthState>()(
       name: 'auth-storage',
       // Only persist user data, not token (token is in HttpOnly cookie)
       partialize: (state) => ({ user: state.user }),
+      onRehydrateStorage: () => {
+        // Cleanup event listener on store rehydration
+        return () => {
+          if (typeof window !== 'undefined' && unauthorizedEventListener) {
+            window.removeEventListener('auth:unauthorized', unauthorizedEventListener);
+            unauthorizedEventListener = null;
+          }
+        };
+      },
     }
   )
 );

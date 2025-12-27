@@ -8,13 +8,13 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { flightsApi } from '../lib/api';
 import ContextualHint from '../components/Onboarding/ContextualHint';
+import NavigationBar from '../components/NavigationBar';
 import type { Flight, FlightFilters } from '../types';
 import Filters from '../components/Filters';
 import FlightEditModal from '../components/FlightEditModal';
 import ConfirmModal from '../components/Training/ConfirmModal';
 import { useThemeStore } from '../store/themeStore';
 import { useToastStore } from '../store/toastStore';
-import DarkModeToggle from '../components/DarkModeToggle';
 import { API_LIMITS, DATE_FORMATS, getDateLocale } from '../lib/constants';
 import { useTranslation } from '../hooks/useTranslation';
 
@@ -148,26 +148,7 @@ export default function FlightsTablePage() {
 
   return (
     <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      {/* Header */}
-      <header className={`${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white'} shadow-sm border-b`}>
-        <div className="px-4 lg:px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link to="/" className="flex items-center gap-3">
-              <img src="/logo.png" alt={t('common:app.logoAlt')} className="h-8 lg:h-10 w-auto" />
-              <h1 className={`text-xl lg:text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                {t('common:app.name')}
-              </h1>
-            </Link>
-            <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>/ {t('flights:table.title')}</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <Link to="/" className="btn-secondary text-sm px-3 py-2">
-              {t('flights:table.backToMap')}
-            </Link>
-            <DarkModeToggle />
-          </div>
-        </div>
-      </header>
+      <NavigationBar />
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-6 max-w-7xl">

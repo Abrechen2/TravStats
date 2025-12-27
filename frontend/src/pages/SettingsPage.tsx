@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import DarkModeToggle from '../components/DarkModeToggle';
+import NavigationBar from '../components/NavigationBar';
 import InlineHelp from '../components/Help/InlineHelp';
 import { useSettingsStore } from '../store/settingsStore';
 import { useThemeStore } from '../store/themeStore';
@@ -43,6 +43,7 @@ export default function SettingsPage() {
     setNotifications,
     setPrivacy,
     setBackup,
+    saveRemoteSettings,
   } = useSettingsStore();
 
   const { isDarkMode, setDarkMode } = useThemeStore();
@@ -90,6 +91,22 @@ export default function SettingsPage() {
     };
     loadTrainingSettings();
   }, []);
+
+  // Auto-save units settings when they change
+  useEffect(() => {
+    const saveSettings = async () => {
+      try {
+        await saveRemoteSettings();
+      } catch (error) {
+        logger.error('Failed to save units settings:', error);
+        addToast('error', t('settings:errors.saveFailed') || 'Failed to save settings');
+      }
+    };
+
+    // Debounce: Warte 500ms nach letzter Änderung
+    const timeoutId = setTimeout(saveSettings, 500);
+    return () => clearTimeout(timeoutId);
+  }, [units, saveRemoteSettings, addToast, t]);
 
   const handleTrainingSettingsUpdate = async () => {
     setLoadingTrainingSettings(true);
@@ -268,18 +285,13 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+      <NavigationBar />
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-6 py-4">
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings:roadmap')}</p>
             <h1 className="text-3xl font-bold">{t('settings:title')}</h1>
             <p className="text-gray-500 dark:text-gray-400">{t('settings:subtitle')}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <DarkModeToggle />
-            <Link to="/" className="btn-secondary">
-              {t('settings:backToDashboard')}
-            </Link>
           </div>
         </div>
       </header>
@@ -500,17 +512,6 @@ export default function SettingsPage() {
                   <option value="USD">{t('settings:units.options.USD')}</option>
                   <option value="GBP">{t('settings:units.options.GBP')}</option>
                   <option value="CHF">{t('settings:units.options.CHF')}</option>
-                </select>
-              </div>
-              <div>
-                <label className="label">{t('settings:units.temperature')}</label>
-                <select
-                  value={units.temperature}
-                  onChange={(e) => setUnits({ temperature: e.target.value as typeof units.temperature })}
-                  className="input"
-                >
-                  <option value="celsius">{t('settings:units.options.celsius')}</option>
-                  <option value="fahrenheit">{t('settings:units.options.fahrenheit')}</option>
                 </select>
               </div>
             </div>
