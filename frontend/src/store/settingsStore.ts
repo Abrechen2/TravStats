@@ -78,6 +78,20 @@ export interface BackupSettings {
   cloudSync: boolean;
 }
 
+export interface ApiKeyStatus {
+  hasKey: boolean;
+  isShared: boolean;
+  hasAccess: boolean;
+}
+
+export interface ApiKeysStatus {
+  openai: ApiKeyStatus;
+  claude: ApiKeyStatus;
+  airlabs: ApiKeyStatus;
+  aviationstack: ApiKeyStatus;
+  opensky: ApiKeyStatus;
+}
+
 export interface SettingsState {
   profile: ProfileSettings;
   display: DisplaySettings;
@@ -87,6 +101,7 @@ export interface SettingsState {
   notifications: NotificationSettings;
   privacy: PrivacySettings;
   backup: BackupSettings;
+  apiKeys: ApiKeysStatus | null;
   setProfile: SettingsUpdater<ProfileSettings>;
   setDisplay: SettingsUpdater<DisplaySettings>;
   setUnits: SettingsUpdater<UnitsSettings>;
@@ -95,6 +110,8 @@ export interface SettingsState {
   setNotifications: SettingsUpdater<NotificationSettings>;
   setPrivacy: SettingsUpdater<PrivacySettings>;
   setBackup: SettingsUpdater<BackupSettings>;
+  setApiKeys: (status: ApiKeysStatus) => void;
+  loadApiKeysStatus: () => Promise<void>;
   resetSettings: () => void;
   loadRemoteSettings: () => Promise<void>;
   saveRemoteSettings: () => Promise<void>;
@@ -102,7 +119,7 @@ export interface SettingsState {
 
 const defaultSettings: Omit<
   SettingsState,
-  'setProfile' | 'setDisplay' | 'setUnits' | 'setDefaults' | 'setMap' | 'setNotifications' | 'setPrivacy' | 'setBackup' | 'resetSettings' | 'loadRemoteSettings' | 'saveRemoteSettings'
+  'setProfile' | 'setDisplay' | 'setUnits' | 'setDefaults' | 'setMap' | 'setNotifications' | 'setPrivacy' | 'setBackup' | 'setApiKeys' | 'loadApiKeysStatus' | 'resetSettings' | 'loadRemoteSettings' | 'saveRemoteSettings'
 > = {
   profile: {
     username: 'Traveler',
@@ -151,6 +168,7 @@ const defaultSettings: Omit<
     exportFormat: 'json',
     cloudSync: false,
   },
+  apiKeys: null,
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -189,6 +207,18 @@ export const useSettingsStore = create<SettingsState>()(
         set((state) => ({
           backup: { ...state.backup, ...updates },
         })),
+      setApiKeys: (status) =>
+        set(() => ({
+          apiKeys: status,
+        })),
+      loadApiKeysStatus: async () => {
+        try {
+          const status = await settingsApi.getApiKeys();
+          set({ apiKeys: status });
+        } catch (error) {
+          console.warn('Failed to load API keys status', error);
+        }
+      },
       resetSettings: () => set(defaultSettings),
       loadRemoteSettings: async () => {
         try {

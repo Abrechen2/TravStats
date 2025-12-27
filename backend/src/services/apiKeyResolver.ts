@@ -1,0 +1,329 @@
+/**
+ * API Key Resolver Service
+ * 
+ * Resolves API keys with priority: User Key > Global Key > ENV Variable
+ */
+
+import { prisma } from '../db';
+import { decryptApiKey } from '../utils/encryption';
+import logger from '../utils/logger';
+
+export type ApiProvider = 'openai' | 'claude' | 'airlabs' | 'aviationstack' | 'opensky';
+
+export interface OpenSkyCredentials {
+  clientId?: string;
+  clientSecret?: string;
+  username?: string;
+  password?: string;
+}
+
+/**
+ * Get API key for a provider with priority resolution
+ * Priority: User Key > Global Key > ENV Variable
+ */
+export async function getApiKey(
+  provider: ApiProvider,
+  userId?: string
+): Promise<string | null> {
+  try {
+    // 1. Try user-specific key
+    if (userId) {
+      const userSettings = await prisma.userSettings.findUnique({
+        where: { userId },
+        select: {
+          openaiApiKey: true,
+          claudeApiKey: true,
+          airlabsApiKey: true,
+          aviationstackApiKey: true,
+        },
+      });
+
+      if (userSettings) {
+        let userKey: string | null = null;
+        
+        switch (provider) {
+          case 'openai':
+            userKey = userSettings.openaiApiKey;
+            break;
+          case 'claude':
+            userKey = userSettings.claudeApiKey;
+            break;
+          case 'airlabs':
+            userKey = userSettings.airlabsApiKey;
+            break;
+          case 'aviationstack':
+            userKey = userSettings.aviationstackApiKey;
+            break;
+        }
+
+        if (userKey) {
+          const decrypted = decryptApiKey(userKey);
+          if (decrypted) {
+            return decrypted;
+          }
+        }
+      }
+    }
+
+    // 2. Try global admin key
+    const adminSettings = await prisma.adminSettings.findFirst();
+    if (adminSettings) {
+      let globalKey: string | null = null;
+      
+      switch (provider) {
+        case 'openai':
+          globalKey = adminSettings.globalOpenaiApiKey;
+          break;
+        case 'claude':
+          globalKey = adminSettings.globalClaudeApiKey;
+          break;
+        case 'airlabs':
+          globalKey = adminSettings.globalAirlabsApiKey;
+          break;
+        case 'aviationstack':
+          globalKey = adminSettings.globalAviationstackApiKey;
+          break;
+      }
+
+      if (globalKey) {
+        const decrypted = decryptApiKey(globalKey);
+        if (decrypted) {
+          return decrypted;
+        }
+      }
+    }
+
+    // 3. Fallback to ENV variable
+    switch (provider) {
+      case 'openai':
+        return process.env.OPENAI_API_KEY || null;
+      case 'claude':
+        return process.env.CLAUDE_API_KEY || null;
+      case 'airlabs':
+        return process.env.AIRLABS_API_KEY || null;
+      case 'aviationstack':
+        return process.env.AVIATIONSTACK_API_KEY || null;
+      default:
+        return null;
+    }
+  } catch (error) {
+    logger.error({
+      operation: 'api_key_resolution_error',
+      message: 'Failed to resolve API key',
+      context: {
+        provider,
+        userId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+    });
+    return null;
+  }
+}
+
+/**
+ * Get OpenSky credentials with priority resolution
+ * Priority: User Credentials > Global Credentials > ENV Variables
+ */
+export async function getOpenSkyCredentials(
+  userId?: string
+): Promise<OpenSkyCredentials | null> {
+  try {
+    // 1. Try user-specific credentials
+    if (userId) {
+      const userSettings = await prisma.userSettings.findUnique({
+        where: { userId },
+        select: {
+          openskyClientId: true,
+          openskyClientSecret: true,
+          openskyUsername: true,
+          openskyPassword: true,
+        },
+      });
+
+      if (userSettings) {
+        const hasUserCredentials =
+          userSettings.openskyClientId ||
+          userSettings.openskyUsername;
+
+        if (hasUserCredentials) {
+          return {
+            clientId: userSettings.openskyClientId
+              ? decryptApiKey(userSettings.openskyClientId)
+              : undefined,
+            clientSecret: userSettings.openskyClientSecret
+              ? decryptApiKey(userSettings.openskyClientSecret)
+              : undefined,
+            username: userSettings.openskyUsername
+              ? decryptApiKey(userSettings.openskyUsername)
+              : undefined,
+            password: userSettings.openskyPassword
+              ? decryptApiKey(userSettings.openskyPassword)
+              : undefined,
+          };
+        }
+      }
+    }
+
+    // 2. Try global admin credentials
+    const adminSettings = await prisma.adminSettings.findFirst();
+    if (adminSettings) {
+      const hasGlobalCredentials =
+        adminSettings.globalOpenskyClientId ||
+        adminSettings.globalOpenskyUsername;
+
+      if (hasGlobalCredentials) {
+        return {
+          clientId: adminSettings.globalOpenskyClientId
+            ? decryptApiKey(adminSettings.globalOpenskyClientId)
+            : undefined,
+          clientSecret: adminSettings.globalOpenskyClientSecret
+            ? decryptApiKey(adminSettings.globalOpenskyClientSecret)
+            : undefined,
+          username: adminSettings.globalOpenskyUsername
+            ? decryptApiKey(adminSettings.globalOpenskyUsername)
+            : undefined,
+          password: adminSettings.globalOpenskyPassword
+            ? decryptApiKey(adminSettings.globalOpenskyPassword)
+            : undefined,
+        };
+      }
+    }
+
+    // 3. Fallback to ENV variables
+    const envClientId = process.env.OPENSKY_CLIENT_ID;
+    const envClientSecret = process.env.OPENSKY_CLIENT_SECRET;
+    const envUsername = process.env.OPENSKY_USERNAME;
+    const envPassword = process.env.OPENSKY_PASSWORD;
+
+    if (envClientId || envUsername) {
+      return {
+        clientId: envClientId || undefined,
+        clientSecret: envClientSecret || undefined,
+        username: envUsername || undefined,
+        password: envPassword || undefined,
+      };
+    }
+
+    return null;
+  } catch (error) {
+    logger.error({
+      operation: 'opensky_credentials_resolution_error',
+      message: 'Failed to resolve OpenSky credentials',
+      context: {
+        userId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+    });
+    return null;
+  }
+}
+
+/**
+ * Check if user has access to a specific API key (either own or shared)
+ */
+export async function hasApiKeyAccess(
+  provider: ApiProvider,
+  userId?: string
+): Promise<{ hasAccess: boolean; isShared: boolean }> {
+  try {
+    // Check user key
+    if (userId) {
+      const userSettings = await prisma.userSettings.findUnique({
+        where: { userId },
+        select: {
+          openaiApiKey: true,
+          claudeApiKey: true,
+          airlabsApiKey: true,
+          aviationstackApiKey: true,
+        },
+      });
+
+      if (userSettings) {
+        let hasUserKey = false;
+        switch (provider) {
+          case 'openai':
+            hasUserKey = !!userSettings.openaiApiKey;
+            break;
+          case 'claude':
+            hasUserKey = !!userSettings.claudeApiKey;
+            break;
+          case 'airlabs':
+            hasUserKey = !!userSettings.airlabsApiKey;
+            break;
+          case 'aviationstack':
+            hasUserKey = !!userSettings.aviationstackApiKey;
+            break;
+        }
+
+        if (hasUserKey) {
+          return { hasAccess: true, isShared: false };
+        }
+      }
+    }
+
+    // Check global key
+    const adminSettings = await prisma.adminSettings.findFirst();
+    if (adminSettings) {
+      let hasGlobalKey = false;
+      try {
+        switch (provider) {
+          case 'openai':
+            hasGlobalKey = !!(adminSettings as any).globalOpenaiApiKey;
+            break;
+          case 'claude':
+            hasGlobalKey = !!(adminSettings as any).globalClaudeApiKey;
+            break;
+          case 'airlabs':
+            hasGlobalKey = !!(adminSettings as any).globalAirlabsApiKey;
+            break;
+          case 'aviationstack':
+            hasGlobalKey = !!(adminSettings as any).globalAviationstackApiKey;
+            break;
+        }
+      } catch (error) {
+        // Field might not exist in database yet
+        logger.warn({
+          operation: 'api_key_access_check_field_error',
+          message: 'Field might not exist in database',
+          provider,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+
+      if (hasGlobalKey) {
+        return { hasAccess: true, isShared: true };
+      }
+    }
+
+    // Check ENV variable
+    let hasEnvKey = false;
+    switch (provider) {
+      case 'openai':
+        hasEnvKey = !!process.env.OPENAI_API_KEY;
+        break;
+      case 'claude':
+        hasEnvKey = !!process.env.CLAUDE_API_KEY;
+        break;
+      case 'airlabs':
+        hasEnvKey = !!process.env.AIRLABS_API_KEY;
+        break;
+      case 'aviationstack':
+        hasEnvKey = !!process.env.AVIATIONSTACK_API_KEY;
+        break;
+    }
+
+    return { hasAccess: hasEnvKey, isShared: false };
+  } catch (error) {
+    logger.error({
+      operation: 'api_key_access_check_error',
+      message: 'Failed to check API key access',
+      context: {
+        provider,
+        userId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+    });
+    return { hasAccess: false, isShared: false };
+  }
+}
+

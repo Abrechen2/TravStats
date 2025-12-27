@@ -279,6 +279,71 @@
         "trained": "Trained Ollama models (via Training page) significantly improve accuracy"
       }
     }
+  },
+  "autoUpdate": {
+    "title": "Automatic Updates",
+    "description": "Automatically fetch current flight data from APIs during active flights. Updates will be saved in the pending updates area for review.",
+    "viewPending": "View Pending Updates",
+    "enabled": "Enable Automatic Updates",
+    "requireApproval": "Require Approval",
+    "checkInterval": "Check Interval (minutes)",
+    "checkIntervalDescription": "How often the system checks for flight data updates",
+    "onlyDuringFlight": "Only During Flight",
+    "onlyDuringFlightDescription": "Only fetch updates during active flight times",
+    "expiryHours": "Expiry Time (hours)",
+    "expiryHoursDescription": "How long pending updates remain available before expiring",
+    "saved": "Auto-update settings saved successfully",
+    "saveFailed": "Failed to save auto-update settings"
+  },
+  "apiKeys": {
+    "title": "API Keys",
+    "description": "Manage API keys for external services. Keys shared by the administrator are automatically used.",
+    "parserApis": "Parser APIs",
+    "flightApis": "Flight Lookup APIs",
+    "shared": "Shared",
+    "sharedTooltip": "Shared by administrator - automatically used",
+    "own": "Own Key",
+    "ownTooltip": "Own API key entered - takes precedence over shared keys",
+    "notConfigured": "Not Configured",
+    "notConfiguredTooltip": "No API key configured - using shared key or ENV variable if available",
+    "getKey": "Get API Key",
+    "enterKey": "Enter API key",
+    "sharedPlaceholder": "Shared by administrator",
+    "show": "Show",
+    "hide": "Hide",
+    "clear": "Clear",
+    "test": "Test",
+    "testing": "Testing...",
+    "sharedNote": "This key is shared by the administrator and cannot be edited",
+    "save": "Save API Keys",
+    "saving": "Saving...",
+    "saved": "API keys saved successfully",
+    "saveFailed": "Failed to save API keys",
+    "openai": {
+      "label": "OpenAI API Key",
+      "description": "Used for AI-powered email parsing"
+    },
+    "claude": {
+      "label": "Claude API Key",
+      "description": "Used for AI-powered email parsing"
+    },
+    "airlabs": {
+      "label": "AirLabs API Key",
+      "description": "Free tier: 1000 requests/month. Used for flight data lookup."
+    },
+    "aviationstack": {
+      "label": "Aviationstack API Key",
+      "description": "Paid service. Used for flight data lookup with higher accuracy."
+    },
+    "opensky": {
+      "label": "OpenSky Network",
+      "description": "Free service. Requires registration. Used for flight data lookup.",
+      "clientId": "Client ID",
+      "clientSecret": "Client Secret",
+      "username": "Username",
+      "password": "Password",
+      "or": "OR (use basic auth instead)"
+    }
   }
 }
 

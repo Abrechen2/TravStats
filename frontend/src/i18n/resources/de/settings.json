@@ -279,6 +279,71 @@
         "trained": "Trainierte Ollama-Modelle (über Training-Page) verbessern die Genauigkeit erheblich"
       }
     }
+  },
+  "autoUpdate": {
+    "title": "Automatische Updates",
+    "description": "Automatisch aktuelle Flugdaten von APIs während aktiver Flüge abrufen. Updates werden im Bereich für ausstehende Updates gespeichert zur Überprüfung.",
+    "viewPending": "Ausstehende Updates anzeigen",
+    "enabled": "Automatische Updates aktivieren",
+    "requireApproval": "Bestätigung erforderlich",
+    "checkInterval": "Prüfintervall (Minuten)",
+    "checkIntervalDescription": "Wie oft das System nach Flugdaten-Updates prüft",
+    "onlyDuringFlight": "Nur während Flugzeit",
+    "onlyDuringFlightDescription": "Updates nur während aktiver Flugzeiten abrufen",
+    "expiryHours": "Ablaufzeit (Stunden)",
+    "expiryHoursDescription": "Wie lange ausstehende Updates verfügbar bleiben, bevor sie ablaufen",
+    "saved": "Auto-Update-Einstellungen erfolgreich gespeichert",
+    "saveFailed": "Fehler beim Speichern der Auto-Update-Einstellungen"
+  },
+  "apiKeys": {
+    "title": "API-Schlüssel",
+    "description": "Verwalte API-Schlüssel für externe Dienste. Vom Administrator geteilte Schlüssel werden automatisch verwendet.",
+    "parserApis": "Parser APIs",
+    "flightApis": "Flugdaten APIs",
+    "shared": "Geteilt",
+    "sharedTooltip": "Vom Administrator geteilter Schlüssel - wird automatisch verwendet",
+    "own": "Eigener Schlüssel",
+    "ownTooltip": "Eigener API-Schlüssel eingegeben - hat Vorrang vor geteilten Schlüsseln",
+    "notConfigured": "Nicht konfiguriert",
+    "notConfiguredTooltip": "Kein API-Schlüssel konfiguriert - verwende geteilten Schlüssel oder ENV-Variable falls verfügbar",
+    "getKey": "API-Schlüssel erstellen",
+    "enterKey": "API-Schlüssel eingeben",
+    "sharedPlaceholder": "Vom Administrator geteilt",
+    "show": "Anzeigen",
+    "hide": "Verstecken",
+    "clear": "Löschen",
+    "test": "Testen",
+    "testing": "Teste...",
+    "sharedNote": "Dieser Schlüssel wird vom Administrator geteilt und kann nicht bearbeitet werden",
+    "save": "API-Schlüssel speichern",
+    "saving": "Wird gespeichert...",
+    "saved": "API-Schlüssel erfolgreich gespeichert",
+    "saveFailed": "Fehler beim Speichern der API-Schlüssel",
+    "openai": {
+      "label": "OpenAI API-Schlüssel",
+      "description": "Wird für KI-gestütztes E-Mail-Parsing verwendet"
+    },
+    "claude": {
+      "label": "Claude API-Schlüssel",
+      "description": "Wird für KI-gestütztes E-Mail-Parsing verwendet"
+    },
+    "airlabs": {
+      "label": "AirLabs API-Schlüssel",
+      "description": "Kostenlos: 1000 Anfragen/Monat. Wird für Flugdaten-Abfrage verwendet."
+    },
+    "aviationstack": {
+      "label": "Aviationstack API-Schlüssel",
+      "description": "Kostenpflichtiger Service. Wird für Flugdaten-Abfrage mit höherer Genauigkeit verwendet."
+    },
+    "opensky": {
+      "label": "OpenSky Network",
+      "description": "Kostenloser Service. Erfordert Registrierung. Wird für Flugdaten-Abfrage verwendet.",
+      "clientId": "Client ID",
+      "clientSecret": "Client Secret",
+      "username": "Benutzername",
+      "password": "Passwort",
+      "or": "ODER (stattdessen Basic Auth verwenden)"
+    }
   }
 }
 

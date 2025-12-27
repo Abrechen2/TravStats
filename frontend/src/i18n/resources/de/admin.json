@@ -6,6 +6,7 @@
     "users": "Benutzer",
     "invitations": "Einladungen",
     "system": "System",
+    "apiKeys": "API-Schlüssel",
     "parsers": "Parser",
     "training": "Training Config",
     "logging": "Logging",
@@ -13,9 +14,28 @@
     "patterns": "Pattern Updates",
     "backups": "Backups"
   },
-  "trainingConfig": "Training Config",
   "parserFeedback": "Parser Feedback",
   "patternUpdates": "Pattern Updates",
+  "parserFeedbackHelp": {
+    "helpTitle": "Parser Feedback",
+    "helpContent": {
+      "description": "Dieser Tab zeigt Statistiken über das Feedback, das Benutzer beim Korrigieren von Parser-Ergebnissen geben. Diese Daten helfen dabei, die Qualität der Parser zu verbessern.",
+      "statsTitle": "Statistiken:",
+      "stats": "Die Statistiken zeigen die Gesamtzahl der Feedback-Einträge, die durchschnittliche Qualitätsbewertung und die häufigsten Probleme.",
+      "usageTitle": "Verwendung:",
+      "usage": "Verwenden Sie den Zeitraum-Filter, um Feedback aus verschiedenen Zeiträumen anzuzeigen. Die Verteilung nach Provider zeigt, welche Parser am häufigsten korrigiert werden. Die häufigsten Probleme helfen dabei, Verbesserungspotenziale zu identifizieren."
+    }
+  },
+  "patternUpdatesHelp": {
+    "helpTitle": "Pattern Updates & Vorschläge",
+    "helpContent": {
+      "description": "Dieser Tab analysiert das Parser-Feedback und schlägt Verbesserungen für die Regex-Patterns vor, die zum Parsen von E-Mails und Bordkarten verwendet werden.",
+      "suggestionsTitle": "Vorschläge:",
+      "suggestions": "Die Vorschläge basieren auf häufigen Fehlern, die Benutzer korrigieren. Jeder Vorschlag enthält eine Konfidenz-Bewertung, die angibt, wie sicher das System ist, dass diese Änderung hilfreich ist.",
+      "autoApplyTitle": "Auto-Apply:",
+      "autoApply": "Die Auto-Apply-Funktion wendet automatisch alle Vorschläge mit einer Konfidenz von ≥90% an. Sie können auch einzelne Vorschläge manuell überprüfen und anwenden."
+    }
+  },
   "instance": "Instanz",
   "totalUsers": "Gesamt Benutzer",
   "activeUsers": "Aktive Benutzer",
@@ -219,6 +239,55 @@
       "restoreFailed": "Fehler beim Wiederherstellen des Backups",
       "deleted": "Backup gelöscht",
       "deleteFailed": "Fehler beim Löschen des Backups"
+    }
+  },
+  "globalApiKeys": {
+    "title": "Globale API-Schlüssel",
+    "description": "Konfiguriere globale API-Schlüssel, die mit allen Benutzern geteilt werden. Benutzer können weiterhin eigene Schlüssel setzen, wenn erlaubt.",
+    "parserApis": "Parser APIs",
+    "parserApisDescription": "API-Schlüssel für KI-gestütztes E-Mail- und Bordkarten-Parsing.",
+    "flightApis": "Flugdaten APIs",
+    "flightApisDescription": "API-Schlüssel für automatische Flugdaten-Abfrage und Updates.",
+    "permissions": "Benutzer-Berechtigungen",
+    "permissionsDescription": "Steuere, ob Benutzer eigene API-Schlüssel bereitstellen können.",
+    "parserPermissions": "Parser API-Berechtigungen",
+    "flightPermissions": "Flugdaten API-Berechtigungen",
+    "allowUserParserApiKeys": "Benutzern erlauben, eigene Parser API-Schlüssel zu setzen",
+    "allowUserParserApiKeysDescription": "Benutzer können eigene OpenAI/Claude API-Schlüssel in ihren Einstellungen eingeben. Ihre Schlüssel haben Vorrang vor globalen Schlüsseln.",
+    "requireUserParserApiKeys": "Von Benutzern verlangen, eigene Parser API-Schlüssel bereitzustellen",
+    "requireUserParserApiKeysDescription": "Zwinge Benutzer, eigene API-Schlüssel bereitzustellen. Globale Schlüssel werden nicht verwendet. Nur kostenlose Parser (Ollama, Tesseract, Regex) funktionieren ohne Benutzer-Schlüssel.",
+    "allowUserFlightApiKeys": "Benutzern erlauben, eigene Flug-API-Schlüssel zu setzen",
+    "allowUserFlightApiKeysDescription": "Benutzer können eigene Flugdaten-API-Schlüssel eingeben. Ihre Schlüssel haben Vorrang vor globalen Schlüsseln.",
+    "requireUserFlightApiKeys": "Von Benutzern verlangen, eigene Flug-API-Schlüssel bereitzustellen",
+    "requireUserFlightApiKeysDescription": "Zwinge Benutzer, eigene Flugdaten-API-Schlüssel bereitzustellen. Globale Schlüssel werden nicht verwendet.",
+    "save": "Alle API-Schlüssel speichern",
+    "saving": "Wird gespeichert...",
+    "saved": "API-Schlüssel erfolgreich gespeichert",
+    "saveFailed": "Fehler beim Speichern der API-Schlüssel",
+    "openai": {
+      "label": "OpenAI API-Schlüssel",
+      "description": "Wird für KI-gestütztes E-Mail- und Bordkarten-Parsing verwendet"
+    },
+    "claude": {
+      "label": "Claude API-Schlüssel",
+      "description": "Wird für KI-gestütztes E-Mail- und Bordkarten-Parsing verwendet"
+    },
+    "airlabs": {
+      "label": "AirLabs API-Schlüssel",
+      "description": "Kostenlos: 1000 Anfragen/Monat. Wird mit allen Benutzern für Flugdaten-Abfrage geteilt."
+    },
+    "aviationstack": {
+      "label": "Aviationstack API-Schlüssel",
+      "description": "Kostenpflichtiger Service. Wird mit allen Benutzern für Flugdaten-Abfrage mit höherer Genauigkeit geteilt."
+    },
+    "opensky": {
+      "label": "OpenSky Network",
+      "description": "Kostenloser Service. Erfordert Registrierung. Wird mit allen Benutzern für Flugdaten-Abfrage geteilt.",
+      "clientId": "Client ID",
+      "clientSecret": "Client Secret",
+      "username": "Benutzername",
+      "password": "Passwort",
+      "or": "ODER (stattdessen Basic Auth verwenden)"
     }
   }
 }

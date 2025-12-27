@@ -135,7 +135,8 @@ router.get('/lookup', async (req: AuthRequest, res: Response, next: NextFunction
 
     const lookup = await lookupFlightDetails(
       flightNumber,
-      typeof date === 'string' ? date : undefined
+      typeof date === 'string' ? date : undefined,
+      req.userId!
     );
 
     if (!lookup) {

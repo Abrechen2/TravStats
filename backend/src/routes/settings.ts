@@ -4,6 +4,14 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import { requireTrainingAccess } from '../middleware/trainingAuth';
 import { prisma } from '../db';
 import { encryptApiKey, decryptApiKey } from '../utils/encryption';
+import { hasApiKeyAccess } from '../services/apiKeyResolver';
+import {
+  testOpenAIKey,
+  testClaudeKey,
+  testAirlabsKey,
+  testAviationstackKey,
+  testOpenSkyCredentials,
+} from '../services/apiKeyTester';
 import logger from '../utils/logger';
 
 const router = Router();
@@ -59,6 +67,13 @@ const settingsSchema = z.object({
     exportFormat: z.enum(['json', 'csv', 'pdf']).optional(),
     cloudSync: z.boolean().optional(),
   }).partial().optional(),
+  autoUpdate: z.object({
+    enabled: z.boolean().optional(),
+    requireApproval: z.boolean().optional(),
+    checkInterval: z.number().min(5).max(1440).optional(), // 5 minutes to 24 hours
+    onlyDuringFlight: z.boolean().optional(),
+    expiryHours: z.number().min(1).max(168).optional(), // 1 hour to 1 week
+  }).partial().optional(),
 }).partial();
 
 const defaultSettings = {
@@ -89,12 +104,36 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
           preferredEmailModel: 'auto',
           preferredVisionModel: 'auto',
           trainingSeparateModels: true,
+          // Initialize auto-update settings with defaults
+          autoUpdateEnabled: false,
+          autoUpdateRequireApproval: true,
+          autoUpdateCheckInterval: 15,
+          autoUpdateOnlyDuringFlight: true,
+          autoUpdateExpiryHours: 24,
         },
       });
-      return res.json(created.data);
+      const response = created.data as any;
+      // Add auto-update settings to response
+      response.autoUpdate = {
+        enabled: created.autoUpdateEnabled,
+        requireApproval: created.autoUpdateRequireApproval,
+        checkInterval: created.autoUpdateCheckInterval,
+        onlyDuringFlight: created.autoUpdateOnlyDuringFlight,
+        expiryHours: created.autoUpdateExpiryHours,
+      };
+      return res.json(response);
     }
 
-    res.json(existing.data);
+    const response = existing.data as any;
+    // Add auto-update settings to response
+    response.autoUpdate = {
+      enabled: existing.autoUpdateEnabled,
+      requireApproval: existing.autoUpdateRequireApproval,
+      checkInterval: existing.autoUpdateCheckInterval,
+      onlyDuringFlight: existing.autoUpdateOnlyDuringFlight,
+      expiryHours: existing.autoUpdateExpiryHours,
+    };
+    res.json(response);
   } catch (error) {
     next(error);
   }
@@ -115,9 +154,32 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
       ...payload,
     };
 
+    const updateData: any = {
+      data: merged as any,
+    };
+
+    // Handle auto-update settings
+    if (payload.autoUpdate) {
+      if (payload.autoUpdate.enabled !== undefined) {
+        updateData.autoUpdateEnabled = payload.autoUpdate.enabled;
+      }
+      if (payload.autoUpdate.requireApproval !== undefined) {
+        updateData.autoUpdateRequireApproval = payload.autoUpdate.requireApproval;
+      }
+      if (payload.autoUpdate.checkInterval !== undefined) {
+        updateData.autoUpdateCheckInterval = payload.autoUpdate.checkInterval;
+      }
+      if (payload.autoUpdate.onlyDuringFlight !== undefined) {
+        updateData.autoUpdateOnlyDuringFlight = payload.autoUpdate.onlyDuringFlight;
+      }
+      if (payload.autoUpdate.expiryHours !== undefined) {
+        updateData.autoUpdateExpiryHours = payload.autoUpdate.expiryHours;
+      }
+    }
+
     const saved = await prisma.userSettings.upsert({
       where: { userId },
-      update: { data: merged as any },
+      update: updateData,
       create: { 
         userId, 
         data: merged as any,
@@ -126,6 +188,12 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
         preferredEmailModel: 'auto',
         preferredVisionModel: 'auto',
         trainingSeparateModels: true,
+        // Initialize auto-update settings with defaults
+        autoUpdateEnabled: payload.autoUpdate?.enabled ?? false,
+        autoUpdateRequireApproval: payload.autoUpdate?.requireApproval ?? true,
+        autoUpdateCheckInterval: payload.autoUpdate?.checkInterval ?? 15,
+        autoUpdateOnlyDuringFlight: payload.autoUpdate?.onlyDuringFlight ?? true,
+        autoUpdateExpiryHours: payload.autoUpdate?.expiryHours ?? 24,
       },
     });
 
@@ -538,6 +606,319 @@ router.put('/training', async (req: AuthRequest, res: Response, next: NextFuncti
       message: 'Training settings updated successfully',
       settings: updated,
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// API Keys schema
+const apiKeysSchema = z.object({
+  openaiApiKey: z.string().optional().nullable(),
+  claudeApiKey: z.string().optional().nullable(),
+  airlabsApiKey: z.string().optional().nullable(),
+  aviationstackApiKey: z.string().optional().nullable(),
+  openskyClientId: z.string().optional().nullable(),
+  openskyClientSecret: z.string().optional().nullable(),
+  openskyUsername: z.string().optional().nullable(),
+  openskyPassword: z.string().optional().nullable(),
+}).partial();
+
+// Get API keys (returns status only, not actual keys)
+router.get('/api-keys', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId!;
+
+    // Try to get user settings - handle case where fields might not exist
+    let settings: any = null;
+    try {
+      settings = await prisma.userSettings.findUnique({
+        where: { userId },
+        select: {
+          openaiApiKey: true,
+          claudeApiKey: true,
+          airlabsApiKey: true,
+          aviationstackApiKey: true,
+          openskyClientId: true,
+          openskyClientSecret: true,
+          openskyUsername: true,
+          openskyPassword: true,
+        },
+      });
+    } catch (error: any) {
+      // If fields don't exist, settings will be null
+      if (error.code !== 'P2009' && error.code !== 'P2025') {
+        throw error;
+      }
+      logger.warn({
+        operation: 'get_api_keys_user_settings_error',
+        message: 'Failed to get user settings, fields might not exist',
+        error: error.message,
+      });
+    }
+
+    // Get admin settings to check for shared keys
+    let adminSettings: any = null;
+    try {
+      adminSettings = await prisma.adminSettings.findFirst();
+    } catch (error: any) {
+      logger.warn({
+        operation: 'get_api_keys_admin_settings_error',
+        message: 'Failed to get admin settings',
+        error: error.message,
+      });
+    }
+
+    // Check access status for each provider - handle errors gracefully
+    let openaiAccess = { hasAccess: false, isShared: false };
+    let claudeAccess = { hasAccess: false, isShared: false };
+    let airlabsAccess = { hasAccess: false, isShared: false };
+    let aviationstackAccess = { hasAccess: false, isShared: false };
+
+    try {
+      [openaiAccess, claudeAccess, airlabsAccess, aviationstackAccess] = await Promise.all([
+        hasApiKeyAccess('openai', userId),
+        hasApiKeyAccess('claude', userId),
+        hasApiKeyAccess('airlabs', userId),
+        hasApiKeyAccess('aviationstack', userId),
+      ]);
+    } catch (error: any) {
+      logger.warn({
+        operation: 'get_api_keys_access_check_error',
+        message: 'Failed to check API key access',
+        error: error.message,
+      });
+    }
+
+    // Check OpenSky (has multiple credentials)
+    const hasUserOpensky = settings && (settings.openskyClientId || settings.openskyUsername);
+    const hasGlobalOpensky = adminSettings && (
+      adminSettings.globalOpenskyClientId || 
+      adminSettings.globalOpenskyUsername
+    );
+    const openskyShared = hasGlobalOpensky && !hasUserOpensky;
+
+    res.json({
+      openai: {
+        hasKey: !!settings?.openaiApiKey,
+        isShared: openaiAccess.isShared,
+        hasAccess: openaiAccess.hasAccess,
+      },
+      claude: {
+        hasKey: !!settings?.claudeApiKey,
+        isShared: claudeAccess.isShared,
+        hasAccess: claudeAccess.hasAccess,
+      },
+      airlabs: {
+        hasKey: !!settings?.airlabsApiKey,
+        isShared: airlabsAccess.isShared,
+        hasAccess: airlabsAccess.hasAccess,
+      },
+      aviationstack: {
+        hasKey: !!settings?.aviationstackApiKey,
+        isShared: aviationstackAccess.isShared,
+        hasAccess: aviationstackAccess.hasAccess,
+      },
+      opensky: {
+        hasKey: !!hasUserOpensky,
+        isShared: openskyShared,
+        hasAccess: hasUserOpensky || hasGlobalOpensky || !!(process.env.OPENSKY_CLIENT_ID || process.env.OPENSKY_USERNAME),
+      },
+    });
+  } catch (error) {
+    logger.error({
+      operation: 'get_api_keys_error',
+      message: 'Failed to get API keys status',
+      context: {
+        userId: req.userId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      },
+    });
+    next(error);
+  }
+});
+
+// Update API keys
+router.put('/api-keys', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId!;
+    const payload = apiKeysSchema.parse(req.body);
+
+    // Get admin settings to check permissions
+    const adminSettings = await prisma.adminSettings.findFirst();
+    const allowUserApiKeys = adminSettings?.allowUserApiKeys ?? true;
+    const allowUserFlightApiKeys = adminSettings?.allowUserFlightApiKeys ?? true;
+
+    const updateData: any = {};
+
+    // Encrypt parser API keys before storing
+    if (payload.openaiApiKey !== undefined) {
+      if (!allowUserApiKeys) {
+        return res.status(403).json({
+          error: 'User API keys are not allowed by administrator',
+        });
+      }
+      updateData.openaiApiKey = encryptApiKey(payload.openaiApiKey);
+    }
+    if (payload.claudeApiKey !== undefined) {
+      if (!allowUserApiKeys) {
+        return res.status(403).json({
+          error: 'User API keys are not allowed by administrator',
+        });
+      }
+      updateData.claudeApiKey = encryptApiKey(payload.claudeApiKey);
+    }
+
+    // Encrypt flight lookup API keys before storing
+    if (payload.airlabsApiKey !== undefined) {
+      if (!allowUserFlightApiKeys) {
+        return res.status(403).json({
+          error: 'User flight API keys are not allowed by administrator',
+        });
+      }
+      updateData.airlabsApiKey = encryptApiKey(payload.airlabsApiKey);
+    }
+    if (payload.aviationstackApiKey !== undefined) {
+      if (!allowUserFlightApiKeys) {
+        return res.status(403).json({
+          error: 'User flight API keys are not allowed by administrator',
+        });
+      }
+      updateData.aviationstackApiKey = encryptApiKey(payload.aviationstackApiKey);
+    }
+    if (payload.openskyClientId !== undefined) {
+      if (!allowUserFlightApiKeys) {
+        return res.status(403).json({
+          error: 'User flight API keys are not allowed by administrator',
+        });
+      }
+      updateData.openskyClientId = encryptApiKey(payload.openskyClientId);
+    }
+    if (payload.openskyClientSecret !== undefined) {
+      if (!allowUserFlightApiKeys) {
+        return res.status(403).json({
+          error: 'User flight API keys are not allowed by administrator',
+        });
+      }
+      updateData.openskyClientSecret = encryptApiKey(payload.openskyClientSecret);
+    }
+    // Clear username/password if they are sent as null/empty (OpenSky now only uses OAuth2)
+    if (payload.openskyUsername !== undefined) {
+      updateData.openskyUsername = null;
+    }
+    if (payload.openskyPassword !== undefined) {
+      updateData.openskyPassword = null;
+    }
+
+    // Update settings
+    await prisma.userSettings.upsert({
+      where: { userId },
+      update: updateData,
+      create: {
+        userId,
+        data: defaultSettings,
+        ...updateData,
+      },
+    });
+
+    // Return updated status
+    const [openaiAccess, claudeAccess, airlabsAccess, aviationstackAccess] = await Promise.all([
+      hasApiKeyAccess('openai', userId),
+      hasApiKeyAccess('claude', userId),
+      hasApiKeyAccess('airlabs', userId),
+      hasApiKeyAccess('aviationstack', userId),
+    ]);
+
+    const updatedSettings = await prisma.userSettings.findUnique({
+      where: { userId },
+      select: {
+        openskyClientId: true,
+        openskyUsername: true,
+      },
+    });
+
+    const adminSettingsAfter = await prisma.adminSettings.findFirst();
+    const hasGlobalOpensky = adminSettingsAfter && adminSettingsAfter.globalOpenskyClientId;
+
+    res.json({
+      message: 'API keys updated successfully',
+      apiKeys: {
+        openai: {
+          hasKey: !!updateData.openaiApiKey || openaiAccess.hasAccess,
+          isShared: openaiAccess.isShared,
+        },
+        claude: {
+          hasKey: !!updateData.claudeApiKey || claudeAccess.hasAccess,
+          isShared: claudeAccess.isShared,
+        },
+        airlabs: {
+          hasKey: !!updateData.airlabsApiKey || airlabsAccess.hasAccess,
+          isShared: airlabsAccess.isShared,
+        },
+        aviationstack: {
+          hasKey: !!updateData.aviationstackApiKey || aviationstackAccess.hasAccess,
+          isShared: aviationstackAccess.isShared,
+        },
+        opensky: {
+          hasKey: !!updatedSettings?.openskyClientId,
+          isShared: hasGlobalOpensky && !updatedSettings?.openskyClientId,
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Test API key endpoints
+router.post('/api-keys/test/openai', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { apiKey } = req.body;
+    const result = await testOpenAIKey(apiKey, req.user!.id);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/api-keys/test/claude', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { apiKey } = req.body;
+    const result = await testClaudeKey(apiKey, req.user!.id);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/api-keys/test/airlabs', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { apiKey } = req.body;
+    const result = await testAirlabsKey(apiKey, req.user!.id);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/api-keys/test/aviationstack', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { apiKey } = req.body;
+    const result = await testAviationstackKey(apiKey, req.user!.id);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/api-keys/test/opensky', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { clientId, clientSecret, username, password } = req.body;
+    const result = await testOpenSkyCredentials(
+      { clientId, clientSecret, username, password },
+      req.user!.id
+    );
+    res.json(result);
   } catch (error) {
     next(error);
   }

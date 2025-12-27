@@ -35,8 +35,6 @@ export default function ParserConfiguration({ className = '' }: ParserConfigurat
   const [settings, setSettings] = useState({
     preferredVisionParser: 'auto',
     preferredTextParser: 'auto',
-    openaiApiKey: '',
-    claudeApiKey: '',
   });
 
   // Load parser settings and available providers
@@ -51,8 +49,6 @@ export default function ParserConfiguration({ className = '' }: ParserConfigurat
         setSettings({
           preferredVisionParser: settingsData.preferredVisionParser || 'auto',
           preferredTextParser: settingsData.preferredTextParser || 'auto',
-          openaiApiKey: settingsData.openaiApiKey || '',
-          claudeApiKey: settingsData.claudeApiKey || '',
         });
       } catch (error) {
         console.error('Failed to load parser data:', error);
@@ -104,8 +100,6 @@ export default function ParserConfiguration({ className = '' }: ParserConfigurat
       await settingsApi.updateParserSettings({
         preferredVisionParser: settings.preferredVisionParser,
         preferredTextParser: settings.preferredTextParser,
-        openaiApiKey: settings.openaiApiKey || undefined,
-        claudeApiKey: settings.claudeApiKey || undefined,
       });
       alert(t('settings:parser.saved'));
     } catch (error: any) {
@@ -208,56 +202,6 @@ export default function ParserConfiguration({ className = '' }: ParserConfigurat
                 {renderProviderStatus('text', option.value)}
               </div>
             ))}
-          </div>
-        </div>
-      </div>
-
-      {/* API Keys Section */}
-      <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-        <h3 className="font-medium text-gray-900 dark:text-white mb-4">{t('settings:parser.apiKeys.title')}</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="label">{t('settings:parser.apiKeys.openai')}</label>
-            <input
-              type="password"
-              value={settings.openaiApiKey}
-              onChange={(e) => setSettings({ ...settings, openaiApiKey: e.target.value })}
-              placeholder="sk-..."
-              className="input font-mono text-sm"
-            />
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              {t('settings:parser.apiKeys.optional')}{' '}
-              <a
-                href="https://platform.openai.com/api-keys"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 dark:text-blue-400 hover:underline"
-              >
-                platform.openai.com
-              </a>
-            </p>
-          </div>
-
-          <div>
-            <label className="label">{t('settings:parser.apiKeys.claude')}</label>
-            <input
-              type="password"
-              value={settings.claudeApiKey}
-              onChange={(e) => setSettings({ ...settings, claudeApiKey: e.target.value })}
-              placeholder="sk-ant-..."
-              className="input font-mono text-sm"
-            />
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              {t('settings:parser.apiKeys.optional')}{' '}
-              <a
-                href="https://console.anthropic.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 dark:text-blue-400 hover:underline"
-              >
-                console.anthropic.com
-              </a>
-            </p>
           </div>
         </div>
       </div>
