@@ -10,6 +10,7 @@
 
 import axios from 'axios';
 import { findOrCreateAirport } from './airportLookup';
+import { getApiKey, getOpenSkyCredentials } from './apiKeyResolver';
 
 // In-memory cache for flight lookup results (AirLabs)
 interface FlightLookupCache {
@@ -62,9 +63,10 @@ export interface FlightData {
  */
 export async function lookupFlightByNumber(
   flightNumber: string,
-  date?: Date
+  date?: Date,
+  userId?: string
 ): Promise<FlightData[]> {
-  const apiKey = process.env.AIRLABS_API_KEY;
+  const apiKey = await getApiKey('airlabs', userId);
 
   if (!apiKey) {
     console.warn('AIRLABS_API_KEY not configured - flight lookup disabled');
@@ -223,19 +225,17 @@ async function getOpenSkyAuthHeaders(opts: {
 
 export async function lookupFlightDetails(
   flightNumber: string,
-  date?: string
+  date?: string,
+  userId?: string
 ): Promise<FlightLookupResult | null> {
   const trimmedNumber = flightNumber.trim();
   if (!trimmedNumber) return null;
 
-  // Optional OpenSky credentials (supports token and basic)
-  const openSkyUser = process.env.OPENSKY_USERNAME;
-  const openSkyPass = process.env.OPENSKY_PASSWORD;
-  const openSkyClientId = process.env.OPENSKY_CLIENT_ID;
-  const openSkyClientSecret = process.env.OPENSKY_CLIENT_SECRET;
+  // Get OpenSky credentials with priority resolution
+  const openSkyCredentials = await getOpenSkyCredentials(userId);
 
   // Prefer Aviationstack if configured
-  const aviationstackKey = process.env.AVIATIONSTACK_API_KEY;
+  const aviationstackKey = await getApiKey('aviationstack', userId);
   if (aviationstackKey) {
     // API docs: https://docs.apilayer.com/aviationstack/docs/endpoints#flights
     // Use HTTPS + params to avoid signature/order issues
@@ -290,14 +290,11 @@ export async function lookupFlightDetails(
 
   if (!flights.length) {
     // Try OpenSky as last resort (requires credentials)
-    const openSkyAuth = await getOpenSkyAuthHeaders({
-      clientId: openSkyClientId,
-      clientSecret: openSkyClientSecret,
-      user: openSkyUser,
-      pass: openSkyPass,
-    });
-    const openSky = await lookupOpenSkyFlight(trimmedNumber, date, openSkyAuth ?? undefined);
-    if (openSky) return openSky;
+    if (openSkyCredentials) {
+      const openSkyAuth = await getOpenSkyAuthHeaders(openSkyCredentials);
+      const openSky = await lookupOpenSkyFlight(trimmedNumber, date, openSkyAuth ?? undefined);
+      if (openSky) return openSky;
+    }
     return null;
   }
 

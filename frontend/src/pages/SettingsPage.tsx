@@ -6,7 +6,8 @@ import { useSettingsStore } from '../store/settingsStore';
 import { useThemeStore } from '../store/themeStore';
 import { useAuthStore } from '../store/authStore';
 import ParserConfiguration from '../components/Settings/ParserConfiguration';
-import { settingsApi, authApi, backupApi } from '../lib/api';
+import ApiKeyCard from '../components/Settings/ApiKeyCard';
+import { settingsApi, authApi, backupApi, pendingUpdatesApi } from '../lib/api';
 import { useToastStore } from '../store/toastStore';
 import { logger } from '../lib/logger';
 import { useTranslation } from '../hooks/useTranslation';
@@ -70,6 +71,30 @@ export default function SettingsPage() {
     trainingSeparateModels: true,
   });
   const [loadingTrainingSettings, setLoadingTrainingSettings] = useState(false);
+  const [autoUpdateSettings, setAutoUpdateSettings] = useState({
+    enabled: false,
+    requireApproval: true,
+    checkInterval: 15,
+    onlyDuringFlight: true,
+    expiryHours: 24,
+  });
+  const [loadingAutoUpdateSettings, setLoadingAutoUpdateSettings] = useState(false);
+  const [apiKeysStatus, setApiKeysStatus] = useState<{
+    openai: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+    claude: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+    airlabs: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+    aviationstack: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+    opensky: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+  } | null>(null);
+  const [apiKeys, setApiKeys] = useState({
+    openaiApiKey: '',
+    claudeApiKey: '',
+    airlabsApiKey: '',
+    aviationstackApiKey: '',
+    openskyClientId: '',
+    openskyClientSecret: '',
+  });
+  const [loadingApiKeys, setLoadingApiKeys] = useState(false);
 
   // Check if user has training access (admin or canTrainLLM)
   const hasTrainingAccess = user?.isAdmin || user?.canTrainLLM || false;
@@ -91,6 +116,60 @@ export default function SettingsPage() {
     };
     loadTrainingSettings();
   }, []);
+
+  // Load auto-update settings
+  useEffect(() => {
+    const loadAutoUpdateSettings = async () => {
+      try {
+        const settings = await settingsApi.get();
+        if (settings.autoUpdate) {
+          setAutoUpdateSettings({
+            enabled: settings.autoUpdate.enabled ?? false,
+            requireApproval: settings.autoUpdate.requireApproval ?? true,
+            checkInterval: settings.autoUpdate.checkInterval ?? 15,
+            onlyDuringFlight: settings.autoUpdate.onlyDuringFlight ?? true,
+            expiryHours: settings.autoUpdate.expiryHours ?? 24,
+          });
+        }
+      } catch (error) {
+        logger.error('Failed to load auto-update settings:', error);
+      }
+    };
+    loadAutoUpdateSettings();
+    
+    // Load API keys status
+    const loadApiKeysStatus = async () => {
+      try {
+        const status = await settingsApi.getApiKeys();
+        setApiKeysStatus(status);
+      } catch (error) {
+        logger.error('Failed to load API keys status:', error);
+      }
+    };
+    loadApiKeysStatus();
+  }, []);
+
+  // Save auto-update settings
+  const saveAutoUpdateSettings = async () => {
+    try {
+      setLoadingAutoUpdateSettings(true);
+      await settingsApi.update({
+        autoUpdate: autoUpdateSettings,
+      });
+      addToast({
+        type: 'success',
+        message: t('settings:autoUpdate.saved') || 'Auto-Update-Einstellungen gespeichert',
+      });
+    } catch (error) {
+      logger.error('Failed to save auto-update settings:', error);
+      addToast({
+        type: 'error',
+        message: t('settings:autoUpdate.saveFailed') || 'Fehler beim Speichern',
+      });
+    } finally {
+      setLoadingAutoUpdateSettings(false);
+    }
+  };
 
   // Auto-save units settings when they change
   useEffect(() => {
@@ -861,8 +940,250 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {/* Auto-Update Settings */}
+        <div className="card space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">{t('settings:autoUpdate.title')}</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings:autoUpdate.description')}</p>
+            </div>
+            <Link
+              to="/pending-updates"
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium"
+            >
+              {t('settings:autoUpdate.viewPending')} →
+            </Link>
+          </div>
+
+          <div className="space-y-4">
+            <label className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={autoUpdateSettings.enabled}
+                onChange={(e) => {
+                  const newSettings = { ...autoUpdateSettings, enabled: e.target.checked };
+                  setAutoUpdateSettings(newSettings);
+                  // Update settings immediately
+                  settingsApi.update({ autoUpdate: newSettings }).catch((error) => {
+                    logger.error('Failed to save auto-update settings:', error);
+                  });
+                }}
+                className="h-4 w-4"
+              />
+              <span>{t('settings:autoUpdate.enabled') || 'Automatische Updates aktivieren'}</span>
+            </label>
+
+            {autoUpdateSettings.enabled && (
+              <>
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={autoUpdateSettings.requireApproval}
+                    onChange={(e) => {
+                      const newSettings = { ...autoUpdateSettings, requireApproval: e.target.checked };
+                      setAutoUpdateSettings(newSettings);
+                      settingsApi.update({ autoUpdate: newSettings }).catch((error) => {
+                        logger.error('Failed to save auto-update settings:', error);
+                      });
+                    }}
+                    className="h-4 w-4"
+                  />
+                  <span>{t('settings:autoUpdate.requireApproval') || 'Bestätigung erforderlich'}</span>
+                </label>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="label">{t('settings:autoUpdate.checkInterval')}</label>
+                    <input
+                      type="number"
+                      value={autoUpdateSettings.checkInterval}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value, 10);
+                        if (value >= 5 && value <= 1440) {
+                          const newSettings = { ...autoUpdateSettings, checkInterval: value };
+                          setAutoUpdateSettings(newSettings);
+                          settingsApi.update({ autoUpdate: newSettings }).catch((error) => {
+                            logger.error('Failed to save auto-update settings:', error);
+                          });
+                        }
+                      }}
+                      min="5"
+                      max="1440"
+                      className="input"
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {t('settings:autoUpdate.checkIntervalDescription')}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="label">{t('settings:autoUpdate.expiryHours')}</label>
+                    <input
+                      type="number"
+                      value={autoUpdateSettings.expiryHours}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value, 10);
+                        if (value >= 1 && value <= 168) {
+                          const newSettings = { ...autoUpdateSettings, expiryHours: value };
+                          setAutoUpdateSettings(newSettings);
+                          settingsApi.update({ autoUpdate: newSettings }).catch((error) => {
+                            logger.error('Failed to save auto-update settings:', error);
+                          });
+                        }
+                      }}
+                      min="1"
+                      max="168"
+                      className="input"
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {t('settings:autoUpdate.expiryHoursDescription')}
+                    </p>
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={autoUpdateSettings.onlyDuringFlight}
+                    onChange={(e) => {
+                      const newSettings = { ...autoUpdateSettings, onlyDuringFlight: e.target.checked };
+                      setAutoUpdateSettings(newSettings);
+                      settingsApi.update({ autoUpdate: newSettings }).catch((error) => {
+                        logger.error('Failed to save auto-update settings:', error);
+                      });
+                    }}
+                    className="h-4 w-4"
+                  />
+                  <span>{t('settings:autoUpdate.onlyDuringFlight') || 'Nur während Flugzeit'}</span>
+                </label>
+              </>
+            )}
+          </div>
+        </div>
+
         {/* Parser Configuration */}
         <ParserConfiguration />
+
+        {/* API Keys */}
+        <div className="card space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">{t('settings:apiKeys.title')}</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings:apiKeys.description')}</p>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            {/* Parser APIs */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">
+                {t('settings:apiKeys.parserApis')}
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <ApiKeyCard
+                  provider="openai"
+                  label={t('settings:apiKeys.openai.label')}
+                  description={t('settings:apiKeys.openai.description')}
+                  getKeyUrl="https://platform.openai.com/api-keys"
+                  isShared={apiKeysStatus?.openai.isShared || false}
+                  hasAccess={apiKeysStatus?.openai.hasAccess || false}
+                  value={apiKeys.openaiApiKey}
+                  onChange={(value) => setApiKeys({ ...apiKeys, openaiApiKey: value })}
+                  onClear={() => setApiKeys({ ...apiKeys, openaiApiKey: '' })}
+                />
+                <ApiKeyCard
+                  provider="claude"
+                  label={t('settings:apiKeys.claude.label')}
+                  description={t('settings:apiKeys.claude.description')}
+                  getKeyUrl="https://console.anthropic.com/settings/keys"
+                  isShared={apiKeysStatus?.claude.isShared || false}
+                  hasAccess={apiKeysStatus?.claude.hasAccess || false}
+                  value={apiKeys.claudeApiKey}
+                  onChange={(value) => setApiKeys({ ...apiKeys, claudeApiKey: value })}
+                  onClear={() => setApiKeys({ ...apiKeys, claudeApiKey: '' })}
+                />
+              </div>
+            </div>
+
+            {/* Flight Lookup APIs */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">
+                {t('settings:apiKeys.flightApis')}
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <ApiKeyCard
+                  provider="airlabs"
+                  label={t('settings:apiKeys.airlabs.label')}
+                  description={t('settings:apiKeys.airlabs.description')}
+                  getKeyUrl="https://airlabs.co/account"
+                  isShared={apiKeysStatus?.airlabs.isShared || false}
+                  hasAccess={apiKeysStatus?.airlabs.hasAccess || false}
+                  value={apiKeys.airlabsApiKey}
+                  onChange={(value) => setApiKeys({ ...apiKeys, airlabsApiKey: value })}
+                  onClear={() => setApiKeys({ ...apiKeys, airlabsApiKey: '' })}
+                />
+                <ApiKeyCard
+                  provider="aviationstack"
+                  label={t('settings:apiKeys.aviationstack.label')}
+                  description={t('settings:apiKeys.aviationstack.description')}
+                  getKeyUrl="https://aviationstack.com/signup"
+                  isShared={apiKeysStatus?.aviationstack.isShared || false}
+                  hasAccess={apiKeysStatus?.aviationstack.hasAccess || false}
+                  value={apiKeys.aviationstackApiKey}
+                  onChange={(value) => setApiKeys({ ...apiKeys, aviationstackApiKey: value })}
+                  onClear={() => setApiKeys({ ...apiKeys, aviationstackApiKey: '' })}
+                />
+                <ApiKeyCard
+                  provider="opensky"
+                  label={t('settings:apiKeys.opensky.label')}
+                  description={t('settings:apiKeys.opensky.description')}
+                  getKeyUrl="https://opensky-network.org/accounts/register"
+                  isShared={apiKeysStatus?.opensky.isShared || false}
+                  hasAccess={apiKeysStatus?.opensky.hasAccess || false}
+                  openskyFields={{
+                    clientId: apiKeys.openskyClientId,
+                    clientSecret: apiKeys.openskyClientSecret,
+                    onClientIdChange: (value) => setApiKeys({ ...apiKeys, openskyClientId: value }),
+                    onClientSecretChange: (value) => setApiKeys({ ...apiKeys, openskyClientSecret: value }),
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <button
+              onClick={async () => {
+                setLoadingApiKeys(true);
+                try {
+                  await settingsApi.updateApiKeys(apiKeys);
+                  addToast('success', t('settings:apiKeys.saved') || 'API keys saved successfully');
+                  // Reload status
+                  const status = await settingsApi.getApiKeys();
+                  setApiKeysStatus(status);
+                  // Clear local values after save
+                  setApiKeys({
+                    openaiApiKey: '',
+                    claudeApiKey: '',
+                    airlabsApiKey: '',
+                    aviationstackApiKey: '',
+                    openskyClientId: '',
+                    openskyClientSecret: '',
+                  });
+                } catch (error: any) {
+                  logger.error('Failed to save API keys:', error);
+                  addToast('error', error.response?.data?.error || t('settings:apiKeys.saveFailed') || 'Failed to save API keys');
+                } finally {
+                  setLoadingApiKeys(false);
+                }
+              }}
+              disabled={loadingApiKeys}
+              className="btn-primary"
+            >
+              {loadingApiKeys ? t('settings:apiKeys.saving') || 'Saving...' : t('settings:apiKeys.save') || 'Save API Keys'}
+            </button>
+          </div>
+        </div>
 
         {/* Training Settings */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">

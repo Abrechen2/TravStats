@@ -23,6 +23,7 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const SetupPage = lazy(() => import('./pages/SetupPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const TrainingPage = lazy(() => import('./pages/TrainingPage'));
+const PendingUpdatesPage = lazy(() => import('./pages/PendingUpdatesPage'));
 
 function AppContent() {
   const { user } = useAuthStore();
@@ -218,6 +219,10 @@ function AppContent() {
           <Route
             path="/training"
             element={isAuthenticated ? <TrainingPage /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/pending-updates"
+            element={isAuthenticated ? <PendingUpdatesPage /> : <Navigate to="/login" />}
           />
         </Routes>
       </Suspense>

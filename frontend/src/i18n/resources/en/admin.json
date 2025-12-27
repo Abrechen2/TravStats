@@ -6,6 +6,7 @@
     "users": "Users",
     "invitations": "Invitations",
     "system": "System",
+    "apiKeys": "API Keys",
     "parsers": "Parsers",
     "training": "Training Config",
     "logging": "Logging",
@@ -13,9 +14,28 @@
     "patterns": "Pattern Updates",
     "backups": "Backups"
   },
-  "trainingConfig": "Training Config",
   "parserFeedback": "Parser Feedback",
   "patternUpdates": "Pattern Updates",
+  "parserFeedbackHelp": {
+    "helpTitle": "Parser Feedback",
+    "helpContent": {
+      "description": "This tab shows statistics about feedback that users provide when correcting parser results. This data helps improve parser quality.",
+      "statsTitle": "Statistics:",
+      "stats": "The statistics show the total number of feedback entries, the average quality score, and the most common issues.",
+      "usageTitle": "Usage:",
+      "usage": "Use the time period filter to view feedback from different time periods. The distribution by provider shows which parsers are corrected most frequently. The most common issues help identify areas for improvement."
+    }
+  },
+  "patternUpdatesHelp": {
+    "helpTitle": "Pattern Updates & Suggestions",
+    "helpContent": {
+      "description": "This tab analyzes parser feedback and suggests improvements for the regex patterns used to parse emails and boarding passes.",
+      "suggestionsTitle": "Suggestions:",
+      "suggestions": "Suggestions are based on common errors that users correct. Each suggestion includes a confidence score indicating how certain the system is that this change will be helpful.",
+      "autoApplyTitle": "Auto-Apply:",
+      "autoApply": "The Auto-Apply function automatically applies all suggestions with a confidence of ≥90%. You can also manually review and apply individual suggestions."
+    }
+  },
   "instance": "Instance",
   "totalUsers": "Total Users",
   "activeUsers": "Active Users",
@@ -219,6 +239,55 @@
       "restoreFailed": "Failed to restore backup",
       "deleted": "Backup deleted",
       "deleteFailed": "Failed to delete backup"
+    }
+  },
+  "globalApiKeys": {
+    "title": "Global API Keys",
+    "description": "Configure global API keys that will be shared with all users. Users can still set their own keys if allowed.",
+    "parserApis": "Parser APIs",
+    "parserApisDescription": "API keys for AI-powered email and boarding pass parsing.",
+    "flightApis": "Flight Lookup APIs",
+    "flightApisDescription": "API keys for automatic flight data lookup and updates.",
+    "permissions": "User Permissions",
+    "permissionsDescription": "Control whether users can provide their own API keys.",
+    "parserPermissions": "Parser API Permissions",
+    "flightPermissions": "Flight Lookup API Permissions",
+    "allowUserParserApiKeys": "Allow users to set their own parser API keys",
+    "allowUserParserApiKeysDescription": "Users can enter their own OpenAI/Claude API keys in their settings. Their keys will take precedence over global keys.",
+    "requireUserParserApiKeys": "Require users to provide their own parser API keys",
+    "requireUserParserApiKeysDescription": "Force users to provide their own API keys. Global keys will not be used. Only free parsers (Ollama, Tesseract, Regex) will work without user keys.",
+    "allowUserFlightApiKeys": "Allow users to set their own flight API keys",
+    "allowUserFlightApiKeysDescription": "Users can enter their own flight lookup API keys. Their keys will take precedence over global keys.",
+    "requireUserFlightApiKeys": "Require users to provide their own flight API keys",
+    "requireUserFlightApiKeysDescription": "Force users to provide their own flight lookup API keys. Global keys will not be used.",
+    "save": "Save All API Keys",
+    "saving": "Saving...",
+    "saved": "API keys saved successfully",
+    "saveFailed": "Failed to save API keys",
+    "openai": {
+      "label": "OpenAI API Key",
+      "description": "Used for AI-powered email and boarding pass parsing"
+    },
+    "claude": {
+      "label": "Claude API Key",
+      "description": "Used for AI-powered email and boarding pass parsing"
+    },
+    "airlabs": {
+      "label": "AirLabs API Key",
+      "description": "Free tier: 1000 requests/month. Shared with all users for flight data lookup."
+    },
+    "aviationstack": {
+      "label": "Aviationstack API Key",
+      "description": "Paid service. Shared with all users for flight data lookup with higher accuracy."
+    },
+    "opensky": {
+      "label": "OpenSky Network",
+      "description": "Free service. Requires registration. Shared with all users for flight data lookup.",
+      "clientId": "Client ID",
+      "clientSecret": "Client Secret",
+      "username": "Username",
+      "password": "Password",
+      "or": "OR (use basic auth instead)"
     }
   }
 }

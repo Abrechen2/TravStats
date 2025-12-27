@@ -6,6 +6,7 @@ import { logger } from '../lib/logger';
 import NavigationBar from '../components/NavigationBar';
 import InlineHelp from '../components/Help/InlineHelp';
 import BackupManagement from '../components/Admin/BackupManagement';
+import ApiKeyCard from '../components/Settings/ApiKeyCard';
 import { useTranslation } from '../hooks/useTranslation';
 
 export default function AdminPage() {
@@ -24,7 +25,7 @@ export default function AdminPage() {
   const [feedbackDetails, setFeedbackDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [loadingHardwareInfo, setLoadingHardwareInfo] = useState(false);
-  const [activeTab, setActiveTab] = useState<'users' | 'invitations' | 'system' | 'parsers' | 'training' | 'logging' | 'feedback' | 'patterns' | 'backups'>('system');
+  const [activeTab, setActiveTab] = useState<'users' | 'invitations' | 'system' | 'parsers' | 'training' | 'logging' | 'feedback' | 'patterns' | 'backups' | 'apiKeys'>('system');
   const [trainingConfig, setTrainingConfig] = useState<any>(null);
   const [savingTrainingConfig, setSavingTrainingConfig] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
@@ -34,6 +35,8 @@ export default function AdminPage() {
   const [selectedFeedbackId, setSelectedFeedbackId] = useState<string | null>(null);
   const [showPatternConfirm, setShowPatternConfirm] = useState<string | null>(null);
   const [showAutoApplyConfirm, setShowAutoApplyConfirm] = useState(false);
+  const [globalApiKeys, setGlobalApiKeys] = useState<any>(null);
+  const [savingGlobalApiKeys, setSavingGlobalApiKeys] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -55,10 +58,26 @@ export default function AdminPage() {
       loadPatternData();
     } else if (activeTab === 'system') {
       loadHardwareInfo();
+    } else if (activeTab === 'apiKeys') {
+      if (!globalApiKeys) {
+        loadGlobalApiKeys();
+      }
+      if (!parserSettings) {
+        loadData();
+      }
     } else if (activeTab === 'training') {
       loadTrainingConfig();
     }
   }, [activeTab, feedbackDays]);
+
+  const loadGlobalApiKeys = async () => {
+    try {
+      const data = await adminApi.getGlobalApiKeys();
+      setGlobalApiKeys(data);
+    } catch (error) {
+      logger.error('Failed to load global API keys:', error);
+    }
+  };
 
   const loadTrainingConfig = async () => {
     try {
@@ -398,6 +417,16 @@ export default function AdminPage() {
           Invitations
         </button>
         <button
+          onClick={() => setActiveTab('apiKeys')}
+          className={`px-4 py-2 font-medium transition ${
+            activeTab === 'apiKeys'
+              ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+          }`}
+        >
+          {t('admin:tabs.apiKeys')}
+        </button>
+        <button
           onClick={() => setActiveTab('parsers')}
           className={`px-4 py-2 font-medium transition ${
             activeTab === 'parsers'
@@ -415,7 +444,7 @@ export default function AdminPage() {
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
           }`}
         >
-          {t('admin:trainingConfig')}
+          {t('admin:tabs.training')}
         </button>
         <button
           onClick={() => setActiveTab('logging')}
@@ -1057,6 +1086,249 @@ export default function AdminPage() {
         </div>
       )}
 
+      {/* API Keys Tab */}
+      {activeTab === 'apiKeys' && (
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                {t('admin:globalApiKeys.title')}
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                {t('admin:globalApiKeys.description')}
+              </p>
+            </div>
+            <button
+              onClick={async () => {
+                setSavingGlobalApiKeys(true);
+                setSavingParsers(true);
+                try {
+                  // Save both parser and flight API keys
+                  await Promise.all([
+                    adminApi.updateGlobalApiKeys(globalApiKeys || {}),
+                    adminApi.updateAdminParserSettings({
+                      globalOpenaiApiKey: parserSettings?.globalOpenaiApiKey,
+                      globalClaudeApiKey: parserSettings?.globalClaudeApiKey,
+                      allowUserApiKeys: parserSettings?.allowUserApiKeys,
+                      requireUserApiKeys: parserSettings?.requireUserApiKeys,
+                    }),
+                  ]);
+                  addToast('success', t('admin:globalApiKeys.saved') || 'API keys saved successfully');
+                  await loadGlobalApiKeys();
+                  if (parserSettings) {
+                    const parserData = await adminApi.getAdminParserSettings();
+                    setParserSettings(parserData);
+                  }
+                } catch (error: any) {
+                  logger.error('Failed to save API keys:', error);
+                  addToast('error', error.response?.data?.error || t('admin:globalApiKeys.saveFailed') || 'Failed to save API keys');
+                } finally {
+                  setSavingGlobalApiKeys(false);
+                  setSavingParsers(false);
+                }
+              }}
+              disabled={savingGlobalApiKeys || savingParsers || !globalApiKeys || !parserSettings}
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-lg transition font-medium"
+            >
+              {(savingGlobalApiKeys || savingParsers) ? t('common:buttons.saving') : t('admin:globalApiKeys.save')}
+            </button>
+          </div>
+
+          {(!globalApiKeys || !parserSettings) && (
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+              <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                {t('common:loading') || 'Loading...'}
+              </p>
+            </div>
+          )}
+
+          {globalApiKeys && parserSettings && (
+            <>
+              {/* Parser APIs */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  {t('admin:globalApiKeys.parserApis')}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  {t('admin:globalApiKeys.parserApisDescription')}
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <ApiKeyCard
+                    provider="openai"
+                    label={t('admin:globalApiKeys.openai.label')}
+                    description={t('admin:globalApiKeys.openai.description')}
+                    getKeyUrl="https://platform.openai.com/api-keys"
+                    isShared={false}
+                    hasAccess={!!parserSettings.globalOpenaiApiKey}
+                    value={parserSettings.globalOpenaiApiKey || ''}
+                    onChange={(value) => setParserSettings({ ...parserSettings, globalOpenaiApiKey: value })}
+                    onClear={() => setParserSettings({ ...parserSettings, globalOpenaiApiKey: '' })}
+                    isAdmin={true}
+                  />
+                  <ApiKeyCard
+                    provider="claude"
+                    label={t('admin:globalApiKeys.claude.label')}
+                    description={t('admin:globalApiKeys.claude.description')}
+                    getKeyUrl="https://console.anthropic.com/settings/keys"
+                    isShared={false}
+                    hasAccess={!!parserSettings.globalClaudeApiKey}
+                    value={parserSettings.globalClaudeApiKey || ''}
+                    onChange={(value) => setParserSettings({ ...parserSettings, globalClaudeApiKey: value })}
+                    onClear={() => setParserSettings({ ...parserSettings, globalClaudeApiKey: '' })}
+                    isAdmin={true}
+                  />
+                </div>
+              </div>
+
+              {/* Flight Lookup APIs */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  {t('admin:globalApiKeys.flightApis')}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  {t('admin:globalApiKeys.flightApisDescription')}
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <ApiKeyCard
+                    provider="airlabs"
+                    label={t('admin:globalApiKeys.airlabs.label')}
+                    description={t('admin:globalApiKeys.airlabs.description')}
+                    getKeyUrl="https://airlabs.co/account"
+                    isShared={false}
+                    hasAccess={!!globalApiKeys.globalAirlabsApiKey}
+                    value={globalApiKeys.globalAirlabsApiKey || ''}
+                    onChange={(value) => setGlobalApiKeys({ ...globalApiKeys, globalAirlabsApiKey: value })}
+                    onClear={() => setGlobalApiKeys({ ...globalApiKeys, globalAirlabsApiKey: '' })}
+                    isAdmin={true}
+                  />
+                  <ApiKeyCard
+                    provider="aviationstack"
+                    label={t('admin:globalApiKeys.aviationstack.label')}
+                    description={t('admin:globalApiKeys.aviationstack.description')}
+                    getKeyUrl="https://aviationstack.com/signup"
+                    isShared={false}
+                    hasAccess={!!globalApiKeys.globalAviationstackApiKey}
+                    value={globalApiKeys.globalAviationstackApiKey || ''}
+                    onChange={(value) => setGlobalApiKeys({ ...globalApiKeys, globalAviationstackApiKey: value })}
+                    onClear={() => setGlobalApiKeys({ ...globalApiKeys, globalAviationstackApiKey: '' })}
+                    isAdmin={true}
+                  />
+                  <ApiKeyCard
+                    provider="opensky"
+                    label={t('admin:globalApiKeys.opensky.label')}
+                    description={t('admin:globalApiKeys.opensky.description')}
+                    getKeyUrl="https://opensky-network.org/accounts/register"
+                    isShared={false}
+                    hasAccess={!!globalApiKeys.globalOpenskyClientId}
+                    openskyFields={{
+                      clientId: globalApiKeys.globalOpenskyClientId || '',
+                      clientSecret: globalApiKeys.globalOpenskyClientSecret || '',
+                      onClientIdChange: (value) => setGlobalApiKeys({ ...globalApiKeys, globalOpenskyClientId: value }),
+                      onClientSecretChange: (value) => setGlobalApiKeys({ ...globalApiKeys, globalOpenskyClientSecret: value }),
+                    }}
+                    isAdmin={true}
+                  />
+                </div>
+              </div>
+
+              {/* User Permissions */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  {t('admin:globalApiKeys.permissions')}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  {t('admin:globalApiKeys.permissionsDescription')}
+                </p>
+                <div className="space-y-4">
+                  {/* Parser API Permissions */}
+                  <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
+                    <h4 className="text-md font-medium text-gray-900 dark:text-white mb-3">
+                      {t('admin:globalApiKeys.parserPermissions')}
+                    </h4>
+                    <div className="space-y-3">
+                      <label className="flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          checked={parserSettings.allowUserApiKeys}
+                          onChange={(e) => setParserSettings({ ...parserSettings, allowUserApiKeys: e.target.checked })}
+                          className="mt-1 h-4 w-4"
+                        />
+                        <div>
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            {t('admin:globalApiKeys.allowUserParserApiKeys')}
+                          </span>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {t('admin:globalApiKeys.allowUserParserApiKeysDescription')}
+                          </p>
+                        </div>
+                      </label>
+                      <label className="flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          checked={parserSettings.requireUserApiKeys}
+                          onChange={(e) => setParserSettings({ ...parserSettings, requireUserApiKeys: e.target.checked })}
+                          className="mt-1 h-4 w-4"
+                        />
+                        <div>
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            {t('admin:globalApiKeys.requireUserParserApiKeys')}
+                          </span>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {t('admin:globalApiKeys.requireUserParserApiKeysDescription')}
+                          </p>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Flight API Permissions */}
+                  <div>
+                    <h4 className="text-md font-medium text-gray-900 dark:text-white mb-3">
+                      {t('admin:globalApiKeys.flightPermissions')}
+                    </h4>
+                    <div className="space-y-3">
+                      <label className="flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          checked={globalApiKeys.allowUserFlightApiKeys ?? true}
+                          onChange={(e) => setGlobalApiKeys({ ...globalApiKeys, allowUserFlightApiKeys: e.target.checked })}
+                          className="mt-1 h-4 w-4"
+                        />
+                        <div>
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            {t('admin:globalApiKeys.allowUserFlightApiKeys')}
+                          </span>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {t('admin:globalApiKeys.allowUserFlightApiKeysDescription')}
+                          </p>
+                        </div>
+                      </label>
+                      <label className="flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          checked={globalApiKeys.requireUserFlightApiKeys ?? false}
+                          onChange={(e) => setGlobalApiKeys({ ...globalApiKeys, requireUserFlightApiKeys: e.target.checked })}
+                          className="mt-1 h-4 w-4"
+                        />
+                        <div>
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            {t('admin:globalApiKeys.requireUserFlightApiKeys')}
+                          </span>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {t('admin:globalApiKeys.requireUserFlightApiKeysDescription')}
+                          </p>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Training Configuration Tab */}
       {activeTab === 'training' && trainingConfig && (
         <div className="space-y-6">
@@ -1181,7 +1453,7 @@ export default function AdminPage() {
                 Global Parser Configuration
               </h2>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                Configure default parser settings and API keys for all users
+                Configure default parser settings for all users. API keys are managed in the API Keys tab.
               </p>
             </div>
             <button
@@ -1191,119 +1463,6 @@ export default function AdminPage() {
             >
               {savingParsers ? t('common:buttons.saving') : t('admin:saveSettings')}
             </button>
-          </div>
-
-          {/* Global API Keys */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              Global API Keys
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              These API keys will be used system-wide unless users provide their own keys (if allowed below).
-              Keys are encrypted at the application level.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  OpenAI API Key
-                </label>
-                <input
-                  type="password"
-                  value={parserSettings.globalOpenaiApiKey || ''}
-                  onChange={(e) => setParserSettings({ ...parserSettings, globalOpenaiApiKey: e.target.value })}
-                  placeholder="sk-..."
-                  className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white font-mono text-sm"
-                />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Get from{' '}
-                  <a
-                    href="https://platform.openai.com/api-keys"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 dark:text-blue-400 hover:underline"
-                  >
-                    platform.openai.com
-                  </a>
-                </p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Claude API Key
-                </label>
-                <input
-                  type="password"
-                  value={parserSettings.globalClaudeApiKey || ''}
-                  onChange={(e) => setParserSettings({ ...parserSettings, globalClaudeApiKey: e.target.value })}
-                  placeholder="sk-ant-..."
-                  className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white font-mono text-sm"
-                />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Get from{' '}
-                  <a
-                    href="https://console.anthropic.com/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 dark:text-blue-400 hover:underline"
-                  >
-                    console.anthropic.com
-                  </a>
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* User Permissions */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              User Permissions
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Control whether users can provide their own API keys for cloud-based parsers.
-            </p>
-            <div className="space-y-3">
-              <label className="flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  checked={parserSettings.allowUserApiKeys}
-                  onChange={(e) => setParserSettings({ ...parserSettings, allowUserApiKeys: e.target.checked })}
-                  className="mt-1 h-4 w-4"
-                />
-                <div>
-                  <span className="font-medium text-gray-900 dark:text-white">
-                    Allow users to provide their own API keys
-                  </span>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Users can enter their own OpenAI/Claude API keys in their settings. Their keys will take precedence over global keys.
-                  </p>
-                </div>
-              </label>
-
-              <label className="flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  checked={parserSettings.requireUserApiKeys}
-                  onChange={(e) => setParserSettings({ ...parserSettings, requireUserApiKeys: e.target.checked })}
-                  className="mt-1 h-4 w-4"
-                />
-                <div>
-                  <span className="font-medium text-gray-900 dark:text-white">
-                    Require users to provide their own API keys
-                  </span>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Force users to provide their own API keys. Global keys will not be used. Only free parsers (Ollama, Tesseract, Regex) will work without user keys.
-                  </p>
-                </div>
-              </label>
-            </div>
-
-            {parserSettings.requireUserApiKeys && !parserSettings.allowUserApiKeys && (
-              <div className="mt-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
-                <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                  ⚠️ Warning: You have enabled "Require user API keys" but disabled "Allow user API keys".
-                  This means users cannot use cloud-based parsers (OpenAI, Claude).
-                </p>
-              </div>
-            )}
           </div>
 
           {/* Default Parser Settings */}
@@ -1647,6 +1806,25 @@ export default function AdminPage() {
       {/* Parser Feedback Tab */}
       {activeTab === 'feedback' && (
         <div className="space-y-6">
+          <InlineHelp
+            title={t('admin:parserFeedbackHelp.helpTitle')}
+            category="advanced"
+            content={
+              <div className="space-y-2">
+                <p>
+                  {t('admin:parserFeedbackHelp.helpContent.description')}
+                </p>
+                <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
+                  <li>
+                    <strong>{t('admin:parserFeedbackHelp.helpContent.statsTitle')}</strong> {t('admin:parserFeedbackHelp.helpContent.stats')}
+                  </li>
+                  <li>
+                    <strong>{t('admin:parserFeedbackHelp.helpContent.usageTitle')}</strong> {t('admin:parserFeedbackHelp.helpContent.usage')}
+                  </li>
+                </ul>
+              </div>
+            }
+          />
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -1861,6 +2039,25 @@ export default function AdminPage() {
       {/* Pattern Updates Tab */}
       {activeTab === 'patterns' && (
         <div className="space-y-6">
+          <InlineHelp
+            title={t('admin:patternUpdatesHelp.helpTitle')}
+            category="expert"
+            content={
+              <div className="space-y-2">
+                <p>
+                  {t('admin:patternUpdatesHelp.helpContent.description')}
+                </p>
+                <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
+                  <li>
+                    <strong>{t('admin:patternUpdatesHelp.helpContent.suggestionsTitle')}</strong> {t('admin:patternUpdatesHelp.helpContent.suggestions')}
+                  </li>
+                  <li>
+                    <strong>{t('admin:patternUpdatesHelp.helpContent.autoApplyTitle')}</strong> {t('admin:patternUpdatesHelp.helpContent.autoApply')}
+                  </li>
+                </ul>
+              </div>
+            }
+          />
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">

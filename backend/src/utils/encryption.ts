@@ -6,6 +6,7 @@
 import crypto from 'crypto';
 import logger from './logger';
 import { SECURITY } from '../config/constants';
+import { initializeEncryptionKey } from './encryptionKey';
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 16; // 128 bits
@@ -19,11 +20,20 @@ const failedDecryptionCache = new Set<string>();
 const DECRYPTION_WARN_INTERVAL = 5 * 60 * 1000; // 5 minutes
 let lastDecryptionWarning = 0;
 
+// Initialize encryption key on module load (automatically generates if not set)
+let ENCRYPTION_KEY_INITIALIZED = false;
+
 /**
  * Get encryption key from environment variable or generate one
- * In production, ENCRYPTION_KEY should be set to a secure random 32-byte hex string
+ * Automatically initializes the key on first call if not set
  */
 function getEncryptionKey(): Buffer {
+  // Initialize encryption key on first call (only once)
+  if (!ENCRYPTION_KEY_INITIALIZED) {
+    initializeEncryptionKey();
+    ENCRYPTION_KEY_INITIALIZED = true;
+  }
+
   const envKey = process.env.ENCRYPTION_KEY;
 
   if (envKey) {
@@ -33,24 +43,14 @@ function getEncryptionKey(): Buffer {
     } else {
       logger.warn({
         operation: 'encryption_key_invalid',
-        message: 'ENCRYPTION_KEY has invalid format, generating temporary key',
+        message: 'ENCRYPTION_KEY has invalid format, using fallback',
       });
     }
   }
 
-  // Fallback: Use JWT_SECRET as base for encryption key (not ideal, but better than nothing)
-  // In production, ENCRYPTION_KEY should always be set
+  // Fallback: Use JWT_SECRET as base for encryption key (should not happen after initialization)
   const fallbackSecret = process.env.JWT_SECRET || 'fallback-secret-change-in-production';
-  const key = crypto.pbkdf2Sync(fallbackSecret, 'encryption-salt', ITERATIONS, KEY_LENGTH, 'sha256');
-
-  if (!envKey) {
-    logger.warn({
-      operation: 'encryption_key_fallback',
-      message: 'ENCRYPTION_KEY not set, using fallback (not secure for production)',
-    });
-  }
-
-  return key;
+  return crypto.pbkdf2Sync(fallbackSecret, 'encryption-salt', ITERATIONS, KEY_LENGTH, 'sha256');
 }
 
 /**

@@ -1,0 +1,290 @@
+/**
+ * API Key Card Component
+ * 
+ * Reusable component for displaying and editing API keys
+ */
+
+import { useState } from 'react';
+import { useTranslation } from '../../hooks/useTranslation';
+import { settingsApi, adminApi } from '../../lib/api';
+
+export interface ApiKeyCardProps {
+  provider: 'openai' | 'claude' | 'airlabs' | 'aviationstack' | 'opensky';
+  label: string;
+  description: string;
+  getKeyUrl: string;
+  isShared: boolean;
+  hasAccess: boolean;
+  value?: string;
+  onChange?: (value: string) => void;
+  onClear?: () => void;
+  isAdmin?: boolean; // If true, use adminApi instead of settingsApi
+  // For OpenSky (multiple fields)
+  openskyFields?: {
+    clientId?: string;
+    clientSecret?: string;
+    username?: string;
+    password?: string;
+    onClientIdChange?: (value: string) => void;
+    onClientSecretChange?: (value: string) => void;
+    onUsernameChange?: (value: string) => void;
+    onPasswordChange?: (value: string) => void;
+  };
+}
+
+export default function ApiKeyCard({
+  provider,
+  label,
+  description,
+  getKeyUrl,
+  isShared,
+  hasAccess,
+  value,
+  onChange,
+  onClear,
+  isAdmin = false,
+  openskyFields,
+}: ApiKeyCardProps) {
+  const { t } = useTranslation(['settings', 'common']);
+  const [showKey, setShowKey] = useState(false);
+  const [localValue, setLocalValue] = useState(value || '');
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const handleChange = (newValue: string) => {
+    setLocalValue(newValue);
+    if (onChange) {
+      onChange(newValue);
+    }
+  };
+
+  const handleClear = () => {
+    setLocalValue('');
+    setTestResult(null);
+    if (onClear) {
+      onClear();
+    }
+  };
+
+  const handleTest = async () => {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const api = isAdmin ? adminApi : settingsApi;
+      let result;
+      if (provider === 'opensky' && openskyFields) {
+        result = await api.testApiKey(provider, undefined, {
+          clientId: openskyFields.clientId,
+          clientSecret: openskyFields.clientSecret,
+        });
+      } else {
+        result = await api.testApiKey(provider, localValue || value);
+      }
+      setTestResult(result);
+    } catch (error: any) {
+      setTestResult({
+        success: false,
+        message: error.response?.data?.message || error.message || 'Test fehlgeschlagen',
+      });
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  return (
+    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3">
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="font-semibold text-gray-900 dark:text-white">{label}</h3>
+            {(() => {
+              // Check if user has own key (for OpenSky, check only clientId)
+              const hasOwnKey = provider === 'opensky' && openskyFields
+                ? !!openskyFields.clientId
+                : !!value;
+              
+              // If user has own key, show "Eigener Schlüssel"
+              if (hasOwnKey) {
+                return (
+                  <span className="px-2 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded" title={t('settings:apiKeys.ownTooltip') || 'Eigener API-Schlüssel eingegeben'}>
+                    {t('settings:apiKeys.own')}
+                  </span>
+                );
+              }
+              
+              // If user has access (via shared key or ENV), show "Geteilt"
+              if (hasAccess) {
+                return (
+                  <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded" title={t('settings:apiKeys.sharedTooltip') || 'Vom Administrator geteilter Schlüssel'}>
+                    {t('settings:apiKeys.shared')}
+                  </span>
+                );
+              }
+              
+              // Only show "Nicht konfiguriert" if no access at all
+              return (
+                <span className="px-2 py-0.5 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded" title={t('settings:apiKeys.notConfiguredTooltip') || 'Kein API-Schlüssel konfiguriert'}>
+                  {t('settings:apiKeys.notConfigured')}
+                </span>
+              );
+            })()}
+          </div>
+          <p className="text-sm text-gray-600 dark:text-gray-400">{description}</p>
+        </div>
+      </div>
+
+      {provider === 'opensky' && openskyFields ? (
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              {t('settings:apiKeys.opensky.clientId')}
+            </label>
+            <div className="flex gap-2">
+              <input
+                type={showKey ? 'text' : 'password'}
+                value={openskyFields.clientId || ''}
+                onChange={(e) => openskyFields.onClientIdChange?.(e.target.value)}
+                placeholder={isShared ? t('settings:apiKeys.sharedPlaceholder') : t('settings:apiKeys.enterKey')}
+                disabled={isShared}
+                className="flex-1 input"
+              />
+              <button
+                type="button"
+                onClick={() => setShowKey(!showKey)}
+                className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                title={showKey ? t('settings:apiKeys.hide') : t('settings:apiKeys.show')}
+              >
+                {showKey ? (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                )}
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              {t('settings:apiKeys.opensky.clientSecret')}
+            </label>
+            <input
+              type={showKey ? 'text' : 'password'}
+              value={openskyFields.clientSecret || ''}
+              onChange={(e) => openskyFields.onClientSecretChange?.(e.target.value)}
+              placeholder={isShared ? t('settings:apiKeys.sharedPlaceholder') : t('settings:apiKeys.enterKey')}
+              disabled={isShared}
+              className="w-full input"
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="flex gap-2">
+          <input
+            type={showKey ? 'text' : 'password'}
+            value={localValue}
+            onChange={(e) => handleChange(e.target.value)}
+            placeholder={isShared ? t('settings:apiKeys.sharedPlaceholder') : t('settings:apiKeys.enterKey')}
+            disabled={isShared}
+            className="flex-1 input"
+          />
+          <button
+            type="button"
+            onClick={() => setShowKey(!showKey)}
+            className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            title={showKey ? t('settings:apiKeys.hide') : t('settings:apiKeys.show')}
+          >
+            {showKey ? (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+            )}
+          </button>
+          {!isShared && localValue && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+              title={t('settings:apiKeys.clear')}
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm">
+          <a
+            href={getKeyUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1"
+          >
+            {t('settings:apiKeys.getKey')} →
+          </a>
+          {isShared && (
+            <span className="text-gray-500 dark:text-gray-400 text-xs">
+              {t('settings:apiKeys.sharedNote')}
+            </span>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={handleTest}
+          disabled={testing || isShared || (!localValue && !value && (!openskyFields || !openskyFields.clientId))}
+          className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-md transition-colors flex items-center gap-2"
+        >
+          {testing ? (
+            <>
+              <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              {t('settings:apiKeys.testing')}
+            </>
+          ) : (
+            <>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {t('settings:apiKeys.test')}
+            </>
+          )}
+        </button>
+      </div>
+      {testResult && (
+        <div className={`mt-2 p-2 rounded-md text-sm ${
+          testResult.success
+            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+            : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+        }`}>
+          {testResult.success ? (
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              {testResult.message}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              {testResult.message}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+

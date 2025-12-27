@@ -1,6 +1,7 @@
 import { Router, Response, NextFunction } from 'express';
 import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
+import logger from '../utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
 import { z } from 'zod';
@@ -102,6 +103,15 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
       message: 'Backup started',
     });
   } catch (error) {
+    logger.error({
+      operation: 'backup_create_error',
+      message: 'Failed to create backup',
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : undefined,
+      },
+    });
     next(error);
   }
 });

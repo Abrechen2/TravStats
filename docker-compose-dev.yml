@@ -70,6 +70,10 @@ services:
       # Training Settings (can be overridden in .env.dev.local)
       PYTHON_CMD: ${PYTHON_CMD:-python3}
       DOCKER: ${DOCKER:-true}
+      # Backup Settings
+      BACKUP_PATH: /app/data/backups
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      DOCKER_DB_CONTAINER: ${DOCKER_DB_CONTAINER:-travstats-db-dev}
     ports:
       - "3004:80"  # Map to nginx internal port 80 (not 3000!)
     volumes:

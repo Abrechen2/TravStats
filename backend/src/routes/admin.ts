@@ -28,6 +28,13 @@ import {
   searchLogsQuerySchema,
 } from '../schemas/admin';
 import { getParserFeedbackStats } from '../services/parserFeedback';
+import {
+  testOpenAIKey,
+  testClaudeKey,
+  testAirlabsKey,
+  testAviationstackKey,
+  testOpenSkyCredentials,
+} from '../services/apiKeyTester';
 import { analyzeFeedbackForPatterns, getPatternAnalysisSummary } from '../services/patternAnalyzer';
 import {
   getPendingPatternSuggestions,
@@ -309,8 +316,16 @@ router.get('/parser-settings', async (req: AuthRequest, res: Response, next: Nex
     res.json({
       globalOpenaiApiKey: decryptApiKey(adminSettings.globalOpenaiApiKey) || undefined,
       globalClaudeApiKey: decryptApiKey(adminSettings.globalClaudeApiKey) || undefined,
+      globalAirlabsApiKey: decryptApiKey(adminSettings.globalAirlabsApiKey) || undefined,
+      globalAviationstackApiKey: decryptApiKey(adminSettings.globalAviationstackApiKey) || undefined,
+      globalOpenskyClientId: decryptApiKey(adminSettings.globalOpenskyClientId) || undefined,
+      globalOpenskyClientSecret: decryptApiKey(adminSettings.globalOpenskyClientSecret) || undefined,
+      globalOpenskyUsername: decryptApiKey(adminSettings.globalOpenskyUsername) || undefined,
+      globalOpenskyPassword: decryptApiKey(adminSettings.globalOpenskyPassword) || undefined,
       allowUserApiKeys: adminSettings.allowUserApiKeys,
       requireUserApiKeys: adminSettings.requireUserApiKeys,
+      allowUserFlightApiKeys: adminSettings.allowUserFlightApiKeys,
+      requireUserFlightApiKeys: adminSettings.requireUserFlightApiKeys,
       defaultVisionParser: adminSettings.defaultVisionParser,
       defaultTextParser: adminSettings.defaultTextParser,
     });
@@ -425,6 +440,138 @@ router.put('/training-config', requireAdmin, async (req: AuthRequest, res: Respo
   }
 });
 
+// Global API keys schema
+const globalApiKeysSchema = z.object({
+  globalAirlabsApiKey: z.string().optional().nullable(),
+  globalAviationstackApiKey: z.string().optional().nullable(),
+  globalOpenskyClientId: z.string().optional().nullable(),
+  globalOpenskyClientSecret: z.string().optional().nullable(),
+  globalOpenskyUsername: z.string().optional().nullable(),
+  globalOpenskyPassword: z.string().optional().nullable(),
+  allowUserFlightApiKeys: z.boolean().optional(),
+  requireUserFlightApiKeys: z.boolean().optional(),
+}).partial();
+
+// Get global API keys
+router.get('/api-keys', requireAdmin, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const adminSettings = await prisma.adminSettings.findFirst();
+
+    if (!adminSettings) {
+      return res.json({
+        globalAirlabsApiKey: undefined,
+        globalAviationstackApiKey: undefined,
+        globalOpenskyClientId: undefined,
+        globalOpenskyClientSecret: undefined,
+        globalOpenskyUsername: undefined,
+        globalOpenskyPassword: undefined,
+        allowUserFlightApiKeys: true,
+        requireUserFlightApiKeys: false,
+      });
+    }
+
+    // Safely access fields that might not exist yet
+    const safeGet = (field: string) => {
+      try {
+        return (adminSettings as any)[field];
+      } catch {
+        return null;
+      }
+    };
+
+    res.json({
+      globalAirlabsApiKey: decryptApiKey(safeGet('globalAirlabsApiKey')) || undefined,
+      globalAviationstackApiKey: decryptApiKey(safeGet('globalAviationstackApiKey')) || undefined,
+      globalOpenskyClientId: decryptApiKey(safeGet('globalOpenskyClientId')) || undefined,
+      globalOpenskyClientSecret: decryptApiKey(safeGet('globalOpenskyClientSecret')) || undefined,
+      globalOpenskyUsername: decryptApiKey(safeGet('globalOpenskyUsername')) || undefined,
+      globalOpenskyPassword: decryptApiKey(safeGet('globalOpenskyPassword')) || undefined,
+      allowUserFlightApiKeys: safeGet('allowUserFlightApiKeys') ?? true,
+      requireUserFlightApiKeys: safeGet('requireUserFlightApiKeys') ?? false,
+    });
+  } catch (error) {
+    logger.error({
+      operation: 'get_global_api_keys_error',
+      message: 'Failed to get global API keys',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    next(error);
+  }
+});
+
+// Update global API keys
+router.put('/api-keys', requireAdmin, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const payload = globalApiKeysSchema.parse(req.body);
+
+    let adminSettings = await prisma.adminSettings.findFirst();
+
+    const updateData: any = {};
+
+    // Encrypt flight lookup API keys before storing
+    if (payload.globalAirlabsApiKey !== undefined) {
+      updateData.globalAirlabsApiKey = encryptApiKey(payload.globalAirlabsApiKey);
+    }
+    if (payload.globalAviationstackApiKey !== undefined) {
+      updateData.globalAviationstackApiKey = encryptApiKey(payload.globalAviationstackApiKey);
+    }
+    if (payload.globalOpenskyClientId !== undefined) {
+      updateData.globalOpenskyClientId = encryptApiKey(payload.globalOpenskyClientId);
+    }
+    if (payload.globalOpenskyClientSecret !== undefined) {
+      updateData.globalOpenskyClientSecret = encryptApiKey(payload.globalOpenskyClientSecret);
+    }
+    if (payload.globalOpenskyUsername !== undefined) {
+      updateData.globalOpenskyUsername = encryptApiKey(payload.globalOpenskyUsername);
+    }
+    if (payload.globalOpenskyPassword !== undefined) {
+      updateData.globalOpenskyPassword = encryptApiKey(payload.globalOpenskyPassword);
+    }
+    if (payload.allowUserFlightApiKeys !== undefined) {
+      updateData.allowUserFlightApiKeys = payload.allowUserFlightApiKeys;
+    }
+    if (payload.requireUserFlightApiKeys !== undefined) {
+      updateData.requireUserFlightApiKeys = payload.requireUserFlightApiKeys;
+    }
+
+    if (adminSettings) {
+      adminSettings = await prisma.adminSettings.update({
+        where: { id: adminSettings.id },
+        data: updateData,
+      });
+    } else {
+      adminSettings = await prisma.adminSettings.create({
+        data: {
+          allowUserApiKeys: true,
+          requireUserApiKeys: false,
+          defaultVisionParser: 'auto',
+          defaultTextParser: 'auto',
+          allowUserFlightApiKeys: true,
+          requireUserFlightApiKeys: false,
+          ...updateData,
+        },
+      });
+    }
+
+    res.json({
+      message: 'Global API keys updated successfully',
+      settings: {
+        globalAirlabsApiKey: decryptApiKey(adminSettings.globalAirlabsApiKey) || undefined,
+        globalAviationstackApiKey: decryptApiKey(adminSettings.globalAviationstackApiKey) || undefined,
+        globalOpenskyClientId: decryptApiKey(adminSettings.globalOpenskyClientId) || undefined,
+        globalOpenskyClientSecret: decryptApiKey(adminSettings.globalOpenskyClientSecret) || undefined,
+        globalOpenskyUsername: decryptApiKey(adminSettings.globalOpenskyUsername) || undefined,
+        globalOpenskyPassword: decryptApiKey(adminSettings.globalOpenskyPassword) || undefined,
+        allowUserFlightApiKeys: adminSettings.allowUserFlightApiKeys,
+        requireUserFlightApiKeys: adminSettings.requireUserFlightApiKeys,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Update admin parser settings
 router.put('/parser-settings', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -477,6 +624,8 @@ router.put('/parser-settings', async (req: AuthRequest, res: Response, next: Nex
           globalClaudeApiKey: encryptApiKey(globalClaudeApiKey),
           allowUserApiKeys: allowUserApiKeys ?? true,
           requireUserApiKeys: requireUserApiKeys ?? false,
+          allowUserFlightApiKeys: true,
+          requireUserFlightApiKeys: false,
           defaultVisionParser: defaultVisionParser || 'auto',
           defaultTextParser: defaultTextParser || 'auto',
         },
@@ -752,6 +901,57 @@ router.get('/parser-feedback/details', async (req: AuthRequest, res: Response, n
       feedback: filtered,
       total,
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Test API key endpoints (admin)
+router.post('/api-keys/test/openai', requireAdmin, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { apiKey } = req.body;
+    const result = await testOpenAIKey(apiKey);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/api-keys/test/claude', requireAdmin, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { apiKey } = req.body;
+    const result = await testClaudeKey(apiKey);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/api-keys/test/airlabs', requireAdmin, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { apiKey } = req.body;
+    const result = await testAirlabsKey(apiKey);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/api-keys/test/aviationstack', requireAdmin, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { apiKey } = req.body;
+    const result = await testAviationstackKey(apiKey);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/api-keys/test/opensky', requireAdmin, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { clientId, clientSecret, username, password } = req.body;
+    const result = await testOpenSkyCredentials({ clientId, clientSecret, username, password });
+    res.json(result);
   } catch (error) {
     next(error);
   }
