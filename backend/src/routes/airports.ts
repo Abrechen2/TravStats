@@ -15,7 +15,7 @@ router.get('/search', airportSearchLimiter, async (req: Request, res: Response, 
   try {
     const { q } = req.query;
 
-    if (!q || typeof q !== 'string') {
+    if (!q || typeof q !== 'string' || q.length > 100) {
       return res.json([]);
     }
 

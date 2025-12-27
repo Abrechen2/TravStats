@@ -365,26 +365,54 @@ export async function startAirportSeeding(): Promise<string> {
   const airportCount = await prisma.airport.count();
   if (airportCount > 0) {
     // Create a completed status if airports already exist
-    const status = await prisma.airportSeedingStatus.create({
-      data: {
-        status: 'completed',
-        totalAirports: airportCount,
-        processedAirports: airportCount,
-        startedAt: new Date(),
-        completedAt: new Date(),
-      },
-    });
-    return status.id;
+    try {
+      const status = await prisma.airportSeedingStatus.create({
+        data: {
+          status: 'completed',
+          totalAirports: airportCount,
+          processedAirports: airportCount,
+          startedAt: new Date(),
+          completedAt: new Date(),
+        },
+      });
+      return status.id;
+    } catch (error: any) {
+      // If another process already created a status, return existing one
+      if (error.code === 'P2002') {
+        const existing = await prisma.airportSeedingStatus.findFirst({
+          orderBy: { createdAt: 'desc' },
+        });
+        if (existing) return existing.id;
+      }
+      throw error;
+    }
   }
 
-  // Create new seeding status
-  const status = await prisma.airportSeedingStatus.create({
-    data: {
-      status: 'pending',
-      totalAirports: 0,
-      processedAirports: 0,
-    },
-  });
+  // Create new seeding status with race condition protection
+  let status;
+  try {
+    status = await prisma.airportSeedingStatus.create({
+      data: {
+        status: 'pending',
+        totalAirports: 0,
+        processedAirports: 0,
+      },
+    });
+  } catch (error: any) {
+    // If another process already created a status, check for existing pending/running status
+    if (error.code === 'P2002' || error.message?.includes('unique')) {
+      const existing = await prisma.airportSeedingStatus.findFirst({
+        where: {
+          status: { in: ['pending', 'running'] },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (existing) {
+        return existing.id;
+      }
+    }
+    throw error;
+  }
 
   seedingStatusId = status.id;
   seedingInProgress = true;
@@ -467,6 +495,8 @@ export async function getSeedingStatus(): Promise<{
 export function isSeedingInProgress(): boolean {
   return seedingInProgress;
 }
+
+
 
 
 

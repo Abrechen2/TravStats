@@ -5,6 +5,11 @@ import { useTranslation } from '../hooks/useTranslation';
 
 // #region agent log
 const debugLog = (location: string, message: string, data: any = {}, hypothesisId?: string) => {
+  // Only log in development mode
+  if (import.meta.env.MODE !== 'development') {
+    return;
+  }
+  
   const logEntry = {
     location,
     message,

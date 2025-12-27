@@ -49,17 +49,17 @@ describe('Admin Routes', () => {
   describe('GET /api/admin/users', () => {
     it('should allow admin to get all users', async () => {
       const response = await request(app)
-        .get('/api/admin/users')
+        .get('/api/v1/admin/users')
         .set('Cookie', [`auth_token=${adminToken}`]);
 
       expect(response.status).toBe(200);
-      expect(Array.isArray(response.body)).toBe(true);
-      expect(response.body.length).toBeGreaterThan(0);
+      expect(Array.isArray(response.body?.users)).toBe(true);
+      expect(response.body.users.length).toBeGreaterThan(0);
     });
 
     it('should deny access to non-admin users', async () => {
       const response = await request(app)
-        .get('/api/admin/users')
+        .get('/api/v1/admin/users')
         .set('Cookie', [`auth_token=${userToken}`]);
 
       expect(response.status).toBe(403);
@@ -67,7 +67,7 @@ describe('Admin Routes', () => {
 
     it('should deny access to unauthenticated requests', async () => {
       const response = await request(app)
-        .get('/api/admin/users');
+        .get('/api/v1/admin/users');
 
       expect(response.status).toBe(401);
     });
@@ -90,7 +90,7 @@ describe('Admin Routes', () => {
 
     it('should allow admin to deactivate a user', async () => {
       const response = await request(app)
-        .patch(`/api/admin/users/${testUserToDelete.id}`)
+        .patch(`/api/v1/admin/users/${testUserToDelete.id}/toggle-active`)
         .set('Cookie', [`auth_token=${adminToken}`])
         .send({ isActive: false });
 
@@ -107,7 +107,7 @@ describe('Admin Routes', () => {
 
     it('should deny non-admin from deactivating users', async () => {
       const response = await request(app)
-        .patch(`/api/admin/users/${testUserToDelete.id}`)
+        .patch(`/api/v1/admin/users/${testUserToDelete.id}/toggle-active`)
         .set('Cookie', [`auth_token=${userToken}`])
         .send({ isActive: false });
 
@@ -124,7 +124,7 @@ describe('Admin Routes', () => {
   describe('Admin Statistics', () => {
     it('should allow admin to view system stats', async () => {
       const response = await request(app)
-        .get('/api/admin/stats')
+        .get('/api/v1/admin/system/info')
         .set('Cookie', [`auth_token=${adminToken}`]);
 
       // If implemented, should return stats
@@ -138,7 +138,7 @@ describe('Admin Routes', () => {
 
     it('should deny non-admin access to stats', async () => {
       const response = await request(app)
-        .get('/api/admin/stats')
+        .get('/api/v1/admin/system/info')
         .set('Cookie', [`auth_token=${userToken}`]);
 
       expect([401, 403, 404]).toContain(response.status);

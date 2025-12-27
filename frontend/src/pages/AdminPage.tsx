@@ -3,6 +3,7 @@ import { useToastStore } from '../store/toastStore';
 import { adminApi } from '../lib/api';
 import { format } from 'date-fns';
 import { logger } from '../lib/logger';
+import NavigationBar from '../components/NavigationBar';
 import InlineHelp from '../components/Help/InlineHelp';
 import BackupManagement from '../components/Admin/BackupManagement';
 import { useTranslation } from '../hooks/useTranslation';
@@ -341,23 +342,28 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <NavigationBar />
+        <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
           Admin Panel
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          {t('admin:title')}
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          {t('admin:description')}
-        </p>
-      </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <NavigationBar />
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            {t('admin:title')}
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            {t('admin:description')}
+          </p>
+        </div>
 
       {/* Tabs */}
       <div className="flex space-x-1 mb-6 border-b border-gray-200 dark:border-gray-700">
@@ -2152,6 +2158,7 @@ export default function AdminPage() {
         <BackupManagement />
       )}
 
+      </div>
     </div>
   );
 }

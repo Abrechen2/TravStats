@@ -21,6 +21,10 @@
     "title": "Anzeige & Sprache",
     "description": "Modus, Sprache und Zeitzone zentral steuern.",
     "language": "Sprache",
+    "languages": {
+      "de": "Deutsch",
+      "en": "English"
+    },
     "timezone": "Zeitzone",
     "dateFormat": "Datumsformat",
     "timeFormat": "Zeitformat",

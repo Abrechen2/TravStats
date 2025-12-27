@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { setupApi } from '../lib/api';
+import { useAuthStore } from '../store/authStore';
 import { useTranslation } from '../hooks/useTranslation';
 
 export default function SetupPage() {
   const navigate = useNavigate();
   const { t } = useTranslation(['setup', 'common']);
+  const { setAuth } = useAuthStore();
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -39,25 +41,23 @@ export default function SetupPage() {
     setLoading(true);
 
     try {
-      await setupApi.initialize(
+      const response = await setupApi.initialize(
         formData.username,
         formData.password,
         formData.instanceName
       );
 
+      // Automatically log in the user with the returned user data
+      setAuth(response.user);
+
       // Show success state
       setSuccess(true);
       setLoading(false);
 
-      // Redirect to login after 3 seconds
+      // Redirect to dashboard after 2 seconds (user is already logged in)
       setTimeout(() => {
-        navigate('/login', {
-          state: {
-            message: t('setup:loginPrompt'),
-            username: formData.username
-          }
-        });
-      }, 3000);
+        navigate('/');
+      }, 2000);
     } catch (err: unknown) {
       const apiError = err as { response?: { data?: { error?: string } } };
       setError(apiError.response?.data?.error || t('setup:errors.failed'));

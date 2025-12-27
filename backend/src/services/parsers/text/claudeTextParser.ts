@@ -33,11 +33,19 @@ export class ClaudeTextParser implements ITextParser {
       throw new Error('Claude API key not configured');
     }
 
-    if (!this.client || apiKey) {
+    // Reset client if API key changed
+    if (!this.client || (apiKey && this.client.apiKey !== key)) {
       this.client = new Anthropic({ apiKey: key });
     }
 
     return this.client;
+  }
+
+  /**
+   * Reset client instance (useful when API key changes)
+   */
+  resetClient(): void {
+    this.client = null;
   }
 
   async checkAvailability(apiKey?: string): Promise<ProviderAvailability> {

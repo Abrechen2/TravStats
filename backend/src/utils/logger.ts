@@ -20,15 +20,44 @@ import { getLoggingConfig } from '../services/loggingConfig';
 // Log directory path
 const LOG_DIR = path.join(process.cwd(), '..', 'data', 'logs');
 
-// Create rotating file stream
-function createRotatingStream(category: string, maxSizeMB: number = 10, maxFiles: number = 7) {
-  return createStream(`${category}.log`, {
-    size: `${maxSizeMB}M`,  // Rotate at configured size
-    interval: '1d',  // Daily rotation
-    path: LOG_DIR,
-    compress: 'gzip',  // Compress rotated files
-    maxFiles,  // Keep configured number of files
-  });
+// Create rotating file stream with error handling
+function createRotatingStream(category: string, maxSizeMB: number = 10, maxFiles: number = 7): NodeJS.WritableStream | null {
+  try {
+    const stream = createStream(`${category}.log`, {
+      size: `${maxSizeMB}M`,  // Rotate at configured size
+      interval: '1d',  // Daily rotation
+      path: LOG_DIR,
+      compress: 'gzip',  // Compress rotated files
+      maxFiles,  // Keep configured number of files
+    });
+
+    // Register error handler to prevent unhandled errors from crashing the process
+    stream.on('error', (error: NodeJS.ErrnoException) => {
+      // Check if it's a permission error
+      if (error.code === 'EACCES' || error.code === 'EPERM') {
+        console.warn(`[Logger] Permission denied for log file ${category}.log: ${error.message}`);
+        console.warn(`[Logger] File logging disabled for ${category} - using console only`);
+      } else {
+        console.warn(`[Logger] Error writing to log file ${category}.log: ${error.message}`);
+      }
+      
+      // Close the stream gracefully
+      try {
+        if (typeof (stream as any).end === 'function') {
+          (stream as any).end();
+        }
+      } catch (closeError) {
+        // Ignore errors when closing
+      }
+    });
+
+    return stream;
+  } catch (error: any) {
+    // If stream creation fails (e.g., permission denied), log warning and return null
+    console.warn(`[Logger] Could not create rotating stream for ${category}.log:`, error?.message || error);
+    console.warn(`[Logger] File logging disabled for ${category} - using console only`);
+    return null;
+  }
 }
 
 // Cache for dynamic category streams
@@ -145,16 +174,22 @@ try {
       }
 
       // App log (all levels) - always enabled
-      streams.push({
-        level: 'trace',
-        stream: createRotatingStream('app'),
-      });
+      const appStream = createRotatingStream('app');
+      if (appStream) {
+        streams.push({
+          level: 'trace',
+          stream: appStream,
+        });
+      }
 
       // Error log (errors only) - always enabled
-      streams.push({
-        level: 'error',
-        stream: createRotatingStream('error'),
-      });
+      const errorStream = createRotatingStream('error');
+      if (errorStream) {
+        streams.push({
+          level: 'error',
+          stream: errorStream,
+        });
+      }
     } catch (streamError: any) {
       console.warn('Could not create log file streams:', streamError?.message || streamError);
       console.warn('Logging to files disabled - using console only');
@@ -200,50 +235,71 @@ export async function initializeCategoryStreams(): Promise<void> {
     categoryStreams.clear();
 
     // Always create security log (security events should always be logged)
-    categoryStreams.set('security', {
-      level: 'warn', // Only warnings and errors for security
-      stream: createRotatingStream('security', config.maxLogFileSize, config.maxLogFiles),
-    });
+    const securityStream = createRotatingStream('security', config.maxLogFileSize, config.maxLogFiles);
+    if (securityStream) {
+      categoryStreams.set('security', {
+        level: 'warn', // Only warnings and errors for security
+        stream: securityStream,
+      });
+    }
 
     // Parser logs (if enabled)
     if (config.logParserOperations && config.debugLoggingEnabled) {
       // Main parser log (all parser operations)
-      categoryStreams.set('parser', {
-        level: 'debug',
-        stream: createRotatingStream('parser', config.maxLogFileSize, config.maxLogFiles),
-      });
+      const parserStream = createRotatingStream('parser', config.maxLogFileSize, config.maxLogFiles);
+      if (parserStream) {
+        categoryStreams.set('parser', {
+          level: 'debug',
+          stream: parserStream,
+        });
+      }
 
       // Detailed parser category logs
-      categoryStreams.set('parser-vision', {
-        level: 'debug',
-        stream: createRotatingStream('parser-vision', config.maxLogFileSize, config.maxLogFiles),
-      });
+      const parserVisionStream = createRotatingStream('parser-vision', config.maxLogFileSize, config.maxLogFiles);
+      if (parserVisionStream) {
+        categoryStreams.set('parser-vision', {
+          level: 'debug',
+          stream: parserVisionStream,
+        });
+      }
 
-      categoryStreams.set('parser-text', {
-        level: 'debug',
-        stream: createRotatingStream('parser-text', config.maxLogFileSize, config.maxLogFiles),
-      });
+      const parserTextStream = createRotatingStream('parser-text', config.maxLogFileSize, config.maxLogFiles);
+      if (parserTextStream) {
+        categoryStreams.set('parser-text', {
+          level: 'debug',
+          stream: parserTextStream,
+        });
+      }
 
-      categoryStreams.set('parser-factory', {
-        level: 'debug',
-        stream: createRotatingStream('parser-factory', config.maxLogFileSize, config.maxLogFiles),
-      });
+      const parserFactoryStream = createRotatingStream('parser-factory', config.maxLogFileSize, config.maxLogFiles);
+      if (parserFactoryStream) {
+        categoryStreams.set('parser-factory', {
+          level: 'debug',
+          stream: parserFactoryStream,
+        });
+      }
     }
 
     // HTTP logs (if enabled)
     if (config.logHttpRequests && config.debugLoggingEnabled) {
-      categoryStreams.set('http', {
-        level: 'debug',
-        stream: createRotatingStream('http', config.maxLogFileSize, config.maxLogFiles),
-      });
+      const httpStream = createRotatingStream('http', config.maxLogFileSize, config.maxLogFiles);
+      if (httpStream) {
+        categoryStreams.set('http', {
+          level: 'debug',
+          stream: httpStream,
+        });
+      }
     }
 
     // Database logs (if enabled)
     if (config.logDatabaseQueries && config.debugLoggingEnabled) {
-      categoryStreams.set('database', {
-        level: 'debug',
-        stream: createRotatingStream('database', config.maxLogFileSize, config.maxLogFiles),
-      });
+      const databaseStream = createRotatingStream('database', config.maxLogFileSize, config.maxLogFiles);
+      if (databaseStream) {
+        categoryStreams.set('database', {
+          level: 'debug',
+          stream: databaseStream,
+        });
+      }
     }
 
     streamsInitialized = true;
@@ -304,10 +360,14 @@ function createCategoryStreams(category: string): pino.StreamEntry[] {
   try {
     const fs = require('fs');
     if (fs.existsSync(LOG_DIR)) {
-      categoryStreamsArray.push(
-        { level: 'trace', stream: createRotatingStream('app') },
-        { level: 'error', stream: createRotatingStream('error') }
-      );
+      const appStream = createRotatingStream('app');
+      const errorStream = createRotatingStream('error');
+      if (appStream) {
+        categoryStreamsArray.push({ level: 'trace', stream: appStream });
+      }
+      if (errorStream) {
+        categoryStreamsArray.push({ level: 'error', stream: errorStream });
+      }
     }
   } catch (error) {
     // Ignore errors for base streams

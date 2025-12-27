@@ -3,6 +3,7 @@ import { trainingApi } from '../../lib/api';
 import { logger } from '../../lib/logger';
 import Tesseract from 'tesseract.js';
 import { Flight, combineDateTime, splitDateTime } from './types';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface BoardingPassAnnotationProps {
   trainingDataId: string;
@@ -105,6 +106,7 @@ async function extractTextFromBoundingBox(
 }
 
 export default function BoardingPassAnnotation({ trainingDataId, onComplete, onCancel }: BoardingPassAnnotationProps) {
+  const { t } = useTranslation(['training', 'common']);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [boundingBoxes, setBoundingBoxes] = useState<BoundingBox[]>([]);
@@ -172,7 +174,7 @@ export default function BoardingPassAnnotation({ trainingDataId, onComplete, onC
             };
             img.onerror = () => {
               logger.error('Failed to load image');
-              alert('Fehler beim Laden des Bildes');
+              alert(t('training:errors.loadImageFailed'));
             };
             img.src = annotationsData.imageBase64;
           }
@@ -205,7 +207,7 @@ export default function BoardingPassAnnotation({ trainingDataId, onComplete, onC
         }
       } catch (error) {
         logger.error('Failed to load training data:', error);
-        alert('Fehler beim Laden der Training-Daten');
+        alert(t('training:errors.loadFailed'));
       } finally {
         setLoading(false);
       }
@@ -520,7 +522,7 @@ export default function BoardingPassAnnotation({ trainingDataId, onComplete, onC
       onComplete();
     } catch (error) {
       logger.error('Failed to save annotation:', error);
-      alert('Fehler beim Speichern');
+      alert(t('training:errors.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -533,7 +535,7 @@ export default function BoardingPassAnnotation({ trainingDataId, onComplete, onC
           Boarding Pass Annotation
         </h2>
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          Bild wird geladen...
+          {t('training:annotation.imageLoading')}
         </p>
       </div>
     );
@@ -545,14 +547,14 @@ export default function BoardingPassAnnotation({ trainingDataId, onComplete, onC
         Boarding Pass Annotation
       </h2>
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-        Zeichne Bounding Boxes um relevante Bereiche
+        {t('training:annotation.drawBoundingBoxes')}
       </p>
 
       <div className="space-y-4">
         {/* Label-Auswahl und Bearbeitung */}
         <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-300 dark:border-gray-600">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {selectedBoxIndex !== null ? 'Label für ausgewählte Box ändern' : 'Label wählen (vor dem Zeichnen)'}
+            {selectedBoxIndex !== null ? t('training:annotation.changeLabelForSelected') : t('training:annotation.selectLabelBeforeDrawing')}
           </label>
           <div className="flex gap-2">
             <select
@@ -560,7 +562,7 @@ export default function BoardingPassAnnotation({ trainingDataId, onComplete, onC
               onChange={(e) => setSelectedLabel(e.target.value)}
               className="input flex-1"
             >
-              <option value="">Label wählen...</option>
+              <option value="">{t('training:annotation.selectLabel')}</option>
               <option value="flightNumber">Flight Number</option>
               <option value="departureCode">Departure Code</option>
               <option value="arrivalCode">Arrival Code</option>
@@ -596,7 +598,7 @@ export default function BoardingPassAnnotation({ trainingDataId, onComplete, onC
                   }}
                   className="btn-secondary"
                 >
-                  Abbrechen
+                  {t('common:buttons.cancel')}
                 </button>
               </>
             )}
@@ -605,18 +607,18 @@ export default function BoardingPassAnnotation({ trainingDataId, onComplete, onC
                 onClick={handleCancelDrawing}
                 className="btn-secondary"
               >
-                Zeichnen abbrechen (ESC)
+                {t('training:annotation.cancelDrawing')}
               </button>
             )}
           </div>
           {selectedBoxIndex !== null && (
             <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-              Box {selectedBoxIndex + 1} ausgewählt. Klicke auf eine andere Box oder ändere das Label.
+              {t('training:annotation.boxSelected', { index: selectedBoxIndex + 1 })}
             </p>
           )}
           {currentBox && (
             <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-              Zeichne eine Box. Drücke ESC oder klicke "Abbrechen" zum Abbrechen.
+              {t('training:annotation.drawingInstructions')}
             </p>
           )}
         </div>
@@ -906,7 +908,7 @@ export default function BoardingPassAnnotation({ trainingDataId, onComplete, onC
               disabled={saving}
               className="btn-secondary"
             >
-              Abbrechen
+              {t('common:buttons.cancel')}
             </button>
           )}
           <button
@@ -914,14 +916,14 @@ export default function BoardingPassAnnotation({ trainingDataId, onComplete, onC
             disabled={saving}
             className="btn-secondary"
           >
-            {saving ? 'Speichern...' : 'Nur speichern'}
+            {saving ? t('training:annotation.saving') : t('training:annotation.saveOnly')}
           </button>
           <button
             onClick={() => handleSave(true)}
             disabled={saving}
             className="btn-primary"
           >
-            {saving ? 'Speichern...' : 'Speichern & Trainieren'}
+            {saving ? t('training:annotation.saving') : t('training:annotation.saveAndTrain')}
           </button>
         </div>
       </div>

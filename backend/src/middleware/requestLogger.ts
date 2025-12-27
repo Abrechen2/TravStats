@@ -2,6 +2,11 @@ import { Request, Response, NextFunction } from 'express';
 import { httpLogger, generateRequestId, enrichWithRequest } from '../utils/logger';
 import { shouldLogHttpRequests } from '../services/loggingConfig';
 
+// Cache for shouldLogHttpRequests result (5 min TTL)
+let cachedShouldLog: boolean | null = null;
+let cacheTimestamp: number = 0;
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
 /**
  * Request Logger Middleware
  *
@@ -42,8 +47,13 @@ export async function requestLoggerMiddleware(
     const endMemory = process.memoryUsage().heapUsed;
     const memoryDelta = endMemory - startMemory;
 
-    // Only log if HTTP request logging is enabled
-    const shouldLog = await shouldLogHttpRequests();
+    // Only log if HTTP request logging is enabled (with caching)
+    const now = Date.now();
+    if (cachedShouldLog === null || (now - cacheTimestamp) > CACHE_TTL_MS) {
+      cachedShouldLog = await shouldLogHttpRequests();
+      cacheTimestamp = now;
+    }
+    const shouldLog = cachedShouldLog;
 
     if (shouldLog) {
       const context = {

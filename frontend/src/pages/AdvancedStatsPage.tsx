@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { flightsApi } from '../lib/api';
-import DarkModeToggle from '../components/DarkModeToggle';
+import { flightsApi, statsApi } from '../lib/api';
+import NavigationBar from '../components/NavigationBar';
 import FlightCalendar from '../components/FlightCalendar';
 import YearHeatmap from '../components/YearHeatmap';
 import ContextualHint from '../components/Onboarding/ContextualHint';
-import type { Flight } from '../types';
+import type { Flight, FunStats, BusinessStats, UniqueStats } from '../types';
 import { STORAGE_KEYS } from '../lib/constants';
 import { useTranslation } from '../hooks/useTranslation';
+import { useSettingsStore } from '../store/settingsStore';
+import { convertDistance, formatDistance, formatCurrency, getDistanceLabel, getCurrencySymbol } from '../lib/units';
 import {
   BarChart,
   Bar,
@@ -26,8 +28,12 @@ export default function AdvancedStatsPage() {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const { t } = useTranslation(['stats', 'common']);
+  const { units } = useSettingsStore();
   const [flights, setFlights] = useState<Flight[]>([]);
   const [loading, setLoading] = useState(true);
+  const [funStats, setFunStats] = useState<FunStats | null>(null);
+  const [businessStats, setBusinessStats] = useState<BusinessStats | null>(null);
+  const [uniqueStats, setUniqueStats] = useState<UniqueStats | null>(null);
 
   useEffect(() => {
     loadFlights();
@@ -62,6 +68,31 @@ export default function AdvancedStatsPage() {
       }
 
       setFlights(allFlights);
+      
+      // Load additional statistics
+      const [fun, business, unique] = await Promise.all([
+        statsApi.getFunStats().catch((err) => {
+          console.error('Failed to load fun stats:', err);
+          return null;
+        }),
+        statsApi.getBusinessStats().catch((err) => {
+          console.error('Failed to load business stats:', err);
+          return null;
+        }),
+        statsApi.getUniqueStats().catch((err) => {
+          console.error('Failed to load unique stats:', err);
+          return null;
+        }),
+      ]);
+      
+      if (fun) setFunStats(fun);
+      if (business) setBusinessStats(business);
+      if (unique) {
+        console.log('Loaded unique stats:', unique);
+        setUniqueStats(unique);
+      } else {
+        console.warn('Unique stats are null or failed to load');
+      }
     } catch (error) {
       console.error('Failed to load flights:', error);
     } finally {
@@ -309,31 +340,7 @@ export default function AdvancedStatsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700">
-        <div className="px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => navigate('/')}
-              className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
-            >
-              {t('stats:back')}
-            </button>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {t('stats:title')}
-            </h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-gray-600 dark:text-gray-300">
-              {t('stats:welcome', { username: user?.username })}
-            </span>
-            <DarkModeToggle />
-            <button onClick={logout} className="btn-secondary">
-              {t('stats:logout')}
-            </button>
-          </div>
-        </div>
-      </header>
+      <NavigationBar />
 
       {/* Main Content */}
       <div className="container mx-auto px-6 py-8">
@@ -537,16 +544,16 @@ export default function AdvancedStatsPage() {
               <h3 className="text-sm font-medium opacity-90 mb-2">
                 {t('stats:distance.totalDistance')}
               </h3>
-              <p className="text-4xl font-bold">{totalDistance.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, '.')}</p>
-              <p className="text-sm opacity-75 mt-1">{t('stats:distance.kilometers')}</p>
+              <p className="text-4xl font-bold">{convertDistance(totalDistance, units.distanceUnit).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, '.')}</p>
+              <p className="text-sm opacity-75 mt-1">{getDistanceLabel(units.distanceUnit, t)}</p>
             </div>
 
             <div className="bg-gradient-to-br from-purple-500 to-purple-600 dark:from-purple-700 dark:to-purple-800 rounded-lg p-6 text-white shadow-md">
               <h3 className="text-sm font-medium opacity-90 mb-2">
                 {t('stats:distance.avgPerFlight')}
               </h3>
-              <p className="text-4xl font-bold">{avgDistance.toFixed(0)}</p>
-              <p className="text-sm opacity-75 mt-1">{t('stats:distance.kilometers')}</p>
+              <p className="text-4xl font-bold">{convertDistance(avgDistance, units.distanceUnit).toFixed(0)}</p>
+              <p className="text-sm opacity-75 mt-1">{getDistanceLabel(units.distanceUnit, t)}</p>
             </div>
 
             <div className="bg-gradient-to-br from-green-500 to-green-600 dark:from-green-700 dark:to-green-800 rounded-lg p-6 text-white shadow-md">
@@ -569,11 +576,11 @@ export default function AdvancedStatsPage() {
               <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3">
                 <div
                   className="bg-green-500 dark:bg-green-600 rounded-full h-3 transition-all"
-                  style={{ width: `${Math.min(earthCircumnavigations * 100, 100)}%` }}
+                  style={{ width: `${Math.min((earthCircumnavigations / 1) * 100, 100)}%` }}
                 />
               </div>
               <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-                {t('stats:distance.earthCircumferenceKm')}
+                {formatDistance(earthCircumference, units.distanceUnit, t)} {t('stats:distance.circumference')}
               </p>
             </div>
 
@@ -591,49 +598,45 @@ export default function AdvancedStatsPage() {
                 />
               </div>
               <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-                {t('stats:distance.moonDistanceKm')}
+                {formatDistance(moonDistance, units.distanceUnit, t)} {t('stats:distance.distance')}
               </p>
             </div>
 
-            {marsPercentage > 0.01 && (
-              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-gray-900 dark:text-white font-medium">
-                    {t('stats:distance.pathToMars')}
-                  </span>
-                  <span className="text-gray-900 dark:text-white font-bold">{marsPercentage.toFixed(4)}%</span>
-                </div>
-                <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3">
-                  <div
-                    className="bg-red-500 dark:bg-red-600 rounded-full h-3 transition-all"
-                    style={{ width: `${Math.min(marsPercentage * 1000, 100)}%` }}
-                  />
-                </div>
-                <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-                  {t('stats:distance.marsDistanceKm')}
-                </p>
+            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-gray-900 dark:text-white font-medium">
+                  {t('stats:distance.pathToMars')}
+                </span>
+                <span className="text-gray-900 dark:text-white font-bold">{marsPercentage.toFixed(4)}%</span>
               </div>
-            )}
+              <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3">
+                <div
+                  className="bg-red-500 dark:bg-red-600 rounded-full h-3 transition-all"
+                  style={{ width: `${Math.min(marsPercentage, 100)}%` }}
+                />
+              </div>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+                {formatDistance(marsDistance, units.distanceUnit, t)} {t('stats:distance.distance')} ({t('stats:distance.average')})
+              </p>
+            </div>
 
-            {voyagerPercentage > 0.00001 && (
-              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-gray-900 dark:text-white font-medium">
-                    {t('stats:distance.pathToVoyager')}
-                  </span>
-                  <span className="text-gray-900 dark:text-white font-bold">{voyagerPercentage.toFixed(6)}%</span>
-                </div>
-                <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3">
-                  <div
-                    className="bg-cyan-500 dark:bg-cyan-600 rounded-full h-3 transition-all"
-                    style={{ width: `${Math.min(voyagerPercentage * 10000, 100)}%` }}
-                  />
-                </div>
-                <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-                  {t('stats:distance.voyagerDistanceKm')}
-                </p>
+            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-gray-900 dark:text-white font-medium">
+                  {t('stats:distance.pathToVoyager')}
+                </span>
+                <span className="text-gray-900 dark:text-white font-bold">{voyagerPercentage.toFixed(6)}%</span>
               </div>
-            )}
+              <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3">
+                <div
+                  className="bg-cyan-500 dark:bg-cyan-600 rounded-full h-3 transition-all"
+                  style={{ width: `${Math.min(voyagerPercentage, 100)}%` }}
+                />
+              </div>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+                {formatDistance(voyagerDistance, units.distanceUnit, t)} {t('stats:distance.fromEarth')}
+              </p>
+            </div>
           </div>
 
           {/* Longest/Shortest Distance */}
@@ -643,7 +646,7 @@ export default function AdvancedStatsPage() {
                 <h3 className="text-sm font-medium opacity-90 mb-2">
                   {t('stats:distance.longestDistance')}
                 </h3>
-                <p className="text-2xl font-bold mb-1">{longestDistance.distance.toFixed(0)} km</p>
+                <p className="text-2xl font-bold mb-1">{formatDistance(longestDistance.distance, units.distanceUnit, t)}</p>
                 <p className="text-sm opacity-75">
                   {longestDistance.flight.depIata || longestDistance.flight.depIcao} → {longestDistance.flight.arrIata || longestDistance.flight.arrIcao}
                 </p>
@@ -653,7 +656,7 @@ export default function AdvancedStatsPage() {
                 <h3 className="text-sm font-medium opacity-90 mb-2">
                   {t('stats:distance.shortestDistance')}
                 </h3>
-                <p className="text-2xl font-bold mb-1">{shortestDistance.distance.toFixed(0)} km</p>
+                <p className="text-2xl font-bold mb-1">{formatDistance(shortestDistance.distance, units.distanceUnit, t)}</p>
                 <p className="text-sm opacity-75">
                   {shortestDistance.flight.depIata || shortestDistance.flight.depIcao} → {shortestDistance.flight.arrIata || shortestDistance.flight.arrIcao}
                 </p>
@@ -849,6 +852,359 @@ export default function AdvancedStatsPage() {
                   {shortestFlight.duration?.toFixed(1) || '0.0'}h
                 </p>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Fun Statistics */}
+        {funStats && (
+          <div className="mt-8">
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
+              {t('stats:fun.title')}
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="bg-gradient-to-br from-purple-500 to-purple-600 dark:from-purple-700 dark:to-purple-800 rounded-lg p-6 text-white shadow-md">
+                <h3 className="text-sm font-medium opacity-90 mb-2">{t('stats:fun.timezoneHopper')}</h3>
+                <p className="text-4xl font-bold mb-1">{funStats.timezoneHopper}</p>
+                <p className="text-sm opacity-75">{t('stats:fun.timezoneHopperDesc', { count: funStats.timezoneHopper })}</p>
+              </div>
+
+              <div className="bg-gradient-to-br from-yellow-500 to-orange-500 dark:from-yellow-700 dark:to-orange-700 rounded-lg p-6 text-white shadow-md">
+                <h3 className="text-sm font-medium opacity-90 mb-2">{t('stats:fun.earlyBird')}</h3>
+                <p className="text-4xl font-bold mb-1">{funStats.earlyBird}</p>
+                <p className="text-sm opacity-75">{t('stats:fun.earlyBirdDesc', { count: funStats.earlyBird })}</p>
+              </div>
+
+              <div className="bg-gradient-to-br from-indigo-500 to-blue-500 dark:from-indigo-700 dark:to-blue-700 rounded-lg p-6 text-white shadow-md">
+                <h3 className="text-sm font-medium opacity-90 mb-2">{t('stats:fun.nightOwl')}</h3>
+                <p className="text-4xl font-bold mb-1">{funStats.nightOwl}</p>
+                <p className="text-sm opacity-75">{t('stats:fun.nightOwlDesc', { count: funStats.nightOwl })}</p>
+              </div>
+
+              <div className="bg-gradient-to-br from-pink-500 to-rose-500 dark:from-pink-700 dark:to-rose-700 rounded-lg p-6 text-white shadow-md">
+                <h3 className="text-sm font-medium opacity-90 mb-2">{t('stats:fun.weekendWarrior')}</h3>
+                <p className="text-4xl font-bold mb-1">{funStats.weekendWarrior}</p>
+                <p className="text-sm opacity-75">{t('stats:fun.weekendWarriorDesc', { count: funStats.weekendWarrior, percentage: funStats.weekendPercentage })}</p>
+              </div>
+
+              <div className="bg-gradient-to-br from-emerald-500 to-teal-500 dark:from-emerald-700 dark:to-teal-700 rounded-lg p-6 text-white shadow-md">
+                <h3 className="text-sm font-medium opacity-90 mb-2">{t('stats:fun.loyaltyScore')}</h3>
+                <p className="text-4xl font-bold mb-1">{funStats.loyaltyScore}%</p>
+                <p className="text-sm opacity-75">{t('stats:fun.loyaltyScoreDesc', { score: funStats.loyaltyScore, airline: funStats.mostUsedAirline || 'N/A' })}</p>
+              </div>
+
+              <div className="bg-gradient-to-br from-cyan-500 to-blue-500 dark:from-cyan-700 dark:to-blue-700 rounded-lg p-6 text-white shadow-md">
+                <h3 className="text-sm font-medium opacity-90 mb-2">{t('stats:fun.shortHaulKing')}</h3>
+                <p className="text-4xl font-bold mb-1">{funStats.shortHaulKing}</p>
+                <p className="text-sm opacity-75">{t('stats:fun.shortHaulKingDesc', { count: funStats.shortHaulKing })}</p>
+              </div>
+
+              <div className="bg-gradient-to-br from-red-500 to-orange-500 dark:from-red-700 dark:to-orange-700 rounded-lg p-6 text-white shadow-md">
+                <h3 className="text-sm font-medium opacity-90 mb-2">{t('stats:fun.longHaulPilot')}</h3>
+                <p className="text-4xl font-bold mb-1">{funStats.longHaulPilot}</p>
+                <p className="text-sm opacity-75">{t('stats:fun.longHaulPilotDesc', { count: funStats.longHaulPilot })}</p>
+              </div>
+
+              {funStats.fastestDay && (
+                <div className="bg-gradient-to-br from-violet-500 to-purple-500 dark:from-violet-700 dark:to-purple-700 rounded-lg p-6 text-white shadow-md">
+                  <h3 className="text-sm font-medium opacity-90 mb-2">{t('stats:fun.fastestDay')}</h3>
+                  <p className="text-2xl font-bold mb-1">{funStats.fastestDayFlights}</p>
+                  <p className="text-sm opacity-75">{t('stats:fun.fastestDayDesc', { date: new Date(funStats.fastestDay).toLocaleDateString(), count: funStats.fastestDayFlights })}</p>
+                </div>
+              )}
+
+              <div className="bg-gradient-to-br from-green-500 to-emerald-500 dark:from-green-700 dark:to-emerald-700 rounded-lg p-6 text-white shadow-md">
+                <h3 className="text-sm font-medium opacity-90 mb-2">{t('stats:fun.co2Footprint')}</h3>
+                <p className="text-3xl font-bold mb-1">{funStats.co2FootprintKg.toLocaleString()} kg</p>
+                <p className="text-sm opacity-75">{t('stats:fun.co2FootprintDesc', { kg: funStats.co2FootprintKg.toLocaleString(), elephants: funStats.co2InElephants.toFixed(1) })}</p>
+              </div>
+
+              {funStats.milestoneYear && (
+                <div className="bg-gradient-to-br from-amber-500 to-yellow-500 dark:from-amber-700 dark:to-yellow-700 rounded-lg p-6 text-white shadow-md">
+                  <h3 className="text-sm font-medium opacity-90 mb-2">{t('stats:fun.milestoneYear')}</h3>
+                  <p className="text-4xl font-bold mb-1">{funStats.milestoneYear}</p>
+                  <p className="text-sm opacity-75">{t('stats:fun.milestoneYearDesc', { year: funStats.milestoneYear, count: funStats.milestoneYearFlights })}</p>
+                </div>
+              )}
+
+              {funStats.routeMaster && (
+                <div className="bg-gradient-to-br from-sky-500 to-cyan-500 dark:from-sky-700 dark:to-cyan-700 rounded-lg p-6 text-white shadow-md">
+                  <h3 className="text-sm font-medium opacity-90 mb-2">{t('stats:fun.routeMaster')}</h3>
+                  <p className="text-2xl font-bold mb-1">{funStats.routeMaster}</p>
+                  <p className="text-sm opacity-75">{t('stats:fun.routeMasterDesc', { route: funStats.routeMaster, count: funStats.routeMasterCount })}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Business Statistics */}
+        {businessStats && (
+          <div className="mt-8">
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
+              {t('stats:business.title')}
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">{t('stats:business.costPerKm')}</h3>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">{formatCurrency(businessStats.costPerKm, units.currency)}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('stats:business.costPerKmDesc', { cost: businessStats.costPerKm.toFixed(2) })}</p>
+              </div>
+
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">{t('stats:business.costPerHour')}</h3>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">{formatCurrency(businessStats.costPerHour, units.currency)}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('stats:business.costPerHourDesc', { cost: businessStats.costPerHour.toFixed(2) })}</p>
+              </div>
+
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">{t('stats:business.totalCost')}</h3>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">{formatCurrency(businessStats.totalCost, units.currency)}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('stats:business.totalCostDesc', { cost: businessStats.totalCost.toLocaleString(), distance: formatDistance(businessStats.totalDistance, units.distanceUnit, t) })}</p>
+              </div>
+
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">{t('stats:business.airportDiversity')}</h3>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">{businessStats.airportDiversity}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('stats:business.airportDiversityDesc', { count: businessStats.airportDiversity })}</p>
+              </div>
+
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">{t('stats:business.avgFlightDuration')}</h3>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">{businessStats.avgFlightDuration.toFixed(1)}h</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('stats:business.avgFlightDurationDesc', { hours: businessStats.avgFlightDuration.toFixed(1) })}</p>
+              </div>
+
+              {businessStats.busiestMonth && (
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">{t('stats:business.busiestMonth')}</h3>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white">{businessStats.busiestMonth}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('stats:business.busiestMonthDesc', { month: businessStats.busiestMonth, count: businessStats.busiestMonthFlights })}</p>
+                </div>
+              )}
+
+              {businessStats.mostCommonCategory && (
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                  <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">{t('stats:business.mostCommonCategory')}</h3>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white capitalize">{businessStats.mostCommonCategory}</p>
+                </div>
+              )}
+
+              {Object.keys(businessStats.seatClassDistribution).length > 0 && (
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 col-span-1 md:col-span-2 lg:col-span-3">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('stats:business.seatClassDistribution')}</h3>
+                  <div className="space-y-2">
+                    {Object.entries(businessStats.seatClassDistribution).map(([seatClass, percentage]) => (
+                      <div key={seatClass} className="flex items-center justify-between">
+                        <span className="text-gray-700 dark:text-gray-300 capitalize">{seatClass.replace('_', ' ')}</span>
+                        <div className="flex items-center gap-4">
+                          <div className="w-32 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            <div
+                              className="bg-blue-500 dark:bg-blue-600 h-2 rounded-full"
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+                          <span className="text-sm font-semibold text-gray-900 dark:text-white w-12 text-right">{percentage}%</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Unique Statistics */}
+        {uniqueStats ? (
+          <div className="mt-8">
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
+              {t('stats:unique.title')}
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Always show some stats even if values are 0 */}
+              <div className="bg-gradient-to-br from-indigo-600 to-purple-600 dark:from-indigo-800 dark:to-purple-800 rounded-lg p-6 text-white shadow-md">
+                <h3 className="text-sm font-medium opacity-90 mb-2">{t('stats:unique.timeTravelIndex')}</h3>
+                <p className="text-4xl font-bold mb-1">{uniqueStats.timeTravelIndex}</p>
+                <p className="text-sm opacity-75">{t('stats:unique.timeTravelIndexDesc', { count: uniqueStats.timeTravelIndex })}</p>
+              </div>
+
+              <div className="bg-gradient-to-br from-orange-500 to-red-500 dark:from-orange-700 dark:to-red-700 rounded-lg p-6 text-white shadow-md">
+                <h3 className="text-sm font-medium opacity-90 mb-2">{t('stats:unique.equatorCrossings')}</h3>
+                <p className="text-4xl font-bold mb-1">{uniqueStats.equatorCrossings}</p>
+                <p className="text-sm opacity-75">{t('stats:unique.equatorCrossingsDesc', { count: uniqueStats.equatorCrossings })}</p>
+              </div>
+
+              <div className="bg-gradient-to-br from-cyan-500 to-blue-500 dark:from-cyan-700 dark:to-blue-700 rounded-lg p-6 text-white shadow-md">
+                <h3 className="text-sm font-medium opacity-90 mb-2">{t('stats:unique.arcticFlights')}</h3>
+                <p className="text-4xl font-bold mb-1">{uniqueStats.arcticFlights}</p>
+                <p className="text-sm opacity-75">{t('stats:unique.arcticFlightsDesc', { count: uniqueStats.arcticFlights })}</p>
+              </div>
+
+              <div className="bg-gradient-to-br from-blue-500 to-teal-500 dark:from-blue-700 dark:to-teal-700 rounded-lg p-6 text-white shadow-md">
+                <h3 className="text-sm font-medium opacity-90 mb-2">{t('stats:unique.oceanCrossings')}</h3>
+                <p className="text-4xl font-bold mb-1">{uniqueStats.oceanCrossings}</p>
+                <p className="text-sm opacity-75">{t('stats:unique.oceanCrossingsDesc', { count: uniqueStats.oceanCrossings })}</p>
+              </div>
+
+              {uniqueStats.hemisphereHops !== undefined && (
+                <div className="bg-gradient-to-br from-emerald-500 to-green-500 dark:from-emerald-700 dark:to-green-700 rounded-lg p-6 text-white shadow-md">
+                  <h3 className="text-sm font-medium opacity-90 mb-2">{t('stats:unique.hemisphereHops')}</h3>
+                  <p className="text-4xl font-bold mb-1">{uniqueStats.hemisphereHops}</p>
+                  <p className="text-sm opacity-75">{t('stats:unique.hemisphereHopsDesc', { count: uniqueStats.hemisphereHops })}</p>
+                </div>
+              )}
+
+              {uniqueStats.dateLineCrossings !== undefined && (
+                <div className="bg-gradient-to-br from-violet-500 to-fuchsia-500 dark:from-violet-700 dark:to-fuchsia-700 rounded-lg p-6 text-white shadow-md">
+                  <h3 className="text-sm font-medium opacity-90 mb-2">{t('stats:unique.dateLineCrossings')}</h3>
+                  <p className="text-4xl font-bold mb-1">{uniqueStats.dateLineCrossings}</p>
+                  <p className="text-sm opacity-75">{t('stats:unique.dateLineCrossingsDesc', { count: uniqueStats.dateLineCrossings })}</p>
+                </div>
+              )}
+
+              {uniqueStats.continentalExplorer !== undefined && (
+                <div className="bg-gradient-to-br from-amber-500 to-yellow-500 dark:from-amber-700 dark:to-yellow-700 rounded-lg p-6 text-white shadow-md">
+                  <h3 className="text-sm font-medium opacity-90 mb-2">{t('stats:unique.continentalExplorer')}</h3>
+                  <p className="text-4xl font-bold mb-1">{uniqueStats.continentalExplorer}</p>
+                  <p className="text-sm opacity-75">{t('stats:unique.continentalExplorerDesc', { count: uniqueStats.continentalExplorer })}</p>
+                  {uniqueStats.continents && uniqueStats.continents.length > 0 && (
+                    <p className="text-xs opacity-60 mt-2">{uniqueStats.continents.join(', ')}</p>
+                  )}
+                </div>
+              )}
+
+              {uniqueStats.tropicsTraveler !== undefined && (
+                <div className="bg-gradient-to-br from-orange-400 to-yellow-400 dark:from-orange-600 dark:to-yellow-600 rounded-lg p-6 text-white shadow-md">
+                  <h3 className="text-sm font-medium opacity-90 mb-2">{t('stats:unique.tropicsTraveler')}</h3>
+                  <p className="text-4xl font-bold mb-1">{uniqueStats.tropicsTraveler}</p>
+                  <p className="text-sm opacity-75">{t('stats:unique.tropicsTravelerDesc', { count: uniqueStats.tropicsTraveler })}</p>
+                </div>
+              )}
+
+              {uniqueStats.eastWestBalance && (
+                <div className="bg-gradient-to-br from-slate-500 to-gray-500 dark:from-slate-700 dark:to-gray-700 rounded-lg p-6 text-white shadow-md">
+                  <h3 className="text-sm font-medium opacity-90 mb-2">{t('stats:unique.eastWestBalance')}</h3>
+                  <p className="text-2xl font-bold mb-1">{uniqueStats.eastWestBalance.eastward}E / {uniqueStats.eastWestBalance.westward}W</p>
+                  <p className="text-sm opacity-75">{t('stats:unique.eastWestBalanceDesc', { 
+                    eastward: uniqueStats.eastWestBalance.eastward, 
+                    westward: uniqueStats.eastWestBalance.westward,
+                    ratio: uniqueStats.eastWestBalance.ratio.toFixed(2)
+                  })}</p>
+                </div>
+              )}
+
+              {uniqueStats.sameDayReturns !== undefined && (
+                <div className="bg-gradient-to-br from-teal-500 to-cyan-500 dark:from-teal-700 dark:to-cyan-700 rounded-lg p-6 text-white shadow-md">
+                  <h3 className="text-sm font-medium opacity-90 mb-2">{t('stats:unique.sameDayReturns')}</h3>
+                  <p className="text-4xl font-bold mb-1">{uniqueStats.sameDayReturns}</p>
+                  <p className="text-sm opacity-75">{t('stats:unique.sameDayReturnsDesc', { count: uniqueStats.sameDayReturns })}</p>
+                </div>
+              )}
+
+              {uniqueStats.midnightFlights !== undefined && (
+                <div className="bg-gradient-to-br from-indigo-600 to-blue-600 dark:from-indigo-800 dark:to-blue-800 rounded-lg p-6 text-white shadow-md">
+                  <h3 className="text-sm font-medium opacity-90 mb-2">{t('stats:unique.midnightFlights')}</h3>
+                  <p className="text-4xl font-bold mb-1">{uniqueStats.midnightFlights}</p>
+                  <p className="text-sm opacity-75">{t('stats:unique.midnightFlightsDesc', { count: uniqueStats.midnightFlights })}</p>
+                </div>
+              )}
+
+              {uniqueStats.seasonalExplorer !== undefined && (
+                <div className="bg-gradient-to-br from-green-500 to-emerald-500 dark:from-green-700 dark:to-emerald-700 rounded-lg p-6 text-white shadow-md">
+                  <h3 className="text-sm font-medium opacity-90 mb-2">{t('stats:unique.seasonalExplorer')}</h3>
+                  <p className="text-4xl font-bold mb-1">{uniqueStats.seasonalExplorer ? '✓' : '✗'}</p>
+                  <p className="text-sm opacity-75">{t('stats:unique.seasonalExplorerDesc', { count: uniqueStats.seasonsCount || 0 })}</p>
+                </div>
+              )}
+
+              {uniqueStats.internationalVsDomestic && (
+                <div className="bg-gradient-to-br from-purple-500 to-pink-500 dark:from-purple-700 dark:to-pink-700 rounded-lg p-6 text-white shadow-md">
+                  <h3 className="text-sm font-medium opacity-90 mb-2">{t('stats:unique.internationalVsDomestic')}</h3>
+                  <p className="text-2xl font-bold mb-1">{uniqueStats.internationalVsDomestic.international}I / {uniqueStats.internationalVsDomestic.domestic}D</p>
+                  <p className="text-sm opacity-75">{t('stats:unique.internationalVsDomesticDesc', { 
+                    international: uniqueStats.internationalVsDomestic.international,
+                    domestic: uniqueStats.internationalVsDomestic.domestic,
+                    ratio: uniqueStats.internationalVsDomestic.ratio.toFixed(2)
+                  })}</p>
+                </div>
+              )}
+
+              {uniqueStats.roundTripMaster !== undefined && (
+                <div className="bg-gradient-to-br from-cyan-500 to-blue-500 dark:from-cyan-700 dark:to-blue-700 rounded-lg p-6 text-white shadow-md">
+                  <h3 className="text-sm font-medium opacity-90 mb-2">{t('stats:unique.roundTripMaster')}</h3>
+                  <p className="text-4xl font-bold mb-1">{uniqueStats.roundTripMaster}</p>
+                  <p className="text-sm opacity-75">{t('stats:unique.roundTripMasterDesc', { count: uniqueStats.roundTripMaster })}</p>
+                </div>
+              )}
+
+              {uniqueStats.highestAirport && (
+                <div className="bg-gradient-to-br from-gray-600 to-gray-700 dark:from-gray-800 dark:to-gray-900 rounded-lg p-6 text-white shadow-md">
+                  <h3 className="text-sm font-medium opacity-90 mb-2">{t('stats:unique.highestAirport')}</h3>
+                  <p className="text-2xl font-bold mb-1">{uniqueStats.highestAirport.name}</p>
+                  <p className="text-sm opacity-75">{t('stats:unique.highestAirportDesc', { name: uniqueStats.highestAirport.name, code: uniqueStats.highestAirport.code, altitude: uniqueStats.highestAirport.altitude })}</p>
+                </div>
+              )}
+
+              {uniqueStats.northernmost && (
+                <div className="bg-gradient-to-br from-sky-500 to-cyan-500 dark:from-sky-700 dark:to-cyan-700 rounded-lg p-6 text-white shadow-md">
+                  <h3 className="text-sm font-medium opacity-90 mb-2">{t('stats:unique.northernmost')}</h3>
+                  <p className="text-2xl font-bold mb-1">{uniqueStats.northernmost.code}</p>
+                  <p className="text-sm opacity-75">{t('stats:unique.northernmostDesc', { code: uniqueStats.northernmost.code, lat: uniqueStats.northernmost.lat.toFixed(2) })}</p>
+                </div>
+              )}
+
+              {uniqueStats.southernmost && (
+                <div className="bg-gradient-to-br from-teal-500 to-green-500 dark:from-teal-700 dark:to-green-700 rounded-lg p-6 text-white shadow-md">
+                  <h3 className="text-sm font-medium opacity-90 mb-2">{t('stats:unique.southernmost')}</h3>
+                  <p className="text-2xl font-bold mb-1">{uniqueStats.southernmost.code}</p>
+                  <p className="text-sm opacity-75">{t('stats:unique.southernmostDesc', { code: uniqueStats.southernmost.code, lat: Math.abs(uniqueStats.southernmost.lat).toFixed(2) })}</p>
+                </div>
+              )}
+
+              {uniqueStats.longestTravelChain > 1 && (
+                <div className="bg-gradient-to-br from-violet-500 to-purple-500 dark:from-violet-700 dark:to-purple-700 rounded-lg p-6 text-white shadow-md">
+                  <h3 className="text-sm font-medium opacity-90 mb-2">{t('stats:unique.longestTravelChain')}</h3>
+                  <p className="text-4xl font-bold mb-1">{uniqueStats.longestTravelChain}</p>
+                  <p className="text-sm opacity-75">{t('stats:unique.longestTravelChainDesc', { count: uniqueStats.longestTravelChain })}</p>
+                </div>
+              )}
+
+              {uniqueStats.fastestRoute && (
+                <div className="bg-gradient-to-br from-yellow-500 to-orange-500 dark:from-yellow-700 dark:to-orange-700 rounded-lg p-6 text-white shadow-md">
+                  <h3 className="text-sm font-medium opacity-90 mb-2">{t('stats:unique.fastestRoute')}</h3>
+                  <p className="text-2xl font-bold mb-1">{uniqueStats.fastestRoute.route}</p>
+                  <p className="text-sm opacity-75">{t('stats:unique.fastestRouteDesc', { route: uniqueStats.fastestRoute.route, speed: uniqueStats.fastestRoute.speed })}</p>
+                </div>
+              )}
+
+              {uniqueStats.mostCountriesInDay > 0 && uniqueStats.mostCountriesDate && (
+                <div className="bg-gradient-to-br from-rose-500 to-pink-500 dark:from-rose-700 dark:to-pink-700 rounded-lg p-6 text-white shadow-md">
+                  <h3 className="text-sm font-medium opacity-90 mb-2">{t('stats:unique.mostCountriesInDay')}</h3>
+                  <p className="text-4xl font-bold mb-1">{uniqueStats.mostCountriesInDay}</p>
+                  <p className="text-sm opacity-75">{t('stats:unique.mostCountriesInDayDesc', { count: uniqueStats.mostCountriesInDay, date: new Date(uniqueStats.mostCountriesDate).toLocaleDateString() })}</p>
+                </div>
+              )}
+
+              {uniqueStats.longestLayover && (
+                <div className="bg-gradient-to-br from-amber-600 to-orange-600 dark:from-amber-800 dark:to-orange-800 rounded-lg p-6 text-white shadow-md">
+                  <h3 className="text-sm font-medium opacity-90 mb-2">{t('stats:unique.longestLayover')}</h3>
+                  <p className="text-3xl font-bold mb-1">{uniqueStats.longestLayover.hours}h</p>
+                  <p className="text-sm opacity-75">{t('stats:unique.longestLayoverDesc', { 
+                    hours: uniqueStats.longestLayover.hours,
+                    from: uniqueStats.longestLayover.from
+                  })}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="mt-8">
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
+              {t('stats:unique.title')}
+            </h2>
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center">
+              <p className="text-gray-500 dark:text-gray-400">{t('stats:loading')}</p>
             </div>
           </div>
         )}

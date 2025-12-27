@@ -11,20 +11,44 @@ const UPLOAD_DIR = path.join(__dirname, '../../uploads/receipts');
 const EMAIL_UPLOAD_DIR = path.join(__dirname, '../../uploads/emails');
 
 // Ensure upload directories exist
-if (!fs.existsSync(UPLOAD_DIR)) {
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-  logger.info({
-    operation: 'upload_dir_created',
-    message: `Created upload directory: ${UPLOAD_DIR}`,
-    context: { directory: UPLOAD_DIR },
+// Wrap in try-catch to prevent startup failures if permissions are missing
+try {
+  if (!fs.existsSync(UPLOAD_DIR)) {
+    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+    logger.info({
+      operation: 'upload_dir_created',
+      message: `Created upload directory: ${UPLOAD_DIR}`,
+      context: { directory: UPLOAD_DIR },
+    });
+  }
+} catch (error: any) {
+  // Log warning but don't prevent startup - directory will be created on first upload attempt
+  console.warn(`[Upload] Could not create upload directory ${UPLOAD_DIR}:`, error?.message || error);
+  console.warn('[Upload] Uploads may fail until directory permissions are fixed');
+  logger.warn({
+    operation: 'upload_dir_creation_failed',
+    message: `Could not create upload directory: ${UPLOAD_DIR}`,
+    context: { directory: UPLOAD_DIR, error: error?.message || 'Unknown error' },
   });
 }
-if (!fs.existsSync(EMAIL_UPLOAD_DIR)) {
-  fs.mkdirSync(EMAIL_UPLOAD_DIR, { recursive: true });
-  logger.info({
-    operation: 'upload_email_dir_created',
-    message: `Created email upload directory: ${EMAIL_UPLOAD_DIR}`,
-    context: { directory: EMAIL_UPLOAD_DIR },
+
+try {
+  if (!fs.existsSync(EMAIL_UPLOAD_DIR)) {
+    fs.mkdirSync(EMAIL_UPLOAD_DIR, { recursive: true });
+    logger.info({
+      operation: 'upload_email_dir_created',
+      message: `Created email upload directory: ${EMAIL_UPLOAD_DIR}`,
+      context: { directory: EMAIL_UPLOAD_DIR },
+    });
+  }
+} catch (error: any) {
+  // Log warning but don't prevent startup - directory will be created on first upload attempt
+  console.warn(`[Upload] Could not create email upload directory ${EMAIL_UPLOAD_DIR}:`, error?.message || error);
+  console.warn('[Upload] Email uploads may fail until directory permissions are fixed');
+  logger.warn({
+    operation: 'upload_email_dir_creation_failed',
+    message: `Could not create email upload directory: ${EMAIL_UPLOAD_DIR}`,
+    context: { directory: EMAIL_UPLOAD_DIR, error: error?.message || 'Unknown error' },
   });
 }
 
@@ -78,12 +102,21 @@ export const uploadReceipt = multer({
 export function deleteReceiptFile(filename: string): void {
   const filePath = path.join(UPLOAD_DIR, filename);
   if (fs.existsSync(filePath)) {
-    fs.unlinkSync(filePath);
-    logger.debug({
-      operation: 'upload_receipt_deleted',
-      message: `Deleted receipt file: ${filename}`,
-      context: { filename },
-    });
+    try {
+      fs.unlinkSync(filePath);
+      logger.debug({
+        operation: 'upload_receipt_deleted',
+        message: `Deleted receipt file: ${filename}`,
+        context: { filename },
+      });
+    } catch (error) {
+      // Log warning but don't throw - file might already be deleted
+      logger.warn({
+        operation: 'upload_receipt_delete_error',
+        message: `Failed to delete receipt file: ${filename}`,
+        context: { filename, error: error instanceof Error ? error.message : 'Unknown error' },
+      });
+    }
   }
 }
 
@@ -114,13 +147,23 @@ export async function cleanupOldReceipts(prisma: any): Promise<number> {
 
     // Delete if not referenced
     if (!referencedFlight) {
-      fs.unlinkSync(filePath);
-      deletedCount++;
-      logger.debug({
-        operation: 'upload_receipt_cleanup',
-        message: `Cleaned up orphaned receipt: ${file}`,
-        context: { filename: file },
-      });
+      try {
+        fs.unlinkSync(filePath);
+        deletedCount++;
+        logger.debug({
+          operation: 'upload_receipt_cleanup',
+          message: `Cleaned up orphaned receipt: ${file}`,
+          context: { filename: file },
+        });
+      } catch (error) {
+        // Log warning but don't fail cleanup process
+        logger.warn({
+          operation: 'upload_receipt_cleanup_error',
+          message: `Failed to delete receipt file: ${file}`,
+          error: error instanceof Error ? error.message : 'Unknown error',
+          context: { filename: file },
+        });
+      }
     }
   }
 

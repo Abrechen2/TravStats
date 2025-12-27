@@ -15,8 +15,14 @@ import { collectLowQualityFeedback } from '../services/parserFeedback';
 const router = Router();
 
 const parseEmailSchema = z.object({
-  emailContent: z.string().min(1, 'Email content is required'),
-  subject: z.string().optional(),
+  emailContent: z.string().min(1, 'Email content is required').refine(
+    (val) => val.length <= 10 * 1024 * 1024,
+    { message: 'Email content too large (max 10MB)' }
+  ),
+  subject: z.string().optional().refine(
+    (val) => !val || val.length <= 1000,
+    { message: 'Subject too long (max 1000 characters)' }
+  ),
 });
 
 /**
@@ -34,7 +40,9 @@ const parseEmailSchema = z.object({
  */
 router.post('/parse-email', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const { emailContent, subject } = parseEmailSchema.parse(req.body);
+    const parsed = parseEmailSchema.parse(req.body);
+    const emailContent = parsed.emailContent;
+    const subject = parsed.subject;
     const userId = req.userId;
 
     logger.info(`[Email Parse] Parsing email for user ${userId}`);
@@ -45,7 +53,7 @@ router.post('/parse-email', authenticate, async (req: AuthRequest, res: Response
     const adminSettings = await getAdminParserSettings();
 
     const result = await parseBookingEmail(
-      subject,
+      subject || undefined,
       emailContent,
       undefined,
       userId ? { ...userSettings, userId } : userSettings || undefined,

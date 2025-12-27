@@ -10,6 +10,11 @@ import i18n from './i18n/config'
 // #region agent log
 // Debug logging helper - works in Docker/Unraid by also logging to console and localStorage
 const debugLog = (location: string, message: string, data: any = {}, hypothesisId?: string) => {
+  // Only log in development mode
+  if (import.meta.env.MODE !== 'development') {
+    return;
+  }
+  
   const logEntry = {
     location,
     message,

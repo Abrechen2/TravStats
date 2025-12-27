@@ -49,6 +49,17 @@
     "flightAdded": "Flight added successfully",
     "flightUpdated": "Flight updated successfully",
     "flightDeleted": "Flight deleted successfully"
+  },
+  "navigation": {
+    "title": "Navigation"
+  },
+  "welcome": "Welcome, {{username}}!",
+  "map": {
+    "view2d": "2D View",
+    "view3d": "3D View",
+    "help2d": "Switch to 2D view",
+    "help3d": "Switch to 3D view",
+    "helpExpanded": "Switch between 2D and 3D map views. The 3D view shows flight routes with altitude information."
   }
 }
 

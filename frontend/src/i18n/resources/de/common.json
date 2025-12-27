@@ -33,11 +33,14 @@
   "accessibility": {
     "close": "Schlie\u00dfen",
     "showHelp": "Hilfe anzeigen",
-    "closeHint": "Hinweis schlie\u00dfen"
+    "closeHint": "Hinweis schlie\u00dfen",
+    "toggleMenu": "Menü umschalten",
+    "back": "Zurück"
   },
   "help": {
     "more": "Mehr erfahren",
-    "less": "Weniger"
+    "less": "Weniger",
+    "clickForMore": "Klick für mehr Infos"
   },
   "theme": {
     "toggle": "Dark Mode umschalten",

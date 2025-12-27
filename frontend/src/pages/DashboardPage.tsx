@@ -11,7 +11,7 @@ import FlightEditModal from '../components/FlightEditModal';
 import Stats from '../components/Stats';
 import Filters from '../components/Filters';
 import ErrorBoundary from '../components/ErrorBoundary';
-import DarkModeToggle from '../components/DarkModeToggle';
+import NavigationBar from '../components/NavigationBar';
 import AchievementPopup from '../components/AchievementPopup';
 import OnboardingGuide from '../components/Onboarding/OnboardingGuide';
 import HelpIcon from '../components/Help/HelpIcon';
@@ -552,68 +552,16 @@ export default function DashboardPage() {
         onChange={handleImportFile}
         className="hidden"
       />
-      {/* Header */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700">
-        <div className="px-4 xl:px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {/* Mobile/Tablet Menu Button */}
-            <button
-              onClick={() => setNavOpen(!navOpen)}
-              className="xl:hidden p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              aria-label={t('common:accessibility.toggleMenu')}
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-            <img src="/logo.png" alt={t('common:app.logoAlt')} className="h-8 xl:h-10 w-auto" />
-            <h1 className="text-xl xl:text-2xl font-bold text-gray-900 dark:text-white">
-              {t('common:app.name')}
-            </h1>
-          </div>
-          <div className="flex items-center gap-2 xl:gap-4">
-
-            {/* Desktop Navigation Links (only on xl screens) */}
-            <Link
-              to="/achievements"
-              className="hidden xl:flex px-3 xl:px-4 py-2 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white rounded-lg font-semibold transition-all shadow-sm hover:shadow-md text-sm xl:text-base"
-            >
-              🏆 {t('dashboard:achievements')}
-            </Link>
-
-            <button
-              onClick={() => navigate('/stats')}
-              className="hidden xl:block px-3 xl:px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
-            >
-              {t('dashboard:stats')}
-            </button>
-
-            <Link
-              to="/settings"
-              className="hidden xl:flex px-3 xl:px-4 py-2 text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-            >
-              ⚙️ {t('dashboard:settings')}
-            </Link>
-
-            <span className="hidden xl:inline text-sm xl:text-base text-gray-600 dark:text-gray-300">
-              {t('dashboard:welcome', { username: user?.username || '' })}
-            </span>
-            <DarkModeToggle />
-            <button onClick={logout} className="btn-secondary text-sm xl:text-base px-3 xl:px-4">
-              {t('dashboard:logout')}
-            </button>
-          </div>
-        </div>
-      </header>
+      {/* Navigation Bar */}
+      <NavigationBar />
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col xl:flex-row overflow-hidden relative">
         {/* Mobile/Tablet Overlay Backdrop */}
-        {(navOpen || leftOpen || rightOpen) && (
+        {(leftOpen || rightOpen) && (
           <div
             className="xl:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
             onClick={() => {
-              setNavOpen(false);
               setLeftOpen(false);
               setRightOpen(false);
             }}

@@ -256,3 +256,90 @@ export interface OnboardingState {
   achievementsViewed: boolean;
   dismissed: boolean;
 }
+
+export interface FunStats {
+  timezoneHopper: number;
+  earlyBird: number;
+  afternoon: number;
+  nightOwl: number;
+  weekendWarrior: number;
+  weekendPercentage: number;
+  loyaltyScore: number;
+  mostUsedAirline: string | null;
+  shortHaulKing: number;
+  longHaulPilot: number;
+  fastestDay: string | null;
+  fastestDayFlights: number;
+  co2FootprintKg: number;
+  co2InElephants: number;
+  milestoneYear: number | null;
+  milestoneYearFlights: number;
+  routeMaster: string | null;
+  routeMasterCount: number;
+}
+
+export interface BusinessStats {
+  costPerKm: number;
+  costPerHour: number;
+  totalCost: number;
+  totalDistance: number;
+  seatClassDistribution: Record<string, number>;
+  mostCommonCategory: string | null;
+  airportDiversity: number;
+  avgFlightDuration: number;
+  busiestMonth: string | null;
+  busiestMonthFlights: number;
+  categoryDistribution: Record<string, number>;
+}
+
+export interface UniqueStats {
+  timeTravelIndex: number;
+  equatorCrossings: number;
+  arcticFlights: number;
+  oceanCrossings: number;
+  highestAirport: {
+    code: string;
+    name: string;
+    altitude: number;
+  } | null;
+  northernmost: {
+    lat: number;
+    code: string;
+  } | null;
+  southernmost: {
+    lat: number;
+    code: string;
+  } | null;
+  longestTravelChain: number;
+  fastestRoute: {
+    route: string;
+    speed: number;
+  } | null;
+  mostCountriesInDay: number;
+  mostCountriesDate: string | null;
+  hemisphereHops: number;
+  dateLineCrossings: number;
+  continentalExplorer: number;
+  continents: string[];
+  tropicsTraveler: number;
+  eastWestBalance: {
+    eastward: number;
+    westward: number;
+    ratio: number;
+  };
+  sameDayReturns: number;
+  midnightFlights: number;
+  seasonalExplorer: boolean;
+  seasonsCount: number;
+  internationalVsDomestic: {
+    international: number;
+    domestic: number;
+    ratio: number;
+  };
+  longestLayover: {
+    hours: number;
+    from: string;
+    to: string;
+  } | null;
+  roundTripMaster: number;
+}

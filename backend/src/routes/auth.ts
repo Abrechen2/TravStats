@@ -30,7 +30,7 @@ function getCookieSecure(req: Request): boolean {
   return false;
 }
 
-const getAuthCookieOptions = (req: Request): CookieOptions => ({
+export const getAuthCookieOptions = (req: Request): CookieOptions => ({
   httpOnly: true, // Prevents JavaScript access (XSS protection)
   secure: getCookieSecure(req), // Auto-detect HTTPS or use COOKIE_SECURE env var
   sameSite: 'lax',
@@ -180,13 +180,30 @@ router.post('/login', authLimiter, async (req: Request, res: Response, next: Nex
         });
 
         if (!existingStatus) {
-          const { startAirportSeeding } = await import('../services/airportSeedingService');
-          await startAirportSeeding();
-          logger.info({
-            operation: 'login_start_airport_seeding',
-            message: 'Airport seeding started after first login',
-            context: { userId: user.id, username: user.username },
-          });
+          try {
+            // Try to create a new seeding status record
+            // This will fail if another process already created one (race condition protection)
+            const { startAirportSeeding } = await import('../services/airportSeedingService');
+            await startAirportSeeding();
+            logger.info({
+              operation: 'login_start_airport_seeding',
+              message: 'Airport seeding started after first login',
+              context: { userId: user.id, username: user.username },
+            });
+          } catch (error: any) {
+            // If another process already started seeding, ignore the error
+            if (error.code === 'P2002') {
+              // P2002 = unique constraint violation (if we add a unique constraint)
+              logger.debug({
+                operation: 'login_airport_seeding_already_running',
+                message: 'Airport seeding already started by another process',
+                context: { userId: user.id },
+              });
+            } else {
+              // Re-throw other errors
+              throw error;
+            }
+          }
         }
       }
     } catch (error) {

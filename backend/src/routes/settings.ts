@@ -27,7 +27,6 @@ const settingsSchema = z.object({
   units: z.object({
     distanceUnit: z.enum(['kilometers', 'miles', 'nautical_miles']).optional(),
     currency: z.enum(['EUR', 'USD', 'GBP', 'CHF']).optional(),
-    temperature: z.enum(['celsius', 'fahrenheit']).optional(),
   }).partial().optional(),
   defaults: z.object({
     flightStatus: z.enum(['scheduled', 'flown']).optional(),
@@ -65,7 +64,7 @@ const settingsSchema = z.object({
 const defaultSettings = {
   profile: { username: 'Traveler', email: 'traveler@example.com', profilePicture: null },
   display: { theme: 'light', language: 'de', timezone: 'Europe/Berlin', dateFormat: 'DD.MM.YYYY', timeFormat: '24h' },
-  units: { distanceUnit: 'kilometers', currency: 'EUR', temperature: 'celsius' },
+  units: { distanceUnit: 'kilometers', currency: 'EUR' },
   defaults: { flightStatus: 'scheduled', seatClass: 'economy', favoriteAirline: 'Lufthansa', flightCategory: 'business' },
   map: { mapStyle: 'osm', zoomLevel: 3, markerStyle: 'pin', routeColor: '#2563eb' },
   notifications: { emailNotifications: true, flightReminder: '24h', checkInReminder: true, featureUpdates: true },

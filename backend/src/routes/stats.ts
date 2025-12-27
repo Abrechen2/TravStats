@@ -3,6 +3,8 @@ import { prisma } from '../db';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { calculateDistance } from '../utils/geo';
 import { Prisma } from '@prisma/client';
+import { calculateFunStats, calculateBusinessStats, calculateUniqueStats } from '../utils/statsCalculator';
+import logger from '../utils/logger';
 
 const router = Router();
 
@@ -27,13 +29,51 @@ router.get('/summary', async (req: AuthRequest, res: Response, next: NextFunctio
       }
     }
 
-    const flights = await prisma.flight.findMany({
-      where,
-    });
+    // Use database aggregation instead of loading all flights into memory
+    const [flights, statusCounts, airlineCounts, categoryCounts, costAgg] = await Promise.all([
+      // Get flights for distance/time calculations (we still need coordinates)
+      prisma.flight.findMany({
+        where,
+        select: {
+          depLat: true,
+          depLon: true,
+          arrLat: true,
+          arrLon: true,
+          departureTime: true,
+          arrivalTime: true,
+        },
+      }),
+      // Count by status using aggregation
+      prisma.flight.groupBy({
+        by: ['status'],
+        where,
+        _count: true,
+      }),
+      // Count by airline using aggregation
+      prisma.flight.groupBy({
+        by: ['airline'],
+        where,
+        _count: true,
+      }),
+      // Count by category using aggregation
+      prisma.flight.groupBy({
+        by: ['category'],
+        where,
+        _count: true,
+      }),
+      // Aggregate costs
+      prisma.flight.aggregate({
+        where,
+        _sum: {
+          price: true,
+          taxes: true,
+          fees: true,
+        },
+      }),
+    ]);
 
     let totalDistance = 0;
     let totalFlightTime = 0;
-    let totalCost = 0;
 
     flights.forEach(flight => {
       const distance = calculateDistance(
@@ -47,35 +87,35 @@ router.get('/summary', async (req: AuthRequest, res: Response, next: NextFunctio
       const flightTime =
         (flight.arrivalTime.getTime() - flight.departureTime.getTime()) / 1000 / 60; // minutes
       totalFlightTime += flightTime;
-
-      const costParts = [flight.price, flight.taxes, flight.fees].filter(
-        (v): v is number => typeof v === 'number'
-      );
-      if (costParts.length > 0) {
-        totalCost += costParts.reduce((a, b) => a + b, 0);
-      }
     });
 
     const avgDistance = flights.length > 0 ? totalDistance / flights.length : 0;
 
-    // Count by status
-    const byStatus = flights.reduce((acc, flight) => {
-      acc[flight.status] = (acc[flight.status] || 0) + 1;
+    // Convert aggregation results to objects
+    const byStatus = statusCounts.reduce((acc, item) => {
+      acc[item.status] = item._count;
       return acc;
     }, {} as Record<string, number>);
 
-    // Count by airline
-    const byAirline = flights.reduce((acc, flight) => {
-      const airline = flight.airline || 'Unknown';
-      acc[airline] = (acc[airline] || 0) + 1;
+    const byAirline = airlineCounts.reduce((acc, item) => {
+      const airline = item.airline || 'Unknown';
+      acc[airline] = item._count;
       return acc;
     }, {} as Record<string, number>);
 
-    const byCategory = flights.reduce((acc, flight) => {
-      const cat = flight.category || 'unassigned';
-      acc[cat] = (acc[cat] || 0) + 1;
+    const byCategory = categoryCounts.reduce((acc, item) => {
+      const cat = item.category || 'unassigned';
+      acc[cat] = item._count;
       return acc;
     }, {} as Record<string, number>);
+
+    // Calculate total cost from aggregated values
+    const costParts = [
+      costAgg._sum.price,
+      costAgg._sum.taxes,
+      costAgg._sum.fees,
+    ].filter((v): v is number => typeof v === 'number');
+    const totalCost = costParts.length > 0 ? costParts.reduce((a, b) => a + b, 0) : 0;
 
     res.json({
       totalFlights: flights.length,
@@ -150,6 +190,245 @@ router.get('/routes', async (req: AuthRequest, res: Response, next: NextFunction
       .slice(0, limit);
 
     res.json({ routes });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get fun/entertaining statistics
+router.get('/fun', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId!;
+    const { fromDate, toDate } = req.query;
+
+    const where: Prisma.FlightWhereInput = { userId, status: 'flown' };
+
+    if (fromDate || toDate) {
+      where.departureTime = {};
+      if (fromDate) {
+        where.departureTime.gte = new Date(fromDate as string);
+      }
+      if (toDate) {
+        where.departureTime.lte = new Date(toDate as string);
+      }
+    }
+
+    const flights = await prisma.flight.findMany({
+      where,
+      select: {
+        id: true,
+        depLat: true,
+        depLon: true,
+        arrLat: true,
+        arrLon: true,
+        depIata: true,
+        depIcao: true,
+        arrIata: true,
+        arrIcao: true,
+        airline: true,
+        aircraft: true,
+        departureTime: true,
+        arrivalTime: true,
+        status: true,
+        price: true,
+        taxes: true,
+        fees: true,
+        category: true,
+        seatClass: true,
+        createdAt: true,
+      },
+    });
+
+    // Calculate stats with error handling - continue even if airport data fails
+    let funStats;
+    try {
+      funStats = await calculateFunStats(flights);
+    } catch (statsError) {
+      // If stats calculation fails (e.g., database issues), return partial stats
+      // This prevents the entire endpoint from failing
+      logger.error({
+        operation: 'calculate_fun_stats_error',
+        message: 'Failed to calculate fun stats, returning partial data',
+        error: statsError instanceof Error ? statsError.message : 'Unknown error',
+      });
+      // Return a minimal response instead of failing completely
+      funStats = {
+        timezoneHopper: 0,
+        earlyBird: 0,
+        afternoon: 0,
+        nightOwl: 0,
+        weekendWarrior: 0,
+        weekendPercentage: 0,
+        loyaltyScore: 0,
+        mostUsedAirline: null,
+        shortHaulKing: 0,
+        longHaulPilot: 0,
+        fastestDay: null,
+        fastestDayFlights: 0,
+        co2FootprintKg: 0,
+        co2InElephants: 0,
+        milestoneYear: null,
+        milestoneYearFlights: 0,
+        routeMaster: null,
+        routeMasterCount: 0,
+      };
+    }
+
+    res.json(funStats);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get business/informative statistics
+router.get('/business', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId!;
+    const { fromDate, toDate } = req.query;
+
+    const where: Prisma.FlightWhereInput = { userId, status: 'flown' };
+
+    if (fromDate || toDate) {
+      where.departureTime = {};
+      if (fromDate) {
+        where.departureTime.gte = new Date(fromDate as string);
+      }
+      if (toDate) {
+        where.departureTime.lte = new Date(toDate as string);
+      }
+    }
+
+    const flights = await prisma.flight.findMany({
+      where,
+      select: {
+        id: true,
+        depLat: true,
+        depLon: true,
+        arrLat: true,
+        arrLon: true,
+        depIata: true,
+        depIcao: true,
+        arrIata: true,
+        arrIcao: true,
+        airline: true,
+        aircraft: true,
+        departureTime: true,
+        arrivalTime: true,
+        status: true,
+        price: true,
+        taxes: true,
+        fees: true,
+        category: true,
+        seatClass: true,
+        createdAt: true,
+      },
+    });
+
+    // Business stats don't require database lookups, so they should be safe
+    // But wrap in try-catch for safety
+    let businessStats;
+    try {
+      businessStats = calculateBusinessStats(flights);
+    } catch (statsError) {
+      logger.error({
+        operation: 'calculate_business_stats_error',
+        message: 'Failed to calculate business stats',
+        error: statsError instanceof Error ? statsError.message : 'Unknown error',
+      });
+      // Return minimal response
+      businessStats = {
+        costPerKm: 0,
+        costPerHour: 0,
+        totalCost: 0,
+        totalDistance: 0,
+        seatClassDistribution: {},
+        mostCommonCategory: null,
+        airportDiversity: 0,
+        avgFlightDuration: 0,
+        busiestMonth: null,
+        busiestMonthFlights: 0,
+        categoryDistribution: {},
+      };
+    }
+
+    res.json(businessStats);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get unique/special statistics
+router.get('/unique', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId!;
+    const { fromDate, toDate } = req.query;
+
+    const where: Prisma.FlightWhereInput = { userId, status: 'flown' };
+
+    if (fromDate || toDate) {
+      where.departureTime = {};
+      if (fromDate) {
+        where.departureTime.gte = new Date(fromDate as string);
+      }
+      if (toDate) {
+        where.departureTime.lte = new Date(toDate as string);
+      }
+    }
+
+    const flights = await prisma.flight.findMany({
+      where,
+      select: {
+        id: true,
+        depLat: true,
+        depLon: true,
+        arrLat: true,
+        arrLon: true,
+        depIata: true,
+        depIcao: true,
+        arrIata: true,
+        arrIcao: true,
+        airline: true,
+        aircraft: true,
+        departureTime: true,
+        arrivalTime: true,
+        status: true,
+        price: true,
+        taxes: true,
+        fees: true,
+        category: true,
+        seatClass: true,
+        createdAt: true,
+      },
+    });
+
+    // Calculate unique stats with error handling - continue even if airport data fails
+    let uniqueStats;
+    try {
+      uniqueStats = await calculateUniqueStats(flights);
+    } catch (statsError) {
+      // If stats calculation fails (e.g., database issues), return partial stats
+      logger.error({
+        operation: 'calculate_unique_stats_error',
+        message: 'Failed to calculate unique stats, returning partial data',
+        error: statsError instanceof Error ? statsError.message : 'Unknown error',
+      });
+      // Return a minimal response instead of failing completely
+      uniqueStats = {
+        timeTravelIndex: 0,
+        equatorCrossings: 0,
+        arcticFlights: 0,
+        oceanCrossings: 0,
+        highestAirport: null,
+        northernmost: null,
+        southernmost: null,
+        longestTravelChain: 0,
+        fastestRoute: null,
+        mostCountriesInDay: 0,
+        mostCountriesDate: null,
+      };
+    }
+
+    res.json(uniqueStats);
   } catch (error) {
     next(error);
   }

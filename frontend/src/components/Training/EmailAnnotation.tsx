@@ -372,7 +372,7 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
           Email Annotation
         </h2>
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          Email Text wird geladen...
+          {t('training:annotation.emailTextLoading')}
         </p>
       </div>
     );
@@ -497,7 +497,7 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
                   onChange={(e) => setSelectedText({ ...selectedText, label: e.target.value })}
                   className="input w-full"
                 >
-                  <option value="">Label wählen...</option>
+                  <option value="">{t('training:annotation.selectLabel')}</option>
                   <option value="flightNumber">Flight Number</option>
                   <option value="departureCode">Departure Code</option>
                   <option value="arrivalCode">Arrival Code</option>
@@ -510,10 +510,10 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
                 </select>
               </div>
               <button onClick={handleSaveAnnotation} className="btn-primary" disabled={!selectedText.label || selectedText.label === ''}>
-                Speichern
+                {t('common:buttons.save')}
               </button>
               <button onClick={() => setSelectedText(null)} className="btn-secondary">
-                Abbrechen
+                {t('common:buttons.cancel')}
               </button>
             </div>
           </div>
@@ -532,7 +532,7 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
                 onChange={(e) => setShowFiltered(e.target.checked)}
                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
-              <span className="text-sm text-gray-600 dark:text-gray-400">Gefiltert anzeigen</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">{t('training:annotation.showFiltered')}</span>
             </label>
           </div>
           <div
@@ -744,7 +744,7 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
               disabled={saving}
               className="btn-secondary"
             >
-              Abbrechen
+              {t('common:buttons.cancel')}
             </button>
           )}
           <button
@@ -752,14 +752,14 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
             disabled={saving}
             className="btn-secondary"
           >
-            {saving ? 'Speichern...' : 'Nur speichern'}
+            {saving ? t('training:annotation.saving') : t('training:annotation.saveOnly')}
           </button>
           <button
             onClick={() => handleSave(true)}
             disabled={saving}
             className="btn-primary"
           >
-            {saving ? 'Speichern...' : 'Speichern & Trainieren'}
+            {saving ? t('training:annotation.saving') : t('training:annotation.saveAndTrain')}
           </button>
         </div>
       </div>

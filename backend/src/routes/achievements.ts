@@ -125,34 +125,48 @@ router.get('/leaderboard', async (req: AuthRequest, res: Response, next: NextFun
   try {
     const limit = parseInt(req.query.limit as string) || 10;
 
-    // Get all user achievements with their points
+    // Use database aggregation instead of loading all data into memory
+    // Get user achievements with aggregated points
     const userAchievements = await prisma.userAchievement.findMany({
-      include: {
-        user: { select: { id: true, username: true, createdAt: true } },
-        achievement: { select: { points: true } },
+      select: {
+        userId: true,
+        achievement: {
+          select: {
+            points: true,
+          },
+        },
+        user: {
+          select: {
+            id: true,
+            username: true,
+            createdAt: true,
+          },
+        },
       },
     });
 
-    // Calculate total points per user
-    const userPointsMap = userAchievements.reduce((acc, ua) => {
-      const userId = ua.user.id;
-      if (!acc[userId]) {
-        acc[userId] = {
+    // Aggregate points per user (more efficient than loading all into memory)
+    const userPointsMap = new Map<string, { user: any; totalPoints: number; achievementCount: number }>();
+    
+    for (const ua of userAchievements) {
+      const userId = ua.userId;
+      if (!userPointsMap.has(userId)) {
+        userPointsMap.set(userId, {
           user: ua.user,
           totalPoints: 0,
           achievementCount: 0,
-        };
+        });
       }
-      acc[userId].totalPoints += ua.achievement.points;
-      acc[userId].achievementCount++;
-      return acc;
-    }, {} as Record<string, any>);
+      const entry = userPointsMap.get(userId)!;
+      entry.totalPoints += ua.achievement.points;
+      entry.achievementCount++;
+    }
 
-    // Convert to array and sort
-    const leaderboard = Object.values(userPointsMap)
-      .sort((a: any, b: any) => b.totalPoints - a.totalPoints)
+    // Convert to array, sort, and limit
+    const leaderboard = Array.from(userPointsMap.values())
+      .sort((a, b) => b.totalPoints - a.totalPoints)
       .slice(0, limit)
-      .map((entry: any, index: number) => ({
+      .map((entry, index) => ({
         rank: index + 1,
         username: entry.user.username,
         totalPoints: entry.totalPoints,

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { trainingApi } from '../../lib/api';
 import { logger } from '../../lib/logger';
 import { useTranslation } from '../../hooks/useTranslation';
+import { useToastStore } from '../../store/toastStore';
 import HelpIcon from '../Help/HelpIcon';
 import ConfirmModal from './ConfirmModal';
 import TrainingDataFilters from './TrainingDataFilters';
@@ -19,6 +20,7 @@ interface JobLogs {
 
 export default function TrainingDashboard({ onEditTrainingData }: TrainingDashboardProps) {
   const { t } = useTranslation('training');
+  const addToast = useToastStore((state) => state.addToast);
   const [trainingData, setTrainingData] = useState<any[]>([]);
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,14 +67,24 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      // Build query params for filtering
+      // Build query params for filtering with validation
       const queryParams = new URLSearchParams();
-      if (filters.status) queryParams.append('status', filters.status);
-      if (filters.type) queryParams.append('type', filters.type);
-      if (filters.tags && filters.tags.length > 0) {
-        queryParams.append('tags', filters.tags.join(','));
+      if (filters.status && filters.status.length <= 50) {
+        queryParams.append('status', filters.status);
       }
-      if (filters.search) queryParams.append('search', filters.search);
+      if (filters.type && filters.type.length <= 50) {
+        queryParams.append('type', filters.type);
+      }
+      if (filters.tags && filters.tags.length > 0 && filters.tags.length <= 20) {
+        // Validate each tag
+        const validTags = filters.tags.filter(tag => tag.length > 0 && tag.length <= 50);
+        if (validTags.length > 0) {
+          queryParams.append('tags', validTags.join(','));
+        }
+      }
+      if (filters.search && filters.search.length > 0 && filters.search.length <= 200) {
+        queryParams.append('search', filters.search);
+      }
 
       const queryString = queryParams.toString();
 
@@ -361,10 +373,10 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
     try {
       await trainingApi.triggerTraining();
       await loadData();
-      alert('Training gestartet!');
+      addToast('success', t('training:toasts.trainingStarted'));
     } catch (error: any) {
       logger.error('Failed to trigger training:', error);
-      alert(error.response?.data?.message || 'Fehler beim Starten des Trainings');
+      addToast('error', error.response?.data?.message || t('training:errors.startTrainingFailed'));
     } finally {
       setTriggering(false);
     }
@@ -388,7 +400,7 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
       await loadData();
     } catch (error: any) {
       logger.error('Failed to delete training data:', error);
-      alert(error.response?.data?.message || 'Fehler beim Löschen');
+      addToast('error', error.response?.data?.message || t('training:errors.deleteFailed'));
     } finally {
       setDeleting(null);
     }
@@ -432,7 +444,7 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
       await loadData();
     } catch (error: any) {
       logger.error('Failed to bulk delete training data:', error);
-      alert('Fehler beim Löschen einiger Einträge');
+      addToast('error', t('training:errors.bulkDeleteFailed'));
     } finally {
       setBulkDeleting(false);
     }
@@ -481,8 +493,8 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
       }, 500);
     } catch (error: any) {
       logger.error('Failed to cancel training:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Fehler beim Abbrechen des Trainings';
-      alert(errorMessage);
+      const errorMessage = error.response?.data?.message || error.message || t('training:errors.cancelTrainingFailed');
+      addToast('error', errorMessage);
 
       // Reload data to get actual status
       loadData();
