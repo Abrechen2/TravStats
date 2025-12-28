@@ -279,6 +279,123 @@
         "trained": "Trained Ollama models (via Training page) significantly improve accuracy"
       }
     }
+  },
+  "autoUpdate": {
+    "title": "Automatic Updates",
+    "description": "Automatically fetch current flight data from APIs during active flights. Updates will be saved in the pending updates area for review.",
+    "info": {
+      "title": "How do automatic updates work?",
+      "description": "When enabled, current flight data is regularly fetched from APIs during active flights. All found changes are saved in the pending updates area so you can review and approve them before they are applied to your flights.",
+      "benefits": {
+        "title": "Benefits:",
+        "realTime": "Real-time updates: Get current flight data automatically during your flights",
+        "automatic": "Automation: No more manual searching for flight changes needed",
+        "review": "Control: All changes are saved for review before being applied",
+        "accurate": "Accuracy: Uses multiple APIs for reliable and precise flight data",
+        "timeSaving": "Time-saving: Save time by automatically updating your flight statistics"
+      },
+      "howItWorks": {
+        "title": "How it works:",
+        "description": "The system checks for updates at configurable intervals (default: 15 minutes) during active flight times. Found changes such as delays, gate changes, or flight status are saved in the 'Pending Updates' area. You can review and approve or reject these changes individually."
+      },
+      "requirement": {
+        "title": "Important note:",
+        "description": "This feature only works with pre-entered flights, e.g. through email import or manual entry. Automatic updates are only performed for flights that are already in your flight list."
+      }
+    },
+    "viewPending": "View Pending Updates",
+    "enabled": "Enable Automatic Updates",
+    "requireApproval": "Require Approval",
+    "checkInterval": "Check Interval (minutes)",
+    "checkIntervalDescription": "How often the system checks for flight data updates",
+    "onlyDuringFlight": "Only During Flight",
+    "onlyDuringFlightDescription": "Only fetch updates during active flight times",
+    "expiryHours": "Expiry Time (hours)",
+    "expiryHoursDescription": "How long pending updates remain available before expiring",
+    "saved": "Auto-update settings saved successfully",
+    "saveFailed": "Failed to save auto-update settings"
+  },
+  "historicalEnrichment": {
+    "title": "Historical Enrichment",
+    "description": "Enriches historical flights (2-5 years) with data from live-tracked flights of the same flight number",
+    "info": {
+      "title": "How does historical enrichment work?",
+      "description": "Historical enrichment finds flights with the same flight number that were already live-tracked and uses their data (route, aircraft, etc.) to enrich your historical flights.",
+      "benefits": {
+        "title": "Benefits:",
+        "completeData": "Complete flight data for old flights",
+        "routeTracking": "Accurate route tracking (overflown countries)",
+        "statistics": "More precise statistics and achievements",
+        "automatic": "Automatic detection of enrichment candidates"
+      },
+      "warning": {
+        "title": "Note (Beta):",
+        "description": "This feature is still in beta. All enrichments must be manually confirmed. Routes can change over time (e.g., Russia airspace closure since 2022)."
+      }
+    },
+    "enabled": "Enable historical flight data enrichment",
+    "minConfidence": "Min Confidence (%)",
+    "minConfidenceDescription": "Only show enrichments with at least X% confidence",
+    "maxPerDay": "Max per Day",
+    "maxPerDayDescription": "Maximum number of enrichments per day",
+    "minAgeYears": "Min Age (Years)",
+    "minAgeYearsDescription": "Minimum age of flights for enrichment",
+    "maxAgeYears": "Max Age (Years)",
+    "maxAgeYearsDescription": "Maximum age of flights for enrichment",
+    "autoProcess": "Automatically search for enrichment candidates at night",
+    "requireApproval": "Each enrichment must be manually confirmed",
+    "saved": "Historical enrichment settings saved successfully",
+    "saveFailed": "Failed to save historical enrichment settings"
+  },
+  "apiKeys": {
+    "title": "API Keys",
+    "description": "Manage API keys for external services. Keys shared by the administrator are automatically used.",
+    "parserApis": "Parser APIs",
+    "flightApis": "Flight Lookup APIs",
+    "shared": "Shared",
+    "sharedTooltip": "Shared by administrator - automatically used",
+    "own": "Own Key",
+    "ownTooltip": "Own API key entered - takes precedence over shared keys",
+    "notConfigured": "Not Configured",
+    "notConfiguredTooltip": "No API key configured - using shared key or ENV variable if available",
+    "getKey": "Get API Key",
+    "enterKey": "Enter API key",
+    "sharedPlaceholder": "Shared by administrator",
+    "show": "Show",
+    "hide": "Hide",
+    "clear": "Clear",
+    "test": "Test",
+    "testing": "Testing...",
+    "sharedNote": "This key is shared by the administrator and cannot be edited",
+    "save": "Save API Keys",
+    "saving": "Saving...",
+    "saved": "API keys saved successfully",
+    "saveFailed": "Failed to save API keys",
+    "openai": {
+      "label": "OpenAI API Key",
+      "description": "Used for AI-powered email parsing"
+    },
+    "claude": {
+      "label": "Claude API Key",
+      "description": "Used for AI-powered email parsing"
+    },
+    "airlabs": {
+      "label": "AirLabs API Key",
+      "description": "Free tier: 1000 requests/month. Used for flight data lookup."
+    },
+    "aviationstack": {
+      "label": "Aviationstack API Key",
+      "description": "Paid service. Used for flight data lookup with higher accuracy."
+    },
+    "opensky": {
+      "label": "OpenSky Network",
+      "description": "Free service. Requires registration. Used for flight data lookup.",
+      "clientId": "Client ID",
+      "clientSecret": "Client Secret",
+      "username": "Username",
+      "password": "Password",
+      "or": "OR (use basic auth instead)"
+    }
   }
 }
 

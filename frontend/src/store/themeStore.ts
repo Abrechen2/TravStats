@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { logger } from '../lib/logger';
 
 interface ThemeState {
   isDarkMode: boolean;
@@ -31,7 +32,7 @@ const getInitialTheme = (): boolean => {
       }
     }
   } catch (e) {
-    console.warn('Error reading theme from localStorage:', e);
+    logger.warn('Error reading theme from localStorage:', e);
   }
   
   // Fallback to system preference if no storage or error

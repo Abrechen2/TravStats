@@ -74,6 +74,8 @@
       "title": "Have a Booking Email?",
       "description": "Import flights directly from confirmation emails!",
       "import": "Import Email",
+      "bestOption": "Best Option",
+      "bestOptionDescription": "Captures all data best from confirmation emails",
       "notImplemented": "Email import is not yet implemented. Please use manual entry or boarding pass scan."
     },
     "placeholders": {
@@ -252,5 +254,20 @@
     "searchingWorldwide": "🔍 Searching worldwide...",
     "noResults": "No airports found",
     "notFound": "❌ Airport \"{{code}}\" not found"
-  }
+  },
+  "dataSource": {
+    "manual": "Manual",
+    "email_import": "Email",
+    "boarding_pass_scan": "Boarding Pass",
+    "historical_enrichment": "Enriched",
+    "live_update": "Live",
+    "live_update_auto": "Live + Auto Update",
+    "live_update_auto_tooltip": "Live tracking with automatic updates",
+    "auto_update": "Auto Update",
+    "api_lookup": "API"
+  },
+  "enrichmentCount": "Enriched {{count}}x",
+  "confidence": "Confidence",
+  "sourceFlightsCount": "{{count}} {{count, plural, one {source flight} other {source flights}}}",
+  "enrichmentHistory": "Enrichment History"
 }

@@ -1,9 +1,12 @@
-import { PrismaClient } from '@prisma/client';
-import logger from './utils/logger';
+/**
+ * Achievement definitions for TravStats
+ * These are core application data that must always be available
+ */
 
-const prisma = new PrismaClient();
+import { prisma } from '../db';
+import logger from '../utils/logger';
 
-interface AchievementDefinition {
+export interface AchievementDefinition {
   code: string;
   name: string;
   description: string;
@@ -16,7 +19,7 @@ interface AchievementDefinition {
   isHidden?: boolean;
 }
 
-const achievements: AchievementDefinition[] = [
+export const achievements: AchievementDefinition[] = [
   // EXPLORER CATEGORY - Visiting places
   {
     code: 'FIRST_FLIGHT',
@@ -690,29 +693,22 @@ const achievements: AchievementDefinition[] = [
   },
 ];
 
-async function seedAchievements() {
-  logger.info({ operation: 'seed_achievements_start', message: 'Starting achievement seeding' });
+/**
+ * Ensure all achievements are present in the database
+ * This function is idempotent and can be safely called multiple times
+ * It will create missing achievements and update existing ones
+ */
+export async function ensureAchievements(): Promise<void> {
+  logger.info({ operation: 'ensure_achievements_start', message: 'Ensuring achievements are present in database' });
 
   try {
-    // #region agent log - Hypothesis C: Log before Prisma query
-    if (process.env.NODE_ENV === 'development') {
-      fetch('http://127.0.0.1:7243/ingest/0704fdb1-689b-416e-9f08-7a10e884bebd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'seedAchievements.ts:698',message:'Before prisma.achievement.count()',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-    }
-    // #endregion
-    
     // Check if achievements already exist
     const existingCount = await prisma.achievement.count();
-    
-    // #region agent log - Hypothesis C: Log after Prisma query
-    if (process.env.NODE_ENV === 'development') {
-      fetch('http://127.0.0.1:7243/ingest/0704fdb1-689b-416e-9f08-7a10e884bebd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'seedAchievements.ts:700',message:'After prisma.achievement.count()',data:{existingCount,timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-    }
-    // #endregion
 
     if (existingCount === achievements.length) {
       logger.info({
-        operation: 'seed_achievements_already_seeded',
-        message: `Achievements already seeded (${existingCount} achievements)`,
+        operation: 'ensure_achievements_already_present',
+        message: `All achievements already present (${existingCount} achievements)`,
         context: { existingCount },
       });
       return;
@@ -720,9 +716,9 @@ async function seedAchievements() {
 
     if (existingCount > 0) {
       logger.info({
-        operation: 'seed_achievements_updating',
-        message: `Found ${existingCount} existing achievements, updating...`,
-        context: { existingCount },
+        operation: 'ensure_achievements_updating',
+        message: `Found ${existingCount} existing achievements, ensuring all are present...`,
+        context: { existingCount, expectedCount: achievements.length },
       });
     }
 
@@ -760,7 +756,7 @@ async function seedAchievements() {
     }
 
     logger.info({
-      operation: 'seed_achievements_processed',
+      operation: 'ensure_achievements_processed',
       message: `Processed ${achievements.length} achievements`,
       context: { total: achievements.length, created, updated },
     });
@@ -772,41 +768,28 @@ async function seedAchievements() {
     }, {} as Record<string, number>);
 
     logger.info({
-      operation: 'seed_achievements_by_category',
+      operation: 'ensure_achievements_by_category',
       message: 'Achievements by category',
       context: { categoryCounts },
     });
 
     logger.info({
-      operation: 'seed_achievements_complete',
-      message: 'Achievement seeding completed successfully',
+      operation: 'ensure_achievements_complete',
+      message: 'Achievement initialization completed successfully',
     });
   } catch (error) {
-    // #region agent log - Hypothesis A, C, E: Log detailed error information
-    if (process.env.NODE_ENV === 'development') {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      const errorStack = error instanceof Error ? error.stack : undefined;
-      fetch('http://127.0.0.1:7243/ingest/0704fdb1-689b-416e-9f08-7a10e884bebd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'seedAchievements.ts:780',message:'Error in seedAchievements',data:{errorMessage,errorStack:errorStack?.substring(0,500),timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      fetch('http://127.0.0.1:7243/ingest/0704fdb1-689b-416e-9f08-7a10e884bebd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'seedAchievements.ts:780',message:'Error in seedAchievements',data:{errorMessage,errorStack:errorStack?.substring(0,500),timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      fetch('http://127.0.0.1:7243/ingest/0704fdb1-689b-416e-9f08-7a10e884bebd',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'seedAchievements.ts:780',message:'Error in seedAchievements',data:{errorMessage,errorStack:errorStack?.substring(0,500),timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-    }
-    // #endregion
-    
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     const errorStack = error instanceof Error ? error.stack : undefined;
-    
+
     logger.error({
-      operation: 'seed_achievements_error',
-      message: 'Error seeding achievements',
+      operation: 'ensure_achievements_error',
+      message: 'Error ensuring achievements',
       error: {
         message: errorMessage,
         stack: errorStack,
       },
     });
     throw error;
-  } finally {
-    await prisma.$disconnect();
   }
 }
 
-seedAchievements();

@@ -1,0 +1,129 @@
+{
+  "title": "Pending Updates",
+  "description": "Review and manage automatic flight data updates",
+  "empty": {
+    "title": "No Pending Updates",
+    "description": "There are currently no pending flight updates. Updates will appear here when automatic updates are enabled and new data is available."
+  },
+  "status": {
+    "pending": "Pending",
+    "applied": "Applied",
+    "rejected": "Rejected",
+    "expired": "Expired",
+    "edited": "Edited"
+  },
+  "expiresIn": "Expires in",
+  "expired": "Expired",
+  "minutes": "minutes",
+  "hours": "hours",
+  "days": "days",
+  "changes": {
+    "title": "Changes",
+    "detailed": "Detailed Changes",
+    "original": "Original",
+    "new": "New",
+    "more": "more"
+  },
+  "statisticsImpact": "Statistics Impact",
+  "distance": "Distance",
+  "flightTime": "Flight Time",
+  "airlines": "Airlines",
+  "airports": "Airports",
+  "before": "Before",
+  "after": "After",
+  "change": "Change",
+  "added": "Added",
+  "removed": "Removed",
+  "actions": {
+    "apply": "Apply",
+    "reject": "Reject",
+    "edit": "Edit",
+    "delete": "Delete",
+    "preview": "Preview Impact",
+    "viewDetails": "View Details"
+  },
+  "filters": {
+    "status": "Status",
+    "sortBy": "Sort By",
+    "all": "All",
+    "pending": "Pending",
+    "edited": "Edited",
+    "applied": "Applied",
+    "rejected": "Rejected",
+    "expired": "Expired",
+    "createdAt": "Created Date",
+    "expiresAt": "Expiry Date"
+  },
+  "statistics": {
+    "title": "Update Statistics",
+    "total": "Total Updates",
+    "applied": "Applied",
+    "rejected": "Rejected",
+    "edited": "Edited",
+    "expired": "Expired"
+  },
+  "messages": {
+    "applied": "Update applied successfully",
+    "rejected": "Update rejected",
+    "updated": "Update saved successfully",
+    "deleted": "Update deleted"
+  },
+  "errors": {
+    "loadFailed": "Failed to load pending updates",
+    "applyFailed": "Failed to apply update",
+    "rejectFailed": "Failed to reject update",
+    "updateFailed": "Failed to save update",
+    "deleteFailed": "Failed to delete update"
+  },
+  "preview": {
+    "title": "Statistics Impact Preview",
+    "description": "This preview shows how applying this update will affect your statistics",
+    "noData": "No data available",
+    "distance": "Distance",
+    "flightTime": "Flight Time",
+    "airlines": "Airlines",
+    "airports": "Airports",
+    "before": "Before",
+    "after": "After",
+    "change": "Change",
+    "added": "Added"
+  },
+  "editor": {
+    "title": "Edit Update",
+    "description": "Modify the proposed changes before applying",
+    "save": "Save Changes",
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "fieldsTitle": "Fields",
+    "preview": "Preview",
+    "airline": "Airline",
+    "aircraft": "Aircraft",
+    "gate": "Gate",
+    "terminal": "Terminal",
+    "depIata": "Departure Airport (IATA)",
+    "arrIata": "Arrival Airport (IATA)",
+    "departureTime": "Departure Time",
+    "arrivalTime": "Arrival Time",
+    "fields": {
+      "airline": "Airline",
+      "flightNumber": "Flight Number",
+      "depIata": "Departure Airport (IATA)",
+      "depIcao": "Departure Airport (ICAO)",
+      "arrIata": "Arrival Airport (IATA)",
+      "arrIcao": "Arrival Airport (ICAO)",
+      "departureTime": "Departure Time",
+      "arrivalTime": "Arrival Time",
+      "depLat": "Departure Latitude",
+      "depLon": "Departure Longitude",
+      "arrLat": "Arrival Latitude",
+      "arrLon": "Arrival Longitude"
+    }
+  },
+  "apiSource": {
+    "airlabs": "AirLabs API",
+    "aviationstack": "Aviationstack API",
+    "opensky": "OpenSky Network"
+  }
+}
+
+

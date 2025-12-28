@@ -1,7 +1,11 @@
 import { useState, useRef } from 'react';
 import { parseApi } from '../lib/api';
 import { useThemeStore } from '../store/themeStore';
+import { useSettingsStore } from '../store/settingsStore';
 import { useTranslation } from '../hooks/useTranslation';
+import { extractBarcodeFromImage } from '../lib/barcodeExtractor';
+import { parseBCBP } from '../lib/bcbpParser';
+import { logger } from '../lib/logger';
 
 interface BoardingPassScannerProps {
   onScanSuccess: (data: any) => void; // ParsedBooking from Ollama
@@ -24,6 +28,7 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
   const [scanSteps, setScanSteps] = useState<ScanStep[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isDarkMode = useThemeStore((s) => s.isDarkMode);
+  const boardingPassParserStrategy = useSettingsStore((s) => s.boardingPassParserStrategy);
 
   const updateScanStep = (id: string, updates: Partial<ScanStep>) => {
     setScanSteps((prev) =>
@@ -38,11 +43,13 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
     setError('');
     setScanning(true);
 
-    // Initialize scan steps
+    // Initialize scan steps (dynamic based on strategy)
     const steps: ScanStep[] = [
       { id: 'load', label: t('flights:scanner.steps.load'), status: 'loading', icon: '📸' },
-      { id: 'upload', label: t('flights:scanner.steps.upload'), status: 'pending', icon: '📤' },
-      { id: 'ollama', label: t('flights:scanner.steps.ollama'), status: 'pending', icon: '🤖' },
+      { id: 'provider', label: 'Provider prüfen', status: 'pending', icon: '🔍' },
+      { id: 'barcode', label: 'Barcode extrahieren', status: 'pending', icon: '📱' },
+      { id: 'parser', label: 'Parser ausführen', status: 'pending', icon: '⚙️' },
+      { id: 'llm', label: t('flights:scanner.steps.ollama'), status: 'pending', icon: '🤖' },
       { id: 'api', label: t('flights:scanner.steps.api'), status: 'pending', icon: '🔍' },
       { id: 'complete', label: t('flights:scanner.steps.complete'), status: 'pending', icon: '✅' },
     ];
@@ -56,39 +63,154 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
         setPreview(dataUrl);
         updateScanStep('load', { status: 'success' });
 
-        // Step 2: Convert to base64 (remove data:image/...;base64, prefix)
-        updateScanStep('upload', { status: 'loading' });
-        const base64Data = dataUrl.split(',')[1];
-
         try {
-          // Step 3: Send to Ollama Vision API
-          updateScanStep('upload', { status: 'success' });
-          updateScanStep('ollama', { status: 'loading', detail: t('flights:scanner.analyzing') });
+          // Step 2: Check provider availability
+          updateScanStep('provider', { status: 'loading' });
+          let providerAvailability;
+          try {
+            providerAvailability = await parseApi.getProviderAvailability();
+          } catch (err) {
+            logger.warn('Failed to check provider availability, assuming unavailable', err);
+            providerAvailability = { ollama: false, openai: false, claude: false };
+          }
+          updateScanStep('provider', { status: 'success' });
 
-          const result = await parseApi.parseBoardingpass(base64Data, true); // enrichWithApi = true
+          const llmAvailable = providerAvailability.ollama || providerAvailability.openai || providerAvailability.claude;
 
-          updateScanStep('ollama', {
-            status: 'success',
-            detail: `${result.flight.flightNumber || t('flights:scanner.flight')} ${result.flight.departureCode} ${t('common:labels.routeSeparator')} ${result.flight.arrivalCode}`,
-          });
+          // Step 3: Determine strategy
+          const strategy = boardingPassParserStrategy || (llmAvailable ? null : 'parser-only');
 
-          // Step 4: API enrichment status
-          if (result.enriched) {
-            updateScanStep('api', { status: 'success', detail: t('flights:scanner.enriched') });
-          } else {
-            updateScanStep('api', { status: 'success', detail: t('flights:scanner.noEnrichment') });
+          // If LLM available and strategy is auto/null, use LLM directly
+          if (llmAvailable && (strategy === null || strategy === 'api-only')) {
+            updateScanStep('barcode', { status: 'pending' });
+            updateScanStep('parser', { status: 'pending' });
+            updateScanStep('llm', { status: 'loading', detail: t('flights:scanner.analyzing') });
+
+            const base64Data = dataUrl.split(',')[1];
+            const result = await parseApi.parseBoardingpass(base64Data, true);
+
+            updateScanStep('llm', {
+              status: 'success',
+              detail: `${result.flight.flightNumber || t('flights:scanner.flight')} ${result.flight.departureCode} ${t('common:labels.routeSeparator')} ${result.flight.arrivalCode}`,
+            });
+
+            if (result.enriched) {
+              updateScanStep('api', { status: 'success', detail: t('flights:scanner.enriched') });
+            } else {
+              updateScanStep('api', { status: 'success', detail: t('flights:scanner.noEnrichment') });
+            }
+
+            updateScanStep('complete', { status: 'success' });
+            await new Promise((resolve) => setTimeout(resolve, 800));
+            onScanSuccess(result.flight);
+            setScanning(false);
+            return;
           }
 
-          // Step 5: Complete
-          updateScanStep('complete', { status: 'success' });
+          // Try barcode extraction and frontend parsing
+          let barcodeData: string | null = null;
+          let parserSuccess = false;
 
-          // Wait a bit so user can see success
-          await new Promise((resolve) => setTimeout(resolve, 800));
+          if (strategy !== 'api-only') {
+            updateScanStep('barcode', { status: 'loading' });
+            barcodeData = await extractBarcodeFromImage(file);
+            if (barcodeData) {
+              updateScanStep('barcode', { status: 'success', detail: 'Barcode gefunden' });
+              
+              updateScanStep('parser', { status: 'loading' });
+              const parsedData = parseBCBP(barcodeData);
+              
+              if (parsedData) {
+                parserSuccess = true;
+                updateScanStep('parser', { status: 'success', detail: `Flug ${parsedData.flightNumber || ''} ${parsedData.departureAirport} → ${parsedData.arrivalAirport}` });
+                
+                // Convert BoardingPassData to ParsedBooking format
+                const flightData: any = {
+                  flightNumber: `${parsedData.operatingCarrierDesignator}${parsedData.flightNumber}`,
+                  departureCode: parsedData.departureAirport,
+                  arrivalCode: parsedData.arrivalAirport,
+                  departureTime: parsedData.dateOfFlight,
+                  seatNumber: parsedData.seatNumber,
+                  seatClass: parsedData.seatClass || 'economy',
+                  airline: parsedData.airlineName || parsedData.operatingCarrierDesignator,
+                };
 
-          // Return parsed data
-          onScanSuccess(result.flight);
+                // Handle strategy: parser-with-api or parser-only
+                if (strategy === 'parser-with-api' && llmAvailable) {
+                  // Validate with API
+                  updateScanStep('llm', { status: 'loading', detail: 'Validierung mit API...' });
+                  try {
+                    const base64Data = dataUrl.split(',')[1];
+                    const apiResult = await parseApi.parseBoardingpass(base64Data, true);
+                    
+                    // Merge results (API as validation)
+                    Object.assign(flightData, {
+                      terminal: apiResult.flight.terminal || flightData.terminal,
+                      gate: apiResult.flight.gate || flightData.gate,
+                      aircraft: apiResult.flight.aircraft || flightData.aircraft,
+                    });
+                    
+                    updateScanStep('llm', { status: 'success', detail: 'API-Validierung erfolgreich' });
+                    if (apiResult.enriched) {
+                      updateScanStep('api', { status: 'success', detail: t('flights:scanner.enriched') });
+                    } else {
+                      updateScanStep('api', { status: 'pending' });
+                    }
+                  } catch (err) {
+                    logger.warn('API validation failed, using parser result only', err);
+                    updateScanStep('llm', { status: 'success', detail: 'API-Validierung übersprungen' });
+                    updateScanStep('api', { status: 'pending' });
+                  }
+                } else {
+                  updateScanStep('llm', { status: 'pending' });
+                  updateScanStep('api', { status: 'pending' });
+                }
+
+                updateScanStep('complete', { status: 'success' });
+                await new Promise((resolve) => setTimeout(resolve, 800));
+                onScanSuccess(flightData);
+                setScanning(false);
+                return;
+              } else {
+                updateScanStep('parser', { status: 'error', detail: 'Parser fehlgeschlagen' });
+              }
+            } else {
+              updateScanStep('barcode', { status: 'error', detail: 'Kein Barcode gefunden' });
+            }
+          }
+
+          // Fallback to LLM/API if parser failed or strategy is api-only
+          if (strategy === 'parser-only' && !parserSuccess) {
+            setError('Kein Barcode gefunden und Parser-Only-Modus aktiviert');
+            setScanning(false);
+            return;
+          }
+
+          // Use LLM/API as fallback
+          if (llmAvailable) {
+            updateScanStep('llm', { status: 'loading', detail: t('flights:scanner.analyzing') });
+            const base64Data = dataUrl.split(',')[1];
+            const result = await parseApi.parseBoardingpass(base64Data, true);
+
+            updateScanStep('llm', {
+              status: 'success',
+              detail: `${result.flight.flightNumber || t('flights:scanner.flight')} ${result.flight.departureCode} ${t('common:labels.routeSeparator')} ${result.flight.arrivalCode}`,
+            });
+
+            if (result.enriched) {
+              updateScanStep('api', { status: 'success', detail: t('flights:scanner.enriched') });
+            } else {
+              updateScanStep('api', { status: 'success', detail: t('flights:scanner.noEnrichment') });
+            }
+
+            updateScanStep('complete', { status: 'success' });
+            await new Promise((resolve) => setTimeout(resolve, 800));
+            onScanSuccess(result.flight);
+          } else {
+            setError('Kein Parser verfügbar. Bitte LLM/API konfigurieren.');
+          }
         } catch (err: any) {
-          console.error('Boarding pass parsing failed:', err);
+          logger.error('Boarding pass parsing failed:', err);
 
           const currentStep = steps.find((s) => s.status === 'loading');
           if (currentStep) {

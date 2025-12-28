@@ -11,6 +11,7 @@ import { execSync } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
 import logger from './utils/logger';
+import { initializeEncryptionKey } from './utils/encryptionKey';
 
 const prisma = new PrismaClient();
 
@@ -19,6 +20,26 @@ async function init() {
   logger.info({ operation: 'init_start', message: 'Initializing TravStats' });
 
   try {
+    // Step 0: Initialize encryption key
+    console.log('0️⃣  Initializing encryption key...');
+    logger.info({ operation: 'init_encryption_key', message: 'Initializing encryption key' });
+    try {
+      initializeEncryptionKey();
+      console.log('   ✅ Encryption key ready\n');
+      logger.info({ operation: 'init_encryption_key_success', message: 'Encryption key initialized successfully' });
+    } catch (error) {
+      console.error('   ⚠️  Encryption key initialization failed');
+      console.error('   API key encryption may not work correctly.\n');
+      logger.warn({
+        operation: 'init_encryption_key_error',
+        message: 'Encryption key initialization failed',
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+      // Don't exit - encryption will use fallback
+    }
+
     // Step 1: Check database connection
     console.log('1️⃣  Checking database connection...');
     logger.info({ operation: 'init_db_check', message: 'Checking database connection' });
@@ -119,22 +140,20 @@ async function init() {
       process.exit(1);
     }
 
-    // Step 4: Seed achievements (essential)
-    console.log('4️⃣  Seeding achievements...');
-    logger.info({ operation: 'init_seed_achievements', message: 'Seeding achievements' });
+    // Step 4: Ensure achievements are present (essential)
+    console.log('4️⃣  Ensuring achievements...');
+    logger.info({ operation: 'init_ensure_achievements', message: 'Ensuring achievements are present' });
     try {
-      execSync('npm run seed:achievements', {
-        stdio: 'inherit',
-        cwd: path.join(__dirname, '..')
-      });
+      const { ensureAchievements } = await import('./data/achievements');
+      await ensureAchievements();
       console.log('   ✅ Achievements ready\n');
-      logger.info({ operation: 'init_seed_achievements_success', message: 'Achievements seeded successfully' });
+      logger.info({ operation: 'init_ensure_achievements_success', message: 'Achievements ensured successfully' });
     } catch (error) {
-      console.error('   ❌ Failed to seed achievements!');
+      console.error('   ❌ Failed to ensure achievements!');
       console.error('   Achievement system may not work correctly.');
       logger.error({
-        operation: 'init_seed_achievements_error',
-        message: 'Failed to seed achievements',
+        operation: 'init_ensure_achievements_error',
+        message: 'Failed to ensure achievements',
         error: {
           message: error instanceof Error ? error.message : 'Unknown error',
         },

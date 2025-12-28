@@ -2,6 +2,74 @@ import { ParsedBooking } from '../../bookingParser';
 import logger from '../../../utils/logger';
 
 /**
+ * Get all available Claude models for text parsing, ordered by preference (newest first)
+ * Returns the model from CLAUDE_MODEL env var if set, otherwise returns list of available models
+ */
+export function getClaudeTextModels(): string[] {
+  // If explicitly set, use only that model
+  if (process.env.CLAUDE_MODEL) {
+    return [process.env.CLAUDE_MODEL];
+  }
+
+  // List of Claude models ordered by release date (newest first)
+  // These are the most common models for text parsing
+  // Update this list when new models are released
+  return [
+    'claude-3-5-sonnet-20241022', // Claude 3.5 Sonnet (October 2024 - latest stable)
+    'claude-3-5-sonnet-20240620', // Claude 3.5 Sonnet (June 2024)
+    'claude-3-opus-20240229',     // Claude 3 Opus (February 2024)
+    'claude-3-sonnet-20240229',   // Claude 3 Sonnet (February 2024)
+    'claude-3-haiku-20240307',    // Claude 3 Haiku (March 2024)
+  ];
+}
+
+/**
+ * Get the latest Claude model for text parsing
+ * Returns the model from CLAUDE_MODEL env var if set, otherwise the latest available model
+ * Models are ordered by release date (newest first)
+ * 
+ * Note: Anthropic recommends using specific model versions for production.
+ * This function returns the newest known model, but you can override it with CLAUDE_MODEL env var.
+ */
+export function getLatestClaudeTextModel(): string {
+  const models = getClaudeTextModels();
+  return models[0];
+}
+
+/**
+ * Get all available Claude models for vision parsing, ordered by preference (newest first)
+ * Returns the model from CLAUDE_VISION_MODEL env var if set, otherwise returns list of available models
+ */
+export function getClaudeVisionModels(): string[] {
+  // If explicitly set, use only that model
+  if (process.env.CLAUDE_VISION_MODEL) {
+    return [process.env.CLAUDE_VISION_MODEL];
+  }
+
+  // List of Claude models with vision capabilities ordered by release date (newest first)
+  // Update this list when new models are released
+  return [
+    'claude-3-5-sonnet-20241022', // Claude 3.5 Sonnet (October 2024 - latest stable with vision)
+    'claude-3-5-sonnet-20240620', // Claude 3.5 Sonnet (June 2024)
+    'claude-3-opus-20240229',     // Claude 3 Opus (February 2024)
+    'claude-3-sonnet-20240229',   // Claude 3 Sonnet (February 2024)
+    'claude-3-haiku-20240307',    // Claude 3 Haiku (March 2024)
+  ];
+}
+
+/**
+ * Get the latest Claude model for vision parsing
+ * Returns the model from CLAUDE_VISION_MODEL env var if set, otherwise the latest available model
+ * 
+ * Note: Anthropic recommends using specific model versions for production.
+ * This function returns the newest known model, but you can override it with CLAUDE_VISION_MODEL env var.
+ */
+export function getLatestClaudeVisionModel(): string {
+  const models = getClaudeVisionModels();
+  return models[0];
+}
+
+/**
  * Common valid IATA airport codes (whitelist for validation)
  * This is a subset of the most common airports to filter out false positives
  */

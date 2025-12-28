@@ -12,20 +12,22 @@ datasource db {
 }
 
 model User {
-  id                 String            @id @default(uuid())
-  username           String            @unique
-  passwordHash       String            @map("password_hash")
-  isAdmin            Boolean           @default(false) @map("is_admin")
-  isActive           Boolean           @default(true) @map("is_active")
-  canTrainLLM        Boolean           @default(false) @map("can_train_llm")
-  invitedBy          String?           @map("invited_by")
-  createdAt          DateTime          @default(now()) @map("created_at")
-  flights            Flight[]
-  userAchievements   UserAchievement[]
-  settings           UserSettings?
-  analyticsEvents    AnalyticsEvent[]
-  createdInvitations Invitation[]
-  trainingData       TrainingData[]
+  id                    String                  @id @default(uuid())
+  username              String                  @unique
+  passwordHash          String                  @map("password_hash")
+  isAdmin               Boolean                 @default(false) @map("is_admin")
+  isActive              Boolean                 @default(true) @map("is_active")
+  canTrainLLM           Boolean                 @default(false) @map("can_train_llm")
+  invitedBy             String?                 @map("invited_by")
+  createdAt             DateTime                @default(now()) @map("created_at")
+  flights               Flight[]
+  userAchievements      UserAchievement[]
+  settings              UserSettings?
+  analyticsEvents       AnalyticsEvent[]
+  createdInvitations    Invitation[]
+  trainingData          TrainingData[]
+  pendingFlightUpdates  PendingFlightUpdate[]
+  pendingUpdateStats    PendingUpdateStatistics?
 
   @@map("users")
 }
@@ -88,13 +90,25 @@ model Flight {
   receiptUrl       String?  @map("receipt_url")
   ticketPrice      Float?   @map("ticket_price")
   createdAt        DateTime @default(now()) @map("created_at")
+  // Route tracking
+  actualRoute      Json?    @map("actual_route") // Array of waypoints [{lat, lon, timestamp, country?}]
+  overflownCountries String[] @default([]) @map("overflown_countries")
+  routeDistance    Float?   @map("route_distance")
+  routeSource      String?  @map("route_source") // 'live_tracking', 'historical_aggregation', 'estimated'
+  hasLiveTracking  Boolean  @default(false) @map("has_live_tracking")
+  // Data source tracking
+  dataSource       String?  @map("data_source") // 'manual', 'email_import', 'boarding_pass_scan', 'historical_enrichment', 'live_update', 'api_lookup'
+  lastModifiedBy   String?  @map("last_modified_by") // 'user', 'auto_update', 'historical_enrichment', 'api'
+  enrichmentHistory Json?   @map("enrichment_history") // Array of enrichment events [{type, timestamp, confidence?, source?}]
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pendingUpdates    PendingFlightUpdate[]
 
   @@index([userId])
   @@index([departureTime])
   @@index([status])
   @@index([airline])
+  @@index([flightNumber])
   @@map("flights")
 }
 
@@ -148,6 +162,14 @@ model UserSettings {
   // User-specific API keys (encrypted at application level)
   openaiApiKey String? @map("openai_api_key")
   claudeApiKey String? @map("claude_api_key")
+  
+  // Flight lookup API keys (encrypted at application level)
+  airlabsApiKey String? @map("airlabs_api_key")
+  aviationstackApiKey String? @map("aviationstack_api_key")
+  openskyClientId String? @map("opensky_client_id")
+  openskyClientSecret String? @map("opensky_client_secret")
+  openskyUsername String? @map("opensky_username")
+  openskyPassword String? @map("opensky_password")
 
   // Developer mode settings
   developerModeEnabled     Boolean   @default(false) @map("developer_mode_enabled")
@@ -158,6 +180,28 @@ model UserSettings {
   preferredEmailModel    String  @default("auto") @map("preferred_email_model") // "auto" | "trained" | "base"
   preferredVisionModel   String  @default("auto") @map("preferred_vision_model") // "auto" | "trained" | "base"
   trainingSeparateModels Boolean @default(true) @map("training_separate_models")
+
+  // Auto-update settings
+  autoUpdateEnabled          Boolean @default(false) @map("auto_update_enabled")
+  autoUpdateRequireApproval  Boolean @default(true) @map("auto_update_require_approval")
+  autoUpdateCheckInterval    Int     @default(15) @map("auto_update_check_interval") // minutes
+  autoUpdateOnlyDuringFlight Boolean @default(true) @map("auto_update_only_during_flight")
+  autoUpdateExpiryHours      Int     @default(24) @map("auto_update_expiry_hours")
+
+  // Boarding pass parser strategy
+  // null = auto (LLM wenn verfügbar, sonst basierend auf Verfügbarkeit)
+  // "parser-only" = Nur Frontend-Parser, kein API-Call
+  // "parser-with-api" = Parser + API zur Validierung
+  // "api-only" = Direkt API verwenden
+  boardingPassParserStrategy String? @map("boarding_pass_parser_strategy")
+
+  // Historical enrichment settings (Beta)
+  historicalEnrichmentEnabled Boolean @default(false) @map("historical_enrichment_enabled")
+  historicalEnrichmentMinConfidence Int @default(60) @map("historical_enrichment_min_confidence")
+  historicalEnrichmentMaxAgeYears Int @default(5) @map("historical_enrichment_max_age_years")
+  historicalEnrichmentAutoProcess Boolean @default(false) @map("historical_enrichment_auto_process")
+  historicalEnrichmentMaxPerDay Int @default(50) @map("historical_enrichment_max_per_day")
+  historicalEnrichmentRequireApproval Boolean @default(true) @map("historical_enrichment_require_approval")
 
   updatedAt DateTime @updatedAt @map("updated_at")
   createdAt DateTime @default(now()) @map("created_at")
@@ -213,10 +257,20 @@ model AdminSettings {
   // Global API keys (encrypted at application level)
   globalOpenaiApiKey String? @map("global_openai_api_key")
   globalClaudeApiKey String? @map("global_claude_api_key")
+  
+  // Global flight lookup API keys (encrypted at application level)
+  globalAirlabsApiKey String? @map("global_airlabs_api_key")
+  globalAviationstackApiKey String? @map("global_aviationstack_api_key")
+  globalOpenskyClientId String? @map("global_opensky_client_id")
+  globalOpenskyClientSecret String? @map("global_opensky_client_secret")
+  globalOpenskyUsername String? @map("global_opensky_username")
+  globalOpenskyPassword String? @map("global_opensky_password")
 
   // User permissions
   allowUserApiKeys   Boolean @default(true) @map("allow_user_api_keys")
   requireUserApiKeys Boolean @default(false) @map("require_user_api_keys")
+  allowUserFlightApiKeys   Boolean @default(true) @map("allow_user_flight_api_keys")
+  requireUserFlightApiKeys Boolean @default(false) @map("require_user_flight_api_keys")
 
   // Default parser settings for new users
   defaultVisionParser String @default("auto") @map("default_vision_parser")
@@ -349,4 +403,54 @@ model Backup {
   @@index([type])
   @@index([createdAt])
   @@map("backups")
+}
+
+model PendingFlightUpdate {
+  id             String   @id @default(uuid())
+  flightId       String   @map("flight_id")
+  userId         String   @map("user_id")
+  status         String   @default("pending") // "pending" | "applied" | "rejected" | "expired" | "edited"
+  originalData   Json     @map("original_data")
+  proposedData   Json     @map("proposed_data")
+  editedData     Json?    @map("edited_data")
+  changes        Json     @map("changes")
+  editedChanges  Json?    @map("edited_changes")
+  apiSource      String   @map("api_source") // "airlabs" | "aviationstack" | "opensky"
+  fetchedAt      DateTime @map("fetched_at")
+  expiresAt      DateTime @map("expires_at")
+  appliedAt      DateTime? @map("applied_at")
+  rejectedAt     DateTime? @map("rejected_at")
+  editedAt       DateTime? @map("edited_at")
+  statisticsImpact Json?  @map("statistics_impact")
+  metadata       Json?    @map("metadata") // For historical enrichment: {sourceFlightsCount, confidence, anomalies, isHistoricalEnrichment, routeConsistency}
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  flight Flight @relation(fields: [flightId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([flightId])
+  @@index([status])
+  @@index([expiresAt])
+  @@index([createdAt])
+  @@map("pending_flight_updates")
+}
+
+model PendingUpdateStatistics {
+  id                String   @id @default(uuid())
+  userId            String   @unique @map("user_id")
+  totalUpdates      Int      @default(0) @map("total_updates")
+  appliedUpdates    Int      @default(0) @map("applied_updates")
+  rejectedUpdates   Int      @default(0) @map("rejected_updates")
+  editedUpdates     Int      @default(0) @map("edited_updates")
+  expiredUpdates    Int      @default(0) @map("expired_updates")
+  mostChangedFields Json     @map("most_changed_fields") // Map of field name to count
+  averageUpdateTime Float?   @map("average_update_time") // minutes
+  lastUpdated       DateTime @updatedAt @map("last_updated")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("pending_update_statistics")
 }

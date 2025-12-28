@@ -240,7 +240,7 @@ function parseFieldsFromText(text: string): OCRExtractedData {
                             gateCode === 'NA';
 
       if (isPlaceholder) {
-        console.log('🚪 Gate placeholder detected (no gate assigned):', gateCode);
+        logger.debug('🚪 Gate placeholder detected (no gate assigned):', gateCode);
         break; // Don't set gate, leave undefined
       }
 

@@ -170,6 +170,51 @@ router.get('/parse-boardingpass/providers', authenticate, async (req: AuthReques
 });
 
 /**
+ * GET /api/v1/parse-boardingpass/availability
+ * Get availability status of all vision parser providers
+ * Used by frontend to determine parsing strategy
+ */
+router.get('/parse-boardingpass/availability', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+
+    // Get user and admin settings (with decrypted API keys)
+    const { getUserParserSettings, getAdminParserSettings } = await import('../services/parserSettings');
+    const userSettings = await getUserParserSettings(userId);
+    const adminSettings = await getAdminParserSettings();
+
+    // Get parser config
+    const config = await getParserConfig(userSettings || undefined, adminSettings || undefined, userId);
+
+    // Get available providers
+    const providers = await getAvailableProviders(config);
+
+    // Extract availability info
+    const ollamaAvailable = providers.vision.find(p => p.provider === 'ollama')?.availability.available || false;
+    const openaiAvailable = providers.vision.find(p => p.provider === 'openai')?.availability.available || false;
+    const claudeAvailable = providers.vision.find(p => p.provider === 'claude')?.availability.available || false;
+
+    res.json({
+      ollama: ollamaAvailable,
+      openai: openaiAvailable,
+      claude: claudeAvailable,
+      // Detailed info for each provider
+      providers: {
+        ollama: providers.vision.find(p => p.provider === 'ollama')?.availability,
+        openai: providers.vision.find(p => p.provider === 'openai')?.availability,
+        claude: providers.vision.find(p => p.provider === 'claude')?.availability,
+      },
+    });
+  } catch (error) {
+    logger.error({ error }, '[Boarding Pass Parse] Failed to get availability');
+    res.status(500).json({
+      error: 'Failed to get provider availability',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+/**
  * GET /api/v1/parse-boardingpass/check
  * Check if current vision parser is available (legacy compatibility)
  */

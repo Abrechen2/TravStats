@@ -55,7 +55,7 @@ function RestoreModal({ backup, onClose, onConfirm }: RestoreModalProps) {
               {t('admin:backup.restore.warning')}
             </p>
             <p className="text-red-700 dark:text-red-300 text-sm mt-2">
-              {t('admin:backup.restore.backupFrom', { date: backup.completedAt ? format(new Date(backup.completedAt), 'dd.MM.yyyy HH:mm') : t('common:labels.unknown') })}
+              {t('admin:backup.restore.backupFrom', { date: formatDate(backup.completedAt) })}
             </p>
           </div>
 
@@ -246,7 +246,7 @@ export default function BackupManagement() {
   };
 
   const handleDelete = async (backup: Backup) => {
-    if (!confirm(t('admin:backup.deleteConfirm', { date: backup.completedAt ? format(new Date(backup.completedAt), 'dd.MM.yyyy HH:mm') : t('common:labels.unknown') }))) {
+    if (!confirm(t('admin:backup.deleteConfirm', { date: formatDate(backup.completedAt) }))) {
       return;
     }
 
@@ -266,6 +266,34 @@ export default function BackupManagement() {
     if (size < 1024 * 1024) return `${(size / 1024).toFixed(2)} KB`;
     if (size < 1024 * 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(2)} MB`;
     return `${(size / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+  };
+
+  const formatDate = (dateString: string | null | undefined): string => {
+    if (!dateString) return t('common:labels.unknown');
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return t('common:labels.unknown');
+      }
+      return format(date, 'dd.MM.yyyy HH:mm');
+    } catch (error) {
+      logger.warn('Failed to format date:', dateString, error);
+      return t('common:labels.unknown');
+    }
+  };
+
+  const formatDateTime = (dateString: string | null | undefined): string => {
+    if (!dateString) return t('common:labels.unknown');
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return t('common:labels.unknown');
+      }
+      return format(date, 'dd.MM.yyyy HH:mm:ss');
+    } catch (error) {
+      logger.warn('Failed to format date:', dateString, error);
+      return t('common:labels.unknown');
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -321,7 +349,7 @@ export default function BackupManagement() {
       {status?.running && status.currentBackup && (
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
           <p className="text-blue-800 dark:text-blue-200">
-            <strong>{t('admin:backup.running')}:</strong> {t('admin:backup.startedAt', { date: status.currentBackup.startedAt ? format(new Date(status.currentBackup.startedAt), 'dd.MM.yyyy HH:mm:ss') : t('common:labels.unknown') })}
+            <strong>{t('admin:backup.running')}:</strong> {t('admin:backup.startedAt', { date: formatDateTime(status.currentBackup.startedAt) })}
           </p>
         </div>
       )}
@@ -361,11 +389,7 @@ export default function BackupManagement() {
               backups.map((backup) => (
                 <tr key={backup.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                    {backup.completedAt
-                      ? format(new Date(backup.completedAt), 'dd.MM.yyyy HH:mm')
-                      : backup.startedAt
-                      ? format(new Date(backup.startedAt), 'dd.MM.yyyy HH:mm')
-                      : t('common:labels.unknown')}
+                    {formatDate(backup.completedAt || backup.startedAt)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`text-sm font-medium ${getStatusColor(backup.status)}`}>

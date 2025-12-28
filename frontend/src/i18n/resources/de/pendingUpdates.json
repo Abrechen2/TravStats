@@ -1,0 +1,129 @@
+{
+  "title": "Ausstehende Updates",
+  "description": "Automatische Flugdaten-Updates überprüfen und verwalten",
+  "empty": {
+    "title": "Keine ausstehenden Updates",
+    "description": "Es gibt derzeit keine ausstehenden Flug-Updates. Updates erscheinen hier, wenn automatische Updates aktiviert sind und neue Daten verfügbar sind."
+  },
+  "status": {
+    "pending": "Ausstehend",
+    "applied": "Angewendet",
+    "rejected": "Abgelehnt",
+    "expired": "Abgelaufen",
+    "edited": "Bearbeitet"
+  },
+  "expiresIn": "Läuft ab in",
+  "expired": "Abgelaufen",
+  "minutes": "Minuten",
+  "hours": "Stunden",
+  "days": "Tage",
+  "changes": {
+    "title": "Änderungen",
+    "detailed": "Detaillierte Änderungen",
+    "original": "Original",
+    "new": "Neu",
+    "more": "weitere"
+  },
+  "statisticsImpact": "Statistik-Auswirkungen",
+  "distance": "Distanz",
+  "flightTime": "Flugzeit",
+  "airlines": "Airlines",
+  "airports": "Flughäfen",
+  "before": "Vorher",
+  "after": "Nachher",
+  "change": "Änderung",
+  "added": "Hinzugefügt",
+  "removed": "Entfernt",
+  "actions": {
+    "apply": "Anwenden",
+    "reject": "Ablehnen",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "preview": "Auswirkungen anzeigen",
+    "viewDetails": "Details anzeigen"
+  },
+  "filters": {
+    "status": "Status",
+    "sortBy": "Sortieren nach",
+    "all": "Alle",
+    "pending": "Ausstehend",
+    "edited": "Bearbeitet",
+    "applied": "Angewendet",
+    "rejected": "Abgelehnt",
+    "expired": "Abgelaufen",
+    "createdAt": "Erstellungsdatum",
+    "expiresAt": "Ablaufdatum"
+  },
+  "statistics": {
+    "title": "Update-Statistiken",
+    "total": "Gesamt Updates",
+    "applied": "Angewendet",
+    "rejected": "Abgelehnt",
+    "edited": "Bearbeitet",
+    "expired": "Abgelaufen"
+  },
+  "messages": {
+    "applied": "Update erfolgreich angewendet",
+    "rejected": "Update abgelehnt",
+    "updated": "Update erfolgreich gespeichert",
+    "deleted": "Update gelöscht"
+  },
+  "errors": {
+    "loadFailed": "Fehler beim Laden der ausstehenden Updates",
+    "applyFailed": "Fehler beim Anwenden des Updates",
+    "rejectFailed": "Fehler beim Ablehnen des Updates",
+    "updateFailed": "Fehler beim Speichern des Updates",
+    "deleteFailed": "Fehler beim Löschen des Updates"
+  },
+  "preview": {
+    "title": "Statistik-Auswirkungen Vorschau",
+    "description": "Diese Vorschau zeigt, wie sich die Anwendung dieses Updates auf Ihre Statistiken auswirkt",
+    "noData": "Keine Daten verfügbar",
+    "distance": "Distanz",
+    "flightTime": "Flugzeit",
+    "airlines": "Airlines",
+    "airports": "Flughäfen",
+    "before": "Vorher",
+    "after": "Nachher",
+    "change": "Änderung",
+    "added": "Hinzugefügt"
+  },
+  "editor": {
+    "title": "Update bearbeiten",
+    "description": "Änderungen vor der Anwendung anpassen",
+    "save": "Änderungen speichern",
+    "cancel": "Abbrechen",
+    "saving": "Wird gespeichert...",
+    "fieldsTitle": "Eingabefelder",
+    "preview": "Vorschau",
+    "airline": "Airline",
+    "aircraft": "Flugzeug",
+    "gate": "Gate",
+    "terminal": "Terminal",
+    "depIata": "Abflughafen (IATA)",
+    "arrIata": "Zielflughafen (IATA)",
+    "departureTime": "Abflugzeit",
+    "arrivalTime": "Ankunftszeit",
+    "fields": {
+      "airline": "Airline",
+      "flightNumber": "Flugnummer",
+      "depIata": "Abflughafen (IATA)",
+      "depIcao": "Abflughafen (ICAO)",
+      "arrIata": "Zielflughafen (IATA)",
+      "arrIcao": "Zielflughafen (ICAO)",
+      "departureTime": "Abflugzeit",
+      "arrivalTime": "Ankunftszeit",
+      "depLat": "Abflug-Breitengrad",
+      "depLon": "Abflug-Längengrad",
+      "arrLat": "Ankunft-Breitengrad",
+      "arrLon": "Ankunft-Längengrad"
+    }
+  },
+  "apiSource": {
+    "airlabs": "AirLabs API",
+    "aviationstack": "Aviationstack API",
+    "opensky": "OpenSky Network"
+  }
+}
+
+

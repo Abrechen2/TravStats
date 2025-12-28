@@ -7,6 +7,7 @@
  */
 
 import { calculateDistance } from './geo';
+import { logger } from './logger';
 
 interface HistoricalFlightTime {
   flightNumber: string;
@@ -65,7 +66,7 @@ export function storeHistoricalFlightTime(
 
     localStorage.setItem(HISTORICAL_DATA_KEY, JSON.stringify(data));
   } catch (error) {
-    console.error('Failed to store historical flight time:', error);
+    logger.error('Failed to store historical flight time:', error);
   }
 }
 
@@ -95,7 +96,7 @@ function getHistoricalFlightTimes(
       return routeMatch;
     });
   } catch (error) {
-    console.error('Failed to retrieve historical flight times:', error);
+    logger.error('Failed to retrieve historical flight times:', error);
     return [];
   }
 }
@@ -188,7 +189,7 @@ export function estimateFlightTimes(
   const historical = getHistoricalFlightTimes(flightNumber, departureIata, arrivalIata);
 
   if (historical.length >= 2) {
-    console.log(`📊 Found ${historical.length} historical samples for this route`);
+    logger.debug(`📊 Found ${historical.length} historical samples for this route`);
 
     const boardingOffset = calculateAverageBoardingOffset(historical);
     const duration = calculateAverageDuration(historical);
@@ -206,12 +207,12 @@ export function estimateFlightTimes(
   }
 
   // Step 2: Fallback to heuristics
-  console.log('🔮 Using heuristic estimation (no historical data)');
-  console.log(`📅 Input: boardingTime=${boardingTime}, flightDate=${flightDate}`);
+  logger.debug('🔮 Using heuristic estimation (no historical data)');
+  logger.debug(`📅 Input: boardingTime=${boardingTime}, flightDate=${flightDate}`);
 
   // Departure = Boarding + 30 minutes
   const departureTime = addMinutesToTime(boardingTime, 30, flightDate);
-  console.log(`🛫 Calculated departure: ${departureTime} (boarding + 30min)`);
+  logger.debug(`🛫 Calculated departure: ${departureTime} (boarding + 30min)`);
 
   // Duration based on distance
   const duration = estimateDurationHeuristic(
@@ -220,10 +221,10 @@ export function estimateFlightTimes(
     arrivalLat,
     arrivalLon
   );
-  console.log(`⏱️ Estimated duration: ${duration} minutes`);
+  logger.debug(`⏱️ Estimated duration: ${duration} minutes`);
 
   const arrivalTime = addMinutesToTime(departureTime, duration, flightDate);
-  console.log(`🛬 Calculated arrival: ${arrivalTime} (departure + ${duration}min)`);
+  logger.debug(`🛬 Calculated arrival: ${arrivalTime} (departure + ${duration}min)`);
 
   return {
     departureTime,

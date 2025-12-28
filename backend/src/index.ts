@@ -20,6 +20,7 @@ import setupRoutes from './routes/setup';
 import adminRoutes from './routes/admin';
 import trainingRoutes from './routes/training';
 import backupRoutes from './routes/backup';
+import pendingUpdatesRoutes from './routes/pendingUpdates';
 import { errorHandler } from './middleware/errorHandler';
 import { requestLoggerMiddleware } from './middleware/requestLogger';
 import { prisma } from './db';
@@ -158,6 +159,7 @@ app.use('/api/v1', boardingpassParseRoutes);
 app.use('/api/v1/parser-feedback', parserFeedbackRoutes);
 app.use('/api/v1/training', trainingRoutes);
 app.use('/api/v1/backup', backupRoutes);
+app.use('/api/v1/pending-updates', pendingUpdatesRoutes);
 
 // Error handling
 app.use(errorHandler);
@@ -167,6 +169,8 @@ process.on('SIGINT', async () => {
   logger.info('Received SIGINT, shutting down gracefully...');
   const { stopScheduler } = await import('./services/backupScheduler');
   stopScheduler();
+  const { stopHistoricalEnrichmentScheduler } = await import('./jobs/historicalEnrichmentScheduler');
+  stopHistoricalEnrichmentScheduler();
   await prisma.$disconnect();
   process.exit(0);
 });
@@ -175,6 +179,8 @@ process.on('SIGTERM', async () => {
   logger.info('Received SIGTERM, shutting down gracefully...');
   const { stopScheduler } = await import('./services/backupScheduler');
   stopScheduler();
+  const { stopHistoricalEnrichmentScheduler } = await import('./jobs/historicalEnrichmentScheduler');
+  stopHistoricalEnrichmentScheduler();
   await prisma.$disconnect();
   process.exit(0);
 });
@@ -202,6 +208,43 @@ if (process.env.NODE_ENV !== 'test') {
       logger.warn({
         operation: 'server_start_backup_scheduler_error',
         message: 'Failed to start backup scheduler',
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+    }
+
+    // Start flight update scheduler
+    try {
+      const { startFlightUpdateScheduler } = await import('./jobs/flightUpdateScheduler');
+      // Default interval: 15 minutes (can be configured per user)
+      startFlightUpdateScheduler(15);
+      logger.info({
+        operation: 'server_start_flight_update_scheduler',
+        message: 'Flight update scheduler started',
+      });
+    } catch (error) {
+      logger.warn({
+        operation: 'server_start_flight_update_scheduler_error',
+        message: 'Failed to start flight update scheduler',
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+    }
+
+    // Start historical enrichment scheduler
+    try {
+      const { startHistoricalEnrichmentScheduler } = await import('./jobs/historicalEnrichmentScheduler');
+      startHistoricalEnrichmentScheduler();
+      logger.info({
+        operation: 'server_start_historical_enrichment_scheduler',
+        message: 'Historical enrichment scheduler started',
+      });
+    } catch (error) {
+      logger.warn({
+        operation: 'server_start_historical_enrichment_scheduler_error',
+        message: 'Failed to start historical enrichment scheduler',
         error: {
           message: error instanceof Error ? error.message : 'Unknown error',
         },

@@ -11,6 +11,7 @@ import { STORAGE_KEYS } from '../lib/constants';
 import { useTranslation } from '../hooks/useTranslation';
 import { useSettingsStore } from '../store/settingsStore';
 import { convertDistance, formatDistance, formatCurrency, getDistanceLabel, getCurrencySymbol } from '../lib/units';
+import { logger } from '../lib/logger';
 import {
   BarChart,
   Bar,
@@ -72,15 +73,15 @@ export default function AdvancedStatsPage() {
       // Load additional statistics
       const [fun, business, unique] = await Promise.all([
         statsApi.getFunStats().catch((err) => {
-          console.error('Failed to load fun stats:', err);
+          logger.error('Failed to load fun stats:', err);
           return null;
         }),
         statsApi.getBusinessStats().catch((err) => {
-          console.error('Failed to load business stats:', err);
+          logger.error('Failed to load business stats:', err);
           return null;
         }),
         statsApi.getUniqueStats().catch((err) => {
-          console.error('Failed to load unique stats:', err);
+          logger.error('Failed to load unique stats:', err);
           return null;
         }),
       ]);
@@ -88,13 +89,13 @@ export default function AdvancedStatsPage() {
       if (fun) setFunStats(fun);
       if (business) setBusinessStats(business);
       if (unique) {
-        console.log('Loaded unique stats:', unique);
+        logger.debug('Loaded unique stats:', unique);
         setUniqueStats(unique);
       } else {
-        console.warn('Unique stats are null or failed to load');
+        logger.warn('Unique stats are null or failed to load');
       }
     } catch (error) {
-      console.error('Failed to load flights:', error);
+      logger.error('Failed to load flights:', error);
     } finally {
       setLoading(false);
     }

@@ -80,6 +80,321 @@ const airlines = [
 const classes = ['economy', 'premium_economy', 'business', 'first'];
 const categories = ['vacation', 'business', 'private'];
 
+const providers = ['ollama', 'ollama', 'ollama', 'regex', 'regex', 'tesseract', 'openai', 'claude'];
+const sourceTypes: Array<'email' | 'boardingpass'> = ['email', 'email', 'email', 'boardingpass', 'boardingpass'];
+
+/**
+ * Create demo parser feedback events
+ */
+async function createParserFeedbackEvents(userId: string) {
+  // Check if feedback events already exist
+  const existingFeedback = await prisma.analyticsEvent.count({
+    where: {
+      userId,
+      type: 'parser_feedback',
+    },
+  });
+
+  if (existingFeedback > 0) {
+    console.log(`   Found ${existingFeedback} existing feedback events (skipping)`);
+    return;
+  }
+
+  const feedbackEvents = [];
+  const now = new Date();
+  
+  // Generate 18 feedback events over the last 60 days
+  for (let i = 0; i < 18; i++) {
+    const daysAgo = Math.floor(Math.random() * 60);
+    const createdAt = new Date(now);
+    createdAt.setDate(createdAt.getDate() - daysAgo);
+    createdAt.setHours(Math.floor(Math.random() * 24), Math.floor(Math.random() * 60));
+
+    const provider = providers[Math.floor(Math.random() * providers.length)];
+    const sourceType = sourceTypes[Math.floor(Math.random() * sourceTypes.length)];
+    
+    // Generate sample flight data with intentional errors
+    const airline = airlines[Math.floor(Math.random() * airlines.length)];
+    const route = flightRoutes[Math.floor(Math.random() * flightRoutes.length)];
+    const depAirport = airports.find(a => a.iata === route.dep)!;
+    const arrAirport = airports.find(a => a.iata === route.arr)!;
+    
+    const flightNumber = airline.prefix + route.flightNum;
+    const pnr = generatePNR();
+    
+    // Create original (incorrect) and corrected results
+    const errorType = Math.floor(Math.random() * 4);
+    let originalResult: any[] = [];
+    let correctedResult: any[] = [];
+    let issues: string[] = [];
+    let userCorrections: any[] = [];
+    let qualityScore = 30 + Math.floor(Math.random() * 65); // 30-95%
+
+    switch (errorType) {
+      case 0: // Flight number error
+        originalResult = [{
+          flightNumber: airline.prefix + (route.flightNum.slice(0, -1) + 'X'), // Wrong last digit
+          departureCode: depAirport.iata,
+          arrivalCode: arrAirport.iata,
+          departureTime: new Date(createdAt).toISOString(),
+          arrivalTime: new Date(createdAt.getTime() + route.duration * 60 * 60 * 1000).toISOString(),
+          pnr: pnr,
+        }];
+        correctedResult = [{
+          flightNumber: flightNumber,
+          departureCode: depAirport.iata,
+          arrivalCode: arrAirport.iata,
+          departureTime: new Date(createdAt).toISOString(),
+          arrivalTime: new Date(createdAt.getTime() + route.duration * 60 * 60 * 1000).toISOString(),
+          pnr: pnr,
+        }];
+        issues.push(`Flight 1: flightNumber mismatch (${originalResult[0].flightNumber} → ${flightNumber})`);
+        userCorrections.push({
+          field: 'flight_0_flightNumber',
+          original: originalResult[0].flightNumber,
+          corrected: flightNumber,
+        });
+        break;
+
+      case 1: // Departure code error
+        const wrongDep = airports.find(a => a.iata !== depAirport.iata && a.iata !== arrAirport.iata)!.iata;
+        originalResult = [{
+          flightNumber: flightNumber,
+          departureCode: wrongDep,
+          arrivalCode: arrAirport.iata,
+          departureTime: new Date(createdAt).toISOString(),
+          arrivalTime: new Date(createdAt.getTime() + route.duration * 60 * 60 * 1000).toISOString(),
+          pnr: pnr,
+        }];
+        correctedResult = [{
+          flightNumber: flightNumber,
+          departureCode: depAirport.iata,
+          arrivalCode: arrAirport.iata,
+          departureTime: new Date(createdAt).toISOString(),
+          arrivalTime: new Date(createdAt.getTime() + route.duration * 60 * 60 * 1000).toISOString(),
+          pnr: pnr,
+        }];
+        issues.push(`Flight 1: departureCode mismatch (${wrongDep} → ${depAirport.iata})`);
+        userCorrections.push({
+          field: 'flight_0_departureCode',
+          original: wrongDep,
+          corrected: depAirport.iata,
+        });
+        break;
+
+      case 2: // PNR error
+        originalResult = [{
+          flightNumber: flightNumber,
+          departureCode: depAirport.iata,
+          arrivalCode: arrAirport.iata,
+          departureTime: new Date(createdAt).toISOString(),
+          arrivalTime: new Date(createdAt.getTime() + route.duration * 60 * 60 * 1000).toISOString(),
+          pnr: 'XXXXXX', // Missing PNR
+        }];
+        correctedResult = [{
+          flightNumber: flightNumber,
+          departureCode: depAirport.iata,
+          arrivalCode: arrAirport.iata,
+          departureTime: new Date(createdAt).toISOString(),
+          arrivalTime: new Date(createdAt.getTime() + route.duration * 60 * 60 * 1000).toISOString(),
+          pnr: pnr,
+        }];
+        issues.push(`Flight 1: pnr mismatch (XXXXXX → ${pnr})`);
+        userCorrections.push({
+          field: 'flight_0_pnr',
+          original: 'XXXXXX',
+          corrected: pnr,
+        });
+        break;
+
+      case 3: // Multiple errors
+        originalResult = [{
+          flightNumber: airline.prefix + '9999', // Wrong flight number
+          departureCode: 'XXX', // Wrong departure
+          arrivalCode: arrAirport.iata,
+          departureTime: new Date(createdAt).toISOString(),
+          arrivalTime: new Date(createdAt.getTime() + route.duration * 60 * 60 * 1000).toISOString(),
+          pnr: '',
+        }];
+        correctedResult = [{
+          flightNumber: flightNumber,
+          departureCode: depAirport.iata,
+          arrivalCode: arrAirport.iata,
+          departureTime: new Date(createdAt).toISOString(),
+          arrivalTime: new Date(createdAt.getTime() + route.duration * 60 * 60 * 1000).toISOString(),
+          pnr: pnr,
+        }];
+        issues.push(`Flight 1: flightNumber mismatch (${originalResult[0].flightNumber} → ${flightNumber})`);
+        issues.push(`Flight 1: departureCode mismatch (XXX → ${depAirport.iata})`);
+        issues.push(`Flight 1: pnr mismatch ( → ${pnr})`);
+        userCorrections.push(
+          { field: 'flight_0_flightNumber', original: originalResult[0].flightNumber, corrected: flightNumber },
+          { field: 'flight_0_departureCode', original: 'XXX', corrected: depAirport.iata },
+          { field: 'flight_0_pnr', original: '', corrected: pnr }
+        );
+        qualityScore = 20 + Math.floor(Math.random() * 20); // Lower quality for multiple errors
+        break;
+    }
+
+    const originalData = sourceType === 'email' 
+      ? {
+          subject: `Your ${airline.name} Flight ${flightNumber} Confirmation`,
+          text: `Flight ${flightNumber} from ${depAirport.iata} to ${arrAirport.iata}`,
+          html: `<p>Flight ${flightNumber} from ${depAirport.iata} to ${arrAirport.iata}</p>`,
+        }
+      : {
+          imageBase64: `hash:demo_boarding_pass_${i}`,
+        };
+
+    feedbackEvents.push({
+      userId,
+      type: 'parser_feedback',
+      payload: {
+        sourceType,
+        provider,
+        originalData,
+        parsedResult: originalResult,
+        correctedResult,
+        qualityScore,
+        issues,
+        userCorrections,
+        timestamp: createdAt.toISOString(),
+      },
+      createdAt,
+    });
+  }
+
+  // Insert in batches
+  const batchSize = 5;
+  for (let i = 0; i < feedbackEvents.length; i += batchSize) {
+    const batch = feedbackEvents.slice(i, i + batchSize);
+    await prisma.analyticsEvent.createMany({
+      data: batch,
+    });
+  }
+
+  console.log(`   Created ${feedbackEvents.length} parser feedback events`);
+}
+
+/**
+ * Generate a random PNR (6-8 alphanumeric characters)
+ */
+function generatePNR(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  const length = 6 + Math.floor(Math.random() * 3); // 6-8 characters
+  let pnr = '';
+  for (let i = 0; i < length; i++) {
+    pnr += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return pnr;
+}
+
+/**
+ * Create demo pattern suggestions
+ */
+async function createPatternSuggestions(userId: string) {
+  // Check if pattern suggestions already exist
+  const existingSuggestions = await prisma.analyticsEvent.count({
+    where: {
+      type: 'pattern_suggestion',
+    },
+  });
+
+  if (existingSuggestions > 0) {
+    console.log(`   Found ${existingSuggestions} existing pattern suggestions (skipping)`);
+    return;
+  }
+
+  const now = new Date();
+  const suggestions = [
+    {
+      field: 'flightNumber',
+      pattern: '\\b([A-Z]{2,3})\\s*(\\d{3,4})\\b',
+      confidence: 0.92,
+      examples: ['LH1234', 'BA567', 'EK8901', 'AF2345', 'LX678'],
+      issue: 'Missing or incorrect flight number',
+      createdAt: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
+    },
+    {
+      field: 'pnr',
+      pattern: '\\b([A-Z0-9]{6,8})\\b',
+      confidence: 0.88,
+      examples: ['ABC123', 'XYZ789', 'DEF456', 'GHI012'],
+      issue: 'Missing or incorrect PNR',
+      createdAt: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000), // 10 days ago
+    },
+    {
+      field: 'departureCode',
+      pattern: '\\b([A-Z]{3})\\b',
+      confidence: 0.75,
+      examples: ['MUC', 'FRA', 'LHR', 'CDG', 'AMS'],
+      issue: 'Missing or incorrect departure airport code',
+      createdAt: new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000), // 15 days ago
+    },
+    {
+      field: 'arrivalCode',
+      pattern: '\\b([A-Z]{3})\\b',
+      confidence: 0.73,
+      examples: ['JFK', 'LAX', 'SFO', 'DXB', 'SIN'],
+      issue: 'Missing or incorrect arrival airport code',
+      createdAt: new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000), // 20 days ago
+    },
+    {
+      field: 'flightNumber',
+      pattern: '\\b([A-Z]{2})\\s*(\\d{4})\\b',
+      confidence: 0.95,
+      examples: ['LH1234', 'BA5678', 'EK9012', 'AF3456'],
+      issue: 'Missing or incorrect flight number (2-letter airline codes)',
+      createdAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+    },
+    {
+      field: 'pnr',
+      pattern: '\\b([A-Z]{6})\\b',
+      confidence: 0.70,
+      examples: ['ABCDEF', 'GHIJKL', 'MNOPQR'],
+      issue: 'Missing or incorrect PNR (6-letter format)',
+      createdAt: new Date(now.getTime() - 25 * 24 * 60 * 60 * 1000), // 25 days ago
+    },
+    {
+      field: 'flightNumber',
+      pattern: '\\b([A-Z]{3})\\s*(\\d{3})\\b',
+      confidence: 0.85,
+      examples: ['UAE123', 'QTR456', 'SIA789'],
+      issue: 'Missing or incorrect flight number (3-letter airline codes)',
+      createdAt: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
+    },
+    {
+      field: 'departureCode',
+      pattern: 'Departure:\\s*([A-Z]{3})',
+      confidence: 0.80,
+      examples: ['MUC', 'FRA', 'LHR'],
+      issue: 'Missing or incorrect departure airport code (with label)',
+      createdAt: new Date(now.getTime() - 12 * 24 * 60 * 60 * 1000), // 12 days ago
+    },
+  ];
+
+  for (const suggestion of suggestions) {
+    await prisma.analyticsEvent.create({
+      data: {
+        userId: 'system',
+        type: 'pattern_suggestion',
+        payload: {
+          field: suggestion.field,
+          pattern: suggestion.pattern,
+          confidence: suggestion.confidence,
+          examples: suggestion.examples,
+          issue: suggestion.issue,
+          applied: false,
+          createdAt: suggestion.createdAt.toISOString(),
+        },
+        createdAt: suggestion.createdAt,
+      },
+    });
+  }
+
+  console.log(`   Created ${suggestions.length} pattern suggestions`);
+}
+
 // Realistische Flüge: München als Hauptflughafen
 const flightRoutes = [
   // Europa (Kurzstrecke) - häufig
@@ -134,29 +449,41 @@ async function seedDemoUser() {
 
   try {
     // Check if demo user already exists
-    const existingUser = await prisma.user.findUnique({
+    let demoUser = await prisma.user.findUnique({
       where: { username: 'demo' },
     });
 
-    if (existingUser) {
-      console.log('   Demo user already exists (skipping)');
-      return;
+    if (!demoUser) {
+      // Create demo user
+      const passwordHash = await hashPassword('demo123');
+      demoUser = await prisma.user.create({
+        data: {
+          username: 'demo',
+          passwordHash,
+        },
+      });
+
+      console.log('✅ Demo user created');
+      console.log('   Username: demo');
+      console.log('   Password: demo123');
+      console.log('');
+      console.log('✈️  Creating 120 sample flights...');
+    } else {
+      console.log('✅ Demo user already exists');
+      console.log('');
+      
+      // Check if flights already exist
+      const existingFlights = await prisma.flight.count({
+        where: { userId: demoUser.id },
+      });
+
+      if (existingFlights > 0) {
+        console.log(`   Found ${existingFlights} existing flights`);
+        console.log('');
+      } else {
+        console.log('✈️  Creating 120 sample flights...');
+      }
     }
-
-    // Create demo user
-    const passwordHash = await hashPassword('demo123');
-    const demoUser = await prisma.user.create({
-      data: {
-        username: 'demo',
-        passwordHash,
-      },
-    });
-
-    console.log('✅ Demo user created');
-    console.log('   Username: demo');
-    console.log('   Password: demo123');
-    console.log('');
-    console.log('✈️  Creating 120 sample flights...');
 
     // Generate 120 flights over 4 years (2020-2024)
     const flights = [];
@@ -213,19 +540,34 @@ async function seedDemoUser() {
     // Sort by date
     flights.sort((a, b) => a.departureTime.getTime() - b.departureTime.getTime());
 
-    // Insert flights in batches
-    const batchSize = 20;
-    for (let i = 0; i < flights.length; i += batchSize) {
-      const batch = flights.slice(i, i + batchSize);
-      await prisma.flight.createMany({
-        data: batch,
-      });
-      console.log(`   Created flights ${i + 1}-${Math.min(i + batchSize, flights.length)} of ${flights.length}`);
+    // Insert flights in batches (only if they don't exist)
+    const existingFlights = await prisma.flight.count({
+      where: { userId: demoUser.id },
+    });
+
+    if (existingFlights === 0) {
+      const batchSize = 20;
+      for (let i = 0; i < flights.length; i += batchSize) {
+        const batch = flights.slice(i, i + batchSize);
+        await prisma.flight.createMany({
+          data: batch,
+        });
+        console.log(`   Created flights ${i + 1}-${Math.min(i + batchSize, flights.length)} of ${flights.length}`);
+      }
+      console.log('');
+      console.log(`✅ Created ${flights.length} flights from 2020-2024`);
     }
+
+    // Create parser feedback events
+    console.log('📊 Creating parser feedback events...');
+    await createParserFeedbackEvents(demoUser.id);
+    
+    // Create pattern suggestions
+    console.log('🔍 Creating pattern suggestions...');
+    await createPatternSuggestions(demoUser.id);
 
     console.log('');
     console.log('✅ Demo user setup complete!');
-    console.log(`   Created ${flights.length} flights from 2020-2024`);
     console.log('   Main hub: Munich (MUC)');
     console.log('   Routes: Europe, Americas, Asia, Oceania, Africa');
   } catch (error) {
