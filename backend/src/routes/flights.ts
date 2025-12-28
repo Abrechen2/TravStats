@@ -9,6 +9,13 @@ import { checkAndUpdateAchievements } from '../utils/achievements';
 import { enrichFlightAirports } from '../services/airportLookup';
 import { flightCreationLimiter } from '../middleware/rateLimit';
 import { lookupFlightDetails } from '../services/flightLookup';
+import {
+  findEnrichmentCandidates,
+  getUserEnrichmentSettings,
+  aggregateFlightData,
+  createHistoricalEnrichment,
+} from '../services/flightEnrichmentService';
+import { estimateRoute } from '../services/routeEstimationService';
 
 const router = Router();
 
@@ -135,7 +142,8 @@ router.get('/lookup', async (req: AuthRequest, res: Response, next: NextFunction
 
     const lookup = await lookupFlightDetails(
       flightNumber,
-      typeof date === 'string' ? date : undefined
+      typeof date === 'string' ? date : undefined,
+      req.userId!
     );
 
     if (!lookup) {
@@ -202,6 +210,9 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
         category: data.category,
         tags: data.tags ?? [],
         receiptUrl: data.receiptUrl,
+        // Data source tracking
+        dataSource: 'manual',
+        lastModifiedBy: 'user',
       },
     });
 
@@ -474,6 +485,9 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     if (data.departureTime) updateData.departureTime = new Date(data.departureTime);
     if (data.arrivalTime) updateData.arrivalTime = new Date(data.arrivalTime);
 
+    // Set lastModifiedBy when user updates
+    updateData.lastModifiedBy = 'user';
+
     const flight = await prisma.flight.update({
       where: { id },
       data: updateData,
@@ -521,6 +535,151 @@ router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction
     });
 
     res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get enrichment candidates
+router.get('/enrichment-candidates', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId!;
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+
+    // Get user settings
+    const settings = await getUserEnrichmentSettings(userId);
+    if (!settings || !settings.enabled) {
+      return res.json({
+        candidates: [],
+        settings: null,
+        message: 'Historical enrichment is disabled. Enable it in settings.',
+      });
+    }
+
+    // Find candidates
+    let candidates = await findEnrichmentCandidates(userId, settings);
+
+    // Apply limit if provided
+    if (limit) {
+      candidates = candidates.slice(0, limit);
+    }
+
+    res.json({
+      candidates,
+      settings,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Enrich a specific flight historically
+router.post('/:id/enrich-historical', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId!;
+    const { id } = req.params;
+
+    // Check if flight exists and belongs to user
+    const flight = await prisma.flight.findFirst({
+      where: { id, userId },
+    });
+
+    if (!flight) {
+      throw new AppError('Flight not found', 404);
+    }
+
+    // Get user settings
+    const settings = await getUserEnrichmentSettings(userId);
+    if (!settings || !settings.enabled) {
+      throw new AppError('Historical enrichment is disabled. Enable it in settings.', 400);
+    }
+
+    if (!flight.flightNumber) {
+      throw new AppError('Flight number is required for historical enrichment', 400);
+    }
+
+    // Aggregate data from similar flights
+    const aggregatedData = await aggregateFlightData(flight.flightNumber, flight.id);
+
+    if (!aggregatedData) {
+      return res.status(404).json({
+        error: 'No reference flights found',
+        message: 'Could not find enough live-tracked flights with the same flight number to enrich this flight.',
+      });
+    }
+
+    // Check confidence threshold
+    if (aggregatedData.confidence < settings.minConfidence) {
+      return res.status(400).json({
+        error: 'Confidence too low',
+        message: `Confidence (${aggregatedData.confidence}%) is below your minimum threshold (${settings.minConfidence}%).`,
+        confidence: aggregatedData.confidence,
+        minConfidence: settings.minConfidence,
+      });
+    }
+
+    // Create pending update
+    const pendingUpdateId = await createHistoricalEnrichment(flight.id, aggregatedData);
+
+    if (!pendingUpdateId) {
+      throw new AppError('Failed to create historical enrichment', 500);
+    }
+
+    res.json({
+      pendingUpdateId,
+      confidence: aggregatedData.confidence,
+      requiresApproval: settings.requireApproval,
+      sourceFlightsCount: aggregatedData.sourceFlightsCount,
+      anomalies: aggregatedData.anomalies,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get route estimation for a flight
+router.get('/:id/route-estimation', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId!;
+    const { id } = req.params;
+
+    // Check if flight exists and belongs to user
+    const flight = await prisma.flight.findFirst({
+      where: { id, userId },
+    });
+
+    if (!flight) {
+      throw new AppError('Flight not found', 404);
+    }
+
+    // If flight already has a route, return it
+    if (flight.actualRoute && Array.isArray(flight.actualRoute) && flight.actualRoute.length > 0) {
+      return res.json({
+        flightId: flight.id,
+        hasRoute: true,
+        routeSource: flight.routeSource,
+        route: flight.actualRoute,
+        overflownCountries: flight.overflownCountries || [],
+        routeDistance: flight.routeDistance,
+      });
+    }
+
+    // Estimate route
+    const estimatedRoute = estimateRoute(
+      flight.depLat,
+      flight.depLon,
+      flight.arrLat,
+      flight.arrLon,
+      flight.flightNumber || '',
+      flight.departureTime
+    );
+
+    res.json({
+      flightId: flight.id,
+      hasRoute: false,
+      routeSource: null,
+      estimatedRoute,
+    });
   } catch (error) {
     next(error);
   }

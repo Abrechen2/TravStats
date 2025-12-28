@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { settingsApi } from '../lib/api';
+import { logger } from '../lib/logger';
 
 type ThemePreference = 'light' | 'dark';
 type LanguagePreference = 'de' | 'en';
@@ -20,6 +21,7 @@ type DateFormat = 'DD.MM.YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD';
 type TimeFormat = '24h' | '12h';
 
 type FlightStatusDefault = 'scheduled' | 'flown';
+type BoardingPassParserStrategy = 'parser-only' | 'parser-with-api' | 'api-only' | null;
 
 type SettingsUpdater<T> = (updates: Partial<T>) => void;
 
@@ -78,6 +80,20 @@ export interface BackupSettings {
   cloudSync: boolean;
 }
 
+export interface ApiKeyStatus {
+  hasKey: boolean;
+  isShared: boolean;
+  hasAccess: boolean;
+}
+
+export interface ApiKeysStatus {
+  openai: ApiKeyStatus;
+  claude: ApiKeyStatus;
+  airlabs: ApiKeyStatus;
+  aviationstack: ApiKeyStatus;
+  opensky: ApiKeyStatus;
+}
+
 export interface SettingsState {
   profile: ProfileSettings;
   display: DisplaySettings;
@@ -87,6 +103,8 @@ export interface SettingsState {
   notifications: NotificationSettings;
   privacy: PrivacySettings;
   backup: BackupSettings;
+  apiKeys: ApiKeysStatus | null;
+  boardingPassParserStrategy: BoardingPassParserStrategy;
   setProfile: SettingsUpdater<ProfileSettings>;
   setDisplay: SettingsUpdater<DisplaySettings>;
   setUnits: SettingsUpdater<UnitsSettings>;
@@ -95,6 +113,9 @@ export interface SettingsState {
   setNotifications: SettingsUpdater<NotificationSettings>;
   setPrivacy: SettingsUpdater<PrivacySettings>;
   setBackup: SettingsUpdater<BackupSettings>;
+  setApiKeys: (status: ApiKeysStatus) => void;
+  setBoardingPassParserStrategy: (strategy: BoardingPassParserStrategy) => void;
+  loadApiKeysStatus: () => Promise<void>;
   resetSettings: () => void;
   loadRemoteSettings: () => Promise<void>;
   saveRemoteSettings: () => Promise<void>;
@@ -102,7 +123,7 @@ export interface SettingsState {
 
 const defaultSettings: Omit<
   SettingsState,
-  'setProfile' | 'setDisplay' | 'setUnits' | 'setDefaults' | 'setMap' | 'setNotifications' | 'setPrivacy' | 'setBackup' | 'resetSettings' | 'loadRemoteSettings' | 'saveRemoteSettings'
+  'setProfile' | 'setDisplay' | 'setUnits' | 'setDefaults' | 'setMap' | 'setNotifications' | 'setPrivacy' | 'setBackup' | 'setApiKeys' | 'setBoardingPassParserStrategy' | 'loadApiKeysStatus' | 'resetSettings' | 'loadRemoteSettings' | 'saveRemoteSettings'
 > = {
   profile: {
     username: 'Traveler',
@@ -151,6 +172,8 @@ const defaultSettings: Omit<
     exportFormat: 'json',
     cloudSync: false,
   },
+  apiKeys: null,
+  boardingPassParserStrategy: null, // null = auto (LLM wenn verfügbar)
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -189,16 +212,38 @@ export const useSettingsStore = create<SettingsState>()(
         set((state) => ({
           backup: { ...state.backup, ...updates },
         })),
+      setApiKeys: (status) =>
+        set(() => ({
+          apiKeys: status,
+        })),
+      setBoardingPassParserStrategy: (strategy) =>
+        set(() => ({
+          boardingPassParserStrategy: strategy,
+        })),
+      loadApiKeysStatus: async () => {
+        try {
+          const status = await settingsApi.getApiKeys();
+          set({ apiKeys: status });
+        } catch (error) {
+          logger.warn('Failed to load API keys status', error);
+        }
+      },
       resetSettings: () => set(defaultSettings),
       loadRemoteSettings: async () => {
         try {
           const remote = await settingsApi.get();
           if (remote) {
             set((state) => {
+              // Extract autoUpdate and historicalEnrichment to exclude them from store
+              const { autoUpdate, historicalEnrichment, ...remoteWithoutDirectFields } = remote as any;
               const newState = {
                 ...state,
-                ...remote,
+                ...remoteWithoutDirectFields,
               };
+              // Set boarding pass parser strategy if present
+              if (remote.boardingPassParserStrategy !== undefined) {
+                newState.boardingPassParserStrategy = remote.boardingPassParserStrategy;
+              }
               // Sync language to i18n if it changed (will be handled by App.tsx useEffect, but we do it here too for immediate update)
               if (remote.display?.language && remote.display.language !== state.display.language) {
                 // The language sync will be handled by the useEffect in App.tsx
@@ -208,16 +253,17 @@ export const useSettingsStore = create<SettingsState>()(
             });
           }
         } catch (error) {
-          console.warn('Failed to load remote settings, using local defaults', error);
+          logger.warn('Failed to load remote settings, using local defaults', error);
         }
       },
       saveRemoteSettings: async () => {
         try {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const { resetSettings, loadRemoteSettings, saveRemoteSettings, ...rest } = get();
+          const { resetSettings, loadRemoteSettings, saveRemoteSettings, autoUpdate, historicalEnrichment, ...rest } = get();
+          // Don't send autoUpdate and historicalEnrichment as they are managed separately
           await settingsApi.update(rest);
         } catch (error) {
-          console.warn('Failed to save settings remotely', error);
+          logger.warn('Failed to save settings remotely', error);
         }
       },
     }),

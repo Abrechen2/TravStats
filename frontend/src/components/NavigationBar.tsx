@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { settingsApi } from '../lib/api';
+import { settingsApi, pendingUpdatesApi } from '../lib/api';
 import DarkModeToggle from './DarkModeToggle';
 import { useTranslation } from '../hooks/useTranslation';
 import { useClickOutside } from '../hooks/useClickOutside';
@@ -14,6 +14,7 @@ export default function NavigationBar() {
   const { t } = useTranslation(['dashboard', 'common']);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [developerModeEnabled, setDeveloperModeEnabled] = useState(false);
+  const [pendingUpdatesCount, setPendingUpdatesCount] = useState(0);
   const mobileMenuRef = useClickOutside<HTMLDivElement>(() => setMobileMenuOpen(false));
 
   // Check if user has training access (admin or canTrainLLM)
@@ -41,6 +42,24 @@ export default function NavigationBar() {
     }
   }, [hasTrainingAccess]);
 
+  // Load pending updates count
+  useEffect(() => {
+    if (user) {
+      const loadPendingCount = async () => {
+        try {
+          const data = await pendingUpdatesApi.getAll({ status: 'pending' });
+          setPendingUpdatesCount(data.count || 0);
+        } catch (error) {
+          // Silently fail - not critical
+        }
+      };
+      loadPendingCount();
+      // Refresh every 30 seconds
+      const interval = setInterval(loadPendingCount, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
+
   const isActive = (path: string) => {
     if (path === '/') {
       return location.pathname === '/';
@@ -58,10 +77,14 @@ export default function NavigationBar() {
     navigate('/login');
   };
 
+  // Show pending updates button if there are pending updates OR if user is currently on that page
+  const showPendingUpdates = pendingUpdatesCount > 0 || location.pathname === '/pending-updates';
+
   const navItems = [
     { path: '/', label: t('dashboard:title'), icon: '🏠', show: true },
     { path: '/achievements', label: t('dashboard:achievements'), icon: '🏆', show: true },
     { path: '/stats', label: t('dashboard:stats'), icon: '📊', show: true },
+    { path: '/pending-updates', label: t('dashboard:pendingUpdates'), icon: '🔄', show: showPendingUpdates, badge: pendingUpdatesCount },
     { path: '/settings', label: t('dashboard:settings'), icon: '⚙️', show: true },
     { path: '/admin', label: t('dashboard:admin'), icon: '👑', show: user?.isAdmin || false },
     { path: '/training', label: t('dashboard:training'), icon: '🤖', show: hasTrainingAccess && developerModeEnabled },
@@ -114,6 +137,7 @@ export default function NavigationBar() {
           <nav className="hidden xl:flex items-center gap-2">
             {navItems.map((item) => {
               const active = isActive(item.path);
+              const hasBadge = (item as any).badge && (item as any).badge > 0;
               if (item.path === '/') {
                 // Dashboard - special styling
                 return (
@@ -127,6 +151,26 @@ export default function NavigationBar() {
                     }`}
                   >
                     {item.icon} {item.label}
+                  </Link>
+                );
+              } else if (item.path === '/pending-updates') {
+                // Pending Updates - with badge
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors text-sm relative ${
+                      active
+                        ? 'bg-yellow-500 text-white shadow-md'
+                        : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-900/50'
+                    }`}
+                  >
+                    {item.icon} {item.label}
+                    {hasBadge && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
+                        {(item as any).badge > 99 ? '99+' : (item as any).badge}
+                      </span>
+                    )}
                   </Link>
                 );
               } else if (item.path === '/achievements') {
@@ -229,6 +273,7 @@ export default function NavigationBar() {
             <div className="space-y-2">
               {navItems.map((item) => {
                 const active = isActive(item.path);
+                const hasBadge = (item as any).badge && (item as any).badge > 0;
                 if (item.path === '/') {
                   // Dashboard
                   return (
@@ -244,6 +289,28 @@ export default function NavigationBar() {
                     >
                       <span className="text-xl">{item.icon}</span>
                       {item.label}
+                    </Link>
+                  );
+                } else if (item.path === '/pending-updates') {
+                  // Pending Updates - with badge
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-colors relative ${
+                        active
+                          ? 'bg-yellow-500 text-white shadow-md'
+                          : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-900/50'
+                      }`}
+                    >
+                      <span className="text-xl">{item.icon}</span>
+                      {item.label}
+                      {hasBadge && (
+                        <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
+                          {(item as any).badge > 99 ? '99+' : (item as any).badge}
+                        </span>
+                      )}
                     </Link>
                   );
                 } else if (item.path === '/achievements') {

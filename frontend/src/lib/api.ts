@@ -184,6 +184,21 @@ export const parseApi = {
     return data;
   },
 
+  // Get provider availability (simplified for hybrid flow)
+  getProviderAvailability: async () => {
+    const { data } = await parserApi.get<{
+      ollama: boolean;
+      openai: boolean;
+      claude: boolean;
+      providers: {
+        ollama?: { available: boolean; reason?: string; metadata?: Record<string, any> };
+        openai?: { available: boolean; reason?: string; metadata?: Record<string, any> };
+        claude?: { available: boolean; reason?: string; metadata?: Record<string, any> };
+      };
+    }>('/parse-boardingpass/availability');
+    return data;
+  },
+
   submitParserCorrection: async (correction: {
     sourceType: 'email' | 'boardingpass';
     provider: string;
@@ -412,6 +427,35 @@ export const settingsApi = {
   },
   updateOnboardingState: async (state: OnboardingState) => {
     const { data } = await api.put<OnboardingState>('/settings/onboarding-state', state);
+    return data;
+  },
+  getApiKeys: async () => {
+    const { data } = await api.get<{
+      openai: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+      claude: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+      airlabs: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+      aviationstack: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+      opensky: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+    }>('/settings/api-keys');
+    return data;
+  },
+  updateApiKeys: async (payload: {
+    openaiApiKey?: string | null;
+    claudeApiKey?: string | null;
+    airlabsApiKey?: string | null;
+    aviationstackApiKey?: string | null;
+    openskyClientId?: string | null;
+    openskyClientSecret?: string | null;
+    openskyUsername?: string | null;
+    openskyPassword?: string | null;
+  }) => {
+    const { data } = await api.put('/settings/api-keys', payload);
+    return data;
+  },
+  testApiKey: async (provider: 'openai' | 'claude' | 'airlabs' | 'aviationstack' | 'opensky', apiKey?: string, openskyCredentials?: { clientId?: string; clientSecret?: string; username?: string; password?: string }) => {
+    const endpoint = `/settings/api-keys/test/${provider}`;
+    const payload = provider === 'opensky' ? openskyCredentials : { apiKey };
+    const { data } = await api.post<{ success: boolean; message: string; details?: any }>(endpoint, payload);
     return data;
   },
 };
@@ -732,6 +776,40 @@ export const adminApi = {
     return data;
   },
 
+  getGlobalApiKeys: async () => {
+    const { data } = await api.get<{
+      globalAirlabsApiKey?: string;
+      globalAviationstackApiKey?: string;
+      globalOpenskyClientId?: string;
+      globalOpenskyClientSecret?: string;
+      globalOpenskyUsername?: string;
+      globalOpenskyPassword?: string;
+      allowUserFlightApiKeys: boolean;
+      requireUserFlightApiKeys: boolean;
+    }>('/admin/api-keys');
+    return data;
+  },
+
+  updateGlobalApiKeys: async (keys: {
+    globalAirlabsApiKey?: string | null;
+    globalAviationstackApiKey?: string | null;
+    globalOpenskyClientId?: string | null;
+    globalOpenskyClientSecret?: string | null;
+    globalOpenskyUsername?: string | null;
+    globalOpenskyPassword?: string | null;
+    allowUserFlightApiKeys?: boolean;
+    requireUserFlightApiKeys?: boolean;
+  }) => {
+    const { data } = await api.put('/admin/api-keys', keys);
+    return data;
+  },
+  testApiKey: async (provider: 'openai' | 'claude' | 'airlabs' | 'aviationstack' | 'opensky', apiKey?: string, openskyCredentials?: { clientId?: string; clientSecret?: string; username?: string; password?: string }) => {
+    const endpoint = `/admin/api-keys/test/${provider}`;
+    const payload = provider === 'opensky' ? openskyCredentials : { apiKey };
+    const { data } = await api.post<{ success: boolean; message: string; details?: any }>(endpoint, payload);
+    return data;
+  },
+
   // Logging API
   getLoggingConfig: async () => {
     const { data } = await api.get<{
@@ -969,6 +1047,59 @@ export const adminApi = {
       total: number;
     }>('/admin/logging/search', { params });
     return data;
+  },
+};
+
+// Pending Updates API
+export const pendingUpdatesApi = {
+  getAll: async (filters?: { status?: string; flightId?: string }) => {
+    const { data } = await api.get<{
+      updates: any[];
+      count: number;
+    }>('/pending-updates', { params: filters });
+    return data;
+  },
+
+  getById: async (id: string) => {
+    const { data } = await api.get<any>(`/pending-updates/${id}`);
+    return data;
+  },
+
+  getStatistics: async () => {
+    const { data } = await api.get<{
+      totalUpdates: number;
+      appliedUpdates: number;
+      rejectedUpdates: number;
+      editedUpdates: number;
+      expiredUpdates: number;
+      mostChangedFields: Record<string, number>;
+      averageUpdateTime: number | null;
+    }>('/pending-updates/statistics');
+    return data;
+  },
+
+  update: async (id: string, editedData: any) => {
+    const { data } = await api.put<any>(`/pending-updates/${id}`, { editedData });
+    return data;
+  },
+
+  preview: async (id: string, editedData?: any) => {
+    const { data } = await api.post<any>(`/pending-updates/${id}/preview`, { editedData });
+    return data;
+  },
+
+  apply: async (id: string) => {
+    const { data } = await api.post<{ success: boolean; flight: any }>(`/pending-updates/${id}/apply`);
+    return data;
+  },
+
+  reject: async (id: string) => {
+    const { data } = await api.post<{ success: boolean }>(`/pending-updates/${id}/reject`);
+    return data;
+  },
+
+  delete: async (id: string) => {
+    await api.delete(`/pending-updates/${id}`);
   },
 };
 

@@ -8,35 +8,27 @@ import { I18nextProvider } from 'react-i18next'
 import i18n from './i18n/config'
 
 // #region agent log
-// Debug logging helper - works in Docker/Unraid by also logging to console and localStorage
+// Debug logging helper - only active in development mode
 const debugLog = (location: string, message: string, data: any = {}, hypothesisId?: string) => {
   // Only log in development mode
   if (import.meta.env.MODE !== 'development') {
     return;
   }
   
-  const logEntry = {
-    location,
-    message,
-    data,
-    timestamp: Date.now(),
-    sessionId: 'debug-session',
-    runId: 'run1',
-    hypothesisId,
-  };
-  
-  // Try to send to debug server (works if running locally)
-  fetch('http://127.0.0.1:7243/ingest/0704fdb1-689b-416e-9f08-7a10e884bebd', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(logEntry),
-  }).catch(() => {});
-  
-  // Also log to console for immediate visibility
+  // Development-only console logging
   console.log(`[DEBUG ${hypothesisId || '?'}] ${location}: ${message}`, data);
   
-  // Store in localStorage for later retrieval (max 100 entries)
+  // Store in localStorage for development debugging (max 100 entries)
   try {
+    const logEntry = {
+      location,
+      message,
+      data,
+      timestamp: Date.now(),
+      sessionId: 'debug-session',
+      runId: 'run1',
+      hypothesisId,
+    };
     const stored = localStorage.getItem('debug-logs') || '[]';
     const logs = JSON.parse(stored);
     logs.push(logEntry);

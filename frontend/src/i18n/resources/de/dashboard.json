@@ -54,6 +54,7 @@
     "title": "Navigation"
   },
   "welcome": "Willkommen, {{username}}!",
+  "pendingUpdates": "Ausstehende Updates",
   "map": {
     "view2d": "2D-Ansicht",
     "view3d": "3D-Ansicht",

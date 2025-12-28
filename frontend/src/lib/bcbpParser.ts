@@ -42,240 +42,48 @@ export interface BoardingPassData {
   raw: string;
 }
 
-// Import airline-specific parsers
-import { parseRyanairBoardingPass } from './airline-parsers/ryanairParser';
+// Import registry-based parser system
+import { parseBCBP as parseBCBPFromRegistry } from './airline-parsers';
 import { logger } from './logger';
 
 /**
  * Enhanced parser that tries multiple boarding pass formats
  *
- * ARCHITECTURE: One scanner, multiple parsers (Fallback Chain Pattern)
+ * ARCHITECTURE: Registry Pattern with Strategy Interface
+ * All parsers are registered in the registry and executed by priority.
  * This allows us to support any airline without duplicating scanner code.
  */
 export function parseBCBP(barcodeData: string): BoardingPassData | null {
-  logger.debug('BCBP PARSER: Raw barcode data:', barcodeData);
-  logger.debug('BCBP PARSER: Length:', barcodeData.length, 'chars');
+  logger.debug('[BCBP Parser] Raw barcode data:', barcodeData);
+  logger.debug('[BCBP Parser] Length:', barcodeData.length, 'chars');
 
-  // Try 1: Standard IATA BCBP format (most common)
-  const bcbpResult = parseBCBPStandard(barcodeData);
-  if (bcbpResult) {
-    logger.debug('BCBP PARSER: Standard IATA format successful');
-    logger.debug('Parsed date:', bcbpResult.dateOfFlight);
-    logger.debug('Airline:', bcbpResult.operatingCarrierDesignator, '-', bcbpResult.airlineName);
-    logger.debug('Flight:', bcbpResult.flightNumber);
-    return bcbpResult;
+  // Use registry-based parser system
+  const result = parseBCBPFromRegistry(barcodeData);
+  
+  if (result) {
+    logger.debug('[BCBP Parser] Parsing successful');
+    logger.debug('[BCBP Parser] Parsed date:', result.dateOfFlight);
+    logger.debug('[BCBP Parser] Airline:', result.operatingCarrierDesignator, '-', result.airlineName);
+    logger.debug('[BCBP Parser] Flight:', result.flightNumber);
+  } else {
+    logger.error('[BCBP Parser] All parsing methods failed');
   }
-
-  // Try 2: Airline-specific formats (proprietary encodings)
-  const ryanairResult = parseRyanairBoardingPass(barcodeData);
-  if (ryanairResult) {
-    logger.debug('BCBP PARSER: Ryanair format successful');
-    return ryanairResult;
-  }
-
-  // TODO: Add more airline-specific parsers here:
-  // const easyJetResult = parseEasyJetBoardingPass(barcodeData);
-  // if (easyJetResult) return easyJetResult;
-
-  // Try 3: URL-based formats (e.g., Lufthansa, Ryanair web boarding passes)
-  const urlResult = parseURLBoardingPass(barcodeData);
-  if (urlResult) {
-    logger.debug('BCBP PARSER: URL format successful');
-    return urlResult;
-  }
-
-  // Try 4: Intelligent fallback - extract what we can from any text
-  const fallbackResult = parseFallbackBoardingPass(barcodeData);
-  if (fallbackResult) {
-    logger.debug('BCBP PARSER: Fallback parsing successful');
-    logger.debug('Parsed date:', fallbackResult.dateOfFlight);
-    return fallbackResult;
-  }
-
-  logger.error('BCBP PARSER: All parsing methods failed');
-  return null;
+  
+  return result;
 }
 
-/**
- * Parse standard IATA BCBP barcode data
- */
-function parseBCBPStandard(barcodeData: string): BoardingPassData | null {
-  try {
-    // BCBP format starts with 'M' for mandatory items
-    if (!barcodeData.startsWith('M')) {
-      return null;
-    }
+// Old parser functions have been moved to separate parser classes in airline-parsers/
+// Use parseBCBP() which delegates to the registry system.
 
-    let pos = 1;
-
-    // Format code (1 char) - '1' for single leg, 'M' for multi-leg
-    const formatCode = barcodeData.charAt(pos);
-    pos += 1;
-
-    // Number of legs (only in multi-leg format 'M', not in format '1')
-    let numberOfLegs = 1;
-    if (formatCode === 'M') {
-      numberOfLegs = parseInt(barcodeData.charAt(pos), 10);
-      pos += 1;
-    }
-
-    // Passenger name (FIXED LENGTH: 20 chars, right-padded with spaces)
-    // Format: LASTNAME/FIRSTNAME followed by spaces
-    const passengerName = barcodeData.substring(pos, pos + 20).trim();
-    pos += 20;
-
-    // Electronic ticket indicator (1 char) - 'E' for e-ticket
-    const electronicTicketIndicator = barcodeData.charAt(pos);
-    pos += 1;
-
-    // Operating carrier PNR code (7 chars)
-    const operatingCarrierPNR = barcodeData.substring(pos, pos + 7).trim();
-    pos += 7;
-
-    // Departure airport (3 chars - IATA code)
-    const departureAirport = barcodeData.substring(pos, pos + 3);
-    pos += 3;
-
-    // Arrival airport (3 chars - IATA code)
-    const arrivalAirport = barcodeData.substring(pos, pos + 3);
-    pos += 3;
-
-    // Operating carrier designator (3 chars - airline code)
-    const operatingCarrierDesignator = barcodeData.substring(pos, pos + 3).trim();
-    pos += 3;
-
-    // Flight number (5 chars, right-padded with spaces)
-    const flightNumber = barcodeData.substring(pos, pos + 5).trim();
-    pos += 5;
-
-    // Date of flight (3 chars - Julian date, day of year)
-    const julianDate = barcodeData.substring(pos, pos + 3);
-    pos += 3;
-    logger.debug('Julian date from barcode:', julianDate);
-
-    // Compartment code (1 char) - Y=Economy, J=Business, F=First
-    const compartmentCode = barcodeData.charAt(pos);
-    pos += 1;
-
-    // Seat number (4 chars)
-    const seatNumber = barcodeData.substring(pos, pos + 4).trim();
-    pos += 4;
-
-    // Check-in sequence number (5 chars)
-    const checkInSequenceNumber = barcodeData.substring(pos, pos + 5).trim();
-    pos += 5;
-
-    // Passenger status (1 char)
-    const passengerStatus = barcodeData.charAt(pos);
-    pos += 1;
-
-    // ===== END OF MANDATORY ITEMS =====
-    // After mandatory items, there may be additional data including conditional items
-
-    // Parse conditional items if available (contains gate, terminal, boarding time, etc.)
-    let gate: string | undefined;
-    let terminal: string | undefined;
-    let boardingTime: string | undefined;
-
-    try {
-      logger.debug(`Current position after mandatory: ${pos}, remaining string: "${barcodeData.substring(pos)}"`);
-
-      // Skip any padding spaces
-      while (pos < barcodeData.length && barcodeData.charAt(pos) === ' ') {
-        pos++;
-      }
-
-      // Beginning of variable size field (1 char) - version number/marker
-      if (pos < barcodeData.length) {
-        const versionByte = barcodeData.charAt(pos);
-        logger.debug('Version/marker byte:', JSON.stringify(versionByte), 'at position', pos);
-        pos += 1;
-
-        // Field size of structured message - Conditional (2 chars, hex)
-        if (pos + 1 < barcodeData.length) {
-          const lengthHex = barcodeData.substring(pos, pos + 2);
-          logger.debug('Conditional length (raw HEX string):', JSON.stringify(lengthHex));
-
-          // Try to parse as hex
-          let conditionalLength = 0;
-          try {
-            conditionalLength = parseInt(lengthHex.trim(), 16);
-            logger.debug('Conditional items length (parsed as hex):', conditionalLength);
-          } catch {
-            logger.warn('Failed to parse conditional length as hex');
-          }
-
-          pos += 2;
-
-          if (conditionalLength > 0 && conditionalLength < 200 && pos + conditionalLength <= barcodeData.length) {
-            const conditionalData = barcodeData.substring(pos, pos + conditionalLength);
-            logger.debug('Full conditional data:', JSON.stringify(conditionalData));
-            logger.debug('Conditional data length:', conditionalData.length);
-
-            // NOTE: Gate, terminal, and boarding time are rarely in IATA barcodes
-            // They will be extracted via OCR from the visual boarding pass text
-            // We skip parsing airline-specific data here to avoid false positives
-
-            logger.debug('Conditional section parsed - airline-specific data will be extracted via OCR');
-            pos += conditionalLength;
-          } else if (conditionalLength === 0) {
-            logger.debug('No conditional data present in this boarding pass');
-          } else {
-            logger.warn(`Invalid conditional length: ${conditionalLength} or insufficient data`);
-          }
-        }
-      }
-    } catch (error) {
-      logger.warn('Failed to parse conditional items (non-critical):', error);
-      // Continue anyway - conditional items are optional
-    }
-
-    // NOTE: We've disabled the fallback barcode search for gate/terminal
-    // because it produces too many false positives (e.g., A220 from document numbers, TT from passenger names)
-    // Gate, terminal, and boarding time should be extracted via OCR from the visual text instead
-    if (!gate && !terminal) {
-      logger.debug('Gate/Terminal/Time not in barcode - will be extracted via OCR from visual text');
-    }
-
-    // Convert Julian date to actual date
-    const dateOfFlight = julianDateToDate(julianDate);
-    logger.debug('Converted to date:', dateOfFlight);
-    const seatClass = mapCompartmentToSeatClass(compartmentCode);
-    const airlineName = getAirlineName(operatingCarrierDesignator);
-
-    return {
-      formatCode,
-      numberOfLegs,
-      passengerName,
-      electronicTicketIndicator,
-      operatingCarrierPNR,
-      departureAirport,
-      arrivalAirport,
-      operatingCarrierDesignator,
-      flightNumber,
-      dateOfFlight,
-      compartmentCode,
-      seatNumber,
-      checkInSequenceNumber,
-      passengerStatus,
-      seatClass,
-      airlineName,
-      gate,
-      terminal,
-      boardingTime,
-      raw: barcodeData,
-    };
-  } catch (error) {
-    logger.error('Failed to parse BCBP:', error);
-    return null;
-  }
-}
+// Helper functions (exported for use by other modules)
 
 /**
  * Convert Julian date (day of year) to ISO date string
  * Smart year detection: assumes current year, but adjusts if date seems wrong
+ * 
+ * @internal - Used by parser classes
  */
-function julianDateToDate(julianDate: string): string {
+export function julianDateToDate(julianDate: string): string {
   const dayOfYear = parseInt(julianDate, 10);
   logger.debug('Julian day conversion: Input day of year =', dayOfYear);
 
@@ -319,7 +127,11 @@ function julianDateToDate(julianDate: string): string {
   return result; // Return YYYY-MM-DD
 }
 
-function mapCompartmentToSeatClass(
+/**
+ * Map compartment code to seat class
+ * @internal - Used by parser classes
+ */
+export function mapCompartmentToSeatClass(
   code: string
 ): 'economy' | 'premium_economy' | 'business' | 'first' {
   const c = code.toUpperCase();
@@ -369,197 +181,3 @@ export function getAirlineName(iataCode: string): string {
   return airlines[iataCode] || iataCode;
 }
 
-/**
- * Parse URL-based boarding passes (e.g., https://lh.de/bp/ABC123)
- */
-function parseURLBoardingPass(barcodeData: string): BoardingPassData | null {
-  try {
-    // Check if it's a URL
-    if (!barcodeData.startsWith('http')) {
-      return null;
-    }
-
-    // Extract data from URL
-    // Common patterns:
-    // - Lufthansa: https://lh.de/bp/...
-    // - Ryanair: https://www.ryanair.com/...
-    // - British Airways: https://www.britishairways.com/...
-
-    // For now, return null - URLs need to be fetched/decoded
-    // This would require backend integration
-    logger.warn('URL-based boarding pass detected, but parsing not yet implemented:', barcodeData);
-    return null;
-  } catch (error) {
-    return null;
-  }
-}
-
-/**
- * Intelligent fallback parser - extracts flight data from any text using regex patterns
- */
-function parseFallbackBoardingPass(barcodeData: string): BoardingPassData | null {
-  try {
-    logger.debug('Attempting fallback parsing on:', barcodeData);
-
-    // Extract what we can using regex patterns
-    const extracted: Partial<BoardingPassData> = {
-      raw: barcodeData,
-      formatCode: 'FALLBACK',
-      numberOfLegs: 1,
-      passengerName: '',
-      electronicTicketIndicator: 'E',
-      operatingCarrierPNR: '',
-      departureAirport: '',
-      arrivalAirport: '',
-      operatingCarrierDesignator: '',
-      flightNumber: '',
-      dateOfFlight: '',
-      compartmentCode: 'Y',
-      seatNumber: '',
-      checkInSequenceNumber: '',
-      passengerStatus: '0',
-    };
-
-    // Pattern 1: IATA airport codes (3 uppercase letters)
-    const airportPattern = /\b([A-Z]{3})\b/g;
-    const airports = [...barcodeData.matchAll(airportPattern)].map(m => m[1]);
-
-    // Common false positives to filter out (not airports)
-    const knownNonAirports = ['SEC', 'DRP', 'SIT', 'FTL', 'MRS', 'STR', 'LHS', 'THE', 'AND', 'FOR'];
-
-    // Known valid airport codes (to override false positive filter)
-    const validAirportCodes = ['LUX', 'MUC', 'FRA', 'LHR', 'JFK', 'LAX', 'ORD', 'DFW', 'CDG', 'AMS',
-                                'BER', 'VIE', 'ZRH', 'GVA', 'BCN', 'MAD', 'FCO', 'MXP', 'CPH', 'OSL',
-                                'ARN', 'HEL', 'WAW', 'PRG', 'BUD', 'ATH', 'IST', 'DXB', 'DOH', 'SIN'];
-
-    const likelyAirports = airports.filter(code => {
-      // Include if it's a known airport code
-      if (validAirportCodes.includes(code)) return true;
-
-      // Exclude known non-airports
-      if (knownNonAirports.includes(code)) return false;
-
-      // Basic validation: not all same letter
-      return code[0] !== code[1] || code[1] !== code[2];
-    });
-
-    if (likelyAirports.length >= 2) {
-      extracted.departureAirport = likelyAirports[0];
-      extracted.arrivalAirport = likelyAirports[1];
-      logger.debug('Airports found:', extracted.departureAirport, '→', extracted.arrivalAirport);
-    } else if (airports.length >= 2) {
-      // Fallback: just take first two 3-letter codes
-      extracted.departureAirport = airports[0];
-      extracted.arrivalAirport = airports[1];
-      logger.debug('Airports found (fallback):', extracted.departureAirport, '→', extracted.arrivalAirport);
-    }
-
-    // Pattern 2: Flight number (airline code + digits)
-    const flightPattern = /\b([A-Z]{2})(\d{1,4})\b/g;
-    const flights = [...barcodeData.matchAll(flightPattern)];
-    if (flights.length > 0) {
-      extracted.operatingCarrierDesignator = flights[0][1];
-      extracted.flightNumber = flights[0][2];
-      extracted.airlineName = getAirlineName(flights[0][1]);
-      logger.debug('Flight found:', extracted.operatingCarrierDesignator + extracted.flightNumber);
-    }
-
-    // Pattern 3: Date patterns (DDMMMYY, YYYYMMDD, DD.MM.YYYY, etc.)
-    const monthMap: Record<string, string> = {
-      'JAN': '01', 'FEB': '02', 'MAR': '03', 'APR': '04',
-      'MAY': '05', 'JUN': '06', 'JUL': '07', 'AUG': '08',
-      'SEP': '09', 'OCT': '10', 'NOV': '11', 'DEC': '12'
-    };
-
-    // Try DDMMMYY format (e.g., 20NOV25)
-    const datePattern1 = /(\d{2})([A-Z]{3})(\d{2})/;
-    const match1 = barcodeData.match(datePattern1);
-    if (match1) {
-      const day = match1[1];
-      const month = monthMap[match1[2]];
-      const year = '20' + match1[3]; // Assume 20xx
-      if (month) {
-        extracted.dateOfFlight = `${year}-${month}-${day}`;
-        logger.debug('Date found:', match1[0], '→', extracted.dateOfFlight);
-      }
-    }
-
-    // Try YYYY-MM-DD or YYYYMMDD
-    if (!extracted.dateOfFlight) {
-      const datePattern2 = /(\d{4})-?(\d{2})-?(\d{2})/;
-      const match2 = barcodeData.match(datePattern2);
-      if (match2) {
-        extracted.dateOfFlight = `${match2[1]}-${match2[2]}-${match2[3]}`;
-        logger.debug('Date found:', match2[0]);
-      }
-    }
-
-    // Try DD.MM.YYYY
-    if (!extracted.dateOfFlight) {
-      const datePattern3 = /(\d{2})\.(\d{2})\.(\d{4})/;
-      const match3 = barcodeData.match(datePattern3);
-      if (match3) {
-        extracted.dateOfFlight = `${match3[3]}-${match3[2]}-${match3[1]}`;
-        logger.debug('Date found:', match3[0]);
-      }
-    }
-
-    // Pattern 4: Passenger name (LASTNAME/FIRSTNAME or similar)
-    const namePattern = /([A-Z]{2,})\s*[\/,]\s*([A-Z]{2,})/;
-    const nameMatch = barcodeData.match(namePattern);
-    if (nameMatch) {
-      extracted.passengerName = `${nameMatch[1]}/${nameMatch[2]}`;
-      logger.debug('Passenger name found:', extracted.passengerName);
-    }
-
-    // Pattern 5: Seat number (e.g., 12A, 3F, 16F)
-    const seatPattern = /\b(\d{1,2}[A-F])\b/;
-    const seatMatch = barcodeData.match(seatPattern);
-    if (seatMatch) {
-      extracted.seatNumber = seatMatch[1];
-      logger.debug('Seat found:', extracted.seatNumber);
-    }
-
-    // Pattern 6: Class indicators
-    const classKeywords = {
-      'BUSINESS': 'J',
-      'FIRST': 'F',
-      'ECONOMY': 'Y',
-      'PREMIUM': 'W',
-    };
-
-    for (const [keyword, code] of Object.entries(classKeywords)) {
-      if (barcodeData.includes(keyword)) {
-        extracted.compartmentCode = code;
-        extracted.seatClass = mapCompartmentToSeatClass(code);
-        logger.debug('Class found:', keyword);
-        break;
-      }
-    }
-
-    // Pattern 7: Time patterns (HH:MM)
-    const timePattern = /\b(\d{2}):(\d{2})\b/g;
-    const times = [...barcodeData.matchAll(timePattern)];
-    if (times.length > 0) {
-      logger.debug('Times found:', times.map(t => t[0]).join(', '));
-    }
-
-    // Validation: We need at minimum departure and arrival airports
-    if (!extracted.departureAirport || !extracted.arrivalAirport) {
-      logger.warn('Fallback parsing failed: missing required airports');
-      return null;
-    }
-
-    // Fill in defaults for required fields
-    if (!extracted.dateOfFlight) {
-      extracted.dateOfFlight = new Date().toISOString().split('T')[0];
-    }
-
-    logger.debug('Fallback parsing successful!', extracted);
-
-    return extracted as BoardingPassData;
-  } catch (error) {
-    logger.error('Fallback parsing error:', error);
-    return null;
-  }
-}

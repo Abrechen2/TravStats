@@ -1,11 +1,16 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { IVisionParser, ProviderAvailability, VisionProvider } from '../types';
 import { ParsedBooking } from '../../bookingParser';
-import { normalizeParsedBooking, cleanLLMJsonResponse, getVisionParserPrompt } from '../shared/utils';
+import { normalizeParsedBooking, cleanLLMJsonResponse, getVisionParserPrompt, getLatestClaudeVisionModel, getClaudeVisionModels } from '../shared/utils';
 import logger, { parserVisionLogger } from '../../../utils/logger';
 import { shouldLogParserOperations } from '../../loggingConfig';
 
-const CLAUDE_VISION_MODEL = process.env.CLAUDE_VISION_MODEL || 'claude-3-5-sonnet-20241022';
+/**
+ * Get Claude vision model - uses env var if set, otherwise latest available model
+ */
+function getClaudeVisionModel(): string {
+  return getLatestClaudeVisionModel();
+}
 
 /**
  * Claude 3.5 Sonnet Vision Parser
@@ -73,7 +78,7 @@ export class ClaudeVisionParser implements IVisionParser {
         available: true,
         metadata: {
           provider: 'claude',
-          model: CLAUDE_VISION_MODEL,
+          model: getClaudeVisionModel(),
           cost: '~$0.01-0.03 per image',
         },
       };
@@ -90,30 +95,46 @@ export class ClaudeVisionParser implements IVisionParser {
     const log = shouldLog ? parserVisionLogger : logger;
     const startTime = Date.now();
 
-    if (shouldLog) {
-      log.info({
-        operation: 'claude_vision_parse_start',
-        context: {
-          model: CLAUDE_VISION_MODEL,
-          imageSize: imageBase64.length,
-          mediaType: this.detectMediaType(imageBase64),
-        },
-      });
-    } else {
-      logger.info('[Claude Vision Parser] Starting boarding pass parsing');
-      logger.info({ model: CLAUDE_VISION_MODEL }, '[Claude Vision Parser] Model');
-    }
+    const modelsToTry = getClaudeVisionModels();
+    const client = this.getClient(apiKey);
+    const prompt = getVisionParserPrompt();
+    
+    let lastError: any = null;
+    
+    // Try each model in order until one works
+    for (let i = 0; i < modelsToTry.length; i++) {
+      const model = modelsToTry[i];
+      const isFirstAttempt = i === 0;
+      const isLastAttempt = i === modelsToTry.length - 1;
+      
+      if (shouldLog) {
+        log.info({
+          operation: isFirstAttempt ? 'claude_vision_parse_start' : 'claude_vision_parse_retry',
+          context: {
+            model,
+            attempt: i + 1,
+            totalModels: modelsToTry.length,
+            imageSize: imageBase64.length,
+            mediaType: this.detectMediaType(imageBase64),
+            previousError: lastError ? (lastError instanceof Error ? lastError.message : 'Unknown error') : undefined,
+          },
+        });
+      } else {
+        if (isFirstAttempt) {
+          logger.info('[Claude Vision Parser] Starting boarding pass parsing');
+        } else {
+          logger.info({ model, attempt: i + 1 }, '[Claude Vision Parser] Retrying with different model');
+        }
+        logger.info({ model }, '[Claude Vision Parser] Model');
+      }
 
-    try {
-      const client = this.getClient(apiKey);
-      const prompt = getVisionParserPrompt();
+      try {
+        // Determine image media type from base64 prefix or assume JPEG
+        const mediaType = this.detectMediaType(imageBase64);
 
-      // Determine image media type from base64 prefix or assume JPEG
-      const mediaType = this.detectMediaType(imageBase64);
-
-      const apiStartTime = Date.now();
-      const response = await client.messages.create({
-        model: CLAUDE_VISION_MODEL,
+        const apiStartTime = Date.now();
+        const response = await client.messages.create({
+          model,
         max_tokens: 1024,
         temperature: 0.1, // Low temperature for factual extraction
         messages: [
@@ -225,96 +246,113 @@ export class ClaudeVisionParser implements IVisionParser {
         }, '[Claude Vision Parser] Extraction complete');
       }
 
-      return result;
-    } catch (error: any) {
-      const totalDuration = Date.now() - startTime;
-      const errorContext = {
-        model: CLAUDE_VISION_MODEL,
-        imageSize: imageBase64.length,
-        totalDuration,
-        status: error?.status,
-        errorMessage: error instanceof Error ? error.message : 'Unknown error',
-        errorStack: error instanceof Error ? error.stack : undefined,
-      };
+        return result;
+      } catch (error: any) {
+        lastError = error;
+        
+        // For 404 errors (model not found), try next model
+        if (error?.status === 404) {
+          const modelError = error?.error?.error?.message || '';
+          if (shouldLog) {
+            log.warn({
+              operation: 'claude_vision_parse_model_not_found_retry',
+              context: {
+                model,
+                attempt: i + 1,
+                modelError,
+                willRetry: !isLastAttempt,
+              },
+            });
+          } else {
+            logger.warn({ 
+              model,
+              attempt: i + 1,
+              message: modelError 
+            }, `[Claude Vision Parser] Model not found, ${isLastAttempt ? 'no more models to try' : 'trying next model'}`);
+          }
+          
+          // If this is the last model, throw error
+          if (isLastAttempt) {
+            throw new Error(`Claude model not found: ${modelError || model}. Tried all available models. Please check your CLAUDE_VISION_MODEL environment variable or API key permissions.`);
+          }
+          
+          // Continue to next model
+          continue;
+        }
+        
+        // For other errors (401, 429, etc.), throw immediately
+        const totalDuration = Date.now() - startTime;
+        const errorContext = {
+          model,
+          imageSize: imageBase64.length,
+          totalDuration,
+          status: error?.status,
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+          errorStack: error instanceof Error ? error.stack : undefined,
+        };
 
-      if (error?.status === 401) {
+        if (error?.status === 401) {
+          if (shouldLog) {
+            log.error({
+              operation: 'claude_vision_parse_auth_error',
+              context: errorContext,
+            });
+          } else {
+            logger.error('[Claude Vision Parser] Invalid API key');
+          }
+          throw new Error('Invalid Claude API key');
+        }
+
+        if (error?.status === 429) {
+          if (shouldLog) {
+            log.error({
+              operation: 'claude_vision_parse_rate_limit',
+              context: errorContext,
+            });
+          } else {
+            logger.error('[Claude Vision Parser] Rate limit exceeded');
+          }
+          throw new Error('Claude API rate limit exceeded. Please try again later.');
+        }
+
+        if (error?.status === 400) {
+          if (shouldLog) {
+            log.error({
+              operation: 'claude_vision_parse_bad_request',
+              context: errorContext,
+            });
+          } else {
+            logger.error({ error: error.message }, '[Claude Vision Parser] Bad request');
+          }
+          throw new Error(`Claude API error: ${error.message}`);
+        }
+
+        if (error instanceof SyntaxError) {
+          if (shouldLog) {
+            log.error({
+              operation: 'claude_vision_parse_json_error',
+              context: errorContext,
+            });
+          } else {
+            logger.error({ error: error.message }, '[Claude Vision Parser] JSON parse error');
+          }
+          throw new Error('Failed to parse Claude response as JSON');
+        }
+
         if (shouldLog) {
           log.error({
-            operation: 'claude_vision_parse_auth_error',
+            operation: 'claude_vision_parse_unexpected_error',
             context: errorContext,
           });
-        } else {
-          logger.error('[Claude Vision Parser] Invalid API key');
-        }
-        throw new Error('Invalid Claude API key');
-      }
-
-      if (error?.status === 404) {
-        const modelError = error?.error?.error?.message || '';
-        if (shouldLog) {
-          log.error({
-            operation: 'claude_vision_parse_model_not_found',
-            context: {
-              ...errorContext,
-              modelError,
-            },
-          });
-        } else {
-          logger.error({ 
-            error, 
-            model: CLAUDE_VISION_MODEL,
-            message: modelError 
-          }, '[Claude Vision Parser] Model not found - check CLAUDE_VISION_MODEL environment variable');
-        }
-        throw new Error(`Claude model not found: ${modelError || CLAUDE_VISION_MODEL}. Please check your CLAUDE_VISION_MODEL environment variable or API key permissions.`);
-      }
-
-      if (error?.status === 429) {
-        if (shouldLog) {
-          log.error({
-            operation: 'claude_vision_parse_rate_limit',
-            context: errorContext,
-          });
-        } else {
-          logger.error('[Claude Vision Parser] Rate limit exceeded');
-        }
-        throw new Error('Claude API rate limit exceeded. Please try again later.');
-      }
-
-      if (error?.status === 400) {
-        if (shouldLog) {
-          log.error({
-            operation: 'claude_vision_parse_bad_request',
-            context: errorContext,
-          });
-        } else {
-          logger.error({ error: error.message }, '[Claude Vision Parser] Bad request');
-        }
-        throw new Error(`Claude API error: ${error.message}`);
-      }
-
-      if (error instanceof SyntaxError) {
-        if (shouldLog) {
-          log.error({
-            operation: 'claude_vision_parse_json_error',
-            context: errorContext,
-          });
-        } else {
-          logger.error({ error: error.message }, '[Claude Vision Parser] JSON parse error');
-        }
-        throw new Error('Failed to parse Claude response as JSON');
-      }
-
-      if (shouldLog) {
-        log.error({
-          operation: 'claude_vision_parse_unexpected_error',
-          context: errorContext,
-        });
       } else {
         logger.error({ error }, '[Claude Vision Parser] Unexpected error');
       }
-      throw new Error(`Claude Vision parsing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        throw new Error(`Claude Vision parsing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
     }
+    
+    // If we get here, all models failed with 404
+    throw new Error(`All Claude models failed. Last error: ${lastError instanceof Error ? lastError.message : 'Unknown error'}`);
   }
 
   /**

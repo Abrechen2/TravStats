@@ -23,7 +23,6 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "seed:airports:csv": "node dist/seedAirportsFromCSV.js",
-    "seed:achievements": "node dist/seedAchievements.js",
     "seed:demo": "node dist/seedDemoUser.js"
   },
   "keywords": [
@@ -43,6 +42,7 @@
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "csv-parse": "^6.1.0",
+    "date-fns-tz": "^3.2.0",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "express-rate-limit": "^7.1.5",

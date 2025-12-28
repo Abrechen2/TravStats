@@ -10,6 +10,8 @@
 
 import axios from 'axios';
 import { findOrCreateAirport } from './airportLookup';
+import { getApiKey, getOpenSkyCredentials } from './apiKeyResolver';
+import { convertAviationstackTimeToUtc, convertAirlabsTimeToUtc } from '../utils/timezone';
 
 // In-memory cache for flight lookup results (AirLabs)
 interface FlightLookupCache {
@@ -62,9 +64,10 @@ export interface FlightData {
  */
 export async function lookupFlightByNumber(
   flightNumber: string,
-  date?: Date
+  date?: Date,
+  userId?: string
 ): Promise<FlightData[]> {
-  const apiKey = process.env.AIRLABS_API_KEY;
+  const apiKey = await getApiKey('airlabs', userId);
 
   if (!apiKey) {
     console.warn('AIRLABS_API_KEY not configured - flight lookup disabled');
@@ -223,19 +226,17 @@ async function getOpenSkyAuthHeaders(opts: {
 
 export async function lookupFlightDetails(
   flightNumber: string,
-  date?: string
+  date?: string,
+  userId?: string
 ): Promise<FlightLookupResult | null> {
   const trimmedNumber = flightNumber.trim();
   if (!trimmedNumber) return null;
 
-  // Optional OpenSky credentials (supports token and basic)
-  const openSkyUser = process.env.OPENSKY_USERNAME;
-  const openSkyPass = process.env.OPENSKY_PASSWORD;
-  const openSkyClientId = process.env.OPENSKY_CLIENT_ID;
-  const openSkyClientSecret = process.env.OPENSKY_CLIENT_SECRET;
+  // Get OpenSky credentials with priority resolution
+  const openSkyCredentials = await getOpenSkyCredentials(userId);
 
   // Prefer Aviationstack if configured
-  const aviationstackKey = process.env.AVIATIONSTACK_API_KEY;
+  const aviationstackKey = await getApiKey('aviationstack', userId);
   if (aviationstackKey) {
     // API docs: https://docs.apilayer.com/aviationstack/docs/endpoints#flights
     // Use HTTPS + params to avoid signature/order issues
@@ -269,14 +270,27 @@ export async function lookupFlightDetails(
           arrivalCode ? findOrCreateAirport(arrivalCode) : Promise.resolve(null),
         ]);
 
+        // Convert Aviationstack times from local airport time to UTC
+        const departureTimeRaw = result.departure?.estimated || result.departure?.scheduled;
+        const arrivalTimeRaw = result.arrival?.estimated || result.arrival?.scheduled;
+
+        const [departureTimeUtc, arrivalTimeUtc] = await Promise.all([
+          departureTimeRaw && departureCode
+            ? convertAviationstackTimeToUtc(departureTimeRaw, departureCode)
+            : Promise.resolve(departureTimeRaw || null),
+          arrivalTimeRaw && arrivalCode
+            ? convertAviationstackTimeToUtc(arrivalTimeRaw, arrivalCode)
+            : Promise.resolve(arrivalTimeRaw || null),
+        ]);
+
         return {
           airline: result.airline?.name,
           flightNumber: result.flight?.iata || result.flight?.icao || trimmedNumber,
           aircraft: result.aircraft?.icao || result.aircraft?.iata,
           departure: departureAirport || undefined,
           arrival: arrivalAirport || undefined,
-          departureTime: result.departure?.estimated || result.departure?.scheduled,
-          arrivalTime: result.arrival?.estimated || result.arrival?.scheduled,
+          departureTime: departureTimeUtc || undefined,
+          arrivalTime: arrivalTimeUtc || undefined,
         };
       }
     } catch (err) {
@@ -290,14 +304,11 @@ export async function lookupFlightDetails(
 
   if (!flights.length) {
     // Try OpenSky as last resort (requires credentials)
-    const openSkyAuth = await getOpenSkyAuthHeaders({
-      clientId: openSkyClientId,
-      clientSecret: openSkyClientSecret,
-      user: openSkyUser,
-      pass: openSkyPass,
-    });
-    const openSky = await lookupOpenSkyFlight(trimmedNumber, date, openSkyAuth ?? undefined);
-    if (openSky) return openSky;
+    if (openSkyCredentials) {
+      const openSkyAuth = await getOpenSkyAuthHeaders(openSkyCredentials);
+      const openSky = await lookupOpenSkyFlight(trimmedNumber, date, openSkyAuth ?? undefined);
+      if (openSky) return openSky;
+    }
     return null;
   }
 
@@ -310,14 +321,27 @@ export async function lookupFlightDetails(
     arrivalCode ? findOrCreateAirport(arrivalCode) : Promise.resolve(null),
   ]);
 
+  // Convert AirLabs times to UTC (AirLabs may return UTC or local times)
+  const departureTimeRaw = first.departure.scheduledTime || first.departure.actualTime;
+  const arrivalTimeRaw = first.arrival.scheduledTime || first.arrival.actualTime;
+
+  const [departureTimeUtc, arrivalTimeUtc] = await Promise.all([
+    departureTimeRaw
+      ? convertAirlabsTimeToUtc(departureTimeRaw, departureCode)
+      : Promise.resolve(null),
+    arrivalTimeRaw
+      ? convertAirlabsTimeToUtc(arrivalTimeRaw, arrivalCode)
+      : Promise.resolve(null),
+  ]);
+
   return {
     airline: first.airline || (first.airlineIata ? getAirlineName(first.airlineIata) || undefined : undefined) || first.airlineIcao,
     flightNumber: first.flightNumber,
     aircraft: first.aircraft || first.aircraftIcao,
     departure: departureAirport || undefined,
     arrival: arrivalAirport || undefined,
-    departureTime: first.departure.scheduledTime || first.departure.actualTime,
-    arrivalTime: first.arrival.scheduledTime || first.arrival.actualTime,
+    departureTime: departureTimeUtc || undefined,
+    arrivalTime: arrivalTimeUtc || undefined,
   };
 }
 

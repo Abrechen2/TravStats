@@ -279,6 +279,123 @@
         "trained": "Trainierte Ollama-Modelle (über Training-Page) verbessern die Genauigkeit erheblich"
       }
     }
+  },
+  "autoUpdate": {
+    "title": "Automatische Updates",
+    "description": "Automatisch aktuelle Flugdaten von APIs während aktiver Flüge abrufen. Updates werden im Bereich für ausstehende Updates gespeichert zur Überprüfung.",
+    "info": {
+      "title": "Wie funktionieren automatische Updates?",
+      "description": "Wenn aktiviert, werden während aktiver Flüge regelmäßig aktuelle Flugdaten von APIs abgerufen. Alle gefundenen Änderungen werden im Bereich für ausstehende Updates gespeichert, damit Sie sie überprüfen und genehmigen können, bevor sie auf Ihre Flüge angewendet werden.",
+      "benefits": {
+        "title": "Vorteile:",
+        "realTime": "Echtzeit-Updates: Erhalten Sie aktuelle Flugdaten automatisch während Ihrer Flüge",
+        "automatic": "Automatisierung: Keine manuelle Suche nach Flugänderungen mehr nötig",
+        "review": "Kontrolle: Alle Änderungen werden zur Überprüfung gespeichert, bevor sie angewendet werden",
+        "accurate": "Genauigkeit: Nutzt mehrere APIs für zuverlässige und präzise Flugdaten",
+        "timeSaving": "Zeitersparnis: Sparen Sie Zeit durch automatische Aktualisierung Ihrer Flugstatistiken"
+      },
+      "howItWorks": {
+        "title": "So funktioniert's:",
+        "description": "Das System prüft in konfigurierbaren Intervallen (Standard: 15 Minuten) während aktiver Flugzeiten nach Updates. Gefundene Änderungen wie Verspätungen, Gate-Wechsel oder Flugstatus werden im Bereich 'Ausstehende Updates' gespeichert. Sie können diese Änderungen einzeln überprüfen und genehmigen oder ablehnen."
+      },
+      "requirement": {
+        "title": "Wichtiger Hinweis:",
+        "description": "Diese Funktion funktioniert nur bei vorab eingetragenen Flügen, z.B. durch den E-Mail-Import oder manuelle Eingabe. Automatische Updates werden nur für Flüge durchgeführt, die bereits in Ihrer Flugliste vorhanden sind."
+      }
+    },
+    "viewPending": "Ausstehende Updates anzeigen",
+    "enabled": "Automatische Updates aktivieren",
+    "requireApproval": "Bestätigung erforderlich",
+    "checkInterval": "Prüfintervall (Minuten)",
+    "checkIntervalDescription": "Wie oft das System nach Flugdaten-Updates prüft",
+    "onlyDuringFlight": "Nur während Flugzeit",
+    "onlyDuringFlightDescription": "Updates nur während aktiver Flugzeiten abrufen",
+    "expiryHours": "Ablaufzeit (Stunden)",
+    "expiryHoursDescription": "Wie lange ausstehende Updates verfügbar bleiben, bevor sie ablaufen",
+    "saved": "Auto-Update-Einstellungen erfolgreich gespeichert",
+    "saveFailed": "Fehler beim Speichern der Auto-Update-Einstellungen"
+  },
+  "historicalEnrichment": {
+    "title": "Historische Anreicherung",
+    "description": "Ergänzt historische Flüge (2-5 Jahre) mit Daten von Live-getrackten Flügen derselben Flugnummer",
+    "info": {
+      "title": "Wie funktioniert die historische Anreicherung?",
+      "description": "Die historische Anreicherung findet Flüge mit derselben Flugnummer, die bereits Live getrackt wurden, und verwendet deren Daten (Route, Flugzeug, etc.) um Ihre historischen Flüge zu ergänzen.",
+      "benefits": {
+        "title": "Vorteile:",
+        "completeData": "Vollständige Flugdaten für alte Flüge",
+        "routeTracking": "Genau Route-Tracking (überflogene Länder)",
+        "statistics": "Präzisere Statistiken und Achievements",
+        "automatic": "Automatische Erkennung von Anreicherungs-Kandidaten"
+      },
+      "warning": {
+        "title": "Hinweis (Beta):",
+        "description": "Diese Funktion ist noch in der Beta-Phase. Alle Anreicherungen müssen manuell bestätigt werden. Routen können sich über die Zeit ändern (z.B. Russland-Sperrzone seit 2022)."
+      }
+    },
+    "enabled": "Historische Flugdaten-Anreicherung aktivieren",
+    "minConfidence": "Min Confidence (%)",
+    "minConfidenceDescription": "Nur Anreicherungen mit mindestens X% Confidence anzeigen",
+    "maxPerDay": "Max pro Tag",
+    "maxPerDayDescription": "Maximale Anzahl Anreicherungen pro Tag",
+    "minAgeYears": "Min Alter (Jahre)",
+    "minAgeYearsDescription": "Minimales Alter von Flügen für Anreicherung",
+    "maxAgeYears": "Max Alter (Jahre)",
+    "maxAgeYearsDescription": "Maximales Alter von Flügen für Anreicherung",
+    "autoProcess": "Automatisch nachts nach Anreicherungs-Kandidaten suchen",
+    "requireApproval": "Jede Anreicherung muss manuell bestätigt werden",
+    "saved": "Historische Anreicherungs-Einstellungen erfolgreich gespeichert",
+    "saveFailed": "Fehler beim Speichern der historischen Anreicherungs-Einstellungen"
+  },
+  "apiKeys": {
+    "title": "API-Schlüssel",
+    "description": "Verwalte API-Schlüssel für externe Dienste. Vom Administrator geteilte Schlüssel werden automatisch verwendet.",
+    "parserApis": "Parser APIs",
+    "flightApis": "Flugdaten APIs",
+    "shared": "Geteilt",
+    "sharedTooltip": "Vom Administrator geteilter Schlüssel - wird automatisch verwendet",
+    "own": "Eigener Schlüssel",
+    "ownTooltip": "Eigener API-Schlüssel eingegeben - hat Vorrang vor geteilten Schlüsseln",
+    "notConfigured": "Nicht konfiguriert",
+    "notConfiguredTooltip": "Kein API-Schlüssel konfiguriert - verwende geteilten Schlüssel oder ENV-Variable falls verfügbar",
+    "getKey": "API-Schlüssel erstellen",
+    "enterKey": "API-Schlüssel eingeben",
+    "sharedPlaceholder": "Vom Administrator geteilt",
+    "show": "Anzeigen",
+    "hide": "Verstecken",
+    "clear": "Löschen",
+    "test": "Testen",
+    "testing": "Teste...",
+    "sharedNote": "Dieser Schlüssel wird vom Administrator geteilt und kann nicht bearbeitet werden",
+    "save": "API-Schlüssel speichern",
+    "saving": "Wird gespeichert...",
+    "saved": "API-Schlüssel erfolgreich gespeichert",
+    "saveFailed": "Fehler beim Speichern der API-Schlüssel",
+    "openai": {
+      "label": "OpenAI API-Schlüssel",
+      "description": "Wird für KI-gestütztes E-Mail-Parsing verwendet"
+    },
+    "claude": {
+      "label": "Claude API-Schlüssel",
+      "description": "Wird für KI-gestütztes E-Mail-Parsing verwendet"
+    },
+    "airlabs": {
+      "label": "AirLabs API-Schlüssel",
+      "description": "Kostenlos: 1000 Anfragen/Monat. Wird für Flugdaten-Abfrage verwendet."
+    },
+    "aviationstack": {
+      "label": "Aviationstack API-Schlüssel",
+      "description": "Kostenpflichtiger Service. Wird für Flugdaten-Abfrage mit höherer Genauigkeit verwendet."
+    },
+    "opensky": {
+      "label": "OpenSky Network",
+      "description": "Kostenloser Service. Erfordert Registrierung. Wird für Flugdaten-Abfrage verwendet.",
+      "clientId": "Client ID",
+      "clientSecret": "Client Secret",
+      "username": "Benutzername",
+      "password": "Passwort",
+      "or": "ODER (stattdessen Basic Auth verwenden)"
+    }
   }
 }
 

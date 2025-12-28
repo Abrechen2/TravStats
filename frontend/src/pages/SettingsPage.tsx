@@ -6,7 +6,8 @@ import { useSettingsStore } from '../store/settingsStore';
 import { useThemeStore } from '../store/themeStore';
 import { useAuthStore } from '../store/authStore';
 import ParserConfiguration from '../components/Settings/ParserConfiguration';
-import { settingsApi, authApi, backupApi } from '../lib/api';
+import ApiKeyCard from '../components/Settings/ApiKeyCard';
+import { settingsApi, authApi, backupApi, pendingUpdatesApi } from '../lib/api';
 import { useToastStore } from '../store/toastStore';
 import { logger } from '../lib/logger';
 import { useTranslation } from '../hooks/useTranslation';
@@ -43,6 +44,8 @@ export default function SettingsPage() {
     setNotifications,
     setPrivacy,
     setBackup,
+    boardingPassParserStrategy,
+    setBoardingPassParserStrategy,
     saveRemoteSettings,
   } = useSettingsStore();
 
@@ -70,6 +73,39 @@ export default function SettingsPage() {
     trainingSeparateModels: true,
   });
   const [loadingTrainingSettings, setLoadingTrainingSettings] = useState(false);
+  const [autoUpdateSettings, setAutoUpdateSettings] = useState({
+    enabled: false,
+    requireApproval: true,
+    checkInterval: 15,
+    onlyDuringFlight: true,
+    expiryHours: 24,
+  });
+  const [loadingAutoUpdateSettings, setLoadingAutoUpdateSettings] = useState(false);
+  const [historicalEnrichmentSettings, setHistoricalEnrichmentSettings] = useState({
+    enabled: false,
+    minConfidence: 60,
+    maxAgeYears: 5,
+    autoProcess: false,
+    maxPerDay: 50,
+    requireApproval: true,
+  });
+  const [loadingHistoricalEnrichmentSettings, setLoadingHistoricalEnrichmentSettings] = useState(false);
+  const [apiKeysStatus, setApiKeysStatus] = useState<{
+    openai: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+    claude: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+    airlabs: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+    aviationstack: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+    opensky: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+  } | null>(null);
+  const [apiKeys, setApiKeys] = useState({
+    openaiApiKey: '',
+    claudeApiKey: '',
+    airlabsApiKey: '',
+    aviationstackApiKey: '',
+    openskyClientId: '',
+    openskyClientSecret: '',
+  });
+  const [loadingApiKeys, setLoadingApiKeys] = useState(false);
 
   // Check if user has training access (admin or canTrainLLM)
   const hasTrainingAccess = user?.isAdmin || user?.canTrainLLM || false;
@@ -91,6 +127,102 @@ export default function SettingsPage() {
     };
     loadTrainingSettings();
   }, []);
+
+  // Load auto-update settings and boarding pass parser strategy
+  useEffect(() => {
+    const loadAutoUpdateSettings = async () => {
+      try {
+        const settings = await settingsApi.get();
+        logger.info('Loaded settings from server:', settings);
+        
+        // Load auto-update settings (always set, even if not in response)
+        logger.info('Setting auto-update settings:', settings.autoUpdate);
+        setAutoUpdateSettings({
+          enabled: settings.autoUpdate?.enabled ?? false,
+          requireApproval: settings.autoUpdate?.requireApproval ?? true,
+          checkInterval: settings.autoUpdate?.checkInterval ?? 15,
+          onlyDuringFlight: settings.autoUpdate?.onlyDuringFlight ?? true,
+          expiryHours: settings.autoUpdate?.expiryHours ?? 24,
+        });
+        
+        // Load boarding pass parser strategy
+        if (settings.boardingPassParserStrategy !== undefined) {
+          setBoardingPassParserStrategy(settings.boardingPassParserStrategy);
+        }
+        
+        // Load historical enrichment settings (always set, even if not in response)
+        logger.info('Setting historical enrichment settings:', settings.historicalEnrichment);
+        setHistoricalEnrichmentSettings({
+          enabled: settings.historicalEnrichment?.enabled ?? false,
+          minConfidence: settings.historicalEnrichment?.minConfidence ?? 60,
+          maxAgeYears: settings.historicalEnrichment?.maxAgeYears ?? 5,
+          autoProcess: settings.historicalEnrichment?.autoProcess ?? false,
+          maxPerDay: settings.historicalEnrichment?.maxPerDay ?? 50,
+          requireApproval: settings.historicalEnrichment?.requireApproval ?? true,
+        });
+      } catch (error) {
+        logger.error('Failed to load auto-update settings:', error);
+      }
+    };
+    loadAutoUpdateSettings();
+    
+    // Load API keys status
+    const loadApiKeysStatus = async () => {
+      try {
+        const status = await settingsApi.getApiKeys();
+        setApiKeysStatus(status);
+      } catch (error) {
+        logger.error('Failed to load API keys status:', error);
+      }
+    };
+    loadApiKeysStatus();
+  }, []);
+
+  // Save auto-update settings
+  const saveAutoUpdateSettings = async () => {
+    try {
+      setLoadingAutoUpdateSettings(true);
+      await settingsApi.update({
+        autoUpdate: autoUpdateSettings,
+      });
+      // Reload settings from server to ensure we have the latest values
+      const reloaded = await settingsApi.get();
+      if (reloaded.autoUpdate) {
+        setAutoUpdateSettings(reloaded.autoUpdate);
+      }
+      addToast('success', t('settings:autoUpdate.saved') || 'Auto-Update-Einstellungen gespeichert');
+    } catch (error) {
+      logger.error('Failed to save auto-update settings:', error);
+      addToast('error', t('settings:autoUpdate.saveFailed') || 'Fehler beim Speichern');
+    } finally {
+      setLoadingAutoUpdateSettings(false);
+    }
+  };
+
+  // Save historical enrichment settings
+  const saveHistoricalEnrichmentSettings = async () => {
+    try {
+      setLoadingHistoricalEnrichmentSettings(true);
+      logger.info('Saving historical enrichment settings:', historicalEnrichmentSettings);
+      const payload = {
+        historicalEnrichment: historicalEnrichmentSettings,
+      };
+      logger.info('Sending payload to server:', payload);
+      await settingsApi.update(payload);
+      // Reload settings from server to ensure we have the latest values
+      const reloaded = await settingsApi.get();
+      logger.info('Reloaded settings from server:', reloaded);
+      if (reloaded.historicalEnrichment) {
+        setHistoricalEnrichmentSettings(reloaded.historicalEnrichment);
+      }
+      addToast('success', t('settings:historicalEnrichment.saved') || 'Historische Anreicherungs-Einstellungen gespeichert');
+    } catch (error) {
+      logger.error('Failed to save historical enrichment settings:', error);
+      addToast('error', t('settings:historicalEnrichment.saveFailed') || 'Fehler beim Speichern');
+    } finally {
+      setLoadingHistoricalEnrichmentSettings(false);
+    }
+  };
 
   // Auto-save units settings when they change
   useEffect(() => {
@@ -861,8 +993,522 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {/* Boarding Pass Parser Strategy */}
+        <div className="card space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">Boarding Pass Parsing</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Wählen Sie die Strategie für das Parsing von Boarding-Pässen
+              </p>
+            </div>
+          </div>
+
+          <InlineHelp
+            title="Boarding Pass Parsing Strategien"
+            category="basic"
+            content={
+              <div className="space-y-2">
+                <p>
+                  Die App unterstützt verschiedene Strategien für das Parsing von Boarding-Pässen:
+                </p>
+                <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
+                  <li>
+                    <strong>Automatisch:</strong> LLM wird bevorzugt (wenn verfügbar), sonst Barcode-Parser mit LLM-Fallback
+                  </li>
+                  <li>
+                    <strong>Nur Parser:</strong> Nur schneller Frontend-Parser, kein API-Call (offline, kostenlos)
+                  </li>
+                  <li>
+                    <strong>Parser + API Kontrolle:</strong> Parser für Geschwindigkeit, API zur Validierung
+                  </li>
+                  <li>
+                    <strong>Nur API:</strong> Direkt LLM/API verwenden (robust, funktioniert für alle Airlines)
+                  </li>
+                </ul>
+              </div>
+            }
+          />
+
+          <div>
+            <label className="label">Parsing-Strategie</label>
+            <select
+              value={boardingPassParserStrategy || 'auto'}
+              onChange={async (e) => {
+                const value = e.target.value === 'auto' ? null : (e.target.value as 'parser-only' | 'parser-with-api' | 'api-only');
+                setBoardingPassParserStrategy(value);
+                try {
+                  await settingsApi.update({
+                    boardingPassParserStrategy: value,
+                  });
+                  addToast('success', 'Boarding Pass Parser-Strategie gespeichert');
+                } catch (error) {
+                  logger.error('Failed to save boarding pass parser strategy:', error);
+                  addToast('error', 'Fehler beim Speichern');
+                }
+              }}
+              className="input"
+            >
+              <option value="auto">Automatisch (Empfohlen)</option>
+              <option value="parser-only">Nur Parser</option>
+              <option value="parser-with-api">Parser + API Kontrolle</option>
+              <option value="api-only">Nur API</option>
+            </select>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {boardingPassParserStrategy === null
+                ? 'LLM wird bevorzugt, wenn verfügbar. Sonst Barcode-Parser mit LLM-Fallback.'
+                : boardingPassParserStrategy === 'parser-only'
+                ? 'Nur Frontend-Parser. Schnell, kostenlos, offline. Kein Fallback.'
+                : boardingPassParserStrategy === 'parser-with-api'
+                ? 'Parser für Geschwindigkeit, API zur Validierung. Beste Balance.'
+                : 'Direkt LLM/API verwenden. Robust, funktioniert für alle Airlines.'}
+            </p>
+          </div>
+        </div>
+
+        {/* Auto-Update Settings */}
+        <div className="card space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">{t('settings:autoUpdate.title')}</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings:autoUpdate.description')}</p>
+            </div>
+            <Link
+              to="/pending-updates"
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium"
+            >
+              {t('settings:autoUpdate.viewPending')} →
+            </Link>
+          </div>
+
+          <InlineHelp
+            title={t('settings:autoUpdate.info.title')}
+            category="basic"
+            content={
+              <div className="space-y-3">
+                <p>
+                  {t('settings:autoUpdate.info.description')}
+                </p>
+                <div>
+                  <p className="font-semibold mb-2">{t('settings:autoUpdate.info.benefits.title')}</p>
+                  <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
+                    <li>{t('settings:autoUpdate.info.benefits.realTime')}</li>
+                    <li>{t('settings:autoUpdate.info.benefits.automatic')}</li>
+                    <li>{t('settings:autoUpdate.info.benefits.review')}</li>
+                    <li>{t('settings:autoUpdate.info.benefits.accurate')}</li>
+                    <li>{t('settings:autoUpdate.info.benefits.timeSaving')}</li>
+                  </ul>
+                </div>
+                <div>
+                  <p className="font-semibold mb-2">{t('settings:autoUpdate.info.howItWorks.title')}</p>
+                  <p className="text-sm">
+                    {t('settings:autoUpdate.info.howItWorks.description')}
+                  </p>
+                </div>
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-3">
+                  <p className="font-semibold mb-1 text-amber-900 dark:text-amber-200 text-sm">
+                    {t('settings:autoUpdate.info.requirement.title')}
+                  </p>
+                  <p className="text-sm text-amber-800 dark:text-amber-300">
+                    {t('settings:autoUpdate.info.requirement.description')}
+                  </p>
+                </div>
+              </div>
+            }
+          />
+
+          <div className="space-y-4">
+            <label className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={autoUpdateSettings.enabled}
+                onChange={(e) => {
+                  setAutoUpdateSettings({ ...autoUpdateSettings, enabled: e.target.checked });
+                }}
+                className="h-4 w-4"
+              />
+              <span>{t('settings:autoUpdate.enabled') || 'Automatische Updates aktivieren'}</span>
+            </label>
+
+            {autoUpdateSettings.enabled && (
+              <>
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={autoUpdateSettings.requireApproval}
+                    onChange={(e) => {
+                      setAutoUpdateSettings({ ...autoUpdateSettings, requireApproval: e.target.checked });
+                    }}
+                    className="h-4 w-4"
+                  />
+                  <span>{t('settings:autoUpdate.requireApproval') || 'Bestätigung erforderlich'}</span>
+                </label>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="label">{t('settings:autoUpdate.checkInterval')}</label>
+                    <input
+                      type="number"
+                      value={autoUpdateSettings.checkInterval}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value, 10);
+                        if (value >= 5 && value <= 1440) {
+                          setAutoUpdateSettings({ ...autoUpdateSettings, checkInterval: value });
+                        }
+                      }}
+                      min="5"
+                      max="1440"
+                      className="input"
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {t('settings:autoUpdate.checkIntervalDescription')}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="label">{t('settings:autoUpdate.expiryHours')}</label>
+                    <input
+                      type="number"
+                      value={autoUpdateSettings.expiryHours}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value, 10);
+                        if (value >= 1 && value <= 168) {
+                          setAutoUpdateSettings({ ...autoUpdateSettings, expiryHours: value });
+                        }
+                      }}
+                      min="1"
+                      max="168"
+                      className="input"
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {t('settings:autoUpdate.expiryHoursDescription')}
+                    </p>
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={autoUpdateSettings.onlyDuringFlight}
+                    onChange={(e) => {
+                      setAutoUpdateSettings({ ...autoUpdateSettings, onlyDuringFlight: e.target.checked });
+                    }}
+                    className="h-4 w-4"
+                  />
+                  <span>{t('settings:autoUpdate.onlyDuringFlight') || 'Nur während Flugzeit'}</span>
+                </label>
+              </>
+            )}
+
+            {/* Save Button */}
+            <div className="flex justify-end pt-4 border-t">
+              <button
+                onClick={saveAutoUpdateSettings}
+                disabled={loadingAutoUpdateSettings}
+                className="btn-primary"
+              >
+                {loadingAutoUpdateSettings
+                  ? t('common:buttons.saving') || 'Speichern...'
+                  : t('common:buttons.save') || 'Speichern'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Historical Enrichment Settings (Beta) */}
+        <div className="card space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-semibold">
+                  {t('settings:historicalEnrichment.title') || 'Historische Anreicherung (Beta)'}
+                </h2>
+                <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                  Beta
+                </span>
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {t('settings:historicalEnrichment.description') || 'Ergänzt historische Flüge (2-5 Jahre) mit Daten von Live-getrackten Flügen derselben Flugnummer'}
+              </p>
+            </div>
+          </div>
+
+          <InlineHelp
+            title={t('settings:historicalEnrichment.info.title') || 'Wie funktioniert die historische Anreicherung?'}
+            category="basic"
+            content={
+              <div className="space-y-3">
+                <p>
+                  {t('settings:historicalEnrichment.info.description') || 'Die historische Anreicherung findet Flüge mit derselben Flugnummer, die bereits Live getrackt wurden, und verwendet deren Daten (Route, Flugzeug, etc.) um Ihre historischen Flüge zu ergänzen.'}
+                </p>
+                <div>
+                  <p className="font-semibold mb-2">{t('settings:historicalEnrichment.info.benefits.title') || 'Vorteile:'}</p>
+                  <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
+                    <li>{t('settings:historicalEnrichment.info.benefits.completeData') || 'Vollständige Flugdaten für alte Flüge'}</li>
+                    <li>{t('settings:historicalEnrichment.info.benefits.routeTracking') || 'Genau Route-Tracking (überflogene Länder)'}</li>
+                    <li>{t('settings:historicalEnrichment.info.benefits.statistics') || 'Präzisere Statistiken und Achievements'}</li>
+                    <li>{t('settings:historicalEnrichment.info.benefits.automatic') || 'Automatische Erkennung von Anreicherungs-Kandidaten'}</li>
+                  </ul>
+                </div>
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-3">
+                  <p className="font-semibold mb-1 text-amber-900 dark:text-amber-200 text-sm">
+                    {t('settings:historicalEnrichment.info.warning.title') || 'Hinweis (Beta):'}
+                  </p>
+                  <p className="text-sm text-amber-800 dark:text-amber-300">
+                    {t('settings:historicalEnrichment.info.warning.description') || 'Diese Funktion ist noch in der Beta-Phase. Alle Anreicherungen müssen manuell bestätigt werden. Routen können sich über die Zeit ändern (z.B. Russland-Sperrzone seit 2022).'}
+                  </p>
+                </div>
+              </div>
+            }
+          />
+
+          <div className="space-y-4">
+            <label className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={historicalEnrichmentSettings.enabled}
+                onChange={(e) => {
+                  setHistoricalEnrichmentSettings({ ...historicalEnrichmentSettings, enabled: e.target.checked });
+                }}
+                className="h-4 w-4"
+              />
+              <span>{t('settings:historicalEnrichment.enabled') || 'Historische Flugdaten-Anreicherung aktivieren'}</span>
+            </label>
+
+            {historicalEnrichmentSettings.enabled && (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="label">
+                      {t('settings:historicalEnrichment.minConfidence') || 'Min Confidence (%)'}
+                    </label>
+                    <input
+                      type="number"
+                      value={historicalEnrichmentSettings.minConfidence}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value, 10);
+                        if (value >= 0 && value <= 100) {
+                          setHistoricalEnrichmentSettings({ ...historicalEnrichmentSettings, minConfidence: value });
+                        }
+                      }}
+                      min="0"
+                      max="100"
+                      className="input"
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {t('settings:historicalEnrichment.minConfidenceDescription') || 'Nur Anreicherungen mit mindestens X% Confidence anzeigen'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="label">
+                      {t('settings:historicalEnrichment.maxPerDay') || 'Max pro Tag'}
+                    </label>
+                    <input
+                      type="number"
+                      value={historicalEnrichmentSettings.maxPerDay}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value, 10);
+                        if (value >= 10 && value <= 200) {
+                          setHistoricalEnrichmentSettings({ ...historicalEnrichmentSettings, maxPerDay: value });
+                        }
+                      }}
+                      min="10"
+                      max="200"
+                      className="input"
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {t('settings:historicalEnrichment.maxPerDayDescription') || 'Maximale Anzahl Anreicherungen pro Tag'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="label">
+                      {t('settings:historicalEnrichment.maxAgeYears') || 'Max Alter (Jahre)'}
+                    </label>
+                    <input
+                      type="number"
+                      value={historicalEnrichmentSettings.maxAgeYears}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value, 10);
+                        if (value >= 2 && value <= 10) {
+                          setHistoricalEnrichmentSettings({ ...historicalEnrichmentSettings, maxAgeYears: value });
+                        }
+                      }}
+                      min="2"
+                      max="10"
+                      className="input"
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {t('settings:historicalEnrichment.maxAgeYearsDescription') || 'Maximales Alter von Flügen für Anreicherung'}
+                    </p>
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={historicalEnrichmentSettings.autoProcess}
+                    onChange={(e) => {
+                      setHistoricalEnrichmentSettings({ ...historicalEnrichmentSettings, autoProcess: e.target.checked });
+                    }}
+                    className="h-4 w-4"
+                  />
+                  <span>{t('settings:historicalEnrichment.autoProcess') || 'Automatisch nachts nach Anreicherungs-Kandidaten suchen'}</span>
+                </label>
+
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={historicalEnrichmentSettings.requireApproval}
+                    onChange={(e) => {
+                      setHistoricalEnrichmentSettings({ ...historicalEnrichmentSettings, requireApproval: e.target.checked });
+                    }}
+                    className="h-4 w-4"
+                  />
+                  <span>{t('settings:historicalEnrichment.requireApproval') || 'Jede Anreicherung muss manuell bestätigt werden'}</span>
+                </label>
+              </>
+            )}
+
+            {/* Save Button */}
+            <div className="flex justify-end pt-4 border-t">
+              <button
+                onClick={saveHistoricalEnrichmentSettings}
+                disabled={loadingHistoricalEnrichmentSettings}
+                className="btn-primary"
+              >
+                {loadingHistoricalEnrichmentSettings
+                  ? t('common:buttons.saving') || 'Speichern...'
+                  : t('common:buttons.save') || 'Speichern'}
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Parser Configuration */}
         <ParserConfiguration />
+
+        {/* API Keys */}
+        <div className="card space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">{t('settings:apiKeys.title')}</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings:apiKeys.description')}</p>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            {/* Parser APIs */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">
+                {t('settings:apiKeys.parserApis')}
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <ApiKeyCard
+                  provider="openai"
+                  label={t('settings:apiKeys.openai.label')}
+                  description={t('settings:apiKeys.openai.description')}
+                  getKeyUrl="https://platform.openai.com/api-keys"
+                  isShared={apiKeysStatus?.openai.isShared || false}
+                  hasAccess={apiKeysStatus?.openai.hasAccess || false}
+                  value={apiKeys.openaiApiKey}
+                  onChange={(value) => setApiKeys({ ...apiKeys, openaiApiKey: value })}
+                  onClear={() => setApiKeys({ ...apiKeys, openaiApiKey: '' })}
+                />
+                <ApiKeyCard
+                  provider="claude"
+                  label={t('settings:apiKeys.claude.label')}
+                  description={t('settings:apiKeys.claude.description')}
+                  getKeyUrl="https://console.anthropic.com/settings/keys"
+                  isShared={apiKeysStatus?.claude.isShared || false}
+                  hasAccess={apiKeysStatus?.claude.hasAccess || false}
+                  value={apiKeys.claudeApiKey}
+                  onChange={(value) => setApiKeys({ ...apiKeys, claudeApiKey: value })}
+                  onClear={() => setApiKeys({ ...apiKeys, claudeApiKey: '' })}
+                />
+              </div>
+            </div>
+
+            {/* Flight Lookup APIs */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">
+                {t('settings:apiKeys.flightApis')}
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <ApiKeyCard
+                  provider="airlabs"
+                  label={t('settings:apiKeys.airlabs.label')}
+                  description={t('settings:apiKeys.airlabs.description')}
+                  getKeyUrl="https://airlabs.co/account"
+                  isShared={apiKeysStatus?.airlabs.isShared || false}
+                  hasAccess={apiKeysStatus?.airlabs.hasAccess || false}
+                  value={apiKeys.airlabsApiKey}
+                  onChange={(value) => setApiKeys({ ...apiKeys, airlabsApiKey: value })}
+                  onClear={() => setApiKeys({ ...apiKeys, airlabsApiKey: '' })}
+                />
+                <ApiKeyCard
+                  provider="aviationstack"
+                  label={t('settings:apiKeys.aviationstack.label')}
+                  description={t('settings:apiKeys.aviationstack.description')}
+                  getKeyUrl="https://aviationstack.com/signup"
+                  isShared={apiKeysStatus?.aviationstack.isShared || false}
+                  hasAccess={apiKeysStatus?.aviationstack.hasAccess || false}
+                  value={apiKeys.aviationstackApiKey}
+                  onChange={(value) => setApiKeys({ ...apiKeys, aviationstackApiKey: value })}
+                  onClear={() => setApiKeys({ ...apiKeys, aviationstackApiKey: '' })}
+                />
+                <ApiKeyCard
+                  provider="opensky"
+                  label={t('settings:apiKeys.opensky.label')}
+                  description={t('settings:apiKeys.opensky.description')}
+                  getKeyUrl="https://opensky-network.org/accounts/register"
+                  isShared={apiKeysStatus?.opensky.isShared || false}
+                  hasAccess={apiKeysStatus?.opensky.hasAccess || false}
+                  openskyFields={{
+                    clientId: apiKeys.openskyClientId,
+                    clientSecret: apiKeys.openskyClientSecret,
+                    onClientIdChange: (value) => setApiKeys({ ...apiKeys, openskyClientId: value }),
+                    onClientSecretChange: (value) => setApiKeys({ ...apiKeys, openskyClientSecret: value }),
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <button
+              onClick={async () => {
+                setLoadingApiKeys(true);
+                try {
+                  await settingsApi.updateApiKeys(apiKeys);
+                  addToast('success', t('settings:apiKeys.saved') || 'API keys saved successfully');
+                  // Reload status
+                  const status = await settingsApi.getApiKeys();
+                  setApiKeysStatus(status);
+                  // Clear local values after save
+                  setApiKeys({
+                    openaiApiKey: '',
+                    claudeApiKey: '',
+                    airlabsApiKey: '',
+                    aviationstackApiKey: '',
+                    openskyClientId: '',
+                    openskyClientSecret: '',
+                  });
+                } catch (error: any) {
+                  logger.error('Failed to save API keys:', error);
+                  addToast('error', error.response?.data?.error || t('settings:apiKeys.saveFailed') || 'Failed to save API keys');
+                } finally {
+                  setLoadingApiKeys(false);
+                }
+              }}
+              disabled={loadingApiKeys}
+              className="btn-primary"
+            >
+              {loadingApiKeys ? t('settings:apiKeys.saving') || 'Saving...' : t('settings:apiKeys.save') || 'Save API Keys'}
+            </button>
+          </div>
+        </div>
 
         {/* Training Settings */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
