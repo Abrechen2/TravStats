@@ -176,12 +176,12 @@ export default function AdminPage() {
     
     setLoadingHardwareInfo(true);
     try {
-      console.log('Loading hardware info...');
+      logger.debug('Loading hardware info...');
       const data = await adminApi.getHardwareInfo();
-      console.log('Hardware info loaded:', data);
+      logger.debug('Hardware info loaded:', data);
       setHardwareInfo(data);
     } catch (error) {
-      console.error('Failed to load hardware info:', error);
+      logger.error('Failed to load hardware info:', error);
       // Set hardwareInfo to object with error to show error state
       setHardwareInfo({ 
         error: error instanceof Error ? error.message : 'Failed to load hardware information',
@@ -414,7 +414,7 @@ export default function AdminPage() {
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
           }`}
         >
-          Invitations
+          {t('admin:tabs.invitations')}
         </button>
         <button
           onClick={() => setActiveTab('apiKeys')}
@@ -434,7 +434,7 @@ export default function AdminPage() {
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
           }`}
         >
-          Parser Settings
+          {t('admin:tabs.parsers')}
         </button>
         <button
           onClick={() => setActiveTab('training')}

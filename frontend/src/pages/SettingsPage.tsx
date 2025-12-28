@@ -81,6 +81,15 @@ export default function SettingsPage() {
     expiryHours: 24,
   });
   const [loadingAutoUpdateSettings, setLoadingAutoUpdateSettings] = useState(false);
+  const [historicalEnrichmentSettings, setHistoricalEnrichmentSettings] = useState({
+    enabled: false,
+    minConfidence: 60,
+    maxAgeYears: 5,
+    autoProcess: false,
+    maxPerDay: 50,
+    requireApproval: true,
+  });
+  const [loadingHistoricalEnrichmentSettings, setLoadingHistoricalEnrichmentSettings] = useState(false);
   const [apiKeysStatus, setApiKeysStatus] = useState<{
     openai: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     claude: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
@@ -124,19 +133,33 @@ export default function SettingsPage() {
     const loadAutoUpdateSettings = async () => {
       try {
         const settings = await settingsApi.get();
-        if (settings.autoUpdate) {
-          setAutoUpdateSettings({
-            enabled: settings.autoUpdate.enabled ?? false,
-            requireApproval: settings.autoUpdate.requireApproval ?? true,
-            checkInterval: settings.autoUpdate.checkInterval ?? 15,
-            onlyDuringFlight: settings.autoUpdate.onlyDuringFlight ?? true,
-            expiryHours: settings.autoUpdate.expiryHours ?? 24,
-          });
-        }
+        logger.info('Loaded settings from server:', settings);
+        
+        // Load auto-update settings (always set, even if not in response)
+        logger.info('Setting auto-update settings:', settings.autoUpdate);
+        setAutoUpdateSettings({
+          enabled: settings.autoUpdate?.enabled ?? false,
+          requireApproval: settings.autoUpdate?.requireApproval ?? true,
+          checkInterval: settings.autoUpdate?.checkInterval ?? 15,
+          onlyDuringFlight: settings.autoUpdate?.onlyDuringFlight ?? true,
+          expiryHours: settings.autoUpdate?.expiryHours ?? 24,
+        });
+        
         // Load boarding pass parser strategy
         if (settings.boardingPassParserStrategy !== undefined) {
           setBoardingPassParserStrategy(settings.boardingPassParserStrategy);
         }
+        
+        // Load historical enrichment settings (always set, even if not in response)
+        logger.info('Setting historical enrichment settings:', settings.historicalEnrichment);
+        setHistoricalEnrichmentSettings({
+          enabled: settings.historicalEnrichment?.enabled ?? false,
+          minConfidence: settings.historicalEnrichment?.minConfidence ?? 60,
+          maxAgeYears: settings.historicalEnrichment?.maxAgeYears ?? 5,
+          autoProcess: settings.historicalEnrichment?.autoProcess ?? false,
+          maxPerDay: settings.historicalEnrichment?.maxPerDay ?? 50,
+          requireApproval: settings.historicalEnrichment?.requireApproval ?? true,
+        });
       } catch (error) {
         logger.error('Failed to load auto-update settings:', error);
       }
@@ -162,18 +185,42 @@ export default function SettingsPage() {
       await settingsApi.update({
         autoUpdate: autoUpdateSettings,
       });
-      addToast({
-        type: 'success',
-        message: t('settings:autoUpdate.saved') || 'Auto-Update-Einstellungen gespeichert',
-      });
+      // Reload settings from server to ensure we have the latest values
+      const reloaded = await settingsApi.get();
+      if (reloaded.autoUpdate) {
+        setAutoUpdateSettings(reloaded.autoUpdate);
+      }
+      addToast('success', t('settings:autoUpdate.saved') || 'Auto-Update-Einstellungen gespeichert');
     } catch (error) {
       logger.error('Failed to save auto-update settings:', error);
-      addToast({
-        type: 'error',
-        message: t('settings:autoUpdate.saveFailed') || 'Fehler beim Speichern',
-      });
+      addToast('error', t('settings:autoUpdate.saveFailed') || 'Fehler beim Speichern');
     } finally {
       setLoadingAutoUpdateSettings(false);
+    }
+  };
+
+  // Save historical enrichment settings
+  const saveHistoricalEnrichmentSettings = async () => {
+    try {
+      setLoadingHistoricalEnrichmentSettings(true);
+      logger.info('Saving historical enrichment settings:', historicalEnrichmentSettings);
+      const payload = {
+        historicalEnrichment: historicalEnrichmentSettings,
+      };
+      logger.info('Sending payload to server:', payload);
+      await settingsApi.update(payload);
+      // Reload settings from server to ensure we have the latest values
+      const reloaded = await settingsApi.get();
+      logger.info('Reloaded settings from server:', reloaded);
+      if (reloaded.historicalEnrichment) {
+        setHistoricalEnrichmentSettings(reloaded.historicalEnrichment);
+      }
+      addToast('success', t('settings:historicalEnrichment.saved') || 'Historische Anreicherungs-Einstellungen gespeichert');
+    } catch (error) {
+      logger.error('Failed to save historical enrichment settings:', error);
+      addToast('error', t('settings:historicalEnrichment.saveFailed') || 'Fehler beim Speichern');
+    } finally {
+      setLoadingHistoricalEnrichmentSettings(false);
     }
   };
 
@@ -988,22 +1035,16 @@ export default function SettingsPage() {
             <select
               value={boardingPassParserStrategy || 'auto'}
               onChange={async (e) => {
-                const value = e.target.value === 'auto' ? null : e.target.value;
+                const value = e.target.value === 'auto' ? null : (e.target.value as 'parser-only' | 'parser-with-api' | 'api-only');
                 setBoardingPassParserStrategy(value);
                 try {
                   await settingsApi.update({
                     boardingPassParserStrategy: value,
                   });
-                  addToast({
-                    type: 'success',
-                    message: 'Boarding Pass Parser-Strategie gespeichert',
-                  });
+                  addToast('success', 'Boarding Pass Parser-Strategie gespeichert');
                 } catch (error) {
                   logger.error('Failed to save boarding pass parser strategy:', error);
-                  addToast({
-                    type: 'error',
-                    message: 'Fehler beim Speichern',
-                  });
+                  addToast('error', 'Fehler beim Speichern');
                 }
               }}
               className="input"
@@ -1014,7 +1055,7 @@ export default function SettingsPage() {
               <option value="api-only">Nur API</option>
             </select>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              {boardingPassParserStrategy === null || boardingPassParserStrategy === 'auto'
+              {boardingPassParserStrategy === null
                 ? 'LLM wird bevorzugt, wenn verfügbar. Sonst Barcode-Parser mit LLM-Fallback.'
                 : boardingPassParserStrategy === 'parser-only'
                 ? 'Nur Frontend-Parser. Schnell, kostenlos, offline. Kein Fallback.'
@@ -1082,12 +1123,7 @@ export default function SettingsPage() {
                 type="checkbox"
                 checked={autoUpdateSettings.enabled}
                 onChange={(e) => {
-                  const newSettings = { ...autoUpdateSettings, enabled: e.target.checked };
-                  setAutoUpdateSettings(newSettings);
-                  // Update settings immediately
-                  settingsApi.update({ autoUpdate: newSettings }).catch((error) => {
-                    logger.error('Failed to save auto-update settings:', error);
-                  });
+                  setAutoUpdateSettings({ ...autoUpdateSettings, enabled: e.target.checked });
                 }}
                 className="h-4 w-4"
               />
@@ -1101,11 +1137,7 @@ export default function SettingsPage() {
                     type="checkbox"
                     checked={autoUpdateSettings.requireApproval}
                     onChange={(e) => {
-                      const newSettings = { ...autoUpdateSettings, requireApproval: e.target.checked };
-                      setAutoUpdateSettings(newSettings);
-                      settingsApi.update({ autoUpdate: newSettings }).catch((error) => {
-                        logger.error('Failed to save auto-update settings:', error);
-                      });
+                      setAutoUpdateSettings({ ...autoUpdateSettings, requireApproval: e.target.checked });
                     }}
                     className="h-4 w-4"
                   />
@@ -1121,11 +1153,7 @@ export default function SettingsPage() {
                       onChange={(e) => {
                         const value = parseInt(e.target.value, 10);
                         if (value >= 5 && value <= 1440) {
-                          const newSettings = { ...autoUpdateSettings, checkInterval: value };
-                          setAutoUpdateSettings(newSettings);
-                          settingsApi.update({ autoUpdate: newSettings }).catch((error) => {
-                            logger.error('Failed to save auto-update settings:', error);
-                          });
+                          setAutoUpdateSettings({ ...autoUpdateSettings, checkInterval: value });
                         }
                       }}
                       min="5"
@@ -1145,11 +1173,7 @@ export default function SettingsPage() {
                       onChange={(e) => {
                         const value = parseInt(e.target.value, 10);
                         if (value >= 1 && value <= 168) {
-                          const newSettings = { ...autoUpdateSettings, expiryHours: value };
-                          setAutoUpdateSettings(newSettings);
-                          settingsApi.update({ autoUpdate: newSettings }).catch((error) => {
-                            logger.error('Failed to save auto-update settings:', error);
-                          });
+                          setAutoUpdateSettings({ ...autoUpdateSettings, expiryHours: value });
                         }
                       }}
                       min="1"
@@ -1167,11 +1191,7 @@ export default function SettingsPage() {
                     type="checkbox"
                     checked={autoUpdateSettings.onlyDuringFlight}
                     onChange={(e) => {
-                      const newSettings = { ...autoUpdateSettings, onlyDuringFlight: e.target.checked };
-                      setAutoUpdateSettings(newSettings);
-                      settingsApi.update({ autoUpdate: newSettings }).catch((error) => {
-                        logger.error('Failed to save auto-update settings:', error);
-                      });
+                      setAutoUpdateSettings({ ...autoUpdateSettings, onlyDuringFlight: e.target.checked });
                     }}
                     className="h-4 w-4"
                   />
@@ -1179,6 +1199,190 @@ export default function SettingsPage() {
                 </label>
               </>
             )}
+
+            {/* Save Button */}
+            <div className="flex justify-end pt-4 border-t">
+              <button
+                onClick={saveAutoUpdateSettings}
+                disabled={loadingAutoUpdateSettings}
+                className="btn-primary"
+              >
+                {loadingAutoUpdateSettings
+                  ? t('common:buttons.saving') || 'Speichern...'
+                  : t('common:buttons.save') || 'Speichern'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Historical Enrichment Settings (Beta) */}
+        <div className="card space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-semibold">
+                  {t('settings:historicalEnrichment.title') || 'Historische Anreicherung (Beta)'}
+                </h2>
+                <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                  Beta
+                </span>
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {t('settings:historicalEnrichment.description') || 'Ergänzt historische Flüge (2-5 Jahre) mit Daten von Live-getrackten Flügen derselben Flugnummer'}
+              </p>
+            </div>
+          </div>
+
+          <InlineHelp
+            title={t('settings:historicalEnrichment.info.title') || 'Wie funktioniert die historische Anreicherung?'}
+            category="basic"
+            content={
+              <div className="space-y-3">
+                <p>
+                  {t('settings:historicalEnrichment.info.description') || 'Die historische Anreicherung findet Flüge mit derselben Flugnummer, die bereits Live getrackt wurden, und verwendet deren Daten (Route, Flugzeug, etc.) um Ihre historischen Flüge zu ergänzen.'}
+                </p>
+                <div>
+                  <p className="font-semibold mb-2">{t('settings:historicalEnrichment.info.benefits.title') || 'Vorteile:'}</p>
+                  <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
+                    <li>{t('settings:historicalEnrichment.info.benefits.completeData') || 'Vollständige Flugdaten für alte Flüge'}</li>
+                    <li>{t('settings:historicalEnrichment.info.benefits.routeTracking') || 'Genau Route-Tracking (überflogene Länder)'}</li>
+                    <li>{t('settings:historicalEnrichment.info.benefits.statistics') || 'Präzisere Statistiken und Achievements'}</li>
+                    <li>{t('settings:historicalEnrichment.info.benefits.automatic') || 'Automatische Erkennung von Anreicherungs-Kandidaten'}</li>
+                  </ul>
+                </div>
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-3">
+                  <p className="font-semibold mb-1 text-amber-900 dark:text-amber-200 text-sm">
+                    {t('settings:historicalEnrichment.info.warning.title') || 'Hinweis (Beta):'}
+                  </p>
+                  <p className="text-sm text-amber-800 dark:text-amber-300">
+                    {t('settings:historicalEnrichment.info.warning.description') || 'Diese Funktion ist noch in der Beta-Phase. Alle Anreicherungen müssen manuell bestätigt werden. Routen können sich über die Zeit ändern (z.B. Russland-Sperrzone seit 2022).'}
+                  </p>
+                </div>
+              </div>
+            }
+          />
+
+          <div className="space-y-4">
+            <label className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={historicalEnrichmentSettings.enabled}
+                onChange={(e) => {
+                  setHistoricalEnrichmentSettings({ ...historicalEnrichmentSettings, enabled: e.target.checked });
+                }}
+                className="h-4 w-4"
+              />
+              <span>{t('settings:historicalEnrichment.enabled') || 'Historische Flugdaten-Anreicherung aktivieren'}</span>
+            </label>
+
+            {historicalEnrichmentSettings.enabled && (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="label">
+                      {t('settings:historicalEnrichment.minConfidence') || 'Min Confidence (%)'}
+                    </label>
+                    <input
+                      type="number"
+                      value={historicalEnrichmentSettings.minConfidence}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value, 10);
+                        if (value >= 0 && value <= 100) {
+                          setHistoricalEnrichmentSettings({ ...historicalEnrichmentSettings, minConfidence: value });
+                        }
+                      }}
+                      min="0"
+                      max="100"
+                      className="input"
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {t('settings:historicalEnrichment.minConfidenceDescription') || 'Nur Anreicherungen mit mindestens X% Confidence anzeigen'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="label">
+                      {t('settings:historicalEnrichment.maxPerDay') || 'Max pro Tag'}
+                    </label>
+                    <input
+                      type="number"
+                      value={historicalEnrichmentSettings.maxPerDay}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value, 10);
+                        if (value >= 10 && value <= 200) {
+                          setHistoricalEnrichmentSettings({ ...historicalEnrichmentSettings, maxPerDay: value });
+                        }
+                      }}
+                      min="10"
+                      max="200"
+                      className="input"
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {t('settings:historicalEnrichment.maxPerDayDescription') || 'Maximale Anzahl Anreicherungen pro Tag'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="label">
+                      {t('settings:historicalEnrichment.maxAgeYears') || 'Max Alter (Jahre)'}
+                    </label>
+                    <input
+                      type="number"
+                      value={historicalEnrichmentSettings.maxAgeYears}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value, 10);
+                        if (value >= 2 && value <= 10) {
+                          setHistoricalEnrichmentSettings({ ...historicalEnrichmentSettings, maxAgeYears: value });
+                        }
+                      }}
+                      min="2"
+                      max="10"
+                      className="input"
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {t('settings:historicalEnrichment.maxAgeYearsDescription') || 'Maximales Alter von Flügen für Anreicherung'}
+                    </p>
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={historicalEnrichmentSettings.autoProcess}
+                    onChange={(e) => {
+                      setHistoricalEnrichmentSettings({ ...historicalEnrichmentSettings, autoProcess: e.target.checked });
+                    }}
+                    className="h-4 w-4"
+                  />
+                  <span>{t('settings:historicalEnrichment.autoProcess') || 'Automatisch nachts nach Anreicherungs-Kandidaten suchen'}</span>
+                </label>
+
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={historicalEnrichmentSettings.requireApproval}
+                    onChange={(e) => {
+                      setHistoricalEnrichmentSettings({ ...historicalEnrichmentSettings, requireApproval: e.target.checked });
+                    }}
+                    className="h-4 w-4"
+                  />
+                  <span>{t('settings:historicalEnrichment.requireApproval') || 'Jede Anreicherung muss manuell bestätigt werden'}</span>
+                </label>
+              </>
+            )}
+
+            {/* Save Button */}
+            <div className="flex justify-end pt-4 border-t">
+              <button
+                onClick={saveHistoricalEnrichmentSettings}
+                disabled={loadingHistoricalEnrichmentSettings}
+                className="btn-primary"
+              >
+                {loadingHistoricalEnrichmentSettings
+                  ? t('common:buttons.saving') || 'Speichern...'
+                  : t('common:buttons.save') || 'Speichern'}
+              </button>
+            </div>
           </div>
         </div>
 

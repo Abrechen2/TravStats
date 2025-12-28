@@ -7,7 +7,7 @@
   "backToDashboard": "← Zurück zum Dashboard",
   "uploadAnnotation": "Upload & Annotation",
   "dashboard": "Training Dashboard",
-  "guide": "Guide",
+  "guideTab": "Guide",
   "llmTraining": "LLM Training",
   "trainLocalOllama": "Trainiere lokale Ollama LLMs mit eigenen Daten",
   "uploadFile": "Datei hochladen",
@@ -149,6 +149,9 @@
     "trainingStarted": "Training gestartet!"
   },
   "annotation": {
+    "title": "Email Annotation",
+    "description": "Wähle zuerst einen Flug aus, dann markiere relevante Textpassagen und weise ihnen Labels zu",
+    "selectFlight": "Flug für Annotation auswählen",
     "cancelDrawing": "Zeichnen abbrechen (ESC)",
     "drawingInstructions": "Zeichne eine Box. Drücke ESC oder klicke \"Abbrechen\" zum Abbrechen.",
     "selectLabel": "Label wählen...",

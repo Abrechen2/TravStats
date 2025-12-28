@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { setupApi } from '../lib/api';
 import { useTranslation } from '../hooks/useTranslation';
+import { logger } from '../lib/logger';
 
 interface AirportSeedingModalProps {
   isOpen: boolean;
@@ -29,7 +30,7 @@ export default function AirportSeedingModal({ isOpen, onClose }: AirportSeedingM
         setTimeout(onClose, 2000);
       }
     } catch (error) {
-      console.error('Failed to fetch seeding status:', error);
+      logger.error('Failed to fetch seeding status:', error);
     }
   };
 

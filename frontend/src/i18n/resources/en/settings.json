@@ -315,6 +315,38 @@
     "saved": "Auto-update settings saved successfully",
     "saveFailed": "Failed to save auto-update settings"
   },
+  "historicalEnrichment": {
+    "title": "Historical Enrichment",
+    "description": "Enriches historical flights (2-5 years) with data from live-tracked flights of the same flight number",
+    "info": {
+      "title": "How does historical enrichment work?",
+      "description": "Historical enrichment finds flights with the same flight number that were already live-tracked and uses their data (route, aircraft, etc.) to enrich your historical flights.",
+      "benefits": {
+        "title": "Benefits:",
+        "completeData": "Complete flight data for old flights",
+        "routeTracking": "Accurate route tracking (overflown countries)",
+        "statistics": "More precise statistics and achievements",
+        "automatic": "Automatic detection of enrichment candidates"
+      },
+      "warning": {
+        "title": "Note (Beta):",
+        "description": "This feature is still in beta. All enrichments must be manually confirmed. Routes can change over time (e.g., Russia airspace closure since 2022)."
+      }
+    },
+    "enabled": "Enable historical flight data enrichment",
+    "minConfidence": "Min Confidence (%)",
+    "minConfidenceDescription": "Only show enrichments with at least X% confidence",
+    "maxPerDay": "Max per Day",
+    "maxPerDayDescription": "Maximum number of enrichments per day",
+    "minAgeYears": "Min Age (Years)",
+    "minAgeYearsDescription": "Minimum age of flights for enrichment",
+    "maxAgeYears": "Max Age (Years)",
+    "maxAgeYearsDescription": "Maximum age of flights for enrichment",
+    "autoProcess": "Automatically search for enrichment candidates at night",
+    "requireApproval": "Each enrichment must be manually confirmed",
+    "saved": "Historical enrichment settings saved successfully",
+    "saveFailed": "Failed to save historical enrichment settings"
+  },
   "apiKeys": {
     "title": "API Keys",
     "description": "Manage API keys for external services. Keys shared by the administrator are automatically used.",

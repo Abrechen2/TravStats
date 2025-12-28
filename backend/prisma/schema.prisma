@@ -90,6 +90,16 @@ model Flight {
   receiptUrl       String?  @map("receipt_url")
   ticketPrice      Float?   @map("ticket_price")
   createdAt        DateTime @default(now()) @map("created_at")
+  // Route tracking
+  actualRoute      Json?    @map("actual_route") // Array of waypoints [{lat, lon, timestamp, country?}]
+  overflownCountries String[] @default([]) @map("overflown_countries")
+  routeDistance    Float?   @map("route_distance")
+  routeSource      String?  @map("route_source") // 'live_tracking', 'historical_aggregation', 'estimated'
+  hasLiveTracking  Boolean  @default(false) @map("has_live_tracking")
+  // Data source tracking
+  dataSource       String?  @map("data_source") // 'manual', 'email_import', 'boarding_pass_scan', 'historical_enrichment', 'live_update', 'api_lookup'
+  lastModifiedBy   String?  @map("last_modified_by") // 'user', 'auto_update', 'historical_enrichment', 'api'
+  enrichmentHistory Json?   @map("enrichment_history") // Array of enrichment events [{type, timestamp, confidence?, source?}]
 
   user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   pendingUpdates    PendingFlightUpdate[]
@@ -184,6 +194,14 @@ model UserSettings {
   // "parser-with-api" = Parser + API zur Validierung
   // "api-only" = Direkt API verwenden
   boardingPassParserStrategy String? @map("boarding_pass_parser_strategy")
+
+  // Historical enrichment settings (Beta)
+  historicalEnrichmentEnabled Boolean @default(false) @map("historical_enrichment_enabled")
+  historicalEnrichmentMinConfidence Int @default(60) @map("historical_enrichment_min_confidence")
+  historicalEnrichmentMaxAgeYears Int @default(5) @map("historical_enrichment_max_age_years")
+  historicalEnrichmentAutoProcess Boolean @default(false) @map("historical_enrichment_auto_process")
+  historicalEnrichmentMaxPerDay Int @default(50) @map("historical_enrichment_max_per_day")
+  historicalEnrichmentRequireApproval Boolean @default(true) @map("historical_enrichment_require_approval")
 
   updatedAt DateTime @updatedAt @map("updated_at")
   createdAt DateTime @default(now()) @map("created_at")
@@ -404,6 +422,7 @@ model PendingFlightUpdate {
   rejectedAt     DateTime? @map("rejected_at")
   editedAt       DateTime? @map("edited_at")
   statisticsImpact Json?  @map("statistics_impact")
+  metadata       Json?    @map("metadata") // For historical enrichment: {sourceFlightsCount, confidence, anomalies, isHistoricalEnrichment, routeConsistency}
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 

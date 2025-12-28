@@ -315,6 +315,38 @@
     "saved": "Auto-Update-Einstellungen erfolgreich gespeichert",
     "saveFailed": "Fehler beim Speichern der Auto-Update-Einstellungen"
   },
+  "historicalEnrichment": {
+    "title": "Historische Anreicherung",
+    "description": "Ergänzt historische Flüge (2-5 Jahre) mit Daten von Live-getrackten Flügen derselben Flugnummer",
+    "info": {
+      "title": "Wie funktioniert die historische Anreicherung?",
+      "description": "Die historische Anreicherung findet Flüge mit derselben Flugnummer, die bereits Live getrackt wurden, und verwendet deren Daten (Route, Flugzeug, etc.) um Ihre historischen Flüge zu ergänzen.",
+      "benefits": {
+        "title": "Vorteile:",
+        "completeData": "Vollständige Flugdaten für alte Flüge",
+        "routeTracking": "Genau Route-Tracking (überflogene Länder)",
+        "statistics": "Präzisere Statistiken und Achievements",
+        "automatic": "Automatische Erkennung von Anreicherungs-Kandidaten"
+      },
+      "warning": {
+        "title": "Hinweis (Beta):",
+        "description": "Diese Funktion ist noch in der Beta-Phase. Alle Anreicherungen müssen manuell bestätigt werden. Routen können sich über die Zeit ändern (z.B. Russland-Sperrzone seit 2022)."
+      }
+    },
+    "enabled": "Historische Flugdaten-Anreicherung aktivieren",
+    "minConfidence": "Min Confidence (%)",
+    "minConfidenceDescription": "Nur Anreicherungen mit mindestens X% Confidence anzeigen",
+    "maxPerDay": "Max pro Tag",
+    "maxPerDayDescription": "Maximale Anzahl Anreicherungen pro Tag",
+    "minAgeYears": "Min Alter (Jahre)",
+    "minAgeYearsDescription": "Minimales Alter von Flügen für Anreicherung",
+    "maxAgeYears": "Max Alter (Jahre)",
+    "maxAgeYearsDescription": "Maximales Alter von Flügen für Anreicherung",
+    "autoProcess": "Automatisch nachts nach Anreicherungs-Kandidaten suchen",
+    "requireApproval": "Jede Anreicherung muss manuell bestätigt werden",
+    "saved": "Historische Anreicherungs-Einstellungen erfolgreich gespeichert",
+    "saveFailed": "Fehler beim Speichern der historischen Anreicherungs-Einstellungen"
+  },
   "apiKeys": {
     "title": "API-Schlüssel",
     "description": "Verwalte API-Schlüssel für externe Dienste. Vom Administrator geteilte Schlüssel werden automatisch verwendet.",

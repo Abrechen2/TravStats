@@ -139,6 +139,7 @@ export default function FlightList({
                       {formatCurrency(flight.price, flight.currency || units.currency)}
                     </span>
                   )}
+                  <DataSourceBadges flight={flight} />
                   {flight.tags && flight.tags.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {flight.tags.map((tag) => (

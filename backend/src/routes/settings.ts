@@ -74,6 +74,14 @@ const settingsSchema = z.object({
     onlyDuringFlight: z.boolean().optional(),
     expiryHours: z.number().min(1).max(168).optional(), // 1 hour to 1 week
   }).partial().optional(),
+  historicalEnrichment: z.object({
+    enabled: z.boolean().optional(),
+    minConfidence: z.number().min(0).max(100).optional(),
+    maxAgeYears: z.number().min(1).max(10).optional(),
+    autoProcess: z.boolean().optional(),
+    maxPerDay: z.number().min(1).max(1000).optional(),
+    requireApproval: z.boolean().optional(),
+  }).partial().optional(),
   boardingPassParserStrategy: z.enum(['parser-only', 'parser-with-api', 'api-only']).nullable().optional(),
 }).partial();
 
@@ -113,6 +121,13 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
           autoUpdateExpiryHours: 24,
           // Initialize boarding pass parser strategy (null = auto)
           boardingPassParserStrategy: null,
+          // Initialize historical enrichment settings with defaults
+          historicalEnrichmentEnabled: false,
+          historicalEnrichmentMinConfidence: 60,
+          historicalEnrichmentMaxAgeYears: 5,
+          historicalEnrichmentAutoProcess: false,
+          historicalEnrichmentMaxPerDay: 50,
+          historicalEnrichmentRequireApproval: true,
         },
       });
       const response = created.data as any;
@@ -126,20 +141,44 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
       };
       // Add boarding pass parser strategy to response
       response.boardingPassParserStrategy = created.boardingPassParserStrategy;
+      // Add historical enrichment settings to response
+      response.historicalEnrichment = {
+        enabled: created.historicalEnrichmentEnabled ?? false,
+        minConfidence: created.historicalEnrichmentMinConfidence ?? 60,
+        maxAgeYears: created.historicalEnrichmentMaxAgeYears ?? 5,
+        autoProcess: created.historicalEnrichmentAutoProcess ?? false,
+        maxPerDay: created.historicalEnrichmentMaxPerDay ?? 50,
+        requireApproval: created.historicalEnrichmentRequireApproval ?? true,
+      };
       return res.json(response);
     }
 
     const response = existing.data as any;
-    // Add auto-update settings to response
+    // Add auto-update settings to response (always include, even if false)
     response.autoUpdate = {
-      enabled: existing.autoUpdateEnabled,
-      requireApproval: existing.autoUpdateRequireApproval,
-      checkInterval: existing.autoUpdateCheckInterval,
-      onlyDuringFlight: existing.autoUpdateOnlyDuringFlight,
-      expiryHours: existing.autoUpdateExpiryHours,
+      enabled: existing.autoUpdateEnabled ?? false,
+      requireApproval: existing.autoUpdateRequireApproval ?? true,
+      checkInterval: existing.autoUpdateCheckInterval ?? 15,
+      onlyDuringFlight: existing.autoUpdateOnlyDuringFlight ?? true,
+      expiryHours: existing.autoUpdateExpiryHours ?? 24,
     };
     // Add boarding pass parser strategy to response
     response.boardingPassParserStrategy = existing.boardingPassParserStrategy;
+    // Add historical enrichment settings to response (always include, even if false)
+    response.historicalEnrichment = {
+      enabled: existing.historicalEnrichmentEnabled ?? false,
+      minConfidence: existing.historicalEnrichmentMinConfidence ?? 60,
+      maxAgeYears: existing.historicalEnrichmentMaxAgeYears ?? 5,
+      autoProcess: existing.historicalEnrichmentAutoProcess ?? false,
+      maxPerDay: existing.historicalEnrichmentMaxPerDay ?? 50,
+      requireApproval: existing.historicalEnrichmentRequireApproval ?? true,
+    };
+    
+    logger.info('GET settings response:', {
+      autoUpdate: response.autoUpdate,
+      historicalEnrichment: response.historicalEnrichment,
+    });
+    
     res.json(response);
   } catch (error) {
     next(error);
@@ -149,14 +188,16 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
 router.put('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
+    logger.info('Received settings update request:', JSON.stringify(req.body, null, 2));
     const payload = settingsSchema.parse(req.body);
+    logger.info('Parsed payload:', JSON.stringify(payload, null, 2));
 
     const existing = await prisma.userSettings.findUnique({
       where: { userId },
     });
 
     // Extract direct fields from payload since they're not part of JSON data
-    const { boardingPassParserStrategy, autoUpdate, ...payloadWithoutDirectFields } = payload;
+    const { boardingPassParserStrategy, autoUpdate, historicalEnrichment, ...payloadWithoutDirectFields } = payload;
 
     const merged = {
       ...defaultSettings,
@@ -170,20 +211,48 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
 
     // Handle auto-update settings
     if (payload.autoUpdate) {
-      if (payload.autoUpdate.enabled !== undefined) {
+      logger.info('Updating auto-update settings:', payload.autoUpdate);
+      // Always update enabled, even if false (use 'in' operator to check if property exists)
+      if ('enabled' in payload.autoUpdate) {
         updateData.autoUpdateEnabled = payload.autoUpdate.enabled;
+        logger.info(`Setting autoUpdateEnabled to: ${payload.autoUpdate.enabled} (type: ${typeof payload.autoUpdate.enabled})`);
       }
-      if (payload.autoUpdate.requireApproval !== undefined) {
+      if ('requireApproval' in payload.autoUpdate) {
         updateData.autoUpdateRequireApproval = payload.autoUpdate.requireApproval;
       }
       if (payload.autoUpdate.checkInterval !== undefined) {
         updateData.autoUpdateCheckInterval = payload.autoUpdate.checkInterval;
       }
-      if (payload.autoUpdate.onlyDuringFlight !== undefined) {
+      if ('onlyDuringFlight' in payload.autoUpdate) {
         updateData.autoUpdateOnlyDuringFlight = payload.autoUpdate.onlyDuringFlight;
       }
       if (payload.autoUpdate.expiryHours !== undefined) {
         updateData.autoUpdateExpiryHours = payload.autoUpdate.expiryHours;
+      }
+    }
+
+    // Historical enrichment settings
+    if (payload.historicalEnrichment) {
+      logger.info('Updating historical enrichment settings:', payload.historicalEnrichment);
+      // Always update enabled, even if false (use 'in' operator to check if property exists)
+      if ('enabled' in payload.historicalEnrichment) {
+        updateData.historicalEnrichmentEnabled = payload.historicalEnrichment.enabled;
+        logger.info(`Setting historicalEnrichmentEnabled to: ${payload.historicalEnrichment.enabled} (type: ${typeof payload.historicalEnrichment.enabled})`);
+      }
+      if (payload.historicalEnrichment.minConfidence !== undefined) {
+        updateData.historicalEnrichmentMinConfidence = payload.historicalEnrichment.minConfidence;
+      }
+      if (payload.historicalEnrichment.maxAgeYears !== undefined) {
+        updateData.historicalEnrichmentMaxAgeYears = payload.historicalEnrichment.maxAgeYears;
+      }
+      if ('autoProcess' in payload.historicalEnrichment) {
+        updateData.historicalEnrichmentAutoProcess = payload.historicalEnrichment.autoProcess;
+      }
+      if (payload.historicalEnrichment.maxPerDay !== undefined) {
+        updateData.historicalEnrichmentMaxPerDay = payload.historicalEnrichment.maxPerDay;
+      }
+      if ('requireApproval' in payload.historicalEnrichment) {
+        updateData.historicalEnrichmentRequireApproval = payload.historicalEnrichment.requireApproval;
       }
     }
 
@@ -192,6 +261,8 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
       updateData.boardingPassParserStrategy = boardingPassParserStrategy;
     }
 
+    logger.info('Update data before save:', JSON.stringify(updateData, null, 2));
+    
     const saved = await prisma.userSettings.upsert({
       where: { userId },
       update: updateData,
@@ -208,13 +279,45 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
         autoUpdateRequireApproval: payload.autoUpdate?.requireApproval ?? true,
         autoUpdateCheckInterval: payload.autoUpdate?.checkInterval ?? 15,
         autoUpdateOnlyDuringFlight: payload.autoUpdate?.onlyDuringFlight ?? true,
+        historicalEnrichmentEnabled: payload.historicalEnrichment?.enabled ?? false,
+        historicalEnrichmentMinConfidence: payload.historicalEnrichment?.minConfidence ?? 60,
+        historicalEnrichmentMaxAgeYears: payload.historicalEnrichment?.maxAgeYears ?? 5,
+        historicalEnrichmentAutoProcess: payload.historicalEnrichment?.autoProcess ?? false,
+        historicalEnrichmentMaxPerDay: payload.historicalEnrichment?.maxPerDay ?? 50,
+        historicalEnrichmentRequireApproval: payload.historicalEnrichment?.requireApproval ?? true,
         autoUpdateExpiryHours: payload.autoUpdate?.expiryHours ?? 24,
         // Initialize boarding pass parser strategy (null = auto)
         boardingPassParserStrategy: boardingPassParserStrategy ?? null,
       },
     });
+    
+    logger.info('Saved settings:', {
+      autoUpdateEnabled: saved.autoUpdateEnabled,
+      historicalEnrichmentEnabled: saved.historicalEnrichmentEnabled,
+    });
 
-    res.json(saved.data);
+    // Return response with autoUpdate and historicalEnrichment settings included
+    const response = saved.data as any;
+    // Add auto-update settings to response
+    response.autoUpdate = {
+      enabled: saved.autoUpdateEnabled,
+      requireApproval: saved.autoUpdateRequireApproval,
+      checkInterval: saved.autoUpdateCheckInterval,
+      onlyDuringFlight: saved.autoUpdateOnlyDuringFlight,
+      expiryHours: saved.autoUpdateExpiryHours,
+    };
+    // Add boarding pass parser strategy to response
+    response.boardingPassParserStrategy = saved.boardingPassParserStrategy;
+    // Add historical enrichment settings to response
+    response.historicalEnrichment = {
+      enabled: saved.historicalEnrichmentEnabled ?? false,
+      minConfidence: saved.historicalEnrichmentMinConfidence ?? 60,
+      maxAgeYears: saved.historicalEnrichmentMaxAgeYears ?? 5,
+      autoProcess: saved.historicalEnrichmentAutoProcess ?? false,
+      maxPerDay: saved.historicalEnrichmentMaxPerDay ?? 50,
+      requireApproval: saved.historicalEnrichmentRequireApproval ?? true,
+    };
+    res.json(response);
   } catch (error) {
     next(error);
   }

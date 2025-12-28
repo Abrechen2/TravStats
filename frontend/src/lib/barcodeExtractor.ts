@@ -7,6 +7,7 @@
 
 import jsQR from 'jsqr';
 import { BrowserMultiFormatReader } from '@zxing/browser';
+import { logger } from './logger';
 
 export interface BarcodeExtractionResult {
   data: string;
@@ -42,7 +43,7 @@ export async function extractBarcodeFromImage(
 
     return null;
   } catch (error) {
-    console.error('[Barcode Extractor] Error extracting barcode:', error);
+    logger.error('[Barcode Extractor] Error extracting barcode:', error);
     return null;
   }
 }
@@ -74,7 +75,7 @@ export async function extractBarcodeWithFormat(
 
     return null;
   } catch (error) {
-    console.error('[Barcode Extractor] Error extracting barcode with format:', error);
+    logger.error('[Barcode Extractor] Error extracting barcode with format:', error);
     return null;
   }
 }
@@ -102,13 +103,13 @@ async function loadImageData(image: File | string): Promise<ImageData | null> {
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         resolve(imageData);
       } catch (error) {
-        console.error('[Barcode Extractor] Error creating ImageData:', error);
+        logger.error('[Barcode Extractor] Error creating ImageData:', error);
         resolve(null);
       }
     };
 
     img.onerror = () => {
-      console.error('[Barcode Extractor] Error loading image');
+      logger.error('[Barcode Extractor] Error loading image');
       resolve(null);
     };
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { parseApi, settingsApi } from '../../lib/api';
 import InlineHelp from '../Help/InlineHelp';
 import { useTranslation } from '../../hooks/useTranslation';
+import { logger } from '../../lib/logger';
 
 const parserProviderOptions = {
   vision: [
@@ -51,7 +52,7 @@ export default function ParserConfiguration({ className = '' }: ParserConfigurat
           preferredTextParser: settingsData.preferredTextParser || 'auto',
         });
       } catch (error) {
-        console.error('Failed to load parser data:', error);
+        logger.error('Failed to load parser data:', error);
       } finally {
         setLoadingProviders(false);
       }
@@ -103,7 +104,7 @@ export default function ParserConfiguration({ className = '' }: ParserConfigurat
       });
       alert(t('settings:parser.saved'));
     } catch (error: any) {
-      console.error('Failed to save settings:', error);
+      logger.error('Failed to save settings:', error);
       const errorMessage = error.response?.data?.error || t('settings:parser.saveFailed');
       alert(errorMessage);
     } finally {

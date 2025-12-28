@@ -94,7 +94,7 @@ export default function PendingUpdateEditor({
             {/* Editor Form */}
             <div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                {t('pendingUpdates:editor.fields')}
+                {t('pendingUpdates:editor.fieldsTitle')}
               </h3>
               <div className="space-y-4">
                 <div>

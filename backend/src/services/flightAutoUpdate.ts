@@ -11,6 +11,7 @@ import { prisma } from '../db';
 import logger from '../utils/logger';
 import { calculateDistance } from '../utils/geo';
 import { getApiKey } from './apiKeyResolver';
+import { aggregateFlightData, type AggregatedFlightData } from './flightEnrichmentService';
 
 const prismaClient = prisma as PrismaClient;
 
@@ -70,6 +71,9 @@ export function calculateChanges(
     'departureTime',
     'arrivalTime',
     'status',
+    'actualRoute',
+    'overflownCountries',
+    'routeDistance',
   ];
 
   for (const field of fieldsToCompare) {
@@ -139,6 +143,9 @@ function hasSignificantChanges(changes: FlightChange[]): boolean {
 
 /**
  * Convert API flight data to proposed flight data format
+ * 
+ * Note: apiData.departureTime and apiData.arrivalTime should already be in UTC
+ * (converted by lookupFlightDetails from local airport time to UTC)
  */
 function convertApiDataToProposed(
   apiData: any,
@@ -153,6 +160,7 @@ function convertApiDataToProposed(
     depIcao: apiData.departure?.icao || originalFlight.depIcao,
     arrIata: apiData.arrival?.iata || originalFlight.arrIata,
     arrIcao: apiData.arrival?.icao || originalFlight.arrIcao,
+    // Times are already in UTC from lookupFlightDetails, just ensure ISO format
     departureTime: apiData.departureTime
       ? new Date(apiData.departureTime).toISOString()
       : originalFlight.departureTime.toISOString(),

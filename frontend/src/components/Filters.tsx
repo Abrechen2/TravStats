@@ -5,6 +5,7 @@ import HelpIcon from './Help/HelpIcon';
 import type { Flight, FlightFilters } from '../types';
 import { API_LIMITS } from '../lib/constants';
 import { useTranslation } from '../hooks/useTranslation';
+import { logger } from '../lib/logger';
 
 interface FiltersProps {
   onFilterChange: (filters: FlightFilters & { minRouteCount?: number }) => void;
@@ -87,7 +88,7 @@ export default function Filters({ onFilterChange }: FiltersProps) {
 
         setAvailableAirlines(airlines);
       } catch (error) {
-        console.error('Failed to load filter options:', error);
+        logger.error('Failed to load filter options:', error);
       }
     };
 

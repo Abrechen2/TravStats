@@ -56,6 +56,16 @@ export interface Flight {
   terminal?: string;
   bookingReference?: string;
   ticketNumber?: string;
+  // Route tracking
+  actualRoute?: Array<{lat: number; lon: number; timestamp?: string; country?: string}>;
+  overflownCountries?: string[];
+  routeDistance?: number;
+  routeSource?: 'live_tracking' | 'historical_aggregation' | 'estimated';
+  hasLiveTracking?: boolean;
+  // Data source tracking
+  dataSource?: 'manual' | 'email_import' | 'boarding_pass_scan' | 'historical_enrichment' | 'live_update' | 'api_lookup';
+  lastModifiedBy?: 'user' | 'auto_update' | 'historical_enrichment' | 'api';
+  enrichmentHistory?: Array<{type: string; timestamp: string; confidence?: number; source?: string; sourceFlightsCount?: number}>;
 }
 
 export interface FlightInput {

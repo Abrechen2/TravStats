@@ -253,5 +253,20 @@
     "searchingWorldwide": "🔍 Suche weltweit...",
     "noResults": "Keine Flughäfen gefunden",
     "notFound": "❌ Flughafen \"{{code}}\" nicht gefunden"
-  }
+  },
+  "dataSource": {
+    "manual": "Manuell",
+    "email_import": "Email",
+    "boarding_pass_scan": "Boarding Pass",
+    "historical_enrichment": "Angereichert",
+    "live_update": "Live",
+    "live_update_auto": "Live + Auto Update",
+    "live_update_auto_tooltip": "Live-Tracking mit automatischen Updates",
+    "auto_update": "Auto Update",
+    "api_lookup": "API"
+  },
+  "enrichmentCount": "{{count}}x angereichert",
+  "confidence": "Vertrauen",
+  "sourceFlightsCount": "{{count}} {{count, plural, one {Quellflug} other {Quellflüge}}}",
+  "enrichmentHistory": "Anreicherungs-Historie"
 }

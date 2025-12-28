@@ -5,6 +5,7 @@ import NavigationBar from '../components/NavigationBar';
 import type { Achievement, AchievementSummary, LeaderboardEntry } from '../types';
 import { STORAGE_KEYS } from '../lib/constants';
 import { useTranslation } from '../hooks/useTranslation';
+import { logger } from '../lib/logger';
 
 const tierColors = {
   bronze: 'from-amber-700 to-amber-900',
@@ -61,7 +62,7 @@ export default function AchievementsPage() {
       setAchievements(data.achievements);
       setSummary(data.summary);
     } catch (error) {
-      console.error('Failed to load achievements:', error);
+      logger.error('Failed to load achievements:', error);
     } finally {
       setLoading(false);
     }
@@ -72,7 +73,7 @@ export default function AchievementsPage() {
       const data = await achievementsApi.getLeaderboard(20);
       setLeaderboard(data.leaderboard);
     } catch (error) {
-      console.error('Failed to load leaderboard:', error);
+      logger.error('Failed to load leaderboard:', error);
     }
   };
 
@@ -86,7 +87,7 @@ export default function AchievementsPage() {
         alert(t('achievements:alerts.none'));
       }
     } catch (error) {
-      console.error('Failed to check achievements:', error);
+      logger.error('Failed to check achievements:', error);
     }
   };
 

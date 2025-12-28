@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { setupApi } from '../lib/api';
 import { useTranslation } from '../hooks/useTranslation';
+import { logger } from '../lib/logger';
 
 interface SeedingStatus {
   status: 'pending' | 'running' | 'completed' | 'failed';
@@ -33,7 +34,7 @@ export default function AirportSeedingBanner({ onStatusChange }: AirportSeedingB
         setIsPolling(true);
       }
     } catch (error) {
-      console.error('Failed to fetch seeding status:', error);
+      logger.error('Failed to fetch seeding status:', error);
       setIsPolling(false);
     }
   };

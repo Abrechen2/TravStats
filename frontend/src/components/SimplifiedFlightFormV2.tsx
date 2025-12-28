@@ -135,6 +135,11 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
     }
   }, [departureDate]);
 
+  // Clear error when step changes (to avoid showing irrelevant errors)
+  useEffect(() => {
+    setError('');
+  }, [step]);
+
   // Track if arrival date has been set manually (to avoid overwriting user input)
   const arrivalDateSetRef = useRef(false);
 
@@ -216,7 +221,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
       setLookupResults(data.flights);
       setStep('select');
     } catch (err) {
-      console.error('Flight lookup error:', err);
+      logger.error('Flight lookup error:', err);
       setError(`${t('errors:lookupUnavailable')} ${t('errors:apiKeyInfo')}`);
       setStep('complete');
     } finally {
@@ -431,6 +436,13 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
         {error && (
           <div className="mx-6 mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded dark:bg-red-900 dark:border-red-700 dark:text-red-200">
             {error}
+          </div>
+        )}
+
+        {/* Show validation warning only in complete step when airports are missing */}
+        {step === 'complete' && (!departure || !arrival) && (
+          <div className="mx-6 mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded dark:bg-red-900 dark:border-red-700 dark:text-red-200">
+            {t('errors:missingAirports')}
           </div>
         )}
 

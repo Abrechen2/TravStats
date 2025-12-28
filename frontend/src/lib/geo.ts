@@ -3,6 +3,8 @@
  * Provides accurate distance calculations using the Haversine formula
  */
 
+import { logger } from './logger';
+
 /**
  * Calculate distance between two coordinates using Haversine formula
  * @param lat1 Latitude of point 1 (degrees)
@@ -181,7 +183,7 @@ export function calculateFlightDurationWithTimezone(
     return (arrUTC - depUTC) / 60000;
   } catch (error) {
     // If timezone conversion fails, fall back to simple calculation
-    console.warn('Failed to calculate flight duration with timezones, using fallback:', error);
+    logger.warn('Failed to calculate flight duration with timezones, using fallback:', error);
     return calculateFlightDuration(departureTime, arrivalTime);
   }
 }
