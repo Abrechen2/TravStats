@@ -288,14 +288,8 @@ if [ "$MIGRATION_SUCCESS" = "true" ]; then
     if [ "$TABLE_CHECK" = "ok" ]; then
         echo "[entrypoint] ✅ Database tables verified, proceeding with seeds"
         
-        # Essential seeds - always run (idempotent)
-        echo "[entrypoint] Seeding achievements..."
-        if npm run seed:achievements 2>&1; then
-            echo "[entrypoint] ✅ Achievements seeded successfully"
-        else
-            echo "[entrypoint] ⚠️  Failed to seed achievements - achievement system may not work"
-            # Don't exit - this is not critical for startup
-        fi
+        # Note: Achievements are core features defined in code, not seeded from database
+        # They are automatically ensured when needed via ensureAchievements() function
     else
         echo "[entrypoint] ⚠️  Database tables not found - skipping seeds (migrations may have failed)"
         echo "[entrypoint] Seeds will be skipped until migrations succeed"

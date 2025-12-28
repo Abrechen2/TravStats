@@ -35,6 +35,19 @@ function RestoreModal({ backup, onClose, onConfirm }: RestoreModalProps) {
   const [targetDatabaseUrl, setTargetDatabaseUrl] = useState('');
   const [confirmText, setConfirmText] = useState('');
 
+  const formatDate = (dateString: string | null | undefined): string => {
+    if (!dateString) return t('common:labels.unknown');
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return t('common:labels.unknown');
+      }
+      return format(date, 'dd.MM.yyyy HH:mm');
+    } catch (error) {
+      return t('common:labels.unknown');
+    }
+  };
+
   const handleConfirm = () => {
     if (confirmText !== t('admin:backup.restore.confirmText')) {
       return;

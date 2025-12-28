@@ -174,7 +174,8 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
       requireApproval: existing.historicalEnrichmentRequireApproval ?? true,
     };
     
-    logger.info('GET settings response:', {
+    logger.info({
+      operation: 'get_settings_response',
       autoUpdate: response.autoUpdate,
       historicalEnrichment: response.historicalEnrichment,
     });
@@ -188,9 +189,15 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
 router.put('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
-    logger.info('Received settings update request:', JSON.stringify(req.body, null, 2));
+    logger.info({
+      operation: 'received_settings_update',
+      body: req.body,
+    });
     const payload = settingsSchema.parse(req.body);
-    logger.info('Parsed payload:', JSON.stringify(payload, null, 2));
+    logger.info({
+      operation: 'parsed_settings_payload',
+      payload,
+    });
 
     const existing = await prisma.userSettings.findUnique({
       where: { userId },
@@ -211,7 +218,10 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
 
     // Handle auto-update settings
     if (payload.autoUpdate) {
-      logger.info('Updating auto-update settings:', payload.autoUpdate);
+      logger.info({
+        operation: 'updating_auto_update_settings',
+        autoUpdate: payload.autoUpdate,
+      });
       // Always update enabled, even if false (use 'in' operator to check if property exists)
       if ('enabled' in payload.autoUpdate) {
         updateData.autoUpdateEnabled = payload.autoUpdate.enabled;
@@ -229,11 +239,21 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
       if (payload.autoUpdate.expiryHours !== undefined) {
         updateData.autoUpdateExpiryHours = payload.autoUpdate.expiryHours;
       }
+    } else if (existing) {
+      // Preserve existing auto-update settings if not in payload
+      updateData.autoUpdateEnabled = existing.autoUpdateEnabled;
+      updateData.autoUpdateRequireApproval = existing.autoUpdateRequireApproval;
+      updateData.autoUpdateCheckInterval = existing.autoUpdateCheckInterval;
+      updateData.autoUpdateOnlyDuringFlight = existing.autoUpdateOnlyDuringFlight;
+      updateData.autoUpdateExpiryHours = existing.autoUpdateExpiryHours;
     }
 
     // Historical enrichment settings
     if (payload.historicalEnrichment) {
-      logger.info('Updating historical enrichment settings:', payload.historicalEnrichment);
+      logger.info({
+        operation: 'updating_historical_enrichment_settings',
+        historicalEnrichment: payload.historicalEnrichment,
+      });
       // Always update enabled, even if false (use 'in' operator to check if property exists)
       if ('enabled' in payload.historicalEnrichment) {
         updateData.historicalEnrichmentEnabled = payload.historicalEnrichment.enabled;
@@ -254,6 +274,14 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
       if ('requireApproval' in payload.historicalEnrichment) {
         updateData.historicalEnrichmentRequireApproval = payload.historicalEnrichment.requireApproval;
       }
+    } else if (existing) {
+      // Preserve existing historical enrichment settings if not in payload
+      updateData.historicalEnrichmentEnabled = existing.historicalEnrichmentEnabled;
+      updateData.historicalEnrichmentMinConfidence = existing.historicalEnrichmentMinConfidence;
+      updateData.historicalEnrichmentMaxAgeYears = existing.historicalEnrichmentMaxAgeYears;
+      updateData.historicalEnrichmentAutoProcess = existing.historicalEnrichmentAutoProcess;
+      updateData.historicalEnrichmentMaxPerDay = existing.historicalEnrichmentMaxPerDay;
+      updateData.historicalEnrichmentRequireApproval = existing.historicalEnrichmentRequireApproval;
     }
 
     // Handle boarding pass parser strategy
@@ -261,7 +289,10 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
       updateData.boardingPassParserStrategy = boardingPassParserStrategy;
     }
 
-    logger.info('Update data before save:', JSON.stringify(updateData, null, 2));
+    logger.info({
+      operation: 'update_data_before_save',
+      updateData,
+    });
     
     const saved = await prisma.userSettings.upsert({
       where: { userId },
@@ -291,7 +322,8 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
       },
     });
     
-    logger.info('Saved settings:', {
+    logger.info({
+      operation: 'saved_settings',
       autoUpdateEnabled: saved.autoUpdateEnabled,
       historicalEnrichmentEnabled: saved.historicalEnrichmentEnabled,
     });
@@ -994,7 +1026,7 @@ router.put('/api-keys', async (req: AuthRequest, res: Response, next: NextFuncti
 router.post('/api-keys/test/openai', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { apiKey } = req.body;
-    const result = await testOpenAIKey(apiKey, req.user!.id);
+    const result = await testOpenAIKey(apiKey, req.userId!);
     res.json(result);
   } catch (error) {
     next(error);
@@ -1004,7 +1036,7 @@ router.post('/api-keys/test/openai', async (req: AuthRequest, res: Response, nex
 router.post('/api-keys/test/claude', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { apiKey } = req.body;
-    const result = await testClaudeKey(apiKey, req.user!.id);
+    const result = await testClaudeKey(apiKey, req.userId!);
     res.json(result);
   } catch (error) {
     next(error);
@@ -1014,7 +1046,7 @@ router.post('/api-keys/test/claude', async (req: AuthRequest, res: Response, nex
 router.post('/api-keys/test/airlabs', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { apiKey } = req.body;
-    const result = await testAirlabsKey(apiKey, req.user!.id);
+    const result = await testAirlabsKey(apiKey, req.userId!);
     res.json(result);
   } catch (error) {
     next(error);
@@ -1024,7 +1056,7 @@ router.post('/api-keys/test/airlabs', async (req: AuthRequest, res: Response, ne
 router.post('/api-keys/test/aviationstack', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { apiKey } = req.body;
-    const result = await testAviationstackKey(apiKey, req.user!.id);
+    const result = await testAviationstackKey(apiKey, req.userId!);
     res.json(result);
   } catch (error) {
     next(error);
@@ -1036,7 +1068,7 @@ router.post('/api-keys/test/opensky', async (req: AuthRequest, res: Response, ne
     const { clientId, clientSecret, username, password } = req.body;
     const result = await testOpenSkyCredentials(
       { clientId, clientSecret, username, password },
-      req.user!.id
+      req.userId!
     );
     res.json(result);
   } catch (error) {

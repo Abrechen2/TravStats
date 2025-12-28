@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { settingsApi, pendingUpdatesApi } from '../lib/api';
@@ -15,7 +15,8 @@ export default function NavigationBar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [developerModeEnabled, setDeveloperModeEnabled] = useState(false);
   const [pendingUpdatesCount, setPendingUpdatesCount] = useState(0);
-  const mobileMenuRef = useClickOutside<HTMLDivElement>(() => setMobileMenuOpen(false));
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+  useClickOutside(mobileMenuRef, () => setMobileMenuOpen(false));
 
   // Check if user has training access (admin or canTrainLLM)
   const hasTrainingAccess = user?.isAdmin || user?.canTrainLLM || false;

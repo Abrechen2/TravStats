@@ -1,5 +1,3 @@
-import { useSettingsStore } from '../store/settingsStore';
-
 export type DistanceUnit = 'kilometers' | 'miles' | 'nautical_miles';
 export type Currency = 'EUR' | 'USD' | 'GBP' | 'CHF';
 

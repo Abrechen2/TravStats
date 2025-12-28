@@ -376,7 +376,7 @@ async function createPatternSuggestions(userId: string) {
   for (const suggestion of suggestions) {
     await prisma.analyticsEvent.create({
       data: {
-        userId: 'system',
+        userId: userId, // Use the provided userId parameter instead of hardcoded 'system'
         type: 'pattern_suggestion',
         payload: {
           field: suggestion.field,

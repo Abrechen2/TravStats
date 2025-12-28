@@ -87,7 +87,7 @@ export async function getPendingUpdates(
 export async function getPendingUpdateById(
   id: string,
   userId: string
-): Promise<PendingFlightUpdate | null> {
+): Promise<(PendingFlightUpdate & { flight: Flight | null }) | null> {
   return await prismaClient.pendingFlightUpdate.findFirst({
     where: {
       id,
@@ -96,7 +96,7 @@ export async function getPendingUpdateById(
     include: {
       flight: true,
     },
-  });
+  }) as (PendingFlightUpdate & { flight: Flight | null }) | null;
 }
 
 /**
@@ -286,25 +286,29 @@ export async function previewStatisticsImpact(
     return null;
   }
 
-  const flight = pendingUpdate.flight as any;
-  const dataToUse = editedData || pendingUpdate.proposedData;
+  const flight = pendingUpdate.flight;
+  const dataToUse = (editedData || pendingUpdate.proposedData) as any;
+  
+  if (!dataToUse) {
+    return null;
+  }
 
   // Get airport coordinates if needed
   const airportCodes = new Set<string>();
-  if (dataToUse.depIata) airportCodes.add(dataToUse.depIata);
-  if (dataToUse.depIcao) airportCodes.add(dataToUse.depIcao);
-  if (dataToUse.arrIata) airportCodes.add(dataToUse.arrIata);
-  if (dataToUse.arrIcao) airportCodes.add(dataToUse.arrIcao);
+  if (dataToUse.depIata) airportCodes.add(String(dataToUse.depIata));
+  if (dataToUse.depIcao) airportCodes.add(String(dataToUse.depIcao));
+  if (dataToUse.arrIata) airportCodes.add(String(dataToUse.arrIata));
+  if (dataToUse.arrIcao) airportCodes.add(String(dataToUse.arrIcao));
 
   const airports = await getCachedAirports(Array.from(airportCodes));
 
   // Build flight data with coordinates
   const flightData = {
     ...dataToUse,
-    depLat: airports.get(dataToUse.depIata || dataToUse.depIcao || '')?.lat || flight.depLat,
-    depLon: airports.get(dataToUse.depIata || dataToUse.depIcao || '')?.lon || flight.depLon,
-    arrLat: airports.get(dataToUse.arrIata || dataToUse.arrIcao || '')?.lat || flight.arrLat,
-    arrLon: airports.get(dataToUse.arrIata || dataToUse.arrIcao || '')?.lon || flight.arrLon,
+    depLat: airports.get(String(dataToUse.depIata || dataToUse.depIcao || ''))?.lat || flight.depLat,
+    depLon: airports.get(String(dataToUse.depIata || dataToUse.depIcao || ''))?.lon || flight.depLon,
+    arrLat: airports.get(String(dataToUse.arrIata || dataToUse.arrIcao || ''))?.lat || flight.arrLat,
+    arrLon: airports.get(String(dataToUse.arrIata || dataToUse.arrIcao || ''))?.lon || flight.arrLon,
   };
 
   return await calculateStatisticsImpact(
@@ -339,7 +343,9 @@ export async function updatePendingUpdate(
     );
 
     // Recalculate statistics impact
-    const flight = pendingUpdate.flight as any;
+    if (!pendingUpdate.flight) {
+      throw new Error('Flight not found for pending update');
+    }
     const statisticsImpact = await previewStatisticsImpact(id, userId, editedData);
 
     const updated = await prismaClient.pendingFlightUpdate.update({
@@ -424,8 +430,16 @@ export async function applyPendingUpdate(
       throw new Error('Can only apply pending or edited updates');
     }
 
-    const flight = pendingUpdate.flight as any;
-    const dataToApply = pendingUpdate.editedData || pendingUpdate.proposedData;
+    if (!pendingUpdate.flight) {
+      throw new Error('Flight not found for pending update');
+    }
+
+    const flight = pendingUpdate.flight;
+    const dataToApply = (pendingUpdate.editedData || pendingUpdate.proposedData) as any;
+    
+    if (!dataToApply) {
+      throw new Error('No data to apply');
+    }
 
     // Get airport coordinates if airports changed
     let depLat = flight.depLat;
@@ -435,14 +449,14 @@ export async function applyPendingUpdate(
 
     if (dataToApply.depIata || dataToApply.depIcao) {
       const airportCodes = new Set<string>();
-      if (dataToApply.depIata) airportCodes.add(dataToApply.depIata);
-      if (dataToApply.depIcao) airportCodes.add(dataToApply.depIcao);
-      if (dataToApply.arrIata) airportCodes.add(dataToApply.arrIata);
-      if (dataToApply.arrIcao) airportCodes.add(dataToApply.arrIcao);
+      if (dataToApply.depIata) airportCodes.add(String(dataToApply.depIata));
+      if (dataToApply.depIcao) airportCodes.add(String(dataToApply.depIcao));
+      if (dataToApply.arrIata) airportCodes.add(String(dataToApply.arrIata));
+      if (dataToApply.arrIcao) airportCodes.add(String(dataToApply.arrIcao));
 
       const airports = await getCachedAirports(Array.from(airportCodes));
-      const depAirport = airports.get(dataToApply.depIata || dataToApply.depIcao || '');
-      const arrAirport = airports.get(dataToApply.arrIata || dataToApply.arrIcao || '');
+      const depAirport = airports.get(String(dataToApply.depIata || dataToApply.depIcao || ''));
+      const arrAirport = airports.get(String(dataToApply.arrIata || dataToApply.arrIcao || ''));
 
       if (depAirport) {
         depLat = depAirport.lat;
@@ -475,10 +489,10 @@ export async function applyPendingUpdate(
       arrLat,
       arrLon,
       departureTime: dataToApply.departureTime
-        ? new Date(dataToApply.departureTime)
+        ? new Date(String(dataToApply.departureTime))
         : flight.departureTime,
       arrivalTime: dataToApply.arrivalTime
-        ? new Date(dataToApply.arrivalTime)
+        ? new Date(String(dataToApply.arrivalTime))
         : flight.arrivalTime,
       // Don't change status automatically
     };

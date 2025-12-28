@@ -5,7 +5,6 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { flightsApi } from '../lib/api';
 import ContextualHint from '../components/Onboarding/ContextualHint';
 import NavigationBar from '../components/NavigationBar';

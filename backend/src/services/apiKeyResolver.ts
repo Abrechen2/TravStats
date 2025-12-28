@@ -148,16 +148,16 @@ export async function getOpenSkyCredentials(
         if (hasUserCredentials) {
           return {
             clientId: userSettings.openskyClientId
-              ? decryptApiKey(userSettings.openskyClientId)
+              ? decryptApiKey(userSettings.openskyClientId) || undefined
               : undefined,
             clientSecret: userSettings.openskyClientSecret
-              ? decryptApiKey(userSettings.openskyClientSecret)
+              ? decryptApiKey(userSettings.openskyClientSecret) || undefined
               : undefined,
             username: userSettings.openskyUsername
-              ? decryptApiKey(userSettings.openskyUsername)
+              ? decryptApiKey(userSettings.openskyUsername) || undefined
               : undefined,
             password: userSettings.openskyPassword
-              ? decryptApiKey(userSettings.openskyPassword)
+              ? decryptApiKey(userSettings.openskyPassword) || undefined
               : undefined,
           };
         }
@@ -174,16 +174,16 @@ export async function getOpenSkyCredentials(
       if (hasGlobalCredentials) {
         return {
           clientId: adminSettings.globalOpenskyClientId
-            ? decryptApiKey(adminSettings.globalOpenskyClientId)
+            ? decryptApiKey(adminSettings.globalOpenskyClientId) || undefined
             : undefined,
           clientSecret: adminSettings.globalOpenskyClientSecret
-            ? decryptApiKey(adminSettings.globalOpenskyClientSecret)
+            ? decryptApiKey(adminSettings.globalOpenskyClientSecret) || undefined
             : undefined,
           username: adminSettings.globalOpenskyUsername
-            ? decryptApiKey(adminSettings.globalOpenskyUsername)
+            ? decryptApiKey(adminSettings.globalOpenskyUsername) || undefined
             : undefined,
           password: adminSettings.globalOpenskyPassword
-            ? decryptApiKey(adminSettings.globalOpenskyPassword)
+            ? decryptApiKey(adminSettings.globalOpenskyPassword) || undefined
             : undefined,
         };
       }

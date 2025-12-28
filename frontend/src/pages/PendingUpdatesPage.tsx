@@ -81,10 +81,7 @@ export default function PendingUpdatesPage() {
       setUpdates(data.updates || []);
     } catch (error) {
       logger.error('Failed to load pending updates:', error);
-      addToast({
-        type: 'error',
-        message: t('pendingUpdates:errors.loadFailed'),
-      });
+      addToast('error', t('pendingUpdates:errors.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -102,54 +99,36 @@ export default function PendingUpdatesPage() {
   const handleApply = async (id: string) => {
     try {
       await pendingUpdatesApi.apply(id);
-      addToast({
-        type: 'success',
-        message: t('pendingUpdates:messages.applied'),
-      });
+      addToast('success', t('pendingUpdates:messages.applied'));
       loadUpdates();
       loadStatistics();
     } catch (error) {
       logger.error('Failed to apply update:', error);
-      addToast({
-        type: 'error',
-        message: t('pendingUpdates:errors.applyFailed'),
-      });
+      addToast('error', t('pendingUpdates:errors.applyFailed'));
     }
   };
 
   const handleReject = async (id: string) => {
     try {
       await pendingUpdatesApi.reject(id);
-      addToast({
-        type: 'success',
-        message: t('pendingUpdates:messages.rejected'),
-      });
+      addToast('success', t('pendingUpdates:messages.rejected'));
       loadUpdates();
       loadStatistics();
     } catch (error) {
       logger.error('Failed to reject update:', error);
-      addToast({
-        type: 'error',
-        message: t('pendingUpdates:errors.rejectFailed'),
-      });
+      addToast('error', t('pendingUpdates:errors.rejectFailed'));
     }
   };
 
   const handleEdit = async (id: string, editedData: any) => {
     try {
       await pendingUpdatesApi.update(id, editedData);
-      addToast({
-        type: 'success',
-        message: t('pendingUpdates:messages.updated'),
-      });
+      addToast('success', t('pendingUpdates:messages.updated'));
       loadUpdates();
       loadStatistics();
     } catch (error) {
       logger.error('Failed to update:', error);
-      addToast({
-        type: 'error',
-        message: t('pendingUpdates:errors.updateFailed'),
-      });
+      addToast('error', t('pendingUpdates:errors.updateFailed'));
     }
   };
 

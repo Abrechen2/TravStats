@@ -1,6 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../store/authStore';
 import { flightsApi, statsApi } from '../lib/api';
 import NavigationBar from '../components/NavigationBar';
 import FlightCalendar from '../components/FlightCalendar';
@@ -10,7 +8,7 @@ import type { Flight, FunStats, BusinessStats, UniqueStats } from '../types';
 import { STORAGE_KEYS } from '../lib/constants';
 import { useTranslation } from '../hooks/useTranslation';
 import { useSettingsStore } from '../store/settingsStore';
-import { convertDistance, formatDistance, formatCurrency, getDistanceLabel, getCurrencySymbol } from '../lib/units';
+import { convertDistance, formatDistance, formatCurrency, getDistanceLabel } from '../lib/units';
 import { logger } from '../lib/logger';
 import {
   BarChart,
@@ -26,8 +24,6 @@ import {
 } from 'recharts';
 
 export default function AdvancedStatsPage() {
-  const { user, logout } = useAuthStore();
-  const navigate = useNavigate();
   const { t } = useTranslation(['stats', 'common']);
   const { units } = useSettingsStore();
   const [flights, setFlights] = useState<Flight[]>([]);
