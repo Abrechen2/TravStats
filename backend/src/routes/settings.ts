@@ -155,10 +155,13 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
       where: { userId },
     });
 
+    // Extract direct fields from payload since they're not part of JSON data
+    const { boardingPassParserStrategy, autoUpdate, ...payloadWithoutDirectFields } = payload;
+
     const merged = {
       ...defaultSettings,
       ...(typeof existing?.data === 'object' && existing.data !== null ? existing.data : {}),
-      ...payload,
+      ...payloadWithoutDirectFields,
     };
 
     const updateData: any = {
@@ -185,8 +188,8 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
     }
 
     // Handle boarding pass parser strategy
-    if (payload.boardingPassParserStrategy !== undefined) {
-      updateData.boardingPassParserStrategy = payload.boardingPassParserStrategy;
+    if (boardingPassParserStrategy !== undefined) {
+      updateData.boardingPassParserStrategy = boardingPassParserStrategy;
     }
 
     const saved = await prisma.userSettings.upsert({
@@ -207,7 +210,7 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
         autoUpdateOnlyDuringFlight: payload.autoUpdate?.onlyDuringFlight ?? true,
         autoUpdateExpiryHours: payload.autoUpdate?.expiryHours ?? 24,
         // Initialize boarding pass parser strategy (null = auto)
-        boardingPassParserStrategy: payload.boardingPassParserStrategy ?? null,
+        boardingPassParserStrategy: boardingPassParserStrategy ?? null,
       },
     });
 

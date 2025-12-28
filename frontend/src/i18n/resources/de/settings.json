@@ -283,6 +283,26 @@
   "autoUpdate": {
     "title": "Automatische Updates",
     "description": "Automatisch aktuelle Flugdaten von APIs während aktiver Flüge abrufen. Updates werden im Bereich für ausstehende Updates gespeichert zur Überprüfung.",
+    "info": {
+      "title": "Wie funktionieren automatische Updates?",
+      "description": "Wenn aktiviert, werden während aktiver Flüge regelmäßig aktuelle Flugdaten von APIs abgerufen. Alle gefundenen Änderungen werden im Bereich für ausstehende Updates gespeichert, damit Sie sie überprüfen und genehmigen können, bevor sie auf Ihre Flüge angewendet werden.",
+      "benefits": {
+        "title": "Vorteile:",
+        "realTime": "Echtzeit-Updates: Erhalten Sie aktuelle Flugdaten automatisch während Ihrer Flüge",
+        "automatic": "Automatisierung: Keine manuelle Suche nach Flugänderungen mehr nötig",
+        "review": "Kontrolle: Alle Änderungen werden zur Überprüfung gespeichert, bevor sie angewendet werden",
+        "accurate": "Genauigkeit: Nutzt mehrere APIs für zuverlässige und präzise Flugdaten",
+        "timeSaving": "Zeitersparnis: Sparen Sie Zeit durch automatische Aktualisierung Ihrer Flugstatistiken"
+      },
+      "howItWorks": {
+        "title": "So funktioniert's:",
+        "description": "Das System prüft in konfigurierbaren Intervallen (Standard: 15 Minuten) während aktiver Flugzeiten nach Updates. Gefundene Änderungen wie Verspätungen, Gate-Wechsel oder Flugstatus werden im Bereich 'Ausstehende Updates' gespeichert. Sie können diese Änderungen einzeln überprüfen und genehmigen oder ablehnen."
+      },
+      "requirement": {
+        "title": "Wichtiger Hinweis:",
+        "description": "Diese Funktion funktioniert nur bei vorab eingetragenen Flügen, z.B. durch den E-Mail-Import oder manuelle Eingabe. Automatische Updates werden nur für Flüge durchgeführt, die bereits in Ihrer Flugliste vorhanden sind."
+      }
+    },
     "viewPending": "Ausstehende Updates anzeigen",
     "enabled": "Automatische Updates aktivieren",
     "requireApproval": "Bestätigung erforderlich",

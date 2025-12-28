@@ -283,6 +283,26 @@
   "autoUpdate": {
     "title": "Automatic Updates",
     "description": "Automatically fetch current flight data from APIs during active flights. Updates will be saved in the pending updates area for review.",
+    "info": {
+      "title": "How do automatic updates work?",
+      "description": "When enabled, current flight data is regularly fetched from APIs during active flights. All found changes are saved in the pending updates area so you can review and approve them before they are applied to your flights.",
+      "benefits": {
+        "title": "Benefits:",
+        "realTime": "Real-time updates: Get current flight data automatically during your flights",
+        "automatic": "Automation: No more manual searching for flight changes needed",
+        "review": "Control: All changes are saved for review before being applied",
+        "accurate": "Accuracy: Uses multiple APIs for reliable and precise flight data",
+        "timeSaving": "Time-saving: Save time by automatically updating your flight statistics"
+      },
+      "howItWorks": {
+        "title": "How it works:",
+        "description": "The system checks for updates at configurable intervals (default: 15 minutes) during active flight times. Found changes such as delays, gate changes, or flight status are saved in the 'Pending Updates' area. You can review and approve or reject these changes individually."
+      },
+      "requirement": {
+        "title": "Important note:",
+        "description": "This feature only works with pre-entered flights, e.g. through email import or manual entry. Automatic updates are only performed for flights that are already in your flight list."
+      }
+    },
     "viewPending": "View Pending Updates",
     "enabled": "Enable Automatic Updates",
     "requireApproval": "Require Approval",
