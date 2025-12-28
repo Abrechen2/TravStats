@@ -184,6 +184,21 @@ export const parseApi = {
     return data;
   },
 
+  // Get provider availability (simplified for hybrid flow)
+  getProviderAvailability: async () => {
+    const { data } = await parserApi.get<{
+      ollama: boolean;
+      openai: boolean;
+      claude: boolean;
+      providers: {
+        ollama?: { available: boolean; reason?: string; metadata?: Record<string, any> };
+        openai?: { available: boolean; reason?: string; metadata?: Record<string, any> };
+        claude?: { available: boolean; reason?: string; metadata?: Record<string, any> };
+      };
+    }>('/parse-boardingpass/availability');
+    return data;
+  },
+
   submitParserCorrection: async (correction: {
     sourceType: 'email' | 'boardingpass';
     provider: string;

@@ -11,10 +11,11 @@
  */
 
 import { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
-import { Airport, airportsApi } from '../lib/api';
+import { Airport, airportsApi, parseApi } from '../lib/api';
 import AirportAutocomplete from './AirportAutocomplete';
 import HelpIcon from './Help/HelpIcon';
 import { useTranslation } from '../hooks/useTranslation';
+import { logger } from '../lib/logger';
 
 // Lazy load BoardingPassScanner as it's heavy (Tesseract.js)
 const BoardingPassScanner = lazy(() => import('./BoardingPassScanner'));
@@ -75,8 +76,10 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
   const [parsedFlights, setParsedFlights] = useState<any[]>([]);
   const [currentFlightIndex, setCurrentFlightIndex] = useState(0);
   const [showFlightReview, setShowFlightReview] = useState(false);
-  const [parserProvider] = useState<string>('unknown');
-  const [originalEmailData] = useState<{ subject?: string; text?: string; html?: string } | undefined>();
+  const [parserProvider, setParserProvider] = useState<string>('unknown');
+  const [originalEmailData, setOriginalEmailData] = useState<{ subject?: string; text?: string; html?: string } | undefined>();
+  const [emailUploading, setEmailUploading] = useState(false);
+  const emailFileInputRef = useRef<HTMLInputElement>(null);
 
   // Flight Lookup State
   const [flightNumber, setFlightNumber] = useState('');
@@ -435,6 +438,51 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
           {/* Step 1: Flight Number Lookup */}
           {step === 'input' && (
             <div className="space-y-4">
+              {/* Email Import - Beste Option */}
+              <div className={`bg-gradient-to-r ${isDarkMode ? 'from-green-900 to-teal-900' : 'from-green-50 to-teal-50'} border-2 ${isDarkMode ? 'border-green-600 shadow-lg shadow-green-900/50' : 'border-green-400 shadow-lg shadow-green-200/50'} rounded-xl p-6 mb-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl ${isDarkMode ? 'hover:shadow-green-900/70' : 'hover:shadow-green-300/70'} ${isDarkMode ? 'ring-2 ring-green-500/30' : 'ring-2 ring-green-400/20'}`}>
+                <div className="flex items-start gap-4">
+                  {/* Badge und Icon Bereich */}
+                  <div className="flex flex-col items-start gap-2 flex-shrink-0">
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${isDarkMode ? 'bg-yellow-500 text-gray-900' : 'bg-yellow-400 text-gray-900'} shadow-md`}>
+                      ⭐ {t('flights:form.email.bestOption')}
+                    </span>
+                    <div className={`text-4xl ${isDarkMode ? 'text-green-300' : 'text-green-600'}`}>
+                      📧
+                    </div>
+                  </div>
+                  
+                  {/* Content Bereich */}
+                  <div className="flex-1 min-w-0">
+                    <h3 className={`font-bold text-2xl ${textClass} mb-2`}>
+                      {t('flights:form.email.title')}
+                    </h3>
+                    <p className={`text-base ${mutedTextClass} mb-4 font-medium`}>
+                      {t('flights:form.email.description')}
+                    </p>
+                    <div className={`space-y-2 mb-4`}>
+                      <p className={`text-sm ${isDarkMode ? 'text-green-300' : 'text-green-700'} font-semibold flex items-center gap-2`}>
+                        <span className={`text-lg ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>✓</span>
+                        {t('flights:form.email.bestOptionDescription')}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Button Bereich */}
+                  <div className="flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setShowEmailUploader(true)}
+                      className="btn-primary whitespace-nowrap px-6 py-3 text-base font-semibold flex items-center gap-2 hover:scale-105 transition-transform duration-200 shadow-md hover:shadow-lg"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      {t('flights:form.email.import')}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               {/* Boarding Pass Scanner */}
               <div className={`bg-gradient-to-r ${isDarkMode ? 'from-blue-900 to-purple-900' : 'from-blue-50 to-purple-50'} border ${isDarkMode ? 'border-blue-700' : 'border-blue-200'} rounded-lg p-4`}>
                 <div className="flex items-center justify-between">
@@ -448,23 +496,6 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                     className="btn-primary"
                   >
                     {t('flights:form.boardingPass.scan')}
-                  </button>
-                </div>
-              </div>
-
-              {/* Email Import */}
-              <div className={`bg-gradient-to-r ${isDarkMode ? 'from-green-900 to-teal-900' : 'from-green-50 to-teal-50'} border ${isDarkMode ? 'border-green-700' : 'border-green-200'} rounded-lg p-4`}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className={`font-semibold text-lg ${textClass}`}>{t('flights:form.email.title')}</h3>
-                    <p className={`text-sm ${mutedTextClass}`}>{t('flights:form.email.description')}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowEmailUploader(true)}
-                    className="btn-secondary"
-                  >
-                    {t('flights:form.email.import')}
                   </button>
                 </div>
               </div>
@@ -955,18 +986,99 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
         </Suspense>
       )}
 
-      {/* Email Uploader Modal - TODO: Implement EmailUploader component */}
+      {/* Email Uploader Modal */}
       {showEmailUploader && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md">
-            <h3 className="text-lg font-bold mb-4">{t('flights:form.email.title')}</h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">{t('flights:form.email.notImplemented')}</p>
-            <button
-              onClick={() => setShowEmailUploader(false)}
-              className="btn-primary"
-            >
-              {t('common:buttons.close')}
-            </button>
+          <div className={`${bgClass} rounded-lg p-6 max-w-md w-full`}>
+            <h3 className={`text-xl font-bold ${textClass} mb-4`}>{t('flights:form.email.title')}</h3>
+            
+            <input
+              ref={emailFileInputRef}
+              type="file"
+              accept=".eml,.msg,.txt"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+
+                setEmailUploading(true);
+                setError('');
+
+                try {
+                  const result = await parseApi.parseEmailFile(file);
+                  
+                  if (result && result.flights && Array.isArray(result.flights) && result.flights.length > 0) {
+                    // Store parsed flights
+                    setParsedFlights(result.flights);
+                    setCurrentFlightIndex(0);
+                    
+                    // Store parser provider and original data
+                    setParserProvider(result.provider || 'unknown');
+                    setOriginalEmailData({
+                      subject: result.subject,
+                      text: result.text,
+                      html: result.html,
+                    });
+                    
+                    // Close email uploader and show flight review
+                    setShowEmailUploader(false);
+                    setShowFlightReview(true);
+                  } else {
+                    setError(t('flights:form.noFlightsInEmail'));
+                  }
+                } catch (err: any) {
+                  logger.error('Failed to parse email:', err);
+                  setError(err.response?.data?.error || err.message || t('flights:form.noFlightsInEmail'));
+                } finally {
+                  setEmailUploading(false);
+                }
+              }}
+              className="hidden"
+              disabled={emailUploading}
+            />
+
+            {emailUploading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                <p className={`${mutedTextClass}`}>{t('flights:form.loadingScanner')}</p>
+              </div>
+            ) : (
+              <>
+                <div
+                  className={`border-2 border-dashed ${isDarkMode ? 'border-gray-600' : 'border-gray-300'} rounded-lg p-8 text-center cursor-pointer hover:border-blue-500 dark:hover:border-blue-400 transition-colors mb-4`}
+                  onClick={() => emailFileInputRef.current?.click()}
+                >
+                  <div className="text-5xl mb-4">📧</div>
+                  <p className={`font-semibold ${textClass} mb-2`}>
+                    {t('flights:form.uploadEmail')}
+                  </p>
+                  <p className={`text-sm ${mutedTextClass}`}>
+                    {t('flights:form.email.description')}
+                  </p>
+                  <p className={`text-xs ${mutedTextClass} mt-2`}>
+                    .eml, .msg, .txt
+                  </p>
+                </div>
+
+                {error && (
+                  <div className="bg-red-100 dark:bg-red-900/20 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded mb-4">
+                    {error}
+                  </div>
+                )}
+              </>
+            )}
+
+            <div className="flex gap-3 justify-end mt-4">
+              <button
+                onClick={() => {
+                  setShowEmailUploader(false);
+                  setError('');
+                }}
+                className="btn-secondary"
+                disabled={emailUploading}
+              >
+                {t('common:buttons.close')}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -985,10 +1097,11 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
               await onSubmit(flightData);
 
               // Check if there are more flights to process
-              if (currentFlightIndex < parsedFlights.length - 1) {
+              const nextIndex = currentFlightIndex + 1;
+              if (nextIndex < parsedFlights.length) {
                 // Move to next flight
-                setCurrentFlightIndex(currentFlightIndex + 1);
-                // Review modal stays open for next flight
+                setCurrentFlightIndex(nextIndex);
+                // Review modal stays open for next flight (initialData will update automatically)
               } else {
                 // All flights processed - close everything
                 setShowFlightReview(false);

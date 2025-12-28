@@ -74,6 +74,7 @@ const settingsSchema = z.object({
     onlyDuringFlight: z.boolean().optional(),
     expiryHours: z.number().min(1).max(168).optional(), // 1 hour to 1 week
   }).partial().optional(),
+  boardingPassParserStrategy: z.enum(['parser-only', 'parser-with-api', 'api-only']).nullable().optional(),
 }).partial();
 
 const defaultSettings = {
@@ -110,6 +111,8 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
           autoUpdateCheckInterval: 15,
           autoUpdateOnlyDuringFlight: true,
           autoUpdateExpiryHours: 24,
+          // Initialize boarding pass parser strategy (null = auto)
+          boardingPassParserStrategy: null,
         },
       });
       const response = created.data as any;
@@ -121,6 +124,8 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
         onlyDuringFlight: created.autoUpdateOnlyDuringFlight,
         expiryHours: created.autoUpdateExpiryHours,
       };
+      // Add boarding pass parser strategy to response
+      response.boardingPassParserStrategy = created.boardingPassParserStrategy;
       return res.json(response);
     }
 
@@ -133,6 +138,8 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
       onlyDuringFlight: existing.autoUpdateOnlyDuringFlight,
       expiryHours: existing.autoUpdateExpiryHours,
     };
+    // Add boarding pass parser strategy to response
+    response.boardingPassParserStrategy = existing.boardingPassParserStrategy;
     res.json(response);
   } catch (error) {
     next(error);
@@ -177,6 +184,11 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
       }
     }
 
+    // Handle boarding pass parser strategy
+    if (payload.boardingPassParserStrategy !== undefined) {
+      updateData.boardingPassParserStrategy = payload.boardingPassParserStrategy;
+    }
+
     const saved = await prisma.userSettings.upsert({
       where: { userId },
       update: updateData,
@@ -194,6 +206,8 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
         autoUpdateCheckInterval: payload.autoUpdate?.checkInterval ?? 15,
         autoUpdateOnlyDuringFlight: payload.autoUpdate?.onlyDuringFlight ?? true,
         autoUpdateExpiryHours: payload.autoUpdate?.expiryHours ?? 24,
+        // Initialize boarding pass parser strategy (null = auto)
+        boardingPassParserStrategy: payload.boardingPassParserStrategy ?? null,
       },
     });
 

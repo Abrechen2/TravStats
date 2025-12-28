@@ -1,11 +1,16 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { ITextParser, ProviderAvailability, TextProvider } from '../types';
 import { ParsedBooking } from '../../bookingParser';
-import { normalizeParsedBooking, cleanLLMJsonResponse, getTextParserPrompt } from '../shared/utils';
+import { normalizeParsedBooking, cleanLLMJsonResponse, getTextParserPrompt, getLatestClaudeTextModel, getClaudeTextModels } from '../shared/utils';
 import logger, { parserTextLogger } from '../../../utils/logger';
 import { shouldLogParserOperations } from '../../loggingConfig';
 
-const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-3-5-sonnet-20241022';
+/**
+ * Get Claude model - uses env var if set, otherwise latest available model
+ */
+function getClaudeModel(): string {
+  return getLatestClaudeTextModel();
+}
 
 /**
  * Claude 3.5 Sonnet Text Parser
@@ -71,7 +76,7 @@ export class ClaudeTextParser implements ITextParser {
         available: true,
         metadata: {
           provider: 'claude',
-          model: CLAUDE_MODEL,
+          model: getClaudeModel(),
           cost: '~$0.003-0.015 per email',
         },
       };
@@ -88,37 +93,53 @@ export class ClaudeTextParser implements ITextParser {
     const log = shouldLog ? parserTextLogger : logger;
     const startTime = Date.now();
 
-    if (shouldLog) {
-      log.info({
-        operation: 'claude_text_parse_start',
-        context: {
-          model: CLAUDE_MODEL,
-          subject,
-          textLength: text.length,
-          htmlLength: html ? html.length : 0,
-        },
-      });
-    } else {
-      logger.info('[Claude Text Parser] Starting email parsing');
-      logger.info({ model: CLAUDE_MODEL }, '[Claude Text Parser] Model');
-    }
-
-    try {
-      const client = this.getClient(apiKey);
-      const prompt = getTextParserPrompt(subject, text);
-
-      const apiStartTime = Date.now();
-      const response = await client.messages.create({
-        model: CLAUDE_MODEL,
-        max_tokens: 2048,
-        temperature: 0.1,
-        messages: [
-          {
-            role: 'user',
-            content: prompt,
+    const modelsToTry = getClaudeTextModels();
+    const client = this.getClient(apiKey);
+    const prompt = getTextParserPrompt(subject, text);
+    
+    let lastError: any = null;
+    
+    // Try each model in order until one works
+    for (let i = 0; i < modelsToTry.length; i++) {
+      const model = modelsToTry[i];
+      const isFirstAttempt = i === 0;
+      const isLastAttempt = i === modelsToTry.length - 1;
+      
+      if (shouldLog) {
+        log.info({
+          operation: isFirstAttempt ? 'claude_text_parse_start' : 'claude_text_parse_retry',
+          context: {
+            model,
+            attempt: i + 1,
+            totalModels: modelsToTry.length,
+            subject,
+            textLength: text.length,
+            htmlLength: html ? html.length : 0,
+            previousError: lastError ? (lastError instanceof Error ? lastError.message : 'Unknown error') : undefined,
           },
-        ],
-      });
+        });
+      } else {
+        if (isFirstAttempt) {
+          logger.info('[Claude Text Parser] Starting email parsing');
+        } else {
+          logger.info({ model, attempt: i + 1 }, '[Claude Text Parser] Retrying with different model');
+        }
+        logger.info({ model }, '[Claude Text Parser] Model');
+      }
+
+      try {
+        const apiStartTime = Date.now();
+        const response = await client.messages.create({
+          model,
+          max_tokens: 2048,
+          temperature: 0.1,
+          messages: [
+            {
+              role: 'user',
+              content: prompt,
+            },
+          ],
+        });
       const apiDuration = Date.now() - apiStartTime;
 
       const rawResponse = response.content[0]?.type === 'text' ? response.content[0].text : '';
@@ -273,68 +294,85 @@ export class ClaudeTextParser implements ITextParser {
         );
       }
 
-      return results;
-    } catch (error: any) {
-      const totalDuration = Date.now() - startTime;
-      const errorContext = {
-        model: CLAUDE_MODEL,
-        textLength: text.length,
-        totalDuration,
-        status: error?.status,
-        errorMessage: error instanceof Error ? error.message : 'Unknown error',
-        errorStack: error instanceof Error ? error.stack : undefined,
-      };
-
-      if (error?.status === 401) {
-        if (shouldLog) {
-          log.error({
-            operation: 'claude_text_parse_auth_error',
-            context: errorContext,
-          });
+        return results;
+      } catch (error: any) {
+        lastError = error;
+        
+        // For 404 errors (model not found), try next model
+        if (error?.status === 404) {
+          const modelError = error?.error?.error?.message || '';
+          if (shouldLog) {
+            log.warn({
+              operation: 'claude_text_parse_model_not_found_retry',
+              context: {
+                model,
+                attempt: i + 1,
+                modelError,
+                willRetry: !isLastAttempt,
+              },
+            });
+          } else {
+            logger.warn({ 
+              model,
+              attempt: i + 1,
+              message: modelError 
+            }, `[Claude Text Parser] Model not found, ${isLastAttempt ? 'no more models to try' : 'trying next model'}`);
+          }
+          
+          // If this is the last model, throw error
+          if (isLastAttempt) {
+            throw new Error(`Claude model not found: ${modelError || model}. Tried all available models. Please check your CLAUDE_MODEL environment variable or API key permissions.`);
+          }
+          
+          // Continue to next model
+          continue;
         }
-        throw new Error('Invalid Claude API key');
-      }
+        
+        // For other errors (401, 429, etc.), throw immediately
+        const totalDuration = Date.now() - startTime;
+        const errorContext = {
+          model,
+          textLength: text.length,
+          totalDuration,
+          status: error?.status,
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+          errorStack: error instanceof Error ? error.stack : undefined,
+        };
 
-      if (error?.status === 404) {
-        const modelError = error?.error?.error?.message || '';
+        if (error?.status === 401) {
+          if (shouldLog) {
+            log.error({
+              operation: 'claude_text_parse_auth_error',
+              context: errorContext,
+            });
+          }
+          throw new Error('Invalid Claude API key');
+        }
+
+        if (error?.status === 429) {
+          if (shouldLog) {
+            log.error({
+              operation: 'claude_text_parse_rate_limit',
+              context: errorContext,
+            });
+          }
+          throw new Error('Claude API rate limit exceeded');
+        }
+
         if (shouldLog) {
           log.error({
-            operation: 'claude_text_parse_model_not_found',
-            context: {
-              ...errorContext,
-              modelError,
-            },
+            operation: 'claude_text_parse_unexpected_error',
+            context: errorContext,
           });
         } else {
-          logger.error({ 
-            error, 
-            model: CLAUDE_MODEL,
-            message: modelError 
-          }, '[Claude Text Parser] Model not found - check CLAUDE_MODEL environment variable');
+          logger.error({ error }, '[Claude Text Parser] Parsing failed');
         }
-        throw new Error(`Claude model not found: ${modelError || CLAUDE_MODEL}. Please check your CLAUDE_MODEL environment variable or API key permissions.`);
+        throw new Error(`Claude parsing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
-
-      if (error?.status === 429) {
-        if (shouldLog) {
-          log.error({
-            operation: 'claude_text_parse_rate_limit',
-            context: errorContext,
-          });
-        }
-        throw new Error('Claude API rate limit exceeded');
-      }
-
-      if (shouldLog) {
-        log.error({
-          operation: 'claude_text_parse_unexpected_error',
-          context: errorContext,
-        });
-      } else {
-        logger.error({ error }, '[Claude Text Parser] Parsing failed');
-      }
-      throw new Error(`Claude parsing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+    
+    // If we get here, all models failed with 404
+    throw new Error(`All Claude models failed. Last error: ${lastError instanceof Error ? lastError.message : 'Unknown error'}`);
   }
 }
 

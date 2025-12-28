@@ -74,6 +74,8 @@
       "title": "Have a Booking Email?",
       "description": "Import flights directly from confirmation emails!",
       "import": "Import Email",
+      "bestOption": "Best Option",
+      "bestOptionDescription": "Captures all data best from confirmation emails",
       "notImplemented": "Email import is not yet implemented. Please use manual entry or boarding pass scan."
     },
     "placeholders": {

@@ -18,3 +18,4 @@ ADD COLUMN IF NOT EXISTS "global_opensky_password" TEXT,
 ADD COLUMN IF NOT EXISTS "allow_user_flight_api_keys" BOOLEAN NOT NULL DEFAULT true,
 ADD COLUMN IF NOT EXISTS "require_user_flight_api_keys" BOOLEAN NOT NULL DEFAULT false;
 
+
