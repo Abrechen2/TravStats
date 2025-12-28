@@ -67,6 +67,12 @@ export default function FlightReviewModal({
   // Initialize form with parsed data
   useEffect(() => {
     if (initialData) {
+      // Reset form state when switching to a new flight
+      setError('');
+      setAirportError('');
+      setDepartureAirport(null);
+      setArrivalAirport(null);
+      
       setFlightNumber(initialData.flightNumber || '');
       setAirline(initialData.airline || '');
       setDepartureCode(initialData.departureCode || '');
@@ -85,14 +91,20 @@ export default function FlightReviewModal({
       if (initialData.price) {
         const priceNum = parseFloat(initialData.price);
         if (!isNaN(priceNum)) setPrice(priceNum);
+      } else {
+        setPrice(undefined);
       }
       if (initialData.taxes) {
         const taxesNum = parseFloat(initialData.taxes);
         if (!isNaN(taxesNum)) setTaxes(taxesNum);
+      } else {
+        setTaxes(undefined);
       }
       if (initialData.fees) {
         const feesNum = parseFloat(initialData.fees);
         if (!isNaN(feesNum)) setFees(feesNum);
+      } else {
+        setFees(undefined);
       }
       if (initialData.currency) {
         setCurrency(initialData.currency.toUpperCase() as 'EUR' | 'USD' | 'GBP' | 'CHF');
@@ -102,6 +114,8 @@ export default function FlightReviewModal({
       const mappedSeatClass = mapSeatClass(initialData.seatClass);
       if (mappedSeatClass) {
         setSeatClass(mappedSeatClass);
+      } else {
+        setSeatClass('economy');
       }
 
       // Lookup airports
@@ -109,7 +123,7 @@ export default function FlightReviewModal({
         lookupAirports(initialData.departureCode, initialData.arrivalCode);
       }
     }
-  }, [initialData]);
+  }, [initialData, flightIndex]); // Also depend on flightIndex to ensure update when switching flights
 
   // Format datetime for datetime-local input
   const formatDateTimeLocal = (isoString: string): string => {

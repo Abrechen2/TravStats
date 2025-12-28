@@ -73,7 +73,9 @@
     "email": {
       "title": "Haben Sie eine Buchungs-E-Mail?",
       "description": "Importieren Sie Fl\u00fcge direkt aus Best\u00e4tigungs-E-Mails!",
-      "import": "E-Mail importieren"
+      "import": "E-Mail importieren",
+      "bestOption": "Beste Option",
+      "bestOptionDescription": "Erfasst alle Daten am besten aus Best\u00e4tigungs-E-Mails"
     },
     "placeholders": {
       "tags": "business, vacation, conference",

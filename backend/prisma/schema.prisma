@@ -178,6 +178,13 @@ model UserSettings {
   autoUpdateOnlyDuringFlight Boolean @default(true) @map("auto_update_only_during_flight")
   autoUpdateExpiryHours      Int     @default(24) @map("auto_update_expiry_hours")
 
+  // Boarding pass parser strategy
+  // null = auto (LLM wenn verfügbar, sonst basierend auf Verfügbarkeit)
+  // "parser-only" = Nur Frontend-Parser, kein API-Call
+  // "parser-with-api" = Parser + API zur Validierung
+  // "api-only" = Direkt API verwenden
+  boardingPassParserStrategy String? @map("boarding_pass_parser_strategy")
+
   updatedAt DateTime @updatedAt @map("updated_at")
   createdAt DateTime @default(now()) @map("created_at")
 

@@ -44,6 +44,8 @@ export default function SettingsPage() {
     setNotifications,
     setPrivacy,
     setBackup,
+    boardingPassParserStrategy,
+    setBoardingPassParserStrategy,
     saveRemoteSettings,
   } = useSettingsStore();
 
@@ -117,7 +119,7 @@ export default function SettingsPage() {
     loadTrainingSettings();
   }, []);
 
-  // Load auto-update settings
+  // Load auto-update settings and boarding pass parser strategy
   useEffect(() => {
     const loadAutoUpdateSettings = async () => {
       try {
@@ -130,6 +132,10 @@ export default function SettingsPage() {
             onlyDuringFlight: settings.autoUpdate.onlyDuringFlight ?? true,
             expiryHours: settings.autoUpdate.expiryHours ?? 24,
           });
+        }
+        // Load boarding pass parser strategy
+        if (settings.boardingPassParserStrategy !== undefined) {
+          setBoardingPassParserStrategy(settings.boardingPassParserStrategy);
         }
       } catch (error) {
         logger.error('Failed to load auto-update settings:', error);
@@ -937,6 +943,85 @@ export default function SettingsPage() {
                 </>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* Boarding Pass Parser Strategy */}
+        <div className="card space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">Boarding Pass Parsing</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Wählen Sie die Strategie für das Parsing von Boarding-Pässen
+              </p>
+            </div>
+          </div>
+
+          <InlineHelp
+            title="Boarding Pass Parsing Strategien"
+            category="basic"
+            content={
+              <div className="space-y-2">
+                <p>
+                  Die App unterstützt verschiedene Strategien für das Parsing von Boarding-Pässen:
+                </p>
+                <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
+                  <li>
+                    <strong>Automatisch:</strong> LLM wird bevorzugt (wenn verfügbar), sonst Barcode-Parser mit LLM-Fallback
+                  </li>
+                  <li>
+                    <strong>Nur Parser:</strong> Nur schneller Frontend-Parser, kein API-Call (offline, kostenlos)
+                  </li>
+                  <li>
+                    <strong>Parser + API Kontrolle:</strong> Parser für Geschwindigkeit, API zur Validierung
+                  </li>
+                  <li>
+                    <strong>Nur API:</strong> Direkt LLM/API verwenden (robust, funktioniert für alle Airlines)
+                  </li>
+                </ul>
+              </div>
+            }
+          />
+
+          <div>
+            <label className="label">Parsing-Strategie</label>
+            <select
+              value={boardingPassParserStrategy || 'auto'}
+              onChange={async (e) => {
+                const value = e.target.value === 'auto' ? null : e.target.value;
+                setBoardingPassParserStrategy(value);
+                try {
+                  await settingsApi.update({
+                    boardingPassParserStrategy: value,
+                  });
+                  addToast({
+                    type: 'success',
+                    message: 'Boarding Pass Parser-Strategie gespeichert',
+                  });
+                } catch (error) {
+                  logger.error('Failed to save boarding pass parser strategy:', error);
+                  addToast({
+                    type: 'error',
+                    message: 'Fehler beim Speichern',
+                  });
+                }
+              }}
+              className="input"
+            >
+              <option value="auto">Automatisch (Empfohlen)</option>
+              <option value="parser-only">Nur Parser</option>
+              <option value="parser-with-api">Parser + API Kontrolle</option>
+              <option value="api-only">Nur API</option>
+            </select>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {boardingPassParserStrategy === null || boardingPassParserStrategy === 'auto'
+                ? 'LLM wird bevorzugt, wenn verfügbar. Sonst Barcode-Parser mit LLM-Fallback.'
+                : boardingPassParserStrategy === 'parser-only'
+                ? 'Nur Frontend-Parser. Schnell, kostenlos, offline. Kein Fallback.'
+                : boardingPassParserStrategy === 'parser-with-api'
+                ? 'Parser für Geschwindigkeit, API zur Validierung. Beste Balance.'
+                : 'Direkt LLM/API verwenden. Robust, funktioniert für alle Airlines.'}
+            </p>
           </div>
         </div>
 
