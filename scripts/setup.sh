@@ -103,7 +103,8 @@ $COMPOSE_CMD exec backend npm run seed:airports:csv || echo "⚠️  Airport see
 
 # Seed achievements
 echo "🏆 Seeding achievements..."
-$COMPOSE_CMD exec backend npm run seed:achievements || echo "⚠️  Achievement seeding failed (non-critical)"
+# Achievements are core features defined in code, not seeded from database
+# They are automatically ensured when needed via ensureAchievements() function
 
 echo ""
 echo "✅ Setup complete!"

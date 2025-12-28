@@ -7,7 +7,7 @@ import { useThemeStore } from '../store/themeStore';
 import { useAuthStore } from '../store/authStore';
 import ParserConfiguration from '../components/Settings/ParserConfiguration';
 import ApiKeyCard from '../components/Settings/ApiKeyCard';
-import { settingsApi, authApi, backupApi, pendingUpdatesApi } from '../lib/api';
+import { settingsApi, authApi, backupApi } from '../lib/api';
 import { useToastStore } from '../store/toastStore';
 import { logger } from '../lib/logger';
 import { useTranslation } from '../hooks/useTranslation';

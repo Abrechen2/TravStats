@@ -14,7 +14,7 @@ interface ChangeDiffViewProps {
   changes: any[];
 }
 
-export default function ChangeDiffView({ original, proposed, changes }: ChangeDiffViewProps) {
+export default function ChangeDiffView({ changes }: ChangeDiffViewProps) {
   const { t } = useTranslation(['pendingUpdates']);
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
   const [expandedFields, setExpandedFields] = useState<Set<string>>(new Set());

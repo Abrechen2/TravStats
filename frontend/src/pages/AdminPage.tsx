@@ -708,16 +708,24 @@ export default function AdminPage() {
                       <div className="text-sm text-gray-600 dark:text-gray-400">
                         {hardwareInfo.gpu.reason || hardwareInfo.gpu.error || t('admin:hardware.noGpuDetected')}
                       </div>
-                      {hardwareInfo.gpu.diagnosis && hardwareInfo.gpu.diagnosis.length > 0 && (
+                      {hardwareInfo.gpu.diagnosis && (
                         <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded">
                           <div className="text-xs font-semibold text-yellow-900 dark:text-yellow-100 mb-2">
                             {t('admin:hardware.solution')}
                           </div>
-                          <ul className="text-xs text-yellow-800 dark:text-yellow-200 space-y-1 list-disc list-inside">
-                            {hardwareInfo.gpu.diagnosis.map((msg: any, idx: number) => (
-                              <li key={idx}>{msg}</li>
-                            ))}
-                          </ul>
+                          {Array.isArray(hardwareInfo.gpu.diagnosis) ? (
+                            hardwareInfo.gpu.diagnosis.length > 0 && (
+                              <ul className="text-xs text-yellow-800 dark:text-yellow-200 space-y-1 list-disc list-inside">
+                                {hardwareInfo.gpu.diagnosis.map((msg: any, idx: number) => (
+                                  <li key={idx}>{msg}</li>
+                                ))}
+                              </ul>
+                            )
+                          ) : (
+                            <div className="text-xs text-yellow-800 dark:text-yellow-200">
+                              {hardwareInfo.gpu.diagnosis}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

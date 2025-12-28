@@ -7,7 +7,7 @@ import { API_LIMITS } from '../lib/constants';
 import { logger } from '../lib/logger';
 import { useTranslation } from '../hooks/useTranslation';
 import { useSettingsStore } from '../store/settingsStore';
-import { formatDistance, getDistanceLabel, formatCurrency as formatCurrencyUtil } from '../lib/units';
+import { formatDistance, formatCurrency as formatCurrencyUtil } from '../lib/units';
 
 interface StatsProps {
   filters?: FlightFilters;

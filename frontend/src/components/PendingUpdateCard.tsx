@@ -22,6 +22,8 @@ interface PendingUpdate {
   apiSource: string;
   fetchedAt: string;
   expiresAt: string;
+  appliedAt?: string;
+  rejectedAt?: string;
   statisticsImpact?: any;
   flight?: {
     id: string;
@@ -48,7 +50,7 @@ export default function PendingUpdateCard({
   onApply,
   onReject,
   onEdit,
-  onSelect,
+  onSelect: _onSelect,
   isSelected,
 }: PendingUpdateCardProps) {
   const { t } = useTranslation(['common', 'pendingUpdates']);

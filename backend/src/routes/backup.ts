@@ -19,7 +19,6 @@ import {
   downloadFromCloud,
   testConnection,
 } from '../services/cloudSyncService';
-import logger from '../utils/logger';
 import { serializeBigInt } from '../utils/serializeBigInt';
 
 const router = Router();

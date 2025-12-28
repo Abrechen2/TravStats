@@ -225,7 +225,7 @@ export async function aggregateFlightData(
         aircraft: { not: null },
         depIcao: { not: null },
         arrIcao: { not: null },
-        actualRoute: { not: null },
+        actualRoute: { not: null as any },
       },
       orderBy: {
         departureTime: 'desc',
@@ -286,9 +286,9 @@ export async function aggregateFlightData(
     return {
       aircraft: mostCommonAircraft,
       depIcao: mostCommonDepIcao,
-      depIata: referenceFlights[0]?.depIata,
+      depIata: referenceFlights[0]?.depIata ?? undefined,
       arrIcao: mostCommonArrIcao,
-      arrIata: referenceFlights[0]?.arrIata,
+      arrIata: referenceFlights[0]?.arrIata ?? undefined,
       gate: mostCommonGate,
       terminal: mostCommonTerminal,
       typicalRoute,
