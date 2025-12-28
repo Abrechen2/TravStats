@@ -1040,6 +1040,42 @@ export default function SettingsPage() {
             </Link>
           </div>
 
+          <InlineHelp
+            title={t('settings:autoUpdate.info.title')}
+            category="basic"
+            content={
+              <div className="space-y-3">
+                <p>
+                  {t('settings:autoUpdate.info.description')}
+                </p>
+                <div>
+                  <p className="font-semibold mb-2">{t('settings:autoUpdate.info.benefits.title')}</p>
+                  <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
+                    <li>{t('settings:autoUpdate.info.benefits.realTime')}</li>
+                    <li>{t('settings:autoUpdate.info.benefits.automatic')}</li>
+                    <li>{t('settings:autoUpdate.info.benefits.review')}</li>
+                    <li>{t('settings:autoUpdate.info.benefits.accurate')}</li>
+                    <li>{t('settings:autoUpdate.info.benefits.timeSaving')}</li>
+                  </ul>
+                </div>
+                <div>
+                  <p className="font-semibold mb-2">{t('settings:autoUpdate.info.howItWorks.title')}</p>
+                  <p className="text-sm">
+                    {t('settings:autoUpdate.info.howItWorks.description')}
+                  </p>
+                </div>
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-3">
+                  <p className="font-semibold mb-1 text-amber-900 dark:text-amber-200 text-sm">
+                    {t('settings:autoUpdate.info.requirement.title')}
+                  </p>
+                  <p className="text-sm text-amber-800 dark:text-amber-300">
+                    {t('settings:autoUpdate.info.requirement.description')}
+                  </p>
+                </div>
+              </div>
+            }
+          />
+
           <div className="space-y-4">
             <label className="flex items-center gap-3">
               <input
