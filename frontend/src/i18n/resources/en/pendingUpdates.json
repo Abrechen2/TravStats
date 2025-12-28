@@ -77,7 +77,16 @@
   },
   "preview": {
     "title": "Statistics Impact Preview",
-    "description": "This preview shows how applying this update will affect your statistics"
+    "description": "This preview shows how applying this update will affect your statistics",
+    "noData": "No data available",
+    "distance": "Distance",
+    "flightTime": "Flight Time",
+    "airlines": "Airlines",
+    "airports": "Airports",
+    "before": "Before",
+    "after": "After",
+    "change": "Change",
+    "added": "Added"
   },
   "editor": {
     "title": "Edit Update",
@@ -85,6 +94,16 @@
     "save": "Save Changes",
     "cancel": "Cancel",
     "saving": "Saving...",
+    "fieldsTitle": "Fields",
+    "preview": "Preview",
+    "airline": "Airline",
+    "aircraft": "Aircraft",
+    "gate": "Gate",
+    "terminal": "Terminal",
+    "depIata": "Departure Airport (IATA)",
+    "arrIata": "Arrival Airport (IATA)",
+    "departureTime": "Departure Time",
+    "arrivalTime": "Arrival Time",
     "fields": {
       "airline": "Airline",
       "flightNumber": "Flight Number",

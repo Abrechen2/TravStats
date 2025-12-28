@@ -42,7 +42,7 @@ function AppContent() {
       const currentLang = i18n.language || i18n.resolvedLanguage;
       if (currentLang !== language) {
         i18n.changeLanguage(language).catch((err) => {
-          console.warn('Failed to change language:', err);
+          logger.warn('Failed to change language:', err);
         });
       }
     }

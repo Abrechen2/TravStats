@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from 'react';
 import { useTranslation as useI18nTranslation } from 'react-i18next';
 import { useSettingsStore } from '../store/settingsStore';
+import { logger } from '../lib/logger';
 
 /**
  * Custom hook that wraps react-i18next's useTranslation
@@ -17,7 +18,7 @@ export function useTranslation(namespace?: string | string[]) {
       const currentLang = i18nInstance.language;
       if (currentLang !== language) {
         i18nInstance.changeLanguage(language).catch((err: Error) => {
-          console.warn('Failed to change language:', err);
+          logger.warn('Failed to change language:', err);
         });
       }
     }

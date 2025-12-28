@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { settingsApi } from '../lib/api';
+import { logger } from '../lib/logger';
 
 type ThemePreference = 'light' | 'dark';
 type LanguagePreference = 'de' | 'en';
@@ -224,7 +225,7 @@ export const useSettingsStore = create<SettingsState>()(
           const status = await settingsApi.getApiKeys();
           set({ apiKeys: status });
         } catch (error) {
-          console.warn('Failed to load API keys status', error);
+          logger.warn('Failed to load API keys status', error);
         }
       },
       resetSettings: () => set(defaultSettings),
@@ -233,9 +234,11 @@ export const useSettingsStore = create<SettingsState>()(
           const remote = await settingsApi.get();
           if (remote) {
             set((state) => {
+              // Extract autoUpdate and historicalEnrichment to exclude them from store
+              const { autoUpdate, historicalEnrichment, ...remoteWithoutDirectFields } = remote as any;
               const newState = {
                 ...state,
-                ...remote,
+                ...remoteWithoutDirectFields,
               };
               // Set boarding pass parser strategy if present
               if (remote.boardingPassParserStrategy !== undefined) {
@@ -250,16 +253,17 @@ export const useSettingsStore = create<SettingsState>()(
             });
           }
         } catch (error) {
-          console.warn('Failed to load remote settings, using local defaults', error);
+          logger.warn('Failed to load remote settings, using local defaults', error);
         }
       },
       saveRemoteSettings: async () => {
         try {
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const { resetSettings, loadRemoteSettings, saveRemoteSettings, ...rest } = get();
+          const { resetSettings, loadRemoteSettings, saveRemoteSettings, autoUpdate, historicalEnrichment, ...rest } = get();
+          // Don't send autoUpdate and historicalEnrichment as they are managed separately
           await settingsApi.update(rest);
         } catch (error) {
-          console.warn('Failed to save settings remotely', error);
+          logger.warn('Failed to save settings remotely', error);
         }
       },
     }),

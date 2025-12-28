@@ -155,6 +155,15 @@ export async function calculateStatisticsImpact(
   // Calculate after stats (with proposed data)
   const afterStats = await calculateUserStats(allFlights, flight, proposedWithCoords);
 
+  // Calculate flight time for this specific flight only
+  const originalDepTime = originalData.departureTime ? new Date(originalData.departureTime) : flight.departureTime;
+  const originalArrTime = originalData.arrivalTime ? new Date(originalData.arrivalTime) : flight.arrivalTime;
+  const proposedDepTime = proposedData.departureTime ? new Date(proposedData.departureTime) : flight.departureTime;
+  const proposedArrTime = proposedData.arrivalTime ? new Date(proposedData.arrivalTime) : flight.arrivalTime;
+
+  const originalFlightTime = Math.round((originalArrTime.getTime() - originalDepTime.getTime()) / (1000 * 60));
+  const proposedFlightTime = Math.round((proposedArrTime.getTime() - proposedDepTime.getTime()) / (1000 * 60));
+
   return {
     distance: {
       before: beforeStats.totalDistance,
@@ -162,9 +171,9 @@ export async function calculateStatisticsImpact(
       change: afterStats.totalDistance - beforeStats.totalDistance,
     },
     flightTime: {
-      before: beforeStats.totalFlightTime,
-      after: afterStats.totalFlightTime,
-      change: afterStats.totalFlightTime - beforeStats.totalFlightTime,
+      before: originalFlightTime,
+      after: proposedFlightTime,
+      change: proposedFlightTime - originalFlightTime,
     },
     airlines: {
       before: beforeStats.airlines,
@@ -445,32 +454,84 @@ export async function applyPendingUpdate(
       }
     }
 
+    // Check if this is a historical enrichment
+    const metadata = pendingUpdate.metadata as any;
+    const isHistoricalEnrichment = metadata?.isHistoricalEnrichment === true;
+
+    // Prepare update data
+    const updateData: any = {
+      airline: dataToApply.airline ?? flight.airline,
+      aircraft: dataToApply.aircraft ?? flight.aircraft,
+      gate: dataToApply.gate ?? flight.gate,
+      terminal: dataToApply.terminal ?? flight.terminal,
+      depIata: dataToApply.depIata ?? flight.depIata,
+      depIcao: dataToApply.depIcao ?? flight.depIcao,
+      depName: dataToApply.depName ?? flight.depName,
+      depLat,
+      depLon,
+      arrIata: dataToApply.arrIata ?? flight.arrIata,
+      arrIcao: dataToApply.arrIcao ?? flight.arrIcao,
+      arrName: dataToApply.arrName ?? flight.arrName,
+      arrLat,
+      arrLon,
+      departureTime: dataToApply.departureTime
+        ? new Date(dataToApply.departureTime)
+        : flight.departureTime,
+      arrivalTime: dataToApply.arrivalTime
+        ? new Date(dataToApply.arrivalTime)
+        : flight.arrivalTime,
+      // Don't change status automatically
+    };
+
+    // Update route data if present
+    if (dataToApply.actualRoute !== undefined) {
+      updateData.actualRoute = dataToApply.actualRoute;
+    }
+    if (dataToApply.overflownCountries !== undefined) {
+      updateData.overflownCountries = dataToApply.overflownCountries;
+    }
+    if (dataToApply.routeDistance !== undefined) {
+      updateData.routeDistance = dataToApply.routeDistance;
+    }
+    if (isHistoricalEnrichment) {
+      updateData.routeSource = 'historical_aggregation';
+    } else if (pendingUpdate.apiSource === 'airlabs' || pendingUpdate.apiSource === 'aviationstack') {
+      updateData.routeSource = 'live_tracking';
+      updateData.hasLiveTracking = true;
+    }
+
+    // Set data source and last modified by
+    if (isHistoricalEnrichment) {
+      // Preserve original data source if it exists, otherwise set to historical_enrichment
+      if (!flight.dataSource) {
+        updateData.dataSource = 'historical_enrichment';
+      }
+      updateData.lastModifiedBy = 'historical_enrichment';
+    } else {
+      // For live updates
+      if (pendingUpdate.apiSource && pendingUpdate.apiSource !== 'historical_aggregation') {
+        updateData.dataSource = 'live_update';
+        updateData.lastModifiedBy = 'auto_update';
+      }
+    }
+
+    // Update enrichment history
+    if (isHistoricalEnrichment && metadata) {
+      const existingHistory = (flight.enrichmentHistory as any[]) || [];
+      const newHistoryEntry = {
+        type: 'historical_enrichment',
+        timestamp: new Date().toISOString(),
+        confidence: metadata.confidence,
+        source: 'aggregated_from_live_flights',
+        sourceFlightsCount: metadata.sourceFlightsCount,
+      };
+      updateData.enrichmentHistory = [...existingHistory, newHistoryEntry];
+    }
+
     // Update flight
     const updatedFlight = await prismaClient.flight.update({
       where: { id: flight.id },
-      data: {
-        airline: dataToApply.airline ?? flight.airline,
-        aircraft: dataToApply.aircraft ?? flight.aircraft,
-        gate: dataToApply.gate ?? flight.gate,
-        terminal: dataToApply.terminal ?? flight.terminal,
-        depIata: dataToApply.depIata ?? flight.depIata,
-        depIcao: dataToApply.depIcao ?? flight.depIcao,
-        depName: dataToApply.depName ?? flight.depName,
-        depLat,
-        depLon,
-        arrIata: dataToApply.arrIata ?? flight.arrIata,
-        arrIcao: dataToApply.arrIcao ?? flight.arrIcao,
-        arrName: dataToApply.arrName ?? flight.arrName,
-        arrLat,
-        arrLon,
-        departureTime: dataToApply.departureTime
-          ? new Date(dataToApply.departureTime)
-          : flight.departureTime,
-        arrivalTime: dataToApply.arrivalTime
-          ? new Date(dataToApply.arrivalTime)
-          : flight.arrivalTime,
-        // Don't change status automatically
-      },
+      data: updateData,
     });
 
     // Mark pending update as applied

@@ -5,6 +5,7 @@ import { useSettingsStore } from '../store/settingsStore';
 import { useTranslation } from '../hooks/useTranslation';
 import { extractBarcodeFromImage } from '../lib/barcodeExtractor';
 import { parseBCBP } from '../lib/bcbpParser';
+import { logger } from '../lib/logger';
 
 interface BoardingPassScannerProps {
   onScanSuccess: (data: any) => void; // ParsedBooking from Ollama
@@ -69,7 +70,7 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
           try {
             providerAvailability = await parseApi.getProviderAvailability();
           } catch (err) {
-            console.warn('Failed to check provider availability, assuming unavailable', err);
+            logger.warn('Failed to check provider availability, assuming unavailable', err);
             providerAvailability = { ollama: false, openai: false, claude: false };
           }
           updateScanStep('provider', { status: 'success' });
@@ -156,7 +157,7 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
                       updateScanStep('api', { status: 'pending' });
                     }
                   } catch (err) {
-                    console.warn('API validation failed, using parser result only', err);
+                    logger.warn('API validation failed, using parser result only', err);
                     updateScanStep('llm', { status: 'success', detail: 'API-Validierung übersprungen' });
                     updateScanStep('api', { status: 'pending' });
                   }
@@ -209,7 +210,7 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
             setError('Kein Parser verfügbar. Bitte LLM/API konfigurieren.');
           }
         } catch (err: any) {
-          console.error('Boarding pass parsing failed:', err);
+          logger.error('Boarding pass parsing failed:', err);
 
           const currentStep = steps.find((s) => s.status === 'loading');
           if (currentStep) {

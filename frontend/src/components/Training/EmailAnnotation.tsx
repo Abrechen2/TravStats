@@ -441,17 +441,17 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-        Email Annotation
+        {t('training:annotation.title')}
       </h2>
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-        Wähle zuerst einen Flug aus, dann markiere relevante Textpassagen und weise ihnen Labels zu
+        {t('training:annotation.description')}
       </p>
 
       <div className="space-y-4">
         {/* Flug-Auswahl vor dem Labeln */}
         <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-300 dark:border-gray-600">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Flug für Annotation auswählen
+            {t('training:annotation.selectFlight')}
           </label>
           <div className="flex gap-2 items-center">
             <select

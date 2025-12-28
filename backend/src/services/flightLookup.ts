@@ -11,6 +11,7 @@
 import axios from 'axios';
 import { findOrCreateAirport } from './airportLookup';
 import { getApiKey, getOpenSkyCredentials } from './apiKeyResolver';
+import { convertAviationstackTimeToUtc, convertAirlabsTimeToUtc } from '../utils/timezone';
 
 // In-memory cache for flight lookup results (AirLabs)
 interface FlightLookupCache {
@@ -269,14 +270,27 @@ export async function lookupFlightDetails(
           arrivalCode ? findOrCreateAirport(arrivalCode) : Promise.resolve(null),
         ]);
 
+        // Convert Aviationstack times from local airport time to UTC
+        const departureTimeRaw = result.departure?.estimated || result.departure?.scheduled;
+        const arrivalTimeRaw = result.arrival?.estimated || result.arrival?.scheduled;
+
+        const [departureTimeUtc, arrivalTimeUtc] = await Promise.all([
+          departureTimeRaw && departureCode
+            ? convertAviationstackTimeToUtc(departureTimeRaw, departureCode)
+            : Promise.resolve(departureTimeRaw || null),
+          arrivalTimeRaw && arrivalCode
+            ? convertAviationstackTimeToUtc(arrivalTimeRaw, arrivalCode)
+            : Promise.resolve(arrivalTimeRaw || null),
+        ]);
+
         return {
           airline: result.airline?.name,
           flightNumber: result.flight?.iata || result.flight?.icao || trimmedNumber,
           aircraft: result.aircraft?.icao || result.aircraft?.iata,
           departure: departureAirport || undefined,
           arrival: arrivalAirport || undefined,
-          departureTime: result.departure?.estimated || result.departure?.scheduled,
-          arrivalTime: result.arrival?.estimated || result.arrival?.scheduled,
+          departureTime: departureTimeUtc || undefined,
+          arrivalTime: arrivalTimeUtc || undefined,
         };
       }
     } catch (err) {
@@ -307,14 +321,27 @@ export async function lookupFlightDetails(
     arrivalCode ? findOrCreateAirport(arrivalCode) : Promise.resolve(null),
   ]);
 
+  // Convert AirLabs times to UTC (AirLabs may return UTC or local times)
+  const departureTimeRaw = first.departure.scheduledTime || first.departure.actualTime;
+  const arrivalTimeRaw = first.arrival.scheduledTime || first.arrival.actualTime;
+
+  const [departureTimeUtc, arrivalTimeUtc] = await Promise.all([
+    departureTimeRaw
+      ? convertAirlabsTimeToUtc(departureTimeRaw, departureCode)
+      : Promise.resolve(null),
+    arrivalTimeRaw
+      ? convertAirlabsTimeToUtc(arrivalTimeRaw, arrivalCode)
+      : Promise.resolve(null),
+  ]);
+
   return {
     airline: first.airline || (first.airlineIata ? getAirlineName(first.airlineIata) || undefined : undefined) || first.airlineIcao,
     flightNumber: first.flightNumber,
     aircraft: first.aircraft || first.aircraftIcao,
     departure: departureAirport || undefined,
     arrival: arrivalAirport || undefined,
-    departureTime: first.departure.scheduledTime || first.departure.actualTime,
-    arrivalTime: first.arrival.scheduledTime || first.arrival.actualTime,
+    departureTime: departureTimeUtc || undefined,
+    arrivalTime: arrivalTimeUtc || undefined,
   };
 }
 

@@ -77,7 +77,16 @@
   },
   "preview": {
     "title": "Statistik-Auswirkungen Vorschau",
-    "description": "Diese Vorschau zeigt, wie sich die Anwendung dieses Updates auf Ihre Statistiken auswirkt"
+    "description": "Diese Vorschau zeigt, wie sich die Anwendung dieses Updates auf Ihre Statistiken auswirkt",
+    "noData": "Keine Daten verfügbar",
+    "distance": "Distanz",
+    "flightTime": "Flugzeit",
+    "airlines": "Airlines",
+    "airports": "Flughäfen",
+    "before": "Vorher",
+    "after": "Nachher",
+    "change": "Änderung",
+    "added": "Hinzugefügt"
   },
   "editor": {
     "title": "Update bearbeiten",
@@ -85,6 +94,16 @@
     "save": "Änderungen speichern",
     "cancel": "Abbrechen",
     "saving": "Wird gespeichert...",
+    "fieldsTitle": "Eingabefelder",
+    "preview": "Vorschau",
+    "airline": "Airline",
+    "aircraft": "Flugzeug",
+    "gate": "Gate",
+    "terminal": "Terminal",
+    "depIata": "Abflughafen (IATA)",
+    "arrIata": "Zielflughafen (IATA)",
+    "departureTime": "Abflugzeit",
+    "arrivalTime": "Ankunftszeit",
     "fields": {
       "airline": "Airline",
       "flightNumber": "Flugnummer",

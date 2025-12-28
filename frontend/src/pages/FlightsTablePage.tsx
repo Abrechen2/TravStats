@@ -17,6 +17,8 @@ import { useThemeStore } from '../store/themeStore';
 import { useToastStore } from '../store/toastStore';
 import { API_LIMITS, DATE_FORMATS, getDateLocale } from '../lib/constants';
 import { useTranslation } from '../hooks/useTranslation';
+import DataSourceBadges from '../components/DataSourceBadges';
+import { logger } from '../lib/logger';
 
 export default function FlightsTablePage() {
   const { t } = useTranslation(['flights', 'common']);
@@ -55,7 +57,7 @@ export default function FlightsTablePage() {
 
       setFlights(allFlights);
     } catch (error) {
-      console.error('Failed to load flights:', error);
+      logger.error('Failed to load flights:', error);
     } finally {
       setLoading(false);
     }
@@ -76,7 +78,7 @@ export default function FlightsTablePage() {
       setFlightToDelete(null);
       loadFlights();
     } catch (error) {
-      console.error('Failed to delete flight:', error);
+      logger.error('Failed to delete flight:', error);
       addToast('error', t('dashboard:errors.deleteFlight'));
       setDeleteConfirmOpen(false);
       setFlightToDelete(null);
@@ -90,7 +92,7 @@ export default function FlightsTablePage() {
       setEditingFlight(null);
       loadFlights();
     } catch (error) {
-      console.error('Failed to update flight:', error);
+      logger.error('Failed to update flight:', error);
       addToast('error', t('dashboard:errors.updateFlight'));
       throw error;
     }
@@ -255,15 +257,18 @@ export default function FlightsTablePage() {
                         {formatDate(flight.arrivalTime)}
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                          flight.status === 'flown'
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                            : flight.status === 'scheduled'
-                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                            : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                        }`}>
-                          {t(`flights:status.${flight.status}`, { defaultValue: flight.status })}
-                        </span>
+                        <div className="flex flex-col gap-2">
+                          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                            flight.status === 'flown'
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                              : flight.status === 'scheduled'
+                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                          }`}>
+                            {t(`flights:status.${flight.status}`, { defaultValue: flight.status })}
+                          </span>
+                          <DataSourceBadges flight={flight} />
+                        </div>
                       </td>
                       <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                         {formatDurationHours(flight.departureTime, flight.arrivalTime)}
