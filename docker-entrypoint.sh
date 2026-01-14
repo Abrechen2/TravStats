@@ -33,13 +33,27 @@ fi
 # Store in /app/secrets (not in /app/data) to prevent exposure via mounted volumes
 if [ -z "$JWT_SECRET" ]; then
     SECRETS_DIR="/app/secrets"
-    mkdir -p "$SECRETS_DIR" 2>/dev/null || echo "[entrypoint] Warning: Could not create $SECRETS_DIR"
-    # Ensure secrets directory is writable even when mounted as a volume
-    chown ${NODE_UID:-1000}:${NODE_GID:-1000} "$SECRETS_DIR" 2>/dev/null || true
-    chmod 700 "$SECRETS_DIR" 2>/dev/null || true
     JWT_SECRET_FILE="$SECRETS_DIR/jwt.secret"
     OLD_JWT_SECRET_FILE="/app/data/jwt.secret"
     OLD_JWT_SECRET_FILE_ALT="/app/data/jwt_secret"
+    
+    # Ensure secrets directory exists and is writable
+    if ! mkdir -p "$SECRETS_DIR" 2>/dev/null; then
+        echo "[entrypoint] ❌ Error: Could not create $SECRETS_DIR"
+        echo "[entrypoint] This is required for JWT secret persistence. Please check volume permissions."
+        exit 1
+    fi
+    
+    # Check if secrets directory is writable
+    if [ ! -w "$SECRETS_DIR" ]; then
+        echo "[entrypoint] ❌ Error: $SECRETS_DIR is not writable"
+        echo "[entrypoint] JWT secret cannot be persisted. Please check volume permissions."
+        exit 1
+    fi
+    
+    # Ensure secrets directory has correct permissions
+    chown ${NODE_UID:-1000}:${NODE_GID:-1000} "$SECRETS_DIR" 2>/dev/null || true
+    chmod 700 "$SECRETS_DIR" 2>/dev/null || true
     
     # Migrate from old location if it exists (for backward compatibility)
     if [ -f "$OLD_JWT_SECRET_FILE" ] && [ ! -f "$JWT_SECRET_FILE" ]; then
@@ -54,17 +68,63 @@ if [ -z "$JWT_SECRET" ]; then
         echo "[entrypoint] JWT_SECRET migrated successfully"
     fi
 
+    # Function to validate JWT secret (minimum 32 hex characters = 64 chars total)
+    validate_jwt_secret() {
+        local secret="$1"
+        if [ -z "$secret" ]; then
+            return 1
+        fi
+        # Check minimum length (64 hex chars = 32 bytes)
+        if [ ${#secret} -lt 64 ]; then
+            return 1
+        fi
+        # Check if it's valid hex (only contains 0-9a-f)
+        if ! echo "$secret" | grep -qE '^[0-9a-fA-F]+$'; then
+            return 1
+        fi
+        return 0
+    }
+
     if [ -f "$JWT_SECRET_FILE" ]; then
-        echo "[entrypoint] Loading existing JWT_SECRET..."
-        JWT_SECRET=$(cat "$JWT_SECRET_FILE")
+        echo "[entrypoint] Loading existing JWT_SECRET from $JWT_SECRET_FILE..."
+        JWT_SECRET=$(cat "$JWT_SECRET_FILE" | tr -d '[:space:]')
+        
+        # Validate loaded secret
+        if ! validate_jwt_secret "$JWT_SECRET"; then
+            echo "[entrypoint] ❌ Error: Existing JWT_SECRET in $JWT_SECRET_FILE is invalid"
+            echo "[entrypoint] Secret must be at least 64 hex characters (32 bytes)"
+            echo "[entrypoint] Please delete the file or set JWT_SECRET environment variable to fix this."
+            exit 1
+        fi
+        
         export JWT_SECRET
+        echo "[entrypoint] ✅ JWT_SECRET loaded successfully (${#JWT_SECRET} characters)"
     else
         echo "[entrypoint] Generating new JWT_SECRET..."
         JWT_SECRET=$(openssl rand -hex 32)
-        export JWT_SECRET
-        echo "$JWT_SECRET" > "$JWT_SECRET_FILE"
+        
+        # Validate generated secret
+        if ! validate_jwt_secret "$JWT_SECRET"; then
+            echo "[entrypoint] ❌ Error: Generated JWT_SECRET failed validation"
+            exit 1
+        fi
+        
+        # Save to file
+        if ! echo "$JWT_SECRET" > "$JWT_SECRET_FILE"; then
+            echo "[entrypoint] ❌ Error: Could not write JWT_SECRET to $JWT_SECRET_FILE"
+            echo "[entrypoint] Please check write permissions for $SECRETS_DIR"
+            exit 1
+        fi
+        
         chmod 600 "$JWT_SECRET_FILE"
-        echo "[entrypoint] JWT_SECRET generated and saved"
+        export JWT_SECRET
+        echo "[entrypoint] ✅ JWT_SECRET generated and saved to $JWT_SECRET_FILE"
+    fi
+else
+    echo "[entrypoint] Using JWT_SECRET from environment variable"
+    # Validate environment variable secret
+    if [ ${#JWT_SECRET} -lt 64 ] || ! echo "$JWT_SECRET" | grep -qE '^[0-9a-fA-F]+$'; then
+        echo "[entrypoint] ⚠️  Warning: JWT_SECRET from environment may be weak (should be at least 64 hex characters)"
     fi
 fi
 

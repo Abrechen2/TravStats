@@ -19,3 +19,5 @@ ADD COLUMN IF NOT EXISTS "allow_user_flight_api_keys" BOOLEAN NOT NULL DEFAULT t
 ADD COLUMN IF NOT EXISTS "require_user_flight_api_keys" BOOLEAN NOT NULL DEFAULT false;
 
 
+
+

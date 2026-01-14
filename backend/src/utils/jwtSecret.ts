@@ -119,15 +119,21 @@ function persistSecret(secretFilePath: string, secret: string) {
 /**
  * Gets or generates JWT secret silently
  * Priority:
- * 1. JWT_SECRET environment variable (if set)
+ * 1. JWT_SECRET environment variable (if set) - highest priority, set by docker-entrypoint.sh
  * 2. Existing secret file (if exists)
  * 3. Generate new random secret and save to file
  */
 export function getJWTSecret(): string {
+  // Priority 1: Environment variable (set by docker-entrypoint.sh in production)
   const envSecret = process.env.JWT_SECRET?.trim();
   if (envSecret) {
     const validation = validateJWTSecret(envSecret);
     if (validation.isValid) {
+      logger.info({
+        operation: 'jwt_secret_source',
+        message: 'Using JWT_SECRET from environment variable',
+        context: { source: 'environment', length: envSecret.length },
+      });
       return envSecret;
     }
 
@@ -140,15 +146,30 @@ export function getJWTSecret(): string {
     });
   }
 
+  // Priority 2: Load from persistent file
   const persistedSecret = readPersistedSecret(RESOLVED_SECRET_FILE);
   if (persistedSecret) {
-    process.env.JWT_SECRET = persistedSecret;
+    // Set as environment variable for consistency (but don't overwrite if already set)
+    if (!process.env.JWT_SECRET) {
+      process.env.JWT_SECRET = persistedSecret;
+    }
+    logger.info({
+      operation: 'jwt_secret_source',
+      message: 'Using JWT_SECRET from persistent file',
+      context: { source: 'file', path: RESOLVED_SECRET_FILE, length: persistedSecret.length },
+    });
     return persistedSecret;
   }
 
+  // Priority 3: Generate new secret
   const newSecret = randomBytes(32).toString('hex');
   persistSecret(RESOLVED_SECRET_FILE, newSecret);
   process.env.JWT_SECRET = newSecret;
+  logger.info({
+    operation: 'jwt_secret_source',
+    message: 'Generated new JWT_SECRET and saved to file',
+    context: { source: 'generated', path: RESOLVED_SECRET_FILE, length: newSecret.length },
+  });
   return newSecret;
 }
 

@@ -232,3 +232,5 @@ export class FallbackParser implements BoardingPassParser {
   }
 }
 
+
+
