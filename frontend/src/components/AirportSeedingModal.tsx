@@ -8,9 +8,16 @@ interface AirportSeedingModalProps {
   onClose: () => void;
 }
 
-export default function AirportSeedingModal({ isOpen, onClose }: AirportSeedingModalProps) {
+export default function AirportSeedingModal({ isOpen, onClose }: AirportSeedingModalProps): JSX.Element | null {
   const { t } = useTranslation(['common', 'setup']);
-  const [status, setStatus] = useState<any>(null);
+  const [status, setStatus] = useState<{
+    status: 'pending' | 'running' | 'completed' | 'failed';
+    progress?: number;
+    estimatedSecondsRemaining?: number;
+    totalAirports?: number;
+    processedAirports?: number;
+    error?: string;
+  } | null>(null);
 
   useEffect(() => {
     if (isOpen) {

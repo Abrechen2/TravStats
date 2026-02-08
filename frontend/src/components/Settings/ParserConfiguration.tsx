@@ -26,9 +26,22 @@ interface ParserConfigurationProps {
   className?: string;
 }
 
-export default function ParserConfiguration({ className = '' }: ParserConfigurationProps) {
+export default function ParserConfiguration({ className = '' }: ParserConfigurationProps): JSX.Element {
   const { t } = useTranslation(['settings', 'common']);
-  const [providers, setProviders] = useState<any>(null);
+  interface ProviderEntry {
+    provider: string;
+    availability: {
+      available: boolean;
+      reason?: string;
+    };
+  }
+
+  interface ProvidersData {
+    vision: ProviderEntry[];
+    text: ProviderEntry[];
+  }
+
+  const [providers, setProviders] = useState<ProvidersData | null>(null);
   const [loadingProviders, setLoadingProviders] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -62,7 +75,7 @@ export default function ParserConfiguration({ className = '' }: ParserConfigurat
 
   const getProviderStatus = (providerType: 'vision' | 'text', providerName: string) => {
     if (!providers) return null;
-    const provider = providers[providerType]?.find((p: any) => p.provider === providerName);
+    const provider = providers[providerType]?.find((p: ProviderEntry) => p.provider === providerName);
     return provider?.availability;
   };
 
@@ -103,9 +116,10 @@ export default function ParserConfiguration({ className = '' }: ParserConfigurat
         preferredTextParser: settings.preferredTextParser,
       });
       alert(t('settings:parser.saved'));
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Failed to save settings:', error);
-      const errorMessage = error.response?.data?.error || t('settings:parser.saveFailed');
+      const errorObj = error as { response?: { data?: { error?: string } } };
+      const errorMessage = errorObj.response?.data?.error || t('settings:parser.saveFailed');
       alert(errorMessage);
     } finally {
       setSaving(false);

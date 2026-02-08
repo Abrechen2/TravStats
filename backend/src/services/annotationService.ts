@@ -192,10 +192,10 @@ export function createTrainingExample(
 ): {
   input: string;
   output: string;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 } {
   let input = '';
-  let metadata: Record<string, any> = {
+  let metadata: Record<string, unknown> = {
     type: annotation.type,
   };
 

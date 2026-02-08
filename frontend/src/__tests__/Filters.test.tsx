@@ -3,55 +3,85 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Filters from '../components/Filters';
 import { flightsApi } from '../lib/api';
 import { useThemeStore } from '../store/themeStore';
+import type { Flight } from '../types';
 
 vi.mock('../lib/api');
 vi.mock('../store/themeStore');
 
+const mockUseThemeStore = vi.mocked(useThemeStore);
+
 describe('Filters', () => {
   const mockOnFilterChange = vi.fn();
 
+  const mockFlight: Flight = {
+    id: '1',
+    userId: 'user-1',
+    airline: 'Lufthansa',
+    flightNumber: 'LH100',
+    depIata: 'FRA',
+    depName: 'Frankfurt Airport',
+    depLat: 50.0333,
+    depLon: 8.5706,
+    arrIata: 'MUC',
+    arrName: 'Munich Airport',
+    arrLat: 48.3538,
+    arrLon: 11.7861,
+    departureTime: '2024-01-15T10:00:00Z',
+    arrivalTime: '2024-01-15T12:00:00Z',
+    status: 'flown',
+    createdAt: '2024-01-15T08:00:00Z',
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
-    (useThemeStore as any).mockReturnValue({
-      isDarkMode: false,
+    mockUseThemeStore.mockImplementation((selector?: unknown) => {
+      const state = {
+        isDarkMode: false,
+        toggleDarkMode: vi.fn(),
+        setDarkMode: vi.fn(),
+      };
+      if (typeof selector === 'function') {
+        return (selector as (s: typeof state) => unknown)(state);
+      }
+      return state;
     });
-    (flightsApi.getAll as any).mockResolvedValue({
-      flights: [
-        {
-          id: '1',
-          airline: 'Lufthansa',
-          departureTime: '2024-01-15T10:00:00Z',
-          status: 'flown',
-        },
-      ],
+    vi.mocked(flightsApi.getAll).mockResolvedValue({
+      flights: [mockFlight],
+      total: 1,
+      limit: 500,
+      offset: 0,
     });
   });
 
   it('should render filter button', () => {
     render(<Filters onFilterChange={mockOnFilterChange} />);
 
-    expect(screen.getByText(/filter/i)).toBeInTheDocument();
+    // Button text is i18n key: map:filters.title
+    expect(screen.getByText(/map:filters\.title/i)).toBeInTheDocument();
   });
 
   it('should open filter panel on click', async () => {
     render(<Filters onFilterChange={mockOnFilterChange} />);
 
-    const filterButton = screen.getByText(/filter/i);
+    const filterButton = screen.getByText(/map:filters\.title/i);
     fireEvent.click(filterButton);
 
     await waitFor(() => {
-      expect(screen.getByText(/filter optionen/i)).toBeInTheDocument();
+      // The panel opens and shows filter-specific content like allYears
+      expect(screen.getByText(/map:filters\.allYears/i)).toBeInTheDocument();
     });
   });
 
   it('should apply year filter', async () => {
     render(<Filters onFilterChange={mockOnFilterChange} />);
 
-    const filterButton = screen.getByText(/filter/i);
+    const filterButton = screen.getByText(/map:filters\.title/i);
     fireEvent.click(filterButton);
 
     await waitFor(() => {
-      const yearSelect = screen.getByText(/alle jahre/i).closest('select');
+      // The default option in year select is map:filters.allYears
+      const allYearsOption = screen.getByText(/map:filters\.allYears/i);
+      const yearSelect = allYearsOption.closest('select');
       if (yearSelect) {
         fireEvent.change(yearSelect, { target: { value: '2024' } });
       }
@@ -62,22 +92,3 @@ describe('Filters', () => {
     });
   });
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

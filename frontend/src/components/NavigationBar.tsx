@@ -7,7 +7,7 @@ import { useTranslation } from '../hooks/useTranslation';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { logger } from '../lib/logger';
 
-export default function NavigationBar() {
+export default function NavigationBar(): JSX.Element {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
@@ -81,7 +81,15 @@ export default function NavigationBar() {
   // Show pending updates button if there are pending updates OR if user is currently on that page
   const showPendingUpdates = pendingUpdatesCount > 0 || location.pathname === '/pending-updates';
 
-  const navItems = [
+  interface NavItem {
+    path: string;
+    label: string;
+    icon: string;
+    show: boolean;
+    badge?: number;
+  }
+
+  const navItems: NavItem[] = ([
     { path: '/', label: t('dashboard:title'), icon: '🏠', show: true },
     { path: '/achievements', label: t('dashboard:achievements'), icon: '🏆', show: true },
     { path: '/stats', label: t('dashboard:stats'), icon: '📊', show: true },
@@ -89,7 +97,7 @@ export default function NavigationBar() {
     { path: '/settings', label: t('dashboard:settings'), icon: '⚙️', show: true },
     { path: '/admin', label: t('dashboard:admin'), icon: '👑', show: user?.isAdmin || false },
     { path: '/training', label: t('dashboard:training'), icon: '🤖', show: hasTrainingAccess && developerModeEnabled },
-  ].filter(item => item.show);
+  ] as NavItem[]).filter(item => item.show);
 
   return (
     <header className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700 sticky top-0 z-50">
@@ -138,7 +146,7 @@ export default function NavigationBar() {
           <nav className="hidden xl:flex items-center gap-2">
             {navItems.map((item) => {
               const active = isActive(item.path);
-              const hasBadge = (item as any).badge && (item as any).badge > 0;
+              const hasBadge = item.badge && item.badge > 0;
               if (item.path === '/') {
                 // Dashboard - special styling
                 return (
@@ -169,7 +177,7 @@ export default function NavigationBar() {
                     {item.icon} {item.label}
                     {hasBadge && (
                       <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
-                        {(item as any).badge > 99 ? '99+' : (item as any).badge}
+                        {(item.badge ?? 0) > 99 ? '99+' : item.badge}
                       </span>
                     )}
                   </Link>
@@ -274,7 +282,7 @@ export default function NavigationBar() {
             <div className="space-y-2">
               {navItems.map((item) => {
                 const active = isActive(item.path);
-                const hasBadge = (item as any).badge && (item as any).badge > 0;
+                const hasBadge = item.badge && item.badge > 0;
                 if (item.path === '/') {
                   // Dashboard
                   return (
@@ -309,7 +317,7 @@ export default function NavigationBar() {
                       {item.label}
                       {hasBadge && (
                         <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
-                          {(item as any).badge > 99 ? '99+' : (item as any).badge}
+                          {(item.badge ?? 0) > 99 ? '99+' : item.badge}
                         </span>
                       )}
                     </Link>

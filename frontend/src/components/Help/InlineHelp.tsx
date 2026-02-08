@@ -25,7 +25,7 @@ export default function InlineHelp({
   content,
   category = 'basic',
   className = '',
-}: InlineHelpProps) {
+}: InlineHelpProps): JSX.Element {
   const [isExpanded, setIsExpanded] = useState(false);
   const { t } = useTranslation('common');
 

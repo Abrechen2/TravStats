@@ -1,10 +1,17 @@
 import { Router, Request, Response, NextFunction } from 'express';
+import { z } from 'zod';
 import { prisma } from '../db';
 import { hashPassword } from '../utils/password';
 import { generateToken } from '../utils/jwt';
 import { getAuthCookieOptions } from './auth';
 import { AppError } from '../middleware/errorHandler';
 import { getSeedingStatus } from '../services/airportSeedingService';
+
+const initializeSchema = z.object({
+  username: z.string().min(1, 'Username is required').max(50),
+  password: z.string().min(8, 'Password must be at least 8 characters').max(128),
+  instanceName: z.string().max(100).optional(),
+});
 
 const router = Router();
 
@@ -36,7 +43,8 @@ router.get('/status', async (req: Request, res: Response, next: NextFunction) =>
 // Initialize instance (only works if no admin users exist)
 router.post('/initialize', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { username, password, instanceName } = req.body;
+    const validated = initializeSchema.parse(req.body);
+    const { username, password } = validated;
 
     // Check if setup already completed (admin exists)
     const adminCount = await prisma.user.count({
@@ -44,15 +52,6 @@ router.post('/initialize', async (req: Request, res: Response, next: NextFunctio
     });
     if (adminCount > 0) {
       throw new AppError('Setup already completed - admin user exists', 400);
-    }
-
-    // Validate input
-    if (!username || !password) {
-      throw new AppError('Username and password are required', 400);
-    }
-
-    if (password.length < 8) {
-      throw new AppError('Password must be at least 8 characters', 400);
     }
 
     // Create first admin user

@@ -21,7 +21,7 @@ interface AirportStats {
   airlines: string[];
 }
 
-function AirportMarkers({ flights }: AirportMarkersProps) {
+function AirportMarkers({ flights }: AirportMarkersProps): JSX.Element {
   const { t } = useTranslation(['map', 'common']);
   const airportStats = useMemo(() => {
     const statsMap = new Map<string, AirportStats>();

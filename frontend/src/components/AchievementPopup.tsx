@@ -48,7 +48,7 @@ const tierGlow = {
   diamond: 'shadow-purple-500/50',
 };
 
-export default function AchievementPopup({ achievements, onClose }: AchievementPopupProps) {
+export default function AchievementPopup({ achievements, onClose }: AchievementPopupProps): JSX.Element | null {
   const { t } = useTranslation(['achievements', 'common']);
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
   const [currentIndex, setCurrentIndex] = useState(0);

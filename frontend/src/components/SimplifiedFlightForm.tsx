@@ -4,7 +4,7 @@ import AirportAutocomplete from './AirportAutocomplete';
 
 // Lazy load BoardingPassScanner as it's heavy (Tesseract.js)
 const BoardingPassScanner = lazy(() => import('./BoardingPassScanner'));
-import { BoardingPassData, getAirlineName } from '../lib/bcbpParser';
+import type { ScanResultData } from './BoardingPassScanner';
 import type { FlightInput, FlightLookupResult } from '../types';
 import { useSettingsStore } from '../store/settingsStore';
 import { logger } from '../lib/logger';
@@ -14,7 +14,7 @@ interface SimplifiedFlightFormProps {
   onCancel: () => void;
 }
 
-export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedFlightFormProps) {
+export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedFlightFormProps): JSX.Element {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [autoFillMessage, setAutoFillMessage] = useState('');
@@ -95,8 +95,8 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
     if (lookup.flightNumber) setFlightNumber(lookup.flightNumber);
     if (lookup.aircraft) setAircraft(prev => prev || lookup.aircraft || '');
 
-    if (lookup.departure) setDeparture(lookup.departure as any);
-    if (lookup.arrival) setArrival(lookup.arrival as any);
+    if (lookup.departure) setDeparture(lookup.departure as Airport);
+    if (lookup.arrival) setArrival(lookup.arrival as Airport);
 
     const updateDateTime = (
       value: string | undefined,
@@ -156,79 +156,77 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
     };
   }, [flightNumber, departureDate]);
 
-  const handleBoardingPassScan = async (bcbpData: BoardingPassData) => {
+  const handleBoardingPassScan = async (scanData: ScanResultData): Promise<void> => {
     setShowScanner(false);
     setError('');
 
+    const depCode = scanData.departureCode || '';
+    const arrCode = scanData.arrivalCode || '';
+
     try {
       // Lookup airports by IATA code using getByCode API
-      // This will automatically fetch from external sources if not in DB
-      let depAirport, arrAirport;
+      let depAirport: Airport | undefined;
+      let arrAirport: Airport | undefined;
 
       try {
         const [dep, arr] = await Promise.all([
-          airportsApi.getByCode(bcbpData.departureAirport),
-          airportsApi.getByCode(bcbpData.arrivalAirport),
+          airportsApi.getByCode(depCode),
+          airportsApi.getByCode(arrCode),
         ]);
 
         depAirport = dep;
         arrAirport = arr;
-      } catch (airportError) {
+      } catch {
         // If airports not found even with external lookup, create placeholder objects
         logger.warn('Airports not found anywhere, using IATA codes directly');
         depAirport = {
           id: 0,
-          iata: bcbpData.departureAirport,
-          icao: undefined,
-          name: bcbpData.departureAirport,
-          city: null,
-          country: null,
+          iata: depCode,
+          name: depCode,
           lat: 0,
           lon: 0,
-          altitude: null,
-          timezone: null
         };
         arrAirport = {
           id: 0,
-          iata: bcbpData.arrivalAirport,
-          icao: undefined,
-          name: bcbpData.arrivalAirport,
-          city: null,
-          country: null,
+          iata: arrCode,
+          name: arrCode,
           lat: 0,
           lon: 0,
-          altitude: null,
-          timezone: null
         };
 
         // Show warning to user
-        setError(`⚠️ Airports "${bcbpData.departureAirport}" and "${bcbpData.arrivalAirport}" not found. Please verify manually.`);
+        setError(`Airports "${depCode}" and "${arrCode}" not found. Please verify manually.`);
       }
 
       // Set airports
-      setDeparture(depAirport as any);
-      setArrival(arrAirport as any);
+      setDeparture(depAirport ?? null);
+      setArrival(arrAirport ?? null);
 
-      // Set date
-      setDepartureDate(bcbpData.dateOfFlight);
-      setArrivalDate(bcbpData.dateOfFlight);
+      // Set date from departureTime if available
+      if (scanData.departureTime) {
+        const dateStr = scanData.departureTime.split('T')[0];
+        setDepartureDate(dateStr);
+        setArrivalDate(dateStr);
+      }
 
       // Set airline and flight number
-      const airlineName = bcbpData.airlineName || getAirlineName(bcbpData.operatingCarrierDesignator);
-      setAirline(airlineName);
-      setFlightNumber(`${bcbpData.operatingCarrierDesignator}${bcbpData.flightNumber}`);
+      if (scanData.airline) {
+        setAirline(scanData.airline);
+      }
+      if (scanData.flightNumber) {
+        setFlightNumber(scanData.flightNumber);
+      }
 
       // Set status to flown (since user has boarding pass)
       setStatus('flown');
-
 
       // Show advanced options since we have flight details
       setShowAdvanced(true);
 
       // Show success message
       setError('');
-    } catch (err) {
-      setError(`Could not find airport data for ${bcbpData.departureAirport} or ${bcbpData.arrivalAirport}. Please enter manually.`);
+    } catch {
+      setError(`Could not find airport data for ${depCode} or ${arrCode}. Please enter manually.`);
     }
   };
 
@@ -283,8 +281,9 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
         category,
         tags: tags.length ? tags : undefined,
       });
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to save flight');
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: { error?: string } } };
+      setError(errorObj.response?.data?.error || 'Failed to save flight');
     } finally {
       setLoading(false);
     }

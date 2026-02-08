@@ -1,12 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import SimplifiedFlightFormV2 from '../components/SimplifiedFlightFormV2';
-import { useSettingsStore } from '../store/settingsStore';
 import { useThemeStore } from '../store/themeStore';
 
 vi.mock('../lib/api');
-vi.mock('../store/settingsStore');
 vi.mock('../store/themeStore');
+vi.mock('../lib/geo', () => ({
+  calculateDistance: vi.fn().mockReturnValue(1000),
+}));
+vi.mock('../lib/timeEstimation', () => ({
+  storeHistoricalFlightTime: vi.fn(),
+  estimateFlightTimes: vi.fn().mockReturnValue({
+    arrivalTime: '14:00',
+    source: 'heuristic',
+    confidence: 'low',
+  }),
+}));
+
+const mockUseThemeStore = vi.mocked(useThemeStore);
 
 describe('SimplifiedFlightFormV2', () => {
   const mockOnSubmit = vi.fn();
@@ -14,33 +25,34 @@ describe('SimplifiedFlightFormV2', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (useThemeStore as any).mockReturnValue({
-      isDarkMode: false,
-    });
-    (useSettingsStore as any).mockReturnValue({
-      units: { currency: 'EUR' },
-      defaults: {
-        flightCategory: 'business',
-        seatClass: 'economy',
-      },
+    mockUseThemeStore.mockImplementation((selector?: unknown) => {
+      const state = {
+        isDarkMode: false,
+        toggleDarkMode: vi.fn(),
+        setDarkMode: vi.fn(),
+      };
+      if (typeof selector === 'function') {
+        return (selector as (s: typeof state) => unknown)(state);
+      }
+      return state;
     });
   });
 
   it('should render flight form', () => {
     render(<SimplifiedFlightFormV2 onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
 
-    expect(screen.getByText(/add flight/i)).toBeInTheDocument();
+    expect(screen.getByText(/flights:form\.title/i)).toBeInTheDocument();
   });
 
   it('should show error when airports are missing', async () => {
     render(<SimplifiedFlightFormV2 onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
 
-    // Navigate to complete step
-    const skipButton = screen.getByText(/skip and enter manually/i);
+    // Navigate to complete step via manual entry action
+    const skipButton = screen.getByText(/flights:form\.manualEntryAction/i);
     fireEvent.click(skipButton);
 
     await waitFor(() => {
-      const submitButton = screen.getByRole('button', { name: /flug speichern/i });
+      const submitButton = screen.getByRole('button', { name: /flights:form\.submit/i });
       expect(submitButton).toBeDisabled();
     });
   });
@@ -48,15 +60,14 @@ describe('SimplifiedFlightFormV2', () => {
   it('should validate required fields', async () => {
     render(<SimplifiedFlightFormV2 onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
 
-    const skipButton = screen.getByText(/skip and enter manually/i);
+    const skipButton = screen.getByText(/flights:form\.manualEntryAction/i);
     fireEvent.click(skipButton);
 
     await waitFor(() => {
-      const submitButton = screen.getByRole('button', { name: /flug speichern/i });
+      const submitButton = screen.getByRole('button', { name: /flights:form\.submit/i });
       expect(submitButton).toBeInTheDocument();
       // Button should be disabled when airports are missing
       expect(submitButton).toBeDisabled();
     });
   });
 });
-

@@ -105,7 +105,7 @@ async function extractTextFromBoundingBox(
   }
 }
 
-export default function BoardingPassAnnotation({ trainingDataId, onComplete, onCancel }: BoardingPassAnnotationProps) {
+export default function BoardingPassAnnotation({ trainingDataId, onComplete, onCancel }: BoardingPassAnnotationProps): JSX.Element {
   const { t } = useTranslation(['training', 'common']);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [image, setImage] = useState<HTMLImageElement | null>(null);
@@ -129,10 +129,10 @@ export default function BoardingPassAnnotation({ trainingDataId, onComplete, onC
         const data = await trainingApi.getById(trainingDataId);
         
         if (data.annotations) {
-          const annotationsData = data.annotations as any;
-          if (annotationsData.imageBase64) {
+          const annotationsData = data.annotations as Record<string, unknown>;
+          if (typeof annotationsData.imageBase64 === 'string') {
             setImageBase64(annotationsData.imageBase64);
-            
+
             // Load image
             const img = new Image();
             img.onload = () => {
@@ -142,33 +142,33 @@ export default function BoardingPassAnnotation({ trainingDataId, onComplete, onC
                 const canvas = canvasRef.current;
                 const maxDisplayWidth = 1200;
                 const maxDisplayHeight = 800;
-                
+
                 // Calculate display scale (for CSS)
                 const displayScale = Math.min(
                   maxDisplayWidth / img.width,
                   maxDisplayHeight / img.height,
                   1
                 );
-                
+
                 // Use device pixel ratio for high DPI displays
                 const dpr = window.devicePixelRatio || 1;
-                
+
                 // Set display size (CSS)
                 canvas.style.width = `${img.width * displayScale}px`;
                 canvas.style.height = `${img.height * displayScale}px`;
-                
+
                 // Set actual canvas size (internal resolution) - use full image size or scaled with DPR
                 const actualScale = displayScale * dpr;
                 canvas.width = img.width * actualScale;
                 canvas.height = img.height * actualScale;
-                
+
                 // Enable high-quality image smoothing
                 const ctx = canvas.getContext('2d');
                 if (ctx) {
                   ctx.imageSmoothingEnabled = true;
                   ctx.imageSmoothingQuality = 'high';
                 }
-                
+
                 drawCanvas();
               }
             };
@@ -178,15 +178,16 @@ export default function BoardingPassAnnotation({ trainingDataId, onComplete, onC
             };
             img.src = annotationsData.imageBase64;
           }
-          if (annotationsData.boundingBoxes) {
-            setBoundingBoxes(annotationsData.boundingBoxes);
+          if (Array.isArray(annotationsData.boundingBoxes)) {
+            setBoundingBoxes(annotationsData.boundingBoxes as BoundingBox[]);
           }
         }
-        
+
         if (data.extractedData && Array.isArray(data.extractedData) && data.extractedData.length > 0) {
           // Convert old format (with departureTime/arrivalTime as ISO) to new format (separate date/time)
-          const convertedFlights = data.extractedData.map((flight: any) => {
-            const converted = { ...flight };
+          const convertedFlights = data.extractedData.map((rawFlight: unknown) => {
+            const flight = rawFlight as Flight;
+            const converted: Flight = { ...flight };
             if (flight.departureTime && !flight.departureDate) {
               const { date, time } = splitDateTime(flight.departureTime);
               if (date) converted.departureDate = date;
@@ -356,7 +357,7 @@ export default function BoardingPassAnnotation({ trainingDataId, onComplete, onC
             
             const field = labelToField[label];
             if (field) {
-              flight[field] = extractedText as any;
+              flight[field] = extractedText;
             }
           }
           

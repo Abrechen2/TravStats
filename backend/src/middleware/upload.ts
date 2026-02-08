@@ -2,6 +2,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
+import { PrismaClient } from '@prisma/client';
 import logger from '../utils/logger';
 import { validateReceiptFile, validateEmailFile, validateBoardingPassImage } from '../utils/fileValidation';
 import { FILE_LIMITS, CLEANUP } from '../config/constants';
@@ -21,14 +22,15 @@ try {
       context: { directory: UPLOAD_DIR },
     });
   }
-} catch (error: any) {
+} catch (error: unknown) {
   // Log warning but don't prevent startup - directory will be created on first upload attempt
-  console.warn(`[Upload] Could not create upload directory ${UPLOAD_DIR}:`, error?.message || error);
+  const errMsg = error instanceof Error ? error.message : String(error);
+  console.warn(`[Upload] Could not create upload directory ${UPLOAD_DIR}:`, errMsg);
   console.warn('[Upload] Uploads may fail until directory permissions are fixed');
   logger.warn({
     operation: 'upload_dir_creation_failed',
     message: `Could not create upload directory: ${UPLOAD_DIR}`,
-    context: { directory: UPLOAD_DIR, error: error?.message || 'Unknown error' },
+    context: { directory: UPLOAD_DIR, error: errMsg },
   });
 }
 
@@ -41,14 +43,15 @@ try {
       context: { directory: EMAIL_UPLOAD_DIR },
     });
   }
-} catch (error: any) {
+} catch (error: unknown) {
   // Log warning but don't prevent startup - directory will be created on first upload attempt
-  console.warn(`[Upload] Could not create email upload directory ${EMAIL_UPLOAD_DIR}:`, error?.message || error);
+  const errMsg = error instanceof Error ? error.message : String(error);
+  console.warn(`[Upload] Could not create email upload directory ${EMAIL_UPLOAD_DIR}:`, errMsg);
   console.warn('[Upload] Email uploads may fail until directory permissions are fixed');
   logger.warn({
     operation: 'upload_email_dir_creation_failed',
     message: `Could not create email upload directory: ${EMAIL_UPLOAD_DIR}`,
-    context: { directory: EMAIL_UPLOAD_DIR, error: error?.message || 'Unknown error' },
+    context: { directory: EMAIL_UPLOAD_DIR, error: errMsg },
   });
 }
 
@@ -68,7 +71,7 @@ const storage = multer.diskStorage({
 });
 
 // File filter - only allow images and PDFs with magic number validation
-const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+const fileFilter = (_req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback): void => {
   const allowedMimeTypes = [
     'image/jpeg',
     'image/jpg',
@@ -124,7 +127,7 @@ export function deleteReceiptFile(filename: string): void {
  * Clean up old receipt files (older than retention period with no database reference)
  * This should be run periodically (e.g., daily cron job)
  */
-export async function cleanupOldReceipts(prisma: any): Promise<number> {
+export async function cleanupOldReceipts(prisma: PrismaClient): Promise<number> {
   const files = fs.readdirSync(UPLOAD_DIR);
   const retentionMs = CLEANUP.RECEIPT_RETENTION_DAYS * 24 * 60 * 60 * 1000;
   const cutoffTime = Date.now() - retentionMs;
@@ -192,7 +195,7 @@ const emailStorage = multer.diskStorage({
 });
 
 // Email file filter - allow .eml, .txt, .msg
-const emailFileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+const emailFileFilter = (_req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback): void => {
   const allowedMimeTypes = [
     'message/rfc822', // .eml files
     'text/plain', // .txt files

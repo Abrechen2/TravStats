@@ -235,7 +235,8 @@ export const useSettingsStore = create<SettingsState>()(
           if (remote) {
             set((state) => {
               // Extract autoUpdate and historicalEnrichment to exclude them from store
-              const { autoUpdate, historicalEnrichment, ...remoteWithoutDirectFields } = remote as any;
+              const remoteRecord = remote as Record<string, unknown>;
+              const { autoUpdate: _au, historicalEnrichment: _he, ...remoteWithoutDirectFields } = remoteRecord;
               const newState = {
                 ...state,
                 ...remoteWithoutDirectFields,

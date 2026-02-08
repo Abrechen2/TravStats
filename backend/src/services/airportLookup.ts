@@ -95,7 +95,7 @@ function calculateDistance(
 /**
  * Sucht einen Flughafen in der lokalen DB oder lädt ihn von externen Quellen
  */
-export async function findOrCreateAirport(code: string): Promise<any> {
+export async function findOrCreateAirport(code: string): Promise<AirportData | null> {
   const upperCode = code.toUpperCase();
 
   // 1. Try cache first
@@ -175,18 +175,18 @@ async function fetchFromExternalAPI(code: string): Promise<ExternalAirportData |
     );
 
     if (response.ok) {
-      const data: any = await response.json();
+      const data = await response.json() as Record<string, unknown>;
 
       if (data && data.latitude && data.longitude) {
         return {
-          iata: data.iata || code,
-          icao: data.icao,
-          name: data.name,
-          city: data.location,
-          country: data.country,
-          lat: parseFloat(data.latitude),
-          lon: parseFloat(data.longitude),
-          altitude: data.elevation_ft ? Math.round(parseFloat(data.elevation_ft) * 0.3048) : undefined,
+          iata: (typeof data.iata === 'string' ? data.iata : code) || code,
+          icao: typeof data.icao === 'string' ? data.icao : undefined,
+          name: typeof data.name === 'string' ? data.name : code,
+          city: typeof data.location === 'string' ? data.location : undefined,
+          country: typeof data.country === 'string' ? data.country : undefined,
+          lat: parseFloat(String(data.latitude)),
+          lon: parseFloat(String(data.longitude)),
+          altitude: data.elevation_ft ? Math.round(parseFloat(String(data.elevation_ft)) * 0.3048) : undefined,
         };
       }
     }

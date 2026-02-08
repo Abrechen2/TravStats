@@ -1,7 +1,7 @@
 import { useThemeStore } from '../store/themeStore';
 import { useTranslation } from '../hooks/useTranslation';
 
-export default function DarkModeToggle() {
+export default function DarkModeToggle(): JSX.Element {
   const { isDarkMode, toggleDarkMode } = useThemeStore();
   const { t } = useTranslation('common');
 

@@ -10,7 +10,29 @@ import { getApiKey, getOpenSkyCredentials } from './apiKeyResolver';
 export interface ApiKeyTestResult {
   success: boolean;
   message: string;
-  details?: any;
+  details?: Record<string, unknown>;
+}
+
+/** Helper to extract error info from axios-like errors */
+function extractAxiosErrorInfo(error: unknown): {
+  status?: number;
+  message: string;
+  data?: Record<string, unknown>;
+} {
+  if (axios.isAxiosError(error)) {
+    return {
+      status: error.response?.status,
+      message: error.response?.data?.error?.message
+        ?? error.response?.data?.error?.info
+        ?? error.message
+        ?? 'Unknown error',
+      data: error.response?.data as Record<string, unknown> | undefined,
+    };
+  }
+  if (error instanceof Error) {
+    return { message: error.message };
+  }
+  return { message: 'Unknown error' };
 }
 
 /**
@@ -57,14 +79,15 @@ export async function testOpenAIKey(apiKey: string, userId?: string): Promise<Ap
       success: false,
       message: `Unexpected response: ${response.status}`,
     };
-  } catch (error: any) {
-    if (error.response?.status === 401) {
+  } catch (error: unknown) {
+    const errInfo = extractAxiosErrorInfo(error);
+    if (errInfo.status === 401) {
       return {
         success: false,
         message: 'Invalid API key',
       };
     }
-    if (error.response?.status === 429) {
+    if (errInfo.status === 429) {
       return {
         success: false,
         message: 'Rate limit exceeded',
@@ -72,7 +95,7 @@ export async function testOpenAIKey(apiKey: string, userId?: string): Promise<Ap
     }
     return {
       success: false,
-      message: error.response?.data?.error?.message || error.message || 'Unknown error',
+      message: errInfo.message,
     };
   }
 }
@@ -122,14 +145,15 @@ export async function testClaudeKey(apiKey: string, userId?: string): Promise<Ap
       success: false,
       message: `Unexpected response: ${response.status}`,
     };
-  } catch (error: any) {
-    if (error.response?.status === 401) {
+  } catch (error: unknown) {
+    const errInfo = extractAxiosErrorInfo(error);
+    if (errInfo.status === 401) {
       return {
         success: false,
         message: 'Invalid API key',
       };
     }
-    if (error.response?.status === 429) {
+    if (errInfo.status === 429) {
       return {
         success: false,
         message: 'Rate limit exceeded',
@@ -137,7 +161,7 @@ export async function testClaudeKey(apiKey: string, userId?: string): Promise<Ap
     }
     return {
       success: false,
-      message: error.response?.data?.error?.message || error.message || 'Unknown error',
+      message: errInfo.message,
     };
   }
 }
@@ -200,18 +224,22 @@ export async function testAirlabsKey(apiKey: string, userId?: string): Promise<A
       success: false,
       message: `Unexpected response: ${response.status}`,
     };
-  } catch (error: any) {
-    if (error.response?.status === 401 || error.response?.status === 403) {
+  } catch (error: unknown) {
+    const errInfo = extractAxiosErrorInfo(error);
+    if (errInfo.status === 401 || errInfo.status === 403) {
       return {
         success: false,
         message: 'Invalid API key',
       };
     }
     // Check for AirLabs error format
-    if (error.response?.data?.error) {
-      const errorMsg = typeof error.response.data.error === 'string'
-        ? error.response.data.error
-        : error.response.data.error.message || 'API error';
+    if (errInfo.data && typeof errInfo.data === 'object' && 'error' in errInfo.data) {
+      const apiError = errInfo.data.error;
+      const errorMsg = typeof apiError === 'string'
+        ? apiError
+        : (typeof apiError === 'object' && apiError !== null && 'message' in apiError)
+          ? String((apiError as { message: unknown }).message)
+          : 'API error';
       return {
         success: false,
         message: errorMsg,
@@ -219,7 +247,7 @@ export async function testAirlabsKey(apiKey: string, userId?: string): Promise<A
     }
     return {
       success: false,
-      message: error.response?.data?.error?.message || error.message || 'Unknown error',
+      message: errInfo.message,
     };
   }
 }
@@ -269,8 +297,9 @@ export async function testAviationstackKey(apiKey: string, userId?: string): Pro
       success: false,
       message: `Unexpected response: ${response.status}`,
     };
-  } catch (error: any) {
-    if (error.response?.status === 401 || error.response?.status === 403) {
+  } catch (error: unknown) {
+    const errInfo = extractAxiosErrorInfo(error);
+    if (errInfo.status === 401 || errInfo.status === 403) {
       return {
         success: false,
         message: 'Invalid API key',
@@ -278,7 +307,7 @@ export async function testAviationstackKey(apiKey: string, userId?: string): Pro
     }
     return {
       success: false,
-      message: error.response?.data?.error?.info || error.message || 'Unknown error',
+      message: errInfo.message,
     };
   }
 }
@@ -335,28 +364,29 @@ export async function testOpenSkyCredentials(
         success: false,
         message: 'Invalid response from authentication server',
       };
-    } catch (error: any) {
-      if (error.response?.status === 401 || error.response?.status === 403) {
+    } catch (error: unknown) {
+      const errInfo = extractAxiosErrorInfo(error);
+      if (errInfo.status === 401 || errInfo.status === 403) {
         return {
           success: false,
           message: 'Invalid OAuth2 credentials - please check Client ID and Client Secret',
         };
       }
-      if (error.response?.data?.error_description) {
+      if (errInfo.data && typeof errInfo.data === 'object' && 'error_description' in errInfo.data) {
         return {
           success: false,
-          message: error.response.data.error_description,
+          message: String(errInfo.data.error_description),
         };
       }
       return {
         success: false,
-        message: error.response?.data?.error || error.message || 'Authentication failed',
+        message: errInfo.message || 'Authentication failed',
       };
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      message: error.message || 'Unknown error',
+      message: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 }

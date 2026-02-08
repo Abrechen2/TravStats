@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { APIError as AnthropicAPIError } from '@anthropic-ai/sdk/core/error';
 import { ITextParser, ProviderAvailability, TextProvider } from '../types';
 import { ParsedBooking } from '../../bookingParser';
 import { normalizeParsedBooking, cleanLLMJsonResponse, getTextParserPrompt, getLatestClaudeTextModel, getClaudeTextModels } from '../shared/utils';
@@ -97,7 +98,7 @@ export class ClaudeTextParser implements ITextParser {
     const client = this.getClient(apiKey);
     const prompt = getTextParserPrompt(subject, text);
     
-    let lastError: any = null;
+    let lastError: unknown = null;
     
     // Try each model in order until one works
     for (let i = 0; i < modelsToTry.length; i++) {
@@ -179,11 +180,11 @@ export class ClaudeTextParser implements ITextParser {
 
       // Parse JSON
       const cleanedResponse = cleanLLMJsonResponse(rawResponse);
-      let parsedData: any;
+      let parsedData: unknown;
 
       try {
         parsedData = JSON.parse(cleanedResponse);
-      } catch (parseError) {
+      } catch (parseError: unknown) {
         if (shouldLog) {
           log.error({
             operation: 'claude_text_parse_json_error',
@@ -200,24 +201,25 @@ export class ClaudeTextParser implements ITextParser {
       }
 
       // Normalize to array
-      let flightsArray: any[] = [];
+      let flightsArray: Record<string, unknown>[] = [];
 
       if (Array.isArray(parsedData)) {
-        flightsArray = parsedData;
+        flightsArray = parsedData as Record<string, unknown>[];
       } else if (parsedData && typeof parsedData === 'object') {
+        const dataObj = parsedData as Record<string, unknown>;
         const possibleKeys = ['flights', 'flightNumbers', 'data', 'results', 'items'];
         let foundArray = false;
 
         for (const key of possibleKeys) {
-          if (Array.isArray(parsedData[key])) {
-            flightsArray = parsedData[key];
+          if (Array.isArray(dataObj[key])) {
+            flightsArray = dataObj[key] as Record<string, unknown>[];
             foundArray = true;
             break;
           }
         }
 
         if (!foundArray) {
-          flightsArray = [parsedData];
+          flightsArray = [dataObj];
         }
       }
 
@@ -235,11 +237,11 @@ export class ClaudeTextParser implements ITextParser {
       }
 
       // Filter out completely invalid flights (missing critical fields)
-      const filteredFlights = flightsArray.filter((flight: any) =>
+      const filteredFlights = flightsArray.filter((flight: Record<string, unknown>) =>
         flight.flightNumber && flight.departureCode && flight.arrivalCode
       );
 
-      const filteredOut = flightsArray.filter((flight: any) =>
+      const filteredOut = flightsArray.filter((flight: Record<string, unknown>) =>
         !flight.flightNumber || !flight.departureCode || !flight.arrivalCode
       );
 
@@ -249,27 +251,27 @@ export class ClaudeTextParser implements ITextParser {
             operation: 'claude_text_parse_flights_filtered',
             context: {
               filteredCount: filteredOut.length,
-              filtered: filteredOut.map((f: any) => ({
-                flightNumber: f.flightNumber || 'MISSING',
-                departureCode: f.departureCode || 'MISSING',
-                arrivalCode: f.arrivalCode || 'MISSING',
+              filtered: filteredOut.map((f: Record<string, unknown>) => ({
+                flightNumber: (f.flightNumber as string) || 'MISSING',
+                departureCode: (f.departureCode as string) || 'MISSING',
+                arrivalCode: (f.arrivalCode as string) || 'MISSING',
               })),
             },
           });
         } else {
           logger.warn({
             count: filteredOut.length,
-            filtered: filteredOut.map((f: any) => ({
-              flightNumber: f.flightNumber || 'MISSING',
-              departureCode: f.departureCode || 'MISSING',
-              arrivalCode: f.arrivalCode || 'MISSING',
+            filtered: filteredOut.map((f: Record<string, unknown>) => ({
+              flightNumber: (f.flightNumber as string) || 'MISSING',
+              departureCode: (f.departureCode as string) || 'MISSING',
+              arrivalCode: (f.arrivalCode as string) || 'MISSING',
             }))
           }, '[Claude Text Parser] Flights filtered out due to missing critical fields');
         }
       }
 
       // Normalize remaining flights
-      const results: ParsedBooking[] = filteredFlights.map((flight: any) => normalizeParsedBooking(flight));
+      const results: ParsedBooking[] = filteredFlights.map((flight: Record<string, unknown>) => normalizeParsedBooking(flight));
       const totalDuration = Date.now() - startTime;
 
       if (shouldLog) {
@@ -295,12 +297,19 @@ export class ClaudeTextParser implements ITextParser {
       }
 
         return results;
-      } catch (error: any) {
+      } catch (error: unknown) {
         lastError = error;
-        
+
+        const isApiError = error instanceof AnthropicAPIError;
+        const statusCode = isApiError ? error.status : undefined;
+
         // For 404 errors (model not found), try next model
-        if (error?.status === 404) {
-          const modelError = error?.error?.error?.message || '';
+        if (statusCode === 404) {
+          const apiErrorBody = isApiError ? error.error : undefined;
+          const nestedError = apiErrorBody && typeof apiErrorBody === 'object' && 'error' in apiErrorBody
+            ? (apiErrorBody as { error?: { message?: string } }).error
+            : undefined;
+          const modelError = nestedError?.message || '';
           if (shouldLog) {
             log.warn({
               operation: 'claude_text_parse_model_not_found_retry',
@@ -312,34 +321,34 @@ export class ClaudeTextParser implements ITextParser {
               },
             });
           } else {
-            logger.warn({ 
+            logger.warn({
               model,
               attempt: i + 1,
-              message: modelError 
+              message: modelError
             }, `[Claude Text Parser] Model not found, ${isLastAttempt ? 'no more models to try' : 'trying next model'}`);
           }
-          
+
           // If this is the last model, throw error
           if (isLastAttempt) {
             throw new Error(`Claude model not found: ${modelError || model}. Tried all available models. Please check your CLAUDE_MODEL environment variable or API key permissions.`);
           }
-          
+
           // Continue to next model
           continue;
         }
-        
+
         // For other errors (401, 429, etc.), throw immediately
         const totalDuration = Date.now() - startTime;
         const errorContext = {
           model,
           textLength: text.length,
           totalDuration,
-          status: error?.status,
+          status: statusCode,
           errorMessage: error instanceof Error ? error.message : 'Unknown error',
           errorStack: error instanceof Error ? error.stack : undefined,
         };
 
-        if (error?.status === 401) {
+        if (statusCode === 401) {
           if (shouldLog) {
             log.error({
               operation: 'claude_text_parse_auth_error',
@@ -349,7 +358,7 @@ export class ClaudeTextParser implements ITextParser {
           throw new Error('Invalid Claude API key');
         }
 
-        if (error?.status === 429) {
+        if (statusCode === 429) {
           if (shouldLog) {
             log.error({
               operation: 'claude_text_parse_rate_limit',

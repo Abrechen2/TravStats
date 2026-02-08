@@ -12,7 +12,7 @@ export default function ReceiptUpload({
   currentReceiptUrl,
   onUploadSuccess,
   onDelete,
-}: ReceiptUploadProps) {
+}: ReceiptUploadProps): JSX.Element {
   const { t } = useTranslation(['flights', 'common', 'errors']);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -42,8 +42,9 @@ export default function ReceiptUpload({
       const receiptUrl = await uploadsApi.uploadReceipt(file, setUploadProgress);
       onUploadSuccess(receiptUrl);
       setUploadProgress(0);
-    } catch (err: any) {
-      setError(err.response?.data?.error || t('flights:receipt.uploadFailed'));
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: { error?: string } } };
+      setError(errorObj.response?.data?.error || t('flights:receipt.uploadFailed'));
     } finally {
       setUploading(false);
     }

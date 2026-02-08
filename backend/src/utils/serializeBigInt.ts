@@ -17,7 +17,7 @@ export function serializeBigInt<T>(obj: T): T {
   }
 
   if (typeof obj === 'object') {
-    const result: any = {};
+    const result: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj)) {
       result[key] = serializeBigInt(value);
     }

@@ -1,7 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 
 interface TrainingDataFiltersProps {
-  trainingData: any[];
+  trainingData: Array<{
+    status: string;
+    type: string;
+    tags?: string[];
+  }>;
   onFilterChange: (filters: {
     status?: string;
     type?: string;
@@ -10,7 +14,7 @@ interface TrainingDataFiltersProps {
   }) => void;
 }
 
-export default function TrainingDataFilters({ trainingData, onFilterChange }: TrainingDataFiltersProps) {
+export default function TrainingDataFilters({ trainingData, onFilterChange }: TrainingDataFiltersProps): JSX.Element {
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<string>('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);

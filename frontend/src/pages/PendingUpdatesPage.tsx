@@ -6,7 +6,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslation } from '../hooks/useTranslation';
-import { pendingUpdatesApi } from '../lib/api';
+import { pendingUpdatesApi, type StatisticsImpact } from '../lib/api';
 import { useToastStore } from '../store/toastStore';
 import { logger } from '../lib/logger';
 import NavigationBar from '../components/NavigationBar';
@@ -14,23 +14,42 @@ import { useThemeStore } from '../store/themeStore';
 import PendingUpdateCard from '../components/PendingUpdateCard';
 import StatisticsImpactPreview from '../components/StatisticsImpactPreview';
 
+interface FlightUpdateData {
+  airline?: string;
+  aircraft?: string;
+  gate?: string;
+  terminal?: string;
+  depIata?: string;
+  arrIata?: string;
+  departureTime?: string;
+  arrivalTime?: string;
+  [key: string]: string | number | boolean | null | undefined;
+}
+
+interface ChangeEntry {
+  field: string;
+  type: 'added' | 'removed' | 'changed';
+  oldValue: string | number | boolean | null | undefined;
+  newValue: string | number | boolean | null | undefined;
+}
+
 interface PendingUpdate {
   id: string;
   flightId: string;
   userId: string;
   status: 'pending' | 'applied' | 'rejected' | 'expired' | 'edited';
-  originalData: any;
-  proposedData: any;
-  editedData?: any;
-  changes: any[];
-  editedChanges?: any[];
+  originalData: FlightUpdateData;
+  proposedData: FlightUpdateData;
+  editedData?: FlightUpdateData;
+  changes: ChangeEntry[];
+  editedChanges?: ChangeEntry[];
   apiSource: string;
   fetchedAt: string;
   expiresAt: string;
   appliedAt?: string;
   rejectedAt?: string;
   editedAt?: string;
-  statisticsImpact?: any;
+  statisticsImpact?: StatisticsImpact;
   flight?: {
     id: string;
     flightNumber: string | null;
@@ -52,7 +71,7 @@ interface Statistics {
   averageUpdateTime: number | null;
 }
 
-export default function PendingUpdatesPage() {
+export default function PendingUpdatesPage(): JSX.Element {
   const { t } = useTranslation(['common', 'pendingUpdates']);
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
   const addToast = useToastStore((state) => state.addToast);
@@ -73,7 +92,7 @@ export default function PendingUpdatesPage() {
   const loadUpdates = async () => {
     try {
       setLoading(true);
-      const filters: any = {};
+      const filters: { status?: string; flightId?: string } = {};
       if (statusFilter && statusFilter !== 'all') {
         filters.status = statusFilter;
       }
@@ -120,7 +139,7 @@ export default function PendingUpdatesPage() {
     }
   };
 
-  const handleEdit = async (id: string, editedData: any) => {
+  const handleEdit = async (id: string, editedData: FlightUpdateData) => {
     try {
       await pendingUpdatesApi.update(id, editedData);
       addToast('success', t('pendingUpdates:messages.updated'));
@@ -133,8 +152,8 @@ export default function PendingUpdatesPage() {
   };
 
   const sortedUpdates = [...updates].sort((a, b) => {
-    let aValue: any;
-    let bValue: any;
+    let aValue: number;
+    let bValue: number;
 
     if (sortBy === 'createdAt') {
       aValue = new Date(a.fetchedAt).getTime();
@@ -246,7 +265,7 @@ export default function PendingUpdatesPage() {
               </label>
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
+                onChange={(e) => setSortBy(e.target.value as 'createdAt' | 'expiresAt')}
                 className="input w-full"
               >
                 <option value="createdAt">{t('pendingUpdates:filters.createdAt')}</option>

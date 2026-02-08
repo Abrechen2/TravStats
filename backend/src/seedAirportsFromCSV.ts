@@ -72,13 +72,14 @@ async function seedAirportsFromCSV() {
     try {
       await downloadCSV(downloadUrl, csvPath);
       logger.info({ operation: 'seed_airports_download_success', message: 'CSV file downloaded successfully' });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       logger.error({
         operation: 'seed_airports_download_error',
         message: 'Failed to download CSV file',
-        error: { message: error.message },
+        error: { message: errorMsg },
       });
-      throw new Error(`Fehler beim Herunterladen der CSV-Datei: ${error.message}`);
+      throw new Error(`Fehler beim Herunterladen der CSV-Datei: ${errorMsg}`);
     }
   }
 

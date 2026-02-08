@@ -16,7 +16,7 @@ interface AirlineOption {
   count: number;
 }
 
-export default function Filters({ onFilterChange }: FiltersProps) {
+export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
   const { t } = useTranslation(['map', 'common', 'flights']);
   const isDarkMode = useThemeStore((s) => s.isDarkMode);
   

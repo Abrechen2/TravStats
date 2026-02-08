@@ -9,9 +9,17 @@ interface TrainingDataPreviewProps {
   onClose: () => void;
 }
 
-export default function TrainingDataPreview({ trainingDataId, isOpen, onClose }: TrainingDataPreviewProps) {
+export default function TrainingDataPreview({ trainingDataId, isOpen, onClose }: TrainingDataPreviewProps): JSX.Element | null {
   const { t } = useTranslation('training');
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<{
+    type: string;
+    status: string;
+    createdAt: string;
+    trainedAt?: string;
+    tags?: string[];
+    annotations?: Record<string, unknown>;
+    extractedData?: unknown[];
+  } | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {

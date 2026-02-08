@@ -268,19 +268,19 @@ export async function hasApiKeyAccess(
       try {
         switch (provider) {
           case 'openai':
-            hasGlobalKey = !!(adminSettings as any).globalOpenaiApiKey;
+            hasGlobalKey = !!adminSettings.globalOpenaiApiKey;
             break;
           case 'claude':
-            hasGlobalKey = !!(adminSettings as any).globalClaudeApiKey;
+            hasGlobalKey = !!adminSettings.globalClaudeApiKey;
             break;
           case 'airlabs':
-            hasGlobalKey = !!(adminSettings as any).globalAirlabsApiKey;
+            hasGlobalKey = !!adminSettings.globalAirlabsApiKey;
             break;
           case 'aviationstack':
-            hasGlobalKey = !!(adminSettings as any).globalAviationstackApiKey;
+            hasGlobalKey = !!adminSettings.globalAviationstackApiKey;
             break;
         }
-      } catch (error) {
+      } catch (error: unknown) {
         // Field might not exist in database yet
         logger.warn({
           operation: 'api_key_access_check_field_error',

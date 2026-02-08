@@ -33,26 +33,28 @@ export async function analyzeFeedbackForPatterns(
 
   // Collect common issues and their examples
   for (const event of events) {
-    const payload = event.payload as any;
-    
+    const payload = event.payload as Record<string, unknown>;
+
     if (payload.issues && Array.isArray(payload.issues)) {
       for (const issue of payload.issues) {
+        if (typeof issue !== 'string') continue;
         if (!issuePatterns[issue]) {
           issuePatterns[issue] = { count: 0, examples: [] };
         }
         issuePatterns[issue].count++;
-        
+
         // Collect examples from parsed result
         if (payload.parsedResult && Array.isArray(payload.parsedResult)) {
           for (const flight of payload.parsedResult) {
-            if (issue.includes('flightNumber') && flight.flightNumber) {
-              issuePatterns[issue].examples.push(flight.flightNumber);
-            } else if (issue.includes('departureCode') && flight.departureCode) {
-              issuePatterns[issue].examples.push(flight.departureCode);
-            } else if (issue.includes('arrivalCode') && flight.arrivalCode) {
-              issuePatterns[issue].examples.push(flight.arrivalCode);
-            } else if (issue.includes('pnr') && flight.pnr) {
-              issuePatterns[issue].examples.push(flight.pnr);
+            const f = flight as Record<string, unknown>;
+            if (issue.includes('flightNumber') && typeof f.flightNumber === 'string') {
+              issuePatterns[issue].examples.push(f.flightNumber);
+            } else if (issue.includes('departureCode') && typeof f.departureCode === 'string') {
+              issuePatterns[issue].examples.push(f.departureCode);
+            } else if (issue.includes('arrivalCode') && typeof f.arrivalCode === 'string') {
+              issuePatterns[issue].examples.push(f.arrivalCode);
+            } else if (issue.includes('pnr') && typeof f.pnr === 'string') {
+              issuePatterns[issue].examples.push(f.pnr);
             }
           }
         }
@@ -237,9 +239,10 @@ export async function getPatternAnalysisSummary(days: number = 30): Promise<{
   const issueCounts: Record<string, number> = {};
 
   for (const event of events) {
-    const payload = event.payload as any;
+    const payload = event.payload as Record<string, unknown>;
     if (payload.issues && Array.isArray(payload.issues)) {
       for (const issue of payload.issues) {
+        if (typeof issue !== 'string') continue;
         issueCounts[issue] = (issueCounts[issue] || 0) + 1;
       }
     }

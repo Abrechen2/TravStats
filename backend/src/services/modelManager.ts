@@ -37,7 +37,7 @@ export async function checkTrainedModelAvailable(modelName: string): Promise<boo
     });
     
     const models = response.data.models || [];
-    const available = models.some((m: any) => m.name === modelName);
+    const available = models.some((m: { name: string }) => m.name === modelName);
     
     // Update cache
     modelCache.set(modelName, {

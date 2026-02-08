@@ -17,7 +17,7 @@ export default function AirportAutocomplete({
   label,
   placeholder,
   required = false,
-}: AirportAutocompleteProps) {
+}: AirportAutocompleteProps): JSX.Element {
   const { t } = useTranslation(['flights', 'common']);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Airport[]>([]);
