@@ -20,10 +20,9 @@ import type { Flight, FlightInput, FlightFilters, GeoJSONFeature, OnboardingStat
 import { useSettingsStore } from '../store/settingsStore';
 import { API_LIMITS, UI_CONFIG, STORAGE_KEYS } from '../lib/constants';
 import { toCsv, escapeXml, downloadBlob } from '../lib/export';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+// jsPDF and autoTable are dynamically imported when needed to reduce bundle size
 
-export default function DashboardPage() {
+export default function DashboardPage(): JSX.Element {
   const { t } = useTranslation(['dashboard', 'common', 'flights', 'training']);
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
@@ -88,7 +87,7 @@ export default function DashboardPage() {
   }, []);
   const settings = useSettingsStore();
   const addToast = useToastStore((state) => state.addToast);
-  const [newAchievements, setNewAchievements] = useState<any[]>([]);
+  const [newAchievements, setNewAchievements] = useState<import('../types').UserAchievement[]>([]);
   const [loadingOnboarding, setLoadingOnboarding] = useState(true);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
@@ -198,14 +197,15 @@ export default function DashboardPage() {
   const loadFlights = async () => {
     try {
       setLoadingMap(true);
-      const { minRouteCount, ...apiFilters } = filters as any;
+      const { minRouteCount: _minRouteCount, ...apiFilters } = filters;
 
-      // Load all flights by pagination
+      // Load all flights by pagination (with safety limit)
+      const MAX_PAGES = 100;
       let allFlights: Flight[] = [];
       let offset = 0;
       const limit = API_LIMITS.MAX_PAGE_SIZE;
 
-      while (true) {
+      for (let page = 0; page < MAX_PAGES; page++) {
         const data = await flightsApi.getAll({ ...apiFilters, limit, offset });
         allFlights = [...allFlights, ...data.flights];
 
@@ -217,11 +217,11 @@ export default function DashboardPage() {
         offset += limit;
       }
 
-      // Load all GeoJSON features by pagination
+      // Load all GeoJSON features by pagination (with safety limit)
       let allGeoFeatures: GeoJSONFeature[] = [];
       offset = 0;
 
-      while (true) {
+      for (let page = 0; page < MAX_PAGES; page++) {
         const geoData = await flightsApi.getGeoJSON({ ...apiFilters, limit, offset });
         allGeoFeatures = [...allGeoFeatures, ...geoData.features];
 
@@ -244,7 +244,7 @@ export default function DashboardPage() {
 
   const handleAddFlight = async (flight: FlightInput) => {
     try {
-      const result: any = await flightsApi.create(flight);
+      const result = await flightsApi.create(flight) as Flight & { newAchievements?: import('../types').UserAchievement[] };
       setShowFlightForm(false);
       loadFlights();
 
@@ -253,7 +253,7 @@ export default function DashboardPage() {
       setRecentFlights(recentData.flights);
       setTotalFlightsCount(recentData.total);
 
-      setOnboarding((prev: any) => ({ ...prev, flightAdded: true }));
+      setOnboarding((prev) => ({ ...prev, flightAdded: true }));
 
       // Show achievement popup if new achievements were unlocked
       if (result.newAchievements && result.newAchievements.length > 0) {
@@ -265,7 +265,7 @@ export default function DashboardPage() {
       }
     } catch (error) {
       logger.error('Failed to add flight:', error);
-      alert(t('dashboard:errors.addFlight'));
+      addToast('error', t('dashboard:errors.addFlight'));
       throw error;
     }
   };
@@ -277,7 +277,7 @@ export default function DashboardPage() {
 
   const handleUpdateFlight = async (id: string, updates: Partial<Flight>) => {
     try {
-      const result: any = await flightsApi.update(id, updates);
+      const result = await flightsApi.update(id, updates) as Flight & { newAchievements?: import('../types').UserAchievement[] };
       setEditingFlight(null);
       loadFlights();
 
@@ -296,7 +296,7 @@ export default function DashboardPage() {
       }
     } catch (error) {
       logger.error('Failed to update flight:', error);
-      alert(t('dashboard:errors.updateFlight'));
+      addToast('error', t('dashboard:errors.updateFlight'));
       throw error;
     }
   };
@@ -316,7 +316,7 @@ export default function DashboardPage() {
         analyticsApi.track('export', { format });
       }
       if (format === 'geojson') {
-        const { minRouteCount, ...apiFilters } = filters as any;
+        const { minRouteCount: _minRouteCount, ...apiFilters } = filters;
         const geoData = await flightsApi.getGeoJSON(apiFilters);
         const blob = new Blob([JSON.stringify(geoData, null, 2)], {
           type: 'application/json',
@@ -329,7 +329,7 @@ export default function DashboardPage() {
         URL.revokeObjectURL(url);
       } else {
         // CSV/PDF/KML export
-        const { minRouteCount, ...apiFilters } = filters as any;
+        const { minRouteCount: _minRouteCount, ...apiFilters } = filters;
         const data = await flightsApi.getAll(apiFilters);
 
         // Build rows with proper structure (not pre-joined)
@@ -374,7 +374,9 @@ export default function DashboardPage() {
           const blob = new Blob([csvContent], { type: 'text/csv' });
           downloadBlob(blob, `flights-${new Date().toISOString()}.csv`);
         } else if (format === 'pdf') {
-          // Generate real PDF using jsPDF
+          // Generate real PDF using jsPDF (dynamically imported)
+          const { jsPDF } = await import('jspdf');
+          const { default: autoTable } = await import('jspdf-autotable');
           const doc = new jsPDF('landscape');
           
           // Add title
@@ -459,9 +461,9 @@ export default function DashboardPage() {
           return;
         }
 
-        let parsed: any[] = [];
+        let parsed: Record<string, string>[] = [];
         if (file.name.endsWith('.json')) {
-          parsed = JSON.parse(content);
+          parsed = JSON.parse(content) as Record<string, string>[];
         } else {
           // naive CSV parser
           const lines = content.split('\n').filter(Boolean);
@@ -494,15 +496,15 @@ export default function DashboardPage() {
                 iata: item.depIata || item['Departure Airport'] || item.departure_airport || '',
                 icao: item.depIcao || item.departure_icao || '',
                 name: item.depName || item.departure_name || '',
-                lat: item.depLat || item.departure_lat || 0,
-                lon: item.depLon || item.departure_lon || 0,
+                lat: Number(item.depLat || item.departure_lat || 0),
+                lon: Number(item.depLon || item.departure_lon || 0),
               },
               arrival: {
                 iata: item.arrIata || item['Arrival Airport'] || item.arrival_airport || '',
                 icao: item.arrIcao || item.arrival_icao || '',
                 name: item.arrName || item.arrival_name || '',
-                lat: item.arrLat || item.arrival_lat || 0,
-                lon: item.arrLon || item.arrival_lon || 0,
+                lat: Number(item.arrLat || item.arrival_lat || 0),
+                lon: Number(item.arrLon || item.arrival_lon || 0),
               },
               departureTime: item.departureTime || item['Departure Time'] || item.departure_time || '',
               arrivalTime: item.arrivalTime || item['Arrival Time'] || item.arrival_time || '',
@@ -1011,7 +1013,7 @@ export default function DashboardPage() {
                 selectedFlightId={selectedFlightId}
                 onFlightClick={setSelectedFlightId}
                 is3D={is3DView}
-                minRouteCount={(filters as any).minRouteCount ?? 1}
+                minRouteCount={filters.minRouteCount ?? 1}
               />
             </ErrorBoundary>
           </div>

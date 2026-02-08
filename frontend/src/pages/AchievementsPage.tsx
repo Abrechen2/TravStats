@@ -23,7 +23,7 @@ const tierTextColors = {
   diamond: 'text-purple-400',
 };
 
-export default function AchievementsPage() {
+export default function AchievementsPage(): JSX.Element {
   const { t } = useTranslation(['achievements', 'common']);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [summary, setSummary] = useState<AchievementSummary | null>(null);

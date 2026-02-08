@@ -5,13 +5,66 @@
  * Also calculates statistics impact of updates.
  */
 
-import { PrismaClient, PendingFlightUpdate, Flight } from '@prisma/client';
+import { PrismaClient, PendingFlightUpdate, Flight, Prisma } from '@prisma/client';
 import { prisma } from '../db';
 import logger from '../utils/logger';
 import { calculateDistance } from '../utils/geo';
 import { getCachedAirports } from './airportCache';
 
 const prismaClient = prisma as PrismaClient;
+
+/** Flight data fields used for original/proposed data snapshots */
+export interface FlightDataSnapshot {
+  airline?: string | null;
+  aircraft?: string | null;
+  gate?: string | null;
+  terminal?: string | null;
+  depIata?: string | null;
+  depIcao?: string | null;
+  depName?: string | null;
+  arrIata?: string | null;
+  arrIcao?: string | null;
+  arrName?: string | null;
+  departureTime?: string | null;
+  arrivalTime?: string | null;
+  status?: string | null;
+  actualRoute?: unknown;
+  overflownCountries?: string[] | null;
+  routeDistance?: number | null;
+}
+
+/** Flight data snapshot extended with coordinate info */
+interface FlightDataWithCoords extends FlightDataSnapshot {
+  depLat?: number | null;
+  depLon?: number | null;
+  arrLat?: number | null;
+  arrLon?: number | null;
+}
+
+/** A single change entry between original and proposed data */
+export interface ChangeEntry {
+  field: string;
+  oldValue: string | number | boolean | null | undefined;
+  newValue: string | number | boolean | null | undefined;
+  type: 'added' | 'removed' | 'changed';
+}
+
+/** Metadata for pending updates (e.g. historical enrichment) */
+interface PendingUpdateMetadata {
+  isHistoricalEnrichment?: boolean;
+  confidence?: number;
+  sourceFlightsCount?: number;
+  [key: string]: unknown;
+}
+
+/** Enrichment history entry stored on Flight */
+interface EnrichmentHistoryEntry {
+  type: string;
+  timestamp: string;
+  confidence?: number;
+  source?: string;
+  sourceFlightsCount?: number;
+}
 
 export interface StatisticsImpact {
   distance: {
@@ -47,8 +100,8 @@ export async function getPendingUpdates(
     status?: string;
     flightId?: string;
   }
-) {
-  const where: any = {
+): Promise<PendingFlightUpdate[]> {
+  const where: Prisma.PendingFlightUpdateWhereInput = {
     userId,
   };
 
@@ -104,8 +157,8 @@ export async function getPendingUpdateById(
  */
 export async function calculateStatisticsImpact(
   flight: Flight,
-  originalData: any,
-  proposedData: any
+  originalData: FlightDataSnapshot,
+  proposedData: FlightDataSnapshot
 ): Promise<StatisticsImpact> {
   // Get all user's flown flights for comparison
   const allFlights = await prismaClient.flight.findMany({
@@ -204,7 +257,7 @@ export async function calculateStatisticsImpact(
 async function calculateUserStats(
   allFlights: Flight[],
   targetFlight: Flight,
-  flightData: any
+  flightData: FlightDataWithCoords
 ): Promise<{
   totalDistance: number;
   totalFlightTime: number;
@@ -279,7 +332,7 @@ async function calculateUserStats(
 export async function previewStatisticsImpact(
   pendingUpdateId: string,
   userId: string,
-  editedData?: any
+  editedData?: FlightDataSnapshot
 ): Promise<StatisticsImpact | null> {
   const pendingUpdate = await getPendingUpdateById(pendingUpdateId, userId);
   if (!pendingUpdate || !pendingUpdate.flight) {
@@ -287,8 +340,8 @@ export async function previewStatisticsImpact(
   }
 
   const flight = pendingUpdate.flight;
-  const dataToUse = (editedData || pendingUpdate.proposedData) as any;
-  
+  const dataToUse = (editedData || pendingUpdate.proposedData) as FlightDataSnapshot | null;
+
   if (!dataToUse) {
     return null;
   }
@@ -313,7 +366,7 @@ export async function previewStatisticsImpact(
 
   return await calculateStatisticsImpact(
     flight,
-    pendingUpdate.originalData,
+    pendingUpdate.originalData as FlightDataSnapshot,
     flightData
   );
 }
@@ -324,7 +377,7 @@ export async function previewStatisticsImpact(
 export async function updatePendingUpdate(
   id: string,
   userId: string,
-  editedData: any
+  editedData: FlightDataSnapshot
 ): Promise<PendingFlightUpdate | null> {
   try {
     const pendingUpdate = await getPendingUpdateById(id, userId);
@@ -338,7 +391,7 @@ export async function updatePendingUpdate(
 
     // Calculate edited changes
     const editedChanges = calculateChanges(
-      pendingUpdate.originalData,
+      pendingUpdate.originalData as FlightDataSnapshot,
       editedData
     );
 
@@ -351,9 +404,9 @@ export async function updatePendingUpdate(
     const updated = await prismaClient.pendingFlightUpdate.update({
       where: { id },
       data: {
-        editedData: editedData as any,
-        editedChanges: editedChanges as any,
-        statisticsImpact: statisticsImpact as any,
+        editedData: editedData as Prisma.InputJsonValue,
+        editedChanges: editedChanges as unknown as Prisma.InputJsonValue,
+        statisticsImpact: statisticsImpact as unknown as Prisma.InputJsonValue,
         editedAt: new Date(),
         status: 'edited',
         updatedAt: new Date(),
@@ -387,19 +440,19 @@ export async function updatePendingUpdate(
 /**
  * Calculate changes between two data objects
  */
-function calculateChanges(original: any, proposed: any): any[] {
-  const changes: any[] = [];
-  const fields = Object.keys({ ...original, ...proposed });
+function calculateChanges(original: FlightDataSnapshot, proposed: FlightDataSnapshot): ChangeEntry[] {
+  const changes: ChangeEntry[] = [];
+  const allKeys = new Set([...Object.keys(original), ...Object.keys(proposed)]);
 
-  for (const field of fields) {
-    const oldValue = original[field];
-    const newValue = proposed[field];
+  for (const field of allKeys) {
+    const oldValue = (original as Record<string, unknown>)[field];
+    const newValue = (proposed as Record<string, unknown>)[field];
 
     if (oldValue !== newValue) {
       changes.push({
         field,
-        oldValue,
-        newValue,
+        oldValue: oldValue as ChangeEntry['oldValue'],
+        newValue: newValue as ChangeEntry['newValue'],
         type:
           oldValue === undefined
             ? 'added'
@@ -435,8 +488,8 @@ export async function applyPendingUpdate(
     }
 
     const flight = pendingUpdate.flight;
-    const dataToApply = (pendingUpdate.editedData || pendingUpdate.proposedData) as any;
-    
+    const dataToApply = (pendingUpdate.editedData || pendingUpdate.proposedData) as FlightDataSnapshot | null;
+
     if (!dataToApply) {
       throw new Error('No data to apply');
     }
@@ -469,11 +522,11 @@ export async function applyPendingUpdate(
     }
 
     // Check if this is a historical enrichment
-    const metadata = pendingUpdate.metadata as any;
+    const metadata = pendingUpdate.metadata as PendingUpdateMetadata | null;
     const isHistoricalEnrichment = metadata?.isHistoricalEnrichment === true;
 
     // Prepare update data
-    const updateData: any = {
+    const updateData: Prisma.FlightUpdateInput = {
       airline: dataToApply.airline ?? flight.airline,
       aircraft: dataToApply.aircraft ?? flight.aircraft,
       gate: dataToApply.gate ?? flight.gate,
@@ -499,10 +552,10 @@ export async function applyPendingUpdate(
 
     // Update route data if present
     if (dataToApply.actualRoute !== undefined) {
-      updateData.actualRoute = dataToApply.actualRoute;
+      updateData.actualRoute = dataToApply.actualRoute as Prisma.InputJsonValue;
     }
     if (dataToApply.overflownCountries !== undefined) {
-      updateData.overflownCountries = dataToApply.overflownCountries;
+      updateData.overflownCountries = dataToApply.overflownCountries ?? undefined;
     }
     if (dataToApply.routeDistance !== undefined) {
       updateData.routeDistance = dataToApply.routeDistance;
@@ -531,15 +584,15 @@ export async function applyPendingUpdate(
 
     // Update enrichment history
     if (isHistoricalEnrichment && metadata) {
-      const existingHistory = (flight.enrichmentHistory as any[]) || [];
-      const newHistoryEntry = {
+      const existingHistory = (Array.isArray(flight.enrichmentHistory) ? flight.enrichmentHistory : []) as unknown as EnrichmentHistoryEntry[];
+      const newHistoryEntry: EnrichmentHistoryEntry = {
         type: 'historical_enrichment',
         timestamp: new Date().toISOString(),
         confidence: metadata.confidence,
         source: 'aggregated_from_live_flights',
         sourceFlightsCount: metadata.sourceFlightsCount,
       };
-      updateData.enrichmentHistory = [...existingHistory, newHistoryEntry];
+      updateData.enrichmentHistory = [...existingHistory, newHistoryEntry] as unknown as Prisma.InputJsonValue;
     }
 
     // Update flight
@@ -651,7 +704,7 @@ export async function updateUserStatistics(
       where: { userId },
     });
 
-    const updateData: any = {
+    const updateData: Prisma.PendingUpdateStatisticsUpdateInput = {
       lastUpdated: new Date(),
     };
 
@@ -682,7 +735,7 @@ export async function updateUserStatistics(
           editedUpdates: action === 'edited' ? 1 : 0,
           expiredUpdates: action === 'expired' ? 1 : 0,
           mostChangedFields: {},
-          ...updateData,
+          lastUpdated: new Date(),
         },
       });
     }
@@ -705,23 +758,35 @@ export async function cleanupExpiredUpdates(): Promise<number> {
   try {
     const now = new Date();
 
+    // Get expired updates (only need userId for statistics)
     const expired = await prismaClient.pendingFlightUpdate.findMany({
       where: {
         status: 'pending',
         expiresAt: { lt: now },
       },
+      select: { id: true, userId: true },
     });
 
-    for (const update of expired) {
-      await prismaClient.pendingFlightUpdate.update({
-        where: { id: update.id },
+    if (expired.length > 0) {
+      // Batch update all expired statuses at once (instead of N individual updates)
+      await prismaClient.pendingFlightUpdate.updateMany({
+        where: {
+          id: { in: expired.map((u) => u.id) },
+        },
         data: {
           status: 'expired',
           updatedAt: new Date(),
         },
       });
 
-      await updateUserStatistics(update.userId, 'expired');
+      // Update user statistics (grouped by userId to minimize DB calls)
+      const userIds = [...new Set(expired.map((u) => u.userId))];
+      for (const userId of userIds) {
+        const count = expired.filter((u) => u.userId === userId).length;
+        for (let i = 0; i < count; i++) {
+          await updateUserStatistics(userId, 'expired');
+        }
+      }
     }
 
     logger.info({

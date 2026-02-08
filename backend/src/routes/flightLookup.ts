@@ -7,6 +7,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { lookupFlightByNumber, parseFlightNumber } from '../services/flightLookup';
 import { flightLookupLimiter } from '../middleware/rateLimit';
+import { authenticate } from '../middleware/auth';
 
 const router = Router();
 
@@ -14,7 +15,7 @@ const router = Router();
  * GET /api/v1/flight-lookup/:flightNumber?date=2024-01-15
  * Lookup flight by number and optional date
  */
-router.get('/:flightNumber', flightLookupLimiter, async (req: Request, res: Response, next: NextFunction) => {
+router.get('/:flightNumber', authenticate, flightLookupLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { flightNumber } = req.params;
     const { date } = req.query;
@@ -68,7 +69,7 @@ router.get('/:flightNumber', flightLookupLimiter, async (req: Request, res: Resp
  * POST /api/v1/flight-lookup/bulk
  * Lookup multiple flights at once
  */
-router.post('/bulk', flightLookupLimiter, async (req: Request, res: Response, next: NextFunction) => {
+router.post('/bulk', authenticate, flightLookupLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { flightNumbers, date } = req.body;
 
@@ -108,11 +109,11 @@ router.post('/bulk', flightLookupLimiter, async (req: Request, res: Response, ne
             success: true,
             flights,
           };
-        } catch (error: any) {
+        } catch (error: unknown) {
           return {
             flightNumber,
             success: false,
-            error: error.message,
+            error: error instanceof Error ? error.message : 'Unknown error',
           };
         }
       })

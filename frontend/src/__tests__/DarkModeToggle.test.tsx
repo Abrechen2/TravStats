@@ -8,6 +8,8 @@ vi.mock('../store/themeStore', () => ({
   useThemeStore: vi.fn(),
 }));
 
+const mockUseThemeStore = vi.mocked(useThemeStore);
+
 describe('DarkModeToggle', () => {
   const mockToggleDarkMode = vi.fn();
 
@@ -16,66 +18,45 @@ describe('DarkModeToggle', () => {
   });
 
   it('should render sun icon when dark mode is active', () => {
-    (useThemeStore as any).mockReturnValue({
+    mockUseThemeStore.mockReturnValue({
       isDarkMode: true,
       toggleDarkMode: mockToggleDarkMode,
+      setDarkMode: vi.fn(),
     });
 
     render(<DarkModeToggle />);
 
-    const button = screen.getByRole('button', { name: /toggle dark mode/i });
+    const button = screen.getByRole('button', { name: /theme\.toggle/i });
     expect(button).toBeInTheDocument();
-    expect(button).toHaveAttribute('title', 'Light Mode aktivieren');
+    expect(button).toHaveAttribute('title', 'theme.enableLight');
   });
 
   it('should render moon icon when dark mode is inactive', () => {
-    (useThemeStore as any).mockReturnValue({
+    mockUseThemeStore.mockReturnValue({
       isDarkMode: false,
       toggleDarkMode: mockToggleDarkMode,
+      setDarkMode: vi.fn(),
     });
 
     render(<DarkModeToggle />);
 
-    const button = screen.getByRole('button', { name: /toggle dark mode/i });
+    const button = screen.getByRole('button', { name: /theme\.toggle/i });
     expect(button).toBeInTheDocument();
-    expect(button).toHaveAttribute('title', 'Dark Mode aktivieren');
+    expect(button).toHaveAttribute('title', 'theme.enableDark');
   });
 
   it('should call toggleDarkMode when clicked', () => {
-    (useThemeStore as any).mockReturnValue({
+    mockUseThemeStore.mockReturnValue({
       isDarkMode: false,
       toggleDarkMode: mockToggleDarkMode,
+      setDarkMode: vi.fn(),
     });
 
     render(<DarkModeToggle />);
 
-    const button = screen.getByRole('button', { name: /toggle dark mode/i });
+    const button = screen.getByRole('button', { name: /theme\.toggle/i });
     fireEvent.click(button);
 
     expect(mockToggleDarkMode).toHaveBeenCalledTimes(1);
   });
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

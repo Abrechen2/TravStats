@@ -6,18 +6,43 @@ import { hashPassword, comparePassword } from '../utils/password';
 import { prisma } from '../db';
 
 // Mock dependencies
+const mockCategoryLogger = {
+  info: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn(),
+  debug: jest.fn(),
+  trace: jest.fn(),
+  fatal: jest.fn(),
+};
+
 jest.mock('../utils/logger', () => ({
   __esModule: true,
   default: {
     info: jest.fn(),
     warn: jest.fn(),
     error: jest.fn(),
+    debug: jest.fn(),
   },
-  securityLogger: {
-    warn: jest.fn(),
-    info: jest.fn(),
-    error: jest.fn(),
-  },
+  securityLogger: mockCategoryLogger,
+  dbLogger: mockCategoryLogger,
+  httpLogger: mockCategoryLogger,
+  parserLogger: mockCategoryLogger,
+  parserVisionLogger: mockCategoryLogger,
+  parserTextLogger: mockCategoryLogger,
+  parserFactoryLogger: mockCategoryLogger,
+  systemLogger: mockCategoryLogger,
+  initializeCategoryStreams: jest.fn(),
+  reinitializeCategoryStreams: jest.fn(),
+  PerformanceTracker: jest.fn().mockImplementation(() => ({
+    end: jest.fn(),
+  })),
+  generateRequestId: jest.fn(() => 'test-request-id'),
+  enrichWithRequest: jest.fn(() => ({})),
+  logRequest: jest.fn(),
+  logQuery: jest.fn(),
+  logApiCall: jest.fn(),
+  logAchievement: jest.fn(),
+  logSecurityEvent: jest.fn(),
 }));
 
 describe('Security Tests', () => {

@@ -13,7 +13,7 @@ interface StatsProps {
   filters?: FlightFilters;
 }
 
-export default function Stats({ filters = {} }: StatsProps) {
+export default function Stats({ filters = {} }: StatsProps): JSX.Element {
   const { t } = useTranslation(['stats', 'common']);
   const { units } = useSettingsStore();
   const [stats, setStats] = useState<StatsType | null>(null);

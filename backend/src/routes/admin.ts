@@ -1,11 +1,45 @@
 import { Router, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../db';
 import { AppError } from '../middleware/errorHandler';
 import crypto from 'crypto';
 import { decryptApiKey, encryptApiKey } from '../utils/encryption';
 import logger from '../utils/logger';
+
+// ---- Admin update data interfaces ----
+interface TrainingConfigUpdateData {
+  trainingModelOutputDir?: string | null;
+  trainingEmailModelName?: string | null;
+  trainingVisionModelName?: string | null;
+}
+
+interface GlobalApiKeysUpdateData {
+  globalAirlabsApiKey?: string | null;
+  globalAviationstackApiKey?: string | null;
+  globalOpenskyClientId?: string | null;
+  globalOpenskyClientSecret?: string | null;
+  globalOpenskyUsername?: string | null;
+  globalOpenskyPassword?: string | null;
+  allowUserFlightApiKeys?: boolean;
+  requireUserFlightApiKeys?: boolean;
+}
+
+interface ParserSettingsUpdateData {
+  globalOpenaiApiKey?: string | null;
+  globalClaudeApiKey?: string | null;
+  allowUserApiKeys?: boolean;
+  requireUserApiKeys?: boolean;
+  defaultVisionParser?: string;
+  defaultTextParser?: string;
+}
+
+interface FeedbackPayload {
+  provider?: string;
+  sourceType?: string;
+  [key: string]: unknown;
+}
 import {
   getLoggingConfig,
   updateLoggingConfig,
@@ -43,6 +77,25 @@ import {
   getPatternUpdateStats,
 } from '../services/patternUpdater';
 import { getHardwareInfo } from '../services/hardwareService';
+
+// ---- Zod validation schemas ----
+const trainingAccessSchema = z.object({
+  canTrainLLM: z.boolean(),
+});
+
+const createInvitationSchema = z.object({
+  email: z.string().email('Invalid email address').optional(),
+  expiresInDays: z.number().int().min(1).max(90).optional().default(7),
+});
+
+const parserSettingsSchema = z.object({
+  globalOpenaiApiKey: z.string().nullable().optional(),
+  globalClaudeApiKey: z.string().nullable().optional(),
+  allowUserApiKeys: z.boolean().optional(),
+  requireUserApiKeys: z.boolean().optional(),
+  defaultVisionParser: z.string().optional(),
+  defaultTextParser: z.string().optional(),
+});
 
 const router = Router();
 
@@ -160,11 +213,7 @@ router.patch('/users/:id/toggle-active', async (req: AuthRequest, res: Response,
 router.put('/users/:id/training-access', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const { canTrainLLM } = req.body;
-
-    if (typeof canTrainLLM !== 'boolean') {
-      throw new AppError('canTrainLLM must be a boolean', 400);
-    }
+    const { canTrainLLM } = trainingAccessSchema.parse(req.body);
 
     const user = await prisma.user.findUnique({
       where: { id },
@@ -209,7 +258,7 @@ router.put('/users/:id/training-access', async (req: AuthRequest, res: Response,
 // Create invitation
 router.post('/invitations', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { email, expiresInDays = 7 } = req.body;
+    const { email, expiresInDays } = createInvitationSchema.parse(req.body);
     const token = crypto.randomBytes(32).toString('hex');
 
     const invitation = await prisma.invitation.create({
@@ -380,8 +429,8 @@ router.put('/training-config', requireAdmin, async (req: AuthRequest, res: Respo
   try {
     const payload = trainingConfigSchema.parse(req.body);
     
-    const updateData: any = {};
-    
+    const updateData: TrainingConfigUpdateData = {};
+
     if (payload.trainingModelOutputDir !== undefined) {
       updateData.trainingModelOutputDir = payload.trainingModelOutputDir || null;
     }
@@ -470,24 +519,15 @@ router.get('/api-keys', requireAdmin, async (req: AuthRequest, res: Response, ne
       });
     }
 
-    // Safely access fields that might not exist yet
-    const safeGet = (field: string) => {
-      try {
-        return (adminSettings as any)[field];
-      } catch {
-        return null;
-      }
-    };
-
     res.json({
-      globalAirlabsApiKey: decryptApiKey(safeGet('globalAirlabsApiKey')) || undefined,
-      globalAviationstackApiKey: decryptApiKey(safeGet('globalAviationstackApiKey')) || undefined,
-      globalOpenskyClientId: decryptApiKey(safeGet('globalOpenskyClientId')) || undefined,
-      globalOpenskyClientSecret: decryptApiKey(safeGet('globalOpenskyClientSecret')) || undefined,
-      globalOpenskyUsername: decryptApiKey(safeGet('globalOpenskyUsername')) || undefined,
-      globalOpenskyPassword: decryptApiKey(safeGet('globalOpenskyPassword')) || undefined,
-      allowUserFlightApiKeys: safeGet('allowUserFlightApiKeys') ?? true,
-      requireUserFlightApiKeys: safeGet('requireUserFlightApiKeys') ?? false,
+      globalAirlabsApiKey: decryptApiKey(adminSettings.globalAirlabsApiKey) || undefined,
+      globalAviationstackApiKey: decryptApiKey(adminSettings.globalAviationstackApiKey) || undefined,
+      globalOpenskyClientId: decryptApiKey(adminSettings.globalOpenskyClientId) || undefined,
+      globalOpenskyClientSecret: decryptApiKey(adminSettings.globalOpenskyClientSecret) || undefined,
+      globalOpenskyUsername: decryptApiKey(adminSettings.globalOpenskyUsername) || undefined,
+      globalOpenskyPassword: decryptApiKey(adminSettings.globalOpenskyPassword) || undefined,
+      allowUserFlightApiKeys: adminSettings.allowUserFlightApiKeys ?? true,
+      requireUserFlightApiKeys: adminSettings.requireUserFlightApiKeys ?? false,
     });
   } catch (error) {
     logger.error({
@@ -507,7 +547,7 @@ router.put('/api-keys', requireAdmin, async (req: AuthRequest, res: Response, ne
 
     let adminSettings = await prisma.adminSettings.findFirst();
 
-    const updateData: any = {};
+    const updateData: GlobalApiKeysUpdateData = {};
 
     // Encrypt flight lookup API keys before storing
     if (payload.globalAirlabsApiKey !== undefined) {
@@ -582,12 +622,12 @@ router.put('/parser-settings', async (req: AuthRequest, res: Response, next: Nex
       requireUserApiKeys,
       defaultVisionParser,
       defaultTextParser,
-    } = req.body;
+    } = parserSettingsSchema.parse(req.body);
 
     // Get or create admin settings
     let adminSettings = await prisma.adminSettings.findFirst();
 
-    const updateData: any = {};
+    const updateData: ParserSettingsUpdateData = {};
 
     // Only update fields that are provided
     // Encrypt API keys before storing
@@ -865,7 +905,7 @@ router.get('/parser-feedback/details', async (req: AuthRequest, res: Response, n
     const since = new Date();
     since.setDate(since.getDate() - days);
 
-    const where: any = {
+    const where: Prisma.AnalyticsEventWhereInput = {
       type: 'parser_feedback',
       createdAt: {
         gte: since,
@@ -889,7 +929,7 @@ router.get('/parser-feedback/details', async (req: AuthRequest, res: Response, n
 
     // Filter by provider and sourceType if provided
     const filtered = events.filter((event) => {
-      const payload = event.payload as any;
+      const payload = event.payload as FeedbackPayload;
       if (provider && payload.provider !== provider) return false;
       if (sourceType && payload.sourceType !== sourceType) return false;
       return true;

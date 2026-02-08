@@ -16,7 +16,7 @@ interface AirportSeedingBannerProps {
   onStatusChange?: (status: SeedingStatus | null) => void;
 }
 
-export default function AirportSeedingBanner({ onStatusChange }: AirportSeedingBannerProps) {
+export default function AirportSeedingBanner({ onStatusChange }: AirportSeedingBannerProps): JSX.Element | null {
   const { t } = useTranslation(['common', 'setup']);
   const [status, setStatus] = useState<SeedingStatus | null>(null);
   const [isPolling, setIsPolling] = useState(false);

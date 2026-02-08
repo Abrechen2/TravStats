@@ -4,23 +4,35 @@
  * Modal for editing pending updates with live preview
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from '../hooks/useTranslation';
 import { useThemeStore } from '../store/themeStore';
 import { pendingUpdatesApi } from '../lib/api';
 import { logger } from '../lib/logger';
 import StatisticsImpactPreview from './StatisticsImpactPreview';
 
+interface FlightUpdateData {
+  airline?: string;
+  aircraft?: string;
+  gate?: string;
+  terminal?: string;
+  depIata?: string;
+  arrIata?: string;
+  departureTime?: string;
+  arrivalTime?: string;
+  [key: string]: string | number | boolean | null | undefined;
+}
+
 interface PendingUpdate {
   id: string;
-  originalData: any;
-  proposedData: any;
-  editedData?: any;
+  originalData: FlightUpdateData;
+  proposedData: FlightUpdateData;
+  editedData?: FlightUpdateData;
 }
 
 interface PendingUpdateEditorProps {
   update: PendingUpdate;
-  onSave: (editedData: any) => void;
+  onSave: (editedData: FlightUpdateData) => void;
   onCancel: () => void;
 }
 
@@ -28,18 +40,15 @@ export default function PendingUpdateEditor({
   update,
   onSave,
   onCancel,
-}: PendingUpdateEditorProps) {
+}: PendingUpdateEditorProps): JSX.Element {
   const { t } = useTranslation(['pendingUpdates', 'common']);
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
-  const [editedData, setEditedData] = useState<any>(update.editedData || update.proposedData);
-  const [previewImpact, setPreviewImpact] = useState<any>(null);
+  const [editedData, setEditedData] = useState<FlightUpdateData>(update.editedData || update.proposedData);
+  const [previewImpact, setPreviewImpact] = useState<Record<string, unknown> | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    loadPreview();
-  }, [editedData]);
-
-  const loadPreview = async () => {
+  const loadPreview = useCallback(async (): Promise<void> => {
     try {
       setLoadingPreview(true);
       const impact = await pendingUpdatesApi.preview(update.id, editedData);
@@ -49,10 +58,25 @@ export default function PendingUpdateEditor({
     } finally {
       setLoadingPreview(false);
     }
-  };
+  }, [update.id, editedData]);
 
-  const handleFieldChange = (field: string, value: any) => {
-    setEditedData((prev: any) => ({
+  // Debounced preview loading (300ms)
+  useEffect(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    debounceTimerRef.current = setTimeout(() => {
+      loadPreview();
+    }, 300);
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [loadPreview]);
+
+  const handleFieldChange = (field: string, value: string | null): void => {
+    setEditedData((prev) => ({
       ...prev,
       [field]: value || undefined,
     }));
@@ -77,6 +101,7 @@ export default function PendingUpdateEditor({
             </h2>
             <button
               onClick={onCancel}
+              aria-label={t('common:actions.close')}
               className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

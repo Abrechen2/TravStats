@@ -10,21 +10,47 @@ import { useThemeStore } from '../store/themeStore';
 import ChangeDiffView from './ChangeDiffView';
 import PendingUpdateEditor from './PendingUpdateEditor';
 
+interface FlightUpdateData {
+  airline?: string;
+  aircraft?: string;
+  gate?: string;
+  terminal?: string;
+  depIata?: string;
+  arrIata?: string;
+  departureTime?: string;
+  arrivalTime?: string;
+  [key: string]: string | number | boolean | null | undefined;
+}
+
+interface ChangeEntry {
+  field: string;
+  type: 'added' | 'removed' | 'changed';
+  oldValue: string | number | boolean | null | undefined;
+  newValue: string | number | boolean | null | undefined;
+}
+
+interface StatisticsImpact {
+  distance?: {
+    change: number;
+  };
+  [key: string]: unknown;
+}
+
 interface PendingUpdate {
   id: string;
   flightId: string;
   status: 'pending' | 'applied' | 'rejected' | 'expired' | 'edited';
-  originalData: any;
-  proposedData: any;
-  editedData?: any;
-  changes: any[];
-  editedChanges?: any[];
+  originalData: FlightUpdateData;
+  proposedData: FlightUpdateData;
+  editedData?: FlightUpdateData;
+  changes: ChangeEntry[];
+  editedChanges?: ChangeEntry[];
   apiSource: string;
   fetchedAt: string;
   expiresAt: string;
   appliedAt?: string;
   rejectedAt?: string;
-  statisticsImpact?: any;
+  statisticsImpact?: StatisticsImpact;
   flight?: {
     id: string;
     flightNumber: string | null;
@@ -40,7 +66,7 @@ interface PendingUpdateCardProps {
   update: PendingUpdate;
   onApply: () => void;
   onReject: () => void;
-  onEdit: (editedData: any) => void;
+  onEdit: (editedData: FlightUpdateData) => void;
   onSelect: () => void;
   isSelected: boolean;
 }
@@ -52,7 +78,7 @@ export default function PendingUpdateCard({
   onEdit,
   onSelect: _onSelect,
   isSelected,
-}: PendingUpdateCardProps) {
+}: PendingUpdateCardProps): JSX.Element {
   const { t } = useTranslation(['common', 'pendingUpdates']);
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
   const [showEditor, setShowEditor] = useState(false);
@@ -146,7 +172,7 @@ export default function PendingUpdateCard({
               {t('pendingUpdates:changes.title')}
             </h4>
             <div className="space-y-1">
-              {changesToShow.slice(0, 3).map((change: any, index: number) => (
+              {changesToShow.slice(0, 3).map((change, index) => (
                 <div key={index} className="text-sm">
                   <span className="font-medium text-gray-900 dark:text-white">
                     {change.field}:

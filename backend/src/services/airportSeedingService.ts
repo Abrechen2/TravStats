@@ -154,13 +154,14 @@ async function seedAirportsFromCSVAsync(statusId: string): Promise<void> {
           operation: 'seed_airports_download_success',
           message: 'CSV file downloaded successfully',
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
         logger.error({
           operation: 'seed_airports_download_error',
           message: 'Failed to download CSV file',
-          error: { message: error.message },
+          error: { message: errorMsg },
         });
-        throw new Error(`Fehler beim Herunterladen der CSV-Datei: ${error.message}`);
+        throw new Error(`Fehler beim Herunterladen der CSV-Datei: ${errorMsg}`);
       }
     }
 
@@ -293,12 +294,12 @@ async function seedAirportsFromCSVAsync(statusId: string): Promise<void> {
             context: { processed, total: totalAirports },
           });
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         logger.error({
           operation: 'seed_airports_airport_error',
           message: `Error processing airport ${airport.name}`,
           context: { airportName: airport.name },
-          error: { message: error.message },
+          error: { message: error instanceof Error ? error.message : 'Unknown error' },
         });
         skipped++;
         processed++;
@@ -376,9 +377,10 @@ export async function startAirportSeeding(): Promise<string> {
         },
       });
       return status.id;
-    } catch (error: any) {
+    } catch (error: unknown) {
       // If another process already created a status, return existing one
-      if (error.code === 'P2002') {
+      const prismaError = error as { code?: string };
+      if (prismaError.code === 'P2002') {
         const existing = await prisma.airportSeedingStatus.findFirst({
           orderBy: { createdAt: 'desc' },
         });
@@ -398,9 +400,10 @@ export async function startAirportSeeding(): Promise<string> {
         processedAirports: 0,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     // If another process already created a status, check for existing pending/running status
-    if (error.code === 'P2002' || error.message?.includes('unique')) {
+    const prismaError = error as { code?: string; message?: string };
+    if (prismaError.code === 'P2002' || prismaError.message?.includes('unique')) {
       const existing = await prisma.airportSeedingStatus.findFirst({
         where: {
           status: { in: ['pending', 'running'] },

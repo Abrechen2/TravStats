@@ -22,7 +22,7 @@ export default function ConfirmModal({
   cancelText,
   confirmButtonClass = 'btn-primary',
   isLoading = false,
-}: ConfirmModalProps) {
+}: ConfirmModalProps): JSX.Element | null {
   const { t } = useTranslation(['training', 'common']);
   const defaultConfirmText = confirmText || t('common:buttons.confirm');
   const defaultCancelText = cancelText || t('common:buttons.cancel');

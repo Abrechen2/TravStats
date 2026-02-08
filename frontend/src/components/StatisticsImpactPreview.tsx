@@ -33,10 +33,10 @@ interface StatisticsImpact {
 }
 
 interface StatisticsImpactPreviewProps {
-  impact: StatisticsImpact | any;
+  impact: StatisticsImpact | Record<string, unknown> | null | undefined;
 }
 
-export default function StatisticsImpactPreview({ impact }: StatisticsImpactPreviewProps) {
+export default function StatisticsImpactPreview({ impact }: StatisticsImpactPreviewProps): JSX.Element {
   const { t } = useTranslation(['pendingUpdates']);
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
 
@@ -47,6 +47,9 @@ export default function StatisticsImpactPreview({ impact }: StatisticsImpactPrev
       </div>
     );
   }
+
+  // Cast to internal type for property access
+  const data = impact as StatisticsImpact;
 
   const formatNumber = (num: number) => {
     return new Intl.NumberFormat('de-DE').format(num);
@@ -76,7 +79,7 @@ export default function StatisticsImpactPreview({ impact }: StatisticsImpactPrev
   return (
     <div className="space-y-6">
       {/* Distance */}
-      {impact.distance && (
+      {data.distance && (
         <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
             {t('pendingUpdates:preview.distance')}
@@ -87,7 +90,7 @@ export default function StatisticsImpactPreview({ impact }: StatisticsImpactPrev
                 {t('pendingUpdates:preview.before')}
               </div>
               <div className="text-xl font-bold text-gray-900 dark:text-white">
-                {formatNumber(impact.distance.before)} km
+                {formatNumber(data.distance.before)} km
               </div>
             </div>
             <div>
@@ -95,15 +98,15 @@ export default function StatisticsImpactPreview({ impact }: StatisticsImpactPrev
                 {t('pendingUpdates:preview.after')}
               </div>
               <div className="text-xl font-bold text-gray-900 dark:text-white">
-                {formatNumber(impact.distance.after)} km
+                {formatNumber(data.distance.after)} km
               </div>
             </div>
             <div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
                 {t('pendingUpdates:preview.change')}
               </div>
-              <div className={`text-xl font-bold ${getChangeColor(impact.distance.change)}`}>
-                {getChangeIcon(impact.distance.change)} {formatNumber(Math.abs(impact.distance.change))} km
+              <div className={`text-xl font-bold ${getChangeColor(data.distance.change)}`}>
+                {getChangeIcon(data.distance.change)} {formatNumber(Math.abs(data.distance.change))} km
               </div>
             </div>
           </div>
@@ -111,7 +114,7 @@ export default function StatisticsImpactPreview({ impact }: StatisticsImpactPrev
       )}
 
       {/* Flight Time */}
-      {impact.flightTime && (
+      {data.flightTime && (
         <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
             {t('pendingUpdates:preview.flightTime')}
@@ -122,7 +125,7 @@ export default function StatisticsImpactPreview({ impact }: StatisticsImpactPrev
                 {t('pendingUpdates:preview.before')}
               </div>
               <div className="text-xl font-bold text-gray-900 dark:text-white">
-                {formatTime(impact.flightTime.before)}
+                {formatTime(data.flightTime.before)}
               </div>
             </div>
             <div>
@@ -130,15 +133,15 @@ export default function StatisticsImpactPreview({ impact }: StatisticsImpactPrev
                 {t('pendingUpdates:preview.after')}
               </div>
               <div className="text-xl font-bold text-gray-900 dark:text-white">
-                {formatTime(impact.flightTime.after)}
+                {formatTime(data.flightTime.after)}
               </div>
             </div>
             <div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
                 {t('pendingUpdates:preview.change')}
               </div>
-              <div className={`text-xl font-bold ${getChangeColor(impact.flightTime.change)}`}>
-                {getChangeIcon(impact.flightTime.change)} {formatTime(Math.abs(impact.flightTime.change))}
+              <div className={`text-xl font-bold ${getChangeColor(data.flightTime.change)}`}>
+                {getChangeIcon(data.flightTime.change)} {formatTime(Math.abs(data.flightTime.change))}
               </div>
             </div>
           </div>
@@ -146,7 +149,7 @@ export default function StatisticsImpactPreview({ impact }: StatisticsImpactPrev
       )}
 
       {/* Airlines */}
-      {impact.airlines && (
+      {data.airlines && (
         <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
             {t('pendingUpdates:preview.airlines')}
@@ -157,9 +160,9 @@ export default function StatisticsImpactPreview({ impact }: StatisticsImpactPrev
                 {t('pendingUpdates:preview.before')}
               </div>
               <div className="text-lg font-bold text-gray-900 dark:text-white">
-                {Array.isArray(impact.airlines.before) 
-                  ? impact.airlines.before.length 
-                  : impact.airlines.before?.size || 0}
+                {Array.isArray(data.airlines.before) 
+                  ? data.airlines.before.length 
+                  : data.airlines.before?.size || 0}
               </div>
             </div>
             <div>
@@ -167,19 +170,19 @@ export default function StatisticsImpactPreview({ impact }: StatisticsImpactPrev
                 {t('pendingUpdates:preview.after')}
               </div>
               <div className="text-lg font-bold text-gray-900 dark:text-white">
-                {Array.isArray(impact.airlines.after) 
-                  ? impact.airlines.after.length 
-                  : impact.airlines.after?.size || 0}
+                {Array.isArray(data.airlines.after) 
+                  ? data.airlines.after.length 
+                  : data.airlines.after?.size || 0}
               </div>
             </div>
           </div>
-          {impact.airlines.added && impact.airlines.added.length > 0 && (
+          {data.airlines.added && data.airlines.added.length > 0 && (
             <div className="mt-3">
               <div className="text-xs text-green-600 dark:text-green-400 mb-1">
                 {t('pendingUpdates:preview.added')}
               </div>
               <div className="text-sm text-gray-700 dark:text-gray-300">
-                {impact.airlines.added.join(', ')}
+                {data.airlines.added.join(', ')}
               </div>
             </div>
           )}
@@ -187,7 +190,7 @@ export default function StatisticsImpactPreview({ impact }: StatisticsImpactPrev
       )}
 
       {/* Airports */}
-      {impact.airports && (
+      {data.airports && (
         <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
             {t('pendingUpdates:preview.airports')}
@@ -198,9 +201,9 @@ export default function StatisticsImpactPreview({ impact }: StatisticsImpactPrev
                 {t('pendingUpdates:preview.before')}
               </div>
               <div className="text-lg font-bold text-gray-900 dark:text-white">
-                {Array.isArray(impact.airports.before) 
-                  ? impact.airports.before.length 
-                  : impact.airports.before?.size || 0}
+                {Array.isArray(data.airports.before) 
+                  ? data.airports.before.length 
+                  : data.airports.before?.size || 0}
               </div>
             </div>
             <div>
@@ -208,19 +211,19 @@ export default function StatisticsImpactPreview({ impact }: StatisticsImpactPrev
                 {t('pendingUpdates:preview.after')}
               </div>
               <div className="text-lg font-bold text-gray-900 dark:text-white">
-                {Array.isArray(impact.airports.after) 
-                  ? impact.airports.after.length 
-                  : impact.airports.after?.size || 0}
+                {Array.isArray(data.airports.after) 
+                  ? data.airports.after.length 
+                  : data.airports.after?.size || 0}
               </div>
             </div>
           </div>
-          {impact.airports.added && impact.airports.added.length > 0 && (
+          {data.airports.added && data.airports.added.length > 0 && (
             <div className="mt-3">
               <div className="text-xs text-green-600 dark:text-green-400 mb-1">
                 {t('pendingUpdates:preview.added')}
               </div>
               <div className="text-sm text-gray-700 dark:text-gray-300">
-                {impact.airports.added.join(', ')}
+                {data.airports.added.join(', ')}
               </div>
             </div>
           )}

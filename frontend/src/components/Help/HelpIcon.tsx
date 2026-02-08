@@ -14,7 +14,7 @@ export default function HelpIcon({
   expandedContent,
   position = 'top',
   className = '',
-}: HelpIconProps) {
+}: HelpIconProps): JSX.Element {
   const [isHovered, setIsHovered] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [calculatedPosition, setCalculatedPosition] = useState<'top' | 'bottom' | 'left' | 'right'>(position);

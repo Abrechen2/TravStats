@@ -736,7 +736,7 @@ export async function parseBoardingPass(
         provider: finalProvider,
         fallbackUsed: finalFallbackUsed,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       if (shouldLog) {
         visionLog.warn({
@@ -1051,7 +1051,7 @@ export async function parseEmail(
         provider: finalProvider,
         fallbackUsed: finalFallbackUsed,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       if (shouldLog) {
         textLog.warn({

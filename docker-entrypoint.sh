@@ -157,7 +157,8 @@ if [ -n "$DATABASE_URL" ]; then
         echo "[entrypoint] ❌ Database connection timeout after $max_retries attempts"
         echo "[entrypoint] Please check:"
         echo "[entrypoint]   1. Database container is running"
-        echo "[entrypoint]   2. DATABASE_URL is correct: $DATABASE_URL"
+        MASKED_URL=$(echo "$DATABASE_URL" | sed -E 's|(://[^:]+:)[^@]+(@)|\1****\2|')
+        echo "[entrypoint]   2. DATABASE_URL is correct: $MASKED_URL"
         echo "[entrypoint]   3. Network connectivity to $DB_HOST:$DB_PORT"
         exit 1
     fi

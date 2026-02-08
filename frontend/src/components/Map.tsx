@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import type { GeoJSONFeature } from '../types';
 import { useThemeStore } from '../store/themeStore';
+import { escapeHtml } from '../lib/escapeHtml';
 import AirportMarkers from './AirportMarkers';
 import 'leaflet/dist/leaflet.css';
 
@@ -133,7 +134,7 @@ const MapUpdater = memo(({ flights }: { flights: GeoJSONFeature[] }) => {
   return null;
 });
 
-function Map({ flights = [], selectedFlightId, onFlightClick, minRouteCount = 1 }: MapProps) {
+function Map({ flights = [], selectedFlightId, onFlightClick, minRouteCount = 1 }: MapProps): JSX.Element {
   const themeStore = useThemeStore();
   const isDarkMode = themeStore?.isDarkMode ?? false;
 
@@ -261,22 +262,22 @@ function Map({ flights = [], selectedFlightId, onFlightClick, minRouteCount = 1 
               }}
               eventHandlers={{
                 click: () => handleRouteClick(route),
-                mouseover: (e: any) => {
-                  const layer = e.target;
+                mouseover: (e: L.LeafletMouseEvent) => {
+                  const layer = e.target as L.Polyline;
                   layer.setStyle({
                     weight: 5,
                     opacity: 1,
                   });
                   layer.bindTooltip(
                     `<div style="text-align: center;">
-                      <strong>${route.departureIATA} ↔ ${route.arrivalIATA}</strong><br/>
+                      <strong>${escapeHtml(route.departureIATA)} ↔ ${escapeHtml(route.arrivalIATA)}</strong><br/>
                       <span>${route.count}x geflogen</span>
                     </div>`,
                     { sticky: true }
                   ).openTooltip();
                 },
-                mouseout: (e: any) => {
-                  const layer = e.target;
+                mouseout: (e: L.LeafletMouseEvent) => {
+                  const layer = e.target as L.Polyline;
                   layer.setStyle({
                     weight: isSelected ? 5 : 3,
                     opacity: isSelected ? 1 : 0.7,

@@ -26,15 +26,17 @@ vi.mock('react-router-dom', async () => {
 
 import LoginPage from '../pages/LoginPage';
 
+const mockUseAuthStore = vi.mocked(useAuthStore);
+
 describe('LoginPage', () => {
   const mockSetAuth = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockNavigate.mockClear();
-    (useAuthStore as any).mockReturnValue({
+    mockUseAuthStore.mockReturnValue({
       setAuth: mockSetAuth,
-    });
+    } as ReturnType<typeof useAuthStore>);
     mockUseLocation.mockReturnValue({
       pathname: '/login',
       search: '',
@@ -50,13 +52,15 @@ describe('LoginPage', () => {
       </BrowserRouter>
     );
 
-    expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
+    // Labels use i18n keys: login.username, login.password
+    expect(screen.getByLabelText(/login\.username/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/login\.password/i)).toBeInTheDocument();
+    // Submit button text is i18n key: login.submit
+    expect(screen.getByRole('button', { name: /login\.submit/i })).toBeInTheDocument();
   });
 
   it('should show error on failed login', async () => {
-    (authApi.login as any).mockRejectedValue({
+    vi.mocked(authApi.login).mockRejectedValue({
       response: { data: { error: 'Invalid credentials' } },
     });
 
@@ -66,9 +70,9 @@ describe('LoginPage', () => {
       </BrowserRouter>
     );
 
-    const usernameInput = screen.getByLabelText(/username/i);
-    const passwordInput = screen.getByLabelText(/password/i);
-    const submitButton = screen.getByRole('button', { name: /sign in/i });
+    const usernameInput = screen.getByLabelText(/login\.username/i);
+    const passwordInput = screen.getByLabelText(/login\.password/i);
+    const submitButton = screen.getByRole('button', { name: /login\.submit/i });
 
     fireEvent.change(usernameInput, { target: { value: 'testuser' } });
     fireEvent.change(passwordInput, { target: { value: 'wrongpassword' } });
@@ -86,8 +90,8 @@ describe('LoginPage', () => {
       </BrowserRouter>
     );
 
-    const registerLink = screen.getByRole('link', { name: /register/i });
+    // Register link text is i18n key: login.register
+    const registerLink = screen.getByRole('link', { name: /login\.register/i });
     expect(registerLink).toHaveAttribute('href', '/register');
   });
 });
-

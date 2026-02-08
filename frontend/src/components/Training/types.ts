@@ -15,7 +15,7 @@ export interface Flight {
   seat?: string;
   gate?: string;
   terminal?: string;
-  [key: string]: any;           // Für zusätzliche Felder
+  [key: string]: string | undefined;  // Für zusätzliche Felder
 }
 
 /**

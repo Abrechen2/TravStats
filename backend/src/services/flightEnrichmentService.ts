@@ -5,11 +5,23 @@
  * live-tracked flights with the same flight number.
  */
 
-import { PrismaClient, Flight, UserSettings } from '@prisma/client';
+import { PrismaClient, Flight, UserSettings, Prisma } from '@prisma/client';
 import { prisma } from '../db';
 import logger from '../utils/logger';
 
 const prismaClient = prisma as PrismaClient;
+
+/** Waypoint in a flight route */
+interface RouteWaypoint {
+  lat: number;
+  lon: number;
+  country?: string;
+}
+
+/** Route data that may have a distance property */
+interface RouteWithDistance {
+  distance?: number;
+}
 
 export interface UserEnrichmentSettings {
   enabled: boolean;
@@ -141,7 +153,7 @@ export async function findEnrichmentCandidates(
       if (!flight.aircraft) missingFields.push('aircraft');
       if (!flight.depIcao) missingFields.push('depIcao');
       if (!flight.arrIcao) missingFields.push('arrIcao');
-      if (!flight.actualRoute || (flight.actualRoute as any[]).length === 0) {
+      if (!flight.actualRoute || (Array.isArray(flight.actualRoute) && flight.actualRoute.length === 0)) {
         missingRoute = true;
         missingFields.push('actualRoute');
       }
@@ -225,7 +237,7 @@ export async function aggregateFlightData(
         aircraft: { not: null },
         depIcao: { not: null },
         arrIcao: { not: null },
-        actualRoute: { not: null as any },
+        actualRoute: { not: Prisma.DbNull },
       },
       orderBy: {
         departureTime: 'desc',
@@ -263,7 +275,7 @@ export async function aggregateFlightData(
     // Aggregate route data
     const routes = referenceFlights
       .map(f => f.actualRoute)
-      .filter(Boolean) as any[];
+      .filter(Boolean) as Prisma.JsonValue[];
 
     const typicalRoute = aggregateRoutes(routes);
     const routeConsistency = calculateRouteConsistency(routes);
@@ -337,7 +349,7 @@ function getMostCommon<T>(arr: T[]): T | undefined {
 /**
  * Aggregate routes from multiple flights
  */
-function aggregateRoutes(routes: any[]): {
+function aggregateRoutes(routes: Prisma.JsonValue[]): {
   waypoints: Array<{lat: number; lon: number}>;
   overflownCountries: string[];
   routeDistance: number;
@@ -347,23 +359,29 @@ function aggregateRoutes(routes: any[]): {
   // For now, use the most recent route as typical
   // TODO: Implement proper median/consensus calculation
   const latestRoute = routes[0];
-  
+
   if (!Array.isArray(latestRoute) || latestRoute.length === 0) {
     return undefined;
   }
 
   // Extract waypoints
   const waypoints = latestRoute
-    .filter((wp: any) => wp.lat && wp.lon)
-    .map((wp: any) => ({ lat: wp.lat, lon: wp.lon }));
+    .filter((wp): wp is Prisma.JsonObject =>
+      typeof wp === 'object' && wp !== null && !Array.isArray(wp) && 'lat' in wp && 'lon' in wp &&
+      typeof wp['lat'] === 'number' && typeof wp['lon'] === 'number'
+    )
+    .map((wp) => ({ lat: wp['lat'] as number, lon: wp['lon'] as number }));
 
   // Extract countries
   const allCountries = new Set<string>();
   for (const route of routes) {
     if (Array.isArray(route)) {
       for (const wp of route) {
-        if (wp.country) {
-          allCountries.add(wp.country);
+        if (typeof wp === 'object' && wp !== null && !Array.isArray(wp) && 'country' in wp) {
+          const country = (wp as Prisma.JsonObject)['country'];
+          if (typeof country === 'string') {
+            allCountries.add(country);
+          }
         }
       }
     }
@@ -371,10 +389,10 @@ function aggregateRoutes(routes: any[]): {
 
   // Calculate average distance (simplified)
   const distances = routes
-    .map((r: any) => r.distance)
-    .filter((d: any) => typeof d === 'number');
+    .map((r) => typeof r === 'object' && r !== null && 'distance' in r ? (r as RouteWithDistance).distance : undefined)
+    .filter((d): d is number => typeof d === 'number');
   const avgDistance = distances.length > 0
-    ? distances.reduce((a: number, b: number) => a + b, 0) / distances.length
+    ? distances.reduce((a, b) => a + b, 0) / distances.length
     : undefined;
 
   return {
@@ -387,7 +405,7 @@ function aggregateRoutes(routes: any[]): {
 /**
  * Calculate route consistency
  */
-function calculateRouteConsistency(routes: any[]): 'high' | 'medium' | 'low' {
+function calculateRouteConsistency(routes: Prisma.JsonValue[]): 'high' | 'medium' | 'low' {
   if (routes.length < 3) return 'low';
 
   // Simplified: Check if routes are similar
@@ -573,11 +591,29 @@ export async function createHistoricalEnrichment(
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
     // Calculate statistics impact
-    let statisticsImpact: any = null;
+    let statisticsImpact: Prisma.InputJsonValue | null = null;
     try {
       const { calculateStatisticsImpact } = await import('./pendingUpdateService');
-      statisticsImpact = await calculateStatisticsImpact(flight, originalData, proposedData);
-    } catch (error) {
+      const impact = await calculateStatisticsImpact(flight, originalData, proposedData);
+      // Convert Set objects in the impact to arrays for JSON serialization
+      if (impact) {
+        statisticsImpact = {
+          ...impact,
+          airlines: {
+            before: Array.from(impact.airlines.before),
+            after: Array.from(impact.airlines.after),
+            added: impact.airlines.added,
+            removed: impact.airlines.removed,
+          },
+          airports: {
+            before: Array.from(impact.airports.before),
+            after: Array.from(impact.airports.after),
+            added: impact.airports.added,
+            removed: impact.airports.removed,
+          },
+        };
+      }
+    } catch (error: unknown) {
       logger.warn({
         operation: 'calculate_statistics_impact_error',
         message: 'Failed to calculate statistics impact',
@@ -610,12 +646,12 @@ export async function createHistoricalEnrichment(
       const updated = await prismaClient.pendingFlightUpdate.update({
         where: { id: existing.id },
         data: {
-          proposedData: proposedData as any,
-          changes: changes as any,
+          proposedData: proposedData as unknown as Prisma.InputJsonValue,
+          changes: changes as unknown as Prisma.InputJsonValue,
           apiSource: 'historical_aggregation',
           fetchedAt: new Date(),
           expiresAt,
-          metadata: metadata as any,
+          metadata: metadata as unknown as Prisma.InputJsonValue,
           updatedAt: new Date(),
         },
       });
@@ -628,14 +664,14 @@ export async function createHistoricalEnrichment(
         flightId: flight.id,
         userId: flight.userId,
         status: 'pending',
-        originalData: originalData as any,
-        proposedData: proposedData as any,
-        changes: changes as any,
+        originalData: originalData as unknown as Prisma.InputJsonValue,
+        proposedData: proposedData as unknown as Prisma.InputJsonValue,
+        changes: changes as unknown as Prisma.InputJsonValue,
         apiSource: 'historical_aggregation',
         fetchedAt: new Date(),
         expiresAt,
-        statisticsImpact: statisticsImpact as any,
-        metadata: metadata as any,
+        statisticsImpact: statisticsImpact as Prisma.InputJsonValue,
+        metadata: metadata as unknown as Prisma.InputJsonValue,
       },
     });
 

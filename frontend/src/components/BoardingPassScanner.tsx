@@ -7,8 +7,14 @@ import { extractBarcodeFromImage } from '../lib/barcodeExtractor';
 import { parseBCBP } from '../lib/bcbpParser';
 import { logger } from '../lib/logger';
 
+import type { ParsedBooking } from '../types';
+
+export interface ScanResultData extends ParsedBooking {
+  seatNumber?: string;
+}
+
 interface BoardingPassScannerProps {
-  onScanSuccess: (data: any) => void; // ParsedBooking from Ollama
+  onScanSuccess: (data: ScanResultData) => void;
   onClose: () => void;
 }
 
@@ -20,7 +26,7 @@ interface ScanStep {
   detail?: string;
 }
 
-export default function BoardingPassScanner({ onScanSuccess, onClose }: BoardingPassScannerProps) {
+export default function BoardingPassScanner({ onScanSuccess, onClose }: BoardingPassScannerProps): JSX.Element {
   const { t } = useTranslation(['flights', 'common', 'errors']);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState('');
@@ -125,7 +131,7 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
                 updateScanStep('parser', { status: 'success', detail: `Flug ${parsedData.flightNumber || ''} ${parsedData.departureAirport} → ${parsedData.arrivalAirport}` });
                 
                 // Convert BoardingPassData to ParsedBooking format
-                const flightData: any = {
+                const flightData: ScanResultData = {
                   flightNumber: `${parsedData.operatingCarrierDesignator}${parsedData.flightNumber}`,
                   departureCode: parsedData.departureAirport,
                   arrivalCode: parsedData.arrivalAirport,
@@ -209,7 +215,7 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
           } else {
             setError('Kein Parser verfügbar. Bitte LLM/API konfigurieren.');
           }
-        } catch (err: any) {
+        } catch (err: unknown) {
           logger.error('Boarding pass parsing failed:', err);
 
           const currentStep = steps.find((s) => s.status === 'loading');
@@ -217,10 +223,11 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
             updateScanStep(currentStep.id, { status: 'error' });
           }
 
-          if (err.response?.status === 503) {
+          const axiosError = err as { response?: { status?: number; data?: { error?: string } }; message?: string };
+          if (axiosError.response?.status === 503) {
             setError(t('flights:scanner.ollamaUnavailable'));
           } else {
-            setError(err.response?.data?.error || err.message || t('errors:boardingPassError'));
+            setError(axiosError.response?.data?.error || axiosError.message || t('errors:boardingPassError'));
           }
 
           setScanning(false);
@@ -234,7 +241,7 @@ export default function BoardingPassScanner({ onScanSuccess, onClose }: Boarding
       };
 
       reader.readAsDataURL(file);
-    } catch (err: any) {
+    } catch (_err: unknown) {
       setError(t('flights:scanner.processError'));
       setScanning(false);
     }

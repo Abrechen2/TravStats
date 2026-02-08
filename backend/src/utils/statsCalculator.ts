@@ -2,6 +2,76 @@ import { calculateDistance } from './geo';
 import { getCachedAirports } from '../services/airportCache';
 import logger from './logger';
 
+interface FunStats {
+  timezoneHopper: number;
+  earlyBird: number;
+  afternoon: number;
+  nightOwl: number;
+  weekendWarrior: number;
+  weekendPercentage: number;
+  loyaltyScore: number;
+  mostUsedAirline: string | null;
+  shortHaulKing: number;
+  longHaulPilot: number;
+  fastestDay: string | null;
+  fastestDayFlights: number;
+  co2FootprintKg: number;
+  co2InElephants: number;
+  milestoneYear: number | null;
+  milestoneYearFlights: number;
+  routeMaster: string | null;
+  routeMasterCount: number;
+}
+
+interface BusinessStats {
+  costPerKm: number;
+  costPerHour: number;
+  totalCost: number;
+  totalDistance: number;
+  seatClassDistribution: Record<string, number>;
+  mostCommonCategory: string | null;
+  airportDiversity: number;
+  avgFlightDuration: number;
+  busiestMonth: string | null;
+  busiestMonthFlights: number;
+  categoryDistribution: Record<string, number>;
+}
+
+interface UniqueStats {
+  timeTravelIndex: number;
+  equatorCrossings: number;
+  arcticFlights: number;
+  oceanCrossings: number;
+  highestAirport: { code: string; name: string; altitude: number } | null;
+  northernmost: { lat: number; code: string } | null;
+  southernmost: { lat: number; code: string } | null;
+  longestTravelChain: number;
+  fastestRoute: { route: string; speed: number } | null;
+  mostCountriesInDay: number;
+  mostCountriesDate: string | null;
+  hemisphereHops: number;
+  dateLineCrossings: number;
+  continentalExplorer: number;
+  continents: string[];
+  tropicsTraveler: number;
+  eastWestBalance: {
+    eastward: number;
+    westward: number;
+    ratio: number;
+  };
+  sameDayReturns: number;
+  midnightFlights: number;
+  seasonalExplorer: boolean;
+  seasonsCount: number;
+  internationalVsDomestic: {
+    international: number;
+    domestic: number;
+    ratio: number;
+  };
+  longestLayover: { hours: number; from: string; to: string } | null;
+  roundTripMaster: number;
+}
+
 interface FlightData {
   id: string;
   depLat: number;
@@ -28,7 +98,7 @@ interface FlightData {
 /**
  * Calculate fun/entertaining statistics
  */
-export async function calculateFunStats(flights: FlightData[]) {
+export async function calculateFunStats(flights: FlightData[]): Promise<FunStats> {
   const flownFlights = flights.filter(f => f.status === 'flown');
   
   // Timezone hopper - count unique timezones
@@ -171,7 +241,7 @@ export async function calculateFunStats(flights: FlightData[]) {
 /**
  * Calculate business/informative statistics
  */
-export function calculateBusinessStats(flights: FlightData[]) {
+export function calculateBusinessStats(flights: FlightData[]): BusinessStats {
   const flownFlights = flights.filter(f => f.status === 'flown');
   
   // Cost per kilometer
@@ -289,7 +359,7 @@ export function calculateBusinessStats(flights: FlightData[]) {
 /**
  * Calculate unique/special statistics
  */
-export async function calculateUniqueStats(flights: FlightData[]) {
+export async function calculateUniqueStats(flights: FlightData[]): Promise<UniqueStats> {
   const flownFlights = flights.filter(f => f.status === 'flown');
   
   // Time travel index - flights that arrive "before" departure due to timezones

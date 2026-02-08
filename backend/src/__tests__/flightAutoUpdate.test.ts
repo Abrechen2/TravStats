@@ -1,5 +1,5 @@
 import { prisma } from '../db';
-import { isFlightActive, calculateChanges, checkAndUpdateFlights } from '../services/flightAutoUpdate';
+import { isFlightActive, calculateChanges, checkAndUpdateFlightsForUser } from '../services/flightAutoUpdate';
 import { Flight } from '@prisma/client';
 
 describe('Flight Auto-Update Service', () => {
@@ -218,7 +218,7 @@ describe('Flight Auto-Update Service', () => {
     });
   });
 
-  describe('checkAndUpdateFlights', () => {
+  describe('checkAndUpdateFlightsForUser', () => {
     it('should not create update for inactive flight when onlyDuringFlight is true', async () => {
       // Create a future flight
       const futureFlight = await prisma.flight.create({
@@ -240,12 +240,7 @@ describe('Flight Auto-Update Service', () => {
         },
       });
 
-      await checkAndUpdateFlights(userId, {
-        checkInterval: 15,
-        onlyDuringFlight: true,
-        requireApproval: true,
-        expiryHours: 24,
-      });
+      await checkAndUpdateFlightsForUser(userId);
 
       const updates = await prisma.pendingFlightUpdate.findMany({
         where: { flightId: futureFlight.id },

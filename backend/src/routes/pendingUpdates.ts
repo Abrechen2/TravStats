@@ -46,7 +46,7 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
     const userId = req.userId!;
     const { status, flightId } = req.query;
 
-    const filters: any = {};
+    const filters: { status?: string; flightId?: string } = {};
     if (status) filters.status = status as string;
     if (flightId) filters.flightId = flightId as string;
 

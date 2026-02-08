@@ -49,8 +49,8 @@ export class OllamaVisionParser implements IVisionParser {
         timeout: 5000,
       });
 
-      const models = response.data.models || [];
-      const hasVisionModel = models.some((m: any) =>
+      const models: Array<{ name: string }> = response.data.models || [];
+      const hasVisionModel = models.some((m: { name: string }) =>
         m.name.includes('llava') || m.name.includes('bakllava') || m.name === this.modelName
       );
 
@@ -61,7 +61,7 @@ export class OllamaVisionParser implements IVisionParser {
           metadata: {
             ollamaUrl: OLLAMA_URL,
             requestedModel: this.modelName,
-            availableModels: models.map((m: any) => m.name),
+            availableModels: models.map((m: { name: string }) => m.name),
           },
         };
       }

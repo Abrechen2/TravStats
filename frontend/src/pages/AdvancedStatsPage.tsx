@@ -23,7 +23,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
-export default function AdvancedStatsPage() {
+export default function AdvancedStatsPage(): JSX.Element {
   const { t } = useTranslation(['stats', 'common']);
   const { units } = useSettingsStore();
   const [flights, setFlights] = useState<Flight[]>([]);

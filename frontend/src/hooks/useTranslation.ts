@@ -7,7 +7,11 @@ import { logger } from '../lib/logger';
  * Custom hook that wraps react-i18next's useTranslation
  * and automatically syncs with the settings store language
  */
-export function useTranslation(namespace?: string | string[]) {
+export function useTranslation(namespace?: string | string[]): {
+  t: (key: string, options?: Record<string, unknown>) => string;
+  i18n: typeof import('i18next').default;
+  ready: boolean;
+} {
   const language = useSettingsStore((state) => state.display.language);
   const translation = useI18nTranslation(namespace);
   const { i18n: i18nInstance } = translation;

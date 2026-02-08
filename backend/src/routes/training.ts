@@ -51,8 +51,8 @@ const uploadSchema = z.object({
 
 // Annotation schema
 const annotationSchema = z.object({
-  annotations: z.any(), // JSON object with text selections or bounding boxes
-  extractedData: z.array(z.any()), // Array of ParsedBooking
+  annotations: z.record(z.unknown()), // JSON object with text selections or bounding boxes
+  extractedData: z.array(z.record(z.unknown())), // Array of ParsedBooking
   tags: z.array(z.string()).optional(), // Optional tags array
 });
 
@@ -74,7 +74,7 @@ router.post(
       const userId = req.userId!;
 
       // For emails, extract content
-      let annotations: any = {};
+      let annotations: Prisma.InputJsonObject = {};
       if (body.type === 'email') {
         const fileBuffer = fs.readFileSync(file.path);
         const extracted = extractEmailFromFile(fileBuffer, file.originalname);
@@ -99,7 +99,7 @@ router.post(
           userId,
           type: body.type,
           originalFile: file.path,
-          annotations,
+          annotations: annotations as Prisma.InputJsonValue,
           extractedData: [],
           status: 'pending',
           tags: body.tags || [],
@@ -155,8 +155,8 @@ router.post(
       const updated = await prisma.trainingData.update({
         where: { id },
         data: {
-          annotations: payload.annotations,
-          extractedData: payload.extractedData,
+          annotations: payload.annotations as Prisma.InputJsonValue,
+          extractedData: payload.extractedData as unknown as Prisma.InputJsonValue,
           ...(payload.tags !== undefined && { tags: payload.tags }),
         },
       });
@@ -210,8 +210,8 @@ router.post(
       await prisma.trainingData.update({
         where: { id },
         data: {
-          annotations: payload.annotations,
-          extractedData: payload.extractedData,
+          annotations: payload.annotations as Prisma.InputJsonValue,
+          extractedData: payload.extractedData as unknown as Prisma.InputJsonValue,
           ...(payload.tags !== undefined && { tags: payload.tags }),
         },
       });

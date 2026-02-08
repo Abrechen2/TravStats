@@ -69,7 +69,7 @@ export interface ProviderAvailability {
   /**
    * Additional metadata (model name, version, etc.)
    */
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**

@@ -43,8 +43,8 @@ function createRotatingStream(category: string, maxSizeMB: number = 10, maxFiles
       
       // Close the stream gracefully
       try {
-        if (typeof (stream as any).end === 'function') {
-          (stream as any).end();
+        if (typeof (stream as NodeJS.WritableStream & { end?: () => void }).end === 'function') {
+          (stream as NodeJS.WritableStream & { end: () => void }).end();
         }
       } catch (closeError) {
         // Ignore errors when closing
@@ -52,9 +52,10 @@ function createRotatingStream(category: string, maxSizeMB: number = 10, maxFiles
     });
 
     return stream;
-  } catch (error: any) {
+  } catch (error: unknown) {
     // If stream creation fails (e.g., permission denied), log warning and return null
-    console.warn(`[Logger] Could not create rotating stream for ${category}.log:`, error?.message || error);
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.warn(`[Logger] Could not create rotating stream for ${category}.log:`, errMsg);
     console.warn(`[Logger] File logging disabled for ${category} - using console only`);
     return null;
   }
@@ -72,11 +73,11 @@ const pinoConfig: pino.LoggerOptions = {
     level: (label) => ({ level: label }),
 
     // Custom formatter for AI-friendly structure
-    log: (obj: any) => {
+    log: (obj: Record<string, unknown>) => {
       // Restructure for AI consumption
       const { msg, time, level, category, context, performance, error, requestId, ...rest } = obj;
 
-      const result: any = {
+      const result: Record<string, unknown> = {
         timestamp: time ? new Date(time as number).toISOString() : new Date().toISOString(),
         level,
         category: category || 'general',
@@ -152,10 +153,11 @@ try {
     if (!fs.existsSync(LOG_DIR)) {
       fs.mkdirSync(LOG_DIR, { recursive: true, mode: 0o755 });
     }
-  } catch (mkdirError: any) {
+  } catch (mkdirError: unknown) {
     // If directory creation fails (e.g., permission denied), log warning but continue
     // The application will still work with console-only logging
-    console.warn(`Could not create log directory ${LOG_DIR}:`, mkdirError?.message || mkdirError);
+    const errMsg = mkdirError instanceof Error ? mkdirError.message : String(mkdirError);
+    console.warn(`Could not create log directory ${LOG_DIR}:`, errMsg);
     console.warn('Logging to files disabled - using console only');
     // Don't throw - allow application to continue with console logging
   }
@@ -190,8 +192,9 @@ try {
           stream: errorStream,
         });
       }
-    } catch (streamError: any) {
-      console.warn('Could not create log file streams:', streamError?.message || streamError);
+    } catch (streamError: unknown) {
+      const errMsg = streamError instanceof Error ? streamError.message : String(streamError);
+      console.warn('Could not create log file streams:', errMsg);
       console.warn('Logging to files disabled - using console only');
     }
   }
@@ -220,9 +223,10 @@ export async function initializeCategoryStreams(): Promise<void> {
       if (!fs.existsSync(LOG_DIR)) {
         fs.mkdirSync(LOG_DIR, { recursive: true, mode: 0o755 });
       }
-    } catch (mkdirError: any) {
+    } catch (mkdirError: unknown) {
       // If directory creation fails, skip category streams
-      console.warn(`Could not create log directory ${LOG_DIR}:`, mkdirError?.message || mkdirError);
+      const errMsg = mkdirError instanceof Error ? mkdirError.message : String(mkdirError);
+      console.warn(`Could not create log directory ${LOG_DIR}:`, errMsg);
       return;
     }
 
@@ -316,8 +320,8 @@ export async function initializeCategoryStreams(): Promise<void> {
 export async function reinitializeCategoryStreams(): Promise<void> {
   // Close existing streams before creating new ones
   for (const streamEntry of categoryStreams.values()) {
-    if (streamEntry.stream && typeof (streamEntry.stream as any).end === 'function') {
-      (streamEntry.stream as any).end();
+    if (streamEntry.stream && typeof (streamEntry.stream as NodeJS.WritableStream & { end?: () => void }).end === 'function') {
+      (streamEntry.stream as NodeJS.WritableStream & { end: () => void }).end();
     }
   }
   
@@ -438,10 +442,10 @@ export class PerformanceTracker {
   private startTime: number;
   private startMemory: number;
   private operation: string;
-  private context: Record<string, any>;
+  private context: Record<string, unknown>;
   private loggerInstance: pino.Logger;
 
-  constructor(operation: string, context?: Record<string, any>, loggerInstance: pino.Logger = logger) {
+  constructor(operation: string, context?: Record<string, unknown>, loggerInstance: pino.Logger = logger) {
     this.operation = operation;
     this.context = context || {};
     this.startTime = Date.now();
@@ -462,7 +466,7 @@ export class PerformanceTracker {
   /**
    * Finish tracking and log results
    */
-  finish(metadata?: Record<string, any>): void {
+  finish(metadata?: Record<string, unknown>): void {
     const duration = Date.now() - this.startTime;
     const endMemory = process.memoryUsage().heapUsed;
     const memoryDelta = endMemory - this.startMemory;
@@ -494,21 +498,28 @@ export function generateRequestId(): string {
 /**
  * Extract request context for logging
  */
-export function enrichWithRequest(req: Request): Record<string, any> {
+interface RequestWithContext extends Request {
+  user?: { id: string };
+  requestId?: string;
+}
+
+export function enrichWithRequest(req: Request): Record<string, unknown> {
+  const reqWithCtx = req as RequestWithContext;
   return {
     method: req.method,
     url: req.url,
     ip: req.ip,
     userAgent: req.get('user-agent'),
-    userId: (req as any).user?.id,
-    requestId: (req as any).requestId,
+    userId: reqWithCtx.user?.id,
+    requestId: reqWithCtx.requestId,
   };
 }
 
 /**
  * Log HTTP request/response (legacy helper, prefer requestLogger middleware)
  */
-export function logRequest(req: any, res: any, duration: number) {
+export function logRequest(req: Request, res: { statusCode: number }, duration: number): void {
+  const reqWithCtx = req as RequestWithContext;
   httpLogger.info({
     operation: 'http_request',
     context: {
@@ -517,7 +528,7 @@ export function logRequest(req: any, res: any, duration: number) {
       status: res.statusCode,
       ip: req.ip,
       userAgent: req.get('user-agent'),
-      userId: req.user?.id,
+      userId: reqWithCtx.user?.id,
     },
     performance: {
       duration,
@@ -528,7 +539,7 @@ export function logRequest(req: any, res: any, duration: number) {
 /**
  * Log database query (legacy helper, prefer Prisma middleware)
  */
-export function logQuery(query: string, duration: number) {
+export function logQuery(query: string, duration: number): void {
   dbLogger.debug({
     operation: 'database_query',
     context: {
@@ -543,7 +554,7 @@ export function logQuery(query: string, duration: number) {
 /**
  * Log external API call
  */
-export function logApiCall(service: string, endpoint: string, duration: number, success: boolean) {
+export function logApiCall(service: string, endpoint: string, duration: number, success: boolean): void {
   logger.info({
     category: 'api_call',
     operation: 'external_api_call',
@@ -561,7 +572,7 @@ export function logApiCall(service: string, endpoint: string, duration: number, 
 /**
  * Log achievement unlock
  */
-export function logAchievement(userId: string, achievementId: string, achievementName: string) {
+export function logAchievement(userId: string, achievementId: string, achievementName: string): void {
   logger.info({
     category: 'achievement',
     operation: 'achievement_unlock',
@@ -579,8 +590,8 @@ export function logAchievement(userId: string, achievementId: string, achievemen
 export function logSecurityEvent(
   type: 'rate_limit' | 'auth_failure' | 'invalid_token' | 'admin_action' | 'suspicious_activity',
   ip: string,
-  details?: any
-) {
+  details?: Record<string, unknown>
+): void {
   securityLogger.warn({
     operation: 'security_event',
     context: {
