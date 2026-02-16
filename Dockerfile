@@ -54,8 +54,20 @@ COPY --from=backend-builder /app/backend/dist ./dist
 RUN npx prisma generate
 
 # Install Python dependencies for training (PyTorch, etc.)
+# Install PyTorch CPU version first (works everywhere, GPU version can be installed later if needed)
+RUN echo "[build] Installing PyTorch CPU version..." && \
+    pip3 install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu && \
+    echo "[build] Validating PyTorch installation..." && \
+    python3 -c "import torch; print(f'PyTorch {torch.__version__} installed successfully')" || \
+    (echo "[build] ❌ ERROR: PyTorch installation validation failed" && exit 1)
+
+# Install other training dependencies
 COPY backend/requirements-training.txt ./
-RUN pip3 install --no-cache-dir -r requirements-training.txt || echo "Warning: Some Python packages may not be available"
+RUN echo "[build] Installing other training dependencies..." && \
+    pip3 install --no-cache-dir transformers>=4.35.0 peft>=0.6.0 datasets>=2.14.0 accelerate>=0.24.0 bitsandbytes>=0.41.0 && \
+    echo "[build] Validating training dependencies..." && \
+    python3 -c "import transformers; import peft; import datasets; import accelerate; print('All training dependencies installed successfully')" || \
+    (echo "[build] ❌ ERROR: Training dependencies validation failed" && exit 1)
 
 # Copy Python scripts (checkHardware.py and trainLora.py)
 # Ensure scripts directory exists before copying

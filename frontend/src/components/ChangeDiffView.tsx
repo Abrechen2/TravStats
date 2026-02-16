@@ -8,13 +8,20 @@ import { useState } from 'react';
 import { useTranslation } from '../hooks/useTranslation';
 import { useThemeStore } from '../store/themeStore';
 
-interface ChangeDiffViewProps {
-  original: any;
-  proposed: any;
-  changes: any[];
+interface ChangeEntry {
+  field: string;
+  type: 'added' | 'removed' | 'changed';
+  oldValue: string | number | boolean | null | undefined;
+  newValue: string | number | boolean | null | undefined;
 }
 
-export default function ChangeDiffView({ original, proposed, changes }: ChangeDiffViewProps) {
+interface ChangeDiffViewProps {
+  original: Record<string, unknown>;
+  proposed: Record<string, unknown>;
+  changes: ChangeEntry[];
+}
+
+export default function ChangeDiffView({ changes }: ChangeDiffViewProps): JSX.Element {
   const { t } = useTranslation(['pendingUpdates']);
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
   const [expandedFields, setExpandedFields] = useState<Set<string>>(new Set());
@@ -48,7 +55,7 @@ export default function ChangeDiffView({ original, proposed, changes }: ChangeDi
     }
   };
 
-  const formatValue = (value: any): string => {
+  const formatValue = (value: unknown): string => {
     if (value === null || value === undefined) return '-';
     if (typeof value === 'object') return JSON.stringify(value);
     if (typeof value === 'string' && value.includes('T')) {

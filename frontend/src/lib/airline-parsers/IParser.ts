@@ -62,3 +62,5 @@ export interface BoardingPassParser {
   parse(barcodeData: string): BoardingPassData | null;
 }
 
+
+

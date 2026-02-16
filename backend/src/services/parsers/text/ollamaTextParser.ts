@@ -44,8 +44,8 @@ export class OllamaTextParser implements ITextParser {
         timeout: 3000,
       });
 
-      const models = response.data.models || [];
-      const hasModel = models.some((m: any) => m.name === this.modelName || m.name.startsWith(this.modelName.split(':')[0]));
+      const models: Array<{ name: string }> = response.data.models || [];
+      const hasModel = models.some((m) => m.name === this.modelName || m.name.startsWith(this.modelName.split(':')[0]));
 
       if (!hasModel) {
         return {
@@ -54,7 +54,7 @@ export class OllamaTextParser implements ITextParser {
           metadata: {
             ollamaUrl: OLLAMA_URL,
             requestedModel: this.modelName,
-            availableModels: models.map((m: any) => m.name),
+            availableModels: models.map((m) => m.name),
           },
         };
       }
@@ -118,7 +118,7 @@ export class OllamaTextParser implements ITextParser {
       // Parse JSON response
       const cleanedResponse = cleanLLMJsonResponse(response.data.response.trim());
 
-      let parsedData: any;
+      let parsedData: unknown;
       try {
         parsedData = JSON.parse(cleanedResponse);
       } catch (parseError) {
@@ -127,25 +127,26 @@ export class OllamaTextParser implements ITextParser {
       }
 
       // Normalize to array format
-      let flightsArray: any[] = [];
+      let flightsArray: Record<string, unknown>[] = [];
 
       if (Array.isArray(parsedData)) {
-        flightsArray = parsedData;
+        flightsArray = parsedData as Record<string, unknown>[];
       } else if (parsedData && typeof parsedData === 'object') {
         // Check for nested arrays
         const possibleKeys = ['flights', 'flightNumbers', 'data', 'results', 'items'];
         let foundArray = false;
+        const dataObj = parsedData as Record<string, unknown>;
 
         for (const key of possibleKeys) {
-          if (Array.isArray(parsedData[key])) {
-            flightsArray = parsedData[key];
+          if (Array.isArray(dataObj[key])) {
+            flightsArray = dataObj[key] as Record<string, unknown>[];
             foundArray = true;
             break;
           }
         }
 
         if (!foundArray) {
-          flightsArray = [parsedData];
+          flightsArray = [dataObj];
         }
       }
 
@@ -153,27 +154,27 @@ export class OllamaTextParser implements ITextParser {
       logger.debug({ rawFlights: flightsArray }, '[Ollama Text Parser] Raw flights from LLM');
 
       // Filter out completely invalid flights (missing critical fields)
-      const filteredFlights = flightsArray.filter((flight: any) =>
+      const filteredFlights = flightsArray.filter((flight) =>
         flight.flightNumber && flight.departureCode && flight.arrivalCode
       );
 
-      const filteredOut = flightsArray.filter((flight: any) =>
+      const filteredOut = flightsArray.filter((flight) =>
         !flight.flightNumber || !flight.departureCode || !flight.arrivalCode
       );
 
       if (filteredOut.length > 0) {
         logger.warn({
           count: filteredOut.length,
-          filtered: filteredOut.map((f: any) => ({
-            flightNumber: f.flightNumber || 'MISSING',
-            departureCode: f.departureCode || 'MISSING',
-            arrivalCode: f.arrivalCode || 'MISSING',
+          filtered: filteredOut.map((f) => ({
+            flightNumber: (f.flightNumber as string) || 'MISSING',
+            departureCode: (f.departureCode as string) || 'MISSING',
+            arrivalCode: (f.arrivalCode as string) || 'MISSING',
           }))
         }, '[Ollama Text Parser] Flights filtered out due to missing critical fields');
       }
 
       // Normalize remaining flights
-      const results: ParsedBooking[] = filteredFlights.map((flight: any) => normalizeParsedBooking(flight));
+      const results: ParsedBooking[] = filteredFlights.map((flight) => normalizeParsedBooking(flight));
 
       logger.info(`[Ollama Text Parser] Parsing complete - ${results.length} valid flight(s)`);
 

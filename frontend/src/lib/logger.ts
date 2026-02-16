@@ -7,44 +7,20 @@
 const isDevelopment = import.meta.env?.DEV ?? import.meta.env?.MODE === 'development';
 
 export const logger = {
-  debug: (...args: any[]) => {
+  debug: (...args: unknown[]): void => {
     if (isDevelopment) {
       console.debug(...args);
     }
   },
-  info: (...args: any[]) => {
+  info: (...args: unknown[]): void => {
     if (isDevelopment) {
       console.info(...args);
     }
   },
-  warn: (...args: any[]) => {
+  warn: (...args: unknown[]): void => {
     console.warn(...args);
   },
-  error: (...args: any[]) => {
+  error: (...args: unknown[]): void => {
     console.error(...args);
-    // In production, you might want to send errors to an error tracking service
-    // e.g., Sentry, LogRocket, etc.
   },
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

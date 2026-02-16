@@ -54,7 +54,7 @@ interface SimplifiedFlightFormProps {
   onCancel: () => void;
 }
 
-export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: SimplifiedFlightFormProps) {
+export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: SimplifiedFlightFormProps): JSX.Element {
   const { t } = useTranslation(['flights', 'errors', 'common']);
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
   const settings = useSettingsStore();
@@ -73,7 +73,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
   } | null>(null);
 
   // Email Import & Review State
-  const [parsedFlights, setParsedFlights] = useState<any[]>([]);
+  const [parsedFlights, setParsedFlights] = useState<import('../types').ParsedBooking[]>([]);
   const [currentFlightIndex, setCurrentFlightIndex] = useState(0);
   const [showFlightReview, setShowFlightReview] = useState(false);
   const [parserProvider, setParserProvider] = useState<string>('unknown');
@@ -316,7 +316,7 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
   // Boarding Pass Scanner with Ollama Vision
   // Now the scanner sends image to backend which uses Ollama + optional API enrichment
   // Returns ParsedBooking that we display in FlightReviewModal
-  const handleBoardingPassScan = async (parsedData: any) => {
+  const handleBoardingPassScan = async (parsedData: import('../types').ParsedBooking) => {
     setShowScanner(false);
     setError('');
 
@@ -403,8 +403,9 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
         category,
         tags: tags.length ? tags : undefined,
       });
-    } catch (err: any) {
-      setError(err.response?.data?.error || t('errors:saveFailed'));
+    } catch (err: unknown) {
+      const axiosError = err as { response?: { data?: { error?: string } } };
+      setError(axiosError.response?.data?.error || t('errors:saveFailed'));
     } finally {
       setLoading(false);
     }
@@ -1037,9 +1038,10 @@ export default function SimplifiedFlightFormV2({ onSubmit, onCancel }: Simplifie
                   } else {
                     setError(t('flights:form.noFlightsInEmail'));
                   }
-                } catch (err: any) {
+                } catch (err: unknown) {
                   logger.error('Failed to parse email:', err);
-                  setError(err.response?.data?.error || err.message || t('flights:form.noFlightsInEmail'));
+                  const axiosError = err as { response?: { data?: { error?: string } }; message?: string };
+                  setError(axiosError.response?.data?.error || axiosError.message || t('flights:form.noFlightsInEmail'));
                 } finally {
                   setEmailUploading(false);
                 }

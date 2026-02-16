@@ -146,7 +146,7 @@ router.get('/leaderboard', async (req: AuthRequest, res: Response, next: NextFun
     });
 
     // Aggregate points per user (more efficient than loading all into memory)
-    const userPointsMap = new Map<string, { user: any; totalPoints: number; achievementCount: number }>();
+    const userPointsMap = new Map<string, { user: { id: string; username: string; createdAt: Date }; totalPoints: number; achievementCount: number }>();
     
     for (const ua of userAchievements) {
       const userId = ua.userId;

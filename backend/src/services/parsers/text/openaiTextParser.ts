@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { APIError as OpenAIAPIError } from 'openai/core/error';
 import { ITextParser, ProviderAvailability, TextProvider } from '../types';
 import { ParsedBooking } from '../../bookingParser';
 import { normalizeParsedBooking, cleanLLMJsonResponse, getTextParserPrompt } from '../shared/utils';
@@ -69,8 +70,9 @@ export class OpenAITextParser implements ITextParser {
           cost: '~$0.002-0.01 per email',
         },
       };
-    } catch (error: any) {
-      if (error?.status === 401) {
+    } catch (error: unknown) {
+      const err = error as { status?: number };
+      if (err?.status === 401) {
         return {
           available: false,
           reason: 'Invalid OpenAI API key',
@@ -120,7 +122,7 @@ export class OpenAITextParser implements ITextParser {
 
       // Parse JSON
       const cleanedResponse = cleanLLMJsonResponse(rawResponse);
-      let parsedData: any;
+      let parsedData: unknown;
 
       try {
         parsedData = JSON.parse(cleanedResponse);
@@ -130,24 +132,25 @@ export class OpenAITextParser implements ITextParser {
       }
 
       // Normalize to array
-      let flightsArray: any[] = [];
+      let flightsArray: Record<string, unknown>[] = [];
 
       if (Array.isArray(parsedData)) {
-        flightsArray = parsedData;
+        flightsArray = parsedData as Record<string, unknown>[];
       } else if (parsedData && typeof parsedData === 'object') {
         const possibleKeys = ['flights', 'flightNumbers', 'data', 'results', 'items'];
         let foundArray = false;
+        const dataObj = parsedData as Record<string, unknown>;
 
         for (const key of possibleKeys) {
-          if (Array.isArray(parsedData[key])) {
-            flightsArray = parsedData[key];
+          if (Array.isArray(dataObj[key])) {
+            flightsArray = dataObj[key] as Record<string, unknown>[];
             foundArray = true;
             break;
           }
         }
 
         if (!foundArray) {
-          flightsArray = [parsedData];
+          flightsArray = [dataObj];
         }
       }
 
@@ -155,27 +158,27 @@ export class OpenAITextParser implements ITextParser {
       logger.debug({ rawFlights: flightsArray }, '[OpenAI Text Parser] Raw flights from LLM');
 
       // Filter out completely invalid flights (missing critical fields)
-      const filteredFlights = flightsArray.filter((flight: any) =>
+      const filteredFlights = flightsArray.filter((flight) =>
         flight.flightNumber && flight.departureCode && flight.arrivalCode
       );
 
-      const filteredOut = flightsArray.filter((flight: any) =>
+      const filteredOut = flightsArray.filter((flight) =>
         !flight.flightNumber || !flight.departureCode || !flight.arrivalCode
       );
 
       if (filteredOut.length > 0) {
         logger.warn({
           count: filteredOut.length,
-          filtered: filteredOut.map((f: any) => ({
-            flightNumber: f.flightNumber || 'MISSING',
-            departureCode: f.departureCode || 'MISSING',
-            arrivalCode: f.arrivalCode || 'MISSING',
+          filtered: filteredOut.map((f) => ({
+            flightNumber: (f.flightNumber as string) || 'MISSING',
+            departureCode: (f.departureCode as string) || 'MISSING',
+            arrivalCode: (f.arrivalCode as string) || 'MISSING',
           }))
         }, '[OpenAI Text Parser] Flights filtered out due to missing critical fields');
       }
 
       // Normalize remaining flights
-      const results: ParsedBooking[] = filteredFlights.map((flight: any) => normalizeParsedBooking(flight));
+      const results: ParsedBooking[] = filteredFlights.map((flight) => normalizeParsedBooking(flight));
 
       logger.info(
         { tokensUsed: response.usage?.total_tokens },
@@ -183,12 +186,15 @@ export class OpenAITextParser implements ITextParser {
       );
 
       return results;
-    } catch (error: any) {
-      if (error?.status === 401) {
+    } catch (error: unknown) {
+      const isApiError = error instanceof OpenAIAPIError;
+      const statusCode = isApiError ? error.status : undefined;
+
+      if (statusCode === 401) {
         throw new Error('Invalid OpenAI API key');
       }
 
-      if (error?.status === 429) {
+      if (statusCode === 429) {
         throw new Error('OpenAI API rate limit exceeded');
       }
 

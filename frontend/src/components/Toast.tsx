@@ -54,7 +54,7 @@ const ToastItem = ({ toast }: { toast: Toast }) => {
   );
 };
 
-export default function Toast() {
+export default function Toast(): JSX.Element | null {
   const toasts = useToastStore((state) => state.toasts);
 
   if (toasts.length === 0) return null;

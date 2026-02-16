@@ -10,7 +10,7 @@ import TrainingGuide from '../components/Training/TrainingGuide';
 import InlineHelp from '../components/Help/InlineHelp';
 import { useTranslation } from '../hooks/useTranslation';
 
-export default function TrainingPage() {
+export default function TrainingPage(): JSX.Element {
   const { t } = useTranslation(['training', 'common']);
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'upload' | 'dashboard' | 'guide'>('upload');

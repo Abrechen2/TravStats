@@ -15,7 +15,7 @@ export default function FlightEditModal({
   isOpen,
   onClose,
   onSave,
-}: FlightEditModalProps) {
+}: FlightEditModalProps): JSX.Element | null {
   const { t } = useTranslation(['flights', 'common', 'errors']);
   const [formData, setFormData] = useState({
     airline: flight.airline || '',
@@ -64,27 +64,27 @@ export default function FlightEditModal({
     setLoading(true);
 
     try {
-      const updates: any = {
+      const updates: Partial<Flight> = {
         airline: formData.airline || undefined,
         flightNumber: formData.flightNumber || undefined,
         aircraft: formData.aircraft || undefined,
-        status: formData.status,
-        category: formData.category || undefined,
-        seatClass: formData.seatClass || undefined,
+        status: formData.status as Flight['status'],
+        category: (formData.category || undefined) as Flight['category'],
+        seatClass: (formData.seatClass || undefined) as Flight['seatClass'],
         seatNumber: formData.seatNumber || undefined,
         price: formData.price > 0 ? formData.price : undefined,
-        currency: formData.currency,
+        currency: formData.currency as Flight['currency'],
         taxes: formData.taxes > 0 ? formData.taxes : undefined,
         fees: formData.fees > 0 ? formData.fees : undefined,
         notes: formData.notes || undefined,
-        tags: formData.tags ? formData.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+        tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()).filter(Boolean) : [],
         receiptUrl: formData.receiptUrl || undefined,
       };
 
       await onSave(flight.id, updates);
       onClose();
-    } catch (err: any) {
-      setError(err.message || t('errors:updateFailed'));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t('errors:updateFailed'));
     } finally {
       setLoading(false);
     }

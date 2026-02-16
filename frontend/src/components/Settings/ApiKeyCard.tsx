@@ -81,10 +81,11 @@ export default function ApiKeyCard({
         result = await api.testApiKey(provider, localValue || value);
       }
       setTestResult(result);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorObj = error as { response?: { data?: { message?: string } }; message?: string };
       setTestResult({
         success: false,
-        message: error.response?.data?.message || error.message || 'Test fehlgeschlagen',
+        message: errorObj.response?.data?.message || errorObj.message || 'Test fehlgeschlagen',
       });
     } finally {
       setTesting(false);

@@ -7,7 +7,7 @@ import { useThemeStore } from '../store/themeStore';
 import { useAuthStore } from '../store/authStore';
 import ParserConfiguration from '../components/Settings/ParserConfiguration';
 import ApiKeyCard from '../components/Settings/ApiKeyCard';
-import { settingsApi, authApi, backupApi, pendingUpdatesApi } from '../lib/api';
+import { settingsApi, authApi, backupApi } from '../lib/api';
 import { useToastStore } from '../store/toastStore';
 import { logger } from '../lib/logger';
 import { useTranslation } from '../hooks/useTranslation';
@@ -24,7 +24,7 @@ const timezoneOptions = [
 
 const colorPresets = ['#2563eb', '#16a34a', '#f97316', '#7c3aed', '#e11d48'];
 
-export default function SettingsPage() {
+export default function SettingsPage(): JSX.Element {
   const { t } = useTranslation(['settings', 'common']);
   const { user } = useAuthStore();
   const {
@@ -63,7 +63,7 @@ export default function SettingsPage() {
     confirmPassword: '',
   });
   const [passwordError, setPasswordError] = useState('');
-  const [lastBackup, setLastBackup] = useState<any>(null);
+  const [lastBackup, setLastBackup] = useState<{ completedAt: string | null; size: string; status: string } | null>(null);
   const [backupStatus, setBackupStatus] = useState<{ running: boolean } | null>(null);
   const [retentionDays, setRetentionDays] = useState(30);
   const [trainingSettings, setTrainingSettings] = useState({
@@ -263,7 +263,7 @@ export default function SettingsPage() {
             backupApi.getStatus(),
           ]);
           
-          const completedBackups = backupsData.backups.filter((b: any) => b.status === 'completed');
+          const completedBackups = backupsData.backups.filter((b) => b.status === 'completed');
           if (completedBackups.length > 0) {
             setLastBackup(completedBackups[0]);
           }
@@ -286,9 +286,10 @@ export default function SettingsPage() {
         .then((data) => {
           setDeveloperModeEnabled(data.enabled);
         })
-        .catch((error: any) => {
+        .catch((error: unknown) => {
           // Handle 403 (forbidden) or 401 (unauthorized) errors gracefully
-          if (error.response?.status === 403 || error.response?.status === 401) {
+          const axiosError = error as { response?: { status?: number } };
+          if (axiosError.response?.status === 403 || axiosError.response?.status === 401) {
             logger.warn('Training access denied or not available:', error);
             // Don't show error to user, just don't enable developer mode
             setDeveloperModeEnabled(false);
@@ -323,9 +324,10 @@ export default function SettingsPage() {
       const result = await settingsApi.uploadProfilePicture(file);
       setProfile({ profilePicture: result.profilePictureUrl });
       addToast('success', t('settings:profile.uploadSuccess'));
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Failed to upload profile picture:', error);
-      addToast('error', error.response?.data?.error || t('settings:profile.uploadError'));
+      const axiosError = error as { response?: { data?: { error?: string } } };
+      addToast('error', axiosError.response?.data?.error || t('settings:profile.uploadError'));
       // Fallback: show local preview
       const url = URL.createObjectURL(file);
       setProfile({ profilePicture: url });
@@ -407,9 +409,10 @@ export default function SettingsPage() {
         newPassword: '',
         confirmPassword: '',
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Failed to change password:', error);
-      setPasswordError(error.response?.data?.error || t('settings:password.error'));
+      const axiosError = error as { response?: { data?: { error?: string } } };
+      setPasswordError(axiosError.response?.data?.error || t('settings:password.error'));
     } finally {
       setChangingPassword(false);
     }
@@ -971,7 +974,7 @@ export default function SettingsPage() {
                     ) : lastBackup ? (
                       <div className="space-y-1">
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {t('settings:backup.status.lastBackup', { date: new Date(lastBackup.completedAt).toLocaleString('de-DE') })}
+                          {t('settings:backup.status.lastBackup', { date: lastBackup.completedAt ? new Date(lastBackup.completedAt).toLocaleString('de-DE') : '-' })}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-500">
                           {t('settings:backup.status.size', { size: (parseInt(lastBackup.size, 10) / 1024 / 1024).toFixed(2) })}
@@ -1495,9 +1498,10 @@ export default function SettingsPage() {
                     openskyClientId: '',
                     openskyClientSecret: '',
                   });
-                } catch (error: any) {
+                } catch (error: unknown) {
                   logger.error('Failed to save API keys:', error);
-                  addToast('error', error.response?.data?.error || t('settings:apiKeys.saveFailed') || 'Failed to save API keys');
+                  const axiosError = error as { response?: { data?: { error?: string } } };
+                  addToast('error', axiosError.response?.data?.error || t('settings:apiKeys.saveFailed') || 'Failed to save API keys');
                 } finally {
                   setLoadingApiKeys(false);
                 }

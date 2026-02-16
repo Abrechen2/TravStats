@@ -1,6 +1,14 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '../db';
 import logger from '../utils/logger';
 import { ParsedBooking } from './bookingParser';
+
+/** A single user correction to a parsed field */
+interface UserCorrection {
+  field: string;
+  original: string | number | boolean | null | undefined;
+  corrected: string | number | boolean | null | undefined;
+}
 
 export interface ParserFeedback {
   userId?: string;
@@ -16,11 +24,7 @@ export interface ParserFeedback {
   correctedResult?: ParsedBooking[];
   qualityScore: number;
   issues: string[];
-  userCorrections?: {
-    field: string;
-    original: any;
-    corrected: any;
-  }[];
+  userCorrections?: UserCorrection[];
 }
 
 /**
@@ -55,7 +59,7 @@ export async function collectParserFeedback(feedback: ParserFeedback): Promise<v
         data: {
           userId: feedback.userId,
           type: 'parser_feedback',
-          payload: payload as any,
+          payload: payload as unknown as Prisma.InputJsonValue,
         },
       });
     } else {
@@ -102,7 +106,7 @@ export async function collectCorrectionFeedback(
   }
 ): Promise<void> {
   const issues: string[] = [];
-  const userCorrections: Array<{ field: string; original: any; corrected: any }> = [];
+  const userCorrections: UserCorrection[] = [];
 
   // Compare original and corrected results
   for (let i = 0; i < Math.max(originalResult.length, correctedResult.length); i++) {
@@ -120,7 +124,8 @@ export async function collectCorrectionFeedback(
     if (!original || !corrected) continue;
 
     // Compare fields
-    const fieldsToCheck: Array<keyof ParsedBooking> = [
+    type StringBookingField = 'flightNumber' | 'departureCode' | 'arrivalCode' | 'departureTime' | 'arrivalTime' | 'pnr' | 'seat' | 'gate' | 'terminal' | 'airline';
+    const fieldsToCheck: StringBookingField[] = [
       'flightNumber',
       'departureCode',
       'arrivalCode',
@@ -287,10 +292,22 @@ export async function getParserFeedbackStats(
     },
   });
 
+  /** Type guard for parser feedback payload */
+  interface FeedbackPayload {
+    provider: string;
+    sourceType: string;
+    qualityScore?: number;
+    issues?: string[];
+  }
+
+  function isFeedbackPayload(val: unknown): val is FeedbackPayload {
+    return typeof val === 'object' && val !== null && 'provider' in val && 'sourceType' in val;
+  }
+
   const filtered = events.filter((e) => {
-    const payload = e.payload as any;
-    if (provider && payload.provider !== provider) return false;
-    if (sourceType && payload.sourceType !== sourceType) return false;
+    if (!isFeedbackPayload(e.payload)) return false;
+    if (provider && e.payload.provider !== provider) return false;
+    if (sourceType && e.payload.sourceType !== sourceType) return false;
     return true;
   });
 
@@ -300,15 +317,18 @@ export async function getParserFeedbackStats(
   const issueCounts: Record<string, number> = {};
 
   for (const event of filtered) {
-    const payload = event.payload as any;
-    
+    if (!isFeedbackPayload(event.payload)) continue;
+    const payload = event.payload;
+
     byProvider[payload.provider] = (byProvider[payload.provider] || 0) + 1;
     bySourceType[payload.sourceType] = (bySourceType[payload.sourceType] || 0) + 1;
     totalQuality += payload.qualityScore || 0;
 
     if (payload.issues && Array.isArray(payload.issues)) {
       for (const issue of payload.issues) {
-        issueCounts[issue] = (issueCounts[issue] || 0) + 1;
+        if (typeof issue === 'string') {
+          issueCounts[issue] = (issueCounts[issue] || 0) + 1;
+        }
       }
     }
   }
@@ -326,6 +346,8 @@ export async function getParserFeedbackStats(
     commonIssues,
   };
 }
+
+
 
 
 

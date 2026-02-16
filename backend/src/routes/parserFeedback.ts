@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { z } from 'zod';
 import { collectCorrectionFeedback } from '../services/parserFeedback';
+import type { ParsedBooking } from '../services/bookingParser';
 import logger from '../utils/logger';
 
 const router = Router();
@@ -9,8 +10,8 @@ const router = Router();
 const correctionSchema = z.object({
   sourceType: z.enum(['email', 'boardingpass']),
   provider: z.string(),
-  originalResult: z.array(z.any()),
-  correctedResult: z.array(z.any()),
+  originalResult: z.array(z.record(z.unknown())),
+  correctedResult: z.array(z.record(z.unknown())),
   originalData: z.object({
     subject: z.string().optional(),
     text: z.string().optional(),
@@ -31,8 +32,8 @@ router.post('/correction', authenticate, async (req: AuthRequest, res: Response)
       userId,
       correction.sourceType,
       correction.provider,
-      correction.originalResult,
-      correction.correctedResult,
+      correction.originalResult as unknown as ParsedBooking[],
+      correction.correctedResult as unknown as ParsedBooking[],
       correction.originalData
     );
 
@@ -64,6 +65,8 @@ router.post('/correction', authenticate, async (req: AuthRequest, res: Response)
 });
 
 export default router;
+
+
 
 
 

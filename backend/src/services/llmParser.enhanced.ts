@@ -223,7 +223,7 @@ JSON OUTPUT:`;
     });
 
     // Parse the JSON response
-    let parsedData: any;
+    let parsedData: unknown;
     try {
       let jsonText = response.data.response.trim();
 
@@ -274,19 +274,20 @@ JSON OUTPUT:`;
     }
 
     // Ensure we have an array - handle various JSON structures
-    let flightsArray: any[] = [];
+    let flightsArray: Record<string, unknown>[] = [];
 
     if (Array.isArray(parsedData)) {
       // Direct array: [flight1, flight2]
-      flightsArray = parsedData;
-    } else if (parsedData && typeof parsedData === 'object') {
+      flightsArray = parsedData as Record<string, unknown>[];
+    } else if (parsedData && typeof parsedData === 'object' && !Array.isArray(parsedData)) {
       // Check for nested arrays with common keys
       const possibleKeys = ['flights', 'flightNumbers', 'data', 'results', 'items'];
       let foundArray = false;
+      const parsedObj = parsedData as Record<string, unknown>;
 
       for (const key of possibleKeys) {
-        if (Array.isArray(parsedData[key])) {
-          flightsArray = parsedData[key];
+        if (Array.isArray(parsedObj[key])) {
+          flightsArray = parsedObj[key] as Record<string, unknown>[];
           foundArray = true;
           logger.debug({
             operation: 'enhanced_llm_parser_nested_array',
@@ -299,7 +300,7 @@ JSON OUTPUT:`;
 
       if (!foundArray) {
         // Single flight object: {flightNumber: ...}
-        flightsArray = [parsedData];
+        flightsArray = [parsedObj];
       }
     }
 
@@ -311,11 +312,15 @@ JSON OUTPUT:`;
 
     // Validate and build ParsedBooking results
     const results: ParsedBooking[] = flightsArray
-      .filter((flight: any) => {
+      .filter((flight: Record<string, unknown>) => {
         // Filter out invalid flights
         return flight.flightNumber && flight.departureCode && flight.arrivalCode;
       })
-      .map((flight: any, index: number) => {
+      .map((flight: Record<string, unknown>, index: number) => {
+        // Helper to safely get string value from unknown
+        const str = (val: unknown): string | undefined =>
+          typeof val === 'string' && val.length > 0 ? val : undefined;
+
         const missing: string[] = [];
         if (!flight.flightNumber) missing.push('flightNumber');
         if (!flight.departureCode) missing.push('departureCode');
@@ -330,25 +335,29 @@ JSON OUTPUT:`;
           return /^[A-Z]{3}$/.test(cleaned) ? cleaned : undefined;
         };
 
+        const flightNum = str(flight.flightNumber);
+        const pnrVal = str(flight.pnr);
+        const bookingRefVal = str(flight.bookingReference);
+
         const result: ParsedBooking = {
-          airline: flight.flightNumber?.slice(0, 2).toUpperCase() || undefined,
-          flightNumber: flight.flightNumber?.toUpperCase().replace(/\s+/g, '') || undefined,
-          departureCode: cleanIATA(flight.departureCode),
-          arrivalCode: cleanIATA(flight.arrivalCode),
-          departureTime: flight.departureTime || undefined,
-          arrivalTime: flight.arrivalTime || undefined,
-          pnr: flight.pnr?.toUpperCase() || flight.bookingReference?.toUpperCase() || undefined,
-          seat: flight.seat?.toUpperCase() || undefined,
-          terminal: flight.terminal || undefined,
-          gate: flight.gate?.toUpperCase() || undefined,
+          airline: flightNum?.slice(0, 2).toUpperCase() || undefined,
+          flightNumber: flightNum?.toUpperCase().replace(/\s+/g, '') || undefined,
+          departureCode: cleanIATA(str(flight.departureCode)),
+          arrivalCode: cleanIATA(str(flight.arrivalCode)),
+          departureTime: str(flight.departureTime) || undefined,
+          arrivalTime: str(flight.arrivalTime) || undefined,
+          pnr: pnrVal?.toUpperCase() || bookingRefVal?.toUpperCase() || undefined,
+          seat: str(flight.seat)?.toUpperCase() || undefined,
+          terminal: str(flight.terminal) || undefined,
+          gate: str(flight.gate)?.toUpperCase() || undefined,
           price: flight.price ? String(flight.price) : undefined,
-          currency: flight.currency?.toUpperCase() || undefined,
+          currency: str(flight.currency)?.toUpperCase() || undefined,
           // NEW FIELDS: Enhanced email parsing
-          aircraft: flight.aircraft || undefined,
-          seatClass: flight.seatClass || undefined,
-          bookingReference: flight.bookingReference?.toUpperCase() || flight.pnr?.toUpperCase() || undefined,
-          ticketNumber: flight.ticketNumber || undefined,
-          boardingGroup: flight.boardingGroup || undefined,
+          aircraft: str(flight.aircraft) || undefined,
+          seatClass: str(flight.seatClass) || undefined,
+          bookingReference: bookingRefVal?.toUpperCase() || pnrVal?.toUpperCase() || undefined,
+          ticketNumber: str(flight.ticketNumber) || undefined,
+          boardingGroup: str(flight.boardingGroup) || undefined,
           taxes: flight.taxes ? String(flight.taxes) : undefined,
           fees: flight.fees ? String(flight.fees) : undefined,
           missing,
@@ -474,8 +483,8 @@ export async function ensureModelAvailable(): Promise<boolean> {
     });
     const response = await axios.get(`${OLLAMA_URL}/api/tags`);
 
-    const models = response.data.models || [];
-    const modelExists = models.some((m: any) => m.name === OLLAMA_MODEL);
+    const models = (response.data.models || []) as Array<{ name: string }>;
+    const modelExists = models.some((m: { name: string }) => m.name === OLLAMA_MODEL);
 
     if (!modelExists) {
       logger.info({

@@ -9,21 +9,95 @@
  */
 
 import axios from 'axios';
+import NodeCache from 'node-cache';
 import { findOrCreateAirport } from './airportLookup';
 import { getApiKey, getOpenSkyCredentials } from './apiKeyResolver';
 import { convertAviationstackTimeToUtc, convertAirlabsTimeToUtc } from '../utils/timezone';
+import logger from '../utils/logger';
 
-// In-memory cache for flight lookup results (AirLabs)
-interface FlightLookupCache {
-  [key: string]: {
-    data: FlightData[];
-    timestamp: number;
+/** AirLabs API response flight record */
+interface AirLabsFlightRecord {
+  flight_iata?: string;
+  airline_name?: string;
+  airline_iata?: string;
+  airline_icao?: string;
+  dep_iata?: string;
+  dep_icao?: string;
+  dep_name?: string;
+  dep_time_utc?: string;
+  dep_time?: string;
+  dep_actual_utc?: string;
+  dep_actual?: string;
+  dep_terminal?: string;
+  dep_gate?: string;
+  arr_iata?: string;
+  arr_icao?: string;
+  arr_name?: string;
+  arr_time_utc?: string;
+  arr_time?: string;
+  arr_actual_utc?: string;
+  arr_actual?: string;
+  arr_terminal?: string;
+  arr_gate?: string;
+  aircraft_icao?: string;
+  status?: string;
+  duration?: number;
+  distance?: number;
+}
+
+/** Aviationstack API response structures */
+interface AviationstackFlightResult {
+  airline?: { name?: string };
+  flight?: { iata?: string; icao?: string };
+  aircraft?: { icao?: string; iata?: string };
+  departure?: {
+    iata?: string;
+    icao?: string;
+    estimated?: string;
+    scheduled?: string;
+    terminal?: string;
+    gate?: string;
+  };
+  arrival?: {
+    iata?: string;
+    icao?: string;
+    estimated?: string;
+    scheduled?: string;
+    terminal?: string;
+    gate?: string;
   };
 }
 
-const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours for historical flights
-const RECENT_CACHE_TTL = 30 * 60 * 1000; // 30 minutes for recent/future flights
-const flightCache: FlightLookupCache = {};
+/** Aviationstack API response wrapper */
+interface AviationstackApiResponse {
+  data?: AviationstackFlightResult[];
+}
+
+/** OpenSky API flight result */
+interface OpenSkyFlightResult {
+  estDepartureAirport?: string;
+  estArrivalAirport?: string;
+  firstSeen?: number;
+  lastSeen?: number;
+  callsign?: string;
+}
+
+/** Airport data returned from findOrCreateAirport */
+interface AirportInfo {
+  iata?: string | null;
+  icao?: string | null;
+  name?: string;
+  lat?: number;
+  lon?: number;
+  terminal?: string;
+  gate?: string;
+}
+
+// Bounded cache for flight lookup results using node-cache
+const CACHE_TTL_SECONDS = 6 * 60 * 60; // 6 hours for historical flights
+const RECENT_CACHE_TTL_SECONDS = 30 * 60; // 30 minutes for recent/future flights
+const MAX_CACHE_KEYS = 500;
+const flightCache = new NodeCache({ stdTTL: CACHE_TTL_SECONDS, maxKeys: MAX_CACHE_KEYS, checkperiod: 600 });
 
 // OpenSky token cache
 let openSkyTokenCache: { token: string; expiresAt: number } | null = null;
@@ -70,7 +144,7 @@ export async function lookupFlightByNumber(
   const apiKey = await getApiKey('airlabs', userId);
 
   if (!apiKey) {
-    console.warn('AIRLABS_API_KEY not configured - flight lookup disabled');
+    logger.warn({ operation: 'flight_lookup', message: 'AIRLABS_API_KEY not configured - flight lookup disabled' });
     return [];
   }
 
@@ -79,17 +153,9 @@ export async function lookupFlightByNumber(
   const cacheKey = `${flightNumber.toUpperCase()}_${dateStr}`;
 
   // Check cache
-  const now = Date.now();
-  const cached = flightCache[cacheKey];
-
-  if (cached) {
-    // Determine TTL based on flight date
-    const isHistorical = date && date < new Date();
-    const ttl = isHistorical ? CACHE_TTL : RECENT_CACHE_TTL;
-
-    if (now - cached.timestamp < ttl) {
-      return cached.data;
-    }
+  const cached = flightCache.get<FlightData[]>(cacheKey);
+  if (cached !== undefined) {
+    return cached;
   }
 
   try {
@@ -104,14 +170,12 @@ export async function lookupFlightByNumber(
     });
 
     if (!response.data || !response.data.response) {
-      flightCache[cacheKey] = {
-        data: [],
-        timestamp: now,
-      };
+      const isHistorical = date && date < new Date();
+      flightCache.set(cacheKey, [], isHistorical ? CACHE_TTL_SECONDS : RECENT_CACHE_TTL_SECONDS);
       return [];
     }
 
-    const flights: FlightData[] = response.data.response.map((flight: any) => ({
+    const flights: FlightData[] = response.data.response.map((flight: AirLabsFlightRecord) => ({
       flightNumber: flight.flight_iata || flightNumber,
       airline: flight.airline_name || getAirlineName(flight.airline_iata || '') || flight.airline_icao || 'Unknown',
       airlineIata: flight.airline_iata,
@@ -140,18 +204,13 @@ export async function lookupFlightByNumber(
       distance: flight.distance,
     }));
 
-    // Cache the results
-    flightCache[cacheKey] = {
-      data: flights,
-      timestamp: now,
-    };
+    // Cache the results with appropriate TTL
+    const isHistorical = date && date < new Date();
+    flightCache.set(cacheKey, flights, isHistorical ? CACHE_TTL_SECONDS : RECENT_CACHE_TTL_SECONDS);
 
     return flights;
-  } catch (error: any) {
-    // Return cached data even if expired, as fallback
-    if (cached) {
-      return cached.data;
-    }
+  } catch (error: unknown) {
+    // node-cache handles expiry, no stale fallback needed
     return [];
   }
 }
@@ -163,8 +222,8 @@ export interface FlightLookupResult {
   airline?: string;
   flightNumber?: string;
   aircraft?: string;
-  departure?: any;
-  arrival?: any;
+  departure?: AirportInfo;
+  arrival?: AirportInfo;
   departureTime?: string;
   arrivalTime?: string;
 }
@@ -209,7 +268,7 @@ async function getOpenSkyAuthHeaders(opts: {
         return { Authorization: `Bearer ${token}` };
       }
     } catch (err) {
-      console.warn('OpenSky OAuth token fetch failed', err instanceof Error ? err.message : err);
+      logger.warn({ operation: 'opensky_token_fetch', message: 'OpenSky OAuth token fetch failed', error: err instanceof Error ? err.message : String(err) });
       // fallback to basic if provided
     }
   }
@@ -258,7 +317,7 @@ export async function lookupFlightDetails(
         params,
         timeout: 6000,
       });
-      const json: any = response.data;
+      const json = response.data as AviationstackApiResponse;
       const result = json.data?.[0];
 
       if (result) {
@@ -294,7 +353,7 @@ export async function lookupFlightDetails(
         };
       }
     } catch (err) {
-      console.error('Aviationstack lookup failed', err);
+      logger.error({ operation: 'aviationstack_lookup', message: 'Aviationstack lookup failed', error: err instanceof Error ? err.message : String(err) });
     }
   }
 
@@ -364,7 +423,7 @@ async function lookupOpenSkyFlight(
   try {
     const url = `https://opensky-network.org/api/flights/callsign?callsign=${callsign}&begin=${begin}&end=${end}`;
     const response = await axios.get(url, { timeout: 6000, headers: authHeaders });
-    const result = (response.data as any[])[0];
+    const result = (response.data as OpenSkyFlightResult[])[0];
     if (!result) return null;
 
     const [departureAirport, arrivalAirport] = await Promise.all([
@@ -381,7 +440,7 @@ async function lookupOpenSkyFlight(
       arrivalTime: result.lastSeen ? new Date(result.lastSeen * 1000).toISOString() : undefined,
     };
   } catch (err) {
-    console.warn('OpenSky fallback failed', err instanceof Error ? err.message : err);
+    logger.warn({ operation: 'opensky_fallback', message: 'OpenSky fallback failed', error: err instanceof Error ? err.message : String(err) });
     return null;
   }
 }

@@ -72,12 +72,17 @@ export async function getAdminParserSettings(): Promise<AdminParserSettings | nu
   };
 }
 
+export interface ParserConfigWithSettings {
+  userSettings: UserParserSettings | undefined;
+  adminSettings: AdminParserSettings | undefined;
+}
+
 /**
  * Get parser config with user and admin settings merged
  * User settings take precedence over admin settings
  * Returns config ready to pass to getParserConfig
  */
-export async function getParserConfigWithSettings(userId: string) {
+export async function getParserConfigWithSettings(userId: string): Promise<ParserConfigWithSettings> {
   const userSettings = await getUserParserSettings(userId);
   const adminSettings = await getAdminParserSettings();
 

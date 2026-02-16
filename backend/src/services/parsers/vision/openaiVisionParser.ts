@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { APIError as OpenAIAPIError } from 'openai/core/error';
 import { IVisionParser, ProviderAvailability, VisionProvider } from '../types';
 import { ParsedBooking } from '../../bookingParser';
 import { normalizeParsedBooking, cleanLLMJsonResponse, getVisionParserPrompt } from '../shared/utils';
@@ -71,15 +72,18 @@ export class OpenAIVisionParser implements IVisionParser {
           cost: '~$0.01-0.05 per image',
         },
       };
-    } catch (error: any) {
-      if (error?.status === 401) {
+    } catch (error: unknown) {
+      const isApiError = error instanceof OpenAIAPIError;
+      const statusCode = isApiError ? error.status : undefined;
+
+      if (statusCode === 401) {
         return {
           available: false,
           reason: 'Invalid OpenAI API key',
         };
       }
 
-      if (error?.status === 404) {
+      if (statusCode === 404) {
         return {
           available: false,
           reason: `Model '${OPENAI_VISION_MODEL}' not found or not accessible`,
@@ -226,18 +230,20 @@ export class OpenAIVisionParser implements IVisionParser {
       }
 
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const isApiError = error instanceof OpenAIAPIError;
+      const statusCode = isApiError ? error.status : undefined;
       const totalDuration = Date.now() - startTime;
       const errorContext = {
         model: OPENAI_VISION_MODEL,
         imageSize: imageBase64.length,
         totalDuration,
-        status: error?.status,
+        status: statusCode,
         errorMessage: error instanceof Error ? error.message : 'Unknown error',
         errorStack: error instanceof Error ? error.stack : undefined,
       };
 
-      if (error?.status === 401) {
+      if (statusCode === 401) {
         if (shouldLog) {
           log.error({
             operation: 'openai_vision_parse_auth_error',
@@ -249,7 +255,7 @@ export class OpenAIVisionParser implements IVisionParser {
         throw new Error('Invalid OpenAI API key');
       }
 
-      if (error?.status === 429) {
+      if (statusCode === 429) {
         if (shouldLog) {
           log.error({
             operation: 'openai_vision_parse_rate_limit',
@@ -261,16 +267,16 @@ export class OpenAIVisionParser implements IVisionParser {
         throw new Error('OpenAI API rate limit exceeded. Please try again later.');
       }
 
-      if (error?.status === 400) {
+      if (statusCode === 400) {
         if (shouldLog) {
           log.error({
             operation: 'openai_vision_parse_bad_request',
             context: errorContext,
           });
         } else {
-          logger.error({ error: error.message }, '[OpenAI Vision Parser] Bad request');
+          logger.error({ error: error instanceof Error ? error.message : 'Unknown error' }, '[OpenAI Vision Parser] Bad request');
         }
-        throw new Error(`OpenAI API error: ${error.message}`);
+        throw new Error(`OpenAI API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
 
       if (error instanceof SyntaxError) {

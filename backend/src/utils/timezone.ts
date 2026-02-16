@@ -4,7 +4,7 @@
  * Functions for converting flight times between local airport time and UTC
  */
 
-import { zonedTimeToUtc, utcToZonedTime, format } from 'date-fns-tz';
+import { toZonedTime, fromZonedTime, format } from 'date-fns-tz';
 import { getCachedAirport } from '../services/airportCache';
 import logger from './logger';
 
@@ -86,7 +86,7 @@ export async function convertLocalTimeToUtc(
         return null;
       }
       // Convert from airport timezone to UTC
-      localDate = zonedTimeToUtc(tempDate, timezone);
+      localDate = fromZonedTime(tempDate, timezone);
     }
 
     return localDate.toISOString();
@@ -130,7 +130,7 @@ export async function convertUtcToLocalTime(
     }
 
     // Convert UTC to airport's local timezone
-    const localDate = utcToZonedTime(utcDate, timezone);
+    const localDate = toZonedTime(utcDate, timezone);
     return localDate.toISOString();
   } catch (error) {
     logger.error({
@@ -227,12 +227,12 @@ export async function convertAviationstackTimeToUtc(
     }
 
     // Convert from airport timezone to UTC
-    // zonedTimeToUtc takes a date and interprets its UTC time as if it's in the given timezone,
+    // fromZonedTime takes a date and interprets its UTC time as if it's in the given timezone,
     // then returns the equivalent UTC date
     // Example: If localDate is 2025-12-28T14:30:00Z (14:30 UTC) and timezone is Europe/Berlin (UTC+1),
-    // zonedTimeToUtc will interpret 14:30 UTC as 14:30 Berlin time, which is 13:30 UTC
+    // fromZonedTime will interpret 14:30 UTC as 14:30 Berlin time, which is 13:30 UTC
     // So it returns 2025-12-28T13:30:00Z
-    const utcDate = zonedTimeToUtc(localDate, timezone);
+    const utcDate = fromZonedTime(localDate, timezone);
     return utcDate.toISOString();
   } catch (error) {
     logger.error({

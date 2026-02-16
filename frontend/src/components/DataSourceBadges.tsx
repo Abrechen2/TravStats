@@ -5,7 +5,7 @@ interface DataSourceBadgesProps {
   flight: Flight;
 }
 
-export default function DataSourceBadges({ flight }: DataSourceBadgesProps) {
+export default function DataSourceBadges({ flight }: DataSourceBadgesProps): JSX.Element | null {
   const { t } = useTranslation(['flights', 'common']);
 
   const badges: Array<{ icon: string; label: string; color: string; tooltip?: string }> = [];
@@ -92,7 +92,7 @@ export default function DataSourceBadges({ flight }: DataSourceBadgesProps) {
 
 function getDataSourceConfig(
   source: string,
-  t: (key: string, options?: any) => string
+  t: (key: string, options?: Record<string, unknown>) => string
 ): { icon: string; label: string; color: string } | null {
   const configs: Record<string, { icon: string; label: string; color: string }> = {
     manual: {
@@ -133,7 +133,7 @@ function getDataSourceConfig(
 function getDataSourceTooltip(
   flight: Flight,
   sourceLabel: string,
-  t: (key: string, options?: any) => string
+  t: (key: string, options?: Record<string, unknown>) => string
 ): string {
   let tooltip = sourceLabel;
   
@@ -152,7 +152,7 @@ function getDataSourceTooltip(
 
 function getEnrichmentTooltip(
   history: Array<{type: string; timestamp: string; confidence?: number; source?: string; sourceFlightsCount?: number}>,
-  t: (key: string, options?: any) => string
+  t: (key: string, options?: Record<string, unknown>) => string
 ): string {
   const latest = history[history.length - 1];
   let tooltip = t('flights:enrichmentHistory');

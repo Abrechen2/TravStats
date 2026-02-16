@@ -190,9 +190,10 @@ router.post('/login', authLimiter, async (req: Request, res: Response, next: Nex
               message: 'Airport seeding started after first login',
               context: { userId: user.id, username: user.username },
             });
-          } catch (error: any) {
+          } catch (error: unknown) {
             // If another process already started seeding, ignore the error
-            if (error.code === 'P2002') {
+            const prismaError = error as { code?: string };
+            if (prismaError.code === 'P2002') {
               // P2002 = unique constraint violation (if we add a unique constraint)
               logger.debug({
                 operation: 'login_airport_seeding_already_running',

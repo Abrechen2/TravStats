@@ -1,7 +1,10 @@
 import { prisma } from '../db';
+import { Achievement, UserAchievement } from '@prisma/client';
 import { calculateDistance } from './geo';
 import logger from './logger';
 import { getCachedAirports } from '../services/airportCache';
+
+type UserAchievementWithRelation = UserAchievement & { achievement: Achievement };
 
 interface FlightData {
   id: string;
@@ -25,7 +28,7 @@ interface FlightData {
  * Returns newly unlocked achievements
  * Uses transactions to prevent race conditions and ensure data consistency
  */
-export async function checkAndUpdateAchievements(userId: string) {
+export async function checkAndUpdateAchievements(userId: string): Promise<UserAchievementWithRelation[]> {
   try {
     // Get all achievements
     const allAchievements = await prisma.achievement.findMany();
@@ -64,7 +67,7 @@ export async function checkAndUpdateAchievements(userId: string) {
 
     // Prepare all updates/creates to execute in a single transaction
     // Use callback-based transaction to prevent race conditions
-    const newlyUnlocked: any[] = [];
+    const newlyUnlocked: UserAchievementWithRelation[] = [];
 
     try {
       await prisma.$transaction(async (tx) => {
@@ -321,7 +324,7 @@ async function calculateUserStats(flights: FlightData[]): Promise<UserStats> {
 }
 
 function checkAchievement(
-  achievement: any,
+  achievement: Achievement,
   stats: UserStats,
   flights: FlightData[]
 ): { isUnlocked: boolean; progress: number } {

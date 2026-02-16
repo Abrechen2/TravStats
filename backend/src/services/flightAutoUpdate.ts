@@ -5,26 +5,30 @@
  * and creates pending updates for user review.
  */
 
-import { PrismaClient, Flight, UserSettings } from '@prisma/client';
-import { lookupFlightDetails } from './flightLookup';
+import { PrismaClient, Flight, UserSettings, Prisma } from '@prisma/client';
+import { lookupFlightDetails, FlightLookupResult } from './flightLookup';
 import { prisma } from '../db';
 import logger from '../utils/logger';
 import { calculateDistance } from '../utils/geo';
 import { getApiKey } from './apiKeyResolver';
 import { aggregateFlightData, type AggregatedFlightData } from './flightEnrichmentService';
+import type { FlightDataSnapshot } from './pendingUpdateService';
 
 const prismaClient = prisma as PrismaClient;
 
+/** Union type for values that can appear in flight data fields */
+type FlightFieldValue = string | number | boolean | null | undefined | string[] | unknown[];
+
 export interface FlightChange {
   field: string;
-  oldValue: any;
-  newValue: any;
+  oldValue: FlightFieldValue;
+  newValue: FlightFieldValue;
   type: 'added' | 'removed' | 'changed';
 }
 
 export interface PendingUpdateData {
-  originalData: any;
-  proposedData: any;
+  originalData: FlightDataSnapshot;
+  proposedData: FlightDataSnapshot;
   changes: FlightChange[];
   apiSource: string;
 }
@@ -53,8 +57,8 @@ export function isFlightActive(flight: Flight): boolean {
  * Calculate differences between original and proposed flight data
  */
 export function calculateChanges(
-  original: any,
-  proposed: any
+  original: FlightDataSnapshot,
+  proposed: FlightDataSnapshot
 ): FlightChange[] {
   const changes: FlightChange[] = [];
 
@@ -77,8 +81,8 @@ export function calculateChanges(
   ];
 
   for (const field of fieldsToCompare) {
-    const oldValue = original[field];
-    const newValue = proposed[field];
+    const oldValue = (original as Record<string, FlightFieldValue>)[field];
+    const newValue = (proposed as Record<string, FlightFieldValue>)[field];
 
     if (oldValue === undefined && newValue !== undefined) {
       changes.push({
@@ -97,8 +101,8 @@ export function calculateChanges(
     } else if (oldValue !== newValue && newValue !== undefined) {
       // Special handling for time fields
       if (field === 'departureTime' || field === 'arrivalTime') {
-        const oldTime = oldValue ? new Date(oldValue).getTime() : 0;
-        const newTime = newValue ? new Date(newValue).getTime() : 0;
+        const oldTime = oldValue && (typeof oldValue === 'string' || typeof oldValue === 'number') ? new Date(oldValue).getTime() : 0;
+        const newTime = newValue && (typeof newValue === 'string' || typeof newValue === 'number') ? new Date(newValue).getTime() : 0;
         const diffMinutes = Math.abs(newTime - oldTime) / (1000 * 60);
 
         // Only include if difference is significant
@@ -148,10 +152,10 @@ function hasSignificantChanges(changes: FlightChange[]): boolean {
  * (converted by lookupFlightDetails from local airport time to UTC)
  */
 function convertApiDataToProposed(
-  apiData: any,
+  apiData: FlightLookupResult,
   originalFlight: Flight
-): any {
-  const proposed: any = {
+): FlightDataSnapshot {
+  const proposed: FlightDataSnapshot = {
     airline: apiData.airline || originalFlight.airline,
     aircraft: apiData.aircraft || originalFlight.aircraft,
     gate: apiData.departure?.gate || originalFlight.gate,
@@ -178,7 +182,7 @@ function convertApiDataToProposed(
  */
 export async function createPendingUpdate(
   flight: Flight,
-  proposedData: any,
+  proposedData: FlightDataSnapshot,
   changes: FlightChange[],
   apiSource: string
 ): Promise<string | null> {
@@ -196,8 +200,8 @@ export async function createPendingUpdate(
       const updated = await prismaClient.pendingFlightUpdate.update({
         where: { id: existing.id },
         data: {
-          proposedData,
-          changes: changes as any,
+          proposedData: proposedData as unknown as Prisma.InputJsonValue,
+          changes: changes as unknown as Prisma.InputJsonValue,
           apiSource,
           fetchedAt: new Date(),
           expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
@@ -228,11 +232,28 @@ export async function createPendingUpdate(
     const expiresAt = new Date(Math.max(Date.now() + 24 * 60 * 60 * 1000, flightEnd.getTime()));
 
     // Calculate statistics impact
-    let statisticsImpact: any = null;
+    let statisticsImpact: Prisma.InputJsonValue | null = null;
     try {
       const { calculateStatisticsImpact } = await import('./pendingUpdateService');
-      statisticsImpact = await calculateStatisticsImpact(flight, originalData, proposedData);
-    } catch (error) {
+      const impact = await calculateStatisticsImpact(flight, originalData, proposedData);
+      if (impact) {
+        statisticsImpact = {
+          ...impact,
+          airlines: {
+            before: Array.from(impact.airlines.before),
+            after: Array.from(impact.airlines.after),
+            added: impact.airlines.added,
+            removed: impact.airlines.removed,
+          },
+          airports: {
+            before: Array.from(impact.airports.before),
+            after: Array.from(impact.airports.after),
+            added: impact.airports.added,
+            removed: impact.airports.removed,
+          },
+        };
+      }
+    } catch (error: unknown) {
       logger.warn({
         operation: 'calculate_statistics_impact_error',
         message: 'Failed to calculate statistics impact',
@@ -248,13 +269,13 @@ export async function createPendingUpdate(
         flightId: flight.id,
         userId: flight.userId,
         status: 'pending',
-        originalData: originalData as any,
-        proposedData: proposedData as any,
-        changes: changes as any,
+        originalData: originalData as unknown as Prisma.InputJsonValue,
+        proposedData: proposedData as unknown as Prisma.InputJsonValue,
+        changes: changes as unknown as Prisma.InputJsonValue,
         apiSource,
         fetchedAt: new Date(),
         expiresAt,
-        statisticsImpact: statisticsImpact as any,
+        statisticsImpact: statisticsImpact as Prisma.InputJsonValue,
       },
     });
 

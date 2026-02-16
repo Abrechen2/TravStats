@@ -1,6 +1,20 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '../db';
 import logger from '../utils/logger';
 import { PatternSuggestion } from './patternAnalyzer';
+
+/** Payload stored in analytics events for pattern suggestions */
+interface PatternSuggestionPayload {
+  field: string;
+  pattern: string;
+  confidence: number;
+  examples: string[];
+  issue: string;
+  applied: boolean;
+  appliedAt?: string;
+  autoApplied?: boolean;
+  createdAt?: string;
+}
 
 export interface PatternUpdate {
   id: string;
@@ -33,8 +47,8 @@ export async function storePatternSuggestions(suggestions: PatternSuggestion[]):
       // Check if this exact pattern already exists
       let patternExists = false;
       if (existing) {
-        const existingPayload = existing.payload as any;
-        if (existingPayload.field === suggestion.field && 
+        const existingPayload = existing.payload as unknown as PatternSuggestionPayload;
+        if (existingPayload.field === suggestion.field &&
             existingPayload.pattern === suggestion.pattern &&
             !existingPayload.applied) {
           patternExists = true;
@@ -55,7 +69,7 @@ export async function storePatternSuggestions(suggestions: PatternSuggestion[]):
               issue: suggestion.issue,
               applied: false,
               createdAt: new Date().toISOString(),
-            } as any,
+            } as unknown as Prisma.InputJsonValue,
           },
         });
       }
@@ -87,7 +101,7 @@ export async function getPendingPatternSuggestions(): Promise<Array<PatternSugge
 
     const suggestions: Array<PatternSuggestion & { id: string }> = [];
     for (const event of events) {
-      const payload = event.payload as any;
+      const payload = event.payload as unknown as PatternSuggestionPayload;
       if (!payload.applied && payload.confidence >= 0.7) {
         suggestions.push({
           id: event.id,
@@ -127,22 +141,23 @@ export async function applyPatternSuggestion(
       return { success: false, message: 'Pattern suggestion not found' };
     }
 
-    const payload = event.payload as any;
-    
+    const payload = event.payload as unknown as PatternSuggestionPayload;
+
     if (payload.applied) {
       return { success: false, message: 'Pattern already applied' };
     }
 
     // Mark as applied
+    const updatedPayload: PatternSuggestionPayload = {
+      ...payload,
+      applied: true,
+      appliedAt: new Date().toISOString(),
+      autoApplied: autoApply,
+    };
     await prisma.analyticsEvent.update({
       where: { id: event.id },
       data: {
-        payload: {
-          ...payload,
-          applied: true,
-          appliedAt: new Date().toISOString(),
-          autoApplied: autoApply,
-        } as any,
+        payload: updatedPayload as unknown as Prisma.InputJsonValue,
       },
     });
 
@@ -186,7 +201,7 @@ export async function autoApplyHighConfidencePatterns(threshold: number = 0.9): 
 
     let appliedCount = 0;
     for (const event of events) {
-      const payload = event.payload as any;
+      const payload = event.payload as unknown as PatternSuggestionPayload;
       if (!payload.applied && payload.confidence >= threshold) {
         const result = await applyPatternSuggestion(event.id, true);
         if (result.success) {
@@ -229,7 +244,7 @@ export async function getPatternUpdateStats(): Promise<{
     const byField: Record<string, number> = {};
 
     for (const event of events) {
-      const payload = event.payload as any;
+      const payload = event.payload as unknown as PatternSuggestionPayload;
       if (payload.applied) applied++;
       totalConfidence += payload.confidence || 0;
       byField[payload.field] = (byField[payload.field] || 0) + 1;

@@ -12,7 +12,7 @@ interface DayCell {
   flights: Flight[];
 }
 
-export default function YearHeatmap({ flights }: YearHeatmapProps) {
+export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element {
   const { t } = useTranslation(['stats', 'common']);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [hoveredCell, setHoveredCell] = useState<DayCell | null>(null);

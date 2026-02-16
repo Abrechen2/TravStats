@@ -1,5 +1,6 @@
 import { Router, Response, NextFunction } from 'express';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { analyticsLimiter } from '../middleware/rateLimit';
 import { prisma } from '../db';
@@ -10,7 +11,7 @@ router.use(authenticate);
 
 const eventSchema = z.object({
   type: z.string().min(1).max(100),
-  payload: z.any().optional().refine((val) => {
+  payload: z.record(z.unknown()).optional().refine((val) => {
     const size = JSON.stringify(val || {}).length;
     return size <= 10000; // 10KB limit
   }, { message: 'Payload too large (max 10KB)' }),
@@ -25,7 +26,7 @@ router.post('/events', analyticsLimiter, async (req: AuthRequest, res: Response,
       data: {
         userId,
         type: data.type,
-        payload: data.payload ?? {},
+        payload: (data.payload ?? {}) as Prisma.InputJsonValue,
       },
     });
 

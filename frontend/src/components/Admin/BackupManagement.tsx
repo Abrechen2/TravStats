@@ -15,7 +15,7 @@ interface Backup {
   startedAt: string | null;
   completedAt: string | null;
   errorMessage: string | null;
-  metadata: any;
+  metadata: Record<string, unknown> | null;
   syncedToCloud: boolean;
   cloudSyncAt: string | null;
   createdAt: string;
@@ -28,12 +28,25 @@ interface RestoreModalProps {
   onConfirm: (scope: 'full' | 'database' | 'files', createBackupBefore: boolean, targetDatabaseUrl?: string) => void;
 }
 
-function RestoreModal({ backup, onClose, onConfirm }: RestoreModalProps) {
+function RestoreModal({ backup, onClose, onConfirm }: RestoreModalProps): JSX.Element {
   const { t } = useTranslation(['admin', 'common']);
   const [scope, setScope] = useState<'full' | 'database' | 'files'>('full');
   const [createBackupBefore, setCreateBackupBefore] = useState(true);
   const [targetDatabaseUrl, setTargetDatabaseUrl] = useState('');
   const [confirmText, setConfirmText] = useState('');
+
+  const formatDate = (dateString: string | null | undefined): string => {
+    if (!dateString) return t('common:labels.unknown');
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return t('common:labels.unknown');
+      }
+      return format(date, 'dd.MM.yyyy HH:mm');
+    } catch (error) {
+      return t('common:labels.unknown');
+    }
+  };
 
   const handleConfirm = () => {
     if (confirmText !== t('admin:backup.restore.confirmText')) {
@@ -148,14 +161,14 @@ function RestoreModal({ backup, onClose, onConfirm }: RestoreModalProps) {
   );
 }
 
-export default function BackupManagement() {
+export default function BackupManagement(): JSX.Element {
   const { t } = useTranslation(['admin', 'common']);
   const addToast = useToastStore((state) => state.addToast);
   const [backups, setBackups] = useState<Backup[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [restoreModal, setRestoreModal] = useState<Backup | null>(null);
-  const [status, setStatus] = useState<{ running: boolean; currentBackup: any } | null>(null);
+  const [status, setStatus] = useState<{ running: boolean; currentBackup: { id: string; status: string; startedAt: string | null } | null } | null>(null);
 
   const loadBackups = async () => {
     try {

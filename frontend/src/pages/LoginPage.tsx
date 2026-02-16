@@ -4,7 +4,7 @@ import { authApi } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { useTranslation } from '../hooks/useTranslation';
 
-export default function LoginPage() {
+export default function LoginPage(): JSX.Element {
   const { t } = useTranslation(['auth', 'common']);
   const location = useLocation();
   const state = location.state as { message?: string; username?: string } | null;
@@ -25,8 +25,9 @@ export default function LoginPage() {
       const { user } = await authApi.login(username, password);
       setAuth(user);
       navigate('/');
-    } catch (err: any) {
-      setError(err.response?.data?.error || t('login.failed'));
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: { error?: string } } };
+      setError(errorObj.response?.data?.error || t('login.failed'));
     } finally {
       setLoading(false);
     }

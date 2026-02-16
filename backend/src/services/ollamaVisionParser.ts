@@ -177,7 +177,7 @@ export async function checkOllamaVisionAvailability(): Promise<boolean> {
     });
 
     const models = response.data.models || [];
-    const hasVisionModel = models.some((m: any) =>
+    const hasVisionModel = models.some((m: { name: string }) =>
       m.name.includes('llava') || m.name.includes('bakllava') || m.name === OLLAMA_VISION_MODEL
     );
 

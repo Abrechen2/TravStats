@@ -148,16 +148,16 @@ export async function getOpenSkyCredentials(
         if (hasUserCredentials) {
           return {
             clientId: userSettings.openskyClientId
-              ? decryptApiKey(userSettings.openskyClientId)
+              ? decryptApiKey(userSettings.openskyClientId) || undefined
               : undefined,
             clientSecret: userSettings.openskyClientSecret
-              ? decryptApiKey(userSettings.openskyClientSecret)
+              ? decryptApiKey(userSettings.openskyClientSecret) || undefined
               : undefined,
             username: userSettings.openskyUsername
-              ? decryptApiKey(userSettings.openskyUsername)
+              ? decryptApiKey(userSettings.openskyUsername) || undefined
               : undefined,
             password: userSettings.openskyPassword
-              ? decryptApiKey(userSettings.openskyPassword)
+              ? decryptApiKey(userSettings.openskyPassword) || undefined
               : undefined,
           };
         }
@@ -174,16 +174,16 @@ export async function getOpenSkyCredentials(
       if (hasGlobalCredentials) {
         return {
           clientId: adminSettings.globalOpenskyClientId
-            ? decryptApiKey(adminSettings.globalOpenskyClientId)
+            ? decryptApiKey(adminSettings.globalOpenskyClientId) || undefined
             : undefined,
           clientSecret: adminSettings.globalOpenskyClientSecret
-            ? decryptApiKey(adminSettings.globalOpenskyClientSecret)
+            ? decryptApiKey(adminSettings.globalOpenskyClientSecret) || undefined
             : undefined,
           username: adminSettings.globalOpenskyUsername
-            ? decryptApiKey(adminSettings.globalOpenskyUsername)
+            ? decryptApiKey(adminSettings.globalOpenskyUsername) || undefined
             : undefined,
           password: adminSettings.globalOpenskyPassword
-            ? decryptApiKey(adminSettings.globalOpenskyPassword)
+            ? decryptApiKey(adminSettings.globalOpenskyPassword) || undefined
             : undefined,
         };
       }
@@ -268,19 +268,19 @@ export async function hasApiKeyAccess(
       try {
         switch (provider) {
           case 'openai':
-            hasGlobalKey = !!(adminSettings as any).globalOpenaiApiKey;
+            hasGlobalKey = !!adminSettings.globalOpenaiApiKey;
             break;
           case 'claude':
-            hasGlobalKey = !!(adminSettings as any).globalClaudeApiKey;
+            hasGlobalKey = !!adminSettings.globalClaudeApiKey;
             break;
           case 'airlabs':
-            hasGlobalKey = !!(adminSettings as any).globalAirlabsApiKey;
+            hasGlobalKey = !!adminSettings.globalAirlabsApiKey;
             break;
           case 'aviationstack':
-            hasGlobalKey = !!(adminSettings as any).globalAviationstackApiKey;
+            hasGlobalKey = !!adminSettings.globalAviationstackApiKey;
             break;
         }
-      } catch (error) {
+      } catch (error: unknown) {
         // Field might not exist in database yet
         logger.warn({
           operation: 'api_key_access_check_field_error',
