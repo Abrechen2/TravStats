@@ -17,11 +17,11 @@
     "@turf/turf": "^6.5.0",
     "@zxing/browser": "^0.1.5",
     "@zxing/library": "^0.21.0",
-    "axios": "^1.6.2",
+    "axios": "^1.13.5",
     "date-fns": "^3.0.6",
     "i18next": "^23.7.16",
-    "jspdf": "^3.0.4",
-    "jspdf-autotable": "^5.0.2",
+    "jspdf": "^4.1.0",
+    "jspdf-autotable": "^5.0.7",
     "jsqr": "^1.4.0",
     "leaflet": "^1.9.4",
     "react": "^18.2.0",
@@ -30,7 +30,7 @@
     "react-hook-form": "^7.49.2",
     "react-i18next": "^14.0.0",
     "react-leaflet": "^4.2.1",
-    "react-router-dom": "^6.21.1",
+    "react-router-dom": "^6.30.3",
     "recharts": "^3.4.1",
     "tesseract.js": "^6.0.1",
     "three": "^0.181.2",
@@ -63,5 +63,9 @@
     "vite": "^6.4.1",
     "vitest": "^4.0.15"
   },
-  "license": "AGPL-3.0-only"
+  "license": "AGPL-3.0-only",
+  "overrides": {
+    "preact": ">=10.27.3",
+    "lodash-es": ">=4.17.23"
+  }
 }
