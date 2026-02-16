@@ -16,7 +16,7 @@ export default function Tooltip({
   position = 'top',
   children,
   className = '',
-}: TooltipProps) {
+}: TooltipProps): JSX.Element {
   const [isHovered, setIsHovered] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [calculatedPosition, setCalculatedPosition] = useState<'top' | 'bottom' | 'left' | 'right'>(position);

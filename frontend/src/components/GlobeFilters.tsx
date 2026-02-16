@@ -46,7 +46,7 @@ function GlobeFilters({
   availableAirlines,
   isCollapsed,
   onToggleCollapse,
-}: GlobeFiltersProps) {
+}: GlobeFiltersProps): JSX.Element {
   const { t } = useTranslation(['map', 'common', 'flights']);
   
   const MONTHS = [

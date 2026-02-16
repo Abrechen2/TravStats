@@ -49,7 +49,10 @@ function getEncryptionKey(): Buffer {
   }
 
   // Fallback: Use JWT_SECRET as base for encryption key (should not happen after initialization)
-  const fallbackSecret = process.env.JWT_SECRET || 'fallback-secret-change-in-production';
+  const fallbackSecret = process.env.JWT_SECRET;
+  if (!fallbackSecret) {
+    throw new Error('Neither ENCRYPTION_KEY nor JWT_SECRET is set. Cannot derive encryption key.');
+  }
   return crypto.pbkdf2Sync(fallbackSecret, 'encryption-salt', ITERATIONS, KEY_LENGTH, 'sha256');
 }
 

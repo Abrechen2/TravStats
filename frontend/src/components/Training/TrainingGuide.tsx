@@ -7,7 +7,7 @@ interface AccordionSection {
   content: React.ReactNode;
 }
 
-export default function TrainingGuide() {
+export default function TrainingGuide(): JSX.Element {
   const { t } = useTranslation('training');
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['introduction']));
 

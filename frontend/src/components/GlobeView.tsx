@@ -2,9 +2,10 @@ import { useEffect, useRef, useMemo, useState } from 'react';
 import Globe from 'react-globe.gl';
 import type { GeoJSONFeature } from '../types';
 import { useThemeStore } from '../store/themeStore';
+import { escapeHtml } from '../lib/escapeHtml';
 
 // #region agent log
-const debugLog = (location: string, message: string, data: any = {}, hypothesisId?: string) => {
+const debugLog = (location: string, message: string, data: Record<string, unknown> = {}, hypothesisId?: string) => {
   // Only log in development mode
   if (import.meta.env.MODE !== 'development') {
     return;
@@ -37,7 +38,7 @@ const debugLog = (location: string, message: string, data: any = {}, hypothesisI
 // Log before Globe import
 debugLog('GlobeView.tsx:import', 'GlobeView module loading', {
   hasGlobe: typeof Globe !== 'undefined',
-  threeAvailable: typeof window !== 'undefined' && (window as any).THREE !== undefined,
+  threeAvailable: typeof window !== 'undefined' && (window as unknown as Record<string, unknown>).THREE !== undefined,
 }, 'D');
 // #endregion
 
@@ -181,13 +182,13 @@ interface PointData {
   iata?: string;
 }
 
-export default function GlobeView({ flights = [], selectedFlightId: _selectedFlightId, onFlightClick, minRouteCount = 1 }: GlobeViewProps) {
+export default function GlobeView({ flights = [], selectedFlightId: _selectedFlightId, onFlightClick, minRouteCount = 1 }: GlobeViewProps): JSX.Element {
   // #region agent log
   debugLog('GlobeView.tsx:render-start', 'GlobeView component rendering', {
     flightsCount: flights.length,
     minRouteCount,
     hasGlobe: typeof Globe !== 'undefined',
-    threeAvailable: typeof window !== 'undefined' && (window as any).THREE !== undefined,
+    threeAvailable: typeof window !== 'undefined' && (window as unknown as Record<string, unknown>).THREE !== undefined,
   }, 'D');
   // #endregion
   
@@ -233,7 +234,7 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
             setCameraAltitude(pov.altitude);
           }
         }
-      }, 100);
+      }, 500);
       return () => clearInterval(interval);
     }
   }, []);
@@ -494,10 +495,10 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
             font-size: 12px;
           ">
             <div style="font-weight: bold; margin-bottom: 4px;">
-              ${arc.departure?.iata || 'UNK'} ↔ ${arc.arrival?.iata || 'UNK'}
+              ${escapeHtml(arc.departure?.iata || 'UNK')} ↔ ${escapeHtml(arc.arrival?.iata || 'UNK')}
             </div>
             <div style="font-size: 11px; opacity: 0.9; margin-bottom: 6px;">
-              ${arc.departure?.name || 'Unknown'} ↔ ${arc.arrival?.name || 'Unknown'}
+              ${escapeHtml(arc.departure?.name || 'Unknown')} ↔ ${escapeHtml(arc.arrival?.name || 'Unknown')}
             </div>
             <div style="color: ${arc.color};">
               ${arc.count}x geflogen
@@ -517,10 +518,11 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
         pointLng="lng"
         pointColor={() => isDarkMode ? '#fbbf24' : '#f59e0b'}
         pointAltitude={0.01}
-        pointRadius={(point: any) => {
+        pointRadius={(point: object) => {
           // Static radius calculation - no zoom-based scaling
           // Very small base size for better visibility
-          const baseRadius = Math.sqrt(point.size) * 0.08;
+          const p = point as PointData;
+          const baseRadius = Math.sqrt(p.size) * 0.08;
           return Math.min(baseRadius, 0.3); // Maximum size capped at 0.4
         }}
         pointLabel={(point: PointData) => `
@@ -532,8 +534,8 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
             font-family: system-ui;
             font-size: 11px;
           ">
-            <div style="font-weight: bold;">${point.code}</div>
-            <div style="opacity: 0.8;">${point.name}</div>
+            <div style="font-weight: bold;">${escapeHtml(point.code)}</div>
+            <div style="opacity: 0.8;">${escapeHtml(point.name)}</div>
             <div style="margin-top: 2px; color: #fbbf24;">
               ${point.size} flight${point.size !== 1 ? 's' : ''}
             </div>

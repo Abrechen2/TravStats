@@ -5,7 +5,6 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { flightsApi } from '../lib/api';
 import ContextualHint from '../components/Onboarding/ContextualHint';
 import NavigationBar from '../components/NavigationBar';
@@ -20,7 +19,7 @@ import { useTranslation } from '../hooks/useTranslation';
 import DataSourceBadges from '../components/DataSourceBadges';
 import { logger } from '../lib/logger';
 
-export default function FlightsTablePage() {
+export default function FlightsTablePage(): JSX.Element {
   const { t } = useTranslation(['flights', 'common']);
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
   const [flights, setFlights] = useState<Flight[]>([]);
@@ -40,7 +39,7 @@ export default function FlightsTablePage() {
   const loadFlights = async () => {
     try {
       setLoading(true);
-      const { minRouteCount, ...apiFilters } = filters as any;
+      const { minRouteCount: _minRouteCount, ...apiFilters } = filters;
       let allFlights: Flight[] = [];
       let offset = 0;
       const limit = API_LIMITS.MAX_PAGE_SIZE;

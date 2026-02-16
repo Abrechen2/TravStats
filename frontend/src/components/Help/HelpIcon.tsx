@@ -14,7 +14,7 @@ export default function HelpIcon({
   expandedContent,
   position = 'top',
   className = '',
-}: HelpIconProps) {
+}: HelpIconProps): JSX.Element {
   const [isHovered, setIsHovered] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [calculatedPosition, setCalculatedPosition] = useState<'top' | 'bottom' | 'left' | 'right'>(position);
@@ -197,13 +197,6 @@ export default function HelpIcon({
 
   const handleTouchStart = () => {
     setIsExpanded(true);
-  };
-
-  const positionClasses = {
-    top: 'bottom-full left-1/2 transform -translate-x-1/2 mb-2',
-    bottom: 'top-full left-1/2 transform -translate-x-1/2 mt-2',
-    left: 'right-full top-1/2 transform -translate-y-1/2 mr-2',
-    right: 'left-full top-1/2 transform -translate-y-1/2 ml-2',
   };
 
   const arrowClasses = {

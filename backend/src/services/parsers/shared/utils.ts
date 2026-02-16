@@ -148,27 +148,31 @@ export function getMissingFields(booking: Partial<ParsedBooking>): string[] {
 /**
  * Clean and normalize parsed booking data
  */
-export function normalizeParsedBooking(data: any): ParsedBooking {
+export function normalizeParsedBooking(data: Record<string, unknown>): ParsedBooking {
   const missing = getMissingFields(data);
 
+  const str = (val: unknown): string | undefined => typeof val === 'string' && val ? val : undefined;
+  const strUp = (val: unknown): string | undefined => typeof val === 'string' && val ? val.toUpperCase() : undefined;
+  const flightNum = str(data.flightNumber);
+
   const result: ParsedBooking = {
-    airline: data.airline || data.flightNumber?.slice(0, 2).toUpperCase() || undefined,
-    flightNumber: validateFlightNumber(data.flightNumber),
-    departureCode: validateIATACode(data.departureCode),
-    arrivalCode: validateIATACode(data.arrivalCode),
-    departureTime: validateDateTime(data.departureTime),
-    arrivalTime: validateDateTime(data.arrivalTime),
-    pnr: data.pnr?.toUpperCase() || data.bookingReference?.toUpperCase() || undefined,
-    seat: data.seat?.toUpperCase() || undefined,
-    terminal: data.terminal || undefined,
-    gate: data.gate?.toUpperCase() || undefined,
+    airline: str(data.airline) || flightNum?.slice(0, 2).toUpperCase() || undefined,
+    flightNumber: validateFlightNumber(str(data.flightNumber)),
+    departureCode: validateIATACode(str(data.departureCode)),
+    arrivalCode: validateIATACode(str(data.arrivalCode)),
+    departureTime: validateDateTime(str(data.departureTime)),
+    arrivalTime: validateDateTime(str(data.arrivalTime)),
+    pnr: strUp(data.pnr) || strUp(data.bookingReference) || undefined,
+    seat: strUp(data.seat) || undefined,
+    terminal: str(data.terminal) || undefined,
+    gate: strUp(data.gate) || undefined,
     price: data.price ? String(data.price) : undefined,
-    currency: data.currency?.toUpperCase() || undefined,
-    aircraft: data.aircraft || undefined,
-    seatClass: data.seatClass || undefined,
-    bookingReference: data.bookingReference?.toUpperCase() || data.pnr?.toUpperCase() || undefined,
-    ticketNumber: data.ticketNumber || undefined,
-    boardingGroup: data.boardingGroup || undefined,
+    currency: strUp(data.currency) || undefined,
+    aircraft: str(data.aircraft) || undefined,
+    seatClass: str(data.seatClass) || undefined,
+    bookingReference: strUp(data.bookingReference) || strUp(data.pnr) || undefined,
+    ticketNumber: str(data.ticketNumber) || undefined,
+    boardingGroup: str(data.boardingGroup) || undefined,
     taxes: data.taxes ? String(data.taxes) : undefined,
     fees: data.fees ? String(data.fees) : undefined,
     missing,

@@ -6,6 +6,7 @@ import archiver from 'archiver';
 import { prisma } from '../db';
 import logger from '../utils/logger';
 import { DATABASE_URL } from '../utils/database';
+import { Backup } from '@prisma/client';
 
 const execAsync = promisify(exec);
 
@@ -43,14 +44,15 @@ try {
       context: { directory: BACKUP_BASE_DIR },
     });
   }
-} catch (error: any) {
+} catch (error: unknown) {
   // Log warning but don't prevent startup - directory will be created on first backup attempt
-  console.warn(`[Backup] Could not create backup directory ${BACKUP_BASE_DIR}:`, error?.message || error);
+  const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+  console.warn(`[Backup] Could not create backup directory ${BACKUP_BASE_DIR}:`, errorMsg);
   console.warn('[Backup] Backups may fail until directory permissions are fixed');
   logger.warn({
     operation: 'backup_dir_creation_failed',
     message: `Could not create backup directory: ${BACKUP_BASE_DIR}`,
-    context: { directory: BACKUP_BASE_DIR, error: error?.message || 'Unknown error' },
+    context: { directory: BACKUP_BASE_DIR, error: errorMsg },
   });
 }
 
@@ -553,7 +555,7 @@ async function archiveUploads(outputPath: string): Promise<number> {
 /**
  * Get metadata about current database state
  */
-async function getMetadata(): Promise<Record<string, any>> {
+async function getMetadata(): Promise<Record<string, string | number>> {
   const [userCount, flightCount, airportCount, achievementCount] = await Promise.all([
     prisma.user.count(),
     prisma.flight.count(),
@@ -793,7 +795,7 @@ export async function createBackup(options: BackupOptions = {}): Promise<string>
 /**
  * List all backups
  */
-export async function listBackups() {
+export async function listBackups(): Promise<Backup[]> {
   return prisma.backup.findMany({
     orderBy: { createdAt: 'desc' },
   });
@@ -802,7 +804,7 @@ export async function listBackups() {
 /**
  * Get backup by ID
  */
-export async function getBackup(id: string) {
+export async function getBackup(id: string): Promise<Backup & { fileExists: boolean }> {
   const backup = await prisma.backup.findUnique({
     where: { id },
   });

@@ -161,8 +161,7 @@ describe('Pending Update Service', () => {
       const updated = await updatePendingUpdate(
         pendingUpdateId,
         userId,
-        editedData,
-        editedChanges
+        editedData
       );
 
       expect(updated).toBeDefined();
@@ -323,5 +322,7 @@ describe('Pending Update Service', () => {
     });
   });
 });
+
+
 
 

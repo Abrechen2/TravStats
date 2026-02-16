@@ -378,7 +378,7 @@ export async function parseBookingEmail(
   // Map to legacy format for backward compatibility
   return {
     flights: result.flights,
-    parserUsed: result.provider as any, // Map provider to legacy format
+    parserUsed: result.provider as ParseResult['parserUsed'], // Map provider to legacy format
     ollamaAvailable: result.provider === 'ollama' || !result.fallbackUsed,
     fallbackUsed: result.fallbackUsed,
   };

@@ -11,7 +11,7 @@ interface ContextualHintProps {
   linkText?: string;
 }
 
-export default function ContextualHint({ id, title, message, linkTo, linkText }: ContextualHintProps) {
+export default function ContextualHint({ id, title, message, linkTo, linkText }: ContextualHintProps): JSX.Element | null {
   const [dismissed, setDismissed] = useState(false);
   const { t } = useTranslation('common');
 

@@ -124,10 +124,21 @@ async function createParserFeedbackEvents(userId: string) {
     
     // Create original (incorrect) and corrected results
     const errorType = Math.floor(Math.random() * 4);
-    let originalResult: any[] = [];
-    let correctedResult: any[] = [];
+    let originalResult: Array<{
+      flightNumber: string;
+      departureCode: string;
+      arrivalCode: string;
+      departureTime: string;
+      arrivalTime: string;
+      pnr: string;
+    }> = [];
+    let correctedResult: typeof originalResult = [];
     let issues: string[] = [];
-    let userCorrections: any[] = [];
+    let userCorrections: Array<{
+      field: string;
+      original: string;
+      corrected: string;
+    }> = [];
     let qualityScore = 30 + Math.floor(Math.random() * 65); // 30-95%
 
     switch (errorType) {
@@ -376,7 +387,7 @@ async function createPatternSuggestions(userId: string) {
   for (const suggestion of suggestions) {
     await prisma.analyticsEvent.create({
       data: {
-        userId: 'system',
+        userId: userId, // Use the provided userId parameter instead of hardcoded 'system'
         type: 'pattern_suggestion',
         payload: {
           field: suggestion.field,

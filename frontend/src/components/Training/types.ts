@@ -15,7 +15,7 @@ export interface Flight {
   seat?: string;
   gate?: string;
   terminal?: string;
-  [key: string]: any;           // Für zusätzliche Felder
+  [key: string]: string | undefined;  // Für zusätzliche Felder
 }
 
 /**
@@ -59,6 +59,8 @@ export function splitDateTime(dateTime?: string): { date?: string; time?: string
   
   return { date: undefined, time: undefined };
 }
+
+
 
 
 

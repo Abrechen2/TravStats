@@ -1,4 +1,5 @@
 import { prisma } from '../db';
+import { Prisma } from '@prisma/client';
 import logger from '../utils/logger';
 import { createTrainingExample, Annotation } from './annotationService';
 import { ParsedBooking } from './bookingParser';
@@ -44,14 +45,15 @@ try {
       context: { directory: TRAINING_DATA_DIR },
     });
   }
-} catch (error: any) {
+} catch (error: unknown) {
   // Log warning but don't prevent startup - directory will be created on first training attempt
-  console.warn(`[Training] Could not create training data directory ${TRAINING_DATA_DIR}:`, error?.message || error);
+  const errorMsg = error instanceof Error ? error.message : String(error);
+  console.warn(`[Training] Could not create training data directory ${TRAINING_DATA_DIR}:`, errorMsg);
   console.warn('[Training] Training may fail until directory permissions are fixed');
   logger.warn({
     operation: 'training_data_dir_creation_failed',
     message: `Could not create training data directory: ${TRAINING_DATA_DIR}`,
-    context: { directory: TRAINING_DATA_DIR, error: error?.message || 'Unknown error' },
+    context: { directory: TRAINING_DATA_DIR, error: errorMsg },
   });
 }
 
@@ -64,14 +66,15 @@ try {
       context: { directory: TRAINING_LOGS_DIR },
     });
   }
-} catch (error: any) {
+} catch (error: unknown) {
   // Log warning but don't prevent startup - directory will be created on first training attempt
-  console.warn(`[Training] Could not create training logs directory ${TRAINING_LOGS_DIR}:`, error?.message || error);
+  const errorMsg = error instanceof Error ? error.message : String(error);
+  console.warn(`[Training] Could not create training logs directory ${TRAINING_LOGS_DIR}:`, errorMsg);
   console.warn('[Training] Training logs may not be saved until directory permissions are fixed');
   logger.warn({
     operation: 'training_logs_dir_creation_failed',
     message: `Could not create training logs directory: ${TRAINING_LOGS_DIR}`,
-    context: { directory: TRAINING_LOGS_DIR, error: error?.message || 'Unknown error' },
+    context: { directory: TRAINING_LOGS_DIR, error: errorMsg },
   });
 }
 
@@ -150,14 +153,11 @@ export async function prepareTrainingData(
   trainingDataIds: string[],
   typeFilter?: 'email' | 'boarding_pass'
 ): Promise<string> {
-  const whereClause: any = {
+  const whereClause: Prisma.TrainingDataWhereInput = {
     id: { in: trainingDataIds },
     status: 'pending',
+    ...(typeFilter ? { type: typeFilter } : {}),
   };
-  
-  if (typeFilter) {
-    whereClause.type = typeFilter;
-  }
   
   const trainingData = await prisma.trainingData.findMany({
     where: whereClause,
@@ -175,7 +175,14 @@ export async function prepareTrainingData(
     throw new Error('No pending training data found');
   }
 
-  const examples: any[] = [];
+  interface TrainingExample {
+    instruction: string;
+    input: string;
+    output: string;
+    metadata: Record<string, unknown>;
+  }
+
+  const examples: TrainingExample[] = [];
 
   for (const data of trainingData) {
     try {
@@ -232,7 +239,7 @@ async function logTrainingEvent(
   trainingJobId: string,
   level: 'info' | 'warn' | 'error' | 'debug',
   message: string,
-  metadata?: Record<string, any>
+  metadata?: Prisma.InputJsonObject
 ) {
   try {
     await prisma.trainingLog.create({
@@ -262,13 +269,10 @@ async function logTrainingEvent(
  */
 async function findLastSuccessfulTraining(modelType?: 'email' | 'vision' | 'combined'): Promise<string | null> {
   try {
-    const whereClause: any = {
+    const whereClause: Prisma.TrainingJobWhereInput = {
       status: 'completed',
+      ...(modelType ? { modelType } : {}),
     };
-    
-    if (modelType) {
-      whereClause.modelType = modelType;
-    }
     
     const lastJob = await prisma.trainingJob.findFirst({
       where: whereClause,
@@ -287,8 +291,8 @@ async function findLastSuccessfulTraining(modelType?: 'email' | 'vision' | 'comb
     }
 
     // Try to get modelPath from metrics first
-    const metrics = lastJob.metrics as any;
-    if (metrics && metrics.modelPath && typeof metrics.modelPath === 'string') {
+    const metrics = lastJob.metrics as Record<string, unknown> | null;
+    if (metrics && typeof metrics === 'object' && 'modelPath' in metrics && typeof metrics.modelPath === 'string') {
       const modelPath = metrics.modelPath;
       if (fs.existsSync(modelPath)) {
         return modelPath;
@@ -339,7 +343,7 @@ export async function trainModel(
   trainingJobId: string,
   jsonlPath: string,
   modelType: 'email' | 'vision' | 'combined' = 'combined'
-): Promise<{ modelPath: string; metrics: Record<string, any> }> {
+): Promise<{ modelPath: string; metrics: Prisma.InputJsonObject }> {
   // Get training configuration
   const config = await getTrainingConfig();
   
@@ -442,11 +446,11 @@ export async function trainModel(
 
       // Log hardware info
       await logTrainingEvent(trainingJobId, 'info', 'Hardware information', {
-        cpu: hardwareInfo.cpu,
-        gpu: hardwareInfo.gpu,
-        python: hardwareInfo.python,
+        cpu: hardwareInfo.cpu as unknown as Prisma.InputJsonValue,
+        gpu: hardwareInfo.gpu as unknown as Prisma.InputJsonValue,
+        python: hardwareInfo.python as unknown as Prisma.InputJsonValue,
         docker: hardwareInfo.docker,
-        trainingAccess: hardwareInfo.trainingAccess,
+        trainingAccess: hardwareInfo.trainingAccess as unknown as Prisma.InputJsonValue,
       });
 
       logger.info({
@@ -482,8 +486,8 @@ export async function trainModel(
       previousModelPath: previousModelPath || undefined,
       isContinuingTraining,
       hardwareInfo: hardwareInfo ? {
-        cpu: hardwareInfo.cpu,
-        gpu: hardwareInfo.gpu,
+        cpu: hardwareInfo.cpu as unknown as Prisma.InputJsonValue,
+        gpu: hardwareInfo.gpu as unknown as Prisma.InputJsonValue,
       } : undefined,
     });
 
@@ -587,8 +591,8 @@ export async function trainModel(
       logFile,
       outputDir,
       hardwareInfo: hardwareInfo ? {
-        cpu: hardwareInfo.cpu,
-        gpu: hardwareInfo.gpu,
+        cpu: hardwareInfo.cpu as unknown as Prisma.InputJsonValue,
+        gpu: hardwareInfo.gpu as unknown as Prisma.InputJsonValue,
       } : undefined,
     });
 
@@ -599,7 +603,7 @@ export async function trainModel(
     }
     
     // Parse metrics from output (would need to be implemented in Python script)
-    const metrics: Record<string, any> = {
+    const metrics: Prisma.InputJsonObject = {
       status: 'completed',
       logFile,
       modelPath: outputDir,
@@ -607,8 +611,8 @@ export async function trainModel(
       modelType,
       isValid,
       hardwareInfo: hardwareInfo ? {
-        cpu: hardwareInfo.cpu,
-        gpu: hardwareInfo.gpu,
+        cpu: hardwareInfo.cpu as unknown as Prisma.InputJsonValue,
+        gpu: hardwareInfo.gpu as unknown as Prisma.InputJsonValue,
       } : undefined,
     };
 
@@ -1091,7 +1095,7 @@ export async function cancelTraining(trainingJobId: string): Promise<void> {
               pid: trackedProcess.pid,
             },
           });
-        } catch (killError: any) {
+        } catch (killError: unknown) {
           // If taskkill fails, try alternative methods
           logger.warn({
             operation: 'cancel_training_taskkill_failed',

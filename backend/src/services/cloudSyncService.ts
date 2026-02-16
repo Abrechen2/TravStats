@@ -154,13 +154,22 @@ export async function listCloudBackups(): Promise<Array<{ name: string; size: nu
 
     const items = await client.getDirectoryContents(WEBDAV_BACKUP_PATH);
 
-    // Ensure items is an array
-    const itemsArray = Array.isArray(items) ? items : (items as any).data || [];
+    // WebDAV getDirectoryContents may return an array or an object with a data property
+    interface WebDAVItem {
+      type: string;
+      basename?: string;
+      size?: number;
+      lastmod?: string;
+    }
+
+    const itemsArray: WebDAVItem[] = Array.isArray(items)
+      ? items as WebDAVItem[]
+      : ((items as { data?: WebDAVItem[] }).data || []);
 
     return itemsArray
-      .filter((item: any) => item.type === 'file' && item.basename?.endsWith('.tar.gz'))
-      .map((item: any) => ({
-        name: item.basename,
+      .filter((item) => item.type === 'file' && item.basename?.endsWith('.tar.gz'))
+      .map((item) => ({
+        name: item.basename || '',
         size: item.size || 0,
         lastModified: item.lastmod ? new Date(item.lastmod) : new Date(),
       }));
@@ -212,6 +221,8 @@ export async function downloadFromCloud(backupName: string, localPath: string): 
     throw error;
   }
 }
+
+
 
 
 

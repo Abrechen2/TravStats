@@ -123,7 +123,7 @@ Example for round trip (MUC→LUX and LUX→MUC):
     });
 
     // Parse the JSON response
-    let parsedData: any;
+    let parsedData: unknown;
     try {
       // Remove any markdown code blocks if present
       let jsonText = response.data.response.trim();
@@ -149,7 +149,9 @@ Example for round trip (MUC→LUX and LUX→MUC):
     }
 
     // Ensure we have an array
-    const flightsArray = Array.isArray(parsedData) ? parsedData : [parsedData];
+    const flightsArray: Record<string, unknown>[] = Array.isArray(parsedData)
+      ? parsedData as Record<string, unknown>[]
+      : [parsedData as Record<string, unknown>];
     logger.debug({
       operation: 'llm_parser_flights_found',
       message: `Found ${flightsArray.length} flight(s)`,
@@ -157,7 +159,7 @@ Example for round trip (MUC→LUX and LUX→MUC):
     });
 
     // Build ParsedBooking results for each flight
-    const results: ParsedBooking[] = flightsArray.map((flight: any, index: number) => {
+    const results: ParsedBooking[] = flightsArray.map((flight: Record<string, unknown>, index: number) => {
       const missing: string[] = [];
       if (!flight.flightNumber) missing.push('flightNumber');
       if (!flight.departureCode) missing.push('departureCode');
@@ -165,19 +167,20 @@ Example for round trip (MUC→LUX and LUX→MUC):
       if (!flight.departureTime) missing.push('departureTime');
       if (!flight.arrivalTime) missing.push('arrivalTime');
 
+      const flightNumber = typeof flight.flightNumber === 'string' ? flight.flightNumber : undefined;
       const result: ParsedBooking = {
-        airline: flight.flightNumber?.slice(0, 2) || undefined,
-        flightNumber: flight.flightNumber || undefined,
-        departureCode: flight.departureCode || undefined,
-        arrivalCode: flight.arrivalCode || undefined,
-        departureTime: flight.departureTime || undefined,
-        arrivalTime: flight.arrivalTime || undefined,
-        pnr: flight.pnr || undefined,
-        seat: flight.seat || undefined,
-        terminal: flight.terminal || undefined,
-        gate: flight.gate || undefined,
-        price: flight.price || undefined,
-        currency: flight.currency || undefined,
+        airline: flightNumber?.slice(0, 2) || undefined,
+        flightNumber: flightNumber || undefined,
+        departureCode: typeof flight.departureCode === 'string' ? flight.departureCode : undefined,
+        arrivalCode: typeof flight.arrivalCode === 'string' ? flight.arrivalCode : undefined,
+        departureTime: typeof flight.departureTime === 'string' ? flight.departureTime : undefined,
+        arrivalTime: typeof flight.arrivalTime === 'string' ? flight.arrivalTime : undefined,
+        pnr: typeof flight.pnr === 'string' ? flight.pnr : undefined,
+        seat: typeof flight.seat === 'string' ? flight.seat : undefined,
+        terminal: typeof flight.terminal === 'string' ? flight.terminal : undefined,
+        gate: typeof flight.gate === 'string' ? flight.gate : undefined,
+        price: typeof flight.price === 'string' ? flight.price : undefined,
+        currency: typeof flight.currency === 'string' ? flight.currency : undefined,
         missing,
       };
 
@@ -264,8 +267,8 @@ export async function ensureModelAvailable(): Promise<boolean> {
     });
     const response = await axios.get(`${OLLAMA_URL}/api/tags`);
 
-    const models = response.data.models || [];
-    const modelExists = models.some((m: any) => m.name === OLLAMA_MODEL);
+    const models: Array<{ name: string }> = response.data.models || [];
+    const modelExists = models.some((m) => m.name === OLLAMA_MODEL);
 
     if (!modelExists) {
       logger.info({

@@ -12,17 +12,45 @@ interface TrainingDashboardProps {
   onEditTrainingData?: (id: string, type: string) => void;
 }
 
+interface TrainingJob {
+  id: string;
+  modelName: string;
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+  createdAt: string;
+  startedAt?: string;
+  completedAt?: string;
+  errorMessage?: string;
+  trainingDataIds?: string[];
+}
+
+interface TrainingLogEntry {
+  timestamp: string;
+  level: string;
+  message: string;
+  metadata?: Record<string, unknown>;
+}
+
+interface TrainingDataEntry {
+  id: string;
+  type: 'email' | 'boarding_pass';
+  status: 'pending' | 'trained' | 'failed';
+  createdAt: string;
+  tags?: string[];
+  extractedDataCount?: number;
+  extractedData?: unknown[];
+}
+
 interface JobLogs {
-  job: any;
-  logs: any[];
+  job: TrainingJob;
+  logs: TrainingLogEntry[];
   logFileContent?: string | null;
 }
 
-export default function TrainingDashboard({ onEditTrainingData }: TrainingDashboardProps) {
+export default function TrainingDashboard({ onEditTrainingData }: TrainingDashboardProps): JSX.Element {
   const { t } = useTranslation('training');
   const addToast = useToastStore((state) => state.addToast);
-  const [trainingData, setTrainingData] = useState<any[]>([]);
-  const [jobs, setJobs] = useState<any[]>([]);
+  const [trainingData, setTrainingData] = useState<TrainingDataEntry[]>([]);
+  const [jobs, setJobs] = useState<TrainingJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [triggering, setTriggering] = useState(false);
   const [cancelling, setCancelling] = useState<string | null>(null);
@@ -46,7 +74,7 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
   }>({});
 
 
-  const [filteredTrainingData, setFilteredTrainingData] = useState<any[]>([]);
+  const [filteredTrainingData, setFilteredTrainingData] = useState<TrainingDataEntry[]>([]);
   const [viewMode, setViewMode] = useState<'list' | 'table'>('list');
   const [sortField, setSortField] = useState<'createdAt' | 'type' | 'status'>('createdAt');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -97,7 +125,7 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
       setJobs(jobsResult.jobs);
 
       // Load logs for running jobs
-      const runningJobs = jobsResult.jobs.filter((job: any) => job.status === 'running' || job.status === 'pending');
+      const runningJobs = jobsResult.jobs.filter((job: TrainingJob) => job.status === 'running' || job.status === 'pending');
       for (const job of runningJobs) {
         await loadJobLogs(job.id);
       }
@@ -374,9 +402,10 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
       await trainingApi.triggerTraining();
       await loadData();
       addToast('success', t('training:toasts.trainingStarted'));
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Failed to trigger training:', error);
-      addToast('error', error.response?.data?.message || t('training:errors.startTrainingFailed'));
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      addToast('error', axiosError.response?.data?.message || t('training:errors.startTrainingFailed'));
     } finally {
       setTriggering(false);
     }
@@ -398,9 +427,10 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
     try {
       await trainingApi.deleteTrainingData(id);
       await loadData();
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Failed to delete training data:', error);
-      addToast('error', error.response?.data?.message || t('training:errors.deleteFailed'));
+      const axiosError = error as { response?: { data?: { message?: string } } };
+      addToast('error', axiosError.response?.data?.message || t('training:errors.deleteFailed'));
     } finally {
       setDeleting(null);
     }
@@ -442,7 +472,7 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
       );
       setSelectedItems(new Set());
       await loadData();
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Failed to bulk delete training data:', error);
       addToast('error', t('training:errors.bulkDeleteFailed'));
     } finally {
@@ -491,9 +521,10 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
       setTimeout(() => {
         loadData();
       }, 500);
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Failed to cancel training:', error);
-      const errorMessage = error.response?.data?.message || error.message || t('training:errors.cancelTrainingFailed');
+      const axiosError = error as { response?: { data?: { message?: string } }; message?: string };
+      const errorMessage = axiosError.response?.data?.message || axiosError.message || t('training:errors.cancelTrainingFailed');
       addToast('error', errorMessage);
 
       // Reload data to get actual status
@@ -532,15 +563,15 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
 
   // Sort training data
   displayTrainingData = [...displayTrainingData].sort((a, b) => {
-    let aValue: any = a[sortField];
-    let bValue: any = b[sortField];
+    let aValue: string | number = a[sortField] ?? '';
+    let bValue: string | number = b[sortField] ?? '';
 
     if (sortField === 'createdAt') {
-      aValue = new Date(aValue).getTime();
-      bValue = new Date(bValue).getTime();
+      aValue = new Date(String(aValue)).getTime();
+      bValue = new Date(String(bValue)).getTime();
     } else {
-      aValue = String(aValue || '').toLowerCase();
-      bValue = String(bValue || '').toLowerCase();
+      aValue = String(aValue).toLowerCase();
+      bValue = String(bValue).toLowerCase();
     }
 
     if (sortDirection === 'asc') {
@@ -571,7 +602,7 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
 
   // Calculate statistics
   // Helper function to get extracted data count
-  const getExtractedDataCount = (data: any): number => {
+  const getExtractedDataCount = (data: TrainingDataEntry): number => {
     // Prefer extractedDataCount if available (from API)
     if (typeof data.extractedDataCount === 'number') {
       return data.extractedDataCount;
@@ -821,7 +852,7 @@ export default function TrainingDashboard({ onEditTrainingData }: TrainingDashbo
                           </pre>
                         ) : logs.logs && logs.logs.length > 0 ? (
                           <div className="space-y-1">
-                            {logs.logs.map((log: any, index: number) => (
+                            {logs.logs.map((log, index) => (
                               <div
                                 key={index}
                                 className={`text-xs font-mono ${log.level === 'error'

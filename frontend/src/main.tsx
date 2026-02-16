@@ -9,7 +9,7 @@ import i18n from './i18n/config'
 
 // #region agent log
 // Debug logging helper - only active in development mode
-const debugLog = (location: string, message: string, data: any = {}, hypothesisId?: string) => {
+const debugLog = (location: string, message: string, data: Record<string, unknown> = {}, hypothesisId?: string) => {
   // Only log in development mode
   if (import.meta.env.MODE !== 'development') {
     return;

@@ -4,7 +4,7 @@ import { setupApi } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { useTranslation } from '../hooks/useTranslation';
 
-export default function SetupPage() {
+export default function SetupPage(): JSX.Element {
   const navigate = useNavigate();
   const { t } = useTranslation(['setup', 'common']);
   const { setAuth } = useAuthStore();

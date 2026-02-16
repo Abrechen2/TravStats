@@ -1,6 +1,9 @@
 ﻿import { format } from 'date-fns';
 import type { Flight } from '../types';
 import { useTranslation } from '../hooks/useTranslation';
+import { useSettingsStore } from '../store/settingsStore';
+import { formatCurrency as formatCurrencyUtil } from '../lib/units';
+import DataSourceBadges from './DataSourceBadges';
 
 interface FlightListProps {
   flights: Flight[];

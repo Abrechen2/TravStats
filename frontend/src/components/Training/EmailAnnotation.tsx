@@ -105,7 +105,7 @@ function filterEmailText(text: string): string {
   return filtered.trim();
 }
 
-export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }: EmailAnnotationProps) {
+export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }: EmailAnnotationProps): JSX.Element {
   const { t } = useTranslation(['training', 'common']);
   const [originalEmailText, setOriginalEmailText] = useState('');
   const [emailText, setEmailText] = useState('');
@@ -129,21 +129,22 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
         const data = await trainingApi.getById(trainingDataId);
         
         if (data.annotations) {
-          const annotationsData = data.annotations as any;
-          if (annotationsData.fullText) {
+          const annotationsData = data.annotations as Record<string, unknown>;
+          if (typeof annotationsData.fullText === 'string') {
             setOriginalEmailText(annotationsData.fullText);
             const filtered = filterEmailText(annotationsData.fullText);
             setEmailText(showFiltered ? filtered : annotationsData.fullText);
           }
-          if (annotationsData.textSelections) {
-            setAnnotations(annotationsData.textSelections);
+          if (Array.isArray(annotationsData.textSelections)) {
+            setAnnotations(annotationsData.textSelections as Array<{ start: number; end: number; text: string; label: string; flightIndex?: number }>);
           }
         }
-        
+
         if (data.extractedData && Array.isArray(data.extractedData) && data.extractedData.length > 0) {
           // Convert old format (with departureTime/arrivalTime as ISO) to new format (separate date/time)
-          const convertedFlights = data.extractedData.map((flight: any) => {
-            const converted = { ...flight };
+          const convertedFlights = data.extractedData.map((rawFlight: unknown) => {
+            const flight = rawFlight as Flight;
+            const converted: Flight = { ...flight };
             if (flight.departureTime && !flight.departureDate) {
               const { date, time } = splitDateTime(flight.departureTime);
               if (date) converted.departureDate = date;
@@ -272,7 +273,7 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
           
           const field = labelToField[label];
           if (field) {
-            flight[field] = text as any;
+            flight[field] = text;
           }
         }
         
@@ -302,7 +303,7 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
     }
   };
 
-  const handleFlightChange = (index: number, field: string, value: any) => {
+  const handleFlightChange = (index: number, field: string, value: string) => {
     const updatedFlights = [...flights];
     updatedFlights[index] = { ...updatedFlights[index], [field]: value };
     setFlights(updatedFlights);

@@ -4,7 +4,7 @@ import { authApi } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { useTranslation } from '../hooks/useTranslation';
 
-export default function RegisterPage() {
+export default function RegisterPage(): JSX.Element {
   const { t } = useTranslation(['auth', 'common']);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -34,8 +34,9 @@ export default function RegisterPage() {
       const { user } = await authApi.register(username, password);
       setAuth(user);
       navigate('/');
-    } catch (err: any) {
-      setError(err.response?.data?.error || t('register.failed'));
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: { error?: string } } };
+      setError(errorObj.response?.data?.error || t('register.failed'));
     } finally {
       setLoading(false);
     }

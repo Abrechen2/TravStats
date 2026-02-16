@@ -1,4 +1,5 @@
 import { Router, Response, NextFunction } from 'express';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../db';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { createFlightSchema, updateFlightSchema, flightQuerySchema } from '../schemas/flight';
@@ -19,12 +20,42 @@ import { estimateRoute } from '../services/routeEstimationService';
 
 const router = Router();
 
+// Interface for flight update data
+interface FlightUpdateData {
+  airline?: string;
+  flightNumber?: string;
+  callsign?: string | null;
+  aircraft?: string | null;
+  status?: string;
+  notes?: string | null;
+  price?: number | null;
+  taxes?: number | null;
+  fees?: number | null;
+  currency?: string | null;
+  category?: string | null;
+  tags?: string[];
+  receiptUrl?: string | null;
+  depIcao?: string | null;
+  depIata?: string | null;
+  depName?: string | null;
+  depLat?: number;
+  depLon?: number;
+  arrIcao?: string | null;
+  arrIata?: string | null;
+  arrName?: string | null;
+  arrLat?: number;
+  arrLon?: number;
+  departureTime?: Date;
+  arrivalTime?: Date;
+  lastModifiedBy?: string;
+}
+
 // All routes require authentication
 router.use(authenticate);
 
 // Normalize query params coming from axios (arrays are sent as foo[] by default)
-const normalizeQueryParams = (query: Record<string, any>) => {
-  const normalized: Record<string, any> = {};
+const normalizeQueryParams = (query: Record<string, string | string[] | undefined>): Record<string, string | string[] | undefined> => {
+  const normalized: Record<string, string | string[] | undefined> = {};
 
   Object.entries(query).forEach(([key, value]) => {
     const normalizedKey = key.endsWith('[]') ? key.slice(0, -2) : key;
@@ -50,7 +81,7 @@ const buildFlightWhere = (
   query: (FlightQueryInput & { tags?: string[] }),
   userId: string
 ) => {
-  const andConditions: any[] = [{ userId }];
+  const andConditions: Prisma.FlightWhereInput[] = [{ userId }];
   let noResults = false;
 
   // Airlines (allow multiple selections)
@@ -111,7 +142,7 @@ const buildFlightWhere = (
 
   // Price range
   if (query.minPrice !== undefined || query.maxPrice !== undefined) {
-    const price: any = {};
+    const price: Prisma.FloatNullableFilter = {};
     if (query.minPrice !== undefined) price.gte = query.minPrice;
     if (query.maxPrice !== undefined) price.lte = query.maxPrice;
     andConditions.push({ price });
@@ -119,7 +150,7 @@ const buildFlightWhere = (
 
   // Date range
   if (query.fromDate || query.toDate) {
-    const departureTime: any = {};
+    const departureTime: Prisma.DateTimeFilter = {};
     if (query.fromDate) departureTime.gte = new Date(query.fromDate);
     if (query.toDate) departureTime.lte = new Date(query.toDate);
     andConditions.push({ departureTime });
@@ -217,14 +248,14 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
     });
 
     // Check achievements after creating a flown flight and return newly unlocked ones
-    let newAchievements: any[] = [];
+    let newAchievements: Awaited<ReturnType<typeof checkAndUpdateAchievements>> = [];
     if (data.status === 'flown') {
       try {
         newAchievements = await checkAndUpdateAchievements(userId);
-      } catch (err: any) {
+      } catch (err: unknown) {
         // Import logger locally to avoid circular dependencies
         import('../utils/logger').then(({ default: logger }) => {
-          logger.error({ type: 'achievement_check_failed', userId, error: err.message });
+          logger.error({ type: 'achievement_check_failed', userId, error: err instanceof Error ? err.message : 'Unknown error' });
         });
       }
     }
@@ -242,9 +273,9 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
 router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
-    const normalizedQuery = normalizeQueryParams(req.query as Record<string, any>);
+    const normalizedQuery = normalizeQueryParams(req.query as Record<string, string | string[] | undefined>);
     const parsedQuery = flightQuerySchema.parse(normalizedQuery);
-    const tagsArray = splitMultiValue(parsedQuery.tags as any);
+    const tagsArray = splitMultiValue(parsedQuery.tags as string | string[] | undefined);
     const query = {
       ...parsedQuery,
       tags: tagsArray,
@@ -286,9 +317,9 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
 router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
-    const normalizedQuery = normalizeQueryParams(req.query as Record<string, any>);
+    const normalizedQuery = normalizeQueryParams(req.query as Record<string, string | string[] | undefined>);
     const parsedQuery = flightQuerySchema.parse(normalizedQuery);
-    const tagsArray = splitMultiValue(parsedQuery.tags as any);
+    const tagsArray = splitMultiValue(parsedQuery.tags as string | string[] | undefined);
     const query = {
       ...parsedQuery,
       tags: tagsArray,
@@ -451,7 +482,7 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
       }
     }
 
-    const updateData: any = {};
+    const updateData: FlightUpdateData = {};
     if (data.airline) updateData.airline = data.airline;
     if (data.flightNumber) updateData.flightNumber = data.flightNumber;
     if (data.callsign !== undefined) updateData.callsign = data.callsign;
@@ -494,14 +525,14 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     });
 
     // Check achievements if status changed to flown and return newly unlocked ones
-    let newAchievements: any[] = [];
+    let newAchievements: Awaited<ReturnType<typeof checkAndUpdateAchievements>> = [];
     if (data.status === 'flown' && existingFlight.status !== 'flown') {
       try {
         newAchievements = await checkAndUpdateAchievements(userId);
-      } catch (err: any) {
+      } catch (err: unknown) {
         // Import logger locally to avoid circular dependencies
         import('../utils/logger').then(({ default: logger }) => {
-          logger.error({ type: 'achievement_check_failed', userId, error: err.message });
+          logger.error({ type: 'achievement_check_failed', userId, error: err instanceof Error ? err.message : 'Unknown error' });
         });
       }
     }

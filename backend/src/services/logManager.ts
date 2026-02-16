@@ -37,11 +37,11 @@ export interface LogEntry {
   level: string;
   category: string;
   message: string;
-  context?: Record<string, any>;
-  performance?: Record<string, any>;
-  error?: Record<string, any>;
+  context?: Record<string, unknown>;
+  performance?: Record<string, unknown>;
+  error?: Record<string, unknown>;
   requestId?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ReadOptions {

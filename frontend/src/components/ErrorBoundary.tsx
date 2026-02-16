@@ -1,8 +1,8 @@
-import { Component, ReactNode } from 'react';
+import { Component, ErrorInfo, ReactNode } from 'react';
 import i18n from '../i18n/config';
 
 // #region agent log
-const debugLog = (location: string, message: string, data: any = {}, hypothesisId?: string) => {
+const debugLog = (location: string, message: string, data: Record<string, unknown> = {}, hypothesisId?: string): void => {
   // Only log in development mode
   if (import.meta.env.MODE !== 'development') {
     return;
@@ -60,7 +60,7 @@ export default class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: any) {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     console.error('Error caught by boundary:', error, errorInfo);
     // #region agent log
     debugLog('ErrorBoundary.tsx:componentDidCatch', 'Error details captured', {
@@ -72,7 +72,7 @@ export default class ErrorBoundary extends Component<Props, State> {
     // #endregion
   }
 
-  render() {
+  render(): ReactNode {
     if (this.state.hasError) {
       if (this.props.fallback) {
         return this.props.fallback;

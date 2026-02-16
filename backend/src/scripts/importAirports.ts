@@ -138,12 +138,12 @@ async function importAirports() {
         if (imported % 100 === 0) {
           console.log(`   ✅ Imported ${imported} airports...`);
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Handle duplicate key errors gracefully
-        if (error.code === 'P2002') {
+        if (error instanceof Error && 'code' in error && (error as { code: string }).code === 'P2002') {
           updated++;
         } else {
-          console.error(`   ❌ Error importing ${airport.name}:`, error.message);
+          console.error(`   ❌ Error importing ${airport.name}:`, error instanceof Error ? error.message : 'Unknown error');
         }
       }
     }
@@ -153,8 +153,8 @@ async function importAirports() {
     console.log(`   Updated: ${updated} airports`);
     console.log(`   Skipped: ${skipped} airports`);
 
-  } catch (error: any) {
-    console.error('❌ Error downloading or importing airports:', error.message);
+  } catch (error: unknown) {
+    console.error('❌ Error downloading or importing airports:', error instanceof Error ? error.message : 'Unknown error');
     process.exit(1);
   } finally {
     await prisma.$disconnect();

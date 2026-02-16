@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { APIError as AnthropicAPIError } from '@anthropic-ai/sdk/core/error';
 import { IVisionParser, ProviderAvailability, VisionProvider } from '../types';
 import { ParsedBooking } from '../../bookingParser';
 import { normalizeParsedBooking, cleanLLMJsonResponse, getVisionParserPrompt, getLatestClaudeVisionModel, getClaudeVisionModels } from '../shared/utils';
@@ -82,7 +83,7 @@ export class ClaudeVisionParser implements IVisionParser {
           cost: '~$0.01-0.03 per image',
         },
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         available: false,
         reason: error instanceof Error ? error.message : 'Unknown error',
@@ -99,7 +100,7 @@ export class ClaudeVisionParser implements IVisionParser {
     const client = this.getClient(apiKey);
     const prompt = getVisionParserPrompt();
     
-    let lastError: any = null;
+    let lastError: unknown = null;
     
     // Try each model in order until one works
     for (let i = 0; i < modelsToTry.length; i++) {
@@ -247,12 +248,19 @@ export class ClaudeVisionParser implements IVisionParser {
       }
 
         return result;
-      } catch (error: any) {
+      } catch (error: unknown) {
         lastError = error;
-        
+
+        const isApiError = error instanceof AnthropicAPIError;
+        const statusCode = isApiError ? error.status : undefined;
+
         // For 404 errors (model not found), try next model
-        if (error?.status === 404) {
-          const modelError = error?.error?.error?.message || '';
+        if (statusCode === 404) {
+          const apiErrorBody = isApiError ? error.error : undefined;
+          const nestedError = apiErrorBody && typeof apiErrorBody === 'object' && 'error' in apiErrorBody
+            ? (apiErrorBody as { error?: { message?: string } }).error
+            : undefined;
+          const modelError = nestedError?.message || '';
           if (shouldLog) {
             log.warn({
               operation: 'claude_vision_parse_model_not_found_retry',
@@ -264,34 +272,34 @@ export class ClaudeVisionParser implements IVisionParser {
               },
             });
           } else {
-            logger.warn({ 
+            logger.warn({
               model,
               attempt: i + 1,
-              message: modelError 
+              message: modelError
             }, `[Claude Vision Parser] Model not found, ${isLastAttempt ? 'no more models to try' : 'trying next model'}`);
           }
-          
+
           // If this is the last model, throw error
           if (isLastAttempt) {
             throw new Error(`Claude model not found: ${modelError || model}. Tried all available models. Please check your CLAUDE_VISION_MODEL environment variable or API key permissions.`);
           }
-          
+
           // Continue to next model
           continue;
         }
-        
+
         // For other errors (401, 429, etc.), throw immediately
         const totalDuration = Date.now() - startTime;
         const errorContext = {
           model,
           imageSize: imageBase64.length,
           totalDuration,
-          status: error?.status,
+          status: statusCode,
           errorMessage: error instanceof Error ? error.message : 'Unknown error',
           errorStack: error instanceof Error ? error.stack : undefined,
         };
 
-        if (error?.status === 401) {
+        if (statusCode === 401) {
           if (shouldLog) {
             log.error({
               operation: 'claude_vision_parse_auth_error',
@@ -303,7 +311,7 @@ export class ClaudeVisionParser implements IVisionParser {
           throw new Error('Invalid Claude API key');
         }
 
-        if (error?.status === 429) {
+        if (statusCode === 429) {
           if (shouldLog) {
             log.error({
               operation: 'claude_vision_parse_rate_limit',
@@ -315,16 +323,16 @@ export class ClaudeVisionParser implements IVisionParser {
           throw new Error('Claude API rate limit exceeded. Please try again later.');
         }
 
-        if (error?.status === 400) {
+        if (statusCode === 400) {
           if (shouldLog) {
             log.error({
               operation: 'claude_vision_parse_bad_request',
               context: errorContext,
             });
           } else {
-            logger.error({ error: error.message }, '[Claude Vision Parser] Bad request');
+            logger.error({ error: error instanceof Error ? error.message : 'Unknown error' }, '[Claude Vision Parser] Bad request');
           }
-          throw new Error(`Claude API error: ${error.message}`);
+          throw new Error(`Claude API error: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
 
         if (error instanceof SyntaxError) {
@@ -344,9 +352,9 @@ export class ClaudeVisionParser implements IVisionParser {
             operation: 'claude_vision_parse_unexpected_error',
             context: errorContext,
           });
-      } else {
-        logger.error({ error }, '[Claude Vision Parser] Unexpected error');
-      }
+        } else {
+          logger.error({ error }, '[Claude Vision Parser] Unexpected error');
+        }
         throw new Error(`Claude Vision parsing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
@@ -363,7 +371,7 @@ export class ClaudeVisionParser implements IVisionParser {
     if (base64.startsWith('data:image/')) {
       const match = base64.match(/^data:(image\/[a-z]+);base64,/);
       if (match) {
-        return match[1] as any;
+        return match[1] as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
       }
     }
 

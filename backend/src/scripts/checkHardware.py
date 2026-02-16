@@ -64,7 +64,7 @@ def get_gpu_info():
         return {
             "available": False,
             "error": "PyTorch not available",
-            "diagnosis": "PyTorch is not installed. Install with: pip install torch"
+            "diagnosis": ["PyTorch is not installed. Install with: pip install torch"]
         }
     
     try:
