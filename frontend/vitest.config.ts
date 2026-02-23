@@ -23,6 +23,13 @@ export default defineConfig({
         '**/*.config.*',
         'src/i18n/resources/**',
       ],
+      thresholds: {
+        global: {
+          lines: 30,
+          functions: 20,
+          branches: 20,
+        },
+      },
     },
   },
   resolve: {
