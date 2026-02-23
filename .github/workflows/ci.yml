@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [Main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   backend:
     name: Backend (lint + typecheck + test)
@@ -38,6 +42,11 @@ jobs:
       - name: Install dependencies
         run: cd backend && npm ci
 
+      - name: Apply database migrations
+        run: cd backend && npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://flights:testpass@localhost:5432/flights_test
+
       - name: Type check
         run: cd backend && npx tsc --noEmit
 
@@ -49,6 +58,7 @@ jobs:
         env:
           DATABASE_URL: postgresql://flights:testpass@localhost:5432/flights_test
           JWT_SECRET: ci-test-secret-min-32-chars-long!!
+          NODE_ENV: test
 
   frontend:
     name: Frontend (lint + typecheck + test + coverage)
