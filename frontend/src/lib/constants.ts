@@ -55,7 +55,7 @@ export function getDateLocale(): string {
         return parsed.state.display.language === "de" ? "de-DE" : "en-US";
       }
     }
-  } catch (e) {
+  } catch {
     // Fallback to default
   }
   return "en-US"; // Default to English

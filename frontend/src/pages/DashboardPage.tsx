@@ -25,8 +25,8 @@ import { motion, AnimatePresence } from "framer-motion";
 
 export default function DashboardPage(): JSX.Element {
   const { t } = useTranslation(["dashboard", "common", "flights", "training"]);
-  const { user, logout: _logout } = useAuthStore();
-  const [_flights, setFlights] = useState<Flight[]>([]); // Filtered flights for map (not directly rendered)
+  const { user } = useAuthStore();
+  const [, setFlights] = useState<Flight[]>([]); // Filtered flights for map (not directly rendered)
   const [recentFlights, setRecentFlights] = useState<Flight[]>([]); // Unfiltered recent flights for sidebar
   const [totalFlightsCount, setTotalFlightsCount] = useState(0); // Total number of all flights
   const [geoFlights, setGeoFlights] = useState<GeoJSONFeature[]>([]);
@@ -34,11 +34,11 @@ export default function DashboardPage(): JSX.Element {
   const [showFlightForm, setShowFlightForm] = useState(false);
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
   const [filters, setFilters] = useState<FlightFilters>({});
-  const [_loadingMap, setLoadingMap] = useState(true); // Loading indicator for map
+  const [, setLoadingMap] = useState(true); // Loading indicator for map
   const [loadingRecent, setLoadingRecent] = useState(true);
   const [is3DView, setIs3DView] = useState(true);
   const importInputRef = useRef<HTMLInputElement | null>(null);
-  const [_navOpen, _setNavOpen] = useState(false);
+
   const [leftOpen, setLeftOpen] = useState(false);
   const [rightOpen, setRightOpen] = useState(false);
   const [onboarding, setOnboarding] = useState<OnboardingState>({
@@ -91,8 +91,8 @@ export default function DashboardPage(): JSX.Element {
   const [loadingOnboarding, setLoadingOnboarding] = useState(true);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
-  const [_developerModeEnabled, setDeveloperModeEnabled] = useState(false);
-  const [_importing, setImporting] = useState(false);
+  const [, setDeveloperModeEnabled] = useState(false);
+  const [, setImporting] = useState(false);
 
   // Close export menu when clicking outside
   useClickOutside(exportMenuRef, () => {
@@ -189,7 +189,7 @@ export default function DashboardPage(): JSX.Element {
   const loadFlights = async () => {
     try {
       setLoadingMap(true);
-      const { minRouteCount: _minRouteCount, ...apiFilters } = filters;
+      const { minRouteCount: _mc, ...apiFilters } = filters; // eslint-disable-line @typescript-eslint/no-unused-vars
 
       // Load all flights by pagination (with safety limit)
       const MAX_PAGES = 100;
@@ -307,7 +307,7 @@ export default function DashboardPage(): JSX.Element {
         analyticsApi.track("export", { format });
       }
       if (format === "geojson") {
-        const { minRouteCount: _minRouteCount, ...apiFilters } = filters;
+        const { minRouteCount: _mc, ...apiFilters } = filters; // eslint-disable-line @typescript-eslint/no-unused-vars
         const geoData = await flightsApi.getGeoJSON(apiFilters);
         const blob = new Blob([JSON.stringify(geoData, null, 2)], {
           type: "application/json",
@@ -320,7 +320,7 @@ export default function DashboardPage(): JSX.Element {
         URL.revokeObjectURL(url);
       } else {
         // CSV/PDF/KML export
-        const { minRouteCount: _minRouteCount, ...apiFilters } = filters;
+        const { minRouteCount: _mc, ...apiFilters } = filters; // eslint-disable-line @typescript-eslint/no-unused-vars
         const data = await flightsApi.getAll(apiFilters);
 
         // Build rows with proper structure (not pre-joined)

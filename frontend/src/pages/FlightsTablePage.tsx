@@ -40,11 +40,12 @@ export default function FlightsTablePage(): JSX.Element {
   const loadFlights = async () => {
     try {
       setLoading(true);
-      const { minRouteCount: _minRouteCount, ...apiFilters } = filters;
+      const { minRouteCount: _mc, ...apiFilters } = filters; // eslint-disable-line @typescript-eslint/no-unused-vars
       let allFlights: Flight[] = [];
       let offset = 0;
       const limit = API_LIMITS.MAX_PAGE_SIZE;
 
+      // eslint-disable-next-line no-constant-condition
       while (true) {
         const data = await flightsApi.getAll({ ...apiFilters, limit, offset });
         allFlights = [...allFlights, ...data.flights];

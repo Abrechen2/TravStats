@@ -186,7 +186,7 @@ export default function FlightReviewModal({
       if (errorMessages.length > 0) {
         setAirportError(errorMessages.join(", "));
       }
-    } catch (err) {
+    } catch {
       setAirportError(t("errors:failedToLoadAirport"));
     } finally {
       setAirportLoading(false);

@@ -78,7 +78,7 @@ describe("Stats Component", () => {
     });
 
     it("should handle empty flight list", () => {
-      const emptyFlights: any[] = [];
+      const emptyFlights: Array<{ distance: number }> = [];
       const totalDistance = emptyFlights.reduce((sum, f) => sum + f.distance, 0);
       expect(totalDistance).toBe(0);
     });

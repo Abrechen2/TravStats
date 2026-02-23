@@ -18,7 +18,7 @@ import { logger } from "../logger";
 export class URLParser implements BoardingPassParser {
   name = "url";
   priority = 20;
-  category: "url" = "url";
+  category = "url" as const;
 
   canParse(barcodeData: string): boolean {
     // Check if it's a URL

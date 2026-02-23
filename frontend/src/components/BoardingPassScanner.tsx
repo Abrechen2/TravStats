@@ -270,7 +270,7 @@ export default function BoardingPassScanner({
       };
 
       reader.readAsDataURL(file);
-    } catch (_err: unknown) {
+    } catch {
       setError(t("flights:scanner.processError"));
       setScanning(false);
     }

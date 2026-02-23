@@ -90,7 +90,7 @@ const calculateHeatmapThresholds = (
   const q50Index = Math.floor(len * 0.5);
   const q75Index = Math.floor(len * 0.75);
 
-  let q25 = sorted[q25Index] || min;
+  const q25 = sorted[q25Index] || min;
   let q50 = sorted[q50Index] || min + Math.floor((max - min) * 0.33);
   let q75 = sorted[q75Index] || min + Math.floor((max - min) * 0.66);
 
@@ -113,7 +113,7 @@ const getHeatmapColor = (
   return "#10b981"; // green - bottom 25%
 };
 
-const MapUpdater = memo(({ flights }: { flights: GeoJSONFeature[] }) => {
+const MapUpdater = memo(function MapUpdater({ flights }: { flights: GeoJSONFeature[] }) {
   const map = useMap();
 
   useEffect(() => {

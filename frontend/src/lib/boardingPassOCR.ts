@@ -333,25 +333,25 @@ function parseFieldsFromText(text: string): OCRExtractedData {
   // Pattern 3: Boarding Time (BOARDING 12:25, BOARDS 9:59 AM, BOARDING TIME 11:20, etc.)
   const boardingTimePatterns = [
     // Standard 24h format - Most common patterns first for performance
-    /(?:BOARDING\s+TIME|BOARDING TIME)[:\s]+(\d{1,2})[:\.](\d{2})/i, // Wideroe: "BOARDING TIME 11:20"
-    /(?:BOARDING|BOARDI.G|BO.RDING|BOARDS|EINST)[:\s]+(\d{1,2})[:\.](\d{2})/i, // "BOARDING 12:25", "BOARDS 9:59"
+    /(?:BOARDING\s+TIME|BOARDING TIME)[:\s]+(\d{1,2})[:.](\d{2})/i, // Wideroe: "BOARDING TIME 11:20"
+    /(?:BOARDING|BOARDI.G|BO.RDING|BOARDS|EINST)[:\s]+(\d{1,2})[:.](\d{2})/i, // "BOARDING 12:25", "BOARDS 9:59"
 
     // Departure/Departs variations (Emirates, United, etc.)
-    /(?:DEPARTS?|DEPARTURE)[:\s]+(\d{1,2})[:\.](\d{2})/i, // Emirates: "DEPARTS 15:40"
-    /(?:DEPARTS?)[:\s]+\d{1,2}\s+\w{3}[,\s]+(\d{1,2})[:\.](\d{2})/i, // "DEPARTS 20 Apr, 15:40"
+    /(?:DEPARTS?|DEPARTURE)[:\s]+(\d{1,2})[:.](\d{2})/i, // Emirates: "DEPARTS 15:40"
+    /(?:DEPARTS?)[:\s]+\d{1,2}\s+\w{3}[,\s]+(\d{1,2})[:.](\d{2})/i, // "DEPARTS 20 Apr, 15:40"
 
     // Compact formats
     /(?:BOARDING|BOARDI.G|BOARDS)[:\s]+(\d{4})/i, // "BOARDING 1225"
-    /(?:BOARD|BO.RD|EINST)[:\s]+(\d{1,2})[:\.](\d{2})/i, // "BOARD 12:25", "EINST 12:25"
-    /(?:EINSTEIGEN|EINSTIEG)[:\s]+(\d{1,2})[:\.](\d{2})/i, // German: "EINSTEIGEN 12:25"
+    /(?:BOARD|BO.RD|EINST)[:\s]+(\d{1,2})[:.](\d{2})/i, // "BOARD 12:25", "EINST 12:25"
+    /(?:EINSTEIGEN|EINSTIEG)[:\s]+(\d{1,2})[:.](\d{2})/i, // German: "EINSTEIGEN 12:25"
 
     // 12h format with AM/PM (United Airlines, etc.)
-    /(?:BOARDING|BOARDS)[:\s]+(\d{1,2})[:\.](\d{2})\s*(?:AM|PM)/i, // "BOARDS 9:59 AM"
+    /(?:BOARDING|BOARDS)[:\s]+(\d{1,2})[:.](\d{2})\s*(?:AM|PM)/i, // "BOARDS 9:59 AM"
     /(?:BOARDING|BOARDS)[:\s]+(\d{1,2})\s*(?:AM|PM)/i, // "BOARDS 9 AM"
-    /(?:DEPARTS?)[:\s]+(\d{1,2})[:\.](\d{2})\s*(?:AM|PM)/i, // "DEPARTS 3:45 PM"
+    /(?:DEPARTS?)[:\s]+(\d{1,2})[:.](\d{2})\s*(?:AM|PM)/i, // "DEPARTS 3:45 PM"
 
     // Context-based: Look for time near boarding-related keywords
-    /(?:BOARDING|BOARDS|DEPARTS?|DEPARTURE).*?(\d{1,2})[:\.](\d{2})\s*(?:AM|PM)?/i,
+    /(?:BOARDING|BOARDS|DEPARTS?|DEPARTURE).*?(\d{1,2})[:.](\d{2})\s*(?:AM|PM)?/i,
   ];
 
   for (const pattern of boardingTimePatterns) {
@@ -411,8 +411,8 @@ function parseFieldsFromText(text: string): OCRExtractedData {
 
   // Pattern 4: Gate Close Time (GATE SCHLIESST 12:50, GATE CLOSES 12:50, etc.)
   const gateClosePatterns = [
-    /GATE\s+(?:SCHLIESST|CLOSES|CLOSING)[:\s]+(\d{1,2})[:\.](\d{2})\s*(?:AM|PM)?/i,
-    /(?:SCHLIESST|CLOSES)[:\s]+(\d{1,2})[:\.](\d{2})\s*(?:AM|PM)?/i,
+    /GATE\s+(?:SCHLIESST|CLOSES|CLOSING)[:\s]+(\d{1,2})[:.](\d{2})\s*(?:AM|PM)?/i,
+    /(?:SCHLIESST|CLOSES)[:\s]+(\d{1,2})[:.](\d{2})\s*(?:AM|PM)?/i,
   ];
 
   for (const pattern of gateClosePatterns) {

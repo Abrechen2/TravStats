@@ -32,7 +32,7 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
     const firstDay = new Date(startDate);
     firstDay.setDate(firstDay.getDate() - firstDay.getDay());
 
-    let currentDate = new Date(firstDay);
+    const currentDate = new Date(firstDay);
     let week: DayCell[] = [];
 
     while (currentDate <= endDate || week.length > 0) {

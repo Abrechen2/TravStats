@@ -26,7 +26,7 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
 
   const loadStats = async () => {
     try {
-      const { minRouteCount, ...apiFilters } = filters;
+      const { minRouteCount: _minRouteCount, ...apiFilters } = filters; // eslint-disable-line @typescript-eslint/no-unused-vars
       const hasBackendFilters = Object.keys(apiFilters).length > 0;
       // If filters are applied, calculate stats from filtered flights
       if (hasBackendFilters) {
@@ -35,6 +35,7 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
         let offset = 0;
 
         while (true) {
+          // eslint-disable-line no-constant-condition
           const { flights } = await flightsApi.getAll({ ...apiFilters, limit, offset });
           allFlights = [...allFlights, ...flights];
           if (flights.length < limit) break;

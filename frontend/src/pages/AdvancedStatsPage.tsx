@@ -51,6 +51,7 @@ export default function AdvancedStatsPage(): JSX.Element {
       let offset = 0;
       const limit = 100;
 
+      // eslint-disable-next-line no-constant-condition
       while (true) {
         const data = await flightsApi.getAll({ limit, offset });
         allFlights = [...allFlights, ...data.flights];
@@ -213,7 +214,7 @@ export default function AdvancedStatsPage(): JSX.Element {
     try {
       const dist = calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon);
       return { flight: f, distance: dist };
-    } catch (err) {
+    } catch {
       return { flight: f, distance: 0 };
     }
   });

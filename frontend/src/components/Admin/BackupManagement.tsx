@@ -47,7 +47,7 @@ function RestoreModal({ backup, onClose, onConfirm }: RestoreModalProps): JSX.El
         return t("common:labels.unknown");
       }
       return format(date, "dd.MM.yyyy HH:mm");
-    } catch (error) {
+    } catch {
       return t("common:labels.unknown");
     }
   };
