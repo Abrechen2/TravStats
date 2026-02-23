@@ -12,7 +12,8 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\""
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
+    "dead-code": "ts-prune | grep -v \"(used in module)\""
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.3",
@@ -61,6 +62,7 @@
     "postcss": "^8.4.32",
     "prettier": "^3.8.1",
     "tailwindcss": "^3.4.0",
+    "ts-prune": "^0.10.3",
     "typescript": "^5.3.3",
     "typescript-eslint": "^8.48.1",
     "vite": "^6.4.1",
