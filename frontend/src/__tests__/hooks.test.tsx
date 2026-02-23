@@ -1,21 +1,21 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook } from '@testing-library/react';
-import { useClickOutside } from '../hooks/useClickOutside';
-import { RefObject } from 'react';
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { renderHook } from "@testing-library/react";
+import { useClickOutside } from "../hooks/useClickOutside";
+import { RefObject } from "react";
 
-describe('Custom Hooks', () => {
-  describe('useClickOutside', () => {
+describe("Custom Hooks", () => {
+  describe("useClickOutside", () => {
     let container: HTMLDivElement;
     let innerElement: HTMLDivElement;
     let outerElement: HTMLDivElement;
 
     beforeEach(() => {
       // Create test DOM elements
-      container = document.createElement('div');
-      innerElement = document.createElement('div');
-      innerElement.id = 'inner';
-      outerElement = document.createElement('div');
-      outerElement.id = 'outer';
+      container = document.createElement("div");
+      innerElement = document.createElement("div");
+      innerElement.id = "inner";
+      outerElement = document.createElement("div");
+      outerElement.id = "outer";
 
       container.appendChild(innerElement);
       document.body.appendChild(container);
@@ -27,14 +27,14 @@ describe('Custom Hooks', () => {
       document.body.removeChild(outerElement);
     });
 
-    it('should call handler when clicking outside element', () => {
+    it("should call handler when clicking outside element", () => {
       const handler = vi.fn();
       const ref: RefObject<HTMLDivElement> = { current: innerElement };
 
       renderHook(() => useClickOutside(ref, handler));
 
       // Simulate click on outer element
-      const event = new MouseEvent('mousedown', {
+      const event = new MouseEvent("mousedown", {
         bubbles: true,
         cancelable: true,
       });
@@ -44,14 +44,14 @@ describe('Custom Hooks', () => {
       expect(handler).toHaveBeenCalledWith(event);
     });
 
-    it('should not call handler when clicking inside element', () => {
+    it("should not call handler when clicking inside element", () => {
       const handler = vi.fn();
       const ref: RefObject<HTMLDivElement> = { current: innerElement };
 
       renderHook(() => useClickOutside(ref, handler));
 
       // Simulate click on inner element
-      const event = new MouseEvent('mousedown', {
+      const event = new MouseEvent("mousedown", {
         bubbles: true,
         cancelable: true,
       });
@@ -60,14 +60,14 @@ describe('Custom Hooks', () => {
       expect(handler).not.toHaveBeenCalled();
     });
 
-    it('should not call handler when ref is null', () => {
+    it("should not call handler when ref is null", () => {
       const handler = vi.fn();
       const ref: RefObject<HTMLDivElement> = { current: null };
 
       renderHook(() => useClickOutside(ref, handler));
 
       // Simulate click anywhere
-      const event = new MouseEvent('mousedown', {
+      const event = new MouseEvent("mousedown", {
         bubbles: true,
         cancelable: true,
       });
@@ -76,18 +76,18 @@ describe('Custom Hooks', () => {
       expect(handler).not.toHaveBeenCalled();
     });
 
-    it('should handle touch events', () => {
+    it("should handle touch events", () => {
       const handler = vi.fn();
       const ref: RefObject<HTMLDivElement> = { current: innerElement };
 
       renderHook(() => useClickOutside(ref, handler));
 
       // Simulate touch on outer element
-      const event = new TouchEvent('touchstart', {
+      const event = new TouchEvent("touchstart", {
         bubbles: true,
         cancelable: true,
       });
-      Object.defineProperty(event, 'target', {
+      Object.defineProperty(event, "target", {
         value: outerElement,
         writable: false,
       });
@@ -96,18 +96,18 @@ describe('Custom Hooks', () => {
       expect(handler).toHaveBeenCalled();
     });
 
-    it('should not call handler for touch events inside element', () => {
+    it("should not call handler for touch events inside element", () => {
       const handler = vi.fn();
       const ref: RefObject<HTMLDivElement> = { current: innerElement };
 
       renderHook(() => useClickOutside(ref, handler));
 
       // Simulate touch on inner element
-      const event = new TouchEvent('touchstart', {
+      const event = new TouchEvent("touchstart", {
         bubbles: true,
         cancelable: true,
       });
-      Object.defineProperty(event, 'target', {
+      Object.defineProperty(event, "target", {
         value: innerElement,
         writable: false,
       });
@@ -116,34 +116,33 @@ describe('Custom Hooks', () => {
       expect(handler).not.toHaveBeenCalled();
     });
 
-    it('should clean up event listeners on unmount', () => {
+    it("should clean up event listeners on unmount", () => {
       const handler = vi.fn();
       const ref: RefObject<HTMLDivElement> = { current: innerElement };
 
-      const removeEventListenerSpy = vi.spyOn(document, 'removeEventListener');
+      const removeEventListenerSpy = vi.spyOn(document, "removeEventListener");
 
       const { unmount } = renderHook(() => useClickOutside(ref, handler));
 
       unmount();
 
-      expect(removeEventListenerSpy).toHaveBeenCalledWith('mousedown', expect.any(Function));
-      expect(removeEventListenerSpy).toHaveBeenCalledWith('touchstart', expect.any(Function));
+      expect(removeEventListenerSpy).toHaveBeenCalledWith("mousedown", expect.any(Function));
+      expect(removeEventListenerSpy).toHaveBeenCalledWith("touchstart", expect.any(Function));
 
       removeEventListenerSpy.mockRestore();
     });
 
-    it('should update handler when it changes', () => {
+    it("should update handler when it changes", () => {
       const handler1 = vi.fn();
       const handler2 = vi.fn();
       const ref: RefObject<HTMLDivElement> = { current: innerElement };
 
-      const { rerender } = renderHook(
-        ({ handler }) => useClickOutside(ref, handler),
-        { initialProps: { handler: handler1 } }
-      );
+      const { rerender } = renderHook(({ handler }) => useClickOutside(ref, handler), {
+        initialProps: { handler: handler1 },
+      });
 
       // Click outside with first handler
-      const event1 = new MouseEvent('mousedown', {
+      const event1 = new MouseEvent("mousedown", {
         bubbles: true,
         cancelable: true,
       });
@@ -156,7 +155,7 @@ describe('Custom Hooks', () => {
       rerender({ handler: handler2 });
 
       // Click outside with second handler
-      const event2 = new MouseEvent('mousedown', {
+      const event2 = new MouseEvent("mousedown", {
         bubbles: true,
         cancelable: true,
       });
@@ -166,14 +165,14 @@ describe('Custom Hooks', () => {
       expect(handler2).toHaveBeenCalledTimes(1); // Now called
     });
 
-    it('should handle clicks on descendant elements', () => {
+    it("should handle clicks on descendant elements", () => {
       const handler = vi.fn();
       const ref: RefObject<HTMLDivElement> = { current: container };
 
       renderHook(() => useClickOutside(ref, handler));
 
       // Click on child element (should not trigger handler)
-      const event = new MouseEvent('mousedown', {
+      const event = new MouseEvent("mousedown", {
         bubbles: true,
         cancelable: true,
       });
@@ -182,7 +181,7 @@ describe('Custom Hooks', () => {
       expect(handler).not.toHaveBeenCalled();
     });
 
-    it('should work with multiple instances', () => {
+    it("should work with multiple instances", () => {
       const handler1 = vi.fn();
       const handler2 = vi.fn();
       const ref1: RefObject<HTMLDivElement> = { current: innerElement };
@@ -192,7 +191,7 @@ describe('Custom Hooks', () => {
       renderHook(() => useClickOutside(ref2, handler2));
 
       // Click outside both
-      const event = new MouseEvent('mousedown', {
+      const event = new MouseEvent("mousedown", {
         bubbles: true,
         cancelable: true,
       });

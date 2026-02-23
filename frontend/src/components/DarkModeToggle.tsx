@@ -1,16 +1,16 @@
-import { useThemeStore } from '../store/themeStore';
-import { useTranslation } from '../hooks/useTranslation';
+import { useThemeStore } from "../store/themeStore";
+import { useTranslation } from "../hooks/useTranslation";
 
 export default function DarkModeToggle(): JSX.Element {
   const { isDarkMode, toggleDarkMode } = useThemeStore();
-  const { t } = useTranslation('common');
+  const { t } = useTranslation("common");
 
   return (
     <button
       onClick={toggleDarkMode}
       className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-      aria-label={t('theme.toggle')}
-      title={isDarkMode ? t('theme.enableLight') : t('theme.enableDark')}
+      aria-label={t("theme.toggle")}
+      title={isDarkMode ? t("theme.enableLight") : t("theme.enableDark")}
     >
       {isDarkMode ? (
         // Sun icon for light mode

@@ -1,6 +1,6 @@
-import { useState, useRef } from 'react';
-import { uploadsApi, API_URL } from '../lib/api';
-import { useTranslation } from '../hooks/useTranslation';
+import { useState, useRef } from "react";
+import { uploadsApi, API_URL } from "../lib/api";
+import { useTranslation } from "../hooks/useTranslation";
 
 interface ReceiptUploadProps {
   currentReceiptUrl?: string | null;
@@ -13,28 +13,35 @@ export default function ReceiptUpload({
   onUploadSuccess,
   onDelete,
 }: ReceiptUploadProps): JSX.Element {
-  const { t } = useTranslation(['flights', 'common', 'errors']);
+  const { t } = useTranslation(["flights", "common", "errors"]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (file: File) => {
     // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+      "application/pdf",
+    ];
     if (!allowedTypes.includes(file.type)) {
-      setError(t('flights:receipt.invalidFileType'));
+      setError(t("flights:receipt.invalidFileType"));
       return;
     }
 
     // Validate file size (10MB max)
     if (file.size > 10 * 1024 * 1024) {
-      setError(t('flights:receipt.fileTooLarge'));
+      setError(t("flights:receipt.fileTooLarge"));
       return;
     }
 
-    setError('');
+    setError("");
     setUploading(true);
     setUploadProgress(0);
 
@@ -44,7 +51,7 @@ export default function ReceiptUpload({
       setUploadProgress(0);
     } catch (err: unknown) {
       const errorObj = err as { response?: { data?: { error?: string } } };
-      setError(errorObj.response?.data?.error || t('flights:receipt.uploadFailed'));
+      setError(errorObj.response?.data?.error || t("flights:receipt.uploadFailed"));
     } finally {
       setUploading(false);
     }
@@ -53,9 +60,9 @@ export default function ReceiptUpload({
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
+    if (e.type === "dragenter" || e.type === "dragover") {
       setDragActive(true);
-    } else if (e.type === 'dragleave') {
+    } else if (e.type === "dragleave") {
       setDragActive(false);
     }
   };
@@ -71,25 +78,29 @@ export default function ReceiptUpload({
   };
 
   const handleDelete = () => {
-    if (confirm(t('flights:receipt.deleteConfirm'))) {
+    if (confirm(t("flights:receipt.deleteConfirm"))) {
       onDelete();
     }
   };
 
   return (
     <div className="space-y-3">
-      <label className="label">{t('flights:receipt.label')}</label>
+      <label className="label">{t("flights:receipt.label")}</label>
 
       {currentReceiptUrl && !uploading ? (
         <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
           <div className="flex-1">
             <a
-              href={currentReceiptUrl.startsWith('http') ? currentReceiptUrl : `${API_URL || window.location.origin}${currentReceiptUrl}`}
+              href={
+                currentReceiptUrl.startsWith("http")
+                  ? currentReceiptUrl
+                  : `${API_URL || window.location.origin}${currentReceiptUrl}`
+              }
               target="_blank"
               rel="noopener noreferrer"
               className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
             >
-              {t('flights:receipt.viewReceipt')}
+              {t("flights:receipt.viewReceipt")}
             </a>
           </div>
           <button
@@ -97,15 +108,15 @@ export default function ReceiptUpload({
             onClick={handleDelete}
             className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-sm"
           >
-            {t('common:buttons.remove')}
+            {t("common:buttons.remove")}
           </button>
         </div>
       ) : (
         <div
           className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
             dragActive
-              ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-              : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+              ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+              : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"
           }`}
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
@@ -123,7 +134,9 @@ export default function ReceiptUpload({
 
           {uploading ? (
             <div className="space-y-2">
-              <p className="text-sm text-gray-600 dark:text-gray-400">{t('flights:receipt.uploading', { progress: uploadProgress })}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {t("flights:receipt.uploading", { progress: uploadProgress })}
+              </p>
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                 <div
                   className="bg-blue-600 h-2 rounded-full transition-all duration-300"
@@ -152,21 +165,21 @@ export default function ReceiptUpload({
                   onClick={() => fileInputRef.current?.click()}
                   className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
                 >
-                  {t('flights:receipt.uploadFile')}
+                  {t("flights:receipt.uploadFile")}
                 </button>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('flights:receipt.dragAndDrop')}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  {t("flights:receipt.dragAndDrop")}
+                </p>
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
-                {t('flights:receipt.fileFormats')}
+                {t("flights:receipt.fileFormats")}
               </p>
             </>
           )}
         </div>
       )}
 
-      {error && (
-        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-      )}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
     </div>
   );
 }

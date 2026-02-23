@@ -1,4 +1,4 @@
-import axios, { type AxiosError } from 'axios';
+import axios, { type AxiosError } from "axios";
 import type {
   User,
   Flight,
@@ -12,10 +12,10 @@ import type {
   LeaderboardEntry,
   FlightLookupResult,
   OnboardingState,
-  ParsedBooking
-} from '../types';
+  ParsedBooking,
+} from "../types";
 
-import { API_TIMEOUTS } from '../config/constants';
+import { API_TIMEOUTS } from "../config/constants";
 
 // ==================== Shared / Reusable Interfaces ====================
 
@@ -53,7 +53,7 @@ export interface ParserCorrectionEntry {
 
 /** Parser correction submission payload */
 export interface ParserCorrectionPayload {
-  sourceType: 'email' | 'boardingpass';
+  sourceType: "email" | "boardingpass";
   provider: string;
   originalResult: ParserCorrectionEntry[];
   correctedResult: ParserCorrectionEntry[];
@@ -175,7 +175,7 @@ export interface UserSettings {
   };
   autoUpdate?: AutoUpdateSettings;
   historicalEnrichment?: HistoricalEnrichmentSettings;
-  boardingPassParserStrategy?: 'parser-only' | 'parser-with-api' | 'api-only' | null;
+  boardingPassParserStrategy?: "parser-only" | "parser-with-api" | "api-only" | null;
   [key: string]: unknown;
 }
 
@@ -183,8 +183,8 @@ export interface UserSettings {
 
 export interface TrainingDataEntry {
   id: string;
-  type: 'email' | 'boarding_pass';
-  status: 'pending' | 'trained' | 'failed';
+  type: "email" | "boarding_pass";
+  status: "pending" | "trained" | "failed";
   annotations?: Record<string, unknown>;
   extractedData?: unknown[];
   extractedDataCount?: number;
@@ -217,7 +217,7 @@ export interface TrainingJobLog {
 export interface TrainingJob {
   id: string;
   modelName: string;
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+  status: "pending" | "running" | "completed" | "failed" | "cancelled";
   type?: string;
   startedAt?: string;
   completedAt?: string;
@@ -239,7 +239,7 @@ export interface TrainingJobLogsResponse {
 
 export interface FlightUpdateChange {
   field: string;
-  type: 'added' | 'removed' | 'changed';
+  type: "added" | "removed" | "changed";
   oldValue: string | number | boolean | null | undefined;
   newValue: string | number | boolean | null | undefined;
 }
@@ -267,7 +267,7 @@ export interface PendingUpdate {
   id: string;
   flightId: string;
   userId: string;
-  status: 'pending' | 'applied' | 'rejected' | 'expired' | 'edited';
+  status: "pending" | "applied" | "rejected" | "expired" | "edited";
   originalData: FlightUpdateData;
   proposedData: FlightUpdateData;
   editedData?: FlightUpdateData;
@@ -355,13 +355,13 @@ export interface ExportAllDataResponse {
 
 // ==================== API URL & Instances ====================
 
-export const API_URL = import.meta.env?.VITE_API_URL || '';
+export const API_URL = import.meta.env?.VITE_API_URL || "";
 
 // Standard API instance with 10s timeout for normal requests
 const api = axios.create({
-  baseURL: API_URL ? `${API_URL}/api/v1` : '/api/v1',
+  baseURL: API_URL ? `${API_URL}/api/v1` : "/api/v1",
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
   timeout: API_TIMEOUTS.DEFAULT,
   withCredentials: true, // Send cookies with every request (HttpOnly JWT)
@@ -369,9 +369,9 @@ const api = axios.create({
 
 // Parser API instance with 180s timeout for long-running parser operations
 const parserApi = axios.create({
-  baseURL: API_URL ? `${API_URL}/api/v1` : '/api/v1',
+  baseURL: API_URL ? `${API_URL}/api/v1` : "/api/v1",
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
   timeout: API_TIMEOUTS.PARSER,
   withCredentials: true,
@@ -379,9 +379,9 @@ const parserApi = axios.create({
 
 // Hardware API instance with 35s timeout for hardware info operations
 const hardwareApi = axios.create({
-  baseURL: API_URL ? `${API_URL}/api/v1` : '/api/v1',
+  baseURL: API_URL ? `${API_URL}/api/v1` : "/api/v1",
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
   timeout: API_TIMEOUTS.HARDWARE,
   withCredentials: true,
@@ -393,7 +393,7 @@ const handle401Error = (error: AxiosError): Promise<never> => {
   if (error.response?.status === 401) {
     // Token expired or invalid - dispatch event for auth store to handle
     // This avoids circular dependency between api.ts and authStore.ts
-    const event = new CustomEvent('auth:unauthorized', {
+    const event = new CustomEvent("auth:unauthorized", {
       detail: { error },
     });
     window.dispatchEvent(event);
@@ -402,50 +402,41 @@ const handle401Error = (error: AxiosError): Promise<never> => {
     // In normal flow, authStore will logout (clears user) and route guards will navigate.
     setTimeout(() => {
       try {
-        const publicPaths = new Set(['/login', '/register', '/setup']);
+        const publicPaths = new Set(["/login", "/register", "/setup"]);
         if (publicPaths.has(window.location.pathname)) return;
 
-        const raw = localStorage.getItem('auth-storage');
+        const raw = localStorage.getItem("auth-storage");
         if (!raw) return;
         const parsed: unknown = JSON.parse(raw);
         const hasUser = !!(
-          typeof parsed === 'object' &&
+          typeof parsed === "object" &&
           parsed !== null &&
-          'state' in parsed &&
-          typeof (parsed as { state: unknown }).state === 'object' &&
+          "state" in parsed &&
+          typeof (parsed as { state: unknown }).state === "object" &&
           (parsed as { state: { user?: unknown } }).state !== null &&
           (parsed as { state: { user?: unknown } }).state?.user
         );
         if (hasUser) {
-          window.location.href = '/login';
+          window.location.href = "/login";
         }
       } catch {
-        window.location.href = '/login';
+        window.location.href = "/login";
       }
     }, 200);
   }
   return Promise.reject(error);
 };
 
-api.interceptors.response.use(
-  (response) => response,
-  handle401Error
-);
+api.interceptors.response.use((response) => response, handle401Error);
 
-parserApi.interceptors.response.use(
-  (response) => response,
-  handle401Error
-);
+parserApi.interceptors.response.use((response) => response, handle401Error);
 
-hardwareApi.interceptors.response.use(
-  (response) => response,
-  handle401Error
-);
+hardwareApi.interceptors.response.use((response) => response, handle401Error);
 
 // Auth API
 export const authApi = {
   register: async (username: string, password: string): Promise<{ user: User }> => {
-    const { data } = await api.post<{ user: User }>('/auth/register', {
+    const { data } = await api.post<{ user: User }>("/auth/register", {
       username,
       password,
     });
@@ -453,7 +444,7 @@ export const authApi = {
   },
 
   login: async (username: string, password: string): Promise<{ user: User }> => {
-    const { data } = await api.post<{ user: User }>('/auth/login', {
+    const { data } = await api.post<{ user: User }>("/auth/login", {
       username,
       password,
     });
@@ -461,10 +452,13 @@ export const authApi = {
   },
 
   logout: async (): Promise<void> => {
-    await api.post('/auth/logout');
+    await api.post("/auth/logout");
   },
-  changePassword: async (oldPassword: string, newPassword: string): Promise<{ message: string }> => {
-    const { data } = await api.post<{ message: string }>('/auth/change-password', {
+  changePassword: async (
+    oldPassword: string,
+    newPassword: string
+  ): Promise<{ message: string }> => {
+    const { data } = await api.post<{ message: string }>("/auth/change-password", {
       oldPassword,
       newPassword,
     });
@@ -475,7 +469,7 @@ export const authApi = {
 // Parse API (Email & Boarding Pass) - Uses parserApi with 180s timeout
 export const parseApi = {
   parseEmail: async (emailContent: string, subject?: string): Promise<EmailParseResult> => {
-    const { data } = await parserApi.post<EmailParseResult>('/parse-email', {
+    const { data } = await parserApi.post<EmailParseResult>("/parse-email", {
       emailContent,
       subject,
     });
@@ -484,18 +478,21 @@ export const parseApi = {
 
   parseEmailFile: async (file: File): Promise<EmailParseResult> => {
     const formData = new FormData();
-    formData.append('email', file);
+    formData.append("email", file);
 
-    const { data } = await parserApi.post<EmailParseResult>('/parse-email-file', formData, {
+    const { data } = await parserApi.post<EmailParseResult>("/parse-email-file", formData, {
       headers: {
-        'Content-Type': 'multipart/form-data',
+        "Content-Type": "multipart/form-data",
       },
     });
     return data;
   },
 
-  parseBoardingpass: async (imageBase64: string, enrichWithApi = true): Promise<BoardingPassParseResult> => {
-    const { data } = await parserApi.post<BoardingPassParseResult>('/parse-boardingpass', {
+  parseBoardingpass: async (
+    imageBase64: string,
+    enrichWithApi = true
+  ): Promise<BoardingPassParseResult> => {
+    const { data } = await parserApi.post<BoardingPassParseResult>("/parse-boardingpass", {
       imageBase64,
       enrichWithApi,
     });
@@ -503,7 +500,7 @@ export const parseApi = {
   },
 
   checkOllamaVision: async (): Promise<OllamaVisionCheckResult> => {
-    const { data } = await parserApi.get<OllamaVisionCheckResult>('/parse-boardingpass/check');
+    const { data } = await parserApi.get<OllamaVisionCheckResult>("/parse-boardingpass/check");
     return data;
   },
 
@@ -527,7 +524,7 @@ export const parseApi = {
         provider: string;
         availability: ProviderAvailability;
       }>;
-    }>('/parse-boardingpass/providers');
+    }>("/parse-boardingpass/providers");
     return data;
   },
 
@@ -551,19 +548,21 @@ export const parseApi = {
         openai?: ProviderAvailability;
         claude?: ProviderAvailability;
       };
-    }>('/parse-boardingpass/availability');
+    }>("/parse-boardingpass/availability");
     return data;
   },
 
   submitParserCorrection: async (correction: ParserCorrectionPayload): Promise<SuccessResponse> => {
-    const { data } = await api.post<SuccessResponse>('/parser-feedback/correction', correction);
+    const { data } = await api.post<SuccessResponse>("/parser-feedback/correction", correction);
     return data;
   },
 };
 
 // Flights API
 export const flightsApi = {
-  getAll: async (filters?: FlightFilters): Promise<{
+  getAll: async (
+    filters?: FlightFilters
+  ): Promise<{
     flights: Flight[];
     total: number;
     limit: number;
@@ -574,12 +573,12 @@ export const flightsApi = {
       total: number;
       limit: number;
       offset: number;
-    }>('/flights', { params: filters });
+    }>("/flights", { params: filters });
     return data;
   },
 
   getGeoJSON: async (filters?: FlightFilters): Promise<GeoJSONFeatureCollection> => {
-    const { data } = await api.get<GeoJSONFeatureCollection>('/flights/geo', {
+    const { data } = await api.get<GeoJSONFeatureCollection>("/flights/geo", {
       params: filters,
     });
     return data;
@@ -591,7 +590,7 @@ export const flightsApi = {
   },
 
   create: async (flight: FlightInput): Promise<Flight> => {
-    const { data } = await api.post<Flight>('/flights', flight);
+    const { data } = await api.post<Flight>("/flights", flight);
     return data;
   },
 
@@ -605,7 +604,7 @@ export const flightsApi = {
   },
 
   lookup: async (params: { flightNumber: string; date?: string }): Promise<FlightLookupResult> => {
-    const { data } = await api.get<FlightLookupResult>('/flights/lookup', { params });
+    const { data } = await api.get<FlightLookupResult>("/flights/lookup", { params });
     return data;
   },
 };
@@ -613,29 +612,42 @@ export const flightsApi = {
 // Stats API
 export const statsApi = {
   getSummary: async (filters?: { fromDate?: string; toDate?: string }): Promise<Stats> => {
-    const { data } = await api.get<Stats>('/stats/summary', { params: filters });
+    const { data } = await api.get<Stats>("/stats/summary", { params: filters });
     return data;
   },
 
   getTopRoutes: async (limit = 10): Promise<{ routes: Route[] }> => {
-    const { data } = await api.get<{ routes: Route[] }>('/stats/routes', {
+    const { data } = await api.get<{ routes: Route[] }>("/stats/routes", {
       params: { limit },
     });
     return data;
   },
 
-  getFunStats: async (filters?: { fromDate?: string; toDate?: string }): Promise<import('../types').FunStats> => {
-    const { data } = await api.get<import('../types').FunStats>('/stats/fun', { params: filters });
+  getFunStats: async (filters?: {
+    fromDate?: string;
+    toDate?: string;
+  }): Promise<import("../types").FunStats> => {
+    const { data } = await api.get<import("../types").FunStats>("/stats/fun", { params: filters });
     return data;
   },
 
-  getBusinessStats: async (filters?: { fromDate?: string; toDate?: string }): Promise<import('../types').BusinessStats> => {
-    const { data } = await api.get<import('../types').BusinessStats>('/stats/business', { params: filters });
+  getBusinessStats: async (filters?: {
+    fromDate?: string;
+    toDate?: string;
+  }): Promise<import("../types").BusinessStats> => {
+    const { data } = await api.get<import("../types").BusinessStats>("/stats/business", {
+      params: filters,
+    });
     return data;
   },
 
-  getUniqueStats: async (filters?: { fromDate?: string; toDate?: string }): Promise<import('../types').UniqueStats> => {
-    const { data } = await api.get<import('../types').UniqueStats>('/stats/unique', { params: filters });
+  getUniqueStats: async (filters?: {
+    fromDate?: string;
+    toDate?: string;
+  }): Promise<import("../types").UniqueStats> => {
+    const { data } = await api.get<import("../types").UniqueStats>("/stats/unique", {
+      params: filters,
+    });
     return data;
   },
 };
@@ -656,7 +668,7 @@ export interface Airport {
 
 export const airportsApi = {
   search: async (query: string): Promise<Airport[]> => {
-    const { data } = await api.get<Airport[]>('/airports/search', {
+    const { data } = await api.get<Airport[]>("/airports/search", {
       params: { q: query },
     });
     return data;
@@ -671,15 +683,14 @@ export const airportsApi = {
 // Achievements API
 export const achievementsApi = {
   getAll: async (): Promise<AchievementsResponse> => {
-    const { data } = await api.get<AchievementsResponse>('/achievements');
+    const { data } = await api.get<AchievementsResponse>("/achievements");
     return data;
   },
 
   getRecent: async (limit = 10): Promise<{ achievements: UserAchievement[] }> => {
-    const { data } = await api.get<{ achievements: UserAchievement[] }>(
-      '/achievements/recent',
-      { params: { limit } }
-    );
+    const { data } = await api.get<{ achievements: UserAchievement[] }>("/achievements/recent", {
+      params: { limit },
+    });
     return data;
   },
 
@@ -692,13 +703,13 @@ export const achievementsApi = {
       message: string;
       newlyUnlocked: number;
       achievements: UserAchievement[];
-    }>('/achievements/check');
+    }>("/achievements/check");
     return data;
   },
 
   getLeaderboard: async (limit = 10): Promise<{ leaderboard: LeaderboardEntry[] }> => {
     const { data } = await api.get<{ leaderboard: LeaderboardEntry[] }>(
-      '/achievements/leaderboard',
+      "/achievements/leaderboard",
       { params: { limit } }
     );
     return data;
@@ -708,11 +719,11 @@ export const achievementsApi = {
 // Settings API
 export const settingsApi = {
   get: async (): Promise<UserSettings> => {
-    const { data } = await api.get<UserSettings>('/settings');
+    const { data } = await api.get<UserSettings>("/settings");
     return data;
   },
   update: async (payload: Partial<UserSettings>): Promise<UserSettings> => {
-    const { data } = await api.put<UserSettings>('/settings', payload);
+    const { data } = await api.put<UserSettings>("/settings", payload);
     return data;
   },
   getParserSettings: async (): Promise<{
@@ -730,7 +741,7 @@ export const settingsApi = {
       textFallbackChain?: string;
       openaiApiKey?: string;
       claudeApiKey?: string;
-    }>('/settings/parser');
+    }>("/settings/parser");
     return data;
   },
   updateParserSettings: async (payload: {
@@ -741,7 +752,7 @@ export const settingsApi = {
     openaiApiKey?: string;
     claudeApiKey?: string;
   }): Promise<MessageResponse> => {
-    const { data } = await api.put<MessageResponse>('/settings/parser', payload);
+    const { data } = await api.put<MessageResponse>("/settings/parser", payload);
     return data;
   },
   getDeveloperMode: async (): Promise<{
@@ -751,52 +762,59 @@ export const settingsApi = {
     const { data } = await api.get<{
       enabled: boolean;
       confirmedAt: string | null;
-    }>('/settings/developer-mode');
+    }>("/settings/developer-mode");
     return data;
   },
-  updateDeveloperMode: async (payload: { enabled: boolean; confirmed?: boolean }): Promise<MessageResponse> => {
-    const { data } = await api.put<MessageResponse>('/settings/developer-mode', payload);
+  updateDeveloperMode: async (payload: {
+    enabled: boolean;
+    confirmed?: boolean;
+  }): Promise<MessageResponse> => {
+    const { data } = await api.put<MessageResponse>("/settings/developer-mode", payload);
     return data;
   },
   getTrainingSettings: async (): Promise<{
     useTrainedModels: boolean;
-    preferredEmailModel: 'auto' | 'trained' | 'base';
-    preferredVisionModel: 'auto' | 'trained' | 'base';
+    preferredEmailModel: "auto" | "trained" | "base";
+    preferredVisionModel: "auto" | "trained" | "base";
     trainingSeparateModels: boolean;
   }> => {
     const { data } = await api.get<{
       useTrainedModels: boolean;
-      preferredEmailModel: 'auto' | 'trained' | 'base';
-      preferredVisionModel: 'auto' | 'trained' | 'base';
+      preferredEmailModel: "auto" | "trained" | "base";
+      preferredVisionModel: "auto" | "trained" | "base";
       trainingSeparateModels: boolean;
-    }>('/settings/training');
+    }>("/settings/training");
     return data;
   },
   updateTrainingSettings: async (payload: {
     useTrainedModels?: boolean;
-    preferredEmailModel?: 'auto' | 'trained' | 'base';
-    preferredVisionModel?: 'auto' | 'trained' | 'base';
+    preferredEmailModel?: "auto" | "trained" | "base";
+    preferredVisionModel?: "auto" | "trained" | "base";
     trainingSeparateModels?: boolean;
   }): Promise<MessageResponse> => {
-    const { data } = await api.put<MessageResponse>('/settings/training', payload);
+    const { data } = await api.put<MessageResponse>("/settings/training", payload);
     return data;
   },
   uploadProfilePicture: async (file: File): Promise<{ profilePictureUrl: string }> => {
     const formData = new FormData();
-    formData.append('profilePicture', file);
-    const { data } = await api.post<{ profilePictureUrl: string }>('/settings/profile-picture', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    formData.append("profilePicture", file);
+    const { data } = await api.post<{ profilePictureUrl: string }>(
+      "/settings/profile-picture",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
     return data;
   },
   getOnboardingState: async (): Promise<OnboardingState> => {
-    const { data } = await api.get<OnboardingState>('/settings/onboarding-state');
+    const { data } = await api.get<OnboardingState>("/settings/onboarding-state");
     return data;
   },
   updateOnboardingState: async (state: OnboardingState): Promise<OnboardingState> => {
-    const { data } = await api.put<OnboardingState>('/settings/onboarding-state', state);
+    const { data } = await api.put<OnboardingState>("/settings/onboarding-state", state);
     return data;
   },
   getApiKeys: async (): Promise<{
@@ -812,7 +830,7 @@ export const settingsApi = {
       airlabs: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
       aviationstack: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
       opensky: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
-    }>('/settings/api-keys');
+    }>("/settings/api-keys");
     return data;
   },
   updateApiKeys: async (payload: {
@@ -825,12 +843,21 @@ export const settingsApi = {
     openskyUsername?: string | null;
     openskyPassword?: string | null;
   }): Promise<MessageResponse> => {
-    const { data } = await api.put<MessageResponse>('/settings/api-keys', payload);
+    const { data } = await api.put<MessageResponse>("/settings/api-keys", payload);
     return data;
   },
-  testApiKey: async (provider: 'openai' | 'claude' | 'airlabs' | 'aviationstack' | 'opensky', apiKey?: string, openskyCredentials?: { clientId?: string; clientSecret?: string; username?: string; password?: string }): Promise<ApiKeyTestResponse> => {
+  testApiKey: async (
+    provider: "openai" | "claude" | "airlabs" | "aviationstack" | "opensky",
+    apiKey?: string,
+    openskyCredentials?: {
+      clientId?: string;
+      clientSecret?: string;
+      username?: string;
+      password?: string;
+    }
+  ): Promise<ApiKeyTestResponse> => {
     const endpoint = `/settings/api-keys/test/${provider}`;
-    const payload = provider === 'opensky' ? openskyCredentials : { apiKey };
+    const payload = provider === "opensky" ? openskyCredentials : { apiKey };
     const { data } = await api.post<ApiKeyTestResponse>(endpoint, payload);
     return data;
   },
@@ -839,24 +866,29 @@ export const settingsApi = {
 // Analytics API
 export const analyticsApi = {
   track: async (type: string, payload?: Record<string, unknown>): Promise<void> => {
-    await api.post('/analytics/events', { type, payload });
+    await api.post("/analytics/events", { type, payload });
   },
 };
 
 // Training API
 export const trainingApi = {
-  upload: async (file: File, type: 'email' | 'boarding_pass'): Promise<TrainingUploadResult> => {
+  upload: async (file: File, type: "email" | "boarding_pass"): Promise<TrainingUploadResult> => {
     const formData = new FormData();
-    formData.append('file', file);
-    formData.append('type', type);
-    const { data } = await api.post<TrainingUploadResult>('/training/upload', formData, {
+    formData.append("file", file);
+    formData.append("type", type);
+    const { data } = await api.post<TrainingUploadResult>("/training/upload", formData, {
       headers: {
-        'Content-Type': 'multipart/form-data',
+        "Content-Type": "multipart/form-data",
       },
     });
     return data;
   },
-  annotate: async (id: string, annotations: Record<string, unknown>, extractedData: Record<string, unknown>[], tags?: string[]): Promise<TrainingAnnotationResult> => {
+  annotate: async (
+    id: string,
+    annotations: Record<string, unknown>,
+    extractedData: Record<string, unknown>[],
+    tags?: string[]
+  ): Promise<TrainingAnnotationResult> => {
     const { data } = await api.post<TrainingAnnotationResult>(`/training/${id}/annotate`, {
       annotations,
       extractedData,
@@ -864,7 +896,12 @@ export const trainingApi = {
     });
     return data;
   },
-  saveAndTrain: async (id: string, annotations: Record<string, unknown>, extractedData: Record<string, unknown>[], tags?: string[]): Promise<TrainingAnnotationResult> => {
+  saveAndTrain: async (
+    id: string,
+    annotations: Record<string, unknown>,
+    extractedData: Record<string, unknown>[],
+    tags?: string[]
+  ): Promise<TrainingAnnotationResult> => {
     const { data } = await api.post<TrainingAnnotationResult>(`/training/${id}/save-and-train`, {
       annotations,
       extractedData,
@@ -881,12 +918,12 @@ export const trainingApi = {
     return data;
   },
   getData: async (queryString?: string): Promise<{ trainingData: TrainingDataEntry[] }> => {
-    const url = `/training/data${queryString ? `?${queryString}` : ''}`;
+    const url = `/training/data${queryString ? `?${queryString}` : ""}`;
     const { data } = await api.get<{ trainingData: TrainingDataEntry[] }>(url);
     return data;
   },
   getJobs: async (): Promise<{ jobs: TrainingJob[] }> => {
-    const { data } = await api.get<{ jobs: TrainingJob[] }>('/training/jobs');
+    const { data } = await api.get<{ jobs: TrainingJob[] }>("/training/jobs");
     return data;
   },
   getJobLogs: async (jobId: string): Promise<TrainingJobLogsResponse> => {
@@ -894,7 +931,9 @@ export const trainingApi = {
     return data;
   },
   triggerTraining: async (): Promise<{ trainingJobId: string; message: string }> => {
-    const { data } = await api.post<{ trainingJobId: string; message: string }>('/training/trigger');
+    const { data } = await api.post<{ trainingJobId: string; message: string }>(
+      "/training/trigger"
+    );
     return data;
   },
   cancelTraining: async (jobId: string): Promise<{ message: string }> => {
@@ -911,23 +950,24 @@ export const trainingApi = {
 export const uploadsApi = {
   uploadReceipt: async (file: File, onProgress?: (progress: number) => void): Promise<string> => {
     const formData = new FormData();
-    formData.append('receipt', file);
+    formData.append("receipt", file);
 
-    const { data } = await api.post<{ receiptUrl: string; filename: string; size: number; mimetype: string }>(
-      '/uploads/receipt',
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        onUploadProgress: (progressEvent) => {
-          if (onProgress && progressEvent.total) {
-            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-            onProgress(progress);
-          }
-        },
-      }
-    );
+    const { data } = await api.post<{
+      receiptUrl: string;
+      filename: string;
+      size: number;
+      mimetype: string;
+    }>("/uploads/receipt", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+      onUploadProgress: (progressEvent) => {
+        if (onProgress && progressEvent.total) {
+          const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          onProgress(progress);
+        }
+      },
+    });
 
     return data.receiptUrl;
   },
@@ -948,11 +988,15 @@ export const setupApi = {
       setupComplete: boolean;
       requiresSetup: boolean;
       message: string;
-    }>('/setup/status');
+    }>("/setup/status");
     return data;
   },
 
-  initialize: async (username: string, password: string, instanceName?: string): Promise<{
+  initialize: async (
+    username: string,
+    password: string,
+    instanceName?: string
+  ): Promise<{
     success: boolean;
     message: string;
     user: { id: string; username: string; isAdmin: boolean };
@@ -961,7 +1005,7 @@ export const setupApi = {
       success: boolean;
       message: string;
       user: { id: string; username: string; isAdmin: boolean };
-    }>('/setup/initialize', {
+    }>("/setup/initialize", {
       username,
       password,
       instanceName,
@@ -970,7 +1014,7 @@ export const setupApi = {
   },
 
   getAirportSeedingStatus: async (): Promise<{
-    status: 'pending' | 'running' | 'completed' | 'failed';
+    status: "pending" | "running" | "completed" | "failed";
     progress?: number; // 0-1
     estimatedSecondsRemaining?: number;
     totalAirports?: number;
@@ -978,13 +1022,13 @@ export const setupApi = {
     error?: string;
   }> => {
     const { data } = await api.get<{
-      status: 'pending' | 'running' | 'completed' | 'failed';
+      status: "pending" | "running" | "completed" | "failed";
       progress?: number; // 0-1
       estimatedSecondsRemaining?: number;
       totalAirports?: number;
       processedAirports?: number;
       error?: string;
-    }>('/setup/airport-seeding-status');
+    }>("/setup/airport-seeding-status");
     return data;
   },
 };
@@ -1009,7 +1053,7 @@ export const adminApi = {
       warningThreshold: boolean;
       registrationEnabled: boolean;
       version: string;
-    }>('/admin/system/info');
+    }>("/admin/system/info");
     return data;
   },
 
@@ -1104,7 +1148,7 @@ export const adminApi = {
         accessible: boolean;
         error?: string;
       };
-    }>('/admin/system/hardware');
+    }>("/admin/system/hardware");
     return data;
   },
 
@@ -1135,11 +1179,13 @@ export const adminApi = {
           userAchievements: number;
         };
       }>;
-    }>('/admin/users');
+    }>("/admin/users");
     return data;
   },
 
-  toggleUserActive: async (userId: string): Promise<{
+  toggleUserActive: async (
+    userId: string
+  ): Promise<{
     user: {
       id: string;
       username: string;
@@ -1158,7 +1204,10 @@ export const adminApi = {
     return data;
   },
 
-  createInvitation: async (email?: string, expiresInDays: number = 7): Promise<{
+  createInvitation: async (
+    email?: string,
+    expiresInDays: number = 7
+  ): Promise<{
     invitation: {
       id: string;
       email?: string;
@@ -1175,7 +1224,7 @@ export const adminApi = {
         expiresAt: string;
       };
       inviteUrl: string;
-    }>('/admin/invitations', { email, expiresInDays });
+    }>("/admin/invitations", { email, expiresInDays });
     return data;
   },
 
@@ -1204,12 +1253,12 @@ export const adminApi = {
           username: string;
         };
       }>;
-    }>('/admin/invitations');
+    }>("/admin/invitations");
     return data;
   },
 
   exportAllData: async (): Promise<ExportAllDataResponse> => {
-    const { data } = await api.get<ExportAllDataResponse>('/admin/export/all-data');
+    const { data } = await api.get<ExportAllDataResponse>("/admin/export/all-data");
     return data;
   },
 
@@ -1228,7 +1277,7 @@ export const adminApi = {
       requireUserApiKeys: boolean;
       defaultVisionParser: string;
       defaultTextParser: string;
-    }>('/admin/parser-settings');
+    }>("/admin/parser-settings");
     return data;
   },
 
@@ -1240,7 +1289,7 @@ export const adminApi = {
     defaultVisionParser?: string;
     defaultTextParser?: string;
   }): Promise<MessageResponse> => {
-    const { data } = await api.put<MessageResponse>('/admin/parser-settings', settings);
+    const { data } = await api.put<MessageResponse>("/admin/parser-settings", settings);
     return data;
   },
 
@@ -1265,7 +1314,7 @@ export const adminApi = {
       envTrainingModelOutputDir: string;
       envTrainingEmailModelName: string;
       envTrainingVisionModelName: string;
-    }>('/admin/training-config');
+    }>("/admin/training-config");
     return data;
   },
 
@@ -1274,7 +1323,7 @@ export const adminApi = {
     trainingEmailModelName?: string | null;
     trainingVisionModelName?: string | null;
   }): Promise<MessageResponse> => {
-    const { data } = await api.put<MessageResponse>('/admin/training-config', config);
+    const { data } = await api.put<MessageResponse>("/admin/training-config", config);
     return data;
   },
 
@@ -1297,7 +1346,7 @@ export const adminApi = {
       globalOpenskyPassword?: string;
       allowUserFlightApiKeys: boolean;
       requireUserFlightApiKeys: boolean;
-    }>('/admin/api-keys');
+    }>("/admin/api-keys");
     return data;
   },
 
@@ -1311,12 +1360,21 @@ export const adminApi = {
     allowUserFlightApiKeys?: boolean;
     requireUserFlightApiKeys?: boolean;
   }): Promise<MessageResponse> => {
-    const { data } = await api.put<MessageResponse>('/admin/api-keys', keys);
+    const { data } = await api.put<MessageResponse>("/admin/api-keys", keys);
     return data;
   },
-  testApiKey: async (provider: 'openai' | 'claude' | 'airlabs' | 'aviationstack' | 'opensky', apiKey?: string, openskyCredentials?: { clientId?: string; clientSecret?: string; username?: string; password?: string }): Promise<ApiKeyTestResponse> => {
+  testApiKey: async (
+    provider: "openai" | "claude" | "airlabs" | "aviationstack" | "opensky",
+    apiKey?: string,
+    openskyCredentials?: {
+      clientId?: string;
+      clientSecret?: string;
+      username?: string;
+      password?: string;
+    }
+  ): Promise<ApiKeyTestResponse> => {
     const endpoint = `/admin/api-keys/test/${provider}`;
-    const payload = provider === 'opensky' ? openskyCredentials : { apiKey };
+    const payload = provider === "opensky" ? openskyCredentials : { apiKey };
     const { data } = await api.post<ApiKeyTestResponse>(endpoint, payload);
     return data;
   },
@@ -1337,7 +1395,7 @@ export const adminApi = {
       logParserOperations: boolean;
       maxLogFileSize: number;
       logRetentionDays: number;
-    }>('/admin/logging/config');
+    }>("/admin/logging/config");
     return data;
   },
 
@@ -1349,18 +1407,20 @@ export const adminApi = {
     maxLogFileSize?: number;
     logRetentionDays?: number;
   }): Promise<MessageResponse> => {
-    const { data } = await api.put<MessageResponse>('/admin/logging/config', config);
+    const { data } = await api.put<MessageResponse>("/admin/logging/config", config);
     return data;
   },
 
-  toggleDebugLogging: async (enabled: boolean): Promise<{
+  toggleDebugLogging: async (
+    enabled: boolean
+  ): Promise<{
     enabled: boolean;
     message: string;
   }> => {
     const { data } = await api.post<{
       enabled: boolean;
       message: string;
-    }>('/admin/logging/toggle-debug', { enabled });
+    }>("/admin/logging/toggle-debug", { enabled });
     return data;
   },
 
@@ -1381,14 +1441,14 @@ export const adminApi = {
         created: string;
         modified: string;
       }>;
-    }>('/admin/logging/files');
+    }>("/admin/logging/files");
     return data;
   },
 
   // Parser Feedback API
   getParserFeedbackStats: async (params?: {
     provider?: string;
-    sourceType?: 'email' | 'boardingpass';
+    sourceType?: "email" | "boardingpass";
     days?: number;
   }): Promise<{
     total: number;
@@ -1398,9 +1458,9 @@ export const adminApi = {
     commonIssues: Array<{ issue: string; count: number }>;
   }> => {
     const queryParams = new URLSearchParams();
-    if (params?.provider) queryParams.append('provider', params.provider);
-    if (params?.sourceType) queryParams.append('sourceType', params.sourceType);
-    if (params?.days) queryParams.append('days', params.days.toString());
+    if (params?.provider) queryParams.append("provider", params.provider);
+    if (params?.sourceType) queryParams.append("sourceType", params.sourceType);
+    if (params?.days) queryParams.append("days", params.days.toString());
 
     const { data } = await api.get<{
       total: number;
@@ -1413,11 +1473,13 @@ export const adminApi = {
   },
 
   submitParserCorrection: async (correction: ParserCorrectionPayload): Promise<SuccessResponse> => {
-    const { data } = await api.post<SuccessResponse>('/parser-feedback/correction', correction);
+    const { data } = await api.post<SuccessResponse>("/parser-feedback/correction", correction);
     return data;
   },
 
-  getParserPatterns: async (params?: { days?: number }): Promise<{
+  getParserPatterns: async (params?: {
+    days?: number;
+  }): Promise<{
     suggestions: Array<{
       pattern: string;
       field: string;
@@ -1446,7 +1508,7 @@ export const adminApi = {
     };
   }> => {
     const queryParams = new URLSearchParams();
-    if (params?.days) queryParams.append('days', params.days.toString());
+    if (params?.days) queryParams.append("days", params.days.toString());
 
     const { data } = await api.get<{
       suggestions: Array<{
@@ -1479,7 +1541,10 @@ export const adminApi = {
     return data;
   },
 
-  applyPatternSuggestion: async (patternId: string, autoApply?: boolean): Promise<{
+  applyPatternSuggestion: async (
+    patternId: string,
+    autoApply?: boolean
+  ): Promise<{
     success: boolean;
     message: string;
   }> => {
@@ -1490,7 +1555,9 @@ export const adminApi = {
     return data;
   },
 
-  autoApplyPatterns: async (threshold?: number): Promise<{
+  autoApplyPatterns: async (
+    threshold?: number
+  ): Promise<{
     success: boolean;
     appliedCount: number;
     message: string;
@@ -1499,13 +1566,13 @@ export const adminApi = {
       success: boolean;
       appliedCount: number;
       message: string;
-    }>('/admin/parser-feedback/patterns/auto-apply', { threshold });
+    }>("/admin/parser-feedback/patterns/auto-apply", { threshold });
     return data;
   },
 
   getParserFeedbackDetails: async (params?: {
     provider?: string;
-    sourceType?: 'email' | 'boardingpass';
+    sourceType?: "email" | "boardingpass";
     days?: number;
     limit?: number;
     offset?: number;
@@ -1514,11 +1581,11 @@ export const adminApi = {
     total: number;
   }> => {
     const queryParams = new URLSearchParams();
-    if (params?.provider) queryParams.append('provider', params.provider);
-    if (params?.sourceType) queryParams.append('sourceType', params.sourceType);
-    if (params?.days) queryParams.append('days', params.days.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    if (params?.offset) queryParams.append('offset', params.offset.toString());
+    if (params?.provider) queryParams.append("provider", params.provider);
+    if (params?.sourceType) queryParams.append("sourceType", params.sourceType);
+    if (params?.days) queryParams.append("days", params.days.toString());
+    if (params?.limit) queryParams.append("limit", params.limit.toString());
+    if (params?.offset) queryParams.append("offset", params.offset.toString());
 
     const { data } = await api.get<{
       feedback: ParserFeedbackEntry[];
@@ -1527,13 +1594,16 @@ export const adminApi = {
     return data;
   },
 
-  getLogFileContent: async (filename: string, params?: {
-    level?: string;
-    category?: string;
-    search?: string;
-    offset?: number;
-    limit?: number;
-  }): Promise<{
+  getLogFileContent: async (
+    filename: string,
+    params?: {
+      level?: string;
+      category?: string;
+      search?: string;
+      offset?: number;
+      limit?: number;
+    }
+  ): Promise<{
     logs: LogEntry[];
     total: number;
     offset: number;
@@ -1550,7 +1620,7 @@ export const adminApi = {
 
   downloadLogFile: async (filename: string): Promise<Blob> => {
     const response = await api.get<Blob>(`/admin/logging/files/${filename}/download`, {
-      responseType: 'blob',
+      responseType: "blob",
     });
     return response.data;
   },
@@ -1573,7 +1643,7 @@ export const adminApi = {
       categories: Record<string, { fileCount: number; totalSize: number }>;
       oldestLog: string;
       newestLog: string;
-    }>('/admin/logging/stats');
+    }>("/admin/logging/stats");
     return data;
   },
 
@@ -1586,7 +1656,7 @@ export const adminApi = {
       message: string;
       filesDeleted: number;
       spaceFreed: number;
-    }>('/admin/logging/cleanup');
+    }>("/admin/logging/cleanup");
     return data;
   },
 
@@ -1604,21 +1674,24 @@ export const adminApi = {
     const { data } = await api.get<{
       results: LogSearchResult[];
       total: number;
-    }>('/admin/logging/search', { params });
+    }>("/admin/logging/search", { params });
     return data;
   },
 };
 
 // Pending Updates API
 export const pendingUpdatesApi = {
-  getAll: async (filters?: { status?: string; flightId?: string }): Promise<{
+  getAll: async (filters?: {
+    status?: string;
+    flightId?: string;
+  }): Promise<{
     updates: PendingUpdate[];
     count: number;
   }> => {
     const { data } = await api.get<{
       updates: PendingUpdate[];
       count: number;
-    }>('/pending-updates', { params: filters });
+    }>("/pending-updates", { params: filters });
     return data;
   },
 
@@ -1644,7 +1717,7 @@ export const pendingUpdatesApi = {
       expiredUpdates: number;
       mostChangedFields: Record<string, number>;
       averageUpdateTime: number | null;
-    }>('/pending-updates/statistics');
+    }>("/pending-updates/statistics");
     return data;
   },
 
@@ -1654,12 +1727,16 @@ export const pendingUpdatesApi = {
   },
 
   preview: async (id: string, editedData?: FlightUpdateData): Promise<Record<string, unknown>> => {
-    const { data } = await api.post<Record<string, unknown>>(`/pending-updates/${id}/preview`, { editedData });
+    const { data } = await api.post<Record<string, unknown>>(`/pending-updates/${id}/preview`, {
+      editedData,
+    });
     return data;
   },
 
   apply: async (id: string): Promise<{ success: boolean; flight: Flight }> => {
-    const { data } = await api.post<{ success: boolean; flight: Flight }>(`/pending-updates/${id}/apply`);
+    const { data } = await api.post<{ success: boolean; flight: Flight }>(
+      `/pending-updates/${id}/apply`
+    );
     return data;
   },
 
@@ -1679,11 +1756,13 @@ export const backupApi = {
   }> => {
     const { data } = await api.get<{
       backups: BackupEntry[];
-    }>('/backup');
+    }>("/backup");
     return data;
   },
 
-  get: async (id: string): Promise<{
+  get: async (
+    id: string
+  ): Promise<{
     backup: BackupEntry;
   }> => {
     const { data } = await api.get<{
@@ -1692,7 +1771,10 @@ export const backupApi = {
     return data;
   },
 
-  create: async (options?: { type?: 'full' | 'partial'; retentionDays?: number }): Promise<{
+  create: async (options?: {
+    type?: "full" | "partial";
+    retentionDays?: number;
+  }): Promise<{
     success: boolean;
     backupId: string;
     message: string;
@@ -1701,22 +1783,25 @@ export const backupApi = {
       success: boolean;
       backupId: string;
       message: string;
-    }>('/backup', options || {});
+    }>("/backup", options || {});
     return data;
   },
 
   download: async (id: string): Promise<Blob> => {
     const response = await api.get<Blob>(`/backup/${id}/download`, {
-      responseType: 'blob',
+      responseType: "blob",
     });
     return response.data;
   },
 
-  restore: async (id: string, options: {
-    scope: 'full' | 'database' | 'files';
-    createBackupBefore?: boolean;
-    targetDatabaseUrl?: string;
-  }): Promise<{
+  restore: async (
+    id: string,
+    options: {
+      scope: "full" | "database" | "files";
+      createBackupBefore?: boolean;
+      targetDatabaseUrl?: string;
+    }
+  ): Promise<{
     success: boolean;
     message: string;
   }> => {
@@ -1727,7 +1812,9 @@ export const backupApi = {
     return data;
   },
 
-  delete: async (id: string): Promise<{
+  delete: async (
+    id: string
+  ): Promise<{
     success: boolean;
     message: string;
   }> => {
@@ -1753,7 +1840,7 @@ export const backupApi = {
         status: string;
         startedAt: string | null;
       } | null;
-    }>('/backup/status');
+    }>("/backup/status");
     return data;
   },
 
@@ -1766,11 +1853,13 @@ export const backupApi = {
       success: boolean;
       deletedCount: number;
       message: string;
-    }>('/backup/cleanup');
+    }>("/backup/cleanup");
     return data;
   },
 
-  syncToCloud: async (id: string): Promise<{
+  syncToCloud: async (
+    id: string
+  ): Promise<{
     success: boolean;
     message: string;
   }> => {
@@ -1794,7 +1883,7 @@ export const backupApi = {
         size: number;
         lastModified: string;
       }>;
-    }>('/backup/cloud/list');
+    }>("/backup/cloud/list");
     return data;
   },
 
@@ -1805,11 +1894,13 @@ export const backupApi = {
     const { data } = await api.post<{
       success: boolean;
       message: string;
-    }>('/backup/cloud/test');
+    }>("/backup/cloud/test");
     return data;
   },
 
-  downloadFromCloud: async (backupName: string): Promise<{
+  downloadFromCloud: async (
+    backupName: string
+  ): Promise<{
     success: boolean;
     message: string;
     localPath: string;
@@ -1818,13 +1909,18 @@ export const backupApi = {
       success: boolean;
       message: string;
       localPath: string;
-    }>('/backup/cloud/download', { backupName });
+    }>("/backup/cloud/download", { backupName });
     return data;
   },
 };
 
 // Utility function: Calculate distance between two coordinates using Haversine formula
-export const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+export const calculateDistance = (
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number => {
   const R = 6371; // Earth's radius in km
   const toRad = (deg: number): number => deg * (Math.PI / 180);
 
@@ -1833,8 +1929,7 @@ export const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2
 
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;

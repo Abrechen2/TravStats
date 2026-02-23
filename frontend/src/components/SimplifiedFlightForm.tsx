@@ -1,46 +1,49 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
-import { Airport, airportsApi, flightsApi } from '../lib/api';
-import AirportAutocomplete from './AirportAutocomplete';
+import { useState, useEffect, lazy, Suspense } from "react";
+import { Airport, airportsApi, flightsApi } from "../lib/api";
+import AirportAutocomplete from "./AirportAutocomplete";
 
 // Lazy load BoardingPassScanner as it's heavy (Tesseract.js)
-const BoardingPassScanner = lazy(() => import('./BoardingPassScanner'));
-import type { ScanResultData } from './BoardingPassScanner';
-import type { FlightInput, FlightLookupResult } from '../types';
-import { useSettingsStore } from '../store/settingsStore';
-import { logger } from '../lib/logger';
+const BoardingPassScanner = lazy(() => import("./BoardingPassScanner"));
+import type { ScanResultData } from "./BoardingPassScanner";
+import type { FlightInput, FlightLookupResult } from "../types";
+import { useSettingsStore } from "../store/settingsStore";
+import { logger } from "../lib/logger";
 
 interface SimplifiedFlightFormProps {
   onSubmit: (flight: FlightInput) => Promise<void>;
   onCancel: () => void;
 }
 
-export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedFlightFormProps): JSX.Element {
+export default function SimplifiedFlightForm({
+  onSubmit,
+  onCancel,
+}: SimplifiedFlightFormProps): JSX.Element {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [autoFillMessage, setAutoFillMessage] = useState('');
+  const [error, setError] = useState("");
+  const [autoFillMessage, setAutoFillMessage] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
 
   // Required fields
   const [departure, setDeparture] = useState<Airport | null>(null);
   const [arrival, setArrival] = useState<Airport | null>(null);
-  const [departureDate, setDepartureDate] = useState('');
-  const [departureTime, setDepartureTime] = useState('12:00');
+  const [departureDate, setDepartureDate] = useState("");
+  const [departureTime, setDepartureTime] = useState("12:00");
 
   // Optional fields (advanced)
-  const [airline, setAirline] = useState('');
-  const [flightNumber, setFlightNumber] = useState('');
-  const [aircraft, setAircraft] = useState('');
-  const [arrivalDate, setArrivalDate] = useState('');
-  const [arrivalTime, setArrivalTime] = useState('14:00');
-  const [status, setStatus] = useState<'scheduled' | 'flown' | 'cancelled'>('flown');
-  const [notes, setNotes] = useState('');
-  const [price, setPrice] = useState<string>('');
-  const [taxes, setTaxes] = useState<string>('');
-  const [fees, setFees] = useState<string>('');
-  const [currency, setCurrency] = useState<'EUR' | 'USD' | 'GBP' | 'CHF'>('EUR');
-  const [category, setCategory] = useState<'business' | 'private' | 'vacation'>('business');
-  const [tagInput, setTagInput] = useState('');
+  const [airline, setAirline] = useState("");
+  const [flightNumber, setFlightNumber] = useState("");
+  const [aircraft, setAircraft] = useState("");
+  const [arrivalDate, setArrivalDate] = useState("");
+  const [arrivalTime, setArrivalTime] = useState("14:00");
+  const [status, setStatus] = useState<"scheduled" | "flown" | "cancelled">("flown");
+  const [notes, setNotes] = useState("");
+  const [price, setPrice] = useState<string>("");
+  const [taxes, setTaxes] = useState<string>("");
+  const [fees, setFees] = useState<string>("");
+  const [currency, setCurrency] = useState<"EUR" | "USD" | "GBP" | "CHF">("EUR");
+  const [category, setCategory] = useState<"business" | "private" | "vacation">("business");
+  const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
 
   const settings = useSettingsStore();
@@ -57,7 +60,7 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
   // Smart defaults
   useEffect(() => {
     // Set today's date
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split("T")[0];
     setDepartureDate(today);
     setArrivalDate(today);
   }, []);
@@ -68,7 +71,7 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
       const depDateTime = new Date(`${departureDate}T${departureTime}`);
       depDateTime.setHours(depDateTime.getHours() + 2);
 
-      setArrivalDate(depDateTime.toISOString().split('T')[0]);
+      setArrivalDate(depDateTime.toISOString().split("T")[0]);
       setArrivalTime(depDateTime.toTimeString().slice(0, 5));
     }
   }, [departureDate, departureTime, arrivalDate]);
@@ -81,9 +84,9 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
       today.setHours(0, 0, 0, 0);
 
       if (depDate < today) {
-        setStatus('flown');
+        setStatus("flown");
       } else {
-        setStatus('scheduled');
+        setStatus("scheduled");
       }
     }
   }, [departureDate]);
@@ -93,7 +96,7 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
 
     if (lookup.airline) setAirline(lookup.airline);
     if (lookup.flightNumber) setFlightNumber(lookup.flightNumber);
-    if (lookup.aircraft) setAircraft(prev => prev || lookup.aircraft || '');
+    if (lookup.aircraft) setAircraft((prev) => prev || lookup.aircraft || "");
 
     if (lookup.departure) setDeparture(lookup.departure as Airport);
     if (lookup.arrival) setArrival(lookup.arrival as Airport);
@@ -113,7 +116,7 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
       }
       const parsed = new Date(value);
       if (Number.isNaN(parsed.getTime())) return;
-      setDate(parsed.toISOString().split('T')[0]);
+      setDate(parsed.toISOString().split("T")[0]);
       setTime(parsed.toTimeString().slice(0, 5));
     };
 
@@ -124,13 +127,13 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
   useEffect(() => {
     const normalizedFlightNumber = flightNumber.trim();
     if (!normalizedFlightNumber) {
-      setAutoFillMessage('');
+      setAutoFillMessage("");
       return;
     }
 
     let cancelled = false;
     const timer = setTimeout(async () => {
-      setAutoFillMessage('🔄 Suche Fluginfos (Aviationstack)...');
+      setAutoFillMessage("🔄 Suche Fluginfos (Aviationstack)...");
       try {
         const lookup = await flightsApi.lookup({
           flightNumber: normalizedFlightNumber,
@@ -141,11 +144,11 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
 
         applyLookupData(lookup);
         setShowAdvanced(true);
-        setAutoFillMessage('✈️ Daten automatisch ergänzt');
+        setAutoFillMessage("✈️ Daten automatisch ergänzt");
       } catch (lookupError) {
         if (!cancelled) {
-          logger.warn('Flight lookup failed', lookupError);
-          setAutoFillMessage('');
+          logger.warn("Flight lookup failed", lookupError);
+          setAutoFillMessage("");
         }
       }
     }, 600);
@@ -158,10 +161,10 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
 
   const handleBoardingPassScan = async (scanData: ScanResultData): Promise<void> => {
     setShowScanner(false);
-    setError('');
+    setError("");
 
-    const depCode = scanData.departureCode || '';
-    const arrCode = scanData.arrivalCode || '';
+    const depCode = scanData.departureCode || "";
+    const arrCode = scanData.arrivalCode || "";
 
     try {
       // Lookup airports by IATA code using getByCode API
@@ -178,7 +181,7 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
         arrAirport = arr;
       } catch {
         // If airports not found even with external lookup, create placeholder objects
-        logger.warn('Airports not found anywhere, using IATA codes directly');
+        logger.warn("Airports not found anywhere, using IATA codes directly");
         depAirport = {
           id: 0,
           iata: depCode,
@@ -204,7 +207,7 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
 
       // Set date from departureTime if available
       if (scanData.departureTime) {
-        const dateStr = scanData.departureTime.split('T')[0];
+        const dateStr = scanData.departureTime.split("T")[0];
         setDepartureDate(dateStr);
         setArrivalDate(dateStr);
       }
@@ -218,13 +221,13 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
       }
 
       // Set status to flown (since user has boarding pass)
-      setStatus('flown');
+      setStatus("flown");
 
       // Show advanced options since we have flight details
       setShowAdvanced(true);
 
       // Show success message
-      setError('');
+      setError("");
     } catch {
       setError(`Could not find airport data for ${depCode} or ${arrCode}. Please enter manually.`);
     }
@@ -232,15 +235,15 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     if (!departure || !arrival) {
-      setError('Please select departure and arrival airports');
+      setError("Please select departure and arrival airports");
       return;
     }
 
     if (!departureDate) {
-      setError('Please select departure date');
+      setError("Please select departure date");
       return;
     }
 
@@ -250,7 +253,9 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
       // Convert local times to ISO strings (properly handles timezone conversion)
       // Note: This treats input times as local browser time and converts to UTC
       const departureDateTime = new Date(`${departureDate}T${departureTime}:00`).toISOString();
-      const arrivalDateTime = new Date(`${arrivalDate || departureDate}T${arrivalTime}:00`).toISOString();
+      const arrivalDateTime = new Date(
+        `${arrivalDate || departureDate}T${arrivalTime}:00`
+      ).toISOString();
 
       await onSubmit({
         airline: airline || undefined,
@@ -283,7 +288,7 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
       });
     } catch (err: unknown) {
       const errorObj = err as { response?: { data?: { error?: string } } };
-      setError(errorObj.response?.data?.error || 'Failed to save flight');
+      setError(errorObj.response?.data?.error || "Failed to save flight");
     } finally {
       setLoading(false);
     }
@@ -293,7 +298,7 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
     const clean = tagInput.trim();
     if (!clean || tags.includes(clean)) return;
     setTags([...tags, clean]);
-    setTagInput('');
+    setTagInput("");
   };
 
   return (
@@ -320,11 +325,7 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
                 <h3 className="font-semibold text-lg">🎫 Have a Boarding Pass?</h3>
                 <p className="text-sm text-gray-600">Scan it to auto-fill all details!</p>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowScanner(true)}
-                className="btn-primary"
-              >
+              <button type="button" onClick={() => setShowScanner(true)} className="btn-primary">
                 📸 Scan Now
               </button>
             </div>
@@ -380,7 +381,7 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
               <label className="label">Status</label>
               <select
                 value={status}
-                onChange={(e) => setStatus(e.target.value as 'scheduled' | 'flown' | 'cancelled')}
+                onChange={(e) => setStatus(e.target.value as "scheduled" | "flown" | "cancelled")}
                 className="input"
               >
                 <option value="flown">Flown ✓</option>
@@ -397,7 +398,7 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
               onClick={() => setShowAdvanced(!showAdvanced)}
               className="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium"
             >
-              <span>{showAdvanced ? '▼' : '▶'}</span>
+              <span>{showAdvanced ? "▼" : "▶"}</span>
               Advanced Options (Optional)
             </button>
 
@@ -539,7 +540,7 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
                       value={tagInput}
                       onChange={(e) => setTagInput(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
+                        if (e.key === "Enter") {
                           e.preventDefault();
                           handleAddTag();
                         }
@@ -547,7 +548,11 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
                       className="input"
                       placeholder="z.B. Konferenz, Familienbesuch"
                     />
-                    <button type="button" onClick={handleAddTag} className="btn-secondary whitespace-nowrap">
+                    <button
+                      type="button"
+                      onClick={handleAddTag}
+                      className="btn-secondary whitespace-nowrap"
+                    >
                       Tag hinzufügen
                     </button>
                   </div>
@@ -590,12 +595,7 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
 
           {/* Actions */}
           <div className="flex gap-3 justify-end pt-4 border-t">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="btn-secondary"
-              disabled={loading}
-            >
+            <button type="button" onClick={onCancel} className="btn-secondary" disabled={loading}>
               Cancel
             </button>
             <button
@@ -603,7 +603,7 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
               className="btn-primary"
               disabled={loading || !departure || !arrival || !departureDate}
             >
-              {loading ? 'Saving...' : '✓ Save Flight'}
+              {loading ? "Saving..." : "✓ Save Flight"}
             </button>
           </div>
         </form>
@@ -616,16 +616,18 @@ export default function SimplifiedFlightForm({ onSubmit, onCancel }: SimplifiedF
 
       {/* Boarding Pass Scanner Modal */}
       {showScanner && (
-        <Suspense fallback={
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-8">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto mb-2"></div>
-                <p className="text-gray-600 dark:text-gray-300">Loading scanner...</p>
+        <Suspense
+          fallback={
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-8">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto mb-2"></div>
+                  <p className="text-gray-600 dark:text-gray-300">Loading scanner...</p>
+                </div>
               </div>
             </div>
-          </div>
-        }>
+          }
+        >
           <BoardingPassScanner
             onScanSuccess={handleBoardingPassScan}
             onClose={() => setShowScanner(false)}

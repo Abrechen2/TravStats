@@ -1,20 +1,20 @@
 /**
  * Boarding Pass Parser Interface
- * 
+ *
  * Defines the contract for all boarding pass parsers in the system.
  * Parsers are executed in priority order until one succeeds.
  */
 
-import { BoardingPassData } from '../bcbpParser';
+import { BoardingPassData } from "../bcbpParser";
 
 /**
  * Parser category for organization and logging
  */
-export type ParserCategory = 'core' | 'low-cost' | 'legacy' | 'regional' | 'url' | 'fallback';
+export type ParserCategory = "core" | "low-cost" | "legacy" | "regional" | "url" | "fallback";
 
 /**
  * Boarding Pass Parser Interface
- * 
+ *
  * All parsers must implement this interface to be registered in the parser chain.
  */
 export interface BoardingPassParser {
@@ -47,7 +47,7 @@ export interface BoardingPassParser {
   /**
    * Quick check if this parser can potentially handle the barcode data.
    * Should be fast (no expensive operations) - used to skip parsers that definitely won't work.
-   * 
+   *
    * @param barcodeData - Raw barcode data string
    * @returns true if parser might be able to parse this data
    */
@@ -55,12 +55,9 @@ export interface BoardingPassParser {
 
   /**
    * Parse the barcode data into structured BoardingPassData.
-   * 
+   *
    * @param barcodeData - Raw barcode data string
    * @returns Parsed boarding pass data, or null if parsing failed
    */
   parse(barcodeData: string): BoardingPassData | null;
 }
-
-
-

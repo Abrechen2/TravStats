@@ -1,20 +1,20 @@
-import { useEffect, useState } from 'react';
-import { statsApi, flightsApi } from '../lib/api';
-import HelpIcon from './Help/HelpIcon';
-import type { Stats as StatsType, Route, FlightFilters, Flight } from '../types';
-import { calculateDistance } from '../lib/geo';
-import { API_LIMITS } from '../lib/constants';
-import { logger } from '../lib/logger';
-import { useTranslation } from '../hooks/useTranslation';
-import { useSettingsStore } from '../store/settingsStore';
-import { formatDistance, formatCurrency as formatCurrencyUtil } from '../lib/units';
+import { useEffect, useState } from "react";
+import { statsApi, flightsApi } from "../lib/api";
+import HelpIcon from "./Help/HelpIcon";
+import type { Stats as StatsType, Route, FlightFilters, Flight } from "../types";
+import { calculateDistance } from "../lib/geo";
+import { API_LIMITS } from "../lib/constants";
+import { logger } from "../lib/logger";
+import { useTranslation } from "../hooks/useTranslation";
+import { useSettingsStore } from "../store/settingsStore";
+import { formatDistance, formatCurrency as formatCurrencyUtil } from "../lib/units";
 
 interface StatsProps {
   filters?: FlightFilters;
 }
 
 export default function Stats({ filters = {} }: StatsProps): JSX.Element {
-  const { t } = useTranslation(['stats', 'common']);
+  const { t } = useTranslation(["stats", "common"]);
   const { units } = useSettingsStore();
   const [stats, setStats] = useState<StatsType | null>(null);
   const [routes, setRoutes] = useState<Route[]>([]);
@@ -53,14 +53,14 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
         setRoutes(routesData.routes);
       }
     } catch (error) {
-      logger.error('Failed to load stats:', error);
+      logger.error("Failed to load stats:", error);
     } finally {
       setLoading(false);
     }
   };
 
   const calculateStats = (flights: Flight[]): StatsType => {
-    const flownFlights = flights.filter(f => f.status === 'flown');
+    const flownFlights = flights.filter((f) => f.status === "flown");
     const totalDistance = flownFlights.reduce((sum, f) => {
       // Use accurate Haversine formula for distance calculation
       // Skip flights with missing coordinates
@@ -72,13 +72,14 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
     }, 0);
 
     const totalFlightTime = flownFlights.reduce((sum, f) => {
-      const duration = (new Date(f.arrivalTime).getTime() - new Date(f.departureTime).getTime()) / 60000;
+      const duration =
+        (new Date(f.arrivalTime).getTime() - new Date(f.departureTime).getTime()) / 60000;
       return sum + duration;
     }, 0);
 
     const byStatus: Record<string, number> = {};
     const byAirline: Record<string, number> = {};
-    flights.forEach(f => {
+    flights.forEach((f) => {
       byStatus[f.status] = (byStatus[f.status] || 0) + 1;
       if (f.airline) byAirline[f.airline] = (byAirline[f.airline] || 0) + 1;
     });
@@ -97,11 +98,15 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
   };
 
   if (loading) {
-    return <div className="text-center py-4 dark:text-gray-300">{t('stats:loading')}</div>;
+    return <div className="text-center py-4 dark:text-gray-300">{t("stats:loading")}</div>;
   }
 
   if (!stats) {
-    return <div className="text-center py-4 text-gray-500 dark:text-gray-400">{t('stats:noStatsAvailable')}</div>;
+    return (
+      <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+        {t("stats:noStatsAvailable")}
+      </div>
+    );
   }
 
   return (
@@ -109,15 +114,19 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-4">
         <div className="card">
-          <p className="text-sm text-gray-600 dark:text-gray-400">{t('stats:overview.totalFlights')}</p>
-          <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{stats.totalFlights}</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {t("stats:overview.totalFlights")}
+          </p>
+          <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+            {stats.totalFlights}
+          </p>
         </div>
         <div className="card">
           <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
-            {t('stats:overview.totalDistance')}
+            {t("stats:overview.totalDistance")}
             <HelpIcon
-              content={t('stats:help.totalDistance')}
-              expandedContent={t('stats:help.totalDistanceExpanded')}
+              content={t("stats:help.totalDistance")}
+              expandedContent={t("stats:help.totalDistanceExpanded")}
               position="top"
             />
           </div>
@@ -126,27 +135,31 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
           </p>
         </div>
         <div className="card">
-          <p className="text-sm text-gray-600 dark:text-gray-400">{t('stats:overview.avgDistance')}</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {t("stats:overview.avgDistance")}
+          </p>
           <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">
             {formatDistance(stats.avgDistance, units.distanceUnit, t)}
           </p>
         </div>
         <div className="card">
           <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
-            {t('stats:overview.totalFlightTime')}
+            {t("stats:overview.totalFlightTime")}
             <HelpIcon
-              content={t('stats:help.totalFlightTime')}
-              expandedContent={t('stats:help.totalFlightTimeExpanded')}
+              content={t("stats:help.totalFlightTime")}
+              expandedContent={t("stats:help.totalFlightTimeExpanded")}
               position="top"
             />
           </div>
           <p className="text-3xl font-bold text-orange-600 dark:text-orange-400">
-            {Math.round(stats.totalFlightTime / 60)} {t('stats:overview.hours')}
+            {Math.round(stats.totalFlightTime / 60)} {t("stats:overview.hours")}
           </p>
         </div>
-        {typeof stats.totalCost === 'number' && (
+        {typeof stats.totalCost === "number" && (
           <div className="card">
-            <p className="text-sm text-gray-600 dark:text-gray-400">{t('stats:overview.totalCost')}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {t("stats:overview.totalCost")}
+            </p>
             <p className="text-3xl font-bold text-amber-600 dark:text-amber-400">
               {formatCurrencyUtil(stats.totalCost, units.currency)}
             </p>
@@ -156,7 +169,7 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
 
       {/* By Status */}
       <div className="card">
-        <h3 className="font-semibold mb-3 dark:text-gray-100">{t('stats:byStatus.title')}</h3>
+        <h3 className="font-semibold mb-3 dark:text-gray-100">{t("stats:byStatus.title")}</h3>
         <div className="space-y-2">
           {Object.entries(stats.byStatus).map(([status, count]) => (
             <div key={status} className="flex justify-between items-center dark:text-gray-200">
@@ -169,7 +182,7 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
 
       {/* By Airline */}
       <div className="card">
-        <h3 className="font-semibold mb-3 dark:text-gray-100">{t('stats:airlines.title')}</h3>
+        <h3 className="font-semibold mb-3 dark:text-gray-100">{t("stats:airlines.title")}</h3>
         <div className="space-y-2">
           {Object.entries(stats.byAirline)
             .sort(([, a], [, b]) => b - a)
@@ -186,7 +199,7 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
       {/* By Category */}
       {stats.byCategory && (
         <div className="card">
-          <h3 className="font-semibold mb-3 dark:text-gray-100">{t('stats:byCategory.title')}</h3>
+          <h3 className="font-semibold mb-3 dark:text-gray-100">{t("stats:byCategory.title")}</h3>
           <div className="space-y-2">
             {Object.entries(stats.byCategory).map(([category, count]) => (
               <div key={category} className="flex justify-between items-center dark:text-gray-200">
@@ -201,7 +214,7 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
       {/* Top Routes */}
       {routes.length > 0 && (
         <div className="card">
-          <h3 className="font-semibold mb-3 dark:text-gray-100">{t('stats:topRoutes.title')}</h3>
+          <h3 className="font-semibold mb-3 dark:text-gray-100">{t("stats:topRoutes.title")}</h3>
           <div className="space-y-3">
             {routes.map((route, index) => (
               <div key={route.route} className="border-b dark:border-gray-700 pb-2 last:border-0">

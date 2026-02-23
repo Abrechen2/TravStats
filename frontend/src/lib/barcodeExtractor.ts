@@ -1,17 +1,17 @@
 /**
  * Barcode Extraction Service
- * 
+ *
  * Extracts barcode data (QR, Aztec, PDF417, DataMatrix) from boarding pass images.
  * Uses @zxing/browser and jsQR libraries for multi-format support.
  */
 
-import jsQR from 'jsqr';
-import { BrowserMultiFormatReader } from '@zxing/browser';
-import { logger } from './logger';
+import jsQR from "jsqr";
+import { BrowserMultiFormatReader } from "@zxing/browser";
+import { logger } from "./logger";
 
 export interface BarcodeExtractionResult {
   data: string;
-  format: 'QR' | 'Aztec' | 'PDF417' | 'DataMatrix' | 'Unknown';
+  format: "QR" | "Aztec" | "PDF417" | "DataMatrix" | "Unknown";
 }
 
 /**
@@ -19,9 +19,7 @@ export interface BarcodeExtractionResult {
  * @param image - File object or data URL string
  * @returns Barcode data string or null if not found
  */
-export async function extractBarcodeFromImage(
-  image: File | string
-): Promise<string | null> {
+export async function extractBarcodeFromImage(image: File | string): Promise<string | null> {
   try {
     // Convert to ImageData for processing
     const imageData = await loadImageData(image);
@@ -43,7 +41,7 @@ export async function extractBarcodeFromImage(
 
     return null;
   } catch (error) {
-    logger.error('[Barcode Extractor] Error extracting barcode:', error);
+    logger.error("[Barcode Extractor] Error extracting barcode:", error);
     return null;
   }
 }
@@ -63,19 +61,19 @@ export async function extractBarcodeWithFormat(
     // Try QR code
     const qrResult = await tryQRCode(imageData);
     if (qrResult) {
-      return { data: qrResult, format: 'QR' };
+      return { data: qrResult, format: "QR" };
     }
 
     // Try ZXing formats
     const zxingResult = await tryZXingFormats(imageData);
     if (zxingResult) {
       // ZXing doesn't always return format, default to Aztec (most common for boarding passes)
-      return { data: zxingResult, format: 'Aztec' };
+      return { data: zxingResult, format: "Aztec" };
     }
 
     return null;
   } catch (error) {
-    logger.error('[Barcode Extractor] Error extracting barcode with format:', error);
+    logger.error("[Barcode Extractor] Error extracting barcode with format:", error);
     return null;
   }
 }
@@ -86,8 +84,8 @@ export async function extractBarcodeWithFormat(
 async function loadImageData(image: File | string): Promise<ImageData | null> {
   return new Promise((resolve) => {
     const img = new Image();
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
 
     if (!ctx) {
       resolve(null);
@@ -98,23 +96,23 @@ async function loadImageData(image: File | string): Promise<ImageData | null> {
       canvas.width = img.width;
       canvas.height = img.height;
       ctx.drawImage(img, 0, 0);
-      
+
       try {
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         resolve(imageData);
       } catch (error) {
-        logger.error('[Barcode Extractor] Error creating ImageData:', error);
+        logger.error("[Barcode Extractor] Error creating ImageData:", error);
         resolve(null);
       }
     };
 
     img.onerror = () => {
-      logger.error('[Barcode Extractor] Error loading image');
+      logger.error("[Barcode Extractor] Error loading image");
       resolve(null);
     };
 
     // Set source
-    if (typeof image === 'string') {
+    if (typeof image === "string") {
       img.src = image;
     } else {
       const reader = new FileReader();
@@ -134,12 +132,12 @@ async function tryQRCode(imageData: ImageData): Promise<string | null> {
   try {
     const result = jsQR(imageData.data, imageData.width, imageData.height);
     if (result && result.data) {
-      console.debug('[Barcode Extractor] QR code found:', result.data.substring(0, 50) + '...');
+      console.debug("[Barcode Extractor] QR code found:", result.data.substring(0, 50) + "...");
       return result.data;
     }
     return null;
   } catch (error) {
-    console.debug('[Barcode Extractor] QR code extraction failed:', error);
+    console.debug("[Barcode Extractor] QR code extraction failed:", error);
     return null;
   }
 }
@@ -150,33 +148,36 @@ async function tryQRCode(imageData: ImageData): Promise<string | null> {
 async function tryZXingFormats(imageData: ImageData): Promise<string | null> {
   try {
     // Convert ImageData to Canvas for ZXing
-    const canvas = document.createElement('canvas');
+    const canvas = document.createElement("canvas");
     canvas.width = imageData.width;
     canvas.height = imageData.height;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) return null;
 
     ctx.putImageData(imageData, 0, 0);
 
     // Use ZXing BrowserMultiFormatReader
     const reader = new BrowserMultiFormatReader();
-    
+
     // ZXing can decode from canvas
     try {
       const result = await reader.decodeFromCanvas(canvas);
       if (result && result.getText()) {
-        console.debug('[Barcode Extractor] ZXing barcode found:', result.getText().substring(0, 50) + '...');
+        console.debug(
+          "[Barcode Extractor] ZXing barcode found:",
+          result.getText().substring(0, 50) + "..."
+        );
         return result.getText();
       }
     } catch (zxingError) {
       // ZXing throws errors when no barcode found, this is expected
-      console.debug('[Barcode Extractor] ZXing extraction failed (no barcode)');
+      console.debug("[Barcode Extractor] ZXing extraction failed (no barcode)");
       return null;
     }
 
     return null;
   } catch (error) {
-    console.debug('[Barcode Extractor] ZXing extraction error:', error);
+    console.debug("[Barcode Extractor] ZXing extraction error:", error);
     return null;
   }
 }
@@ -186,13 +187,13 @@ async function tryZXingFormats(imageData: ImageData): Promise<string | null> {
  */
 export function looksLikeBarcodeData(data: string): boolean {
   if (!data || data.length < 10) return false;
-  
+
   // Common patterns:
   // - IATA BCBP starts with M1, M2
   // - Contains airline codes (2-3 letters)
   // - Contains airport codes (3 letters)
   // - Contains dates/numbers
-  
+
   const barcodePatterns = [
     /^M[12]/, // IATA BCBP
     /[A-Z]{2}\d{1,4}/, // Flight numbers
@@ -200,6 +201,5 @@ export function looksLikeBarcodeData(data: string): boolean {
     /\d{3}/, // Julian dates
   ];
 
-  return barcodePatterns.some(pattern => pattern.test(data));
+  return barcodePatterns.some((pattern) => pattern.test(data));
 }
-

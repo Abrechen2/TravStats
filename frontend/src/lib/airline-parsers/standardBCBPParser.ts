@@ -1,87 +1,90 @@
 /**
  * Standard IATA BCBP Parser
- * 
+ *
  * Parses the standard IATA Bar Coded Boarding Pass (BCBP) format.
  * This format is used by most legacy carriers worldwide.
  */
 
-import { BoardingPassParser } from './IParser';
-import { BoardingPassData } from '../bcbpParser';
-import { logger } from '../logger';
+import { BoardingPassParser } from "./IParser";
+import { BoardingPassData } from "../bcbpParser";
+import { logger } from "../logger";
 
 /**
  * Convert Julian date (day of year) to ISO date string
  */
 function julianDateToDate(julianDate: string): string {
   const dayOfYear = parseInt(julianDate, 10);
-  logger.debug('[Standard BCBP Parser] Julian day conversion: Input day of year =', dayOfYear);
+  logger.debug("[Standard BCBP Parser] Julian day conversion: Input day of year =", dayOfYear);
 
   let year = new Date().getFullYear();
-  logger.debug('[Standard BCBP Parser] Current year:', year);
+  logger.debug("[Standard BCBP Parser] Current year:", year);
 
   const date = new Date(Date.UTC(year, 0, dayOfYear));
-  logger.debug('[Standard BCBP Parser] Calculated date (before year adjustment):', date.toISOString().split('T')[0]);
+  logger.debug(
+    "[Standard BCBP Parser] Calculated date (before year adjustment):",
+    date.toISOString().split("T")[0]
+  );
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const diffDays = Math.floor((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
-  logger.debug('[Standard BCBP Parser] Days difference from today:', diffDays);
+  logger.debug("[Standard BCBP Parser] Days difference from today:", diffDays);
 
   let adjustedYear = year;
   if (diffDays > 300) {
     adjustedYear = year - 1;
-    logger.debug('[Standard BCBP Parser] Date is >300 days in future, assuming PREVIOUS year');
+    logger.debug("[Standard BCBP Parser] Date is >300 days in future, assuming PREVIOUS year");
   }
 
   const finalDate = new Date(Date.UTC(adjustedYear, 0, dayOfYear));
-  const result = finalDate.toISOString().split('T')[0];
-  logger.debug('[Standard BCBP Parser] Final converted date:', result);
+  const result = finalDate.toISOString().split("T")[0];
+  logger.debug("[Standard BCBP Parser] Final converted date:", result);
   return result;
 }
 
 function mapCompartmentToSeatClass(
   code: string
-): 'economy' | 'premium_economy' | 'business' | 'first' {
+): "economy" | "premium_economy" | "business" | "first" {
   const c = code.toUpperCase();
-  if ('FAP'.includes(c)) return 'first';
-  if ('CJDZ'.includes(c)) return 'business';
-  if ('WPE'.includes(c)) return 'premium_economy';
-  return 'economy';
+  if ("FAP".includes(c)) return "first";
+  if ("CJDZ".includes(c)) return "business";
+  if ("WPE".includes(c)) return "premium_economy";
+  return "economy";
 }
 
 function getAirlineName(iataCode: string): string {
   const airlines: Record<string, string> = {
-    'LH': 'Lufthansa',
-    'EN': 'AirDolomiti',
-    'BA': 'British Airways',
-    'AF': 'Air France',
-    'KL': 'KLM',
-    'LX': 'Swiss',
-    'OS': 'Austrian Airlines',
-    'SN': 'Brussels Airlines',
-    'SK': 'SAS Scandinavian Airlines',
-    'AY': 'Finnair',
-    'TP': 'TAP Air Portugal',
-    'IB': 'Iberia',
-    'VY': 'Vueling',
-    'FR': 'Ryanair',
-    'U2': 'easyJet',
-    'W6': 'Wizz Air',
-    'EW': 'Eurowings',
-    'UA': 'United Airlines',
-    'AA': 'American Airlines',
-    'DL': 'Delta Air Lines',
-    'WN': 'Southwest Airlines',
-    'B6': 'JetBlue',
-    'AC': 'Air Canada',
-    'EK': 'Emirates',
-    'QR': 'Qatar Airways',
-    'TK': 'Turkish Airlines',
-    'SQ': 'Singapore Airlines',
-    'CX': 'Cathay Pacific',
-    'NH': 'ANA',
-    'JL': 'Japan Airlines',
+    LH: "Lufthansa",
+    EN: "AirDolomiti",
+    BA: "British Airways",
+    AF: "Air France",
+    KL: "KLM",
+    LX: "Swiss",
+    OS: "Austrian Airlines",
+    SN: "Brussels Airlines",
+    SK: "SAS Scandinavian Airlines",
+    AY: "Finnair",
+    TP: "TAP Air Portugal",
+    IB: "Iberia",
+    VY: "Vueling",
+    FR: "Ryanair",
+    U2: "easyJet",
+    W6: "Wizz Air",
+    EW: "Eurowings",
+    UA: "United Airlines",
+    AA: "American Airlines",
+    DL: "Delta Air Lines",
+    WN: "Southwest Airlines",
+    B6: "JetBlue",
+    AC: "Air Canada",
+    EK: "Emirates",
+    QR: "Qatar Airways",
+    TK: "Turkish Airlines",
+    SQ: "Singapore Airlines",
+    CX: "Cathay Pacific",
+    NH: "ANA",
+    JL: "Japan Airlines",
   };
 
   return airlines[iataCode.trim()] || iataCode.trim();
@@ -89,22 +92,22 @@ function getAirlineName(iataCode: string): string {
 
 /**
  * Standard IATA BCBP Parser
- * 
+ *
  * Priority: 10 (high priority - this covers ~80% of all boarding passes)
  */
 export class StandardBCBPParser implements BoardingPassParser {
-  name = 'standard-bcbp';
+  name = "standard-bcbp";
   priority = 10;
-  category: 'core' = 'core';
+  category: "core" = "core";
 
   canParse(barcodeData: string): boolean {
     // Quick check: BCBP format starts with 'M' for mandatory items
-    return barcodeData.startsWith('M');
+    return barcodeData.startsWith("M");
   }
 
   parse(barcodeData: string): BoardingPassData | null {
     try {
-      if (!barcodeData.startsWith('M')) {
+      if (!barcodeData.startsWith("M")) {
         return null;
       }
 
@@ -116,7 +119,7 @@ export class StandardBCBPParser implements BoardingPassParser {
 
       // Number of legs (only in multi-leg format 'M', not in format '1')
       let numberOfLegs = 1;
-      if (formatCode === 'M') {
+      if (formatCode === "M") {
         numberOfLegs = parseInt(barcodeData.charAt(pos), 10);
         pos += 1;
       }
@@ -152,7 +155,7 @@ export class StandardBCBPParser implements BoardingPassParser {
       // Date of flight (3 chars - Julian date, day of year)
       const julianDate = barcodeData.substring(pos, pos + 3);
       pos += 3;
-      logger.debug('[Standard BCBP Parser] Julian date from barcode:', julianDate);
+      logger.debug("[Standard BCBP Parser] Julian date from barcode:", julianDate);
 
       // Compartment code (1 char) - Y=Economy, J=Business, F=First
       const compartmentCode = barcodeData.charAt(pos);
@@ -179,7 +182,7 @@ export class StandardBCBPParser implements BoardingPassParser {
         logger.debug(`[Standard BCBP Parser] Current position after mandatory: ${pos}`);
 
         // Skip padding spaces
-        while (pos < barcodeData.length && barcodeData.charAt(pos) === ' ') {
+        while (pos < barcodeData.length && barcodeData.charAt(pos) === " ") {
           pos++;
         }
 
@@ -190,34 +193,49 @@ export class StandardBCBPParser implements BoardingPassParser {
           // Field size of structured message - Conditional (2 chars, hex)
           if (pos + 1 < barcodeData.length) {
             const lengthHex = barcodeData.substring(pos, pos + 2);
-            logger.debug('[Standard BCBP Parser] Conditional length (raw HEX string):', JSON.stringify(lengthHex));
+            logger.debug(
+              "[Standard BCBP Parser] Conditional length (raw HEX string):",
+              JSON.stringify(lengthHex)
+            );
 
             let conditionalLength = 0;
             try {
               conditionalLength = parseInt(lengthHex.trim(), 16);
-              logger.debug('[Standard BCBP Parser] Conditional items length (parsed as hex):', conditionalLength);
+              logger.debug(
+                "[Standard BCBP Parser] Conditional items length (parsed as hex):",
+                conditionalLength
+              );
             } catch {
-              logger.warn('[Standard BCBP Parser] Failed to parse conditional length as hex');
+              logger.warn("[Standard BCBP Parser] Failed to parse conditional length as hex");
             }
 
             pos += 2;
 
-            if (conditionalLength > 0 && conditionalLength < 200 && pos + conditionalLength <= barcodeData.length) {
+            if (
+              conditionalLength > 0 &&
+              conditionalLength < 200 &&
+              pos + conditionalLength <= barcodeData.length
+            ) {
               // Conditional data exists but we skip parsing airline-specific data
-              logger.debug('[Standard BCBP Parser] Conditional section present - airline-specific data will be extracted via OCR');
+              logger.debug(
+                "[Standard BCBP Parser] Conditional section present - airline-specific data will be extracted via OCR"
+              );
               pos += conditionalLength;
             } else if (conditionalLength === 0) {
-              logger.debug('[Standard BCBP Parser] No conditional data present');
+              logger.debug("[Standard BCBP Parser] No conditional data present");
             }
           }
         }
       } catch (error) {
-        logger.warn('[Standard BCBP Parser] Failed to parse conditional items (non-critical):', error);
+        logger.warn(
+          "[Standard BCBP Parser] Failed to parse conditional items (non-critical):",
+          error
+        );
       }
 
       // Convert Julian date to actual date
       const dateOfFlight = julianDateToDate(julianDate);
-      logger.debug('[Standard BCBP Parser] Converted to date:', dateOfFlight);
+      logger.debug("[Standard BCBP Parser] Converted to date:", dateOfFlight);
       const seatClass = mapCompartmentToSeatClass(compartmentCode);
       const airlineName = getAirlineName(operatingCarrierDesignator);
 
@@ -244,11 +262,8 @@ export class StandardBCBPParser implements BoardingPassParser {
         raw: barcodeData,
       };
     } catch (error) {
-      logger.error('[Standard BCBP Parser] Failed to parse BCBP:', error);
+      logger.error("[Standard BCBP Parser] Failed to parse BCBP:", error);
       return null;
     }
   }
 }
-
-
-

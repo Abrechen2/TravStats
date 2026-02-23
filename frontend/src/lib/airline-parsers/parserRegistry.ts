@@ -1,14 +1,14 @@
 /**
  * Parser Registry
- * 
+ *
  * Central registry for managing boarding pass parsers.
  * Implements Singleton pattern to ensure single instance across the application.
  * Parsers are executed in priority order until one succeeds.
  */
 
-import { BoardingPassParser } from './IParser';
-import { BoardingPassData } from '../bcbpParser';
-import { logger } from '../logger';
+import { BoardingPassParser } from "./IParser";
+import { BoardingPassData } from "../bcbpParser";
+import { logger } from "../logger";
 
 /**
  * Parser Registry Singleton
@@ -38,7 +38,7 @@ class ParserRegistry {
    */
   register(parser: BoardingPassParser): void {
     // Check if parser with same name already exists
-    const existingIndex = this.parsers.findIndex(p => p.name === parser.name);
+    const existingIndex = this.parsers.findIndex((p) => p.name === parser.name);
     if (existingIndex >= 0) {
       logger.warn(`[Parser Registry] Parser "${parser.name}" already registered, replacing...`);
       this.parsers[existingIndex] = parser;
@@ -53,7 +53,7 @@ class ParserRegistry {
    * @param name - Parser name to unregister
    */
   unregister(name: string): void {
-    const index = this.parsers.findIndex(p => p.name === name);
+    const index = this.parsers.findIndex((p) => p.name === name);
     if (index >= 0) {
       this.parsers.splice(index, 1);
       this.sorted = false;
@@ -75,28 +75,34 @@ class ParserRegistry {
   /**
    * Parse barcode data using registered parsers
    * Tries parsers in priority order until one succeeds.
-   * 
+   *
    * @param barcodeData - Raw barcode data string
    * @returns Parsed boarding pass data, or null if all parsers failed
    */
   parse(barcodeData: string): BoardingPassData | null {
     if (!barcodeData || barcodeData.trim().length === 0) {
-      logger.debug('[Parser Registry] Empty barcode data provided');
+      logger.debug("[Parser Registry] Empty barcode data provided");
       return null;
     }
 
     const parsers = this.getParsers();
-    logger.debug(`[Parser Registry] Attempting to parse with ${parsers.length} registered parser(s)`);
+    logger.debug(
+      `[Parser Registry] Attempting to parse with ${parsers.length} registered parser(s)`
+    );
 
     for (const parser of parsers) {
       try {
         // Quick check first
         if (!parser.canParse(barcodeData)) {
-          logger.debug(`[Parser Registry] Parser "${parser.name}" skipped (canParse returned false)`);
+          logger.debug(
+            `[Parser Registry] Parser "${parser.name}" skipped (canParse returned false)`
+          );
           continue;
         }
 
-        logger.debug(`[Parser Registry] Trying parser "${parser.name}" (priority: ${parser.priority})`);
+        logger.debug(
+          `[Parser Registry] Trying parser "${parser.name}" (priority: ${parser.priority})`
+        );
         const result = parser.parse(barcodeData);
 
         if (result) {
@@ -112,7 +118,7 @@ class ParserRegistry {
       }
     }
 
-    logger.error('[Parser Registry] All parsers failed to parse barcode data');
+    logger.error("[Parser Registry] All parsers failed to parse barcode data");
     return null;
   }
 
@@ -133,6 +139,3 @@ class ParserRegistry {
 }
 
 export default ParserRegistry;
-
-
-

@@ -1,19 +1,24 @@
-import { useEffect, useRef, useMemo, useState } from 'react';
-import Globe from 'react-globe.gl';
-import type { GeoJSONFeature } from '../types';
-import { useThemeStore } from '../store/themeStore';
-import { escapeHtml } from '../lib/escapeHtml';
+import { useEffect, useRef, useMemo, useState } from "react";
+import Globe from "react-globe.gl";
+import type { GeoJSONFeature } from "../types";
+import { useThemeStore } from "../store/themeStore";
+import { escapeHtml } from "../lib/escapeHtml";
 
 // #region agent log
-const debugLog = (location: string, message: string, data: Record<string, unknown> = {}, hypothesisId?: string) => {
+const debugLog = (
+  location: string,
+  message: string,
+  data: Record<string, unknown> = {},
+  hypothesisId?: string
+) => {
   // Only log in development mode
-  if (import.meta.env.MODE !== 'development') {
+  if (import.meta.env.MODE !== "development") {
     return;
   }
-  
+
   // Development-only console logging
-  console.log(`[DEBUG ${hypothesisId || '?'}] ${location}: ${message}`, data);
-  
+  console.log(`[DEBUG ${hypothesisId || "?"}] ${location}: ${message}`, data);
+
   // Store in localStorage for development debugging (max 100 entries)
   try {
     const logEntry = {
@@ -21,25 +26,32 @@ const debugLog = (location: string, message: string, data: Record<string, unknow
       message,
       data,
       timestamp: Date.now(),
-      sessionId: 'debug-session',
-      runId: 'run1',
+      sessionId: "debug-session",
+      runId: "run1",
       hypothesisId,
     };
-    const stored = localStorage.getItem('debug-logs') || '[]';
+    const stored = localStorage.getItem("debug-logs") || "[]";
     const logs = JSON.parse(stored);
     logs.push(logEntry);
     if (logs.length > 100) logs.shift();
-    localStorage.setItem('debug-logs', JSON.stringify(logs));
+    localStorage.setItem("debug-logs", JSON.stringify(logs));
   } catch (e) {
     // Ignore localStorage errors
   }
 };
 
 // Log before Globe import
-debugLog('GlobeView.tsx:import', 'GlobeView module loading', {
-  hasGlobe: typeof Globe !== 'undefined',
-  threeAvailable: typeof window !== 'undefined' && (window as unknown as Record<string, unknown>).THREE !== undefined,
-}, 'D');
+debugLog(
+  "GlobeView.tsx:import",
+  "GlobeView module loading",
+  {
+    hasGlobe: typeof Globe !== "undefined",
+    threeAvailable:
+      typeof window !== "undefined" &&
+      (window as unknown as Record<string, unknown>).THREE !== undefined,
+  },
+  "D"
+);
 // #endregion
 
 interface GlobeViewProps {
@@ -52,13 +64,13 @@ interface GlobeViewProps {
 // Helper function to create bidirectional route key (FRA-JFK === JFK-FRA)
 const createRouteKey = (airportA: string, airportB: string): string => {
   // Sort alphabetically to ensure bidirectional routes are treated as the same
-  return airportA < airportB
-    ? `${airportA}-${airportB}`
-    : `${airportB}-${airportA}`;
+  return airportA < airportB ? `${airportA}-${airportB}` : `${airportB}-${airportA}`;
 };
 
 // Calculate dynamic heatmap thresholds based on data distribution
-const calculateHeatmapThresholds = (counts: number[]): { q25: number; q50: number; q75: number; max: number } => {
+const calculateHeatmapThresholds = (
+  counts: number[]
+): { q25: number; q50: number; q75: number; max: number } => {
   if (counts.length === 0) return { q25: 1, q50: 2, q75: 3, max: 5 };
 
   const sorted = [...counts].sort((a, b) => a - b);
@@ -78,7 +90,7 @@ const calculateHeatmapThresholds = (counts: number[]): { q25: number; q50: numbe
 
   // Use actual quantiles, but ensure they're distinct
   const q25Index = Math.floor(len * 0.25);
-  const q50Index = Math.floor(len * 0.50);
+  const q50Index = Math.floor(len * 0.5);
   const q75Index = Math.floor(len * 0.75);
 
   let q25 = sorted[q25Index] || min;
@@ -93,12 +105,15 @@ const calculateHeatmapThresholds = (counts: number[]): { q25: number; q50: numbe
 };
 
 // Heatmap color based on dynamic quantiles
-const getHeatmapColor = (count: number, thresholds: { q25: number; q50: number; q75: number }): string => {
+const getHeatmapColor = (
+  count: number,
+  thresholds: { q25: number; q50: number; q75: number }
+): string => {
   // Use > instead of >= to ensure better distribution when values are equal
-  if (count > thresholds.q75) return '#ef4444'; // red - top 25%
-  if (count > thresholds.q50) return '#f59e0b';  // orange - 50-75%
-  if (count > thresholds.q25) return '#eab308';   // yellow - 25-50%
-  return '#10b981';                                // green - bottom 25%
+  if (count > thresholds.q75) return "#ef4444"; // red - top 25%
+  if (count > thresholds.q50) return "#f59e0b"; // orange - 50-75%
+  if (count > thresholds.q25) return "#eab308"; // yellow - 25-50%
+  return "#10b981"; // green - bottom 25%
 };
 
 // Helper function to calculate distance between two coordinates (Haversine formula)
@@ -111,8 +126,7 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
@@ -155,7 +169,10 @@ const getStaticArcAltitude = (
 // Note: selectedFlightId is available for future implementation (e.g., highlighting selected flight on globe)
 // Type for react-globe.gl component ref
 type GlobeInstance = {
-  pointOfView: (point?: { lat: number; lng: number; altitude: number }, transitionDuration?: number) => { lat: number; lng: number; altitude: number } | void;
+  pointOfView: (
+    point?: { lat: number; lng: number; altitude: number },
+    transitionDuration?: number
+  ) => { lat: number; lng: number; altitude: number } | void;
   controls: () => { autoRotate: boolean; autoRotateSpeed: number };
 };
 
@@ -182,27 +199,44 @@ interface PointData {
   iata?: string;
 }
 
-export default function GlobeView({ flights = [], selectedFlightId: _selectedFlightId, onFlightClick, minRouteCount = 1 }: GlobeViewProps): JSX.Element {
+export default function GlobeView({
+  flights = [],
+  selectedFlightId: _selectedFlightId,
+  onFlightClick,
+  minRouteCount = 1,
+}: GlobeViewProps): JSX.Element {
   // #region agent log
-  debugLog('GlobeView.tsx:render-start', 'GlobeView component rendering', {
-    flightsCount: flights.length,
-    minRouteCount,
-    hasGlobe: typeof Globe !== 'undefined',
-    threeAvailable: typeof window !== 'undefined' && (window as unknown as Record<string, unknown>).THREE !== undefined,
-  }, 'D');
+  debugLog(
+    "GlobeView.tsx:render-start",
+    "GlobeView component rendering",
+    {
+      flightsCount: flights.length,
+      minRouteCount,
+      hasGlobe: typeof Globe !== "undefined",
+      threeAvailable:
+        typeof window !== "undefined" &&
+        (window as unknown as Record<string, unknown>).THREE !== undefined,
+    },
+    "D"
+  );
   // #endregion
-  
+
   const globeRef = useRef<GlobeInstance | null>(null);
   const themeStore = useThemeStore();
   const isDarkMode = themeStore?.isDarkMode ?? false;
   const [autoRotate, setAutoRotate] = useState(false);
   const [cameraAltitude, setCameraAltitude] = useState(2.2);
-  
+
   // #region agent log
   useEffect(() => {
-    debugLog('GlobeView.tsx:mounted', 'GlobeView component mounted', {
-      hasGlobeRef: !!globeRef.current,
-    }, 'D');
+    debugLog(
+      "GlobeView.tsx:mounted",
+      "GlobeView component mounted",
+      {
+        hasGlobeRef: !!globeRef.current,
+      },
+      "D"
+    );
   }, []);
   // #endregion
 
@@ -264,11 +298,11 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
       departure: { iata?: string; name?: string; icao?: string };
       arrival: { iata?: string; name?: string; icao?: string };
     }
-    
+
     // First, aggregate flights by route
     const routeMap = new Map<string, RouteData>();
 
-    (flights || []).forEach(flight => {
+    (flights || []).forEach((flight) => {
       if (!flight?.properties || !flight?.geometry) return;
 
       const coords = flight.geometry.coordinates;
@@ -287,10 +321,14 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
 
       if (!validCoords) return;
 
-      const depIATA = flight.properties.departureAirport?.iata ||
-        flight.properties.departureAirport?.icao || 'UNKNOWN';
-      const arrIATA = flight.properties.arrivalAirport?.iata ||
-        flight.properties.arrivalAirport?.icao || 'UNKNOWN';
+      const depIATA =
+        flight.properties.departureAirport?.iata ||
+        flight.properties.departureAirport?.icao ||
+        "UNKNOWN";
+      const arrIATA =
+        flight.properties.arrivalAirport?.iata ||
+        flight.properties.arrivalAirport?.icao ||
+        "UNKNOWN";
       // Create bidirectional route key (FRA-JFK === JFK-FRA)
       const routeKey = createRouteKey(depIATA, arrIATA);
 
@@ -313,7 +351,7 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
     });
 
     // Calculate thresholds
-    const counts = Array.from(routeMap.values()).map(r => r.count);
+    const counts = Array.from(routeMap.values()).map((r) => r.count);
     const thresholds = calculateHeatmapThresholds(counts);
 
     // Create arcs with dynamic colors and apply route frequency filter
@@ -340,7 +378,7 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
   const pointsData = useMemo(() => {
     const airportMap = new Map();
 
-    (flights || []).forEach(flight => {
+    (flights || []).forEach((flight) => {
       if (!flight?.properties || !flight?.geometry) return;
 
       const coords = flight.geometry.coordinates;
@@ -351,15 +389,12 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
       const depLng = coords[0][0];
       const depIata = flight.properties.departureAirport?.iata;
       const depIcao = flight.properties.departureAirport?.icao;
-      const depCode = depIata || depIcao || 'Unknown';
-      const depValid =
-        [depLat, depLng].every(Number.isFinite) &&
-        !(depLat === 0 && depLng === 0);
+      const depCode = depIata || depIcao || "Unknown";
+      const depValid = [depLat, depLng].every(Number.isFinite) && !(depLat === 0 && depLng === 0);
 
       if (depValid) {
-        const depKey = depCode !== 'Unknown'
-          ? depCode
-          : `${depLat.toFixed(2)}_${depLng.toFixed(2)}`;
+        const depKey =
+          depCode !== "Unknown" ? depCode : `${depLat.toFixed(2)}_${depLng.toFixed(2)}`;
 
         if (!airportMap.has(depKey)) {
           airportMap.set(depKey, {
@@ -371,7 +406,7 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
           });
         } else {
           const existing = airportMap.get(depKey);
-          if ((depIata || depIcao) && existing.code === 'Unknown') {
+          if ((depIata || depIcao) && existing.code === "Unknown") {
             existing.code = depCode;
             existing.name = flight.properties.departureAirport?.name || depCode;
           }
@@ -384,15 +419,12 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
       const arrLng = coords[coords.length - 1][0];
       const arrIata = flight.properties.arrivalAirport?.iata;
       const arrIcao = flight.properties.arrivalAirport?.icao;
-      const arrCode = arrIata || arrIcao || 'Unknown';
-      const arrValid =
-        [arrLat, arrLng].every(Number.isFinite) &&
-        !(arrLat === 0 && arrLng === 0);
+      const arrCode = arrIata || arrIcao || "Unknown";
+      const arrValid = [arrLat, arrLng].every(Number.isFinite) && !(arrLat === 0 && arrLng === 0);
 
       if (arrValid) {
-        const arrKey = arrCode !== 'Unknown'
-          ? arrCode
-          : `${arrLat.toFixed(2)}_${arrLng.toFixed(2)}`;
+        const arrKey =
+          arrCode !== "Unknown" ? arrCode : `${arrLat.toFixed(2)}_${arrLng.toFixed(2)}`;
 
         if (!airportMap.has(arrKey)) {
           airportMap.set(arrKey, {
@@ -404,7 +436,7 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
           });
         } else {
           const existing = airportMap.get(arrKey);
-          if ((arrIata || arrIcao) && existing.code === 'Unknown') {
+          if ((arrIata || arrIcao) && existing.code === "Unknown") {
             existing.code = arrCode;
             existing.name = flight.properties.arrivalAirport?.name || arrCode;
           }
@@ -417,9 +449,15 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
   }, [flights]);
 
   return (
-    <div className="h-full w-full relative flex items-center justify-center" style={{ touchAction: 'pan-x pan-y pinch-zoom' }}>
+    <div
+      className="h-full w-full relative flex items-center justify-center"
+      style={{ touchAction: "pan-x pan-y pinch-zoom" }}
+    >
       {/* Control Panel */}
-      <div className="absolute bottom-4 left-4 z-[9999] bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 border border-gray-200 dark:border-gray-700" style={{ touchAction: 'auto', pointerEvents: 'auto' }}>
+      <div
+        className="absolute bottom-4 left-4 z-[9999] bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 border border-gray-200 dark:border-gray-700"
+        style={{ touchAction: "auto", pointerEvents: "auto" }}
+      >
         {/* Auto-Rotation Toggle */}
         <label className="flex items-center gap-2 cursor-pointer select-none">
           <input
@@ -436,31 +474,34 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
 
       {/* Heatmap Legend */}
       {arcsData.length > 0 && (
-        <div className="absolute bottom-4 right-4 z-[9999] bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3 border border-gray-200 dark:border-gray-700" style={{ touchAction: 'auto', pointerEvents: 'auto' }}>
+        <div
+          className="absolute bottom-4 right-4 z-[9999] bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3 border border-gray-200 dark:border-gray-700"
+          style={{ touchAction: "auto", pointerEvents: "auto" }}
+        >
           <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
             Routenfrequenz
           </div>
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-0.5" style={{ backgroundColor: '#10b981' }}></div>
+              <div className="w-8 h-0.5" style={{ backgroundColor: "#10b981" }}></div>
               <span className="text-xs text-gray-600 dark:text-gray-400">
                 1-{heatmapThresholds.q25}x
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-0.5" style={{ backgroundColor: '#eab308' }}></div>
+              <div className="w-8 h-0.5" style={{ backgroundColor: "#eab308" }}></div>
               <span className="text-xs text-gray-600 dark:text-gray-400">
                 {heatmapThresholds.q25 + 1}-{heatmapThresholds.q50}x
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-0.5" style={{ backgroundColor: '#f59e0b' }}></div>
+              <div className="w-8 h-0.5" style={{ backgroundColor: "#f59e0b" }}></div>
               <span className="text-xs text-gray-600 dark:text-gray-400">
                 {heatmapThresholds.q50 + 1}-{heatmapThresholds.q75}x
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-0.5" style={{ backgroundColor: '#ef4444' }}></div>
+              <div className="w-8 h-0.5" style={{ backgroundColor: "#ef4444" }}></div>
               <span className="text-xs text-gray-600 dark:text-gray-400">
                 {heatmapThresholds.q75 + 1}+ ({heatmapThresholds.max}x max)
               </span>
@@ -471,7 +512,7 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
 
       <Globe
         ref={globeRef}
-        style={{ width: '100%', height: '100%' }}
+        style={{ width: "100%", height: "100%" }}
         globeImageUrl="https://unpkg.com/three-globe@2.31.1/example/img/earth-blue-marble.jpg"
         bumpImageUrl="https://unpkg.com/three-globe@2.31.1/example/img/earth-topology.png"
         backgroundImageUrl={null}
@@ -495,10 +536,10 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
             font-size: 12px;
           ">
             <div style="font-weight: bold; margin-bottom: 4px;">
-              ${escapeHtml(arc.departure?.iata || 'UNK')} ↔ ${escapeHtml(arc.arrival?.iata || 'UNK')}
+              ${escapeHtml(arc.departure?.iata || "UNK")} ↔ ${escapeHtml(arc.arrival?.iata || "UNK")}
             </div>
             <div style="font-size: 11px; opacity: 0.9; margin-bottom: 6px;">
-              ${escapeHtml(arc.departure?.name || 'Unknown')} ↔ ${escapeHtml(arc.arrival?.name || 'Unknown')}
+              ${escapeHtml(arc.departure?.name || "Unknown")} ↔ ${escapeHtml(arc.arrival?.name || "Unknown")}
             </div>
             <div style="color: ${arc.color};">
               ${arc.count}x geflogen
@@ -516,7 +557,7 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
         pointsData={pointsData}
         pointLat="lat"
         pointLng="lng"
-        pointColor={() => isDarkMode ? '#fbbf24' : '#f59e0b'}
+        pointColor={() => (isDarkMode ? "#fbbf24" : "#f59e0b")}
         pointAltitude={0.01}
         pointRadius={(point: object) => {
           // Static radius calculation - no zoom-based scaling
@@ -537,12 +578,12 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
             <div style="font-weight: bold;">${escapeHtml(point.code)}</div>
             <div style="opacity: 0.8;">${escapeHtml(point.name)}</div>
             <div style="margin-top: 2px; color: #fbbf24;">
-              ${point.size} flight${point.size !== 1 ? 's' : ''}
+              ${point.size} flight${point.size !== 1 ? "s" : ""}
             </div>
           </div>
         `}
         // Globe settings
-        atmosphereColor={isDarkMode ? '#4a5568' : '#3b82f6'}
+        atmosphereColor={isDarkMode ? "#4a5568" : "#3b82f6"}
         atmosphereAltitude={0.25}
         enablePointerInteraction={true}
         animateIn={true}
@@ -550,5 +591,3 @@ export default function GlobeView({ flights = [], selectedFlightId: _selectedFli
     </div>
   );
 }
-
-

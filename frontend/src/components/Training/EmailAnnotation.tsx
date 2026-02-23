@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
-import { trainingApi } from '../../lib/api';
-import { logger } from '../../lib/logger';
-import { Flight, getFlightColorClass, combineDateTime, splitDateTime } from './types';
-import { useTranslation } from '../../hooks/useTranslation';
+import { useState, useEffect, useRef } from "react";
+import { trainingApi } from "../../lib/api";
+import { logger } from "../../lib/logger";
+import { Flight, getFlightColorClass, combineDateTime, splitDateTime } from "./types";
+import { useTranslation } from "../../hooks/useTranslation";
 
 interface EmailAnnotationProps {
   trainingDataId: string;
@@ -17,105 +17,116 @@ function filterEmailText(text: string): string {
   let filtered = text;
 
   // Remove HTML tags but keep text content (do this first)
-  filtered = filtered.replace(/<[^>]+>/g, '');
-  filtered = filtered.replace(/&nbsp;/g, ' ');
-  filtered = filtered.replace(/&amp;/g, '&');
-  filtered = filtered.replace(/&lt;/g, '<');
-  filtered = filtered.replace(/&gt;/g, '>');
+  filtered = filtered.replace(/<[^>]+>/g, "");
+  filtered = filtered.replace(/&nbsp;/g, " ");
+  filtered = filtered.replace(/&amp;/g, "&");
+  filtered = filtered.replace(/&lt;/g, "<");
+  filtered = filtered.replace(/&gt;/g, ">");
 
   // Remove only full URLs (http/https/www), not domain names in text
-  filtered = filtered.replace(/https?:\/\/[^\s<>]+/gi, '');
-  filtered = filtered.replace(/www\.[^\s<>]+/gi, '');
+  filtered = filtered.replace(/https?:\/\/[^\s<>]+/gi, "");
+  filtered = filtered.replace(/www\.[^\s<>]+/gi, "");
 
   // Remove email addresses (only if they look like actual email addresses)
-  filtered = filtered.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '');
+  filtered = filtered.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, "");
 
   // Remove common greetings (German and English) - only at the start
   const greetingPatterns = [
-    /^(Sehr\s+geehrte?[rs]?[,\s]+[^\n]+\n?)/gmi,
-    /^(Liebe?[rs]?[,\s]+[^\n]+\n?)/gmi,
-    /^(Hallo[,\s]+[^\n]+\n?)/gmi,
-    /^(Dear\s+[^\n]+\n?)/gmi,
-    /^(Hello[,\s]+[^\n]+\n?)/gmi,
-    /^(Hi[,\s]+[^\n]+\n?)/gmi,
+    /^(Sehr\s+geehrte?[rs]?[,\s]+[^\n]+\n?)/gim,
+    /^(Liebe?[rs]?[,\s]+[^\n]+\n?)/gim,
+    /^(Hallo[,\s]+[^\n]+\n?)/gim,
+    /^(Dear\s+[^\n]+\n?)/gim,
+    /^(Hello[,\s]+[^\n]+\n?)/gim,
+    /^(Hi[,\s]+[^\n]+\n?)/gim,
   ];
-  greetingPatterns.forEach(pattern => {
-    filtered = filtered.replace(pattern, '');
+  greetingPatterns.forEach((pattern) => {
+    filtered = filtered.replace(pattern, "");
   });
 
   // Process line by line
-  const lines = filtered.split('\n');
+  const lines = filtered.split("\n");
   const footerKeywords = [
-    'unsubscribe',
-    'abmelden',
-    'impressum',
-    'datenschutz',
-    'privacy policy',
-    'terms and conditions',
-    'agb',
-    'allgemeine geschäftsbedingungen',
+    "unsubscribe",
+    "abmelden",
+    "impressum",
+    "datenschutz",
+    "privacy policy",
+    "terms and conditions",
+    "agb",
+    "allgemeine geschäftsbedingungen",
   ];
 
   const processedLines = lines
-    .map(line => line.trim())
-    .filter(line => {
+    .map((line) => line.trim())
+    .filter((line) => {
       // Skip completely empty lines (will be handled by blank line reduction)
       if (line.length === 0) {
         return true; // Keep empty lines for now, we'll reduce them later
       }
-      
+
       // Remove lines with footer keywords
       const lowerLine = line.toLowerCase();
-      if (footerKeywords.some(keyword => lowerLine.includes(keyword))) {
+      if (footerKeywords.some((keyword) => lowerLine.includes(keyword))) {
         return false;
       }
-      
+
       // Only remove lines that are very short AND contain only whitespace/punctuation
       // Keep short lines that might be important (like airport codes "MUC", "KIX")
       if (line.length <= 3) {
         // Only remove if it's mostly whitespace or just punctuation
-        const meaningfulChars = line.replace(/[\s\W]/g, '').length;
+        const meaningfulChars = line.replace(/[\s\W]/g, "").length;
         if (meaningfulChars === 0) {
           return false;
         }
       }
-      
+
       return true;
     });
 
   // Join lines and reduce multiple blank lines to max 1
-  filtered = processedLines.join('\n');
+  filtered = processedLines.join("\n");
   // Reduce multiple consecutive newlines to maximum 1
-  filtered = filtered.replace(/\n{2,}/g, '\n');
+  filtered = filtered.replace(/\n{2,}/g, "\n");
   // Clean up multiple whitespace within lines (but preserve single spaces)
-  filtered = filtered.replace(/[ \t]{2,}/g, ' ');
+  filtered = filtered.replace(/[ \t]{2,}/g, " ");
 
   // Remove common closings at the end
   const closingPatterns = [
-    /(Mit\s+freundlichen\s+Grüßen?[^\n]*\n?[^\n]*)$/gmi,
-    /(Viele\s+Grüße?[^\n]*\n?[^\n]*)$/gmi,
-    /(Best\s+regards?[^\n]*\n?[^\n]*)$/gmi,
-    /(Kind\s+regards?[^\n]*\n?[^\n]*)$/gmi,
-    /(Sincerely[^\n]*\n?[^\n]*)$/gmi,
+    /(Mit\s+freundlichen\s+Grüßen?[^\n]*\n?[^\n]*)$/gim,
+    /(Viele\s+Grüße?[^\n]*\n?[^\n]*)$/gim,
+    /(Best\s+regards?[^\n]*\n?[^\n]*)$/gim,
+    /(Kind\s+regards?[^\n]*\n?[^\n]*)$/gim,
+    /(Sincerely[^\n]*\n?[^\n]*)$/gim,
   ];
-  closingPatterns.forEach(pattern => {
-    filtered = filtered.replace(pattern, '');
+  closingPatterns.forEach((pattern) => {
+    filtered = filtered.replace(pattern, "");
   });
 
   return filtered.trim();
 }
 
-export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }: EmailAnnotationProps): JSX.Element {
-  const { t } = useTranslation(['training', 'common']);
-  const [originalEmailText, setOriginalEmailText] = useState('');
-  const [emailText, setEmailText] = useState('');
+export default function EmailAnnotation({
+  trainingDataId,
+  onComplete,
+  onCancel,
+}: EmailAnnotationProps): JSX.Element {
+  const { t } = useTranslation(["training", "common"]);
+  const [originalEmailText, setOriginalEmailText] = useState("");
+  const [emailText, setEmailText] = useState("");
   const [showFiltered, setShowFiltered] = useState(true);
-  const [selectedText, setSelectedText] = useState<{ start: number; end: number; label: string; flightIndex?: number } | null>(null);
-  const [annotations, setAnnotations] = useState<Array<{ start: number; end: number; text: string; label: string; flightIndex?: number }>>([]);
+  const [selectedText, setSelectedText] = useState<{
+    start: number;
+    end: number;
+    label: string;
+    flightIndex?: number;
+  } | null>(null);
+  const [annotations, setAnnotations] = useState<
+    Array<{ start: number; end: number; text: string; label: string; flightIndex?: number }>
+  >([]);
   const [flights, setFlights] = useState<Flight[]>([{}]);
   const [selectedFlightIndex, setSelectedFlightIndex] = useState<number>(0); // Flug-Auswahl vor dem Labeln
   const [tags, setTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState('');
+  const [tagInput, setTagInput] = useState("");
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const textContainerRef = useRef<HTMLDivElement>(null);
@@ -127,20 +138,32 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
       try {
         setLoading(true);
         const data = await trainingApi.getById(trainingDataId);
-        
+
         if (data.annotations) {
           const annotationsData = data.annotations as Record<string, unknown>;
-          if (typeof annotationsData.fullText === 'string') {
+          if (typeof annotationsData.fullText === "string") {
             setOriginalEmailText(annotationsData.fullText);
             const filtered = filterEmailText(annotationsData.fullText);
             setEmailText(showFiltered ? filtered : annotationsData.fullText);
           }
           if (Array.isArray(annotationsData.textSelections)) {
-            setAnnotations(annotationsData.textSelections as Array<{ start: number; end: number; text: string; label: string; flightIndex?: number }>);
+            setAnnotations(
+              annotationsData.textSelections as Array<{
+                start: number;
+                end: number;
+                text: string;
+                label: string;
+                flightIndex?: number;
+              }>
+            );
           }
         }
 
-        if (data.extractedData && Array.isArray(data.extractedData) && data.extractedData.length > 0) {
+        if (
+          data.extractedData &&
+          Array.isArray(data.extractedData) &&
+          data.extractedData.length > 0
+        ) {
           // Convert old format (with departureTime/arrivalTime as ISO) to new format (separate date/time)
           const convertedFlights = data.extractedData.map((rawFlight: unknown) => {
             const flight = rawFlight as Flight;
@@ -163,13 +186,13 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
           });
           setFlights(convertedFlights);
         }
-        
+
         if (data.tags && Array.isArray(data.tags)) {
           setTags(data.tags);
         }
       } catch (error) {
-        logger.error('Failed to load training data:', error);
-        alert(t('training:errors.loadFailed'));
+        logger.error("Failed to load training data:", error);
+        alert(t("training:errors.loadFailed"));
       } finally {
         setLoading(false);
       }
@@ -192,94 +215,97 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
     }
 
     const container = textContainerRef.current;
-    
+
     // Finde die Positionen im ursprünglichen Text
     // Suche nach dem ersten Vorkommen des ausgewählten Textes
     const range = selection.getRangeAt(0);
-    
+
     // Erstelle einen Range vom Anfang des Containers bis zum Start der Auswahl
     const startRange = document.createRange();
     startRange.setStart(container, 0);
     startRange.setEnd(range.startContainer, range.startOffset);
     const start = startRange.toString().length;
-    
+
     // Erstelle einen Range vom Anfang des Containers bis zum Ende der Auswahl
     const endRange = document.createRange();
     endRange.setStart(container, 0);
     endRange.setEnd(range.endContainer, range.endOffset);
     const end = endRange.toString().length;
-    
+
     // Verwende den aktuell ausgewählten Flug
-    setSelectedText({ start, end, label: '', flightIndex: selectedFlightIndex });
+    setSelectedText({ start, end, label: "", flightIndex: selectedFlightIndex });
   };
 
   const handleSaveAnnotation = () => {
-    if (selectedText && selectedText.label && selectedText.label !== '') {
+    if (selectedText && selectedText.label && selectedText.label !== "") {
       const text = emailText.substring(selectedText.start, selectedText.end).trim();
       const flightIndex = selectedText.flightIndex ?? selectedFlightIndex;
-      
+
       // Annotation hinzufügen
-      setAnnotations([...annotations, {
-        ...selectedText,
-        text,
-        flightIndex,
-      }]);
-      
+      setAnnotations([
+        ...annotations,
+        {
+          ...selectedText,
+          text,
+          flightIndex,
+        },
+      ]);
+
       // Automatisch Groundtruth ausfüllen
       if (flightIndex < flights.length && text) {
         const updatedFlights = [...flights];
         const flight = updatedFlights[flightIndex];
-        
+
         // Mappe Label zu Flight-Feld
         // Note: For date/time labels, we try to parse and split intelligently
         const label = selectedText.label;
-        
-        if (label === 'departureDate' || label === 'departureTime') {
+
+        if (label === "departureDate" || label === "departureTime") {
           // Try to parse ISO format or separate date/time
           const { date, time } = splitDateTime(text);
-          if (label === 'departureDate' && date) {
+          if (label === "departureDate" && date) {
             flight.departureDate = date;
-          } else if (label === 'departureDate' && !date) {
+          } else if (label === "departureDate" && !date) {
             // Assume it's just a date string
             flight.departureDate = text;
           }
-          if (label === 'departureTime' && time) {
+          if (label === "departureTime" && time) {
             flight.departureTime = time;
-          } else if (label === 'departureTime' && !time) {
+          } else if (label === "departureTime" && !time) {
             // Assume it's just a time string
             flight.departureTime = text;
           }
-        } else if (label === 'arrivalDate' || label === 'arrivalTime') {
+        } else if (label === "arrivalDate" || label === "arrivalTime") {
           const { date, time } = splitDateTime(text);
-          if (label === 'arrivalDate' && date) {
+          if (label === "arrivalDate" && date) {
             flight.arrivalDate = date;
-          } else if (label === 'arrivalDate' && !date) {
+          } else if (label === "arrivalDate" && !date) {
             flight.arrivalDate = text;
           }
-          if (label === 'arrivalTime' && time) {
+          if (label === "arrivalTime" && time) {
             flight.arrivalTime = time;
-          } else if (label === 'arrivalTime' && !time) {
+          } else if (label === "arrivalTime" && !time) {
             flight.arrivalTime = text;
           }
         } else {
           // Simple field mapping
           const labelToField: Record<string, keyof Flight> = {
-            flightNumber: 'flightNumber',
-            departureCode: 'departureCode',
-            arrivalCode: 'arrivalCode',
-            pnr: 'pnr',
-            aircraftType: 'aircraftType',
+            flightNumber: "flightNumber",
+            departureCode: "departureCode",
+            arrivalCode: "arrivalCode",
+            pnr: "pnr",
+            aircraftType: "aircraftType",
           };
-          
+
           const field = labelToField[label];
           if (field) {
             flight[field] = text;
           }
         }
-        
+
         setFlights(updatedFlights);
       }
-      
+
       setSelectedText(null);
     }
   };
@@ -292,14 +318,16 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
     if (flights.length > 1) {
       setFlights(flights.filter((_, i) => i !== index));
       // Remove annotations for this flight
-      setAnnotations(annotations.filter(a => a.flightIndex !== index));
+      setAnnotations(annotations.filter((a) => a.flightIndex !== index));
       // Update flight indices
-      setAnnotations(annotations.map(a => {
-        if (a.flightIndex !== undefined && a.flightIndex > index) {
-          return { ...a, flightIndex: a.flightIndex - 1 };
-        }
-        return a;
-      }));
+      setAnnotations(
+        annotations.map((a) => {
+          if (a.flightIndex !== undefined && a.flightIndex > index) {
+            return { ...a, flightIndex: a.flightIndex - 1 };
+          }
+          return a;
+        })
+      );
     }
   };
 
@@ -313,7 +341,7 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
     const clean = tagInput.trim();
     if (!clean || tags.includes(clean)) return;
     setTags([...tags, clean]);
-    setTagInput('');
+    setTagInput("");
   };
 
   const handleRemoveTag = (tagToRemove: string) => {
@@ -324,13 +352,13 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
     setSaving(true);
     try {
       const annotationData = {
-        type: 'email',
+        type: "email",
         fullText: originalEmailText,
         textSelections: annotations,
       };
 
       // Convert flights to backend format: combine date+time to ISO 8601
-      const flightsForBackend = flights.map(flight => {
+      const flightsForBackend = flights.map((flight) => {
         const converted = { ...flight };
         // Combine departureDate + departureTime to departureTime (ISO 8601)
         if (flight.departureDate || flight.departureTime) {
@@ -359,8 +387,8 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
 
       onComplete();
     } catch (error) {
-      logger.error('Failed to save annotation:', error);
-      alert(t('training:errors.saveFailed'));
+      logger.error("Failed to save annotation:", error);
+      alert(t("training:errors.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -373,7 +401,7 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
           Email Annotation
         </h2>
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          {t('training:annotation.emailTextLoading')}
+          {t("training:annotation.emailTextLoading")}
         </p>
       </div>
     );
@@ -383,15 +411,20 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
 
   // Render text with visual highlights for annotations
   const renderTextWithHighlights = () => {
-    if (!displayText) return 'Kein Text verfügbar';
-    
+    if (!displayText) return "Kein Text verfügbar";
+
     // Sort annotations by start position
     const sortedAnnotations = [...annotations].sort((a, b) => a.start - b.start);
-    
+
     // Create array of text segments with highlights
-    const segments: Array<{ text: string; isHighlight: boolean; label?: string; flightIndex?: number }> = [];
+    const segments: Array<{
+      text: string;
+      isHighlight: boolean;
+      label?: string;
+      flightIndex?: number;
+    }> = [];
     let lastIndex = 0;
-    
+
     sortedAnnotations.forEach((annotation) => {
       // Add text before annotation
       if (annotation.start > lastIndex) {
@@ -400,7 +433,7 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
           isHighlight: false,
         });
       }
-      
+
       // Add highlighted annotation
       segments.push({
         text: displayText.substring(annotation.start, annotation.end),
@@ -408,10 +441,10 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
         label: annotation.label,
         flightIndex: annotation.flightIndex,
       });
-      
+
       lastIndex = annotation.end;
     });
-    
+
     // Add remaining text
     if (lastIndex < displayText.length) {
       segments.push({
@@ -419,10 +452,11 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
         isHighlight: false,
       });
     }
-    
+
     return segments.map((segment, segmentIndex) => {
       if (segment.isHighlight) {
-        const flightLabel = segment.flightIndex !== undefined ? ` (Flug ${segment.flightIndex + 1})` : '';
+        const flightLabel =
+          segment.flightIndex !== undefined ? ` (Flug ${segment.flightIndex + 1})` : "";
         const flightIndex = segment.flightIndex ?? 0;
         const colorClass = getFlightColorClass(flightIndex);
         return (
@@ -442,17 +476,17 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
       <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-        {t('training:annotation.title')}
+        {t("training:annotation.title")}
       </h2>
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-        {t('training:annotation.description')}
+        {t("training:annotation.description")}
       </p>
 
       <div className="space-y-4">
         {/* Flug-Auswahl vor dem Labeln */}
         <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-300 dark:border-gray-600">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {t('training:annotation.selectFlight')}
+            {t("training:annotation.selectFlight")}
           </label>
           <div className="flex gap-2 items-center">
             <select
@@ -498,7 +532,7 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
                   onChange={(e) => setSelectedText({ ...selectedText, label: e.target.value })}
                   className="input w-full"
                 >
-                  <option value="">{t('training:annotation.selectLabel')}</option>
+                  <option value="">{t("training:annotation.selectLabel")}</option>
                   <option value="flightNumber">Flight Number</option>
                   <option value="departureCode">Departure Code</option>
                   <option value="arrivalCode">Arrival Code</option>
@@ -510,11 +544,15 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
                   <option value="aircraftType">Aircraft Type</option>
                 </select>
               </div>
-              <button onClick={handleSaveAnnotation} className="btn-primary" disabled={!selectedText.label || selectedText.label === ''}>
-                {t('common:buttons.save')}
+              <button
+                onClick={handleSaveAnnotation}
+                className="btn-primary"
+                disabled={!selectedText.label || selectedText.label === ""}
+              >
+                {t("common:buttons.save")}
               </button>
               <button onClick={() => setSelectedText(null)} className="btn-secondary">
-                {t('common:buttons.cancel')}
+                {t("common:buttons.cancel")}
               </button>
             </div>
           </div>
@@ -533,7 +571,9 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
                 onChange={(e) => setShowFiltered(e.target.checked)}
                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
-              <span className="text-sm text-gray-600 dark:text-gray-400">{t('training:annotation.showFiltered')}</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                {t("training:annotation.showFiltered")}
+              </span>
             </label>
           </div>
           <div
@@ -562,7 +602,10 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
           </div>
           <div className="space-y-4">
             {flights.map((flight, index) => (
-              <div key={index} className="p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+              <div
+                key={index}
+                className="p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50"
+              >
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
                     Flug {index + 1}
@@ -583,8 +626,8 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
                     </label>
                     <input
                       type="text"
-                      value={flight.flightNumber || ''}
-                      onChange={(e) => handleFlightChange(index, 'flightNumber', e.target.value)}
+                      value={flight.flightNumber || ""}
+                      onChange={(e) => handleFlightChange(index, "flightNumber", e.target.value)}
                       className="input w-full"
                       placeholder="LH103"
                     />
@@ -595,8 +638,8 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
                     </label>
                     <input
                       type="text"
-                      value={flight.pnr || ''}
-                      onChange={(e) => handleFlightChange(index, 'pnr', e.target.value)}
+                      value={flight.pnr || ""}
+                      onChange={(e) => handleFlightChange(index, "pnr", e.target.value)}
                       className="input w-full"
                       placeholder="ABC123"
                     />
@@ -607,8 +650,10 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
                     </label>
                     <input
                       type="text"
-                      value={flight.departureCode || ''}
-                      onChange={(e) => handleFlightChange(index, 'departureCode', e.target.value.toUpperCase())}
+                      value={flight.departureCode || ""}
+                      onChange={(e) =>
+                        handleFlightChange(index, "departureCode", e.target.value.toUpperCase())
+                      }
                       className="input w-full"
                       placeholder="MUC"
                       maxLength={3}
@@ -620,8 +665,10 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
                     </label>
                     <input
                       type="text"
-                      value={flight.arrivalCode || ''}
-                      onChange={(e) => handleFlightChange(index, 'arrivalCode', e.target.value.toUpperCase())}
+                      value={flight.arrivalCode || ""}
+                      onChange={(e) =>
+                        handleFlightChange(index, "arrivalCode", e.target.value.toUpperCase())
+                      }
                       className="input w-full"
                       placeholder="FRA"
                       maxLength={3}
@@ -633,8 +680,8 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
                     </label>
                     <input
                       type="date"
-                      value={flight.departureDate || ''}
-                      onChange={(e) => handleFlightChange(index, 'departureDate', e.target.value)}
+                      value={flight.departureDate || ""}
+                      onChange={(e) => handleFlightChange(index, "departureDate", e.target.value)}
                       className="input w-full"
                     />
                   </div>
@@ -644,8 +691,8 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
                     </label>
                     <input
                       type="time"
-                      value={flight.departureTime || ''}
-                      onChange={(e) => handleFlightChange(index, 'departureTime', e.target.value)}
+                      value={flight.departureTime || ""}
+                      onChange={(e) => handleFlightChange(index, "departureTime", e.target.value)}
                       className="input w-full"
                     />
                   </div>
@@ -655,8 +702,8 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
                     </label>
                     <input
                       type="date"
-                      value={flight.arrivalDate || ''}
-                      onChange={(e) => handleFlightChange(index, 'arrivalDate', e.target.value)}
+                      value={flight.arrivalDate || ""}
+                      onChange={(e) => handleFlightChange(index, "arrivalDate", e.target.value)}
                       className="input w-full"
                     />
                   </div>
@@ -666,8 +713,8 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
                     </label>
                     <input
                       type="time"
-                      value={flight.arrivalTime || ''}
-                      onChange={(e) => handleFlightChange(index, 'arrivalTime', e.target.value)}
+                      value={flight.arrivalTime || ""}
+                      onChange={(e) => handleFlightChange(index, "arrivalTime", e.target.value)}
                       className="input w-full"
                     />
                   </div>
@@ -677,8 +724,8 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
                     </label>
                     <input
                       type="text"
-                      value={flight.aircraftType || ''}
-                      onChange={(e) => handleFlightChange(index, 'aircraftType', e.target.value)}
+                      value={flight.aircraftType || ""}
+                      onChange={(e) => handleFlightChange(index, "aircraftType", e.target.value)}
                       className="input w-full"
                       placeholder="A320, Boeing 737"
                     />
@@ -700,7 +747,7 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
               value={tagInput}
               onChange={(e) => setTagInput(e.target.value)}
               onKeyPress={(e) => {
-                if (e.key === 'Enter') {
+                if (e.key === "Enter") {
                   e.preventDefault();
                   handleAddTag();
                 }
@@ -740,27 +787,15 @@ export default function EmailAnnotation({ trainingDataId, onComplete, onCancel }
 
         <div className="flex gap-3">
           {onCancel && (
-            <button
-              onClick={onCancel}
-              disabled={saving}
-              className="btn-secondary"
-            >
-              {t('common:buttons.cancel')}
+            <button onClick={onCancel} disabled={saving} className="btn-secondary">
+              {t("common:buttons.cancel")}
             </button>
           )}
-          <button
-            onClick={() => handleSave(false)}
-            disabled={saving}
-            className="btn-secondary"
-          >
-            {saving ? t('training:annotation.saving') : t('training:annotation.saveOnly')}
+          <button onClick={() => handleSave(false)} disabled={saving} className="btn-secondary">
+            {saving ? t("training:annotation.saving") : t("training:annotation.saveOnly")}
           </button>
-          <button
-            onClick={() => handleSave(true)}
-            disabled={saving}
-            className="btn-primary"
-          >
-            {saving ? t('training:annotation.saving') : t('training:annotation.saveAndTrain')}
+          <button onClick={() => handleSave(true)} disabled={saving} className="btn-primary">
+            {saving ? t("training:annotation.saving") : t("training:annotation.saveAndTrain")}
           </button>
         </div>
       </div>

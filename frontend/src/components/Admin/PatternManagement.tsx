@@ -1,5 +1,5 @@
-import InlineHelp from '../Help/InlineHelp';
-import { useTranslation } from '../../hooks/useTranslation';
+import InlineHelp from "../Help/InlineHelp";
+import { useTranslation } from "../../hooks/useTranslation";
 
 export interface PatternSuggestion {
   id: string;
@@ -54,24 +54,24 @@ export default function PatternManagement({
   onDismissConfirm,
   onDismissAutoApply,
 }: PatternManagementProps): JSX.Element {
-  const { t } = useTranslation(['admin', 'common']);
+  const { t } = useTranslation(["admin", "common"]);
 
   return (
     <div className="space-y-6">
       <InlineHelp
-        title={t('admin:patternUpdatesHelp.helpTitle')}
+        title={t("admin:patternUpdatesHelp.helpTitle")}
         category="expert"
         content={
           <div className="space-y-2">
-            <p>
-              {t('admin:patternUpdatesHelp.helpContent.description')}
-            </p>
+            <p>{t("admin:patternUpdatesHelp.helpContent.description")}</p>
             <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
               <li>
-                <strong>{t('admin:patternUpdatesHelp.helpContent.suggestionsTitle')}</strong> {t('admin:patternUpdatesHelp.helpContent.suggestions')}
+                <strong>{t("admin:patternUpdatesHelp.helpContent.suggestionsTitle")}</strong>{" "}
+                {t("admin:patternUpdatesHelp.helpContent.suggestions")}
               </li>
               <li>
-                <strong>{t('admin:patternUpdatesHelp.helpContent.autoApplyTitle')}</strong> {t('admin:patternUpdatesHelp.helpContent.autoApply')}
+                <strong>{t("admin:patternUpdatesHelp.helpContent.autoApplyTitle")}</strong>{" "}
+                {t("admin:patternUpdatesHelp.helpContent.autoApply")}
               </li>
             </ul>
           </div>
@@ -163,32 +163,43 @@ export default function PatternManagement({
                             <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded text-sm font-medium">
                               {suggestion.field}
                             </span>
-                            <span className={`px-2 py-1 rounded text-sm font-medium ${
-                              suggestion.confidence >= 0.9
-                                ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-                                : suggestion.confidence >= 0.8
-                                ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
-                                : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
-                            }`}>
+                            <span
+                              className={`px-2 py-1 rounded text-sm font-medium ${
+                                suggestion.confidence >= 0.9
+                                  ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300"
+                                  : suggestion.confidence >= 0.8
+                                    ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300"
+                                    : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300"
+                              }`}
+                            >
                               {Math.round(suggestion.confidence * 100)}% confidence
                             </span>
                           </div>
                           <div className="mb-2">
-                            <span className="text-sm text-gray-600 dark:text-gray-400">Pattern: </span>
+                            <span className="text-sm text-gray-600 dark:text-gray-400">
+                              Pattern:{" "}
+                            </span>
                             <code className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-sm font-mono">
                               {suggestion.pattern}
                             </code>
                           </div>
                           <div className="mb-2">
-                            <span className="text-sm text-gray-600 dark:text-gray-400">Issue: </span>
-                            <span className="text-sm text-gray-700 dark:text-gray-300">{suggestion.issue}</span>
+                            <span className="text-sm text-gray-600 dark:text-gray-400">
+                              Issue:{" "}
+                            </span>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                              {suggestion.issue}
+                            </span>
                           </div>
                           {suggestion.examples && suggestion.examples.length > 0 && (
                             <div>
-                              <span className="text-sm text-gray-600 dark:text-gray-400">Examples: </span>
+                              <span className="text-sm text-gray-600 dark:text-gray-400">
+                                Examples:{" "}
+                              </span>
                               <span className="text-sm text-gray-700 dark:text-gray-300">
-                                {suggestion.examples.slice(0, 5).join(', ')}
-                                {suggestion.examples.length > 5 && ` (+${suggestion.examples.length - 5} more)`}
+                                {suggestion.examples.slice(0, 5).join(", ")}
+                                {suggestion.examples.length > 5 &&
+                                  ` (+${suggestion.examples.length - 5} more)`}
                               </span>
                             </div>
                           )}
@@ -217,11 +228,15 @@ export default function PatternManagement({
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-gray-600 dark:text-gray-400">Total Issues:</span>
-                    <span className="font-medium text-gray-900 dark:text-white">{patternData.summary.totalIssues}</span>
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      {patternData.summary.totalIssues}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600 dark:text-gray-400">Pattern Suggestions:</span>
-                    <span className="font-medium text-gray-900 dark:text-white">{patternData.summary.suggestions}</span>
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      {patternData.summary.suggestions}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -242,7 +257,8 @@ export default function PatternManagement({
               Pattern anwenden?
             </h3>
             <p className="text-gray-700 dark:text-gray-300 mb-6">
-              Möchten Sie dieses Pattern wirklich anwenden? Hinweis: Dies erfordert manuelle Code-Updates.
+              Möchten Sie dieses Pattern wirklich anwenden? Hinweis: Dies erfordert manuelle
+              Code-Updates.
             </p>
             <div className="flex gap-3">
               <button
@@ -270,7 +286,8 @@ export default function PatternManagement({
               Alle Patterns automatisch anwenden?
             </h3>
             <p className="text-gray-700 dark:text-gray-300 mb-6">
-              Möchten Sie alle hochwertigen Patterns automatisch anwenden? Dies kann mehrere Patterns gleichzeitig betreffen.
+              Möchten Sie alle hochwertigen Patterns automatisch anwenden? Dies kann mehrere
+              Patterns gleichzeitig betreffen.
             </p>
             <div className="flex gap-3">
               <button

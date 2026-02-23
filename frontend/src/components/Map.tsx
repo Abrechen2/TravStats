@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useCallback, memo } from 'react';
-import { MapContainer, TileLayer, Polyline, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import type { GeoJSONFeature } from '../types';
-import { useThemeStore } from '../store/themeStore';
-import { escapeHtml } from '../lib/escapeHtml';
-import AirportMarkers from './AirportMarkers';
-import 'leaflet/dist/leaflet.css';
+import { useEffect, useMemo, useCallback, memo } from "react";
+import { MapContainer, TileLayer, Polyline, useMap } from "react-leaflet";
+import L from "leaflet";
+import type { GeoJSONFeature } from "../types";
+import { useThemeStore } from "../store/themeStore";
+import { escapeHtml } from "../lib/escapeHtml";
+import AirportMarkers from "./AirportMarkers";
+import "leaflet/dist/leaflet.css";
 
 interface MapProps {
   flights: GeoJSONFeature[];
@@ -61,13 +61,13 @@ function splitLineAtAntimeridian(positions: [number, number][]): [number, number
 // Helper function to create bidirectional route key (FRA-JFK === JFK-FRA)
 const createRouteKey = (airportA: string, airportB: string): string => {
   // Sort alphabetically to ensure bidirectional routes are treated as the same
-  return airportA < airportB
-    ? `${airportA}-${airportB}`
-    : `${airportB}-${airportA}`;
+  return airportA < airportB ? `${airportA}-${airportB}` : `${airportB}-${airportA}`;
 };
 
 // Calculate dynamic heatmap thresholds based on data distribution
-const calculateHeatmapThresholds = (counts: number[]): { q25: number; q50: number; q75: number; max: number } => {
+const calculateHeatmapThresholds = (
+  counts: number[]
+): { q25: number; q50: number; q75: number; max: number } => {
   if (counts.length === 0) return { q25: 1, q50: 2, q75: 3, max: 5 };
 
   const sorted = [...counts].sort((a, b) => a - b);
@@ -87,7 +87,7 @@ const calculateHeatmapThresholds = (counts: number[]): { q25: number; q50: numbe
 
   // Use actual quantiles, but ensure they're distinct
   const q25Index = Math.floor(len * 0.25);
-  const q50Index = Math.floor(len * 0.50);
+  const q50Index = Math.floor(len * 0.5);
   const q75Index = Math.floor(len * 0.75);
 
   let q25 = sorted[q25Index] || min;
@@ -102,12 +102,15 @@ const calculateHeatmapThresholds = (counts: number[]): { q25: number; q50: numbe
 };
 
 // Heatmap color based on dynamic quantiles
-const getHeatmapColor = (count: number, thresholds: { q25: number; q50: number; q75: number }): string => {
+const getHeatmapColor = (
+  count: number,
+  thresholds: { q25: number; q50: number; q75: number }
+): string => {
   // Use > instead of >= to ensure better distribution when values are equal
-  if (count > thresholds.q75) return '#ef4444'; // red - top 25%
-  if (count > thresholds.q50) return '#f59e0b';  // orange - 50-75%
-  if (count > thresholds.q25) return '#eab308';   // yellow - 25-50%
-  return '#10b981';                                // green - bottom 25%
+  if (count > thresholds.q75) return "#ef4444"; // red - top 25%
+  if (count > thresholds.q50) return "#f59e0b"; // orange - 50-75%
+  if (count > thresholds.q25) return "#eab308"; // yellow - 25-50%
+  return "#10b981"; // green - bottom 25%
 };
 
 const MapUpdater = memo(({ flights }: { flights: GeoJSONFeature[] }) => {
@@ -134,21 +137,33 @@ const MapUpdater = memo(({ flights }: { flights: GeoJSONFeature[] }) => {
   return null;
 });
 
-function Map({ flights = [], selectedFlightId, onFlightClick, minRouteCount = 1 }: MapProps): JSX.Element {
+function Map({
+  flights = [],
+  selectedFlightId,
+  onFlightClick,
+  minRouteCount = 1,
+}: MapProps): JSX.Element {
   const themeStore = useThemeStore();
   const isDarkMode = themeStore?.isDarkMode ?? false;
 
   // Aggregate flights by route (departure-arrival pair) with dynamic heatmap colors
-  const { aggregatedRoutes, heatmapThresholds } = useMemo<{ aggregatedRoutes: AggregatedRoute[]; heatmapThresholds: { q25: number; q50: number; q75: number; max: number } }>(() => {
+  const { aggregatedRoutes, heatmapThresholds } = useMemo<{
+    aggregatedRoutes: AggregatedRoute[];
+    heatmapThresholds: { q25: number; q50: number; q75: number; max: number };
+  }>(() => {
     const routeMap: Record<string, AggregatedRoute> = {};
 
     flights.forEach((flight) => {
       if (!flight?.properties || !flight?.geometry) return;
 
-      const depIATA = flight.properties.departureAirport?.iata ||
-                      flight.properties.departureAirport?.icao || 'UNKNOWN';
-      const arrIATA = flight.properties.arrivalAirport?.iata ||
-                      flight.properties.arrivalAirport?.icao || 'UNKNOWN';
+      const depIATA =
+        flight.properties.departureAirport?.iata ||
+        flight.properties.departureAirport?.icao ||
+        "UNKNOWN";
+      const arrIATA =
+        flight.properties.arrivalAirport?.iata ||
+        flight.properties.arrivalAirport?.icao ||
+        "UNKNOWN";
 
       // Create bidirectional route key (FRA-JFK === JFK-FRA)
       const routeKey = createRouteKey(depIATA, arrIATA);
@@ -160,10 +175,13 @@ function Map({ flights = [], selectedFlightId, onFlightClick, minRouteCount = 1 
         );
 
         // Validate positions
-        const validPositions = positions.filter(pos =>
-          pos && pos.length === 2 &&
-          !(pos[0] === 0 && pos[1] === 0) &&
-          Number.isFinite(pos[0]) && Number.isFinite(pos[1])
+        const validPositions = positions.filter(
+          (pos) =>
+            pos &&
+            pos.length === 2 &&
+            !(pos[0] === 0 && pos[1] === 0) &&
+            Number.isFinite(pos[0]) &&
+            Number.isFinite(pos[1])
         );
 
         if (validPositions.length < 2) return;
@@ -180,7 +198,7 @@ function Map({ flights = [], selectedFlightId, onFlightClick, minRouteCount = 1 
           count: 1,
           segments,
           flights: [flight],
-          color: '', // Will be set after threshold calculation
+          color: "", // Will be set after threshold calculation
         };
       } else {
         // Increment count for existing route
@@ -192,12 +210,12 @@ function Map({ flights = [], selectedFlightId, onFlightClick, minRouteCount = 1 
 
     // Calculate thresholds based on all route counts
     const allRoutes = Object.values(routeMap);
-    const counts = allRoutes.map(r => r.count);
+    const counts = allRoutes.map((r) => r.count);
     const thresholds = calculateHeatmapThresholds(counts);
 
     // Filter routes by minimum count and assign colors based on thresholds
-    const routes = allRoutes.filter(route => route.count >= minRouteCount);
-    routes.forEach(route => {
+    const routes = allRoutes.filter((route) => route.count >= minRouteCount);
+    routes.forEach((route) => {
       route.color = getHeatmapColor(route.count, thresholds);
     });
 
@@ -205,23 +223,26 @@ function Map({ flights = [], selectedFlightId, onFlightClick, minRouteCount = 1 
   }, [flights, minRouteCount]);
 
   // Memoized click handler
-  const handleRouteClick = useCallback((route: AggregatedRoute) => {
-    // Click on most recent flight in route
-    if (route.flights.length > 0 && onFlightClick) {
-      const mostRecentFlight = route.flights[route.flights.length - 1];
-      onFlightClick(mostRecentFlight.properties.id);
-    }
-  }, [onFlightClick]);
+  const handleRouteClick = useCallback(
+    (route: AggregatedRoute) => {
+      // Click on most recent flight in route
+      if (route.flights.length > 0 && onFlightClick) {
+        const mostRecentFlight = route.flights[route.flights.length - 1];
+        onFlightClick(mostRecentFlight.properties.id);
+      }
+    },
+    [onFlightClick]
+  );
 
   return (
-    <div className="h-full w-full" style={{ touchAction: 'pan-x pan-y pinch-zoom' }}>
+    <div className="h-full w-full" style={{ touchAction: "pan-x pan-y pinch-zoom" }}>
       <MapContainer
         center={[50, 10]}
         zoom={4}
         minZoom={2}
         worldCopyJump={true}
         preferCanvas={true}
-        style={{ height: '100%', width: '100%', touchAction: 'pan-x pan-y pinch-zoom' }}
+        style={{ height: "100%", width: "100%", touchAction: "pan-x pan-y pinch-zoom" }}
         className="rounded-lg"
       >
         {isDarkMode ? (
@@ -268,13 +289,15 @@ function Map({ flights = [], selectedFlightId, onFlightClick, minRouteCount = 1 
                     weight: 5,
                     opacity: 1,
                   });
-                  layer.bindTooltip(
-                    `<div style="text-align: center;">
+                  layer
+                    .bindTooltip(
+                      `<div style="text-align: center;">
                       <strong>${escapeHtml(route.departureIATA)} ↔ ${escapeHtml(route.arrivalIATA)}</strong><br/>
                       <span>${route.count}x geflogen</span>
                     </div>`,
-                    { sticky: true }
-                  ).openTooltip();
+                      { sticky: true }
+                    )
+                    .openTooltip();
                 },
                 mouseout: (e: L.LeafletMouseEvent) => {
                   const layer = e.target as L.Polyline;
@@ -301,25 +324,25 @@ function Map({ flights = [], selectedFlightId, onFlightClick, minRouteCount = 1 
           </div>
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-0.5" style={{ backgroundColor: '#10b981' }}></div>
+              <div className="w-8 h-0.5" style={{ backgroundColor: "#10b981" }}></div>
               <span className="text-xs text-gray-600 dark:text-gray-400">
                 1-{heatmapThresholds.q25}x
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-0.5" style={{ backgroundColor: '#eab308' }}></div>
+              <div className="w-8 h-0.5" style={{ backgroundColor: "#eab308" }}></div>
               <span className="text-xs text-gray-600 dark:text-gray-400">
                 {heatmapThresholds.q25 + 1}-{heatmapThresholds.q50}x
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-0.5" style={{ backgroundColor: '#f59e0b' }}></div>
+              <div className="w-8 h-0.5" style={{ backgroundColor: "#f59e0b" }}></div>
               <span className="text-xs text-gray-600 dark:text-gray-400">
                 {heatmapThresholds.q50 + 1}-{heatmapThresholds.q75}x
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-0.5" style={{ backgroundColor: '#ef4444' }}></div>
+              <div className="w-8 h-0.5" style={{ backgroundColor: "#ef4444" }}></div>
               <span className="text-xs text-gray-600 dark:text-gray-400">
                 {heatmapThresholds.q75 + 1}+ ({heatmapThresholds.max}x max)
               </span>

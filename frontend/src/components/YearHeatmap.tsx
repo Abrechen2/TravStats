@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import type { Flight } from '../types';
-import { useTranslation } from '../hooks/useTranslation';
+import { useState } from "react";
+import type { Flight } from "../types";
+import { useTranslation } from "../hooks/useTranslation";
 
 interface YearHeatmapProps {
   flights: Flight[];
@@ -13,7 +13,7 @@ interface DayCell {
 }
 
 export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element {
-  const { t } = useTranslation(['stats', 'common']);
+  const { t } = useTranslation(["stats", "common"]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [hoveredCell, setHoveredCell] = useState<DayCell | null>(null);
 
@@ -69,36 +69,36 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
   };
 
   const getIntensityClass = (count: number): string => {
-    if (count === 0) return 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700';
-    if (count === 1) return 'bg-green-200 dark:bg-green-900 border-green-300 dark:border-green-800';
-    if (count === 2) return 'bg-green-400 dark:bg-green-700 border-green-500 dark:border-green-600';
-    if (count === 3) return 'bg-green-600 dark:bg-green-600 border-green-700 dark:border-green-500';
-    return 'bg-green-800 dark:bg-green-500 border-green-900 dark:border-green-400';
+    if (count === 0) return "bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700";
+    if (count === 1) return "bg-green-200 dark:bg-green-900 border-green-300 dark:border-green-800";
+    if (count === 2) return "bg-green-400 dark:bg-green-700 border-green-500 dark:border-green-600";
+    if (count === 3) return "bg-green-600 dark:bg-green-600 border-green-700 dark:border-green-500";
+    return "bg-green-800 dark:bg-green-500 border-green-900 dark:border-green-400";
   };
 
   const yearData = generateYearData();
   const monthLabels = [
-    t('stats:months.jan'),
-    t('stats:months.feb'),
-    t('stats:months.mar'),
-    t('stats:months.apr'),
-    t('stats:months.may'),
-    t('stats:months.jun'),
-    t('stats:months.jul'),
-    t('stats:months.aug'),
-    t('stats:months.sep'),
-    t('stats:months.oct'),
-    t('stats:months.nov'),
-    t('stats:months.dec'),
+    t("stats:months.jan"),
+    t("stats:months.feb"),
+    t("stats:months.mar"),
+    t("stats:months.apr"),
+    t("stats:months.may"),
+    t("stats:months.jun"),
+    t("stats:months.jul"),
+    t("stats:months.aug"),
+    t("stats:months.sep"),
+    t("stats:months.oct"),
+    t("stats:months.nov"),
+    t("stats:months.dec"),
   ];
   const weekDayLabels = [
-    t('stats:weekdays.sunday'),
-    t('stats:weekdays.monday'),
-    t('stats:weekdays.tuesday'),
-    t('stats:weekdays.wednesday'),
-    t('stats:weekdays.thursday'),
-    t('stats:weekdays.friday'),
-    t('stats:weekdays.saturday'),
+    t("stats:weekdays.sunday"),
+    t("stats:weekdays.monday"),
+    t("stats:weekdays.tuesday"),
+    t("stats:weekdays.wednesday"),
+    t("stats:weekdays.thursday"),
+    t("stats:weekdays.friday"),
+    t("stats:weekdays.saturday"),
   ];
 
   return (
@@ -106,7 +106,7 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-          {t('stats:heatmap.title')}
+          {t("stats:heatmap.title")}
         </h3>
         {availableYears.length > 1 && (
           <select
@@ -143,7 +143,13 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
                   <div
                     key={month}
                     className="text-xs text-gray-600 dark:text-gray-400"
-                    style={{ width: '12px', marginLeft: i === 0 ? '0' : `${(weekOfYear - (i > 0 ? Math.floor((new Date(selectedYear, i - 1, 1).getTime() - new Date(selectedYear, 0, 1).getTime()) / (1000 * 60 * 60 * 24)) / 7 : 0)) * 13}px` }}
+                    style={{
+                      width: "12px",
+                      marginLeft:
+                        i === 0
+                          ? "0"
+                          : `${(weekOfYear - (i > 0 ? Math.floor((new Date(selectedYear, i - 1, 1).getTime() - new Date(selectedYear, 0, 1).getTime()) / (1000 * 60 * 60 * 24)) / 7 : 0)) * 13}px`,
+                    }}
                   >
                     {month}
                   </div>
@@ -177,12 +183,12 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
                         key={dayIndex}
                         className={`
                           w-3 h-3 rounded-sm border cursor-pointer transition-all hover:scale-125
-                          ${!isCurrentYear ? 'opacity-20' : ''}
+                          ${!isCurrentYear ? "opacity-20" : ""}
                           ${getIntensityClass(day.flightCount)}
                         `}
                         onMouseEnter={() => setHoveredCell(day)}
                         onMouseLeave={() => setHoveredCell(null)}
-                        title={t('stats:heatmap.dayTooltip', {
+                        title={t("stats:heatmap.dayTooltip", {
                           date: day.date.toLocaleDateString(),
                           count: day.flightCount,
                         })}
@@ -200,20 +206,18 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
       {hoveredCell && hoveredCell.flightCount > 0 && (
         <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
           <p className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
-            {hoveredCell.date.toLocaleDateString('de-DE', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
+            {hoveredCell.date.toLocaleDateString("de-DE", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
             })}
           </p>
           <div className="space-y-1">
             {hoveredCell.flights.map((flight) => (
-              <div
-                key={flight.id}
-                className="text-xs text-gray-700 dark:text-gray-300"
-              >
-                {flight.airline} {flight.flightNumber}: {flight.depIata || flight.depIcao} {t('common:labels.routeSeparator')} {flight.arrIata || flight.arrIcao}
+              <div key={flight.id} className="text-xs text-gray-700 dark:text-gray-300">
+                {flight.airline} {flight.flightNumber}: {flight.depIata || flight.depIcao}{" "}
+                {t("common:labels.routeSeparator")} {flight.arrIata || flight.arrIcao}
               </div>
             ))}
           </div>
@@ -223,7 +227,9 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
       {/* Legend */}
       <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-600 dark:text-gray-400">{t('stats:heatmap.legend.less')}</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {t("stats:heatmap.legend.less")}
+          </p>
           <div className="flex gap-1">
             {[0, 1, 2, 3, 4].map((level) => (
               <div
@@ -232,7 +238,9 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
               />
             ))}
           </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">{t('stats:heatmap.legend.more')}</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {t("stats:heatmap.legend.more")}
+          </p>
         </div>
       </div>
 
@@ -242,7 +250,9 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
           <p className="text-2xl font-bold text-gray-900 dark:text-white">
             {flights.filter((f) => new Date(f.departureTime).getFullYear() === selectedYear).length}
           </p>
-          <p className="text-xs text-gray-600 dark:text-gray-400">{t('stats:heatmap.flightsInYear', { year: selectedYear })}</p>
+          <p className="text-xs text-gray-600 dark:text-gray-400">
+            {t("stats:heatmap.flightsInYear", { year: selectedYear })}
+          </p>
         </div>
         <div className="text-center">
           <p className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -250,20 +260,21 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
               new Set(
                 flights
                   .filter((f) => new Date(f.departureTime).getFullYear() === selectedYear)
-                  .map((f) => f.departureTime.split('T')[0])
+                  .map((f) => f.departureTime.split("T")[0])
               ).size
             }
           </p>
-          <p className="text-xs text-gray-600 dark:text-gray-400">{t('stats:heatmap.daysWithFlights')}</p>
+          <p className="text-xs text-gray-600 dark:text-gray-400">
+            {t("stats:heatmap.daysWithFlights")}
+          </p>
         </div>
         <div className="text-center">
           <p className="text-2xl font-bold text-gray-900 dark:text-white">
-            {Math.max(
-              ...yearData.flat().map((d) => d.flightCount),
-              0
-            )}
+            {Math.max(...yearData.flat().map((d) => d.flightCount), 0)}
           </p>
-          <p className="text-xs text-gray-600 dark:text-gray-400">{t('stats:heatmap.maxFlightsPerDay')}</p>
+          <p className="text-xs text-gray-600 dark:text-gray-400">
+            {t("stats:heatmap.maxFlightsPerDay")}
+          </p>
         </div>
       </div>
     </div>

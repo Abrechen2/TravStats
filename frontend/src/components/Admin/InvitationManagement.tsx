@@ -1,6 +1,6 @@
-import { format } from 'date-fns';
-import InlineHelp from '../Help/InlineHelp';
-import { useTranslation } from '../../hooks/useTranslation';
+import { format } from "date-fns";
+import InlineHelp from "../Help/InlineHelp";
+import { useTranslation } from "../../hooks/useTranslation";
 
 export interface Invitation {
   id: string;
@@ -25,12 +25,12 @@ export default function InvitationManagement({
   copiedUrl,
   onCreateInvitation,
 }: InvitationManagementProps): JSX.Element {
-  const { t } = useTranslation(['admin', 'common']);
+  const { t } = useTranslation(["admin", "common"]);
 
   return (
     <div className="space-y-4">
       <InlineHelp
-        title={t('admin:invitations.title')}
+        title={t("admin:invitations.title")}
         category="advanced"
         content={
           <div className="space-y-2">
@@ -39,7 +39,8 @@ export default function InvitationManagement({
             </p>
             <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
               <li>
-                <strong>Einladung erstellen:</strong> Generiert einen eindeutigen Link, der zum Registrieren verwendet werden kann
+                <strong>Einladung erstellen:</strong> Generiert einen eindeutigen Link, der zum
+                Registrieren verwendet werden kann
               </li>
               <li>
                 <strong>Ablaufdatum:</strong> Einladungen laufen nach 7 Tagen ab (standardmäßig)
@@ -48,16 +49,15 @@ export default function InvitationManagement({
                 <strong>Einmalige Nutzung:</strong> Jeder Link kann nur einmal verwendet werden
               </li>
               <li>
-                <strong>E-Mail (optional):</strong> Sie können eine E-Mail-Adresse zuordnen, um die Einladung zu verfolgen
+                <strong>E-Mail (optional):</strong> Sie können eine E-Mail-Adresse zuordnen, um die
+                Einladung zu verfolgen
               </li>
             </ul>
           </div>
         }
       />
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-          Invitation Links
-        </h2>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Invitation Links</h2>
         <button
           onClick={onCreateInvitation}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition"
@@ -100,12 +100,12 @@ export default function InvitationManagement({
                   {invitation.creator.username}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                  {format(new Date(invitation.expiresAt), 'MMM d, yyyy')}
+                  {format(new Date(invitation.expiresAt), "MMM d, yyyy")}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   {invitation.usedAt ? (
                     <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                      Used on {format(new Date(invitation.usedAt), 'MMM d')}
+                      Used on {format(new Date(invitation.usedAt), "MMM d")}
                     </span>
                   ) : new Date(invitation.expiresAt) < new Date() ? (
                     <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">

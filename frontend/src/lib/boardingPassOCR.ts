@@ -5,9 +5,9 @@
  * using Tesseract.js OCR engine.
  */
 
-import Tesseract from 'tesseract.js';
-import { logger } from './logger';
-import { BOARDING_PASS_OCR } from '../config/constants';
+import Tesseract from "tesseract.js";
+import { logger } from "./logger";
+import { BOARDING_PASS_OCR } from "../config/constants";
 
 export interface OCRExtractedData {
   gate?: string;
@@ -23,11 +23,11 @@ export interface OCRExtractedData {
 function preprocessImageForOCR(imageDataUrl: string): Promise<string> {
   return new Promise((resolve) => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    img.crossOrigin = "anonymous";
 
     img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
       if (!ctx) {
         resolve(imageDataUrl);
         return;
@@ -47,7 +47,9 @@ function preprocessImageForOCR(imageDataUrl: string): Promise<string> {
 
       // Step 1: Remove color cast (important for turquoise/colored backgrounds)
       // Calculate average color to detect color cast
-      let avgR = 0, avgG = 0, avgB = 0;
+      let avgR = 0,
+        avgG = 0,
+        avgB = 0;
       for (let i = 0; i < data.length; i += 4) {
         avgR += data[i];
         avgG += data[i + 1];
@@ -58,11 +60,13 @@ function preprocessImageForOCR(imageDataUrl: string): Promise<string> {
       avgG /= pixelCount;
       avgB /= pixelCount;
 
-      logger.debug(`Detected color cast: R=${avgR.toFixed(0)}, G=${avgG.toFixed(0)}, B=${avgB.toFixed(0)}`);
+      logger.debug(
+        `Detected color cast: R=${avgR.toFixed(0)}, G=${avgG.toFixed(0)}, B=${avgB.toFixed(0)}`
+      );
 
       // Step 2: Detect if dark background with light text (SAS, dark blue, etc.)
       const isDarkBackground = avgR < 100 && avgG < 100 && avgB < 150;
-      logger.debug(`Background type: ${isDarkBackground ? 'DARK (will invert)' : 'LIGHT'}`);
+      logger.debug(`Background type: ${isDarkBackground ? "DARK (will invert)" : "LIGHT"}`);
 
       // Step 3: Preprocessing with color cast removal
       for (let i = 0; i < data.length; i += 4) {
@@ -131,14 +135,16 @@ function preprocessImageForOCR(imageDataUrl: string): Promise<string> {
 
       ctx.putImageData(sharpenedData, 0, 0);
 
-      logger.debug('Image preprocessed: 2.5x scale, color cast removed, high contrast B&W, sharpened');
+      logger.debug(
+        "Image preprocessed: 2.5x scale, color cast removed, high contrast B&W, sharpened"
+      );
 
       // Return preprocessed image as data URL
-      resolve(canvas.toDataURL('image/png'));
+      resolve(canvas.toDataURL("image/png"));
     };
 
     img.onerror = () => {
-      logger.warn('Image preprocessing failed, using original');
+      logger.warn("Image preprocessing failed, using original");
       resolve(imageDataUrl);
     };
 
@@ -150,34 +156,34 @@ function preprocessImageForOCR(imageDataUrl: string): Promise<string> {
  * Extract text from boarding pass image using OCR
  */
 async function extractTextFromImage(imageFile: File | string): Promise<string> {
-  logger.debug('Starting OCR text extraction...');
+  logger.debug("Starting OCR text extraction...");
 
   try {
     // Preprocess image for better OCR
     let imageToProcess = imageFile;
-    if (typeof imageFile === 'string') {
-      logger.debug('Preprocessing image for better OCR...');
+    if (typeof imageFile === "string") {
+      logger.debug("Preprocessing image for better OCR...");
       imageToProcess = await preprocessImageForOCR(imageFile);
     }
 
     const result = await Tesseract.recognize(
       imageToProcess,
-      'eng', // English
+      "eng", // English
       {
         logger: (m) => {
-          if (m.status === 'recognizing text') {
+          if (m.status === "recognizing text") {
             logger.debug(`OCR Progress: ${Math.round(m.progress * 100)}%`);
           }
-        }
+        },
       }
     );
 
     const extractedText = result.data.text;
-    logger.debug('OCR extracted text:', extractedText);
+    logger.debug("OCR extracted text:", extractedText);
     return extractedText;
   } catch (error) {
-    logger.error('OCR extraction failed:', error);
-    return '';
+    logger.error("OCR extraction failed:", error);
+    return "";
   }
 }
 
@@ -188,38 +194,45 @@ function parseFieldsFromText(text: string): OCRExtractedData {
   const data: OCRExtractedData = {};
 
   // Normalize text: uppercase, remove extra spaces
-  const normalizedText = text.toUpperCase().replace(/\s+/g, ' ');
+  const normalizedText = text.toUpperCase().replace(/\s+/g, " ");
 
-  logger.debug('Searching for patterns in OCR text...');
+  logger.debug("Searching for patterns in OCR text...");
 
   // Pattern 1: Gate (GATE B11, GATE 029, B11 gate, etc.)
   // OCR often misreads characters, so we use flexible patterns
   const gatePatterns = [
     // First check for placeholders explicitly (before matching real gates)
-    /(?:GATE|GNTE|G[A4O]TE|G.TE)[:\s]+([-._*]{1,}|TBA|TBD|N\/A|NA)\b/i,  // "GATE ----", "GATE ....", "GATE -"
+    /(?:GATE|GNTE|G[A4O]TE|G.TE)[:\s]+([-._*]{1,}|TBA|TBD|N\/A|NA)\b/i, // "GATE ----", "GATE ....", "GATE -"
 
     // With letter prefix (most common)
-    /(?:GATE|GNTE|G[A4O]TE|G.TE)[:\s]+([A-Z]\d{1,3})/i,           // "GATE B11", "GATE: B11" (tolerant for OCR errors)
-    /(?:GATE|GNTE|G[A4O]TE)[:\s]+([A-Z])\s*(\d{1,3})/i,      // "GATE B 11"
-    /\b([A-Z])(\d{1,3})\s*(?:GATE|GNTE|G.TE)/i,              // "B11 GATE"
+    /(?:GATE|GNTE|G[A4O]TE|G.TE)[:\s]+([A-Z]\d{1,3})/i, // "GATE B11", "GATE: B11" (tolerant for OCR errors)
+    /(?:GATE|GNTE|G[A4O]TE)[:\s]+([A-Z])\s*(\d{1,3})/i, // "GATE B 11"
+    /\b([A-Z])(\d{1,3})\s*(?:GATE|GNTE|G.TE)/i, // "B11 GATE"
 
     // Numeric only gates (Lufthansa "029", etc.)
-    /(?:GATE|GNTE|G[A4O]TE|G.TE)[:\s]+(\d{3})\b/i,           // "GATE 029" (3-digit numeric)
-    /(?:GATE|GNTE|G[A4O]TE|G.TE)[:\s]+(\d{1,2})\b(?!\d)/i,   // "GATE 29" (1-2 digit numeric, not followed by more digits)
+    /(?:GATE|GNTE|G[A4O]TE|G.TE)[:\s]+(\d{3})\b/i, // "GATE 029" (3-digit numeric)
+    /(?:GATE|GNTE|G[A4O]TE|G.TE)[:\s]+(\d{1,2})\b(?!\d)/i, // "GATE 29" (1-2 digit numeric, not followed by more digits)
 
     // Context-based patterns
     /(?:SITZ|SEAT)[:\s]+\w+.*?\s+([A-Z]\d{1,3})/i, // AirDolomiti/German format: "SITZ 10A B11"
     /GRP[:\s]+\d+.*?SITZ[:\s]+\w+.*?\s+([A-Z]\d{1,3})/i, // Full AirDolomiti format: "GRP 3 SITZ 10A B11"
-    /\b([A-Z])(\d{1,2})\s*(?:GRP|GROUP)/i,  // "B11 GRP" pattern
+    /\b([A-Z])(\d{1,2})\s*(?:GRP|GROUP)/i, // "B11 GRP" pattern
   ];
 
   for (const pattern of gatePatterns) {
     const match = normalizedText.match(pattern);
     if (match) {
       // First pattern is placeholder-only (no capture group for gate code)
-      if (match[0].includes('----') || match[0].includes('....') || match[0].includes('***') ||
-          match[0].includes('TBA') || match[0].includes('TBD') || match[0].includes('N/A') || match[0].includes('-')) {
-        logger.debug('Gate placeholder detected (no gate assigned):', match[1] || match[0]);
+      if (
+        match[0].includes("----") ||
+        match[0].includes("....") ||
+        match[0].includes("***") ||
+        match[0].includes("TBA") ||
+        match[0].includes("TBD") ||
+        match[0].includes("N/A") ||
+        match[0].includes("-")
+      ) {
+        logger.debug("Gate placeholder detected (no gate assigned):", match[1] || match[0]);
         break; // Don't set gate, leave undefined
       }
 
@@ -230,17 +243,18 @@ function parseFieldsFromText(text: string): OCRExtractedData {
       if (!gateCode) continue;
 
       // Clean up: remove spaces
-      gateCode = gateCode.replace(/\s/g, '');
+      gateCode = gateCode.replace(/\s/g, "");
 
       // Double-check for placeholders in captured content
-      const isPlaceholder = /^[.\-_*]+$/.test(gateCode) || // "....", "----", "____", "****"
-                            gateCode === 'TBA' ||          // "To Be Announced"
-                            gateCode === 'TBD' ||          // "To Be Determined"
-                            gateCode === 'N/A' ||
-                            gateCode === 'NA';
+      const isPlaceholder =
+        /^[.\-_*]+$/.test(gateCode) || // "....", "----", "____", "****"
+        gateCode === "TBA" || // "To Be Announced"
+        gateCode === "TBD" || // "To Be Determined"
+        gateCode === "N/A" ||
+        gateCode === "NA";
 
       if (isPlaceholder) {
-        logger.debug('🚪 Gate placeholder detected (no gate assigned):', gateCode);
+        logger.debug("🚪 Gate placeholder detected (no gate assigned):", gateCode);
         break; // Don't set gate, leave undefined
       }
 
@@ -249,7 +263,7 @@ function parseFieldsFromText(text: string): OCRExtractedData {
       // - 1-3 digits only (029, 29, etc.)
       if (/^[A-Z]\d{1,3}$/.test(gateCode) || /^\d{1,3}$/.test(gateCode)) {
         data.gate = gateCode;
-        logger.debug('Found gate:', data.gate);
+        logger.debug("Found gate:", data.gate);
         break;
       }
     }
@@ -268,14 +282,15 @@ function parseFieldsFromText(text: string): OCRExtractedData {
       // Filter criteria for valid gates:
       // 1. Gate number between 1-99 (not seat row like 10A would have letter A after)
       // 2. Exclude common false positives (seat numbers near SEAT/SITZ keywords)
-      const isSeatNumber = normalizedText.includes(`SEAT ${potentialGate}`) ||
-                           normalizedText.includes(`SITZ ${potentialGate}`) ||
-                           normalizedText.includes(`${potentialGate}A`) ||
-                           normalizedText.includes(`${potentialGate}B`) ||
-                           normalizedText.includes(`${potentialGate}C`) ||
-                           normalizedText.includes(`${potentialGate}D`) ||
-                           normalizedText.includes(`${potentialGate}E`) ||
-                           normalizedText.includes(`${potentialGate}F`);
+      const isSeatNumber =
+        normalizedText.includes(`SEAT ${potentialGate}`) ||
+        normalizedText.includes(`SITZ ${potentialGate}`) ||
+        normalizedText.includes(`${potentialGate}A`) ||
+        normalizedText.includes(`${potentialGate}B`) ||
+        normalizedText.includes(`${potentialGate}C`) ||
+        normalizedText.includes(`${potentialGate}D`) ||
+        normalizedText.includes(`${potentialGate}E`) ||
+        normalizedText.includes(`${potentialGate}F`);
 
       if (num >= 1 && num <= 99 && !isSeatNumber) {
         potentialGates.push(potentialGate);
@@ -286,16 +301,19 @@ function parseFieldsFromText(text: string): OCRExtractedData {
     // (usually gates appear before seat numbers on boarding passes)
     if (potentialGates.length > 0) {
       data.gate = potentialGates[0];
-      logger.debug('Found gate (fallback pattern):', data.gate,
-                  potentialGates.length > 1 ? `(other candidates: ${potentialGates.slice(1).join(', ')})` : '');
+      logger.debug(
+        "Found gate (fallback pattern):",
+        data.gate,
+        potentialGates.length > 1 ? `(other candidates: ${potentialGates.slice(1).join(", ")})` : ""
+      );
     }
   }
 
   // Pattern 2: Terminal (TERMINAL 1, TERMINAL: T1, T1, etc.)
   const terminalPatterns = [
-    /TERMINAL[:\s]+([T]?\d)/i,              // "TERMINAL 1", "TERMINAL: T1"
-    /TERMINAL[:\s]+([A-Z])/i,               // "TERMINAL A"
-    /\bT(\d|[A-Z])\b/,                      // "T1", "T2"
+    /TERMINAL[:\s]+([T]?\d)/i, // "TERMINAL 1", "TERMINAL: T1"
+    /TERMINAL[:\s]+([A-Z])/i, // "TERMINAL A"
+    /\bT(\d|[A-Z])\b/, // "T1", "T2"
   ];
 
   for (const pattern of terminalPatterns) {
@@ -307,7 +325,7 @@ function parseFieldsFromText(text: string): OCRExtractedData {
         terminal = `T${terminal}`;
       }
       data.terminal = terminal;
-      logger.debug('Found terminal:', data.terminal);
+      logger.debug("Found terminal:", data.terminal);
       break;
     }
   }
@@ -315,22 +333,22 @@ function parseFieldsFromText(text: string): OCRExtractedData {
   // Pattern 3: Boarding Time (BOARDING 12:25, BOARDS 9:59 AM, BOARDING TIME 11:20, etc.)
   const boardingTimePatterns = [
     // Standard 24h format - Most common patterns first for performance
-    /(?:BOARDING\s+TIME|BOARDING TIME)[:\s]+(\d{1,2})[:\.](\d{2})/i,  // Wideroe: "BOARDING TIME 11:20"
-    /(?:BOARDING|BOARDI.G|BO.RDING|BOARDS|EINST)[:\s]+(\d{1,2})[:\.](\d{2})/i,   // "BOARDING 12:25", "BOARDS 9:59"
+    /(?:BOARDING\s+TIME|BOARDING TIME)[:\s]+(\d{1,2})[:\.](\d{2})/i, // Wideroe: "BOARDING TIME 11:20"
+    /(?:BOARDING|BOARDI.G|BO.RDING|BOARDS|EINST)[:\s]+(\d{1,2})[:\.](\d{2})/i, // "BOARDING 12:25", "BOARDS 9:59"
 
     // Departure/Departs variations (Emirates, United, etc.)
-    /(?:DEPARTS?|DEPARTURE)[:\s]+(\d{1,2})[:\.](\d{2})/i,  // Emirates: "DEPARTS 15:40"
-    /(?:DEPARTS?)[:\s]+\d{1,2}\s+\w{3}[,\s]+(\d{1,2})[:\.](\d{2})/i,  // "DEPARTS 20 Apr, 15:40"
+    /(?:DEPARTS?|DEPARTURE)[:\s]+(\d{1,2})[:\.](\d{2})/i, // Emirates: "DEPARTS 15:40"
+    /(?:DEPARTS?)[:\s]+\d{1,2}\s+\w{3}[,\s]+(\d{1,2})[:\.](\d{2})/i, // "DEPARTS 20 Apr, 15:40"
 
     // Compact formats
-    /(?:BOARDING|BOARDI.G|BOARDS)[:\s]+(\d{4})/i,                  // "BOARDING 1225"
-    /(?:BOARD|BO.RD|EINST)[:\s]+(\d{1,2})[:\.](\d{2})/i,      // "BOARD 12:25", "EINST 12:25"
-    /(?:EINSTEIGEN|EINSTIEG)[:\s]+(\d{1,2})[:\.](\d{2})/i,    // German: "EINSTEIGEN 12:25"
+    /(?:BOARDING|BOARDI.G|BOARDS)[:\s]+(\d{4})/i, // "BOARDING 1225"
+    /(?:BOARD|BO.RD|EINST)[:\s]+(\d{1,2})[:\.](\d{2})/i, // "BOARD 12:25", "EINST 12:25"
+    /(?:EINSTEIGEN|EINSTIEG)[:\s]+(\d{1,2})[:\.](\d{2})/i, // German: "EINSTEIGEN 12:25"
 
     // 12h format with AM/PM (United Airlines, etc.)
-    /(?:BOARDING|BOARDS)[:\s]+(\d{1,2})[:\.](\d{2})\s*(?:AM|PM)/i,   // "BOARDS 9:59 AM"
-    /(?:BOARDING|BOARDS)[:\s]+(\d{1,2})\s*(?:AM|PM)/i,               // "BOARDS 9 AM"
-    /(?:DEPARTS?)[:\s]+(\d{1,2})[:\.](\d{2})\s*(?:AM|PM)/i,         // "DEPARTS 3:45 PM"
+    /(?:BOARDING|BOARDS)[:\s]+(\d{1,2})[:\.](\d{2})\s*(?:AM|PM)/i, // "BOARDS 9:59 AM"
+    /(?:BOARDING|BOARDS)[:\s]+(\d{1,2})\s*(?:AM|PM)/i, // "BOARDS 9 AM"
+    /(?:DEPARTS?)[:\s]+(\d{1,2})[:\.](\d{2})\s*(?:AM|PM)/i, // "DEPARTS 3:45 PM"
 
     // Context-based: Look for time near boarding-related keywords
     /(?:BOARDING|BOARDS|DEPARTS?|DEPARTURE).*?(\d{1,2})[:\.](\d{2})\s*(?:AM|PM)?/i,
@@ -357,8 +375,12 @@ function parseFieldsFromText(text: string): OCRExtractedData {
         }
 
         if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
-          data.boardingTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-          logger.debug('Found boarding time:', data.boardingTime, isPM || isAM ? `(converted from ${match[0]})` : '');
+          data.boardingTime = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+          logger.debug(
+            "Found boarding time:",
+            data.boardingTime,
+            isPM || isAM ? `(converted from ${match[0]})` : ""
+          );
           break;
         }
       } else if (match[1].length === 4) {
@@ -367,7 +389,7 @@ function parseFieldsFromText(text: string): OCRExtractedData {
         const minutes = parseInt(match[1].substring(2, 4));
         if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
           data.boardingTime = `${match[1].substring(0, 2)}:${match[1].substring(2, 4)}`;
-          logger.debug('Found boarding time:', data.boardingTime);
+          logger.debug("Found boarding time:", data.boardingTime);
           break;
         }
       } else if (isAM || isPM) {
@@ -379,8 +401,8 @@ function parseFieldsFromText(text: string): OCRExtractedData {
           hours = 0;
         }
         if (hours >= 0 && hours < 24) {
-          data.boardingTime = `${String(hours).padStart(2, '0')}:00`;
-          logger.debug('Found boarding time:', data.boardingTime, `(converted from ${match[0]})`);
+          data.boardingTime = `${String(hours).padStart(2, "0")}:00`;
+          logger.debug("Found boarding time:", data.boardingTime, `(converted from ${match[0]})`);
           break;
         }
       }
@@ -411,8 +433,12 @@ function parseFieldsFromText(text: string): OCRExtractedData {
       }
 
       if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
-        data.gateCloseTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-        logger.debug('Found gate close time:', data.gateCloseTime, isPM || isAM ? `(converted from ${match[0]})` : '');
+        data.gateCloseTime = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+        logger.debug(
+          "Found gate close time:",
+          data.gateCloseTime,
+          isPM || isAM ? `(converted from ${match[0]})` : ""
+        );
         break;
       }
     }
@@ -427,25 +453,24 @@ function parseFieldsFromText(text: string): OCRExtractedData {
 export async function extractBoardingPassDataFromImage(
   imageFile: File | string
 ): Promise<OCRExtractedData> {
-  logger.debug('Starting boarding pass OCR extraction...');
+  logger.debug("Starting boarding pass OCR extraction...");
 
   try {
     // Step 1: Extract text using OCR
     const text = await extractTextFromImage(imageFile);
 
     if (!text || text.trim().length === 0) {
-      logger.warn('OCR returned empty text');
+      logger.warn("OCR returned empty text");
       return {};
     }
 
     // Step 2: Parse fields from extracted text
     const extractedData = parseFieldsFromText(text);
 
-    logger.debug('OCR extraction complete:', extractedData);
+    logger.debug("OCR extraction complete:", extractedData);
     return extractedData;
-
   } catch (error) {
-    logger.error('OCR processing failed:', error);
+    logger.error("OCR processing failed:", error);
     return {};
   }
 }
@@ -462,9 +487,9 @@ export async function extractBoardingPassDataQuick(
     extractBoardingPassDataFromImage(imageFile),
     new Promise<OCRExtractedData>((resolve) => {
       setTimeout(() => {
-        logger.warn('OCR timeout - returning empty result');
+        logger.warn("OCR timeout - returning empty result");
         resolve({});
       }, timeoutMs);
-    })
+    }),
   ]);
 }

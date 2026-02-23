@@ -1,6 +1,6 @@
-﻿import { OnboardingState } from '../../types';
-import { useTranslation } from '../../hooks/useTranslation';
-import OnboardingStep from './OnboardingStep';
+﻿import { OnboardingState } from "../../types";
+import { useTranslation } from "../../hooks/useTranslation";
+import OnboardingStep from "./OnboardingStep";
 
 interface OnboardingGuideProps {
   onboarding: OnboardingState;
@@ -15,51 +15,54 @@ type OnboardingStepConfig = {
   linkText: string;
 };
 
-export default function OnboardingGuide({ onboarding, onUpdate }: OnboardingGuideProps): JSX.Element {
-  const { t } = useTranslation('onboarding');
+export default function OnboardingGuide({
+  onboarding,
+  onUpdate,
+}: OnboardingGuideProps): JSX.Element {
+  const { t } = useTranslation("onboarding");
 
   const steps: OnboardingStepConfig[] = [
     {
-      id: 'flightAdded',
-      label: t('steps.flightAdded.label'),
-      description: t('steps.flightAdded.description'),
-      linkTo: '/',
-      linkText: t('steps.flightAdded.linkText'),
+      id: "flightAdded",
+      label: t("steps.flightAdded.label"),
+      description: t("steps.flightAdded.description"),
+      linkTo: "/",
+      linkText: t("steps.flightAdded.linkText"),
     },
     {
-      id: 'usedFilter',
-      label: t('steps.usedFilter.label'),
-      description: t('steps.usedFilter.description'),
-      linkTo: '/',
-      linkText: t('steps.usedFilter.linkText'),
+      id: "usedFilter",
+      label: t("steps.usedFilter.label"),
+      description: t("steps.usedFilter.description"),
+      linkTo: "/",
+      linkText: t("steps.usedFilter.linkText"),
     },
     {
-      id: 'mapExplored',
-      label: t('steps.mapExplored.label'),
-      description: t('steps.mapExplored.description'),
-      linkTo: '/',
-      linkText: t('steps.mapExplored.linkText'),
+      id: "mapExplored",
+      label: t("steps.mapExplored.label"),
+      description: t("steps.mapExplored.description"),
+      linkTo: "/",
+      linkText: t("steps.mapExplored.linkText"),
     },
     {
-      id: 'statsViewed',
-      label: t('steps.statsViewed.label'),
-      description: t('steps.statsViewed.description'),
-      linkTo: '/stats',
-      linkText: t('steps.statsViewed.linkText'),
+      id: "statsViewed",
+      label: t("steps.statsViewed.label"),
+      description: t("steps.statsViewed.description"),
+      linkTo: "/stats",
+      linkText: t("steps.statsViewed.linkText"),
     },
     {
-      id: 'achievementsViewed',
-      label: t('steps.achievementsViewed.label'),
-      description: t('steps.achievementsViewed.description'),
-      linkTo: '/achievements',
-      linkText: t('steps.achievementsViewed.linkText'),
+      id: "achievementsViewed",
+      label: t("steps.achievementsViewed.label"),
+      description: t("steps.achievementsViewed.description"),
+      linkTo: "/achievements",
+      linkText: t("steps.achievementsViewed.linkText"),
     },
     {
-      id: 'exported',
-      label: t('steps.exported.label'),
-      description: t('steps.exported.description'),
-      linkTo: '/',
-      linkText: t('steps.exported.linkText'),
+      id: "exported",
+      label: t("steps.exported.label"),
+      description: t("steps.exported.description"),
+      linkTo: "/",
+      linkText: t("steps.exported.linkText"),
     },
   ];
 
@@ -75,15 +78,15 @@ export default function OnboardingGuide({ onboarding, onUpdate }: OnboardingGuid
     <div className="card space-y-4 bg-gradient-to-r from-blue-50 to-amber-50 dark:from-gray-800 dark:to-gray-700">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{t('title')}</p>
+          <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{t("title")}</p>
           <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-            {t('progress', { completed: completedSteps, total: totalSteps })}
+            {t("progress", { completed: completedSteps, total: totalSteps })}
           </p>
         </div>
         <button
           onClick={() => onUpdate({ dismissed: true })}
           className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-xl leading-none"
-          aria-label={t('dismissAria')}
+          aria-label={t("dismissAria")}
         >
           x
         </button>
@@ -98,7 +101,7 @@ export default function OnboardingGuide({ onboarding, onUpdate }: OnboardingGuid
           ></div>
         </div>
         <p className="text-xs text-gray-600 dark:text-gray-400 text-right">
-          {t('progressPercent', { percent: Math.round(progressPercentage) })}
+          {t("progressPercent", { percent: Math.round(progressPercentage) })}
         </p>
       </div>
 
@@ -121,20 +124,10 @@ export default function OnboardingGuide({ onboarding, onUpdate }: OnboardingGuid
       {completedSteps === totalSteps && (
         <div className="pt-2 border-t border-gray-300 dark:border-gray-600">
           <p className="text-sm font-medium text-green-700 dark:text-green-400 text-center">
-            {t('complete')}
+            {t("complete")}
           </p>
         </div>
       )}
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-

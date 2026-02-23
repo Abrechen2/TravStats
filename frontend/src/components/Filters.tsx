@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
-import { useThemeStore } from '../store/themeStore';
-import { flightsApi } from '../lib/api';
-import HelpIcon from './Help/HelpIcon';
-import type { Flight, FlightFilters } from '../types';
-import { API_LIMITS } from '../lib/constants';
-import { useTranslation } from '../hooks/useTranslation';
-import { logger } from '../lib/logger';
+import { useState, useEffect, useRef } from "react";
+import { useThemeStore } from "../store/themeStore";
+import { flightsApi } from "../lib/api";
+import HelpIcon from "./Help/HelpIcon";
+import type { Flight, FlightFilters } from "../types";
+import { API_LIMITS } from "../lib/constants";
+import { useTranslation } from "../hooks/useTranslation";
+import { logger } from "../lib/logger";
 
 interface FiltersProps {
   onFilterChange: (filters: FlightFilters & { minRouteCount?: number }) => void;
@@ -17,22 +17,22 @@ interface AirlineOption {
 }
 
 export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
-  const { t } = useTranslation(['map', 'common', 'flights']);
+  const { t } = useTranslation(["map", "common", "flights"]);
   const isDarkMode = useThemeStore((s) => s.isDarkMode);
-  
+
   const MONTHS = [
-    { value: 1, label: t('stats:months.jan') },
-    { value: 2, label: t('stats:months.feb') },
-    { value: 3, label: t('stats:months.mar') },
-    { value: 4, label: t('stats:months.apr') },
-    { value: 5, label: t('stats:months.may') },
-    { value: 6, label: t('stats:months.jun') },
-    { value: 7, label: t('stats:months.jul') },
-    { value: 8, label: t('stats:months.aug') },
-    { value: 9, label: t('stats:months.sep') },
-    { value: 10, label: t('stats:months.oct') },
-    { value: 11, label: t('stats:months.nov') },
-    { value: 12, label: t('stats:months.dec') },
+    { value: 1, label: t("stats:months.jan") },
+    { value: 2, label: t("stats:months.feb") },
+    { value: 3, label: t("stats:months.mar") },
+    { value: 4, label: t("stats:months.apr") },
+    { value: 5, label: t("stats:months.may") },
+    { value: 6, label: t("stats:months.jun") },
+    { value: 7, label: t("stats:months.jul") },
+    { value: 8, label: t("stats:months.aug") },
+    { value: 9, label: t("stats:months.sep") },
+    { value: 10, label: t("stats:months.oct") },
+    { value: 11, label: t("stats:months.nov") },
+    { value: 12, label: t("stats:months.dec") },
   ];
   const [showFilters, setShowFilters] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
@@ -71,7 +71,7 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
         const years = new Set<number>();
         const airlineMap = new Map<string, number>();
 
-        allFlights.forEach(flight => {
+        allFlights.forEach((flight) => {
           const year = new Date(flight.departureTime).getFullYear();
           years.add(year);
 
@@ -88,7 +88,7 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
 
         setAvailableAirlines(airlines);
       } catch (error) {
-        logger.error('Failed to load filter options:', error);
+        logger.error("Failed to load filter options:", error);
       }
     };
 
@@ -123,10 +123,10 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
     }
 
     // Status filter
-    const statuses: Array<'scheduled' | 'flown' | 'cancelled'> = [];
-    if (showFlown) statuses.push('flown');
-    if (showScheduled) statuses.push('scheduled');
-    if (showCancelled) statuses.push('cancelled');
+    const statuses: Array<"scheduled" | "flown" | "cancelled"> = [];
+    if (showFlown) statuses.push("flown");
+    if (showScheduled) statuses.push("scheduled");
+    if (showCancelled) statuses.push("cancelled");
 
     if (statuses.length > 0 && statuses.length < 3) {
       filters.status = statuses;
@@ -140,7 +140,16 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
 
     onFilterChange(filters);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [yearFilter, monthFilter, minRouteCount, selectedAirlines, showFlown, showScheduled, showCancelled, availableAirlines.length]);
+  }, [
+    yearFilter,
+    monthFilter,
+    minRouteCount,
+    selectedAirlines,
+    showFlown,
+    showScheduled,
+    showCancelled,
+    availableAirlines.length,
+  ]);
 
   // Click outside to close
   useEffect(() => {
@@ -151,8 +160,8 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
     };
 
     if (showFilters) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [showFilters]);
 
@@ -167,10 +176,8 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
   };
 
   const toggleAirline = (airline: string) => {
-    setSelectedAirlines(prev =>
-      prev.includes(airline)
-        ? prev.filter(a => a !== airline)
-        : [...prev, airline]
+    setSelectedAirlines((prev) =>
+      prev.includes(airline) ? prev.filter((a) => a !== airline) : [...prev, airline]
     );
   };
 
@@ -180,7 +187,7 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
     if (selectedAirlines.length === availableAirlines.length) {
       setSelectedAirlines([]);
     } else {
-      setSelectedAirlines(availableAirlines.map(a => a.name));
+      setSelectedAirlines(availableAirlines.map((a) => a.name));
     }
   };
 
@@ -200,14 +207,19 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
         onClick={() => setShowFilters(!showFilters)}
         className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg shadow-sm transition-colors ${
           isDarkMode
-            ? 'bg-gray-800 text-gray-100 border border-gray-600 hover:bg-gray-700'
-            : 'bg-white text-gray-800 border border-gray-300 hover:bg-gray-50'
+            ? "bg-gray-800 text-gray-100 border border-gray-600 hover:bg-gray-700"
+            : "bg-white text-gray-800 border border-gray-300 hover:bg-gray-50"
         }`}
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+          />
         </svg>
-        <span className="font-semibold text-sm">{t('map:filters.title')}</span>
+        <span className="font-semibold text-sm">{t("map:filters.title")}</span>
         {activeFilterCount() > 0 && (
           <span className="bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
             {activeFilterCount()}
@@ -218,76 +230,91 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
       {showFilters && (
         <div
           className={`absolute right-0 mt-2 w-80 rounded-lg shadow-xl border z-50 max-h-[calc(100vh-120px)] overflow-y-auto ${
-            isDarkMode
-              ? 'bg-gray-800 border-gray-700'
-              : 'bg-white border-gray-200'
+            isDarkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
           }`}
         >
           <div className="p-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                {t('map:filters.title')}
+              <h3
+                className={`text-lg font-semibold ${isDarkMode ? "text-white" : "text-gray-900"}`}
+              >
+                {t("map:filters.title")}
               </h3>
               <button
                 onClick={() => setShowFilters(false)}
                 className={`p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${
-                  isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                  isDarkMode ? "text-gray-400" : "text-gray-500"
                 }`}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
 
             {/* Zeit-Filter */}
             <div className="mb-4">
-              <h4 className={`text-sm font-semibold mb-2 flex items-center gap-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                📅 {t('map:filters.timePeriod')}
+              <h4
+                className={`text-sm font-semibold mb-2 flex items-center gap-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}
+              >
+                📅 {t("map:filters.timePeriod")}
                 <HelpIcon
-                  content={t('map:filters.help.timePeriod')}
-                  expandedContent={t('map:filters.help.timePeriodExpanded')}
+                  content={t("map:filters.help.timePeriod")}
+                  expandedContent={t("map:filters.help.timePeriodExpanded")}
                   position="right"
                 />
               </h4>
               <select
-                value={yearFilter ?? ''}
+                value={yearFilter ?? ""}
                 onChange={(e) => setYearFilter(e.target.value ? Number(e.target.value) : null)}
                 className={`w-full p-2 text-sm border rounded focus:ring-2 focus:ring-blue-500 ${
                   isDarkMode
-                    ? 'bg-gray-700 border-gray-600 text-gray-300'
-                    : 'bg-white border-gray-300 text-gray-700'
+                    ? "bg-gray-700 border-gray-600 text-gray-300"
+                    : "bg-white border-gray-300 text-gray-700"
                 }`}
               >
-                <option value="">{t('map:filters.allYears')}</option>
-                {availableYears.map(year => (
-                  <option key={year} value={year}>{year}</option>
+                <option value="">{t("map:filters.allYears")}</option>
+                {availableYears.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
                 ))}
               </select>
 
               <select
-                value={monthFilter ?? ''}
+                value={monthFilter ?? ""}
                 onChange={(e) => setMonthFilter(e.target.value ? Number(e.target.value) : null)}
                 className={`w-full p-2 text-sm border rounded mt-2 focus:ring-2 focus:ring-blue-500 ${
                   isDarkMode
-                    ? 'bg-gray-700 border-gray-600 text-gray-300'
-                    : 'bg-white border-gray-300 text-gray-700'
+                    ? "bg-gray-700 border-gray-600 text-gray-300"
+                    : "bg-white border-gray-300 text-gray-700"
                 }`}
               >
-                <option value="">{t('map:filters.allMonths')}</option>
-                {MONTHS.map(month => (
-                  <option key={month.value} value={month.value}>{month.label}</option>
+                <option value="">{t("map:filters.allMonths")}</option>
+                {MONTHS.map((month) => (
+                  <option key={month.value} value={month.value}>
+                    {month.label}
+                  </option>
                 ))}
               </select>
             </div>
 
             {/* Routen-Frequenz Filter */}
             <div className="mb-4">
-              <h4 className={`text-sm font-semibold mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                🛫 {t('map:filters.routeFrequency')}
+              <h4
+                className={`text-sm font-semibold mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}
+              >
+                🛫 {t("map:filters.routeFrequency")}
               </h4>
-              <label className={`text-xs block mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                {t('map:filters.minFlown', { count: minRouteCount })}
+              <label
+                className={`text-xs block mb-1 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}
+              >
+                {t("map:filters.minFlown", { count: minRouteCount })}
               </label>
               <input
                 type="range"
@@ -297,7 +324,9 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
                 onChange={(e) => setMinRouteCount(Number(e.target.value))}
                 className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
               />
-              <div className={`flex justify-between text-xs mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+              <div
+                className={`flex justify-between text-xs mt-1 ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}
+              >
                 <span>1x</span>
                 <span>20x+</span>
               </div>
@@ -307,11 +336,13 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
             {availableAirlines.length > 0 && (
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-2">
-                  <h4 className={`text-sm font-semibold flex items-center gap-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                    🏢 {t('map:filters.airlines')}
+                  <h4
+                    className={`text-sm font-semibold flex items-center gap-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}
+                  >
+                    🏢 {t("map:filters.airlines")}
                     <HelpIcon
-                      content={t('map:filters.help.airlines')}
-                      expandedContent={t('map:filters.help.airlinesExpanded')}
+                      content={t("map:filters.help.airlines")}
+                      expandedContent={t("map:filters.help.airlinesExpanded")}
                       position="right"
                     />
                   </h4>
@@ -319,38 +350,48 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
                     onClick={toggleAllAirlines}
                     className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
                   >
-                    {selectedAirlines.length === availableAirlines.length ? t('map:filters.none') : t('map:filters.all')}
+                    {selectedAirlines.length === availableAirlines.length
+                      ? t("map:filters.none")
+                      : t("map:filters.all")}
                   </button>
                 </div>
-                <div className={`max-h-32 overflow-y-auto border rounded p-2 ${
-                  isDarkMode
-                    ? 'border-gray-600 bg-gray-700'
-                    : 'border-gray-300 bg-gray-50'
-                }`}>
-                  {availableAirlines.slice(0, API_LIMITS.MAX_FILTER_AIRLINES).map(airline => (
+                <div
+                  className={`max-h-32 overflow-y-auto border rounded p-2 ${
+                    isDarkMode ? "border-gray-600 bg-gray-700" : "border-gray-300 bg-gray-50"
+                  }`}
+                >
+                  {availableAirlines.slice(0, API_LIMITS.MAX_FILTER_AIRLINES).map((airline) => (
                     <label
                       key={airline.name}
                       className={`flex items-center gap-2 text-sm mb-1 cursor-pointer p-1 rounded ${
                         isDarkMode
-                          ? 'text-gray-300 hover:bg-gray-600'
-                          : 'text-gray-700 hover:bg-gray-100'
+                          ? "text-gray-300 hover:bg-gray-600"
+                          : "text-gray-700 hover:bg-gray-100"
                       }`}
                     >
                       <input
                         type="checkbox"
-                        checked={selectedAirlines.length === 0 || selectedAirlines.includes(airline.name)}
+                        checked={
+                          selectedAirlines.length === 0 || selectedAirlines.includes(airline.name)
+                        }
                         onChange={() => toggleAirline(airline.name)}
                         className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                       />
-                      <span className="truncate flex-1">{airline.name || t('common:labels.unknown')}</span>
-                      <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      <span className="truncate flex-1">
+                        {airline.name || t("common:labels.unknown")}
+                      </span>
+                      <span className={`text-xs ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
                         ({airline.count})
                       </span>
                     </label>
                   ))}
                   {availableAirlines.length > API_LIMITS.MAX_FILTER_AIRLINES && (
-                    <div className={`text-xs mt-2 italic ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                      {t('map:filters.moreAirlines', { count: availableAirlines.length - API_LIMITS.MAX_FILTER_AIRLINES })}
+                    <div
+                      className={`text-xs mt-2 italic ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}
+                    >
+                      {t("map:filters.moreAirlines", {
+                        count: availableAirlines.length - API_LIMITS.MAX_FILTER_AIRLINES,
+                      })}
                     </div>
                   )}
                 </div>
@@ -359,41 +400,49 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
 
             {/* Status-Filter */}
             <div className="mb-4">
-              <h4 className={`text-sm font-semibold mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                ✈️ {t('map:filters.status')}
+              <h4
+                className={`text-sm font-semibold mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}
+              >
+                ✈️ {t("map:filters.status")}
               </h4>
-              <label className={`flex items-center gap-2 text-sm mb-1 cursor-pointer ${
-                isDarkMode ? 'text-gray-300' : 'text-gray-700'
-              }`}>
+              <label
+                className={`flex items-center gap-2 text-sm mb-1 cursor-pointer ${
+                  isDarkMode ? "text-gray-300" : "text-gray-700"
+                }`}
+              >
                 <input
                   type="checkbox"
                   checked={showFlown}
                   onChange={(e) => setShowFlown(e.target.checked)}
                   className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                 />
-                {t('flights:status.flown')}
+                {t("flights:status.flown")}
               </label>
-              <label className={`flex items-center gap-2 text-sm mb-1 cursor-pointer ${
-                isDarkMode ? 'text-gray-300' : 'text-gray-700'
-              }`}>
+              <label
+                className={`flex items-center gap-2 text-sm mb-1 cursor-pointer ${
+                  isDarkMode ? "text-gray-300" : "text-gray-700"
+                }`}
+              >
                 <input
                   type="checkbox"
                   checked={showScheduled}
                   onChange={(e) => setShowScheduled(e.target.checked)}
                   className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                 />
-                {t('flights:status.scheduled')}
+                {t("flights:status.scheduled")}
               </label>
-              <label className={`flex items-center gap-2 text-sm cursor-pointer ${
-                isDarkMode ? 'text-gray-300' : 'text-gray-700'
-              }`}>
+              <label
+                className={`flex items-center gap-2 text-sm cursor-pointer ${
+                  isDarkMode ? "text-gray-300" : "text-gray-700"
+                }`}
+              >
                 <input
                   type="checkbox"
                   checked={showCancelled}
                   onChange={(e) => setShowCancelled(e.target.checked)}
                   className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                 />
-                {t('flights:status.cancelled')}
+                {t("flights:status.cancelled")}
               </label>
             </div>
 
@@ -402,11 +451,11 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
               onClick={handleReset}
               className={`w-full p-2 rounded text-sm font-medium transition-colors ${
                 isDarkMode
-                  ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
               }`}
             >
-              {t('map:filters.reset')}
+              {t("map:filters.reset")}
             </button>
           </div>
         </div>

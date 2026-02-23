@@ -11,13 +11,13 @@
  */
 export function escapeCsv(value: string | number | null | undefined): string {
   if (value === null || value === undefined) {
-    return '';
+    return "";
   }
 
   const stringValue = String(value);
 
   // If the value contains comma, quote, or newline, escape it
-  if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+  if (stringValue.includes(",") || stringValue.includes('"') || stringValue.includes("\n")) {
     // Escape quotes by doubling them, then wrap in quotes
     return `"${stringValue.replace(/"/g, '""')}"`;
   }
@@ -31,9 +31,7 @@ export function escapeCsv(value: string | number | null | undefined): string {
  * @returns CSV string
  */
 export function toCsv(rows: (string | number | null | undefined)[][]): string {
-  return rows
-    .map(row => row.map(cell => escapeCsv(cell)).join(','))
-    .join('\n');
+  return rows.map((row) => row.map((cell) => escapeCsv(cell)).join(",")).join("\n");
 }
 
 /**
@@ -43,16 +41,16 @@ export function toCsv(rows: (string | number | null | undefined)[][]): string {
  */
 export function escapeHtml(text: string | number | null | undefined): string {
   if (text === null || text === undefined) {
-    return '';
+    return "";
   }
 
   const stringValue = String(text);
   return stringValue
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 /**
@@ -62,16 +60,16 @@ export function escapeHtml(text: string | number | null | undefined): string {
  */
 export function escapeXml(text: string | number | null | undefined): string {
   if (text === null || text === undefined) {
-    return '';
+    return "";
   }
 
   const stringValue = String(text);
   return stringValue
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
 }
 
 /**
@@ -81,7 +79,7 @@ export function escapeXml(text: string | number | null | undefined): string {
  */
 export function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  const a = document.createElement("a");
   a.href = url;
   a.download = filename;
   a.click();

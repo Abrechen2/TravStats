@@ -1,5 +1,5 @@
-import ApiKeyCard from '../Settings/ApiKeyCard';
-import { useTranslation } from '../../hooks/useTranslation';
+import ApiKeyCard from "../Settings/ApiKeyCard";
+import { useTranslation } from "../../hooks/useTranslation";
 
 export interface GlobalApiKeys {
   globalAirlabsApiKey?: string;
@@ -36,7 +36,7 @@ export default function GlobalApiKeysManager({
   onGlobalApiKeysChange,
   onParserSettingsChange,
 }: GlobalApiKeysManagerProps): JSX.Element {
-  const { t } = useTranslation(['admin', 'common']);
+  const { t } = useTranslation(["admin", "common"]);
 
   return (
     <div className="space-y-6">
@@ -44,10 +44,10 @@ export default function GlobalApiKeysManager({
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            {t('admin:globalApiKeys.title')}
+            {t("admin:globalApiKeys.title")}
           </h2>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            {t('admin:globalApiKeys.description')}
+            {t("admin:globalApiKeys.description")}
           </p>
         </div>
         <button
@@ -55,14 +55,14 @@ export default function GlobalApiKeysManager({
           disabled={saving || !globalApiKeys || !parserSettings}
           className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-lg transition font-medium"
         >
-          {saving ? t('common:buttons.saving') : t('admin:globalApiKeys.save')}
+          {saving ? t("common:buttons.saving") : t("admin:globalApiKeys.save")}
         </button>
       </div>
 
       {(!globalApiKeys || !parserSettings) && (
         <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
           <p className="text-sm text-yellow-800 dark:text-yellow-200">
-            {t('common:loading') || 'Loading...'}
+            {t("common:loading") || "Loading..."}
           </p>
         </div>
       )}
@@ -72,34 +72,42 @@ export default function GlobalApiKeysManager({
           {/* Parser APIs */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              {t('admin:globalApiKeys.parserApis')}
+              {t("admin:globalApiKeys.parserApis")}
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              {t('admin:globalApiKeys.parserApisDescription')}
+              {t("admin:globalApiKeys.parserApisDescription")}
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <ApiKeyCard
                 provider="openai"
-                label={t('admin:globalApiKeys.openai.label')}
-                description={t('admin:globalApiKeys.openai.description')}
+                label={t("admin:globalApiKeys.openai.label")}
+                description={t("admin:globalApiKeys.openai.description")}
                 getKeyUrl="https://platform.openai.com/api-keys"
                 isShared={false}
                 hasAccess={!!parserSettings.globalOpenaiApiKey}
-                value={parserSettings.globalOpenaiApiKey || ''}
-                onChange={(value) => onParserSettingsChange({ ...parserSettings, globalOpenaiApiKey: value })}
-                onClear={() => onParserSettingsChange({ ...parserSettings, globalOpenaiApiKey: '' })}
+                value={parserSettings.globalOpenaiApiKey || ""}
+                onChange={(value) =>
+                  onParserSettingsChange({ ...parserSettings, globalOpenaiApiKey: value })
+                }
+                onClear={() =>
+                  onParserSettingsChange({ ...parserSettings, globalOpenaiApiKey: "" })
+                }
                 isAdmin={true}
               />
               <ApiKeyCard
                 provider="claude"
-                label={t('admin:globalApiKeys.claude.label')}
-                description={t('admin:globalApiKeys.claude.description')}
+                label={t("admin:globalApiKeys.claude.label")}
+                description={t("admin:globalApiKeys.claude.description")}
                 getKeyUrl="https://console.anthropic.com/settings/keys"
                 isShared={false}
                 hasAccess={!!parserSettings.globalClaudeApiKey}
-                value={parserSettings.globalClaudeApiKey || ''}
-                onChange={(value) => onParserSettingsChange({ ...parserSettings, globalClaudeApiKey: value })}
-                onClear={() => onParserSettingsChange({ ...parserSettings, globalClaudeApiKey: '' })}
+                value={parserSettings.globalClaudeApiKey || ""}
+                onChange={(value) =>
+                  onParserSettingsChange({ ...parserSettings, globalClaudeApiKey: value })
+                }
+                onClear={() =>
+                  onParserSettingsChange({ ...parserSettings, globalClaudeApiKey: "" })
+                }
                 isAdmin={true}
               />
             </div>
@@ -108,48 +116,56 @@ export default function GlobalApiKeysManager({
           {/* Flight Lookup APIs */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              {t('admin:globalApiKeys.flightApis')}
+              {t("admin:globalApiKeys.flightApis")}
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              {t('admin:globalApiKeys.flightApisDescription')}
+              {t("admin:globalApiKeys.flightApisDescription")}
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <ApiKeyCard
                 provider="airlabs"
-                label={t('admin:globalApiKeys.airlabs.label')}
-                description={t('admin:globalApiKeys.airlabs.description')}
+                label={t("admin:globalApiKeys.airlabs.label")}
+                description={t("admin:globalApiKeys.airlabs.description")}
                 getKeyUrl="https://airlabs.co/account"
                 isShared={false}
                 hasAccess={!!globalApiKeys.globalAirlabsApiKey}
-                value={globalApiKeys.globalAirlabsApiKey || ''}
-                onChange={(value) => onGlobalApiKeysChange({ ...globalApiKeys, globalAirlabsApiKey: value })}
-                onClear={() => onGlobalApiKeysChange({ ...globalApiKeys, globalAirlabsApiKey: '' })}
+                value={globalApiKeys.globalAirlabsApiKey || ""}
+                onChange={(value) =>
+                  onGlobalApiKeysChange({ ...globalApiKeys, globalAirlabsApiKey: value })
+                }
+                onClear={() => onGlobalApiKeysChange({ ...globalApiKeys, globalAirlabsApiKey: "" })}
                 isAdmin={true}
               />
               <ApiKeyCard
                 provider="aviationstack"
-                label={t('admin:globalApiKeys.aviationstack.label')}
-                description={t('admin:globalApiKeys.aviationstack.description')}
+                label={t("admin:globalApiKeys.aviationstack.label")}
+                description={t("admin:globalApiKeys.aviationstack.description")}
                 getKeyUrl="https://aviationstack.com/signup"
                 isShared={false}
                 hasAccess={!!globalApiKeys.globalAviationstackApiKey}
-                value={globalApiKeys.globalAviationstackApiKey || ''}
-                onChange={(value) => onGlobalApiKeysChange({ ...globalApiKeys, globalAviationstackApiKey: value })}
-                onClear={() => onGlobalApiKeysChange({ ...globalApiKeys, globalAviationstackApiKey: '' })}
+                value={globalApiKeys.globalAviationstackApiKey || ""}
+                onChange={(value) =>
+                  onGlobalApiKeysChange({ ...globalApiKeys, globalAviationstackApiKey: value })
+                }
+                onClear={() =>
+                  onGlobalApiKeysChange({ ...globalApiKeys, globalAviationstackApiKey: "" })
+                }
                 isAdmin={true}
               />
               <ApiKeyCard
                 provider="opensky"
-                label={t('admin:globalApiKeys.opensky.label')}
-                description={t('admin:globalApiKeys.opensky.description')}
+                label={t("admin:globalApiKeys.opensky.label")}
+                description={t("admin:globalApiKeys.opensky.description")}
                 getKeyUrl="https://opensky-network.org/accounts/register"
                 isShared={false}
                 hasAccess={!!globalApiKeys.globalOpenskyClientId}
                 openskyFields={{
-                  clientId: globalApiKeys.globalOpenskyClientId || '',
-                  clientSecret: globalApiKeys.globalOpenskyClientSecret || '',
-                  onClientIdChange: (value) => onGlobalApiKeysChange({ ...globalApiKeys, globalOpenskyClientId: value }),
-                  onClientSecretChange: (value) => onGlobalApiKeysChange({ ...globalApiKeys, globalOpenskyClientSecret: value }),
+                  clientId: globalApiKeys.globalOpenskyClientId || "",
+                  clientSecret: globalApiKeys.globalOpenskyClientSecret || "",
+                  onClientIdChange: (value) =>
+                    onGlobalApiKeysChange({ ...globalApiKeys, globalOpenskyClientId: value }),
+                  onClientSecretChange: (value) =>
+                    onGlobalApiKeysChange({ ...globalApiKeys, globalOpenskyClientSecret: value }),
                 }}
                 isAdmin={true}
               />
@@ -159,31 +175,36 @@ export default function GlobalApiKeysManager({
           {/* User Permissions */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              {t('admin:globalApiKeys.permissions')}
+              {t("admin:globalApiKeys.permissions")}
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              {t('admin:globalApiKeys.permissionsDescription')}
+              {t("admin:globalApiKeys.permissionsDescription")}
             </p>
             <div className="space-y-4">
               {/* Parser API Permissions */}
               <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
                 <h4 className="text-md font-medium text-gray-900 dark:text-white mb-3">
-                  {t('admin:globalApiKeys.parserPermissions')}
+                  {t("admin:globalApiKeys.parserPermissions")}
                 </h4>
                 <div className="space-y-3">
                   <label className="flex items-start gap-3">
                     <input
                       type="checkbox"
                       checked={parserSettings.allowUserApiKeys}
-                      onChange={(e) => onParserSettingsChange({ ...parserSettings, allowUserApiKeys: e.target.checked })}
+                      onChange={(e) =>
+                        onParserSettingsChange({
+                          ...parserSettings,
+                          allowUserApiKeys: e.target.checked,
+                        })
+                      }
                       className="mt-1 h-4 w-4"
                     />
                     <div>
                       <span className="font-medium text-gray-900 dark:text-white">
-                        {t('admin:globalApiKeys.allowUserParserApiKeys')}
+                        {t("admin:globalApiKeys.allowUserParserApiKeys")}
                       </span>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {t('admin:globalApiKeys.allowUserParserApiKeysDescription')}
+                        {t("admin:globalApiKeys.allowUserParserApiKeysDescription")}
                       </p>
                     </div>
                   </label>
@@ -191,15 +212,20 @@ export default function GlobalApiKeysManager({
                     <input
                       type="checkbox"
                       checked={parserSettings.requireUserApiKeys}
-                      onChange={(e) => onParserSettingsChange({ ...parserSettings, requireUserApiKeys: e.target.checked })}
+                      onChange={(e) =>
+                        onParserSettingsChange({
+                          ...parserSettings,
+                          requireUserApiKeys: e.target.checked,
+                        })
+                      }
                       className="mt-1 h-4 w-4"
                     />
                     <div>
                       <span className="font-medium text-gray-900 dark:text-white">
-                        {t('admin:globalApiKeys.requireUserParserApiKeys')}
+                        {t("admin:globalApiKeys.requireUserParserApiKeys")}
                       </span>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {t('admin:globalApiKeys.requireUserParserApiKeysDescription')}
+                        {t("admin:globalApiKeys.requireUserParserApiKeysDescription")}
                       </p>
                     </div>
                   </label>
@@ -209,22 +235,27 @@ export default function GlobalApiKeysManager({
               {/* Flight API Permissions */}
               <div>
                 <h4 className="text-md font-medium text-gray-900 dark:text-white mb-3">
-                  {t('admin:globalApiKeys.flightPermissions')}
+                  {t("admin:globalApiKeys.flightPermissions")}
                 </h4>
                 <div className="space-y-3">
                   <label className="flex items-start gap-3">
                     <input
                       type="checkbox"
                       checked={globalApiKeys.allowUserFlightApiKeys ?? true}
-                      onChange={(e) => onGlobalApiKeysChange({ ...globalApiKeys, allowUserFlightApiKeys: e.target.checked })}
+                      onChange={(e) =>
+                        onGlobalApiKeysChange({
+                          ...globalApiKeys,
+                          allowUserFlightApiKeys: e.target.checked,
+                        })
+                      }
                       className="mt-1 h-4 w-4"
                     />
                     <div>
                       <span className="font-medium text-gray-900 dark:text-white">
-                        {t('admin:globalApiKeys.allowUserFlightApiKeys')}
+                        {t("admin:globalApiKeys.allowUserFlightApiKeys")}
                       </span>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {t('admin:globalApiKeys.allowUserFlightApiKeysDescription')}
+                        {t("admin:globalApiKeys.allowUserFlightApiKeysDescription")}
                       </p>
                     </div>
                   </label>
@@ -232,15 +263,20 @@ export default function GlobalApiKeysManager({
                     <input
                       type="checkbox"
                       checked={globalApiKeys.requireUserFlightApiKeys ?? false}
-                      onChange={(e) => onGlobalApiKeysChange({ ...globalApiKeys, requireUserFlightApiKeys: e.target.checked })}
+                      onChange={(e) =>
+                        onGlobalApiKeysChange({
+                          ...globalApiKeys,
+                          requireUserFlightApiKeys: e.target.checked,
+                        })
+                      }
                       className="mt-1 h-4 w-4"
                     />
                     <div>
                       <span className="font-medium text-gray-900 dark:text-white">
-                        {t('admin:globalApiKeys.requireUserFlightApiKeys')}
+                        {t("admin:globalApiKeys.requireUserFlightApiKeys")}
                       </span>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {t('admin:globalApiKeys.requireUserFlightApiKeysDescription')}
+                        {t("admin:globalApiKeys.requireUserFlightApiKeysDescription")}
                       </p>
                     </div>
                   </label>

@@ -1,7 +1,7 @@
-import { format } from 'date-fns';
-import InlineHelp from '../Help/InlineHelp';
-import { useTranslation } from '../../hooks/useTranslation';
-import type { AdminUser } from './SystemInfo';
+import { format } from "date-fns";
+import InlineHelp from "../Help/InlineHelp";
+import { useTranslation } from "../../hooks/useTranslation";
+import type { AdminUser } from "./SystemInfo";
 
 interface UserManagementProps {
   users: AdminUser[];
@@ -12,27 +12,30 @@ export default function UserManagement({
   users,
   onToggleUserActive,
 }: UserManagementProps): JSX.Element {
-  const { t } = useTranslation(['admin', 'common']);
+  const { t } = useTranslation(["admin", "common"]);
 
   return (
     <div className="space-y-4">
       <InlineHelp
-        title={t('admin:users.title')}
+        title={t("admin:users.title")}
         category="advanced"
         content={
           <div className="space-y-2">
             <p>
-              Verwalten Sie alle Benutzer Ihrer TravStats-Instanz. Hier können Sie Benutzer anzeigen, Rollen ändern und Benutzer löschen.
+              Verwalten Sie alle Benutzer Ihrer TravStats-Instanz. Hier können Sie Benutzer
+              anzeigen, Rollen ändern und Benutzer löschen.
             </p>
             <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
               <li>
                 <strong>Admin:</strong> Vollzugriff auf alle Funktionen, einschließlich Admin-Panel
               </li>
               <li>
-                <strong>User:</strong> Standard-Benutzer mit Zugriff auf Flüge, Statistiken und Achievements
+                <strong>User:</strong> Standard-Benutzer mit Zugriff auf Flüge, Statistiken und
+                Achievements
               </li>
               <li>
-                <strong>Löschen:</strong> Vorsicht! Beim Löschen werden alle Daten des Benutzers entfernt
+                <strong>Löschen:</strong> Vorsicht! Beim Löschen werden alle Daten des Benutzers
+                entfernt
               </li>
             </ul>
           </div>
@@ -70,7 +73,7 @@ export default function UserManagement({
                     {user.username}
                   </div>
                   <div className="text-xs text-gray-500 dark:text-gray-400">
-                    {format(new Date(user.createdAt), 'MMM d, yyyy')}
+                    {format(new Date(user.createdAt), "MMM d, yyyy")}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
@@ -106,7 +109,7 @@ export default function UserManagement({
                     onClick={() => onToggleUserActive(user.id)}
                     className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
                   >
-                    {user.isActive ? 'Deactivate' : 'Activate'}
+                    {user.isActive ? "Deactivate" : "Activate"}
                   </button>
                 </td>
               </tr>

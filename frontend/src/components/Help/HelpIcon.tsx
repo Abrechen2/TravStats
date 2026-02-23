@@ -1,27 +1,29 @@
-import { useState, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { useTranslation } from '../../hooks/useTranslation';
+import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { useTranslation } from "../../hooks/useTranslation";
 
 interface HelpIconProps {
   content: string;
   expandedContent?: string;
-  position?: 'top' | 'bottom' | 'left' | 'right';
+  position?: "top" | "bottom" | "left" | "right";
   className?: string;
 }
 
 export default function HelpIcon({
   content,
   expandedContent,
-  position = 'top',
-  className = '',
+  position = "top",
+  className = "",
 }: HelpIconProps): JSX.Element {
   const [isHovered, setIsHovered] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [calculatedPosition, setCalculatedPosition] = useState<'top' | 'bottom' | 'left' | 'right'>(position);
+  const [calculatedPosition, setCalculatedPosition] = useState<"top" | "bottom" | "left" | "right">(
+    position
+  );
   const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});
   const iconRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
-  const { t } = useTranslation('common');
+  const { t } = useTranslation("common");
 
   // Function to calculate and update tooltip position
   const updateTooltipPosition = () => {
@@ -39,15 +41,15 @@ export default function HelpIcon({
     let style: React.CSSProperties = {};
 
     // Check if tooltip fits in preferred position
-    const checkPosition = (pos: 'top' | 'bottom' | 'left' | 'right') => {
+    const checkPosition = (pos: "top" | "bottom" | "left" | "right") => {
       switch (pos) {
-        case 'top':
+        case "top":
           return iconRect.top - tooltipHeight - padding >= 0;
-        case 'bottom':
+        case "bottom":
           return iconRect.bottom + tooltipHeight + padding <= viewportHeight;
-        case 'left':
+        case "left":
           return iconRect.left - tooltipWidth - padding >= 0;
-        case 'right':
+        case "right":
           return iconRect.right + tooltipWidth + padding <= viewportWidth;
       }
     };
@@ -55,17 +57,17 @@ export default function HelpIcon({
     // Try preferred position first
     if (!checkPosition(position)) {
       // Try alternative positions
-      if (position === 'top' || position === 'bottom') {
+      if (position === "top" || position === "bottom") {
         if (iconRect.top < viewportHeight / 2) {
-          newPosition = 'bottom';
+          newPosition = "bottom";
         } else {
-          newPosition = 'top';
+          newPosition = "top";
         }
       } else {
         if (iconRect.left < viewportWidth / 2) {
-          newPosition = 'right';
+          newPosition = "right";
         } else {
-          newPosition = 'left';
+          newPosition = "left";
         }
       }
     }
@@ -75,40 +77,46 @@ export default function HelpIcon({
     const iconCenterY = iconRect.top + iconRect.height / 2;
 
     switch (newPosition) {
-      case 'top':
+      case "top":
         style = {
           left: `${iconCenterX}px`,
           top: `${iconRect.top - tooltipHeight - padding}px`,
-          transform: 'translateX(-50%)',
+          transform: "translateX(-50%)",
         };
         break;
-      case 'bottom':
+      case "bottom":
         style = {
           left: `${iconCenterX}px`,
           top: `${iconRect.bottom + padding}px`,
-          transform: 'translateX(-50%)',
+          transform: "translateX(-50%)",
         };
         break;
-      case 'left':
+      case "left":
         style = {
           left: `${iconRect.left - tooltipWidth - padding}px`,
           top: `${iconCenterY}px`,
-          transform: 'translateY(-50%)',
+          transform: "translateY(-50%)",
         };
         break;
-      case 'right':
+      case "right":
         style = {
           left: `${iconRect.right + padding}px`,
           top: `${iconCenterY}px`,
-          transform: 'translateY(-50%)',
+          transform: "translateY(-50%)",
         };
         break;
     }
 
     // Ensure tooltip stays within viewport
-    const finalLeft = Math.max(padding, Math.min(parseFloat(style.left as string), viewportWidth - tooltipWidth - padding));
-    const finalTop = Math.max(padding, Math.min(parseFloat(style.top as string), viewportHeight - tooltipHeight - padding));
-    
+    const finalLeft = Math.max(
+      padding,
+      Math.min(parseFloat(style.left as string), viewportWidth - tooltipWidth - padding)
+    );
+    const finalTop = Math.max(
+      padding,
+      Math.min(parseFloat(style.top as string), viewportHeight - tooltipHeight - padding)
+    );
+
     style.left = `${finalLeft}px`;
     style.top = `${finalTop}px`;
 
@@ -123,7 +131,7 @@ export default function HelpIcon({
       const timeoutId = setTimeout(() => {
         updateTooltipPosition();
       }, 0);
-      
+
       return () => clearTimeout(timeoutId);
     }
   }, [isHovered, isExpanded, position]);
@@ -137,12 +145,12 @@ export default function HelpIcon({
         });
       };
 
-      window.addEventListener('scroll', handleUpdate, true);
-      window.addEventListener('resize', handleUpdate);
-      
+      window.addEventListener("scroll", handleUpdate, true);
+      window.addEventListener("resize", handleUpdate);
+
       return () => {
-        window.removeEventListener('scroll', handleUpdate, true);
-        window.removeEventListener('resize', handleUpdate);
+        window.removeEventListener("scroll", handleUpdate, true);
+        window.removeEventListener("resize", handleUpdate);
       };
     }
   }, [isHovered, isExpanded, position]);
@@ -162,11 +170,11 @@ export default function HelpIcon({
     };
 
     if (isExpanded) {
-      document.addEventListener('mousedown', handleClickOutside);
-      document.addEventListener('touchstart', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener("touchstart", handleClickOutside);
       return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-        document.removeEventListener('touchstart', handleClickOutside);
+        document.removeEventListener("mousedown", handleClickOutside);
+        document.removeEventListener("touchstart", handleClickOutside);
       };
     }
   }, [isExpanded]);
@@ -174,15 +182,15 @@ export default function HelpIcon({
   // ESC key handler
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && isExpanded) {
+      if (event.key === "Escape" && isExpanded) {
         setIsExpanded(false);
         setIsHovered(false);
       }
     };
 
     if (isExpanded) {
-      document.addEventListener('keydown', handleEsc);
-      return () => document.removeEventListener('keydown', handleEsc);
+      document.addEventListener("keydown", handleEsc);
+      return () => document.removeEventListener("keydown", handleEsc);
     }
   }, [isExpanded]);
 
@@ -200,10 +208,11 @@ export default function HelpIcon({
   };
 
   const arrowClasses = {
-    top: 'top-full left-1/2 transform -translate-x-1/2 border-t-gray-900 dark:border-t-gray-700',
-    bottom: 'bottom-full left-1/2 transform -translate-x-1/2 border-b-gray-900 dark:border-b-gray-700',
-    left: 'left-full top-1/2 transform -translate-y-1/2 border-l-gray-900 dark:border-l-gray-700',
-    right: 'right-full top-1/2 transform -translate-y-1/2 border-r-gray-900 dark:border-r-gray-700',
+    top: "top-full left-1/2 transform -translate-x-1/2 border-t-gray-900 dark:border-t-gray-700",
+    bottom:
+      "bottom-full left-1/2 transform -translate-x-1/2 border-b-gray-900 dark:border-b-gray-700",
+    left: "left-full top-1/2 transform -translate-y-1/2 border-l-gray-900 dark:border-l-gray-700",
+    right: "right-full top-1/2 transform -translate-y-1/2 border-r-gray-900 dark:border-r-gray-700",
   };
 
   const tooltipContent = (isHovered || isExpanded) && (
@@ -222,7 +231,7 @@ export default function HelpIcon({
         <p className="whitespace-normal break-words">{content}</p>
         {expandedContent && !isExpanded && (
           <p className="mt-2 text-xs text-blue-400 dark:text-blue-300 italic">
-            {t('help.clickForMore')}
+            {t("help.clickForMore")}
           </p>
         )}
         {expandedContent && isExpanded && (
@@ -246,7 +255,7 @@ export default function HelpIcon({
             }}
             className="mt-2 text-xs text-blue-400 hover:text-blue-300 active:text-blue-200 underline touch-manipulation"
           >
-            {t('buttons.close')}
+            {t("buttons.close")}
           </button>
         )}
       </div>
@@ -273,7 +282,7 @@ export default function HelpIcon({
           }}
           onClick={handleClick}
           onTouchStart={handleTouchStart}
-          aria-label={t('accessibility.showHelp')}
+          aria-label={t("accessibility.showHelp")}
         >
           <svg
             className="w-4 h-4"

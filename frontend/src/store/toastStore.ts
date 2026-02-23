@@ -1,6 +1,6 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 
-export type ToastType = 'success' | 'error' | 'warning' | 'info';
+export type ToastType = "success" | "error" | "warning" | "info";
 
 export interface Toast {
   id: string;
@@ -21,7 +21,7 @@ export const useToastStore = create<ToastState>((set) => ({
   addToast: (type, message, duration = 5000) => {
     const id = Math.random().toString(36).substring(2, 9);
     const toast: Toast = { id, type, message, duration };
-    
+
     set((state) => ({
       toasts: [...state.toasts, toast],
     }));
@@ -46,18 +46,3 @@ export const useToastStore = create<ToastState>((set) => ({
     set({ toasts: [] });
   },
 }));
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

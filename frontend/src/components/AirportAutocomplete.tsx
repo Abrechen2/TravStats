@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
-import { airportsApi, Airport, setupApi } from '../lib/api';
-import { logger } from '../lib/logger';
-import { useTranslation } from '../hooks/useTranslation';
+import { useState, useEffect, useRef } from "react";
+import { airportsApi, Airport, setupApi } from "../lib/api";
+import { logger } from "../lib/logger";
+import { useTranslation } from "../hooks/useTranslation";
 
 interface AirportAutocompleteProps {
   value?: Airport | null;
@@ -18,22 +18,22 @@ export default function AirportAutocomplete({
   placeholder,
   required = false,
 }: AirportAutocompleteProps): JSX.Element {
-  const { t } = useTranslation(['flights', 'common']);
-  const [query, setQuery] = useState('');
+  const { t } = useTranslation(["flights", "common"]);
+  const [query, setQuery] = useState("");
   const [results, setResults] = useState<Airport[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
-  
-  const defaultPlaceholder = placeholder || t('flights:airportAutocomplete.placeholder');
+
+  const defaultPlaceholder = placeholder || t("flights:airportAutocomplete.placeholder");
 
   // Check if airport seeding is in progress
   useEffect(() => {
     const checkSeedingStatus = async () => {
       try {
         const status = await setupApi.getAirportSeedingStatus();
-        setIsSeeding(status.status === 'running' || status.status === 'pending');
+        setIsSeeding(status.status === "running" || status.status === "pending");
       } catch (error) {
         // If check fails, assume not seeding
         setIsSeeding(false);
@@ -53,9 +53,9 @@ export default function AirportAutocomplete({
       setQuery(display);
     } else {
       // Only clear query if input is NOT focused (to avoid clearing while user is typing)
-      const input = wrapperRef.current?.querySelector('input');
+      const input = wrapperRef.current?.querySelector("input");
       if (document.activeElement !== input) {
-        setQuery('');
+        setQuery("");
       }
     }
   }, [value]);
@@ -68,8 +68,8 @@ export default function AirportAutocomplete({
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // Debounced search
@@ -94,7 +94,7 @@ export default function AirportAutocomplete({
             const airport = await airportsApi.getByCode(query.trim().toUpperCase());
             setResults([airport]);
           } catch (lookupError) {
-            logger.debug('External search also found nothing');
+            logger.debug("External search also found nothing");
             setResults([]);
           }
         } else {
@@ -103,7 +103,7 @@ export default function AirportAutocomplete({
 
         setIsOpen(true);
       } catch (error) {
-        logger.error('Airport search failed:', error);
+        logger.error("Airport search failed:", error);
         setResults([]);
       } finally {
         setLoading(false);
@@ -140,12 +140,12 @@ export default function AirportAutocomplete({
         value={query}
         onChange={handleInputChange}
         onFocus={() => !isSeeding && query.length >= 2 && setIsOpen(true)}
-        placeholder={isSeeding ? t('flights:airportAutocomplete.seeding') : defaultPlaceholder}
+        placeholder={isSeeding ? t("flights:airportAutocomplete.seeding") : defaultPlaceholder}
         className="input"
         required={required}
         autoComplete="off"
         disabled={isSeeding}
-        title={isSeeding ? t('flights:airportAutocomplete.seedingTitle') : undefined}
+        title={isSeeding ? t("flights:airportAutocomplete.seedingTitle") : undefined}
       />
 
       {/* Dropdown */}
@@ -154,43 +154,46 @@ export default function AirportAutocomplete({
           {loading && (
             <div className="px-4 py-3 text-sm text-gray-500">
               {/^[A-Z]{3,4}$/i.test(query.trim())
-                ? t('flights:airportAutocomplete.searchingWorldwide')
-                : t('flights:airportAutocomplete.searching')}
+                ? t("flights:airportAutocomplete.searchingWorldwide")
+                : t("flights:airportAutocomplete.searching")}
             </div>
           )}
 
           {!loading && results.length === 0 && query.length >= 2 && (
             <div className="px-4 py-3 text-sm text-gray-500">
               {/^[A-Z]{3,4}$/i.test(query.trim())
-                ? t('flights:airportAutocomplete.notFound', { code: query.toUpperCase() })
-                : t('flights:airportAutocomplete.noResults')}
+                ? t("flights:airportAutocomplete.notFound", { code: query.toUpperCase() })
+                : t("flights:airportAutocomplete.noResults")}
             </div>
           )}
 
-          {!loading && results.map((airport) => (
-            <button
-              key={airport.id}
-              type="button"
-              onClick={() => handleSelect(airport)}
-              className="w-full px-4 py-2 text-left hover:bg-blue-50 focus:bg-blue-50 focus:outline-none border-b last:border-0"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-medium">
-                    {airport.iata && <span className="text-blue-600">{airport.iata}</span>}
-                    {airport.iata && airport.icao && <span className="text-gray-400 mx-1">/</span>}
-                    {airport.icao && <span className="text-gray-600">{airport.icao}</span>}
-                    <span className="ml-2">{airport.name}</span>
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    {airport.city && airport.country && `${airport.city}, ${airport.country}`}
-                    {airport.city && !airport.country && airport.city}
-                    {!airport.city && airport.country && airport.country}
+          {!loading &&
+            results.map((airport) => (
+              <button
+                key={airport.id}
+                type="button"
+                onClick={() => handleSelect(airport)}
+                className="w-full px-4 py-2 text-left hover:bg-blue-50 focus:bg-blue-50 focus:outline-none border-b last:border-0"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium">
+                      {airport.iata && <span className="text-blue-600">{airport.iata}</span>}
+                      {airport.iata && airport.icao && (
+                        <span className="text-gray-400 mx-1">/</span>
+                      )}
+                      {airport.icao && <span className="text-gray-600">{airport.icao}</span>}
+                      <span className="ml-2">{airport.name}</span>
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {airport.city && airport.country && `${airport.city}, ${airport.country}`}
+                      {airport.city && !airport.country && airport.city}
+                      {!airport.city && airport.country && airport.country}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </button>
-          ))}
+              </button>
+            ))}
         </div>
       )}
     </div>
