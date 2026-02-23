@@ -5,11 +5,12 @@ Checks CPU, GPU, and Python/PyTorch availability
 Returns JSON output for TypeScript processing
 """
 
+import contextlib
 import json
-import sys
-import os
 import multiprocessing
+import os
 import platform
+import sys
 
 # Try to import PyTorch for GPU detection
 try:
@@ -25,7 +26,7 @@ def get_cpu_info():
         cpu_count = multiprocessing.cpu_count()
         cpu_model = platform.processor()
         architecture = platform.machine()
-        
+
         # Try to get more detailed CPU info on different platforms
         if platform.system() == 'Windows':
             try:
@@ -37,14 +38,14 @@ def get_cpu_info():
                 pass
         elif platform.system() == 'Linux':
             try:
-                with open('/proc/cpuinfo', 'r') as f:
+                with open('/proc/cpuinfo') as f:
                     for line in f:
                         if 'model name' in line.lower():
                             cpu_model = line.split(':')[1].strip()
                             break
             except:
                 pass
-        
+
         return {
             "cores": cpu_count,
             "model": cpu_model or "Unknown",
@@ -66,13 +67,13 @@ def get_gpu_info():
             "error": "PyTorch not available",
             "diagnosis": ["PyTorch is not installed. Install with: pip install torch"]
         }
-    
+
     try:
         # Check if PyTorch was built with CUDA support
         pytorch_has_cuda = hasattr(torch.version, 'cuda') and torch.version.cuda is not None
-        
+
         cuda_available = torch.cuda.is_available()
-        
+
         if not cuda_available:
             # Provide detailed diagnosis
             diagnosis = []
@@ -82,35 +83,35 @@ def get_gpu_info():
             else:
                 diagnosis.append("PyTorch has CUDA support but CUDA is not available")
                 diagnosis.append("Check: 1) NVIDIA drivers installed, 2) CUDA toolkit installed, 3) GPU is accessible")
-            
+
             # Try to detect GPU via nvidia-smi (if available)
             gpu_detected = False
             gpu_name_detected = None
             try:
                 import subprocess
-                result = subprocess.run(['nvidia-smi', '--query-gpu=name', '--format=csv,noheader'], 
+                result = subprocess.run(['nvidia-smi', '--query-gpu=name', '--format=csv,noheader'],
                                       capture_output=True, text=True, timeout=5)
                 if result.returncode == 0 and result.stdout.strip():
                     gpu_detected = True
                     gpu_name_detected = result.stdout.strip().split('\n')[0]
             except:
                 pass
-            
+
             result = {
                 "available": False,
                 "reason": "CUDA not available",
                 "diagnosis": diagnosis,
                 "pytorchHasCuda": pytorch_has_cuda
             }
-            
+
             if gpu_detected:
                 result["gpuDetected"] = True
                 result["gpuNameDetected"] = gpu_name_detected
                 result["diagnosis"].append(f"GPU detected via nvidia-smi: {gpu_name_detected}")
                 result["diagnosis"].append("GPU is present but PyTorch cannot access it - install PyTorch with CUDA support")
-            
+
             return result
-        
+
         # Get GPU details
         gpu_count = torch.cuda.device_count()
         if gpu_count == 0:
@@ -119,12 +120,12 @@ def get_gpu_info():
                 "reason": "No GPU devices found",
                 "pytorchHasCuda": pytorch_has_cuda
             }
-        
+
         # Get first GPU info
         gpu_name = torch.cuda.get_device_name(0)
         gpu_props = torch.cuda.get_device_properties(0)
         gpu_memory = gpu_props.total_memory / (1024**3)  # Convert to GB
-        
+
         # Get all GPUs
         gpus = []
         for i in range(gpu_count):
@@ -136,14 +137,12 @@ def get_gpu_info():
                 "name": gpu_name_i,
                 "memory": round(gpu_memory_i, 2)
             })
-        
+
         # Try to get CUDA version
         cuda_version = None
-        try:
+        with contextlib.suppress(BaseException):
             cuda_version = torch.version.cuda
-        except:
-            pass
-        
+
         return {
             "available": True,
             "count": gpu_count,
@@ -164,18 +163,16 @@ def get_gpu_info():
 def get_python_info():
     """Get Python and PyTorch version information"""
     python_version = sys.version.split()[0]
-    
+
     pytorch_info = {
         "available": PYTORCH_AVAILABLE,
         "version": None
     }
-    
+
     if PYTORCH_AVAILABLE:
-        try:
+        with contextlib.suppress(BaseException):
             pytorch_info["version"] = torch.__version__
-        except:
-            pass
-    
+
     return {
         "available": True,
         "version": python_version,
@@ -187,7 +184,7 @@ def main():
     try:
         # Check if running in Docker
         is_docker = os.path.exists('/.dockerenv') or os.environ.get('DOCKER') == 'true'
-        
+
         hardware_info = {
             "cpu": get_cpu_info(),
             "gpu": get_gpu_info(),
@@ -199,7 +196,7 @@ def main():
                 "version": platform.version()
             }
         }
-        
+
         # Output as JSON
         print(json.dumps(hardware_info, indent=2))
         sys.exit(0)

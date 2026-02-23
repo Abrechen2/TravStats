@@ -7,9 +7,8 @@ import argparse
 import json
 import random
 import sys
-import urllib.request
 import urllib.error
-
+import urllib.request
 
 EVAL_FIELDS = ["flightNumber", "departureCode", "arrivalCode", "departureDate", "airline"]
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
@@ -31,7 +30,7 @@ def parse_args():
 def load_examples(jsonl_path, sample_size):
     examples = []
     try:
-        with open(jsonl_path, "r", encoding="utf-8") as f:
+        with open(jsonl_path, encoding="utf-8") as f:
             for line in f:
                 stripped = line.strip()
                 if not stripped:
@@ -41,7 +40,7 @@ def load_examples(jsonl_path, sample_size):
                 except json.JSONDecodeError:
                     continue
     except OSError as exc:
-        raise RuntimeError("Failed to read test data file {!r}: {}".format(jsonl_path, exc)) from exc
+        raise RuntimeError(f"Failed to read test data file {jsonl_path!r}: {exc}") from exc
     capped_size = min(sample_size, MAX_SAMPLE_SIZE)
     if len(examples) > capped_size:
         examples = random.sample(examples, capped_size)
@@ -51,7 +50,7 @@ def load_examples(jsonl_path, sample_size):
 def call_ollama(ollama_url, model_name, prompt):
     payload = json.dumps({"model": model_name, "prompt": prompt, "stream": False}).encode("utf-8")
     request = urllib.request.Request(
-        "{}/api/generate".format(ollama_url),
+        f"{ollama_url}/api/generate",
         data=payload,
         headers={"Content-Type": "application/json"},
         method="POST",
@@ -93,7 +92,7 @@ def compare_field(expected_value, actual_value):
 
 
 def evaluate_example(expected_output, actual_response):
-    field_matches = {field: False for field in EVAL_FIELDS}
+    field_matches = dict.fromkeys(EVAL_FIELDS, False)
     if actual_response is None:
         return False, field_matches
     actual_data = extract_json_from_text(actual_response)
@@ -110,9 +109,9 @@ def evaluate_example(expected_output, actual_response):
 def run_evaluation(model_name, ollama_url, examples):
     if not examples:
         return build_result(model_name=model_name, samples_tested=0, response_count=0,
-            field_totals={field: 0 for field in EVAL_FIELDS}, issues=["No test examples available"])
+            field_totals=dict.fromkeys(EVAL_FIELDS, 0), issues=["No test examples available"])
     response_count = 0
-    field_totals = {field: 0 for field in EVAL_FIELDS}
+    field_totals = dict.fromkeys(EVAL_FIELDS, 0)
     issues = []
     no_response_count = 0
     bad_json_count = 0
@@ -131,9 +130,9 @@ def run_evaluation(model_name, ollama_url, examples):
                 if matched:
                     field_totals[field] += 1
     if no_response_count > 0:
-        issues.append("{} examples got no response from Ollama".format(no_response_count))
+        issues.append(f"{no_response_count} examples got no response from Ollama")
     if bad_json_count > 0:
-        issues.append("{} examples got no valid JSON response".format(bad_json_count))
+        issues.append(f"{bad_json_count} examples got no valid JSON response")
     return build_result(model_name=model_name, samples_tested=len(examples),
         response_count=response_count, field_totals=field_totals, issues=issues)
 
@@ -144,7 +143,7 @@ def build_result(model_name, samples_tested, response_count, field_totals, issue
         field_scores = {field: field_totals[field] / samples_tested for field in EVAL_FIELDS}
         field_accuracy = sum(field_scores.values()) / len(EVAL_FIELDS)
     else:
-        field_scores = {field: 0.0 for field in EVAL_FIELDS}
+        field_scores = dict.fromkeys(EVAL_FIELDS, 0.0)
         field_accuracy = 0.0
     overall_score = round((response_rate * 0.3 + field_accuracy * 0.7) * 100)
     return {
@@ -160,7 +159,7 @@ def build_result(model_name, samples_tested, response_count, field_totals, issue
 
 def check_ollama_available(ollama_url):
     try:
-        with urllib.request.urlopen("{}/api/tags".format(ollama_url), timeout=5) as response:
+        with urllib.request.urlopen(f"{ollama_url}/api/tags", timeout=5) as response:
             return response.status == 200
     except Exception:
         return False
@@ -175,14 +174,14 @@ def main():
             "samples_tested": 0,
             "response_rate": 0.0,
             "field_accuracy": 0.0,
-            "field_scores": {field: 0.0 for field in EVAL_FIELDS},
+            "field_scores": dict.fromkeys(EVAL_FIELDS, 0.0),
             "overall_score": 0,
-            "issues": ["Ollama is not available at {}".format(args.ollama_url)],
+            "issues": [f"Ollama is not available at {args.ollama_url}"],
         }
         if args.output_json:
             print(json.dumps(result))
         else:
-            print("ERROR: Ollama not available at {}".format(args.ollama_url), file=sys.stderr)
+            print(f"ERROR: Ollama not available at {args.ollama_url}", file=sys.stderr)
         sys.exit(0)
     try:
         examples = load_examples(args.test_data, sample_size)
@@ -192,14 +191,14 @@ def main():
             "samples_tested": 0,
             "response_rate": 0.0,
             "field_accuracy": 0.0,
-            "field_scores": {field: 0.0 for field in EVAL_FIELDS},
+            "field_scores": dict.fromkeys(EVAL_FIELDS, 0.0),
             "overall_score": 0,
             "issues": [str(exc)],
         }
         if args.output_json:
             print(json.dumps(result))
         else:
-            print("ERROR: {}".format(exc), file=sys.stderr)
+            print(f"ERROR: {exc}", file=sys.stderr)
         sys.exit(0)
     result = run_evaluation(model_name=args.model_name, ollama_url=args.ollama_url, examples=examples)
     if args.output_json:
@@ -211,11 +210,11 @@ def main():
         print("Field accuracy: {:.1%}".format(result["field_accuracy"]))
         print("Overall score: {}/100".format(result["overall_score"]))
         for field, score in result["field_scores"].items():
-            print("  {}: {:.1%}".format(field, score))
+            print(f"  {field}: {score:.1%}")
         if result["issues"]:
             print("Issues:")
             for issue in result["issues"]:
-                print("  - {}".format(issue))
+                print(f"  - {issue}")
 
 
 if __name__ == "__main__":
