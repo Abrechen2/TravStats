@@ -672,7 +672,7 @@ export default function AdvancedStatsPage(): JSX.Element {
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-              <div className="bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-700 dark:to-blue-800 rounded-lg p-6 text-white shadow-md">
+              <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-6 text-white shadow-md">
                 <h3 className="text-sm font-medium opacity-90 mb-2">
                   {t("stats:distance.totalDistance")}
                 </h3>
@@ -684,7 +684,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                 <p className="text-sm opacity-75 mt-1">{getDistanceLabel(units.distanceUnit, t)}</p>
               </div>
 
-              <div className="bg-gradient-to-br from-purple-500 to-purple-600 dark:from-purple-700 dark:to-purple-800 rounded-lg p-6 text-white shadow-md">
+              <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg p-6 text-white shadow-md">
                 <h3 className="text-sm font-medium opacity-90 mb-2">
                   {t("stats:distance.avgPerFlight")}
                 </h3>
@@ -694,7 +694,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                 <p className="text-sm opacity-75 mt-1">{getDistanceLabel(units.distanceUnit, t)}</p>
               </div>
 
-              <div className="bg-gradient-to-br from-green-500 to-green-600 dark:from-green-700 dark:to-green-800 rounded-lg p-6 text-white shadow-md">
+              <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg p-6 text-white shadow-md">
                 <h3 className="text-sm font-medium opacity-90 mb-2">
                   {t("stats:distance.earthCircumnavigations")}
                 </h3>
@@ -804,7 +804,7 @@ export default function AdvancedStatsPage(): JSX.Element {
             {/* Longest/Shortest Distance */}
             {longestDistance && shortestDistance && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                <div className="bg-gradient-to-br from-orange-500 to-orange-600 dark:from-orange-700 dark:to-orange-800 rounded-lg p-4 text-white shadow-md">
+                <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg p-4 text-white shadow-md">
                   <h3 className="text-sm font-medium opacity-90 mb-2">
                     {t("stats:distance.longestDistance")}
                   </h3>
@@ -817,7 +817,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                   </p>
                 </div>
 
-                <div className="bg-gradient-to-br from-teal-500 to-teal-600 dark:from-teal-700 dark:to-teal-800 rounded-lg p-4 text-white shadow-md">
+                <div className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg p-4 text-white shadow-md">
                   <h3 className="text-sm font-medium opacity-90 mb-2">
                     {t("stats:distance.shortestDistance")}
                   </h3>
@@ -1066,7 +1066,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                 {t("stats:fun.title")}
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="bg-gradient-to-br from-purple-500 to-purple-600 dark:from-purple-700 dark:to-purple-800 rounded-lg p-6 text-white shadow-md">
+                <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg p-6 text-white shadow-md">
                   <h3 className="text-sm font-medium opacity-90 mb-2">
                     {t("stats:fun.timezoneHopper")}
                   </h3>
@@ -1076,7 +1076,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                   </p>
                 </div>
 
-                <div className="bg-gradient-to-br from-yellow-500 to-orange-500 dark:from-yellow-700 dark:to-orange-700 rounded-lg p-6 text-white shadow-md">
+                <div className="bg-gradient-to-br from-yellow-500 to-orange-500 rounded-lg p-6 text-white shadow-md">
                   <h3 className="text-sm font-medium opacity-90 mb-2">
                     {t("stats:fun.earlyBird")}
                   </h3>
@@ -1086,7 +1086,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                   </p>
                 </div>
 
-                <div className="bg-gradient-to-br from-indigo-500 to-blue-500 dark:from-indigo-700 dark:to-blue-700 rounded-lg p-6 text-white shadow-md">
+                <div className="bg-gradient-to-br from-indigo-500 to-blue-500 rounded-lg p-6 text-white shadow-md">
                   <h3 className="text-sm font-medium opacity-90 mb-2">{t("stats:fun.nightOwl")}</h3>
                   <p className="text-4xl font-bold mb-1">{funStats.nightOwl}</p>
                   <p className="text-sm opacity-75">
@@ -1094,7 +1094,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                   </p>
                 </div>
 
-                <div className="bg-gradient-to-br from-pink-500 to-rose-500 dark:from-pink-700 dark:to-rose-700 rounded-lg p-6 text-white shadow-md">
+                <div className="bg-gradient-to-br from-pink-500 to-rose-500 rounded-lg p-6 text-white shadow-md">
                   <h3 className="text-sm font-medium opacity-90 mb-2">
                     {t("stats:fun.weekendWarrior")}
                   </h3>
@@ -1107,7 +1107,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                   </p>
                 </div>
 
-                <div className="bg-gradient-to-br from-emerald-500 to-teal-500 dark:from-emerald-700 dark:to-teal-700 rounded-lg p-6 text-white shadow-md">
+                <div className="bg-gradient-to-br from-emerald-500 to-teal-500 rounded-lg p-6 text-white shadow-md">
                   <h3 className="text-sm font-medium opacity-90 mb-2">
                     {t("stats:fun.loyaltyScore")}
                   </h3>
@@ -1120,7 +1120,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                   </p>
                 </div>
 
-                <div className="bg-gradient-to-br from-cyan-500 to-blue-500 dark:from-cyan-700 dark:to-blue-700 rounded-lg p-6 text-white shadow-md">
+                <div className="bg-gradient-to-br from-cyan-500 to-blue-500 rounded-lg p-6 text-white shadow-md">
                   <h3 className="text-sm font-medium opacity-90 mb-2">
                     {t("stats:fun.shortHaulKing")}
                   </h3>
@@ -1130,7 +1130,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                   </p>
                 </div>
 
-                <div className="bg-gradient-to-br from-red-500 to-orange-500 dark:from-red-700 dark:to-orange-700 rounded-lg p-6 text-white shadow-md">
+                <div className="bg-gradient-to-br from-red-500 to-orange-500 rounded-lg p-6 text-white shadow-md">
                   <h3 className="text-sm font-medium opacity-90 mb-2">
                     {t("stats:fun.longHaulPilot")}
                   </h3>
@@ -1141,7 +1141,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                 </div>
 
                 {funStats.fastestDay && (
-                  <div className="bg-gradient-to-br from-violet-500 to-purple-500 dark:from-violet-700 dark:to-purple-700 rounded-lg p-6 text-white shadow-md">
+                  <div className="bg-gradient-to-br from-violet-500 to-purple-500 rounded-lg p-6 text-white shadow-md">
                     <h3 className="text-sm font-medium opacity-90 mb-2">
                       {t("stats:fun.fastestDay")}
                     </h3>
@@ -1155,7 +1155,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                   </div>
                 )}
 
-                <div className="bg-gradient-to-br from-green-500 to-emerald-500 dark:from-green-700 dark:to-emerald-700 rounded-lg p-6 text-white shadow-md">
+                <div className="bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg p-6 text-white shadow-md">
                   <h3 className="text-sm font-medium opacity-90 mb-2">
                     {t("stats:fun.co2Footprint")}
                   </h3>
@@ -1171,7 +1171,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                 </div>
 
                 {funStats.milestoneYear && (
-                  <div className="bg-gradient-to-br from-amber-500 to-yellow-500 dark:from-amber-700 dark:to-yellow-700 rounded-lg p-6 text-white shadow-md">
+                  <div className="bg-gradient-to-br from-amber-500 to-yellow-500 rounded-lg p-6 text-white shadow-md">
                     <h3 className="text-sm font-medium opacity-90 mb-2">
                       {t("stats:fun.milestoneYear")}
                     </h3>
@@ -1186,7 +1186,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                 )}
 
                 {funStats.routeMaster && (
-                  <div className="bg-gradient-to-br from-sky-500 to-cyan-500 dark:from-sky-700 dark:to-cyan-700 rounded-lg p-6 text-white shadow-md">
+                  <div className="bg-gradient-to-br from-sky-500 to-cyan-500 rounded-lg p-6 text-white shadow-md">
                     <h3 className="text-sm font-medium opacity-90 mb-2">
                       {t("stats:fun.routeMaster")}
                     </h3>
@@ -1410,7 +1410,7 @@ export default function AdvancedStatsPage(): JSX.Element {
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/* Always show some stats even if values are 0 */}
-                <div className="bg-gradient-to-br from-indigo-600 to-purple-600 dark:from-indigo-800 dark:to-purple-800 rounded-lg p-6 text-white shadow-md">
+                <div className="bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg p-6 text-white shadow-md">
                   <h3 className="text-sm font-medium opacity-90 mb-2">
                     {t("stats:unique.timeTravelIndex")}
                   </h3>
@@ -1420,7 +1420,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                   </p>
                 </div>
 
-                <div className="bg-gradient-to-br from-orange-500 to-red-500 dark:from-orange-700 dark:to-red-700 rounded-lg p-6 text-white shadow-md">
+                <div className="bg-gradient-to-br from-orange-500 to-red-500 rounded-lg p-6 text-white shadow-md">
                   <h3 className="text-sm font-medium opacity-90 mb-2">
                     {t("stats:unique.equatorCrossings")}
                   </h3>
@@ -1432,7 +1432,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                   </p>
                 </div>
 
-                <div className="bg-gradient-to-br from-cyan-500 to-blue-500 dark:from-cyan-700 dark:to-blue-700 rounded-lg p-6 text-white shadow-md">
+                <div className="bg-gradient-to-br from-cyan-500 to-blue-500 rounded-lg p-6 text-white shadow-md">
                   <h3 className="text-sm font-medium opacity-90 mb-2">
                     {t("stats:unique.arcticFlights")}
                   </h3>
@@ -1442,7 +1442,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                   </p>
                 </div>
 
-                <div className="bg-gradient-to-br from-blue-500 to-teal-500 dark:from-blue-700 dark:to-teal-700 rounded-lg p-6 text-white shadow-md">
+                <div className="bg-gradient-to-br from-blue-500 to-teal-500 rounded-lg p-6 text-white shadow-md">
                   <h3 className="text-sm font-medium opacity-90 mb-2">
                     {t("stats:unique.oceanCrossings")}
                   </h3>
@@ -1453,7 +1453,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                 </div>
 
                 {uniqueStats.hemisphereHops !== undefined && (
-                  <div className="bg-gradient-to-br from-emerald-500 to-green-500 dark:from-emerald-700 dark:to-green-700 rounded-lg p-6 text-white shadow-md">
+                  <div className="bg-gradient-to-br from-emerald-500 to-green-500 rounded-lg p-6 text-white shadow-md">
                     <h3 className="text-sm font-medium opacity-90 mb-2">
                       {t("stats:unique.hemisphereHops")}
                     </h3>
@@ -1465,7 +1465,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                 )}
 
                 {uniqueStats.dateLineCrossings !== undefined && (
-                  <div className="bg-gradient-to-br from-violet-500 to-fuchsia-500 dark:from-violet-700 dark:to-fuchsia-700 rounded-lg p-6 text-white shadow-md">
+                  <div className="bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-lg p-6 text-white shadow-md">
                     <h3 className="text-sm font-medium opacity-90 mb-2">
                       {t("stats:unique.dateLineCrossings")}
                     </h3>
@@ -1479,7 +1479,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                 )}
 
                 {uniqueStats.continentalExplorer !== undefined && (
-                  <div className="bg-gradient-to-br from-amber-500 to-yellow-500 dark:from-amber-700 dark:to-yellow-700 rounded-lg p-6 text-white shadow-md">
+                  <div className="bg-gradient-to-br from-amber-500 to-yellow-500 rounded-lg p-6 text-white shadow-md">
                     <h3 className="text-sm font-medium opacity-90 mb-2">
                       {t("stats:unique.continentalExplorer")}
                     </h3>
@@ -1496,7 +1496,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                 )}
 
                 {uniqueStats.tropicsTraveler !== undefined && (
-                  <div className="bg-gradient-to-br from-orange-400 to-yellow-400 dark:from-orange-600 dark:to-yellow-600 rounded-lg p-6 text-white shadow-md">
+                  <div className="bg-gradient-to-br from-orange-400 to-yellow-400 rounded-lg p-6 text-white shadow-md">
                     <h3 className="text-sm font-medium opacity-90 mb-2">
                       {t("stats:unique.tropicsTraveler")}
                     </h3>
@@ -1510,7 +1510,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                 )}
 
                 {uniqueStats.eastWestBalance && (
-                  <div className="bg-gradient-to-br from-slate-500 to-gray-500 dark:from-slate-700 dark:to-gray-700 rounded-lg p-6 text-white shadow-md">
+                  <div className="bg-gradient-to-br from-slate-500 to-gray-500 rounded-lg p-6 text-white shadow-md">
                     <h3 className="text-sm font-medium opacity-90 mb-2">
                       {t("stats:unique.eastWestBalance")}
                     </h3>
@@ -1529,7 +1529,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                 )}
 
                 {uniqueStats.sameDayReturns !== undefined && (
-                  <div className="bg-gradient-to-br from-teal-500 to-cyan-500 dark:from-teal-700 dark:to-cyan-700 rounded-lg p-6 text-white shadow-md">
+                  <div className="bg-gradient-to-br from-teal-500 to-cyan-500 rounded-lg p-6 text-white shadow-md">
                     <h3 className="text-sm font-medium opacity-90 mb-2">
                       {t("stats:unique.sameDayReturns")}
                     </h3>
@@ -1541,7 +1541,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                 )}
 
                 {uniqueStats.midnightFlights !== undefined && (
-                  <div className="bg-gradient-to-br from-indigo-600 to-blue-600 dark:from-indigo-800 dark:to-blue-800 rounded-lg p-6 text-white shadow-md">
+                  <div className="bg-gradient-to-br from-indigo-600 to-blue-600 rounded-lg p-6 text-white shadow-md">
                     <h3 className="text-sm font-medium opacity-90 mb-2">
                       {t("stats:unique.midnightFlights")}
                     </h3>
@@ -1555,7 +1555,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                 )}
 
                 {uniqueStats.seasonalExplorer !== undefined && (
-                  <div className="bg-gradient-to-br from-green-500 to-emerald-500 dark:from-green-700 dark:to-emerald-700 rounded-lg p-6 text-white shadow-md">
+                  <div className="bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg p-6 text-white shadow-md">
                     <h3 className="text-sm font-medium opacity-90 mb-2">
                       {t("stats:unique.seasonalExplorer")}
                     </h3>
@@ -1571,7 +1571,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                 )}
 
                 {uniqueStats.internationalVsDomestic && (
-                  <div className="bg-gradient-to-br from-purple-500 to-pink-500 dark:from-purple-700 dark:to-pink-700 rounded-lg p-6 text-white shadow-md">
+                  <div className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg p-6 text-white shadow-md">
                     <h3 className="text-sm font-medium opacity-90 mb-2">
                       {t("stats:unique.internationalVsDomestic")}
                     </h3>
@@ -1590,7 +1590,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                 )}
 
                 {uniqueStats.roundTripMaster !== undefined && (
-                  <div className="bg-gradient-to-br from-cyan-500 to-blue-500 dark:from-cyan-700 dark:to-blue-700 rounded-lg p-6 text-white shadow-md">
+                  <div className="bg-gradient-to-br from-cyan-500 to-blue-500 rounded-lg p-6 text-white shadow-md">
                     <h3 className="text-sm font-medium opacity-90 mb-2">
                       {t("stats:unique.roundTripMaster")}
                     </h3>
@@ -1604,7 +1604,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                 )}
 
                 {uniqueStats.highestAirport && (
-                  <div className="bg-gradient-to-br from-gray-600 to-gray-700 dark:from-gray-800 dark:to-gray-900 rounded-lg p-6 text-white shadow-md">
+                  <div className="bg-gradient-to-br from-gray-600 to-gray-700 rounded-lg p-6 text-white shadow-md">
                     <h3 className="text-sm font-medium opacity-90 mb-2">
                       {t("stats:unique.highestAirport")}
                     </h3>
@@ -1620,7 +1620,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                 )}
 
                 {uniqueStats.northernmost && (
-                  <div className="bg-gradient-to-br from-sky-500 to-cyan-500 dark:from-sky-700 dark:to-cyan-700 rounded-lg p-6 text-white shadow-md">
+                  <div className="bg-gradient-to-br from-sky-500 to-cyan-500 rounded-lg p-6 text-white shadow-md">
                     <h3 className="text-sm font-medium opacity-90 mb-2">
                       {t("stats:unique.northernmost")}
                     </h3>
@@ -1635,7 +1635,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                 )}
 
                 {uniqueStats.southernmost && (
-                  <div className="bg-gradient-to-br from-teal-500 to-green-500 dark:from-teal-700 dark:to-green-700 rounded-lg p-6 text-white shadow-md">
+                  <div className="bg-gradient-to-br from-teal-500 to-green-500 rounded-lg p-6 text-white shadow-md">
                     <h3 className="text-sm font-medium opacity-90 mb-2">
                       {t("stats:unique.southernmost")}
                     </h3>
@@ -1650,7 +1650,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                 )}
 
                 {uniqueStats.longestTravelChain > 1 && (
-                  <div className="bg-gradient-to-br from-violet-500 to-purple-500 dark:from-violet-700 dark:to-purple-700 rounded-lg p-6 text-white shadow-md">
+                  <div className="bg-gradient-to-br from-violet-500 to-purple-500 rounded-lg p-6 text-white shadow-md">
                     <h3 className="text-sm font-medium opacity-90 mb-2">
                       {t("stats:unique.longestTravelChain")}
                     </h3>
@@ -1664,7 +1664,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                 )}
 
                 {uniqueStats.fastestRoute && (
-                  <div className="bg-gradient-to-br from-yellow-500 to-orange-500 dark:from-yellow-700 dark:to-orange-700 rounded-lg p-6 text-white shadow-md">
+                  <div className="bg-gradient-to-br from-yellow-500 to-orange-500 rounded-lg p-6 text-white shadow-md">
                     <h3 className="text-sm font-medium opacity-90 mb-2">
                       {t("stats:unique.fastestRoute")}
                     </h3>
@@ -1679,7 +1679,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                 )}
 
                 {uniqueStats.mostCountriesInDay > 0 && uniqueStats.mostCountriesDate && (
-                  <div className="bg-gradient-to-br from-rose-500 to-pink-500 dark:from-rose-700 dark:to-pink-700 rounded-lg p-6 text-white shadow-md">
+                  <div className="bg-gradient-to-br from-rose-500 to-pink-500 rounded-lg p-6 text-white shadow-md">
                     <h3 className="text-sm font-medium opacity-90 mb-2">
                       {t("stats:unique.mostCountriesInDay")}
                     </h3>
@@ -1694,7 +1694,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                 )}
 
                 {uniqueStats.longestLayover && (
-                  <div className="bg-gradient-to-br from-amber-600 to-orange-600 dark:from-amber-800 dark:to-orange-800 rounded-lg p-6 text-white shadow-md">
+                  <div className="bg-gradient-to-br from-amber-600 to-orange-600 rounded-lg p-6 text-white shadow-md">
                     <h3 className="text-sm font-medium opacity-90 mb-2">
                       {t("stats:unique.longestLayover")}
                     </h3>
