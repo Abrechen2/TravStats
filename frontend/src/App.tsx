@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, MotionConfig } from "framer-motion";
 import { useEffect, useState, Suspense, lazy } from "react";
 import { useAuthStore } from "./store/authStore";
 import { logger } from "./lib/logger";
@@ -25,6 +25,25 @@ const SetupPage = lazy(() => import("./pages/SetupPage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const TrainingPage = lazy(() => import("./pages/TrainingPage"));
 const PendingUpdatesPage = lazy(() => import("./pages/PendingUpdatesPage"));
+
+function LoadingFallback(): JSX.Element {
+  return (
+    <div
+      className="min-h-screen flex items-center justify-center"
+      style={{ background: "var(--bg-base)" }}
+    >
+      <div className="text-center">
+        <div
+          className="text-2xl font-display font-bold mb-2"
+          style={{ color: "var(--text-primary)" }}
+        >
+          Loading...
+        </div>
+        <div style={{ color: "var(--text-muted)" }}>Please wait...</div>
+      </div>
+    </div>
+  );
+}
 
 function AppContent() {
   const { user } = useAuthStore();
@@ -140,113 +159,101 @@ function AppContent() {
 
   const isAuthenticated = !!user;
 
-  const LoadingFallback = () => (
-    <div
-      className="min-h-screen flex items-center justify-center"
-      style={{ background: "var(--bg-base)" }}
-    >
-      <div className="text-center">
-        <div
-          className="text-2xl font-display font-bold mb-2"
-          style={{ color: "var(--text-primary)" }}
-        >
-          {t("loading.title")}
-        </div>
-        <div style={{ color: "var(--text-muted)" }}>{t("loading.pleaseWait")}</div>
-      </div>
-    </div>
-  );
-
   return (
-    <ErrorBoundary
-      fallback={
-        <div
-          className="min-h-screen flex items-center justify-center"
-          style={{ background: "var(--bg-base)" }}
-        >
+    <MotionConfig reducedMotion="user">
+      <ErrorBoundary
+        fallback={
           <div
-            className="max-w-md w-full p-8 rounded-xl"
-            style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+            className="min-h-screen flex items-center justify-center"
+            style={{ background: "var(--bg-base)" }}
           >
-            <div className="text-center">
-              <div className="text-6xl mb-4">💥</div>
-              <h1
-                className="text-2xl font-display font-bold mb-2"
-                style={{ color: "var(--text-primary)" }}
-              >
-                {t("errorBoundary.title")}
-              </h1>
-              <p className="mb-6" style={{ color: "var(--text-muted)" }}>
-                {t("errorBoundary.message")}
-              </p>
-              <button
-                onClick={() => window.location.reload()}
-                className="btn-primary w-full px-6 py-3"
-              >
-                {t("errorBoundary.refresh")}
-              </button>
+            <div
+              className="max-w-md w-full p-8 rounded-xl"
+              style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+            >
+              <div className="text-center">
+                <div className="text-6xl mb-4">💥</div>
+                <h1
+                  className="text-2xl font-display font-bold mb-2"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  {t("errorBoundary.title")}
+                </h1>
+                <p className="mb-6" style={{ color: "var(--text-muted)" }}>
+                  {t("errorBoundary.message")}
+                </p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="btn-primary w-full px-6 py-3"
+                >
+                  {t("errorBoundary.refresh")}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      }
-    >
-      <Toast />
-      <AirportSeedingBanner />
-      <AirportSeedingModal isOpen={showSeedingModal} onClose={handleCloseSeedingModal} />
-      <Suspense fallback={<LoadingFallback />}>
-        <AnimatePresence mode="wait">
-          <Routes location={location} key={location.pathname}>
-            {/* Public routes */}
-            <Route path="/setup" element={<SetupPage />} />
-            <Route path="/login" element={isAuthenticated ? <Navigate to="/" /> : <LoginPage />} />
-            <Route
-              path="/register"
-              element={isAuthenticated ? <Navigate to="/" /> : <RegisterPage />}
-            />
+        }
+      >
+        <Toast />
+        <AirportSeedingBanner />
+        <AirportSeedingModal isOpen={showSeedingModal} onClose={handleCloseSeedingModal} />
+        <Suspense fallback={<LoadingFallback />}>
+          <AnimatePresence mode="wait">
+            <Routes location={location} key={location.pathname}>
+              {/* Public routes */}
+              <Route path="/setup" element={<SetupPage />} />
+              <Route
+                path="/login"
+                element={isAuthenticated ? <Navigate to="/" /> : <LoginPage />}
+              />
+              <Route
+                path="/register"
+                element={isAuthenticated ? <Navigate to="/" /> : <RegisterPage />}
+              />
 
-            {/* Protected routes */}
-            <Route
-              path="/"
-              element={isAuthenticated ? <DashboardPage /> : <Navigate to="/login" />}
-            />
-            <Route
-              path="/flights"
-              element={isAuthenticated ? <FlightsTablePage /> : <Navigate to="/login" />}
-            />
-            <Route
-              path="/achievements"
-              element={isAuthenticated ? <AchievementsPage /> : <Navigate to="/login" />}
-            />
-            <Route
-              path="/stats"
-              element={isAuthenticated ? <AdvancedStatsPage /> : <Navigate to="/login" />}
-            />
-            <Route
-              path="/settings"
-              element={isAuthenticated ? <SettingsPage /> : <Navigate to="/login" />}
-            />
-            <Route
-              path="/admin"
-              element={
-                isAuthenticated && user?.isAdmin ? (
-                  <AdminPage />
-                ) : (
-                  <Navigate to={isAuthenticated ? "/" : "/login"} />
-                )
-              }
-            />
-            <Route
-              path="/training"
-              element={isAuthenticated ? <TrainingPage /> : <Navigate to="/login" />}
-            />
-            <Route
-              path="/pending-updates"
-              element={isAuthenticated ? <PendingUpdatesPage /> : <Navigate to="/login" />}
-            />
-          </Routes>
-        </AnimatePresence>
-      </Suspense>
-    </ErrorBoundary>
+              {/* Protected routes */}
+              <Route
+                path="/"
+                element={isAuthenticated ? <DashboardPage /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/flights"
+                element={isAuthenticated ? <FlightsTablePage /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/achievements"
+                element={isAuthenticated ? <AchievementsPage /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/stats"
+                element={isAuthenticated ? <AdvancedStatsPage /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/settings"
+                element={isAuthenticated ? <SettingsPage /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/admin"
+                element={
+                  isAuthenticated && user?.isAdmin ? (
+                    <AdminPage />
+                  ) : (
+                    <Navigate to={isAuthenticated ? "/" : "/login"} />
+                  )
+                }
+              />
+              <Route
+                path="/training"
+                element={isAuthenticated ? <TrainingPage /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/pending-updates"
+                element={isAuthenticated ? <PendingUpdatesPage /> : <Navigate to="/login" />}
+              />
+            </Routes>
+          </AnimatePresence>
+        </Suspense>
+      </ErrorBoundary>
+    </MotionConfig>
   );
 }
 
