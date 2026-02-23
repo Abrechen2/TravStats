@@ -835,6 +835,15 @@ def train_lora(
         trainer.save_model()
         tokenizer.save_pretrained(output_dir)
         logger.info("Final model saved successfully")
+        
+        # Capture training metrics from trainer state
+        train_metrics: Dict[str, Any] = {}
+        if hasattr(trainer, 'state') and trainer.state is not None:
+            state = trainer.state
+            train_metrics['final_loss'] = state.log_history[-1].get('loss') if state.log_history else None
+            train_metrics['total_steps'] = state.global_step
+            train_metrics['epochs_completed'] = state.epoch
+            train_metrics['log_history'] = state.log_history[-10:]  # Last 10 log entries
     except KeyboardInterrupt:
         # Handle keyboard interrupt gracefully
         if _cancellation_requested:
@@ -920,12 +929,28 @@ def train_lora(
         "batch_size": batch_size,
         "learning_rate": learning_rate,
         "hardware": hardware_info,
+        "train_metrics": train_metrics,
     }
     
     with open(os.path.join(output_dir, "training_info.json"), "w") as f:
         json.dump(training_info, f, indent=2)
     
     logger.info("Training completed successfully!")
+    
+    # Output structured metrics to stdout for TypeScript to parse
+    metrics_output = {
+        "final_loss": train_metrics.get('final_loss'),
+        "total_steps": train_metrics.get('total_steps'),
+        "epochs_completed": train_metrics.get('epochs_completed'),
+        "num_examples": len(examples),
+        "lora_rank": lora_rank,
+        "num_epochs": num_epochs,
+        "batch_size": batch_size,
+        "learning_rate": learning_rate,
+        "log_history": train_metrics.get('log_history', []),
+    }
+    print(f"METRICS_JSON:{json.dumps(metrics_output)}", flush=True)
+    
     return output_dir
 
 

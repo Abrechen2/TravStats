@@ -602,7 +602,18 @@ export async function trainModel(
       throw new Error('Trained model validation failed');
     }
     
-    // Parse metrics from output (would need to be implemented in Python script)
+    // Parse metrics from stdout
+    const metricsLine = stdout.split('\n').find((line: string) => line.startsWith('METRICS_JSON:'));
+    let parsedMetrics: Record<string, unknown> = {};
+    if (metricsLine) {
+      try {
+        const jsonStr = metricsLine.slice('METRICS_JSON:'.length);
+        parsedMetrics = JSON.parse(jsonStr) as Record<string, unknown>;
+      } catch {
+        logger.warn({ operation: 'parse_training_metrics', message: 'Failed to parse metrics JSON from output' });
+      }
+    }
+
     const metrics: Prisma.InputJsonObject = {
       status: 'completed',
       logFile,
@@ -610,6 +621,11 @@ export async function trainModel(
       modelName,
       modelType,
       isValid,
+      finalLoss: parsedMetrics.final_loss ?? null,
+      totalSteps: parsedMetrics.total_steps ?? null,
+      epochsCompleted: parsedMetrics.epochs_completed ?? null,
+      numExamples: parsedMetrics.num_examples ?? null,
+      logHistory: parsedMetrics.log_history ?? [],
       hardwareInfo: hardwareInfo ? {
         cpu: hardwareInfo.cpu as unknown as Prisma.InputJsonValue,
         gpu: hardwareInfo.gpu as unknown as Prisma.InputJsonValue,
@@ -957,11 +973,27 @@ async function processTrainingJob(trainingJobId: string): Promise<void> {
       : undefined;
     const jsonlPath = await prepareTrainingData(job.trainingDataIds, typeFilter);
 
+    // Resolve model name for evaluation (needed after training)
+    const config = await getTrainingConfig();
+    const modelName = modelType === 'email' ? config.emailModelName
+      : modelType === 'vision' ? config.visionModelName
+      : config.emailModelName;
+
     // Train model
     const { modelPath, metrics } = await trainModel(trainingJobId, jsonlPath, modelType);
 
     // Export to Ollama
     await exportToOllama(trainingJobId, modelPath, modelType);
+
+    // Evaluate model quality (non-blocking - failure does not affect training success)
+    const evalResult = await evaluateModel(trainingJobId, modelName, jsonlPath);
+    if (evalResult) {
+      await logTrainingEvent(trainingJobId, 'info', 'Model evaluation completed', {
+        overallScore: evalResult.overallScore as unknown as Prisma.InputJsonValue,
+        fieldAccuracy: evalResult.fieldAccuracy as unknown as Prisma.InputJsonValue,
+        samplesTested: evalResult.samplesTested as unknown as Prisma.InputJsonValue,
+      } as Prisma.InputJsonObject);
+    }
 
     // Update training data status
     await prisma.trainingData.updateMany({
@@ -982,7 +1014,17 @@ async function processTrainingJob(trainingJobId: string): Promise<void> {
         status: 'completed',
         completedAt: new Date(),
         logFile,
-        metrics,
+        metrics: {
+          ...(metrics as Record<string, unknown>),
+          ...(evalResult ? {
+            evaluation: {
+              overallScore: evalResult.overallScore,
+              fieldAccuracy: evalResult.fieldAccuracy,
+              samplesTested: evalResult.samplesTested,
+              fieldScores: evalResult.fieldScores,
+            } as Prisma.InputJsonValue,
+          } : {}),
+        } as Prisma.InputJsonObject,
       },
     });
 
@@ -1027,6 +1069,126 @@ async function processTrainingJob(trainingJobId: string): Promise<void> {
         error: errorMessage,
       },
     });
+  }
+}
+
+export interface ModelEvaluationResult {
+  modelName: string;
+  samplesTested: number;
+  responseRate: number;
+  fieldAccuracy: number;
+  fieldScores: Record<string, number>;
+  overallScore: number;
+  issues: string[];
+}
+
+/**
+ * Evaluate a trained model by running it against test samples from the JSONL file.
+ * Returns null on any error - evaluation failure does not break training.
+ */
+export async function evaluateModel(
+  trainingJobId: string,
+  modelName: string,
+  testJsonlPath: string
+): Promise<ModelEvaluationResult | null> {
+  await logTrainingEvent(trainingJobId, 'info', 'Starting model evaluation', {
+    modelName,
+    testJsonlPath,
+  } as Prisma.InputJsonObject);
+
+  // Resolve script path using same IS_DOCKER / dev fallback pattern as trainModel()
+  const pythonScript = path.join(__dirname, '../scripts/evalModel.py');
+  const devScriptPath = path.join(__dirname, '../../src/scripts/evalModel.py');
+  const finalScriptPath = fs.existsSync(pythonScript) ? pythonScript : devScriptPath;
+
+  if (!fs.existsSync(finalScriptPath)) {
+    logger.warn({
+      operation: 'evaluate_model',
+      message: 'evalModel.py script not found - skipping evaluation',
+      context: { pythonScript, devScriptPath },
+    });
+    return null;
+  }
+
+  const command = `${PYTHON_CMD} "${finalScriptPath}" --model-name "${modelName}" --test-data "${testJsonlPath}" --ollama-url "${OLLAMA_URL}" --output-json`;
+
+  try {
+    const { stdout, stderr } = await execAsync(command, {
+      timeout: 5 * 60 * 1000, // 5 minutes
+    });
+
+    if (stderr) {
+      logger.warn({
+        operation: 'evaluate_model',
+        message: 'evalModel.py produced stderr output',
+        context: { modelName, stderr: stderr.substring(0, 500) },
+      });
+    }
+
+    const trimmed = stdout.trim();
+    if (!trimmed) {
+      logger.warn({
+        operation: 'evaluate_model',
+        message: 'evalModel.py produced no output',
+        context: { modelName },
+      });
+      return null;
+    }
+
+    const parsed: unknown = JSON.parse(trimmed);
+
+    if (
+      typeof parsed !== 'object' ||
+      parsed === null ||
+      typeof (parsed as Record<string, unknown>).model_name !== 'string' ||
+      typeof (parsed as Record<string, unknown>).samples_tested !== 'number' ||
+      typeof (parsed as Record<string, unknown>).response_rate !== 'number' ||
+      typeof (parsed as Record<string, unknown>).field_accuracy !== 'number' ||
+      typeof (parsed as Record<string, unknown>).overall_score !== 'number'
+    ) {
+      logger.warn({
+        operation: 'evaluate_model',
+        message: 'evalModel.py output has unexpected format',
+        context: { modelName, output: trimmed.substring(0, 200) },
+      });
+      return null;
+    }
+
+    const raw = parsed as Record<string, unknown>;
+
+    const result: ModelEvaluationResult = {
+      modelName: raw.model_name as string,
+      samplesTested: raw.samples_tested as number,
+      responseRate: raw.response_rate as number,
+      fieldAccuracy: raw.field_accuracy as number,
+      fieldScores: (typeof raw.field_scores === 'object' && raw.field_scores !== null)
+        ? (raw.field_scores as Record<string, number>)
+        : {},
+      overallScore: raw.overall_score as number,
+      issues: Array.isArray(raw.issues) ? (raw.issues as string[]) : [],
+    };
+
+    logger.info({
+      operation: 'evaluate_model',
+      message: 'Model evaluation completed',
+      context: {
+        modelName,
+        overallScore: result.overallScore,
+        fieldAccuracy: result.fieldAccuracy,
+        samplesTested: result.samplesTested,
+        issues: result.issues,
+      },
+    });
+
+    return result;
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    logger.warn({
+      operation: 'evaluate_model',
+      message: 'Model evaluation failed - continuing without evaluation metrics',
+      context: { modelName, trainingJobId, error: errorMsg },
+    });
+    return null;
   }
 }
 
@@ -1426,6 +1588,137 @@ export async function cleanupStaleJobs(): Promise<void> {
     });
     // Don't throw - we don't want cleanup failures to crash the server
   }
+}
+
+
+
+export interface TrainingDataAnalysis {
+  totalExamples: number;
+  duplicates: number;
+  avgInputLength: number;
+  minInputLength: number;
+  maxInputLength: number;
+  avgOutputLength: number;
+  minOutputLength: number;
+  maxOutputLength: number;
+  emptyInputs: number;
+  emptyOutputs: number;
+  shortExamples: number;
+  issues: string[];
+  qualityScore: number;
+  estimatedTrainingMinutes: number;
+}
+
+/**
+ * Analyze training data quality without triggering an actual training run.
+ * Creates a temporary JSONL file, runs checkTrainingData.py with --output-json,
+ * parses the result, cleans up and returns the analysis.
+ */
+export async function analyzeTrainingData(
+  trainingDataIds: string[],
+  typeFilter?: 'email' | 'boarding_pass'
+): Promise<TrainingDataAnalysis> {
+  // Prepare a temporary JSONL (reuses prepareTrainingData but does not update DB)
+  const jsonlPath = await prepareTrainingData(trainingDataIds, typeFilter);
+
+  // Resolve check script path using same pattern as trainModel()
+  const pythonScript = path.join(__dirname, '../scripts/checkTrainingData.py');
+  const devScriptPath = path.join(__dirname, '../../src/scripts/checkTrainingData.py');
+  const finalScriptPath = fs.existsSync(pythonScript) ? pythonScript : devScriptPath;
+
+  if (!fs.existsSync(finalScriptPath)) {
+    try {
+      fs.unlinkSync(jsonlPath);
+    } catch {
+      // Ignore cleanup errors
+    }
+    throw new Error(
+      `Quality check script not found at ${finalScriptPath} or ${pythonScript}. ` +
+      `Please ensure checkTrainingData.py exists.`
+    );
+  }
+
+  let rawOutput: string;
+  try {
+    const command = `${PYTHON_CMD} "${finalScriptPath}" --input "${jsonlPath}" --output-json`;
+    logger.info({
+      operation: 'analyze_training_data',
+      message: 'Running training data quality check',
+      context: { command, jsonlPath },
+    });
+    const { stdout, stderr } = await execAsync(command);
+    if (stderr) {
+      logger.warn({
+        operation: 'analyze_training_data_stderr',
+        message: 'Quality check script produced stderr output',
+        context: { stderr },
+      });
+    }
+    rawOutput = stdout;
+  } catch (execError) {
+    throw new Error(
+      `Training data quality check failed: ${
+        execError instanceof Error ? execError.message : 'Unknown error'
+      }`
+    );
+  } finally {
+    // Always clean up temp JSONL
+    try {
+      fs.unlinkSync(jsonlPath);
+    } catch {
+      // Ignore cleanup errors
+    }
+  }
+
+  // Parse the JSON output from the script
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(rawOutput);
+  } catch {
+    throw new Error(`Failed to parse quality check output as JSON: ${rawOutput}`);
+  }
+
+  if (
+    typeof parsed !== 'object' ||
+    parsed === null ||
+    !('total_examples' in parsed)
+  ) {
+    throw new Error('Unexpected quality check output format');
+  }
+
+  const raw = parsed as Record<string, unknown>;
+
+  const analysis: TrainingDataAnalysis = {
+    totalExamples: typeof raw['total_examples'] === 'number' ? raw['total_examples'] : 0,
+    duplicates: typeof raw['duplicates'] === 'number' ? raw['duplicates'] : 0,
+    avgInputLength: typeof raw['avg_input_length'] === 'number' ? raw['avg_input_length'] : 0,
+    minInputLength: typeof raw['min_input_length'] === 'number' ? raw['min_input_length'] : 0,
+    maxInputLength: typeof raw['max_input_length'] === 'number' ? raw['max_input_length'] : 0,
+    avgOutputLength: typeof raw['avg_output_length'] === 'number' ? raw['avg_output_length'] : 0,
+    minOutputLength: typeof raw['min_output_length'] === 'number' ? raw['min_output_length'] : 0,
+    maxOutputLength: typeof raw['max_output_length'] === 'number' ? raw['max_output_length'] : 0,
+    emptyInputs: typeof raw['empty_inputs'] === 'number' ? raw['empty_inputs'] : 0,
+    emptyOutputs: typeof raw['empty_outputs'] === 'number' ? raw['empty_outputs'] : 0,
+    shortExamples: typeof raw['short_examples'] === 'number' ? raw['short_examples'] : 0,
+    issues: Array.isArray(raw['issues']) ? (raw['issues'] as unknown[]).map(String) : [],
+    qualityScore: typeof raw['quality_score'] === 'number' ? raw['quality_score'] : 0,
+    estimatedTrainingMinutes:
+      typeof raw['estimated_training_minutes'] === 'number'
+        ? raw['estimated_training_minutes']
+        : 0,
+  };
+
+  logger.info({
+    operation: 'analyze_training_data_complete',
+    message: 'Training data quality analysis complete',
+    context: {
+      totalExamples: analysis.totalExamples,
+      qualityScore: analysis.qualityScore,
+      issueCount: analysis.issues.length,
+    },
+  });
+
+  return analysis;
 }
 
 // Run cleanup on startup to catch jobs that were abandoned

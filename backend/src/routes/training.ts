@@ -8,7 +8,7 @@ import logger from '../utils/logger';
 import multer from 'multer';
 import * as path from 'path';
 import * as fs from 'fs';
-import { triggerTraining, shouldTriggerTraining, cancelTraining } from '../services/trainingService';
+import { triggerTraining, shouldTriggerTraining, cancelTraining, analyzeTrainingData } from '../services/trainingService';
 import { ParsedBooking } from '../services/bookingParser';
 import { extractEmailFromFile } from '../services/emailExtractor';
 import { Prisma } from '@prisma/client';
@@ -561,6 +561,65 @@ router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction
     res.json({
       message: 'Training data deleted successfully',
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/v1/training/data/analysis
+ * Analyze training data quality before training
+ * Query params: type (email|boarding_pass), ids (comma-separated IDs)
+ */
+router.get('/data/analysis', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId!;
+    const { type, ids } = req.query;
+
+    // Validate optional type filter
+    const typeFilter: 'email' | 'boarding_pass' | undefined =
+      type === 'email' || type === 'boarding_pass' ? type : undefined;
+
+    let trainingDataIds: string[];
+
+    if (ids && typeof ids === 'string') {
+      // Use explicitly provided IDs
+      trainingDataIds = ids.split(',').map((id) => id.trim()).filter(Boolean);
+      if (trainingDataIds.length === 0) {
+        throw new AppError('No valid IDs provided in "ids" query parameter', 400);
+      }
+    } else {
+      // Fall back to all pending training data for this user
+      const pendingData = await prisma.trainingData.findMany({
+        where: {
+          userId,
+          status: 'pending',
+          ...(typeFilter ? { type: typeFilter } : {}),
+        },
+        select: { id: true },
+      });
+
+      trainingDataIds = pendingData.map((d) => d.id);
+
+      if (trainingDataIds.length === 0) {
+        throw new AppError('No pending training data found for analysis', 404);
+      }
+    }
+
+    const analysis = await analyzeTrainingData(trainingDataIds, typeFilter);
+
+    logger.info({
+      operation: 'training_data_analysis',
+      message: 'Training data analysis requested',
+      context: {
+        userId,
+        trainingDataIds,
+        typeFilter,
+        qualityScore: analysis.qualityScore,
+      },
+    });
+
+    res.json({ analysis });
   } catch (error) {
     next(error);
   }
