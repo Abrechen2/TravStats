@@ -9,12 +9,12 @@ import { STORAGE_KEYS } from "../lib/constants";
 import { useTranslation } from "../hooks/useTranslation";
 import { logger } from "../lib/logger";
 
-const tierTextColors = {
-  bronze: "text-amber-400",
-  silver: "text-gray-300",
-  gold: "text-yellow-400",
-  platinum: "text-cyan-400",
-  diamond: "text-purple-400",
+const tierTextColorValues: Record<string, string> = {
+  bronze: "#f59e0b",
+  silver: "var(--text-muted)",
+  gold: "var(--accent)",
+  platinum: "#22d3ee",
+  diamond: "#a855f7",
 };
 
 export default function AchievementsPage(): JSX.Element {
@@ -170,8 +170,17 @@ export default function AchievementsPage(): JSX.Element {
                         }}
                       >
                         <div
-                          className={`text-3xl font-bold w-12 text-center ${entry.rank === 1 ? "text-yellow-400" : entry.rank === 2 ? "text-gray-400" : entry.rank === 3 ? "text-amber-600" : ""}`}
-                          style={entry.rank > 3 ? { color: "var(--text-muted)" } : undefined}
+                          className="text-3xl font-bold w-12 text-center"
+                          style={{
+                            color:
+                              entry.rank === 1
+                                ? "var(--accent)"
+                                : entry.rank === 2
+                                  ? "var(--text-muted)"
+                                  : entry.rank === 3
+                                    ? "#d97706"
+                                    : "var(--text-muted)",
+                          }}
                         >
                           {entry.rank === 1
                             ? "🥇"
@@ -409,10 +418,12 @@ export default function AchievementsPage(): JSX.Element {
                           <div className="flex items-start justify-between mb-3">
                             <div className="text-4xl">{achievement.icon}</div>
                             <div
-                              className={`text-xs font-bold uppercase px-2 py-1 rounded ${achievement.isUnlocked ? tierTextColors[achievement.tier] : ""}`}
-                              style={
-                                !achievement.isUnlocked ? { color: "var(--text-muted)" } : undefined
-                              }
+                              className="text-xs font-bold uppercase px-2 py-1 rounded"
+                              style={{
+                                color: achievement.isUnlocked
+                                  ? tierTextColorValues[achievement.tier]
+                                  : "var(--text-muted)",
+                              }}
                             >
                               {t(`achievements:tiers.${achievement.tier}`)}
                             </div>
