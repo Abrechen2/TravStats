@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v5.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -8,9 +8,11 @@ repos:
       - id: check-json
       - id: check-merge-conflict
       - id: detect-private-key
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.3.0
+    rev: v0.9.0
     hooks:
       - id: ruff
         args: [--fix]
@@ -21,6 +23,6 @@ repos:
       - id: prettier-frontend
         name: Prettier (frontend)
         language: node
-        entry: bash -c "cd frontend && npx prettier --write"
+        entry: npx --prefix frontend prettier --write
         files: ^frontend/src/.*\.(ts|tsx|css)$
         pass_filenames: true
