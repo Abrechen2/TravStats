@@ -1,6 +1,9 @@
 # TravStats - Combined Frontend + Backend Dockerfile
 # This creates a single container with both the web UI and API
 
+# Version argument (pass via: docker build --build-arg VERSION=$(cat backend/VERSION) .)
+ARG VERSION=0.0.0-dev
+
 # Stage 1: Build Frontend
 FROM node:20-alpine AS frontend-builder
 
@@ -29,6 +32,16 @@ RUN npm run build
 
 # Stage 3: Production - Combined Container
 FROM node:20-slim AS production
+
+# Re-declare ARG so it's available in this stage
+ARG VERSION=0.0.0-dev
+
+# OCI image labels
+LABEL org.opencontainers.image.title="TravStats"
+LABEL org.opencontainers.image.description="Personal flight tracking and statistics"
+LABEL org.opencontainers.image.version="${VERSION}"
+LABEL org.opencontainers.image.source="https://github.com/Abrechen2/TravStats"
+LABEL org.opencontainers.image.licenses="MIT"
 
 WORKDIR /app
 
@@ -74,7 +87,12 @@ RUN echo "[build] Installing other training dependencies..." && \
 RUN mkdir -p ./dist/scripts
 COPY --from=backend-builder /app/backend/src/scripts/checkHardware.py ./dist/scripts/checkHardware.py
 COPY --from=backend-builder /app/backend/src/scripts/trainLora.py ./dist/scripts/trainLora.py
+COPY --from=backend-builder /app/backend/src/scripts/checkTrainingData.py ./dist/scripts/checkTrainingData.py
+COPY --from=backend-builder /app/backend/src/scripts/evalModel.py ./dist/scripts/evalModel.py
 RUN chmod +x ./dist/scripts/*.py 2>/dev/null || true
+
+# Copy VERSION file for runtime version reporting
+COPY backend/VERSION ./VERSION
 
 # Setup Frontend (nginx will serve these files)
 WORKDIR /app/frontend

@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
+import * as fs from 'fs';
+import * as path from 'path';
 import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth';
@@ -137,9 +139,20 @@ app.use(cookieParser());
 // Request logging middleware (with correlation IDs)
 app.use(requestLoggerMiddleware);
 
+// Read version from VERSION file (single source of truth)
+let appVersion = '0.0.0-dev';
+try {
+  const versionFile = path.join(__dirname, '../VERSION');
+  if (fs.existsSync(versionFile)) {
+    appVersion = fs.readFileSync(versionFile, 'utf-8').trim();
+  }
+} catch {
+  // fallback to dev
+}
+
 // Health check
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', version: appVersion, timestamp: new Date().toISOString() });
 });
 
 // API routes
