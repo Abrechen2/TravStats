@@ -124,12 +124,16 @@ export default function RegisterPage(): JSX.Element {
               />
             </div>
             <button type="submit" disabled={loading} className="btn-primary w-full mt-2">
-              {loading ? t("login.submitting") : t("register.submit")}
+              {loading ? t("register.submitting") : t("register.submit")}
             </button>
           </form>
           <p className="mt-6 text-center text-sm" style={{ color: "var(--text-muted)" }}>
             {t("register.hasAccount")}{" "}
-            <Link to="/login" className="font-medium" style={{ color: "var(--accent)" }}>
+            <Link
+              to="/login"
+              className="font-medium transition-colors"
+              style={{ color: "var(--accent)" }}
+            >
               {t("register.login")}
             </Link>
           </p>
