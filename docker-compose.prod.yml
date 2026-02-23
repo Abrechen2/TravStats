@@ -48,6 +48,21 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "4.0"
+          memory: 8G
+        reservations:
+          cpus: "0.5"
+          memory: 1G
 
   app:
     image: ghcr.io/abrechen2/travstats:${VERSION:-latest}
@@ -118,8 +133,6 @@ services:
       - ALL
     cap_add:
       - CHOWN
-      - SETUID
-      - SETGID
     logging:
       driver: "json-file"
       options:
