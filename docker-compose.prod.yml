@@ -36,7 +36,7 @@ services:
       start_period: 60s
 
   app:
-    image: ghcr.io/abrechen2/travstats:latest
+    image: ghcr.io/abrechen2/travstats:${VERSION:-latest}
     container_name: travstats-app
     restart: unless-stopped
     working_dir: /app/backend # default to backend so npm commands run in the right place
