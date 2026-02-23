@@ -66,4 +66,17 @@ export default defineConfig({
       polyfill: false,
     },
   },
+  test: {
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      exclude: [
+        'node_modules/**',
+        'dist/**',
+        'src/main.tsx',
+        '**/*.d.ts',
+        '**/*.config.*',
+      ],
+    },
+  },
 })
