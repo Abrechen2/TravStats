@@ -105,7 +105,7 @@ export default function NavigationBar(): JSX.Element {
     <header
       className="sticky top-0 z-50 backdrop-blur-md"
       style={{
-        background: "rgba(22,27,34,0.92)",
+        background: "var(--bg-surface)",
         borderBottom: "1px solid var(--color-border)",
       }}
     >
