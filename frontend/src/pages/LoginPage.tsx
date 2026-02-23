@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
+import { motion } from "framer-motion";
 import { authApi } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
 import { useTranslation } from "../hooks/useTranslation";
@@ -16,11 +17,10 @@ export default function LoginPage(): JSX.Element {
   const navigate = useNavigate();
   const { setAuth } = useAuthStore();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
     setError("");
     setLoading(true);
-
     try {
       const { user } = await authApi.login(username, password);
       setAuth(user);
@@ -34,77 +34,111 @@ export default function LoginPage(): JSX.Element {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
-      <div className="card w-full max-w-md">
-        <div className="flex flex-col items-center mb-6">
-          <img
-            src="/logo-with-text.png"
-            alt={t("common:app.logoAlt")}
-            className="h-24 w-auto mb-4"
-          />
-          <h1 className="text-3xl font-bold text-center">{t("common:app.name")}</h1>
-        </div>
-        <h2 className="text-xl text-gray-600 dark:text-gray-300 text-center mb-8">
-          {t("login.title")}
-        </h2>
+    <div className="min-h-screen flex items-center justify-center relative">
+      <div className="auth-bg" />
 
-        {state?.message && (
-          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
-            {state.message}
-          </div>
-        )}
-
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="login-username" className="label">
-              {t("login.username")}
-            </label>
-            <input
-              id="login-username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="input"
-              required
-            />
-          </div>
-
-          <div>
-            <label htmlFor="login-password" className="label">
-              {t("login.password")}
-            </label>
-            <input
-              id="login-password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="input"
-              required
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className={`btn-primary w-full ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{
+          duration: 0.35,
+          ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
+        }}
+        className="relative z-10 w-full max-w-sm px-4"
+      >
+        {/* Wordmark */}
+        <div className="text-center mb-8">
+          <h1
+            className="text-4xl font-display font-bold tracking-widest uppercase"
+            style={{ color: "var(--text-primary)" }}
           >
-            {loading ? t("login.submitting") : t("login.submit")}
-          </button>
-        </form>
+            TRAV<span style={{ color: "var(--accent)" }}>.</span>STATS
+          </h1>
+          <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
+            {t("login.title")}
+          </p>
+        </div>
 
-        <p className="mt-6 text-center text-gray-600 dark:text-gray-400">
-          {t("login.noAccount")}{" "}
-          <Link to="/register" className="text-blue-600 dark:text-blue-400 hover:underline">
-            {t("login.register")}
-          </Link>
-        </p>
-      </div>
+        {/* Card */}
+        <div
+          className="rounded-2xl p-8"
+          style={{
+            background: "rgba(28, 33, 40, 0.85)",
+            backdropFilter: "blur(20px)",
+            border: "1px solid var(--color-border)",
+            borderTop: "2px solid var(--accent)",
+          }}
+        >
+          {state?.message && (
+            <div
+              className="px-4 py-3 rounded-lg mb-4 text-sm"
+              style={{
+                background: "rgba(63,185,80,0.12)",
+                border: "1px solid var(--success)",
+                color: "var(--success)",
+              }}
+            >
+              {state.message}
+            </div>
+          )}
+
+          {error && (
+            <div
+              className="px-4 py-3 rounded-lg mb-4 text-sm"
+              style={{
+                background: "rgba(248,81,73,0.12)",
+                border: "1px solid var(--danger)",
+                color: "var(--danger)",
+              }}
+            >
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="login-username" className="label">
+                {t("login.username")}
+              </label>
+              <input
+                id="login-username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="input"
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="login-password" className="label">
+                {t("login.password")}
+              </label>
+              <input
+                id="login-password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="input"
+                required
+              />
+            </div>
+            <button type="submit" disabled={loading} className="btn-primary w-full mt-2">
+              {loading ? t("login.submitting") : t("login.submit")}
+            </button>
+          </form>
+
+          <p className="mt-6 text-center text-sm" style={{ color: "var(--text-muted)" }}>
+            {t("login.noAccount")}{" "}
+            <Link
+              to="/register"
+              className="font-medium transition-colors"
+              style={{ color: "var(--accent)" }}
+            >
+              {t("login.register")}
+            </Link>
+          </p>
+        </div>
+      </motion.div>
     </div>
   );
 }
