@@ -949,13 +949,15 @@ export default function AdvancedStatsPage(): JSX.Element {
                   <div key={status} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div
-                        className={`w-3 h-3 rounded-full ${
-                          status === "flown"
-                            ? "bg-green-500"
-                            : status === "scheduled"
-                              ? "bg-blue-500"
-                              : "bg-red-500"
-                        }`}
+                        className="w-3 h-3 rounded-full"
+                        style={{
+                          background:
+                            status === "flown"
+                              ? "var(--success)"
+                              : status === "scheduled"
+                                ? "var(--accent)"
+                                : "var(--danger)",
+                        }}
                       />
                       <span
                         className="font-medium capitalize"
