@@ -396,11 +396,9 @@ export default function EmailAnnotation({
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-          Email Annotation
-        </h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
+      <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
+        <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">Email Annotation</h2>
+        <p className="text-sm text-[var(--text-muted)]">
           {t("training:annotation.emailTextLoading")}
         </p>
       </div>
@@ -474,18 +472,18 @@ export default function EmailAnnotation({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+    <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
+      <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">
         {t("training:annotation.title")}
       </h2>
-      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+      <p className="text-sm text-[var(--text-muted)] mb-4">
         {t("training:annotation.description")}
       </p>
 
       <div className="space-y-4">
         {/* Flug-Auswahl vor dem Labeln */}
-        <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-300 dark:border-gray-600">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <div className="p-4 bg-[var(--bg-base)] rounded-lg border border-[var(--color-border)]">
+          <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
             {t("training:annotation.selectFlight")}
           </label>
           <div className="flex gap-2 items-center">
@@ -503,7 +501,7 @@ export default function EmailAnnotation({
             </select>
             <button
               onClick={handleAddFlight}
-              className="px-3 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+              className="px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-800"
             >
               + Flug hinzufügen
             </button>
@@ -514,17 +512,17 @@ export default function EmailAnnotation({
         {selectedText && (
           <div
             ref={labelSelectorRef}
-            className="sticky top-0 z-10 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-2 border-blue-500 shadow-lg"
+            className="sticky top-0 z-10 p-4 bg-blue-50 rounded-lg border-2 border-blue-500 shadow-lg"
           >
-            <p className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+            <p className="text-sm font-medium text-[var(--text-primary)] mb-2">
               Ausgewählter Text: "{displayText.substring(selectedText.start, selectedText.end)}"
             </p>
-            <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+            <p className="text-xs text-[var(--text-muted)] mb-2">
               Flug {selectedFlightIndex + 1} wird annotiert
             </p>
             <div className="flex flex-wrap gap-2 items-end">
               <div className="flex-1 min-w-[200px]">
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
                   Label
                 </label>
                 <select
@@ -561,7 +559,7 @@ export default function EmailAnnotation({
         {/* Email Text Display */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label className="block text-sm font-medium text-[var(--text-primary)]">
               Email Text
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
@@ -569,16 +567,16 @@ export default function EmailAnnotation({
                 type="checkbox"
                 checked={showFiltered}
                 onChange={(e) => setShowFiltered(e.target.checked)}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="rounded border-[var(--color-border)] text-blue-600 focus:ring-blue-500"
               />
-              <span className="text-sm text-gray-600 dark:text-gray-400">
+              <span className="text-sm text-[var(--text-muted)]">
                 {t("training:annotation.showFiltered")}
               </span>
             </label>
           </div>
           <div
             ref={textContainerRef}
-            className="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 min-h-[300px] max-h-[600px] overflow-y-auto whitespace-pre-wrap select-text"
+            className="w-full p-4 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] min-h-[300px] max-h-[600px] overflow-y-auto whitespace-pre-wrap select-text"
             onMouseUp={handleTextSelect}
             contentEditable={false}
             suppressContentEditableWarning
@@ -590,12 +588,12 @@ export default function EmailAnnotation({
         {/* Multi-Flight Support */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <h3 className="text-sm font-medium text-[var(--text-primary)]">
               Flight Data (Ground Truth)
             </h3>
             <button
               onClick={handleAddFlight}
-              className="px-3 py-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+              className="px-3 py-1 text-sm font-medium text-blue-600 hover:text-blue-800"
             >
               + Flug hinzufügen
             </button>
@@ -604,16 +602,16 @@ export default function EmailAnnotation({
             {flights.map((flight, index) => (
               <div
                 key={index}
-                className="p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50"
+                className="p-4 border border-[var(--color-border)] rounded-lg bg-[var(--bg-base)]"
               >
                 <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">
+                  <h4 className="text-sm font-semibold text-[var(--text-primary)]">
                     Flug {index + 1}
                   </h4>
                   {flights.length > 1 && (
                     <button
                       onClick={() => handleRemoveFlight(index)}
-                      className="px-2 py-1 text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+                      className="px-2 py-1 text-xs font-medium text-red-600 hover:text-red-800"
                     >
                       Entfernen
                     </button>
@@ -621,7 +619,7 @@ export default function EmailAnnotation({
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
                       Flight Number
                     </label>
                     <input
@@ -633,7 +631,7 @@ export default function EmailAnnotation({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
                       PNR
                     </label>
                     <input
@@ -645,7 +643,7 @@ export default function EmailAnnotation({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
                       Departure Code
                     </label>
                     <input
@@ -660,7 +658,7 @@ export default function EmailAnnotation({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
                       Arrival Code
                     </label>
                     <input
@@ -675,7 +673,7 @@ export default function EmailAnnotation({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
                       Departure Date
                     </label>
                     <input
@@ -686,7 +684,7 @@ export default function EmailAnnotation({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
                       Departure Time
                     </label>
                     <input
@@ -697,7 +695,7 @@ export default function EmailAnnotation({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
                       Arrival Date
                     </label>
                     <input
@@ -708,7 +706,7 @@ export default function EmailAnnotation({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
                       Arrival Time
                     </label>
                     <input
@@ -719,7 +717,7 @@ export default function EmailAnnotation({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
                       Aircraft Type
                     </label>
                     <input
@@ -738,9 +736,7 @@ export default function EmailAnnotation({
 
         {/* Tags */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Tags
-          </label>
+          <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Tags</label>
           <div className="flex gap-2 mb-2">
             <input
               type="text"
@@ -768,13 +764,13 @@ export default function EmailAnnotation({
               {tags.map((tag) => (
                 <span
                   key={tag}
-                  className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded text-sm"
+                  className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm"
                 >
                   {tag}
                   <button
                     type="button"
                     onClick={() => handleRemoveTag(tag)}
-                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
+                    className="text-blue-600 hover:text-blue-800"
                     aria-label={`Tag ${tag} entfernen`}
                   >
                     ×

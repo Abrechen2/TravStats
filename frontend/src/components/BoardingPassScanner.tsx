@@ -279,19 +279,21 @@ export default function BoardingPassScanner({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div
-        className={`${isDarkMode ? "bg-gray-800" : "bg-white"} rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto`}
+        className={`${isDarkMode ? "bg-[var(--bg-surface)]" : "bg-[var(--bg-surface)]"} rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto`}
       >
         {/* Header */}
         <div
-          className={`sticky top-0 ${isDarkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"} border-b px-6 py-4 flex items-center justify-between`}
+          className={`sticky top-0 ${isDarkMode ? "bg-[var(--bg-surface)] border-[var(--color-border)]" : "bg-[var(--bg-surface)] border-[var(--color-border)]"} border-b px-6 py-4 flex items-center justify-between`}
         >
-          <h2 className={`text-xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"}`}>
+          <h2
+            className={`text-xl font-bold ${isDarkMode ? "text-white" : "text-[var(--text-primary)]"}`}
+          >
             {t("flights:scanner.title")}
           </h2>
           <button
             onClick={onClose}
             disabled={scanning}
-            className={`p-2 ${isDarkMode ? "text-gray-300 hover:bg-gray-700" : "text-gray-600 hover:bg-gray-100"} rounded-lg transition-colors`}
+            className={`p-2 ${isDarkMode ? "text-[var(--text-muted)] hover:bg-[var(--bg-surface)]" : "text-[var(--text-muted)] hover:bg-[var(--bg-elevated)]"} rounded-lg transition-colors`}
             aria-label={t("common:buttons.close")}
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -324,8 +326,8 @@ export default function BoardingPassScanner({
               <div
                 className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
                   isDarkMode
-                    ? "border-gray-600 hover:border-gray-500 bg-gray-750"
-                    : "border-gray-300 hover:border-gray-400 bg-gray-50"
+                    ? "border-[var(--color-border)] hover:border-[var(--text-muted)] bg-[var(--bg-elevated)]"
+                    : "border-[var(--color-border)] hover:border-[var(--color-border)] bg-[var(--bg-base)]"
                 }`}
                 onClick={() => fileInputRef.current?.click()}
               >
@@ -340,15 +342,19 @@ export default function BoardingPassScanner({
                   <div className="text-5xl">🎫</div>
                   <div>
                     <p
-                      className={`text-lg font-medium ${isDarkMode ? "text-white" : "text-gray-900"}`}
+                      className={`text-lg font-medium ${isDarkMode ? "text-white" : "text-[var(--text-primary)]"}`}
                     >
                       {t("flights:scanner.uploadTitle")}
                     </p>
-                    <p className={`text-sm mt-1 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
+                    <p
+                      className={`text-sm mt-1 ${isDarkMode ? "text-[var(--text-muted)]" : "text-[var(--text-muted)]"}`}
+                    >
                       {t("flights:scanner.clickToSelect")}
                     </p>
                   </div>
-                  <p className={`text-xs ${isDarkMode ? "text-gray-500" : "text-gray-500"}`}>
+                  <p
+                    className={`text-xs ${isDarkMode ? "text-[var(--text-muted)]" : "text-[var(--text-muted)]"}`}
+                  >
                     {t("flights:scanner.supportedFormats")}
                   </p>
                 </div>
@@ -379,7 +385,7 @@ export default function BoardingPassScanner({
           {preview && (
             <div className="space-y-4">
               {/* Image Preview */}
-              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-2">
+              <div className="border-2 border-dashed border-[var(--color-border)] rounded-lg p-2">
                 <img
                   src={preview}
                   alt={t("flights:scanner.previewAlt")}
@@ -407,8 +413,8 @@ export default function BoardingPassScanner({
                                 ? "bg-blue-900/20 border border-blue-800"
                                 : "bg-blue-50 border border-blue-200"
                               : isDarkMode
-                                ? "bg-gray-750 border border-gray-700"
-                                : "bg-gray-50 border border-gray-200"
+                                ? "bg-[var(--bg-elevated)] border border-[var(--color-border)]"
+                                : "bg-[var(--bg-base)] border border-[var(--color-border)]"
                       }`}
                     >
                       <span className="text-2xl">{step.icon}</span>
@@ -428,8 +434,8 @@ export default function BoardingPassScanner({
                                     ? "text-blue-200"
                                     : "text-blue-800"
                                   : isDarkMode
-                                    ? "text-gray-400"
-                                    : "text-gray-600"
+                                    ? "text-[var(--text-muted)]"
+                                    : "text-[var(--text-muted)]"
                           }`}
                         >
                           {step.label}

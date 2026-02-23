@@ -150,9 +150,12 @@ export default function AirportAutocomplete({
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
+        <div
+          className="absolute z-10 w-full mt-1 rounded-lg shadow-lg max-h-60 overflow-auto"
+          style={{ background: "var(--bg-elevated)", border: "1px solid var(--color-border)" }}
+        >
           {loading && (
-            <div className="px-4 py-3 text-sm text-gray-500">
+            <div className="px-4 py-3 text-sm" style={{ color: "var(--text-muted)" }}>
               {/^[A-Z]{3,4}$/i.test(query.trim())
                 ? t("flights:airportAutocomplete.searchingWorldwide")
                 : t("flights:airportAutocomplete.searching")}
@@ -160,7 +163,7 @@ export default function AirportAutocomplete({
           )}
 
           {!loading && results.length === 0 && query.length >= 2 && (
-            <div className="px-4 py-3 text-sm text-gray-500">
+            <div className="px-4 py-3 text-sm" style={{ color: "var(--text-muted)" }}>
               {/^[A-Z]{3,4}$/i.test(query.trim())
                 ? t("flights:airportAutocomplete.notFound", { code: query.toUpperCase() })
                 : t("flights:airportAutocomplete.noResults")}
@@ -173,19 +176,30 @@ export default function AirportAutocomplete({
                 key={airport.id}
                 type="button"
                 onClick={() => handleSelect(airport)}
-                className="w-full px-4 py-2 text-left hover:bg-blue-50 focus:bg-blue-50 focus:outline-none border-b last:border-0"
+                className="w-full px-4 py-2 text-left focus:outline-none border-b last:border-0"
+                style={{ borderColor: "var(--color-border)" }}
               >
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="font-medium">
-                      {airport.iata && <span className="text-blue-600">{airport.iata}</span>}
-                      {airport.iata && airport.icao && (
-                        <span className="text-gray-400 mx-1">/</span>
+                      {airport.iata && (
+                        <span className="font-semibold" style={{ color: "var(--accent)" }}>
+                          {airport.iata}
+                        </span>
                       )}
-                      {airport.icao && <span className="text-gray-600">{airport.icao}</span>}
+                      {airport.iata && airport.icao && (
+                        <span className="mx-1" style={{ color: "var(--text-muted)" }}>
+                          /
+                        </span>
+                      )}
+                      {airport.icao && (
+                        <span className="" style={{ color: "var(--text-muted)" }}>
+                          {airport.icao}
+                        </span>
+                      )}
                       <span className="ml-2">{airport.name}</span>
                     </div>
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm" style={{ color: "var(--text-muted)" }}>
                       {airport.city && airport.country && `${airport.city}, ${airport.country}`}
                       {airport.city && !airport.country && airport.city}
                       {!airport.city && airport.country && airport.country}

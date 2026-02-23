@@ -99,13 +99,22 @@ export default function FlightEditModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+      <div
+        className="rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        style={{ background: "var(--bg-surface)" }}
+      >
+        <div
+          className="sticky top-0 px-6 py-4"
+          style={{ background: "var(--bg-surface)", borderBottom: "1px solid var(--color-border)" }}
+        >
           <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold dark:text-gray-100">{t("flights:edit.title")}</h2>
+            <h2 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
+              {t("flights:edit.title")}
+            </h2>
             <button
               onClick={onClose}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              className="transition-colors"
+              style={{ color: "var(--text-muted)" }}
               aria-label={t("common:buttons.close")}
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -118,7 +127,7 @@ export default function FlightEditModal({
               </svg>
             </button>
           </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+          <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
             {flight.depIata || flight.depIcao} {t("common:labels.routeSeparator")}{" "}
             {flight.arrIata || flight.arrIcao}
           </p>
