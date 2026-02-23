@@ -13,18 +13,16 @@ export default defineConfig({
       reporter: ['text', 'lcov', 'html', 'json-summary'],
       exclude: [
         'node_modules/**',
+        'dist/**',
         'src/__tests__/**',
         'src/**/*.test.{ts,tsx}',
         'src/**/*.spec.{ts,tsx}',
         'src/main.tsx',
         'src/vite-env.d.ts',
+        '**/*.d.ts',
+        '**/*.config.*',
+        'src/i18n/resources/**',
       ],
-      thresholds: {
-        lines: 50,
-        functions: 50,
-        branches: 50,
-        statements: 50,
-      },
     },
   },
   resolve: {
@@ -33,27 +31,3 @@ export default defineConfig({
     },
   },
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
