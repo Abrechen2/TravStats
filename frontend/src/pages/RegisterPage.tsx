@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { authApi } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
 import { useTranslation } from "../hooks/useTranslation";
@@ -14,22 +15,18 @@ export default function RegisterPage(): JSX.Element {
   const navigate = useNavigate();
   const { setAuth } = useAuthStore();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
     setError("");
-
     if (password !== confirmPassword) {
       setError(t("register.passwordsNotMatch"));
       return;
     }
-
     if (password.length < 6) {
       setError(t("register.passwordTooShort"));
       return;
     }
-
     setLoading(true);
-
     try {
       const { user } = await authApi.register(username, password);
       setAuth(user);
@@ -43,84 +40,101 @@ export default function RegisterPage(): JSX.Element {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
-      <div className="card w-full max-w-md">
-        <div className="flex flex-col items-center mb-6">
-          <img
-            src="/logo-with-text.png"
-            alt={t("common:app.logoAlt")}
-            className="h-24 w-auto mb-4"
-          />
-          <h1 className="text-3xl font-bold text-center">{t("common:app.name")}</h1>
+    <div className="min-h-screen flex items-center justify-center relative">
+      <div className="auth-bg" />
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{
+          duration: 0.35,
+          ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
+        }}
+        className="relative z-10 w-full max-w-sm px-4"
+      >
+        <div className="text-center mb-8">
+          <h1
+            className="text-4xl font-display font-bold tracking-widest uppercase"
+            style={{ color: "var(--text-primary)" }}
+          >
+            TRAV<span style={{ color: "var(--accent)" }}>.</span>STATS
+          </h1>
+          <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
+            {t("register.title")}
+          </p>
         </div>
-        <h2 className="text-xl text-gray-600 dark:text-gray-300 text-center mb-8">
-          {t("register.title")}
-        </h2>
-
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="username" className="label">
-              {t("register.username")}
-            </label>
-            <input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="input"
-              required
-              minLength={3}
-              autoFocus
-            />
-          </div>
-
-          <div>
-            <label htmlFor="password" className="label">
-              {t("register.password")}
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="input"
-              required
-              minLength={6}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="confirmPassword" className="label">
-              {t("register.confirmPassword")}
-            </label>
-            <input
-              id="confirmPassword"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="input"
-              required
-            />
-          </div>
-
-          <button type="submit" disabled={loading} className="btn-primary w-full">
-            {loading ? t("register.submitting") : t("register.submit")}
-          </button>
-        </form>
-
-        <p className="mt-6 text-center text-gray-600 dark:text-gray-400">
-          {t("register.hasAccount")}{" "}
-          <Link to="/login" className="text-blue-600 dark:text-blue-400 hover:underline">
-            {t("register.signIn")}
-          </Link>
-        </p>
-      </div>
+        <div
+          className="rounded-2xl p-8"
+          style={{
+            background: "rgba(28, 33, 40, 0.85)",
+            backdropFilter: "blur(20px)",
+            border: "1px solid var(--color-border)",
+            borderTop: "2px solid var(--accent)",
+          }}
+        >
+          {error && (
+            <div
+              className="px-4 py-3 rounded-lg mb-4 text-sm"
+              style={{
+                background: "rgba(248,81,73,0.12)",
+                border: "1px solid var(--danger)",
+                color: "var(--danger)",
+              }}
+            >
+              {error}
+            </div>
+          )}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="reg-username" className="label">
+                {t("register.username")}
+              </label>
+              <input
+                id="reg-username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="input"
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="reg-password" className="label">
+                {t("register.password")}
+              </label>
+              <input
+                id="reg-password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="input"
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="reg-confirm" className="label">
+                {t("register.confirmPassword")}
+              </label>
+              <input
+                id="reg-confirm"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="input"
+                required
+              />
+            </div>
+            <button type="submit" disabled={loading} className="btn-primary w-full mt-2">
+              {loading ? t("login.submitting") : t("register.submit")}
+            </button>
+          </form>
+          <p className="mt-6 text-center text-sm" style={{ color: "var(--text-muted)" }}>
+            {t("register.hasAccount")}{" "}
+            <Link to="/login" className="font-medium" style={{ color: "var(--accent)" }}>
+              {t("register.login")}
+            </Link>
+          </p>
+        </div>
+      </motion.div>
     </div>
   );
 }
