@@ -455,7 +455,7 @@ export default function GlobeView({
     >
       {/* Control Panel */}
       <div
-        className="absolute bottom-4 left-4 z-[9999] bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 border border-gray-200 dark:border-gray-700"
+        className="absolute bottom-4 left-4 z-[9999] bg-[var(--bg-surface)] rounded-lg shadow-lg p-4 border border-[var(--color-border)]"
         style={{ touchAction: "auto", pointerEvents: "auto" }}
       >
         {/* Auto-Rotation Toggle */}
@@ -464,45 +464,41 @@ export default function GlobeView({
             type="checkbox"
             checked={autoRotate}
             onChange={(e) => setAutoRotate(e.target.checked)}
-            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+            className="w-4 h-4 text-blue-600 bg-[var(--bg-elevated)] border-[var(--color-border)] rounded focus:ring-2 focus:ring-blue-500"
           />
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            🌍 Auto-Rotation
-          </span>
+          <span className="text-sm font-medium text-[var(--text-primary)]">🌍 Auto-Rotation</span>
         </label>
       </div>
 
       {/* Heatmap Legend */}
       {arcsData.length > 0 && (
         <div
-          className="absolute bottom-4 right-4 z-[9999] bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3 border border-gray-200 dark:border-gray-700"
+          className="absolute bottom-4 right-4 z-[9999] bg-[var(--bg-surface)] rounded-lg shadow-lg p-3 border border-[var(--color-border)]"
           style={{ touchAction: "auto", pointerEvents: "auto" }}
         >
-          <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+          <div className="text-xs font-semibold text-[var(--text-primary)] mb-2">
             Routenfrequenz
           </div>
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <div className="w-8 h-0.5" style={{ backgroundColor: "#10b981" }}></div>
-              <span className="text-xs text-gray-600 dark:text-gray-400">
-                1-{heatmapThresholds.q25}x
-              </span>
+              <span className="text-xs text-[var(--text-muted)]">1-{heatmapThresholds.q25}x</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-8 h-0.5" style={{ backgroundColor: "#eab308" }}></div>
-              <span className="text-xs text-gray-600 dark:text-gray-400">
+              <span className="text-xs text-[var(--text-muted)]">
                 {heatmapThresholds.q25 + 1}-{heatmapThresholds.q50}x
               </span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-8 h-0.5" style={{ backgroundColor: "#f59e0b" }}></div>
-              <span className="text-xs text-gray-600 dark:text-gray-400">
+              <span className="text-xs text-[var(--text-muted)]">
                 {heatmapThresholds.q50 + 1}-{heatmapThresholds.q75}x
               </span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-8 h-0.5" style={{ backgroundColor: "#ef4444" }}></div>
-              <span className="text-xs text-gray-600 dark:text-gray-400">
+              <span className="text-xs text-[var(--text-muted)]">
                 {heatmapThresholds.q75 + 1}+ ({heatmapThresholds.max}x max)
               </span>
             </div>

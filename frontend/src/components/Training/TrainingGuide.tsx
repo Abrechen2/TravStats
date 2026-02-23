@@ -30,20 +30,20 @@ export default function TrainingGuide(): JSX.Element {
       content: (
         <div className="space-y-4">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
               Was ist Model Training?
             </h3>
-            <p className="text-gray-700 dark:text-gray-300">
+            <p className="text-[var(--text-primary)]">
               Model Training ermöglicht es Ihnen, das lokale Ollama LLM (Large Language Model) mit
               Ihren eigenen Flugdaten zu trainieren. Durch das Training lernt das Modell, Flugdaten
               aus E-Mails und Boarding Passes besser zu erkennen und zu extrahieren.
             </p>
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
               Warum sollte man das Modell trainieren?
             </h3>
-            <ul className="list-disc list-inside space-y-1 text-gray-700 dark:text-gray-300">
+            <ul className="list-disc list-inside space-y-1 text-[var(--text-primary)]">
               <li>
                 <strong>Bessere Genauigkeit:</strong> Das Modell lernt Ihre spezifischen
                 E-Mail-Formate und Boarding-Pass-Layouts kennen
@@ -62,10 +62,10 @@ export default function TrainingGuide(): JSX.Element {
             </ul>
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
               Voraussetzungen
             </h3>
-            <ul className="list-disc list-inside space-y-1 text-gray-700 dark:text-gray-300">
+            <ul className="list-disc list-inside space-y-1 text-[var(--text-primary)]">
               <li>
                 <strong>Developer Mode:</strong> Muss in den Einstellungen aktiviert sein
               </li>
@@ -102,10 +102,10 @@ export default function TrainingGuide(): JSX.Element {
       title: "Workflow-Übersicht",
       content: (
         <div className="space-y-4">
-          <p className="text-gray-700 dark:text-gray-300">
+          <p className="text-[var(--text-primary)]">
             Der Training-Workflow besteht aus 4 Hauptschritten:
           </p>
-          <ol className="list-decimal list-inside space-y-3 text-gray-700 dark:text-gray-300">
+          <ol className="list-decimal list-inside space-y-3 text-[var(--text-primary)]">
             <li>
               <strong>Daten sammeln:</strong> Laden Sie E-Mails (.eml, .msg, .txt) oder Boarding
               Passes (.png, .jpg, .jpeg) hoch
@@ -124,8 +124,8 @@ export default function TrainingGuide(): JSX.Element {
               automatisch in Ollama verfügbar. Testen Sie es mit neuen Daten über den Parser.
             </li>
           </ol>
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
-            <p className="text-sm text-blue-900 dark:text-blue-100">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm text-blue-900">
               <strong>Tipp:</strong> Beginnen Sie mit 5-10 hochwertigen, gut annotierten Einträgen.
               Qualität ist wichtiger als Quantität!
             </p>
@@ -140,10 +140,10 @@ export default function TrainingGuide(): JSX.Element {
         <div className="space-y-6">
           {/* Schritt 1 */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
               Schritt 1: Daten hochladen
             </h3>
-            <div className="space-y-2 text-gray-700 dark:text-gray-300">
+            <div className="space-y-2 text-[var(--text-primary)]">
               <p>
                 <strong>Unterstützte Formate:</strong>
               </p>
@@ -172,10 +172,10 @@ export default function TrainingGuide(): JSX.Element {
 
           {/* Schritt 2 */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
               Schritt 2: Annotation
             </h3>
-            <div className="space-y-4 text-gray-700 dark:text-gray-300">
+            <div className="space-y-4 text-[var(--text-primary)]">
               <div>
                 <h4 className="font-semibold mb-2">E-Mail-Annotation:</h4>
                 <ul className="list-disc list-inside ml-4 space-y-1">
@@ -219,10 +219,10 @@ export default function TrainingGuide(): JSX.Element {
 
           {/* Schritt 3 */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
               Schritt 3: Training vorbereiten
             </h3>
-            <div className="space-y-2 text-gray-700 dark:text-gray-300">
+            <div className="space-y-2 text-[var(--text-primary)]">
               <ul className="list-disc list-inside ml-4 space-y-1">
                 <li>
                   <strong>Status-Check:</strong> Stellen Sie sicher, dass mindestens 5 Einträge den
@@ -242,10 +242,10 @@ export default function TrainingGuide(): JSX.Element {
 
           {/* Schritt 4 */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
               Schritt 4: Training starten
             </h3>
-            <div className="space-y-2 text-gray-700 dark:text-gray-300">
+            <div className="space-y-2 text-[var(--text-primary)]">
               <ul className="list-disc list-inside ml-4 space-y-1">
                 <li>
                   <strong>Training-Button:</strong> Klicken Sie auf "Training starten" im Training
@@ -276,10 +276,10 @@ export default function TrainingGuide(): JSX.Element {
 
           {/* Schritt 5 */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
               Schritt 5: Training überwachen
             </h3>
-            <div className="space-y-2 text-gray-700 dark:text-gray-300">
+            <div className="space-y-2 text-[var(--text-primary)]">
               <p>
                 <strong>Job-Status:</strong>
               </p>
@@ -337,10 +337,10 @@ export default function TrainingGuide(): JSX.Element {
 
           {/* Schritt 6 */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
               {t("training:guide.step6.title")}
             </h3>
-            <div className="space-y-2 text-gray-700 dark:text-gray-300">
+            <div className="space-y-2 text-[var(--text-primary)]">
               <p>
                 <strong>{t("training:guide.step6.whenCancel")}</strong>
               </p>
@@ -377,10 +377,10 @@ export default function TrainingGuide(): JSX.Element {
 
           {/* Schritt 7 */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
               Schritt 7: Ergebnisse nutzen
             </h3>
-            <div className="space-y-2 text-gray-700 dark:text-gray-300">
+            <div className="space-y-2 text-[var(--text-primary)]">
               <ul className="list-disc list-inside ml-4 space-y-1">
                 <li>
                   <strong>Automatische Verfügbarkeit:</strong> Nach erfolgreichem Training wird das
@@ -410,15 +410,15 @@ export default function TrainingGuide(): JSX.Element {
       content: (
         <div className="space-y-4">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
               LoRA (Low-Rank Adaptation)
             </h3>
-            <p className="text-gray-700 dark:text-gray-300 mb-2">
+            <p className="text-[var(--text-primary)] mb-2">
               LoRA ist eine effiziente Methode zum Fine-Tuning von großen Sprachmodellen. Statt das
               gesamte Modell neu zu trainieren, werden nur kleine, trainierbare Matrizen
               hinzugefügt.
             </p>
-            <ul className="list-disc list-inside ml-4 space-y-1 text-gray-700 dark:text-gray-300">
+            <ul className="list-disc list-inside ml-4 space-y-1 text-[var(--text-primary)]">
               <li>
                 <strong>Vorteile:</strong> Viel schneller und speichereffizienter als
                 Full-Fine-Tuning
@@ -433,19 +433,19 @@ export default function TrainingGuide(): JSX.Element {
             </ul>
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Base Model</h3>
-            <p className="text-gray-700 dark:text-gray-300">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">Base Model</h3>
+            <p className="text-[var(--text-primary)]">
               Das Standard-Base-Modell ist{" "}
-              <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">qwen2.5:7b</code>. Dieses
+              <code className="bg-[var(--bg-elevated)] px-1 rounded">qwen2.5:7b</code>. Dieses
               Modell wird von Ollama bereitgestellt und muss vor dem ersten Training heruntergeladen
               werden (~4-5 GB).
             </p>
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
               Hyperparameter
             </h3>
-            <div className="space-y-2 text-gray-700 dark:text-gray-300">
+            <div className="space-y-2 text-[var(--text-primary)]">
               <p>Die folgenden Hyperparameter werden verwendet:</p>
               <ul className="list-disc list-inside ml-4 space-y-1">
                 <li>
@@ -468,8 +468,8 @@ export default function TrainingGuide(): JSX.Element {
                   <strong>Max Length:</strong> 2048 (Maximale Token-Länge pro Beispiel)
                 </li>
               </ul>
-              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4 mt-3">
-                <p className="text-sm text-yellow-900 dark:text-yellow-100">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-3">
+                <p className="text-sm text-yellow-900">
                   <strong>Hinweis:</strong> Diese Parameter sind für die meisten Anwendungsfälle
                   optimal. Änderungen erfordern Code-Anpassungen.
                 </p>
@@ -477,10 +477,10 @@ export default function TrainingGuide(): JSX.Element {
             </div>
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
               Hardware-Optimierung
             </h3>
-            <div className="space-y-2 text-gray-700 dark:text-gray-300">
+            <div className="space-y-2 text-[var(--text-primary)]">
               <p>
                 <strong>CPU vs. GPU:</strong>
               </p>
@@ -519,15 +519,15 @@ export default function TrainingGuide(): JSX.Element {
       content: (
         <div className="space-y-4">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
               Häufige Fehler und Lösungen
             </h3>
             <div className="space-y-3">
               <div>
-                <h4 className="font-semibold text-gray-900 dark:text-white">
+                <h4 className="font-semibold text-[var(--text-primary)]">
                   "Training job failed" - Training fehlgeschlagen
                 </h4>
-                <ul className="list-disc list-inside ml-4 space-y-1 text-gray-700 dark:text-gray-300">
+                <ul className="list-disc list-inside ml-4 space-y-1 text-[var(--text-primary)]">
                   <li>Prüfen Sie die Logs im Training Dashboard (klicken Sie auf "Details")</li>
                   <li>
                     Häufige Ursachen: Zu wenig Speicher, Ollama nicht erreichbar, ungültige
@@ -540,14 +540,14 @@ export default function TrainingGuide(): JSX.Element {
                 </ul>
               </div>
               <div>
-                <h4 className="font-semibold text-gray-900 dark:text-white">
+                <h4 className="font-semibold text-[var(--text-primary)]">
                   "Ollama model not found" - Modell nicht gefunden
                 </h4>
-                <ul className="list-disc list-inside ml-4 space-y-1 text-gray-700 dark:text-gray-300">
+                <ul className="list-disc list-inside ml-4 space-y-1 text-[var(--text-primary)]">
                   <li>Das Base-Modell muss in Ollama verfügbar sein</li>
                   <li>
                     Lösung: Führen Sie{" "}
-                    <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">
+                    <code className="bg-[var(--bg-elevated)] px-1 rounded">
                       ollama pull qwen2.5:7b
                     </code>{" "}
                     aus
@@ -555,10 +555,10 @@ export default function TrainingGuide(): JSX.Element {
                 </ul>
               </div>
               <div>
-                <h4 className="font-semibold text-gray-900 dark:text-white">
+                <h4 className="font-semibold text-[var(--text-primary)]">
                   "CUDA out of memory" - GPU-Speicher voll
                 </h4>
-                <ul className="list-disc list-inside ml-4 space-y-1 text-gray-700 dark:text-gray-300">
+                <ul className="list-disc list-inside ml-4 space-y-1 text-[var(--text-primary)]">
                   <li>Die GPU hat nicht genug VRAM</li>
                   <li>
                     Lösung: Reduzieren Sie die Batch Size (Code-Anpassung) oder verwenden Sie CPU
@@ -566,10 +566,10 @@ export default function TrainingGuide(): JSX.Element {
                 </ul>
               </div>
               <div>
-                <h4 className="font-semibold text-gray-900 dark:text-white">
+                <h4 className="font-semibold text-[var(--text-primary)]">
                   Training läuft sehr langsam
                 </h4>
-                <ul className="list-disc list-inside ml-4 space-y-1 text-gray-700 dark:text-gray-300">
+                <ul className="list-disc list-inside ml-4 space-y-1 text-[var(--text-primary)]">
                   <li>CPU-Training ist deutlich langsamer als GPU-Training</li>
                   <li>
                     Lösung: Verwenden Sie eine GPU, wenn verfügbar, oder reduzieren Sie die
@@ -580,10 +580,10 @@ export default function TrainingGuide(): JSX.Element {
             </div>
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
               Logs interpretieren
             </h3>
-            <div className="space-y-2 text-gray-700 dark:text-gray-300">
+            <div className="space-y-2 text-[var(--text-primary)]">
               <p>Die Training-Logs enthalten wichtige Informationen:</p>
               <ul className="list-disc list-inside ml-4 space-y-1">
                 <li>
@@ -603,10 +603,10 @@ export default function TrainingGuide(): JSX.Element {
             </div>
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
               Performance-Optimierung
             </h3>
-            <ul className="list-disc list-inside ml-4 space-y-1 text-gray-700 dark:text-gray-300">
+            <ul className="list-disc list-inside ml-4 space-y-1 text-[var(--text-primary)]">
               <li>
                 <strong>GPU verwenden:</strong> Deutlichste Performance-Verbesserung
               </li>
@@ -622,10 +622,10 @@ export default function TrainingGuide(): JSX.Element {
             </ul>
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
               Wann mehr Daten helfen
             </h3>
-            <ul className="list-disc list-inside ml-4 space-y-1 text-gray-700 dark:text-gray-300">
+            <ul className="list-disc list-inside ml-4 space-y-1 text-[var(--text-primary)]">
               <li>Wenn das Modell bestimmte Airlines/Formate nicht erkennt</li>
               <li>Wenn die Extraktion inkonsistent ist</li>
               <li>Wenn neue, unbekannte Formate hinzukommen</li>
@@ -644,36 +644,36 @@ export default function TrainingGuide(): JSX.Element {
       content: (
         <div className="space-y-4">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
               Datenqualität &gt; Datenmenge
             </h3>
-            <p className="text-gray-700 dark:text-gray-300 mb-2">
+            <p className="text-[var(--text-primary)] mb-2">
               Es ist besser, weniger, aber hochwertige Daten zu haben, als viele schlechte Daten.
             </p>
-            <ul className="list-disc list-inside ml-4 space-y-1 text-gray-700 dark:text-gray-300">
+            <ul className="list-disc list-inside ml-4 space-y-1 text-[var(--text-primary)]">
               <li>Korrigieren Sie alle Fehler sorgfältig während der Annotation</li>
               <li>Verwenden Sie verschiedene Airlines und Formate für bessere Abdeckung</li>
               <li>Stellen Sie sicher, dass alle Felder korrekt ausgefüllt sind</li>
             </ul>
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
               Regelmäßiges Training
             </h3>
-            <ul className="list-disc list-inside ml-4 space-y-1 text-gray-700 dark:text-gray-300">
+            <ul className="list-disc list-inside ml-4 space-y-1 text-[var(--text-primary)]">
               <li>Trainieren Sie regelmäßig, wenn Sie neue Daten hinzufügen</li>
               <li>Jedes Training verbessert das vorherige Modell (inkrementelles Training)</li>
               <li>Beginnen Sie mit 5-10 Einträgen und fügen Sie nach und nach mehr hinzu</li>
             </ul>
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
               Tagging-Strategien
             </h3>
-            <p className="text-gray-700 dark:text-gray-300 mb-2">
+            <p className="text-[var(--text-primary)] mb-2">
               Tags helfen, Daten zu organisieren und können für Filterung verwendet werden:
             </p>
-            <ul className="list-disc list-inside ml-4 space-y-1 text-gray-700 dark:text-gray-300">
+            <ul className="list-disc list-inside ml-4 space-y-1 text-[var(--text-primary)]">
               <li>
                 <strong>Airline:</strong> "lufthansa", "ryanair", "emirates"
               </li>
@@ -689,20 +689,18 @@ export default function TrainingGuide(): JSX.Element {
             </ul>
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
               Backup vor Training
             </h3>
-            <ul className="list-disc list-inside ml-4 space-y-1 text-gray-700 dark:text-gray-300">
+            <ul className="list-disc list-inside ml-4 space-y-1 text-[var(--text-primary)]">
               <li>Erstellen Sie ein Backup Ihrer Datenbank vor dem ersten Training</li>
               <li>Training-Daten werden nicht gelöscht, aber es ist gut, vorsichtig zu sein</li>
               <li>Verwenden Sie die Export-Funktion im Admin-Panel für Backups</li>
             </ul>
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              Weitere Tipps
-            </h3>
-            <ul className="list-disc list-inside ml-4 space-y-1 text-gray-700 dark:text-gray-300">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">Weitere Tipps</h3>
+            <ul className="list-disc list-inside ml-4 space-y-1 text-[var(--text-primary)]">
               <li>Testen Sie das trainierte Modell immer mit neuen, nicht annotierten Daten</li>
               <li>Dokumentieren Sie, welche Daten Sie für welches Training verwendet haben</li>
               <li>Überwachen Sie die Loss-Werte: Sie sollten während des Trainings abnehmen</li>
@@ -716,31 +714,31 @@ export default function TrainingGuide(): JSX.Element {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Model Training Guide</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+      <div className="bg-[var(--bg-surface)] rounded-lg shadow">
+        <div className="p-6 border-b border-[var(--color-border)]">
+          <h2 className="text-2xl font-bold text-[var(--text-primary)]">Model Training Guide</h2>
+          <p className="text-sm text-[var(--text-muted)] mt-1">
             Umfassende Anleitung zum Training von LLM-Modellen mit eigenen Daten
           </p>
         </div>
 
-        <div className="divide-y divide-gray-200 dark:divide-gray-700">
+        <div className="divide-y divide-gray-200">
           {sections.map((section) => {
             const isExpanded = expandedSections.has(section.id);
             return (
               <div
                 key={section.id}
-                className="border-b border-gray-200 dark:border-gray-700 last:border-b-0"
+                className="border-b border-[var(--color-border)] last:border-b-0"
               >
                 <button
                   onClick={() => toggleSection(section.id)}
-                  className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-[var(--bg-base)] transition-colors"
                 >
-                  <span className="text-lg font-semibold text-gray-900 dark:text-white">
+                  <span className="text-lg font-semibold text-[var(--text-primary)]">
                     {section.title}
                   </span>
                   <svg
-                    className={`w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform ${
+                    className={`w-5 h-5 text-[var(--text-muted)] transition-transform ${
                       isExpanded ? "transform rotate-180" : ""
                     }`}
                     fill="none"
@@ -756,7 +754,7 @@ export default function TrainingGuide(): JSX.Element {
                   </svg>
                 </button>
                 {isExpanded && (
-                  <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900/50">{section.content}</div>
+                  <div className="px-6 py-4 bg-[var(--bg-base)]">{section.content}</div>
                 )}
               </div>
             );

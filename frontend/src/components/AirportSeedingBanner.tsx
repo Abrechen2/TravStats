@@ -86,13 +86,13 @@ export default function AirportSeedingBanner({
   const progressPercent = Math.round(progress * 100);
 
   return (
-    <div className="w-full bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800 shadow-sm">
+    <div className="w-full bg-blue-50 border-b border-blue-200 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 py-3">
         <div className="flex items-start gap-3">
           {/* Icon */}
           <div className="flex-shrink-0 mt-0.5">
             {status.status === "running" ? (
-              <div className="animate-spin text-blue-600 dark:text-blue-400">
+              <div className="animate-spin text-blue-600">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -104,7 +104,7 @@ export default function AirportSeedingBanner({
               </div>
             ) : status.status === "failed" ? (
               <svg
-                className="w-5 h-5 text-red-600 dark:text-red-400"
+                className="w-5 h-5 text-red-600"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -118,7 +118,7 @@ export default function AirportSeedingBanner({
               </svg>
             ) : (
               <svg
-                className="w-5 h-5 text-blue-600 dark:text-blue-400"
+                className="w-5 h-5 text-blue-600"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -137,14 +137,14 @@ export default function AirportSeedingBanner({
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-4 mb-2">
               <div>
-                <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                <h3 className="text-sm font-semibold text-blue-900">
                   {status.status === "running"
                     ? t("setup:airportSeeding.banner.loading")
                     : status.status === "failed"
                       ? t("setup:airportSeeding.banner.failed")
                       : t("setup:airportSeeding.banner.preparing")}
                 </h3>
-                <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">
+                <p className="text-xs text-blue-700 mt-0.5">
                   {status.status === "running"
                     ? t("setup:airportSeeding.banner.limitedFeatures")
                     : status.status === "failed"
@@ -157,12 +157,12 @@ export default function AirportSeedingBanner({
               {status.status === "running" && (
                 <div className="flex-shrink-0 text-right">
                   {status.processedAirports !== undefined && status.totalAirports !== undefined && (
-                    <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                    <p className="text-xs text-blue-600 font-medium">
                       {status.processedAirports} / {status.totalAirports}
                     </p>
                   )}
                   {status.estimatedSecondsRemaining !== undefined && (
-                    <p className="text-xs text-blue-500 dark:text-blue-500 mt-0.5">
+                    <p className="text-xs text-blue-500 mt-0.5">
                       {formatEstimatedTime(status.estimatedSecondsRemaining)}
                     </p>
                   )}
@@ -173,14 +173,14 @@ export default function AirportSeedingBanner({
             {/* Progress bar */}
             {status.status === "running" && (
               <div className="space-y-1">
-                <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2">
+                <div className="w-full bg-blue-200 rounded-full h-2">
                   <div
-                    className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full transition-all duration-300"
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                     style={{ width: `${progressPercent}%` }}
                   ></div>
                 </div>
                 <div className="flex items-center justify-between">
-                  <p className="text-xs text-blue-600 dark:text-blue-400">
+                  <p className="text-xs text-blue-600">
                     {t("setup:airportSeeding.banner.progress", { percent: progressPercent })}
                   </p>
                 </div>

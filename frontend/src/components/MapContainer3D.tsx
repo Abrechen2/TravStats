@@ -105,7 +105,7 @@ export default function MapContainer3D({
 
   return (
     <div
-      className="relative h-full w-full rounded-lg shadow overflow-hidden bg-white dark:bg-gray-900 flex items-center justify-center"
+      className="relative h-full w-full rounded-lg shadow overflow-hidden bg-[var(--bg-surface)] flex items-center justify-center"
       style={{ touchAction: "pan-x pan-y pinch-zoom" }}
     >
       <div
@@ -118,9 +118,7 @@ export default function MapContainer3D({
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto mb-2"></div>
-                  <p className="text-gray-600 dark:text-gray-300 text-sm">
-                    {t("map:loading3DGlobe")}
-                  </p>
+                  <p className="text-[var(--text-muted)] text-sm">{t("map:loading3DGlobe")}</p>
                 </div>
               </div>
             }

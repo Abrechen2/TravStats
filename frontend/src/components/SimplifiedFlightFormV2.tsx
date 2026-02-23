@@ -433,13 +433,13 @@ export default function SimplifiedFlightFormV2({
   };
 
   // Theme classes
-  const bgClass = isDarkMode ? "bg-gray-800" : "bg-white";
-  const textClass = isDarkMode ? "text-white" : "text-gray-900";
-  const mutedTextClass = isDarkMode ? "text-gray-400" : "text-gray-600";
-  const borderClass = isDarkMode ? "border-gray-700" : "border-gray-200";
+  const bgClass = isDarkMode ? "bg-[var(--bg-surface)]" : "bg-[var(--bg-surface)]";
+  const textClass = isDarkMode ? "text-white" : "text-[var(--text-primary)]";
+  const mutedTextClass = isDarkMode ? "text-[var(--text-muted)]" : "text-[var(--text-muted)]";
+  const borderClass = isDarkMode ? "border-[var(--color-border)]" : "border-[var(--color-border)]";
   const inputClass = isDarkMode
-    ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400"
-    : "bg-white border-gray-300 text-gray-900";
+    ? "bg-[var(--bg-surface)] border-[var(--color-border)] text-white placeholder-[var(--text-muted)]"
+    : "bg-[var(--bg-surface)] border-[var(--color-border)] text-[var(--text-primary)]";
   const sizedInputClass = `${inputClass} text-base py-3`;
 
   return (
@@ -456,14 +456,14 @@ export default function SimplifiedFlightFormV2({
         </div>
 
         {error && (
-          <div className="mx-6 mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded dark:bg-red-900 dark:border-red-700 dark:text-red-200">
+          <div className="mx-6 mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
             {error}
           </div>
         )}
 
         {/* Show validation warning only in complete step when airports are missing */}
         {step === "complete" && (!departure || !arrival) && (
-          <div className="mx-6 mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded dark:bg-red-900 dark:border-red-700 dark:text-red-200">
+          <div className="mx-6 mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
             {t("errors:missingAirports")}
           </div>
         )}
@@ -480,7 +480,7 @@ export default function SimplifiedFlightFormV2({
                   {/* Badge und Icon Bereich */}
                   <div className="flex flex-col items-start gap-2 flex-shrink-0">
                     <span
-                      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${isDarkMode ? "bg-yellow-500 text-gray-900" : "bg-yellow-400 text-gray-900"} shadow-md`}
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${isDarkMode ? "bg-yellow-500 text-[var(--text-primary)]" : "bg-yellow-400 text-[var(--text-primary)]"} shadow-md`}
                     >
                       ⭐ {t("flights:form.email.bestOption")}
                     </span>
@@ -539,7 +539,7 @@ export default function SimplifiedFlightFormV2({
 
               {/* Boarding Pass Scanner */}
               <div
-                className={`bg-gradient-to-r ${isDarkMode ? "from-blue-900 to-purple-900" : "from-blue-50 to-purple-50"} border ${isDarkMode ? "border-blue-700" : "border-blue-200"} rounded-lg p-4`}
+                className={`bg-gradient-to-r ${"from-[var(--bg-elevated)] to-[var(--bg-muted)]"} border ${isDarkMode ? "border-blue-700" : "border-blue-200"} rounded-lg p-4`}
               >
                 <div className="flex items-center justify-between">
                   <div>
@@ -623,8 +623,8 @@ export default function SimplifiedFlightFormV2({
                   onClick={() => handleSelectFlight(flight)}
                   className={`w-full text-left p-4 rounded-lg border-2 ${
                     isDarkMode
-                      ? "border-gray-700 hover:border-blue-500 bg-gray-700"
-                      : "border-gray-200 hover:border-blue-500 bg-gray-50"
+                      ? "border-[var(--color-border)] hover:border-blue-500 bg-[var(--bg-surface)]"
+                      : "border-[var(--color-border)] hover:border-blue-500 bg-[var(--bg-base)]"
                   } transition-colors`}
                 >
                   <div className="flex justify-between items-start">
@@ -650,7 +650,7 @@ export default function SimplifiedFlightFormV2({
                             ? "bg-green-100 text-green-800"
                             : flight.status === "scheduled"
                               ? "bg-blue-100 text-blue-800"
-                              : "bg-gray-100 text-gray-800"
+                              : "bg-[var(--bg-elevated)] text-[var(--text-primary)]"
                         }`}
                       >
                         {t("flights:status." + flight.status, { defaultValue: flight.status })}
@@ -662,7 +662,7 @@ export default function SimplifiedFlightFormV2({
               <button
                 type="button"
                 onClick={() => setStep("input")}
-                className="w-full text-center text-sm text-gray-500 hover:text-gray-700"
+                className="w-full text-center text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)]"
               >
                 {t("flights:lookup.backToSearch")}
               </button>
@@ -1070,12 +1070,10 @@ export default function SimplifiedFlightFormV2({
         <Suspense
           fallback={
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-8">
+              <div className="bg-[var(--bg-surface)] rounded-lg p-8">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto mb-2"></div>
-                  <p className="text-gray-600 dark:text-gray-300">
-                    {t("flights:form.loadingScanner")}
-                  </p>
+                  <p className="text-[var(--text-muted)]">{t("flights:form.loadingScanner")}</p>
                 </div>
               </div>
             </div>
@@ -1161,7 +1159,7 @@ export default function SimplifiedFlightFormV2({
             ) : (
               <>
                 <div
-                  className={`border-2 border-dashed ${isDarkMode ? "border-gray-600" : "border-gray-300"} rounded-lg p-8 text-center cursor-pointer hover:border-blue-500 dark:hover:border-blue-400 transition-colors mb-4`}
+                  className={`border-2 border-dashed ${isDarkMode ? "border-[var(--color-border)]" : "border-[var(--color-border)]"} rounded-lg p-8 text-center cursor-pointer hover:border-blue-500 transition-colors mb-4`}
                   onClick={() => emailFileInputRef.current?.click()}
                 >
                   <div className="text-5xl mb-4">📧</div>
@@ -1175,7 +1173,7 @@ export default function SimplifiedFlightFormV2({
                 </div>
 
                 {error && (
-                  <div className="bg-red-100 dark:bg-red-900/20 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded mb-4">
+                  <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
                     {error}
                   </div>
                 )}

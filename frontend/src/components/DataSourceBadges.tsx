@@ -36,7 +36,7 @@ export default function DataSourceBadges({ flight }: DataSourceBadgesProps): JSX
     badges.push({
       icon: "🔄",
       label: t("flights:dataSource.live_update_auto"),
-      color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+      color: "bg-green-100 text-green-800",
       tooltip: t("flights:dataSource.live_update_auto_tooltip"),
     });
   }
@@ -50,7 +50,7 @@ export default function DataSourceBadges({ flight }: DataSourceBadgesProps): JSX
         enrichmentCount > 1
           ? t("flights:enrichmentCount", { count: enrichmentCount })
           : t("flights:dataSource.historical_enrichment"),
-      color: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
+      color: "bg-amber-100 text-amber-800",
       tooltip: getEnrichmentTooltip(flight.enrichmentHistory, t),
     });
   }
@@ -69,7 +69,7 @@ export default function DataSourceBadges({ flight }: DataSourceBadgesProps): JSX
         badges.push({
           icon: "🔄",
           label: t("flights:dataSource.auto_update"),
-          color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+          color: "bg-green-100 text-green-800",
         });
       }
     } else if (flight.lastModifiedBy === "historical_enrichment") {
@@ -104,32 +104,32 @@ function getDataSourceConfig(
     manual: {
       icon: "✏️",
       label: t("flights:dataSource.manual"),
-      color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
+      color: "bg-[var(--bg-elevated)] text-[var(--text-primary)]",
     },
     email_import: {
       icon: "📧",
       label: t("flights:dataSource.email_import"),
-      color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+      color: "bg-blue-100 text-blue-800",
     },
     boarding_pass_scan: {
       icon: "🎫",
       label: t("flights:dataSource.boarding_pass_scan"),
-      color: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+      color: "bg-purple-100 text-purple-800",
     },
     historical_enrichment: {
       icon: "🔍",
       label: t("flights:dataSource.historical_enrichment"),
-      color: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
+      color: "bg-amber-100 text-amber-800",
     },
     live_update: {
       icon: "🔄",
       label: t("flights:dataSource.live_update"),
-      color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+      color: "bg-green-100 text-green-800",
     },
     api_lookup: {
       icon: "🌐",
       label: t("flights:dataSource.api_lookup"),
-      color: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200",
+      color: "bg-cyan-100 text-cyan-800",
     },
   };
 

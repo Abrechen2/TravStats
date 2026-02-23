@@ -303,10 +303,10 @@ export default function SimplifiedFlightForm({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b px-6 py-4">
+      <div className="bg-[var(--bg-surface)] rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-[var(--bg-surface)] border-b px-6 py-4">
           <h2 className="text-2xl font-bold">✈️ Add Flight</h2>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="text-sm text-[var(--text-muted)] mt-1">
             Just enter departure & arrival airports - we'll handle the rest!
           </p>
         </div>
@@ -319,11 +319,13 @@ export default function SimplifiedFlightForm({
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Boarding Pass Scanner Button */}
-          <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4">
+          <div className="border border-[var(--color-border)] bg-[var(--bg-elevated)] rounded-lg p-4">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-semibold text-lg">🎫 Have a Boarding Pass?</h3>
-                <p className="text-sm text-gray-600">Scan it to auto-fill all details!</p>
+                <p className="text-sm text-[var(--text-muted)]">
+                  Scan it to auto-fill all details!
+                </p>
               </div>
               <button type="button" onClick={() => setShowScanner(true)} className="btn-primary">
                 📸 Scan Now
@@ -609,7 +611,7 @@ export default function SimplifiedFlightForm({
         </form>
 
         {/* Helper Text */}
-        <div className="px-6 pb-4 text-sm text-gray-500 border-t pt-4">
+        <div className="px-6 pb-4 text-sm text-[var(--text-muted)] border-t pt-4">
           💡 <strong>Pro tip:</strong> Scan your boarding pass or just select airports and date!
         </div>
       </div>
@@ -619,10 +621,10 @@ export default function SimplifiedFlightForm({
         <Suspense
           fallback={
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-8">
+              <div className="bg-[var(--bg-surface)] rounded-lg p-8">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto mb-2"></div>
-                  <p className="text-gray-600 dark:text-gray-300">Loading scanner...</p>
+                  <p className="text-[var(--text-muted)]">Loading scanner...</p>
                 </div>
               </div>
             </div>

@@ -210,11 +210,10 @@ export default function Tooltip({
   };
 
   const arrowClasses = {
-    top: "top-full left-1/2 transform -translate-x-1/2 border-t-gray-900 dark:border-t-gray-700",
-    bottom:
-      "bottom-full left-1/2 transform -translate-x-1/2 border-b-gray-900 dark:border-b-gray-700",
-    left: "left-full top-1/2 transform -translate-y-1/2 border-l-gray-900 dark:border-l-gray-700",
-    right: "right-full top-1/2 transform -translate-y-1/2 border-r-gray-900 dark:border-r-gray-700",
+    top: "top-full left-1/2 transform -translate-x-1/2",
+    bottom: "bottom-full left-1/2 transform -translate-x-1/2",
+    left: "left-full top-1/2 transform -translate-y-1/2",
+    right: "right-full top-1/2 transform -translate-y-1/2",
   };
 
   const tooltipContent = (isHovered || isExpanded) && (
@@ -229,16 +228,23 @@ export default function Tooltip({
         }
       }}
     >
-      <div className="bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg shadow-xl p-3 max-w-sm sm:max-w-md break-words">
+      <div
+        className="text-xs rounded-lg shadow-xl p-3 max-w-sm sm:max-w-md break-words"
+        style={{
+          background: "var(--bg-elevated)",
+          color: "var(--text-primary)",
+          border: "1px solid var(--color-border)",
+        }}
+      >
         <div className="whitespace-normal break-words">{content}</div>
         {expandedContent && !isExpanded && (
-          <p className="mt-2 text-xs text-blue-400 dark:text-blue-300 italic">
+          <p className="mt-2 text-xs italic" style={{ color: "var(--accent)" }}>
             {t("help.clickForMore")}
           </p>
         )}
         {expandedContent && isExpanded && (
-          <div className="mt-2 pt-2 border-t border-gray-600 dark:border-gray-500">
-            <div className="whitespace-normal text-gray-300 dark:text-gray-300 break-words">
+          <div className="mt-2 pt-2 border-t" style={{ borderColor: "var(--color-border)" }}>
+            <div className="whitespace-normal break-words" style={{ color: "var(--text-muted)" }}>
               {expandedContent}
             </div>
           </div>

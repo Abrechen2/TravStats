@@ -9,9 +9,9 @@ interface InlineHelpProps {
 }
 
 const categoryColors = {
-  basic: "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700",
-  advanced: "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-700",
-  expert: "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700",
+  basic: "border-[var(--color-border)]",
+  advanced: "border-[var(--accent)]",
+  expert: "border-[var(--warning)]",
 };
 
 const categoryIcons = {
@@ -35,9 +35,11 @@ export default function InlineHelp({
         <div className="flex items-start gap-3 flex-1">
           <span className="text-xl">{categoryIcons[category]}</span>
           <div className="flex-1">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">{title}</h3>
+            <h3 className="text-sm font-semibold mb-1" style={{ color: "var(--text-primary)" }}>
+              {title}
+            </h3>
             {isExpanded && (
-              <div className="text-sm text-gray-700 dark:text-gray-300 mt-2 space-y-2">
+              <div className="text-sm mt-2 space-y-2" style={{ color: "var(--text-muted)" }}>
                 {content}
               </div>
             )}
@@ -45,7 +47,8 @@ export default function InlineHelp({
         </div>
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="ml-4 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 whitespace-nowrap"
+          className="ml-4 text-sm font-medium whitespace-nowrap"
+          style={{ color: "var(--accent)" }}
         >
           {isExpanded ? t("help.less") : t("help.more")}
         </button>

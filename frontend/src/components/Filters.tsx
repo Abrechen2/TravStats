@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { useThemeStore } from "../store/themeStore";
 import { flightsApi } from "../lib/api";
 import HelpIcon from "./Help/HelpIcon";
 import type { Flight, FlightFilters } from "../types";
@@ -15,10 +14,8 @@ interface AirlineOption {
   name: string;
   count: number;
 }
-
 export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
   const { t } = useTranslation(["map", "common", "flights"]);
-  const isDarkMode = useThemeStore((s) => s.isDarkMode);
 
   const MONTHS = [
     { value: 1, label: t("stats:months.jan") },
@@ -205,11 +202,12 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
     <div ref={filterRef} className="relative">
       <button
         onClick={() => setShowFilters(!showFilters)}
-        className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg shadow-sm transition-colors ${
-          isDarkMode
-            ? "bg-gray-800 text-gray-100 border border-gray-600 hover:bg-gray-700"
-            : "bg-white text-gray-800 border border-gray-300 hover:bg-gray-50"
-        }`}
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg shadow-sm transition-colors"
+        style={{
+          background: "var(--bg-surface)",
+          color: "var(--text-primary)",
+          border: "1px solid var(--color-border)",
+        }}
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
@@ -221,7 +219,10 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
         </svg>
         <span className="font-semibold text-sm">{t("map:filters.title")}</span>
         {activeFilterCount() > 0 && (
-          <span className="bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+          <span
+            className="text-xs rounded-full w-5 h-5 flex items-center justify-center"
+            style={{ background: "var(--accent)", color: "var(--bg-base)" }}
+          >
             {activeFilterCount()}
           </span>
         )}
@@ -229,22 +230,18 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
 
       {showFilters && (
         <div
-          className={`absolute right-0 mt-2 w-80 rounded-lg shadow-xl border z-50 max-h-[calc(100vh-120px)] overflow-y-auto ${
-            isDarkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
-          }`}
+          className="absolute right-0 mt-2 w-80 rounded-lg shadow-xl z-50 max-h-[calc(100vh-120px)] overflow-y-auto"
+          style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
         >
           <div className="p-4">
             <div className="flex items-center justify-between mb-4">
-              <h3
-                className={`text-lg font-semibold ${isDarkMode ? "text-white" : "text-gray-900"}`}
-              >
+              <h3 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
                 {t("map:filters.title")}
               </h3>
               <button
                 onClick={() => setShowFilters(false)}
-                className={`p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${
-                  isDarkMode ? "text-gray-400" : "text-gray-500"
-                }`}
+                className="p-1 rounded transition-colors"
+                style={{ color: "var(--text-muted)" }}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
@@ -260,7 +257,8 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
             {/* Zeit-Filter */}
             <div className="mb-4">
               <h4
-                className={`text-sm font-semibold mb-2 flex items-center gap-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}
+                className="text-sm font-semibold mb-2 flex items-center gap-2"
+                style={{ color: "var(--text-muted)" }}
               >
                 📅 {t("map:filters.timePeriod")}
                 <HelpIcon
@@ -271,12 +269,12 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
               </h4>
               <select
                 value={yearFilter ?? ""}
-                onChange={(e) => setYearFilter(e.target.value ? Number(e.target.value) : null)}
-                className={`w-full p-2 text-sm border rounded focus:ring-2 focus:ring-blue-500 ${
-                  isDarkMode
-                    ? "bg-gray-700 border-gray-600 text-gray-300"
-                    : "bg-white border-gray-300 text-gray-700"
-                }`}
+                className="w-full p-2 text-sm rounded"
+                style={{
+                  background: "var(--bg-elevated)",
+                  border: "1px solid var(--color-border)",
+                  color: "var(--text-primary)",
+                }}
               >
                 <option value="">{t("map:filters.allYears")}</option>
                 {availableYears.map((year) => (
@@ -289,11 +287,12 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
               <select
                 value={monthFilter ?? ""}
                 onChange={(e) => setMonthFilter(e.target.value ? Number(e.target.value) : null)}
-                className={`w-full p-2 text-sm border rounded mt-2 focus:ring-2 focus:ring-blue-500 ${
-                  isDarkMode
-                    ? "bg-gray-700 border-gray-600 text-gray-300"
-                    : "bg-white border-gray-300 text-gray-700"
-                }`}
+                className="w-full p-2 text-sm rounded mt-2"
+                style={{
+                  background: "var(--bg-elevated)",
+                  border: "1px solid var(--color-border)",
+                  color: "var(--text-primary)",
+                }}
               >
                 <option value="">{t("map:filters.allMonths")}</option>
                 {MONTHS.map((month) => (
@@ -306,14 +305,10 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
 
             {/* Routen-Frequenz Filter */}
             <div className="mb-4">
-              <h4
-                className={`text-sm font-semibold mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}
-              >
+              <h4 className="text-sm font-semibold mb-2" style={{ color: "var(--text-muted)" }}>
                 🛫 {t("map:filters.routeFrequency")}
               </h4>
-              <label
-                className={`text-xs block mb-1 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}
-              >
+              <label className="text-xs block mb-1" style={{ color: "var(--text-muted)" }}>
                 {t("map:filters.minFlown", { count: minRouteCount })}
               </label>
               <input
@@ -322,10 +317,12 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
                 max="20"
                 value={minRouteCount}
                 onChange={(e) => setMinRouteCount(Number(e.target.value))}
-                className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                className="w-full h-2 rounded-lg appearance-none cursor-pointer"
+                style={{ background: "var(--bg-muted)" }}
               />
               <div
-                className={`flex justify-between text-xs mt-1 ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}
+                className="flex justify-between text-xs mt-1"
+                style={{ color: "var(--text-muted)" }}
               >
                 <span>1x</span>
                 <span>20x+</span>
@@ -337,7 +334,8 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-2">
                   <h4
-                    className={`text-sm font-semibold flex items-center gap-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}
+                    className="text-sm font-semibold flex items-center gap-2"
+                    style={{ color: "var(--text-muted)" }}
                   >
                     🏢 {t("map:filters.airlines")}
                     <HelpIcon
@@ -348,7 +346,8 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
                   </h4>
                   <button
                     onClick={toggleAllAirlines}
-                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                    className="text-xs hover:underline"
+                    style={{ color: "var(--accent)" }}
                   >
                     {selectedAirlines.length === availableAirlines.length
                       ? t("map:filters.none")
@@ -356,18 +355,17 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
                   </button>
                 </div>
                 <div
-                  className={`max-h-32 overflow-y-auto border rounded p-2 ${
-                    isDarkMode ? "border-gray-600 bg-gray-700" : "border-gray-300 bg-gray-50"
-                  }`}
+                  className="max-h-32 overflow-y-auto rounded p-2"
+                  style={{
+                    border: "1px solid var(--color-border)",
+                    background: "var(--bg-elevated)",
+                  }}
                 >
                   {availableAirlines.slice(0, API_LIMITS.MAX_FILTER_AIRLINES).map((airline) => (
                     <label
                       key={airline.name}
-                      className={`flex items-center gap-2 text-sm mb-1 cursor-pointer p-1 rounded ${
-                        isDarkMode
-                          ? "text-gray-300 hover:bg-gray-600"
-                          : "text-gray-700 hover:bg-gray-100"
-                      }`}
+                      className="flex items-center gap-2 text-sm mb-1 cursor-pointer p-1 rounded"
+                      style={{ color: "var(--text-primary)" }}
                     >
                       <input
                         type="checkbox"
@@ -380,15 +378,13 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
                       <span className="truncate flex-1">
                         {airline.name || t("common:labels.unknown")}
                       </span>
-                      <span className={`text-xs ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
+                      <span className="text-xs" style={{ color: "var(--text-muted)" }}>
                         ({airline.count})
                       </span>
                     </label>
                   ))}
                   {availableAirlines.length > API_LIMITS.MAX_FILTER_AIRLINES && (
-                    <div
-                      className={`text-xs mt-2 italic ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}
-                    >
+                    <div className="text-xs mt-2 italic" style={{ color: "var(--text-muted)" }}>
                       {t("map:filters.moreAirlines", {
                         count: availableAirlines.length - API_LIMITS.MAX_FILTER_AIRLINES,
                       })}
@@ -400,15 +396,12 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
 
             {/* Status-Filter */}
             <div className="mb-4">
-              <h4
-                className={`text-sm font-semibold mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-700"}`}
-              >
+              <h4 className="text-sm font-semibold mb-2" style={{ color: "var(--text-muted)" }}>
                 ✈️ {t("map:filters.status")}
               </h4>
               <label
-                className={`flex items-center gap-2 text-sm mb-1 cursor-pointer ${
-                  isDarkMode ? "text-gray-300" : "text-gray-700"
-                }`}
+                className="flex items-center gap-2 text-sm mb-1 cursor-pointer"
+                style={{ color: "var(--text-primary)" }}
               >
                 <input
                   type="checkbox"
@@ -419,9 +412,8 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
                 {t("flights:status.flown")}
               </label>
               <label
-                className={`flex items-center gap-2 text-sm mb-1 cursor-pointer ${
-                  isDarkMode ? "text-gray-300" : "text-gray-700"
-                }`}
+                className="flex items-center gap-2 text-sm mb-1 cursor-pointer"
+                style={{ color: "var(--text-primary)" }}
               >
                 <input
                   type="checkbox"
@@ -432,9 +424,8 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
                 {t("flights:status.scheduled")}
               </label>
               <label
-                className={`flex items-center gap-2 text-sm cursor-pointer ${
-                  isDarkMode ? "text-gray-300" : "text-gray-700"
-                }`}
+                className="flex items-center gap-2 text-sm cursor-pointer"
+                style={{ color: "var(--text-primary)" }}
               >
                 <input
                   type="checkbox"
@@ -449,11 +440,8 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
             {/* Reset Button */}
             <button
               onClick={handleReset}
-              className={`w-full p-2 rounded text-sm font-medium transition-colors ${
-                isDarkMode
-                  ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-              }`}
+              className="w-full p-2 rounded text-sm font-medium transition-colors"
+              style={{ background: "var(--bg-elevated)", color: "var(--text-muted)" }}
             >
               {t("map:filters.reset")}
             </button>

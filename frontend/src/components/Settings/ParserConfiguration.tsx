@@ -97,7 +97,9 @@ export default function ParserConfiguration({
 
   const renderProviderStatus = (providerType: "vision" | "text", providerName: string) => {
     if (loadingProviders) {
-      return <span className="text-xs text-gray-400">{t("common:buttons.loading")}</span>;
+      return (
+        <span className="text-xs text-[var(--text-muted)]">{t("common:buttons.loading")}</span>
+      );
     }
 
     const status = getProviderStatus(providerType, providerName);
@@ -105,7 +107,7 @@ export default function ParserConfiguration({
 
     if (status.available) {
       return (
-        <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+        <div className="flex items-center gap-1 text-xs text-green-600">
           <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
             <path
               fillRule="evenodd"
@@ -119,10 +121,7 @@ export default function ParserConfiguration({
     }
 
     return (
-      <div
-        className="flex items-center gap-1 text-xs text-yellow-600 dark:text-yellow-400"
-        title={status.reason}
-      >
+      <div className="flex items-center gap-1 text-xs text-yellow-600" title={status.reason}>
         <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
           <path
             fillRule="evenodd"
@@ -163,19 +162,17 @@ export default function ParserConfiguration({
             {saving ? t("common:buttons.saving") : t("settings:parser.saveSettings")}
           </button>
         </div>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          {t("settings:parser.description")}
-        </p>
+        <p className="text-sm text-[var(--text-muted)]">{t("settings:parser.description")}</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Vision Parser (Boarding Pass) */}
         <div className="space-y-4">
           <div>
-            <h3 className="font-medium text-gray-900 dark:text-white mb-1">
+            <h3 className="font-medium text-[var(--text-primary)] mb-1">
               {t("settings:parser.vision.title")}
             </h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-xs text-[var(--text-muted)]">
               {t("settings:parser.vision.description")}
             </p>
           </div>
@@ -193,7 +190,7 @@ export default function ParserConfiguration({
                 </option>
               ))}
             </select>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-xs text-[var(--text-muted)] mt-1">
               {
                 parserProviderOptions.vision.find((o) => o.value === settings.preferredVisionParser)
                   ?.description
@@ -202,11 +199,11 @@ export default function ParserConfiguration({
           </div>
 
           {/* Provider Status List */}
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 space-y-2">
-            <p className="text-xs font-medium text-gray-700 dark:text-gray-300">Provider Status:</p>
+          <div className="bg-[var(--bg-base)] rounded-lg p-3 space-y-2">
+            <p className="text-xs font-medium text-[var(--text-primary)]">Provider Status:</p>
             {parserProviderOptions.vision.map((option) => (
               <div key={option.value} className="flex items-center justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">{option.label}</span>
+                <span className="text-[var(--text-muted)]">{option.label}</span>
                 {renderProviderStatus("vision", option.value)}
               </div>
             ))}
@@ -216,10 +213,10 @@ export default function ParserConfiguration({
         {/* Text Parser (Email) */}
         <div className="space-y-4">
           <div>
-            <h3 className="font-medium text-gray-900 dark:text-white mb-1">
+            <h3 className="font-medium text-[var(--text-primary)] mb-1">
               {t("settings:parser.text.title")}
             </h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-xs text-[var(--text-muted)]">
               {t("settings:parser.text.description")}
             </p>
           </div>
@@ -237,7 +234,7 @@ export default function ParserConfiguration({
                 </option>
               ))}
             </select>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-xs text-[var(--text-muted)] mt-1">
               {
                 parserProviderOptions.text.find((o) => o.value === settings.preferredTextParser)
                   ?.description
@@ -246,11 +243,11 @@ export default function ParserConfiguration({
           </div>
 
           {/* Provider Status List */}
-          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 space-y-2">
-            <p className="text-xs font-medium text-gray-700 dark:text-gray-300">Provider Status:</p>
+          <div className="bg-[var(--bg-base)] rounded-lg p-3 space-y-2">
+            <p className="text-xs font-medium text-[var(--text-primary)]">Provider Status:</p>
             {parserProviderOptions.text.map((option) => (
               <div key={option.value} className="flex items-center justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">{option.label}</span>
+                <span className="text-[var(--text-muted)]">{option.label}</span>
                 {renderProviderStatus("text", option.value)}
               </div>
             ))}
