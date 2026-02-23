@@ -249,6 +249,7 @@ export const useSettingsStore = create<SettingsState>()(
             set((state) => {
               // Extract autoUpdate and historicalEnrichment to exclude them from store
               const remoteRecord = remote as Record<string, unknown>;
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
               const {
                 autoUpdate: _au,
                 historicalEnrichment: _he,

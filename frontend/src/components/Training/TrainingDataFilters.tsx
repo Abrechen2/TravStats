@@ -56,7 +56,6 @@ export default function TrainingDataFilters({
       prevFiltersRef.current = filtersKey;
       onFilterChange(newFilters);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, typeFilter, selectedTags, searchQuery]);
 
   const handleTagToggle = (tag: string) => {

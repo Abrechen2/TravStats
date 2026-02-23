@@ -92,7 +92,7 @@ export function julianDateToDate(julianDate: string): string {
   const dayOfYear = parseInt(julianDate, 10);
   logger.debug("Julian day conversion: Input day of year =", dayOfYear);
 
-  let year = new Date().getFullYear();
+  const year = new Date().getFullYear();
   logger.debug("Current year:", year);
 
   // Create date from day of year using UTC to avoid timezone issues

@@ -56,6 +56,7 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
         const limit = API_LIMITS.MAX_PAGE_SIZE; // match backend max to avoid validation errors and fewer requests
 
         // Fetch all flights to build complete filter options
+        // eslint-disable-next-line no-constant-condition
         while (true) {
           const { flights } = await flightsApi.getAll({ limit, offset });
           allFlights = [...allFlights, ...flights];
@@ -136,7 +137,6 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
     filters.minRouteCount = minRouteCount;
 
     onFilterChange(filters);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     yearFilter,
     monthFilter,

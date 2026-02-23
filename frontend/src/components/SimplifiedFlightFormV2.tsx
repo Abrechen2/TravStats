@@ -185,7 +185,7 @@ export default function SimplifiedFlightFormV2({
           confidence: estimation.confidence,
           sampleCount: estimation.sampleCount,
         });
-      } catch (err) {
+      } catch {
         // If calculation fails, use same day + 2 hours as fallback
         const depDateTime = new Date(`${departureDate}T${departureTime}`);
         const arrDateTime = new Date(depDateTime.getTime() + 2 * 60 * 60 * 1000);
@@ -327,7 +327,7 @@ export default function SimplifiedFlightFormV2({
       }
 
       setStep("complete");
-    } catch (err) {
+    } catch {
       setError(t("errors:failedToLoadAirport"));
     } finally {
       setLoading(false);
@@ -1206,25 +1206,20 @@ export default function SimplifiedFlightFormV2({
             setCurrentFlightIndex(0);
           }}
           onConfirm={async (flightData) => {
-            try {
-              await onSubmit(flightData);
+            await onSubmit(flightData);
 
-              // Check if there are more flights to process
-              const nextIndex = currentFlightIndex + 1;
-              if (nextIndex < parsedFlights.length) {
-                // Move to next flight
-                setCurrentFlightIndex(nextIndex);
-                // Review modal stays open for next flight (initialData will update automatically)
-              } else {
-                // All flights processed - close everything
-                setShowFlightReview(false);
-                setParsedFlights([]);
-                setCurrentFlightIndex(0);
-                onCancel(); // Close Add Flight Dialog
-              }
-            } catch (err) {
-              // Error is handled in FlightReviewModal
-              throw err;
+            // Check if there are more flights to process
+            const nextIndex = currentFlightIndex + 1;
+            if (nextIndex < parsedFlights.length) {
+              // Move to next flight
+              setCurrentFlightIndex(nextIndex);
+              // Review modal stays open for next flight (initialData will update automatically)
+            } else {
+              // All flights processed - close everything
+              setShowFlightReview(false);
+              setParsedFlights([]);
+              setCurrentFlightIndex(0);
+              onCancel(); // Close Add Flight Dialog
             }
           }}
           initialData={parsedFlights[currentFlightIndex]}

@@ -189,7 +189,8 @@ export default function TrainingGuide(): JSX.Element {
                   </li>
                   <li>
                     <strong>Tags hinzufügen:</strong> Verwenden Sie Tags, um Einträge zu
-                    kategorisieren (z.B. "lufthansa", "business", "international")
+                    kategorisieren (z.B. &quot;lufthansa&quot;, &quot;business&quot;,
+                    &quot;international&quot;)
                   </li>
                   <li>
                     <strong>Mehrfach-Flüge:</strong> Eine E-Mail kann mehrere Flüge enthalten. Fügen
@@ -226,15 +227,15 @@ export default function TrainingGuide(): JSX.Element {
               <ul className="list-disc list-inside ml-4 space-y-1">
                 <li>
                   <strong>Status-Check:</strong> Stellen Sie sicher, dass mindestens 5 Einträge den
-                  Status "pending" haben
+                  Status &quot;pending&quot; haben
                 </li>
                 <li>
                   <strong>Filter und Tags verwenden:</strong> Sie können Filter verwenden, um
                   bestimmte Einträge für das Training auszuwählen
                 </li>
                 <li>
-                  <strong>Mindestanzahl prüfen:</strong> Der "Training starten" Button ist erst
-                  aktiv, wenn mindestens 5 Einträge vorhanden sind
+                  <strong>Mindestanzahl prüfen:</strong> Der &quot;Training starten&quot; Button ist
+                  erst aktiv, wenn mindestens 5 Einträge vorhanden sind
                 </li>
               </ul>
             </div>
@@ -248,8 +249,8 @@ export default function TrainingGuide(): JSX.Element {
             <div className="space-y-2 text-[var(--text-primary)]">
               <ul className="list-disc list-inside ml-4 space-y-1">
                 <li>
-                  <strong>Training-Button:</strong> Klicken Sie auf "Training starten" im Training
-                  Dashboard
+                  <strong>Training-Button:</strong> Klicken Sie auf &quot;Training starten&quot; im
+                  Training Dashboard
                 </li>
                 <li>
                   <strong>Hardware-Anforderungen:</strong>
@@ -323,8 +324,8 @@ export default function TrainingGuide(): JSX.Element {
                 </li>
               </ol>
               <p className="mt-3">
-                <strong>Logs verstehen:</strong> Klicken Sie auf "Details" bei einem Job, um die
-                vollständigen Logs zu sehen. Die Logs zeigen:
+                <strong>Logs verstehen:</strong> Klicken Sie auf &quot;Details&quot; bei einem Job,
+                um die vollständigen Logs zu sehen. Die Logs zeigen:
               </p>
               <ul className="list-disc list-inside ml-4 space-y-1">
                 <li>Training-Fortschritt (Epochen, Steps, Loss-Werte)</li>
@@ -388,7 +389,7 @@ export default function TrainingGuide(): JSX.Element {
                 </li>
                 <li>
                   <strong>Parser-Konfiguration anpassen:</strong> Gehen Sie zu Einstellungen →
-                  Parser-Konfiguration und wählen Sie "Ollama" als Parser-Typ
+                  Parser-Konfiguration und wählen Sie &quot;Ollama&quot; als Parser-Typ
                 </li>
                 <li>
                   <strong>Testen mit neuen Daten:</strong> Laden Sie neue E-Mails oder Boarding
@@ -525,10 +526,12 @@ export default function TrainingGuide(): JSX.Element {
             <div className="space-y-3">
               <div>
                 <h4 className="font-semibold text-[var(--text-primary)]">
-                  "Training job failed" - Training fehlgeschlagen
+                  &quot;Training job failed&quot; - Training fehlgeschlagen
                 </h4>
                 <ul className="list-disc list-inside ml-4 space-y-1 text-[var(--text-primary)]">
-                  <li>Prüfen Sie die Logs im Training Dashboard (klicken Sie auf "Details")</li>
+                  <li>
+                    Prüfen Sie die Logs im Training Dashboard (klicken Sie auf &quot;Details&quot;)
+                  </li>
                   <li>
                     Häufige Ursachen: Zu wenig Speicher, Ollama nicht erreichbar, ungültige
                     Trainingsdaten
@@ -541,7 +544,7 @@ export default function TrainingGuide(): JSX.Element {
               </div>
               <div>
                 <h4 className="font-semibold text-[var(--text-primary)]">
-                  "Ollama model not found" - Modell nicht gefunden
+                  &quot;Ollama model not found&quot; - Modell nicht gefunden
                 </h4>
                 <ul className="list-disc list-inside ml-4 space-y-1 text-[var(--text-primary)]">
                   <li>Das Base-Modell muss in Ollama verfügbar sein</li>
@@ -556,7 +559,7 @@ export default function TrainingGuide(): JSX.Element {
               </div>
               <div>
                 <h4 className="font-semibold text-[var(--text-primary)]">
-                  "CUDA out of memory" - GPU-Speicher voll
+                  &quot;CUDA out of memory&quot; - GPU-Speicher voll
                 </h4>
                 <ul className="list-disc list-inside ml-4 space-y-1 text-[var(--text-primary)]">
                   <li>Die GPU hat nicht genug VRAM</li>
@@ -587,7 +590,8 @@ export default function TrainingGuide(): JSX.Element {
               <p>Die Training-Logs enthalten wichtige Informationen:</p>
               <ul className="list-disc list-inside ml-4 space-y-1">
                 <li>
-                  <strong>Epoch/Step:</strong> Zeigt den Fortschritt (z.B. "Epoch 1/3, Step 10/50")
+                  <strong>Epoch/Step:</strong> Zeigt den Fortschritt (z.B. &quot;Epoch 1/3, Step
+                  10/50&quot;)
                 </li>
                 <li>
                   <strong>Loss:</strong> Sollte während des Trainings abnehmen. Steigender Loss kann
@@ -675,16 +679,20 @@ export default function TrainingGuide(): JSX.Element {
             </p>
             <ul className="list-disc list-inside ml-4 space-y-1 text-[var(--text-primary)]">
               <li>
-                <strong>Airline:</strong> "lufthansa", "ryanair", "emirates"
+                <strong>Airline:</strong> &quot;lufthansa&quot;, &quot;ryanair&quot;,
+                &quot;emirates&quot;
               </li>
               <li>
-                <strong>Klasse:</strong> "economy", "business", "first"
+                <strong>Klasse:</strong> &quot;economy&quot;, &quot;business&quot;,
+                &quot;first&quot;
               </li>
               <li>
-                <strong>Typ:</strong> "domestic", "international", "long-haul"
+                <strong>Typ:</strong> &quot;domestic&quot;, &quot;international&quot;,
+                &quot;long-haul&quot;
               </li>
               <li>
-                <strong>Quelle:</strong> "email", "boarding-pass", "manual"
+                <strong>Quelle:</strong> &quot;email&quot;, &quot;boarding-pass&quot;,
+                &quot;manual&quot;
               </li>
             </ul>
           </div>

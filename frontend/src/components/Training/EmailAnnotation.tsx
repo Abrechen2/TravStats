@@ -515,7 +515,8 @@ export default function EmailAnnotation({
             className="sticky top-0 z-10 p-4 bg-blue-50 rounded-lg border-2 border-blue-500 shadow-lg"
           >
             <p className="text-sm font-medium text-[var(--text-primary)] mb-2">
-              Ausgewählter Text: "{displayText.substring(selectedText.start, selectedText.end)}"
+              Ausgewählter Text: &quot;{displayText.substring(selectedText.start, selectedText.end)}
+              &quot;
             </p>
             <p className="text-xs text-[var(--text-muted)] mb-2">
               Flug {selectedFlightIndex + 1} wird annotiert

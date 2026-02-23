@@ -120,7 +120,7 @@ function AppContent() {
               setShowSeedingModal(true);
             }
           }
-        } catch (error) {
+        } catch {
           // Ignore errors
         }
       };

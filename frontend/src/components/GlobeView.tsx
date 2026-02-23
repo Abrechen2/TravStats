@@ -35,7 +35,7 @@ const debugLog = (
     logs.push(logEntry);
     if (logs.length > 100) logs.shift();
     localStorage.setItem("debug-logs", JSON.stringify(logs));
-  } catch (e) {
+  } catch {
     // Ignore localStorage errors
   }
 };
@@ -93,7 +93,7 @@ const calculateHeatmapThresholds = (
   const q50Index = Math.floor(len * 0.5);
   const q75Index = Math.floor(len * 0.75);
 
-  let q25 = sorted[q25Index] || min;
+  const q25 = sorted[q25Index] || min;
   let q50 = sorted[q50Index] || min + Math.floor((max - min) * 0.33);
   let q75 = sorted[q75Index] || min + Math.floor((max - min) * 0.66);
 
@@ -201,7 +201,6 @@ interface PointData {
 
 export default function GlobeView({
   flights = [],
-  selectedFlightId: _selectedFlightId,
   onFlightClick,
   minRouteCount = 1,
 }: GlobeViewProps): JSX.Element {
@@ -356,7 +355,7 @@ export default function GlobeView({
 
     // Create arcs with dynamic colors and apply route frequency filter
     const arcs = Array.from(routeMap.entries())
-      .filter(([_, route]) => route.count >= minRouteCount) // Apply min route count filter
+      .filter(([, route]) => route.count >= minRouteCount) // Apply min route count filter
       .map(([routeKey, route]) => ({
         routeKey,
         count: route.count,

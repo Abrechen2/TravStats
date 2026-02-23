@@ -307,7 +307,7 @@ export default function SimplifiedFlightForm({
         <div className="sticky top-0 bg-[var(--bg-surface)] border-b px-6 py-4">
           <h2 className="text-2xl font-bold">✈️ Add Flight</h2>
           <p className="text-sm text-[var(--text-muted)] mt-1">
-            Just enter departure & arrival airports - we'll handle the rest!
+            Just enter departure &amp; arrival airports - we&apos;ll handle the rest!
           </p>
         </div>
 

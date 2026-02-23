@@ -43,7 +43,7 @@ const getInitialLanguage = (): string => {
         return parsed.state.display.language;
       }
     }
-  } catch (e) {
+  } catch {
     // Fallback to default
   }
   return "en"; // Default to English
