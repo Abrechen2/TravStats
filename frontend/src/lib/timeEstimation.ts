@@ -6,8 +6,8 @@
  * 2. Heuristic calculations (85% accurate)
  */
 
-import { calculateDistance } from './geo';
-import { logger } from './logger';
+import { calculateDistance } from "./geo";
+import { logger } from "./logger";
 
 interface HistoricalFlightTime {
   flightNumber: string;
@@ -22,12 +22,12 @@ interface HistoricalFlightTime {
 interface TimeEstimationResult {
   departureTime: string;
   arrivalTime: string;
-  source: 'historical' | 'heuristic';
-  confidence: 'high' | 'medium' | 'low';
+  source: "historical" | "heuristic";
+  confidence: "high" | "medium" | "low";
   sampleCount?: number;
 }
 
-const HISTORICAL_DATA_KEY = 'travstats_historical_flight_times';
+const HISTORICAL_DATA_KEY = "travstats_historical_flight_times";
 
 /**
  * Store a successful flight time for future reference
@@ -66,7 +66,7 @@ export function storeHistoricalFlightTime(
 
     localStorage.setItem(HISTORICAL_DATA_KEY, JSON.stringify(data));
   } catch (error) {
-    logger.error('Failed to store historical flight time:', error);
+    logger.error("Failed to store historical flight time:", error);
   }
 }
 
@@ -85,10 +85,8 @@ function getHistoricalFlightTimes(
     const data: HistoricalFlightTime[] = JSON.parse(stored);
 
     // Filter by route and optionally flight number
-    return data.filter(entry => {
-      const routeMatch =
-        entry.departureIata === departureIata &&
-        entry.arrivalIata === arrivalIata;
+    return data.filter((entry) => {
+      const routeMatch = entry.departureIata === departureIata && entry.arrivalIata === arrivalIata;
 
       if (flightNumber) {
         return routeMatch && entry.flightNumber === flightNumber;
@@ -96,7 +94,7 @@ function getHistoricalFlightTimes(
       return routeMatch;
     });
   } catch (error) {
-    logger.error('Failed to retrieve historical flight times:', error);
+    logger.error("Failed to retrieve historical flight times:", error);
     return [];
   }
 }
@@ -107,7 +105,7 @@ function getHistoricalFlightTimes(
 function calculateAverageBoardingOffset(samples: HistoricalFlightTime[]): number {
   if (samples.length === 0) return 30; // Default 30 minutes
 
-  const offsets = samples.map(sample => {
+  const offsets = samples.map((sample) => {
     const boarding = new Date(`1970-01-01T${sample.boardingTime}`);
     const departure = new Date(`1970-01-01T${sample.departureTime}`);
     return (departure.getTime() - boarding.getTime()) / (1000 * 60); // minutes
@@ -121,7 +119,7 @@ function calculateAverageBoardingOffset(samples: HistoricalFlightTime[]): number
  * Calculate average flight duration
  */
 function calculateAverageDuration(samples: HistoricalFlightTime[]): number {
-  const durations = samples.map(sample => {
+  const durations = samples.map((sample) => {
     const departure = new Date(`1970-01-01T${sample.departureTime}`);
     const arrival = new Date(`1970-01-01T${sample.arrivalTime}`);
     return (arrival.getTime() - departure.getTime()) / (1000 * 60); // minutes
@@ -156,18 +154,18 @@ function estimateDurationHeuristic(
  * Uses local time consistently (flight times are always in local airport time)
  */
 function addMinutesToTime(timeStr: string, minutes: number, dateStr: string): string {
-  const [hours, mins] = timeStr.split(':').map(Number);
+  const [hours, mins] = timeStr.split(":").map(Number);
 
   // Parse date correctly: "2025-06-07" should be treated as local date, not UTC
   // Split and use Date constructor with year, month, day to avoid timezone issues
-  const [year, month, day] = dateStr.split('-').map(Number);
+  const [year, month, day] = dateStr.split("-").map(Number);
   const date = new Date(year, month - 1, day, hours, mins, 0, 0);
 
   // Add minutes
   date.setMinutes(date.getMinutes() + minutes);
 
-  const resultHours = String(date.getHours()).padStart(2, '0');
-  const resultMins = String(date.getMinutes()).padStart(2, '0');
+  const resultHours = String(date.getHours()).padStart(2, "0");
+  const resultMins = String(date.getMinutes()).padStart(2, "0");
   return `${resultHours}:${resultMins}`;
 }
 
@@ -200,14 +198,14 @@ export function estimateFlightTimes(
     return {
       departureTime,
       arrivalTime,
-      source: 'historical',
-      confidence: 'high',
+      source: "historical",
+      confidence: "high",
       sampleCount: historical.length,
     };
   }
 
   // Step 2: Fallback to heuristics
-  logger.debug('🔮 Using heuristic estimation (no historical data)');
+  logger.debug("🔮 Using heuristic estimation (no historical data)");
   logger.debug(`📅 Input: boardingTime=${boardingTime}, flightDate=${flightDate}`);
 
   // Departure = Boarding + 30 minutes
@@ -215,12 +213,7 @@ export function estimateFlightTimes(
   logger.debug(`🛫 Calculated departure: ${departureTime} (boarding + 30min)`);
 
   // Duration based on distance
-  const duration = estimateDurationHeuristic(
-    departureLat,
-    departureLon,
-    arrivalLat,
-    arrivalLon
-  );
+  const duration = estimateDurationHeuristic(departureLat, departureLon, arrivalLat, arrivalLon);
   logger.debug(`⏱️ Estimated duration: ${duration} minutes`);
 
   const arrivalTime = addMinutesToTime(departureTime, duration, flightDate);
@@ -229,8 +222,8 @@ export function estimateFlightTimes(
   return {
     departureTime,
     arrivalTime,
-    source: 'heuristic',
-    confidence: historical.length === 1 ? 'medium' : 'low',
+    source: "heuristic",
+    confidence: historical.length === 1 ? "medium" : "low",
     sampleCount: historical.length,
   };
 }

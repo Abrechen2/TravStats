@@ -1,8 +1,8 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import type { User } from '../types';
-import { authApi } from '../lib/api';
-import { logger } from '../lib/logger';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import type { User } from "../types";
+import { authApi } from "../lib/api";
+import { logger } from "../lib/logger";
 
 interface AuthState {
   user: User | null;
@@ -17,7 +17,7 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => {
       // Listen for unauthorized events from API interceptor
-      if (typeof window !== 'undefined') {
+      if (typeof window !== "undefined") {
         unauthorizedEventListener = async () => {
           const store = get();
           if (store.user) {
@@ -25,7 +25,7 @@ export const useAuthStore = create<AuthState>()(
             await store.logout();
           }
         };
-        window.addEventListener('auth:unauthorized', unauthorizedEventListener);
+        window.addEventListener("auth:unauthorized", unauthorizedEventListener);
       }
 
       return {
@@ -39,7 +39,7 @@ export const useAuthStore = create<AuthState>()(
             // Clear the HttpOnly cookie on server
             await authApi.logout();
           } catch (error) {
-            logger.error('Logout error:', error);
+            logger.error("Logout error:", error);
           } finally {
             // Clear local user state regardless of API result
             set({ user: null });
@@ -48,14 +48,14 @@ export const useAuthStore = create<AuthState>()(
       };
     },
     {
-      name: 'auth-storage',
+      name: "auth-storage",
       // Only persist user data, not token (token is in HttpOnly cookie)
       partialize: (state) => ({ user: state.user }),
       onRehydrateStorage: () => {
         // Cleanup event listener on store rehydration
         return () => {
-          if (typeof window !== 'undefined' && unauthorizedEventListener) {
-            window.removeEventListener('auth:unauthorized', unauthorizedEventListener);
+          if (typeof window !== "undefined" && unauthorizedEventListener) {
+            window.removeEventListener("auth:unauthorized", unauthorizedEventListener);
             unauthorizedEventListener = null;
           }
         };

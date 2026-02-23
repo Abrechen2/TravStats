@@ -1,7 +1,7 @@
-import { useEffect, useCallback } from 'react';
-import { useTranslation as useI18nTranslation } from 'react-i18next';
-import { useSettingsStore } from '../store/settingsStore';
-import { logger } from '../lib/logger';
+import { useEffect, useCallback } from "react";
+import { useTranslation as useI18nTranslation } from "react-i18next";
+import { useSettingsStore } from "../store/settingsStore";
+import { logger } from "../lib/logger";
 
 /**
  * Custom hook that wraps react-i18next's useTranslation
@@ -9,7 +9,7 @@ import { logger } from '../lib/logger';
  */
 export function useTranslation(namespace?: string | string[]): {
   t: (key: string, options?: Record<string, unknown>) => string;
-  i18n: typeof import('i18next').default;
+  i18n: typeof import("i18next").default;
   ready: boolean;
 } {
   const language = useSettingsStore((state) => state.display.language);
@@ -22,7 +22,7 @@ export function useTranslation(namespace?: string | string[]): {
       const currentLang = i18nInstance.language;
       if (currentLang !== language) {
         i18nInstance.changeLanguage(language).catch((err: Error) => {
-          logger.warn('Failed to change language:', err);
+          logger.warn("Failed to change language:", err);
         });
       }
     }
@@ -42,4 +42,3 @@ export function useTranslation(namespace?: string | string[]): {
     i18n: i18nInstance,
   };
 }
-

@@ -1,16 +1,16 @@
-﻿import { useState, useEffect } from 'react';
-import { Airport, FlightInput, ParsedBooking } from '../types';
-import { airportsApi, parseApi } from '../lib/api';
-import { useAuthStore } from '../store/authStore';
-import { logger } from '../lib/logger';
-import { useTranslation } from '../hooks/useTranslation';
+﻿import { useState, useEffect } from "react";
+import { Airport, FlightInput, ParsedBooking } from "../types";
+import { airportsApi, parseApi } from "../lib/api";
+import { useAuthStore } from "../store/authStore";
+import { logger } from "../lib/logger";
+import { useTranslation } from "../hooks/useTranslation";
 
 interface FlightReviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (flight: FlightInput) => Promise<void>;
   initialData: ParsedBooking;
-  source: 'email' | 'boardingpass';
+  source: "email" | "boardingpass";
   flightIndex?: number;
   totalFlights?: number;
   parserProvider?: string;
@@ -29,28 +29,30 @@ export default function FlightReviewModal({
   source,
   flightIndex,
   totalFlights,
-  parserProvider = 'unknown',
+  parserProvider = "unknown",
   originalData,
 }: FlightReviewModalProps): JSX.Element | null {
-  const { t } = useTranslation(['flights', 'common', 'errors']);
+  const { t } = useTranslation(["flights", "common", "errors"]);
   const { user } = useAuthStore();
   // Form state
-  const [flightNumber, setFlightNumber] = useState('');
-  const [airline, setAirline] = useState('');
-  const [departureCode, setDepartureCode] = useState('');
-  const [arrivalCode, setArrivalCode] = useState('');
-  const [departureTime, setDepartureTime] = useState('');
-  const [arrivalTime, setArrivalTime] = useState('');
-  const [aircraft, setAircraft] = useState('');
-  const [seatClass, setSeatClass] = useState<'economy' | 'premium_economy' | 'business' | 'first'>('economy');
-  const [seat, setSeat] = useState('');
-  const [terminal, setTerminal] = useState('');
-  const [gate, setGate] = useState('');
-  const [bookingReference, setBookingReference] = useState('');
-  const [boardingGroup, setBoardingGroup] = useState('');
-  const [ticketNumber, setTicketNumber] = useState('');
+  const [flightNumber, setFlightNumber] = useState("");
+  const [airline, setAirline] = useState("");
+  const [departureCode, setDepartureCode] = useState("");
+  const [arrivalCode, setArrivalCode] = useState("");
+  const [departureTime, setDepartureTime] = useState("");
+  const [arrivalTime, setArrivalTime] = useState("");
+  const [aircraft, setAircraft] = useState("");
+  const [seatClass, setSeatClass] = useState<"economy" | "premium_economy" | "business" | "first">(
+    "economy"
+  );
+  const [seat, setSeat] = useState("");
+  const [terminal, setTerminal] = useState("");
+  const [gate, setGate] = useState("");
+  const [bookingReference, setBookingReference] = useState("");
+  const [boardingGroup, setBoardingGroup] = useState("");
+  const [ticketNumber, setTicketNumber] = useState("");
   const [price, setPrice] = useState<number | undefined>(undefined);
-  const [currency, setCurrency] = useState<'EUR' | 'USD' | 'GBP' | 'CHF'>('EUR');
+  const [currency, setCurrency] = useState<"EUR" | "USD" | "GBP" | "CHF">("EUR");
   const [taxes, setTaxes] = useState<number | undefined>(undefined);
   const [fees, setFees] = useState<number | undefined>(undefined);
 
@@ -58,34 +60,36 @@ export default function FlightReviewModal({
   const [departureAirport, setDepartureAirport] = useState<Airport | null>(null);
   const [arrivalAirport, setArrivalAirport] = useState<Airport | null>(null);
   const [airportLoading, setAirportLoading] = useState(false);
-  const [airportError, setAirportError] = useState('');
+  const [airportError, setAirportError] = useState("");
 
   // UI state
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   // Initialize form with parsed data
   useEffect(() => {
     if (initialData) {
       // Reset form state when switching to a new flight
-      setError('');
-      setAirportError('');
+      setError("");
+      setAirportError("");
       setDepartureAirport(null);
       setArrivalAirport(null);
-      
-      setFlightNumber(initialData.flightNumber || '');
-      setAirline(initialData.airline || '');
-      setDepartureCode(initialData.departureCode || '');
-      setArrivalCode(initialData.arrivalCode || '');
-      setDepartureTime(initialData.departureTime ? formatDateTimeLocal(initialData.departureTime) : '');
-      setArrivalTime(initialData.arrivalTime ? formatDateTimeLocal(initialData.arrivalTime) : '');
-      setAircraft(initialData.aircraft || '');
-      setSeat(initialData.seat || '');
-      setTerminal(initialData.terminal || '');
-      setGate(initialData.gate || '');
-      setBookingReference(initialData.bookingReference || initialData.pnr || '');
-      setBoardingGroup(initialData.boardingGroup || '');
-      setTicketNumber(initialData.ticketNumber || '');
+
+      setFlightNumber(initialData.flightNumber || "");
+      setAirline(initialData.airline || "");
+      setDepartureCode(initialData.departureCode || "");
+      setArrivalCode(initialData.arrivalCode || "");
+      setDepartureTime(
+        initialData.departureTime ? formatDateTimeLocal(initialData.departureTime) : ""
+      );
+      setArrivalTime(initialData.arrivalTime ? formatDateTimeLocal(initialData.arrivalTime) : "");
+      setAircraft(initialData.aircraft || "");
+      setSeat(initialData.seat || "");
+      setTerminal(initialData.terminal || "");
+      setGate(initialData.gate || "");
+      setBookingReference(initialData.bookingReference || initialData.pnr || "");
+      setBoardingGroup(initialData.boardingGroup || "");
+      setTicketNumber(initialData.ticketNumber || "");
 
       // Parse price fields
       if (initialData.price) {
@@ -107,7 +111,7 @@ export default function FlightReviewModal({
         setFees(undefined);
       }
       if (initialData.currency) {
-        setCurrency(initialData.currency.toUpperCase() as 'EUR' | 'USD' | 'GBP' | 'CHF');
+        setCurrency(initialData.currency.toUpperCase() as "EUR" | "USD" | "GBP" | "CHF");
       }
 
       // Map seat class
@@ -115,7 +119,7 @@ export default function FlightReviewModal({
       if (mappedSeatClass) {
         setSeatClass(mappedSeatClass);
       } else {
-        setSeatClass('economy');
+        setSeatClass("economy");
       }
 
       // Lookup airports
@@ -130,18 +134,20 @@ export default function FlightReviewModal({
     try {
       return new Date(isoString).toISOString().slice(0, 16);
     } catch {
-      return '';
+      return "";
     }
   };
 
   // Map parsed seat class to FlightInput format
-  const mapSeatClass = (seatClass?: string): 'economy' | 'premium_economy' | 'business' | 'first' | null => {
+  const mapSeatClass = (
+    seatClass?: string
+  ): "economy" | "premium_economy" | "business" | "first" | null => {
     if (!seatClass) return null;
     const lower = seatClass.toLowerCase();
-    if (lower.includes('first')) return 'first';
-    if (lower.includes('business')) return 'business';
-    if (lower.includes('premium')) return 'premium_economy';
-    if (lower.includes('economy')) return 'economy';
+    if (lower.includes("first")) return "first";
+    if (lower.includes("business")) return "business";
+    if (lower.includes("premium")) return "premium_economy";
+    if (lower.includes("economy")) return "economy";
     return null;
   };
 
@@ -150,7 +156,7 @@ export default function FlightReviewModal({
     if (!depCode && !arrCode) return;
 
     setAirportLoading(true);
-    setAirportError('');
+    setAirportError("");
 
     try {
       const errorMessages: string[] = [];
@@ -158,34 +164,30 @@ export default function FlightReviewModal({
       if (depCode) {
         const depLabel = depCode.toUpperCase();
         const depResults = await airportsApi.search(depLabel);
-        const depMatch = depResults.find(
-          (a: Airport) => a.iata?.toUpperCase() === depLabel
-        );
+        const depMatch = depResults.find((a: Airport) => a.iata?.toUpperCase() === depLabel);
         if (depMatch) {
           setDepartureAirport(depMatch);
         } else {
-          errorMessages.push(t('flights:review.departureNotFound', { code: depLabel }));
+          errorMessages.push(t("flights:review.departureNotFound", { code: depLabel }));
         }
       }
 
       if (arrCode) {
         const arrLabel = arrCode.toUpperCase();
         const arrResults = await airportsApi.search(arrLabel);
-        const arrMatch = arrResults.find(
-          (a: Airport) => a.iata?.toUpperCase() === arrLabel
-        );
+        const arrMatch = arrResults.find((a: Airport) => a.iata?.toUpperCase() === arrLabel);
         if (arrMatch) {
           setArrivalAirport(arrMatch);
         } else {
-          errorMessages.push(t('flights:review.arrivalNotFound', { code: arrLabel }));
+          errorMessages.push(t("flights:review.arrivalNotFound", { code: arrLabel }));
         }
       }
 
       if (errorMessages.length > 0) {
-        setAirportError(errorMessages.join(', '));
+        setAirportError(errorMessages.join(", "));
       }
     } catch (err) {
-      setAirportError(t('errors:failedToLoadAirport'));
+      setAirportError(t("errors:failedToLoadAirport"));
     } finally {
       setAirportLoading(false);
     }
@@ -206,16 +208,16 @@ export default function FlightReviewModal({
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     // Validation
     if (!departureAirport || !arrivalAirport) {
-      setError(t('errors:missingAirports'));
+      setError(t("errors:missingAirports"));
       return;
     }
 
     if (!departureTime || !arrivalTime) {
-      setError(t('errors:missingTimes'));
+      setError(t("errors:missingTimes"));
       return;
     }
 
@@ -241,7 +243,7 @@ export default function FlightReviewModal({
         currency,
         taxes,
         fees,
-        status: new Date(departureTime) < new Date() ? 'flown' : 'scheduled',
+        status: new Date(departureTime) < new Date() ? "flown" : "scheduled",
       };
 
       // Check if data was corrected and collect feedback
@@ -249,7 +251,7 @@ export default function FlightReviewModal({
       if (hasCorrections && user) {
         // Collect feedback asynchronously (don't await to avoid blocking)
         collectFeedback(initialData, flightInput).catch((err: unknown) => {
-          logger.warn('Failed to collect feedback:', err);
+          logger.warn("Failed to collect feedback:", err);
         });
       }
 
@@ -257,7 +259,7 @@ export default function FlightReviewModal({
       // onConfirm handles closing the modal or moving to next flight
     } catch (err: unknown) {
       const error = err as { response?: { data?: { error?: string } }; message?: string };
-      setError(error.response?.data?.error || error.message || t('errors:saveFailed'));
+      setError(error.response?.data?.error || error.message || t("errors:saveFailed"));
     } finally {
       setLoading(false);
     }
@@ -280,33 +282,40 @@ export default function FlightReviewModal({
   };
 
   // Collect feedback for corrections
-  const collectFeedback = async (original: ParsedBooking, corrected: FlightInput): Promise<void> => {
+  const collectFeedback = async (
+    original: ParsedBooking,
+    corrected: FlightInput
+  ): Promise<void> => {
     try {
-      const originalResult = [{
-        flightNumber: original.flightNumber,
-        departureCode: original.departureCode,
-        arrivalCode: original.arrivalCode,
-        departureTime: original.departureTime,
-        arrivalTime: original.arrivalTime,
-        pnr: original.pnr,
-        seat: original.seat,
-        gate: original.gate,
-        terminal: original.terminal,
-        airline: original.airline,
-      }];
+      const originalResult = [
+        {
+          flightNumber: original.flightNumber,
+          departureCode: original.departureCode,
+          arrivalCode: original.arrivalCode,
+          departureTime: original.departureTime,
+          arrivalTime: original.arrivalTime,
+          pnr: original.pnr,
+          seat: original.seat,
+          gate: original.gate,
+          terminal: original.terminal,
+          airline: original.airline,
+        },
+      ];
 
-      const correctedResult = [{
-        flightNumber: corrected.flightNumber,
-        departureCode: corrected.departure?.iata,
-        arrivalCode: corrected.arrival?.iata,
-        departureTime: corrected.departureTime,
-        arrivalTime: corrected.arrivalTime,
-        pnr: corrected.bookingReference,
-        seat: corrected.seatNumber,
-        gate: corrected.gate,
-        terminal: corrected.terminal,
-        airline: corrected.airline,
-      }];
+      const correctedResult = [
+        {
+          flightNumber: corrected.flightNumber,
+          departureCode: corrected.departure?.iata,
+          arrivalCode: corrected.arrival?.iata,
+          departureTime: corrected.departureTime,
+          arrivalTime: corrected.arrivalTime,
+          pnr: corrected.bookingReference,
+          seat: corrected.seatNumber,
+          gate: corrected.gate,
+          terminal: corrected.terminal,
+          airline: corrected.airline,
+        },
+      ];
 
       await parseApi.submitParserCorrection({
         sourceType: source,
@@ -317,13 +326,13 @@ export default function FlightReviewModal({
       });
     } catch (error: unknown) {
       // Silently fail - feedback collection should not break the flow
-      logger.warn('Failed to submit parser correction feedback:', error);
+      logger.warn("Failed to submit parser correction feedback:", error);
     }
   };
 
   if (!isOpen) return null;
 
-  const title = t('flights:review.title');
+  const title = t("flights:review.title");
   const showProgress = totalFlights && totalFlights > 1 && flightIndex !== undefined;
 
   return (
@@ -335,17 +344,22 @@ export default function FlightReviewModal({
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h2>
             {showProgress && (
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                {t('flights:review.flightIndex', { index: flightIndex! + 1, total: totalFlights })}
+                {t("flights:review.flightIndex", { index: flightIndex! + 1, total: totalFlights })}
               </p>
             )}
           </div>
           <button
             onClick={onClose}
             className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            aria-label={t('common:buttons.close')}
+            aria-label={t("common:buttons.close")}
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -366,7 +380,9 @@ export default function FlightReviewModal({
 
           {airportLoading && (
             <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <p className="text-blue-800 dark:text-blue-200">{t('flights:review.loadingAirports')}</p>
+              <p className="text-blue-800 dark:text-blue-200">
+                {t("flights:review.loadingAirports")}
+              </p>
             </div>
           )}
 
@@ -374,28 +390,28 @@ export default function FlightReviewModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('flights:form.flightNumber')} *
+                {t("flights:form.flightNumber")} *
               </label>
               <input
                 type="text"
                 value={flightNumber}
                 onChange={(e) => setFlightNumber(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                placeholder={t('flights:form.placeholders.flightNumber')}
+                placeholder={t("flights:form.placeholders.flightNumber")}
                 required
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('flights:form.airline')}
+                {t("flights:form.airline")}
               </label>
               <input
                 type="text"
                 value={airline}
                 onChange={(e) => setAirline(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                placeholder={t('flights:form.placeholders.airline')}
+                placeholder={t("flights:form.placeholders.airline")}
               />
             </div>
           </div>
@@ -404,7 +420,7 @@ export default function FlightReviewModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('flights:form.departureAirportCode')} *
+                {t("flights:form.departureAirportCode")} *
               </label>
               <input
                 type="text"
@@ -415,15 +431,15 @@ export default function FlightReviewModal({
                   setDepartureAirport(null);
                 }}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                placeholder={t('flights:form.placeholders.departureCode')}
+                placeholder={t("flights:form.placeholders.departureCode")}
                 maxLength={3}
                 required
               />
               {departureAirport && (
                 <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                  {t('flights:review.selectedAirport', {
+                  {t("flights:review.selectedAirport", {
                     name: departureAirport.name,
-                    code: departureAirport.iata || departureAirport.icao || '',
+                    code: departureAirport.iata || departureAirport.icao || "",
                   })}
                 </p>
               )}
@@ -431,7 +447,7 @@ export default function FlightReviewModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('flights:form.arrivalAirportCode')} *
+                {t("flights:form.arrivalAirportCode")} *
               </label>
               <input
                 type="text"
@@ -442,15 +458,15 @@ export default function FlightReviewModal({
                   setArrivalAirport(null);
                 }}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                placeholder={t('flights:form.placeholders.arrivalCode')}
+                placeholder={t("flights:form.placeholders.arrivalCode")}
                 maxLength={3}
                 required
               />
               {arrivalAirport && (
                 <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                  {t('flights:review.selectedAirport', {
+                  {t("flights:review.selectedAirport", {
                     name: arrivalAirport.name,
-                    code: arrivalAirport.iata || arrivalAirport.icao || '',
+                    code: arrivalAirport.iata || arrivalAirport.icao || "",
                   })}
                 </p>
               )}
@@ -461,7 +477,7 @@ export default function FlightReviewModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('flights:form.departureTime')} *
+                {t("flights:form.departureTime")} *
               </label>
               <input
                 type="datetime-local"
@@ -474,7 +490,7 @@ export default function FlightReviewModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('flights:form.arrivalTime')} *
+                {t("flights:form.arrivalTime")} *
               </label>
               <input
                 type="datetime-local"
@@ -490,30 +506,34 @@ export default function FlightReviewModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('flights:form.aircraft')}
+                {t("flights:form.aircraft")}
               </label>
               <input
                 type="text"
                 value={aircraft}
                 onChange={(e) => setAircraft(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                placeholder={t('flights:form.placeholders.aircraft')}
+                placeholder={t("flights:form.placeholders.aircraft")}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('flights:form.seatClass')}
+                {t("flights:form.seatClass")}
               </label>
               <select
                 value={seatClass}
-                onChange={(e) => setSeatClass(e.target.value as 'economy' | 'premium_economy' | 'business' | 'first')}
+                onChange={(e) =>
+                  setSeatClass(
+                    e.target.value as "economy" | "premium_economy" | "business" | "first"
+                  )
+                }
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
               >
-                <option value="economy">{t('flights:seatClass.economy')}</option>
-                <option value="premium_economy">{t('flights:seatClass.premium_economy')}</option>
-                <option value="business">{t('flights:seatClass.business')}</option>
-                <option value="first">{t('flights:seatClass.first')}</option>
+                <option value="economy">{t("flights:seatClass.economy")}</option>
+                <option value="premium_economy">{t("flights:seatClass.premium_economy")}</option>
+                <option value="business">{t("flights:seatClass.business")}</option>
+                <option value="first">{t("flights:seatClass.first")}</option>
               </select>
             </div>
           </div>
@@ -522,40 +542,40 @@ export default function FlightReviewModal({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('flights:form.seat')}
+                {t("flights:form.seat")}
               </label>
               <input
                 type="text"
                 value={seat}
                 onChange={(e) => setSeat(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                placeholder={t('flights:form.placeholders.seat')}
+                placeholder={t("flights:form.placeholders.seat")}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('flights:form.terminal')}
+                {t("flights:form.terminal")}
               </label>
               <input
                 type="text"
                 value={terminal}
                 onChange={(e) => setTerminal(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                placeholder={t('flights:form.placeholders.terminal')}
+                placeholder={t("flights:form.placeholders.terminal")}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('flights:form.gate')}
+                {t("flights:form.gate")}
               </label>
               <input
                 type="text"
                 value={gate}
                 onChange={(e) => setGate(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                placeholder={t('flights:form.placeholders.gate')}
+                placeholder={t("flights:form.placeholders.gate")}
               />
             </div>
           </div>
@@ -564,28 +584,28 @@ export default function FlightReviewModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('flights:form.bookingReference')}
+                {t("flights:form.bookingReference")}
               </label>
               <input
                 type="text"
                 value={bookingReference}
                 onChange={(e) => setBookingReference(e.target.value.toUpperCase())}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                placeholder={t('flights:form.placeholders.bookingReference')}
+                placeholder={t("flights:form.placeholders.bookingReference")}
                 maxLength={6}
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('flights:form.boardingGroup')}
+                {t("flights:form.boardingGroup")}
               </label>
               <input
                 type="text"
                 value={boardingGroup}
                 onChange={(e) => setBoardingGroup(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                placeholder={t('flights:form.placeholders.boardingGroup')}
+                placeholder={t("flights:form.placeholders.boardingGroup")}
                 maxLength={3}
               />
             </div>
@@ -594,14 +614,14 @@ export default function FlightReviewModal({
           {/* Ticket Number */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {t('flights:form.ticketNumber')}
+              {t("flights:form.ticketNumber")}
             </label>
             <input
               type="text"
               value={ticketNumber}
               onChange={(e) => setTicketNumber(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-              placeholder={t('flights:form.placeholders.ticketNumber')}
+              placeholder={t("flights:form.placeholders.ticketNumber")}
               maxLength={13}
             />
           </div>
@@ -609,64 +629,68 @@ export default function FlightReviewModal({
           {/* Cost Breakdown */}
           <div className="border dark:border-gray-700 rounded-lg p-4">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-              {t('flights:review.costsTitle')}
+              {t("flights:review.costsTitle")}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t('common:labels.price')}
+                  {t("common:labels.price")}
                 </label>
                 <input
                   type="number"
                   step="0.01"
-                  value={price || ''}
-                  onChange={(e) => setPrice(e.target.value ? parseFloat(e.target.value) : undefined)}
+                  value={price || ""}
+                  onChange={(e) =>
+                    setPrice(e.target.value ? parseFloat(e.target.value) : undefined)
+                  }
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                  placeholder={t('flights:form.placeholders.price')}
+                  placeholder={t("flights:form.placeholders.price")}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t('flights:form.currency')}
+                  {t("flights:form.currency")}
                 </label>
                 <select
                   value={currency}
-                  onChange={(e) => setCurrency(e.target.value as 'EUR' | 'USD' | 'GBP' | 'CHF')}
+                  onChange={(e) => setCurrency(e.target.value as "EUR" | "USD" | "GBP" | "CHF")}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="EUR">{t('flights:currency.EUR')}</option>
-                  <option value="USD">{t('flights:currency.USD')}</option>
-                  <option value="GBP">{t('flights:currency.GBP')}</option>
-                  <option value="CHF">{t('flights:currency.CHF')}</option>
+                  <option value="EUR">{t("flights:currency.EUR")}</option>
+                  <option value="USD">{t("flights:currency.USD")}</option>
+                  <option value="GBP">{t("flights:currency.GBP")}</option>
+                  <option value="CHF">{t("flights:currency.CHF")}</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t('common:labels.taxes')}
+                  {t("common:labels.taxes")}
                 </label>
                 <input
                   type="number"
                   step="0.01"
-                  value={taxes || ''}
-                  onChange={(e) => setTaxes(e.target.value ? parseFloat(e.target.value) : undefined)}
+                  value={taxes || ""}
+                  onChange={(e) =>
+                    setTaxes(e.target.value ? parseFloat(e.target.value) : undefined)
+                  }
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                  placeholder={t('flights:form.placeholders.taxes')}
+                  placeholder={t("flights:form.placeholders.taxes")}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t('common:labels.fees')}
+                  {t("common:labels.fees")}
                 </label>
                 <input
                   type="number"
                   step="0.01"
-                  value={fees || ''}
+                  value={fees || ""}
                   onChange={(e) => setFees(e.target.value ? parseFloat(e.target.value) : undefined)}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                  placeholder={t('flights:form.placeholders.fees')}
+                  placeholder={t("flights:form.placeholders.fees")}
                 />
               </div>
             </div>
@@ -680,14 +704,18 @@ export default function FlightReviewModal({
               className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-semibold"
               disabled={loading}
             >
-              {showProgress ? t('common:buttons.cancel') : t('flights:review.discard')}
+              {showProgress ? t("common:buttons.cancel") : t("flights:review.discard")}
             </button>
             <button
               type="submit"
               className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={loading || airportLoading || !departureAirport || !arrivalAirport}
             >
-              {loading ? t('flights:review.saving') : showProgress ? t('common:buttons.next') : t('flights:review.confirm')}
+              {loading
+                ? t("flights:review.saving")
+                : showProgress
+                  ? t("common:buttons.next")
+                  : t("flights:review.confirm")}
             </button>
           </div>
         </form>

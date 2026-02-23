@@ -4,9 +4,9 @@
  * Displays a celebration popup when user unlocks new achievements
  */
 
-import { useEffect, useState, useRef } from 'react';
-import { useThemeStore } from '../store/themeStore';
-import { useTranslation } from '../hooks/useTranslation';
+import { useEffect, useState, useRef } from "react";
+import { useThemeStore } from "../store/themeStore";
+import { useTranslation } from "../hooks/useTranslation";
 
 interface Achievement {
   id: string;
@@ -14,7 +14,7 @@ interface Achievement {
   name: string;
   description: string;
   icon: string;
-  tier: 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
+  tier: "bronze" | "silver" | "gold" | "platinum" | "diamond";
   category: string;
   points: number;
 }
@@ -33,23 +33,26 @@ interface AchievementPopupProps {
 }
 
 const tierColors = {
-  bronze: 'from-orange-700 to-orange-500',
-  silver: 'from-gray-400 to-gray-300',
-  gold: 'from-yellow-500 to-yellow-400',
-  platinum: 'from-cyan-400 to-blue-500',
-  diamond: 'from-purple-500 to-pink-500',
+  bronze: "from-orange-700 to-orange-500",
+  silver: "from-gray-400 to-gray-300",
+  gold: "from-yellow-500 to-yellow-400",
+  platinum: "from-cyan-400 to-blue-500",
+  diamond: "from-purple-500 to-pink-500",
 };
 
 const tierGlow = {
-  bronze: 'shadow-orange-500/50',
-  silver: 'shadow-gray-400/50',
-  gold: 'shadow-yellow-500/50',
-  platinum: 'shadow-cyan-500/50',
-  diamond: 'shadow-purple-500/50',
+  bronze: "shadow-orange-500/50",
+  silver: "shadow-gray-400/50",
+  gold: "shadow-yellow-500/50",
+  platinum: "shadow-cyan-500/50",
+  diamond: "shadow-purple-500/50",
 };
 
-export default function AchievementPopup({ achievements, onClose }: AchievementPopupProps): JSX.Element | null {
-  const { t } = useTranslation(['achievements', 'common']);
+export default function AchievementPopup({
+  achievements,
+  onClose,
+}: AchievementPopupProps): JSX.Element | null {
+  const { t } = useTranslation(["achievements", "common"]);
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
@@ -103,14 +106,18 @@ export default function AchievementPopup({ achievements, onClose }: AchievementP
   const tier = currentAchievement.achievement.tier;
 
   return (
-    <div className={`fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[200] p-4 ${isExiting ? 'animate-fadeOut' : 'animate-fadeIn'}`}>
-      <div className={`
-        ${isDarkMode ? 'bg-gray-800' : 'bg-white'}
+    <div
+      className={`fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[200] p-4 ${isExiting ? "animate-fadeOut" : "animate-fadeIn"}`}
+    >
+      <div
+        className={`
+        ${isDarkMode ? "bg-gray-800" : "bg-white"}
         rounded-2xl max-w-md w-full p-8 shadow-2xl
         ${tierGlow[tier]}
-        ${isExiting ? 'scale-95 opacity-0' : 'scale-100 opacity-100'}
+        ${isExiting ? "scale-95 opacity-0" : "scale-100 opacity-100"}
         transition-all duration-300
-      `}>
+      `}
+      >
         {/* Confetti Animation */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl">
           <div className="confetti-container">
@@ -122,7 +129,9 @@ export default function AchievementPopup({ achievements, onClose }: AchievementP
                   left: `${Math.random() * 100}%`,
                   animationDelay: `${Math.random() * 2}s`,
                   animationDuration: `${3 + Math.random() * 2}s`,
-                  backgroundColor: ['#FFD700', '#FFA500', '#FF69B4', '#00CED1', '#9370DB'][Math.floor(Math.random() * 5)]
+                  backgroundColor: ["#FFD700", "#FFA500", "#FF69B4", "#00CED1", "#9370DB"][
+                    Math.floor(Math.random() * 5)
+                  ],
                 }}
               />
             ))}
@@ -130,66 +139,84 @@ export default function AchievementPopup({ achievements, onClose }: AchievementP
         </div>
 
         {/* Close Button */}
-          <button
+        <button
           onClick={handleClose}
-          className={`absolute top-4 right-4 p-2 rounded-lg ${isDarkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}
-          aria-label={t('common:buttons.close')}
+          className={`absolute top-4 right-4 p-2 rounded-lg ${isDarkMode ? "hover:bg-gray-700 text-gray-400" : "hover:bg-gray-100 text-gray-500"}`}
+          aria-label={t("common:buttons.close")}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         </button>
 
         {/* Achievement Icon */}
-        <div className={`
+        <div
+          className={`
           w-32 h-32 mx-auto mb-6
           bg-gradient-to-br ${tierColors[tier]}
           rounded-full
           flex items-center justify-center
           shadow-xl ${tierGlow[tier]}
           animate-bounce-slow
-        `}>
+        `}
+        >
           <span className="text-6xl">{currentAchievement.achievement.icon}</span>
         </div>
 
         {/* Achievement Info */}
         <div className="text-center space-y-4">
           <div>
-            <div className={`text-sm font-semibold uppercase tracking-wider mb-2 ${
-              isDarkMode ? 'text-gray-400' : 'text-gray-600'
-            }`}>
-              🏆 {t('achievements:popup.unlocked')}
+            <div
+              className={`text-sm font-semibold uppercase tracking-wider mb-2 ${
+                isDarkMode ? "text-gray-400" : "text-gray-600"
+              }`}
+            >
+              🏆 {t("achievements:popup.unlocked")}
             </div>
-            <h2 className={`text-3xl font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            <h2
+              className={`text-3xl font-bold mb-2 ${isDarkMode ? "text-white" : "text-gray-900"}`}
+            >
               {currentAchievement.achievement.name}
             </h2>
-            <p className={`text-lg ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+            <p className={`text-lg ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
               {currentAchievement.achievement.description}
             </p>
           </div>
 
           {/* Tier Badge */}
           <div className="flex items-center justify-center gap-2">
-            <span className={`
+            <span
+              className={`
               px-4 py-2 rounded-full text-sm font-bold uppercase
               bg-gradient-to-r ${tierColors[tier]}
               text-white shadow-lg
-            `}>
-              {t(`achievements:tiers.${tier}`)} {t('achievements:popup.tier')}
+            `}
+            >
+              {t(`achievements:tiers.${tier}`)} {t("achievements:popup.tier")}
             </span>
-            <span className={`
+            <span
+              className={`
               px-3 py-1 rounded-full text-xs font-semibold
-              ${isDarkMode ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-800'}
-            `}>
-              +{currentAchievement.achievement.points} {t('achievements:popup.points')}
+              ${isDarkMode ? "bg-blue-900 text-blue-200" : "bg-blue-100 text-blue-800"}
+            `}
+            >
+              +{currentAchievement.achievement.points} {t("achievements:popup.points")}
             </span>
           </div>
 
           {/* Progress Indicator */}
           {achievements.length > 1 && (
             <div className="pt-4">
-              <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mb-2`}>
-                {t('achievements:popup.progress', { current: currentIndex + 1, total: achievements.length })}
+              <div className={`text-xs ${isDarkMode ? "text-gray-400" : "text-gray-500"} mb-2`}>
+                {t("achievements:popup.progress", {
+                  current: currentIndex + 1,
+                  total: achievements.length,
+                })}
               </div>
               <div className="flex gap-1 justify-center">
                 {achievements.map((_, idx) => (
@@ -197,10 +224,10 @@ export default function AchievementPopup({ achievements, onClose }: AchievementP
                     key={idx}
                     className={`h-1.5 rounded-full transition-all ${
                       idx === currentIndex
-                        ? 'w-8 bg-gradient-to-r ' + tierColors[tier]
+                        ? "w-8 bg-gradient-to-r " + tierColors[tier]
                         : idx < currentIndex
-                        ? 'w-1.5 bg-gray-400'
-                        : 'w-1.5 bg-gray-300'
+                          ? "w-1.5 bg-gray-400"
+                          : "w-1.5 bg-gray-300"
                     }`}
                   />
                 ))}
@@ -216,17 +243,17 @@ export default function AchievementPopup({ achievements, onClose }: AchievementP
                   onClick={handleClose}
                   className={`flex-1 px-4 py-2 rounded-lg font-medium ${
                     isDarkMode
-                      ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
-                      : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                      ? "bg-gray-700 hover:bg-gray-600 text-gray-200"
+                      : "bg-gray-200 hover:bg-gray-300 text-gray-700"
                   }`}
                 >
-                  {t('achievements:popup.closeAll')}
+                  {t("achievements:popup.closeAll")}
                 </button>
                 <button
                   onClick={handleNext}
                   className={`flex-1 px-4 py-2 rounded-lg font-medium bg-gradient-to-r ${tierColors[tier]} text-white shadow-lg hover:shadow-xl transition-all`}
                 >
-                  {t('achievements:popup.next')} →
+                  {t("achievements:popup.next")} →
                 </button>
               </>
             ) : (
@@ -234,7 +261,7 @@ export default function AchievementPopup({ achievements, onClose }: AchievementP
                 onClick={handleClose}
                 className={`w-full px-4 py-2 rounded-lg font-medium bg-gradient-to-r ${tierColors[tier]} text-white shadow-lg hover:shadow-xl transition-all`}
               >
-                {t('achievements:popup.awesome')} 🎉
+                {t("achievements:popup.awesome")} 🎉
               </button>
             )}
           </div>

@@ -35,11 +35,11 @@ export const UI_CONFIG = {
 export const DATE_FORMATS = {
   /** Default date format options */
   DEFAULT: {
-    year: 'numeric' as const,
-    month: '2-digit' as const,
-    day: '2-digit' as const,
-    hour: '2-digit' as const,
-    minute: '2-digit' as const,
+    year: "numeric" as const,
+    month: "2-digit" as const,
+    day: "2-digit" as const,
+    hour: "2-digit" as const,
+    minute: "2-digit" as const,
   },
 } as const;
 
@@ -48,45 +48,45 @@ export const DATE_FORMATS = {
  */
 export function getDateLocale(): string {
   try {
-    const stored = localStorage.getItem('settings-storage');
+    const stored = localStorage.getItem("settings-storage");
     if (stored) {
       const parsed = JSON.parse(stored);
       if (parsed?.state?.display?.language) {
-        return parsed.state.display.language === 'de' ? 'de-DE' : 'en-US';
+        return parsed.state.display.language === "de" ? "de-DE" : "en-US";
       }
     }
   } catch (e) {
     // Fallback to default
   }
-  return 'en-US'; // Default to English
+  return "en-US"; // Default to English
 }
 
 /**
  * Export Formats
  */
 export const EXPORT_FORMATS = {
-  CSV: 'csv',
-  GEOJSON: 'geojson',
-  PDF: 'pdf',
-  KML: 'kml',
-  JSON: 'json',
+  CSV: "csv",
+  GEOJSON: "geojson",
+  PDF: "pdf",
+  KML: "kml",
+  JSON: "json",
 } as const;
 
 /**
  * Flight Status Values
  */
 export const FLIGHT_STATUS = {
-  SCHEDULED: 'scheduled',
-  FLOWN: 'flown',
-  CANCELLED: 'cancelled',
+  SCHEDULED: "scheduled",
+  FLOWN: "flown",
+  CANCELLED: "cancelled",
 } as const;
 
 /**
  * Storage Keys for localStorage
  */
 export const STORAGE_KEYS = {
-  ONBOARDING_CHECKLIST: 'onboarding-checklist',
-  THEME: 'theme',
-  USER_SETTINGS: 'user-settings',
-  CONTEXTUAL_HINTS: 'contextual-hints',
+  ONBOARDING_CHECKLIST: "onboarding-checklist",
+  THEME: "theme",
+  USER_SETTINGS: "user-settings",
+  CONTEXTUAL_HINTS: "contextual-hints",
 } as const;

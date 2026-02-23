@@ -1,11 +1,11 @@
 /**
  * Statistics Impact Preview Component
- * 
+ *
  * Shows how pending update will affect user statistics
  */
 
-import { useTranslation } from '../hooks/useTranslation';
-import { useThemeStore } from '../store/themeStore';
+import { useTranslation } from "../hooks/useTranslation";
+import { useThemeStore } from "../store/themeStore";
 
 interface StatisticsImpact {
   distance: {
@@ -36,14 +36,16 @@ interface StatisticsImpactPreviewProps {
   impact: StatisticsImpact | Record<string, unknown> | null | undefined;
 }
 
-export default function StatisticsImpactPreview({ impact }: StatisticsImpactPreviewProps): JSX.Element {
-  const { t } = useTranslation(['pendingUpdates']);
+export default function StatisticsImpactPreview({
+  impact,
+}: StatisticsImpactPreviewProps): JSX.Element {
+  const { t } = useTranslation(["pendingUpdates"]);
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
 
   if (!impact) {
     return (
       <div className="text-center text-gray-500 dark:text-gray-400 py-8">
-        {t('pendingUpdates:preview.noData')}
+        {t("pendingUpdates:preview.noData")}
       </div>
     );
   }
@@ -52,7 +54,7 @@ export default function StatisticsImpactPreview({ impact }: StatisticsImpactPrev
   const data = impact as StatisticsImpact;
 
   const formatNumber = (num: number) => {
-    return new Intl.NumberFormat('de-DE').format(num);
+    return new Intl.NumberFormat("de-DE").format(num);
   };
 
   const formatTime = (minutes: number) => {
@@ -65,29 +67,29 @@ export default function StatisticsImpactPreview({ impact }: StatisticsImpactPrev
   };
 
   const getChangeColor = (change: number) => {
-    if (change > 0) return 'text-green-600 dark:text-green-400';
-    if (change < 0) return 'text-red-600 dark:text-red-400';
-    return 'text-gray-600 dark:text-gray-400';
+    if (change > 0) return "text-green-600 dark:text-green-400";
+    if (change < 0) return "text-red-600 dark:text-red-400";
+    return "text-gray-600 dark:text-gray-400";
   };
 
   const getChangeIcon = (change: number) => {
-    if (change > 0) return '↑';
-    if (change < 0) return '↓';
-    return '→';
+    if (change > 0) return "↑";
+    if (change < 0) return "↓";
+    return "→";
   };
 
   return (
     <div className="space-y-6">
       {/* Distance */}
       {data.distance && (
-        <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+        <div className={`p-4 rounded-lg ${isDarkMode ? "bg-gray-700" : "bg-gray-50"}`}>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-            {t('pendingUpdates:preview.distance')}
+            {t("pendingUpdates:preview.distance")}
           </h3>
           <div className="grid grid-cols-3 gap-4">
             <div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                {t('pendingUpdates:preview.before')}
+                {t("pendingUpdates:preview.before")}
               </div>
               <div className="text-xl font-bold text-gray-900 dark:text-white">
                 {formatNumber(data.distance.before)} km
@@ -95,7 +97,7 @@ export default function StatisticsImpactPreview({ impact }: StatisticsImpactPrev
             </div>
             <div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                {t('pendingUpdates:preview.after')}
+                {t("pendingUpdates:preview.after")}
               </div>
               <div className="text-xl font-bold text-gray-900 dark:text-white">
                 {formatNumber(data.distance.after)} km
@@ -103,10 +105,11 @@ export default function StatisticsImpactPreview({ impact }: StatisticsImpactPrev
             </div>
             <div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                {t('pendingUpdates:preview.change')}
+                {t("pendingUpdates:preview.change")}
               </div>
               <div className={`text-xl font-bold ${getChangeColor(data.distance.change)}`}>
-                {getChangeIcon(data.distance.change)} {formatNumber(Math.abs(data.distance.change))} km
+                {getChangeIcon(data.distance.change)} {formatNumber(Math.abs(data.distance.change))}{" "}
+                km
               </div>
             </div>
           </div>
@@ -115,14 +118,14 @@ export default function StatisticsImpactPreview({ impact }: StatisticsImpactPrev
 
       {/* Flight Time */}
       {data.flightTime && (
-        <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+        <div className={`p-4 rounded-lg ${isDarkMode ? "bg-gray-700" : "bg-gray-50"}`}>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-            {t('pendingUpdates:preview.flightTime')}
+            {t("pendingUpdates:preview.flightTime")}
           </h3>
           <div className="grid grid-cols-3 gap-4">
             <div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                {t('pendingUpdates:preview.before')}
+                {t("pendingUpdates:preview.before")}
               </div>
               <div className="text-xl font-bold text-gray-900 dark:text-white">
                 {formatTime(data.flightTime.before)}
@@ -130,7 +133,7 @@ export default function StatisticsImpactPreview({ impact }: StatisticsImpactPrev
             </div>
             <div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                {t('pendingUpdates:preview.after')}
+                {t("pendingUpdates:preview.after")}
               </div>
               <div className="text-xl font-bold text-gray-900 dark:text-white">
                 {formatTime(data.flightTime.after)}
@@ -138,10 +141,11 @@ export default function StatisticsImpactPreview({ impact }: StatisticsImpactPrev
             </div>
             <div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                {t('pendingUpdates:preview.change')}
+                {t("pendingUpdates:preview.change")}
               </div>
               <div className={`text-xl font-bold ${getChangeColor(data.flightTime.change)}`}>
-                {getChangeIcon(data.flightTime.change)} {formatTime(Math.abs(data.flightTime.change))}
+                {getChangeIcon(data.flightTime.change)}{" "}
+                {formatTime(Math.abs(data.flightTime.change))}
               </div>
             </div>
           </div>
@@ -150,28 +154,28 @@ export default function StatisticsImpactPreview({ impact }: StatisticsImpactPrev
 
       {/* Airlines */}
       {data.airlines && (
-        <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+        <div className={`p-4 rounded-lg ${isDarkMode ? "bg-gray-700" : "bg-gray-50"}`}>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-            {t('pendingUpdates:preview.airlines')}
+            {t("pendingUpdates:preview.airlines")}
           </h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                {t('pendingUpdates:preview.before')}
+                {t("pendingUpdates:preview.before")}
               </div>
               <div className="text-lg font-bold text-gray-900 dark:text-white">
-                {Array.isArray(data.airlines.before) 
-                  ? data.airlines.before.length 
+                {Array.isArray(data.airlines.before)
+                  ? data.airlines.before.length
                   : data.airlines.before?.size || 0}
               </div>
             </div>
             <div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                {t('pendingUpdates:preview.after')}
+                {t("pendingUpdates:preview.after")}
               </div>
               <div className="text-lg font-bold text-gray-900 dark:text-white">
-                {Array.isArray(data.airlines.after) 
-                  ? data.airlines.after.length 
+                {Array.isArray(data.airlines.after)
+                  ? data.airlines.after.length
                   : data.airlines.after?.size || 0}
               </div>
             </div>
@@ -179,10 +183,10 @@ export default function StatisticsImpactPreview({ impact }: StatisticsImpactPrev
           {data.airlines.added && data.airlines.added.length > 0 && (
             <div className="mt-3">
               <div className="text-xs text-green-600 dark:text-green-400 mb-1">
-                {t('pendingUpdates:preview.added')}
+                {t("pendingUpdates:preview.added")}
               </div>
               <div className="text-sm text-gray-700 dark:text-gray-300">
-                {data.airlines.added.join(', ')}
+                {data.airlines.added.join(", ")}
               </div>
             </div>
           )}
@@ -191,28 +195,28 @@ export default function StatisticsImpactPreview({ impact }: StatisticsImpactPrev
 
       {/* Airports */}
       {data.airports && (
-        <div className={`p-4 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+        <div className={`p-4 rounded-lg ${isDarkMode ? "bg-gray-700" : "bg-gray-50"}`}>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-            {t('pendingUpdates:preview.airports')}
+            {t("pendingUpdates:preview.airports")}
           </h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                {t('pendingUpdates:preview.before')}
+                {t("pendingUpdates:preview.before")}
               </div>
               <div className="text-lg font-bold text-gray-900 dark:text-white">
-                {Array.isArray(data.airports.before) 
-                  ? data.airports.before.length 
+                {Array.isArray(data.airports.before)
+                  ? data.airports.before.length
                   : data.airports.before?.size || 0}
               </div>
             </div>
             <div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                {t('pendingUpdates:preview.after')}
+                {t("pendingUpdates:preview.after")}
               </div>
               <div className="text-lg font-bold text-gray-900 dark:text-white">
-                {Array.isArray(data.airports.after) 
-                  ? data.airports.after.length 
+                {Array.isArray(data.airports.after)
+                  ? data.airports.after.length
                   : data.airports.after?.size || 0}
               </div>
             </div>
@@ -220,10 +224,10 @@ export default function StatisticsImpactPreview({ impact }: StatisticsImpactPrev
           {data.airports.added && data.airports.added.length > 0 && (
             <div className="mt-3">
               <div className="text-xs text-green-600 dark:text-green-400 mb-1">
-                {t('pendingUpdates:preview.added')}
+                {t("pendingUpdates:preview.added")}
               </div>
               <div className="text-sm text-gray-700 dark:text-gray-300">
-                {data.airports.added.join(', ')}
+                {data.airports.added.join(", ")}
               </div>
             </div>
           )}
@@ -232,7 +236,3 @@ export default function StatisticsImpactPreview({ impact }: StatisticsImpactPrev
     </div>
   );
 }
-
-
-
-

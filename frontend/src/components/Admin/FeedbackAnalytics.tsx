@@ -1,7 +1,7 @@
-import { format } from 'date-fns';
-import InlineHelp from '../Help/InlineHelp';
-import { useTranslation } from '../../hooks/useTranslation';
-import type { ParserFeedbackEntry } from '../../lib/api';
+import { format } from "date-fns";
+import InlineHelp from "../Help/InlineHelp";
+import { useTranslation } from "../../hooks/useTranslation";
+import type { ParserFeedbackEntry } from "../../lib/api";
 
 export interface FeedbackStats {
   total: number;
@@ -47,24 +47,24 @@ export default function FeedbackAnalytics({
   onSetDays,
   onSelectFeedback,
 }: FeedbackAnalyticsProps): JSX.Element {
-  const { t } = useTranslation(['admin', 'common']);
+  const { t } = useTranslation(["admin", "common"]);
 
   return (
     <div className="space-y-6">
       <InlineHelp
-        title={t('admin:parserFeedbackHelp.helpTitle')}
+        title={t("admin:parserFeedbackHelp.helpTitle")}
         category="advanced"
         content={
           <div className="space-y-2">
-            <p>
-              {t('admin:parserFeedbackHelp.helpContent.description')}
-            </p>
+            <p>{t("admin:parserFeedbackHelp.helpContent.description")}</p>
             <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
               <li>
-                <strong>{t('admin:parserFeedbackHelp.helpContent.statsTitle')}</strong> {t('admin:parserFeedbackHelp.helpContent.stats')}
+                <strong>{t("admin:parserFeedbackHelp.helpContent.statsTitle")}</strong>{" "}
+                {t("admin:parserFeedbackHelp.helpContent.stats")}
               </li>
               <li>
-                <strong>{t('admin:parserFeedbackHelp.helpContent.usageTitle')}</strong> {t('admin:parserFeedbackHelp.helpContent.usage')}
+                <strong>{t("admin:parserFeedbackHelp.helpContent.usageTitle")}</strong>{" "}
+                {t("admin:parserFeedbackHelp.helpContent.usage")}
               </li>
             </ul>
           </div>
@@ -133,9 +133,10 @@ export default function FeedbackAnalytics({
                     .sort(([, a], [, b]) => (b as number) - (a as number))
                     .map(([provider, count]) => {
                       const countNum = count as number;
-                      const percentage = feedbackStats.total > 0
-                        ? Math.round((countNum / feedbackStats.total) * 100)
-                        : 0;
+                      const percentage =
+                        feedbackStats.total > 0
+                          ? Math.round((countNum / feedbackStats.total) * 100)
+                          : 0;
                       return (
                         <div key={provider}>
                           <div className="flex items-center justify-between mb-1">
@@ -170,13 +171,17 @@ export default function FeedbackAnalytics({
                 <div className="grid grid-cols-2 gap-4">
                   {Object.entries(feedbackStats.bySourceType).map(([type, count]) => {
                     const countNum = count as number;
-                    const percentage = feedbackStats.total > 0
-                      ? Math.round((countNum / feedbackStats.total) * 100)
-                      : 0;
+                    const percentage =
+                      feedbackStats.total > 0
+                        ? Math.round((countNum / feedbackStats.total) * 100)
+                        : 0;
                     return (
-                      <div key={type} className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                      <div
+                        key={type}
+                        className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700"
+                      >
                         <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                          {type === 'email' ? 'Email' : 'Boarding Pass'}
+                          {type === "email" ? "Email" : "Boarding Pass"}
                         </div>
                         <div className="text-2xl font-bold text-gray-900 dark:text-white">
                           {String(countNum)}
@@ -200,19 +205,21 @@ export default function FeedbackAnalytics({
               </h3>
               {feedbackStats.commonIssues.length > 0 ? (
                 <div className="space-y-2">
-                  {feedbackStats.commonIssues.map((issue: { issue: string; count: number }, index: number) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700"
-                    >
-                      <span className="text-sm text-gray-700 dark:text-gray-300">
-                        {issue.issue}
-                      </span>
-                      <span className="px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded-full text-sm font-medium">
-                        {issue.count}x
-                      </span>
-                    </div>
-                  ))}
+                  {feedbackStats.commonIssues.map(
+                    (issue: { issue: string; count: number }, index: number) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700"
+                      >
+                        <span className="text-sm text-gray-700 dark:text-gray-300">
+                          {issue.issue}
+                        </span>
+                        <span className="px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded-full text-sm font-medium">
+                          {issue.count}x
+                        </span>
+                      </div>
+                    )
+                  )}
                 </div>
               ) : (
                 <p className="text-gray-500 dark:text-gray-400">No issues reported</p>
@@ -243,26 +250,39 @@ export default function FeedbackAnalytics({
                               <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 rounded text-xs font-medium">
                                 {payload.sourceType}
                               </span>
-                              <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                payload.qualityScore >= 50
-                                  ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-                                  : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
-                              }`}>
+                              <span
+                                className={`px-2 py-1 rounded text-xs font-medium ${
+                                  payload.qualityScore >= 50
+                                    ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300"
+                                    : "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300"
+                                }`}
+                              >
                                 {payload.qualityScore}% quality
                               </span>
                             </div>
                             <div className="text-sm text-gray-600 dark:text-gray-400">
-                              {format(new Date(entry.createdAt), 'PPp')}
+                              {format(new Date(entry.createdAt), "PPp")}
                             </div>
                             {payload.issues && payload.issues.length > 0 && (
                               <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                {payload.issues.slice(0, 3).join(', ')}
-                                {payload.issues.length > 3 && ` (+${payload.issues.length - 3} more)`}
+                                {payload.issues.slice(0, 3).join(", ")}
+                                {payload.issues.length > 3 &&
+                                  ` (+${payload.issues.length - 3} more)`}
                               </div>
                             )}
                           </div>
-                          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          <svg
+                            className="w-5 h-5 text-gray-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 5l7 7-7 7"
+                            />
                           </svg>
                         </div>
                       </div>
@@ -274,7 +294,9 @@ export default function FeedbackAnalytics({
           </div>
         ) : (
           <div className="text-center py-12">
-            <div className="text-gray-400 dark:text-gray-500 mb-2">Loading feedback statistics...</div>
+            <div className="text-gray-400 dark:text-gray-500 mb-2">
+              Loading feedback statistics...
+            </div>
           </div>
         )}
       </div>
@@ -290,13 +312,20 @@ export default function FeedbackAnalytics({
                 className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
             <div className="p-6">
               {(() => {
-                const feedback = feedbackDetails.feedback.find((f: ParserFeedbackEntry) => f.id === selectedFeedbackId);
+                const feedback = feedbackDetails.feedback.find(
+                  (f: ParserFeedbackEntry) => f.id === selectedFeedbackId
+                );
                 if (!feedback) return <p>Feedback not found</p>;
                 const payload = feedback.payload as unknown as FeedbackPayload;
                 return (
@@ -306,7 +335,9 @@ export default function FeedbackAnalytics({
                       <p className="text-gray-700 dark:text-gray-300">{payload.provider}</p>
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Quality Score</h3>
+                      <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                        Quality Score
+                      </h3>
                       <p className="text-gray-700 dark:text-gray-300">{payload.qualityScore}%</p>
                     </div>
                     <div>
@@ -319,7 +350,9 @@ export default function FeedbackAnalytics({
                     </div>
                     {payload.parsedResult && (
                       <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Parsed Result</h3>
+                        <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                          Parsed Result
+                        </h3>
                         <pre className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg overflow-x-auto text-sm">
                           {JSON.stringify(payload.parsedResult, null, 2)}
                         </pre>
@@ -327,7 +360,9 @@ export default function FeedbackAnalytics({
                     )}
                     {payload.correctedResult && (
                       <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Corrected Result</h3>
+                        <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                          Corrected Result
+                        </h3>
                         <pre className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg overflow-x-auto text-sm">
                           {JSON.stringify(payload.correctedResult, null, 2)}
                         </pre>
@@ -335,16 +370,29 @@ export default function FeedbackAnalytics({
                     )}
                     {payload.userCorrections && payload.userCorrections.length > 0 && (
                       <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-white mb-2">User Corrections</h3>
+                        <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                          User Corrections
+                        </h3>
                         <div className="space-y-2">
-                          {payload.userCorrections.map((correction: { field: string; original: unknown; corrected: unknown }, i: number) => (
-                            <div key={i} className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg">
-                              <div className="font-medium text-gray-900 dark:text-white">{correction.field}</div>
-                              <div className="text-sm text-gray-600 dark:text-gray-400">
-                                {String(correction.original)} &rarr; {String(correction.corrected)}
+                          {payload.userCorrections.map(
+                            (
+                              correction: { field: string; original: unknown; corrected: unknown },
+                              i: number
+                            ) => (
+                              <div
+                                key={i}
+                                className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg"
+                              >
+                                <div className="font-medium text-gray-900 dark:text-white">
+                                  {correction.field}
+                                </div>
+                                <div className="text-sm text-gray-600 dark:text-gray-400">
+                                  {String(correction.original)} &rarr;{" "}
+                                  {String(correction.corrected)}
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            )
+                          )}
                         </div>
                       </div>
                     )}

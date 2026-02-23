@@ -1,31 +1,31 @@
-import { Link } from 'react-router-dom';
-import { useState, useEffect } from 'react';
-import NavigationBar from '../components/NavigationBar';
-import InlineHelp from '../components/Help/InlineHelp';
-import { useSettingsStore } from '../store/settingsStore';
-import { useThemeStore } from '../store/themeStore';
-import { useAuthStore } from '../store/authStore';
-import ParserConfiguration from '../components/Settings/ParserConfiguration';
-import ApiKeyCard from '../components/Settings/ApiKeyCard';
-import { settingsApi, authApi, backupApi } from '../lib/api';
-import { useToastStore } from '../store/toastStore';
-import { logger } from '../lib/logger';
-import { useTranslation } from '../hooks/useTranslation';
-import { changeLanguage } from '../i18n/config';
+import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import NavigationBar from "../components/NavigationBar";
+import InlineHelp from "../components/Help/InlineHelp";
+import { useSettingsStore } from "../store/settingsStore";
+import { useThemeStore } from "../store/themeStore";
+import { useAuthStore } from "../store/authStore";
+import ParserConfiguration from "../components/Settings/ParserConfiguration";
+import ApiKeyCard from "../components/Settings/ApiKeyCard";
+import { settingsApi, authApi, backupApi } from "../lib/api";
+import { useToastStore } from "../store/toastStore";
+import { logger } from "../lib/logger";
+import { useTranslation } from "../hooks/useTranslation";
+import { changeLanguage } from "../i18n/config";
 
 const timezoneOptions = [
-  'Europe/Berlin',
-  'Europe/Paris',
-  'UTC',
-  'America/New_York',
-  'America/Los_Angeles',
-  'Asia/Singapore',
+  "Europe/Berlin",
+  "Europe/Paris",
+  "UTC",
+  "America/New_York",
+  "America/Los_Angeles",
+  "Asia/Singapore",
 ];
 
-const colorPresets = ['#2563eb', '#16a34a', '#f97316', '#7c3aed', '#e11d48'];
+const colorPresets = ["#2563eb", "#16a34a", "#f97316", "#7c3aed", "#e11d48"];
 
 export default function SettingsPage(): JSX.Element {
-  const { t } = useTranslation(['settings', 'common']);
+  const { t } = useTranslation(["settings", "common"]);
   const { user } = useAuthStore();
   const {
     profile,
@@ -58,18 +58,22 @@ export default function SettingsPage(): JSX.Element {
   const [changingPassword, setChangingPassword] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
-    oldPassword: '',
-    newPassword: '',
-    confirmPassword: '',
+    oldPassword: "",
+    newPassword: "",
+    confirmPassword: "",
   });
-  const [passwordError, setPasswordError] = useState('');
-  const [lastBackup, setLastBackup] = useState<{ completedAt: string | null; size: string; status: string } | null>(null);
+  const [passwordError, setPasswordError] = useState("");
+  const [lastBackup, setLastBackup] = useState<{
+    completedAt: string | null;
+    size: string;
+    status: string;
+  } | null>(null);
   const [backupStatus, setBackupStatus] = useState<{ running: boolean } | null>(null);
   const [retentionDays, setRetentionDays] = useState(30);
   const [trainingSettings, setTrainingSettings] = useState({
     useTrainedModels: true,
-    preferredEmailModel: 'auto' as 'auto' | 'trained' | 'base',
-    preferredVisionModel: 'auto' as 'auto' | 'trained' | 'base',
+    preferredEmailModel: "auto" as "auto" | "trained" | "base",
+    preferredVisionModel: "auto" as "auto" | "trained" | "base",
     trainingSeparateModels: true,
   });
   const [loadingTrainingSettings, setLoadingTrainingSettings] = useState(false);
@@ -89,7 +93,8 @@ export default function SettingsPage(): JSX.Element {
     maxPerDay: 50,
     requireApproval: true,
   });
-  const [loadingHistoricalEnrichmentSettings, setLoadingHistoricalEnrichmentSettings] = useState(false);
+  const [loadingHistoricalEnrichmentSettings, setLoadingHistoricalEnrichmentSettings] =
+    useState(false);
   const [apiKeysStatus, setApiKeysStatus] = useState<{
     openai: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     claude: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
@@ -98,12 +103,12 @@ export default function SettingsPage(): JSX.Element {
     opensky: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
   } | null>(null);
   const [apiKeys, setApiKeys] = useState({
-    openaiApiKey: '',
-    claudeApiKey: '',
-    airlabsApiKey: '',
-    aviationstackApiKey: '',
-    openskyClientId: '',
-    openskyClientSecret: '',
+    openaiApiKey: "",
+    claudeApiKey: "",
+    airlabsApiKey: "",
+    aviationstackApiKey: "",
+    openskyClientId: "",
+    openskyClientSecret: "",
   });
   const [loadingApiKeys, setLoadingApiKeys] = useState(false);
 
@@ -122,7 +127,7 @@ export default function SettingsPage(): JSX.Element {
           trainingSeparateModels: data.trainingSeparateModels,
         });
       } catch (error) {
-        logger.error('Failed to load training settings:', error);
+        logger.error("Failed to load training settings:", error);
       }
     };
     loadTrainingSettings();
@@ -133,10 +138,10 @@ export default function SettingsPage(): JSX.Element {
     const loadAutoUpdateSettings = async () => {
       try {
         const settings = await settingsApi.get();
-        logger.info('Loaded settings from server:', settings);
-        
+        logger.info("Loaded settings from server:", settings);
+
         // Load auto-update settings (always set, even if not in response)
-        logger.info('Setting auto-update settings:', settings.autoUpdate);
+        logger.info("Setting auto-update settings:", settings.autoUpdate);
         setAutoUpdateSettings({
           enabled: settings.autoUpdate?.enabled ?? false,
           requireApproval: settings.autoUpdate?.requireApproval ?? true,
@@ -144,14 +149,14 @@ export default function SettingsPage(): JSX.Element {
           onlyDuringFlight: settings.autoUpdate?.onlyDuringFlight ?? true,
           expiryHours: settings.autoUpdate?.expiryHours ?? 24,
         });
-        
+
         // Load boarding pass parser strategy
         if (settings.boardingPassParserStrategy !== undefined) {
           setBoardingPassParserStrategy(settings.boardingPassParserStrategy);
         }
-        
+
         // Load historical enrichment settings (always set, even if not in response)
-        logger.info('Setting historical enrichment settings:', settings.historicalEnrichment);
+        logger.info("Setting historical enrichment settings:", settings.historicalEnrichment);
         setHistoricalEnrichmentSettings({
           enabled: settings.historicalEnrichment?.enabled ?? false,
           minConfidence: settings.historicalEnrichment?.minConfidence ?? 60,
@@ -161,18 +166,18 @@ export default function SettingsPage(): JSX.Element {
           requireApproval: settings.historicalEnrichment?.requireApproval ?? true,
         });
       } catch (error) {
-        logger.error('Failed to load auto-update settings:', error);
+        logger.error("Failed to load auto-update settings:", error);
       }
     };
     loadAutoUpdateSettings();
-    
+
     // Load API keys status
     const loadApiKeysStatus = async () => {
       try {
         const status = await settingsApi.getApiKeys();
         setApiKeysStatus(status);
       } catch (error) {
-        logger.error('Failed to load API keys status:', error);
+        logger.error("Failed to load API keys status:", error);
       }
     };
     loadApiKeysStatus();
@@ -190,10 +195,13 @@ export default function SettingsPage(): JSX.Element {
       if (reloaded.autoUpdate) {
         setAutoUpdateSettings(reloaded.autoUpdate);
       }
-      addToast('success', t('settings:autoUpdate.saved') || 'Auto-Update-Einstellungen gespeichert');
+      addToast(
+        "success",
+        t("settings:autoUpdate.saved") || "Auto-Update-Einstellungen gespeichert"
+      );
     } catch (error) {
-      logger.error('Failed to save auto-update settings:', error);
-      addToast('error', t('settings:autoUpdate.saveFailed') || 'Fehler beim Speichern');
+      logger.error("Failed to save auto-update settings:", error);
+      addToast("error", t("settings:autoUpdate.saveFailed") || "Fehler beim Speichern");
     } finally {
       setLoadingAutoUpdateSettings(false);
     }
@@ -203,22 +211,26 @@ export default function SettingsPage(): JSX.Element {
   const saveHistoricalEnrichmentSettings = async () => {
     try {
       setLoadingHistoricalEnrichmentSettings(true);
-      logger.info('Saving historical enrichment settings:', historicalEnrichmentSettings);
+      logger.info("Saving historical enrichment settings:", historicalEnrichmentSettings);
       const payload = {
         historicalEnrichment: historicalEnrichmentSettings,
       };
-      logger.info('Sending payload to server:', payload);
+      logger.info("Sending payload to server:", payload);
       await settingsApi.update(payload);
       // Reload settings from server to ensure we have the latest values
       const reloaded = await settingsApi.get();
-      logger.info('Reloaded settings from server:', reloaded);
+      logger.info("Reloaded settings from server:", reloaded);
       if (reloaded.historicalEnrichment) {
         setHistoricalEnrichmentSettings(reloaded.historicalEnrichment);
       }
-      addToast('success', t('settings:historicalEnrichment.saved') || 'Historische Anreicherungs-Einstellungen gespeichert');
+      addToast(
+        "success",
+        t("settings:historicalEnrichment.saved") ||
+          "Historische Anreicherungs-Einstellungen gespeichert"
+      );
     } catch (error) {
-      logger.error('Failed to save historical enrichment settings:', error);
-      addToast('error', t('settings:historicalEnrichment.saveFailed') || 'Fehler beim Speichern');
+      logger.error("Failed to save historical enrichment settings:", error);
+      addToast("error", t("settings:historicalEnrichment.saveFailed") || "Fehler beim Speichern");
     } finally {
       setLoadingHistoricalEnrichmentSettings(false);
     }
@@ -230,8 +242,8 @@ export default function SettingsPage(): JSX.Element {
       try {
         await saveRemoteSettings();
       } catch (error) {
-        logger.error('Failed to save units settings:', error);
-        addToast('error', t('settings:errors.saveFailed') || 'Failed to save settings');
+        logger.error("Failed to save units settings:", error);
+        addToast("error", t("settings:errors.saveFailed") || "Failed to save settings");
       }
     };
 
@@ -244,10 +256,10 @@ export default function SettingsPage(): JSX.Element {
     setLoadingTrainingSettings(true);
     try {
       await settingsApi.updateTrainingSettings(trainingSettings);
-      addToast('success', t('settings:training.updated'));
+      addToast("success", t("settings:training.updated"));
     } catch (error) {
-      logger.error('Failed to update training settings:', error);
-      addToast('error', t('settings:training.updateFailed'));
+      logger.error("Failed to update training settings:", error);
+      addToast("error", t("settings:training.updateFailed"));
     } finally {
       setLoadingTrainingSettings(false);
     }
@@ -262,14 +274,14 @@ export default function SettingsPage(): JSX.Element {
             backupApi.list(),
             backupApi.getStatus(),
           ]);
-          
-          const completedBackups = backupsData.backups.filter((b) => b.status === 'completed');
+
+          const completedBackups = backupsData.backups.filter((b) => b.status === "completed");
           if (completedBackups.length > 0) {
             setLastBackup(completedBackups[0]);
           }
           setBackupStatus(statusData);
         } catch (error) {
-          logger.error('Failed to load backup info:', error);
+          logger.error("Failed to load backup info:", error);
         }
       };
       loadBackupInfo();
@@ -290,11 +302,11 @@ export default function SettingsPage(): JSX.Element {
           // Handle 403 (forbidden) or 401 (unauthorized) errors gracefully
           const axiosError = error as { response?: { status?: number } };
           if (axiosError.response?.status === 403 || axiosError.response?.status === 401) {
-            logger.warn('Training access denied or not available:', error);
+            logger.warn("Training access denied or not available:", error);
             // Don't show error to user, just don't enable developer mode
             setDeveloperModeEnabled(false);
           } else {
-            logger.error('Failed to load developer mode status:', error);
+            logger.error("Failed to load developer mode status:", error);
           }
         });
     } else {
@@ -308,14 +320,14 @@ export default function SettingsPage(): JSX.Element {
     if (!file) return;
 
     // Validate file type
-    if (!file.type.startsWith('image/')) {
-      addToast('error', t('settings:profile.invalidFileType'));
+    if (!file.type.startsWith("image/")) {
+      addToast("error", t("settings:profile.invalidFileType"));
       return;
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      addToast('error', t('settings:profile.fileTooLarge'));
+      addToast("error", t("settings:profile.fileTooLarge"));
       return;
     }
 
@@ -323,11 +335,11 @@ export default function SettingsPage(): JSX.Element {
     try {
       const result = await settingsApi.uploadProfilePicture(file);
       setProfile({ profilePicture: result.profilePictureUrl });
-      addToast('success', t('settings:profile.uploadSuccess'));
+      addToast("success", t("settings:profile.uploadSuccess"));
     } catch (error: unknown) {
-      logger.error('Failed to upload profile picture:', error);
+      logger.error("Failed to upload profile picture:", error);
       const axiosError = error as { response?: { data?: { error?: string } } };
-      addToast('error', axiosError.response?.data?.error || t('settings:profile.uploadError'));
+      addToast("error", axiosError.response?.data?.error || t("settings:profile.uploadError"));
       // Fallback: show local preview
       const url = URL.createObjectURL(file);
       setProfile({ profilePicture: url });
@@ -335,7 +347,7 @@ export default function SettingsPage(): JSX.Element {
       setUploadingProfilePicture(false);
       // Reset input
       if (event.target) {
-        event.target.value = '';
+        event.target.value = "";
       }
     }
   };
@@ -343,7 +355,7 @@ export default function SettingsPage(): JSX.Element {
   const handleThemeToggle = () => {
     const nextIsDark = !isDarkMode;
     setDarkMode(nextIsDark);
-    setDisplay({ theme: nextIsDark ? 'dark' : 'light' });
+    setDisplay({ theme: nextIsDark ? "dark" : "light" });
   };
 
   const handleDeveloperModeToggle = () => {
@@ -367,34 +379,34 @@ export default function SettingsPage(): JSX.Element {
       });
       setDeveloperModeEnabled(enabled);
     } catch (error) {
-      logger.error('Failed to update developer mode:', error);
-      alert(t('settings:developer.updateError'));
+      logger.error("Failed to update developer mode:", error);
+      alert(t("settings:developer.updateError"));
     } finally {
       setLoadingDeveloperMode(false);
     }
   };
 
   const handlePasswordChange = async () => {
-    setPasswordError('');
+    setPasswordError("");
 
     // Validation
     if (!passwordForm.oldPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
-      setPasswordError(t('common:messages.error'));
+      setPasswordError(t("common:messages.error"));
       return;
     }
 
     if (passwordForm.newPassword.length < 6) {
-      setPasswordError(t('common:messages.error'));
+      setPasswordError(t("common:messages.error"));
       return;
     }
 
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      setPasswordError(t('common:messages.error'));
+      setPasswordError(t("common:messages.error"));
       return;
     }
 
     if (passwordForm.oldPassword === passwordForm.newPassword) {
-      setPasswordError(t('common:messages.error'));
+      setPasswordError(t("common:messages.error"));
       return;
     }
 
@@ -402,17 +414,17 @@ export default function SettingsPage(): JSX.Element {
 
     try {
       await authApi.changePassword(passwordForm.oldPassword, passwordForm.newPassword);
-      addToast('success', t('settings:password.success'));
+      addToast("success", t("settings:password.success"));
       setShowPasswordModal(false);
       setPasswordForm({
-        oldPassword: '',
-        newPassword: '',
-        confirmPassword: '',
+        oldPassword: "",
+        newPassword: "",
+        confirmPassword: "",
       });
     } catch (error: unknown) {
-      logger.error('Failed to change password:', error);
+      logger.error("Failed to change password:", error);
       const axiosError = error as { response?: { data?: { error?: string } } };
-      setPasswordError(axiosError.response?.data?.error || t('settings:password.error'));
+      setPasswordError(axiosError.response?.data?.error || t("settings:password.error"));
     } finally {
       setChangingPassword(false);
     }
@@ -424,9 +436,9 @@ export default function SettingsPage(): JSX.Element {
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings:roadmap')}</p>
-            <h1 className="text-3xl font-bold">{t('settings:title')}</h1>
-            <p className="text-gray-500 dark:text-gray-400">{t('settings:subtitle')}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{t("settings:roadmap")}</p>
+            <h1 className="text-3xl font-bold">{t("settings:title")}</h1>
+            <p className="text-gray-500 dark:text-gray-400">{t("settings:subtitle")}</p>
           </div>
         </div>
       </header>
@@ -437,16 +449,13 @@ export default function SettingsPage(): JSX.Element {
           <div className="card lg:col-span-2 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold">{t('settings:profile.title')}</h2>
+                <h2 className="text-xl font-semibold">{t("settings:profile.title")}</h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {t('settings:profile.description')}
+                  {t("settings:profile.description")}
                 </p>
               </div>
-              <button
-                onClick={() => setShowPasswordModal(true)}
-                className="btn-secondary"
-              >
-                {t('settings:profile.changePassword')}
+              <button onClick={() => setShowPasswordModal(true)} className="btn-secondary">
+                {t("settings:profile.changePassword")}
               </button>
             </div>
 
@@ -455,7 +464,7 @@ export default function SettingsPage(): JSX.Element {
                 {profile.profilePicture ? (
                   <img
                     src={profile.profilePicture}
-                    alt={t('settings:profile.title')}
+                    alt={t("settings:profile.title")}
                     className="w-full h-full object-cover rounded-full"
                   />
                 ) : (
@@ -463,7 +472,7 @@ export default function SettingsPage(): JSX.Element {
                 )}
               </div>
               <div>
-                <label className="label">{t('settings:profile.uploadAvatar')}</label>
+                <label className="label">{t("settings:profile.uploadAvatar")}</label>
                 <input
                   type="file"
                   accept="image/*"
@@ -476,7 +485,7 @@ export default function SettingsPage(): JSX.Element {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="label">{t('settings:profile.username')}</label>
+                <label className="label">{t("settings:profile.username")}</label>
                 <input
                   type="text"
                   value={profile.username}
@@ -485,7 +494,7 @@ export default function SettingsPage(): JSX.Element {
                 />
               </div>
               <div>
-                <label className="label">{t('settings:profile.email')}</label>
+                <label className="label">{t("settings:profile.email")}</label>
                 <input
                   type="email"
                   value={profile.email}
@@ -500,10 +509,12 @@ export default function SettingsPage(): JSX.Element {
                 className="btn-danger"
                 onClick={() => setPrivacy({ accountDeletionRequested: true })}
               >
-                {t('settings:profile.deleteAccount')}
+                {t("settings:profile.deleteAccount")}
               </button>
               {privacy.accountDeletionRequested && (
-                <span className="text-sm text-red-500">{t('settings:profile.deletionRequested')}</span>
+                <span className="text-sm text-red-500">
+                  {t("settings:profile.deletionRequested")}
+                </span>
               )}
             </div>
           </div>
@@ -512,66 +523,65 @@ export default function SettingsPage(): JSX.Element {
           <div className="card space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold">{t('settings:display.title')}</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings:display.description')}</p>
+                <h2 className="text-xl font-semibold">{t("settings:display.title")}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {t("settings:display.description")}
+                </p>
               </div>
               <button
                 onClick={handleThemeToggle}
                 className={`px-3 py-2 rounded-lg border text-sm ${
                   isDarkMode
-                    ? 'bg-gray-800 text-yellow-400 border-gray-700'
-                    : 'bg-gray-100 text-gray-800 border-gray-200'
+                    ? "bg-gray-800 text-yellow-400 border-gray-700"
+                    : "bg-gray-100 text-gray-800 border-gray-200"
                 }`}
               >
-                {display.theme === 'dark' 
-                  ? `${t('settings:display.theme.darkMode')} ${t('settings:display.theme.active')}`
-                  : `${t('settings:display.theme.lightMode')} ${t('settings:display.theme.active')}`
-                }
+                {display.theme === "dark"
+                  ? `${t("settings:display.theme.darkMode")} ${t("settings:display.theme.active")}`
+                  : `${t("settings:display.theme.lightMode")} ${t("settings:display.theme.active")}`}
               </button>
             </div>
 
             <InlineHelp
-              title={t('settings:display.theme.title')}
+              title={t("settings:display.theme.title")}
               category="basic"
               content={
                 <div className="space-y-2">
-                  <p>
-                    {t('settings:display.theme.description')}
-                  </p>
+                  <p>{t("settings:display.theme.description")}</p>
                   <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
                     <li>
-                      <strong>{t('settings:display.theme.lightMode')}:</strong> {t('settings:display.theme.lightDescription')}
+                      <strong>{t("settings:display.theme.lightMode")}:</strong>{" "}
+                      {t("settings:display.theme.lightDescription")}
                     </li>
                     <li>
-                      <strong>{t('settings:display.theme.darkMode')}:</strong> {t('settings:display.theme.darkDescription')}
+                      <strong>{t("settings:display.theme.darkMode")}:</strong>{" "}
+                      {t("settings:display.theme.darkDescription")}
                     </li>
-                    <li>
-                      {t('settings:display.theme.autoSave')}
-                    </li>
+                    <li>{t("settings:display.theme.autoSave")}</li>
                   </ul>
                 </div>
               }
             />
 
             <div>
-              <label className="label">{t('settings:display.language')}</label>
+              <label className="label">{t("settings:display.language")}</label>
               <select
                 value={display.language}
                 onChange={(e) => {
-                  const newLang = e.target.value as 'de' | 'en';
+                  const newLang = e.target.value as "de" | "en";
                   // changeLanguage is async but we don't need to await here
                   // as the UI will re-render automatically when i18n updates
                   void changeLanguage(newLang);
                 }}
                 className="input"
               >
-                <option value="de">{t('settings:display.languages.de')}</option>
-                <option value="en">{t('settings:display.languages.en')}</option>
+                <option value="de">{t("settings:display.languages.de")}</option>
+                <option value="en">{t("settings:display.languages.en")}</option>
               </select>
             </div>
 
             <div>
-              <label className="label">{t('settings:display.timezone')}</label>
+              <label className="label">{t("settings:display.timezone")}</label>
               <select
                 value={display.timezone}
                 onChange={(e) => setDisplay({ timezone: e.target.value })}
@@ -587,10 +597,12 @@ export default function SettingsPage(): JSX.Element {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="label">{t('settings:display.dateFormat')}</label>
+                <label className="label">{t("settings:display.dateFormat")}</label>
                 <select
                   value={display.dateFormat}
-                  onChange={(e) => setDisplay({ dateFormat: e.target.value as typeof display.dateFormat })}
+                  onChange={(e) =>
+                    setDisplay({ dateFormat: e.target.value as typeof display.dateFormat })
+                  }
                   className="input"
                 >
                   <option value="DD.MM.YYYY">DD.MM.YYYY</option>
@@ -599,10 +611,12 @@ export default function SettingsPage(): JSX.Element {
                 </select>
               </div>
               <div>
-                <label className="label">{t('settings:display.timeFormat')}</label>
+                <label className="label">{t("settings:display.timeFormat")}</label>
                 <select
                   value={display.timeFormat}
-                  onChange={(e) => setDisplay({ timeFormat: e.target.value as typeof display.timeFormat })}
+                  onChange={(e) =>
+                    setDisplay({ timeFormat: e.target.value as typeof display.timeFormat })
+                  }
                   className="input"
                 >
                   <option value="24h">24h</option>
@@ -618,35 +632,41 @@ export default function SettingsPage(): JSX.Element {
           <div className="card space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold">{t('settings:units.title')}</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings:units.description')}</p>
+                <h2 className="text-xl font-semibold">{t("settings:units.title")}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {t("settings:units.description")}
+                </p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="label">{t('settings:units.distance')}</label>
+                <label className="label">{t("settings:units.distance")}</label>
                 <select
                   value={units.distanceUnit}
-                  onChange={(e) => setUnits({ distanceUnit: e.target.value as typeof units.distanceUnit })}
+                  onChange={(e) =>
+                    setUnits({ distanceUnit: e.target.value as typeof units.distanceUnit })
+                  }
                   className="input"
                 >
-                  <option value="kilometers">{t('settings:units.options.kilometers')}</option>
-                  <option value="miles">{t('settings:units.options.miles')}</option>
-                  <option value="nautical_miles">{t('settings:units.options.nautical_miles')}</option>
+                  <option value="kilometers">{t("settings:units.options.kilometers")}</option>
+                  <option value="miles">{t("settings:units.options.miles")}</option>
+                  <option value="nautical_miles">
+                    {t("settings:units.options.nautical_miles")}
+                  </option>
                 </select>
               </div>
               <div>
-                <label className="label">{t('settings:units.currency')}</label>
+                <label className="label">{t("settings:units.currency")}</label>
                 <select
                   value={units.currency}
                   onChange={(e) => setUnits({ currency: e.target.value as typeof units.currency })}
                   className="input"
                 >
-                  <option value="EUR">{t('settings:units.options.EUR')}</option>
-                  <option value="USD">{t('settings:units.options.USD')}</option>
-                  <option value="GBP">{t('settings:units.options.GBP')}</option>
-                  <option value="CHF">{t('settings:units.options.CHF')}</option>
+                  <option value="EUR">{t("settings:units.options.EUR")}</option>
+                  <option value="USD">{t("settings:units.options.USD")}</option>
+                  <option value="GBP">{t("settings:units.options.GBP")}</option>
+                  <option value="CHF">{t("settings:units.options.CHF")}</option>
                 </select>
               </div>
             </div>
@@ -656,38 +676,46 @@ export default function SettingsPage(): JSX.Element {
           <div className="card space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold">{t('settings:defaults.title')}</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings:defaults.description')}</p>
+                <h2 className="text-xl font-semibold">{t("settings:defaults.title")}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {t("settings:defaults.description")}
+                </p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="label">{t('settings:defaults.flightStatus')}</label>
+                <label className="label">{t("settings:defaults.flightStatus")}</label>
                 <select
                   value={defaults.flightStatus}
-                  onChange={(e) => setDefaults({ flightStatus: e.target.value as typeof defaults.flightStatus })}
+                  onChange={(e) =>
+                    setDefaults({ flightStatus: e.target.value as typeof defaults.flightStatus })
+                  }
                   className="input"
                 >
-                  <option value="scheduled">{t('settings:defaults.options.scheduled')}</option>
-                  <option value="flown">{t('settings:defaults.options.flown')}</option>
+                  <option value="scheduled">{t("settings:defaults.options.scheduled")}</option>
+                  <option value="flown">{t("settings:defaults.options.flown")}</option>
                 </select>
               </div>
               <div>
-                <label className="label">{t('settings:defaults.seatClass')}</label>
+                <label className="label">{t("settings:defaults.seatClass")}</label>
                 <select
                   value={defaults.seatClass}
-                  onChange={(e) => setDefaults({ seatClass: e.target.value as typeof defaults.seatClass })}
+                  onChange={(e) =>
+                    setDefaults({ seatClass: e.target.value as typeof defaults.seatClass })
+                  }
                   className="input"
                 >
-                  <option value="economy">{t('settings:defaults.options.economy')}</option>
-                  <option value="premium_economy">{t('settings:defaults.options.premium_economy')}</option>
-                  <option value="business">{t('settings:defaults.options.business')}</option>
-                  <option value="first">{t('settings:defaults.options.first')}</option>
+                  <option value="economy">{t("settings:defaults.options.economy")}</option>
+                  <option value="premium_economy">
+                    {t("settings:defaults.options.premium_economy")}
+                  </option>
+                  <option value="business">{t("settings:defaults.options.business")}</option>
+                  <option value="first">{t("settings:defaults.options.first")}</option>
                 </select>
               </div>
               <div>
-                <label className="label">{t('settings:defaults.favoriteAirline')}</label>
+                <label className="label">{t("settings:defaults.favoriteAirline")}</label>
                 <input
                   type="text"
                   value={defaults.favoriteAirline}
@@ -696,15 +724,19 @@ export default function SettingsPage(): JSX.Element {
                 />
               </div>
               <div>
-                <label className="label">{t('settings:defaults.flightCategory')}</label>
+                <label className="label">{t("settings:defaults.flightCategory")}</label>
                 <select
                   value={defaults.flightCategory}
-                  onChange={(e) => setDefaults({ flightCategory: e.target.value as typeof defaults.flightCategory })}
+                  onChange={(e) =>
+                    setDefaults({
+                      flightCategory: e.target.value as typeof defaults.flightCategory,
+                    })
+                  }
                   className="input"
                 >
-                  <option value="business">{t('settings:defaults.options.business')}</option>
-                  <option value="private">{t('settings:defaults.options.private')}</option>
-                  <option value="vacation">{t('settings:defaults.options.vacation')}</option>
+                  <option value="business">{t("settings:defaults.options.business")}</option>
+                  <option value="private">{t("settings:defaults.options.private")}</option>
+                  <option value="vacation">{t("settings:defaults.options.vacation")}</option>
                 </select>
               </div>
             </div>
@@ -716,25 +748,27 @@ export default function SettingsPage(): JSX.Element {
           <div className="card space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold">{t('settings:map.title')}</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings:map.description')}</p>
+                <h2 className="text-xl font-semibold">{t("settings:map.title")}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {t("settings:map.description")}
+                </p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="label">{t('settings:map.mapStyle')}</label>
+                <label className="label">{t("settings:map.mapStyle")}</label>
                 <select
                   value={map.mapStyle}
                   onChange={(e) => setMap({ mapStyle: e.target.value as typeof map.mapStyle })}
                   className="input"
                 >
-                  <option value="osm">{t('settings:map.options.osm')}</option>
-                  <option value="satellite">{t('settings:map.options.satellite')}</option>
+                  <option value="osm">{t("settings:map.options.osm")}</option>
+                  <option value="satellite">{t("settings:map.options.satellite")}</option>
                 </select>
               </div>
               <div>
-                <label className="label">{t('settings:map.zoomLevel')}</label>
+                <label className="label">{t("settings:map.zoomLevel")}</label>
                 <input
                   type="number"
                   min={1}
@@ -745,19 +779,21 @@ export default function SettingsPage(): JSX.Element {
                 />
               </div>
               <div>
-                <label className="label">{t('settings:map.markerStyle')}</label>
+                <label className="label">{t("settings:map.markerStyle")}</label>
                 <select
                   value={map.markerStyle}
-                  onChange={(e) => setMap({ markerStyle: e.target.value as typeof map.markerStyle })}
+                  onChange={(e) =>
+                    setMap({ markerStyle: e.target.value as typeof map.markerStyle })
+                  }
                   className="input"
                 >
-                  <option value="pin">{t('settings:map.options.pin')}</option>
-                  <option value="circle">{t('settings:map.options.circle')}</option>
-                  <option value="custom">{t('settings:map.options.custom')}</option>
+                  <option value="pin">{t("settings:map.options.pin")}</option>
+                  <option value="circle">{t("settings:map.options.circle")}</option>
+                  <option value="custom">{t("settings:map.options.custom")}</option>
                 </select>
               </div>
               <div>
-                <label className="label">{t('settings:map.routeColor')}</label>
+                <label className="label">{t("settings:map.routeColor")}</label>
                 <div className="flex items-center gap-2">
                   <input
                     type="color"
@@ -785,8 +821,10 @@ export default function SettingsPage(): JSX.Element {
           <div className="card space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold">{t('settings:notifications.title')}</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings:notifications.description')}</p>
+                <h2 className="text-xl font-semibold">{t("settings:notifications.title")}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {t("settings:notifications.description")}
+                </p>
               </div>
             </div>
 
@@ -798,7 +836,7 @@ export default function SettingsPage(): JSX.Element {
                   onChange={(e) => setNotifications({ emailNotifications: e.target.checked })}
                   className="h-4 w-4"
                 />
-                <span>{t('settings:notifications.emailNotifications')}</span>
+                <span>{t("settings:notifications.emailNotifications")}</span>
               </label>
 
               <label className="flex items-center gap-3">
@@ -808,19 +846,23 @@ export default function SettingsPage(): JSX.Element {
                   onChange={(e) => setNotifications({ checkInReminder: e.target.checked })}
                   className="h-4 w-4"
                 />
-                <span>{t('settings:notifications.checkInReminder')}</span>
+                <span>{t("settings:notifications.checkInReminder")}</span>
               </label>
 
               <div>
-                <label className="label">{t('settings:notifications.flightReminder')}</label>
+                <label className="label">{t("settings:notifications.flightReminder")}</label>
                 <select
                   value={notifications.flightReminder}
-                  onChange={(e) => setNotifications({ flightReminder: e.target.value as typeof notifications.flightReminder })}
+                  onChange={(e) =>
+                    setNotifications({
+                      flightReminder: e.target.value as typeof notifications.flightReminder,
+                    })
+                  }
                   className="input"
                 >
-                  <option value="off">{t('settings:notifications.options.off')}</option>
-                  <option value="24h">{t('settings:notifications.options.24h')}</option>
-                  <option value="48h">{t('settings:notifications.options.48h')}</option>
+                  <option value="off">{t("settings:notifications.options.off")}</option>
+                  <option value="24h">{t("settings:notifications.options.24h")}</option>
+                  <option value="48h">{t("settings:notifications.options.48h")}</option>
                 </select>
               </div>
 
@@ -831,7 +873,7 @@ export default function SettingsPage(): JSX.Element {
                   onChange={(e) => setNotifications({ featureUpdates: e.target.checked })}
                   className="h-4 w-4"
                 />
-                <span>{t('settings:notifications.featureUpdates')}</span>
+                <span>{t("settings:notifications.featureUpdates")}</span>
               </label>
             </div>
           </div>
@@ -842,8 +884,10 @@ export default function SettingsPage(): JSX.Element {
           <div className="card space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold">{t('settings:privacy.title')}</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings:privacy.description')}</p>
+                <h2 className="text-xl font-semibold">{t("settings:privacy.title")}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {t("settings:privacy.description")}
+                </p>
               </div>
             </div>
 
@@ -855,7 +899,7 @@ export default function SettingsPage(): JSX.Element {
                   onChange={(e) => setPrivacy({ twoFactorAuth: e.target.checked })}
                   className="h-4 w-4"
                 />
-                <span>{t('settings:privacy.twoFactorAuth')}</span>
+                <span>{t("settings:privacy.twoFactorAuth")}</span>
               </label>
 
               <label className="flex items-center gap-3">
@@ -865,7 +909,7 @@ export default function SettingsPage(): JSX.Element {
                   onChange={(e) => setPrivacy({ loginAlerts: e.target.checked })}
                   className="h-4 w-4"
                 />
-                <span>{t('settings:privacy.loginAlerts')}</span>
+                <span>{t("settings:privacy.loginAlerts")}</span>
               </label>
 
               <label className="flex items-center gap-3">
@@ -875,7 +919,7 @@ export default function SettingsPage(): JSX.Element {
                   onChange={(e) => setPrivacy({ analyticsOptIn: e.target.checked })}
                   className="h-4 w-4"
                 />
-                <span>{t('settings:privacy.analyticsOptIn')}</span>
+                <span>{t("settings:privacy.analyticsOptIn")}</span>
               </label>
 
               <div className="flex items-center gap-3">
@@ -883,9 +927,13 @@ export default function SettingsPage(): JSX.Element {
                   className="btn-secondary"
                   onClick={() => setPrivacy({ dataExportRequested: true })}
                 >
-                  {t('settings:privacy.dataExport')}
+                  {t("settings:privacy.dataExport")}
                 </button>
-                {privacy.dataExportRequested && <span className="text-sm text-green-500">{t('settings:privacy.dataExportRequested')}</span>}
+                {privacy.dataExportRequested && (
+                  <span className="text-sm text-green-500">
+                    {t("settings:privacy.dataExportRequested")}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -894,8 +942,10 @@ export default function SettingsPage(): JSX.Element {
           <div className="card space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold">{t('settings:backup.title')}</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings:backup.description')}</p>
+                <h2 className="text-xl font-semibold">{t("settings:backup.title")}</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {t("settings:backup.description")}
+                </p>
               </div>
             </div>
 
@@ -907,32 +957,36 @@ export default function SettingsPage(): JSX.Element {
                   onChange={(e) => setBackup({ autoBackup: e.target.checked })}
                   className="h-4 w-4"
                 />
-                <span>{t('settings:backup.autoBackup')}</span>
+                <span>{t("settings:backup.autoBackup")}</span>
               </label>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="label">{t('settings:backup.backupInterval')}</label>
+                  <label className="label">{t("settings:backup.backupInterval")}</label>
                   <select
                     value={backup.backupInterval}
-                    onChange={(e) => setBackup({ backupInterval: e.target.value as typeof backup.backupInterval })}
+                    onChange={(e) =>
+                      setBackup({ backupInterval: e.target.value as typeof backup.backupInterval })
+                    }
                     className="input"
                   >
-                    <option value="daily">{t('settings:backup.intervals.daily')}</option>
-                    <option value="weekly">{t('settings:backup.intervals.weekly')}</option>
-                    <option value="monthly">{t('settings:backup.intervals.monthly')}</option>
+                    <option value="daily">{t("settings:backup.intervals.daily")}</option>
+                    <option value="weekly">{t("settings:backup.intervals.weekly")}</option>
+                    <option value="monthly">{t("settings:backup.intervals.monthly")}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="label">{t('settings:backup.exportFormat')}</label>
+                  <label className="label">{t("settings:backup.exportFormat")}</label>
                   <select
                     value={backup.exportFormat}
-                    onChange={(e) => setBackup({ exportFormat: e.target.value as typeof backup.exportFormat })}
+                    onChange={(e) =>
+                      setBackup({ exportFormat: e.target.value as typeof backup.exportFormat })
+                    }
                     className="input"
                   >
-                    <option value="json">{t('settings:backup.formats.json')}</option>
-                    <option value="csv">{t('settings:backup.formats.csv')}</option>
-                    <option value="pdf">{t('settings:backup.formats.pdf')}</option>
+                    <option value="json">{t("settings:backup.formats.json")}</option>
+                    <option value="csv">{t("settings:backup.formats.csv")}</option>
+                    <option value="pdf">{t("settings:backup.formats.pdf")}</option>
                   </select>
                 </div>
               </div>
@@ -944,11 +998,11 @@ export default function SettingsPage(): JSX.Element {
                   onChange={(e) => setBackup({ cloudSync: e.target.checked })}
                   className="h-4 w-4"
                 />
-                <span>{t('settings:backup.cloudSync')}</span>
+                <span>{t("settings:backup.cloudSync")}</span>
               </label>
 
               <div>
-                <label className="label">{t('settings:backup.retentionDays')}</label>
+                <label className="label">{t("settings:backup.retentionDays")}</label>
                 <input
                   type="number"
                   value={retentionDays}
@@ -958,36 +1012,46 @@ export default function SettingsPage(): JSX.Element {
                   className="input"
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {t('settings:backup.retentionDaysDescription', { days: retentionDays })}
+                  {t("settings:backup.retentionDaysDescription", { days: retentionDays })}
                 </p>
               </div>
 
               {user?.isAdmin && (
                 <>
                   <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('settings:backup.status.title')}</p>
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      {t("settings:backup.status.title")}
+                    </p>
                     {backupStatus?.running ? (
                       <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
                         <span className="animate-pulse">●</span>
-                        <span>{t('settings:backup.status.running')}</span>
+                        <span>{t("settings:backup.status.running")}</span>
                       </div>
                     ) : lastBackup ? (
                       <div className="space-y-1">
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {t('settings:backup.status.lastBackup', { date: lastBackup.completedAt ? new Date(lastBackup.completedAt).toLocaleString('de-DE') : '-' })}
+                          {t("settings:backup.status.lastBackup", {
+                            date: lastBackup.completedAt
+                              ? new Date(lastBackup.completedAt).toLocaleString("de-DE")
+                              : "-",
+                          })}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-500">
-                          {t('settings:backup.status.size', { size: (parseInt(lastBackup.size, 10) / 1024 / 1024).toFixed(2) })}
+                          {t("settings:backup.status.size", {
+                            size: (parseInt(lastBackup.size, 10) / 1024 / 1024).toFixed(2),
+                          })}
                         </p>
                       </div>
                     ) : (
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings:backup.status.noBackup')}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {t("settings:backup.status.noBackup")}
+                      </p>
                     )}
                   </div>
 
                   <div className="pt-2">
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {t('settings:backup.status.path', { path: '/app/data/backups' })}
+                      {t("settings:backup.status.path", { path: "/app/data/backups" })}
                     </p>
                   </div>
                 </>
@@ -1017,16 +1081,20 @@ export default function SettingsPage(): JSX.Element {
                 </p>
                 <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
                   <li>
-                    <strong>Automatisch:</strong> LLM wird bevorzugt (wenn verfügbar), sonst Barcode-Parser mit LLM-Fallback
+                    <strong>Automatisch:</strong> LLM wird bevorzugt (wenn verfügbar), sonst
+                    Barcode-Parser mit LLM-Fallback
                   </li>
                   <li>
-                    <strong>Nur Parser:</strong> Nur schneller Frontend-Parser, kein API-Call (offline, kostenlos)
+                    <strong>Nur Parser:</strong> Nur schneller Frontend-Parser, kein API-Call
+                    (offline, kostenlos)
                   </li>
                   <li>
-                    <strong>Parser + API Kontrolle:</strong> Parser für Geschwindigkeit, API zur Validierung
+                    <strong>Parser + API Kontrolle:</strong> Parser für Geschwindigkeit, API zur
+                    Validierung
                   </li>
                   <li>
-                    <strong>Nur API:</strong> Direkt LLM/API verwenden (robust, funktioniert für alle Airlines)
+                    <strong>Nur API:</strong> Direkt LLM/API verwenden (robust, funktioniert für
+                    alle Airlines)
                   </li>
                 </ul>
               </div>
@@ -1036,18 +1104,21 @@ export default function SettingsPage(): JSX.Element {
           <div>
             <label className="label">Parsing-Strategie</label>
             <select
-              value={boardingPassParserStrategy || 'auto'}
+              value={boardingPassParserStrategy || "auto"}
               onChange={async (e) => {
-                const value = e.target.value === 'auto' ? null : (e.target.value as 'parser-only' | 'parser-with-api' | 'api-only');
+                const value =
+                  e.target.value === "auto"
+                    ? null
+                    : (e.target.value as "parser-only" | "parser-with-api" | "api-only");
                 setBoardingPassParserStrategy(value);
                 try {
                   await settingsApi.update({
                     boardingPassParserStrategy: value,
                   });
-                  addToast('success', 'Boarding Pass Parser-Strategie gespeichert');
+                  addToast("success", "Boarding Pass Parser-Strategie gespeichert");
                 } catch (error) {
-                  logger.error('Failed to save boarding pass parser strategy:', error);
-                  addToast('error', 'Fehler beim Speichern');
+                  logger.error("Failed to save boarding pass parser strategy:", error);
+                  addToast("error", "Fehler beim Speichern");
                 }
               }}
               className="input"
@@ -1059,12 +1130,12 @@ export default function SettingsPage(): JSX.Element {
             </select>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               {boardingPassParserStrategy === null
-                ? 'LLM wird bevorzugt, wenn verfügbar. Sonst Barcode-Parser mit LLM-Fallback.'
-                : boardingPassParserStrategy === 'parser-only'
-                ? 'Nur Frontend-Parser. Schnell, kostenlos, offline. Kein Fallback.'
-                : boardingPassParserStrategy === 'parser-with-api'
-                ? 'Parser für Geschwindigkeit, API zur Validierung. Beste Balance.'
-                : 'Direkt LLM/API verwenden. Robust, funktioniert für alle Airlines.'}
+                ? "LLM wird bevorzugt, wenn verfügbar. Sonst Barcode-Parser mit LLM-Fallback."
+                : boardingPassParserStrategy === "parser-only"
+                  ? "Nur Frontend-Parser. Schnell, kostenlos, offline. Kein Fallback."
+                  : boardingPassParserStrategy === "parser-with-api"
+                    ? "Parser für Geschwindigkeit, API zur Validierung. Beste Balance."
+                    : "Direkt LLM/API verwenden. Robust, funktioniert für alle Airlines."}
             </p>
           </div>
         </div>
@@ -1073,47 +1144,49 @@ export default function SettingsPage(): JSX.Element {
         <div className="card space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-semibold">{t('settings:autoUpdate.title')}</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings:autoUpdate.description')}</p>
+              <h2 className="text-xl font-semibold">{t("settings:autoUpdate.title")}</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {t("settings:autoUpdate.description")}
+              </p>
             </div>
             <Link
               to="/pending-updates"
               className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm font-medium"
             >
-              {t('settings:autoUpdate.viewPending')} →
+              {t("settings:autoUpdate.viewPending")} →
             </Link>
           </div>
 
           <InlineHelp
-            title={t('settings:autoUpdate.info.title')}
+            title={t("settings:autoUpdate.info.title")}
             category="basic"
             content={
               <div className="space-y-3">
-                <p>
-                  {t('settings:autoUpdate.info.description')}
-                </p>
+                <p>{t("settings:autoUpdate.info.description")}</p>
                 <div>
-                  <p className="font-semibold mb-2">{t('settings:autoUpdate.info.benefits.title')}</p>
+                  <p className="font-semibold mb-2">
+                    {t("settings:autoUpdate.info.benefits.title")}
+                  </p>
                   <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
-                    <li>{t('settings:autoUpdate.info.benefits.realTime')}</li>
-                    <li>{t('settings:autoUpdate.info.benefits.automatic')}</li>
-                    <li>{t('settings:autoUpdate.info.benefits.review')}</li>
-                    <li>{t('settings:autoUpdate.info.benefits.accurate')}</li>
-                    <li>{t('settings:autoUpdate.info.benefits.timeSaving')}</li>
+                    <li>{t("settings:autoUpdate.info.benefits.realTime")}</li>
+                    <li>{t("settings:autoUpdate.info.benefits.automatic")}</li>
+                    <li>{t("settings:autoUpdate.info.benefits.review")}</li>
+                    <li>{t("settings:autoUpdate.info.benefits.accurate")}</li>
+                    <li>{t("settings:autoUpdate.info.benefits.timeSaving")}</li>
                   </ul>
                 </div>
                 <div>
-                  <p className="font-semibold mb-2">{t('settings:autoUpdate.info.howItWorks.title')}</p>
-                  <p className="text-sm">
-                    {t('settings:autoUpdate.info.howItWorks.description')}
+                  <p className="font-semibold mb-2">
+                    {t("settings:autoUpdate.info.howItWorks.title")}
                   </p>
+                  <p className="text-sm">{t("settings:autoUpdate.info.howItWorks.description")}</p>
                 </div>
                 <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-3">
                   <p className="font-semibold mb-1 text-amber-900 dark:text-amber-200 text-sm">
-                    {t('settings:autoUpdate.info.requirement.title')}
+                    {t("settings:autoUpdate.info.requirement.title")}
                   </p>
                   <p className="text-sm text-amber-800 dark:text-amber-300">
-                    {t('settings:autoUpdate.info.requirement.description')}
+                    {t("settings:autoUpdate.info.requirement.description")}
                   </p>
                 </div>
               </div>
@@ -1130,7 +1203,7 @@ export default function SettingsPage(): JSX.Element {
                 }}
                 className="h-4 w-4"
               />
-              <span>{t('settings:autoUpdate.enabled') || 'Automatische Updates aktivieren'}</span>
+              <span>{t("settings:autoUpdate.enabled") || "Automatische Updates aktivieren"}</span>
             </label>
 
             {autoUpdateSettings.enabled && (
@@ -1140,16 +1213,21 @@ export default function SettingsPage(): JSX.Element {
                     type="checkbox"
                     checked={autoUpdateSettings.requireApproval}
                     onChange={(e) => {
-                      setAutoUpdateSettings({ ...autoUpdateSettings, requireApproval: e.target.checked });
+                      setAutoUpdateSettings({
+                        ...autoUpdateSettings,
+                        requireApproval: e.target.checked,
+                      });
                     }}
                     className="h-4 w-4"
                   />
-                  <span>{t('settings:autoUpdate.requireApproval') || 'Bestätigung erforderlich'}</span>
+                  <span>
+                    {t("settings:autoUpdate.requireApproval") || "Bestätigung erforderlich"}
+                  </span>
                 </label>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="label">{t('settings:autoUpdate.checkInterval')}</label>
+                    <label className="label">{t("settings:autoUpdate.checkInterval")}</label>
                     <input
                       type="number"
                       value={autoUpdateSettings.checkInterval}
@@ -1164,12 +1242,12 @@ export default function SettingsPage(): JSX.Element {
                       className="input"
                     />
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      {t('settings:autoUpdate.checkIntervalDescription')}
+                      {t("settings:autoUpdate.checkIntervalDescription")}
                     </p>
                   </div>
 
                   <div>
-                    <label className="label">{t('settings:autoUpdate.expiryHours')}</label>
+                    <label className="label">{t("settings:autoUpdate.expiryHours")}</label>
                     <input
                       type="number"
                       value={autoUpdateSettings.expiryHours}
@@ -1184,7 +1262,7 @@ export default function SettingsPage(): JSX.Element {
                       className="input"
                     />
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      {t('settings:autoUpdate.expiryHoursDescription')}
+                      {t("settings:autoUpdate.expiryHoursDescription")}
                     </p>
                   </div>
                 </div>
@@ -1194,11 +1272,14 @@ export default function SettingsPage(): JSX.Element {
                     type="checkbox"
                     checked={autoUpdateSettings.onlyDuringFlight}
                     onChange={(e) => {
-                      setAutoUpdateSettings({ ...autoUpdateSettings, onlyDuringFlight: e.target.checked });
+                      setAutoUpdateSettings({
+                        ...autoUpdateSettings,
+                        onlyDuringFlight: e.target.checked,
+                      });
                     }}
                     className="h-4 w-4"
                   />
-                  <span>{t('settings:autoUpdate.onlyDuringFlight') || 'Nur während Flugzeit'}</span>
+                  <span>{t("settings:autoUpdate.onlyDuringFlight") || "Nur während Flugzeit"}</span>
                 </label>
               </>
             )}
@@ -1211,8 +1292,8 @@ export default function SettingsPage(): JSX.Element {
                 className="btn-primary"
               >
                 {loadingAutoUpdateSettings
-                  ? t('common:buttons.saving') || 'Speichern...'
-                  : t('common:buttons.save') || 'Speichern'}
+                  ? t("common:buttons.saving") || "Speichern..."
+                  : t("common:buttons.save") || "Speichern"}
               </button>
             </div>
           </div>
@@ -1224,41 +1305,61 @@ export default function SettingsPage(): JSX.Element {
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-xl font-semibold">
-                  {t('settings:historicalEnrichment.title') || 'Historische Anreicherung (Beta)'}
+                  {t("settings:historicalEnrichment.title") || "Historische Anreicherung (Beta)"}
                 </h2>
                 <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
                   Beta
                 </span>
               </div>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {t('settings:historicalEnrichment.description') || 'Ergänzt historische Flüge (2-5 Jahre) mit Daten von Live-getrackten Flügen derselben Flugnummer'}
+                {t("settings:historicalEnrichment.description") ||
+                  "Ergänzt historische Flüge (2-5 Jahre) mit Daten von Live-getrackten Flügen derselben Flugnummer"}
               </p>
             </div>
           </div>
 
           <InlineHelp
-            title={t('settings:historicalEnrichment.info.title') || 'Wie funktioniert die historische Anreicherung?'}
+            title={
+              t("settings:historicalEnrichment.info.title") ||
+              "Wie funktioniert die historische Anreicherung?"
+            }
             category="basic"
             content={
               <div className="space-y-3">
                 <p>
-                  {t('settings:historicalEnrichment.info.description') || 'Die historische Anreicherung findet Flüge mit derselben Flugnummer, die bereits Live getrackt wurden, und verwendet deren Daten (Route, Flugzeug, etc.) um Ihre historischen Flüge zu ergänzen.'}
+                  {t("settings:historicalEnrichment.info.description") ||
+                    "Die historische Anreicherung findet Flüge mit derselben Flugnummer, die bereits Live getrackt wurden, und verwendet deren Daten (Route, Flugzeug, etc.) um Ihre historischen Flüge zu ergänzen."}
                 </p>
                 <div>
-                  <p className="font-semibold mb-2">{t('settings:historicalEnrichment.info.benefits.title') || 'Vorteile:'}</p>
+                  <p className="font-semibold mb-2">
+                    {t("settings:historicalEnrichment.info.benefits.title") || "Vorteile:"}
+                  </p>
                   <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
-                    <li>{t('settings:historicalEnrichment.info.benefits.completeData') || 'Vollständige Flugdaten für alte Flüge'}</li>
-                    <li>{t('settings:historicalEnrichment.info.benefits.routeTracking') || 'Genau Route-Tracking (überflogene Länder)'}</li>
-                    <li>{t('settings:historicalEnrichment.info.benefits.statistics') || 'Präzisere Statistiken und Achievements'}</li>
-                    <li>{t('settings:historicalEnrichment.info.benefits.automatic') || 'Automatische Erkennung von Anreicherungs-Kandidaten'}</li>
+                    <li>
+                      {t("settings:historicalEnrichment.info.benefits.completeData") ||
+                        "Vollständige Flugdaten für alte Flüge"}
+                    </li>
+                    <li>
+                      {t("settings:historicalEnrichment.info.benefits.routeTracking") ||
+                        "Genau Route-Tracking (überflogene Länder)"}
+                    </li>
+                    <li>
+                      {t("settings:historicalEnrichment.info.benefits.statistics") ||
+                        "Präzisere Statistiken und Achievements"}
+                    </li>
+                    <li>
+                      {t("settings:historicalEnrichment.info.benefits.automatic") ||
+                        "Automatische Erkennung von Anreicherungs-Kandidaten"}
+                    </li>
                   </ul>
                 </div>
                 <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-3">
                   <p className="font-semibold mb-1 text-amber-900 dark:text-amber-200 text-sm">
-                    {t('settings:historicalEnrichment.info.warning.title') || 'Hinweis (Beta):'}
+                    {t("settings:historicalEnrichment.info.warning.title") || "Hinweis (Beta):"}
                   </p>
                   <p className="text-sm text-amber-800 dark:text-amber-300">
-                    {t('settings:historicalEnrichment.info.warning.description') || 'Diese Funktion ist noch in der Beta-Phase. Alle Anreicherungen müssen manuell bestätigt werden. Routen können sich über die Zeit ändern (z.B. Russland-Sperrzone seit 2022).'}
+                    {t("settings:historicalEnrichment.info.warning.description") ||
+                      "Diese Funktion ist noch in der Beta-Phase. Alle Anreicherungen müssen manuell bestätigt werden. Routen können sich über die Zeit ändern (z.B. Russland-Sperrzone seit 2022)."}
                   </p>
                 </div>
               </div>
@@ -1271,11 +1372,17 @@ export default function SettingsPage(): JSX.Element {
                 type="checkbox"
                 checked={historicalEnrichmentSettings.enabled}
                 onChange={(e) => {
-                  setHistoricalEnrichmentSettings({ ...historicalEnrichmentSettings, enabled: e.target.checked });
+                  setHistoricalEnrichmentSettings({
+                    ...historicalEnrichmentSettings,
+                    enabled: e.target.checked,
+                  });
                 }}
                 className="h-4 w-4"
               />
-              <span>{t('settings:historicalEnrichment.enabled') || 'Historische Flugdaten-Anreicherung aktivieren'}</span>
+              <span>
+                {t("settings:historicalEnrichment.enabled") ||
+                  "Historische Flugdaten-Anreicherung aktivieren"}
+              </span>
             </label>
 
             {historicalEnrichmentSettings.enabled && (
@@ -1283,7 +1390,7 @@ export default function SettingsPage(): JSX.Element {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="label">
-                      {t('settings:historicalEnrichment.minConfidence') || 'Min Confidence (%)'}
+                      {t("settings:historicalEnrichment.minConfidence") || "Min Confidence (%)"}
                     </label>
                     <input
                       type="number"
@@ -1291,7 +1398,10 @@ export default function SettingsPage(): JSX.Element {
                       onChange={(e) => {
                         const value = parseInt(e.target.value, 10);
                         if (value >= 0 && value <= 100) {
-                          setHistoricalEnrichmentSettings({ ...historicalEnrichmentSettings, minConfidence: value });
+                          setHistoricalEnrichmentSettings({
+                            ...historicalEnrichmentSettings,
+                            minConfidence: value,
+                          });
                         }
                       }}
                       min="0"
@@ -1299,13 +1409,14 @@ export default function SettingsPage(): JSX.Element {
                       className="input"
                     />
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      {t('settings:historicalEnrichment.minConfidenceDescription') || 'Nur Anreicherungen mit mindestens X% Confidence anzeigen'}
+                      {t("settings:historicalEnrichment.minConfidenceDescription") ||
+                        "Nur Anreicherungen mit mindestens X% Confidence anzeigen"}
                     </p>
                   </div>
 
                   <div>
                     <label className="label">
-                      {t('settings:historicalEnrichment.maxPerDay') || 'Max pro Tag'}
+                      {t("settings:historicalEnrichment.maxPerDay") || "Max pro Tag"}
                     </label>
                     <input
                       type="number"
@@ -1313,7 +1424,10 @@ export default function SettingsPage(): JSX.Element {
                       onChange={(e) => {
                         const value = parseInt(e.target.value, 10);
                         if (value >= 10 && value <= 200) {
-                          setHistoricalEnrichmentSettings({ ...historicalEnrichmentSettings, maxPerDay: value });
+                          setHistoricalEnrichmentSettings({
+                            ...historicalEnrichmentSettings,
+                            maxPerDay: value,
+                          });
                         }
                       }}
                       min="10"
@@ -1321,13 +1435,14 @@ export default function SettingsPage(): JSX.Element {
                       className="input"
                     />
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      {t('settings:historicalEnrichment.maxPerDayDescription') || 'Maximale Anzahl Anreicherungen pro Tag'}
+                      {t("settings:historicalEnrichment.maxPerDayDescription") ||
+                        "Maximale Anzahl Anreicherungen pro Tag"}
                     </p>
                   </div>
 
                   <div>
                     <label className="label">
-                      {t('settings:historicalEnrichment.maxAgeYears') || 'Max Alter (Jahre)'}
+                      {t("settings:historicalEnrichment.maxAgeYears") || "Max Alter (Jahre)"}
                     </label>
                     <input
                       type="number"
@@ -1335,7 +1450,10 @@ export default function SettingsPage(): JSX.Element {
                       onChange={(e) => {
                         const value = parseInt(e.target.value, 10);
                         if (value >= 2 && value <= 10) {
-                          setHistoricalEnrichmentSettings({ ...historicalEnrichmentSettings, maxAgeYears: value });
+                          setHistoricalEnrichmentSettings({
+                            ...historicalEnrichmentSettings,
+                            maxAgeYears: value,
+                          });
                         }
                       }}
                       min="2"
@@ -1343,7 +1461,8 @@ export default function SettingsPage(): JSX.Element {
                       className="input"
                     />
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      {t('settings:historicalEnrichment.maxAgeYearsDescription') || 'Maximales Alter von Flügen für Anreicherung'}
+                      {t("settings:historicalEnrichment.maxAgeYearsDescription") ||
+                        "Maximales Alter von Flügen für Anreicherung"}
                     </p>
                   </div>
                 </div>
@@ -1353,11 +1472,17 @@ export default function SettingsPage(): JSX.Element {
                     type="checkbox"
                     checked={historicalEnrichmentSettings.autoProcess}
                     onChange={(e) => {
-                      setHistoricalEnrichmentSettings({ ...historicalEnrichmentSettings, autoProcess: e.target.checked });
+                      setHistoricalEnrichmentSettings({
+                        ...historicalEnrichmentSettings,
+                        autoProcess: e.target.checked,
+                      });
                     }}
                     className="h-4 w-4"
                   />
-                  <span>{t('settings:historicalEnrichment.autoProcess') || 'Automatisch nachts nach Anreicherungs-Kandidaten suchen'}</span>
+                  <span>
+                    {t("settings:historicalEnrichment.autoProcess") ||
+                      "Automatisch nachts nach Anreicherungs-Kandidaten suchen"}
+                  </span>
                 </label>
 
                 <label className="flex items-center gap-3">
@@ -1365,11 +1490,17 @@ export default function SettingsPage(): JSX.Element {
                     type="checkbox"
                     checked={historicalEnrichmentSettings.requireApproval}
                     onChange={(e) => {
-                      setHistoricalEnrichmentSettings({ ...historicalEnrichmentSettings, requireApproval: e.target.checked });
+                      setHistoricalEnrichmentSettings({
+                        ...historicalEnrichmentSettings,
+                        requireApproval: e.target.checked,
+                      });
                     }}
                     className="h-4 w-4"
                   />
-                  <span>{t('settings:historicalEnrichment.requireApproval') || 'Jede Anreicherung muss manuell bestätigt werden'}</span>
+                  <span>
+                    {t("settings:historicalEnrichment.requireApproval") ||
+                      "Jede Anreicherung muss manuell bestätigt werden"}
+                  </span>
                 </label>
               </>
             )}
@@ -1382,8 +1513,8 @@ export default function SettingsPage(): JSX.Element {
                 className="btn-primary"
               >
                 {loadingHistoricalEnrichmentSettings
-                  ? t('common:buttons.saving') || 'Speichern...'
-                  : t('common:buttons.save') || 'Speichern'}
+                  ? t("common:buttons.saving") || "Speichern..."
+                  : t("common:buttons.save") || "Speichern"}
               </button>
             </div>
           </div>
@@ -1396,8 +1527,10 @@ export default function SettingsPage(): JSX.Element {
         <div className="card space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-semibold">{t('settings:apiKeys.title')}</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">{t('settings:apiKeys.description')}</p>
+              <h2 className="text-xl font-semibold">{t("settings:apiKeys.title")}</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {t("settings:apiKeys.description")}
+              </p>
             </div>
           </div>
 
@@ -1405,30 +1538,30 @@ export default function SettingsPage(): JSX.Element {
             {/* Parser APIs */}
             <div>
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">
-                {t('settings:apiKeys.parserApis')}
+                {t("settings:apiKeys.parserApis")}
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <ApiKeyCard
                   provider="openai"
-                  label={t('settings:apiKeys.openai.label')}
-                  description={t('settings:apiKeys.openai.description')}
+                  label={t("settings:apiKeys.openai.label")}
+                  description={t("settings:apiKeys.openai.description")}
                   getKeyUrl="https://platform.openai.com/api-keys"
                   isShared={apiKeysStatus?.openai.isShared || false}
                   hasAccess={apiKeysStatus?.openai.hasAccess || false}
                   value={apiKeys.openaiApiKey}
                   onChange={(value) => setApiKeys({ ...apiKeys, openaiApiKey: value })}
-                  onClear={() => setApiKeys({ ...apiKeys, openaiApiKey: '' })}
+                  onClear={() => setApiKeys({ ...apiKeys, openaiApiKey: "" })}
                 />
                 <ApiKeyCard
                   provider="claude"
-                  label={t('settings:apiKeys.claude.label')}
-                  description={t('settings:apiKeys.claude.description')}
+                  label={t("settings:apiKeys.claude.label")}
+                  description={t("settings:apiKeys.claude.description")}
                   getKeyUrl="https://console.anthropic.com/settings/keys"
                   isShared={apiKeysStatus?.claude.isShared || false}
                   hasAccess={apiKeysStatus?.claude.hasAccess || false}
                   value={apiKeys.claudeApiKey}
                   onChange={(value) => setApiKeys({ ...apiKeys, claudeApiKey: value })}
-                  onClear={() => setApiKeys({ ...apiKeys, claudeApiKey: '' })}
+                  onClear={() => setApiKeys({ ...apiKeys, claudeApiKey: "" })}
                 />
               </div>
             </div>
@@ -1436,35 +1569,35 @@ export default function SettingsPage(): JSX.Element {
             {/* Flight Lookup APIs */}
             <div>
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">
-                {t('settings:apiKeys.flightApis')}
+                {t("settings:apiKeys.flightApis")}
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <ApiKeyCard
                   provider="airlabs"
-                  label={t('settings:apiKeys.airlabs.label')}
-                  description={t('settings:apiKeys.airlabs.description')}
+                  label={t("settings:apiKeys.airlabs.label")}
+                  description={t("settings:apiKeys.airlabs.description")}
                   getKeyUrl="https://airlabs.co/account"
                   isShared={apiKeysStatus?.airlabs.isShared || false}
                   hasAccess={apiKeysStatus?.airlabs.hasAccess || false}
                   value={apiKeys.airlabsApiKey}
                   onChange={(value) => setApiKeys({ ...apiKeys, airlabsApiKey: value })}
-                  onClear={() => setApiKeys({ ...apiKeys, airlabsApiKey: '' })}
+                  onClear={() => setApiKeys({ ...apiKeys, airlabsApiKey: "" })}
                 />
                 <ApiKeyCard
                   provider="aviationstack"
-                  label={t('settings:apiKeys.aviationstack.label')}
-                  description={t('settings:apiKeys.aviationstack.description')}
+                  label={t("settings:apiKeys.aviationstack.label")}
+                  description={t("settings:apiKeys.aviationstack.description")}
                   getKeyUrl="https://aviationstack.com/signup"
                   isShared={apiKeysStatus?.aviationstack.isShared || false}
                   hasAccess={apiKeysStatus?.aviationstack.hasAccess || false}
                   value={apiKeys.aviationstackApiKey}
                   onChange={(value) => setApiKeys({ ...apiKeys, aviationstackApiKey: value })}
-                  onClear={() => setApiKeys({ ...apiKeys, aviationstackApiKey: '' })}
+                  onClear={() => setApiKeys({ ...apiKeys, aviationstackApiKey: "" })}
                 />
                 <ApiKeyCard
                   provider="opensky"
-                  label={t('settings:apiKeys.opensky.label')}
-                  description={t('settings:apiKeys.opensky.description')}
+                  label={t("settings:apiKeys.opensky.label")}
+                  description={t("settings:apiKeys.opensky.description")}
                   getKeyUrl="https://opensky-network.org/accounts/register"
                   isShared={apiKeysStatus?.opensky.isShared || false}
                   hasAccess={apiKeysStatus?.opensky.hasAccess || false}
@@ -1472,7 +1605,8 @@ export default function SettingsPage(): JSX.Element {
                     clientId: apiKeys.openskyClientId,
                     clientSecret: apiKeys.openskyClientSecret,
                     onClientIdChange: (value) => setApiKeys({ ...apiKeys, openskyClientId: value }),
-                    onClientSecretChange: (value) => setApiKeys({ ...apiKeys, openskyClientSecret: value }),
+                    onClientSecretChange: (value) =>
+                      setApiKeys({ ...apiKeys, openskyClientSecret: value }),
                   }}
                 />
               </div>
@@ -1485,23 +1619,28 @@ export default function SettingsPage(): JSX.Element {
                 setLoadingApiKeys(true);
                 try {
                   await settingsApi.updateApiKeys(apiKeys);
-                  addToast('success', t('settings:apiKeys.saved') || 'API keys saved successfully');
+                  addToast("success", t("settings:apiKeys.saved") || "API keys saved successfully");
                   // Reload status
                   const status = await settingsApi.getApiKeys();
                   setApiKeysStatus(status);
                   // Clear local values after save
                   setApiKeys({
-                    openaiApiKey: '',
-                    claudeApiKey: '',
-                    airlabsApiKey: '',
-                    aviationstackApiKey: '',
-                    openskyClientId: '',
-                    openskyClientSecret: '',
+                    openaiApiKey: "",
+                    claudeApiKey: "",
+                    airlabsApiKey: "",
+                    aviationstackApiKey: "",
+                    openskyClientId: "",
+                    openskyClientSecret: "",
                   });
                 } catch (error: unknown) {
-                  logger.error('Failed to save API keys:', error);
+                  logger.error("Failed to save API keys:", error);
                   const axiosError = error as { response?: { data?: { error?: string } } };
-                  addToast('error', axiosError.response?.data?.error || t('settings:apiKeys.saveFailed') || 'Failed to save API keys');
+                  addToast(
+                    "error",
+                    axiosError.response?.data?.error ||
+                      t("settings:apiKeys.saveFailed") ||
+                      "Failed to save API keys"
+                  );
                 } finally {
                   setLoadingApiKeys(false);
                 }
@@ -1509,7 +1648,9 @@ export default function SettingsPage(): JSX.Element {
               disabled={loadingApiKeys}
               className="btn-primary"
             >
-              {loadingApiKeys ? t('settings:apiKeys.saving') || 'Saving...' : t('settings:apiKeys.save') || 'Save API Keys'}
+              {loadingApiKeys
+                ? t("settings:apiKeys.saving") || "Saving..."
+                : t("settings:apiKeys.save") || "Save API Keys"}
             </button>
           </div>
         </div>
@@ -1517,27 +1658,37 @@ export default function SettingsPage(): JSX.Element {
         {/* Training Settings */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-            <span>🤖</span> {t('settings:training.title')}
+            <span>🤖</span> {t("settings:training.title")}
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mb-4">
-            {t('settings:training.description')}
+            {t("settings:training.description")}
           </p>
 
           <InlineHelp
-            title={t('settings:training.help.title')}
+            title={t("settings:training.help.title")}
             category="expert"
             content={
               <div className="space-y-3">
-                <p>
-                  {t('settings:training.help.description')}
-                </p>
+                <p>{t("settings:training.help.description")}</p>
                 <div>
-                  <p className="font-semibold mb-1">{t('settings:training.help.optionsTitle')}</p>
+                  <p className="font-semibold mb-1">{t("settings:training.help.optionsTitle")}</p>
                   <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
-                    <li><strong>{t('settings:training.useTrainedModels')}:</strong> {t('settings:training.help.options.useTrainedModels')}</li>
-                    <li><strong>{t('settings:training.preferredEmailModel')}:</strong> {t('settings:training.help.options.preferredEmailModel')}</li>
-                    <li><strong>{t('settings:training.preferredVisionModel')}:</strong> {t('settings:training.help.options.preferredVisionModel')}</li>
-                    <li><strong>{t('settings:training.trainingSeparateModels')}:</strong> {t('settings:training.help.options.trainingSeparateModels')}</li>
+                    <li>
+                      <strong>{t("settings:training.useTrainedModels")}:</strong>{" "}
+                      {t("settings:training.help.options.useTrainedModels")}
+                    </li>
+                    <li>
+                      <strong>{t("settings:training.preferredEmailModel")}:</strong>{" "}
+                      {t("settings:training.help.options.preferredEmailModel")}
+                    </li>
+                    <li>
+                      <strong>{t("settings:training.preferredVisionModel")}:</strong>{" "}
+                      {t("settings:training.help.options.preferredVisionModel")}
+                    </li>
+                    <li>
+                      <strong>{t("settings:training.trainingSeparateModels")}:</strong>{" "}
+                      {t("settings:training.help.options.trainingSeparateModels")}
+                    </li>
                   </ul>
                 </div>
               </div>
@@ -1548,17 +1699,19 @@ export default function SettingsPage(): JSX.Element {
             <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
               <div className="flex-1">
                 <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
-                  {t('settings:training.useTrainedModels')}
+                  {t("settings:training.useTrainedModels")}
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {t('settings:training.useTrainedModelsDescription')}
+                  {t("settings:training.useTrainedModelsDescription")}
                 </p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
                   checked={trainingSettings.useTrainedModels}
-                  onChange={(e) => setTrainingSettings({ ...trainingSettings, useTrainedModels: e.target.checked })}
+                  onChange={(e) =>
+                    setTrainingSettings({ ...trainingSettings, useTrainedModels: e.target.checked })
+                  }
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
@@ -1566,51 +1719,66 @@ export default function SettingsPage(): JSX.Element {
             </div>
 
             <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-              <label className="label">{t('settings:training.preferredEmailModel')}</label>
+              <label className="label">{t("settings:training.preferredEmailModel")}</label>
               <select
                 value={trainingSettings.preferredEmailModel}
-                onChange={(e) => setTrainingSettings({ ...trainingSettings, preferredEmailModel: e.target.value as 'auto' | 'trained' | 'base' })}
+                onChange={(e) =>
+                  setTrainingSettings({
+                    ...trainingSettings,
+                    preferredEmailModel: e.target.value as "auto" | "trained" | "base",
+                  })
+                }
                 className="input"
               >
-                <option value="auto">{t('settings:training.modelOptions.auto')}</option>
-                <option value="trained">{t('settings:training.modelOptions.trained')}</option>
-                <option value="base">{t('settings:training.modelOptions.base')}</option>
+                <option value="auto">{t("settings:training.modelOptions.auto")}</option>
+                <option value="trained">{t("settings:training.modelOptions.trained")}</option>
+                <option value="base">{t("settings:training.modelOptions.base")}</option>
               </select>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {t('settings:training.preferredEmailModelDescription')}
+                {t("settings:training.preferredEmailModelDescription")}
               </p>
             </div>
 
             <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-              <label className="label">{t('settings:training.preferredVisionModel')}</label>
+              <label className="label">{t("settings:training.preferredVisionModel")}</label>
               <select
                 value={trainingSettings.preferredVisionModel}
-                onChange={(e) => setTrainingSettings({ ...trainingSettings, preferredVisionModel: e.target.value as 'auto' | 'trained' | 'base' })}
+                onChange={(e) =>
+                  setTrainingSettings({
+                    ...trainingSettings,
+                    preferredVisionModel: e.target.value as "auto" | "trained" | "base",
+                  })
+                }
                 className="input"
               >
-                <option value="auto">{t('settings:training.modelOptions.auto')}</option>
-                <option value="trained">{t('settings:training.modelOptions.trained')}</option>
-                <option value="base">{t('settings:training.modelOptions.base')}</option>
+                <option value="auto">{t("settings:training.modelOptions.auto")}</option>
+                <option value="trained">{t("settings:training.modelOptions.trained")}</option>
+                <option value="base">{t("settings:training.modelOptions.base")}</option>
               </select>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {t('settings:training.preferredVisionModelDescription')}
+                {t("settings:training.preferredVisionModelDescription")}
               </p>
             </div>
 
             <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
               <div className="flex-1">
                 <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
-                  {t('settings:training.trainingSeparateModels')}
+                  {t("settings:training.trainingSeparateModels")}
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {t('settings:training.trainingSeparateModelsDescription')}
+                  {t("settings:training.trainingSeparateModelsDescription")}
                 </p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
                   checked={trainingSettings.trainingSeparateModels}
-                  onChange={(e) => setTrainingSettings({ ...trainingSettings, trainingSeparateModels: e.target.checked })}
+                  onChange={(e) =>
+                    setTrainingSettings({
+                      ...trainingSettings,
+                      trainingSeparateModels: e.target.checked,
+                    })
+                  }
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
@@ -1623,7 +1791,9 @@ export default function SettingsPage(): JSX.Element {
                 disabled={loadingTrainingSettings}
                 className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loadingTrainingSettings ? t('settings:training.savingSettings') : t('settings:training.saveSettings')}
+                {loadingTrainingSettings
+                  ? t("settings:training.savingSettings")
+                  : t("settings:training.saveSettings")}
               </button>
             </div>
           </div>
@@ -1633,39 +1803,42 @@ export default function SettingsPage(): JSX.Element {
         {hasTrainingAccess && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-              <span>⚙️</span> {t('settings:developer.title')}
+              <span>⚙️</span> {t("settings:developer.title")}
             </h2>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
-              {t('settings:developer.description')}
+              {t("settings:developer.description")}
             </p>
 
             <InlineHelp
-              title={t('settings:developer.help.title')}
+              title={t("settings:developer.help.title")}
               category="expert"
               content={
                 <div className="space-y-3">
-                  <p>
-                    {t('settings:developer.help.description')}
-                  </p>
+                  <p>{t("settings:developer.help.description")}</p>
                   <div>
-                    <p className="font-semibold mb-1">{t('settings:developer.help.features.title')}</p>
+                    <p className="font-semibold mb-1">
+                      {t("settings:developer.help.features.title")}
+                    </p>
                     <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
-                      <li>{t('settings:developer.help.features.items.trainingPage')}</li>
-                      <li>{t('settings:developer.help.features.items.uploadAnnotation')}</li>
-                      <li>{t('settings:developer.help.features.items.loraTraining')}</li>
-                      <li>{t('settings:developer.help.features.items.parserAccuracy')}</li>
+                      <li>{t("settings:developer.help.features.items.trainingPage")}</li>
+                      <li>{t("settings:developer.help.features.items.uploadAnnotation")}</li>
+                      <li>{t("settings:developer.help.features.items.loraTraining")}</li>
+                      <li>{t("settings:developer.help.features.items.parserAccuracy")}</li>
                     </ul>
                   </div>
                   <div>
-                    <p className="font-semibold mb-1">{t('settings:developer.help.requirements.title')}</p>
+                    <p className="font-semibold mb-1">
+                      {t("settings:developer.help.requirements.title")}
+                    </p>
                     <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
-                      <li>{t('settings:developer.help.requirements.items.ollama')}</li>
-                      <li>{t('settings:developer.help.requirements.items.hardware')}</li>
-                      <li>{t('settings:developer.help.requirements.items.trainingData')}</li>
+                      <li>{t("settings:developer.help.requirements.items.ollama")}</li>
+                      <li>{t("settings:developer.help.requirements.items.hardware")}</li>
+                      <li>{t("settings:developer.help.requirements.items.trainingData")}</li>
                     </ul>
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    <strong>{t('settings:developer.help.noteLabel')}:</strong> {t('settings:developer.help.note')}
+                    <strong>{t("settings:developer.help.noteLabel")}:</strong>{" "}
+                    {t("settings:developer.help.note")}
                   </p>
                 </div>
               }
@@ -1675,10 +1848,10 @@ export default function SettingsPage(): JSX.Element {
               <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                 <div className="flex-1">
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
-                    {t('settings:developer.modeTitle')}
+                    {t("settings:developer.modeTitle")}
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {t('settings:developer.modeDescription')}
+                    {t("settings:developer.modeDescription")}
                   </p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
@@ -1699,21 +1872,21 @@ export default function SettingsPage(): JSX.Element {
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
                   <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                    {t('settings:developer.confirmTitle')}
+                    {t("settings:developer.confirmTitle")}
                   </h3>
                   <div className="space-y-3 mb-6">
                     <p className="text-gray-700 dark:text-gray-300">
-                      {t('settings:developer.confirmMessage')}
+                      {t("settings:developer.confirmMessage")}
                     </p>
                     <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
                       <p className="text-sm font-semibold text-yellow-800 dark:text-yellow-200 mb-2">
-                        {t('settings:developer.risks.title')}
+                        {t("settings:developer.risks.title")}
                       </p>
                       <ul className="text-sm text-yellow-700 dark:text-yellow-300 space-y-1 list-disc list-inside">
-                        <li>{t('settings:developer.risks.items.resourceUsage')}</li>
-                        <li>{t('settings:developer.risks.items.technicalKnowledge')}</li>
-                        <li>{t('settings:developer.risks.items.unexpectedResults')}</li>
-                        <li>{t('settings:developer.risks.items.longTraining')}</li>
+                        <li>{t("settings:developer.risks.items.resourceUsage")}</li>
+                        <li>{t("settings:developer.risks.items.technicalKnowledge")}</li>
+                        <li>{t("settings:developer.risks.items.unexpectedResults")}</li>
+                        <li>{t("settings:developer.risks.items.longTraining")}</li>
                       </ul>
                     </div>
                   </div>
@@ -1722,13 +1895,13 @@ export default function SettingsPage(): JSX.Element {
                       onClick={() => setShowDeveloperConfirm(false)}
                       className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                     >
-                      {t('settings:developer.cancel')}
+                      {t("settings:developer.cancel")}
                     </button>
                     <button
                       onClick={() => handleDeveloperModeConfirm(true)}
                       className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
                     >
-                      {t('settings:developer.activate')}
+                      {t("settings:developer.activate")}
                     </button>
                   </div>
                 </div>
@@ -1742,7 +1915,7 @@ export default function SettingsPage(): JSX.Element {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                {t('settings:password.title')}
+                {t("settings:password.title")}
               </h3>
               <div className="space-y-4">
                 {passwordError && (
@@ -1751,35 +1924,41 @@ export default function SettingsPage(): JSX.Element {
                   </div>
                 )}
                 <div>
-                  <label className="label">{t('settings:password.oldPassword')}</label>
+                  <label className="label">{t("settings:password.oldPassword")}</label>
                   <input
                     type="password"
                     value={passwordForm.oldPassword}
-                    onChange={(e) => setPasswordForm({ ...passwordForm, oldPassword: e.target.value })}
+                    onChange={(e) =>
+                      setPasswordForm({ ...passwordForm, oldPassword: e.target.value })
+                    }
                     className="input"
-                    placeholder={t('settings:password.oldPassword')}
+                    placeholder={t("settings:password.oldPassword")}
                     disabled={changingPassword}
                   />
                 </div>
                 <div>
-                  <label className="label">{t('settings:password.newPassword')}</label>
+                  <label className="label">{t("settings:password.newPassword")}</label>
                   <input
                     type="password"
                     value={passwordForm.newPassword}
-                    onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                    onChange={(e) =>
+                      setPasswordForm({ ...passwordForm, newPassword: e.target.value })
+                    }
                     className="input"
-                    placeholder={t('settings:password.newPassword')}
+                    placeholder={t("settings:password.newPassword")}
                     disabled={changingPassword}
                   />
                 </div>
                 <div>
-                  <label className="label">{t('settings:password.confirmPassword')}</label>
+                  <label className="label">{t("settings:password.confirmPassword")}</label>
                   <input
                     type="password"
                     value={passwordForm.confirmPassword}
-                    onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                    onChange={(e) =>
+                      setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })
+                    }
                     className="input"
-                    placeholder={t('settings:password.confirmPassword')}
+                    placeholder={t("settings:password.confirmPassword")}
                     disabled={changingPassword}
                   />
                 </div>
@@ -1788,24 +1967,26 @@ export default function SettingsPage(): JSX.Element {
                 <button
                   onClick={() => {
                     setShowPasswordModal(false);
-                    setPasswordError('');
+                    setPasswordError("");
                     setPasswordForm({
-                      oldPassword: '',
-                      newPassword: '',
-                      confirmPassword: '',
+                      oldPassword: "",
+                      newPassword: "",
+                      confirmPassword: "",
                     });
                   }}
                   className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                   disabled={changingPassword}
                 >
-                  {t('common:buttons.cancel')}
+                  {t("common:buttons.cancel")}
                 </button>
                 <button
                   onClick={handlePasswordChange}
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={changingPassword}
                 >
-                  {changingPassword ? t('settings:password.changing') : t('settings:password.submit')}
+                  {changingPassword
+                    ? t("settings:password.changing")
+                    : t("settings:password.submit")}
                 </button>
               </div>
             </div>
@@ -1816,20 +1997,30 @@ export default function SettingsPage(): JSX.Element {
         {user?.isAdmin && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-              <span>👑</span> {t('settings:admin.title')}
+              <span>👑</span> {t("settings:admin.title")}
             </h2>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
-              {t('settings:admin.description')}
+              {t("settings:admin.description")}
             </p>
             <Link
               to="/admin"
               className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                />
               </svg>
-              {t('settings:admin.openAdminPanel')}
+              {t("settings:admin.openAdminPanel")}
             </Link>
           </div>
         )}
@@ -1851,8 +2042,9 @@ export default function SettingsPage(): JSX.Element {
                 Copyright © 2025 Dennis Wittke
               </p>
               <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
-                This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License.
-                If you run this software as a web service, you must make the complete source code available under AGPL-3.0.
+                This program is free software: you can redistribute it and/or modify it under the
+                terms of the GNU Affero General Public License. If you run this software as a web
+                service, you must make the complete source code available under AGPL-3.0.
               </p>
               <a
                 href="https://github.com/Abrechen2/TravStats"
@@ -1861,7 +2053,11 @@ export default function SettingsPage(): JSX.Element {
                 className="inline-flex items-center px-4 py-2 bg-gray-800 dark:bg-gray-700 hover:bg-gray-900 dark:hover:bg-gray-600 text-white font-medium rounded-lg transition-colors text-sm"
               >
                 <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                  <path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd" />
+                  <path
+                    fillRule="evenodd"
+                    d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+                    clipRule="evenodd"
+                  />
                 </svg>
                 View Source Code on GitHub
               </a>
@@ -1871,12 +2067,17 @@ export default function SettingsPage(): JSX.Element {
 
         <div className="bg-blue-50 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-700 rounded-lg p-4 text-sm text-blue-900 dark:text-blue-100 flex items-center justify-between">
           <div>
-            <p className="font-semibold">{t('settings:autoSaved.title')}</p>
-            <p className="text-blue-800 dark:text-blue-200">{t('settings:autoSaved.description')}</p>
+            <p className="font-semibold">{t("settings:autoSaved.title")}</p>
+            <p className="text-blue-800 dark:text-blue-200">
+              {t("settings:autoSaved.description")}
+            </p>
           </div>
           <div className="flex items-center gap-2">
-            <button className="btn-secondary" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-              {t('settings:scrollToTop')}
+            <button
+              className="btn-secondary"
+              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            >
+              {t("settings:scrollToTop")}
             </button>
           </div>
         </div>
@@ -1884,4 +2085,3 @@ export default function SettingsPage(): JSX.Element {
     </div>
   );
 }
-

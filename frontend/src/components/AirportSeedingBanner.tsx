@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
-import { setupApi } from '../lib/api';
-import { useTranslation } from '../hooks/useTranslation';
-import { logger } from '../lib/logger';
+import { useEffect, useState } from "react";
+import { setupApi } from "../lib/api";
+import { useTranslation } from "../hooks/useTranslation";
+import { logger } from "../lib/logger";
 
 interface SeedingStatus {
-  status: 'pending' | 'running' | 'completed' | 'failed';
+  status: "pending" | "running" | "completed" | "failed";
   progress?: number;
   estimatedSecondsRemaining?: number;
   totalAirports?: number;
@@ -16,8 +16,10 @@ interface AirportSeedingBannerProps {
   onStatusChange?: (status: SeedingStatus | null) => void;
 }
 
-export default function AirportSeedingBanner({ onStatusChange }: AirportSeedingBannerProps): JSX.Element | null {
-  const { t } = useTranslation(['common', 'setup']);
+export default function AirportSeedingBanner({
+  onStatusChange,
+}: AirportSeedingBannerProps): JSX.Element | null {
+  const { t } = useTranslation(["common", "setup"]);
   const [status, setStatus] = useState<SeedingStatus | null>(null);
   const [isPolling, setIsPolling] = useState(false);
 
@@ -28,13 +30,13 @@ export default function AirportSeedingBanner({ onStatusChange }: AirportSeedingB
       onStatusChange?.(data);
 
       // Stop polling if completed or failed
-      if (data.status === 'completed' || data.status === 'failed') {
+      if (data.status === "completed" || data.status === "failed") {
         setIsPolling(false);
-      } else if (data.status === 'running' || data.status === 'pending') {
+      } else if (data.status === "running" || data.status === "pending") {
         setIsPolling(true);
       }
     } catch (error) {
-      logger.error('Failed to fetch seeding status:', error);
+      logger.error("Failed to fetch seeding status:", error);
       setIsPolling(false);
     }
   };
@@ -59,25 +61,25 @@ export default function AirportSeedingBanner({ onStatusChange }: AirportSeedingB
   }, [isPolling]);
 
   // Don't show banner if not seeding or already completed
-  if (!status || status.status === 'completed') {
+  if (!status || status.status === "completed") {
     return null;
   }
 
   // Format estimated time
   const formatEstimatedTime = (seconds?: number): string => {
     if (!seconds || seconds < 10) {
-      return t('setup:airportSeeding.calculating');
+      return t("setup:airportSeeding.calculating");
     }
 
     if (seconds < 60) {
-      return t('setup:airportSeeding.estimatedSeconds', { seconds });
+      return t("setup:airportSeeding.estimatedSeconds", { seconds });
     }
 
     const minutes = Math.ceil(seconds / 60);
     if (minutes === 1) {
-      return t('setup:airportSeeding.estimatedMinute');
+      return t("setup:airportSeeding.estimatedMinute");
     }
-    return t('setup:airportSeeding.estimatedMinutes', { minutes });
+    return t("setup:airportSeeding.estimatedMinutes", { minutes });
   };
 
   const progress = status.progress ?? 0;
@@ -89,14 +91,9 @@ export default function AirportSeedingBanner({ onStatusChange }: AirportSeedingB
         <div className="flex items-start gap-3">
           {/* Icon */}
           <div className="flex-shrink-0 mt-0.5">
-            {status.status === 'running' ? (
+            {status.status === "running" ? (
               <div className="animate-spin text-blue-600 dark:text-blue-400">
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -105,7 +102,7 @@ export default function AirportSeedingBanner({ onStatusChange }: AirportSeedingB
                   />
                 </svg>
               </div>
-            ) : status.status === 'failed' ? (
+            ) : status.status === "failed" ? (
               <svg
                 className="w-5 h-5 text-red-600 dark:text-red-400"
                 fill="none"
@@ -141,23 +138,23 @@ export default function AirportSeedingBanner({ onStatusChange }: AirportSeedingB
             <div className="flex items-center justify-between gap-4 mb-2">
               <div>
                 <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-                  {status.status === 'running'
-                    ? t('setup:airportSeeding.banner.loading')
-                    : status.status === 'failed'
-                    ? t('setup:airportSeeding.banner.failed')
-                    : t('setup:airportSeeding.banner.preparing')}
+                  {status.status === "running"
+                    ? t("setup:airportSeeding.banner.loading")
+                    : status.status === "failed"
+                      ? t("setup:airportSeeding.banner.failed")
+                      : t("setup:airportSeeding.banner.preparing")}
                 </h3>
                 <p className="text-xs text-blue-700 dark:text-blue-300 mt-0.5">
-                  {status.status === 'running'
-                    ? t('setup:airportSeeding.banner.limitedFeatures')
-                    : status.status === 'failed'
-                    ? status.error || t('setup:airportSeeding.banner.errorOccurred')
-                    : t('setup:airportSeeding.banner.pleaseWait')}
+                  {status.status === "running"
+                    ? t("setup:airportSeeding.banner.limitedFeatures")
+                    : status.status === "failed"
+                      ? status.error || t("setup:airportSeeding.banner.errorOccurred")
+                      : t("setup:airportSeeding.banner.pleaseWait")}
                 </p>
               </div>
 
               {/* Status info */}
-              {status.status === 'running' && (
+              {status.status === "running" && (
                 <div className="flex-shrink-0 text-right">
                   {status.processedAirports !== undefined && status.totalAirports !== undefined && (
                     <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">
@@ -174,7 +171,7 @@ export default function AirportSeedingBanner({ onStatusChange }: AirportSeedingB
             </div>
 
             {/* Progress bar */}
-            {status.status === 'running' && (
+            {status.status === "running" && (
               <div className="space-y-1">
                 <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2">
                   <div
@@ -184,7 +181,7 @@ export default function AirportSeedingBanner({ onStatusChange }: AirportSeedingB
                 </div>
                 <div className="flex items-center justify-between">
                   <p className="text-xs text-blue-600 dark:text-blue-400">
-                    {t('setup:airportSeeding.banner.progress', { percent: progressPercent })}
+                    {t("setup:airportSeeding.banner.progress", { percent: progressPercent })}
                   </p>
                 </div>
               </div>
@@ -195,9 +192,3 @@ export default function AirportSeedingBanner({ onStatusChange }: AirportSeedingB
     </div>
   );
 }
-
-
-
-
-
-

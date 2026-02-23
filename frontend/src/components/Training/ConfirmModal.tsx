@@ -1,4 +1,4 @@
-import { useTranslation } from '../../hooks/useTranslation';
+import { useTranslation } from "../../hooks/useTranslation";
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -20,12 +20,12 @@ export default function ConfirmModal({
   message,
   confirmText,
   cancelText,
-  confirmButtonClass = 'btn-primary',
+  confirmButtonClass = "btn-primary",
   isLoading = false,
 }: ConfirmModalProps): JSX.Element | null {
-  const { t } = useTranslation(['training', 'common']);
-  const defaultConfirmText = confirmText || t('common:buttons.confirm');
-  const defaultCancelText = cancelText || t('common:buttons.cancel');
+  const { t } = useTranslation(["training", "common"]);
+  const defaultConfirmText = confirmText || t("common:buttons.confirm");
+  const defaultCancelText = cancelText || t("common:buttons.cancel");
   if (!isOpen) return null;
 
   return (
@@ -64,7 +64,7 @@ export default function ConfirmModal({
               disabled={isLoading}
               className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white sm:ml-3 sm:w-auto sm:text-sm ${confirmButtonClass} disabled:opacity-50 disabled:cursor-not-allowed`}
             >
-              {isLoading ? t('training:modal.processing') : defaultConfirmText}
+              {isLoading ? t("training:modal.processing") : defaultConfirmText}
             </button>
             <button
               type="button"
@@ -80,19 +80,3 @@ export default function ConfirmModal({
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

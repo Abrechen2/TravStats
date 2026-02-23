@@ -37,35 +37,47 @@ export interface Flight {
   arrLon: number;
   departureTime: string;
   arrivalTime: string;
-  status: 'scheduled' | 'flown' | 'cancelled';
+  status: "scheduled" | "flown" | "cancelled";
   notes?: string;
   createdAt: string;
   // Costs & categorization
   price?: number;
-  currency?: 'EUR' | 'USD' | 'GBP' | 'CHF';
+  currency?: "EUR" | "USD" | "GBP" | "CHF";
   taxes?: number;
   fees?: number;
-  category?: 'business' | 'private' | 'vacation';
+  category?: "business" | "private" | "vacation";
   tags?: string[];
   receiptUrl?: string;
   // Extended fields
   seatNumber?: string;
-  seatClass?: 'economy' | 'premium_economy' | 'business' | 'first';
+  seatClass?: "economy" | "premium_economy" | "business" | "first";
   boardingGroup?: string;
   gate?: string;
   terminal?: string;
   bookingReference?: string;
   ticketNumber?: string;
   // Route tracking
-  actualRoute?: Array<{lat: number; lon: number; timestamp?: string; country?: string}>;
+  actualRoute?: Array<{ lat: number; lon: number; timestamp?: string; country?: string }>;
   overflownCountries?: string[];
   routeDistance?: number;
-  routeSource?: 'live_tracking' | 'historical_aggregation' | 'estimated';
+  routeSource?: "live_tracking" | "historical_aggregation" | "estimated";
   hasLiveTracking?: boolean;
   // Data source tracking
-  dataSource?: 'manual' | 'email_import' | 'boarding_pass_scan' | 'historical_enrichment' | 'live_update' | 'api_lookup';
-  lastModifiedBy?: 'user' | 'auto_update' | 'historical_enrichment' | 'api';
-  enrichmentHistory?: Array<{type: string; timestamp: string; confidence?: number; source?: string; sourceFlightsCount?: number}>;
+  dataSource?:
+    | "manual"
+    | "email_import"
+    | "boarding_pass_scan"
+    | "historical_enrichment"
+    | "live_update"
+    | "api_lookup";
+  lastModifiedBy?: "user" | "auto_update" | "historical_enrichment" | "api";
+  enrichmentHistory?: Array<{
+    type: string;
+    timestamp: string;
+    confidence?: number;
+    source?: string;
+    sourceFlightsCount?: number;
+  }>;
 }
 
 export interface FlightInput {
@@ -77,21 +89,21 @@ export interface FlightInput {
   arrival: Airport;
   departureTime: string;
   arrivalTime: string;
-  status?: 'scheduled' | 'flown' | 'cancelled';
+  status?: "scheduled" | "flown" | "cancelled";
   notes?: string;
   // Extended fields
   seatNumber?: string;
-  seatClass?: 'economy' | 'premium_economy' | 'business' | 'first';
+  seatClass?: "economy" | "premium_economy" | "business" | "first";
   boardingGroup?: string;
   gate?: string;
   terminal?: string;
   bookingReference?: string;
   ticketNumber?: string;
   price?: number;
-  currency?: 'EUR' | 'USD' | 'GBP' | 'CHF';
+  currency?: "EUR" | "USD" | "GBP" | "CHF";
   taxes?: number;
   fees?: number;
-  category?: 'business' | 'private' | 'vacation';
+  category?: "business" | "private" | "vacation";
   tags?: string[];
   receiptUrl?: string;
 }
@@ -136,12 +148,8 @@ export interface FlightFilters {
   arrivalAirport?: string;
   fromDate?: string;
   toDate?: string;
-  status?:
-    | 'scheduled'
-    | 'flown'
-    | 'cancelled'
-    | Array<'scheduled' | 'flown' | 'cancelled'>;
-  category?: 'business' | 'private' | 'vacation';
+  status?: "scheduled" | "flown" | "cancelled" | Array<"scheduled" | "flown" | "cancelled">;
+  category?: "business" | "private" | "vacation";
   tags?: string[];
   minPrice?: number;
   maxPrice?: number;
@@ -171,7 +179,7 @@ export interface Route {
 }
 
 export interface GeoJSONFeature {
-  type: 'Feature';
+  type: "Feature";
   properties: {
     id: string;
     airline: string;
@@ -191,22 +199,22 @@ export interface GeoJSONFeature {
     departureTime: string;
     arrivalTime: string;
     status: string;
-    category?: 'business' | 'private' | 'vacation';
+    category?: "business" | "private" | "vacation";
     tags?: string[];
     price?: number;
-    currency?: 'EUR' | 'USD' | 'GBP' | 'CHF';
+    currency?: "EUR" | "USD" | "GBP" | "CHF";
     taxes?: number;
     fees?: number;
     distance: number;
   };
   geometry: {
-    type: 'LineString';
+    type: "LineString";
     coordinates: [number, number][];
   };
 }
 
 export interface GeoJSONFeatureCollection {
-  type: 'FeatureCollection';
+  type: "FeatureCollection";
   features: GeoJSONFeature[];
 }
 
@@ -217,7 +225,7 @@ export interface Achievement {
   description: string;
   category: string;
   icon: string;
-  tier: 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
+  tier: "bronze" | "silver" | "gold" | "platinum" | "diamond";
   requirement: number;
   requirementType: string;
   points: number;

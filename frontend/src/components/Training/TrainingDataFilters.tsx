@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from "react";
 
 interface TrainingDataFiltersProps {
   trainingData: Array<{
@@ -14,19 +14,18 @@ interface TrainingDataFiltersProps {
   }) => void;
 }
 
-export default function TrainingDataFilters({ trainingData, onFilterChange }: TrainingDataFiltersProps): JSX.Element {
-  const [statusFilter, setStatusFilter] = useState<string>('');
-  const [typeFilter, setTypeFilter] = useState<string>('');
+export default function TrainingDataFilters({
+  trainingData,
+  onFilterChange,
+}: TrainingDataFiltersProps): JSX.Element {
+  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [typeFilter, setTypeFilter] = useState<string>("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Extract all unique tags from training data
   const allTags = Array.from(
-    new Set(
-      trainingData
-        .flatMap((data) => data.tags || [])
-        .filter(Boolean)
-    )
+    new Set(trainingData.flatMap((data) => data.tags || []).filter(Boolean))
   ).sort();
 
   // Extract unique statuses and types
@@ -34,7 +33,7 @@ export default function TrainingDataFilters({ trainingData, onFilterChange }: Tr
   const allTypes = Array.from(new Set(trainingData.map((data) => data.type))).sort();
 
   // Track previous filter values to prevent unnecessary updates
-  const prevFiltersRef = useRef<string>('');
+  const prevFiltersRef = useRef<string>("");
 
   useEffect(() => {
     const newFilters = {
@@ -43,15 +42,15 @@ export default function TrainingDataFilters({ trainingData, onFilterChange }: Tr
       tags: selectedTags.length > 0 ? selectedTags : undefined,
       search: searchQuery.trim() || undefined,
     };
-    
+
     // Create a stable string representation for comparison
     const filtersKey = JSON.stringify({
-      status: newFilters.status || '',
-      type: newFilters.type || '',
-      tags: (newFilters.tags || []).sort().join(','),
-      search: newFilters.search || '',
+      status: newFilters.status || "",
+      type: newFilters.type || "",
+      tags: (newFilters.tags || []).sort().join(","),
+      search: newFilters.search || "",
     });
-    
+
     // Only call onFilterChange if filters actually changed
     if (prevFiltersRef.current !== filtersKey) {
       prevFiltersRef.current = filtersKey;
@@ -67,13 +66,14 @@ export default function TrainingDataFilters({ trainingData, onFilterChange }: Tr
   };
 
   const clearFilters = () => {
-    setStatusFilter('');
-    setTypeFilter('');
+    setStatusFilter("");
+    setTypeFilter("");
     setSelectedTags([]);
-    setSearchQuery('');
+    setSearchQuery("");
   };
 
-  const hasActiveFilters = statusFilter || typeFilter || selectedTags.length > 0 || searchQuery.trim();
+  const hasActiveFilters =
+    statusFilter || typeFilter || selectedTags.length > 0 || searchQuery.trim();
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
@@ -136,7 +136,7 @@ export default function TrainingDataFilters({ trainingData, onFilterChange }: Tr
             <option value="">Alle</option>
             {allTypes.map((type) => (
               <option key={type} value={type}>
-                {type === 'email' ? 'Email' : 'Boarding Pass'}
+                {type === "email" ? "Email" : "Boarding Pass"}
               </option>
             ))}
           </select>
@@ -174,4 +174,3 @@ export default function TrainingDataFilters({ trainingData, onFilterChange }: Tr
     </div>
   );
 }
-

@@ -1,9 +1,9 @@
-﻿import { format } from 'date-fns';
-import type { Flight } from '../types';
-import { useTranslation } from '../hooks/useTranslation';
-import { useSettingsStore } from '../store/settingsStore';
-import { formatCurrency as formatCurrencyUtil } from '../lib/units';
-import DataSourceBadges from './DataSourceBadges';
+﻿import { format } from "date-fns";
+import type { Flight } from "../types";
+import { useTranslation } from "../hooks/useTranslation";
+import { useSettingsStore } from "../store/settingsStore";
+import { formatCurrency as formatCurrencyUtil } from "../lib/units";
+import DataSourceBadges from "./DataSourceBadges";
 
 interface FlightListProps {
   flights: Flight[];
@@ -20,18 +20,20 @@ export default function FlightList({
   onEditFlight,
   onDeleteFlight,
 }: FlightListProps): JSX.Element {
-  const { t } = useTranslation(['flights', 'common']);
+  const { t } = useTranslation(["flights", "common"]);
 
   const getStatusBadge = (status: string): JSX.Element => {
     const colors = {
-      scheduled: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-      flown: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+      scheduled: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+      flown: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+      cancelled: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
     };
     const statusLabel = t(`flights:status.${status}`, { defaultValue: status });
 
     return (
-      <span className={`px-2 py-1 rounded text-xs font-medium ${colors[status as keyof typeof colors]}`}>
+      <span
+        className={`px-2 py-1 rounded text-xs font-medium ${colors[status as keyof typeof colors]}`}
+      >
         {statusLabel}
       </span>
     );
@@ -40,11 +42,11 @@ export default function FlightList({
   const getCategoryBadge = (category?: string): JSX.Element | null => {
     if (!category) return null;
     const colors = {
-      business: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-      private: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      vacation: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
+      business: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+      private: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+      vacation: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
     };
-    const categoryKey = category as 'business' | 'private' | 'vacation';
+    const categoryKey = category as "business" | "private" | "vacation";
     return (
       <span className={`px-2 py-1 rounded text-xs font-medium ${colors[categoryKey]}`}>
         {t(`flights:category.${categoryKey}`)}
@@ -53,18 +55,18 @@ export default function FlightList({
   };
 
   const { units } = useSettingsStore();
-  
+
   const formatCurrency = (value?: number, currency?: string): string => {
-    if (value === undefined || value === null) return '';
+    if (value === undefined || value === null) return "";
     // Use currency from settings if not specified
-    const currencyToUse = (currency || units.currency) as 'EUR' | 'USD' | 'GBP' | 'CHF';
+    const currencyToUse = (currency || units.currency) as "EUR" | "USD" | "GBP" | "CHF";
     return formatCurrencyUtil(value, currencyToUse);
   };
 
   if (flights.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-        {t('flights:list.noFlights')}
+        {t("flights:list.noFlights")}
       </div>
     );
   }
@@ -74,13 +76,19 @@ export default function FlightList({
       {flights.map((flight) => {
         const costParts: string[] = [];
         if (flight.price != null) {
-          costParts.push(`${t('common:labels.price')}: ${formatCurrency(flight.price, flight.currency)}`);
+          costParts.push(
+            `${t("common:labels.price")}: ${formatCurrency(flight.price, flight.currency)}`
+          );
         }
         if (flight.taxes != null) {
-          costParts.push(`${t('common:labels.taxes')}: ${formatCurrency(flight.taxes, flight.currency)}`);
+          costParts.push(
+            `${t("common:labels.taxes")}: ${formatCurrency(flight.taxes, flight.currency)}`
+          );
         }
         if (flight.fees != null) {
-          costParts.push(`${t('common:labels.fees')}: ${formatCurrency(flight.fees, flight.currency)}`);
+          costParts.push(
+            `${t("common:labels.fees")}: ${formatCurrency(flight.fees, flight.currency)}`
+          );
         }
 
         return (
@@ -88,8 +96,8 @@ export default function FlightList({
             key={flight.id}
             className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
               selectedFlightId === flight.id
-                ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/30'
-                : 'border-gray-200 hover:border-gray-300 bg-white dark:border-gray-600 dark:hover:border-gray-500 dark:bg-gray-700'
+                ? "border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/30"
+                : "border-gray-200 hover:border-gray-300 bg-white dark:border-gray-600 dark:hover:border-gray-500 dark:bg-gray-700"
             }`}
             onClick={() => onFlightClick(flight.id)}
           >
@@ -105,28 +113,32 @@ export default function FlightList({
 
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-gray-500 dark:text-gray-400">{t('flights:list.from')}</p>
+                    <p className="text-gray-500 dark:text-gray-400">{t("flights:list.from")}</p>
                     <p className="font-medium dark:text-gray-100">
                       {flight.depIata || flight.depIcao}
                       {flight.depName && (
-                        <span className="text-gray-600 dark:text-gray-400 ml-1">- {flight.depName}</span>
+                        <span className="text-gray-600 dark:text-gray-400 ml-1">
+                          - {flight.depName}
+                        </span>
                       )}
                     </p>
                     <p className="text-gray-600 dark:text-gray-400">
-                      {format(new Date(flight.departureTime), 'MMM dd, yyyy HH:mm')}
+                      {format(new Date(flight.departureTime), "MMM dd, yyyy HH:mm")}
                     </p>
                   </div>
 
                   <div>
-                    <p className="text-gray-500 dark:text-gray-400">{t('flights:list.to')}</p>
+                    <p className="text-gray-500 dark:text-gray-400">{t("flights:list.to")}</p>
                     <p className="font-medium dark:text-gray-100">
                       {flight.arrIata || flight.arrIcao}
                       {flight.arrName && (
-                        <span className="text-gray-600 dark:text-gray-400 ml-1">- {flight.arrName}</span>
+                        <span className="text-gray-600 dark:text-gray-400 ml-1">
+                          - {flight.arrName}
+                        </span>
                       )}
                     </p>
                     <p className="text-gray-600 dark:text-gray-400">
-                      {format(new Date(flight.arrivalTime), 'MMM dd, yyyy HH:mm')}
+                      {format(new Date(flight.arrivalTime), "MMM dd, yyyy HH:mm")}
                     </p>
                   </div>
                 </div>
@@ -159,13 +171,13 @@ export default function FlightList({
 
                 {flight.aircraft && (
                   <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                    {t('flights:list.aircraft')}: {flight.aircraft}
+                    {t("flights:list.aircraft")}: {flight.aircraft}
                   </p>
                 )}
 
                 {costParts.length > 0 && (
                   <p className="text-sm text-gray-700 dark:text-gray-200 mt-2">
-                    {costParts.join(' | ')}
+                    {costParts.join(" | ")}
                   </p>
                 )}
 
@@ -196,14 +208,9 @@ export default function FlightList({
                     onEditFlight(flight);
                   }}
                   className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                  title={t('flights:list.edit')}
+                  title={t("flights:list.edit")}
                 >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -216,19 +223,14 @@ export default function FlightList({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (confirm(t('flights:list.deleteConfirm'))) {
+                    if (confirm(t("flights:list.deleteConfirm"))) {
                       onDeleteFlight(flight.id);
                     }
                   }}
                   className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                  title={t('flights:list.delete')}
+                  title={t("flights:list.delete")}
                 >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"

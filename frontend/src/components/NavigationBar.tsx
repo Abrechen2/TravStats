@@ -1,17 +1,17 @@
-import { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useAuthStore } from '../store/authStore';
-import { settingsApi, pendingUpdatesApi } from '../lib/api';
-import DarkModeToggle from './DarkModeToggle';
-import { useTranslation } from '../hooks/useTranslation';
-import { useClickOutside } from '../hooks/useClickOutside';
-import { logger } from '../lib/logger';
+import { useState, useEffect, useRef } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useAuthStore } from "../store/authStore";
+import { settingsApi, pendingUpdatesApi } from "../lib/api";
+import DarkModeToggle from "./DarkModeToggle";
+import { useTranslation } from "../hooks/useTranslation";
+import { useClickOutside } from "../hooks/useClickOutside";
+import { logger } from "../lib/logger";
 
 export default function NavigationBar(): JSX.Element {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
-  const { t } = useTranslation(['dashboard', 'common']);
+  const { t } = useTranslation(["dashboard", "common"]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [developerModeEnabled, setDeveloperModeEnabled] = useState(false);
   const [pendingUpdatesCount, setPendingUpdatesCount] = useState(0);
@@ -32,10 +32,10 @@ export default function NavigationBar(): JSX.Element {
         .catch((error) => {
           // Handle 403 (forbidden) or 401 (unauthorized) errors gracefully
           if (error.response?.status === 403 || error.response?.status === 401) {
-            logger.warn('Training access denied or not available:', error);
+            logger.warn("Training access denied or not available:", error);
             setDeveloperModeEnabled(false);
           } else {
-            logger.error('Failed to load developer mode status:', error);
+            logger.error("Failed to load developer mode status:", error);
           }
         });
     } else {
@@ -48,7 +48,7 @@ export default function NavigationBar(): JSX.Element {
     if (user) {
       const loadPendingCount = async () => {
         try {
-          const data = await pendingUpdatesApi.getAll({ status: 'pending' });
+          const data = await pendingUpdatesApi.getAll({ status: "pending" });
           setPendingUpdatesCount(data.count || 0);
         } catch (error) {
           // Silently fail - not critical
@@ -62,24 +62,24 @@ export default function NavigationBar(): JSX.Element {
   }, [user]);
 
   const isActive = (path: string) => {
-    if (path === '/') {
-      return location.pathname === '/';
+    if (path === "/") {
+      return location.pathname === "/";
     }
     return location.pathname.startsWith(path);
   };
-  const showBackButton = location.pathname !== '/';
+  const showBackButton = location.pathname !== "/";
 
   const handleBack = () => {
-    navigate('/');
+    navigate("/");
   };
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
+    navigate("/login");
   };
 
   // Show pending updates button if there are pending updates OR if user is currently on that page
-  const showPendingUpdates = pendingUpdatesCount > 0 || location.pathname === '/pending-updates';
+  const showPendingUpdates = pendingUpdatesCount > 0 || location.pathname === "/pending-updates";
 
   interface NavItem {
     path: string;
@@ -89,15 +89,28 @@ export default function NavigationBar(): JSX.Element {
     badge?: number;
   }
 
-  const navItems: NavItem[] = ([
-    { path: '/', label: t('dashboard:title'), icon: '🏠', show: true },
-    { path: '/achievements', label: t('dashboard:achievements'), icon: '🏆', show: true },
-    { path: '/stats', label: t('dashboard:stats'), icon: '📊', show: true },
-    { path: '/pending-updates', label: t('dashboard:pendingUpdates'), icon: '🔄', show: showPendingUpdates, badge: pendingUpdatesCount },
-    { path: '/settings', label: t('dashboard:settings'), icon: '⚙️', show: true },
-    { path: '/admin', label: t('dashboard:admin'), icon: '👑', show: user?.isAdmin || false },
-    { path: '/training', label: t('dashboard:training'), icon: '🤖', show: hasTrainingAccess && developerModeEnabled },
-  ] as NavItem[]).filter(item => item.show);
+  const navItems: NavItem[] = (
+    [
+      { path: "/", label: t("dashboard:title"), icon: "🏠", show: true },
+      { path: "/achievements", label: t("dashboard:achievements"), icon: "🏆", show: true },
+      { path: "/stats", label: t("dashboard:stats"), icon: "📊", show: true },
+      {
+        path: "/pending-updates",
+        label: t("dashboard:pendingUpdates"),
+        icon: "🔄",
+        show: showPendingUpdates,
+        badge: pendingUpdatesCount,
+      },
+      { path: "/settings", label: t("dashboard:settings"), icon: "⚙️", show: true },
+      { path: "/admin", label: t("dashboard:admin"), icon: "👑", show: user?.isAdmin || false },
+      {
+        path: "/training",
+        label: t("dashboard:training"),
+        icon: "🤖",
+        show: hasTrainingAccess && developerModeEnabled,
+      },
+    ] as NavItem[]
+  ).filter((item) => item.show);
 
   return (
     <header className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700 sticky top-0 z-50">
@@ -109,13 +122,23 @@ export default function NavigationBar(): JSX.Element {
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="xl:hidden p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              aria-label={t('common:accessibility.toggleMenu')}
+              aria-label={t("common:accessibility.toggleMenu")}
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 {mobileMenuOpen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
                 )}
               </svg>
             </button>
@@ -125,19 +148,24 @@ export default function NavigationBar(): JSX.Element {
               <button
                 onClick={handleBack}
                 className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                aria-label={t('common:accessibility.back')}
+                aria-label={t("common:accessibility.back")}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
                 </svg>
               </button>
             )}
 
             {/* Logo and App Name */}
             <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-              <img src="/logo.png" alt={t('common:app.logoAlt')} className="h-8 w-auto" />
+              <img src="/logo.png" alt={t("common:app.logoAlt")} className="h-8 w-auto" />
               <h1 className="text-xl font-bold text-gray-900 dark:text-white hidden sm:block">
-                {t('common:app.name')}
+                {t("common:app.name")}
               </h1>
             </Link>
           </div>
@@ -147,7 +175,7 @@ export default function NavigationBar(): JSX.Element {
             {navItems.map((item) => {
               const active = isActive(item.path);
               const hasBadge = item.badge && item.badge > 0;
-              if (item.path === '/') {
+              if (item.path === "/") {
                 // Dashboard - special styling
                 return (
                   <Link
@@ -155,14 +183,14 @@ export default function NavigationBar(): JSX.Element {
                     to={item.path}
                     className={`px-4 py-2 rounded-lg font-semibold transition-all text-sm ${
                       active
-                        ? 'bg-blue-600 text-white shadow-md'
-                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        ? "bg-blue-600 text-white shadow-md"
+                        : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                     }`}
                   >
                     {item.icon} {item.label}
                   </Link>
                 );
-              } else if (item.path === '/pending-updates') {
+              } else if (item.path === "/pending-updates") {
                 // Pending Updates - with badge
                 return (
                   <Link
@@ -170,19 +198,19 @@ export default function NavigationBar(): JSX.Element {
                     to={item.path}
                     className={`px-4 py-2 rounded-lg font-medium transition-colors text-sm relative ${
                       active
-                        ? 'bg-yellow-500 text-white shadow-md'
-                        : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-900/50'
+                        ? "bg-yellow-500 text-white shadow-md"
+                        : "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-900/50"
                     }`}
                   >
                     {item.icon} {item.label}
                     {hasBadge && (
                       <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
-                        {(item.badge ?? 0) > 99 ? '99+' : item.badge}
+                        {(item.badge ?? 0) > 99 ? "99+" : item.badge}
                       </span>
                     )}
                   </Link>
                 );
-              } else if (item.path === '/achievements') {
+              } else if (item.path === "/achievements") {
                 // Achievements - golden gradient
                 return (
                   <Link
@@ -190,14 +218,14 @@ export default function NavigationBar(): JSX.Element {
                     to={item.path}
                     className={`px-4 py-2 rounded-lg font-semibold transition-all text-sm ${
                       active
-                        ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-md'
-                        : 'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white shadow-sm hover:shadow-md'
+                        ? "bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-md"
+                        : "bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white shadow-sm hover:shadow-md"
                     }`}
                   >
                     {item.icon} {item.label}
                   </Link>
                 );
-              } else if (item.path === '/stats') {
+              } else if (item.path === "/stats") {
                 // Stats - blue box like other buttons
                 return (
                   <Link
@@ -205,8 +233,8 @@ export default function NavigationBar(): JSX.Element {
                     to={item.path}
                     className={`px-4 py-2 rounded-lg font-medium transition-colors text-sm ${
                       active
-                        ? 'bg-blue-600 text-white shadow-md'
-                        : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50'
+                        ? "bg-blue-600 text-white shadow-md"
+                        : "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50"
                     }`}
                   >
                     {item.icon} {item.label}
@@ -220,8 +248,8 @@ export default function NavigationBar(): JSX.Element {
                     to={item.path}
                     className={`px-4 py-2 rounded-lg font-medium transition-colors text-sm ${
                       active
-                        ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        ? "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white"
+                        : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600"
                     }`}
                   >
                     {item.icon} {item.label}
@@ -235,7 +263,7 @@ export default function NavigationBar(): JSX.Element {
           <div className="flex items-center gap-3">
             {/* Welcome Text (Desktop only) */}
             <span className="hidden xl:inline text-sm text-gray-600 dark:text-gray-300">
-              {t('dashboard:welcome', { username: user?.username || '' })}
+              {t("dashboard:welcome", { username: user?.username || "" })}
             </span>
 
             {/* Dark Mode Toggle */}
@@ -246,7 +274,7 @@ export default function NavigationBar(): JSX.Element {
               onClick={handleLogout}
               className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
             >
-              {t('dashboard:logout')}
+              {t("dashboard:logout")}
             </button>
           </div>
         </div>
@@ -254,7 +282,10 @@ export default function NavigationBar(): JSX.Element {
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="xl:hidden fixed inset-0 bg-black bg-opacity-50 z-40" onClick={() => setMobileMenuOpen(false)} />
+        <div
+          className="xl:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+          onClick={() => setMobileMenuOpen(false)}
+        />
       )}
       {mobileMenuOpen && (
         <div
@@ -264,15 +295,20 @@ export default function NavigationBar(): JSX.Element {
           <div className="p-4 border-b dark:border-gray-700">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {t('dashboard:navigation.title')}
+                {t("dashboard:navigation.title")}
               </h2>
               <button
                 onClick={() => setMobileMenuOpen(false)}
                 className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                aria-label={t('common:accessibility.close')}
+                aria-label={t("common:accessibility.close")}
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
@@ -283,7 +319,7 @@ export default function NavigationBar(): JSX.Element {
               {navItems.map((item) => {
                 const active = isActive(item.path);
                 const hasBadge = item.badge && item.badge > 0;
-                if (item.path === '/') {
+                if (item.path === "/") {
                   // Dashboard
                   return (
                     <Link
@@ -292,15 +328,15 @@ export default function NavigationBar(): JSX.Element {
                       onClick={() => setMobileMenuOpen(false)}
                       className={`flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-colors ${
                         active
-                          ? 'bg-blue-600 text-white shadow-md'
-                          : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
+                          ? "bg-blue-600 text-white shadow-md"
+                          : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                       }`}
                     >
                       <span className="text-xl">{item.icon}</span>
                       {item.label}
                     </Link>
                   );
-                } else if (item.path === '/pending-updates') {
+                } else if (item.path === "/pending-updates") {
                   // Pending Updates - with badge
                   return (
                     <Link
@@ -309,20 +345,20 @@ export default function NavigationBar(): JSX.Element {
                       onClick={() => setMobileMenuOpen(false)}
                       className={`flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-colors relative ${
                         active
-                          ? 'bg-yellow-500 text-white shadow-md'
-                          : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-900/50'
+                          ? "bg-yellow-500 text-white shadow-md"
+                          : "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-900/50"
                       }`}
                     >
                       <span className="text-xl">{item.icon}</span>
                       {item.label}
                       {hasBadge && (
                         <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
-                          {(item.badge ?? 0) > 99 ? '99+' : item.badge}
+                          {(item.badge ?? 0) > 99 ? "99+" : item.badge}
                         </span>
                       )}
                     </Link>
                   );
-                } else if (item.path === '/achievements') {
+                } else if (item.path === "/achievements") {
                   // Achievements - golden gradient
                   return (
                     <Link
@@ -331,15 +367,15 @@ export default function NavigationBar(): JSX.Element {
                       onClick={() => setMobileMenuOpen(false)}
                       className={`flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-all ${
                         active
-                          ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-md'
-                          : 'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white shadow-sm'
+                          ? "bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-md"
+                          : "bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white shadow-sm"
                       }`}
                     >
                       <span className="text-xl">{item.icon}</span>
                       {item.label}
                     </Link>
                   );
-                } else if (item.path === '/stats') {
+                } else if (item.path === "/stats") {
                   // Stats - blue box
                   return (
                     <Link
@@ -348,8 +384,8 @@ export default function NavigationBar(): JSX.Element {
                       onClick={() => setMobileMenuOpen(false)}
                       className={`flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-colors ${
                         active
-                          ? 'bg-blue-600 text-white shadow-md'
-                          : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50'
+                          ? "bg-blue-600 text-white shadow-md"
+                          : "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50"
                       }`}
                     >
                       <span className="text-xl">{item.icon}</span>
@@ -365,8 +401,8 @@ export default function NavigationBar(): JSX.Element {
                       onClick={() => setMobileMenuOpen(false)}
                       className={`flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-colors ${
                         active
-                          ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
+                          ? "bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white"
+                          : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600"
                       }`}
                     >
                       <span className="text-xl">{item.icon}</span>
@@ -380,7 +416,7 @@ export default function NavigationBar(): JSX.Element {
             {/* Mobile Welcome and Logout */}
             <div className="mt-6 pt-6 border-t dark:border-gray-700">
               <div className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 mb-3">
-                {t('dashboard:welcome', { username: user?.username || '' })}
+                {t("dashboard:welcome", { username: user?.username || "" })}
               </div>
               <button
                 onClick={() => {
@@ -389,7 +425,7 @@ export default function NavigationBar(): JSX.Element {
                 }}
                 className="w-full px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
               >
-                {t('dashboard:logout')}
+                {t("dashboard:logout")}
               </button>
             </div>
           </div>
@@ -398,4 +434,3 @@ export default function NavigationBar(): JSX.Element {
     </header>
   );
 }
-

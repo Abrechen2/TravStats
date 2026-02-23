@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useTranslation } from '../../hooks/useTranslation';
+import { useState } from "react";
+import { useTranslation } from "../../hooks/useTranslation";
 
 interface AccordionSection {
   id: string;
@@ -8,8 +8,8 @@ interface AccordionSection {
 }
 
 export default function TrainingGuide(): JSX.Element {
-  const { t } = useTranslation('training');
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['introduction']));
+  const { t } = useTranslation("training");
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(["introduction"]));
 
   const toggleSection = (sectionId: string) => {
     setExpandedSections((prev) => {
@@ -25,8 +25,8 @@ export default function TrainingGuide(): JSX.Element {
 
   const sections: AccordionSection[] = [
     {
-      id: 'introduction',
-      title: 'Einführung',
+      id: "introduction",
+      title: "Einführung",
       content: (
         <div className="space-y-4">
           <div>
@@ -49,8 +49,7 @@ export default function TrainingGuide(): JSX.Element {
                 E-Mail-Formate und Boarding-Pass-Layouts kennen
               </li>
               <li>
-                <strong>Weniger manuelle Korrekturen:</strong> Automatische Extraktion wird
-                präziser
+                <strong>Weniger manuelle Korrekturen:</strong> Automatische Extraktion wird präziser
               </li>
               <li>
                 <strong>Lokale Verarbeitung:</strong> Alle Daten bleiben auf Ihrem Server, keine
@@ -99,8 +98,8 @@ export default function TrainingGuide(): JSX.Element {
       ),
     },
     {
-      id: 'workflow',
-      title: 'Workflow-Übersicht',
+      id: "workflow",
+      title: "Workflow-Übersicht",
       content: (
         <div className="space-y-4">
           <p className="text-gray-700 dark:text-gray-300">
@@ -135,8 +134,8 @@ export default function TrainingGuide(): JSX.Element {
       ),
     },
     {
-      id: 'steps',
-      title: 'Detaillierte Schritte',
+      id: "steps",
+      title: "Detaillierte Schritte",
       content: (
         <div className="space-y-6">
           {/* Schritt 1 */}
@@ -164,15 +163,9 @@ export default function TrainingGuide(): JSX.Element {
                   Verwenden Sie E-Mails von verschiedenen Airlines (Lufthansa, Ryanair, etc.) für
                   bessere Abdeckung
                 </li>
-                <li>
-                  Boarding Passes sollten gut lesbar sein (hohe Auflösung, kein Blur)
-                </li>
-                <li>
-                  Mindestens 5 Einträge sind erforderlich, 10-20 sind für den Start ideal
-                </li>
-                <li>
-                  Verschiedene Formate und Layouts helfen dem Modell, flexibler zu werden
-                </li>
+                <li>Boarding Passes sollten gut lesbar sein (hohe Auflösung, kein Blur)</li>
+                <li>Mindestens 5 Einträge sind erforderlich, 10-20 sind für den Start ideal</li>
+                <li>Verschiedene Formate und Layouts helfen dem Modell, flexibler zu werden</li>
               </ul>
             </div>
           </div>
@@ -199,8 +192,8 @@ export default function TrainingGuide(): JSX.Element {
                     kategorisieren (z.B. "lufthansa", "business", "international")
                   </li>
                   <li>
-                    <strong>Mehrfach-Flüge:</strong> Eine E-Mail kann mehrere Flüge enthalten.
-                    Fügen Sie alle Flüge hinzu, die in der E-Mail gefunden werden.
+                    <strong>Mehrfach-Flüge:</strong> Eine E-Mail kann mehrere Flüge enthalten. Fügen
+                    Sie alle Flüge hinzu, die in der E-Mail gefunden werden.
                   </li>
                 </ul>
               </div>
@@ -232,8 +225,8 @@ export default function TrainingGuide(): JSX.Element {
             <div className="space-y-2 text-gray-700 dark:text-gray-300">
               <ul className="list-disc list-inside ml-4 space-y-1">
                 <li>
-                  <strong>Status-Check:</strong> Stellen Sie sicher, dass mindestens 5 Einträge
-                  den Status "pending" haben
+                  <strong>Status-Check:</strong> Stellen Sie sicher, dass mindestens 5 Einträge den
+                  Status "pending" haben
                 </li>
                 <li>
                   <strong>Filter und Tags verwenden:</strong> Sie können Filter verwenden, um
@@ -274,8 +267,8 @@ export default function TrainingGuide(): JSX.Element {
                   Fortschritt angezeigt
                 </li>
                 <li>
-                  <strong>Fortschritts-Tracking:</strong> Sie können den Fortschritt in Echtzeit
-                  im Training Dashboard verfolgen
+                  <strong>Fortschritts-Tracking:</strong> Sie können den Fortschritt in Echtzeit im
+                  Training Dashboard verfolgen
                 </li>
               </ul>
             </div>
@@ -345,11 +338,11 @@ export default function TrainingGuide(): JSX.Element {
           {/* Schritt 6 */}
           <div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              {t('training:guide.step6.title')}
+              {t("training:guide.step6.title")}
             </h3>
             <div className="space-y-2 text-gray-700 dark:text-gray-300">
               <p>
-                <strong>{t('training:guide.step6.whenCancel')}</strong>
+                <strong>{t("training:guide.step6.whenCancel")}</strong>
               </p>
               <ul className="list-disc list-inside ml-4 space-y-1">
                 <li>Wenn Sie einen Fehler in den Logs sehen</li>
@@ -360,15 +353,11 @@ export default function TrainingGuide(): JSX.Element {
                 <strong>Checkpoint-System:</strong>
               </p>
               <ul className="list-disc list-inside ml-4 space-y-1">
-                <li>
-                  Das System speichert automatisch Checkpoints während des Trainings
-                </li>
+                <li>Das System speichert automatisch Checkpoints während des Trainings</li>
                 <li>
                   Bei einem Neustart kann das Training vom letzten Checkpoint fortgesetzt werden
                 </li>
-                <li>
-                  Die letzten 3 Checkpoints werden gespeichert
-                </li>
+                <li>Die letzten 3 Checkpoints werden gespeichert</li>
               </ul>
               <p className="mt-3">
                 <strong>Fortsetzen von vorherigem Training:</strong>
@@ -406,8 +395,8 @@ export default function TrainingGuide(): JSX.Element {
                   Passes hoch und testen Sie die verbesserte Extraktion
                 </li>
                 <li>
-                  <strong>Iteratives Training:</strong> Wenn die Ergebnisse noch nicht optimal
-                  sind, fügen Sie mehr annotierte Daten hinzu und trainieren Sie erneut
+                  <strong>Iteratives Training:</strong> Wenn die Ergebnisse noch nicht optimal sind,
+                  fügen Sie mehr annotierte Daten hinzu und trainieren Sie erneut
                 </li>
               </ul>
             </div>
@@ -416,8 +405,8 @@ export default function TrainingGuide(): JSX.Element {
       ),
     },
     {
-      id: 'technical',
-      title: 'Technische Details',
+      id: "technical",
+      title: "Technische Details",
       content: (
         <div className="space-y-4">
           <div>
@@ -426,7 +415,8 @@ export default function TrainingGuide(): JSX.Element {
             </h3>
             <p className="text-gray-700 dark:text-gray-300 mb-2">
               LoRA ist eine effiziente Methode zum Fine-Tuning von großen Sprachmodellen. Statt das
-              gesamte Modell neu zu trainieren, werden nur kleine, trainierbare Matrizen hinzugefügt.
+              gesamte Modell neu zu trainieren, werden nur kleine, trainierbare Matrizen
+              hinzugefügt.
             </p>
             <ul className="list-disc list-inside ml-4 space-y-1 text-gray-700 dark:text-gray-300">
               <li>
@@ -443,13 +433,12 @@ export default function TrainingGuide(): JSX.Element {
             </ul>
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              Base Model
-            </h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Base Model</h3>
             <p className="text-gray-700 dark:text-gray-300">
-              Das Standard-Base-Modell ist <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">qwen2.5:7b</code>.
-              Dieses Modell wird von Ollama bereitgestellt und muss vor dem ersten Training
-              heruntergeladen werden (~4-5 GB).
+              Das Standard-Base-Modell ist{" "}
+              <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">qwen2.5:7b</code>. Dieses
+              Modell wird von Ollama bereitgestellt und muss vor dem ersten Training heruntergeladen
+              werden (~4-5 GB).
             </p>
           </div>
           <div>
@@ -525,8 +514,8 @@ export default function TrainingGuide(): JSX.Element {
       ),
     },
     {
-      id: 'troubleshooting',
-      title: 'Troubleshooting',
+      id: "troubleshooting",
+      title: "Troubleshooting",
       content: (
         <div className="space-y-4">
           <div>
@@ -539,9 +528,7 @@ export default function TrainingGuide(): JSX.Element {
                   "Training job failed" - Training fehlgeschlagen
                 </h4>
                 <ul className="list-disc list-inside ml-4 space-y-1 text-gray-700 dark:text-gray-300">
-                  <li>
-                    Prüfen Sie die Logs im Training Dashboard (klicken Sie auf "Details")
-                  </li>
+                  <li>Prüfen Sie die Logs im Training Dashboard (klicken Sie auf "Details")</li>
                   <li>
                     Häufige Ursachen: Zu wenig Speicher, Ollama nicht erreichbar, ungültige
                     Trainingsdaten
@@ -557,11 +544,13 @@ export default function TrainingGuide(): JSX.Element {
                   "Ollama model not found" - Modell nicht gefunden
                 </h4>
                 <ul className="list-disc list-inside ml-4 space-y-1 text-gray-700 dark:text-gray-300">
+                  <li>Das Base-Modell muss in Ollama verfügbar sein</li>
                   <li>
-                    Das Base-Modell muss in Ollama verfügbar sein
-                  </li>
-                  <li>
-                    Lösung: Führen Sie <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">ollama pull qwen2.5:7b</code> aus
+                    Lösung: Führen Sie{" "}
+                    <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">
+                      ollama pull qwen2.5:7b
+                    </code>{" "}
+                    aus
                   </li>
                 </ul>
               </div>
@@ -570,9 +559,7 @@ export default function TrainingGuide(): JSX.Element {
                   "CUDA out of memory" - GPU-Speicher voll
                 </h4>
                 <ul className="list-disc list-inside ml-4 space-y-1 text-gray-700 dark:text-gray-300">
-                  <li>
-                    Die GPU hat nicht genug VRAM
-                  </li>
+                  <li>Die GPU hat nicht genug VRAM</li>
                   <li>
                     Lösung: Reduzieren Sie die Batch Size (Code-Anpassung) oder verwenden Sie CPU
                   </li>
@@ -583,9 +570,7 @@ export default function TrainingGuide(): JSX.Element {
                   Training läuft sehr langsam
                 </h4>
                 <ul className="list-disc list-inside ml-4 space-y-1 text-gray-700 dark:text-gray-300">
-                  <li>
-                    CPU-Training ist deutlich langsamer als GPU-Training
-                  </li>
+                  <li>CPU-Training ist deutlich langsamer als GPU-Training</li>
                   <li>
                     Lösung: Verwenden Sie eine GPU, wenn verfügbar, oder reduzieren Sie die
                     Datenmenge
@@ -599,16 +584,14 @@ export default function TrainingGuide(): JSX.Element {
               Logs interpretieren
             </h3>
             <div className="space-y-2 text-gray-700 dark:text-gray-300">
-              <p>
-                Die Training-Logs enthalten wichtige Informationen:
-              </p>
+              <p>Die Training-Logs enthalten wichtige Informationen:</p>
               <ul className="list-disc list-inside ml-4 space-y-1">
                 <li>
                   <strong>Epoch/Step:</strong> Zeigt den Fortschritt (z.B. "Epoch 1/3, Step 10/50")
                 </li>
                 <li>
-                  <strong>Loss:</strong> Sollte während des Trainings abnehmen. Steigender Loss
-                  kann auf Overfitting hinweisen
+                  <strong>Loss:</strong> Sollte während des Trainings abnehmen. Steigender Loss kann
+                  auf Overfitting hinweisen
                 </li>
                 <li>
                   <strong>Error-Messages:</strong> Zeigen spezifische Probleme an
@@ -643,15 +626,9 @@ export default function TrainingGuide(): JSX.Element {
               Wann mehr Daten helfen
             </h3>
             <ul className="list-disc list-inside ml-4 space-y-1 text-gray-700 dark:text-gray-300">
-              <li>
-                Wenn das Modell bestimmte Airlines/Formate nicht erkennt
-              </li>
-              <li>
-                Wenn die Extraktion inkonsistent ist
-              </li>
-              <li>
-                Wenn neue, unbekannte Formate hinzukommen
-              </li>
+              <li>Wenn das Modell bestimmte Airlines/Formate nicht erkennt</li>
+              <li>Wenn die Extraktion inkonsistent ist</li>
+              <li>Wenn neue, unbekannte Formate hinzukommen</li>
               <li>
                 <strong>Aber:</strong> Qualität ist wichtiger als Quantität. 10 gut annotierte
                 Einträge sind besser als 50 schlechte
@@ -662,8 +639,8 @@ export default function TrainingGuide(): JSX.Element {
       ),
     },
     {
-      id: 'best-practices',
-      title: 'Best Practices',
+      id: "best-practices",
+      title: "Best Practices",
       content: (
         <div className="space-y-4">
           <div>
@@ -674,15 +651,9 @@ export default function TrainingGuide(): JSX.Element {
               Es ist besser, weniger, aber hochwertige Daten zu haben, als viele schlechte Daten.
             </p>
             <ul className="list-disc list-inside ml-4 space-y-1 text-gray-700 dark:text-gray-300">
-              <li>
-                Korrigieren Sie alle Fehler sorgfältig während der Annotation
-              </li>
-              <li>
-                Verwenden Sie verschiedene Airlines und Formate für bessere Abdeckung
-              </li>
-              <li>
-                Stellen Sie sicher, dass alle Felder korrekt ausgefüllt sind
-              </li>
+              <li>Korrigieren Sie alle Fehler sorgfältig während der Annotation</li>
+              <li>Verwenden Sie verschiedene Airlines und Formate für bessere Abdeckung</li>
+              <li>Stellen Sie sicher, dass alle Felder korrekt ausgefüllt sind</li>
             </ul>
           </div>
           <div>
@@ -690,15 +661,9 @@ export default function TrainingGuide(): JSX.Element {
               Regelmäßiges Training
             </h3>
             <ul className="list-disc list-inside ml-4 space-y-1 text-gray-700 dark:text-gray-300">
-              <li>
-                Trainieren Sie regelmäßig, wenn Sie neue Daten hinzufügen
-              </li>
-              <li>
-                Jedes Training verbessert das vorherige Modell (inkrementelles Training)
-              </li>
-              <li>
-                Beginnen Sie mit 5-10 Einträgen und fügen Sie nach und nach mehr hinzu
-              </li>
+              <li>Trainieren Sie regelmäßig, wenn Sie neue Daten hinzufügen</li>
+              <li>Jedes Training verbessert das vorherige Modell (inkrementelles Training)</li>
+              <li>Beginnen Sie mit 5-10 Einträgen und fügen Sie nach und nach mehr hinzu</li>
             </ul>
           </div>
           <div>
@@ -728,15 +693,9 @@ export default function TrainingGuide(): JSX.Element {
               Backup vor Training
             </h3>
             <ul className="list-disc list-inside ml-4 space-y-1 text-gray-700 dark:text-gray-300">
-              <li>
-                Erstellen Sie ein Backup Ihrer Datenbank vor dem ersten Training
-              </li>
-              <li>
-                Training-Daten werden nicht gelöscht, aber es ist gut, vorsichtig zu sein
-              </li>
-              <li>
-                Verwenden Sie die Export-Funktion im Admin-Panel für Backups
-              </li>
+              <li>Erstellen Sie ein Backup Ihrer Datenbank vor dem ersten Training</li>
+              <li>Training-Daten werden nicht gelöscht, aber es ist gut, vorsichtig zu sein</li>
+              <li>Verwenden Sie die Export-Funktion im Admin-Panel für Backups</li>
             </ul>
           </div>
           <div>
@@ -744,18 +703,10 @@ export default function TrainingGuide(): JSX.Element {
               Weitere Tipps
             </h3>
             <ul className="list-disc list-inside ml-4 space-y-1 text-gray-700 dark:text-gray-300">
-              <li>
-                Testen Sie das trainierte Modell immer mit neuen, nicht annotierten Daten
-              </li>
-              <li>
-                Dokumentieren Sie, welche Daten Sie für welches Training verwendet haben
-              </li>
-              <li>
-                Überwachen Sie die Loss-Werte: Sie sollten während des Trainings abnehmen
-              </li>
-              <li>
-                Bei Problemen: Prüfen Sie die Logs zuerst, dann die Datenqualität
-              </li>
+              <li>Testen Sie das trainierte Modell immer mit neuen, nicht annotierten Daten</li>
+              <li>Dokumentieren Sie, welche Daten Sie für welches Training verwendet haben</li>
+              <li>Überwachen Sie die Loss-Werte: Sie sollten während des Trainings abnehmen</li>
+              <li>Bei Problemen: Prüfen Sie die Logs zuerst, dann die Datenqualität</li>
             </ul>
           </div>
         </div>
@@ -767,9 +718,7 @@ export default function TrainingGuide(): JSX.Element {
     <div className="max-w-4xl mx-auto">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Model Training Guide
-          </h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Model Training Guide</h2>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
             Umfassende Anleitung zum Training von LLM-Modellen mit eigenen Daten
           </p>
@@ -779,7 +728,10 @@ export default function TrainingGuide(): JSX.Element {
           {sections.map((section) => {
             const isExpanded = expandedSections.has(section.id);
             return (
-              <div key={section.id} className="border-b border-gray-200 dark:border-gray-700 last:border-b-0">
+              <div
+                key={section.id}
+                className="border-b border-gray-200 dark:border-gray-700 last:border-b-0"
+              >
                 <button
                   onClick={() => toggleSection(section.id)}
                   className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
@@ -789,7 +741,7 @@ export default function TrainingGuide(): JSX.Element {
                   </span>
                   <svg
                     className={`w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform ${
-                      isExpanded ? 'transform rotate-180' : ''
+                      isExpanded ? "transform rotate-180" : ""
                     }`}
                     fill="none"
                     stroke="currentColor"
@@ -804,9 +756,7 @@ export default function TrainingGuide(): JSX.Element {
                   </svg>
                 </button>
                 {isExpanded && (
-                  <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900/50">
-                    {section.content}
-                  </div>
+                  <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900/50">{section.content}</div>
                 )}
               </div>
             );
@@ -816,4 +766,3 @@ export default function TrainingGuide(): JSX.Element {
     </div>
   );
 }
-

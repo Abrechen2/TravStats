@@ -1,5 +1,5 @@
-declare module 'react-globe.gl' {
-  import { FC } from 'react';
+declare module "react-globe.gl" {
+  import { FC } from "react";
 
   interface GlobeProps {
     ref?: any;

@@ -1,27 +1,27 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { settingsApi } from '../lib/api';
-import { logger } from '../lib/logger';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { settingsApi } from "../lib/api";
+import { logger } from "../lib/logger";
 
-type ThemePreference = 'light' | 'dark';
-type LanguagePreference = 'de' | 'en';
-type DistanceUnit = 'kilometers' | 'miles' | 'nautical_miles';
-type Currency = 'EUR' | 'USD' | 'GBP' | 'CHF';
-type FlightCategory = 'business' | 'private' | 'vacation';
-type SeatClass = 'economy' | 'premium_economy' | 'business' | 'first';
+type ThemePreference = "light" | "dark";
+type LanguagePreference = "de" | "en";
+type DistanceUnit = "kilometers" | "miles" | "nautical_miles";
+type Currency = "EUR" | "USD" | "GBP" | "CHF";
+type FlightCategory = "business" | "private" | "vacation";
+type SeatClass = "economy" | "premium_economy" | "business" | "first";
 
-type FlightReminder = 'off' | '24h' | '48h';
-type BackupInterval = 'daily' | 'weekly' | 'monthly';
-type ExportFormat = 'json' | 'csv' | 'pdf';
+type FlightReminder = "off" | "24h" | "48h";
+type BackupInterval = "daily" | "weekly" | "monthly";
+type ExportFormat = "json" | "csv" | "pdf";
 
-type MapStyle = 'osm' | 'satellite';
-type MarkerStyle = 'pin' | 'circle' | 'custom';
+type MapStyle = "osm" | "satellite";
+type MarkerStyle = "pin" | "circle" | "custom";
 
-type DateFormat = 'DD.MM.YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD';
-type TimeFormat = '24h' | '12h';
+type DateFormat = "DD.MM.YYYY" | "MM/DD/YYYY" | "YYYY-MM-DD";
+type TimeFormat = "24h" | "12h";
 
-type FlightStatusDefault = 'scheduled' | 'flown';
-type BoardingPassParserStrategy = 'parser-only' | 'parser-with-api' | 'api-only' | null;
+type FlightStatusDefault = "scheduled" | "flown";
+type BoardingPassParserStrategy = "parser-only" | "parser-with-api" | "api-only" | null;
 
 type SettingsUpdater<T> = (updates: Partial<T>) => void;
 
@@ -123,39 +123,52 @@ export interface SettingsState {
 
 const defaultSettings: Omit<
   SettingsState,
-  'setProfile' | 'setDisplay' | 'setUnits' | 'setDefaults' | 'setMap' | 'setNotifications' | 'setPrivacy' | 'setBackup' | 'setApiKeys' | 'setBoardingPassParserStrategy' | 'loadApiKeysStatus' | 'resetSettings' | 'loadRemoteSettings' | 'saveRemoteSettings'
+  | "setProfile"
+  | "setDisplay"
+  | "setUnits"
+  | "setDefaults"
+  | "setMap"
+  | "setNotifications"
+  | "setPrivacy"
+  | "setBackup"
+  | "setApiKeys"
+  | "setBoardingPassParserStrategy"
+  | "loadApiKeysStatus"
+  | "resetSettings"
+  | "loadRemoteSettings"
+  | "saveRemoteSettings"
 > = {
   profile: {
-    username: 'Traveler',
-    email: 'traveler@example.com',
+    username: "Traveler",
+    email: "traveler@example.com",
     profilePicture: undefined,
   },
   display: {
-    theme: 'light',
-    language: 'en',
-    timezone: 'Europe/Berlin',
-    dateFormat: 'DD.MM.YYYY',
-    timeFormat: '24h',
+    theme: "light",
+    language: "en",
+    timezone: "Europe/Berlin",
+    dateFormat: "DD.MM.YYYY",
+    timeFormat: "24h",
   },
   units: {
-    distanceUnit: 'kilometers',
-    currency: 'EUR',
+    distanceUnit: "kilometers",
+    currency: "EUR",
   },
   defaults: {
-    flightStatus: 'scheduled',
-    seatClass: 'economy',
-    favoriteAirline: 'Lufthansa',
-    flightCategory: 'business',
+    flightStatus: "scheduled",
+    seatClass: "economy",
+    favoriteAirline: "Lufthansa",
+    flightCategory: "business",
   },
   map: {
-    mapStyle: 'osm',
+    mapStyle: "osm",
     zoomLevel: 3,
-    markerStyle: 'pin',
-    routeColor: '#2563eb',
+    markerStyle: "pin",
+    routeColor: "#2563eb",
   },
   notifications: {
     emailNotifications: true,
-    flightReminder: '24h',
+    flightReminder: "24h",
     checkInReminder: true,
     featureUpdates: true,
   },
@@ -168,8 +181,8 @@ const defaultSettings: Omit<
   },
   backup: {
     autoBackup: false,
-    backupInterval: 'weekly',
-    exportFormat: 'json',
+    backupInterval: "weekly",
+    exportFormat: "json",
     cloudSync: false,
   },
   apiKeys: null,
@@ -225,7 +238,7 @@ export const useSettingsStore = create<SettingsState>()(
           const status = await settingsApi.getApiKeys();
           set({ apiKeys: status });
         } catch (error) {
-          logger.warn('Failed to load API keys status', error);
+          logger.warn("Failed to load API keys status", error);
         }
       },
       resetSettings: () => set(defaultSettings),
@@ -236,7 +249,11 @@ export const useSettingsStore = create<SettingsState>()(
             set((state) => {
               // Extract autoUpdate and historicalEnrichment to exclude them from store
               const remoteRecord = remote as Record<string, unknown>;
-              const { autoUpdate: _au, historicalEnrichment: _he, ...remoteWithoutDirectFields } = remoteRecord;
+              const {
+                autoUpdate: _au,
+                historicalEnrichment: _he,
+                ...remoteWithoutDirectFields
+              } = remoteRecord;
               const newState = {
                 ...state,
                 ...remoteWithoutDirectFields,
@@ -254,7 +271,7 @@ export const useSettingsStore = create<SettingsState>()(
             });
           }
         } catch (error) {
-          logger.warn('Failed to load remote settings, using local defaults', error);
+          logger.warn("Failed to load remote settings, using local defaults", error);
         }
       },
       saveRemoteSettings: async () => {
@@ -264,12 +281,12 @@ export const useSettingsStore = create<SettingsState>()(
           // Don't send autoUpdate and historicalEnrichment as they are managed separately
           await settingsApi.update(rest);
         } catch (error) {
-          logger.warn('Failed to save settings remotely', error);
+          logger.warn("Failed to save settings remotely", error);
         }
       },
     }),
     {
-      name: 'settings-storage',
+      name: "settings-storage",
     }
   )
 );

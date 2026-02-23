@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import type { Flight } from '../types';
-import { useTranslation } from '../hooks/useTranslation';
+import { useState } from "react";
+import type { Flight } from "../types";
+import { useTranslation } from "../hooks/useTranslation";
 
 interface FlightCalendarProps {
   flights: Flight[];
@@ -13,7 +13,7 @@ interface DayData {
 }
 
 export default function FlightCalendar({ flights }: FlightCalendarProps) {
-  const { t } = useTranslation(['stats', 'common']);
+  const { t } = useTranslation(["stats", "common"]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<DayData | null>(null);
 
@@ -78,10 +78,10 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
   };
 
   const getIntensityColor = (flightCount: number): string => {
-    if (flightCount === 0) return 'bg-gray-100 dark:bg-gray-700';
-    if (flightCount === 1) return 'bg-blue-200 dark:bg-blue-900';
-    if (flightCount === 2) return 'bg-blue-400 dark:bg-blue-700';
-    return 'bg-blue-600 dark:bg-blue-500';
+    if (flightCount === 0) return "bg-gray-100 dark:bg-gray-700";
+    if (flightCount === 1) return "bg-blue-200 dark:bg-blue-900";
+    if (flightCount === 2) return "bg-blue-400 dark:bg-blue-700";
+    return "bg-blue-600 dark:bg-blue-500";
   };
 
   const goToPreviousMonth = () => {
@@ -95,28 +95,28 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
   };
 
   const monthNames = [
-    t('stats:calendar.months.january'),
-    t('stats:calendar.months.february'),
-    t('stats:calendar.months.march'),
-    t('stats:calendar.months.april'),
-    t('stats:calendar.months.may'),
-    t('stats:calendar.months.june'),
-    t('stats:calendar.months.july'),
-    t('stats:calendar.months.august'),
-    t('stats:calendar.months.september'),
-    t('stats:calendar.months.october'),
-    t('stats:calendar.months.november'),
-    t('stats:calendar.months.december'),
+    t("stats:calendar.months.january"),
+    t("stats:calendar.months.february"),
+    t("stats:calendar.months.march"),
+    t("stats:calendar.months.april"),
+    t("stats:calendar.months.may"),
+    t("stats:calendar.months.june"),
+    t("stats:calendar.months.july"),
+    t("stats:calendar.months.august"),
+    t("stats:calendar.months.september"),
+    t("stats:calendar.months.october"),
+    t("stats:calendar.months.november"),
+    t("stats:calendar.months.december"),
   ];
 
   const weekDays = [
-    t('stats:weekdays.sunday'),
-    t('stats:weekdays.monday'),
-    t('stats:weekdays.tuesday'),
-    t('stats:weekdays.wednesday'),
-    t('stats:weekdays.thursday'),
-    t('stats:weekdays.friday'),
-    t('stats:weekdays.saturday'),
+    t("stats:weekdays.sunday"),
+    t("stats:weekdays.monday"),
+    t("stats:weekdays.tuesday"),
+    t("stats:weekdays.wednesday"),
+    t("stats:weekdays.thursday"),
+    t("stats:weekdays.friday"),
+    t("stats:weekdays.saturday"),
   ];
 
   const calendarDays = getCalendarDays();
@@ -158,8 +158,7 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
 
         {/* Calendar days */}
         {calendarDays.map((dayData, index) => {
-          const isToday =
-            dayData.date.toDateString() === new Date().toDateString();
+          const isToday = dayData.date.toDateString() === new Date().toDateString();
           const hasFlights = dayData.flights.length > 0;
 
           return (
@@ -168,17 +167,17 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
               onClick={() => hasFlights && setSelectedDay(dayData)}
               className={`
                 relative aspect-square p-2 rounded-lg text-center transition-all
-                ${!dayData.isCurrentMonth ? 'opacity-30' : ''}
-                ${isToday ? 'ring-2 ring-blue-500' : ''}
-                ${hasFlights ? 'cursor-pointer hover:scale-105' : 'cursor-default'}
+                ${!dayData.isCurrentMonth ? "opacity-30" : ""}
+                ${isToday ? "ring-2 ring-blue-500" : ""}
+                ${hasFlights ? "cursor-pointer hover:scale-105" : "cursor-default"}
                 ${getIntensityColor(dayData.flights.length)}
               `}
             >
               <span
                 className={`text-sm font-medium ${
                   dayData.flights.length > 0
-                    ? 'text-white dark:text-white'
-                    : 'text-gray-700 dark:text-gray-300'
+                    ? "text-white dark:text-white"
+                    : "text-gray-700 dark:text-gray-300"
                 }`}
               >
                 {dayData.date.getDate()}
@@ -187,10 +186,7 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
                 <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2">
                   <div className="flex gap-0.5">
                     {dayData.flights.slice(0, 3).map((_, i) => (
-                      <div
-                        key={i}
-                        className="w-1 h-1 rounded-full bg-white"
-                      />
+                      <div key={i} className="w-1 h-1 rounded-full bg-white" />
                     ))}
                   </div>
                 </div>
@@ -205,11 +201,11 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
         <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {selectedDay.date.toLocaleDateString('de-DE', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
+              {selectedDay.date.toLocaleDateString("de-DE", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
               })}
             </h4>
             <button
@@ -231,21 +227,18 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
                       {flight.airline} {flight.flightNumber}
                     </p>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {flight.depIata || flight.depIcao} →{' '}
-                      {flight.arrIata || flight.arrIcao}
+                      {flight.depIata || flight.depIcao} → {flight.arrIata || flight.arrIcao}
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {new Date(flight.departureTime).toLocaleTimeString('de-DE', {
-                        hour: '2-digit',
-                        minute: '2-digit',
+                      {new Date(flight.departureTime).toLocaleTimeString("de-DE", {
+                        hour: "2-digit",
+                        minute: "2-digit",
                       })}
                     </p>
                     {flight.seatClass && (
-                      <p className="text-xs text-gray-500 dark:text-gray-500">
-                        {flight.seatClass}
-                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-500">{flight.seatClass}</p>
                     )}
                   </div>
                 </div>
@@ -258,7 +251,7 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
       {/* Legend */}
       <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-          {t('stats:calendar.intensity')}:
+          {t("stats:calendar.intensity")}:
         </p>
         <div className="flex gap-2 items-center">
           <div className="flex items-center gap-1">
