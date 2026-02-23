@@ -1,0 +1,12 @@
+# Approved open source licenses for TravStats dependencies
+MIT
+Apache-2.0
+Apache 2.0
+ISC
+BSD-2-Clause
+BSD-3-Clause
+0BSD
+Unlicense
+CC0-1.0
+PSF-2.0
+BlueOak-1.0.0

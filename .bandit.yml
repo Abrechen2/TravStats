@@ -1,0 +1,9 @@
+# .bandit.yml - Python security linter config
+skips:
+  - B101  # assert statements (ok in scripts)
+  - B603  # subprocess without shell=True (we use shell=False explicitly)
+  - B607  # partial path in subprocess (python3 cmd is fine)
+exclude_dirs:
+  - node_modules
+  - dist
+  - .venv
