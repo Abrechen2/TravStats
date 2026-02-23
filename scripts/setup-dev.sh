@@ -27,4 +27,8 @@ fi
 
 echo ""
 echo "=== Setup complete! ==="
-echo "Next: copy .env.example to .env, then docker compose up -d db"
+echo "Next steps:"
+echo "  1. Copy .env.example to .env and fill in values"
+echo "  2. docker compose up -d db"
+echo "  3. cd backend && npx prisma migrate dev"
+echo "  4. npm run dev (in backend/ and frontend/ separately)"
