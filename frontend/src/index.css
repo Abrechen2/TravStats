@@ -2,47 +2,199 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Design Tokens ──────────────────────────────────────── */
+:root {
+  --bg-base: #0d1117;
+  --bg-surface: #161b22;
+  --bg-elevated: #1c2128;
+  --bg-muted: #21262d;
+  --color-border: #30363d;
+  --text-primary: #e6edf3;
+  --text-muted: #8b949e;
+  --accent: #e8a045;
+  --accent-dim: #c8842a;
+  --accent-glow: rgba(232, 160, 69, 0.18);
+  --success: #3fb950;
+  --danger: #f85149;
+  --warning: #d29922;
+}
+
+/* Always dark — dark class applied on <html> in index.html */
+
 @layer base {
   body {
-    @apply bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100;
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    font-family: "Inter", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--bg-base);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
   }
 }
 
 @layer components {
+  /* ─── Buttons ──────────────────────────────────────────── */
   .btn {
-    @apply px-4 py-2 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-800;
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-offset-2;
   }
 
   .btn-primary {
-    @apply btn bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600;
+    @apply btn font-semibold;
+    background-color: var(--accent);
+    color: #0d1117;
+    transition:
+      background-color 0.2s,
+      box-shadow 0.2s;
+  }
+  .btn-primary:hover {
+    background-color: var(--accent-dim);
+    box-shadow: 0 0 16px var(--accent-glow);
+  }
+  .btn-primary:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    box-shadow: none;
   }
 
   .btn-secondary {
-    @apply btn bg-gray-200 text-gray-900 hover:bg-gray-300 focus:ring-gray-500 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600;
+    @apply btn;
+    background-color: var(--bg-elevated);
+    color: var(--text-primary);
+    border: 1px solid var(--color-border);
+  }
+  .btn-secondary:hover {
+    background-color: var(--bg-muted);
+    border-color: var(--text-muted);
   }
 
   .btn-danger {
-    @apply btn bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 dark:bg-red-500 dark:hover:bg-red-600;
+    @apply btn;
+    background-color: var(--danger);
+    color: #ffffff;
+  }
+  .btn-danger:hover {
+    filter: brightness(0.85);
   }
 
+  /* ─── Inputs ───────────────────────────────────────────── */
   .input {
-    @apply w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100;
+    @apply w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-2 transition-all duration-200;
+    background-color: var(--bg-muted);
+    border: 1px solid var(--color-border);
+    color: var(--text-primary);
+    --tw-ring-color: var(--accent);
+  }
+  .input::placeholder {
+    color: var(--text-muted);
+  }
+  .input:focus {
+    border-color: var(--accent);
   }
 
+  /* ─── Labels ───────────────────────────────────────────── */
   .label {
-    @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1;
+    @apply block text-sm font-medium mb-1;
+    color: var(--text-muted);
   }
 
+  /* ─── Cards ────────────────────────────────────────────── */
   .card {
-    @apply bg-white dark:bg-gray-800 rounded-lg shadow-md p-6;
+    @apply rounded-xl p-6;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--color-border);
+  }
+
+  /* ─── Accent divider ───────────────────────────────────── */
+  .accent-bar {
+    @apply h-px w-full;
+    background: linear-gradient(90deg, var(--accent) 0%, transparent 100%);
+    opacity: 0.4;
   }
 }
 
-/* Leaflet overrides */
+/* ─── Auth page animations ───────────────────────────────── */
+@keyframes driftspot {
+  0% {
+    transform: translate(0, 0);
+  }
+  33% {
+    transform: translate(5vw, -3vh);
+  }
+  66% {
+    transform: translate(-4vw, 5vh);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+.auth-bg {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-base);
+  overflow: hidden;
+  z-index: 0;
+}
+
+.auth-bg::before {
+  content: "";
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(232, 160, 69, 0.12) 0%, transparent 70%);
+  top: 20%;
+  left: 30%;
+  animation: driftspot 20s ease-in-out infinite;
+}
+
+.auth-bg::after {
+  content: "";
+  position: absolute;
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(232, 160, 69, 0.07) 0%, transparent 70%);
+  bottom: 10%;
+  right: 20%;
+  animation: driftspot 28s ease-in-out infinite reverse;
+}
+
+/* ─── Leaflet overrides ──────────────────────────────────── */
 .leaflet-container {
   @apply h-full w-full z-0;
+  background: var(--bg-base) !important;
 }
-
 .leaflet-popup-content-wrapper {
-  @apply rounded-lg;
+  background: var(--bg-elevated) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+}
+.leaflet-popup-tip {
+  background: var(--bg-elevated) !important;
+}
+.leaflet-control-zoom a {
+  background: var(--bg-elevated) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--color-border) !important;
+}
+.leaflet-control-zoom a:hover {
+  background: var(--bg-muted) !important;
 }
