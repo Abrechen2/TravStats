@@ -1,10 +1,18 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { settingsApi, pendingUpdatesApi } from "../lib/api";
 import { useTranslation } from "../hooks/useTranslation";
 import { useClickOutside } from "../hooks/useClickOutside";
 import { logger } from "../lib/logger";
+
+interface NavItem {
+  path: string;
+  label: string;
+  show: boolean;
+  badge?: number;
+  warn?: boolean;
+}
 
 export default function NavigationBar(): JSX.Element {
   const { user, logout } = useAuthStore();
@@ -15,7 +23,8 @@ export default function NavigationBar(): JSX.Element {
   const [developerModeEnabled, setDeveloperModeEnabled] = useState(false);
   const [pendingUpdatesCount, setPendingUpdatesCount] = useState(0);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
-  useClickOutside(mobileMenuRef, () => setMobileMenuOpen(false));
+  const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
+  useClickOutside(mobileMenuRef, closeMobileMenu);
 
   const hasTrainingAccess = user?.isAdmin || user?.canTrainLLM || false;
 
@@ -45,7 +54,7 @@ export default function NavigationBar(): JSX.Element {
           const data = await pendingUpdatesApi.getAll({ status: "pending" });
           setPendingUpdatesCount(data.count || 0);
         } catch {
-          // silently fail
+          logger.warn("Failed to load pending updates count");
         }
       };
       loadPendingCount();
@@ -59,47 +68,37 @@ export default function NavigationBar(): JSX.Element {
     return location.pathname.startsWith(path);
   };
 
-  const handleLogout = async () => {
+  const handleLogout = async (): Promise<void> => {
     await logout();
     navigate("/login");
   };
 
   const showPendingUpdates = pendingUpdatesCount > 0 || location.pathname === "/pending-updates";
 
-  interface NavItem {
-    path: string;
-    label: string;
-    show: boolean;
-    badge?: number;
-    warn?: boolean;
-  }
-
-  const navItems: NavItem[] = (
-    [
-      { path: "/", label: t("dashboard:title"), show: true },
-      { path: "/achievements", label: t("dashboard:achievements"), show: true },
-      { path: "/stats", label: t("dashboard:stats"), show: true },
-      { path: "/flights", label: "Flights", show: true },
-      {
-        path: "/pending-updates",
-        label: t("dashboard:pendingUpdates"),
-        show: showPendingUpdates,
-        badge: pendingUpdatesCount,
-        warn: true,
-      },
-      { path: "/settings", label: t("dashboard:settings"), show: true },
-      {
-        path: "/admin",
-        label: t("dashboard:admin"),
-        show: user?.isAdmin || false,
-      },
-      {
-        path: "/training",
-        label: t("dashboard:training"),
-        show: hasTrainingAccess && developerModeEnabled,
-      },
-    ] as NavItem[]
-  ).filter((item) => item.show);
+  const navItems: NavItem[] = [
+    { path: "/", label: t("dashboard:title"), show: true },
+    { path: "/achievements", label: t("dashboard:achievements"), show: true },
+    { path: "/stats", label: t("dashboard:stats"), show: true },
+    { path: "/flights", label: t("dashboard:flights") || "Flights", show: true },
+    {
+      path: "/pending-updates",
+      label: t("dashboard:pendingUpdates"),
+      show: showPendingUpdates,
+      badge: pendingUpdatesCount,
+      warn: true,
+    },
+    { path: "/settings", label: t("dashboard:settings"), show: true },
+    {
+      path: "/admin",
+      label: t("dashboard:admin"),
+      show: user?.isAdmin || false,
+    },
+    {
+      path: "/training",
+      label: t("dashboard:training"),
+      show: hasTrainingAccess && developerModeEnabled,
+    },
+  ].filter((item) => item.show);
 
   return (
     <header
@@ -115,14 +114,8 @@ export default function NavigationBar(): JSX.Element {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="xl:hidden p-2 rounded-lg transition-colors"
+              className="xl:hidden p-2 rounded-lg transition-colors nav-icon-btn"
               style={{ color: "var(--text-muted)" }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background = "var(--bg-elevated)";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-              }}
               aria-label={t("common:accessibility.toggleMenu")}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

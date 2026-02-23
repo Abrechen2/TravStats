@@ -202,3 +202,11 @@
 .leaflet-control-zoom a:hover {
   background: var(--bg-muted) !important;
 }
+
+/* ─── NavigationBar ─────────────────────────────────────── */
+.nav-icon-btn {
+  transition: background-color 200ms;
+}
+.nav-icon-btn:hover {
+  background-color: var(--bg-elevated);
+}
