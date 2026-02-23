@@ -25,7 +25,8 @@
     "prisma:studio": "prisma studio",
     "seed:airports:csv": "node dist/seedAirportsFromCSV.js",
     "seed:demo": "node dist/seedDemoUser.js",
-    "dead-code": "ts-prune | grep -v \"(used in module)\""
+    "dead-code": "ts-prune | grep -v \"(used in module)\"",
+    "lint:py": "ruff check src/scripts/"
   },
   "keywords": [
     "flight",

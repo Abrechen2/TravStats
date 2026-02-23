@@ -34,7 +34,7 @@ def parse_args() -> argparse.Namespace:
 def load_jsonl(filepath: str) -> list[dict]:
     """Load and parse a JSONL file. Returns list of parsed objects."""
     examples = []
-    with open(filepath, "r", encoding="utf-8") as fh:
+    with open(filepath, encoding="utf-8") as fh:
         for line_number, line in enumerate(fh, start=1):
             stripped = line.strip()
             if not stripped:
