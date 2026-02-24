@@ -32,7 +32,16 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
     { value: 12, label: t("stats:months.dec") },
   ];
   const [showFilters, setShowFilters] = useState(false);
+  const [openUpward, setOpenUpward] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
+
+  // Determine open direction based on button position in viewport
+  useEffect(() => {
+    if (showFilters && filterRef.current) {
+      const rect = filterRef.current.getBoundingClientRect();
+      setOpenUpward(rect.bottom > window.innerHeight * 0.6);
+    }
+  }, [showFilters]);
 
   // Filter state
   const [yearFilter, setYearFilter] = useState<number | null>(null);
@@ -230,7 +239,7 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
 
       {showFilters && (
         <div
-          className="absolute right-0 bottom-full mb-2 w-80 rounded-lg shadow-xl z-50 max-h-[calc(100vh-120px)] overflow-y-auto"
+          className={`absolute right-0 w-80 rounded-lg shadow-xl z-50 max-h-[calc(100vh-120px)] overflow-y-auto ${openUpward ? "bottom-full mb-2" : "mt-2"}`}
           style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
         >
           <div className="p-4">
