@@ -8,7 +8,7 @@ export default function DarkModeToggle(): JSX.Element {
   return (
     <button
       onClick={toggleDarkMode}
-      className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+      className="p-2 rounded-lg hover:bg-[var(--bg-elevated)] transition-colors"
       aria-label={t("theme.toggle")}
       title={isDarkMode ? t("theme.enableLight") : t("theme.enableDark")}
     >
@@ -30,7 +30,7 @@ export default function DarkModeToggle(): JSX.Element {
       ) : (
         // Moon icon for dark mode
         <svg
-          className="w-5 h-5 text-gray-700"
+          className="w-5 h-5 text-[var(--text-primary)]"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"

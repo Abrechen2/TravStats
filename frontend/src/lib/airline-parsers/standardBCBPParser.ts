@@ -16,7 +16,7 @@ function julianDateToDate(julianDate: string): string {
   const dayOfYear = parseInt(julianDate, 10);
   logger.debug("[Standard BCBP Parser] Julian day conversion: Input day of year =", dayOfYear);
 
-  let year = new Date().getFullYear();
+  const year = new Date().getFullYear();
   logger.debug("[Standard BCBP Parser] Current year:", year);
 
   const date = new Date(Date.UTC(year, 0, dayOfYear));
@@ -98,7 +98,7 @@ function getAirlineName(iataCode: string): string {
 export class StandardBCBPParser implements BoardingPassParser {
   name = "standard-bcbp";
   priority = 10;
-  category: "core" = "core";
+  category = "core" as const;
 
   canParse(barcodeData: string): boolean {
     // Quick check: BCBP format starts with 'M' for mandatory items

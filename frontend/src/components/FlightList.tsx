@@ -24,9 +24,9 @@ export default function FlightList({
 
   const getStatusBadge = (status: string): JSX.Element => {
     const colors = {
-      scheduled: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-      flown: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-      cancelled: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+      scheduled: "border border-[var(--color-border)] text-[var(--text-muted)]",
+      flown: "text-[var(--success)]",
+      cancelled: "text-[var(--danger)]",
     };
     const statusLabel = t(`flights:status.${status}`, { defaultValue: status });
 
@@ -42,9 +42,9 @@ export default function FlightList({
   const getCategoryBadge = (category?: string): JSX.Element | null => {
     if (!category) return null;
     const colors = {
-      business: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-      private: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-      vacation: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
+      business: "text-[var(--accent)]",
+      private: "text-[var(--success)]",
+      vacation: "text-[var(--warning)]",
     };
     const categoryKey = category as "business" | "private" | "vacation";
     return (
@@ -65,7 +65,7 @@ export default function FlightList({
 
   if (flights.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+      <div className="text-center py-8" style={{ color: "var(--text-muted)" }}>
         {t("flights:list.noFlights")}
       </div>
     );
@@ -96,15 +96,15 @@ export default function FlightList({
             key={flight.id}
             className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
               selectedFlightId === flight.id
-                ? "border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-900/30"
-                : "border-gray-200 hover:border-gray-300 bg-white dark:border-gray-600 dark:hover:border-gray-500 dark:bg-gray-700"
+                ? "border-[var(--accent)] bg-[var(--bg-elevated)]"
+                : "border-[var(--color-border)] hover:border-[var(--text-muted)] bg-[var(--bg-surface)]"
             }`}
             onClick={() => onFlightClick(flight.id)}
           >
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
-                  <h3 className="font-semibold text-lg dark:text-gray-100">
+                  <h3 className="font-semibold text-lg" style={{ color: "var(--text-primary)" }}>
                     {flight.airline} {flight.flightNumber}
                   </h3>
                   {getStatusBadge(flight.status)}
@@ -113,31 +113,35 @@ export default function FlightList({
 
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-gray-500 dark:text-gray-400">{t("flights:list.from")}</p>
-                    <p className="font-medium dark:text-gray-100">
+                    <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                      {t("flights:list.from")}
+                    </p>
+                    <p className="font-medium" style={{ color: "var(--text-primary)" }}>
                       {flight.depIata || flight.depIcao}
                       {flight.depName && (
-                        <span className="text-gray-600 dark:text-gray-400 ml-1">
+                        <span className="ml-1" style={{ color: "var(--text-muted)" }}>
                           - {flight.depName}
                         </span>
                       )}
                     </p>
-                    <p className="text-gray-600 dark:text-gray-400">
+                    <p className="text-sm" style={{ color: "var(--text-muted)" }}>
                       {format(new Date(flight.departureTime), "MMM dd, yyyy HH:mm")}
                     </p>
                   </div>
 
                   <div>
-                    <p className="text-gray-500 dark:text-gray-400">{t("flights:list.to")}</p>
-                    <p className="font-medium dark:text-gray-100">
+                    <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                      {t("flights:list.to")}
+                    </p>
+                    <p className="font-medium" style={{ color: "var(--text-primary)" }}>
                       {flight.arrIata || flight.arrIcao}
                       {flight.arrName && (
-                        <span className="text-gray-600 dark:text-gray-400 ml-1">
+                        <span className="ml-1" style={{ color: "var(--text-muted)" }}>
                           - {flight.arrName}
                         </span>
                       )}
                     </p>
-                    <p className="text-gray-600 dark:text-gray-400">
+                    <p className="text-sm" style={{ color: "var(--text-muted)" }}>
                       {format(new Date(flight.arrivalTime), "MMM dd, yyyy HH:mm")}
                     </p>
                   </div>
@@ -145,12 +149,18 @@ export default function FlightList({
 
                 <div className="flex flex-wrap items-center gap-3 mt-3 text-sm">
                   {flight.category && (
-                    <span className="px-2 py-1 rounded-full bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-100">
+                    <span
+                      className="px-2 py-1 rounded-full"
+                      style={{ background: "var(--bg-elevated)", color: "var(--text-muted)" }}
+                    >
                       {t(`flights:category.${flight.category}`)}
                     </span>
                   )}
                   {flight.price != null && (
-                    <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100">
+                    <span
+                      className="px-2 py-1 rounded-full"
+                      style={{ background: "var(--bg-elevated)", color: "var(--accent)" }}
+                    >
                       {formatCurrency(flight.price, flight.currency || units.currency)}
                     </span>
                   )}
@@ -160,7 +170,8 @@ export default function FlightList({
                       {flight.tags.map((tag) => (
                         <span
                           key={tag}
-                          className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200"
+                          className="px-2 py-0.5 rounded-full"
+                          style={{ background: "var(--bg-muted)", color: "var(--text-primary)" }}
                         >
                           #{tag}
                         </span>
@@ -170,19 +181,19 @@ export default function FlightList({
                 </div>
 
                 {flight.aircraft && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                  <p className="text-sm mt-2" style={{ color: "var(--text-muted)" }}>
                     {t("flights:list.aircraft")}: {flight.aircraft}
                   </p>
                 )}
 
                 {costParts.length > 0 && (
-                  <p className="text-sm text-gray-700 dark:text-gray-200 mt-2">
+                  <p className="text-sm mt-2" style={{ color: "var(--text-primary)" }}>
                     {costParts.join(" | ")}
                   </p>
                 )}
 
                 {flight.notes && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 italic">
+                  <p className="text-sm mt-2 italic" style={{ color: "var(--text-muted)" }}>
                     {flight.notes}
                   </p>
                 )}
@@ -192,7 +203,8 @@ export default function FlightList({
                     {flight.tags.map((tag) => (
                       <span
                         key={tag}
-                        className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-100"
+                        className="px-2 py-1 text-xs rounded-full"
+                        style={{ background: "var(--bg-muted)", color: "var(--text-primary)" }}
                       >
                         {tag}
                       </span>
@@ -207,7 +219,8 @@ export default function FlightList({
                     e.stopPropagation();
                     onEditFlight(flight);
                   }}
-                  className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                  className="transition-colors"
+                  style={{ color: "var(--accent)" }}
                   title={t("flights:list.edit")}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -227,7 +240,8 @@ export default function FlightList({
                       onDeleteFlight(flight.id);
                     }
                   }}
-                  className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                  className="transition-colors"
+                  style={{ color: "var(--danger)" }}
                   title={t("flights:list.delete")}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -561,15 +561,15 @@ export default function TrainingDashboard({
   const getStatusColor = (status: string) => {
     switch (status) {
       case "completed":
-        return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400";
+        return "bg-green-100 text-green-800";
       case "running":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400";
+        return "bg-blue-100 text-blue-800";
       case "failed":
-        return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400";
+        return "bg-red-100 text-red-800";
       case "pending":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400";
+        return "bg-yellow-100 text-yellow-800";
       default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300";
+        return "bg-[var(--bg-elevated)] text-[var(--text-primary)]";
     }
   };
 
@@ -577,7 +577,7 @@ export default function TrainingDashboard({
     return (
       <div className="text-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">{t("loading")}</p>
+        <p className="mt-2 text-[var(--text-muted)]">{t("loading")}</p>
       </div>
     );
   }
@@ -664,82 +664,68 @@ export default function TrainingDashboard({
     <div className="space-y-6">
       {/* Summary */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-            {t("stats.totalTrainingData")}
-          </div>
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</div>
+        <div className="bg-[var(--bg-surface)] rounded-lg shadow p-4">
+          <div className="text-sm text-[var(--text-muted)]">{t("stats.totalTrainingData")}</div>
+          <div className="text-2xl font-bold text-[var(--text-primary)]">{stats.total}</div>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+        <div className="bg-[var(--bg-surface)] rounded-lg shadow p-4">
+          <div className="text-sm text-[var(--text-muted)] flex items-center gap-2">
             {t("stats.pending")}
             <HelpIcon content={t("stats.pendingHelp")} position="top" />
           </div>
-          <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-            {stats.pending}
-          </div>
+          <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+        <div className="bg-[var(--bg-surface)] rounded-lg shadow p-4">
+          <div className="text-sm text-[var(--text-muted)] flex items-center gap-2">
             {t("stats.trained")}
             <HelpIcon content={t("stats.trainedHelp")} position="top" />
           </div>
-          <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-            {stats.trained}
-          </div>
+          <div className="text-2xl font-bold text-green-600">{stats.trained}</div>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="text-sm text-gray-600 dark:text-gray-400">{t("stats.trainingJobs")}</div>
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">{jobs.length}</div>
+        <div className="bg-[var(--bg-surface)] rounded-lg shadow p-4">
+          <div className="text-sm text-[var(--text-muted)]">{t("stats.trainingJobs")}</div>
+          <div className="text-2xl font-bold text-[var(--text-primary)]">{jobs.length}</div>
         </div>
       </div>
 
       {/* Detailed Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="text-sm text-gray-600 dark:text-gray-400">{t("stats.emails")}</div>
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.emails}</div>
+        <div className="bg-[var(--bg-surface)] rounded-lg shadow p-4">
+          <div className="text-sm text-[var(--text-muted)]">{t("stats.emails")}</div>
+          <div className="text-2xl font-bold text-[var(--text-primary)]">{stats.emails}</div>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-            {t("stats.boardingPasses")}
-          </div>
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">
+        <div className="bg-[var(--bg-surface)] rounded-lg shadow p-4">
+          <div className="text-sm text-[var(--text-muted)]">{t("stats.boardingPasses")}</div>
+          <div className="text-2xl font-bold text-[var(--text-primary)]">
             {stats.boardingPasses}
           </div>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="text-sm text-gray-600 dark:text-gray-400">{t("stats.totalFlights")}</div>
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">
-            {stats.totalFlights}
-          </div>
+        <div className="bg-[var(--bg-surface)] rounded-lg shadow p-4">
+          <div className="text-sm text-[var(--text-muted)]">{t("stats.totalFlights")}</div>
+          <div className="text-2xl font-bold text-[var(--text-primary)]">{stats.totalFlights}</div>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="text-sm text-gray-600 dark:text-gray-400">
-            {t("stats.avgFlightsPerEmail")}
-          </div>
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">
+        <div className="bg-[var(--bg-surface)] rounded-lg shadow p-4">
+          <div className="text-sm text-[var(--text-muted)]">{t("stats.avgFlightsPerEmail")}</div>
+          <div className="text-2xl font-bold text-[var(--text-primary)]">
             {stats.avgFlightsPerEmail}
           </div>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="text-sm text-gray-600 dark:text-gray-400">{t("stats.uniqueTags")}</div>
-          <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalTags}</div>
+        <div className="bg-[var(--bg-surface)] rounded-lg shadow p-4">
+          <div className="text-sm text-[var(--text-muted)]">{t("stats.uniqueTags")}</div>
+          <div className="text-2xl font-bold text-[var(--text-primary)]">{stats.totalTags}</div>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <div className="text-sm text-gray-600 dark:text-gray-400">{t("stats.jobsCompleted")}</div>
-          <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-            {stats.jobsCompleted}
-          </div>
+        <div className="bg-[var(--bg-surface)] rounded-lg shadow p-4">
+          <div className="text-sm text-[var(--text-muted)]">{t("stats.jobsCompleted")}</div>
+          <div className="text-2xl font-bold text-green-600">{stats.jobsCompleted}</div>
         </div>
       </div>
 
       {/* Actions */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+      <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              <h3 className="text-lg font-semibold text-[var(--text-primary)]">
                 {t("actions.startTraining")}
               </h3>
               <HelpIcon
@@ -748,7 +734,7 @@ export default function TrainingDashboard({
                 position="right"
               />
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-[var(--text-muted)]">
               {pendingCount >= 5
                 ? t("actions.readyForTraining", { count: pendingCount })
                 : t("actions.minimumEntriesRequired", { count: pendingCount })}
@@ -765,12 +751,10 @@ export default function TrainingDashboard({
       </div>
 
       {/* Training Jobs */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+      <div className="bg-[var(--bg-surface)] rounded-lg shadow">
+        <div className="p-6 border-b border-[var(--color-border)]">
           <div className="flex items-center gap-2">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {t("jobs.title")}
-            </h3>
+            <h3 className="text-lg font-semibold text-[var(--text-primary)]">{t("jobs.title")}</h3>
             <HelpIcon
               content={t("jobs.titleHelp")}
               expandedContent={t("jobs.titleHelpExpanded")}
@@ -778,11 +762,9 @@ export default function TrainingDashboard({
             />
           </div>
         </div>
-        <div className="divide-y divide-gray-200 dark:divide-gray-700">
+        <div className="divide-y divide-gray-200">
           {jobs.length === 0 ? (
-            <div className="p-6 text-center text-gray-500 dark:text-gray-400">
-              {t("jobs.noJobs")}
-            </div>
+            <div className="p-6 text-center text-[var(--text-muted)]">{t("jobs.noJobs")}</div>
           ) : (
             jobs.map((job) => {
               const logs = jobLogs[job.id];
@@ -794,10 +776,8 @@ export default function TrainingDashboard({
                 <div key={job.id} className="p-6">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex-1">
-                      <div className="font-medium text-gray-900 dark:text-white">
-                        {job.modelName}
-                      </div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                      <div className="font-medium text-[var(--text-primary)]">{job.modelName}</div>
+                      <div className="text-sm text-[var(--text-muted)]">
                         {new Date(job.createdAt).toLocaleString()}
                       </div>
                     </div>
@@ -817,14 +797,14 @@ export default function TrainingDashboard({
                         <button
                           onClick={() => handleCancelTrainingClick(job.id)}
                           disabled={cancelling === job.id}
-                          className="px-3 py-1 text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="px-3 py-1 text-sm font-medium text-red-600 hover:text-red-800 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {cancelling === job.id ? t("jobs.cancelling") : t("jobs.cancel")}
                         </button>
                       )}
                       <button
                         onClick={() => toggleJobExpanded(job.id)}
-                        className="px-3 py-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                        className="px-3 py-1 text-sm font-medium text-blue-600 hover:text-blue-800"
                       >
                         {isExpanded ? t("jobs.hide") : t("jobs.details")}
                       </button>
@@ -836,7 +816,7 @@ export default function TrainingDashboard({
                     <div className="mt-4">
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          <span className="text-sm font-medium text-[var(--text-primary)]">
                             {progress.phase}
                           </span>
                           <HelpIcon
@@ -847,17 +827,17 @@ export default function TrainingDashboard({
                         </div>
                         <div className="flex items-center gap-2">
                           {progress.estimatedTimeRemaining !== undefined && (
-                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                            <span className="text-xs text-[var(--text-muted)]">
                               {formatEstimatedTime(progress.estimatedTimeRemaining)}{" "}
                               {t("progress.remaining")}
                             </span>
                           )}
-                          <span className="text-sm text-gray-500 dark:text-gray-400">
+                          <span className="text-sm text-[var(--text-muted)]">
                             {Math.round(progress.progress)}%
                           </span>
                         </div>
                       </div>
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                      <div className="w-full bg-[var(--bg-muted)] rounded-full h-2">
                         <div
                           className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                           style={{ width: `${progress.progress}%` }}
@@ -867,30 +847,28 @@ export default function TrainingDashboard({
                   )}
 
                   {job.errorMessage && (
-                    <div className="mt-2 text-sm text-red-600 dark:text-red-400">
-                      {job.errorMessage}
-                    </div>
+                    <div className="mt-2 text-sm text-red-600">{job.errorMessage}</div>
                   )}
                   {job.startedAt && (
-                    <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    <div className="mt-2 text-sm text-[var(--text-muted)]">
                       {t("jobs.started")} {new Date(job.startedAt).toLocaleString()}
                     </div>
                   )}
                   {job.completedAt && (
-                    <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    <div className="mt-2 text-sm text-[var(--text-muted)]">
                       {t("jobs.completed")} {new Date(job.completedAt).toLocaleString()}
                     </div>
                   )}
 
                   {/* Expanded Logs View */}
                   {isExpanded && logs && (
-                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                    <div className="mt-4 pt-4 border-t border-[var(--color-border)]">
+                      <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-2">
                         {t("jobs.logsAndProgress")}
                       </h4>
-                      <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 max-h-96 overflow-y-auto">
+                      <div className="bg-[var(--bg-base)] rounded-lg p-4 max-h-96 overflow-y-auto">
                         {logs.logFileContent ? (
-                          <pre className="text-xs text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-mono">
+                          <pre className="text-xs text-[var(--text-primary)] whitespace-pre-wrap font-mono">
                             {logs.logFileContent.split("\n").slice(-100).join("\n")}
                           </pre>
                         ) : logs.logs && logs.logs.length > 0 ? (
@@ -900,18 +878,18 @@ export default function TrainingDashboard({
                                 key={index}
                                 className={`text-xs font-mono ${
                                   log.level === "error"
-                                    ? "text-red-600 dark:text-red-400"
+                                    ? "text-red-600"
                                     : log.level === "warn"
-                                      ? "text-yellow-600 dark:text-yellow-400"
-                                      : "text-gray-700 dark:text-gray-300"
+                                      ? "text-yellow-600"
+                                      : "text-[var(--text-primary)]"
                                 }`}
                               >
-                                <span className="text-gray-500 dark:text-gray-500">
+                                <span className="text-[var(--text-muted)]">
                                   {new Date(log.timestamp).toLocaleTimeString()}
                                 </span>{" "}
                                 [{log.level.toUpperCase()}] {log.message}
                                 {log.metadata && Object.keys(log.metadata).length > 0 && (
-                                  <div className="ml-4 text-gray-600 dark:text-gray-400">
+                                  <div className="ml-4 text-[var(--text-muted)]">
                                     {JSON.stringify(log.metadata, null, 2)}
                                   </div>
                                 )}
@@ -919,7 +897,7 @@ export default function TrainingDashboard({
                             ))}
                           </div>
                         ) : (
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                          <div className="text-sm text-[var(--text-muted)]">
                             {t("jobs.noLogsAvailable")}
                           </div>
                         )}
@@ -937,17 +915,17 @@ export default function TrainingDashboard({
       <TrainingDataFilters trainingData={trainingData} onFilterChange={handleFilterChange} />
 
       {/* Training Data */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t("data.title")}</h3>
+      <div className="bg-[var(--bg-surface)] rounded-lg shadow">
+        <div className="p-6 border-b border-[var(--color-border)] flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-[var(--text-primary)]">{t("data.title")}</h3>
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 border border-gray-300 dark:border-gray-600 rounded-md">
+            <div className="flex items-center gap-2 border border-[var(--color-border)] rounded-md">
               <button
                 onClick={() => setViewMode("list")}
                 className={`px-3 py-1 text-sm font-medium rounded-l-md ${
                   viewMode === "list"
                     ? "bg-blue-600 text-white"
-                    : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                    : "bg-[var(--bg-surface)] text-[var(--text-primary)] hover:bg-[var(--bg-base)]"
                 }`}
               >
                 {t("data.list")}
@@ -957,14 +935,14 @@ export default function TrainingDashboard({
                 className={`px-3 py-1 text-sm font-medium rounded-r-md ${
                   viewMode === "table"
                     ? "bg-blue-600 text-white"
-                    : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                    : "bg-[var(--bg-surface)] text-[var(--text-primary)] hover:bg-[var(--bg-base)]"
                 }`}
               >
                 {t("data.table")}
               </button>
             </div>
             {displayTrainingData.length > 0 && (
-              <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
+              <label className="flex items-center gap-2 text-sm text-[var(--text-muted)] cursor-pointer">
                 <input
                   type="checkbox"
                   checked={
@@ -977,7 +955,7 @@ export default function TrainingDashboard({
                       ).length
                   }
                   onChange={handleSelectAll}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="rounded border-[var(--color-border)] text-blue-600 focus:ring-blue-500"
                 />
                 Alle auswählen
               </label>
@@ -985,8 +963,8 @@ export default function TrainingDashboard({
           </div>
         </div>
         {selectedItems.size > 0 && (
-          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-            <span className="text-sm font-medium text-blue-900 dark:text-blue-300">
+          <div className="p-4 bg-blue-50 border-b border-[var(--color-border)] flex items-center justify-between">
+            <span className="text-sm font-medium text-blue-900">
               {selectedItems.size === 1
                 ? t("data.selectedCount", { count: selectedItems.size })
                 : t("data.selectedCountPlural", { count: selectedItems.size })}
@@ -1002,12 +980,12 @@ export default function TrainingDashboard({
         )}
         {viewMode === "table" ? (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-700">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-[var(--bg-base)]">
                 <tr>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-12"
+                    className="px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider w-12"
                   >
                     <input
                       type="checkbox"
@@ -1021,12 +999,12 @@ export default function TrainingDashboard({
                           ).length
                       }
                       onChange={handleSelectAll}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded border-[var(--color-border)] text-blue-600 focus:ring-blue-500"
                     />
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
+                    className="px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider cursor-pointer hover:bg-[var(--bg-elevated)]"
                     onClick={() => handleSort("type")}
                   >
                     <div className="flex items-center gap-2">
@@ -1036,7 +1014,7 @@ export default function TrainingDashboard({
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
+                    className="px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider cursor-pointer hover:bg-[var(--bg-elevated)]"
                     onClick={() => handleSort("status")}
                   >
                     <div className="flex items-center gap-2">
@@ -1046,13 +1024,13 @@ export default function TrainingDashboard({
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+                    className="px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider"
                   >
                     {t("data.tags")}
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
+                    className="px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider cursor-pointer hover:bg-[var(--bg-elevated)]"
                     onClick={() => handleSort("createdAt")}
                   >
                     <div className="flex items-center gap-2">
@@ -1064,19 +1042,16 @@ export default function TrainingDashboard({
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+                    className="px-6 py-3 text-right text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider"
                   >
                     {t("data.actions")}
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              <tbody className="bg-[var(--bg-surface)] divide-y divide-gray-200">
                 {displayTrainingData.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={6}
-                      className="px-6 py-4 text-center text-gray-500 dark:text-gray-400"
-                    >
+                    <td colSpan={6} className="px-6 py-4 text-center text-[var(--text-muted)]">
                       {trainingData.length === 0 ? t("data.noData") : t("data.noMatchingData")}
                     </td>
                   </tr>
@@ -1086,26 +1061,26 @@ export default function TrainingDashboard({
                     const canEdit = data.status === "pending" && !isInUse;
 
                     return (
-                      <tr key={data.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <tr key={data.id} className="hover:bg-[var(--bg-base)]">
                         <td className="px-6 py-4 whitespace-nowrap">
                           {canEdit && (
                             <input
                               type="checkbox"
                               checked={selectedItems.has(data.id)}
                               onChange={() => handleToggleSelect(data.id)}
-                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              className="rounded border-[var(--color-border)] text-blue-600 focus:ring-blue-500"
                             />
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          <div className="text-sm font-medium text-[var(--text-primary)]">
                             {data.type === "email" ? "📧 Email" : "🎫 Boarding Pass"}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             {isInUse && (
-                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
+                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
                                 {t("data.beingTrained")}
                               </span>
                             )}
@@ -1122,17 +1097,17 @@ export default function TrainingDashboard({
                               {data.tags.map((tag: string) => (
                                 <span
                                   key={tag}
-                                  className="inline-flex items-center px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded text-xs"
+                                  className="inline-flex items-center px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs"
                                 >
                                   {tag}
                                 </span>
                               ))}
                             </div>
                           ) : (
-                            <span className="text-sm text-gray-400 dark:text-gray-500">-</span>
+                            <span className="text-sm text-[var(--text-muted)]">-</span>
                           )}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--text-muted)]">
                           {new Date(data.createdAt).toLocaleString()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -1141,14 +1116,14 @@ export default function TrainingDashboard({
                               <>
                                 <button
                                   onClick={() => setPreviewDataId(data.id)}
-                                  className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300"
+                                  className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                                 >
                                   {t("data.preview")}
                                 </button>
                                 {onEditTrainingData && (
                                   <button
                                     onClick={() => handleEditTrainingData(data.id, data.type)}
-                                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                                    className="text-blue-600 hover:text-blue-800"
                                   >
                                     {t("data.edit")}
                                   </button>
@@ -1156,14 +1131,14 @@ export default function TrainingDashboard({
                                 <button
                                   onClick={() => handleDeleteTrainingDataClick(data.id)}
                                   disabled={deleting === data.id}
-                                  className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  className="text-red-600 hover:text-red-800 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                   {deleting === data.id ? t("data.deleting") : t("data.delete")}
                                 </button>
                               </>
                             )}
                             {!canEdit && data.status === "pending" && (
-                              <span className="text-xs text-gray-500 dark:text-gray-400 italic">
+                              <span className="text-xs text-[var(--text-muted)] italic">
                                 {t("data.inUse")}
                               </span>
                             )}
@@ -1177,9 +1152,9 @@ export default function TrainingDashboard({
             </table>
           </div>
         ) : (
-          <div className="divide-y divide-gray-200 dark:divide-gray-700">
+          <div className="divide-y divide-gray-200">
             {displayTrainingData.length === 0 ? (
-              <div className="p-6 text-center text-gray-500 dark:text-gray-400">
+              <div className="p-6 text-center text-[var(--text-muted)]">
                 {trainingData.length === 0 ? t("data.noData") : t("data.noMatchingData")}
               </div>
             ) : (
@@ -1196,14 +1171,12 @@ export default function TrainingDashboard({
                             type="checkbox"
                             checked={selectedItems.has(data.id)}
                             onChange={() => handleToggleSelect(data.id)}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            className="rounded border-[var(--color-border)] text-blue-600 focus:ring-blue-500"
                           />
                         )}
                         <div className="flex-1">
-                          <div className="font-medium text-gray-900 dark:text-white">
-                            {data.type}
-                          </div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                          <div className="font-medium text-[var(--text-primary)]">{data.type}</div>
+                          <div className="text-sm text-[var(--text-muted)]">
                             {new Date(data.createdAt).toLocaleString()}
                           </div>
                           {data.tags && data.tags.length > 0 && (
@@ -1211,7 +1184,7 @@ export default function TrainingDashboard({
                               {data.tags.map((tag: string) => (
                                 <span
                                   key={tag}
-                                  className="inline-flex items-center px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded text-xs"
+                                  className="inline-flex items-center px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs"
                                 >
                                   {tag}
                                 </span>
@@ -1222,7 +1195,7 @@ export default function TrainingDashboard({
                       </div>
                       <div className="flex items-center gap-3">
                         {isInUse && (
-                          <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400">
+                          <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
                             {t("data.beingTrained")}
                           </span>
                         )}
@@ -1235,14 +1208,14 @@ export default function TrainingDashboard({
                           <>
                             <button
                               onClick={() => setPreviewDataId(data.id)}
-                              className="px-3 py-1 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300"
+                              className="px-3 py-1 text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                             >
                               {t("data.preview")}
                             </button>
                             {onEditTrainingData && (
                               <button
                                 onClick={() => handleEditTrainingData(data.id, data.type)}
-                                className="px-3 py-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                                className="px-3 py-1 text-sm font-medium text-blue-600 hover:text-blue-800"
                               >
                                 {t("data.edit")}
                               </button>
@@ -1250,14 +1223,14 @@ export default function TrainingDashboard({
                             <button
                               onClick={() => handleDeleteTrainingDataClick(data.id)}
                               disabled={deleting === data.id}
-                              className="px-3 py-1 text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="px-3 py-1 text-sm font-medium text-red-600 hover:text-red-800 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               {deleting === data.id ? t("data.deleting") : t("data.delete")}
                             </button>
                           </>
                         )}
                         {!canEdit && data.status === "pending" && (
-                          <span className="text-xs text-gray-500 dark:text-gray-400 italic">
+                          <span className="text-xs text-[var(--text-muted)] italic">
                             {t("data.usedForTraining")}
                           </span>
                         )}

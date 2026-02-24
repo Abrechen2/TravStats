@@ -554,30 +554,28 @@ export default function BoardingPassAnnotation({
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+      <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
+        <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">
           Boarding Pass Annotation
         </h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          {t("training:annotation.imageLoading")}
-        </p>
+        <p className="text-sm text-[var(--text-muted)]">{t("training:annotation.imageLoading")}</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+    <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
+      <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">
         Boarding Pass Annotation
       </h2>
-      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+      <p className="text-sm text-[var(--text-muted)] mb-4">
         {t("training:annotation.drawBoundingBoxes")}
       </p>
 
       <div className="space-y-4">
         {/* Label-Auswahl und Bearbeitung */}
-        <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-300 dark:border-gray-600">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <div className="p-4 bg-[var(--bg-base)] rounded-lg border border-[var(--color-border)]">
+          <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
             {selectedBoxIndex !== null
               ? t("training:annotation.changeLabelForSelected")
               : t("training:annotation.selectLabelBeforeDrawing")}
@@ -635,21 +633,21 @@ export default function BoardingPassAnnotation({
             )}
           </div>
           {selectedBoxIndex !== null && (
-            <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+            <p className="text-xs text-[var(--text-muted)] mt-2">
               {t("training:annotation.boxSelected", { index: selectedBoxIndex + 1 })}
             </p>
           )}
           {currentBox && (
-            <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+            <p className="text-xs text-[var(--text-muted)] mt-2">
               {t("training:annotation.drawingInstructions")}
             </p>
           )}
         </div>
 
-        <div className="border border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700 overflow-auto">
+        <div className="border border-[var(--color-border)] rounded-lg p-4 bg-[var(--bg-base)] overflow-auto">
           <canvas
             ref={canvasRef}
-            className="border border-gray-300 dark:border-gray-600 rounded cursor-crosshair max-w-full h-auto"
+            className="border border-[var(--color-border)] rounded cursor-crosshair max-w-full h-auto"
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
@@ -658,29 +656,27 @@ export default function BoardingPassAnnotation({
 
         {/* OCR Loading Indicator */}
         {ocrLoading && (
-          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-300 dark:border-blue-700">
-            <p className="text-sm text-blue-700 dark:text-blue-300">
-              🔍 OCR läuft... Text wird extrahiert...
-            </p>
+          <div className="p-4 bg-blue-50 rounded-lg border border-blue-300">
+            <p className="text-sm text-blue-700">🔍 OCR läuft... Text wird extrahiert...</p>
           </div>
         )}
 
         {/* Flight Data (Ground Truth) */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <h3 className="text-sm font-medium text-[var(--text-primary)]">
               Flight Data (Ground Truth)
             </h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-xs text-[var(--text-muted)]">
               Felder werden automatisch durch OCR ausgefüllt
             </p>
           </div>
-          <div className="p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+          <div className="p-4 border border-[var(--color-border)] rounded-lg bg-[var(--bg-base)]">
             {flights.map((flight, index) => (
               <div key={index} className="space-y-3">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
                       Flight Number
                     </label>
                     <input
@@ -699,7 +695,7 @@ export default function BoardingPassAnnotation({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
                       PNR
                     </label>
                     <input
@@ -715,7 +711,7 @@ export default function BoardingPassAnnotation({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
                       Departure Code
                     </label>
                     <input
@@ -735,7 +731,7 @@ export default function BoardingPassAnnotation({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
                       Arrival Code
                     </label>
                     <input
@@ -755,7 +751,7 @@ export default function BoardingPassAnnotation({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
                       Departure Date
                     </label>
                     <input
@@ -773,7 +769,7 @@ export default function BoardingPassAnnotation({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
                       Departure Time
                     </label>
                     <input
@@ -791,7 +787,7 @@ export default function BoardingPassAnnotation({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
                       Arrival Date
                     </label>
                     <input
@@ -809,7 +805,7 @@ export default function BoardingPassAnnotation({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
                       Arrival Time
                     </label>
                     <input
@@ -827,7 +823,7 @@ export default function BoardingPassAnnotation({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
                       Seat
                     </label>
                     <input
@@ -843,7 +839,7 @@ export default function BoardingPassAnnotation({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
                       Gate
                     </label>
                     <input
@@ -859,7 +855,7 @@ export default function BoardingPassAnnotation({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
                       Terminal
                     </label>
                     <input
@@ -878,7 +874,7 @@ export default function BoardingPassAnnotation({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
                       Aircraft Type
                     </label>
                     <input
@@ -904,9 +900,7 @@ export default function BoardingPassAnnotation({
 
         {/* Tags */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Tags
-          </label>
+          <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Tags</label>
           <div className="flex gap-2 mb-2">
             <input
               type="text"
@@ -934,13 +928,13 @@ export default function BoardingPassAnnotation({
               {tags.map((tag) => (
                 <span
                   key={tag}
-                  className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded text-sm"
+                  className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm"
                 >
                   {tag}
                   <button
                     type="button"
                     onClick={() => handleRemoveTag(tag)}
-                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
+                    className="text-blue-600 hover:text-blue-800"
                     aria-label={`Tag ${tag} entfernen`}
                   >
                     ×

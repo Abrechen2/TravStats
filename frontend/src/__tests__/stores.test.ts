@@ -69,7 +69,9 @@ describe("Zustand Stores", () => {
 
     it("should clear user on logout even if API fails", async () => {
       const { authApi } = await import("../lib/api");
-      const mockLogout = authApi.logout as any;
+      const mockLogout = authApi.logout as unknown as {
+        mockRejectedValueOnce: (err: Error) => void;
+      };
       mockLogout.mockRejectedValueOnce(new Error("API error"));
 
       const { result } = renderHook(() => useAuthStore());

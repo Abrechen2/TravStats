@@ -186,7 +186,7 @@ export default function FlightReviewModal({
       if (errorMessages.length > 0) {
         setAirportError(errorMessages.join(", "));
       }
-    } catch (err) {
+    } catch {
       setAirportError(t("errors:failedToLoadAirport"));
     } finally {
       setAirportLoading(false);
@@ -337,20 +337,20 @@ export default function FlightReviewModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-[var(--bg-surface)] rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+        <div className="sticky top-0 bg-[var(--bg-surface)] border-b px-6 py-4 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h2>
+            <h2 className="text-xl font-bold text-[var(--text-primary)]">{title}</h2>
             {showProgress && (
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              <p className="text-sm text-[var(--text-muted)] mt-1">
                 {t("flights:review.flightIndex", { index: flightIndex! + 1, total: totalFlights })}
               </p>
             )}
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            className="p-2 text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] rounded-lg transition-colors"
             aria-label={t("common:buttons.close")}
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -367,50 +367,48 @@ export default function FlightReviewModal({
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && (
-            <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-              <p className="text-red-800 dark:text-red-200">{error}</p>
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-800">{error}</p>
             </div>
           )}
 
           {airportError && (
-            <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-              <p className="text-yellow-800 dark:text-yellow-200">{airportError}</p>
+            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-yellow-800">{airportError}</p>
             </div>
           )}
 
           {airportLoading && (
-            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <p className="text-blue-800 dark:text-blue-200">
-                {t("flights:review.loadingAirports")}
-              </p>
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-blue-800">{t("flights:review.loadingAirports")}</p>
             </div>
           )}
 
           {/* Flight Details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                 {t("flights:form.flightNumber")} *
               </label>
               <input
                 type="text"
                 value={flightNumber}
                 onChange={(e) => setFlightNumber(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
                 placeholder={t("flights:form.placeholders.flightNumber")}
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                 {t("flights:form.airline")}
               </label>
               <input
                 type="text"
                 value={airline}
                 onChange={(e) => setAirline(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
                 placeholder={t("flights:form.placeholders.airline")}
               />
             </div>
@@ -419,7 +417,7 @@ export default function FlightReviewModal({
           {/* Route */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                 {t("flights:form.departureAirportCode")} *
               </label>
               <input
@@ -430,13 +428,13 @@ export default function FlightReviewModal({
                   setDepartureCode(code);
                   setDepartureAirport(null);
                 }}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
                 placeholder={t("flights:form.placeholders.departureCode")}
                 maxLength={3}
                 required
               />
               {departureAirport && (
-                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                <p className="text-xs text-[var(--text-muted)] mt-1">
                   {t("flights:review.selectedAirport", {
                     name: departureAirport.name,
                     code: departureAirport.iata || departureAirport.icao || "",
@@ -446,7 +444,7 @@ export default function FlightReviewModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                 {t("flights:form.arrivalAirportCode")} *
               </label>
               <input
@@ -457,13 +455,13 @@ export default function FlightReviewModal({
                   setArrivalCode(code);
                   setArrivalAirport(null);
                 }}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
                 placeholder={t("flights:form.placeholders.arrivalCode")}
                 maxLength={3}
                 required
               />
               {arrivalAirport && (
-                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                <p className="text-xs text-[var(--text-muted)] mt-1">
                   {t("flights:review.selectedAirport", {
                     name: arrivalAirport.name,
                     code: arrivalAirport.iata || arrivalAirport.icao || "",
@@ -476,27 +474,27 @@ export default function FlightReviewModal({
           {/* Times */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                 {t("flights:form.departureTime")} *
               </label>
               <input
                 type="datetime-local"
                 value={departureTime}
                 onChange={(e) => setDepartureTime(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                 {t("flights:form.arrivalTime")} *
               </label>
               <input
                 type="datetime-local"
                 value={arrivalTime}
                 onChange={(e) => setArrivalTime(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
                 required
               />
             </div>
@@ -505,20 +503,20 @@ export default function FlightReviewModal({
           {/* Aircraft and Class */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                 {t("flights:form.aircraft")}
               </label>
               <input
                 type="text"
                 value={aircraft}
                 onChange={(e) => setAircraft(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
                 placeholder={t("flights:form.placeholders.aircraft")}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                 {t("flights:form.seatClass")}
               </label>
               <select
@@ -528,7 +526,7 @@ export default function FlightReviewModal({
                     e.target.value as "economy" | "premium_economy" | "business" | "first"
                   )
                 }
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
               >
                 <option value="economy">{t("flights:seatClass.economy")}</option>
                 <option value="premium_economy">{t("flights:seatClass.premium_economy")}</option>
@@ -541,40 +539,40 @@ export default function FlightReviewModal({
           {/* Seat Details */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                 {t("flights:form.seat")}
               </label>
               <input
                 type="text"
                 value={seat}
                 onChange={(e) => setSeat(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
                 placeholder={t("flights:form.placeholders.seat")}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                 {t("flights:form.terminal")}
               </label>
               <input
                 type="text"
                 value={terminal}
                 onChange={(e) => setTerminal(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
                 placeholder={t("flights:form.placeholders.terminal")}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                 {t("flights:form.gate")}
               </label>
               <input
                 type="text"
                 value={gate}
                 onChange={(e) => setGate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
                 placeholder={t("flights:form.placeholders.gate")}
               />
             </div>
@@ -583,28 +581,28 @@ export default function FlightReviewModal({
           {/* Booking Details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                 {t("flights:form.bookingReference")}
               </label>
               <input
                 type="text"
                 value={bookingReference}
                 onChange={(e) => setBookingReference(e.target.value.toUpperCase())}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
                 placeholder={t("flights:form.placeholders.bookingReference")}
                 maxLength={6}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                 {t("flights:form.boardingGroup")}
               </label>
               <input
                 type="text"
                 value={boardingGroup}
                 onChange={(e) => setBoardingGroup(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
                 placeholder={t("flights:form.placeholders.boardingGroup")}
                 maxLength={3}
               />
@@ -613,27 +611,27 @@ export default function FlightReviewModal({
 
           {/* Ticket Number */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
               {t("flights:form.ticketNumber")}
             </label>
             <input
               type="text"
               value={ticketNumber}
               onChange={(e) => setTicketNumber(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
               placeholder={t("flights:form.placeholders.ticketNumber")}
               maxLength={13}
             />
           </div>
 
           {/* Cost Breakdown */}
-          <div className="border dark:border-gray-700 rounded-lg p-4">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+          <div className="border rounded-lg p-4">
+            <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">
               {t("flights:review.costsTitle")}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                   {t("common:labels.price")}
                 </label>
                 <input
@@ -643,19 +641,19 @@ export default function FlightReviewModal({
                   onChange={(e) =>
                     setPrice(e.target.value ? parseFloat(e.target.value) : undefined)
                   }
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
                   placeholder={t("flights:form.placeholders.price")}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                   {t("flights:form.currency")}
                 </label>
                 <select
                   value={currency}
                   onChange={(e) => setCurrency(e.target.value as "EUR" | "USD" | "GBP" | "CHF")}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="EUR">{t("flights:currency.EUR")}</option>
                   <option value="USD">{t("flights:currency.USD")}</option>
@@ -665,7 +663,7 @@ export default function FlightReviewModal({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                   {t("common:labels.taxes")}
                 </label>
                 <input
@@ -675,13 +673,13 @@ export default function FlightReviewModal({
                   onChange={(e) =>
                     setTaxes(e.target.value ? parseFloat(e.target.value) : undefined)
                   }
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
                   placeholder={t("flights:form.placeholders.taxes")}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                   {t("common:labels.fees")}
                 </label>
                 <input
@@ -689,7 +687,7 @@ export default function FlightReviewModal({
                   step="0.01"
                   value={fees || ""}
                   onChange={(e) => setFees(e.target.value ? parseFloat(e.target.value) : undefined)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
                   placeholder={t("flights:form.placeholders.fees")}
                 />
               </div>
@@ -697,11 +695,11 @@ export default function FlightReviewModal({
           </div>
 
           {/* Buttons */}
-          <div className="flex gap-3 pt-4 border-t dark:border-gray-700">
+          <div className="flex gap-3 pt-4 border-t">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-semibold"
+              className="flex-1 px-4 py-2 bg-[var(--bg-muted)] text-[var(--text-primary)] rounded-lg hover:bg-[var(--bg-elevated)] transition-colors font-semibold"
               disabled={loading}
             >
               {showProgress ? t("common:buttons.cancel") : t("flights:review.discard")}
