@@ -182,6 +182,39 @@
     "confirmCleanupLogs": "Delete old log files based on retention policy? This action cannot be undone.",
     "confirmDeactivateDemo": "Deactivate the demo user account? This will prevent login with demo credentials."
   },
+  "logging": {
+    "title": "Debug Logging & Diagnostics",
+    "description": "Advanced logging for troubleshooting and monitoring",
+    "debugMode": "Enable Debug Mode",
+    "debugModeDisable": "Disable Debug Mode",
+    "help": {
+      "title": "Logging Configuration",
+      "description": "Controls the logging behavior of the system. Debug mode enables detailed output for troubleshooting.",
+      "levelsTitle": "Log Levels:",
+      "levels": "error → warn → info → debug → trace (from least to most detailed)",
+      "warningTitle": "Note:",
+      "warning": "Debug mode can impact performance and generates large log files. Only enable for short diagnostic periods."
+    }
+  },
+  "parserSettings": {
+    "title": "Global Parser Configuration",
+    "description": "Configure default parser settings for all users. API keys are managed in the API Keys tab.",
+    "defaultSettings": "Default Settings",
+    "defaultSettingsDescription": "These defaults will be applied to new user accounts. Users can change them in their settings.",
+    "visionParser": "Default Vision Parser (Boarding Pass)",
+    "textParser": "Default Text Parser (Email)",
+    "autoHelp": "Auto mode automatically selects the best available parser",
+    "help": {
+      "title": "Parser Configuration",
+      "description": "Configures the default parsers used for all users.",
+      "freeTitle": "Free Options:",
+      "free": "Ollama (local AI, GPU recommended), Tesseract (OCR), Regex (pattern matching)",
+      "cloudTitle": "Cloud Options:",
+      "cloud": "OpenAI (~$0.01-0.05/request), Claude (~$0.01-0.03/request) – require API keys",
+      "autoTitle": "Auto Mode:",
+      "auto": "Priority: Cloud AI > local AI > OCR/Regex based on availability"
+    }
+  },
   "backup": {
     "title": "Backup Management",
     "description": "Manage your backups and restore them if needed",
@@ -239,6 +272,16 @@
       "restoreFailed": "Failed to restore backup",
       "deleted": "Backup deleted",
       "deleteFailed": "Failed to delete backup"
+    },
+    "help": {
+      "title": "Backup Management",
+      "description": "Backups secure all data of the TravStats instance and can be restored in case of data loss or migration.",
+      "typesTitle": "Backup Types:",
+      "types": "Full (database + files), Database only, Files only",
+      "restoreTitle": "Restore:",
+      "restore": "It is recommended to create a new backup before restoring. All current data will be overwritten.",
+      "retentionTitle": "Retention:",
+      "retention": "Backups are automatically deleted after the configured retention period."
     }
   },
   "globalApiKeys": {
@@ -288,6 +331,16 @@
       "username": "Username",
       "password": "Password",
       "or": "OR (use basic auth instead)"
+    },
+    "help": {
+      "title": "Global API Keys",
+      "description": "These keys are shared with all users and enable access to external AI and flight data services.",
+      "parserTitle": "Parser APIs:",
+      "parser": "OpenAI and Claude are used for AI-powered parsing of emails and boarding passes.",
+      "flightTitle": "Flight Lookup APIs:",
+      "flight": "AirLabs, Aviationstack and OpenSky are used for automatic flight data updates.",
+      "permissionsTitle": "User Permissions:",
+      "permissions": "Controls whether users can set their own keys. Global keys are the fallback for users without their own keys."
     }
   }
 }

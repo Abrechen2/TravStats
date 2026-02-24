@@ -182,6 +182,39 @@
     "confirmCleanupLogs": "Alte Log-Dateien basierend auf der Aufbewahrungsrichtlinie löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
     "confirmDeactivateDemo": "Demo-Benutzerkonto deaktivieren? Dies verhindert die Anmeldung mit Demo-Anmeldedaten."
   },
+  "logging": {
+    "title": "Debug-Logging & Diagnostik",
+    "description": "Erweitertes Logging für Fehlerbehebung und Überwachung",
+    "debugMode": "Debug-Modus aktivieren",
+    "debugModeDisable": "Debug-Modus deaktivieren",
+    "help": {
+      "title": "Logging-Konfiguration",
+      "description": "Steuert das Logging-Verhalten des Systems. Debug-Modus aktiviert detaillierte Ausgaben für die Fehlersuche.",
+      "levelsTitle": "Log-Level:",
+      "levels": "error → warn → info → debug → trace (von wenig zu sehr detailliert)",
+      "warningTitle": "Hinweis:",
+      "warning": "Debug-Modus kann die Leistung beeinträchtigen und erzeugt große Log-Dateien. Nur kurzzeitig für Diagnosen aktivieren."
+    }
+  },
+  "parserSettings": {
+    "title": "Globale Parser-Konfiguration",
+    "description": "Standard Parser-Einstellungen für alle Benutzer. API-Schlüssel werden im API-Schlüssel Tab verwaltet.",
+    "defaultSettings": "Standard-Einstellungen",
+    "defaultSettingsDescription": "Diese Standardwerte gelten für neue Benutzerkonten. Benutzer können diese in ihren eigenen Einstellungen ändern.",
+    "visionParser": "Standard Vision-Parser (Bordkarte)",
+    "textParser": "Standard Text-Parser (E-Mail)",
+    "autoHelp": "Auto-Modus wählt automatisch den besten verfügbaren Parser",
+    "help": {
+      "title": "Parser-Konfiguration",
+      "description": "Konfiguriert die Standard-Parser für alle Benutzer.",
+      "freeTitle": "Kostenlose Optionen:",
+      "free": "Ollama (lokale KI, GPU empfohlen), Tesseract (OCR), Regex (Mustererkennung)",
+      "cloudTitle": "Cloud-Optionen:",
+      "cloud": "OpenAI (~0,01–0,05€/Anfrage), Claude (~0,01–0,03€/Anfrage) – erfordern API-Schlüssel",
+      "autoTitle": "Auto-Modus:",
+      "auto": "Priorisiert: Cloud-KI > lokale KI > OCR/Regex basierend auf Verfügbarkeit"
+    }
+  },
   "backup": {
     "title": "Backup-Verwaltung",
     "description": "Verwalten Sie Ihre Backups und stellen Sie sie bei Bedarf wieder her",
@@ -239,6 +272,16 @@
       "restoreFailed": "Fehler beim Wiederherstellen des Backups",
       "deleted": "Backup gelöscht",
       "deleteFailed": "Fehler beim Löschen des Backups"
+    },
+    "help": {
+      "title": "Backup-Verwaltung",
+      "description": "Backups sichern alle Daten der TravStats-Instanz und können bei Datenverlust oder Umzug wiederhergestellt werden.",
+      "typesTitle": "Backup-Typen:",
+      "types": "Vollständig (Datenbank + Dateien), Nur Datenbank, Nur Dateien",
+      "restoreTitle": "Wiederherstellung:",
+      "restore": "Vor der Wiederherstellung wird empfohlen, ein neues Backup zu erstellen. Alle aktuellen Daten werden überschrieben.",
+      "retentionTitle": "Aufbewahrung:",
+      "retention": "Backups werden automatisch nach der konfigurierten Aufbewahrungsdauer gelöscht."
     }
   },
   "globalApiKeys": {
@@ -288,6 +331,16 @@
       "username": "Benutzername",
       "password": "Passwort",
       "or": "ODER (stattdessen Basic Auth verwenden)"
+    },
+    "help": {
+      "title": "Globale API-Schlüssel",
+      "description": "Diese Schlüssel werden mit allen Benutzern geteilt und ermöglichen den Zugriff auf externe KI- und Flugdaten-Services.",
+      "parserTitle": "Parser APIs:",
+      "parser": "OpenAI und Claude werden für KI-gestütztes Parsing von E-Mails und Bordkarten verwendet.",
+      "flightTitle": "Flugdaten APIs:",
+      "flight": "AirLabs, Aviationstack und OpenSky werden für automatische Flugdaten-Updates verwendet.",
+      "permissionsTitle": "Benutzer-Berechtigungen:",
+      "permissions": "Steuert ob Benutzer eigene Schlüssel setzen können. Globale Schlüssel sind Fallback für Benutzer ohne eigene Schlüssel."
     }
   }
 }
