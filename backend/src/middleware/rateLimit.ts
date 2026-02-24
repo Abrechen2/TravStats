@@ -78,6 +78,7 @@ export const analyticsLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
 /**
  * Rate limiter for backup restore operations
  * Prevents accidental data loss through rapid restores
