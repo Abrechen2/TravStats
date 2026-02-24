@@ -1,3 +1,4 @@
+import InlineHelp from "../Help/InlineHelp";
 import { useTranslation } from "../../hooks/useTranslation";
 
 export interface ParserSettingsData {
@@ -30,11 +31,10 @@ export default function ParserSettings({
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold text-[var(--text-primary)]">
-            Global Parser Configuration
+            {t("admin:parserSettings.title")}
           </h2>
           <p className="text-sm text-[var(--text-muted)] mt-1">
-            Configure default parser settings for all users. API keys are managed in the API Keys
-            tab.
+            {t("admin:parserSettings.description")}
           </p>
         </div>
         <button
@@ -46,19 +46,42 @@ export default function ParserSettings({
         </button>
       </div>
 
+      <InlineHelp
+        title={t("admin:parserSettings.help.title")}
+        category="advanced"
+        content={
+          <div className="space-y-2">
+            <p>{t("admin:parserSettings.help.description")}</p>
+            <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
+              <li>
+                <strong>{t("admin:parserSettings.help.freeTitle")}</strong>{" "}
+                {t("admin:parserSettings.help.free")}
+              </li>
+              <li>
+                <strong>{t("admin:parserSettings.help.cloudTitle")}</strong>{" "}
+                {t("admin:parserSettings.help.cloud")}
+              </li>
+              <li>
+                <strong>{t("admin:parserSettings.help.autoTitle")}</strong>{" "}
+                {t("admin:parserSettings.help.auto")}
+              </li>
+            </ul>
+          </div>
+        }
+      />
+
       {/* Default Parser Settings */}
       <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
-          Default Parser Settings
+          {t("admin:parserSettings.defaultSettings")}
         </h3>
         <p className="text-sm text-[var(--text-muted)] mb-4">
-          These defaults will be applied to new user accounts. Users can change them in their
-          settings.
+          {t("admin:parserSettings.defaultSettingsDescription")}
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-              Default Vision Parser (Boarding Pass)
+              {t("admin:parserSettings.visionParser")}
             </label>
             <select
               value={parserSettings.defaultVisionParser}
@@ -75,12 +98,12 @@ export default function ParserSettings({
               <option value="manual">Manual Entry</option>
             </select>
             <p className="text-xs text-[var(--text-muted)] mt-1">
-              Auto mode automatically selects the best available parser
+              {t("admin:parserSettings.autoHelp")}
             </p>
           </div>
           <div>
             <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-              Default Text Parser (Email)
+              {t("admin:parserSettings.textParser")}
             </label>
             <select
               value={parserSettings.defaultTextParser}
@@ -96,50 +119,8 @@ export default function ParserSettings({
               <option value="regex">Regex Fallback</option>
             </select>
             <p className="text-xs text-[var(--text-muted)] mt-1">
-              Auto mode automatically selects the best available parser
+              {t("admin:parserSettings.autoHelp")}
             </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Help Section */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="flex items-start gap-3">
-          <svg
-            className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
-            <path
-              fillRule="evenodd"
-              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-              clipRule="evenodd"
-            />
-          </svg>
-          <div className="text-sm text-blue-900">
-            <p className="font-medium mb-2">Parser Configuration Guide</p>
-            <ul className="space-y-1 text-xs">
-              <li>
-                * <strong>Free Options</strong>: Ollama (local AI, GPU recommended), Tesseract
-                (OCR), Regex (pattern matching)
-              </li>
-              <li>
-                * <strong>Cloud Options</strong>: OpenAI (~$0.01-0.05/image, $0.002-0.01/email),
-                Claude (~$0.01-0.03/image, $0.003-0.015/email)
-              </li>
-              <li>
-                * <strong>Auto Mode</strong>: System prioritizes cloud AI &gt; local AI &gt;
-                OCR/regex based on availability
-              </li>
-              <li>
-                * <strong>API Keys</strong>: Global keys are shared across all users unless users
-                provide their own
-              </li>
-              <li>
-                * <strong>Fallback Chain</strong>: Users can configure custom fallback sequences in
-                their settings
-              </li>
-            </ul>
           </div>
         </div>
       </div>

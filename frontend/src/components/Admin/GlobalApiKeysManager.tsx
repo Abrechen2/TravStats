@@ -1,4 +1,5 @@
 import ApiKeyCard from "../Settings/ApiKeyCard";
+import InlineHelp from "../Help/InlineHelp";
 import { useTranslation } from "../../hooks/useTranslation";
 
 export interface GlobalApiKeys {
@@ -58,6 +59,30 @@ export default function GlobalApiKeysManager({
           {saving ? t("common:buttons.saving") : t("admin:globalApiKeys.save")}
         </button>
       </div>
+
+      <InlineHelp
+        title={t("admin:globalApiKeys.help.title")}
+        category="advanced"
+        content={
+          <div className="space-y-2">
+            <p>{t("admin:globalApiKeys.help.description")}</p>
+            <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
+              <li>
+                <strong>{t("admin:globalApiKeys.help.parserTitle")}</strong>{" "}
+                {t("admin:globalApiKeys.help.parser")}
+              </li>
+              <li>
+                <strong>{t("admin:globalApiKeys.help.flightTitle")}</strong>{" "}
+                {t("admin:globalApiKeys.help.flight")}
+              </li>
+              <li>
+                <strong>{t("admin:globalApiKeys.help.permissionsTitle")}</strong>{" "}
+                {t("admin:globalApiKeys.help.permissions")}
+              </li>
+            </ul>
+          </div>
+        }
+      />
 
       {(!globalApiKeys || !parserSettings) && (
         <div

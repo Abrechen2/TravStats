@@ -3,6 +3,7 @@ import { backupApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import { format } from "date-fns";
 import { logger } from "../../lib/logger";
+import InlineHelp from "../Help/InlineHelp";
 import { useTranslation } from "../../hooks/useTranslation";
 
 interface Backup {
@@ -373,6 +374,29 @@ export default function BackupManagement(): JSX.Element {
               : t("admin:backup.createNow")}
         </button>
       </div>
+
+      <InlineHelp
+        title={t("admin:backup.help.title")}
+        category="advanced"
+        content={
+          <div className="space-y-2">
+            <p>{t("admin:backup.help.description")}</p>
+            <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
+              <li>
+                <strong>{t("admin:backup.help.typesTitle")}</strong> {t("admin:backup.help.types")}
+              </li>
+              <li>
+                <strong>{t("admin:backup.help.restoreTitle")}</strong>{" "}
+                {t("admin:backup.help.restore")}
+              </li>
+              <li>
+                <strong>{t("admin:backup.help.retentionTitle")}</strong>{" "}
+                {t("admin:backup.help.retention")}
+              </li>
+            </ul>
+          </div>
+        }
+      />
 
       {status?.running && status.currentBackup && (
         <div

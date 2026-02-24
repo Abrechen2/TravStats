@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+import InlineHelp from "../Help/InlineHelp";
 import { useTranslation } from "../../hooks/useTranslation";
 
 export interface LoggingConfig {
@@ -59,11 +60,9 @@ export default function LoggingManager({
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold text-[var(--text-primary)]">
-            Debug Logging &amp; Diagnostics
+            {t("admin:logging.title")}
           </h2>
-          <p className="text-sm text-[var(--text-muted)] mt-1">
-            Advanced logging for troubleshooting and monitoring
-          </p>
+          <p className="text-sm text-[var(--text-muted)] mt-1">{t("admin:logging.description")}</p>
         </div>
         <div className="flex gap-2">
           <button
@@ -74,7 +73,9 @@ export default function LoggingManager({
                 : "bg-blue-600 hover:bg-blue-700 text-white"
             }`}
           >
-            {loggingConfig.logLevel === "debug" ? "Disable Debug Mode" : "Enable Debug Mode"}
+            {loggingConfig.logLevel === "debug"
+              ? t("admin:logging.debugModeDisable")
+              : t("admin:logging.debugMode")}
           </button>
           <button
             onClick={onSave}
@@ -85,6 +86,26 @@ export default function LoggingManager({
           </button>
         </div>
       </div>
+
+      <InlineHelp
+        title={t("admin:logging.help.title")}
+        category="expert"
+        content={
+          <div className="space-y-2">
+            <p>{t("admin:logging.help.description")}</p>
+            <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
+              <li>
+                <strong>{t("admin:logging.help.levelsTitle")}</strong>{" "}
+                {t("admin:logging.help.levels")}
+              </li>
+              <li>
+                <strong>{t("admin:logging.help.warningTitle")}</strong>{" "}
+                {t("admin:logging.help.warning")}
+              </li>
+            </ul>
+          </div>
+        }
+      />
 
       {/* Debug Mode Warning */}
       {loggingConfig.logLevel === "debug" && (
