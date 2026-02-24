@@ -187,6 +187,21 @@ export default function SettingsPage(): JSX.Element {
     loadApiKeysStatus();
   }, []);
 
+  // Save profile settings
+  const [savingProfile, setSavingProfile] = useState(false);
+  const saveProfileSettings = async () => {
+    try {
+      setSavingProfile(true);
+      await saveRemoteSettings();
+      addToast("success", t("settings:profile.saved") || "Profil gespeichert");
+    } catch (error) {
+      logger.error("Failed to save profile settings:", error);
+      addToast("error", t("settings:profile.saveFailed") || "Fehler beim Speichern des Profils");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
   // Save auto-update settings
   const saveAutoUpdateSettings = async () => {
     try {
@@ -591,6 +606,22 @@ export default function SettingsPage(): JSX.Element {
                       className="input"
                     />
                   </div>
+                </div>
+
+                <div
+                  className="flex justify-end pt-4"
+                  style={{ borderTop: "1px solid var(--color-border)" }}
+                >
+                  <button
+                    onClick={saveProfileSettings}
+                    disabled={savingProfile}
+                    className="btn-primary"
+                    style={{ boxShadow: "0 0 16px rgba(232,160,69,0.25)" }}
+                  >
+                    {savingProfile
+                      ? t("common:buttons.saving") || "Speichern..."
+                      : t("settings:profile.save") || "Profil speichern"}
+                  </button>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
@@ -1134,8 +1165,8 @@ export default function SettingsPage(): JSX.Element {
             {activeSection === "parser" && (
               <SectionCard>
                 <SectionTitle
-                  title="Boarding Pass Parsing"
-                  description="Wählen Sie die Strategie für das Parsing von Boarding-Pässen"
+                  title={t("settings:parser.title")}
+                  description={t("settings:parser.description")}
                 />
                 <InlineHelp
                   title="Boarding Pass Parsing Strategien"
