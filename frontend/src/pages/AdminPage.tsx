@@ -39,7 +39,7 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
-type ActiveTab =
+type ActiveSection =
   | "users"
   | "invitations"
   | "system"
@@ -71,7 +71,7 @@ export default function AdminPage(): JSX.Element {
   const [feedbackDetails, setFeedbackDetails] = useState<FeedbackDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingHardwareInfo, setLoadingHardwareInfo] = useState(false);
-  const [activeTab, setActiveTab] = useState<ActiveTab>("system");
+  const [activeSection, setActiveSection] = useState<ActiveSection>("system");
   const [trainingConfig, setTrainingConfig] = useState<TrainingConfigData | null>(null);
   const [savingTrainingConfig, setSavingTrainingConfig] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
@@ -91,31 +91,31 @@ export default function AdminPage(): JSX.Element {
   }, []);
 
   useEffect(() => {
-    if (activeTab === "system") {
+    if (activeSection === "system") {
       loadHardwareInfo();
     }
-  }, [activeTab]);
+  }, [activeSection]);
 
   useEffect(() => {
-    if (activeTab === "logging") {
+    if (activeSection === "logging") {
       loadLoggingData();
-    } else if (activeTab === "feedback") {
+    } else if (activeSection === "feedback") {
       loadFeedbackData();
-    } else if (activeTab === "patterns") {
+    } else if (activeSection === "patterns") {
       loadPatternData();
-    } else if (activeTab === "system") {
+    } else if (activeSection === "system") {
       loadHardwareInfo();
-    } else if (activeTab === "apiKeys") {
+    } else if (activeSection === "apiKeys") {
       if (!globalApiKeys) {
         loadGlobalApiKeys();
       }
       if (!parserSettings) {
         loadData();
       }
-    } else if (activeTab === "training") {
+    } else if (activeSection === "training") {
       loadTrainingConfig();
     }
-  }, [activeTab, feedbackDays]);
+  }, [activeSection, feedbackDays]);
 
   const loadData = async (): Promise<void> => {
     setLoading(true);
@@ -457,256 +457,209 @@ export default function AdminPage(): JSX.Element {
     );
   }
 
+  interface AdminSection {
+    id: ActiveSection;
+    label: string;
+    badge?: number;
+  }
+
+  const sections: AdminSection[] = [
+    { id: "system", label: t("admin:tabs.system") },
+    { id: "users", label: t("admin:tabs.users"), badge: users.length },
+    { id: "invitations", label: t("admin:tabs.invitations") },
+    { id: "apiKeys", label: t("admin:tabs.apiKeys") },
+    { id: "parsers", label: t("admin:tabs.parsers") },
+    { id: "training", label: t("admin:tabs.training") },
+    { id: "logging", label: t("admin:tabs.logging") },
+    {
+      id: "feedback",
+      label: t("admin:parserFeedback"),
+      badge: feedbackStats && feedbackStats.total > 0 ? feedbackStats.total : undefined,
+    },
+    {
+      id: "patterns",
+      label: t("admin:patternUpdates"),
+      badge:
+        patternData?.pendingSuggestions?.length && patternData.pendingSuggestions.length > 0
+          ? patternData.pendingSuggestions.length
+          : undefined,
+    },
+    { id: "backups", label: t("admin:tabs.backups") },
+  ];
+
   return (
     <div
       className="min-h-screen"
       style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}
     >
       <NavigationBar />
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>
-            {t("admin:title")}
-          </h1>
-          <p style={{ color: "var(--text-muted)" }}>{t("admin:description")}</p>
-        </div>
-
-        {/* Tabs */}
-        <div
-          className="flex space-x-1 mb-6 border-b"
-          style={{ borderColor: "var(--color-border)" }}
+      <div className="flex h-[calc(100vh-3.5rem)]">
+        {/* Sidebar */}
+        <aside
+          className="w-52 flex-shrink-0 flex-col py-4 overflow-y-auto hidden md:flex"
+          style={{
+            background: "var(--bg-surface)",
+            borderRight: "1px solid var(--color-border)",
+          }}
         >
-          <button
-            onClick={() => setActiveTab("system")}
-            className={`px-4 py-2 font-medium transition ${
-              activeTab === "system"
-                ? "border-b-2 border-[var(--color-amber)] text-[var(--color-amber)]"
-                : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-            }`}
-          >
-            {t("admin:tabs.system")}
-          </button>
-          <button
-            onClick={() => setActiveTab("users")}
-            className={`px-4 py-2 font-medium transition ${
-              activeTab === "users"
-                ? "border-b-2 border-[var(--color-amber)] text-[var(--color-amber)]"
-                : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-            }`}
-          >
-            {t("admin:tabs.users")} ({users.length})
-          </button>
-          <button
-            onClick={() => setActiveTab("invitations")}
-            className={`px-4 py-2 font-medium transition ${
-              activeTab === "invitations"
-                ? "border-b-2 border-[var(--color-amber)] text-[var(--color-amber)]"
-                : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-            }`}
-          >
-            {t("admin:tabs.invitations")}
-          </button>
-          <button
-            onClick={() => setActiveTab("apiKeys")}
-            className={`px-4 py-2 font-medium transition ${
-              activeTab === "apiKeys"
-                ? "border-b-2 border-[var(--color-amber)] text-[var(--color-amber)]"
-                : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-            }`}
-          >
-            {t("admin:tabs.apiKeys")}
-          </button>
-          <button
-            onClick={() => setActiveTab("parsers")}
-            className={`px-4 py-2 font-medium transition ${
-              activeTab === "parsers"
-                ? "border-b-2 border-[var(--color-amber)] text-[var(--color-amber)]"
-                : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-            }`}
-          >
-            {t("admin:tabs.parsers")}
-          </button>
-          <button
-            onClick={() => setActiveTab("training")}
-            className={`px-4 py-2 font-medium transition ${
-              activeTab === "training"
-                ? "border-b-2 border-[var(--color-amber)] text-[var(--color-amber)]"
-                : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-            }`}
-          >
-            {t("admin:tabs.training")}
-          </button>
-          <button
-            onClick={() => setActiveTab("logging")}
-            className={`px-4 py-2 font-medium transition ${
-              activeTab === "logging"
-                ? "border-b-2 border-[var(--color-amber)] text-[var(--color-amber)]"
-                : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-            }`}
-          >
-            {t("admin:tabs.logging")}
-          </button>
-          <button
-            onClick={() => setActiveTab("feedback")}
-            className={`px-4 py-2 font-medium transition ${
-              activeTab === "feedback"
-                ? "border-b-2 border-[var(--color-amber)] text-[var(--color-amber)]"
-                : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-            }`}
-          >
-            {t("admin:parserFeedback")}
-            {feedbackStats && feedbackStats.total > 0 && (
-              <span className="ml-2 px-2 py-0.5 text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full">
-                {feedbackStats.total}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab("patterns")}
-            className={`px-4 py-2 font-medium transition ${
-              activeTab === "patterns"
-                ? "border-b-2 border-[var(--color-amber)] text-[var(--color-amber)]"
-                : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-            }`}
-          >
-            {t("admin:patternUpdates")}
-            {patternData &&
-              patternData.pendingSuggestions &&
-              patternData.pendingSuggestions.length > 0 && (
-                <span className="ml-2 px-2 py-0.5 text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded-full">
-                  {patternData.pendingSuggestions.length}
-                </span>
-              )}
-          </button>
-          <button
-            onClick={() => setActiveTab("backups")}
-            className={`px-4 py-2 font-medium transition ${
-              activeTab === "backups"
-                ? "border-b-2 border-[var(--color-amber)] text-[var(--color-amber)]"
-                : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-            }`}
-          >
-            {t("admin:tabs.backups")}
-          </button>
-        </div>
+          <div className="px-4 pb-3 mb-1" style={{ borderBottom: "1px solid var(--color-border)" }}>
+            <h1
+              className="text-sm font-semibold uppercase tracking-wider"
+              style={{ color: "var(--text-muted)" }}
+            >
+              {t("admin:title")}
+            </h1>
+          </div>
+          <nav className="space-y-0.5 px-2 mt-2">
+            {sections.map((section) => (
+              <button
+                key={section.id}
+                onClick={() => setActiveSection(section.id)}
+                className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-between"
+                style={{
+                  background: activeSection === section.id ? "var(--bg-elevated)" : "transparent",
+                  color: activeSection === section.id ? "var(--accent)" : "var(--text-muted)",
+                  borderLeft:
+                    activeSection === section.id
+                      ? "2px solid var(--accent)"
+                      : "2px solid transparent",
+                }}
+              >
+                <span>{section.label}</span>
+                {section.badge !== undefined && (
+                  <span
+                    className="ml-1 px-1.5 py-0.5 text-xs rounded-full font-medium"
+                    style={{
+                      background: "var(--bg-base)",
+                      color: "var(--text-muted)",
+                    }}
+                  >
+                    {section.badge}
+                  </span>
+                )}
+              </button>
+            ))}
+          </nav>
+        </aside>
 
-        {/* Tab Content */}
-        {activeTab === "system" && systemInfo && (
-          <SystemInfoTab
-            systemInfo={systemInfo}
-            hardwareInfo={hardwareInfo}
-            loadingHardwareInfo={loadingHardwareInfo}
-            users={users}
-            onLoadHardwareInfo={loadHardwareInfo}
-            onExportData={handleExportData}
-            onToggleDemoUser={handleToggleUserActive}
-          />
-        )}
+        {/* Main content */}
+        <main className="flex-1 overflow-y-auto p-6 space-y-6">
+          {activeSection === "system" && systemInfo && (
+            <SystemInfoTab
+              systemInfo={systemInfo}
+              hardwareInfo={hardwareInfo}
+              loadingHardwareInfo={loadingHardwareInfo}
+              users={users}
+              onLoadHardwareInfo={loadHardwareInfo}
+              onExportData={handleExportData}
+              onToggleDemoUser={handleToggleUserActive}
+            />
+          )}
 
-        {activeTab === "users" && (
-          <UserManagement users={users} onToggleUserActive={handleToggleUserActive} />
-        )}
+          {activeSection === "users" && (
+            <UserManagement users={users} onToggleUserActive={handleToggleUserActive} />
+          )}
 
-        {activeTab === "invitations" && (
-          <InvitationManagement
-            invitations={invitations}
-            copiedUrl={copiedUrl}
-            onCreateInvitation={handleCreateInvitation}
-          />
-        )}
+          {activeSection === "invitations" && (
+            <InvitationManagement
+              invitations={invitations}
+              copiedUrl={copiedUrl}
+              onCreateInvitation={handleCreateInvitation}
+            />
+          )}
 
-        {activeTab === "apiKeys" && (
-          <GlobalApiKeysManager
-            globalApiKeys={globalApiKeys}
-            parserSettings={
-              parserSettings
-                ? {
-                    globalOpenaiApiKey: parserSettings.globalOpenaiApiKey,
-                    globalClaudeApiKey: parserSettings.globalClaudeApiKey,
-                    allowUserApiKeys: parserSettings.allowUserApiKeys,
-                    requireUserApiKeys: parserSettings.requireUserApiKeys,
-                  }
-                : null
-            }
-            saving={savingGlobalApiKeys || savingParsers}
-            onSave={handleSaveGlobalApiKeys}
-            onGlobalApiKeysChange={setGlobalApiKeys}
-            onParserSettingsChange={(apiKeySettings: ParserApiKeySettings) => {
-              if (parserSettings) {
-                setParserSettings({
-                  ...parserSettings,
-                  globalOpenaiApiKey: apiKeySettings.globalOpenaiApiKey,
-                  globalClaudeApiKey: apiKeySettings.globalClaudeApiKey,
-                  allowUserApiKeys: apiKeySettings.allowUserApiKeys,
-                  requireUserApiKeys: apiKeySettings.requireUserApiKeys,
-                });
+          {activeSection === "apiKeys" && (
+            <GlobalApiKeysManager
+              globalApiKeys={globalApiKeys}
+              parserSettings={
+                parserSettings
+                  ? {
+                      globalOpenaiApiKey: parserSettings.globalOpenaiApiKey,
+                      globalClaudeApiKey: parserSettings.globalClaudeApiKey,
+                      allowUserApiKeys: parserSettings.allowUserApiKeys,
+                      requireUserApiKeys: parserSettings.requireUserApiKeys,
+                    }
+                  : null
               }
-            }}
-          />
-        )}
+              saving={savingGlobalApiKeys || savingParsers}
+              onSave={handleSaveGlobalApiKeys}
+              onGlobalApiKeysChange={setGlobalApiKeys}
+              onParserSettingsChange={(apiKeySettings: ParserApiKeySettings) => {
+                if (parserSettings) {
+                  setParserSettings({
+                    ...parserSettings,
+                    globalOpenaiApiKey: apiKeySettings.globalOpenaiApiKey,
+                    globalClaudeApiKey: apiKeySettings.globalClaudeApiKey,
+                    allowUserApiKeys: apiKeySettings.allowUserApiKeys,
+                    requireUserApiKeys: apiKeySettings.requireUserApiKeys,
+                  });
+                }
+              }}
+            />
+          )}
 
-        {activeTab === "parsers" && parserSettings && (
-          <ParserSettingsTab
-            parserSettings={parserSettings}
-            savingParsers={savingParsers}
-            onSave={handleSaveParserSettings}
-            onParserSettingsChange={setParserSettings}
-          />
-        )}
+          {activeSection === "parsers" && parserSettings && (
+            <ParserSettingsTab
+              parserSettings={parserSettings}
+              savingParsers={savingParsers}
+              onSave={handleSaveParserSettings}
+              onParserSettingsChange={setParserSettings}
+            />
+          )}
 
-        {activeTab === "training" && trainingConfig && (
-          <TrainingConfigTab
-            trainingConfig={trainingConfig}
-            savingTrainingConfig={savingTrainingConfig}
-            onSave={handleSaveTrainingConfig}
-            onTrainingConfigChange={setTrainingConfig}
-          />
-        )}
+          {activeSection === "training" && trainingConfig && (
+            <TrainingConfigTab
+              trainingConfig={trainingConfig}
+              savingTrainingConfig={savingTrainingConfig}
+              onSave={handleSaveTrainingConfig}
+              onTrainingConfigChange={setTrainingConfig}
+            />
+          )}
 
-        {activeTab === "logging" && loggingConfig && (
-          <LoggingManager
-            loggingConfig={loggingConfig}
-            logFiles={logFiles}
-            logStats={logStats}
-            savingLogging={savingLogging}
-            onSave={handleSaveLoggingConfig}
-            onToggleDebug={handleToggleDebugLogging}
-            onDownload={handleDownloadLogFile}
-            onDelete={handleDeleteLogFile}
-            onCleanup={handleCleanupLogs}
-            onLoggingConfigChange={setLoggingConfig}
-          />
-        )}
+          {activeSection === "logging" && loggingConfig && (
+            <LoggingManager
+              loggingConfig={loggingConfig}
+              logFiles={logFiles}
+              logStats={logStats}
+              savingLogging={savingLogging}
+              onSave={handleSaveLoggingConfig}
+              onToggleDebug={handleToggleDebugLogging}
+              onDownload={handleDownloadLogFile}
+              onDelete={handleDeleteLogFile}
+              onCleanup={handleCleanupLogs}
+              onLoggingConfigChange={setLoggingConfig}
+            />
+          )}
 
-        {activeTab === "feedback" && (
-          <FeedbackAnalytics
-            feedbackStats={feedbackStats}
-            feedbackDetails={feedbackDetails}
-            feedbackDays={feedbackDays}
-            selectedFeedbackId={selectedFeedbackId}
-            onSetDays={setFeedbackDays}
-            onSelectFeedback={setSelectedFeedbackId}
-          />
-        )}
+          {activeSection === "feedback" && (
+            <FeedbackAnalytics
+              feedbackStats={feedbackStats}
+              feedbackDetails={feedbackDetails}
+              feedbackDays={feedbackDays}
+              selectedFeedbackId={selectedFeedbackId}
+              onSetDays={setFeedbackDays}
+              onSelectFeedback={setSelectedFeedbackId}
+            />
+          )}
 
-        {activeTab === "patterns" && (
-          <PatternManagement
-            patternData={patternData}
-            feedbackDays={feedbackDays}
-            showPatternConfirm={showPatternConfirm}
-            showAutoApplyConfirm={showAutoApplyConfirm}
-            onSetDays={setFeedbackDays}
-            onApply={handleApplyPattern}
-            onApplyConfirm={handleApplyPatternConfirm}
-            onAutoApply={handleAutoApplyPatterns}
-            onAutoApplyConfirm={handleAutoApplyPatternsConfirm}
-            onDismissConfirm={() => setShowPatternConfirm(null)}
-            onDismissAutoApply={() => setShowAutoApplyConfirm(false)}
-          />
-        )}
+          {activeSection === "patterns" && (
+            <PatternManagement
+              patternData={patternData}
+              feedbackDays={feedbackDays}
+              showPatternConfirm={showPatternConfirm}
+              showAutoApplyConfirm={showAutoApplyConfirm}
+              onSetDays={setFeedbackDays}
+              onApply={handleApplyPattern}
+              onApplyConfirm={handleApplyPatternConfirm}
+              onAutoApply={handleAutoApplyPatterns}
+              onAutoApplyConfirm={handleAutoApplyPatternsConfirm}
+              onDismissConfirm={() => setShowPatternConfirm(null)}
+              onDismissAutoApply={() => setShowAutoApplyConfirm(false)}
+            />
+          )}
 
-        {activeTab === "backups" && <BackupManagement />}
+          {activeSection === "backups" && <BackupManagement />}
+        </main>
       </div>
     </div>
   );
