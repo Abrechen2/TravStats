@@ -78,3 +78,28 @@ export const analyticsLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+/**
+ * Rate limiter for backup restore operations
+ * Prevents accidental data loss through rapid restores
+ * Allows 3 restores per hour per IP
+ */
+export const backupRestoreLimiter = rateLimit({
+  windowMs: RATE_LIMITS.BACKUP_RESTORE_WINDOW_MS,
+  max: RATE_LIMITS.BACKUP_RESTORE_MAX,
+  message: 'Too many restore operations, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/**
+ * Rate limiter for training trigger endpoint
+ * Prevents resource exhaustion from repeated training runs
+ * Allows 2 training triggers per hour per IP
+ */
+export const trainingTriggerLimiter = rateLimit({
+  windowMs: RATE_LIMITS.TRAINING_TRIGGER_WINDOW_MS,
+  max: RATE_LIMITS.TRAINING_TRIGGER_MAX,
+  message: 'Too many training requests, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
