@@ -101,5 +101,9 @@
     "thisWeek": "Diese Woche",
     "thisMonth": "Dieser Monat",
     "thisYear": "Dieses Jahr"
+  },
+  "sort": {
+    "ascending": "aufsteigend",
+    "descending": "absteigend"
   }
 }
