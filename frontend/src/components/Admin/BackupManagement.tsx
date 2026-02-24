@@ -98,7 +98,7 @@ function RestoreModal({ backup, onClose, onConfirm }: RestoreModalProps): JSX.El
               type="checkbox"
               checked={createBackupBefore}
               onChange={(e) => setCreateBackupBefore(e.target.checked)}
-              className="h-4 w-4"
+              className="checkbox"
             />
             <span>{t("admin:backup.restore.createBackupBefore")}</span>
           </label>

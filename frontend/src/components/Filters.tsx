@@ -383,7 +383,7 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
                           selectedAirlines.length === 0 || selectedAirlines.includes(airline.name)
                         }
                         onChange={() => toggleAirline(airline.name)}
-                        className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                        className="checkbox"
                       />
                       <span className="truncate flex-1">
                         {airline.name || t("common:labels.unknown")}
@@ -417,7 +417,7 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
                   type="checkbox"
                   checked={showFlown}
                   onChange={(e) => setShowFlown(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                  className="checkbox"
                 />
                 {t("flights:status.flown")}
               </label>
@@ -429,7 +429,7 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
                   type="checkbox"
                   checked={showScheduled}
                   onChange={(e) => setShowScheduled(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                  className="checkbox"
                 />
                 {t("flights:status.scheduled")}
               </label>
@@ -441,7 +441,7 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
                   type="checkbox"
                   checked={showCancelled}
                   onChange={(e) => setShowCancelled(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                  className="checkbox"
                 />
                 {t("flights:status.cancelled")}
               </label>

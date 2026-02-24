@@ -225,7 +225,7 @@ export default function GlobalApiKeysManager({
                           allowUserApiKeys: e.target.checked,
                         })
                       }
-                      className="mt-1 h-4 w-4"
+                      className="checkbox mt-1"
                     />
                     <div>
                       <span className="font-medium text-[var(--text-primary)]">
@@ -246,7 +246,7 @@ export default function GlobalApiKeysManager({
                           requireUserApiKeys: e.target.checked,
                         })
                       }
-                      className="mt-1 h-4 w-4"
+                      className="checkbox mt-1"
                     />
                     <div>
                       <span className="font-medium text-[var(--text-primary)]">
@@ -276,7 +276,7 @@ export default function GlobalApiKeysManager({
                           allowUserFlightApiKeys: e.target.checked,
                         })
                       }
-                      className="mt-1 h-4 w-4"
+                      className="checkbox mt-1"
                     />
                     <div>
                       <span className="font-medium text-[var(--text-primary)]">
@@ -297,7 +297,7 @@ export default function GlobalApiKeysManager({
                           requireUserFlightApiKeys: e.target.checked,
                         })
                       }
-                      className="mt-1 h-4 w-4"
+                      className="checkbox mt-1"
                     />
                     <div>
                       <span className="font-medium text-[var(--text-primary)]">

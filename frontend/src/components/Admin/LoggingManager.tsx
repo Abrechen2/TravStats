@@ -247,7 +247,7 @@ export default function LoggingManager({
               onChange={(e) =>
                 onLoggingConfigChange({ ...loggingConfig, logHttpRequests: e.target.checked })
               }
-              className="mt-1 h-4 w-4"
+              className="checkbox mt-1"
             />
             <div>
               <span className="font-medium text-[var(--text-primary)]">
@@ -265,7 +265,7 @@ export default function LoggingManager({
               onChange={(e) =>
                 onLoggingConfigChange({ ...loggingConfig, logDatabaseQueries: e.target.checked })
               }
-              className="mt-1 h-4 w-4"
+              className="checkbox mt-1"
             />
             <div>
               <span className="font-medium text-[var(--text-primary)]">
@@ -283,7 +283,7 @@ export default function LoggingManager({
               onChange={(e) =>
                 onLoggingConfigChange({ ...loggingConfig, logParserOperations: e.target.checked })
               }
-              className="mt-1 h-4 w-4"
+              className="checkbox mt-1"
             />
             <div>
               <span className="font-medium text-[var(--text-primary)]">

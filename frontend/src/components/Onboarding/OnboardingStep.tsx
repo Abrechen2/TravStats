@@ -26,7 +26,7 @@ export default function OnboardingStep({
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="mt-1 h-4 w-4 rounded border-[var(--color-border)] text-blue-600 focus:ring-blue-500"
+        className="checkbox mt-1"
       />
       <div className="flex-1">
         <label
