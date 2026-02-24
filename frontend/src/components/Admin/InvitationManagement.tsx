@@ -67,7 +67,10 @@ export default function InvitationManagement({
       </div>
 
       {copiedUrl && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-green-800 text-sm">
+        <div
+          className="border rounded-lg p-3 text-sm"
+          style={{ background: "var(--bg-elevated)", borderColor: "#4ade80", color: "#16a34a" }}
+        >
           Invitation link copied to clipboard!
         </div>
       )}
@@ -90,7 +93,7 @@ export default function InvitationManagement({
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y" style={{ borderColor: "var(--color-border)" }}>
             {invitations.map((invitation) => (
               <tr key={invitation.id}>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--text-primary)]">
@@ -108,11 +111,11 @@ export default function InvitationManagement({
                       Used on {format(new Date(invitation.usedAt), "MMM d")}
                     </span>
                   ) : new Date(invitation.expiresAt) < new Date() ? (
-                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
                       Expired
                     </span>
                   ) : (
-                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
                       Active
                     </span>
                   )}
