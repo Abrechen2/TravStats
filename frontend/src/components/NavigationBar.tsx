@@ -79,7 +79,7 @@ export default function NavigationBar(): JSX.Element {
     { path: "/", label: t("dashboard:title"), show: true },
     { path: "/achievements", label: t("dashboard:achievements"), show: true },
     { path: "/stats", label: t("dashboard:stats"), show: true },
-    { path: "/flights", label: t("dashboard:flights") || "Flights", show: true },
+    { path: "/flights", label: t("dashboard:flights"), show: true },
     {
       path: "/pending-updates",
       label: t("dashboard:pendingUpdates"),

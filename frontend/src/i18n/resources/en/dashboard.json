@@ -33,6 +33,7 @@
   "import": "Import",
   "filters": "Filters",
   "stats": "Stats",
+  "flights": "Flights",
   "achievements": "Achievements",
   "settings": "Settings",
   "admin": "Admin",
@@ -63,4 +64,3 @@
     "helpExpanded": "Switch between 2D and 3D map views. The 3D view shows flight routes with altitude information."
   }
 }
-
