@@ -77,7 +77,8 @@
     "taxes": "Steuern",
     "fees": "Gebühren",
     "routeSeparator": "→",
-    "unknown": "Unbekannt"
+    "unknown": "Unbekannt",
+    "notAvailable": "k.A."
   },
   "messages": {
     "success": "Erfolg",
@@ -102,4 +103,3 @@
     "thisYear": "Dieses Jahr"
   }
 }
-

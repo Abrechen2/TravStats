@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { trainingApi, settingsApi } from "../lib/api";
 import { logger } from "../lib/logger";
+import { useAuthStore } from "../store/authStore";
 import NavigationBar from "../components/NavigationBar";
 import TrainingDashboard from "../components/Training/TrainingDashboard";
 import EmailAnnotation from "../components/Training/EmailAnnotation";
@@ -13,6 +14,7 @@ import { useTranslation } from "../hooks/useTranslation";
 export default function TrainingPage(): JSX.Element {
   const { t } = useTranslation(["training", "common"]);
   const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
   const [activeTab, setActiveTab] = useState<"upload" | "dashboard" | "guide">("upload");
   const [uploadedFile, setUploadedFile] = useState<{ id: string; type: string } | null>(null);
   const [developerModeEnabled, setDeveloperModeEnabled] = useState(false);
@@ -20,20 +22,22 @@ export default function TrainingPage(): JSX.Element {
   const boardingPassFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    const hasTrainingAccess = user?.isAdmin || user?.canTrainLLM || false;
+    if (!hasTrainingAccess) return;
+
     // Check if developer mode is enabled
     settingsApi
       .getDeveloperMode()
       .then((data) => {
         setDeveloperModeEnabled(data.enabled);
         if (!data.enabled) {
-          // Redirect to settings if not enabled
           navigate("/settings");
         }
       })
       .catch((error) => {
         logger.error("Failed to check developer mode:", error);
       });
-  }, [navigate]);
+  }, [navigate, user]);
 
   const handleFileUpload = async (file: File, type: "email" | "boarding_pass") => {
     try {

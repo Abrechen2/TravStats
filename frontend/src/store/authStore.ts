@@ -6,8 +6,10 @@ import { logger } from "../lib/logger";
 
 interface AuthState {
   user: User | null;
+  _hasHydrated: boolean;
   setAuth: (user: User) => void;
   logout: () => Promise<void>;
+  setHasHydrated: (value: boolean) => void;
 }
 
 // Event listener cleanup function
@@ -30,6 +32,8 @@ export const useAuthStore = create<AuthState>()(
 
       return {
         user: null,
+        _hasHydrated: false,
+        setHasHydrated: (value) => set({ _hasHydrated: value }),
         setAuth: (user) => {
           // JWT is now stored in HttpOnly cookie (more secure)
           set({ user });
@@ -51,14 +55,13 @@ export const useAuthStore = create<AuthState>()(
       name: "auth-storage",
       // Only persist user data, not token (token is in HttpOnly cookie)
       partialize: (state) => ({ user: state.user }),
-      onRehydrateStorage: () => {
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
         // Cleanup event listener on store rehydration
-        return () => {
-          if (typeof window !== "undefined" && unauthorizedEventListener) {
-            window.removeEventListener("auth:unauthorized", unauthorizedEventListener);
-            unauthorizedEventListener = null;
-          }
-        };
+        if (typeof window !== "undefined" && unauthorizedEventListener) {
+          window.removeEventListener("auth:unauthorized", unauthorizedEventListener);
+          unauthorizedEventListener = null;
+        }
       },
     }
   )
