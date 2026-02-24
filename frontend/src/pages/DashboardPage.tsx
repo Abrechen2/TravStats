@@ -372,12 +372,12 @@ export default function DashboardPage(): JSX.Element {
 
           // Add title
           doc.setFontSize(18);
-          doc.text("TravStats Flight Report", 14, 15);
+          doc.text(t("dashboard:pdf.title"), 14, 15);
 
           // Add export date and total flights
           doc.setFontSize(10);
-          doc.text(`Exported: ${new Date().toLocaleString()}`, 14, 22);
-          doc.text(`Total Flights: ${data.flights.length}`, 14, 27);
+          doc.text(`${t("dashboard:pdf.exported")} ${new Date().toLocaleString()}`, 14, 22);
+          doc.text(`${t("dashboard:pdf.totalFlights")} ${data.flights.length}`, 14, 27);
 
           // Prepare table data
           const tableData = rowsData.slice(1).map((row) => row.map((cell) => String(cell || "")));
@@ -584,7 +584,7 @@ export default function DashboardPage(): JSX.Element {
                 className="w-full h-full flex items-center justify-center"
                 style={{ color: "var(--text-muted)" }}
               >
-                Map unavailable
+                {t("dashboard:mapUnavailable")}
               </div>
             }
           >
@@ -611,7 +611,7 @@ export default function DashboardPage(): JSX.Element {
               border: "1px solid var(--color-border)",
               color: leftOpen ? "#0d1117" : "var(--text-primary)",
             }}
-            title="Flights"
+            title={t("dashboard:flightsTitle")}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -637,7 +637,7 @@ export default function DashboardPage(): JSX.Element {
               border: "1px solid var(--color-border)",
               color: rightOpen ? "#0d1117" : "var(--text-primary)",
             }}
-            title="Stats"
+            title={t("dashboard:statsTitle")}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -959,7 +959,11 @@ export default function DashboardPage(): JSX.Element {
                 </div>
                 <div className="flex-1 overflow-y-auto p-4">
                   <ErrorBoundary
-                    fallback={<div style={{ color: "var(--text-muted)" }}>Stats unavailable</div>}
+                    fallback={
+                      <div style={{ color: "var(--text-muted)" }}>
+                        {t("dashboard:statsUnavailable")}
+                      </div>
+                    }
                   >
                     <Stats filters={filters} />
                   </ErrorBoundary>

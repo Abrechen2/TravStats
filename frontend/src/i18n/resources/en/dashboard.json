@@ -62,5 +62,14 @@
     "help2d": "Switch to 2D view",
     "help3d": "Switch to 3D view",
     "helpExpanded": "Switch between 2D and 3D map views. The 3D view shows flight routes with altitude information."
-  }
+  },
+  "mapUnavailable": "Map unavailable",
+  "statsUnavailable": "Stats unavailable",
+  "pdf": {
+    "title": "TravStats Flight Report",
+    "exported": "Exported:",
+    "totalFlights": "Total Flights:"
+  },
+  "flightsTitle": "Flights",
+  "statsTitle": "Stats"
 }
