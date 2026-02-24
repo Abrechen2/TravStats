@@ -34,8 +34,8 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
         let allFlights: Flight[] = [];
         let offset = 0;
 
+        // eslint-disable-next-line no-constant-condition
         while (true) {
-          // eslint-disable-line no-constant-condition
           const { flights } = await flightsApi.getAll({ ...apiFilters, limit, offset });
           allFlights = [...allFlights, ...flights];
           if (flights.length < limit) break;
