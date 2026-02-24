@@ -88,10 +88,14 @@ export default function LoggingManager({
 
       {/* Debug Mode Warning */}
       {loggingConfig.logLevel === "debug" && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <div
+          className="border rounded-lg p-4"
+          style={{ background: "var(--bg-elevated)", borderColor: "var(--color-amber)" }}
+        >
           <div className="flex items-start gap-3">
             <svg
-              className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5"
+              className="w-5 h-5 flex-shrink-0 mt-0.5"
+              style={{ color: "var(--color-amber)" }}
               fill="currentColor"
               viewBox="0 0 20 20"
             >
@@ -102,8 +106,10 @@ export default function LoggingManager({
               />
             </svg>
             <div>
-              <p className="font-medium text-yellow-900">Debug Mode Active</p>
-              <p className="text-sm text-yellow-800 mt-1">
+              <p className="font-medium" style={{ color: "var(--color-amber)" }}>
+                Debug Mode Active
+              </p>
+              <p className="text-sm mt-1" style={{ color: "var(--color-amber)" }}>
                 Debug logging is enabled with detailed instrumentation. This may impact performance
                 and generate large log files. Consider disabling after troubleshooting.
               </p>
@@ -294,7 +300,7 @@ export default function LoggingManager({
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y" style={{ borderColor: "var(--color-border)" }}>
                 {logFiles.map((file) => (
                   <tr key={file.filename}>
                     <td className="px-4 py-3 text-sm font-mono text-[var(--text-primary)]">
@@ -304,8 +310,8 @@ export default function LoggingManager({
                       <span
                         className={`px-2 py-1 text-xs font-semibold rounded-full ${
                           file.category === "error"
-                            ? "bg-red-100 text-red-800"
-                            : "bg-blue-100 text-blue-800"
+                            ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                            : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
                         }`}
                       >
                         {file.category}
@@ -320,7 +326,7 @@ export default function LoggingManager({
                     <td className="px-4 py-3 text-sm space-x-2">
                       <button
                         onClick={() => onDownload(file.filename)}
-                        className="text-blue-600 hover:text-blue-900"
+                        className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
                       >
                         Download
                       </button>

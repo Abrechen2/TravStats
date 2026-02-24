@@ -60,8 +60,13 @@ export default function GlobalApiKeysManager({
       </div>
 
       {(!globalApiKeys || !parserSettings) && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <p className="text-sm text-yellow-800">{t("common:loading") || "Loading..."}</p>
+        <div
+          className="border rounded-lg p-4"
+          style={{ background: "var(--bg-elevated)", borderColor: "var(--color-amber)" }}
+        >
+          <p className="text-sm" style={{ color: "var(--color-amber)" }}>
+            {t("common:loading") || "Loading..."}
+          </p>
         </div>
       )}
 

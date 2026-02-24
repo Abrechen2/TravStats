@@ -447,7 +447,10 @@ export default function AdminPage(): JSX.Element {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div
+        className="min-h-screen"
+        style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}
+      >
         <NavigationBar />
         <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">Admin Panel</div>
       </div>
@@ -455,25 +458,31 @@ export default function AdminPage(): JSX.Element {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div
+      className="min-h-screen"
+      style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}
+    >
       <NavigationBar />
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          <h1 className="text-3xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>
             {t("admin:title")}
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">{t("admin:description")}</p>
+          <p style={{ color: "var(--text-muted)" }}>{t("admin:description")}</p>
         </div>
 
         {/* Tabs */}
-        <div className="flex space-x-1 mb-6 border-b border-gray-200 dark:border-gray-700">
+        <div
+          className="flex space-x-1 mb-6 border-b"
+          style={{ borderColor: "var(--color-border)" }}
+        >
           <button
             onClick={() => setActiveTab("system")}
             className={`px-4 py-2 font-medium transition ${
               activeTab === "system"
-                ? "border-b-2 border-blue-600 text-blue-600 dark:text-blue-400"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                ? "border-b-2 border-[var(--color-amber)] text-[var(--color-amber)]"
+                : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             }`}
           >
             System Info
@@ -482,8 +491,8 @@ export default function AdminPage(): JSX.Element {
             onClick={() => setActiveTab("users")}
             className={`px-4 py-2 font-medium transition ${
               activeTab === "users"
-                ? "border-b-2 border-blue-600 text-blue-600 dark:text-blue-400"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                ? "border-b-2 border-[var(--color-amber)] text-[var(--color-amber)]"
+                : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             }`}
           >
             Users ({users.length})
@@ -492,8 +501,8 @@ export default function AdminPage(): JSX.Element {
             onClick={() => setActiveTab("invitations")}
             className={`px-4 py-2 font-medium transition ${
               activeTab === "invitations"
-                ? "border-b-2 border-blue-600 text-blue-600 dark:text-blue-400"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                ? "border-b-2 border-[var(--color-amber)] text-[var(--color-amber)]"
+                : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             }`}
           >
             {t("admin:tabs.invitations")}
@@ -502,8 +511,8 @@ export default function AdminPage(): JSX.Element {
             onClick={() => setActiveTab("apiKeys")}
             className={`px-4 py-2 font-medium transition ${
               activeTab === "apiKeys"
-                ? "border-b-2 border-blue-600 text-blue-600 dark:text-blue-400"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                ? "border-b-2 border-[var(--color-amber)] text-[var(--color-amber)]"
+                : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             }`}
           >
             {t("admin:tabs.apiKeys")}
@@ -512,8 +521,8 @@ export default function AdminPage(): JSX.Element {
             onClick={() => setActiveTab("parsers")}
             className={`px-4 py-2 font-medium transition ${
               activeTab === "parsers"
-                ? "border-b-2 border-blue-600 text-blue-600 dark:text-blue-400"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                ? "border-b-2 border-[var(--color-amber)] text-[var(--color-amber)]"
+                : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             }`}
           >
             {t("admin:tabs.parsers")}
@@ -522,8 +531,8 @@ export default function AdminPage(): JSX.Element {
             onClick={() => setActiveTab("training")}
             className={`px-4 py-2 font-medium transition ${
               activeTab === "training"
-                ? "border-b-2 border-blue-600 text-blue-600 dark:text-blue-400"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                ? "border-b-2 border-[var(--color-amber)] text-[var(--color-amber)]"
+                : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             }`}
           >
             {t("admin:tabs.training")}
@@ -532,8 +541,8 @@ export default function AdminPage(): JSX.Element {
             onClick={() => setActiveTab("logging")}
             className={`px-4 py-2 font-medium transition ${
               activeTab === "logging"
-                ? "border-b-2 border-blue-600 text-blue-600 dark:text-blue-400"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                ? "border-b-2 border-[var(--color-amber)] text-[var(--color-amber)]"
+                : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             }`}
           >
             {t("admin:tabs.logging")}
@@ -542,8 +551,8 @@ export default function AdminPage(): JSX.Element {
             onClick={() => setActiveTab("feedback")}
             className={`px-4 py-2 font-medium transition ${
               activeTab === "feedback"
-                ? "border-b-2 border-blue-600 text-blue-600 dark:text-blue-400"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                ? "border-b-2 border-[var(--color-amber)] text-[var(--color-amber)]"
+                : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             }`}
           >
             {t("admin:parserFeedback")}
@@ -557,8 +566,8 @@ export default function AdminPage(): JSX.Element {
             onClick={() => setActiveTab("patterns")}
             className={`px-4 py-2 font-medium transition ${
               activeTab === "patterns"
-                ? "border-b-2 border-blue-600 text-blue-600 dark:text-blue-400"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                ? "border-b-2 border-[var(--color-amber)] text-[var(--color-amber)]"
+                : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             }`}
           >
             {t("admin:patternUpdates")}
@@ -574,8 +583,8 @@ export default function AdminPage(): JSX.Element {
             onClick={() => setActiveTab("backups")}
             className={`px-4 py-2 font-medium transition ${
               activeTab === "backups"
-                ? "border-b-2 border-blue-600 text-blue-600 dark:text-blue-400"
-                : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                ? "border-b-2 border-[var(--color-amber)] text-[var(--color-amber)]"
+                : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             }`}
           >
             {t("admin:tabs.backups")}

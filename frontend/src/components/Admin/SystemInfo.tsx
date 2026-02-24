@@ -132,11 +132,14 @@ export default function SystemInfo({
 
       {/* Warning */}
       {systemInfo.warningThreshold && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <h3 className="font-semibold text-yellow-900 mb-2">
+        <div
+          className="border rounded-lg p-4"
+          style={{ background: "var(--bg-elevated)", borderColor: "var(--color-amber)" }}
+        >
+          <h3 className="font-semibold mb-2" style={{ color: "var(--color-amber)" }}>
             {t("admin:userLimitWarning.title")}
           </h3>
-          <p className="text-sm text-yellow-800">
+          <p className="text-sm" style={{ color: "var(--color-amber)" }}>
             {t("admin:userLimitWarning.message", { maxUsers: systemInfo.maxUsers })}
           </p>
         </div>
@@ -144,9 +147,14 @@ export default function SystemInfo({
 
       {/* Demo User Warning */}
       {systemInfo.demoUserExists && systemInfo.demoUserActive && (
-        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-          <h3 className="font-semibold text-orange-900 mb-2">Demo User Active</h3>
-          <p className="text-sm text-orange-800 mb-3">
+        <div
+          className="border rounded-lg p-4"
+          style={{ background: "var(--bg-elevated)", borderColor: "#f97316" }}
+        >
+          <h3 className="font-semibold mb-2" style={{ color: "#ea580c" }}>
+            Demo User Active
+          </h3>
+          <p className="text-sm mb-3" style={{ color: "#ea580c" }}>
             The demo user account (username: &quot;demo&quot;, password: &quot;demo123&quot;) is
             currently active. This is a security risk in production environments. It is recommended
             to deactivate this account after initial testing.
@@ -177,7 +185,7 @@ export default function SystemInfo({
           <button
             onClick={onLoadHardwareInfo}
             disabled={loadingHardwareInfo}
-            className="px-3 py-1 text-sm font-medium text-blue-600 hover:text-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-3 py-1 text-sm font-medium text-[var(--color-amber)] hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loadingHardwareInfo ? t("admin:refreshing") : t("admin:refresh")}
           </button>
@@ -190,8 +198,13 @@ export default function SystemInfo({
         )}
 
         {hardwareInfo && hardwareInfo.error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-            <div className="text-sm text-red-800">{hardwareInfo.error}</div>
+          <div
+            className="border rounded-lg p-4 mb-4"
+            style={{ background: "var(--bg-elevated)", borderColor: "#f87171" }}
+          >
+            <div className="text-sm" style={{ color: "#dc2626" }}>
+              {hardwareInfo.error}
+            </div>
           </div>
         )}
 
@@ -236,9 +249,9 @@ export default function SystemInfo({
                 <span
                   className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
                     hardwareInfo.gpu.available
-                      ? "bg-green-100 text-green-800"
+                      ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
                       : hardwareInfo.gpu.gpuDetected
-                        ? "bg-yellow-100 text-yellow-800"
+                        ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
                         : "bg-[var(--bg-elevated)] text-[var(--text-primary)]"
                   }`}
                 >
@@ -322,20 +335,34 @@ export default function SystemInfo({
                       t("admin:hardware.noGpuDetected")}
                   </div>
                   {hardwareInfo.gpu.diagnosis && (
-                    <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
-                      <div className="text-xs font-semibold text-yellow-900 mb-2">
+                    <div
+                      className="mt-3 p-3 border rounded"
+                      style={{
+                        background: "var(--bg-elevated)",
+                        borderColor: "var(--color-amber)",
+                      }}
+                    >
+                      <div
+                        className="text-xs font-semibold mb-2"
+                        style={{ color: "var(--color-amber)" }}
+                      >
                         {t("admin:hardware.solution")}
                       </div>
                       {Array.isArray(hardwareInfo.gpu.diagnosis) ? (
                         hardwareInfo.gpu.diagnosis.length > 0 && (
-                          <ul className="text-xs text-yellow-800 space-y-1 list-disc list-inside">
+                          <ul
+                            className="text-xs space-y-1 list-disc list-inside"
+                            style={{ color: "var(--color-amber)" }}
+                          >
                             {hardwareInfo.gpu.diagnosis.map((msg: string, idx: number) => (
                               <li key={idx}>{msg}</li>
                             ))}
                           </ul>
                         )
                       ) : (
-                        <div className="text-xs text-yellow-800">{hardwareInfo.gpu.diagnosis}</div>
+                        <div className="text-xs" style={{ color: "var(--color-amber)" }}>
+                          {hardwareInfo.gpu.diagnosis}
+                        </div>
                       )}
                     </div>
                   )}
@@ -350,8 +377,8 @@ export default function SystemInfo({
                 <span
                   className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
                     hardwareInfo.python.available
-                      ? "bg-green-100 text-green-800"
-                      : "bg-red-100 text-red-800"
+                      ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                      : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
                   }`}
                 >
                   {hardwareInfo.python.available

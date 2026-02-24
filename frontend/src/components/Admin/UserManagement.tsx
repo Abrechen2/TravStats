@@ -65,7 +65,7 @@ export default function UserManagement({
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y" style={{ borderColor: "var(--color-border)" }}>
             {users.map((user) => (
               <tr key={user.id}>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -84,7 +84,7 @@ export default function UserManagement({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   {user.isAdmin ? (
-                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
+                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
                       Admin
                     </span>
                   ) : (
@@ -95,11 +95,11 @@ export default function UserManagement({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   {user.isActive ? (
-                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
                       Active
                     </span>
                   ) : (
-                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
                       Inactive
                     </span>
                   )}
@@ -107,7 +107,7 @@ export default function UserManagement({
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <button
                     onClick={() => onToggleUserActive(user.id)}
-                    className="text-blue-600 hover:text-blue-900"
+                    className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
                   >
                     {user.isActive ? "Deactivate" : "Activate"}
                   </button>

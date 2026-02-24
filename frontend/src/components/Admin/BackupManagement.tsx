@@ -67,9 +67,14 @@ function RestoreModal({ backup, onClose, onConfirm }: RestoreModalProps): JSX.El
         </h2>
 
         <div className="space-y-4 mb-6">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-800 font-semibold">{t("admin:backup.restore.warning")}</p>
-            <p className="text-red-700 text-sm mt-2">
+          <div
+            className="border rounded-lg p-4"
+            style={{ background: "var(--bg-elevated)", borderColor: "#f87171" }}
+          >
+            <p className="font-semibold" style={{ color: "#dc2626" }}>
+              {t("admin:backup.restore.warning")}
+            </p>
+            <p className="text-sm mt-2" style={{ color: "#dc2626" }}>
               {t("admin:backup.restore.backupFrom", { date: formatDate(backup.completedAt) })}
             </p>
           </div>
@@ -370,8 +375,11 @@ export default function BackupManagement(): JSX.Element {
       </div>
 
       {status?.running && status.currentBackup && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-blue-800">
+        <div
+          className="border rounded-lg p-4"
+          style={{ background: "var(--bg-elevated)", borderColor: "#60a5fa" }}
+        >
+          <p style={{ color: "#2563eb" }}>
             <strong>{t("admin:backup.running")}:</strong>{" "}
             {t("admin:backup.startedAt", { date: formatDateTime(status.currentBackup.startedAt) })}
           </p>
@@ -379,7 +387,7 @@ export default function BackupManagement(): JSX.Element {
       )}
 
       <div className="bg-[var(--bg-surface)] rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
+        <table className="min-w-full divide-y" style={{ borderColor: "var(--color-border)" }}>
           <thead className="bg-[var(--bg-base)]">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
@@ -402,7 +410,10 @@ export default function BackupManagement(): JSX.Element {
               </th>
             </tr>
           </thead>
-          <tbody className="bg-[var(--bg-surface)] divide-y divide-gray-200">
+          <tbody
+            className="bg-[var(--bg-surface)] divide-y"
+            style={{ borderColor: "var(--color-border)" }}
+          >
             {backups.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-6 py-4 text-center text-[var(--text-muted)]">
@@ -441,13 +452,13 @@ export default function BackupManagement(): JSX.Element {
                         <>
                           <button
                             onClick={() => handleDownload(backup)}
-                            className="text-blue-600 hover:text-blue-900"
+                            className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
                           >
                             {t("admin:backup.actions.download")}
                           </button>
                           <button
                             onClick={() => setRestoreModal(backup)}
-                            className="text-orange-600 hover:text-orange-900"
+                            className="text-orange-600 hover:text-orange-900 dark:text-orange-400 dark:hover:text-orange-300"
                           >
                             {t("admin:backup.actions.restore")}
                           </button>
