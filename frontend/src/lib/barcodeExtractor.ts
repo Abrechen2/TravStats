@@ -132,12 +132,12 @@ async function tryQRCode(imageData: ImageData): Promise<string | null> {
   try {
     const result = jsQR(imageData.data, imageData.width, imageData.height);
     if (result && result.data) {
-      console.debug("[Barcode Extractor] QR code found:", result.data.substring(0, 50) + "...");
+      logger.debug("[Barcode Extractor] QR code found:", result.data.substring(0, 50) + "...");
       return result.data;
     }
     return null;
   } catch (error) {
-    console.debug("[Barcode Extractor] QR code extraction failed:", error);
+    logger.debug("[Barcode Extractor] QR code extraction failed:", error);
     return null;
   }
 }
@@ -163,7 +163,7 @@ async function tryZXingFormats(imageData: ImageData): Promise<string | null> {
     try {
       const result = await reader.decodeFromCanvas(canvas);
       if (result && result.getText()) {
-        console.debug(
+        logger.debug(
           "[Barcode Extractor] ZXing barcode found:",
           result.getText().substring(0, 50) + "..."
         );
@@ -171,13 +171,13 @@ async function tryZXingFormats(imageData: ImageData): Promise<string | null> {
       }
     } catch {
       // ZXing throws errors when no barcode found, this is expected
-      console.debug("[Barcode Extractor] ZXing extraction failed (no barcode)");
+      logger.debug("[Barcode Extractor] ZXing extraction failed (no barcode)");
       return null;
     }
 
     return null;
   } catch (error) {
-    console.debug("[Barcode Extractor] ZXing extraction error:", error);
+    logger.debug("[Barcode Extractor] ZXing extraction error:", error);
     return null;
   }
 }
