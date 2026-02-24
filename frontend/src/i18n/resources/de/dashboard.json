@@ -33,6 +33,7 @@
   "import": "Importieren",
   "filters": "Filter",
   "stats": "Statistiken",
+  "flights": "Flüge",
   "achievements": "Erfolge",
   "settings": "Einstellungen",
   "admin": "Admin",
@@ -63,4 +64,3 @@
     "helpExpanded": "Wechseln Sie zwischen 2D- und 3D-Kartenansicht. Die 3D-Ansicht zeigt die Flugrouten mit Höheninformationen."
   }
 }
-
