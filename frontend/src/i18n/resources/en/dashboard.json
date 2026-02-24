@@ -71,5 +71,6 @@
     "totalFlights": "Total Flights:"
   },
   "flightsTitle": "Flights",
-  "statsTitle": "Stats"
+  "statsTitle": "Stats",
+  "unknownDate": "Unknown date"
 }
