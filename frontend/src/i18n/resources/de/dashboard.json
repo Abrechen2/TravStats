@@ -62,5 +62,14 @@
     "help2d": "Zur 2D-Ansicht wechseln",
     "help3d": "Zur 3D-Ansicht wechseln",
     "helpExpanded": "Wechseln Sie zwischen 2D- und 3D-Kartenansicht. Die 3D-Ansicht zeigt die Flugrouten mit Höheninformationen."
-  }
+  },
+  "mapUnavailable": "Karte nicht verfügbar",
+  "statsUnavailable": "Statistiken nicht verfügbar",
+  "pdf": {
+    "title": "TravStats Flugreport",
+    "exported": "Exportiert:",
+    "totalFlights": "Gesamt Flüge:"
+  },
+  "flightsTitle": "Flüge",
+  "statsTitle": "Statistiken"
 }
