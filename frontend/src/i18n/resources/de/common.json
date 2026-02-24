@@ -83,7 +83,7 @@
   "messages": {
     "success": "Erfolg",
     "error": "Fehler",
-    "warning": "Sind Sie sicher, dass Sie diesen Flug löschen möchten?",
+    "warning": "Warnung",
     "info": "Information",
     "noData": "Keine Daten verfügbar",
     "noResults": "Keine Ergebnisse gefunden",
