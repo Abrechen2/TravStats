@@ -128,11 +128,10 @@ export default function LoggingManager({
             </svg>
             <div>
               <p className="font-medium" style={{ color: "var(--color-amber)" }}>
-                Debug Mode Active
+                {t("admin:logging.debugActive.title")}
               </p>
               <p className="text-sm mt-1" style={{ color: "var(--color-amber)" }}>
-                Debug logging is enabled with detailed instrumentation. This may impact performance
-                and generate large log files. Consider disabling after troubleshooting.
+                {t("admin:logging.debugActive.message")}
               </p>
             </div>
           </div>
@@ -143,19 +142,25 @@ export default function LoggingManager({
       {logStats && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
-            <div className="text-[var(--text-muted)] text-sm mb-1">Total Log Files</div>
+            <div className="text-[var(--text-muted)] text-sm mb-1">
+              {t("admin:logging.stats.totalFiles")}
+            </div>
             <div className="text-2xl font-bold text-[var(--text-primary)]">
               {logStats.fileCount}
             </div>
           </div>
           <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
-            <div className="text-[var(--text-muted)] text-sm mb-1">Total Size</div>
+            <div className="text-[var(--text-muted)] text-sm mb-1">
+              {t("admin:logging.stats.totalSize")}
+            </div>
             <div className="text-2xl font-bold text-[var(--text-primary)]">
               {(logStats.totalSize / 1024 / 1024).toFixed(2)} MB
             </div>
           </div>
           <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
-            <div className="text-[var(--text-muted)] text-sm mb-1">Oldest Log</div>
+            <div className="text-[var(--text-muted)] text-sm mb-1">
+              {t("admin:logging.stats.oldestLog")}
+            </div>
             <div className="text-sm font-medium text-[var(--text-primary)]">
               {(() => {
                 try {
@@ -169,7 +174,9 @@ export default function LoggingManager({
             </div>
           </div>
           <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
-            <div className="text-[var(--text-muted)] text-sm mb-1">Newest Log</div>
+            <div className="text-[var(--text-muted)] text-sm mb-1">
+              {t("admin:logging.stats.newestLog")}
+            </div>
             <div className="text-sm font-medium text-[var(--text-primary)]">
               {(() => {
                 try {
@@ -188,12 +195,12 @@ export default function LoggingManager({
       {/* Logging Configuration */}
       <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
-          Logging Configuration
+          {t("admin:logging.configSection")}
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
             <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-              Log Level
+              {t("admin:logging.level.label")}
             </label>
             <select
               value={loggingConfig.logLevel}
@@ -202,19 +209,17 @@ export default function LoggingManager({
               }
               className="w-full px-3 py-2 bg-[var(--bg-surface)] border border-[var(--color-border)] rounded-lg text-[var(--text-primary)]"
             >
-              <option value="error">Error (Minimal)</option>
-              <option value="warn">Warning</option>
-              <option value="info">Info (Default)</option>
-              <option value="debug">Debug (Verbose)</option>
-              <option value="trace">Trace (Very Verbose)</option>
+              <option value="error">{t("admin:logging.level.error")}</option>
+              <option value="warn">{t("admin:logging.level.warn")}</option>
+              <option value="info">{t("admin:logging.level.info")}</option>
+              <option value="debug">{t("admin:logging.level.debug")}</option>
+              <option value="trace">{t("admin:logging.level.trace")}</option>
             </select>
-            <p className="text-xs text-[var(--text-muted)] mt-1">
-              Higher levels include all lower levels (e.g., Debug includes Info, Warn, Error)
-            </p>
+            <p className="text-xs text-[var(--text-muted)] mt-1">{t("admin:logging.level.hint")}</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-              Log Retention (Days)
+              {t("admin:logging.retention.label")}
             </label>
             <input
               type="number"
@@ -230,7 +235,7 @@ export default function LoggingManager({
               className="w-full px-3 py-2 bg-[var(--bg-surface)] border border-[var(--color-border)] rounded-lg text-[var(--text-primary)]"
             />
             <p className="text-xs text-[var(--text-muted)] mt-1">
-              Log files older than this will be automatically deleted
+              {t("admin:logging.retention.hint")}
             </p>
           </div>
         </div>
@@ -245,9 +250,11 @@ export default function LoggingManager({
               className="mt-1 h-4 w-4"
             />
             <div>
-              <span className="font-medium text-[var(--text-primary)]">Log HTTP Requests</span>
+              <span className="font-medium text-[var(--text-primary)]">
+                {t("admin:logging.categories.http.label")}
+              </span>
               <p className="text-sm text-[var(--text-muted)]">
-                Log all HTTP requests with timing, IP, user, and status (category: http)
+                {t("admin:logging.categories.http.hint")}
               </p>
             </div>
           </label>
@@ -261,9 +268,11 @@ export default function LoggingManager({
               className="mt-1 h-4 w-4"
             />
             <div>
-              <span className="font-medium text-[var(--text-primary)]">Log Database Queries</span>
+              <span className="font-medium text-[var(--text-primary)]">
+                {t("admin:logging.categories.database.label")}
+              </span>
               <p className="text-sm text-[var(--text-muted)]">
-                Log SQL queries with args and performance metrics (category: database)
+                {t("admin:logging.categories.database.hint")}
               </p>
             </div>
           </label>
@@ -277,9 +286,11 @@ export default function LoggingManager({
               className="mt-1 h-4 w-4"
             />
             <div>
-              <span className="font-medium text-[var(--text-primary)]">Log Parser Operations</span>
+              <span className="font-medium text-[var(--text-primary)]">
+                {t("admin:logging.categories.parser.label")}
+              </span>
               <p className="text-sm text-[var(--text-muted)]">
-                Log LLM operations with provider details (category: parser)
+                {t("admin:logging.categories.parser.hint")}
               </p>
             </div>
           </label>
@@ -289,35 +300,37 @@ export default function LoggingManager({
       {/* Log Files */}
       <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-[var(--text-primary)]">Log Files</h3>
+          <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+            {t("admin:logging.files.title")}
+          </h3>
           <button
             onClick={onCleanup}
             className="text-sm bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg transition"
           >
-            Cleanup Old Logs
+            {t("admin:logging.files.cleanup")}
           </button>
         </div>
         {logFiles.length === 0 ? (
-          <p className="text-[var(--text-muted)] text-sm">No log files found</p>
+          <p className="text-[var(--text-muted)] text-sm">{t("admin:logging.files.empty")}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-[var(--bg-base)]">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
-                    Filename
+                    {t("admin:logging.files.colFilename")}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
-                    Category
+                    {t("admin:logging.files.colCategory")}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
-                    Size
+                    {t("admin:logging.files.colSize")}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
-                    Modified
+                    {t("admin:logging.files.colModified")}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
-                    Actions
+                    {t("admin:logging.files.colActions")}
                   </th>
                 </tr>
               </thead>
@@ -349,13 +362,13 @@ export default function LoggingManager({
                         onClick={() => onDownload(file.filename)}
                         className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
                       >
-                        Download
+                        {t("admin:logging.files.download")}
                       </button>
                       <button
                         onClick={() => onDelete(file.filename)}
                         className="text-red-600 hover:text-red-900"
                       >
-                        Delete
+                        {t("admin:logging.files.delete")}
                       </button>
                     </td>
                   </tr>
