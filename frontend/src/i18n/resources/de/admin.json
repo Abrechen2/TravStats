@@ -5,7 +5,7 @@
   "tabs": {
     "users": "Benutzer",
     "invitations": "Einladungen",
-    "system": "System",
+    "system": "System-Info",
     "apiKeys": "API-Schlüssel",
     "parsers": "Parser",
     "training": "Training Config",
