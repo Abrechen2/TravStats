@@ -485,7 +485,7 @@ export default function AdminPage(): JSX.Element {
                 : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             }`}
           >
-            System Info
+            {t("admin:tabs.system")}
           </button>
           <button
             onClick={() => setActiveTab("users")}
@@ -495,7 +495,7 @@ export default function AdminPage(): JSX.Element {
                 : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             }`}
           >
-            Users ({users.length})
+            {t("admin:tabs.users")} ({users.length})
           </button>
           <button
             onClick={() => setActiveTab("invitations")}
