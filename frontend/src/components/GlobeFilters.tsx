@@ -193,7 +193,7 @@ function GlobeFilters({
                         filters.selectedAirlines.includes(airline)
                       }
                       onChange={() => toggleAirline(airline)}
-                      className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                      className="checkbox"
                     />
                     <span className="truncate">{airline || t("common:labels.unknown")}</span>
                   </label>
@@ -217,7 +217,7 @@ function GlobeFilters({
                 type="checkbox"
                 checked={filters.showFlown}
                 onChange={(e) => onChange({ ...filters, showFlown: e.target.checked })}
-                className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                className="checkbox"
               />
               {t("flights:status.flown")}
             </label>
@@ -226,7 +226,7 @@ function GlobeFilters({
                 type="checkbox"
                 checked={filters.showScheduled}
                 onChange={(e) => onChange({ ...filters, showScheduled: e.target.checked })}
-                className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                className="checkbox"
               />
               {t("flights:status.scheduled")}
             </label>
@@ -235,7 +235,7 @@ function GlobeFilters({
                 type="checkbox"
                 checked={filters.showCancelled}
                 onChange={(e) => onChange({ ...filters, showCancelled: e.target.checked })}
-                className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                className="checkbox"
               />
               {t("flights:status.cancelled")}
             </label>
