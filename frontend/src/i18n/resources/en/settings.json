@@ -15,7 +15,10 @@
     "invalidFileType": "Please select an image file",
     "fileTooLarge": "Image file is too large (max. 5MB)",
     "uploadSuccess": "Profile picture uploaded successfully",
-    "uploadError": "Error uploading profile picture"
+    "uploadError": "Error uploading profile picture",
+    "save": "Save profile",
+    "saved": "Profile saved",
+    "saveFailed": "Failed to save profile"
   },
   "display": {
     "title": "Display & Language",
@@ -398,4 +401,3 @@
     }
   }
 }
-

@@ -15,7 +15,10 @@
     "invalidFileType": "Bitte wählen Sie eine Bilddatei aus",
     "fileTooLarge": "Bilddatei ist zu groß (max. 5MB)",
     "uploadSuccess": "Profilbild erfolgreich hochgeladen",
-    "uploadError": "Fehler beim Hochladen des Profilbilds"
+    "uploadError": "Fehler beim Hochladen des Profilbilds",
+    "save": "Profil speichern",
+    "saved": "Profil gespeichert",
+    "saveFailed": "Fehler beim Speichern des Profils"
   },
   "display": {
     "title": "Anzeige & Sprache",
@@ -398,4 +401,3 @@
     }
   }
 }
-
