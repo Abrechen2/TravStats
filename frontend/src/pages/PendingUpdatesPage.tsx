@@ -10,7 +10,6 @@ import { pendingUpdatesApi, type StatisticsImpact } from "../lib/api";
 import { useToastStore } from "../store/toastStore";
 import { logger } from "../lib/logger";
 import NavigationBar from "../components/NavigationBar";
-import { useThemeStore } from "../store/themeStore";
 import PendingUpdateCard from "../components/PendingUpdateCard";
 import StatisticsImpactPreview from "../components/StatisticsImpactPreview";
 
@@ -73,7 +72,6 @@ interface Statistics {
 
 export default function PendingUpdatesPage(): JSX.Element {
   const { t } = useTranslation(["common", "pendingUpdates"]);
-  const isDarkMode = useThemeStore((state) => state.isDarkMode);
   const addToast = useToastStore((state) => state.addToast);
 
   const [updates, setUpdates] = useState<PendingUpdate[]>([]);
@@ -174,37 +172,38 @@ export default function PendingUpdatesPage(): JSX.Element {
   const editedCount = updates.filter((u) => u.status === "edited").length;
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? "bg-gray-900" : "bg-gray-50"}`}>
+    <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
       <NavigationBar />
 
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          <h1 className="text-3xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>
             {t("pendingUpdates:title")}
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">{t("pendingUpdates:description")}</p>
+          <p style={{ color: "var(--text-muted)" }}>{t("pendingUpdates:description")}</p>
         </div>
 
         {/* Statistics Dashboard */}
         {statistics && (
           <div
-            className={`${isDarkMode ? "bg-gray-800" : "bg-white"} rounded-lg shadow-sm p-6 mb-6`}
+            className="rounded-lg shadow-sm p-6 mb-6"
+            style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
           >
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            <h2 className="text-xl font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
               {t("pendingUpdates:statistics.title")}
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
+                <div className="text-sm" style={{ color: "var(--text-muted)" }}>
                   {t("pendingUpdates:statistics.total")}
                 </div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                <div className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
                   {statistics.totalUpdates}
                 </div>
               </div>
               <div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
+                <div className="text-sm" style={{ color: "var(--text-muted)" }}>
                   {t("pendingUpdates:statistics.applied")}
                 </div>
                 <div className="text-2xl font-bold text-green-600 dark:text-green-400">
@@ -212,7 +211,7 @@ export default function PendingUpdatesPage(): JSX.Element {
                 </div>
               </div>
               <div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
+                <div className="text-sm" style={{ color: "var(--text-muted)" }}>
                   {t("pendingUpdates:statistics.rejected")}
                 </div>
                 <div className="text-2xl font-bold text-red-600 dark:text-red-400">
@@ -220,18 +219,18 @@ export default function PendingUpdatesPage(): JSX.Element {
                 </div>
               </div>
               <div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
+                <div className="text-sm" style={{ color: "var(--text-muted)" }}>
                   {t("pendingUpdates:statistics.edited")}
                 </div>
-                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                <div className="text-2xl font-bold" style={{ color: "var(--color-amber)" }}>
                   {statistics.editedUpdates}
                 </div>
               </div>
               <div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
+                <div className="text-sm" style={{ color: "var(--text-muted)" }}>
                   {t("pendingUpdates:statistics.expired")}
                 </div>
-                <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">
+                <div className="text-2xl font-bold" style={{ color: "var(--text-muted)" }}>
                   {statistics.expiredUpdates}
                 </div>
               </div>
@@ -240,12 +239,13 @@ export default function PendingUpdatesPage(): JSX.Element {
         )}
 
         {/* Filters and Sort */}
-        <div className={`${isDarkMode ? "bg-gray-800" : "bg-white"} rounded-lg shadow-sm p-4 mb-6`}>
+        <div
+          className="rounded-lg shadow-sm p-4 mb-6"
+          style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+        >
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex-1 min-w-[200px]">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t("pendingUpdates:filters.status")}
-              </label>
+              <label className="label mb-2">{t("pendingUpdates:filters.status")}</label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
@@ -264,9 +264,7 @@ export default function PendingUpdatesPage(): JSX.Element {
               </select>
             </div>
             <div className="flex-1 min-w-[200px]">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t("pendingUpdates:filters.sortBy")}
-              </label>
+              <label className="label mb-2">{t("pendingUpdates:filters.sortBy")}</label>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as "createdAt" | "expiresAt")}
@@ -279,7 +277,7 @@ export default function PendingUpdatesPage(): JSX.Element {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-                className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
+                className="btn-secondary p-2"
               >
                 {sortOrder === "asc" ? "↑" : "↓"}
               </button>
@@ -290,15 +288,22 @@ export default function PendingUpdatesPage(): JSX.Element {
         {/* Updates List */}
         {loading ? (
           <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <p className="mt-4 text-gray-600 dark:text-gray-400">{t("common:loading")}</p>
+            <div
+              className="inline-block animate-spin rounded-full h-8 w-8 border-b-2"
+              style={{ borderColor: "var(--color-amber)" }}
+            ></div>
+            <p className="mt-4" style={{ color: "var(--text-muted)" }}>
+              {t("common:loading")}
+            </p>
           </div>
         ) : sortedUpdates.length === 0 ? (
           <div
-            className={`${isDarkMode ? "bg-gray-800" : "bg-white"} rounded-lg shadow-sm p-12 text-center`}
+            className="rounded-lg shadow-sm p-12 text-center"
+            style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
           >
             <svg
-              className="mx-auto h-12 w-12 text-gray-400"
+              className="mx-auto h-12 w-12"
+              style={{ color: "var(--text-muted)" }}
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -310,10 +315,10 @@ export default function PendingUpdatesPage(): JSX.Element {
                 d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
               />
             </svg>
-            <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-white">
+            <h3 className="mt-4 text-lg font-medium" style={{ color: "var(--text-primary)" }}>
               {t("pendingUpdates:empty.title")}
             </h3>
-            <p className="mt-2 text-gray-600 dark:text-gray-400">
+            <p className="mt-2" style={{ color: "var(--text-muted)" }}>
               {t("pendingUpdates:empty.description")}
             </p>
           </div>
@@ -337,16 +342,17 @@ export default function PendingUpdatesPage(): JSX.Element {
         {selectedUpdate && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div
-              className={`${isDarkMode ? "bg-gray-800" : "bg-white"} rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-auto`}
+              className="rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-auto"
+              style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
             >
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  <h2 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>
                     {t("pendingUpdates:preview.title")}
                   </h2>
                   <button
                     onClick={() => setSelectedUpdate(null)}
-                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                    style={{ color: "var(--text-muted)" }}
                   >
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path

@@ -36,20 +36,35 @@ export default function ContextualHint({
   if (dismissed) return null;
 
   return (
-    <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+    <div
+      className="mb-6 rounded-lg p-4"
+      style={{
+        background: "var(--bg-elevated)",
+        border: "1px solid var(--color-border)",
+      }}
+    >
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <h3 className="text-sm font-semibold text-blue-900 mb-1">{title}</h3>
-          <p className="text-sm text-blue-800">{message}</p>
+          <h3 className="text-sm font-semibold mb-1" style={{ color: "var(--text-primary)" }}>
+            {title}
+          </h3>
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            {message}
+          </p>
           {linkTo && linkText && (
-            <Link to={linkTo} className="text-sm text-blue-600 hover:underline mt-2 inline-block">
+            <Link
+              to={linkTo}
+              className="text-sm hover:underline mt-2 inline-block"
+              style={{ color: "var(--color-amber)" }}
+            >
               {linkText} {"→"}
             </Link>
           )}
         </div>
         <button
           onClick={handleDismiss}
-          className="ml-4 text-blue-500 hover:text-blue-700"
+          className="ml-4"
+          style={{ color: "var(--text-muted)" }}
           aria-label={t("accessibility.closeHint")}
         >
           x
