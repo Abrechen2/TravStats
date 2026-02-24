@@ -152,28 +152,21 @@ export default function SystemInfo({
           style={{ background: "var(--bg-elevated)", borderColor: "#f97316" }}
         >
           <h3 className="font-semibold mb-2" style={{ color: "#ea580c" }}>
-            Demo User Active
+            {t("admin:demoWarning.title")}
           </h3>
           <p className="text-sm mb-3" style={{ color: "#ea580c" }}>
-            The demo user account (username: &quot;demo&quot;, password: &quot;demo123&quot;) is
-            currently active. This is a security risk in production environments. It is recommended
-            to deactivate this account after initial testing.
+            {t("admin:demoWarning.message")}
           </p>
           <button
             onClick={() => {
               const demoUser = users.find((u) => u.username === "demo");
-              if (
-                demoUser &&
-                confirm(
-                  "Deactivate the demo user account? This will prevent login with demo credentials."
-                )
-              ) {
+              if (demoUser && confirm(t("admin:prompts.confirmDeactivateDemo"))) {
                 onToggleDemoUser(demoUser.id);
               }
             }}
             className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition text-sm font-medium"
           >
-            Deactivate Demo User
+            {t("admin:demoWarning.button")}
           </button>
         </div>
       )}
@@ -181,7 +174,9 @@ export default function SystemInfo({
       {/* Hardware Information */}
       <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">Hardware Information</h2>
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+            {t("admin:hardware.title")}
+          </h2>
           <button
             onClick={onLoadHardwareInfo}
             disabled={loadingHardwareInfo}
@@ -256,10 +251,10 @@ export default function SystemInfo({
                   }`}
                 >
                   {hardwareInfo.gpu.available
-                    ? "Verfügbar"
+                    ? t("admin:hardware.available")
                     : hardwareInfo.gpu.gpuDetected
-                      ? "Erkannt (nicht verfügbar)"
-                      : "Nicht verfügbar"}
+                      ? t("admin:hardware.detected")
+                      : t("admin:hardware.notAvailable")}
                 </span>
               </h3>
               {hardwareInfo.gpu.available ? (
@@ -511,33 +506,33 @@ export default function SystemInfo({
           onClick={onExportData}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition"
         >
-          Download Full Backup (JSON)
+          {t("admin:systemInfo.exportButton")}
         </button>
         <p className="text-sm text-[var(--text-muted)] mt-2">
-          Export all user data for backup purposes (GDPR compliant)
+          {t("admin:systemInfo.exportDescription")}
         </p>
         <InlineHelp
-          title="Daten-Export"
+          title={t("admin:systemInfo.exportHelp.title")}
           category="advanced"
           content={
             <div className="space-y-2 mt-2">
-              <p>Exportieren Sie alle Benutzerdaten als JSON-Datei für Backup-Zwecke.</p>
+              <p>{t("admin:systemInfo.exportHelp.description")}</p>
               <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
                 <li>
-                  <strong>Vollständiger Export:</strong> Enthält alle Flüge, Achievements,
-                  Einstellungen und Benutzerdaten
+                  <strong>{t("admin:systemInfo.exportHelp.fullExportTitle")}</strong>{" "}
+                  {t("admin:systemInfo.exportHelp.fullExport")}
                 </li>
                 <li>
-                  <strong>GDPR-konform:</strong> Alle Daten werden in einem strukturierten Format
-                  exportiert
+                  <strong>{t("admin:systemInfo.exportHelp.gdprTitle")}</strong>{" "}
+                  {t("admin:systemInfo.exportHelp.gdpr")}
                 </li>
                 <li>
-                  <strong>Backup:</strong> Regelmäßige Exports werden empfohlen, um Datenverlust zu
-                  vermeiden
+                  <strong>{t("admin:systemInfo.exportHelp.backupTitle")}</strong>{" "}
+                  {t("admin:systemInfo.exportHelp.backup")}
                 </li>
                 <li>
-                  <strong>Format:</strong> JSON-Datei, die einfach importiert oder analysiert werden
-                  kann
+                  <strong>{t("admin:systemInfo.exportHelp.formatTitle")}</strong>{" "}
+                  {t("admin:systemInfo.exportHelp.format")}
                 </li>
               </ul>
             </div>

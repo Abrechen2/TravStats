@@ -46,10 +46,64 @@
   "refresh": "🔄 Refresh",
   "refreshing": "⏳ Loading...",
   "users": {
-    "title": "User Management"
+    "title": "User Management",
+    "help": {
+      "description": "Manage all users of your TravStats instance. View users, change roles and deactivate accounts.",
+      "adminTitle": "Admin:",
+      "admin": "Full access to all features including the admin panel",
+      "userTitle": "User:",
+      "user": "Standard user with access to flights, statistics and achievements",
+      "deactivateTitle": "Deactivate:",
+      "deactivate": "Deactivated users cannot log in but their data is preserved"
+    },
+    "table": {
+      "username": "Username",
+      "flights": "Flights",
+      "achievements": "Achievements",
+      "role": "Role",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "role": {
+      "admin": "Admin",
+      "user": "User"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "actions": {
+      "deactivate": "Deactivate",
+      "activate": "Activate"
+    }
   },
   "invitations": {
-    "title": "Manage Invitations"
+    "title": "Manage Invitations",
+    "help": {
+      "description": "Create invitation links to invite new users to your TravStats instance.",
+      "createTitle": "Create invitation:",
+      "create": "Generates a unique link that can be used to register",
+      "expiryTitle": "Expiry date:",
+      "expiry": "Invitations expire after 7 days (by default)",
+      "oneUseTitle": "Single use:",
+      "oneUse": "Each link can only be used once",
+      "emailTitle": "Email (optional):",
+      "email": "You can assign an email address to track the invitation"
+    },
+    "invitationLinks": "Invitation Links",
+    "createButton": "+ Create Invitation",
+    "copiedToClipboard": "Invitation link copied to clipboard!",
+    "table": {
+      "email": "Email",
+      "createdBy": "Created By",
+      "expires": "Expires",
+      "status": "Status"
+    },
+    "status": {
+      "usedOn": "Used on {{date}}",
+      "expired": "Expired",
+      "active": "Active"
+    }
   },
   "userLimitWarning": {
     "title": "⚠️ User Limit Warning",
@@ -57,8 +111,8 @@
   },
   "demoWarning": {
     "title": "🔓 Demo Account Active",
-    "message": "The demo user account (username: \"demo\", password: \"demo123\") is currently active.",
-    "button": "Deactivate Demo Account"
+    "message": "The demo user account (username: \"demo\", password: \"demo123\") is currently active. This is a security risk in production environments. Deactivate this account after initial testing.",
+    "button": "Deactivate Demo User"
   },
   "hardware": {
     "title": "💻 Hardware Information",
@@ -107,7 +161,21 @@
     "registration": "Registration",
     "enabled": "✅ Enabled",
     "disabled": "❌ Disabled",
-    "version": "Version"
+    "version": "Version",
+    "exportButton": "Download Full Backup (JSON)",
+    "exportDescription": "Export all user data for backup purposes (GDPR compliant)",
+    "exportHelp": {
+      "title": "Data Export",
+      "description": "Export all user data as a JSON file for backup purposes.",
+      "fullExportTitle": "Full Export:",
+      "fullExport": "Contains all flights, achievements, settings and user data",
+      "gdprTitle": "GDPR compliant:",
+      "gdpr": "All data is exported in a structured format",
+      "backupTitle": "Backup:",
+      "backup": "Regular exports are recommended to avoid data loss",
+      "formatTitle": "Format:",
+      "format": "JSON file that can be easily imported or analyzed"
+    }
   },
   "export": {
     "button": "📥 Export Data",
@@ -282,6 +350,72 @@
       "restore": "It is recommended to create a new backup before restoring. All current data will be overwritten.",
       "retentionTitle": "Retention:",
       "retention": "Backups are automatically deleted after the configured retention period."
+    }
+  },
+  "feedback": {
+    "title": "Parser Feedback Statistics",
+    "timePeriod": "Time Period:",
+    "days7": "Last 7 days",
+    "days30": "Last 30 days",
+    "days90": "Last 90 days",
+    "year": "Last year",
+    "totalEntries": "Total Feedback Entries",
+    "avgQuality": "Average Quality Score",
+    "commonIssues": "Common Issues",
+    "byProvider": "Distribution by Parser Provider",
+    "bySourceType": "Distribution by Source Type",
+    "noData": "No data available",
+    "email": "Email",
+    "boardingPass": "Boarding Pass",
+    "ofTotal": "{{pct}}% of total",
+    "mostCommonIssues": "Most Common Issues",
+    "noIssues": "No issues reported",
+    "recentEntries": "Recent Feedback Entries ({{count}})",
+    "quality": "{{score}}% quality",
+    "loading": "Loading feedback statistics...",
+    "details": "Feedback Details",
+    "notFound": "Feedback not found",
+    "provider": "Provider",
+    "qualityScore": "Quality Score",
+    "issues": "Issues",
+    "parsedResult": "Parsed Result",
+    "correctedResult": "Corrected Result",
+    "userCorrections": "User Corrections"
+  },
+  "patterns": {
+    "title": "Pattern Updates & Suggestions",
+    "autoApply": "Auto-Apply High Confidence (≥90%)",
+    "timePeriod": "Time Period:",
+    "days7": "Last 7 days",
+    "days30": "Last 30 days",
+    "days90": "Last 90 days",
+    "year": "Last year",
+    "totalPatterns": "Total Patterns",
+    "applied": "Applied",
+    "pending": "Pending",
+    "avgConfidence": "Avg Confidence",
+    "pendingSuggestions": "Pending Pattern Suggestions ({{count}})",
+    "confidence": "{{pct}}% confidence",
+    "pattern": "Pattern:",
+    "issue": "Issue:",
+    "examples": "Examples:",
+    "apply": "Apply",
+    "noPending": "No pending pattern suggestions",
+    "summary": "Analysis Summary",
+    "totalIssues": "Total Issues:",
+    "patternSuggestions": "Pattern Suggestions:",
+    "loading": "Loading pattern data...",
+    "confirmApply": {
+      "title": "Apply Pattern?",
+      "message": "Apply this pattern? Note: This requires manual code updates.",
+      "cancel": "Cancel",
+      "confirm": "Apply"
+    },
+    "confirmAutoApply": {
+      "title": "Auto-apply all patterns?",
+      "message": "Auto-apply all high-confidence patterns? This may affect multiple patterns simultaneously.",
+      "cancel": "Cancel",
+      "confirm": "Apply"
     }
   },
   "globalApiKeys": {

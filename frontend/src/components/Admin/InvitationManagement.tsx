@@ -34,35 +34,37 @@ export default function InvitationManagement({
         category="advanced"
         content={
           <div className="space-y-2">
-            <p>
-              Erstellen Sie Einladungslinks, um neue Benutzer zu Ihrer TravStats-Instanz einzuladen.
-            </p>
+            <p>{t("admin:invitations.help.description")}</p>
             <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
               <li>
-                <strong>Einladung erstellen:</strong> Generiert einen eindeutigen Link, der zum
-                Registrieren verwendet werden kann
+                <strong>{t("admin:invitations.help.createTitle")}</strong>{" "}
+                {t("admin:invitations.help.create")}
               </li>
               <li>
-                <strong>Ablaufdatum:</strong> Einladungen laufen nach 7 Tagen ab (standardmäßig)
+                <strong>{t("admin:invitations.help.expiryTitle")}</strong>{" "}
+                {t("admin:invitations.help.expiry")}
               </li>
               <li>
-                <strong>Einmalige Nutzung:</strong> Jeder Link kann nur einmal verwendet werden
+                <strong>{t("admin:invitations.help.oneUseTitle")}</strong>{" "}
+                {t("admin:invitations.help.oneUse")}
               </li>
               <li>
-                <strong>E-Mail (optional):</strong> Sie können eine E-Mail-Adresse zuordnen, um die
-                Einladung zu verfolgen
+                <strong>{t("admin:invitations.help.emailTitle")}</strong>{" "}
+                {t("admin:invitations.help.email")}
               </li>
             </ul>
           </div>
         }
       />
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold text-[var(--text-primary)]">Invitation Links</h2>
+        <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+          {t("admin:invitations.invitationLinks")}
+        </h2>
         <button
           onClick={onCreateInvitation}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition"
         >
-          + Create Invitation
+          {t("admin:invitations.createButton")}
         </button>
       </div>
 
@@ -71,7 +73,7 @@ export default function InvitationManagement({
           className="border rounded-lg p-3 text-sm"
           style={{ background: "var(--bg-elevated)", borderColor: "#4ade80", color: "#16a34a" }}
         >
-          Invitation link copied to clipboard!
+          {t("admin:invitations.copiedToClipboard")}
         </div>
       )}
 
@@ -80,16 +82,16 @@ export default function InvitationManagement({
           <thead className="bg-[var(--bg-base)]">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
-                Email
+                {t("admin:invitations.table.email")}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
-                Created By
+                {t("admin:invitations.table.createdBy")}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
-                Expires
+                {t("admin:invitations.table.expires")}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
-                Status
+                {t("admin:invitations.table.status")}
               </th>
             </tr>
           </thead>
@@ -108,15 +110,17 @@ export default function InvitationManagement({
                 <td className="px-6 py-4 whitespace-nowrap">
                   {invitation.usedAt ? (
                     <span className="px-2 py-1 text-xs font-semibold rounded-full bg-[var(--bg-elevated)] text-[var(--text-primary)]">
-                      Used on {format(new Date(invitation.usedAt), "MMM d")}
+                      {t("admin:invitations.status.usedOn", {
+                        date: format(new Date(invitation.usedAt), "MMM d"),
+                      })}
                     </span>
                   ) : new Date(invitation.expiresAt) < new Date() ? (
                     <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
-                      Expired
+                      {t("admin:invitations.status.expired")}
                     </span>
                   ) : (
                     <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                      Active
+                      {t("admin:invitations.status.active")}
                     </span>
                   )}
                 </td>
