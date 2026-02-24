@@ -77,7 +77,8 @@
     "taxes": "Taxes",
     "fees": "Fees",
     "routeSeparator": "→",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "notAvailable": "N/A"
   },
   "messages": {
     "success": "Success",
@@ -102,4 +103,3 @@
     "thisYear": "This year"
   }
 }
-

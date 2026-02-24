@@ -46,7 +46,7 @@ function LoadingFallback(): JSX.Element {
 }
 
 function AppContent() {
-  const { user } = useAuthStore();
+  const { user, _hasHydrated } = useAuthStore();
   const loadRemoteSettings = useSettingsStore((s) => s.loadRemoteSettings);
   const language = useSettingsStore((s) => s.display.language);
   const isDarkMode = useThemeStore((s) => s.isDarkMode);
@@ -137,8 +137,8 @@ function AppContent() {
     localStorage.setItem("airport-seeding-modal-seen", "true");
   };
 
-  // Show loading while checking setup status
-  if (!setupChecked) {
+  // Show loading while checking setup status or waiting for auth store hydration
+  if (!setupChecked || !_hasHydrated) {
     return (
       <div
         className="min-h-screen flex items-center justify-center"
