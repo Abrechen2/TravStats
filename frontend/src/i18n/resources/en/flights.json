@@ -155,7 +155,7 @@
     },
     "footer": {
       "showing": "Showing {{count}} flights",
-      "sortedBy": "Sorted by {{field}} ({{order}})"
+      "sortedBy": "Sorted by {{label}} ({{direction}})"
     }
   },
   "review": {

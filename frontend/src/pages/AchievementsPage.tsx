@@ -371,11 +371,7 @@ export default function AchievementsPage(): JSX.Element {
                       type="checkbox"
                       checked={showUnlockedOnly}
                       onChange={(e) => setShowUnlockedOnly(e.target.checked)}
-                      className="w-5 h-5 rounded"
-                      style={{
-                        background: "var(--bg-elevated)",
-                        borderColor: "var(--color-border)",
-                      }}
+                      className="checkbox"
                     />
                     <span className="text-sm" style={{ color: "var(--text-primary)" }}>
                       {t("achievements:filters.showUnlockedOnly")}

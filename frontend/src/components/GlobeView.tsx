@@ -463,7 +463,7 @@ export default function GlobeView({
             type="checkbox"
             checked={autoRotate}
             onChange={(e) => setAutoRotate(e.target.checked)}
-            className="w-4 h-4 text-blue-600 bg-[var(--bg-elevated)] border-[var(--color-border)] rounded focus:ring-2 focus:ring-blue-500"
+            className="checkbox"
           />
           <span className="text-sm font-medium text-[var(--text-primary)]">🌍 Auto-Rotation</span>
         </label>
