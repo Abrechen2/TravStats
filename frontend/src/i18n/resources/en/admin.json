@@ -262,6 +262,56 @@
       "levels": "error → warn → info → debug → trace (from least to most detailed)",
       "warningTitle": "Note:",
       "warning": "Debug mode can impact performance and generates large log files. Only enable for short diagnostic periods."
+    },
+    "debugActive": {
+      "title": "Debug Mode Active",
+      "message": "Debug logging is enabled with detailed instrumentation. This may impact performance and generate large log files. Consider disabling after troubleshooting."
+    },
+    "stats": {
+      "totalFiles": "Total Log Files",
+      "totalSize": "Total Size",
+      "oldestLog": "Oldest Log",
+      "newestLog": "Newest Log"
+    },
+    "configSection": "Logging Configuration",
+    "level": {
+      "label": "Log Level",
+      "hint": "Higher levels include all lower levels (e.g., Debug includes Info, Warn, Error)",
+      "error": "Error (Minimal)",
+      "warn": "Warning",
+      "info": "Info (Default)",
+      "debug": "Debug (Verbose)",
+      "trace": "Trace (Very Verbose)"
+    },
+    "retention": {
+      "label": "Log Retention (Days)",
+      "hint": "Log files older than this will be automatically deleted"
+    },
+    "categories": {
+      "http": {
+        "label": "Log HTTP Requests",
+        "hint": "Log all HTTP requests with timing, IP, user, and status (category: http)"
+      },
+      "database": {
+        "label": "Log Database Queries",
+        "hint": "Log SQL queries with args and performance metrics (category: database)"
+      },
+      "parser": {
+        "label": "Log Parser Operations",
+        "hint": "Log LLM operations with provider details (category: parser)"
+      }
+    },
+    "files": {
+      "title": "Log Files",
+      "cleanup": "Cleanup Old Logs",
+      "empty": "No log files found",
+      "colFilename": "Filename",
+      "colCategory": "Category",
+      "colSize": "Size",
+      "colModified": "Modified",
+      "colActions": "Actions",
+      "download": "Download",
+      "delete": "Delete"
     }
   },
   "parserSettings": {

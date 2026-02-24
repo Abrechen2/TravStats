@@ -262,6 +262,56 @@
       "levels": "error → warn → info → debug → trace (von wenig zu sehr detailliert)",
       "warningTitle": "Hinweis:",
       "warning": "Debug-Modus kann die Leistung beeinträchtigen und erzeugt große Log-Dateien. Nur kurzzeitig für Diagnosen aktivieren."
+    },
+    "debugActive": {
+      "title": "Debug-Modus aktiv",
+      "message": "Debug-Logging ist mit detaillierter Instrumentierung aktiviert. Dies kann die Leistung beeinträchtigen und große Log-Dateien erzeugen. Deaktivieren Sie dies nach der Fehlersuche."
+    },
+    "stats": {
+      "totalFiles": "Gesamt Log-Dateien",
+      "totalSize": "Gesamtgröße",
+      "oldestLog": "Ältestes Log",
+      "newestLog": "Neuestes Log"
+    },
+    "configSection": "Logging-Konfiguration",
+    "level": {
+      "label": "Log-Level",
+      "hint": "Höhere Level beinhalten alle niedrigeren Level (z. B. Debug beinhaltet Info, Warn, Error)",
+      "error": "Error (Minimal)",
+      "warn": "Warning",
+      "info": "Info (Standard)",
+      "debug": "Debug (Ausführlich)",
+      "trace": "Trace (Sehr ausführlich)"
+    },
+    "retention": {
+      "label": "Log-Aufbewahrung (Tage)",
+      "hint": "Log-Dateien die älter als dieser Wert sind werden automatisch gelöscht"
+    },
+    "categories": {
+      "http": {
+        "label": "HTTP-Anfragen protokollieren",
+        "hint": "Alle HTTP-Anfragen mit Timing, IP, Benutzer und Status protokollieren (Kategorie: http)"
+      },
+      "database": {
+        "label": "Datenbankabfragen protokollieren",
+        "hint": "SQL-Abfragen mit Argumenten und Performance-Metriken protokollieren (Kategorie: database)"
+      },
+      "parser": {
+        "label": "Parser-Operationen protokollieren",
+        "hint": "LLM-Operationen mit Provider-Details protokollieren (Kategorie: parser)"
+      }
+    },
+    "files": {
+      "title": "Log-Dateien",
+      "cleanup": "Alte Logs bereinigen",
+      "empty": "Keine Log-Dateien gefunden",
+      "colFilename": "Dateiname",
+      "colCategory": "Kategorie",
+      "colSize": "Größe",
+      "colModified": "Geändert",
+      "colActions": "Aktionen",
+      "download": "Herunterladen",
+      "delete": "Löschen"
     }
   },
   "parserSettings": {
