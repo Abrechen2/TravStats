@@ -1,4 +1,5 @@
 import { useState, useEffect, lazy, Suspense } from "react";
+import { useTranslation } from "react-i18next";
 import { Airport, airportsApi, flightsApi } from "../lib/api";
 import AirportAutocomplete from "./AirportAutocomplete";
 
@@ -18,6 +19,7 @@ export default function SimplifiedFlightForm({
   onSubmit,
   onCancel,
 }: SimplifiedFlightFormProps): JSX.Element {
+  const { t } = useTranslation(["flights"]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [autoFillMessage, setAutoFillMessage] = useState("");
@@ -133,7 +135,7 @@ export default function SimplifiedFlightForm({
 
     let cancelled = false;
     const timer = setTimeout(async () => {
-      setAutoFillMessage("🔄 Suche Fluginfos (Aviationstack)...");
+      setAutoFillMessage(t("flights:form.simplified.lookupSearching"));
       try {
         const lookup = await flightsApi.lookup({
           flightNumber: normalizedFlightNumber,
@@ -144,7 +146,7 @@ export default function SimplifiedFlightForm({
 
         applyLookupData(lookup);
         setShowAdvanced(true);
-        setAutoFillMessage("✈️ Daten automatisch ergänzt");
+        setAutoFillMessage(t("flights:form.simplified.lookupSuccess"));
       } catch (lookupError) {
         if (!cancelled) {
           logger.warn("Flight lookup failed", lookupError);
@@ -198,7 +200,9 @@ export default function SimplifiedFlightForm({
         };
 
         // Show warning to user
-        setError(`Airports "${depCode}" and "${arrCode}" not found. Please verify manually.`);
+        setError(
+          t("flights:form.simplified.airportsNotFoundManual", { dep: depCode, arr: arrCode })
+        );
       }
 
       // Set airports
@@ -229,7 +233,7 @@ export default function SimplifiedFlightForm({
       // Show success message
       setError("");
     } catch {
-      setError(`Could not find airport data for ${depCode} or ${arrCode}. Please enter manually.`);
+      setError(t("flights:form.simplified.airportDataNotFound", { dep: depCode, arr: arrCode }));
     }
   };
 
@@ -238,12 +242,12 @@ export default function SimplifiedFlightForm({
     setError("");
 
     if (!departure || !arrival) {
-      setError("Please select departure and arrival airports");
+      setError(t("flights:form.validation.selectAirports"));
       return;
     }
 
     if (!departureDate) {
-      setError("Please select departure date");
+      setError(t("flights:form.validation.selectDate"));
       return;
     }
 
@@ -288,7 +292,7 @@ export default function SimplifiedFlightForm({
       });
     } catch (err: unknown) {
       const errorObj = err as { response?: { data?: { error?: string } } };
-      setError(errorObj.response?.data?.error || "Failed to save flight");
+      setError(errorObj.response?.data?.error ?? t("flights:form.simplified.failedToSave"));
     } finally {
       setLoading(false);
     }
@@ -305,9 +309,9 @@ export default function SimplifiedFlightForm({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-[var(--bg-surface)] rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-[var(--bg-surface)] border-b px-6 py-4">
-          <h2 className="text-2xl font-bold">✈️ Add Flight</h2>
+          <h2 className="text-2xl font-bold">✈️ {t("flights:form.title")}</h2>
           <p className="text-sm text-[var(--text-muted)] mt-1">
-            Just enter departure &amp; arrival airports - we&apos;ll handle the rest!
+            {t("flights:form.simplified.subtitle")}
           </p>
         </div>
 
@@ -322,35 +326,37 @@ export default function SimplifiedFlightForm({
           <div className="border border-[var(--color-border)] bg-[var(--bg-elevated)] rounded-lg p-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-semibold text-lg">🎫 Have a Boarding Pass?</h3>
+                <h3 className="font-semibold text-lg">🎫 {t("flights:form.boardingPass.title")}</h3>
                 <p className="text-sm text-[var(--text-muted)]">
-                  Scan it to auto-fill all details!
+                  {t("flights:form.boardingPass.description")}
                 </p>
               </div>
               <button type="button" onClick={() => setShowScanner(true)} className="btn-primary">
-                📸 Scan Now
+                📸 {t("flights:form.boardingPass.scan")}
               </button>
             </div>
           </div>
 
           {/* Quick Add Section */}
           <div className="space-y-4">
-            <h3 className="font-semibold text-lg">Or Enter Manually</h3>
+            <h3 className="font-semibold text-lg">
+              {t("flights:form.simplified.orEnterManually")}
+            </h3>
 
             {/* Airports */}
             <div className="grid grid-cols-2 gap-4">
               <AirportAutocomplete
                 value={departure}
                 onChange={setDeparture}
-                label="From"
-                placeholder="FRA, Frankfurt, etc."
+                label={t("flights:list.from")}
+                placeholder={t("flights:form.placeholders.departureAirport")}
                 required
               />
               <AirportAutocomplete
                 value={arrival}
                 onChange={setArrival}
-                label="To"
-                placeholder="LHR, London, etc."
+                label={t("flights:list.to")}
+                placeholder={t("flights:form.placeholders.arrivalAirport")}
                 required
               />
             </div>
@@ -358,7 +364,7 @@ export default function SimplifiedFlightForm({
             {/* Date & Time */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="label">Departure Date *</label>
+                <label className="label">{t("flights:form.departureDate")}</label>
                 <input
                   type="date"
                   value={departureDate}
@@ -368,7 +374,7 @@ export default function SimplifiedFlightForm({
                 />
               </div>
               <div>
-                <label className="label">Departure Time</label>
+                <label className="label">{t("flights:form.departureTime")}</label>
                 <input
                   type="time"
                   value={departureTime}
@@ -380,15 +386,15 @@ export default function SimplifiedFlightForm({
 
             {/* Status */}
             <div>
-              <label className="label">Status</label>
+              <label className="label">{t("flights:form.status")}</label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as "scheduled" | "flown" | "cancelled")}
                 className="input"
               >
-                <option value="flown">Flown ✓</option>
-                <option value="scheduled">Scheduled</option>
-                <option value="cancelled">Cancelled</option>
+                <option value="flown">{t("flights:status.flown")} ✓</option>
+                <option value="scheduled">{t("flights:status.scheduled")}</option>
+                <option value="cancelled">{t("flights:status.cancelled")}</option>
               </select>
             </div>
           </div>
@@ -401,7 +407,7 @@ export default function SimplifiedFlightForm({
               className="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium"
             >
               <span>{showAdvanced ? "▼" : "▶"}</span>
-              Advanced Options (Optional)
+              {t("flights:form.simplified.advancedOptions")}
             </button>
 
             {showAdvanced && (
@@ -409,23 +415,23 @@ export default function SimplifiedFlightForm({
                 {/* Flight Details */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="label">Airline</label>
+                    <label className="label">{t("flights:form.airline")}</label>
                     <input
                       type="text"
                       value={airline}
                       onChange={(e) => setAirline(e.target.value)}
                       className="input"
-                      placeholder="e.g., Lufthansa"
+                      placeholder={t("flights:form.placeholders.airline")}
                     />
                   </div>
                   <div>
-                    <label className="label">Flight Number</label>
+                    <label className="label">{t("flights:form.flightNumber")}</label>
                     <input
                       type="text"
                       value={flightNumber}
                       onChange={(e) => setFlightNumber(e.target.value)}
                       className="input"
-                      placeholder="e.g., LH123"
+                      placeholder={t("flights:form.placeholders.flightNumber")}
                     />
                     {autoFillMessage && (
                       <p className="text-xs text-blue-600 mt-1">{autoFillMessage}</p>
@@ -434,20 +440,20 @@ export default function SimplifiedFlightForm({
                 </div>
 
                 <div>
-                  <label className="label">Aircraft Type</label>
+                  <label className="label">{t("flights:form.aircraft")}</label>
                   <input
                     type="text"
                     value={aircraft}
                     onChange={(e) => setAircraft(e.target.value)}
                     className="input"
-                    placeholder="e.g., A320, B737"
+                    placeholder={t("flights:form.placeholders.aircraft")}
                   />
                 </div>
 
                 {/* Arrival Date/Time Override */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="label">Arrival Date</label>
+                    <label className="label">{t("flights:form.arrivalDate")}</label>
                     <input
                       type="date"
                       value={arrivalDate}
@@ -456,7 +462,7 @@ export default function SimplifiedFlightForm({
                     />
                   </div>
                   <div>
-                    <label className="label">Arrival Time</label>
+                    <label className="label">{t("flights:form.arrivalTime")}</label>
                     <input
                       type="time"
                       value={arrivalTime}
@@ -469,7 +475,7 @@ export default function SimplifiedFlightForm({
                 {/* Costs & Category */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="label">Preis</label>
+                    <label className="label">{t("flights:form.price")}</label>
                     <div className="flex gap-2">
                       <input
                         type="number"
@@ -478,7 +484,7 @@ export default function SimplifiedFlightForm({
                         value={price}
                         onChange={(e) => setPrice(e.target.value)}
                         className="input"
-                        placeholder="z.B. 199.99"
+                        placeholder={t("flights:form.placeholders.price")}
                       />
                       <select
                         value={currency}
@@ -493,22 +499,22 @@ export default function SimplifiedFlightForm({
                     </div>
                   </div>
                   <div>
-                    <label className="label">Kategorie</label>
+                    <label className="label">{t("flights:form.category")}</label>
                     <select
                       value={category}
                       onChange={(e) => setCategory(e.target.value as typeof category)}
                       className="input"
                     >
-                      <option value="business">Geschäftlich</option>
-                      <option value="private">Privat</option>
-                      <option value="vacation">Urlaub</option>
+                      <option value="business">{t("flights:category.business")}</option>
+                      <option value="private">{t("flights:category.private")}</option>
+                      <option value="vacation">{t("flights:category.vacation")}</option>
                     </select>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="label">Steuern</label>
+                    <label className="label">{t("flights:form.taxes")}</label>
                     <input
                       type="number"
                       min="0"
@@ -516,11 +522,11 @@ export default function SimplifiedFlightForm({
                       value={taxes}
                       onChange={(e) => setTaxes(e.target.value)}
                       className="input"
-                      placeholder="optional"
+                      placeholder={t("flights:form.placeholders.optional")}
                     />
                   </div>
                   <div>
-                    <label className="label">Gebühren</label>
+                    <label className="label">{t("flights:form.fees")}</label>
                     <input
                       type="number"
                       min="0"
@@ -528,14 +534,14 @@ export default function SimplifiedFlightForm({
                       value={fees}
                       onChange={(e) => setFees(e.target.value)}
                       className="input"
-                      placeholder="optional"
+                      placeholder={t("flights:form.placeholders.optional")}
                     />
                   </div>
                 </div>
 
                 {/* Tags */}
                 <div>
-                  <label className="label">Tags</label>
+                  <label className="label">{t("flights:form.tags")}</label>
                   <div className="flex gap-2">
                     <input
                       type="text"
@@ -548,14 +554,14 @@ export default function SimplifiedFlightForm({
                         }
                       }}
                       className="input"
-                      placeholder="z.B. Konferenz, Familienbesuch"
+                      placeholder={t("flights:form.placeholders.tags")}
                     />
                     <button
                       type="button"
                       onClick={handleAddTag}
                       className="btn-secondary whitespace-nowrap"
                     >
-                      Tag hinzufügen
+                      {t("flights:form.simplified.addTag")}
                     </button>
                   </div>
                   {tags.length > 0 && (
@@ -582,13 +588,13 @@ export default function SimplifiedFlightForm({
 
                 {/* Notes */}
                 <div>
-                  <label className="label">Notes</label>
+                  <label className="label">{t("flights:form.notes")}</label>
                   <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     className="input"
                     rows={2}
-                    placeholder="Optional notes about this flight..."
+                    placeholder={t("flights:form.placeholders.notes")}
                   />
                 </div>
               </div>
@@ -598,21 +604,21 @@ export default function SimplifiedFlightForm({
           {/* Actions */}
           <div className="flex gap-3 justify-end pt-4 border-t">
             <button type="button" onClick={onCancel} className="btn-secondary" disabled={loading}>
-              Cancel
+              {t("flights:form.cancel")}
             </button>
             <button
               type="submit"
               className="btn-primary"
               disabled={loading || !departure || !arrival || !departureDate}
             >
-              {loading ? "Saving..." : "✓ Save Flight"}
+              {loading ? t("flights:form.saving") : `✓ ${t("flights:form.submit")}`}
             </button>
           </div>
         </form>
 
         {/* Helper Text */}
         <div className="px-6 pb-4 text-sm text-[var(--text-muted)] border-t pt-4">
-          💡 <strong>Pro tip:</strong> Scan your boarding pass or just select airports and date!
+          💡 {t("flights:form.simplified.proTip")}
         </div>
       </div>
 
@@ -624,7 +630,7 @@ export default function SimplifiedFlightForm({
               <div className="bg-[var(--bg-surface)] rounded-lg p-8">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto mb-2"></div>
-                  <p className="text-[var(--text-muted)]">Loading scanner...</p>
+                  <p className="text-[var(--text-muted)]">{t("flights:form.loadingScanner")}</p>
                 </div>
               </div>
             </div>

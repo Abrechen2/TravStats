@@ -26,6 +26,8 @@
     "status": "Status",
     "category": "Kategorie",
     "price": "Preis",
+    "taxes": "Steuern",
+    "fees": "Geb\u00fchren",
     "currency": "W\u00e4hrung",
     "notes": "Notizen",
     "tags": "Tags",
@@ -77,6 +79,18 @@
       "bestOption": "Beste Option",
       "bestOptionDescription": "Erfasst alle Daten am besten aus Best\u00e4tigungs-E-Mails"
     },
+    "simplified": {
+      "subtitle": "Geben Sie einfach Abflug- und Ankunftsflughafen ein \u2013 wir erledigen den Rest!",
+      "orEnterManually": "Oder manuell eingeben",
+      "advancedOptions": "Erweiterte Optionen (optional)",
+      "proTip": "Tipp: Scannen Sie Ihren Boarding Pass oder w\u00e4hlen Sie einfach Flugh\u00e4fen und Datum!",
+      "addTag": "Tag hinzuf\u00fcgen",
+      "lookupSearching": "\ud83d\udd04 Suche Fluginfos (Aviationstack)...",
+      "lookupSuccess": "\u2708\ufe0f Daten automatisch erg\u00e4nzt",
+      "airportsNotFoundManual": "Flugh\u00e4fen \u201e{{dep}}\u201c und \u201e{{arr}}\u201c nicht gefunden. Bitte manuell pr\u00fcfen.",
+      "airportDataNotFound": "Keine Flughafendaten f\u00fcr {{dep}} oder {{arr}} gefunden. Bitte manuell eingeben.",
+      "failedToSave": "Flug konnte nicht gespeichert werden"
+    },
     "placeholders": {
       "tags": "business, vacation, conference",
       "flightNumber": "LH400",
@@ -95,10 +109,13 @@
       "boardingGroup": "1 oder A",
       "ticketNumber": "2202236084346",
       "taxes": "45.67",
-      "fees": "12.30"
+      "fees": "12.30",
+      "optional": "optional"
     },
     "validation": {
-      "selectAirportsAndDates": "Bitte w\u00e4hlen Sie beide Flugh\u00e4fen und Daten aus"
+      "selectAirportsAndDates": "Bitte w\u00e4hlen Sie beide Flugh\u00e4fen und Daten aus",
+      "selectAirports": "Bitte w\u00e4hlen Sie Abflug- und Ankunftsflughafen aus",
+      "selectDate": "Bitte w\u00e4hlen Sie ein Abflugdatum aus"
     },
     "tagsHint": "Durch Kommas getrennte Tags zum Filtern.",
     "loadingScanner": "Scanner wird geladen...",
