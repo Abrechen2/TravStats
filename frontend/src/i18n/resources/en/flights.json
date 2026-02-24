@@ -1,4 +1,4 @@
-﻿{
+{
   "form": {
     "title": "Add Flight",
     "flightNumber": "Flight Number",
@@ -26,6 +26,8 @@
     "status": "Status",
     "category": "Category",
     "price": "Price",
+    "taxes": "Taxes",
+    "fees": "Fees",
     "currency": "Currency",
     "notes": "Notes",
     "tags": "Tags",
@@ -78,6 +80,18 @@
       "bestOptionDescription": "Captures all data best from confirmation emails",
       "notImplemented": "Email import is not yet implemented. Please use manual entry or boarding pass scan."
     },
+    "simplified": {
+      "subtitle": "Just enter departure & arrival airports - we'll handle the rest!",
+      "orEnterManually": "Or Enter Manually",
+      "advancedOptions": "Advanced Options (Optional)",
+      "proTip": "Pro tip: Scan your boarding pass or just select airports and date!",
+      "addTag": "Add Tag",
+      "lookupSearching": "Searching flight info (Aviationstack)...",
+      "lookupSuccess": "Data auto-filled",
+      "airportsNotFoundManual": "Airports \"{{dep}}\" and \"{{arr}}\" not found. Please verify manually.",
+      "airportDataNotFound": "Could not find airport data for {{dep}} or {{arr}}. Please enter manually.",
+      "failedToSave": "Failed to save flight"
+    },
     "placeholders": {
       "tags": "business, vacation, conference",
       "flightNumber": "LH400",
@@ -96,10 +110,13 @@
       "boardingGroup": "1 or A",
       "ticketNumber": "2202236084346",
       "taxes": "45.67",
-      "fees": "12.30"
+      "fees": "12.30",
+      "optional": "optional"
     },
     "validation": {
-      "selectAirportsAndDates": "Please select both airports and dates"
+      "selectAirportsAndDates": "Please select both airports and dates",
+      "selectAirports": "Please select departure and arrival airports",
+      "selectDate": "Please select departure date"
     },
     "tagsHint": "Comma-separated tags for filtering.",
     "loadingScanner": "Loading scanner...",
