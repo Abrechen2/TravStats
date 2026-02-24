@@ -20,6 +20,7 @@ import {
   testConnection,
 } from '../services/cloudSyncService';
 import { serializeBigInt } from '../utils/serializeBigInt';
+import { backupRestoreLimiter } from '../middleware/rateLimit';
 
 const router = Router();
 
@@ -59,7 +60,7 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
 router.get('/status', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const runningBackup = await getBackup('').catch(() => null);
-    
+
     // Find running backup
     const { listBackups } = await import('../services/backupService');
     const allBackups = await listBackups();
@@ -81,7 +82,7 @@ router.get('/status', async (req: AuthRequest, res: Response, next: NextFunction
 router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const body = createBackupSchema.parse(req.body);
-    
+
     // Check if there's already a running backup
     const { listBackups } = await import('../services/backupService');
     const allBackups = await listBackups();
@@ -166,7 +167,7 @@ router.get('/:id/download', async (req: AuthRequest, res: Response, next: NextFu
  * POST /api/v1/backup/:id/restore
  * Restore backup
  */
-router.post('/:id/restore', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post('/:id/restore', backupRestoreLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
     const body = restoreBackupSchema.parse(req.body);
@@ -327,7 +328,3 @@ router.post('/cloud/download', async (req: AuthRequest, res: Response, next: Nex
 });
 
 export default router;
-
-
-
-

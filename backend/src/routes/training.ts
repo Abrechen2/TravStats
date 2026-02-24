@@ -12,6 +12,7 @@ import { triggerTraining, shouldTriggerTraining, cancelTraining, analyzeTraining
 import { ParsedBooking } from '../services/bookingParser';
 import { extractEmailFromFile } from '../services/emailExtractor';
 import { Prisma } from '@prisma/client';
+import { trainingTriggerLimiter } from '../middleware/rateLimit';
 
 const router = Router();
 
@@ -358,10 +359,10 @@ router.get('/data', async (req: AuthRequest, res: Response, next: NextFunction) 
     const trainingDataWithCount = trainingData.map((data) => {
       // extractedData is stored as JSON and can be an array or object
       const extractedData = data.extractedData as ParsedBooking[] | ParsedBooking | null;
-      const extractedDataCount = Array.isArray(extractedData) 
-        ? extractedData.length 
-        : extractedData !== null 
-        ? 1 
+      const extractedDataCount = Array.isArray(extractedData)
+        ? extractedData.length
+        : extractedData !== null
+        ? 1
         : 0;
       return {
         ...data,
@@ -629,7 +630,7 @@ router.get('/data/analysis', async (req: AuthRequest, res: Response, next: NextF
  * POST /api/v1/training/trigger
  * Manually trigger training
  */
-router.post('/trigger', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post('/trigger', trainingTriggerLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
     const trainingJobId = await triggerTraining(userId);
@@ -680,4 +681,3 @@ router.post('/jobs/:id/cancel', async (req: AuthRequest, res: Response, next: Ne
 });
 
 export default router;
-
