@@ -110,6 +110,43 @@
     border-color: var(--accent);
   }
 
+  /* ─── Checkboxes ───────────────────────────────────────── */
+  .checkbox {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 0.2rem;
+    background-color: var(--bg-muted);
+    border: 1px solid var(--color-border);
+    cursor: pointer;
+    flex-shrink: 0;
+    position: relative;
+    transition:
+      background-color 0.15s,
+      border-color 0.15s;
+  }
+  .checkbox:checked {
+    background-color: var(--accent);
+    border-color: var(--accent);
+  }
+  .checkbox:checked::after {
+    content: "";
+    position: absolute;
+    top: 1px;
+    left: 4px;
+    width: 4px;
+    height: 8px;
+    border: 2px solid #0d1117;
+    border-top: none;
+    border-left: none;
+    transform: rotate(45deg);
+  }
+  .checkbox:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
   /* ─── Labels ───────────────────────────────────────────── */
   .label {
     @apply block text-sm font-medium mb-1;

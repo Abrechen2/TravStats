@@ -469,7 +469,7 @@ export default function SettingsPage(): JSX.Element {
       checked={checked}
       onChange={onChange}
       disabled={disabled}
-      style={{ accentColor: "var(--accent)", width: "1rem", height: "1rem" }}
+      className="checkbox"
     />
   );
 
