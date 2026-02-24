@@ -56,7 +56,6 @@ export default function TrainingDataFilters({
       prevFiltersRef.current = filtersKey;
       onFilterChange(newFilters);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter, typeFilter, selectedTags, searchQuery]);
 
   const handleTagToggle = (tag: string) => {
@@ -76,14 +75,11 @@ export default function TrainingDataFilters({
     statusFilter || typeFilter || selectedTags.length > 0 || searchQuery.trim();
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
+    <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6 mb-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Filter</h3>
+        <h3 className="text-lg font-semibold text-[var(--text-primary)]">Filter</h3>
         {hasActiveFilters && (
-          <button
-            onClick={clearFilters}
-            className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
-          >
+          <button onClick={clearFilters} className="text-sm text-blue-600 hover:text-blue-800">
             Filter zurücksetzen
           </button>
         )}
@@ -92,9 +88,7 @@ export default function TrainingDataFilters({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Search */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Suche
-          </label>
+          <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Suche</label>
           <input
             type="text"
             value={searchQuery}
@@ -106,7 +100,7 @@ export default function TrainingDataFilters({
 
         {/* Status Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
             Status
           </label>
           <select
@@ -125,9 +119,7 @@ export default function TrainingDataFilters({
 
         {/* Type Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Typ
-          </label>
+          <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">Typ</label>
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
@@ -144,26 +136,26 @@ export default function TrainingDataFilters({
 
         {/* Tags Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
             Tags ({selectedTags.length} ausgewählt)
           </label>
-          <div className="max-h-32 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-md p-2 bg-white dark:bg-gray-700">
+          <div className="max-h-32 overflow-y-auto border border-[var(--color-border)] rounded-md p-2 bg-[var(--bg-surface)]">
             {allTags.length === 0 ? (
-              <p className="text-sm text-gray-500 dark:text-gray-400">Keine Tags verfügbar</p>
+              <p className="text-sm text-[var(--text-muted)]">Keine Tags verfügbar</p>
             ) : (
               <div className="space-y-1">
                 {allTags.map((tag) => (
                   <label
                     key={tag}
-                    className="flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 p-1 rounded"
+                    className="flex items-center gap-2 text-sm cursor-pointer hover:bg-[var(--bg-base)] p-1 rounded"
                   >
                     <input
                       type="checkbox"
                       checked={selectedTags.includes(tag)}
                       onChange={() => handleTagToggle(tag)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      className="rounded border-[var(--color-border)] text-blue-600 focus:ring-blue-500"
                     />
-                    <span className="text-gray-700 dark:text-gray-300">{tag}</span>
+                    <span className="text-[var(--text-primary)]">{tag}</span>
                   </label>
                 ))}
               </div>

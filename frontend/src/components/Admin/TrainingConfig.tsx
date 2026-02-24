@@ -32,10 +32,10 @@ export default function TrainingConfig({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+          <h2 className="text-xl font-semibold text-[var(--text-primary)]">
             {t("admin:trainingConfig.title")}
           </h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+          <p className="text-sm text-[var(--text-muted)] mt-1">
             {t("admin:trainingConfig.description")}
           </p>
         </div>
@@ -65,20 +65,20 @@ export default function TrainingConfig({
               </ol>
             </div>
             <p
-              className="text-sm text-gray-600 dark:text-gray-400"
+              className="text-sm text-[var(--text-muted)]"
               dangerouslySetInnerHTML={{ __html: t("admin:trainingConfig.helpContent.note") }}
             />
           </div>
         }
       />
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+      <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
           {t("admin:trainingConfig.modelStorage.title")}
         </h3>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
               {t("admin:trainingConfig.modelStorage.label")}
             </label>
             <input
@@ -91,17 +91,17 @@ export default function TrainingConfig({
                 })
               }
               placeholder={trainingConfig.envTrainingModelOutputDir || "./data/training/models"}
-              className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+              className="w-full px-3 py-2 bg-[var(--bg-surface)] border border-[var(--color-border)] rounded-lg text-[var(--text-primary)]"
             />
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-xs text-[var(--text-muted)] mt-1">
               {t("admin:trainingConfig.modelStorage.currentlyUsed")}{" "}
-              <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">
+              <code className="bg-[var(--bg-elevated)] px-1 rounded">
                 {trainingConfig.currentTrainingModelOutputDir}
               </code>
             </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-xs text-[var(--text-muted)] mt-1">
               {t("admin:trainingConfig.modelStorage.envFallback")}{" "}
-              <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">
+              <code className="bg-[var(--bg-elevated)] px-1 rounded">
                 {trainingConfig.envTrainingModelOutputDir}
               </code>
             </p>
@@ -109,13 +109,13 @@ export default function TrainingConfig({
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+      <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
           {t("admin:trainingConfig.modelNames.title")}
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
               {t("admin:trainingConfig.modelNames.emailModel")}
             </label>
             <input
@@ -128,23 +128,23 @@ export default function TrainingConfig({
                 })
               }
               placeholder={trainingConfig.envTrainingEmailModelName || "travstats-email-custom"}
-              className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+              className="w-full px-3 py-2 bg-[var(--bg-surface)] border border-[var(--color-border)] rounded-lg text-[var(--text-primary)]"
             />
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-xs text-[var(--text-muted)] mt-1">
               {t("admin:trainingConfig.modelNames.currently")}{" "}
-              <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">
+              <code className="bg-[var(--bg-elevated)] px-1 rounded">
                 {trainingConfig.currentTrainingEmailModelName}
               </code>
             </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-xs text-[var(--text-muted)] mt-1">
               {t("admin:trainingConfig.modelNames.env")}{" "}
-              <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">
+              <code className="bg-[var(--bg-elevated)] px-1 rounded">
                 {trainingConfig.envTrainingEmailModelName}
               </code>
             </p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
               {t("admin:trainingConfig.modelNames.visionModel")}
             </label>
             <input
@@ -157,17 +157,17 @@ export default function TrainingConfig({
                 })
               }
               placeholder={trainingConfig.envTrainingVisionModelName || "travstats-vision-custom"}
-              className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+              className="w-full px-3 py-2 bg-[var(--bg-surface)] border border-[var(--color-border)] rounded-lg text-[var(--text-primary)]"
             />
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-xs text-[var(--text-muted)] mt-1">
               {t("admin:trainingConfig.modelNames.currently")}{" "}
-              <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">
+              <code className="bg-[var(--bg-elevated)] px-1 rounded">
                 {trainingConfig.currentTrainingVisionModelName}
               </code>
             </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-xs text-[var(--text-muted)] mt-1">
               {t("admin:trainingConfig.modelNames.env")}{" "}
-              <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">
+              <code className="bg-[var(--bg-elevated)] px-1 rounded">
                 {trainingConfig.envTrainingVisionModelName}
               </code>
             </p>

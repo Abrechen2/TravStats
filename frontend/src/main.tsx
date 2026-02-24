@@ -39,7 +39,7 @@ const debugLog = (
     logs.push(logEntry);
     if (logs.length > 100) logs.shift(); // Keep last 100 entries
     localStorage.setItem("debug-logs", JSON.stringify(logs));
-  } catch (e) {
+  } catch {
     // Ignore localStorage errors
   }
 };

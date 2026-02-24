@@ -58,10 +58,10 @@ export default function LoggingManager({
       {/* Header with Quick Actions */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+          <h2 className="text-xl font-semibold text-[var(--text-primary)]">
             Debug Logging &amp; Diagnostics
           </h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+          <p className="text-sm text-[var(--text-muted)] mt-1">
             Advanced logging for troubleshooting and monitoring
           </p>
         </div>
@@ -88,10 +88,10 @@ export default function LoggingManager({
 
       {/* Debug Mode Warning */}
       {loggingConfig.logLevel === "debug" && (
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <div className="flex items-start gap-3">
             <svg
-              className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5"
+              className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5"
               fill="currentColor"
               viewBox="0 0 20 20"
             >
@@ -102,8 +102,8 @@ export default function LoggingManager({
               />
             </svg>
             <div>
-              <p className="font-medium text-yellow-900 dark:text-yellow-100">Debug Mode Active</p>
-              <p className="text-sm text-yellow-800 dark:text-yellow-200 mt-1">
+              <p className="font-medium text-yellow-900">Debug Mode Active</p>
+              <p className="text-sm text-yellow-800 mt-1">
                 Debug logging is enabled with detailed instrumentation. This may impact performance
                 and generate large log files. Consider disabling after troubleshooting.
               </p>
@@ -115,21 +115,21 @@ export default function LoggingManager({
       {/* Statistics */}
       {logStats && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <div className="text-gray-600 dark:text-gray-400 text-sm mb-1">Total Log Files</div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+          <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
+            <div className="text-[var(--text-muted)] text-sm mb-1">Total Log Files</div>
+            <div className="text-2xl font-bold text-[var(--text-primary)]">
               {logStats.fileCount}
             </div>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <div className="text-gray-600 dark:text-gray-400 text-sm mb-1">Total Size</div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+          <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
+            <div className="text-[var(--text-muted)] text-sm mb-1">Total Size</div>
+            <div className="text-2xl font-bold text-[var(--text-primary)]">
               {(logStats.totalSize / 1024 / 1024).toFixed(2)} MB
             </div>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <div className="text-gray-600 dark:text-gray-400 text-sm mb-1">Oldest Log</div>
-            <div className="text-sm font-medium text-gray-900 dark:text-white">
+          <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
+            <div className="text-[var(--text-muted)] text-sm mb-1">Oldest Log</div>
+            <div className="text-sm font-medium text-[var(--text-primary)]">
               {(() => {
                 try {
                   return logStats.oldestLog
@@ -141,9 +141,9 @@ export default function LoggingManager({
               })()}
             </div>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <div className="text-gray-600 dark:text-gray-400 text-sm mb-1">Newest Log</div>
-            <div className="text-sm font-medium text-gray-900 dark:text-white">
+          <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
+            <div className="text-[var(--text-muted)] text-sm mb-1">Newest Log</div>
+            <div className="text-sm font-medium text-[var(--text-primary)]">
               {(() => {
                 try {
                   return logStats.newestLog
@@ -159,13 +159,13 @@ export default function LoggingManager({
       )}
 
       {/* Logging Configuration */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+      <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
           Logging Configuration
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
               Log Level
             </label>
             <select
@@ -173,7 +173,7 @@ export default function LoggingManager({
               onChange={(e) =>
                 onLoggingConfigChange({ ...loggingConfig, logLevel: e.target.value })
               }
-              className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+              className="w-full px-3 py-2 bg-[var(--bg-surface)] border border-[var(--color-border)] rounded-lg text-[var(--text-primary)]"
             >
               <option value="error">Error (Minimal)</option>
               <option value="warn">Warning</option>
@@ -181,12 +181,12 @@ export default function LoggingManager({
               <option value="debug">Debug (Verbose)</option>
               <option value="trace">Trace (Very Verbose)</option>
             </select>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-xs text-[var(--text-muted)] mt-1">
               Higher levels include all lower levels (e.g., Debug includes Info, Warn, Error)
             </p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
               Log Retention (Days)
             </label>
             <input
@@ -200,9 +200,9 @@ export default function LoggingManager({
                   logRetentionDays: parseInt(e.target.value),
                 })
               }
-              className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
+              className="w-full px-3 py-2 bg-[var(--bg-surface)] border border-[var(--color-border)] rounded-lg text-[var(--text-primary)]"
             />
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <p className="text-xs text-[var(--text-muted)] mt-1">
               Log files older than this will be automatically deleted
             </p>
           </div>
@@ -218,8 +218,8 @@ export default function LoggingManager({
               className="mt-1 h-4 w-4"
             />
             <div>
-              <span className="font-medium text-gray-900 dark:text-white">Log HTTP Requests</span>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <span className="font-medium text-[var(--text-primary)]">Log HTTP Requests</span>
+              <p className="text-sm text-[var(--text-muted)]">
                 Log all HTTP requests with timing, IP, user, and status (category: http)
               </p>
             </div>
@@ -234,10 +234,8 @@ export default function LoggingManager({
               className="mt-1 h-4 w-4"
             />
             <div>
-              <span className="font-medium text-gray-900 dark:text-white">
-                Log Database Queries
-              </span>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <span className="font-medium text-[var(--text-primary)]">Log Database Queries</span>
+              <p className="text-sm text-[var(--text-muted)]">
                 Log SQL queries with args and performance metrics (category: database)
               </p>
             </div>
@@ -252,10 +250,8 @@ export default function LoggingManager({
               className="mt-1 h-4 w-4"
             />
             <div>
-              <span className="font-medium text-gray-900 dark:text-white">
-                Log Parser Operations
-              </span>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <span className="font-medium text-[var(--text-primary)]">Log Parser Operations</span>
+              <p className="text-sm text-[var(--text-muted)]">
                 Log LLM operations with provider details (category: parser)
               </p>
             </div>
@@ -264,9 +260,9 @@ export default function LoggingManager({
       </div>
 
       {/* Log Files */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+      <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Log Files</h3>
+          <h3 className="text-lg font-semibold text-[var(--text-primary)]">Log Files</h3>
           <button
             onClick={onCleanup}
             className="text-sm bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg transition"
@@ -275,62 +271,62 @@ export default function LoggingManager({
           </button>
         </div>
         {logFiles.length === 0 ? (
-          <p className="text-gray-600 dark:text-gray-400 text-sm">No log files found</p>
+          <p className="text-[var(--text-muted)] text-sm">No log files found</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-900">
+              <thead className="bg-[var(--bg-base)]">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                     Filename
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                     Category
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                     Size
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                     Modified
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              <tbody className="divide-y divide-gray-200">
                 {logFiles.map((file) => (
                   <tr key={file.filename}>
-                    <td className="px-4 py-3 text-sm font-mono text-gray-900 dark:text-white">
+                    <td className="px-4 py-3 text-sm font-mono text-[var(--text-primary)]">
                       {file.filename}
                     </td>
                     <td className="px-4 py-3 text-sm">
                       <span
                         className={`px-2 py-1 text-xs font-semibold rounded-full ${
                           file.category === "error"
-                            ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
-                            : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                            ? "bg-red-100 text-red-800"
+                            : "bg-blue-100 text-blue-800"
                         }`}
                       >
                         {file.category}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                    <td className="px-4 py-3 text-sm text-[var(--text-primary)]">
                       {(file.size / 1024).toFixed(2)} KB
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                    <td className="px-4 py-3 text-sm text-[var(--text-primary)]">
                       {format(new Date(file.modified), "MMM d, HH:mm")}
                     </td>
                     <td className="px-4 py-3 text-sm space-x-2">
                       <button
                         onClick={() => onDownload(file.filename)}
-                        className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                        className="text-blue-600 hover:text-blue-900"
                       >
                         Download
                       </button>
                       <button
                         onClick={() => onDelete(file.filename)}
-                        className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                        className="text-red-600 hover:text-red-900"
                       >
                         Delete
                       </button>

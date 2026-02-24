@@ -111,7 +111,7 @@ export default function AchievementPopup({
     >
       <div
         className={`
-        ${isDarkMode ? "bg-gray-800" : "bg-white"}
+        bg-[var(--bg-surface)]
         rounded-2xl max-w-md w-full p-8 shadow-2xl
         ${tierGlow[tier]}
         ${isExiting ? "scale-95 opacity-0" : "scale-100 opacity-100"}
@@ -141,7 +141,8 @@ export default function AchievementPopup({
         {/* Close Button */}
         <button
           onClick={handleClose}
-          className={`absolute top-4 right-4 p-2 rounded-lg ${isDarkMode ? "hover:bg-gray-700 text-gray-400" : "hover:bg-gray-100 text-gray-500"}`}
+          className="absolute top-4 right-4 p-2 rounded-lg transition-colors"
+          style={{ color: "var(--text-muted)" }}
           aria-label={t("common:buttons.close")}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -172,18 +173,15 @@ export default function AchievementPopup({
         <div className="text-center space-y-4">
           <div>
             <div
-              className={`text-sm font-semibold uppercase tracking-wider mb-2 ${
-                isDarkMode ? "text-gray-400" : "text-gray-600"
-              }`}
+              className="text-sm font-semibold uppercase tracking-wider mb-2"
+              style={{ color: "var(--text-muted)" }}
             >
               🏆 {t("achievements:popup.unlocked")}
             </div>
-            <h2
-              className={`text-3xl font-bold mb-2 ${isDarkMode ? "text-white" : "text-gray-900"}`}
-            >
+            <h2 className="text-3xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>
               {currentAchievement.achievement.name}
             </h2>
-            <p className={`text-lg ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
+            <p className="text-lg" style={{ color: "var(--text-muted)" }}>
               {currentAchievement.achievement.description}
             </p>
           </div>
@@ -212,7 +210,7 @@ export default function AchievementPopup({
           {/* Progress Indicator */}
           {achievements.length > 1 && (
             <div className="pt-4">
-              <div className={`text-xs ${isDarkMode ? "text-gray-400" : "text-gray-500"} mb-2`}>
+              <div className="text-xs mb-2" style={{ color: "var(--text-muted)" }}>
                 {t("achievements:popup.progress", {
                   current: currentIndex + 1,
                   total: achievements.length,
@@ -226,8 +224,8 @@ export default function AchievementPopup({
                       idx === currentIndex
                         ? "w-8 bg-gradient-to-r " + tierColors[tier]
                         : idx < currentIndex
-                          ? "w-1.5 bg-gray-400"
-                          : "w-1.5 bg-gray-300"
+                          ? "w-1.5 bg-[var(--text-muted)]"
+                          : "w-1.5 bg-[var(--color-border)]"
                     }`}
                   />
                 ))}
@@ -243,8 +241,8 @@ export default function AchievementPopup({
                   onClick={handleClose}
                   className={`flex-1 px-4 py-2 rounded-lg font-medium ${
                     isDarkMode
-                      ? "bg-gray-700 hover:bg-gray-600 text-gray-200"
-                      : "bg-gray-200 hover:bg-gray-300 text-gray-700"
+                      ? "bg-[var(--bg-elevated)] hover:bg-[var(--bg-muted)] text-[var(--text-primary)]"
+                      : "bg-[var(--bg-elevated)] hover:bg-[var(--bg-muted)] text-[var(--text-primary)]"
                   }`}
                 >
                   {t("achievements:popup.closeAll")}

@@ -52,7 +52,7 @@ export default function TrainingDataPreview({
       <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
         {/* Background overlay */}
         <div
-          className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75"
+          className="fixed inset-0 transition-opacity bg-[var(--bg-base)]0 bg-opacity-75"
           onClick={onClose}
         ></div>
 
@@ -61,15 +61,15 @@ export default function TrainingDataPreview({
           &#8203;
         </span>
 
-        <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
-          <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6">
+        <div className="inline-block align-bottom bg-[var(--bg-surface)] rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+          <div className="bg-[var(--bg-surface)] px-4 pt-5 pb-4 sm:p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+              <h3 className="text-lg leading-6 font-medium text-[var(--text-primary)]">
                 {t("training:preview.title")}
               </h3>
               <button
                 onClick={onClose}
-                className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+                className="text-[var(--text-muted)] hover:text-[var(--text-muted)]"
               >
                 <span className="sr-only">{t("training:preview.closeAria")}</span>
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -86,44 +86,42 @@ export default function TrainingDataPreview({
             {loading ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-                <p className="mt-2 text-gray-600 dark:text-gray-400">
-                  {t("training:preview.loading")}
-                </p>
+                <p className="mt-2 text-[var(--text-muted)]">{t("training:preview.loading")}</p>
               </div>
             ) : data ? (
               <div className="space-y-6">
                 {/* Basic Info */}
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                  <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-2">
                     {t("training:preview.basicInfo")}
                   </h4>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="text-gray-500 dark:text-gray-400">
+                      <span className="text-[var(--text-muted)]">
                         {t("training:preview.type")}:
                       </span>{" "}
-                      <span className="text-gray-900 dark:text-white">{data.type}</span>
+                      <span className="text-[var(--text-primary)]">{data.type}</span>
                     </div>
                     <div>
-                      <span className="text-gray-500 dark:text-gray-400">
+                      <span className="text-[var(--text-muted)]">
                         {t("training:preview.status")}:
                       </span>{" "}
-                      <span className="text-gray-900 dark:text-white">{data.status}</span>
+                      <span className="text-[var(--text-primary)]">{data.status}</span>
                     </div>
                     <div>
-                      <span className="text-gray-500 dark:text-gray-400">
+                      <span className="text-[var(--text-muted)]">
                         {t("training:preview.created")}:
                       </span>{" "}
-                      <span className="text-gray-900 dark:text-white">
+                      <span className="text-[var(--text-primary)]">
                         {new Date(data.createdAt).toLocaleString()}
                       </span>
                     </div>
                     {data.trainedAt && (
                       <div>
-                        <span className="text-gray-500 dark:text-gray-400">
+                        <span className="text-[var(--text-muted)]">
                           {t("training:preview.trained")}:
                         </span>{" "}
-                        <span className="text-gray-900 dark:text-white">
+                        <span className="text-[var(--text-primary)]">
                           {new Date(data.trainedAt).toLocaleString()}
                         </span>
                       </div>
@@ -134,14 +132,14 @@ export default function TrainingDataPreview({
                 {/* Tags */}
                 {data.tags && data.tags.length > 0 && (
                   <div>
-                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                    <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-2">
                       {t("training:preview.tags")}
                     </h4>
                     <div className="flex flex-wrap gap-2">
                       {data.tags.map((tag: string) => (
                         <span
                           key={tag}
-                          className="inline-flex items-center px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded text-sm"
+                          className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm"
                         >
                           {tag}
                         </span>
@@ -153,11 +151,11 @@ export default function TrainingDataPreview({
                 {/* Annotations */}
                 {data.annotations && (
                   <div>
-                    <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                    <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-2">
                       {t("training:preview.annotations")}
                     </h4>
-                    <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 max-h-64 overflow-y-auto">
-                      <pre className="text-xs text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-mono">
+                    <div className="bg-[var(--bg-base)] rounded-lg p-4 max-h-64 overflow-y-auto">
+                      <pre className="text-xs text-[var(--text-primary)] whitespace-pre-wrap font-mono">
                         {JSON.stringify(data.annotations, null, 2)}
                       </pre>
                     </div>
@@ -169,13 +167,13 @@ export default function TrainingDataPreview({
                   Array.isArray(data.extractedData) &&
                   data.extractedData.length > 0 && (
                     <div>
-                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                      <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-2">
                         {t("training:preview.extractedDataCount", {
                           count: data.extractedData.length,
                         })}
                       </h4>
-                      <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 max-h-64 overflow-y-auto">
-                        <pre className="text-xs text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-mono">
+                      <div className="bg-[var(--bg-base)] rounded-lg p-4 max-h-64 overflow-y-auto">
+                        <pre className="text-xs text-[var(--text-primary)] whitespace-pre-wrap font-mono">
                           {JSON.stringify(data.extractedData, null, 2)}
                         </pre>
                       </div>
@@ -183,12 +181,12 @@ export default function TrainingDataPreview({
                   )}
               </div>
             ) : (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+              <div className="text-center py-8 text-[var(--text-muted)]">
                 {t("training:preview.noDataAvailable")}
               </div>
             )}
           </div>
-          <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+          <div className="bg-[var(--bg-base)] px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
             <button
               type="button"
               onClick={onClose}

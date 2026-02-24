@@ -156,34 +156,40 @@ function AirportMarkers({ flights }: AirportMarkersProps): JSX.Element {
               <div className="text-sm space-y-2" style={{ minWidth: "200px" }}>
                 <div className="font-bold text-base border-b pb-1 mb-2">{airport.code}</div>
 
-                <div className="text-xs text-gray-600">{airport.name}</div>
+                <div className="text-xs text-[var(--text-muted)]">{airport.name}</div>
 
                 <div className="grid grid-cols-2 gap-2 pt-2 border-t">
                   <div>
-                    <div className="text-xs text-gray-500">{t("map:airportMarkers.visits")}</div>
+                    <div className="text-xs text-[var(--text-muted)]">
+                      {t("map:airportMarkers.visits")}
+                    </div>
                     <div className="font-semibold text-blue-600">{airport.visits}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500">{t("map:airportMarkers.airlines")}</div>
+                    <div className="text-xs text-[var(--text-muted)]">
+                      {t("map:airportMarkers.airlines")}
+                    </div>
                     <div className="font-semibold text-purple-600">{airport.airlines.length}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-[var(--text-muted)]">
                       {t("map:airportMarkers.departures")}
                     </div>
                     <div className="font-semibold text-green-600">{airport.departures}</div>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500">{t("map:airportMarkers.arrivals")}</div>
+                    <div className="text-xs text-[var(--text-muted)]">
+                      {t("map:airportMarkers.arrivals")}
+                    </div>
                     <div className="font-semibold text-orange-600">{airport.arrivals}</div>
                   </div>
                 </div>
 
                 <div className="pt-2 border-t">
-                  <div className="text-xs text-gray-500 mb-1">
+                  <div className="text-xs text-[var(--text-muted)] mb-1">
                     {t("map:airportMarkers.lastVisit")}
                   </div>
-                  <div className="text-xs text-gray-600">
+                  <div className="text-xs text-[var(--text-muted)]">
                     {new Date(airport.lastVisit).toLocaleDateString(getDateLocale(), {
                       year: "numeric",
                       month: "short",
@@ -193,10 +199,10 @@ function AirportMarkers({ flights }: AirportMarkersProps): JSX.Element {
                 </div>
 
                 <div className="pt-2 border-t">
-                  <div className="text-xs text-gray-500 mb-1">
+                  <div className="text-xs text-[var(--text-muted)] mb-1">
                     {t("map:airportMarkers.firstVisit")}
                   </div>
-                  <div className="text-xs text-gray-600">
+                  <div className="text-xs text-[var(--text-muted)]">
                     {new Date(airport.firstVisit).toLocaleDateString(getDateLocale(), {
                       year: "numeric",
                       month: "short",
@@ -207,10 +213,10 @@ function AirportMarkers({ flights }: AirportMarkersProps): JSX.Element {
 
                 {airport.airlines.length > 0 && (
                   <div className="pt-2 border-t">
-                    <div className="text-xs text-gray-500 mb-1">
+                    <div className="text-xs text-[var(--text-muted)] mb-1">
                       {t("map:airportMarkers.airlines")}
                     </div>
-                    <div className="text-xs text-gray-600">
+                    <div className="text-xs text-[var(--text-muted)]">
                       {airport.airlines.slice(0, 3).join(", ")}
                       {airport.airlines.length > 3 &&
                         ` ${t("map:airportMarkers.moreAirlines", { count: airport.airlines.length - 3 })}`}

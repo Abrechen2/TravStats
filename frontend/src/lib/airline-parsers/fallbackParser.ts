@@ -64,7 +64,7 @@ function mapCompartmentToSeatClass(
 export class FallbackParser implements BoardingPassParser {
   name = "fallback";
   priority = 100;
-  category: "fallback" = "fallback";
+  category = "fallback" as const;
 
   canParse(barcodeData: string): boolean {
     // Fallback parser can potentially parse anything
@@ -238,7 +238,7 @@ export class FallbackParser implements BoardingPassParser {
       }
 
       // Pattern 4: Passenger name (LASTNAME/FIRSTNAME or similar)
-      const namePattern = /([A-Z]{2,})\s*[\/,]\s*([A-Z]{2,})/;
+      const namePattern = /([A-Z]{2,})\s*[/,]\s*([A-Z]{2,})/;
       const nameMatch = barcodeData.match(namePattern);
       if (nameMatch) {
         extracted.passengerName = `${nameMatch[1]}/${nameMatch[2]}`;

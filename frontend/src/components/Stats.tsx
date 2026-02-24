@@ -26,7 +26,7 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
 
   const loadStats = async () => {
     try {
-      const { minRouteCount, ...apiFilters } = filters;
+      const { minRouteCount: _minRouteCount, ...apiFilters } = filters; // eslint-disable-line @typescript-eslint/no-unused-vars
       const hasBackendFilters = Object.keys(apiFilters).length > 0;
       // If filters are applied, calculate stats from filtered flights
       if (hasBackendFilters) {
@@ -34,6 +34,7 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
         let allFlights: Flight[] = [];
         let offset = 0;
 
+        // eslint-disable-next-line no-constant-condition
         while (true) {
           const { flights } = await flightsApi.getAll({ ...apiFilters, limit, offset });
           allFlights = [...allFlights, ...flights];
@@ -98,12 +99,16 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
   };
 
   if (loading) {
-    return <div className="text-center py-4 dark:text-gray-300">{t("stats:loading")}</div>;
+    return (
+      <div className="text-center py-4" style={{ color: "var(--text-muted)" }}>
+        {t("stats:loading")}
+      </div>
+    );
   }
 
   if (!stats) {
     return (
-      <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+      <div className="text-center py-4" style={{ color: "var(--text-muted)" }}>
         {t("stats:noStatsAvailable")}
       </div>
     );
@@ -114,15 +119,15 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-4">
         <div className="card">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
             {t("stats:overview.totalFlights")}
           </p>
-          <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+          <p className="text-3xl font-bold" style={{ color: "var(--accent)" }}>
             {stats.totalFlights}
           </p>
         </div>
         <div className="card">
-          <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+          <div className="text-sm flex items-center gap-2" style={{ color: "var(--text-muted)" }}>
             {t("stats:overview.totalDistance")}
             <HelpIcon
               content={t("stats:help.totalDistance")}
@@ -130,20 +135,20 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
               position="top"
             />
           </div>
-          <p className="text-3xl font-bold text-green-600 dark:text-green-400">
+          <p className="text-3xl font-bold" style={{ color: "var(--accent)" }}>
             {formatDistance(stats.totalDistance, units.distanceUnit, t)}
           </p>
         </div>
         <div className="card">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
             {t("stats:overview.avgDistance")}
           </p>
-          <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">
+          <p className="text-3xl font-bold" style={{ color: "var(--accent)" }}>
             {formatDistance(stats.avgDistance, units.distanceUnit, t)}
           </p>
         </div>
         <div className="card">
-          <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+          <div className="text-sm flex items-center gap-2" style={{ color: "var(--text-muted)" }}>
             {t("stats:overview.totalFlightTime")}
             <HelpIcon
               content={t("stats:help.totalFlightTime")}
@@ -151,16 +156,16 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
               position="top"
             />
           </div>
-          <p className="text-3xl font-bold text-orange-600 dark:text-orange-400">
+          <p className="text-3xl font-bold" style={{ color: "var(--accent)" }}>
             {Math.round(stats.totalFlightTime / 60)} {t("stats:overview.hours")}
           </p>
         </div>
         {typeof stats.totalCost === "number" && (
           <div className="card">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
               {t("stats:overview.totalCost")}
             </p>
-            <p className="text-3xl font-bold text-amber-600 dark:text-amber-400">
+            <p className="text-3xl font-bold" style={{ color: "var(--accent)" }}>
               {formatCurrencyUtil(stats.totalCost, units.currency)}
             </p>
           </div>
@@ -169,10 +174,16 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
 
       {/* By Status */}
       <div className="card">
-        <h3 className="font-semibold mb-3 dark:text-gray-100">{t("stats:byStatus.title")}</h3>
+        <h3 className="font-semibold mb-3" style={{ color: "var(--text-primary)" }}>
+          {t("stats:byStatus.title")}
+        </h3>
         <div className="space-y-2">
           {Object.entries(stats.byStatus).map(([status, count]) => (
-            <div key={status} className="flex justify-between items-center dark:text-gray-200">
+            <div
+              key={status}
+              className="flex justify-between items-center"
+              style={{ color: "var(--text-primary)" }}
+            >
               <span>{t(`flights:status.${status}`, { defaultValue: status })}</span>
               <span className="font-semibold">{count}</span>
             </div>
@@ -182,13 +193,19 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
 
       {/* By Airline */}
       <div className="card">
-        <h3 className="font-semibold mb-3 dark:text-gray-100">{t("stats:airlines.title")}</h3>
+        <h3 className="font-semibold mb-3" style={{ color: "var(--text-primary)" }}>
+          {t("stats:airlines.title")}
+        </h3>
         <div className="space-y-2">
           {Object.entries(stats.byAirline)
             .sort(([, a], [, b]) => b - a)
             .slice(0, 5)
             .map(([airline, count]) => (
-              <div key={airline} className="flex justify-between items-center dark:text-gray-200">
+              <div
+                key={airline}
+                className="flex justify-between items-center"
+                style={{ color: "var(--text-primary)" }}
+              >
                 <span>{airline}</span>
                 <span className="font-semibold">{count}</span>
               </div>
@@ -199,10 +216,16 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
       {/* By Category */}
       {stats.byCategory && (
         <div className="card">
-          <h3 className="font-semibold mb-3 dark:text-gray-100">{t("stats:byCategory.title")}</h3>
+          <h3 className="font-semibold mb-3" style={{ color: "var(--text-primary)" }}>
+            {t("stats:byCategory.title")}
+          </h3>
           <div className="space-y-2">
             {Object.entries(stats.byCategory).map(([category, count]) => (
-              <div key={category} className="flex justify-between items-center dark:text-gray-200">
+              <div
+                key={category}
+                className="flex justify-between items-center"
+                style={{ color: "var(--text-primary)" }}
+              >
                 <span>{t(`flights:category.${category}`, { defaultValue: category })}</span>
                 <span className="font-semibold">{count}</span>
               </div>
@@ -214,20 +237,26 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
       {/* Top Routes */}
       {routes.length > 0 && (
         <div className="card">
-          <h3 className="font-semibold mb-3 dark:text-gray-100">{t("stats:topRoutes.title")}</h3>
+          <h3 className="font-semibold mb-3" style={{ color: "var(--text-primary)" }}>
+            {t("stats:topRoutes.title")}
+          </h3>
           <div className="space-y-3">
             {routes.map((route, index) => (
-              <div key={route.route} className="border-b dark:border-gray-700 pb-2 last:border-0">
+              <div
+                key={route.route}
+                className="border-b pb-2 last:border-0"
+                style={{ borderColor: "var(--color-border)" }}
+              >
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="font-medium dark:text-gray-100">
+                    <p className="font-medium" style={{ color: "var(--text-primary)" }}>
                       {index + 1}. {route.route}
                     </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="text-sm" style={{ color: "var(--text-muted)" }}>
                       {formatDistance(route.distance, units.distanceUnit, t)}
                     </p>
                   </div>
-                  <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+                  <span className="text-sm font-semibold" style={{ color: "var(--accent)" }}>
                     {route.count}x
                   </span>
                 </div>

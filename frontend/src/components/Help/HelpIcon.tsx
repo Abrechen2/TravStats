@@ -208,11 +208,10 @@ export default function HelpIcon({
   };
 
   const arrowClasses = {
-    top: "top-full left-1/2 transform -translate-x-1/2 border-t-gray-900 dark:border-t-gray-700",
-    bottom:
-      "bottom-full left-1/2 transform -translate-x-1/2 border-b-gray-900 dark:border-b-gray-700",
-    left: "left-full top-1/2 transform -translate-y-1/2 border-l-gray-900 dark:border-l-gray-700",
-    right: "right-full top-1/2 transform -translate-y-1/2 border-r-gray-900 dark:border-r-gray-700",
+    top: "top-full left-1/2 transform -translate-x-1/2",
+    bottom: "bottom-full left-1/2 transform -translate-x-1/2",
+    left: "left-full top-1/2 transform -translate-y-1/2",
+    right: "right-full top-1/2 transform -translate-y-1/2",
   };
 
   const tooltipContent = (isHovered || isExpanded) && (
@@ -227,16 +226,23 @@ export default function HelpIcon({
         }
       }}
     >
-      <div className="bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg shadow-xl p-3 max-w-sm sm:max-w-md break-words">
+      <div
+        className="text-xs rounded-lg shadow-xl p-3 max-w-sm sm:max-w-md break-words"
+        style={{
+          background: "var(--bg-elevated)",
+          color: "var(--text-primary)",
+          border: "1px solid var(--color-border)",
+        }}
+      >
         <p className="whitespace-normal break-words">{content}</p>
         {expandedContent && !isExpanded && (
-          <p className="mt-2 text-xs text-blue-400 dark:text-blue-300 italic">
+          <p className="mt-2 text-xs italic" style={{ color: "var(--accent)" }}>
             {t("help.clickForMore")}
           </p>
         )}
         {expandedContent && isExpanded && (
-          <div className="mt-2 pt-2 border-t border-gray-600 dark:border-gray-500">
-            <p className="whitespace-normal text-gray-300 dark:text-gray-300 break-words">
+          <div className="mt-2 pt-2 border-t" style={{ borderColor: "var(--color-border)" }}>
+            <p className="whitespace-normal break-words" style={{ color: "var(--text-muted)" }}>
               {expandedContent}
             </p>
           </div>
@@ -273,7 +279,8 @@ export default function HelpIcon({
       <div className={`relative inline-flex items-center ${className}`}>
         <div
           ref={iconRef}
-          className="cursor-help text-gray-400 hover:text-blue-500 dark:text-gray-500 dark:hover:text-blue-400 transition-colors touch-manipulation"
+          className="cursor-help transition-colors touch-manipulation"
+          style={{ color: "var(--text-muted)" }}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => {
             if (!isExpanded) {

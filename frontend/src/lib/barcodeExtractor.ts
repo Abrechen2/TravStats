@@ -169,7 +169,7 @@ async function tryZXingFormats(imageData: ImageData): Promise<string | null> {
         );
         return result.getText();
       }
-    } catch (zxingError) {
+    } catch {
       // ZXing throws errors when no barcode found, this is expected
       console.debug("[Barcode Extractor] ZXing extraction failed (no barcode)");
       return null;

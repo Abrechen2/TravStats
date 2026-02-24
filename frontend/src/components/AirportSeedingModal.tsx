@@ -56,20 +56,16 @@ export default function AirportSeedingModal({
       <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
         {/* Background overlay */}
         <div
-          className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75"
+          className="fixed inset-0 transition-opacity bg-[var(--bg-base)]0 bg-opacity-75"
           onClick={onClose}
         ></div>
 
         {/* Modal */}
-        <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-          <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6">
+        <div className="inline-block align-bottom bg-[var(--bg-surface)] rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+          <div className="bg-[var(--bg-surface)] px-4 pt-5 pb-4 sm:p-6">
             <div className="sm:flex sm:items-start">
-              <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900 sm:mx-0 sm:h-10 sm:w-10">
-                <svg
-                  className="h-6 w-6 text-blue-600 dark:text-blue-400 animate-spin"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
+              <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
+                <svg className="h-6 w-6 text-blue-600 animate-spin" fill="none" viewBox="0 0 24 24">
                   <circle
                     className="opacity-25"
                     cx="12"
@@ -86,23 +82,23 @@ export default function AirportSeedingModal({
                 </svg>
               </div>
               <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+                <h3 className="text-lg leading-6 font-medium text-[var(--text-primary)]">
                   {t("setup:airportSeeding.modal.title")}
                 </h3>
                 <div className="mt-2">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="text-sm text-[var(--text-muted)]">
                     {t("setup:airportSeeding.modal.description")}
                   </p>
 
                   {status.status === "running" && (
                     <div className="mt-4 space-y-2">
-                      <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                      <div className="w-full bg-[var(--bg-muted)] rounded-full h-2">
                         <div
-                          className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full transition-all duration-300"
+                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                           style={{ width: `${progressPercent}%` }}
                         ></div>
                       </div>
-                      <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400">
+                      <div className="flex justify-between text-xs text-[var(--text-muted)]">
                         <span>
                           {t("setup:airportSeeding.modal.progress", { percent: progressPercent })}
                         </span>
@@ -122,7 +118,7 @@ export default function AirportSeedingModal({
               </div>
             </div>
           </div>
-          <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+          <div className="bg-[var(--bg-base)] px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
             <button
               type="button"
               onClick={onClose}

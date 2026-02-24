@@ -88,7 +88,7 @@ export default function ReceiptUpload({
       <label className="label">{t("flights:receipt.label")}</label>
 
       {currentReceiptUrl && !uploading ? (
-        <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+        <div className="flex items-center gap-3 p-3 bg-[var(--bg-base)] rounded-lg">
           <div className="flex-1">
             <a
               href={
@@ -98,7 +98,7 @@ export default function ReceiptUpload({
               }
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
+              className="text-blue-600 hover:underline text-sm"
             >
               {t("flights:receipt.viewReceipt")}
             </a>
@@ -106,7 +106,7 @@ export default function ReceiptUpload({
           <button
             type="button"
             onClick={handleDelete}
-            className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-sm"
+            className="text-red-600 hover:text-red-800 text-sm"
           >
             {t("common:buttons.remove")}
           </button>
@@ -115,8 +115,8 @@ export default function ReceiptUpload({
         <div
           className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
             dragActive
-              ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-              : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"
+              ? "border-blue-500 bg-blue-50"
+              : "border-[var(--color-border)] hover:border-[var(--color-border)]"
           }`}
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
@@ -134,10 +134,10 @@ export default function ReceiptUpload({
 
           {uploading ? (
             <div className="space-y-2">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-[var(--text-muted)]">
                 {t("flights:receipt.uploading", { progress: uploadProgress })}
               </p>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+              <div className="w-full bg-[var(--bg-muted)] rounded-full h-2">
                 <div
                   className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                   style={{ width: `${uploadProgress}%` }}
@@ -147,7 +147,7 @@ export default function ReceiptUpload({
           ) : (
             <>
               <svg
-                className="mx-auto h-12 w-12 text-gray-400"
+                className="mx-auto h-12 w-12 text-[var(--text-muted)]"
                 stroke="currentColor"
                 fill="none"
                 viewBox="0 0 48 48"
@@ -163,15 +163,15 @@ export default function ReceiptUpload({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
+                  className="text-blue-600 hover:text-blue-800 font-medium"
                 >
                   {t("flights:receipt.uploadFile")}
                 </button>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                <p className="text-sm text-[var(--text-muted)] mt-1">
                   {t("flights:receipt.dragAndDrop")}
                 </p>
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
+              <p className="text-xs text-[var(--text-muted)] mt-2">
                 {t("flights:receipt.fileFormats")}
               </p>
             </>
@@ -179,7 +179,7 @@ export default function ReceiptUpload({
         </div>
       )}
 
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="text-sm text-red-600">{error}</p>}
     </div>
   );
 }

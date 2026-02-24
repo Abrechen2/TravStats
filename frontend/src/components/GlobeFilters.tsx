@@ -88,10 +88,10 @@ function GlobeFilters({
       {/* Collapse Button */}
       <button
         onClick={onToggleCollapse}
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-lg px-4 py-2 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
+        className="bg-[var(--bg-surface)] rounded-lg shadow-lg px-4 py-2 border border-[var(--color-border)] hover:bg-[var(--bg-base)] transition-colors flex items-center gap-2"
         style={{ touchAction: "auto", pointerEvents: "auto" }}
       >
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+        <span className="text-sm font-medium text-[var(--text-primary)]">
           {isCollapsed ? "▶" : "▼"} {t("map:filters.title")}
         </span>
       </button>
@@ -99,12 +99,12 @@ function GlobeFilters({
       {/* Filter Panel */}
       {!isCollapsed && (
         <div
-          className="mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 border border-gray-200 dark:border-gray-700 max-w-xs max-h-[calc(100vh-120px)] overflow-y-auto"
+          className="mt-2 bg-[var(--bg-surface)] rounded-lg shadow-lg p-4 border border-[var(--color-border)] max-w-xs max-h-[calc(100vh-120px)] overflow-y-auto"
           style={{ touchAction: "auto", pointerEvents: "auto" }}
         >
           {/* Zeit-Filter */}
           <div className="mb-4">
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-2">
               📅 {t("map:filters.timePeriod")}
             </h3>
 
@@ -113,7 +113,7 @@ function GlobeFilters({
               onChange={(e) =>
                 onChange({ ...filters, yearFilter: e.target.value ? Number(e.target.value) : null })
               }
-              className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-blue-500"
+              className="w-full p-2 text-sm border border-[var(--color-border)] rounded bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
             >
               <option value="">{t("map:filters.allYears")}</option>
               {availableYears.map((year) => (
@@ -131,7 +131,7 @@ function GlobeFilters({
                   monthFilter: e.target.value ? Number(e.target.value) : null,
                 })
               }
-              className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 mt-2 focus:ring-2 focus:ring-blue-500"
+              className="w-full p-2 text-sm border border-[var(--color-border)] rounded bg-[var(--bg-surface)] text-[var(--text-primary)] mt-2 focus:ring-2 focus:ring-blue-500"
             >
               <option value="">{t("map:filters.allMonths")}</option>
               {MONTHS.map((month) => (
@@ -144,10 +144,10 @@ function GlobeFilters({
 
           {/* Routen-Frequenz Filter */}
           <div className="mb-4">
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-2">
               🛫 {t("map:filters.routeFrequency")}
             </h3>
-            <label className="text-xs text-gray-600 dark:text-gray-400 block mb-1">
+            <label className="text-xs text-[var(--text-muted)] block mb-1">
               {t("map:filters.minFlown", { count: filters.minRouteCount })}
             </label>
             <input
@@ -156,9 +156,9 @@ function GlobeFilters({
               max="20"
               value={filters.minRouteCount}
               onChange={(e) => onChange({ ...filters, minRouteCount: Number(e.target.value) })}
-              className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
+              className="w-full h-2 bg-[var(--bg-muted)] rounded-lg appearance-none cursor-pointer"
             />
-            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
+            <div className="flex justify-between text-xs text-[var(--text-muted)] mt-1">
               <span>1x</span>
               <span>20x+</span>
             </div>
@@ -168,23 +168,23 @@ function GlobeFilters({
           {availableAirlines.length > 0 && (
             <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">
                   🏢 {t("map:filters.airlines")}
                 </h3>
                 <button
                   onClick={toggleAllAirlines}
-                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                  className="text-xs text-blue-600 hover:underline"
                 >
                   {filters.selectedAirlines.length === availableAirlines.length
                     ? t("map:filters.none")
                     : t("map:filters.all")}
                 </button>
               </div>
-              <div className="max-h-32 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded p-2 bg-gray-50 dark:bg-gray-700">
+              <div className="max-h-32 overflow-y-auto border border-[var(--color-border)] rounded p-2 bg-[var(--bg-base)]">
                 {availableAirlines.slice(0, 15).map((airline) => (
                   <label
                     key={airline}
-                    className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 mb-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 p-1 rounded"
+                    className="flex items-center gap-2 text-sm text-[var(--text-primary)] mb-1 cursor-pointer hover:bg-[var(--bg-elevated)] p-1 rounded"
                   >
                     <input
                       type="checkbox"
@@ -199,7 +199,7 @@ function GlobeFilters({
                   </label>
                 ))}
                 {availableAirlines.length > 15 && (
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 italic">
+                  <div className="text-xs text-[var(--text-muted)] mt-2 italic">
                     {t("map:filters.moreAirlines", { count: availableAirlines.length - 15 })}
                   </div>
                 )}
@@ -209,10 +209,10 @@ function GlobeFilters({
 
           {/* Status-Filter */}
           <div className="mb-4">
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-2">
               ✈️ {t("map:filters.status")}
             </h3>
-            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 mb-1 cursor-pointer">
+            <label className="flex items-center gap-2 text-sm text-[var(--text-primary)] mb-1 cursor-pointer">
               <input
                 type="checkbox"
                 checked={filters.showFlown}
@@ -221,7 +221,7 @@ function GlobeFilters({
               />
               {t("flights:status.flown")}
             </label>
-            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 mb-1 cursor-pointer">
+            <label className="flex items-center gap-2 text-sm text-[var(--text-primary)] mb-1 cursor-pointer">
               <input
                 type="checkbox"
                 checked={filters.showScheduled}
@@ -230,7 +230,7 @@ function GlobeFilters({
               />
               {t("flights:status.scheduled")}
             </label>
-            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+            <label className="flex items-center gap-2 text-sm text-[var(--text-primary)] cursor-pointer">
               <input
                 type="checkbox"
                 checked={filters.showCancelled}
@@ -244,7 +244,7 @@ function GlobeFilters({
           {/* Reset Button */}
           <button
             onClick={handleReset}
-            className="w-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 p-2 rounded hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-medium transition-colors"
+            className="w-full bg-[var(--bg-muted)] text-[var(--text-primary)] p-2 rounded hover:bg-[var(--bg-elevated)] text-sm font-medium transition-colors"
           >
             {t("map:filters.reset")}
           </button>
