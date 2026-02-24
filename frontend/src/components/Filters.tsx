@@ -230,7 +230,7 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
 
       {showFilters && (
         <div
-          className="absolute right-0 mt-2 w-80 rounded-lg shadow-xl z-50 max-h-[calc(100vh-120px)] overflow-y-auto"
+          className="absolute right-0 bottom-full mb-2 w-80 rounded-lg shadow-xl z-50 max-h-[calc(100vh-120px)] overflow-y-auto"
           style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
         >
           <div className="p-4">
@@ -269,6 +269,7 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
               </h4>
               <select
                 value={yearFilter ?? ""}
+                onChange={(e) => setYearFilter(e.target.value ? Number(e.target.value) : null)}
                 className="w-full p-2 text-sm rounded"
                 style={{
                   background: "var(--bg-elevated)",
