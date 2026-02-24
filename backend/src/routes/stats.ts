@@ -1,4 +1,5 @@
 import { Router, Response, NextFunction } from 'express';
+import { z } from 'zod';
 import { prisma } from '../db';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { calculateDistance } from '../utils/geo';
@@ -11,21 +12,38 @@ const router = Router();
 // All routes require authentication
 router.use(authenticate);
 
+// Shared schema for date-range query parameters
+const DateRangeQuerySchema = z.object({
+  fromDate: z.string().optional(),
+  toDate: z.string().optional(),
+});
+
+// Schema for routes query parameters
+const RoutesQuerySchema = z.object({
+  limit: z.coerce.number().int().positive().optional(),
+});
+
 // Get summary statistics
-router.get('/summary', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get('/summary', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
-    const { fromDate, toDate } = req.query;
+
+    const parsed = DateRangeQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
+      return;
+    }
+    const { fromDate, toDate } = parsed.data;
 
     const where: Prisma.FlightWhereInput = { userId };
 
     if (fromDate || toDate) {
       where.departureTime = {};
       if (fromDate) {
-        where.departureTime.gte = new Date(fromDate as string);
+        where.departureTime.gte = new Date(fromDate);
       }
       if (toDate) {
-        where.departureTime.lte = new Date(toDate as string);
+        where.departureTime.lte = new Date(toDate);
       }
     }
 
@@ -133,10 +151,16 @@ router.get('/summary', async (req: AuthRequest, res: Response, next: NextFunctio
 });
 
 // Get top routes
-router.get('/routes', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get('/routes', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
-    const limit = parseInt(req.query.limit as string) || 10;
+
+    const parsed = RoutesQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
+      return;
+    }
+    const limit = parsed.data.limit ?? 10;
 
     const flights = await prisma.flight.findMany({
       where: { userId },
@@ -196,20 +220,26 @@ router.get('/routes', async (req: AuthRequest, res: Response, next: NextFunction
 });
 
 // Get fun/entertaining statistics
-router.get('/fun', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get('/fun', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
-    const { fromDate, toDate } = req.query;
+
+    const parsed = DateRangeQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
+      return;
+    }
+    const { fromDate, toDate } = parsed.data;
 
     const where: Prisma.FlightWhereInput = { userId, status: 'flown' };
 
     if (fromDate || toDate) {
       where.departureTime = {};
       if (fromDate) {
-        where.departureTime.gte = new Date(fromDate as string);
+        where.departureTime.gte = new Date(fromDate);
       }
       if (toDate) {
-        where.departureTime.lte = new Date(toDate as string);
+        where.departureTime.lte = new Date(toDate);
       }
     }
 
@@ -281,20 +311,26 @@ router.get('/fun', async (req: AuthRequest, res: Response, next: NextFunction) =
 });
 
 // Get business/informative statistics
-router.get('/business', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get('/business', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
-    const { fromDate, toDate } = req.query;
+
+    const parsed = DateRangeQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
+      return;
+    }
+    const { fromDate, toDate } = parsed.data;
 
     const where: Prisma.FlightWhereInput = { userId, status: 'flown' };
 
     if (fromDate || toDate) {
       where.departureTime = {};
       if (fromDate) {
-        where.departureTime.gte = new Date(fromDate as string);
+        where.departureTime.gte = new Date(fromDate);
       }
       if (toDate) {
-        where.departureTime.lte = new Date(toDate as string);
+        where.departureTime.lte = new Date(toDate);
       }
     }
 
@@ -358,20 +394,26 @@ router.get('/business', async (req: AuthRequest, res: Response, next: NextFuncti
 });
 
 // Get unique/special statistics
-router.get('/unique', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get('/unique', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
-    const { fromDate, toDate } = req.query;
+
+    const parsed = DateRangeQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
+      return;
+    }
+    const { fromDate, toDate } = parsed.data;
 
     const where: Prisma.FlightWhereInput = { userId, status: 'flown' };
 
     if (fromDate || toDate) {
       where.departureTime = {};
       if (fromDate) {
-        where.departureTime.gte = new Date(fromDate as string);
+        where.departureTime.gte = new Date(fromDate);
       }
       if (toDate) {
-        where.departureTime.lte = new Date(toDate as string);
+        where.departureTime.lte = new Date(toDate);
       }
     }
 
