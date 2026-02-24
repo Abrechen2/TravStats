@@ -5,6 +5,31 @@ All notable changes to TravStats are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
+## [0.9.0-beta] - 2026-02-24
+
+First public beta release. Re-versioned from 1.0.x to 0.9.0-beta to reflect that not all planned features are complete yet.
+
+### Added
+- Version badge in About tab (reads from package.json)
+- Rate limiting on backup-restore (3/hr) and training-trigger (2/hr) endpoints
+- Zod validation for stats route query parameters
+- PayPal donation and GitHub Star buttons in Settings → About
+- i18n translations for all hardcoded strings in `SimplifiedFlightForm`
+- Missing `unknownDate` i18n key in dashboard translations
+- i18n translations for hardcoded strings in `DashboardPage` (PDF export, map/stats fallbacks)
+
+### Changed
+- Package versions bumped to `0.9.0-beta` (frontend + backend)
+- Admin page refactored to sidebar layout
+- All plain browser checkboxes replaced with styled `.checkbox` class
+
+### Fixed
+- `alert()` calls in AchievementsPage replaced with toast notifications
+- `console.debug()` calls in `barcodeExtractor.ts` replaced with `logger.debug()`
+- Dark mode issues across all pages (hardcoded Tailwind colors → CSS variables)
+
+---
+
 ## [1.0.1] - 2026-02-23
 
 ### Added

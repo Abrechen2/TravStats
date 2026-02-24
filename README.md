@@ -1,8 +1,22 @@
 # ✈️ TravStats
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![Version](https://img.shields.io/badge/version-0.9.0--beta-orange.svg)](https://github.com/Abrechen2/TravStats/releases)
 
-> **⚠️ BETA APPLICATION** - This application is currently in beta. Features may be incomplete, and there may be bugs. Use at your own risk.
+> ### 🚧 Public Beta — v0.9.0-beta
+>
+> TravStats is functional and actively used, but not yet feature-complete. The following core features work well:
+> flight tracking, interactive 2D/3D maps, statistics, 58 achievements, boarding pass scanning, email import, and data export.
+>
+> **Known gaps (still in development):**
+> - Automated database backups (UI exists, backend logic pending)
+> - CSV bulk import
+> - CO₂ footprint tracker
+> - PDF report export
+> - PWA / offline support
+>
+> **Recommendation:** Take regular manual backups via *Admin → Export* until automated backups are live.
+> Bugs and feedback welcome via [GitHub Issues](https://github.com/Abrechen2/TravStats/issues).
 
 Self-hosted flight tracking and statistics app for small groups (1-10 accounts). Track your flights, visualize routes on interactive maps, and collect achievements.
 
