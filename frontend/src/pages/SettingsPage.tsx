@@ -1387,6 +1387,43 @@ export default function SettingsPage(): JSX.Element {
                     Beta
                   </span>
                 </div>
+                <InlineHelp
+                  title={t("settings:historicalEnrichment.info.title")}
+                  category="basic"
+                  content={
+                    <div className="space-y-3">
+                      <p>{t("settings:historicalEnrichment.info.description")}</p>
+                      <div>
+                        <p className="font-semibold mb-2">
+                          {t("settings:historicalEnrichment.info.benefits.title")}
+                        </p>
+                        <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
+                          <li>{t("settings:historicalEnrichment.info.benefits.completeData")}</li>
+                          <li>{t("settings:historicalEnrichment.info.benefits.routeTracking")}</li>
+                          <li>{t("settings:historicalEnrichment.info.benefits.statistics")}</li>
+                          <li>{t("settings:historicalEnrichment.info.benefits.automatic")}</li>
+                        </ul>
+                      </div>
+                      <div
+                        className="rounded-lg p-3"
+                        style={{
+                          background: "rgba(232,160,69,0.1)",
+                          border: "1px solid rgba(232,160,69,0.3)",
+                        }}
+                      >
+                        <p
+                          className="font-semibold mb-1 text-sm"
+                          style={{ color: "var(--accent)" }}
+                        >
+                          {t("settings:historicalEnrichment.info.warning.title")}
+                        </p>
+                        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                          {t("settings:historicalEnrichment.info.warning.description")}
+                        </p>
+                      </div>
+                    </div>
+                  }
+                />
                 <div className="space-y-4">
                   <label className="flex items-center gap-3">
                     <AmberToggle
