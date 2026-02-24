@@ -73,20 +73,20 @@ export default function FeedbackAnalytics({
       <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-[var(--text-primary)]">
-            Parser Feedback Statistics
+            {t("admin:feedback.title")}
           </h2>
           <div className="flex items-center gap-4">
             <label className="text-sm text-[var(--text-muted)]">
-              Time Period:
+              {t("admin:feedback.timePeriod")}
               <select
                 value={feedbackDays}
                 onChange={(e) => onSetDays(Number(e.target.value))}
                 className="ml-2 px-3 py-1 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)]"
               >
-                <option value={7}>Last 7 days</option>
-                <option value={30}>Last 30 days</option>
-                <option value={90}>Last 90 days</option>
-                <option value={365}>Last year</option>
+                <option value={7}>{t("admin:feedback.days7")}</option>
+                <option value={30}>{t("admin:feedback.days30")}</option>
+                <option value={90}>{t("admin:feedback.days90")}</option>
+                <option value={365}>{t("admin:feedback.year")}</option>
               </select>
             </label>
           </div>
@@ -97,17 +97,23 @@ export default function FeedbackAnalytics({
             {/* Overview Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                <div className="text-blue-600 text-sm font-medium mb-1">Total Feedback Entries</div>
+                <div className="text-blue-600 text-sm font-medium mb-1">
+                  {t("admin:feedback.totalEntries")}
+                </div>
                 <div className="text-3xl font-bold text-blue-900">{feedbackStats.total}</div>
               </div>
               <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-                <div className="text-green-600 text-sm font-medium mb-1">Average Quality Score</div>
+                <div className="text-green-600 text-sm font-medium mb-1">
+                  {t("admin:feedback.avgQuality")}
+                </div>
                 <div className="text-3xl font-bold text-green-900">
                   {feedbackStats.avgQualityScore}%
                 </div>
               </div>
               <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
-                <div className="text-purple-600 text-sm font-medium mb-1">Common Issues</div>
+                <div className="text-purple-600 text-sm font-medium mb-1">
+                  {t("admin:feedback.commonIssues")}
+                </div>
                 <div className="text-3xl font-bold text-purple-900">
                   {feedbackStats.commonIssues.length}
                 </div>
@@ -117,7 +123,7 @@ export default function FeedbackAnalytics({
             {/* Provider Distribution */}
             <div className="bg-[var(--bg-base)] rounded-lg p-6">
               <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
-                Distribution by Parser Provider
+                {t("admin:feedback.byProvider")}
               </h3>
               {Object.keys(feedbackStats.byProvider).length > 0 ? (
                 <div className="space-y-3">
@@ -150,14 +156,14 @@ export default function FeedbackAnalytics({
                     })}
                 </div>
               ) : (
-                <p className="text-[var(--text-muted)]">No data available</p>
+                <p className="text-[var(--text-muted)]">{t("admin:feedback.noData")}</p>
               )}
             </div>
 
             {/* Source Type Distribution */}
             <div className="bg-[var(--bg-base)] rounded-lg p-6">
               <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
-                Distribution by Source Type
+                {t("admin:feedback.bySourceType")}
               </h3>
               {Object.keys(feedbackStats.bySourceType).length > 0 ? (
                 <div className="grid grid-cols-2 gap-4">
@@ -173,27 +179,29 @@ export default function FeedbackAnalytics({
                         className="bg-[var(--bg-surface)] rounded-lg p-4 border border-[var(--color-border)]"
                       >
                         <div className="text-sm text-[var(--text-muted)] mb-1">
-                          {type === "email" ? "Email" : "Boarding Pass"}
+                          {type === "email"
+                            ? t("admin:feedback.email")
+                            : t("admin:feedback.boardingPass")}
                         </div>
                         <div className="text-2xl font-bold text-[var(--text-primary)]">
                           {String(countNum)}
                         </div>
                         <div className="text-xs text-[var(--text-muted)] mt-1">
-                          {percentage}% of total
+                          {t("admin:feedback.ofTotal", { pct: percentage })}
                         </div>
                       </div>
                     );
                   })}
                 </div>
               ) : (
-                <p className="text-[var(--text-muted)]">No data available</p>
+                <p className="text-[var(--text-muted)]">{t("admin:feedback.noData")}</p>
               )}
             </div>
 
             {/* Common Issues */}
             <div className="bg-[var(--bg-base)] rounded-lg p-6">
               <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
-                Most Common Issues
+                {t("admin:feedback.mostCommonIssues")}
               </h3>
               {feedbackStats.commonIssues.length > 0 ? (
                 <div className="space-y-2">
@@ -212,7 +220,7 @@ export default function FeedbackAnalytics({
                   )}
                 </div>
               ) : (
-                <p className="text-[var(--text-muted)]">No issues reported</p>
+                <p className="text-[var(--text-muted)]">{t("admin:feedback.noIssues")}</p>
               )}
             </div>
 
@@ -220,7 +228,7 @@ export default function FeedbackAnalytics({
             {feedbackDetails && feedbackDetails.feedback && feedbackDetails.feedback.length > 0 && (
               <div className="bg-[var(--bg-base)] rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
-                  Recent Feedback Entries ({feedbackDetails.total})
+                  {t("admin:feedback.recentEntries", { count: feedbackDetails.total })}
                 </h3>
                 <div className="space-y-2 max-h-96 overflow-y-auto">
                   {feedbackDetails.feedback.map((entry: ParserFeedbackEntry) => {
@@ -247,7 +255,7 @@ export default function FeedbackAnalytics({
                                     : "bg-red-100 text-red-800"
                                 }`}
                               >
-                                {payload.qualityScore}% quality
+                                {t("admin:feedback.quality", { score: payload.qualityScore })}
                               </span>
                             </div>
                             <div className="text-sm text-[var(--text-muted)]">
@@ -284,7 +292,7 @@ export default function FeedbackAnalytics({
           </div>
         ) : (
           <div className="text-center py-12">
-            <div className="text-[var(--text-muted)] mb-2">Loading feedback statistics...</div>
+            <div className="text-[var(--text-muted)] mb-2">{t("admin:feedback.loading")}</div>
           </div>
         )}
       </div>
@@ -294,7 +302,9 @@ export default function FeedbackAnalytics({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-[var(--bg-surface)] rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-[var(--bg-surface)] border-b px-6 py-4 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-[var(--text-primary)]">Feedback Details</h2>
+              <h2 className="text-2xl font-bold text-[var(--text-primary)]">
+                {t("admin:feedback.details")}
+              </h2>
               <button
                 onClick={() => onSelectFeedback(null)}
                 className="p-2 text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] rounded-lg"
@@ -314,22 +324,26 @@ export default function FeedbackAnalytics({
                 const feedback = feedbackDetails.feedback.find(
                   (f: ParserFeedbackEntry) => f.id === selectedFeedbackId
                 );
-                if (!feedback) return <p>Feedback not found</p>;
+                if (!feedback) return <p>{t("admin:feedback.notFound")}</p>;
                 const payload = feedback.payload as unknown as FeedbackPayload;
                 return (
                   <div className="space-y-4">
                     <div>
-                      <h3 className="font-semibold text-[var(--text-primary)] mb-2">Provider</h3>
+                      <h3 className="font-semibold text-[var(--text-primary)] mb-2">
+                        {t("admin:feedback.provider")}
+                      </h3>
                       <p className="text-[var(--text-primary)]">{payload.provider}</p>
                     </div>
                     <div>
                       <h3 className="font-semibold text-[var(--text-primary)] mb-2">
-                        Quality Score
+                        {t("admin:feedback.qualityScore")}
                       </h3>
                       <p className="text-[var(--text-primary)]">{payload.qualityScore}%</p>
                     </div>
                     <div>
-                      <h3 className="font-semibold text-[var(--text-primary)] mb-2">Issues</h3>
+                      <h3 className="font-semibold text-[var(--text-primary)] mb-2">
+                        {t("admin:feedback.issues")}
+                      </h3>
                       <ul className="list-disc list-inside text-[var(--text-primary)]">
                         {payload.issues?.map((issue: string, i: number) => (
                           <li key={i}>{issue}</li>
@@ -339,7 +353,7 @@ export default function FeedbackAnalytics({
                     {payload.parsedResult && (
                       <div>
                         <h3 className="font-semibold text-[var(--text-primary)] mb-2">
-                          Parsed Result
+                          {t("admin:feedback.parsedResult")}
                         </h3>
                         <pre className="bg-[var(--bg-elevated)] p-4 rounded-lg overflow-x-auto text-sm">
                           {JSON.stringify(payload.parsedResult, null, 2)}
@@ -349,7 +363,7 @@ export default function FeedbackAnalytics({
                     {payload.correctedResult && (
                       <div>
                         <h3 className="font-semibold text-[var(--text-primary)] mb-2">
-                          Corrected Result
+                          {t("admin:feedback.correctedResult")}
                         </h3>
                         <pre className="bg-[var(--bg-elevated)] p-4 rounded-lg overflow-x-auto text-sm">
                           {JSON.stringify(payload.correctedResult, null, 2)}
@@ -359,7 +373,7 @@ export default function FeedbackAnalytics({
                     {payload.userCorrections && payload.userCorrections.length > 0 && (
                       <div>
                         <h3 className="font-semibold text-[var(--text-primary)] mb-2">
-                          User Corrections
+                          {t("admin:feedback.userCorrections")}
                         </h3>
                         <div className="space-y-2">
                           {payload.userCorrections.map(

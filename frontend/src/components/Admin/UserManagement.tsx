@@ -21,21 +21,17 @@ export default function UserManagement({
         category="advanced"
         content={
           <div className="space-y-2">
-            <p>
-              Verwalten Sie alle Benutzer Ihrer TravStats-Instanz. Hier können Sie Benutzer
-              anzeigen, Rollen ändern und Benutzer löschen.
-            </p>
+            <p>{t("admin:users.help.description")}</p>
             <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
               <li>
-                <strong>Admin:</strong> Vollzugriff auf alle Funktionen, einschließlich Admin-Panel
+                <strong>{t("admin:users.help.adminTitle")}</strong> {t("admin:users.help.admin")}
               </li>
               <li>
-                <strong>User:</strong> Standard-Benutzer mit Zugriff auf Flüge, Statistiken und
-                Achievements
+                <strong>{t("admin:users.help.userTitle")}</strong> {t("admin:users.help.user")}
               </li>
               <li>
-                <strong>Löschen:</strong> Vorsicht! Beim Löschen werden alle Daten des Benutzers
-                entfernt
+                <strong>{t("admin:users.help.deactivateTitle")}</strong>{" "}
+                {t("admin:users.help.deactivate")}
               </li>
             </ul>
           </div>
@@ -46,22 +42,22 @@ export default function UserManagement({
           <thead className="bg-[var(--bg-base)]">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
-                Username
+                {t("admin:users.table.username")}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
-                Flights
+                {t("admin:users.table.flights")}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
-                Achievements
+                {t("admin:users.table.achievements")}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
-                Role
+                {t("admin:users.table.role")}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
-                Status
+                {t("admin:users.table.status")}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
-                Actions
+                {t("admin:users.table.actions")}
               </th>
             </tr>
           </thead>
@@ -85,22 +81,22 @@ export default function UserManagement({
                 <td className="px-6 py-4 whitespace-nowrap">
                   {user.isAdmin ? (
                     <span className="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
-                      Admin
+                      {t("admin:users.role.admin")}
                     </span>
                   ) : (
                     <span className="px-2 py-1 text-xs font-semibold rounded-full bg-[var(--bg-elevated)] text-[var(--text-primary)]">
-                      User
+                      {t("admin:users.role.user")}
                     </span>
                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   {user.isActive ? (
                     <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                      Active
+                      {t("admin:users.status.active")}
                     </span>
                   ) : (
                     <span className="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
-                      Inactive
+                      {t("admin:users.status.inactive")}
                     </span>
                   )}
                 </td>
@@ -109,7 +105,9 @@ export default function UserManagement({
                     onClick={() => onToggleUserActive(user.id)}
                     className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
                   >
-                    {user.isActive ? "Deactivate" : "Activate"}
+                    {user.isActive
+                      ? t("admin:users.actions.deactivate")
+                      : t("admin:users.actions.activate")}
                   </button>
                 </td>
               </tr>

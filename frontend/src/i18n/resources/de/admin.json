@@ -46,10 +46,64 @@
   "refresh": "🔄 Aktualisieren",
   "refreshing": "⏳ Lade...",
   "users": {
-    "title": "Benutzerverwaltung"
+    "title": "Benutzerverwaltung",
+    "help": {
+      "description": "Verwalten Sie alle Benutzer Ihrer TravStats-Instanz. Benutzer anzeigen, Rollen ändern und Konten deaktivieren.",
+      "adminTitle": "Admin:",
+      "admin": "Vollzugriff auf alle Funktionen, einschließlich Admin-Panel",
+      "userTitle": "Benutzer:",
+      "user": "Standard-Benutzer mit Zugriff auf Flüge, Statistiken und Achievements",
+      "deactivateTitle": "Deaktivieren:",
+      "deactivate": "Deaktivierte Benutzer können sich nicht anmelden, ihre Daten bleiben erhalten"
+    },
+    "table": {
+      "username": "Benutzername",
+      "flights": "Flüge",
+      "achievements": "Achievements",
+      "role": "Rolle",
+      "status": "Status",
+      "actions": "Aktionen"
+    },
+    "role": {
+      "admin": "Admin",
+      "user": "Benutzer"
+    },
+    "status": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv"
+    },
+    "actions": {
+      "deactivate": "Deaktivieren",
+      "activate": "Aktivieren"
+    }
   },
   "invitations": {
-    "title": "Einladungen verwalten"
+    "title": "Einladungen verwalten",
+    "help": {
+      "description": "Erstellen Sie Einladungslinks, um neue Benutzer zu Ihrer TravStats-Instanz einzuladen.",
+      "createTitle": "Einladung erstellen:",
+      "create": "Generiert einen eindeutigen Link, der zum Registrieren verwendet werden kann",
+      "expiryTitle": "Ablaufdatum:",
+      "expiry": "Einladungen laufen nach 7 Tagen ab (standardmäßig)",
+      "oneUseTitle": "Einmalige Nutzung:",
+      "oneUse": "Jeder Link kann nur einmal verwendet werden",
+      "emailTitle": "E-Mail (optional):",
+      "email": "Sie können eine E-Mail-Adresse zuordnen, um die Einladung zu verfolgen"
+    },
+    "invitationLinks": "Einladungslinks",
+    "createButton": "+ Einladung erstellen",
+    "copiedToClipboard": "Einladungslink in die Zwischenablage kopiert!",
+    "table": {
+      "email": "E-Mail",
+      "createdBy": "Erstellt von",
+      "expires": "Läuft ab",
+      "status": "Status"
+    },
+    "status": {
+      "usedOn": "Verwendet am {{date}}",
+      "expired": "Abgelaufen",
+      "active": "Aktiv"
+    }
   },
   "userLimitWarning": {
     "title": "⚠️ Benutzerlimit-Warnung",
@@ -57,8 +111,8 @@
   },
   "demoWarning": {
     "title": "🔓 Demo-Konto aktiv",
-    "message": "Das Demo-Benutzerkonto (Benutzername: \"demo\", Passwort: \"demo123\") ist derzeit aktiv.",
-    "button": "Demo-Konto deaktivieren"
+    "message": "Das Demo-Benutzerkonto (Benutzername: \"demo\", Passwort: \"demo123\") ist derzeit aktiv. Dies ist ein Sicherheitsrisiko in Produktionsumgebungen. Deaktivieren Sie dieses Konto nach dem ersten Test.",
+    "button": "Demo-Benutzer deaktivieren"
   },
   "hardware": {
     "title": "💻 Hardware-Informationen",
@@ -107,7 +161,21 @@
     "registration": "Registrierung",
     "enabled": "✅ Aktiviert",
     "disabled": "❌ Deaktiviert",
-    "version": "Version"
+    "version": "Version",
+    "exportButton": "Vollständiges Backup herunterladen (JSON)",
+    "exportDescription": "Alle Benutzerdaten für Backup-Zwecke exportieren (DSGVO-konform)",
+    "exportHelp": {
+      "title": "Daten-Export",
+      "description": "Exportieren Sie alle Benutzerdaten als JSON-Datei für Backup-Zwecke.",
+      "fullExportTitle": "Vollständiger Export:",
+      "fullExport": "Enthält alle Flüge, Achievements, Einstellungen und Benutzerdaten",
+      "gdprTitle": "DSGVO-konform:",
+      "gdpr": "Alle Daten werden in einem strukturierten Format exportiert",
+      "backupTitle": "Backup:",
+      "backup": "Regelmäßige Exports werden empfohlen, um Datenverlust zu vermeiden",
+      "formatTitle": "Format:",
+      "format": "JSON-Datei, die einfach importiert oder analysiert werden kann"
+    }
   },
   "export": {
     "button": "📥 Daten exportieren",
@@ -282,6 +350,72 @@
       "restore": "Vor der Wiederherstellung wird empfohlen, ein neues Backup zu erstellen. Alle aktuellen Daten werden überschrieben.",
       "retentionTitle": "Aufbewahrung:",
       "retention": "Backups werden automatisch nach der konfigurierten Aufbewahrungsdauer gelöscht."
+    }
+  },
+  "feedback": {
+    "title": "Parser Feedback-Statistiken",
+    "timePeriod": "Zeitraum:",
+    "days7": "Letzte 7 Tage",
+    "days30": "Letzte 30 Tage",
+    "days90": "Letzte 90 Tage",
+    "year": "Letztes Jahr",
+    "totalEntries": "Gesamt Feedback-Einträge",
+    "avgQuality": "Durchschnittliche Qualitätsbewertung",
+    "commonIssues": "Häufige Probleme",
+    "byProvider": "Verteilung nach Parser-Provider",
+    "bySourceType": "Verteilung nach Quelltyp",
+    "noData": "Keine Daten verfügbar",
+    "email": "E-Mail",
+    "boardingPass": "Bordkarte",
+    "ofTotal": "{{pct}}% der Gesamtmenge",
+    "mostCommonIssues": "Häufigste Probleme",
+    "noIssues": "Keine Probleme gemeldet",
+    "recentEntries": "Neueste Feedback-Einträge ({{count}})",
+    "quality": "{{score}}% Qualität",
+    "loading": "Lade Feedback-Statistiken...",
+    "details": "Feedback-Details",
+    "notFound": "Feedback nicht gefunden",
+    "provider": "Provider",
+    "qualityScore": "Qualitätsbewertung",
+    "issues": "Probleme",
+    "parsedResult": "Gepartes Ergebnis",
+    "correctedResult": "Korrigiertes Ergebnis",
+    "userCorrections": "Benutzerkorrekturen"
+  },
+  "patterns": {
+    "title": "Pattern Updates & Vorschläge",
+    "autoApply": "Hochkonfidente automatisch anwenden (≥90%)",
+    "timePeriod": "Zeitraum:",
+    "days7": "Letzte 7 Tage",
+    "days30": "Letzte 30 Tage",
+    "days90": "Letzte 90 Tage",
+    "year": "Letztes Jahr",
+    "totalPatterns": "Gesamt Patterns",
+    "applied": "Angewendet",
+    "pending": "Ausstehend",
+    "avgConfidence": "Ø Konfidenz",
+    "pendingSuggestions": "Ausstehende Pattern-Vorschläge ({{count}})",
+    "confidence": "{{pct}}% Konfidenz",
+    "pattern": "Pattern:",
+    "issue": "Problem:",
+    "examples": "Beispiele:",
+    "apply": "Anwenden",
+    "noPending": "Keine ausstehenden Pattern-Vorschläge",
+    "summary": "Analyse-Zusammenfassung",
+    "totalIssues": "Gesamt Probleme:",
+    "patternSuggestions": "Pattern-Vorschläge:",
+    "loading": "Lade Pattern-Daten...",
+    "confirmApply": {
+      "title": "Pattern anwenden?",
+      "message": "Möchten Sie dieses Pattern wirklich anwenden? Hinweis: Dies erfordert manuelle Code-Updates.",
+      "cancel": "Abbrechen",
+      "confirm": "Anwenden"
+    },
+    "confirmAutoApply": {
+      "title": "Alle Patterns automatisch anwenden?",
+      "message": "Möchten Sie alle hochwertigen Patterns automatisch anwenden? Dies kann mehrere Patterns gleichzeitig betreffen.",
+      "cancel": "Abbrechen",
+      "confirm": "Anwenden"
     }
   },
   "globalApiKeys": {
