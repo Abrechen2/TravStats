@@ -8,6 +8,7 @@ import type { Achievement, AchievementSummary, LeaderboardEntry } from "../types
 import { STORAGE_KEYS } from "../lib/constants";
 import { useTranslation } from "../hooks/useTranslation";
 import { logger } from "../lib/logger";
+import { useToastStore } from "../store/toastStore";
 
 const tierTextColorValues: Record<string, string> = {
   bronze: "#f59e0b",
@@ -19,6 +20,7 @@ const tierTextColorValues: Record<string, string> = {
 
 export default function AchievementsPage(): JSX.Element {
   const { t } = useTranslation(["achievements", "common"]);
+  const { addToast } = useToastStore();
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [summary, setSummary] = useState<AchievementSummary | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -72,10 +74,10 @@ export default function AchievementsPage(): JSX.Element {
     try {
       const result = await achievementsApi.checkAchievements();
       if (result.newlyUnlocked > 0) {
-        alert(t("achievements:alerts.unlocked", { count: result.newlyUnlocked }));
+        addToast("success", t("achievements:alerts.unlocked", { count: result.newlyUnlocked }));
         loadAchievements();
       } else {
-        alert(t("achievements:alerts.none"));
+        addToast("info", t("achievements:alerts.none"));
       }
     } catch (error) {
       logger.error("Failed to check achievements:", error);
