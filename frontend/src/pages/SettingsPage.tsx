@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { version as appVersion } from "../../package.json";
 import { useState, useEffect } from "react";
 import NavigationBar from "../components/NavigationBar";
 import InlineHelp from "../components/Help/InlineHelp";
@@ -1982,7 +1983,15 @@ export default function SettingsPage(): JSX.Element {
             {/* About */}
             {activeSection === "about" && (
               <SectionCard>
-                <SectionTitle title="About TravStats" />
+                <div className="flex items-baseline gap-3 mb-1">
+                  <SectionTitle title="About TravStats" />
+                  <span
+                    className="text-sm font-mono px-2 py-0.5 rounded"
+                    style={{ background: "var(--bg-elevated)", color: "var(--text-muted)" }}
+                  >
+                    v{appVersion}
+                  </span>
+                </div>
                 <p className="text-sm" style={{ color: "var(--text-muted)" }}>
                   TravStats - Flight Statistics Tracking Application
                 </p>
