@@ -83,7 +83,7 @@ const baseFlightSchema = z.object({
   fees: z.number().min(0).optional(),
   category: z.enum(['business', 'private', 'vacation']).optional(),
   tags: z.array(z.string().max(40)).optional(),
-  companions: z.array(z.string().max(100)).optional().default([]),
+  companions: z.array(z.string().max(100)).max(50).optional().default([]),
   receiptUrl: receiptUrlValidator,
 });
 

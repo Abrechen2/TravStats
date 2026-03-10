@@ -256,6 +256,7 @@
     "back": "Hinten (Reihen 26+)",
     "mostCommon": "Häufigster Sitzplatz",
     "avgRow": "Durchschn. Reihe",
-    "noData": "Keine Sitzplatzdaten vorhanden"
+    "noData": "Keine Sitzplatzdaten vorhanden",
+    "seatClassTitle": "Sitzklasse"
   }
 }

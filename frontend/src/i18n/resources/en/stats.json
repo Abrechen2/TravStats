@@ -256,6 +256,7 @@
     "back": "Back (rows 26+)",
     "mostCommon": "Most common seat",
     "avgRow": "Avg. row",
-    "noData": "No seat data recorded"
+    "noData": "No seat data recorded",
+    "seatClassTitle": "Seat Class"
   }
 }
