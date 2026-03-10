@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import type { VisMode } from "../types/visMode";
 
 import { useAuthStore } from "../store/authStore";
 import { flightsApi, analyticsApi, settingsApi } from "../lib/api";
@@ -36,7 +37,7 @@ export default function DashboardPage(): JSX.Element {
   const [filters, setFilters] = useState<FlightFilters>({});
   const [, setLoadingMap] = useState(true); // Loading indicator for map
   const [loadingRecent, setLoadingRecent] = useState(true);
-  const [is3DView, setIs3DView] = useState(true);
+  const [visMode, setVisMode] = useState<VisMode>("routes");
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
   const [leftOpen, setLeftOpen] = useState(false);
@@ -145,15 +146,12 @@ export default function DashboardPage(): JSX.Element {
     }
   }, [totalFlightsCount, filters, onboarding.flightAdded, onboarding.usedFilter]);
 
-  // Detect map exploration (2D/3D toggle or map interaction)
-  const handleMapToggle = () => {
-    setIs3DView((prev) => {
-      const newValue = !prev;
-      if (!onboarding.mapExplored) {
-        setOnboarding((prevOnboarding) => ({ ...prevOnboarding, mapExplored: true }));
-      }
-      return newValue;
-    });
+  // Detect map exploration (vis mode change)
+  const handleVisModeChange = (mode: VisMode): void => {
+    setVisMode(mode);
+    if (!onboarding.mapExplored) {
+      setOnboarding((prev) => ({ ...prev, mapExplored: true }));
+    }
   };
 
   // Save onboarding state to server and localStorage whenever it changes
@@ -592,7 +590,8 @@ export default function DashboardPage(): JSX.Element {
               flights={geoFlights}
               selectedFlightId={selectedFlightId}
               onFlightClick={setSelectedFlightId}
-              is3D={is3DView}
+              visMode={visMode}
+              onVisModeChange={handleVisModeChange}
               minRouteCount={filters.minRouteCount ?? 1}
             />
           </ErrorBoundary>
@@ -651,20 +650,8 @@ export default function DashboardPage(): JSX.Element {
           </button>
         </div>
 
-        {/* Floating Top-Right Controls: 2D/3D, add, export */}
+        {/* Floating Top-Right Controls: add, export */}
         <div className="absolute top-3 right-3 z-20 flex gap-2">
-          <button
-            onClick={handleMapToggle}
-            className="px-3 py-2 rounded-xl text-sm font-medium backdrop-blur-md transition-all"
-            style={{
-              background: "rgba(22,27,34,0.85)",
-              border: "1px solid var(--color-border)",
-              color: "var(--text-muted)",
-            }}
-          >
-            {is3DView ? "3D" : "2D"}
-          </button>
-
           <button
             onClick={() => setShowFlightForm(true)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all"
@@ -992,7 +979,7 @@ export default function DashboardPage(): JSX.Element {
       )}
 
       <HelpIcon
-        content={is3DView ? t("dashboard:map.help2d") : t("dashboard:map.help3d")}
+        content={visMode === "globe" ? t("dashboard:map.help2d") : t("dashboard:map.help3d")}
         expandedContent={t("dashboard:map.helpExpanded")}
         position="bottom"
       />
