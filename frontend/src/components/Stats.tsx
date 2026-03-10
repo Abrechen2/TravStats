@@ -8,6 +8,7 @@ import { logger } from "../lib/logger";
 import { useTranslation } from "../hooks/useTranslation";
 import { useSettingsStore } from "../store/settingsStore";
 import { formatDistance, formatCurrency as formatCurrencyUtil } from "../lib/units";
+import { SkeletonStatCards } from "./SkeletonLoader";
 
 interface StatsProps {
   filters?: FlightFilters;
@@ -99,11 +100,7 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
   };
 
   if (loading) {
-    return (
-      <div className="text-center py-4" style={{ color: "var(--text-muted)" }}>
-        {t("stats:loading")}
-      </div>
-    );
+    return <SkeletonStatCards />;
   }
 
   if (!stats) {

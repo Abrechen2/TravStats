@@ -19,6 +19,7 @@ import { useTranslation } from "../hooks/useTranslation";
 import DataSourceBadges from "../components/DataSourceBadges";
 import { logger } from "../lib/logger";
 import PageTransition from "../components/PageTransition";
+import { SkeletonTable } from "../components/SkeletonLoader";
 
 export default function FlightsTablePage(): JSX.Element {
   const { t } = useTranslation(["flights", "common", "dashboard"]);
@@ -217,9 +218,7 @@ export default function FlightsTablePage(): JSX.Element {
           >
             <div className="overflow-x-auto">
               {loading ? (
-                <div className="text-center py-12" style={{ color: "var(--text-muted)" }}>
-                  {t("flights:table.loading")}
-                </div>
+                <SkeletonTable rows={10} />
               ) : sortedFlights.length === 0 ? (
                 <div className="text-center py-12" style={{ color: "var(--text-muted)" }}>
                   <p className="text-lg mb-2">{t("flights:table.noFlights")}</p>
