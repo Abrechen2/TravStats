@@ -104,3 +104,15 @@ export const trainingTriggerLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+/**
+ * Rate limiter for boarding pass parsing (expensive LLM/vision operation)
+ * Allows 20 parses per 15 minutes per IP
+ */
+export const boardingPassParseLimiter = rateLimit({
+  windowMs: RATE_LIMITS.BOARDING_PASS_PARSE_WINDOW_MS,
+  max: RATE_LIMITS.BOARDING_PASS_PARSE_MAX,
+  message: 'Too many boarding pass parse requests, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});

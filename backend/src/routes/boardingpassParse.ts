@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
 import { authenticate, AuthRequest } from '../middleware/auth';
+import { boardingPassParseLimiter } from '../middleware/rateLimit';
 import { z } from 'zod';
 import logger from '../utils/logger';
 import { getParserConfig, parseBoardingPass, getAvailableProviders } from '../services/parsers/factory';
@@ -28,7 +29,7 @@ const parseBoardingpassSchema = z.object({
  * - fallbackUsed: boolean - Whether fallback was used
  * - enriched: boolean - Whether data was enriched with API
  */
-router.post('/parse-boardingpass', authenticate, async (req: AuthRequest, res: Response) => {
+router.post('/parse-boardingpass', authenticate, boardingPassParseLimiter, async (req: AuthRequest, res: Response) => {
   try {
     const { imageBase64, enrichWithApi } = parseBoardingpassSchema.parse(req.body);
     const userId = req.userId!;
