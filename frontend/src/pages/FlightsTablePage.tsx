@@ -8,8 +8,9 @@ import { useState, useEffect } from "react";
 import { flightsApi } from "../lib/api";
 import ContextualHint from "../components/Onboarding/ContextualHint";
 import NavigationBar from "../components/NavigationBar";
-import type { Flight, FlightFilters } from "../types";
+import type { Flight, FlightFilters, FlightInput } from "../types";
 import Filters from "../components/Filters";
+import SimplifiedFlightFormV2 from "../components/SimplifiedFlightFormV2";
 import FlightEditModal from "../components/FlightEditModal";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import { useToastStore } from "../store/toastStore";
@@ -20,7 +21,7 @@ import { logger } from "../lib/logger";
 import PageTransition from "../components/PageTransition";
 
 export default function FlightsTablePage(): JSX.Element {
-  const { t } = useTranslation(["flights", "common"]);
+  const { t } = useTranslation(["flights", "common", "dashboard"]);
   const [flights, setFlights] = useState<Flight[]>([]);
   const [filters, setFilters] = useState<FlightFilters>({});
   const [loading, setLoading] = useState(true);
@@ -31,6 +32,7 @@ export default function FlightsTablePage(): JSX.Element {
     "departureTime"
   );
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [showAddFlight, setShowAddFlight] = useState(false);
   const addToast = useToastStore((state) => state.addToast);
 
   useEffect(() => {
@@ -96,6 +98,18 @@ export default function FlightsTablePage(): JSX.Element {
       logger.error("Failed to update flight:", error);
       addToast("error", t("dashboard:errors.updateFlight"));
       throw error;
+    }
+  };
+
+  const handleAddFlight = async (flight: FlightInput): Promise<void> => {
+    try {
+      await flightsApi.create(flight);
+      addToast("success", t("flights:table.toast.updated"));
+      setShowAddFlight(false);
+      void loadFlights();
+    } catch (error) {
+      logger.error("Failed to add flight:", error);
+      addToast("error", t("dashboard:errors.addFlight"));
     }
   };
 
@@ -179,13 +193,22 @@ export default function FlightsTablePage(): JSX.Element {
 
         {/* Main Content */}
         <div className="container mx-auto px-4 py-6 max-w-7xl">
-          <ContextualHint
-            id="flights-table-page-hint"
-            title={t("flights:table.welcome")}
-            message={t("flights:table.description")}
-            linkTo="/"
-            linkText={t("flights:table.backToDashboard")}
-          />
+          <div className="flex items-center justify-between mb-4">
+            <ContextualHint
+              id="flights-table-page-hint"
+              title={t("flights:table.welcome")}
+              message={t("flights:table.description")}
+              linkTo="/"
+              linkText={t("flights:table.backToDashboard")}
+            />
+            <button
+              className="btn-primary flex items-center gap-2 whitespace-nowrap"
+              onClick={() => setShowAddFlight(true)}
+            >
+              <span>+</span>
+              <span>{t("dashboard:addFlight")}</span>
+            </button>
+          </div>
 
           {/* Table */}
           <div
@@ -461,6 +484,14 @@ export default function FlightsTablePage(): JSX.Element {
             isOpen={!!editingFlight}
             onClose={() => setEditingFlight(null)}
             onSave={handleUpdate}
+          />
+        )}
+
+        {/* Add Flight Modal */}
+        {showAddFlight && (
+          <SimplifiedFlightFormV2
+            onSubmit={handleAddFlight}
+            onCancel={() => setShowAddFlight(false)}
           />
         )}
 

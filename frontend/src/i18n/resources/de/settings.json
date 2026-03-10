@@ -12,6 +12,8 @@
     "email": "E-Mail-Adresse",
     "deleteAccount": "Account löschen",
     "deletionRequested": "Löschanfrage vorgemerkt",
+    "dangerZone": "Gefahrenbereich",
+    "dangerZoneDescription": "Diese Aktion kann nicht rückgängig gemacht werden.",
     "invalidFileType": "Bitte wählen Sie eine Bilddatei aus",
     "fileTooLarge": "Bilddatei ist zu groß (max. 5MB)",
     "uploadSuccess": "Profilbild erfolgreich hochgeladen",

@@ -12,6 +12,8 @@
     "email": "Email Address",
     "deleteAccount": "Delete Account",
     "deletionRequested": "Deletion request pending",
+    "dangerZone": "Danger Zone",
+    "dangerZoneDescription": "This action cannot be undone.",
     "invalidFileType": "Please select an image file",
     "fileTooLarge": "Image file is too large (max. 5MB)",
     "uploadSuccess": "Profile picture uploaded successfully",

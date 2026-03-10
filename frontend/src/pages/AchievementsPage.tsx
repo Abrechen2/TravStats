@@ -430,10 +430,14 @@ export default function AchievementsPage(): JSX.Element {
                             className="text-xl font-bold mb-2"
                             style={{ color: "var(--text-primary)" }}
                           >
-                            {achievement.name}
+                            {t(`achievements:codes.${achievement.code}.name`, {
+                              defaultValue: achievement.name,
+                            })}
                           </h3>
                           <p className="text-sm mb-4" style={{ color: "var(--text-muted)" }}>
-                            {achievement.description}
+                            {t(`achievements:codes.${achievement.code}.description`, {
+                              defaultValue: achievement.description,
+                            })}
                           </p>
                           {!achievement.isUnlocked && (
                             <div className="space-y-2">

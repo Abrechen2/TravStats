@@ -23,7 +23,7 @@ Self-hosted flight tracking and statistics app for small groups (1-10 accounts).
 ## 🚀 Features
 
 - **Flight Tracking**: Record flights with categories, tags, and costs
-- **Interactive Maps**: 2D/3D visualization of flight routes and airports
+- **Interactive Maps**: 6 visualization modes — Routes, Heatmap, Hexagon (3D), 3D Columns, Trips (animated), Globe
 - **Statistics**: Comprehensive analyses (distance, flight time, costs, top routes)
 - **Achievements**: 58 Battlefield-style achievements in 5 categories
 - **Boarding Pass Scanner**: QR code and barcode scanning
