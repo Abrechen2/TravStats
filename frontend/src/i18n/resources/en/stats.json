@@ -245,5 +245,17 @@
     "longestLayoverDesc": "{{hours}} hours in {{from}}",
     "roundTripMaster": "Round Trip Master",
     "roundTripMasterDesc": "{{count}} complete round trips"
+  },
+  "seats": {
+    "title": "Seat Statistics",
+    "window": "Window",
+    "middle": "Middle",
+    "aisle": "Aisle",
+    "front": "Front (rows 1–10)",
+    "middleZone": "Middle (rows 11–25)",
+    "back": "Back (rows 26+)",
+    "mostCommon": "Most common seat",
+    "avgRow": "Avg. row",
+    "noData": "No seat data recorded"
   }
 }

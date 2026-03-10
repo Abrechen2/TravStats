@@ -678,6 +678,16 @@ export const statsApi = {
     });
     return data;
   },
+
+  getSeatStats: async (filters?: {
+    fromDate?: string;
+    toDate?: string;
+  }): Promise<import("../types").SeatStats> => {
+    const { data } = await api.get<import("../types").SeatStats>("/stats/seats", {
+      params: filters,
+    });
+    return data;
+  },
 };
 
 // Airport API

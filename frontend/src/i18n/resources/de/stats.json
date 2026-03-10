@@ -245,5 +245,17 @@
     "longestLayoverDesc": "{{hours}} Stunden in {{from}}",
     "roundTripMaster": "Rundreise-Meister",
     "roundTripMasterDesc": "{{count}} komplette Hin- und Rückflüge"
+  },
+  "seats": {
+    "title": "Sitzplatz-Statistiken",
+    "window": "Fenster",
+    "middle": "Mitte",
+    "aisle": "Gang",
+    "front": "Vorne (Reihen 1–10)",
+    "middleZone": "Mitte (Reihen 11–25)",
+    "back": "Hinten (Reihen 26+)",
+    "mostCommon": "Häufigster Sitzplatz",
+    "avgRow": "Durchschn. Reihe",
+    "noData": "Keine Sitzplatzdaten vorhanden"
   }
 }

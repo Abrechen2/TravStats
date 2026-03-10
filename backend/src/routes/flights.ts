@@ -34,6 +34,7 @@ interface FlightUpdateData {
   currency?: string | null;
   category?: string | null;
   tags?: string[];
+  companions?: string[];
   receiptUrl?: string | null;
   depIcao?: string | null;
   depIata?: string | null;
@@ -275,6 +276,7 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
         currency: data.currency,
         category: data.category,
         tags: data.tags ?? [],
+        companions: data.companions ?? [],
         receiptUrl: data.receiptUrl,
         // Data source tracking
         dataSource: 'manual',
@@ -530,6 +532,7 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     if (data.currency !== undefined) updateData.currency = data.currency;
     if (data.category !== undefined) updateData.category = data.category;
     if (data.tags !== undefined) updateData.tags = data.tags;
+    if (data.companions !== undefined) updateData.companions = data.companions;
     if (data.receiptUrl !== undefined) updateData.receiptUrl = data.receiptUrl;
 
     if (data.departure) {

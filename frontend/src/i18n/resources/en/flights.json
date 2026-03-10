@@ -31,6 +31,8 @@
     "currency": "Currency",
     "notes": "Notes",
     "tags": "Tags",
+    "companions": "Travel companions",
+    "companionsHint": "Add names, press Enter",
     "submit": "Save Flight",
     "saving": "Saving...",
     "cancel": "Cancel",
@@ -95,6 +97,7 @@
     },
     "placeholders": {
       "tags": "business, vacation, conference",
+      "companions": "John Doe",
       "flightNumber": "LH400",
       "airline": "Lufthansa",
       "departureAirport": "FRA, Frankfurt",
