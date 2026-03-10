@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect } from "react";
 import { DeckGLMap } from "./DeckGLMap";
+import { VisModeSelector } from "./VisModeSelector";
 import type { GeoJSONFeature } from "../types";
 import type { VisMode } from "../types/visMode";
 import { useTranslation } from "../hooks/useTranslation";
@@ -139,10 +140,14 @@ export default function MapContainer3D({
             selectedFlightId={selectedFlightId}
             onFlightClick={onFlightClick}
             visMode={visMode}
-            onVisModeChange={onVisModeChange}
             minRouteCount={minRouteCount}
           />
         )}
+      </div>
+
+      {/* Mode selector — always visible, below the dashboard toolbar */}
+      <div className="absolute top-16 right-3 z-10">
+        <VisModeSelector current={visMode} onChange={onVisModeChange} />
       </div>
     </div>
   );

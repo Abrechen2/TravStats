@@ -58,15 +58,11 @@ describe("buildRouteData", () => {
     expect(arcs).toHaveLength(0);
   });
 
-  it("skips flights with missing coordinates", () => {
+  it("skips flights with missing geometry coordinates", () => {
     const incomplete: GeoJSONFeature = {
       ...mockFlight,
-      properties: {
-        ...mockFlight.properties,
-        id: "f3",
-        departureAirport: { iata: "FRA" }, // missing lat/lon
-        arrivalAirport: { iata: "JFK", lat: 40.64, lon: -73.78 },
-      },
+      properties: { ...mockFlight.properties, id: "f3" },
+      geometry: { type: "LineString", coordinates: [] },
     };
     const { arcs } = buildRouteData([incomplete], 1);
     expect(arcs).toHaveLength(0);

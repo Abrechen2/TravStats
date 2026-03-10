@@ -47,14 +47,14 @@ describe("buildHeatmapData", () => {
     expect(fra?.weight).toBe(2);
   });
 
-  it("skips airports with missing coordinates", () => {
+  it("skips flights with missing geometry coordinates", () => {
     const flight: GeoJSONFeature = {
       type: "Feature",
       properties: {
         id: "f1",
         airline: "LH",
         flightNumber: "LH1",
-        departureAirport: { iata: "FRA" }, // no lat/lon
+        departureAirport: { iata: "FRA", lat: 50.03, lon: 8.57 },
         arrivalAirport: { iata: "JFK", lat: 40.64, lon: -73.78 },
         departureTime: "",
         arrivalTime: "",
@@ -64,6 +64,6 @@ describe("buildHeatmapData", () => {
       geometry: { type: "LineString", coordinates: [] },
     };
     const points = buildHeatmapData([flight]);
-    expect(points).toHaveLength(1); // only JFK
+    expect(points).toHaveLength(0); // entire flight skipped — no coords
   });
 });

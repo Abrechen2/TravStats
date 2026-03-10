@@ -45,13 +45,10 @@ describe("buildTripsData", () => {
     expect(trips[0].timestamps[0]).toBeLessThan(trips[0].timestamps[1]);
   });
 
-  it("skips flights with missing airport coordinates", () => {
+  it("skips flights with missing geometry coordinates", () => {
     const incomplete: GeoJSONFeature = {
       ...mockFlight,
-      properties: {
-        ...mockFlight.properties,
-        departureAirport: { iata: "FRA" }, // no lat/lon
-      },
+      geometry: { type: "LineString", coordinates: [] },
     };
     const trips = buildTripsData([incomplete]);
     expect(trips).toHaveLength(0);

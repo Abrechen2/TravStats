@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
-import Map from "react-map-gl/maplibre";
-import { DeckGL } from "@deck.gl/react";
-import type { Layer } from "@deck.gl/core";
+import Map, { useControl } from "react-map-gl/maplibre";
+import { MapboxOverlay } from "@deck.gl/mapbox";
+import type { Layer, MapViewState } from "@deck.gl/core";
 import type { GeoJSONFeature } from "../types";
 import type { VisMode } from "../types/visMode";
 import { createRoutesLayers } from "./layers/routesLayer";
@@ -9,11 +9,10 @@ import { createHeatmapLayer } from "./layers/heatmapLayer";
 import { createHexagonLayer } from "./layers/hexagonLayer";
 import { createColumnsLayer } from "./layers/columnsLayer";
 import { createTripsLayer, buildTripsData, getTimeRange } from "./layers/tripsLayer";
-import { VisModeSelector } from "./VisModeSelector";
 import { TimeSlider } from "./TimeSlider";
 import { useThemeStore } from "../store/themeStore";
 
-const INITIAL_VIEW_STATE = {
+const INITIAL_VIEW_STATE: MapViewState = {
   longitude: 10,
   latitude: 30,
   zoom: 2,
@@ -24,21 +23,27 @@ const INITIAL_VIEW_STATE = {
 const LIGHT_MAP_STYLE = "https://demotiles.maplibre.org/style.json";
 const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
+interface DeckOverlayProps {
+  layers: Layer[];
+}
+
+function DeckGLOverlay({ layers }: DeckOverlayProps): null {
+  const overlay = useControl<MapboxOverlay>(() => new MapboxOverlay({ layers }), {
+    position: "top-left",
+  });
+  overlay.setProps({ layers });
+  return null;
+}
+
 interface DeckGLMapProps {
   flights: GeoJSONFeature[];
   visMode: VisMode;
-  onVisModeChange: (mode: VisMode) => void;
   minRouteCount?: number;
   selectedFlightId?: string;
   onFlightClick?: (flightId: string) => void;
 }
 
-export function DeckGLMap({
-  flights,
-  visMode,
-  onVisModeChange,
-  minRouteCount = 1,
-}: DeckGLMapProps): JSX.Element {
+export function DeckGLMap({ flights, visMode, minRouteCount = 1 }: DeckGLMapProps): JSX.Element {
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
 
   const [currentTime, setCurrentTime] = useState<number>(0);
@@ -79,22 +84,13 @@ export function DeckGLMap({
 
   return (
     <div className="relative w-full h-full">
-      <DeckGL
+      <Map
         initialViewState={INITIAL_VIEW_STATE}
-        controller={true}
-        layers={layers}
+        mapStyle={isDarkMode ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
         style={{ position: "absolute", inset: "0" }}
       >
-        <Map
-          mapStyle={isDarkMode ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
-          style={{ width: "100%", height: "100%" }}
-        />
-      </DeckGL>
-
-      {/* Mode selector — top right */}
-      <div className="absolute top-3 right-3 z-10">
-        <VisModeSelector current={visMode} onChange={onVisModeChange} />
-      </div>
+        <DeckGLOverlay layers={layers} />
+      </Map>
 
       {/* Time slider — bottom center, trips mode only */}
       {visMode === "trips" && (

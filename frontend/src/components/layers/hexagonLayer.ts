@@ -8,14 +8,10 @@ export interface HexDatum {
 export function buildHexData(flights: GeoJSONFeature[]): HexDatum[] {
   const points: HexDatum[] = [];
   for (const f of flights) {
-    const dep = f.properties.departureAirport;
-    const arr = f.properties.arrivalAirport;
-    if (dep.lon != null && dep.lat != null) {
-      points.push({ position: [dep.lon, dep.lat] });
-    }
-    if (arr.lon != null && arr.lat != null) {
-      points.push({ position: [arr.lon, arr.lat] });
-    }
+    const coords = f.geometry.coordinates;
+    if (!coords || coords.length < 2) continue;
+    points.push({ position: coords[0] as [number, number] });
+    points.push({ position: coords[coords.length - 1] as [number, number] });
   }
   return points;
 }

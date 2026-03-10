@@ -5,20 +5,15 @@ import type { TripDatum } from "./layerTypes";
 export function buildTripsData(flights: GeoJSONFeature[]): TripDatum[] {
   return flights
     .filter((f) => {
-      const dep = f.properties.departureAirport;
-      const arr = f.properties.arrivalAirport;
-      return dep.lon != null && dep.lat != null && arr.lon != null && arr.lat != null;
+      const coords = f.geometry.coordinates;
+      return coords != null && coords.length >= 2;
     })
     .map((f) => {
-      const dep = f.properties.departureAirport;
-      const arr = f.properties.arrivalAirport;
+      const coords = f.geometry.coordinates;
       const t0 = new Date(f.properties.departureTime).getTime() / 1000;
       const t1 = new Date(f.properties.arrivalTime).getTime() / 1000;
       return {
-        path: [
-          [dep.lon!, dep.lat!],
-          [arr.lon!, arr.lat!],
-        ] as [number, number][],
+        path: [coords[0] as [number, number], coords[coords.length - 1] as [number, number]],
         timestamps: [t0, t1],
       };
     });

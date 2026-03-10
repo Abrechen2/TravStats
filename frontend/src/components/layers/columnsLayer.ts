@@ -12,13 +12,21 @@ export function buildColumnData(flights: GeoJSONFeature[]): ColumnDatum[] {
   const counts = new Map<string, { position: [number, number]; count: number }>();
 
   for (const f of flights) {
-    for (const ap of [f.properties.departureAirport, f.properties.arrivalAirport]) {
-      if (!ap.iata || ap.lon == null || ap.lat == null) continue;
-      const existing = counts.get(ap.iata);
-      counts.set(ap.iata, {
-        position: [ap.lon, ap.lat],
-        count: (existing?.count ?? 0) + 1,
-      });
+    const coords = f.geometry.coordinates;
+    if (!coords || coords.length < 2) continue;
+    const depCoord = coords[0] as [number, number];
+    const arrCoord = coords[coords.length - 1] as [number, number];
+
+    const dep = f.properties.departureAirport;
+    const arr = f.properties.arrivalAirport;
+
+    if (dep.iata) {
+      const existing = counts.get(dep.iata);
+      counts.set(dep.iata, { position: depCoord, count: (existing?.count ?? 0) + 1 });
+    }
+    if (arr.iata) {
+      const existing = counts.get(arr.iata);
+      counts.set(arr.iata, { position: arrCoord, count: (existing?.count ?? 0) + 1 });
     }
   }
 
