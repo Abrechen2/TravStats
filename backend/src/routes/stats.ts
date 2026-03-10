@@ -20,6 +20,118 @@ const DateRangeQuerySchema = z.object({
   toDate: z.string().optional(),
 });
 
+// Extended schema for summary endpoint with year comparison support
+const SummaryQuerySchema = z.object({
+  fromDate: z.string().optional(),
+  toDate: z.string().optional(),
+  year: z.coerce.number().int().min(1900).max(2100).optional(),
+  compareYear: z.coerce.number().int().min(1900).max(2100).optional(),
+});
+
+interface SummaryStats {
+  totalFlights: number;
+  totalDistance: number;
+  totalFlightTime: number;
+  avgDistance: number;
+  byStatus: Record<string, number>;
+  byAirline: Record<string, number>;
+  totalCost: number;
+  byCategory: Record<string, number>;
+}
+
+async function computeSummary(userId: string, where: Prisma.FlightWhereInput): Promise<SummaryStats> {
+  const [flights, statusCounts, airlineCounts, categoryCounts, costAgg] = await Promise.all([
+    prisma.flight.findMany({
+      where,
+      select: {
+        depLat: true,
+        depLon: true,
+        arrLat: true,
+        arrLon: true,
+        departureTime: true,
+        arrivalTime: true,
+      },
+    }),
+    prisma.flight.groupBy({
+      by: ['status'],
+      where,
+      _count: true,
+    }),
+    prisma.flight.groupBy({
+      by: ['airline'],
+      where,
+      _count: true,
+    }),
+    prisma.flight.groupBy({
+      by: ['category'],
+      where,
+      _count: true,
+    }),
+    prisma.flight.aggregate({
+      where,
+      _sum: {
+        price: true,
+        taxes: true,
+        fees: true,
+      },
+    }),
+  ]);
+
+  let totalDistance = 0;
+  let totalFlightTime = 0;
+
+  flights.forEach(flight => {
+    const distance = calculateDistance(
+      flight.depLat,
+      flight.depLon,
+      flight.arrLat,
+      flight.arrLon
+    );
+    totalDistance += distance;
+
+    const flightTime =
+      (flight.arrivalTime.getTime() - flight.departureTime.getTime()) / 1000 / 60;
+    totalFlightTime += flightTime;
+  });
+
+  const avgDistance = flights.length > 0 ? totalDistance / flights.length : 0;
+
+  const byStatus = statusCounts.reduce((acc, item) => {
+    acc[item.status] = item._count;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const byAirline = airlineCounts.reduce((acc, item) => {
+    const airline = item.airline || 'Unknown';
+    acc[airline] = item._count;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const byCategory = categoryCounts.reduce((acc, item) => {
+    const cat = item.category || 'unassigned';
+    acc[cat] = item._count;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const costParts = [
+    costAgg._sum.price,
+    costAgg._sum.taxes,
+    costAgg._sum.fees,
+  ].filter((v): v is number => typeof v === 'number');
+  const totalCost = costParts.length > 0 ? costParts.reduce((a, b) => a + b, 0) : 0;
+
+  return {
+    totalFlights: flights.length,
+    totalDistance: Math.round(totalDistance),
+    totalFlightTime: Math.round(totalFlightTime),
+    avgDistance: Math.round(avgDistance),
+    byStatus,
+    byAirline,
+    totalCost: Math.round(totalCost * 100) / 100,
+    byCategory,
+  };
+}
+
 // Schema for routes query parameters
 const RoutesQuerySchema = z.object({
   limit: z.coerce.number().int().positive().optional(),
@@ -30,123 +142,47 @@ router.get('/summary', async (req: AuthRequest, res: Response, next: NextFunctio
   try {
     const userId = req.userId!;
 
-    const parsed = DateRangeQuerySchema.safeParse(req.query);
+    const parsed = SummaryQuerySchema.safeParse(req.query);
     if (!parsed.success) {
       res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
       return;
     }
-    const { fromDate, toDate } = parsed.data;
+    const { fromDate, toDate, year, compareYear } = parsed.data;
 
-    const where: Prisma.FlightWhereInput = { userId };
+    const buildWhere = (filterYear?: number): Prisma.FlightWhereInput => {
+      const where: Prisma.FlightWhereInput = { userId };
 
-    if (fromDate || toDate) {
-      where.departureTime = {};
-      if (fromDate) {
-        where.departureTime.gte = new Date(fromDate);
+      if (filterYear !== undefined) {
+        // Year filter overrides fromDate/toDate
+        where.departureTime = {
+          gte: new Date(filterYear, 0, 1),
+          lt: new Date(filterYear + 1, 0, 1),
+        };
+      } else if (fromDate || toDate) {
+        where.departureTime = {};
+        if (fromDate) {
+          (where.departureTime as Prisma.DateTimeFilter).gte = new Date(fromDate);
+        }
+        if (toDate) {
+          (where.departureTime as Prisma.DateTimeFilter).lte = new Date(toDate);
+        }
       }
-      if (toDate) {
-        where.departureTime.lte = new Date(toDate);
-      }
+
+      return where;
+    };
+
+    if (year !== undefined && compareYear !== undefined) {
+      // Return comparison response: { current, compare }
+      const [current, compare] = await Promise.all([
+        computeSummary(userId, buildWhere(year)),
+        computeSummary(userId, buildWhere(compareYear)),
+      ]);
+      res.json({ current, compare });
+    } else {
+      // Return flat summary (backward-compatible)
+      const summary = await computeSummary(userId, buildWhere(year));
+      res.json(summary);
     }
-
-    // Use database aggregation instead of loading all flights into memory
-    const [flights, statusCounts, airlineCounts, categoryCounts, costAgg] = await Promise.all([
-      // Get flights for distance/time calculations (we still need coordinates)
-      prisma.flight.findMany({
-        where,
-        select: {
-          depLat: true,
-          depLon: true,
-          arrLat: true,
-          arrLon: true,
-          departureTime: true,
-          arrivalTime: true,
-        },
-      }),
-      // Count by status using aggregation
-      prisma.flight.groupBy({
-        by: ['status'],
-        where,
-        _count: true,
-      }),
-      // Count by airline using aggregation
-      prisma.flight.groupBy({
-        by: ['airline'],
-        where,
-        _count: true,
-      }),
-      // Count by category using aggregation
-      prisma.flight.groupBy({
-        by: ['category'],
-        where,
-        _count: true,
-      }),
-      // Aggregate costs
-      prisma.flight.aggregate({
-        where,
-        _sum: {
-          price: true,
-          taxes: true,
-          fees: true,
-        },
-      }),
-    ]);
-
-    let totalDistance = 0;
-    let totalFlightTime = 0;
-
-    flights.forEach(flight => {
-      const distance = calculateDistance(
-        flight.depLat,
-        flight.depLon,
-        flight.arrLat,
-        flight.arrLon
-      );
-      totalDistance += distance;
-
-      const flightTime =
-        (flight.arrivalTime.getTime() - flight.departureTime.getTime()) / 1000 / 60; // minutes
-      totalFlightTime += flightTime;
-    });
-
-    const avgDistance = flights.length > 0 ? totalDistance / flights.length : 0;
-
-    // Convert aggregation results to objects
-    const byStatus = statusCounts.reduce((acc, item) => {
-      acc[item.status] = item._count;
-      return acc;
-    }, {} as Record<string, number>);
-
-    const byAirline = airlineCounts.reduce((acc, item) => {
-      const airline = item.airline || 'Unknown';
-      acc[airline] = item._count;
-      return acc;
-    }, {} as Record<string, number>);
-
-    const byCategory = categoryCounts.reduce((acc, item) => {
-      const cat = item.category || 'unassigned';
-      acc[cat] = item._count;
-      return acc;
-    }, {} as Record<string, number>);
-
-    // Calculate total cost from aggregated values
-    const costParts = [
-      costAgg._sum.price,
-      costAgg._sum.taxes,
-      costAgg._sum.fees,
-    ].filter((v): v is number => typeof v === 'number');
-    const totalCost = costParts.length > 0 ? costParts.reduce((a, b) => a + b, 0) : 0;
-
-    res.json({
-      totalFlights: flights.length,
-      totalDistance: Math.round(totalDistance),
-      totalFlightTime: Math.round(totalFlightTime),
-      avgDistance: Math.round(avgDistance),
-      byStatus,
-      byAirline,
-      totalCost: Math.round(totalCost * 100) / 100,
-      byCategory,
-    });
   } catch (error) {
     next(error);
   }

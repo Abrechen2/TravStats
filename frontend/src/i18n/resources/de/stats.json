@@ -20,6 +20,12 @@
     "airlines": "Fluggesellschaften"
   },
   "noStatsAvailable": "Keine Statistiken verfügbar",
+  "yearFilter": {
+    "allTime": "Alle Jahre",
+    "selectYear": "Nach Jahr filtern",
+    "compareWith": "Vergleich mit",
+    "vs": "ggü. {{year}}"
+  },
   "byStatus": {
     "title": "Nach Status"
   },
