@@ -34,8 +34,8 @@ export default function AirportAutocomplete({
       try {
         const status = await setupApi.getAirportSeedingStatus();
         setIsSeeding(status.status === "running" || status.status === "pending");
-      } catch {
-        // If check fails, assume not seeding
+      } catch (error) {
+        logger.warn("Failed to check airport seeding status", { error });
         setIsSeeding(false);
       }
     };
@@ -93,8 +93,8 @@ export default function AirportAutocomplete({
           try {
             const airport = await airportsApi.getByCode(query.trim().toUpperCase());
             setResults([airport]);
-          } catch {
-            logger.debug("External search also found nothing");
+          } catch (error) {
+            logger.warn("Airport search failed", { error });
             setResults([]);
           }
         } else {
