@@ -246,6 +246,21 @@
     "roundTripMaster": "Round Trip Master",
     "roundTripMasterDesc": "{{count}} complete round trips"
   },
+  "certificate": {
+    "title": "Flight Certificate",
+    "generate": "Generate Certificate",
+    "download": "Download PNG",
+    "close": "Close",
+    "headline": "FLIGHT CERTIFICATE",
+    "totalFlights": "Total Flights",
+    "totalDistance": "Total Distance",
+    "totalFlightTime": "Total Flight Time",
+    "topAirline": "Favorite Airline",
+    "favoriteRoute": "Favorite Route",
+    "years": "Years Active",
+    "generatedOn": "Generated on {{date}}",
+    "poweredBy": "TravStats — Your Personal Flight Tracker"
+  },
   "seats": {
     "title": "Seat Statistics",
     "window": "Window",

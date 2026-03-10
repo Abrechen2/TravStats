@@ -9,6 +9,8 @@ import type { Flight, FunStats, BusinessStats, UniqueStats, SeatStats } from "..
 import { STORAGE_KEYS } from "../lib/constants";
 import { useTranslation } from "../hooks/useTranslation";
 import { useSettingsStore } from "../store/settingsStore";
+import { useAuthStore } from "../store/authStore";
+import { FlightCertificate } from "../components/FlightCertificate";
 import { convertDistance, formatDistance, formatCurrency, getDistanceLabel } from "../lib/units";
 import { logger } from "../lib/logger";
 import { SkeletonStatCards } from "../components/SkeletonLoader";
@@ -51,12 +53,14 @@ function DeltaBadge({ current, compare }: DeltaBadgeProps): JSX.Element {
 export default function AdvancedStatsPage(): JSX.Element {
   const { t } = useTranslation(["stats", "common"]);
   const { units } = useSettingsStore();
+  const { user } = useAuthStore();
   const [flights, setFlights] = useState<Flight[]>([]);
   const [loading, setLoading] = useState(true);
   const [funStats, setFunStats] = useState<FunStats | null>(null);
   const [businessStats, setBusinessStats] = useState<BusinessStats | null>(null);
   const [uniqueStats, setUniqueStats] = useState<UniqueStats | null>(null);
   const [seatStats, setSeatStats] = useState<SeatStats | null>(null);
+  const [showCertificate, setShowCertificate] = useState(false);
 
   // Year filter + comparison state
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
@@ -446,6 +450,42 @@ export default function AdvancedStatsPage(): JSX.Element {
     flights: flightsPerMonthOfYear[index] || 0,
   }));
 
+  // Certificate derived stats
+  const topAirline: string | null = sortedAirlines.length > 0 ? sortedAirlines[0][0] : null;
+
+  const routeCounts = flights.reduce(
+    (acc, flight) => {
+      const dep = flight.depIata || flight.depIcao || null;
+      const arr = flight.arrIata || flight.arrIcao || null;
+      if (dep && arr) {
+        const key = `${dep} → ${arr}`;
+        acc[key] = (acc[key] || 0) + 1;
+      }
+      return acc;
+    },
+    {} as Record<string, number>
+  );
+  const favoriteRoute: string | null =
+    Object.keys(routeCounts).length > 0
+      ? Object.entries(routeCounts).sort(([, a], [, b]) => b - a)[0][0]
+      : null;
+
+  const yearsActive: number[] = [
+    ...new Set(
+      flights.map((f) => new Date(f.departureTime).getFullYear()).filter((y) => !isNaN(y))
+    ),
+  ];
+
+  const certificateStats = {
+    totalFlights: flights.length,
+    totalDistance,
+    totalFlightTime,
+    topAirline,
+    favoriteRoute,
+    yearsActive,
+    userName: user?.username ?? "Traveler",
+  };
+
   if (loading) {
     return (
       <PageTransition>
@@ -473,6 +513,29 @@ export default function AdvancedStatsPage(): JSX.Element {
             linkTo="/"
             linkText={t("stats:hint.linkText")}
           />
+
+          {/* Generate Certificate Button */}
+          {flights.length > 0 && (
+            <div className="flex justify-end mb-4">
+              <button
+                onClick={() => setShowCertificate(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-colors"
+                style={{
+                  backgroundColor: "var(--color-primary)",
+                  color: "#ffffff",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                ✈ {t("stats:certificate.generate")}
+              </button>
+            </div>
+          )}
+
+          {/* Certificate Modal */}
+          {showCertificate && (
+            <FlightCertificate stats={certificateStats} onClose={() => setShowCertificate(false)} />
+          )}
 
           {/* Year Filter Controls */}
           {availableYears.length > 0 && (

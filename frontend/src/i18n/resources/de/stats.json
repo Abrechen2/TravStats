@@ -246,6 +246,21 @@
     "roundTripMaster": "Rundreise-Meister",
     "roundTripMasterDesc": "{{count}} komplette Hin- und Rückflüge"
   },
+  "certificate": {
+    "title": "Flug-Zertifikat",
+    "generate": "Zertifikat erstellen",
+    "download": "PNG herunterladen",
+    "close": "Schließen",
+    "headline": "FLUG-ZERTIFIKAT",
+    "totalFlights": "Gesamtflüge",
+    "totalDistance": "Gesamtdistanz",
+    "totalFlightTime": "Gesamtflugzeit",
+    "topAirline": "Lieblingsfluggesellschaft",
+    "favoriteRoute": "Lieblingsroute",
+    "years": "Aktive Jahre",
+    "generatedOn": "Erstellt am {{date}}",
+    "poweredBy": "TravStats — Dein persönlicher Flugtracker"
+  },
   "seats": {
     "title": "Sitzplatz-Statistiken",
     "window": "Fenster",
