@@ -155,8 +155,8 @@ router.get('/summary', async (req: AuthRequest, res: Response, next: NextFunctio
       if (filterYear !== undefined) {
         // Year filter overrides fromDate/toDate
         where.departureTime = {
-          gte: new Date(filterYear, 0, 1),
-          lt: new Date(filterYear + 1, 0, 1),
+          gte: new Date(Date.UTC(filterYear, 0, 1)),
+          lt: new Date(Date.UTC(filterYear + 1, 0, 1)),
         };
       } else if (fromDate || toDate) {
         where.departureTime = {};
