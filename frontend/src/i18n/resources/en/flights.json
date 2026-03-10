@@ -117,7 +117,8 @@
     "validation": {
       "selectAirportsAndDates": "Please select both airports and dates",
       "selectAirports": "Please select departure and arrival airports",
-      "selectDate": "Please select departure date"
+      "selectDate": "Please select departure date",
+      "invalidPrice": "Price, taxes, and fees must be positive numbers"
     },
     "tagsHint": "Comma-separated tags for filtering.",
     "loadingScanner": "Loading scanner...",
