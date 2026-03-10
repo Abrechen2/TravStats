@@ -5,6 +5,24 @@ All notable changes to TravStats are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
+## [Unreleased]
+
+### Added
+- **deck.gl visualization**: 6 switchable map modes — Routes (arc layer), Heatmap, Hexagon (3D), 3D Columns, Trips (animated with TimeSlider), and Globe (react-globe.gl)
+- `VisModeSelector` component to switch between all visualization modes from any view
+- `TimeSlider` component for Trips mode animation playback
+- Layer factories for each visualization mode (`routesLayer`, `heatmapLayer`, `hexagonLayer`, `columnsLayer`, `tripsLayer`)
+
+### Changed
+- Map integration refactored from Leaflet to deck.gl 9.x + MapLibre GL 5.x (`DeckGLMap` component)
+- `MapboxOverlay` + `useControl` pattern used for deck.gl/MapLibre integration (avoids WebGL context conflict)
+- `VisModeSelector` moved to `MapContainer3D` level so it remains visible in Globe mode
+
+### Fixed
+- All layer factories now read coordinates from `geometry.coordinates` (GeoJSON LineString), not from airport property `lat`/`lon` fields which the API does not populate
+
+---
+
 ## [0.9.0-beta] - 2026-02-24
 
 First public beta release. Re-versioned from 1.0.x to 0.9.0-beta to reflect that not all planned features are complete yet.
