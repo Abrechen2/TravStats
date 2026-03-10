@@ -1,0 +1,46 @@
+import { TripsLayer } from "deck.gl";
+import type { GeoJSONFeature } from "../../types";
+import type { TripDatum } from "./layerTypes";
+
+export function buildTripsData(flights: GeoJSONFeature[]): TripDatum[] {
+  return flights
+    .filter((f) => {
+      const dep = f.properties.departureAirport;
+      const arr = f.properties.arrivalAirport;
+      return dep.lon != null && dep.lat != null && arr.lon != null && arr.lat != null;
+    })
+    .map((f) => {
+      const dep = f.properties.departureAirport;
+      const arr = f.properties.arrivalAirport;
+      const t0 = new Date(f.properties.departureTime).getTime() / 1000;
+      const t1 = new Date(f.properties.arrivalTime).getTime() / 1000;
+      return {
+        path: [
+          [dep.lon!, dep.lat!],
+          [arr.lon!, arr.lat!],
+        ] as [number, number][],
+        timestamps: [t0, t1],
+      };
+    });
+}
+
+export function getTimeRange(trips: TripDatum[]): { min: number; max: number } {
+  const all = trips.flatMap((t) => t.timestamps);
+  return {
+    min: Math.min(...all),
+    max: Math.max(...all),
+  };
+}
+
+export function createTripsLayer(trips: TripDatum[], currentTime: number): TripsLayer<TripDatum> {
+  return new TripsLayer<TripDatum>({
+    id: "trips",
+    data: trips,
+    getPath: (d) => d.path,
+    getTimestamps: (d) => d.timestamps,
+    getColor: [255, 180, 0, 200],
+    currentTime,
+    trailLength: 3600 * 4,
+    widthMinPixels: 2,
+  });
+}
