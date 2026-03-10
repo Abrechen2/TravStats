@@ -116,3 +116,27 @@ export const boardingPassParseLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+/**
+ * Rate limiter for stats calculation endpoints (expensive DB aggregations)
+ * Allows 30 requests per minute per IP
+ */
+export const statsLimiter = rateLimit({
+  windowMs: RATE_LIMITS.STATS_WINDOW_MS,
+  max: RATE_LIMITS.STATS_MAX_REQUESTS,
+  message: 'Too many stats requests, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/**
+ * Rate limiter for admin export endpoint (loads entire database)
+ * Allows 5 exports per hour per IP
+ */
+export const adminExportLimiter = rateLimit({
+  windowMs: RATE_LIMITS.ADMIN_EXPORT_WINDOW_MS,
+  max: RATE_LIMITS.ADMIN_EXPORT_MAX,
+  message: 'Too many export requests, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
