@@ -193,6 +193,41 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
     const userId = req.userId!;
     const data = createFlightSchema.parse(req.body);
 
+    // Duplicate check: same userId + flightNumber + same calendar day
+    const forceCreate = req.query['force'] === 'true';
+    if (data.flightNumber && !forceCreate) {
+      const depDate = new Date(data.departureTime);
+      const dayStart = new Date(depDate);
+      dayStart.setUTCHours(0, 0, 0, 0);
+      const dayEnd = new Date(depDate);
+      dayEnd.setUTCHours(23, 59, 59, 999);
+
+      const existing = await prisma.flight.findFirst({
+        where: {
+          userId,
+          flightNumber: data.flightNumber,
+          departureTime: { gte: dayStart, lte: dayEnd },
+        },
+        select: {
+          id: true,
+          flightNumber: true,
+          airline: true,
+          depIata: true,
+          arrIata: true,
+          departureTime: true,
+        },
+      });
+
+      if (existing) {
+        res.status(409).json({
+          error: 'DUPLICATE_FLIGHT',
+          message: `Flight ${data.flightNumber} on this day already exists`,
+          existingFlight: existing,
+        });
+        return;
+      }
+    }
+
     // Enrich airport data with missing information from database
     const enriched = await enrichFlightAirports({
       departure: {

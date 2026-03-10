@@ -123,7 +123,13 @@
     "loadingScanner": "Scanner wird geladen...",
     "noFlightsInEmail": "Keine Flüge in der E-Mail gefunden.",
     "departureAirportCode": "Abflughafen (IATA) *",
-    "arrivalAirportCode": "Ankunftsflughafen (IATA) *"
+    "arrivalAirportCode": "Ankunftsflughafen (IATA) *",
+    "duplicate": {
+      "title": "Flug existiert bereits",
+      "message": "Flug {{flightNumber}} ({{route}}) existiert für diesen Tag bereits. Trotzdem hinzufügen?",
+      "cancel": "Abbrechen",
+      "addAnyway": "Trotzdem hinzufügen"
+    }
   },
   "list": {
     "title": "Flüge",

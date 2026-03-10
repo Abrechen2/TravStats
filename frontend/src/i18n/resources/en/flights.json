@@ -124,7 +124,13 @@
     "loadingScanner": "Loading scanner...",
     "noFlightsInEmail": "No flights found in the email.",
     "departureAirportCode": "Departure airport (IATA) *",
-    "arrivalAirportCode": "Arrival airport (IATA) *"
+    "arrivalAirportCode": "Arrival airport (IATA) *",
+    "duplicate": {
+      "title": "Flight Already Exists",
+      "message": "Flight {{flightNumber}} ({{route}}) already exists for this day. Add it anyway?",
+      "cancel": "Cancel",
+      "addAnyway": "Add Anyway"
+    }
   },
   "list": {
     "title": "Flights",
