@@ -43,8 +43,8 @@ const getInitialLanguage = (): string => {
         return parsed.state.display.language;
       }
     }
-  } catch {
-    // Fallback to default
+  } catch (error) {
+    console.warn("[i18n] Initialization failed, using defaults", error);
   }
   return "en"; // Default to English
 };
@@ -133,8 +133,8 @@ export const changeLanguage = async (lng: "en" | "de"): Promise<void> => {
   await i18n.changeLanguage(lng);
   const settingsStore = useSettingsStore.getState();
   settingsStore.setDisplay({ language: lng });
-  settingsStore.saveRemoteSettings().catch(() => {
-    // Silently fail if remote save fails
+  settingsStore.saveRemoteSettings().catch((error: unknown) => {
+    console.warn("[i18n] Failed to save language preference remotely", error);
   });
 };
 
