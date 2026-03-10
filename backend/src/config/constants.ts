@@ -73,6 +73,14 @@ export const RATE_LIMITS = {
   // Boarding pass parse rate limits
   BOARDING_PASS_PARSE_WINDOW_MS: 15 * 60 * 1000, // 15 minutes
   BOARDING_PASS_PARSE_MAX: 20, // parses per window
+
+  // Stats calculation rate limits (expensive DB aggregations)
+  STATS_WINDOW_MS: 60 * 1000, // 1 minute
+  STATS_MAX_REQUESTS: 30, // 30 requests per minute
+
+  // Admin export rate limits (loads entire DB)
+  ADMIN_EXPORT_WINDOW_MS: 60 * 60 * 1000, // 1 hour
+  ADMIN_EXPORT_MAX: 5, // 5 exports per hour
 } as const;
 
 // ========== DATABASE & QUERY LIMITS ==========

@@ -6,11 +6,13 @@ import { calculateDistance } from '../utils/geo';
 import { Prisma } from '@prisma/client';
 import { calculateFunStats, calculateBusinessStats, calculateUniqueStats } from '../utils/statsCalculator';
 import logger from '../utils/logger';
+import { statsLimiter } from '../middleware/rateLimit';
 
 const router = Router();
 
-// All routes require authentication
+// All routes require authentication and are rate-limited
 router.use(authenticate);
+router.use(statsLimiter);
 
 // Shared schema for date-range query parameters
 const DateRangeQuerySchema = z.object({
@@ -164,6 +166,18 @@ router.get('/routes', async (req: AuthRequest, res: Response, next: NextFunction
 
     const flights = await prisma.flight.findMany({
       where: { userId },
+      select: {
+        depIata: true,
+        depIcao: true,
+        depName: true,
+        depLat: true,
+        depLon: true,
+        arrIata: true,
+        arrIcao: true,
+        arrName: true,
+        arrLat: true,
+        arrLon: true,
+      },
     });
 
     // Group by route

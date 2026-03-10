@@ -7,6 +7,7 @@ import { AppError } from '../middleware/errorHandler';
 import crypto from 'crypto';
 import { decryptApiKey, encryptApiKey } from '../utils/encryption';
 import logger from '../utils/logger';
+import { adminExportLimiter } from '../middleware/rateLimit';
 
 // ---- Admin update data interfaces ----
 interface TrainingConfigUpdateData {
@@ -329,7 +330,7 @@ router.get('/invitations', async (req: AuthRequest, res: Response, next: NextFun
 });
 
 // Export all data (for backup)
-router.get('/export/all-data', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get('/export/all-data', adminExportLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const users = await prisma.user.findMany({
       include: {
