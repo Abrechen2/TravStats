@@ -28,6 +28,18 @@
     "lastVisit": "Letzter Besuch",
     "firstVisit": "Erster Besuch",
     "moreAirlines": "+{{count}} mehr"
+  },
+  "visMode": {
+    "routes": "Routen",
+    "globe": "Globus",
+    "heatmap": "Heatmap",
+    "hexagon": "Hexagon",
+    "columns": "3D-Säulen",
+    "trips": "Animation",
+    "label": "Darstellung"
+  },
+  "timeSlider": {
+    "play": "Abspielen",
+    "pause": "Pause"
   }
 }
-

@@ -190,11 +190,15 @@ export interface GeoJSONFeature {
       icao?: string;
       iata?: string;
       name?: string;
+      lat?: number;
+      lon?: number;
     };
     arrivalAirport: {
       icao?: string;
       iata?: string;
       name?: string;
+      lat?: number;
+      lon?: number;
     };
     departureTime: string;
     arrivalTime: string;

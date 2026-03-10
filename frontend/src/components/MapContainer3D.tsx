@@ -1,6 +1,8 @@
 import { lazy, Suspense, useEffect } from "react";
-import Map from "./Map";
+import { DeckGLMap } from "./DeckGLMap";
+import { VisModeSelector } from "./VisModeSelector";
 import type { GeoJSONFeature } from "../types";
+import type { VisMode } from "../types/visMode";
 import { useTranslation } from "../hooks/useTranslation";
 
 // #region agent log
@@ -75,7 +77,8 @@ interface MapContainer3DProps {
   flights: GeoJSONFeature[];
   selectedFlightId?: string;
   onFlightClick?: (flightId: string) => void;
-  is3D: boolean;
+  visMode: VisMode;
+  onVisModeChange: (mode: VisMode) => void;
   minRouteCount?: number;
 }
 
@@ -83,7 +86,8 @@ export default function MapContainer3D({
   flights,
   selectedFlightId,
   onFlightClick,
-  is3D,
+  visMode,
+  onVisModeChange,
   minRouteCount = 1,
 }: MapContainer3DProps) {
   const { t } = useTranslation(["common", "map"]);
@@ -94,13 +98,13 @@ export default function MapContainer3D({
       "MapContainer3D.tsx:render",
       "MapContainer3D rendered",
       {
-        is3D,
+        visMode,
         flightsCount: flights.length,
         minRouteCount,
       },
-      is3D ? "E" : undefined
+      visMode === "globe" ? "E" : undefined
     );
-  }, [is3D, flights.length, minRouteCount]);
+  }, [visMode, flights.length, minRouteCount]);
   // #endregion
 
   return (
@@ -112,7 +116,7 @@ export default function MapContainer3D({
         className="h-full w-full max-w-[1200px] flex items-center justify-center px-4"
         style={{ touchAction: "pan-x pan-y pinch-zoom" }}
       >
-        {is3D ? (
+        {visMode === "globe" ? (
           <Suspense
             fallback={
               <div className="flex items-center justify-center h-full">
@@ -131,13 +135,19 @@ export default function MapContainer3D({
             />
           </Suspense>
         ) : (
-          <Map
+          <DeckGLMap
             flights={flights}
             selectedFlightId={selectedFlightId}
             onFlightClick={onFlightClick}
+            visMode={visMode}
             minRouteCount={minRouteCount}
           />
         )}
+      </div>
+
+      {/* Mode selector — always visible, below the dashboard toolbar */}
+      <div className="absolute top-16 right-3 z-10">
+        <VisModeSelector current={visMode} onChange={onVisModeChange} />
       </div>
     </div>
   );
