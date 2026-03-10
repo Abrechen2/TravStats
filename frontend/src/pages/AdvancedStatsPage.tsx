@@ -10,7 +10,7 @@ import { STORAGE_KEYS } from "../lib/constants";
 import { useTranslation } from "../hooks/useTranslation";
 import { useSettingsStore } from "../store/settingsStore";
 import { useAuthStore } from "../store/authStore";
-import { FlightCertificate } from "../components/FlightCertificate";
+import { FlightCertificate, type FlightCertificateStats } from "../components/FlightCertificate";
 import { convertDistance, formatDistance, formatCurrency, getDistanceLabel } from "../lib/units";
 import { logger } from "../lib/logger";
 import { SkeletonStatCards } from "../components/SkeletonLoader";
@@ -476,7 +476,7 @@ export default function AdvancedStatsPage(): JSX.Element {
     ),
   ];
 
-  const certificateStats = {
+  const certificateStats: FlightCertificateStats = {
     totalFlights: flights.length,
     totalDistance,
     totalFlightTime,

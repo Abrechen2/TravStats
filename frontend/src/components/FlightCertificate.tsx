@@ -46,7 +46,7 @@ export function FlightCertificate({
   });
 
   const yearsLabel =
-    stats.yearsActive.length > 0 ? stats.yearsActive.sort((a, b) => a - b).join(", ") : "—";
+    stats.yearsActive.length > 0 ? [...stats.yearsActive].sort((a, b) => a - b).join(", ") : "—";
 
   const totalFlightTimeRounded = Math.round(stats.totalFlightTime);
   const totalDistanceRounded = Math.round(stats.totalDistance).toLocaleString();
