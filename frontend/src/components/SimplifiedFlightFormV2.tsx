@@ -494,7 +494,9 @@ export default function SimplifiedFlightFormV2({
                     <h3 className={`font-bold text-2xl ${textClass} mb-2`}>
                       {t("flights:form.email.title")}
                     </h3>
-                    <p className={`text-base ${mutedTextClass} mb-4 font-medium`}>
+                    <p
+                      className={`text-base ${isDarkMode ? mutedTextClass : "text-green-900"} mb-4 font-medium`}
+                    >
                       {t("flights:form.email.description")}
                     </p>
                     <div className={`space-y-2 mb-4`}>
@@ -595,6 +597,13 @@ export default function SimplifiedFlightFormV2({
                   </button>
                 </div>
                 <p className={`text-xs ${mutedTextClass} mt-1`}>{t("flights:form.lookupHint")}</p>
+                {flightNumber.trim() && !searchDate && (
+                  <p
+                    className={`text-xs mt-0.5 ${isDarkMode ? "text-yellow-400" : "text-yellow-700"}`}
+                  >
+                    {t("flights:form.dateImproves")}
+                  </p>
+                )}
               </div>
 
               {/* Manual Entry Option */}

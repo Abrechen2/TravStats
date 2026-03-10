@@ -625,18 +625,41 @@ export default function SettingsPage(): JSX.Element {
                   </button>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3">
-                  <button
-                    className="btn-danger"
-                    onClick={() => setPrivacy({ accountDeletionRequested: true })}
+                {/* Danger Zone */}
+                <div
+                  className="mt-6 pt-4"
+                  style={{ borderTop: "1px solid rgba(var(--danger-rgb, 220,38,38), 0.3)" }}
+                >
+                  <p
+                    className="text-xs font-semibold uppercase tracking-widest mb-3"
+                    style={{ color: "var(--danger)" }}
                   >
-                    {t("settings:profile.deleteAccount")}
-                  </button>
-                  {privacy.accountDeletionRequested && (
-                    <span className="text-sm" style={{ color: "var(--danger)" }}>
-                      {t("settings:profile.deletionRequested")}
-                    </span>
-                  )}
+                    {t("settings:profile.dangerZone")}
+                  </p>
+                  <div
+                    className="rounded-lg p-4"
+                    style={{
+                      border: "1px solid rgba(var(--danger-rgb, 220,38,38), 0.4)",
+                      background: "rgba(var(--danger-rgb, 220,38,38), 0.05)",
+                    }}
+                  >
+                    <p className="text-sm mb-3" style={{ color: "var(--text-muted)" }}>
+                      {t("settings:profile.dangerZoneDescription")}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <button
+                        className="btn-danger"
+                        onClick={() => setPrivacy({ accountDeletionRequested: true })}
+                      >
+                        {t("settings:profile.deleteAccount")}
+                      </button>
+                      {privacy.accountDeletionRequested && (
+                        <span className="text-sm" style={{ color: "var(--danger)" }}>
+                          {t("settings:profile.deletionRequested")}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </SectionCard>
             )}

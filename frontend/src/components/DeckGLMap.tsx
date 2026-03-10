@@ -1,5 +1,5 @@
-import { useState, useMemo, useCallback } from "react";
-import Map, { useControl } from "react-map-gl/maplibre";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import Map, { useControl, type MapRef } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import type { Layer, MapViewState } from "@deck.gl/core";
 import type { GeoJSONFeature } from "../types";
@@ -45,9 +45,18 @@ interface DeckGLMapProps {
 
 export function DeckGLMap({ flights, visMode, minRouteCount = 1 }: DeckGLMapProps): JSX.Element {
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
+  const mapRef = useRef<MapRef>(null);
 
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [playing, setPlaying] = useState<boolean>(false);
+
+  // Auto-pitch: 3D layers need pitch > 0 to be visible
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+    const is3D = visMode === "hexagon" || visMode === "columns";
+    map.easeTo({ pitch: is3D ? 45 : 0, duration: 600 });
+  }, [visMode]);
 
   const trips = useMemo(
     () => (visMode === "trips" ? buildTripsData(flights) : []),
@@ -85,6 +94,7 @@ export function DeckGLMap({ flights, visMode, minRouteCount = 1 }: DeckGLMapProp
   return (
     <div className="relative w-full h-full">
       <Map
+        ref={mapRef}
         initialViewState={INITIAL_VIEW_STATE}
         mapStyle={isDarkMode ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
         style={{ position: "absolute", inset: "0" }}
@@ -94,7 +104,7 @@ export function DeckGLMap({ flights, visMode, minRouteCount = 1 }: DeckGLMapProp
 
       {/* Time slider — bottom center, trips mode only */}
       {visMode === "trips" && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10">
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20">
           <TimeSlider
             min={timeRange.min}
             max={timeRange.max}
