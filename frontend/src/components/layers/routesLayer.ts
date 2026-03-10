@@ -7,6 +7,17 @@ function routeKey(a: string, b: string): string {
   return [a, b].sort().join("-");
 }
 
+function getCoordsFromFeature(
+  f: GeoJSONFeature
+): { depCoord: [number, number]; arrCoord: [number, number] } | null {
+  const coords = f.geometry.coordinates;
+  if (!coords || coords.length < 2) return null;
+  return {
+    depCoord: coords[0] as [number, number],
+    arrCoord: coords[coords.length - 1] as [number, number],
+  };
+}
+
 export function buildRouteData(
   flights: GeoJSONFeature[],
   minRouteCount: number
@@ -17,22 +28,15 @@ export function buildRouteData(
   for (const f of flights) {
     const dep = f.properties.departureAirport;
     const arr = f.properties.arrivalAirport;
-    if (
-      !dep.iata ||
-      !arr.iata ||
-      dep.lon == null ||
-      dep.lat == null ||
-      arr.lon == null ||
-      arr.lat == null
-    )
-      continue;
+    const coords = getCoordsFromFeature(f);
+    if (!dep.iata || !arr.iata || !coords) continue;
 
     const key = routeKey(dep.iata, arr.iata);
     routeCounts.set(key, (routeCounts.get(key) ?? 0) + 1);
 
     if (!airportMap.has(dep.iata)) {
       airportMap.set(dep.iata, {
-        position: [dep.lon, dep.lat],
+        position: coords.depCoord,
         count: 0,
         name: dep.name ?? dep.iata,
         iata: dep.iata,
@@ -40,7 +44,7 @@ export function buildRouteData(
     }
     if (!airportMap.has(arr.iata)) {
       airportMap.set(arr.iata, {
-        position: [arr.lon, arr.lat],
+        position: coords.arrCoord,
         count: 0,
         name: arr.name ?? arr.iata,
         iata: arr.iata,
@@ -59,15 +63,8 @@ export function buildRouteData(
   for (const f of flights) {
     const dep = f.properties.departureAirport;
     const arr = f.properties.arrivalAirport;
-    if (
-      !dep.iata ||
-      !arr.iata ||
-      dep.lon == null ||
-      dep.lat == null ||
-      arr.lon == null ||
-      arr.lat == null
-    )
-      continue;
+    const coords = getCoordsFromFeature(f);
+    if (!dep.iata || !arr.iata || !coords) continue;
 
     const key = routeKey(dep.iata, arr.iata);
     const count = routeCounts.get(key) ?? 0;
@@ -75,8 +72,8 @@ export function buildRouteData(
 
     const color = getHeatmapColor(count, q25, q50, q75);
     arcMap.set(key, {
-      sourcePosition: [dep.lon, dep.lat],
-      targetPosition: [arr.lon, arr.lat],
+      sourcePosition: coords.depCoord,
+      targetPosition: coords.arrCoord,
       count,
       sourceColor: [...color, 200] as [number, number, number, number],
       targetColor: [...color, 200] as [number, number, number, number],

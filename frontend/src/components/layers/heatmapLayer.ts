@@ -10,13 +10,21 @@ export function buildHeatmapData(flights: GeoJSONFeature[]): HeatmapDatum[] {
   const weights = new Map<string, HeatmapDatum>();
 
   for (const f of flights) {
-    for (const ap of [f.properties.departureAirport, f.properties.arrivalAirport]) {
-      if (!ap.iata || ap.lon == null || ap.lat == null) continue;
-      const existing = weights.get(ap.iata);
-      weights.set(ap.iata, {
-        position: [ap.lon, ap.lat],
-        weight: (existing?.weight ?? 0) + 1,
-      });
+    const coords = f.geometry.coordinates;
+    if (!coords || coords.length < 2) continue;
+    const depCoord = coords[0] as [number, number];
+    const arrCoord = coords[coords.length - 1] as [number, number];
+
+    const dep = f.properties.departureAirport;
+    const arr = f.properties.arrivalAirport;
+
+    if (dep.iata) {
+      const existing = weights.get(dep.iata);
+      weights.set(dep.iata, { position: depCoord, weight: (existing?.weight ?? 0) + 1 });
+    }
+    if (arr.iata) {
+      const existing = weights.get(arr.iata);
+      weights.set(arr.iata, { position: arrCoord, weight: (existing?.weight ?? 0) + 1 });
     }
   }
 
