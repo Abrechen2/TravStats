@@ -39,7 +39,33 @@ interface SummaryStats {
   byCategory: Record<string, number>;
 }
 
-async function computeSummary(userId: string, where: Prisma.FlightWhereInput): Promise<SummaryStats> {
+function buildWhere(
+  userId: string,
+  fromDate: string | undefined,
+  toDate: string | undefined,
+  filterYear?: number,
+): Prisma.FlightWhereInput {
+  const where: Prisma.FlightWhereInput = { userId };
+
+  if (filterYear !== undefined) {
+    where.departureTime = {
+      gte: new Date(Date.UTC(filterYear, 0, 1)),
+      lt: new Date(Date.UTC(filterYear + 1, 0, 1)),
+    };
+  } else if (fromDate || toDate) {
+    where.departureTime = {};
+    if (fromDate) {
+      (where.departureTime as Prisma.DateTimeFilter).gte = new Date(fromDate);
+    }
+    if (toDate) {
+      (where.departureTime as Prisma.DateTimeFilter).lte = new Date(toDate);
+    }
+  }
+
+  return where;
+}
+
+async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummaryStats> {
   const [flights, statusCounts, airlineCounts, categoryCounts, costAgg] = await Promise.all([
     prisma.flight.findMany({
       where,
@@ -149,38 +175,16 @@ router.get('/summary', async (req: AuthRequest, res: Response, next: NextFunctio
     }
     const { fromDate, toDate, year, compareYear } = parsed.data;
 
-    const buildWhere = (filterYear?: number): Prisma.FlightWhereInput => {
-      const where: Prisma.FlightWhereInput = { userId };
-
-      if (filterYear !== undefined) {
-        // Year filter overrides fromDate/toDate
-        where.departureTime = {
-          gte: new Date(Date.UTC(filterYear, 0, 1)),
-          lt: new Date(Date.UTC(filterYear + 1, 0, 1)),
-        };
-      } else if (fromDate || toDate) {
-        where.departureTime = {};
-        if (fromDate) {
-          (where.departureTime as Prisma.DateTimeFilter).gte = new Date(fromDate);
-        }
-        if (toDate) {
-          (where.departureTime as Prisma.DateTimeFilter).lte = new Date(toDate);
-        }
-      }
-
-      return where;
-    };
-
     if (year !== undefined && compareYear !== undefined) {
       // Return comparison response: { current, compare }
       const [current, compare] = await Promise.all([
-        computeSummary(userId, buildWhere(year)),
-        computeSummary(userId, buildWhere(compareYear)),
+        computeSummary(buildWhere(userId, fromDate, toDate, year)),
+        computeSummary(buildWhere(userId, fromDate, toDate, compareYear)),
       ]);
       res.json({ current, compare });
     } else {
       // Return flat summary (backward-compatible)
-      const summary = await computeSummary(userId, buildWhere(year));
+      const summary = await computeSummary(buildWhere(userId, fromDate, toDate, year));
       res.json(summary);
     }
   } catch (error) {
