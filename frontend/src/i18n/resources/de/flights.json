@@ -39,6 +39,7 @@
     "manualEntry": "Manuelle Eingabe",
     "manualEntryAction": "Suche \u00fcberspringen und manuell eingeben",
     "lookupHint": "Wir f\u00fcllen alle Flugdaten automatisch aus!",
+    "dateImproves": "Tipp: Mit Datum wird das Suchergebnis genauer.",
     "lookupLoaded": "Flugdaten geladen von {{airline}} {{flightNumber}}",
     "estimatedTimes": "Gesch\u00e4tzte Flugzeiten",
     "estimatedTimesHistorical": "Basierend auf {{count}} {{count, plural, one {historischen Flug} other {historischen Fl\u00fcgen}}} dieser Route.",

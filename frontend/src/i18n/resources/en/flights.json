@@ -39,6 +39,7 @@
     "manualEntry": "Manual Entry",
     "manualEntryAction": "Skip lookup and enter manually",
     "lookupHint": "We'll automatically fill in all flight details!",
+    "dateImproves": "Tip: Adding a date improves search accuracy.",
     "lookupLoaded": "Flight details loaded from {{airline}} {{flightNumber}}",
     "estimatedTimes": "Estimated Flight Times",
     "estimatedTimesHistorical": "Based on {{count}} {{count, plural, one {historical flight} other {historical flights}}} of this route.",
