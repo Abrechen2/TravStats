@@ -49,8 +49,17 @@ interface FlightLookupResult {
   status?: string;
 }
 
+interface DuplicateFlight {
+  id: string;
+  flightNumber: string;
+  airline: string | null;
+  depIata: string | null;
+  arrIata: string | null;
+  departureTime: string;
+}
+
 interface SimplifiedFlightFormProps {
-  onSubmit: (flight: FlightInput) => Promise<void>;
+  onSubmit: (flight: FlightInput, force?: boolean) => Promise<void>;
   onCancel: () => void;
 }
 
@@ -65,6 +74,7 @@ export default function SimplifiedFlightFormV2({
   // UI State
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [duplicateFlight, setDuplicateFlight] = useState<DuplicateFlight | null>(null);
   const [showScanner, setShowScanner] = useState(false);
   const [showEmailUploader, setShowEmailUploader] = useState(false);
   const [step, setStep] = useState<"input" | "lookup" | "select" | "complete">("input");
@@ -425,8 +435,93 @@ export default function SimplifiedFlightFormV2({
         tags: tags.length ? tags : undefined,
       });
     } catch (err: unknown) {
-      const axiosError = err as { response?: { data?: { error?: string } } };
-      setError(axiosError.response?.data?.error || t("errors:saveFailed"));
+      const errorObj = err as {
+        response?: {
+          status?: number;
+          data?: { error?: string; existingFlight?: DuplicateFlight };
+        };
+      };
+      if (errorObj.response?.status === 409 && errorObj.response.data?.existingFlight) {
+        setDuplicateFlight(errorObj.response.data.existingFlight);
+        setLoading(false);
+        return;
+      }
+      setError(errorObj.response?.data?.error ?? t("errors:saveFailed"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForceSubmit = async (): Promise<void> => {
+    setDuplicateFlight(null);
+
+    if (!departure || !arrival) {
+      setError(t("errors:missingAirports"));
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const departureDateTime = new Date(`${departureDate}T${departureTime}:00`).toISOString();
+      const arrivalDateTime = new Date(`${arrivalDate}T${arrivalTime}:00`).toISOString();
+
+      if (flightNumber && departureTime && arrivalTime && departure.iata && arrival.iata) {
+        const depDate = new Date(`${departureDate}T${departureTime}`);
+        depDate.setMinutes(depDate.getMinutes() - 30);
+        const estimatedBoardingTime = `${String(depDate.getHours()).padStart(2, "0")}:${String(depDate.getMinutes()).padStart(2, "0")}`;
+
+        storeHistoricalFlightTime(
+          flightNumber,
+          departure.iata,
+          arrival.iata,
+          estimatedBoardingTime,
+          departureTime,
+          arrivalTime,
+          departureDate
+        );
+      }
+
+      setTimeEstimationWarning(null);
+
+      await onSubmit(
+        {
+          departure: {
+            iata: departure.iata,
+            icao: departure.icao,
+            name: departure.name,
+            lat: departure.lat,
+            lon: departure.lon,
+          },
+          arrival: {
+            iata: arrival.iata,
+            icao: arrival.icao,
+            name: arrival.name,
+            lat: arrival.lat,
+            lon: arrival.lon,
+          },
+          airline: airline || undefined,
+          flightNumber: flightNumber || undefined,
+          aircraft: aircraft || undefined,
+          seatClass: seatClass || undefined,
+          seatNumber: seatNumber || undefined,
+          terminal: terminal || undefined,
+          gate: gate || undefined,
+          departureTime: departureDateTime,
+          arrivalTime: arrivalDateTime,
+          status,
+          notes: notes || undefined,
+          price: price,
+          currency,
+          category,
+          tags: tags.length ? tags : undefined,
+        },
+        true
+      );
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: { error?: string } } };
+      setError(errorObj.response?.data?.error ?? t("errors:saveFailed"));
     } finally {
       setLoading(false);
     }
@@ -1238,6 +1333,39 @@ export default function SimplifiedFlightFormV2({
           parserProvider={parserProvider}
           originalData={originalEmailData}
         />
+      )}
+
+      {/* Duplicate Flight Dialog */}
+      {duplicateFlight && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-[var(--card-bg)] border border-[var(--border)] rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <h3 className="text-lg font-bold text-[var(--text-primary)] mb-2">
+              {t("flights:form.duplicate.title")}
+            </h3>
+            <p className="text-[var(--text-secondary)] mb-4">
+              {t("flights:form.duplicate.message", {
+                flightNumber: duplicateFlight.flightNumber,
+                route: `${duplicateFlight.depIata ?? "?"} → ${duplicateFlight.arrIata ?? "?"}`,
+              })}
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setDuplicateFlight(null)}
+                className="flex-1 px-4 py-2 border border-[var(--border)] rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors"
+              >
+                {t("flights:form.duplicate.cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleForceSubmit()}
+                className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium"
+              >
+                {t("flights:form.duplicate.addAnyway")}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

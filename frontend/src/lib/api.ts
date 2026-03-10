@@ -589,8 +589,8 @@ export const flightsApi = {
     return data;
   },
 
-  create: async (flight: FlightInput): Promise<Flight> => {
-    const { data } = await api.post<Flight>("/flights", flight);
+  create: async (flight: FlightInput, force = false): Promise<Flight> => {
+    const { data } = await api.post<Flight>(`/flights${force ? "?force=true" : ""}`, flight);
     return data;
   },
 
