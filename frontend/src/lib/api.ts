@@ -754,6 +754,37 @@ export const achievementsApi = {
   },
 };
 
+// ==================== Email Notification Interfaces ====================
+
+export interface SmtpConfigInput {
+  host: string;
+  port: number;
+  secure: boolean;
+  username: string;
+  password: string;
+  fromEmail: string;
+  fromName: string;
+  enabled: boolean;
+}
+
+export interface SmtpConfigResponse {
+  configured?: boolean;
+  host?: string;
+  port?: number;
+  secure?: boolean;
+  username?: string;
+  password?: string;
+  fromEmail?: string;
+  fromName?: string;
+  enabled?: boolean;
+}
+
+export interface NotificationPreferences {
+  notificationEmail: string | null;
+  notifyBefore24h: boolean;
+  notifyBefore2h: boolean;
+}
+
 // Settings API
 export const settingsApi = {
   get: async (): Promise<UserSettings> => {
@@ -1713,6 +1744,41 @@ export const adminApi = {
       results: LogSearchResult[];
       total: number;
     }>("/admin/logging/search", { params });
+    return data;
+  },
+
+  getSmtpConfig: async (): Promise<SmtpConfigResponse> => {
+    const { data } = await api.get<SmtpConfigResponse>("/admin/smtp");
+    return data;
+  },
+
+  saveSmtpConfig: async (config: SmtpConfigInput): Promise<SmtpConfigResponse> => {
+    const { data } = await api.put<SmtpConfigResponse>("/admin/smtp", config);
+    return data;
+  },
+
+  testSmtpConnection: async (
+    config: SmtpConfigInput
+  ): Promise<{ success: boolean; error?: string }> => {
+    const { data } = await api.post<{ success: boolean; error?: string }>(
+      "/admin/smtp/test",
+      config
+    );
+    return data;
+  },
+};
+
+// Notification preferences API
+export const notificationsApi = {
+  getPreferences: async (): Promise<NotificationPreferences> => {
+    const { data } = await api.get<NotificationPreferences>("/settings/notifications");
+    return data;
+  },
+
+  updatePreferences: async (
+    prefs: Partial<NotificationPreferences>
+  ): Promise<NotificationPreferences> => {
+    const { data } = await api.put<NotificationPreferences>("/settings/notifications", prefs);
     return data;
   },
 };

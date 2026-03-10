@@ -12,6 +12,7 @@ import GlobalApiKeysManager from "../components/Admin/GlobalApiKeysManager";
 import ParserSettingsTab from "../components/Admin/ParserSettings";
 import TrainingConfigTab from "../components/Admin/TrainingConfig";
 import LoggingManager from "../components/Admin/LoggingManager";
+import SmtpManager from "../components/Admin/SmtpManager";
 import FeedbackAnalytics from "../components/Admin/FeedbackAnalytics";
 import PatternManagement from "../components/Admin/PatternManagement";
 import { useTranslation } from "../hooks/useTranslation";
@@ -49,7 +50,8 @@ type ActiveSection =
   | "feedback"
   | "patterns"
   | "backups"
-  | "apiKeys";
+  | "apiKeys"
+  | "smtp";
 
 // ==================== Admin Page Component ====================
 
@@ -485,6 +487,7 @@ export default function AdminPage(): JSX.Element {
           : undefined,
     },
     { id: "backups", label: t("admin:tabs.backups") },
+    { id: "smtp", label: t("admin:tabs.smtp") },
   ];
 
   return (
@@ -659,6 +662,19 @@ export default function AdminPage(): JSX.Element {
           )}
 
           {activeSection === "backups" && <BackupManagement />}
+
+          {activeSection === "smtp" && (
+            <div
+              style={{
+                background: "var(--bg-card)",
+                border: "1px solid var(--border-color)",
+                borderRadius: 12,
+                padding: 24,
+              }}
+            >
+              <SmtpManager />
+            </div>
+          )}
         </main>
       </div>
     </div>

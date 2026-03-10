@@ -106,7 +106,24 @@
       "off": "Off",
       "24h": "24h before",
       "48h": "48h before"
-    }
+    },
+    "email": "Notification email",
+    "before24h": "24h before departure",
+    "before2h": "2h before departure",
+    "save": "Save",
+    "saved": "Saved!",
+    "smtpTitle": "SMTP Configuration",
+    "smtpHost": "Host",
+    "smtpPort": "Port",
+    "smtpSecure": "Secure (TLS)",
+    "smtpUsername": "Username",
+    "smtpPassword": "Password",
+    "smtpFromEmail": "From email",
+    "smtpFromName": "From name",
+    "smtpEnabled": "Enable email notifications",
+    "testConnection": "Test connection",
+    "testSuccess": "Connection successful!",
+    "testFailed": "Connection failed: {{error}}"
   },
   "privacy": {
     "title": "Privacy & Security",

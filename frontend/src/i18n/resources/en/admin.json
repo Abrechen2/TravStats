@@ -12,7 +12,8 @@
     "logging": "Logging",
     "feedback": "Parser Feedback",
     "patterns": "Pattern Updates",
-    "backups": "Backups"
+    "backups": "Backups",
+    "smtp": "Email / SMTP"
   },
   "parserFeedback": "Parser Feedback",
   "patternUpdates": "Pattern Updates",
