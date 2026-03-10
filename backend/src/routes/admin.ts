@@ -97,6 +97,20 @@ const parserSettingsSchema = z.object({
   defaultTextParser: z.string().optional(),
 });
 
+const testApiKeySchema = z.object({
+  apiKey: z.string().min(1, 'API key is required'),
+});
+
+const testOpenSkySchema = z.object({
+  clientId: z.string().optional(),
+  clientSecret: z.string().optional(),
+  username: z.string().optional(),
+  password: z.string().optional(),
+}).refine(
+  (data) => (!!data.clientId && !!data.clientSecret) || (!!data.username && !!data.password),
+  { message: 'Provide either clientId+clientSecret or username+password' }
+);
+
 const router = Router();
 
 // All routes require authentication and admin privileges
@@ -405,7 +419,7 @@ router.get('/training-config', requireAdmin, async (req: AuthRequest, res: Respo
     const adminSettings = await prisma.adminSettings.findFirst();
     const { getTrainingConfig } = await import('../services/trainingService');
     const trainingConfig = await getTrainingConfig();
-    
+
     res.json({
       trainingModelOutputDir: adminSettings?.trainingModelOutputDir || null,
       trainingEmailModelName: adminSettings?.trainingEmailModelName || null,
@@ -428,7 +442,7 @@ router.get('/training-config', requireAdmin, async (req: AuthRequest, res: Respo
 router.put('/training-config', requireAdmin, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const payload = trainingConfigSchema.parse(req.body);
-    
+
     const updateData: TrainingConfigUpdateData = {};
 
     if (payload.trainingModelOutputDir !== undefined) {
@@ -440,9 +454,9 @@ router.put('/training-config', requireAdmin, async (req: AuthRequest, res: Respo
     if (payload.trainingVisionModelName !== undefined) {
       updateData.trainingVisionModelName = payload.trainingVisionModelName || null;
     }
-    
+
     let adminSettings = await prisma.adminSettings.findFirst();
-    
+
     if (adminSettings) {
       adminSettings = await prisma.adminSettings.update({
         where: { id: adminSettings.id },
@@ -459,7 +473,7 @@ router.put('/training-config', requireAdmin, async (req: AuthRequest, res: Respo
         },
       });
     }
-    
+
     logger.info({
       operation: 'training_config_updated',
       message: 'Training configuration updated',
@@ -468,11 +482,11 @@ router.put('/training-config', requireAdmin, async (req: AuthRequest, res: Respo
         settings: updateData,
       },
     });
-    
+
     // Get updated effective values
     const { getTrainingConfig } = await import('../services/trainingService');
     const trainingConfig = await getTrainingConfig();
-    
+
     res.json({
       message: 'Training configuration updated successfully',
       settings: {
@@ -705,10 +719,10 @@ router.put('/logging/config', async (req: AuthRequest, res: Response, next: Next
   try {
     const validatedData = loggingConfigSchema.parse(req.body);
     const updated = await updateLoggingConfig(validatedData);
-    
+
     // Reinitialize logger streams with new config
     await invalidateCacheAndReinit();
-    
+
     res.json({
       message: 'Logging configuration updated successfully',
       config: updated,
@@ -723,10 +737,10 @@ router.post('/logging/toggle-debug', async (req: AuthRequest, res: Response, nex
   try {
     const { enabled } = toggleDebugLoggingSchema.parse(req.body);
     await toggleDebugLogging(enabled);
-    
+
     // Reinitialize logger streams with new config
     await invalidateCacheAndReinit();
-    
+
     res.json({
       message: `Debug logging ${enabled ? 'enabled' : 'disabled'}`,
       debugLoggingEnabled: enabled,
@@ -949,7 +963,7 @@ router.get('/parser-feedback/details', async (req: AuthRequest, res: Response, n
 // Test API key endpoints (admin)
 router.post('/api-keys/test/openai', requireAdmin, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { apiKey } = req.body;
+    const { apiKey } = testApiKeySchema.parse(req.body);
     const result = await testOpenAIKey(apiKey);
     res.json(result);
   } catch (error) {
@@ -959,7 +973,7 @@ router.post('/api-keys/test/openai', requireAdmin, async (req: AuthRequest, res:
 
 router.post('/api-keys/test/claude', requireAdmin, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { apiKey } = req.body;
+    const { apiKey } = testApiKeySchema.parse(req.body);
     const result = await testClaudeKey(apiKey);
     res.json(result);
   } catch (error) {
@@ -969,7 +983,7 @@ router.post('/api-keys/test/claude', requireAdmin, async (req: AuthRequest, res:
 
 router.post('/api-keys/test/airlabs', requireAdmin, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { apiKey } = req.body;
+    const { apiKey } = testApiKeySchema.parse(req.body);
     const result = await testAirlabsKey(apiKey);
     res.json(result);
   } catch (error) {
@@ -979,7 +993,7 @@ router.post('/api-keys/test/airlabs', requireAdmin, async (req: AuthRequest, res
 
 router.post('/api-keys/test/aviationstack', requireAdmin, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { apiKey } = req.body;
+    const { apiKey } = testApiKeySchema.parse(req.body);
     const result = await testAviationstackKey(apiKey);
     res.json(result);
   } catch (error) {
@@ -989,7 +1003,7 @@ router.post('/api-keys/test/aviationstack', requireAdmin, async (req: AuthReques
 
 router.post('/api-keys/test/opensky', requireAdmin, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { clientId, clientSecret, username, password } = req.body;
+    const { clientId, clientSecret, username, password } = testOpenSkySchema.parse(req.body);
     const result = await testOpenSkyCredentials({ clientId, clientSecret, username, password });
     res.json(result);
   } catch (error) {
