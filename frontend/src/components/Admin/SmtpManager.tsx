@@ -40,8 +40,11 @@ export default function SmtpManager(): JSX.Element {
             enabled: data.enabled ?? false,
           });
         }
-      } catch {
-        // Not configured yet — use defaults
+      } catch (err) {
+        addToast(
+          "error",
+          err instanceof Error ? err.message : t("settings:notifications.loadError")
+        );
       } finally {
         setLoading(false);
       }

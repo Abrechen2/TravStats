@@ -22,8 +22,11 @@ export default function NotificationPreferences(): JSX.Element {
       try {
         const data = await notificationsApi.getPreferences();
         setPrefs(data);
-      } catch {
-        // Use defaults
+      } catch (err) {
+        addToast(
+          "error",
+          err instanceof Error ? err.message : t("settings:notifications.loadError")
+        );
       } finally {
         setLoading(false);
       }

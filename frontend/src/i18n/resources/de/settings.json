@@ -123,7 +123,8 @@
     "smtpEnabled": "E-Mail-Benachrichtigungen aktivieren",
     "testConnection": "Verbindung testen",
     "testSuccess": "Verbindung erfolgreich!",
-    "testFailed": "Verbindung fehlgeschlagen: {{error}}"
+    "testFailed": "Verbindung fehlgeschlagen: {{error}}",
+    "loadError": "Konfiguration konnte nicht geladen werden"
   },
   "privacy": {
     "title": "Datenschutz & Sicherheit",
