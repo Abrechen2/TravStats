@@ -629,11 +629,15 @@ router.get('/seats', async (req: AuthRequest, res: Response, next: NextFunction)
       }
 
       // Position classification by last letter
-      if (lastLetter === 'A' || lastLetter === 'F') {
+      // Covers narrow-body (A-F: 3+3) and wide-body (A-K: 3+4+3) layouts:
+      //   Window: A, F, K
+      //   Middle: B, E, H, J (wide-body center section)
+      //   Aisle:  C, D, G (narrow/wide-body aisle seats)
+      if (lastLetter === 'A' || lastLetter === 'F' || lastLetter === 'K') {
         windowCount++;
-      } else if (lastLetter === 'B' || lastLetter === 'E') {
+      } else if (lastLetter === 'B' || lastLetter === 'E' || lastLetter === 'H' || lastLetter === 'J') {
         middleCount++;
-      } else if (lastLetter === 'C' || lastLetter === 'D') {
+      } else if (lastLetter === 'C' || lastLetter === 'D' || lastLetter === 'G') {
         aisleCount++;
       } else {
         unknownCount++;

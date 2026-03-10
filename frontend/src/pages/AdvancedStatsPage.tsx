@@ -2203,7 +2203,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                         className="text-lg font-semibold mb-3"
                         style={{ color: "var(--text-primary)" }}
                       >
-                        Seat Class
+                        {t("stats:seats.seatClassTitle")}
                       </h3>
                       {Object.entries(seatStats.seatClassDistribution).map(([cls, count]) => {
                         const total = Object.values(seatStats.seatClassDistribution).reduce(
