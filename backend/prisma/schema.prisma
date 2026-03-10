@@ -87,6 +87,7 @@ model Flight {
   fees             Float?   @map("fees")
   category         String?  @default("private") @map("category") // business, private, vacation
   tags             String[] @default([]) @map("tags")
+  companions       String[] @default([]) @map("companions")
   receiptUrl       String?  @map("receipt_url")
   ticketPrice      Float?   @map("ticket_price")
   createdAt        DateTime @default(now()) @map("created_at")
@@ -162,7 +163,7 @@ model UserSettings {
   // User-specific API keys (encrypted at application level)
   openaiApiKey String? @map("openai_api_key")
   claudeApiKey String? @map("claude_api_key")
-  
+
   // Flight lookup API keys (encrypted at application level)
   airlabsApiKey String? @map("airlabs_api_key")
   aviationstackApiKey String? @map("aviationstack_api_key")
@@ -257,7 +258,7 @@ model AdminSettings {
   // Global API keys (encrypted at application level)
   globalOpenaiApiKey String? @map("global_openai_api_key")
   globalClaudeApiKey String? @map("global_claude_api_key")
-  
+
   // Global flight lookup API keys (encrypted at application level)
   globalAirlabsApiKey String? @map("global_airlabs_api_key")
   globalAviationstackApiKey String? @map("global_aviationstack_api_key")

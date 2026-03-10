@@ -56,6 +56,7 @@ export interface Flight {
   terminal?: string;
   bookingReference?: string;
   ticketNumber?: string;
+  companions?: string[];
   // Route tracking
   actualRoute?: Array<{ lat: number; lon: number; timestamp?: string; country?: string }>;
   overflownCountries?: string[];
@@ -105,6 +106,7 @@ export interface FlightInput {
   fees?: number;
   category?: "business" | "private" | "vacation";
   tags?: string[];
+  companions?: string[];
   receiptUrl?: string;
 }
 
@@ -364,4 +366,18 @@ export interface UniqueStats {
     to: string;
   } | null;
   roundTripMaster: number;
+}
+
+export interface SeatStats {
+  windowCount: number;
+  middleCount: number;
+  aisleCount: number;
+  unknownCount: number;
+  noSeatCount: number;
+  frontCount: number;
+  middleZoneCount: number;
+  backCount: number;
+  mostCommonSeat: string | null;
+  seatClassDistribution: Record<string, number>;
+  avgRowNumber: number | null;
 }

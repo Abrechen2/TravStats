@@ -123,6 +123,8 @@ export default function SimplifiedFlightFormV2({
   const [currency, setCurrency] = useState<"EUR" | "USD" | "GBP" | "CHF">("EUR");
   const [category, setCategory] = useState<"business" | "private" | "vacation">("business");
   const [tags, setTags] = useState<string[]>([]);
+  const [companions, setCompanions] = useState<string[]>([]);
+  const [companionInput, setCompanionInput] = useState("");
 
   // Initialize defaults from settings
   useEffect(() => {
@@ -433,6 +435,7 @@ export default function SimplifiedFlightFormV2({
         currency,
         category,
         tags: tags.length ? tags : undefined,
+        companions: companions.length ? companions : undefined,
       });
     } catch (err: unknown) {
       const errorObj = err as {
@@ -516,6 +519,7 @@ export default function SimplifiedFlightFormV2({
           currency,
           category,
           tags: tags.length ? tags : undefined,
+          companions: companions.length ? companions : undefined,
         },
         true
       );
@@ -1130,6 +1134,49 @@ export default function SimplifiedFlightFormV2({
                   placeholder={t("flights:form.placeholders.tags")}
                 />
                 <p className={`text-xs ${mutedTextClass} mt-1`}>{t("flights:form.tagsHint")}</p>
+              </div>
+
+              {/* Travel Companions */}
+              <div>
+                <label className={`label ${textClass}`}>{t("flights:form.companions")}</label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {companions.map((companion, idx) => (
+                    <span
+                      key={idx}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-sm bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
+                    >
+                      {companion}
+                      <button
+                        type="button"
+                        onClick={() => setCompanions((prev) => prev.filter((_, i) => i !== idx))}
+                        className="ml-1 hover:text-red-500 leading-none"
+                        aria-label={`Remove ${companion}`}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  value={companionInput}
+                  onChange={(e) => setCompanionInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === ",") {
+                      e.preventDefault();
+                      const name = companionInput.trim().replace(/,$/, "");
+                      if (name && !companions.includes(name)) {
+                        setCompanions((prev) => [...prev, name]);
+                      }
+                      setCompanionInput("");
+                    }
+                  }}
+                  className={`input ${sizedInputClass}`}
+                  placeholder={t("flights:form.placeholders.companions")}
+                />
+                <p className={`text-xs ${mutedTextClass} mt-1`}>
+                  {t("flights:form.companionsHint")}
+                </p>
               </div>
 
               {/* Notes */}

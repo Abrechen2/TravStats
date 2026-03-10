@@ -31,6 +31,8 @@
     "currency": "Währung",
     "notes": "Notizen",
     "tags": "Tags",
+    "companions": "Reisebegleiter",
+    "companionsHint": "Namen eingeben, Enter drücken",
     "submit": "Flug speichern",
     "saving": "Speichert...",
     "cancel": "Abbrechen",
@@ -94,6 +96,7 @@
     },
     "placeholders": {
       "tags": "business, vacation, conference",
+      "companions": "Max Mustermann",
       "flightNumber": "LH400",
       "airline": "Lufthansa",
       "departureAirport": "FRA, Frankfurt",

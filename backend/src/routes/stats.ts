@@ -530,4 +530,144 @@ router.get('/unique', async (req: AuthRequest, res: Response, next: NextFunction
   }
 });
 
+// Seat position statistics
+interface SeatStats {
+  windowCount: number;
+  middleCount: number;
+  aisleCount: number;
+  unknownCount: number;
+  noSeatCount: number;
+  frontCount: number;
+  middleZoneCount: number;
+  backCount: number;
+  mostCommonSeat: string | null;
+  seatClassDistribution: Record<string, number>;
+  avgRowNumber: number | null;
+}
+
+router.get('/seats', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.userId!;
+
+    const parsed = DateRangeQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
+      return;
+    }
+    const { fromDate, toDate } = parsed.data;
+
+    const where: Prisma.FlightWhereInput = { userId, status: 'flown' };
+
+    if (fromDate || toDate) {
+      where.departureTime = {};
+      if (fromDate) {
+        where.departureTime.gte = new Date(fromDate);
+      }
+      if (toDate) {
+        where.departureTime.lte = new Date(toDate);
+      }
+    }
+
+    const flights = await prisma.flight.findMany({
+      where,
+      select: {
+        seatNumber: true,
+        seatClass: true,
+      },
+    });
+
+    const seatRegex = /^(\d+)([A-Z]+)$/i;
+    const seatCounts: Record<string, number> = {};
+
+    let windowCount = 0;
+    let middleCount = 0;
+    let aisleCount = 0;
+    let unknownCount = 0;
+    let noSeatCount = 0;
+    let frontCount = 0;
+    let middleZoneCount = 0;
+    let backCount = 0;
+    let rowTotal = 0;
+    let rowCountWithNumber = 0;
+    const seatClassDistribution: Record<string, number> = {};
+
+    for (const flight of flights) {
+      // Count seat class distribution
+      if (flight.seatClass) {
+        seatClassDistribution[flight.seatClass] = (seatClassDistribution[flight.seatClass] ?? 0) + 1;
+      }
+
+      if (!flight.seatNumber) {
+        noSeatCount++;
+        continue;
+      }
+
+      // Count seat occurrences for mostCommonSeat
+      const normalizedSeat = flight.seatNumber.toUpperCase();
+      seatCounts[normalizedSeat] = (seatCounts[normalizedSeat] ?? 0) + 1;
+
+      const match = seatRegex.exec(flight.seatNumber);
+      if (!match) {
+        unknownCount++;
+        continue;
+      }
+
+      const rowNumber = parseInt(match[1], 10);
+      const letters = match[2].toUpperCase();
+      const lastLetter = letters[letters.length - 1];
+
+      // Row zone classification
+      rowTotal += rowNumber;
+      rowCountWithNumber++;
+
+      if (rowNumber >= 1 && rowNumber <= 10) {
+        frontCount++;
+      } else if (rowNumber >= 11 && rowNumber <= 25) {
+        middleZoneCount++;
+      } else {
+        backCount++;
+      }
+
+      // Position classification by last letter
+      if (lastLetter === 'A' || lastLetter === 'F') {
+        windowCount++;
+      } else if (lastLetter === 'B' || lastLetter === 'E') {
+        middleCount++;
+      } else if (lastLetter === 'C' || lastLetter === 'D') {
+        aisleCount++;
+      } else {
+        unknownCount++;
+      }
+    }
+
+    // Most common seat
+    let mostCommonSeat: string | null = null;
+    let maxSeatCount = 0;
+    for (const [seat, count] of Object.entries(seatCounts)) {
+      if (count > maxSeatCount) {
+        maxSeatCount = count;
+        mostCommonSeat = seat;
+      }
+    }
+
+    const result: SeatStats = {
+      windowCount,
+      middleCount,
+      aisleCount,
+      unknownCount,
+      noSeatCount,
+      frontCount,
+      middleZoneCount,
+      backCount,
+      mostCommonSeat,
+      seatClassDistribution,
+      avgRowNumber: rowCountWithNumber > 0 ? Math.round((rowTotal / rowCountWithNumber) * 10) / 10 : null,
+    };
+
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;
