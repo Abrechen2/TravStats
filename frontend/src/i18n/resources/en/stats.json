@@ -20,6 +20,12 @@
     "airlines": "Airlines"
   },
   "noStatsAvailable": "No statistics available",
+  "yearFilter": {
+    "allTime": "All time",
+    "selectYear": "Filter by year",
+    "compareWith": "Compare with",
+    "vs": "vs {{year}}"
+  },
   "byStatus": {
     "title": "By Status"
   },

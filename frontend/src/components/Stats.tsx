@@ -51,7 +51,10 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
           statsApi.getSummary(),
           statsApi.getTopRoutes(API_LIMITS.TOP_ROUTES),
         ]);
-        setStats(summaryData);
+        // getSummary without year/compareYear always returns flat SummaryStats (not a compare response)
+        if (!("current" in summaryData)) {
+          setStats(summaryData as StatsType);
+        }
         setRoutes(routesData.routes);
       }
     } catch (error) {

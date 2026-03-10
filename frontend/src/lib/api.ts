@@ -4,7 +4,6 @@ import type {
   Flight,
   FlightInput,
   FlightFilters,
-  Stats,
   Route,
   GeoJSONFeatureCollection,
   AchievementsResponse,
@@ -609,10 +608,39 @@ export const flightsApi = {
   },
 };
 
+// ==================== Stats-specific Types ====================
+
+/** Full summary stats shape returned by /stats/summary */
+export interface SummaryStats {
+  totalFlights: number;
+  totalDistance: number;
+  totalFlightTime: number;
+  avgDistance: number;
+  byStatus: Record<string, number>;
+  byAirline: Record<string, number>;
+  totalCost: number;
+  byCategory: Record<string, number>;
+}
+
+/** Response when compareYear is also provided */
+export interface SummaryCompareResponse {
+  current: SummaryStats;
+  compare: SummaryStats;
+}
+
+export type SummaryResponse = SummaryStats | SummaryCompareResponse;
+
+export interface SummaryParams {
+  fromDate?: string;
+  toDate?: string;
+  year?: number;
+  compareYear?: number;
+}
+
 // Stats API
 export const statsApi = {
-  getSummary: async (filters?: { fromDate?: string; toDate?: string }): Promise<Stats> => {
-    const { data } = await api.get<Stats>("/stats/summary", { params: filters });
+  getSummary: async (params?: SummaryParams): Promise<SummaryResponse> => {
+    const { data } = await api.get<SummaryResponse>("/stats/summary", { params });
     return data;
   },
 

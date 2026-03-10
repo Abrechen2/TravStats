@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { flightsApi, statsApi } from "../lib/api";
+import type { SummaryStats, SummaryCompareResponse } from "../lib/api";
 import NavigationBar from "../components/NavigationBar";
 import FlightCalendar from "../components/FlightCalendar";
 import YearHeatmap from "../components/YearHeatmap";
@@ -25,6 +26,28 @@ import {
 } from "recharts";
 import PageTransition from "../components/PageTransition";
 
+interface DeltaBadgeProps {
+  current: number;
+  compare: number;
+}
+
+function DeltaBadge({ current, compare }: DeltaBadgeProps): JSX.Element {
+  const delta = current - compare;
+  const pct = compare !== 0 ? Math.round((delta / compare) * 100) : 0;
+  const positive = delta >= 0;
+  return (
+    <span
+      className={`inline-flex items-center gap-0.5 text-xs font-semibold px-1.5 py-0.5 rounded ${
+        positive
+          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+          : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+      }`}
+    >
+      {positive ? "▲" : "▼"} {Math.abs(pct)}%
+    </span>
+  );
+}
+
 export default function AdvancedStatsPage(): JSX.Element {
   const { t } = useTranslation(["stats", "common"]);
   const { units } = useSettingsStore();
@@ -33,6 +56,50 @@ export default function AdvancedStatsPage(): JSX.Element {
   const [funStats, setFunStats] = useState<FunStats | null>(null);
   const [businessStats, setBusinessStats] = useState<BusinessStats | null>(null);
   const [uniqueStats, setUniqueStats] = useState<UniqueStats | null>(null);
+
+  // Year filter + comparison state
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
+  const [compareYear, setCompareYear] = useState<number | null>(null);
+  const [compareEnabled, setCompareEnabled] = useState(false);
+  const [yearSummary, setYearSummary] = useState<SummaryStats | null>(null);
+  const [compareSummary, setCompareSummary] = useState<SummaryStats | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+
+  const loadYearSummary = useCallback(
+    async (year: number, cmpYear: number | null): Promise<void> => {
+      setSummaryLoading(true);
+      try {
+        if (cmpYear !== null) {
+          const resp = await statsApi.getSummary({ year, compareYear: cmpYear });
+          if ("current" in resp) {
+            const cmpResp = resp as SummaryCompareResponse;
+            setYearSummary(cmpResp.current);
+            setCompareSummary(cmpResp.compare);
+          }
+        } else {
+          const resp = await statsApi.getSummary({ year });
+          if (!("current" in resp)) {
+            setYearSummary(resp as SummaryStats);
+            setCompareSummary(null);
+          }
+        }
+      } catch (err) {
+        logger.error("Failed to load year summary:", err);
+      } finally {
+        setSummaryLoading(false);
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (selectedYear !== null) {
+      void loadYearSummary(selectedYear, compareEnabled ? compareYear : null);
+    } else {
+      setYearSummary(null);
+      setCompareSummary(null);
+    }
+  }, [selectedYear, compareEnabled, compareYear, loadYearSummary]);
 
   useEffect(() => {
     loadFlights();
@@ -316,6 +383,11 @@ export default function AdvancedStatsPage(): JSX.Element {
       flights: count,
     }));
 
+  // Available years from flights (descending)
+  const availableYears: number[] = Object.keys(flightsPerYear)
+    .map(Number)
+    .sort((a, b) => b - a);
+
   // Weekday analysis
   const weekdayNames = [
     t("stats:weekdays.sunday"),
@@ -396,7 +468,238 @@ export default function AdvancedStatsPage(): JSX.Element {
             linkTo="/"
             linkText={t("stats:hint.linkText")}
           />
-          {/* Overview Stats */}
+
+          {/* Year Filter Controls */}
+          {availableYears.length > 0 && (
+            <div
+              className="rounded-lg shadow p-4 mb-6 flex flex-wrap items-center gap-4"
+              style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+            >
+              <div className="flex items-center gap-2">
+                <label
+                  htmlFor="year-select"
+                  className="text-sm font-medium"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  {t("stats:yearFilter.selectYear")}
+                </label>
+                <select
+                  id="year-select"
+                  value={selectedYear ?? ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "") {
+                      setSelectedYear(null);
+                      setCompareEnabled(false);
+                      setCompareYear(null);
+                    } else {
+                      setSelectedYear(Number(val));
+                    }
+                  }}
+                  className="rounded border px-2 py-1 text-sm"
+                  style={{
+                    background: "var(--bg-elevated)",
+                    borderColor: "var(--color-border)",
+                    color: "var(--text-primary)",
+                  }}
+                >
+                  <option value="">{t("stats:yearFilter.allTime")}</option>
+                  {availableYears.map((yr) => (
+                    <option key={yr} value={yr}>
+                      {yr}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedYear !== null && (
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={compareEnabled}
+                    onChange={(e) => {
+                      setCompareEnabled(e.target.checked);
+                      if (!e.target.checked) {
+                        setCompareYear(null);
+                      }
+                    }}
+                    className="rounded"
+                  />
+                  <span className="text-sm font-medium" style={{ color: "var(--text-muted)" }}>
+                    {t("stats:yearFilter.compareWith")}
+                  </span>
+                </label>
+              )}
+
+              {selectedYear !== null && compareEnabled && (
+                <select
+                  value={compareYear ?? ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setCompareYear(val === "" ? null : Number(val));
+                  }}
+                  className="rounded border px-2 py-1 text-sm"
+                  style={{
+                    background: "var(--bg-elevated)",
+                    borderColor: "var(--color-border)",
+                    color: "var(--text-primary)",
+                  }}
+                >
+                  <option value="">—</option>
+                  {availableYears
+                    .filter((yr) => yr !== selectedYear)
+                    .map((yr) => (
+                      <option key={yr} value={yr}>
+                        {yr}
+                      </option>
+                    ))}
+                </select>
+              )}
+
+              {summaryLoading && (
+                <span className="text-sm" style={{ color: "var(--text-muted)" }}>
+                  {t("stats:loading")}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Year-Filtered Summary Cards */}
+          {yearSummary !== null && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              {/* Total Flights */}
+              <div
+                className="rounded-lg shadow p-6"
+                style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+              >
+                <h3 className="text-sm font-medium" style={{ color: "var(--text-muted)" }}>
+                  {t("stats:overview.totalFlights")}
+                  {compareSummary !== null && (
+                    <span className="ml-1 text-xs" style={{ color: "var(--text-muted)" }}>
+                      {t("stats:yearFilter.vs", { year: compareYear })}
+                    </span>
+                  )}
+                </h3>
+                <div className="flex items-end gap-2 mt-2">
+                  <p className="text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
+                    {yearSummary.totalFlights}
+                  </p>
+                  {compareSummary !== null && (
+                    <DeltaBadge
+                      current={yearSummary.totalFlights}
+                      compare={compareSummary.totalFlights}
+                    />
+                  )}
+                </div>
+                {compareSummary !== null && (
+                  <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+                    {compareSummary.totalFlights} ({compareYear})
+                  </p>
+                )}
+              </div>
+
+              {/* Total Distance */}
+              <div
+                className="rounded-lg shadow p-6"
+                style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+              >
+                <h3 className="text-sm font-medium" style={{ color: "var(--text-muted)" }}>
+                  {t("stats:overview.totalDistance")}
+                  {compareSummary !== null && (
+                    <span className="ml-1 text-xs" style={{ color: "var(--text-muted)" }}>
+                      {t("stats:yearFilter.vs", { year: compareYear })}
+                    </span>
+                  )}
+                </h3>
+                <div className="flex items-end gap-2 mt-2">
+                  <p className="text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
+                    {convertDistance(yearSummary.totalDistance, units.distanceUnit)
+                      .toFixed(0)
+                      .replace(/\B(?=(\d{3})+(?!\d))/g, ".")}
+                    <span className="text-lg ml-1">{getDistanceLabel(units.distanceUnit, t)}</span>
+                  </p>
+                  {compareSummary !== null && (
+                    <DeltaBadge
+                      current={yearSummary.totalDistance}
+                      compare={compareSummary.totalDistance}
+                    />
+                  )}
+                </div>
+                {compareSummary !== null && (
+                  <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+                    {convertDistance(compareSummary.totalDistance, units.distanceUnit).toFixed(0)}{" "}
+                    {getDistanceLabel(units.distanceUnit, t)} ({compareYear})
+                  </p>
+                )}
+              </div>
+
+              {/* Total Flight Time */}
+              <div
+                className="rounded-lg shadow p-6"
+                style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+              >
+                <h3 className="text-sm font-medium" style={{ color: "var(--text-muted)" }}>
+                  {t("stats:overview.totalFlightTime")}
+                  {compareSummary !== null && (
+                    <span className="ml-1 text-xs" style={{ color: "var(--text-muted)" }}>
+                      {t("stats:yearFilter.vs", { year: compareYear })}
+                    </span>
+                  )}
+                </h3>
+                <div className="flex items-end gap-2 mt-2">
+                  <p className="text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
+                    {(yearSummary.totalFlightTime / 60).toFixed(1)}
+                    <span className="text-lg ml-1">{t("stats:overview.hours")}</span>
+                  </p>
+                  {compareSummary !== null && (
+                    <DeltaBadge
+                      current={yearSummary.totalFlightTime}
+                      compare={compareSummary.totalFlightTime}
+                    />
+                  )}
+                </div>
+                {compareSummary !== null && (
+                  <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+                    {(compareSummary.totalFlightTime / 60).toFixed(1)} {t("stats:overview.hours")} (
+                    {compareYear})
+                  </p>
+                )}
+              </div>
+
+              {/* Total Cost */}
+              <div
+                className="rounded-lg shadow p-6"
+                style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+              >
+                <h3 className="text-sm font-medium" style={{ color: "var(--text-muted)" }}>
+                  {t("stats:overview.totalCost")}
+                  {compareSummary !== null && (
+                    <span className="ml-1 text-xs" style={{ color: "var(--text-muted)" }}>
+                      {t("stats:yearFilter.vs", { year: compareYear })}
+                    </span>
+                  )}
+                </h3>
+                <div className="flex items-end gap-2 mt-2">
+                  <p className="text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
+                    {formatCurrency(yearSummary.totalCost, units.currency)}
+                  </p>
+                  {compareSummary !== null && (
+                    <DeltaBadge
+                      current={yearSummary.totalCost}
+                      compare={compareSummary.totalCost}
+                    />
+                  )}
+                </div>
+                {compareSummary !== null && (
+                  <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+                    {formatCurrency(compareSummary.totalCost, units.currency)} ({compareYear})
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Overview Stats (all-time, always shown) */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div
               className="rounded-lg shadow p-6"
