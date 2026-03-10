@@ -8,12 +8,24 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 ## [Unreleased]
 
 ### Added
+- **Duplicate Flight Detection**: POST `/api/v1/flights` returns 409 with `existingFlight` details when duplicate detected (same flightNumber + calendar day). Frontend shows confirmation dialog with "Add Anyway" option (uses `?force=true` bypass). Indexed query for O(1) performance.
+- **Year-over-Year Statistics**: `/api/v1/stats/summary?year=YYYY&compareYear=YYYY` returns `{ current: SummaryStats, compare: SummaryStats }`. Frontend `AdvancedStatsPage` shows year dropdown + compare toggle with delta badges (↑↓ % change). Backend helpers: `buildWhere()` (filter by year) and `computeSummary()` (5-query aggregation).
+- **Travel Companions**: `companions` field added to Flight model (max 50 entries × 100 chars each). Tag-style input in `SimplifiedFlightFormV2`. Zod schema validation.
+- **Seat Statistics**: New `GET /api/v1/stats/seats` endpoint returns distribution by position (window/middle/aisle), zone (front/bulkhead/exit/standard), and cabin class (economy/business/etc). Detects wide-body (A-K columns) vs narrow-body (A-F) layouts.
+- **Flight Certificate**: New `FlightCertificate.tsx` component generates downloadable PNG stats card using html2canvas (scale:2 for retina display). Shows total flights, total distance, total flight time, top airline, years active, user name. Button in `AdvancedStatsPage` when flights are loaded.
+- **Email Notifications**: Singleton `SmtpConfig` model (id=1) for SMTP configuration. User model enhanced with `notificationEmail`, `notifyBefore24h`, `notifyBefore2h` fields.
+  - Services: `emailService.ts` (nodemailer HTML templates), `reminderScheduler.ts` (node-cron every 15 min with in-memory dedup Set)
+  - Admin routes: `GET/PUT/POST /api/v1/admin/smtp` (password always masked in responses)
+  - User routes: `GET/PUT /api/v1/settings/notifications` (email + threshold preferences)
+  - Frontend: `Admin/SmtpManager.tsx` (SMTP config UI), `Settings/NotificationPreferences.tsx` (user preferences)
+- `statsLimiter` (30 req/min) and `adminExportLimiter` (5/hr) rate limiters on protected endpoints
+- Zod validation on 5 test endpoints: `/api/v1/stats/summary` (year range 1900-2100), `/api/v1/airports/enrich`, `/api/v1/settings/apiKeys`, `/api/v1/stats/seats`, `/api/v1/admin/smtp/*` (full SmtpConfig validation)
+
+### Changed
 - **deck.gl visualization**: 6 switchable map modes — Routes (arc layer), Heatmap, Hexagon (3D), 3D Columns, Trips (animated with TimeSlider), and Globe (react-globe.gl)
 - `VisModeSelector` component to switch between all visualization modes from any view
 - `TimeSlider` component for Trips mode animation playback
 - Layer factories for each visualization mode (`routesLayer`, `heatmapLayer`, `hexagonLayer`, `columnsLayer`, `tripsLayer`)
-
-### Changed
 - Map integration refactored from Leaflet to deck.gl 9.x + MapLibre GL 5.x (`DeckGLMap` component)
 - `MapboxOverlay` + `useControl` pattern used for deck.gl/MapLibre integration (avoids WebGL context conflict)
 - `VisModeSelector` moved to `MapContainer3D` level so it remains visible in Globe mode

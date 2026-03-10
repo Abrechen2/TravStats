@@ -22,14 +22,18 @@ Self-hosted flight tracking and statistics app for small groups (1-10 accounts).
 
 ## 🚀 Features
 
-- **Flight Tracking**: Record flights with categories, tags, and costs
+- **Flight Tracking**: Record flights with categories, tags, travel companions (up to 50), and costs
 - **Interactive Maps**: 6 visualization modes — Routes, Heatmap, Hexagon (3D), 3D Columns, Trips (animated), Globe
-- **Statistics**: Comprehensive analyses (distance, flight time, costs, top routes)
+- **Statistics**: Year-over-year comparison, seat distribution (window/middle/aisle/zone/class), distance, flight time, costs, top routes
+- **Duplicate Detection**: Smart detection of same flight/day combinations; override with "Add Anyway" button
+- **Flight Certificates**: Downloadable PNG stats card with total flights, distance, time, top airline, years active
+- **Seat Statistics**: Track window/middle/aisle seats, zones (front/bulkhead/exit/standard), cabin classes
 - **Achievements**: 58 Battlefield-style achievements in 5 categories
-- **Boarding Pass Scanner**: QR code and barcode scanning
-- **Email Import**: Automatic import of flight confirmations (optional with AI)
+- **Boarding Pass Scanner**: QR code and barcode scanning with OCR
+- **Email Import**: Automatic import of flight confirmations (optional with AI via Ollama)
+- **Email Notifications**: Configurable flight reminders (24h and 2h before departure via SMTP)
 - **Export**: CSV, GeoJSON, KML (Google Earth)
-- **Admin Panel**: User management, invitations, data export
+- **Admin Panel**: User management, invitations, SMTP configuration, system info, data export
 
 ## 📦 Installation with Docker
 
@@ -137,10 +141,55 @@ TRAINING_VISION_MODEL_NAME=travstats-vision-custom
 ## 📖 Usage
 
 1. **Record first flight**: Dashboard → "New Flight"
-2. **Scan boarding pass**: Use upload function
-3. **View statistics**: Dashboard & Stats page
-4. **Unlock achievements**: Automatically when reaching milestones
-5. **Export data**: Admin Panel → Export
+2. **Add travel companions**: Enter names as tags (up to 50 per flight, 100 chars each)
+3. **Record seat info**: Specify position (window/middle/aisle), zone, and cabin class
+4. **Scan boarding pass**: Use upload function (QR/barcode/OCR)
+5. **View statistics**: Stats page with year comparison and seat distribution
+6. **Download certificate**: Stats page → Download PNG card with flight achievements
+7. **Enable reminders**: Settings → Notifications → Enter email + enable 24h/2h alerts
+8. **Unlock achievements**: Automatically when reaching milestones
+9. **Export data**: Admin Panel → Export (CSV/GeoJSON/KML)
+
+## 🔔 Email Notifications (Optional)
+
+To enable flight reminders:
+
+1. **Admin → Settings → Email (SMTP)**: Configure your mail server
+2. **Settings → Notifications**: Enter your email and enable 24h/2h reminders
+3. **Done**: Receive automatic reminders before flights depart
+
+Reminders are checked every 15 minutes and sent based on configured thresholds (24 hours and 2 hours before departure).
+
+## 🛠️ API Endpoints (Selection)
+
+### Flight Management
+- `POST /api/v1/flights` — Create flight
+  - Returns 409 if duplicate (same flightNumber + day) with `existingFlight` details
+  - Use `?force=true` to bypass duplicate detection
+- `GET /api/v1/flights` — List user's flights
+- `PUT /api/v1/flights/:id` — Update flight (companions, tags, cost, seatPosition, etc.)
+
+### Statistics
+- `GET /api/v1/stats/summary?year=YYYY&compareYear=YYYY` — Summary with optional year comparison
+  - Returns `{ current: SummaryStats, compare: SummaryStats }`
+- `GET /api/v1/stats/seats` — Seat distribution by position, zone, and cabin class
+- `GET /api/v1/stats/routes` — Top routes by frequency
+- `GET /api/v1/stats/airlines` — Flight count by airline
+
+### Admin (SMTP Configuration)
+- `GET /api/v1/admin/smtp` — Get SMTP config (password masked)
+- `PUT /api/v1/admin/smtp` — Update SMTP settings
+- `POST /api/v1/admin/smtp/test` — Test connection with credentials
+
+### User Settings
+- `GET /api/v1/settings/notifications` — Get notification preferences
+- `PUT /api/v1/settings/notifications` — Update email and reminder thresholds (24h/2h)
+
+**Rate Limiting:**
+- Stats endpoints: 30 req/min per user
+- Admin export: 5 req/hr per admin
+
+For complete API docs, see backend source at `/backend/src/routes/`
 
 ## 🔒 Security
 
