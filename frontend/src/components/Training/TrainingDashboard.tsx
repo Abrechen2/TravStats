@@ -58,7 +58,7 @@ export default function TrainingDashboard({
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   const [jobLogs, setJobLogs] = useState<Record<string, JobLogs>>({});
-  const pollingIntervalRef = useRef<number | null>(null);
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [cancelJobId, setCancelJobId] = useState<string | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);

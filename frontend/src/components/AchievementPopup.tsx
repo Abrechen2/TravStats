@@ -56,7 +56,7 @@ export default function AchievementPopup({
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
-  const timeoutRefs = useRef<number[]>([]);
+  const timeoutRefs = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const currentAchievement = achievements[currentIndex];
 

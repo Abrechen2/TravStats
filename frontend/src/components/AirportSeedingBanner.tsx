@@ -48,7 +48,7 @@ export default function AirportSeedingBanner({
 
   useEffect(() => {
     // Poll every 2-3 seconds if seeding is in progress
-    let intervalId: number | null = null;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
     if (isPolling) {
       intervalId = setInterval(fetchStatus, 2500);
     }
