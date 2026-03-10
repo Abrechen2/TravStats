@@ -8,6 +8,7 @@ import { useThemeStore } from "../store/themeStore";
 import { useAuthStore } from "../store/authStore";
 import ParserConfiguration from "../components/Settings/ParserConfiguration";
 import ApiKeyCard from "../components/Settings/ApiKeyCard";
+import NotificationPreferences from "../components/Settings/NotificationPreferences";
 import { settingsApi, authApi, backupApi } from "../lib/api";
 import { useToastStore } from "../store/toastStore";
 import { logger } from "../lib/logger";
@@ -1011,6 +1012,8 @@ export default function SettingsPage(): JSX.Element {
                     </span>
                   </label>
                 </div>
+                <hr style={{ borderColor: "var(--border-color)", margin: "1.5rem 0" }} />
+                <NotificationPreferences />
               </SectionCard>
             )}
 

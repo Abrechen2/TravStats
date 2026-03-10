@@ -184,6 +184,8 @@ process.on('SIGINT', async () => {
   stopScheduler();
   const { stopHistoricalEnrichmentScheduler } = await import('./jobs/historicalEnrichmentScheduler');
   stopHistoricalEnrichmentScheduler();
+  const { stopReminderScheduler } = await import('./services/reminderScheduler');
+  stopReminderScheduler();
   await prisma.$disconnect();
   process.exit(0);
 });
@@ -194,6 +196,8 @@ process.on('SIGTERM', async () => {
   stopScheduler();
   const { stopHistoricalEnrichmentScheduler } = await import('./jobs/historicalEnrichmentScheduler');
   stopHistoricalEnrichmentScheduler();
+  const { stopReminderScheduler } = await import('./services/reminderScheduler');
+  stopReminderScheduler();
   await prisma.$disconnect();
   process.exit(0);
 });
@@ -258,6 +262,24 @@ if (process.env.NODE_ENV !== 'test') {
       logger.warn({
         operation: 'server_start_historical_enrichment_scheduler_error',
         message: 'Failed to start historical enrichment scheduler',
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+    }
+
+    // Start flight reminder scheduler
+    try {
+      const { startReminderScheduler } = await import('./services/reminderScheduler');
+      startReminderScheduler();
+      logger.info({
+        operation: 'server_start_reminder_scheduler',
+        message: 'Flight reminder scheduler started',
+      });
+    } catch (error) {
+      logger.warn({
+        operation: 'server_start_reminder_scheduler_error',
+        message: 'Failed to start flight reminder scheduler',
         error: {
           message: error instanceof Error ? error.message : 'Unknown error',
         },

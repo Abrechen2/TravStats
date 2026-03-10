@@ -20,6 +20,10 @@ model User {
   canTrainLLM           Boolean                 @default(false) @map("can_train_llm")
   invitedBy             String?                 @map("invited_by")
   createdAt             DateTime                @default(now()) @map("created_at")
+  // Email notification preferences
+  notificationEmail     String?                 @map("notification_email")
+  notifyBefore24h       Boolean                 @default(false) @map("notify_before_24h")
+  notifyBefore2h        Boolean                 @default(false) @map("notify_before_2h")
   flights               Flight[]
   userAchievements      UserAchievement[]
   settings              UserSettings?
@@ -436,6 +440,22 @@ model PendingFlightUpdate {
   @@index([expiresAt])
   @@index([createdAt])
   @@map("pending_flight_updates")
+}
+
+model SmtpConfig {
+  id        Int      @id @default(1)
+  host      String
+  port      Int      @default(587)
+  secure    Boolean  @default(false)
+  username  String
+  password  String
+  fromEmail String   @map("from_email")
+  fromName  String   @default("TravStats") @map("from_name")
+  enabled   Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("smtp_config")
 }
 
 model PendingUpdateStatistics {

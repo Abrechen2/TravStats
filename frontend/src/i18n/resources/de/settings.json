@@ -106,7 +106,24 @@
       "off": "Aus",
       "24h": "24h vorher",
       "48h": "48h vorher"
-    }
+    },
+    "email": "Benachrichtigungs-E-Mail",
+    "before24h": "24h vor Abflug",
+    "before2h": "2h vor Abflug",
+    "save": "Speichern",
+    "saved": "Gespeichert!",
+    "smtpTitle": "SMTP-Konfiguration",
+    "smtpHost": "Host",
+    "smtpPort": "Port",
+    "smtpSecure": "Sicher (TLS)",
+    "smtpUsername": "Benutzername",
+    "smtpPassword": "Passwort",
+    "smtpFromEmail": "Absender-E-Mail",
+    "smtpFromName": "Absendername",
+    "smtpEnabled": "E-Mail-Benachrichtigungen aktivieren",
+    "testConnection": "Verbindung testen",
+    "testSuccess": "Verbindung erfolgreich!",
+    "testFailed": "Verbindung fehlgeschlagen: {{error}}"
   },
   "privacy": {
     "title": "Datenschutz & Sicherheit",
