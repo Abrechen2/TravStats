@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { flightsApi, statsApi } from "../lib/api";
-import type { SummaryStats, SummaryCompareResponse } from "../lib/api";
+import type { SummaryStats } from "../lib/api";
 import NavigationBar from "../components/NavigationBar";
 import FlightCalendar from "../components/FlightCalendar";
 import YearHeatmap from "../components/YearHeatmap";
@@ -72,14 +72,13 @@ export default function AdvancedStatsPage(): JSX.Element {
         if (cmpYear !== null) {
           const resp = await statsApi.getSummary({ year, compareYear: cmpYear });
           if ("current" in resp) {
-            const cmpResp = resp as SummaryCompareResponse;
-            setYearSummary(cmpResp.current);
-            setCompareSummary(cmpResp.compare);
+            setYearSummary(resp.current);
+            setCompareSummary(resp.compare);
           }
         } else {
           const resp = await statsApi.getSummary({ year });
           if (!("current" in resp)) {
-            setYearSummary(resp as SummaryStats);
+            setYearSummary(resp);
             setCompareSummary(null);
           }
         }
@@ -111,7 +110,7 @@ export default function AdvancedStatsPage(): JSX.Element {
     }
   }, []);
 
-  const loadFlights = async () => {
+  const loadFlights = async (): Promise<void> => {
     try {
       setLoading(true);
       // Load all flights by pagination (max 100 per request)
