@@ -10,6 +10,7 @@ import { useTranslation } from "../hooks/useTranslation";
 import { useSettingsStore } from "../store/settingsStore";
 import { convertDistance, formatDistance, formatCurrency, getDistanceLabel } from "../lib/units";
 import { logger } from "../lib/logger";
+import { SkeletonStatCards } from "../components/SkeletonLoader";
 import {
   BarChart,
   Bar,
@@ -371,12 +372,10 @@ export default function AdvancedStatsPage(): JSX.Element {
   if (loading) {
     return (
       <PageTransition>
-        <div
-          className="h-screen flex items-center justify-center"
-          style={{ background: "var(--bg-base)" }}
-        >
-          <div className="text-center">
-            <div style={{ color: "var(--text-muted)" }}>{t("stats:loading")}</div>
+        <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
+          <NavigationBar />
+          <div className="container mx-auto px-4 py-6 max-w-7xl">
+            <SkeletonStatCards />
           </div>
         </div>
       </PageTransition>

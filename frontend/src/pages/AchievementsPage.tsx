@@ -4,6 +4,7 @@ import { achievementsApi } from "../lib/api";
 import ContextualHint from "../components/Onboarding/ContextualHint";
 import NavigationBar from "../components/NavigationBar";
 import PageTransition from "../components/PageTransition";
+import { SkeletonAchievementGrid } from "../components/SkeletonLoader";
 import type { Achievement, AchievementSummary, LeaderboardEntry } from "../types";
 import { STORAGE_KEYS } from "../lib/constants";
 import { useTranslation } from "../hooks/useTranslation";
@@ -103,14 +104,19 @@ export default function AchievementsPage(): JSX.Element {
   );
   if (loading) {
     return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{ background: "var(--bg-base)" }}
-      >
-        <div style={{ color: "var(--text-primary)" }} className="text-xl">
-          {t("achievements:loading")}
+      <PageTransition>
+        <div
+          className="min-h-screen"
+          style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}
+        >
+          <NavigationBar />
+          <div className="p-6">
+            <div className="max-w-7xl mx-auto">
+              <SkeletonAchievementGrid />
+            </div>
+          </div>
         </div>
-      </div>
+      </PageTransition>
     );
   }
 
