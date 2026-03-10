@@ -14,6 +14,7 @@ export interface FlightCertificateStats {
 
 interface FlightCertificateProps {
   stats: FlightCertificateStats;
+  onDownload?: () => void;
   onClose: () => void;
 }
 
@@ -30,7 +31,11 @@ async function downloadCertificate(ref: React.RefObject<HTMLDivElement | null>):
   link.click();
 }
 
-export function FlightCertificate({ stats, onClose }: FlightCertificateProps): JSX.Element {
+export function FlightCertificate({
+  stats,
+  onDownload,
+  onClose,
+}: FlightCertificateProps): JSX.Element {
   const { t } = useTranslation(["stats"]);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -75,7 +80,10 @@ export function FlightCertificate({ stats, onClose }: FlightCertificateProps): J
         }}
       >
         <button
-          onClick={() => void downloadCertificate(cardRef)}
+          onClick={() => {
+            void downloadCertificate(cardRef);
+            onDownload?.();
+          }}
           style={{
             backgroundColor: "#d4af37",
             color: "#0a1628",
