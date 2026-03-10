@@ -123,7 +123,8 @@
     "smtpEnabled": "Enable email notifications",
     "testConnection": "Test connection",
     "testSuccess": "Connection successful!",
-    "testFailed": "Connection failed: {{error}}"
+    "testFailed": "Connection failed: {{error}}",
+    "loadError": "Failed to load configuration"
   },
   "privacy": {
     "title": "Privacy & Security",

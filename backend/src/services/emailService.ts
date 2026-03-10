@@ -3,6 +3,7 @@ import type { Transporter } from 'nodemailer';
 import type { SmtpConfig } from '@prisma/client';
 import { prisma } from '../db';
 import logger from '../utils/logger';
+import { SMTP_CONFIG_ID } from '../routes/admin/smtp';
 
 export interface SmtpConfigInput {
   host: string;
@@ -79,7 +80,7 @@ export async function sendFlightReminder(
     return;
   }
 
-  const config = await prisma.smtpConfig.findUnique({ where: { id: 1 } });
+  const config = await prisma.smtpConfig.findUnique({ where: { id: SMTP_CONFIG_ID } });
   if (!config || !config.enabled) {
     logger.info({
       operation: 'email_reminder_skipped',
