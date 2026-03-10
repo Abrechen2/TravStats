@@ -1,4 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
+import { z } from 'zod';
 import { prisma } from '../db';
 import {
   findOrCreateAirport,
@@ -7,6 +8,16 @@ import {
 } from '../services/airportLookup';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { airportSearchLimiter } from '../middleware/rateLimit';
+
+const enrichAirportSchema = z.object({
+  iata: z.string().length(3).toUpperCase().optional(),
+  icao: z.string().length(4).toUpperCase().optional(),
+  lat: z.number().min(-90).max(90).optional(),
+  lon: z.number().min(-180).max(180).optional(),
+}).refine(
+  (data) => data.iata || data.icao || (data.lat !== undefined && data.lon !== undefined),
+  { message: 'Provide either IATA, ICAO, or coordinates (lat/lon)' }
+);
 
 const router = Router();
 
@@ -92,13 +103,7 @@ router.get('/coords/nearest', authenticate, async (req: AuthRequest, res: Respon
 // Enrich airport data with missing information (requires authentication)
 router.post('/enrich', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { iata, icao, lat, lon } = req.body;
-
-    if (!iata && !icao && (lat === undefined || lon === undefined)) {
-      return res.status(400).json({
-        error: 'Provide either IATA, ICAO, or coordinates (lat/lon)',
-      });
-    }
+    const { iata, icao, lat, lon } = enrichAirportSchema.parse(req.body);
 
     const enriched = await enrichAirportData({ iata, icao, lat, lon });
 

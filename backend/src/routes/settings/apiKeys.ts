@@ -32,6 +32,20 @@ const apiKeysSchema = z.object({
   openskyPassword: z.string().optional().nullable(),
 }).partial();
 
+const testApiKeySchema = z.object({
+  apiKey: z.string().min(1, 'API key is required'),
+});
+
+const testOpenSkySchema = z.object({
+  clientId: z.string().optional(),
+  clientSecret: z.string().optional(),
+  username: z.string().optional(),
+  password: z.string().optional(),
+}).refine(
+  (data) => (!!data.clientId && !!data.clientSecret) || (!!data.username && !!data.password),
+  { message: 'Provide either clientId+clientSecret or username+password' }
+);
+
 // GET /
 router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -289,7 +303,7 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
 // POST /test/openai
 router.post('/test/openai', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { apiKey } = req.body as { apiKey: string };
+    const { apiKey } = testApiKeySchema.parse(req.body);
     const result = await testOpenAIKey(apiKey, req.userId!);
     res.json(result);
   } catch (error) {
@@ -300,7 +314,7 @@ router.post('/test/openai', async (req: AuthRequest, res: Response, next: NextFu
 // POST /test/claude
 router.post('/test/claude', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { apiKey } = req.body as { apiKey: string };
+    const { apiKey } = testApiKeySchema.parse(req.body);
     const result = await testClaudeKey(apiKey, req.userId!);
     res.json(result);
   } catch (error) {
@@ -311,7 +325,7 @@ router.post('/test/claude', async (req: AuthRequest, res: Response, next: NextFu
 // POST /test/airlabs
 router.post('/test/airlabs', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { apiKey } = req.body as { apiKey: string };
+    const { apiKey } = testApiKeySchema.parse(req.body);
     const result = await testAirlabsKey(apiKey, req.userId!);
     res.json(result);
   } catch (error) {
@@ -322,7 +336,7 @@ router.post('/test/airlabs', async (req: AuthRequest, res: Response, next: NextF
 // POST /test/aviationstack
 router.post('/test/aviationstack', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { apiKey } = req.body as { apiKey: string };
+    const { apiKey } = testApiKeySchema.parse(req.body);
     const result = await testAviationstackKey(apiKey, req.userId!);
     res.json(result);
   } catch (error) {
@@ -333,12 +347,7 @@ router.post('/test/aviationstack', async (req: AuthRequest, res: Response, next:
 // POST /test/opensky
 router.post('/test/opensky', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { clientId, clientSecret, username, password } = req.body as {
-      clientId: string;
-      clientSecret: string;
-      username: string;
-      password: string;
-    };
+    const { clientId, clientSecret, username, password } = testOpenSkySchema.parse(req.body);
     const result = await testOpenSkyCredentials(
       { clientId, clientSecret, username, password },
       req.userId!

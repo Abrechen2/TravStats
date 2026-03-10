@@ -251,6 +251,23 @@ export default function SimplifiedFlightForm({
       return;
     }
 
+    const priceNum = price ? Number(price) : undefined;
+    const taxesNum = taxes ? Number(taxes) : undefined;
+    const feesNum = fees ? Number(fees) : undefined;
+
+    if (priceNum !== undefined && (isNaN(priceNum) || priceNum < 0)) {
+      setError(t("flights:form.validation.invalidPrice"));
+      return;
+    }
+    if (taxesNum !== undefined && (isNaN(taxesNum) || taxesNum < 0)) {
+      setError(t("flights:form.validation.invalidPrice"));
+      return;
+    }
+    if (feesNum !== undefined && (isNaN(feesNum) || feesNum < 0)) {
+      setError(t("flights:form.validation.invalidPrice"));
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -283,9 +300,9 @@ export default function SimplifiedFlightForm({
         arrivalTime: arrivalDateTime,
         status,
         notes: notes || undefined,
-        price: price ? Number(price) : undefined,
-        taxes: taxes ? Number(taxes) : undefined,
-        fees: fees ? Number(fees) : undefined,
+        price: priceNum,
+        taxes: taxesNum,
+        fees: feesNum,
         currency,
         category,
         tags: tags.length ? tags : undefined,

@@ -1,6 +1,6 @@
-﻿{
+{
   "form": {
-    "title": "Flug hinzuf\u00fcgen",
+    "title": "Flug hinzufügen",
     "flightNumber": "Flugnummer",
     "flightNumberExample": "(z. B. LH400, BA1234)",
     "searchFlight": "Flug suchen",
@@ -27,8 +27,8 @@
     "category": "Kategorie",
     "price": "Preis",
     "taxes": "Steuern",
-    "fees": "Geb\u00fchren",
-    "currency": "W\u00e4hrung",
+    "fees": "Gebühren",
+    "currency": "Währung",
     "notes": "Notizen",
     "tags": "Tags",
     "submit": "Flug speichern",
@@ -37,59 +37,59 @@
     "scanBoardingPass": "Boarding Pass scannen",
     "uploadEmail": "E-Mail hochladen",
     "manualEntry": "Manuelle Eingabe",
-    "manualEntryAction": "Suche \u00fcberspringen und manuell eingeben",
-    "lookupHint": "Wir f\u00fcllen alle Flugdaten automatisch aus!",
+    "manualEntryAction": "Suche überspringen und manuell eingeben",
+    "lookupHint": "Wir füllen alle Flugdaten automatisch aus!",
     "dateImproves": "Tipp: Mit Datum wird das Suchergebnis genauer.",
     "lookupLoaded": "Flugdaten geladen von {{airline}} {{flightNumber}}",
-    "estimatedTimes": "Gesch\u00e4tzte Flugzeiten",
-    "estimatedTimesHistorical": "Basierend auf {{count}} {{count, plural, one {historischen Flug} other {historischen Fl\u00fcgen}}} dieser Route.",
-    "estimatedTimesCalculated": "Abflug- und Ankunftszeiten wurden aus Ihren fr\u00fcheren Fl\u00fcgen berechnet.",
-    "estimatedTimesAutomatic": "Automatisch gesch\u00e4tzt basierend auf Boarding-Zeit und Flugdistanz.",
+    "estimatedTimes": "Geschätzte Flugzeiten",
+    "estimatedTimesHistorical": "Basierend auf {{count}} {{count, plural, one {historischen Flug} other {historischen Flügen}}} dieser Route.",
+    "estimatedTimesCalculated": "Abflug- und Ankunftszeiten wurden aus Ihren früheren Flügen berechnet.",
+    "estimatedTimesAutomatic": "Automatisch geschätzt basierend auf Boarding-Zeit und Flugdistanz.",
     "estimatedTimesAssumption": "Annahme: Abflug = Boarding + 30min, Flugdauer -> {{minutes}} Minuten.",
-    "reviewTimes": "Bitte \u00fcberpr\u00fcfen und korrigieren Sie die Zeiten bei Bedarf.",
+    "reviewTimes": "Bitte überprüfen und korrigieren Sie die Zeiten bei Bedarf.",
     "hideWarning": "Warnung ausblenden",
     "help": {
-      "departureAirport": "W\u00e4hlen Sie den Abflughafen aus. Sie k\u00f6nnen nach IATA-Code (z.B. FRA) oder Name suchen.",
-      "arrivalAirport": "W\u00e4hlen Sie den Zielflughafen aus. Sie k\u00f6nnen nach IATA-Code (z.B. LHR) oder Name suchen.",
-      "departureDate": "W\u00e4hlen Sie das Abflugdatum aus.",
+      "departureAirport": "Wählen Sie den Abflughafen aus. Sie können nach IATA-Code (z.B. FRA) oder Name suchen.",
+      "arrivalAirport": "Wählen Sie den Zielflughafen aus. Sie können nach IATA-Code (z.B. LHR) oder Name suchen.",
+      "departureDate": "Wählen Sie das Abflugdatum aus.",
       "departureTime": "Geben Sie die Abflugzeit ein (lokale Zeit des Abflughafens).",
       "departureTimeExpanded": "Die Zeit sollte in der lokalen Zeitzone des Abflughafens angegeben werden. Das System konvertiert automatisch bei Bedarf.",
-      "arrivalDate": "W\u00e4hlen Sie das Ankunftsdatum aus.",
+      "arrivalDate": "Wählen Sie das Ankunftsdatum aus.",
       "arrivalTime": "Geben Sie die Ankunftszeit ein (lokale Zeit des Zielflughafens).",
       "arrivalTimeExpanded": "Die Zeit sollte in der lokalen Zeitzone des Zielflughafens angegeben werden. Das System konvertiert automatisch bei Bedarf.",
-      "price": "Der Preis wird zusammen mit der W\u00e4hrung gespeichert. Sie k\u00f6nnen sp\u00e4ter nach Preisen filtern und Statistiken anzeigen.",
-      "tags": "F\u00fcgen Sie Tags hinzu, um Fl\u00fcge sp\u00e4ter zu kategorisieren und zu filtern (z.B. 'business', 'international').",
-      "tagsExpanded": "Tags werden durch Kommas getrennt. Sie k\u00f6nnen sp\u00e4ter nach Tags filtern und Statistiken nach Tags gruppieren. Beispiele: 'business', 'vacation', 'lufthansa', 'long-haul'.",
-      "flightNumber": "Geben Sie die Flugnummer ein (z.B. LH400). Mit dem Lookup-Button k\u00f6nnen Sie automatisch Flugdaten abrufen, wenn ein API-Schl\u00fcssel konfiguriert ist.",
-      "flightNumberExpanded": "Die automatische Flugsuche verwendet externe APIs (AirLabs, AviationStack, OpenSky), um Flugdaten abzurufen. Ohne API-Schl\u00fcssel m\u00fcssen Sie die Daten manuell eingeben."
+      "price": "Der Preis wird zusammen mit der Währung gespeichert. Sie können später nach Preisen filtern und Statistiken anzeigen.",
+      "tags": "Fügen Sie Tags hinzu, um Flüge später zu kategorisieren und zu filtern (z.B. 'business', 'international').",
+      "tagsExpanded": "Tags werden durch Kommas getrennt. Sie können später nach Tags filtern und Statistiken nach Tags gruppieren. Beispiele: 'business', 'vacation', 'lufthansa', 'long-haul'.",
+      "flightNumber": "Geben Sie die Flugnummer ein (z.B. LH400). Mit dem Lookup-Button können Sie automatisch Flugdaten abrufen, wenn ein API-Schlüssel konfiguriert ist.",
+      "flightNumberExpanded": "Die automatische Flugsuche verwendet externe APIs (AirLabs, AviationStack, OpenSky), um Flugdaten abzurufen. Ohne API-Schlüssel müssen Sie die Daten manuell eingeben."
     },
     "steps": {
-      "input": "Flugnummer f\u00fcr automatische Suche eingeben",
-      "select": "W\u00e4hlen Sie Ihren Flug aus den Ergebnissen",
-      "complete": "Flugdetails \u00fcberpr\u00fcfen und vervollst\u00e4ndigen"
+      "input": "Flugnummer für automatische Suche eingeben",
+      "select": "Wählen Sie Ihren Flug aus den Ergebnissen",
+      "complete": "Flugdetails überprüfen und vervollständigen"
     },
     "boardingPass": {
       "title": "Haben Sie einen Boarding Pass?",
-      "description": "Scannen Sie ihn f\u00fcr sofortiges Auto-Ausf\u00fcllen!",
+      "description": "Scannen Sie ihn für sofortiges Auto-Ausfüllen!",
       "scan": "Jetzt scannen"
     },
     "email": {
       "title": "Haben Sie eine Buchungs-E-Mail?",
-      "description": "Importieren Sie Fl\u00fcge direkt aus Best\u00e4tigungs-E-Mails!",
+      "description": "Importieren Sie Flüge direkt aus Bestätigungs-E-Mails!",
       "import": "E-Mail importieren",
       "bestOption": "Beste Option",
-      "bestOptionDescription": "Erfasst alle Daten am besten aus Best\u00e4tigungs-E-Mails"
+      "bestOptionDescription": "Erfasst alle Daten am besten aus Bestätigungs-E-Mails"
     },
     "simplified": {
-      "subtitle": "Geben Sie einfach Abflug- und Ankunftsflughafen ein \u2013 wir erledigen den Rest!",
+      "subtitle": "Geben Sie einfach Abflug- und Ankunftsflughafen ein – wir erledigen den Rest!",
       "orEnterManually": "Oder manuell eingeben",
       "advancedOptions": "Erweiterte Optionen (optional)",
-      "proTip": "Tipp: Scannen Sie Ihren Boarding Pass oder w\u00e4hlen Sie einfach Flugh\u00e4fen und Datum!",
-      "addTag": "Tag hinzuf\u00fcgen",
-      "lookupSearching": "\ud83d\udd04 Suche Fluginfos (Aviationstack)...",
-      "lookupSuccess": "\u2708\ufe0f Daten automatisch erg\u00e4nzt",
-      "airportsNotFoundManual": "Flugh\u00e4fen \u201e{{dep}}\u201c und \u201e{{arr}}\u201c nicht gefunden. Bitte manuell pr\u00fcfen.",
-      "airportDataNotFound": "Keine Flughafendaten f\u00fcr {{dep}} oder {{arr}} gefunden. Bitte manuell eingeben.",
+      "proTip": "Tipp: Scannen Sie Ihren Boarding Pass oder wählen Sie einfach Flughäfen und Datum!",
+      "addTag": "Tag hinzufügen",
+      "lookupSearching": "🔄 Suche Fluginfos (Aviationstack)...",
+      "lookupSuccess": "✈️ Daten automatisch ergänzt",
+      "airportsNotFoundManual": "Flughäfen „{{dep}}“ und „{{arr}}“ nicht gefunden. Bitte manuell prüfen.",
+      "airportDataNotFound": "Keine Flughafendaten für {{dep}} oder {{arr}} gefunden. Bitte manuell eingeben.",
       "failedToSave": "Flug konnte nicht gespeichert werden"
     },
     "placeholders": {
@@ -105,7 +105,7 @@
       "gate": "A12",
       "seat": "12A",
       "price": "249.99",
-      "notes": "Zus\u00e4tzliche Informationen...",
+      "notes": "Zusätzliche Informationen...",
       "bookingReference": "9RFAA7",
       "boardingGroup": "1 oder A",
       "ticketNumber": "2202236084346",
@@ -114,36 +114,37 @@
       "optional": "optional"
     },
     "validation": {
-      "selectAirportsAndDates": "Bitte w\u00e4hlen Sie beide Flugh\u00e4fen und Daten aus",
-      "selectAirports": "Bitte w\u00e4hlen Sie Abflug- und Ankunftsflughafen aus",
-      "selectDate": "Bitte w\u00e4hlen Sie ein Abflugdatum aus"
+      "selectAirportsAndDates": "Bitte wählen Sie beide Flughäfen und Daten aus",
+      "selectAirports": "Bitte wählen Sie Abflug- und Ankunftsflughafen aus",
+      "selectDate": "Bitte wählen Sie ein Abflugdatum aus",
+      "invalidPrice": "Preis, Steuern und Gebühren müssen positive Zahlen sein"
     },
     "tagsHint": "Durch Kommas getrennte Tags zum Filtern.",
     "loadingScanner": "Scanner wird geladen...",
-    "noFlightsInEmail": "Keine Fl\u00fcge in der E-Mail gefunden.",
+    "noFlightsInEmail": "Keine Flüge in der E-Mail gefunden.",
     "departureAirportCode": "Abflughafen (IATA) *",
     "arrivalAirportCode": "Ankunftsflughafen (IATA) *"
   },
   "list": {
-    "title": "Fl\u00fcge",
-    "noFlights": "Keine Fl\u00fcge gefunden",
+    "title": "Flüge",
+    "noFlights": "Keine Flüge gefunden",
     "edit": "Bearbeiten",
-    "delete": "L\u00f6schen",
+    "delete": "Löschen",
     "viewDetails": "Details anzeigen",
     "from": "Von",
     "to": "Nach",
     "aircraft": "Flugzeug",
-    "deleteConfirm": "M\u00f6chten Sie diesen Flug wirklich l\u00f6schen?"
+    "deleteConfirm": "Möchten Sie diesen Flug wirklich löschen?"
   },
   "table": {
     "title": "Flugliste",
-    "backToMap": "Zur\u00fcck zur Karte",
+    "backToMap": "Zurück zur Karte",
     "welcome": "Willkommen zur Flugtabelle!",
-    "description": "Hier sehen Sie alle Ihre Fl\u00fcge in einer \u00fcbersichtlichen Tabelle. Sie k\u00f6nnen sortieren, filtern und Fl\u00fcge bearbeiten oder l\u00f6schen.",
-    "backToDashboard": "Zur\u00fcck zum Dashboard",
-    "loading": "Fl\u00fcge werden geladen...",
-    "noFlights": "Keine Fl\u00fcge gefunden",
-    "noFlightsHint": "Versuchen Sie, Ihre Filter anzupassen oder f\u00fcgen Sie Ihren ersten Flug hinzu.",
+    "description": "Hier sehen Sie alle Ihre Flüge in einer übersichtlichen Tabelle. Sie können sortieren, filtern und Flüge bearbeiten oder löschen.",
+    "backToDashboard": "Zurück zum Dashboard",
+    "loading": "Flüge werden geladen...",
+    "noFlights": "Keine Flüge gefunden",
+    "noFlightsHint": "Versuchen Sie, Ihre Filter anzupassen oder fügen Sie Ihren ersten Flug hinzu.",
     "airline": "Airline",
     "flightNumber": "Flugnummer",
     "route": "Route",
@@ -155,13 +156,13 @@
     "price": "Preis",
     "actions": "Aktionen",
     "deleteConfirm": {
-      "title": "Flug l\u00f6schen?",
-      "message": "M\u00f6chten Sie diesen Flug wirklich l\u00f6schen?\n\nDiese Aktion kann nicht r\u00fcckg\u00e4ngig gemacht werden.",
-      "confirm": "Ja, l\u00f6schen",
+      "title": "Flug löschen?",
+      "message": "Möchten Sie diesen Flug wirklich löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden.",
+      "confirm": "Ja, löschen",
       "cancel": "Abbrechen"
     },
     "toast": {
-      "deleted": "Flug gel\u00f6scht",
+      "deleted": "Flug gelöscht",
       "updated": "Flug aktualisiert"
     },
     "sort": {
@@ -171,30 +172,30 @@
       "duration": "Dauer"
     },
     "footer": {
-      "showing": "Zeige {{count}} Fl\u00fcge",
+      "showing": "Zeige {{count}} Flüge",
       "sortedBy": "Sortiert nach {{label}} ({{direction}})"
     }
   },
   "review": {
-    "title": "Flug \u00fcberpr\u00fcfen",
+    "title": "Flug überprüfen",
     "source": "Quelle",
     "flightIndex": "Flug {{index}} von {{total}}",
-    "confirm": "Best\u00e4tigen",
+    "confirm": "Bestätigen",
     "edit": "Bearbeiten",
     "cancel": "Abbrechen",
     "discard": "Verwerfen",
     "saving": "Speichert...",
     "next": "Weiter",
     "costsTitle": "Kosten (optional)",
-    "loadingAirports": "Flugh\u00e4fen werden geladen...",
+    "loadingAirports": "Flughäfen werden geladen...",
     "departureNotFound": "Abflughafen {{code}} nicht gefunden",
     "arrivalNotFound": "Ankunftsflughafen {{code}} nicht gefunden",
-    "selectedAirport": "Ausgew\u00e4hlt: {{name}} ({{code}})"
+    "selectedAirport": "Ausgewählt: {{name}} ({{code}})"
   },
   "lookup": {
-    "resultsTitle": "{{count}} {{count, plural, one {Flug} other {Fl\u00fcge}}} gefunden",
+    "resultsTitle": "{{count}} {{count, plural, one {Flug} other {Flüge}}} gefunden",
     "departs": "Abflug",
-    "backToSearch": "Zur\u00fcck zur Suche"
+    "backToSearch": "Zurück zur Suche"
   },
   "status": {
     "scheduled": "Geplant",
@@ -203,7 +204,7 @@
     "landed": "Gelandet"
   },
   "category": {
-    "business": "Gesch\u00e4ftlich",
+    "business": "Geschäftlich",
     "private": "Privat",
     "vacation": "Urlaub"
   },

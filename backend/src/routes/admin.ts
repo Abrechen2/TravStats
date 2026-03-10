@@ -880,11 +880,19 @@ router.get('/parser-feedback/patterns', async (req: AuthRequest, res: Response, 
   }
 });
 
+const applyPatternSchema = z.object({
+  autoApply: z.boolean().optional(),
+});
+
+const autoApplySchema = z.object({
+  threshold: z.number().min(0).max(1).optional().default(0.9),
+});
+
 // Apply a pattern suggestion
 router.post('/parser-feedback/patterns/:id/apply', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    const { autoApply } = req.body;
+    const { autoApply } = applyPatternSchema.parse(req.body);
     const result = await applyPatternSuggestion(id, autoApply === true);
     res.json(result);
   } catch (error) {
@@ -895,7 +903,7 @@ router.post('/parser-feedback/patterns/:id/apply', async (req: AuthRequest, res:
 // Auto-apply high-confidence patterns
 router.post('/parser-feedback/patterns/auto-apply', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const threshold = parseFloat(req.body.threshold as string) || 0.9;
+    const { threshold } = autoApplySchema.parse(req.body);
     const appliedCount = await autoApplyHighConfidencePatterns(threshold);
     res.json({
       success: true,
