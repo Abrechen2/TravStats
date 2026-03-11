@@ -106,6 +106,14 @@ model Flight {
   lastModifiedBy   String?  @map("last_modified_by") // 'user', 'auto_update', 'historical_enrichment', 'api'
   enrichmentHistory Json?   @map("enrichment_history") // Array of enrichment events [{type, timestamp, confidence?, source?}]
 
+  // Phase 1: Email Template Parsing
+  baggageAllowance    String?  @map("baggage_allowance")
+  frequentFlyerNumber String?  @map("frequent_flyer_number")
+  bookingClassLetter  String?  @map("booking_class_letter")  // e.g. "Y", "C", "J", "F"
+  coPassengers        String[] @default([]) @map("co_passengers")
+  parserTemplate      String?  @map("parser_template")       // e.g. "LH" or null
+  parserConfidence    Int?     @map("parser_confidence")     // 0–100
+
   user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   pendingUpdates    PendingFlightUpdate[]
 
