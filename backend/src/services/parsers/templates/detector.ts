@@ -62,7 +62,11 @@ export function detectAirline(
   htmlContent: string
 ): string | null {
   for (const rule of DETECTION_RULES) {
-    if (rule.fromDomains.some((domain) => fromAddress.toLowerCase().includes(domain))) {
+    const senderDomain = fromAddress.toLowerCase().split("@")[1] ?? "";
+    if (rule.fromDomains.some((d) => {
+      const ruleDomain = d.replace("@", "");
+      return senderDomain === ruleDomain || senderDomain.endsWith("." + ruleDomain);
+    })) {
       return rule.iata;
     }
     if (rule.subjectPatterns.some((pattern) => pattern.test(subject))) {

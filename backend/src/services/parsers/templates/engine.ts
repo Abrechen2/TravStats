@@ -1,18 +1,11 @@
 import * as cheerio from "cheerio";
-import type { AirlineTemplate, SelectorKey } from "./types";
+import { TRANSFORMS, type AirlineTemplate, type SelectorKey, type TransformName } from "./types";
 import type { ParsedBooking } from "../../bookingParser";
 
 const CRITICAL_FIELDS: SelectorKey[] = ["flightNumber", "departureCode", "arrivalCode"];
 
-function safeTransform(transform: string, value: string): string {
-  try {
-    // eslint-disable-next-line no-new-func
-    const fn = new Function("value", `return (${transform})(value)`) as (v: string) => string;
-    const result = fn(value);
-    return typeof result === "string" ? result : value;
-  } catch {
-    return value;
-  }
+function applyTransform(transformName: TransformName, value: string): string {
+  return TRANSFORMS[transformName](value);
 }
 
 const SELECTOR_TO_BOOKING_KEY: Partial<Record<SelectorKey, keyof ParsedBooking>> = {
@@ -69,11 +62,25 @@ export function applyTemplate(
 
     if (value) {
       const transform = template.transforms[sKey];
-      const finalValue = transform ? safeTransform(transform, value) : value;
+      const finalValue = transform ? applyTransform(transform, value) : value;
       (result as unknown as Record<string, unknown>)[bookingKey] = finalValue;
       matchedFields++;
     } else if (CRITICAL_FIELDS.includes(sKey)) {
       result.missing.push(bookingKey as string);
+    }
+  }
+
+  // Special handling for coPassengers (comma/semicolon-separated list)
+  const coPassengersSelector = template.selectors.coPassengers;
+  if ($ && coPassengersSelector) {
+    const el = $(coPassengersSelector);
+    totalFields++;
+    if (el.length > 0) {
+      const rawText = el.first().text().trim();
+      if (rawText) {
+        result.coPassengers = rawText.split(/[,;]/).map((s) => s.trim()).filter(Boolean);
+        matchedFields++;
+      }
     }
   }
 

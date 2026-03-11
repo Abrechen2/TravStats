@@ -36,7 +36,7 @@ describe("applyTemplate", () => {
   it("applies transform functions to values", () => {
     const templateWithTransform: AirlineTemplate = {
       ...mockTemplate,
-      transforms: { flightNumber: "value => value.toLowerCase()" },
+      transforms: { flightNumber: "lowercase" },
     };
     const result = applyTemplate(templateWithTransform, "", mockHtml);
     expect(result.flightNumber).toBe("ta1234");
