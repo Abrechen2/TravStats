@@ -94,6 +94,7 @@ export default function RegisterPage(): JSX.Element {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="input"
+                autoComplete="username"
                 required
               />
             </div>
@@ -107,6 +108,7 @@ export default function RegisterPage(): JSX.Element {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="input"
+                autoComplete="new-password"
                 required
               />
             </div>
@@ -120,6 +122,7 @@ export default function RegisterPage(): JSX.Element {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="input"
+                autoComplete="new-password"
                 required
               />
             </div>
@@ -134,7 +137,7 @@ export default function RegisterPage(): JSX.Element {
               className="font-medium transition-colors"
               style={{ color: "var(--accent)" }}
             >
-              {t("register.login")}
+              {t("register.signIn")}
             </Link>
           </p>
         </div>

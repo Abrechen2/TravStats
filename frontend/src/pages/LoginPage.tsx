@@ -106,6 +106,7 @@ export default function LoginPage(): JSX.Element {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="input"
+                autoComplete="username"
                 required
               />
             </div>
@@ -119,6 +120,7 @@ export default function LoginPage(): JSX.Element {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="input"
+                autoComplete="current-password"
                 required
               />
             </div>
