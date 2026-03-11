@@ -10,7 +10,8 @@ describe("detectAirline", () => {
   });
 
   it("detects easyJet by subject pattern", () => {
-    expect(detectAirline("noreply@easyjet.com", "Your easyJet booking confirmation", "")).toBe("U2");
+    // Use an email address that doesn't match any fromDomain rule
+    expect(detectAirline("", "Your easyJet booking confirmation", "")).toBe("U2");
   });
 
   it("returns null for unknown airline", () => {
