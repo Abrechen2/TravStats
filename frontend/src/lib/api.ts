@@ -78,6 +78,7 @@ export interface EmailParseResult {
   subject?: string;
   text?: string;
   html?: string;
+  airlineNotice?: string | null;
 }
 
 /** Ollama vision check response */

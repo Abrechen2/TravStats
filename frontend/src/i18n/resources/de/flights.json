@@ -80,7 +80,9 @@
       "description": "Importieren Sie Flüge direkt aus Bestätigungs-E-Mails!",
       "import": "E-Mail importieren",
       "bestOption": "Beste Option",
-      "bestOptionDescription": "Erfasst alle Daten am besten aus Bestätigungs-E-Mails"
+      "bestOptionDescription": "Erfasst alle Daten am besten aus Bestätigungs-E-Mails",
+      "textFallback": "Email-Text einfügen (Fallback)",
+      "textPlaceholder": "Email-Inhalt hier einfügen..."
     },
     "simplified": {
       "subtitle": "Geben Sie einfach Abflug- und Ankunftsflughafen ein – wir erledigen den Rest!",
