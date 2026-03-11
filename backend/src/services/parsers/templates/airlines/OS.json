@@ -1,0 +1,23 @@
+{
+  "airline": "Austrian Airlines",
+  "iata": "OS",
+  "version": "2024-03",
+  "from": ["@austrian.com", "@newsletter.austrian.com"],
+  "subject": ["Buchungsbestätigung", "Austrian booking confirmation"],
+  "selectors": {
+    "flightNumber": ".flight-number, td.flight",
+    "pnr": ".booking-reference, .pnr",
+    "departureCode": ".dep-airport",
+    "arrivalCode": ".arr-airport",
+    "departureTime": ".dep-time",
+    "arrivalTime": ".arr-time",
+    "seat": ".seat",
+    "seatClass": ".class",
+    "price": ".total",
+    "currency": ".currency",
+    "baggage": ".baggage",
+    "frequentFlyer": ".miles-more, .ffn"
+  },
+  "transforms": {},
+  "testCases": []
+}

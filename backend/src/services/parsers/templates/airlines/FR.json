@@ -1,0 +1,22 @@
+{
+  "airline": "Ryanair",
+  "iata": "FR",
+  "version": "2024-03",
+  "from": ["@ryanair.com", "@info.ryanair.com"],
+  "subject": ["Your booking confirmation", "Ihre Buchungsbestätigung"],
+  "selectors": {
+    "flightNumber": ".flight-num, td.flight-number",
+    "pnr": ".booking-reference, .pnr",
+    "departureCode": ".origin-code",
+    "arrivalCode": ".destination-code",
+    "departureTime": ".departure-datetime",
+    "arrivalTime": ".arrival-datetime",
+    "seat": ".seat",
+    "price": ".grand-total",
+    "currency": ".currency-symbol",
+    "baggage": ".baggage-details",
+    "ticketNumber": ".ticket-no"
+  },
+  "transforms": {},
+  "testCases": []
+}

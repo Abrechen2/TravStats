@@ -1,0 +1,27 @@
+{
+  "airline": "Lufthansa",
+  "iata": "LH",
+  "version": "2024-03",
+  "from": ["@lufthansa.com", "@miles-and-more.com"],
+  "subject": ["Buchungsbestätigung", "Booking Confirmation", "Ihre Buchung"],
+  "selectors": {
+    "flightNumber": "td.flightno, .flight-number, [data-flight-number]",
+    "pnr": ".booking-code, .pnr, [data-pnr], td.pnr",
+    "departureCode": ".dep-airport-code, [data-dep-iata]",
+    "arrivalCode": ".arr-airport-code, [data-arr-iata]",
+    "departureTime": "[data-dep-datetime], .departure-time",
+    "arrivalTime": "[data-arr-datetime], .arrival-time",
+    "seat": ".seat-number, [data-seat]",
+    "seatClass": ".cabin-class, .travel-class",
+    "price": ".total-price, [data-total-price]",
+    "currency": ".currency",
+    "taxes": ".taxes-amount",
+    "fees": ".fees-amount",
+    "baggage": ".baggage-info, .gepäck",
+    "frequentFlyer": ".miles-more-number, .ffn",
+    "ticketNumber": ".ticket-number, [data-ticket]",
+    "bookingClassLetter": ".booking-class, [data-booking-class]"
+  },
+  "transforms": {},
+  "testCases": []
+}

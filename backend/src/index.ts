@@ -28,6 +28,7 @@ import { requestLoggerMiddleware } from './middleware/requestLogger';
 import { prisma } from './db';
 import logger from './utils/logger';
 import { DATABASE_URL } from './utils/database';
+import { templateRegistry } from './services/parsers/templates/registry';
 
 // Load environment variables
 dotenv.config();
@@ -280,6 +281,23 @@ if (process.env.NODE_ENV !== 'test') {
       logger.warn({
         operation: 'server_start_reminder_scheduler_error',
         message: 'Failed to start flight reminder scheduler',
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+    }
+
+    // Initialize airline template registry
+    try {
+      await templateRegistry.initialize();
+      logger.info({
+        operation: 'server_start_template_registry',
+        message: 'Airline template registry initialized',
+      });
+    } catch (error) {
+      logger.warn({
+        operation: 'server_start_template_registry_error',
+        message: 'Failed to initialize airline template registry',
         error: {
           message: error instanceof Error ? error.message : 'Unknown error',
         },
