@@ -33,9 +33,9 @@ export function createTripsLayer(trips: TripDatum[], currentTime: number): Trips
     data: trips,
     getPath: (d) => d.path,
     getTimestamps: (d) => d.timestamps,
-    getColor: [255, 180, 0, 200],
+    getColor: [255, 255, 255, 200],
     currentTime,
-    trailLength: 3600 * 4,
-    widthMinPixels: 2,
+    trailLength: 3600 * 6,
+    widthMinPixels: 1.5,
   });
 }

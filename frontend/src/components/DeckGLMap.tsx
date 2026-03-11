@@ -20,7 +20,7 @@ const INITIAL_VIEW_STATE: MapViewState = {
   bearing: 0,
 };
 
-const LIGHT_MAP_STYLE = "https://demotiles.maplibre.org/style.json";
+const LIGHT_MAP_STYLE = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
 interface DeckOverlayProps {

@@ -103,7 +103,7 @@ export function createRoutesLayers(
     getTargetPosition: (d) => d.targetPosition,
     getSourceColor: (d) => d.sourceColor,
     getTargetColor: (d) => d.targetColor,
-    getWidth: 2,
+    getWidth: 1.5,
     pickable: !!onFlightClick,
     onClick: onFlightClick
       ? ({ object }) => {
@@ -117,8 +117,8 @@ export function createRoutesLayers(
     id: "routes-scatter",
     data: points,
     getPosition: (d) => d.position,
-    getRadius: (d) => Math.min(4 + d.count * 0.5, 12) * 1000,
-    getFillColor: [100, 180, 255, 200],
+    getRadius: (d) => Math.min(3 + d.count * 0.4, 10) * 1000,
+    getFillColor: [232, 160, 69, 150],
     pickable: false,
   });
 

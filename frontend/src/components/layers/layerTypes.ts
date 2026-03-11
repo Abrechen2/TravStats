@@ -22,10 +22,10 @@ export interface TripDatum {
 export type HeatmapTier = "low" | "medium" | "high" | "critical";
 
 export const HEATMAP_COLORS: Record<HeatmapTier, [number, number, number]> = {
-  low: [16, 185, 129],
-  medium: [234, 179, 8],
-  high: [245, 158, 11],
-  critical: [239, 68, 68],
+  low: [100, 116, 139], // slate-500 — muted, recedes into map
+  medium: [232, 160, 69], // brand amber accent
+  high: [249, 115, 22], // orange-500 — warm intensity
+  critical: [239, 68, 68], // red-500 — hotspot
 };
 
 export function getHeatmapColor(
