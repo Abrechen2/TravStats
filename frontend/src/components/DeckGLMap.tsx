@@ -43,7 +43,12 @@ interface DeckGLMapProps {
   onFlightClick?: (flightId: string) => void;
 }
 
-export function DeckGLMap({ flights, visMode, minRouteCount = 1 }: DeckGLMapProps): JSX.Element {
+export function DeckGLMap({
+  flights,
+  visMode,
+  minRouteCount = 1,
+  onFlightClick,
+}: DeckGLMapProps): JSX.Element {
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
   const mapRef = useRef<MapRef>(null);
 
@@ -68,12 +73,15 @@ export function DeckGLMap({ flights, visMode, minRouteCount = 1 }: DeckGLMapProp
     [trips]
   );
 
-  const effectiveTime = currentTime !== 0 ? currentTime : timeRange.min;
+  // Initialize currentTime to timeRange.min when trips data loads or changes
+  useEffect(() => {
+    setCurrentTime(timeRange.min);
+  }, [timeRange.min]);
 
   const layers = useMemo((): Layer[] => {
     switch (visMode) {
       case "routes":
-        return createRoutesLayers(flights, minRouteCount);
+        return createRoutesLayers(flights, minRouteCount, onFlightClick);
       case "heatmap":
         return [createHeatmapLayer(flights)];
       case "hexagon":
@@ -81,11 +89,11 @@ export function DeckGLMap({ flights, visMode, minRouteCount = 1 }: DeckGLMapProp
       case "columns":
         return [createColumnsLayer(flights)];
       case "trips":
-        return [createTripsLayer(trips, effectiveTime)];
+        return [createTripsLayer(trips, currentTime)];
       default:
         return [];
     }
-  }, [visMode, flights, minRouteCount, trips, effectiveTime]);
+  }, [visMode, flights, minRouteCount, trips, currentTime, onFlightClick]);
 
   const handleTimeChange = useCallback((value: number | ((prev: number) => number)): void => {
     setCurrentTime((prev) => (typeof value === "function" ? value(prev) : value));
@@ -108,7 +116,7 @@ export function DeckGLMap({ flights, visMode, minRouteCount = 1 }: DeckGLMapProp
           <TimeSlider
             min={timeRange.min}
             max={timeRange.max}
-            current={effectiveTime}
+            current={currentTime}
             onChange={handleTimeChange}
             playing={playing}
             onTogglePlay={() => setPlaying((p) => !p)}
