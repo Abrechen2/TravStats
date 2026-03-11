@@ -682,7 +682,7 @@ export default function SettingsPage(): JSX.Element {
                       borderColor: "var(--color-border)",
                     }}
                   >
-                    {display.theme === "dark"
+                    {isDarkMode
                       ? t("settings:display.theme.darkMode") +
                         " " +
                         t("settings:display.theme.active")
