@@ -41,5 +41,12 @@
   "timeSlider": {
     "play": "Play",
     "pause": "Pause"
+  },
+  "globe": {
+    "routeFrequency": "Route Frequency",
+    "autoRotation": "Auto-Rotation",
+    "timesFlown": "Flown {{count}}x",
+    "flight_one": "flight",
+    "flight_other": "flights"
   }
 }

@@ -23,6 +23,7 @@ export function buildRouteData(
   minRouteCount: number
 ): { arcs: ArcDatum[]; points: PointDatum[] } {
   const routeCounts = new Map<string, number>();
+  const routeFlightIds = new Map<string, string[]>();
   const airportMap = new Map<string, PointDatum>();
 
   for (const f of flights) {
@@ -33,6 +34,10 @@ export function buildRouteData(
 
     const key = routeKey(dep.iata, arr.iata);
     routeCounts.set(key, (routeCounts.get(key) ?? 0) + 1);
+
+    const ids = routeFlightIds.get(key) ?? [];
+    ids.push(f.properties.id);
+    routeFlightIds.set(key, ids);
 
     if (!airportMap.has(dep.iata)) {
       airportMap.set(dep.iata, {
@@ -77,6 +82,7 @@ export function buildRouteData(
       count,
       sourceColor: [...color, 200] as [number, number, number, number],
       targetColor: [...color, 200] as [number, number, number, number],
+      flightIds: routeFlightIds.get(key) ?? [],
     });
   }
 
@@ -85,7 +91,8 @@ export function buildRouteData(
 
 export function createRoutesLayers(
   flights: GeoJSONFeature[],
-  minRouteCount: number
+  minRouteCount: number,
+  onFlightClick?: (flightId: string) => void
 ): [ArcLayer<ArcDatum>, ScatterplotLayer<PointDatum>] {
   const { arcs, points } = buildRouteData(flights, minRouteCount);
 
@@ -97,7 +104,13 @@ export function createRoutesLayers(
     getSourceColor: (d) => d.sourceColor,
     getTargetColor: (d) => d.targetColor,
     getWidth: 2,
-    pickable: true,
+    pickable: !!onFlightClick,
+    onClick: onFlightClick
+      ? ({ object }) => {
+          const lastId = object?.flightIds.at(-1);
+          if (lastId) onFlightClick(lastId);
+        }
+      : undefined,
   });
 
   const scatterLayer = new ScatterplotLayer<PointDatum>({
@@ -106,7 +119,7 @@ export function createRoutesLayers(
     getPosition: (d) => d.position,
     getRadius: (d) => Math.min(4 + d.count * 0.5, 12) * 1000,
     getFillColor: [100, 180, 255, 200],
-    pickable: true,
+    pickable: false,
   });
 
   return [arcLayer, scatterLayer];

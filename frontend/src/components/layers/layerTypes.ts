@@ -4,6 +4,7 @@ export interface ArcDatum {
   count: number;
   sourceColor: [number, number, number, number];
   targetColor: [number, number, number, number];
+  flightIds: string[];
 }
 
 export interface PointDatum {
