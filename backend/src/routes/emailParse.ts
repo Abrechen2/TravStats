@@ -79,7 +79,10 @@ router.post('/parse-email', authenticate, async (req: AuthRequest, res: Response
       ).catch(err => logger.warn({ error: err }, '[Email Parse] Failed to collect feedback'));
     }
 
-    res.json(result);
+    res.json({
+      ...result,
+      airlineNotice: result.flights[0]?.airlineNotice ?? null,
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       logger.warn({ errors: error.errors }, '[Email Parse] Validation error');
@@ -197,6 +200,7 @@ router.post(
         subject: extracted.subject,
         text: extracted.text.substring(0, 1000), // Truncate for feedback (first 1000 chars)
         html: extracted.html ? extracted.html.substring(0, 1000) : undefined, // Truncate for feedback
+        airlineNotice: result.flights[0]?.airlineNotice ?? null,
       });
     } catch (error) {
       // Cleanup: Delete temporary file on error
