@@ -5,19 +5,24 @@ import OnboardingStep from "./OnboardingStep";
 interface OnboardingGuideProps {
   onboarding: OnboardingState;
   onUpdate: (updates: Partial<OnboardingState>) => void;
+  onAddFlight?: () => void;
+  onOpenFilter?: () => void;
 }
 
 type OnboardingStepConfig = {
   id: keyof OnboardingState;
   label: string;
   description: string;
-  linkTo: string;
+  linkTo?: string;
   linkText: string;
+  onAction?: () => void;
 };
 
 export default function OnboardingGuide({
   onboarding,
   onUpdate,
+  onAddFlight,
+  onOpenFilter,
 }: OnboardingGuideProps): JSX.Element {
   const { t } = useTranslation("onboarding");
 
@@ -26,15 +31,15 @@ export default function OnboardingGuide({
       id: "flightAdded",
       label: t("steps.flightAdded.label"),
       description: t("steps.flightAdded.description"),
-      linkTo: "/",
       linkText: t("steps.flightAdded.linkText"),
+      onAction: onAddFlight,
     },
     {
       id: "usedFilter",
       label: t("steps.usedFilter.label"),
       description: t("steps.usedFilter.description"),
-      linkTo: "/",
       linkText: t("steps.usedFilter.linkText"),
+      onAction: onOpenFilter,
     },
     {
       id: "mapExplored",
@@ -117,6 +122,7 @@ export default function OnboardingGuide({
             description={step.description}
             linkTo={step.linkTo}
             linkText={step.linkText}
+            onAction={step.onAction}
           />
         ))}
       </div>

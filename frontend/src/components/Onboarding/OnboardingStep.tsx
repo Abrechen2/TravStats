@@ -8,6 +8,7 @@ interface OnboardingStepProps {
   description?: string;
   linkTo?: string;
   linkText?: string;
+  onAction?: () => void;
 }
 
 export default function OnboardingStep({
@@ -18,6 +19,7 @@ export default function OnboardingStep({
   description,
   linkTo,
   linkText,
+  onAction,
 }: OnboardingStepProps): JSX.Element {
   return (
     <div className="flex items-start gap-3">
@@ -36,13 +38,23 @@ export default function OnboardingStep({
           {label}
         </label>
         {description && <p className="text-xs text-[var(--text-muted)] mt-1">{description}</p>}
-        {linkTo && linkText && (
+        {onAction && linkText && (
+          <button
+            onClick={onAction}
+            className="text-xs hover:underline mt-1 inline-block"
+            style={{ color: "var(--accent)" }}
+          >
+            {linkText} →
+          </button>
+        )}
+        {!onAction && linkTo && linkText && (
           <Link
             to={linkTo}
-            className="text-xs text-blue-600 hover:underline mt-1 inline-block"
+            className="text-xs hover:underline mt-1 inline-block"
+            style={{ color: "var(--accent)" }}
             onClick={(e) => e.stopPropagation()}
           >
-            {linkText} {"→"}
+            {linkText} →
           </Link>
         )}
       </div>
