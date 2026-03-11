@@ -23,6 +23,7 @@ import adminRoutes from './routes/admin';
 import trainingRoutes from './routes/training';
 import backupRoutes from './routes/backup';
 import pendingUpdatesRoutes from './routes/pendingUpdates';
+import templateStatusRoutes from './routes/templateStatus';
 import { errorHandler } from './middleware/errorHandler';
 import { requestLoggerMiddleware } from './middleware/requestLogger';
 import { prisma } from './db';
@@ -174,6 +175,7 @@ app.use('/api/v1/parser-feedback', parserFeedbackRoutes);
 app.use('/api/v1/training', trainingRoutes);
 app.use('/api/v1/backup', backupRoutes);
 app.use('/api/v1/pending-updates', pendingUpdatesRoutes);
+app.use('/api/v1/template-status', templateStatusRoutes);
 
 // Error handling
 app.use(errorHandler);

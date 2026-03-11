@@ -2040,4 +2040,24 @@ export const calculateDistance = (
   return R * c;
 };
 
+export interface TemplateStatusEntry {
+  iata: string;
+  airline: string;
+  version: string;
+  source: "builtin" | "cached";
+}
+
+export interface TemplateStatusResult {
+  templates: TemplateStatusEntry[];
+  total: number;
+  githubRepo: string;
+}
+
+export const templateApi = {
+  getStatus: async (): Promise<TemplateStatusResult> => {
+    const res = await api.get<TemplateStatusResult>("/template-status");
+    return res.data;
+  },
+};
+
 export default api;
