@@ -66,8 +66,8 @@ class TemplateRegistry {
             this.templateSources.set(content.iata, "cached");
           }
         }
-      } catch {
-        // Ignore malformed cache files silently
+      } catch (err) {
+        logger.debug({ file, err }, "Skipped malformed cache file");
       }
     }
   }
@@ -93,6 +93,7 @@ class TemplateRegistry {
     setTimeout(() => {
       void this.syncFromGitHub();
     }, 5000);
+    // Singleton registry — interval runs for process lifetime (intentional)
     setInterval(() => {
       void this.syncFromGitHub();
     }, SYNC_INTERVAL_MS);
@@ -126,21 +127,28 @@ class TemplateRegistry {
 
   private fetchJson<T>(url: string): Promise<T> {
     return new Promise((resolve, reject) => {
-      https
-        .get(url, (res) => {
-          let data = "";
-          res.on("data", (chunk: string) => {
-            data += chunk;
-          });
-          res.on("end", () => {
-            try {
-              resolve(JSON.parse(data) as T);
-            } catch (e) {
-              reject(e);
-            }
-          });
-        })
-        .on("error", reject);
+      const req = https.get(url, (res) => {
+        if (res.statusCode !== 200) {
+          reject(new Error(`HTTP ${res.statusCode ?? "unknown"} from ${url}`));
+          res.resume(); // drain the response
+          return;
+        }
+        let data = "";
+        res.on("data", (chunk: string) => {
+          data += chunk;
+        });
+        res.on("end", () => {
+          try {
+            resolve(JSON.parse(data) as T);
+          } catch (e) {
+            reject(e);
+          }
+        });
+      });
+      req.setTimeout(10000, () => {
+        req.destroy(new Error(`Timeout fetching ${url}`));
+      });
+      req.on("error", reject);
     });
   }
 }
