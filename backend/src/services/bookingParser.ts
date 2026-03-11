@@ -30,7 +30,7 @@ export interface ParsedBooking {
   coPassengers?: string[];        // e.g. ["Max Mustermann", "Erika Musterfrau"]
   parserTemplate?: string;        // Which template was used, e.g. "LH"
   parserConfidence?: number;      // 0–100
-  airlineNotice?: string;         // User-facing notice if no template found
+  airlineNotice?: string;         // Transient: not persisted to DB, UI-only notice when no template found
   missing: string[];
 }
 
