@@ -32,6 +32,7 @@ model User {
   trainingData          TrainingData[]
   pendingFlightUpdates  PendingFlightUpdate[]
   pendingUpdateStats    PendingUpdateStatistics?
+  parseLogs             ParseTrainingLog[]
 
   @@map("users")
 }
@@ -464,6 +465,26 @@ model SmtpConfig {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("smtp_config")
+}
+
+model ParseTrainingLog {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  airline        String?
+  templateUsed   String?  @map("template_used")
+  templateHit    Boolean  @map("template_hit")
+  confidence     Int?
+  fieldCount     Int      @map("field_count")
+  missingFields  String[] @map("missing_fields")
+  parserProvider String   @map("parser_provider")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([templateHit])
+  @@index([airline])
+  @@map("parse_training_logs")
 }
 
 model PendingUpdateStatistics {
