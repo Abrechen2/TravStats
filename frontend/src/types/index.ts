@@ -141,7 +141,7 @@ export interface ParsedBooking {
   coPassengers?: string[];
   parserTemplate?: string;
   parserConfidence?: number;
-  airlineNotice?: string;
+  airlineNotice?: string; // Transient: not persisted to DB, UI-only notice when no template found
   missing?: string[];
 }
 
