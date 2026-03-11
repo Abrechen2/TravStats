@@ -23,6 +23,14 @@ export interface ParsedBooking {
   boardingGroup?: string;         // e.g., "1", "A", "Zone 3"
   taxes?: string;                 // Tax amount (separate from total price)
   fees?: string;                  // Fees amount (separate from total price)
+  // Phase 1: New fields
+  baggageAllowance?: string;      // e.g. "1x23kg", "20kg included"
+  frequentFlyerNumber?: string;   // e.g. "LH-123456789"
+  bookingClassLetter?: string;    // IATA booking class, e.g. "Y", "M", "C", "J", "F"
+  coPassengers?: string[];        // e.g. ["Max Mustermann", "Erika Musterfrau"]
+  parserTemplate?: string;        // Which template was used, e.g. "LH"
+  parserConfidence?: number;      // 0–100
+  airlineNotice?: string;         // User-facing notice if no template found
   missing: string[];
 }
 
