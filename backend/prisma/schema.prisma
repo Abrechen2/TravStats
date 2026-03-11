@@ -91,7 +91,7 @@ model Flight {
   fees             Float?   @map("fees")
   category         String?  @default("private") @map("category") // business, private, vacation
   tags             String[] @default([]) @map("tags")
-  companions       String[] @default([]) @map("companions")
+  companions       String[] @default([]) @map("companions")  // User-defined travel group (set manually, vs. coPassengers = auto-parsed from email)
   receiptUrl       String?  @map("receipt_url")
   ticketPrice      Float?   @map("ticket_price")
   createdAt        DateTime @default(now()) @map("created_at")
@@ -110,7 +110,7 @@ model Flight {
   baggageAllowance    String?  @map("baggage_allowance")
   frequentFlyerNumber String?  @map("frequent_flyer_number")
   bookingClassLetter  String?  @map("booking_class_letter")  // e.g. "Y", "C", "J", "F"
-  coPassengers        String[] @default([]) @map("co_passengers")
+  coPassengers        String[] @default([]) @map("co_passengers")  // Names parsed from booking email (vs. companions = user-defined travel group)
   parserTemplate      String?  @map("parser_template")       // e.g. "LH" or null
   parserConfidence    Int?     @map("parser_confidence")     // 0–100
 
