@@ -1,0 +1,22 @@
+{
+  "airline": "Eurowings",
+  "iata": "EW",
+  "version": "2024-03",
+  "from": ["@eurowings.com", "@newsletter.eurowings.com"],
+  "subject": ["Buchungsbestätigung", "Eurowings booking"],
+  "selectors": {
+    "flightNumber": ".flight-no, .flightnumber",
+    "pnr": ".booking-code, .pnr",
+    "departureCode": ".departure-code",
+    "arrivalCode": ".arrival-code",
+    "departureTime": ".dep-datetime",
+    "arrivalTime": ".arr-datetime",
+    "seat": ".seat-number",
+    "seatClass": ".fare-class",
+    "price": ".total-price",
+    "currency": ".currency",
+    "baggage": ".baggage-info"
+  },
+  "transforms": {},
+  "testCases": []
+}

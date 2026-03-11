@@ -1,0 +1,23 @@
+{
+  "airline": "Brussels Airlines",
+  "iata": "SN",
+  "version": "2024-03",
+  "from": ["@brusselsairlines.com"],
+  "subject": ["Booking confirmation", "Ihre Buchungsbestätigung"],
+  "selectors": {
+    "flightNumber": ".flight-number",
+    "pnr": ".booking-code",
+    "departureCode": ".dep-airport",
+    "arrivalCode": ".arr-airport",
+    "departureTime": ".dep-time",
+    "arrivalTime": ".arr-time",
+    "seat": ".seat",
+    "seatClass": ".cabin",
+    "price": ".total-price",
+    "currency": ".currency",
+    "baggage": ".baggage",
+    "frequentFlyer": ".miles-more"
+  },
+  "transforms": {},
+  "testCases": []
+}
