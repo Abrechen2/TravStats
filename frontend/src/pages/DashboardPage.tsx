@@ -446,7 +446,7 @@ export default function DashboardPage(): JSX.Element {
       try {
         const content = e.target?.result;
         if (!content || typeof content !== "string") {
-          addToast("error", t("dashboard:errors.exportFailed"));
+          addToast("error", t("dashboard:errors.importFailed"));
           return;
         }
 
@@ -516,13 +516,24 @@ export default function DashboardPage(): JSX.Element {
           }
         }
 
-        if (successCount > 0) {
+        if (successCount > 0 && errorCount > 0) {
+          addToast(
+            "warning",
+            t("dashboard:errors.importPartial", {
+              success: successCount,
+              total: parsed.length,
+              errors: errorCount,
+            })
+          );
+          loadRecentFlights();
+          loadFlights();
+        } else if (successCount > 0) {
           addToast("success", t("dashboard:success.flightAdded"));
           // Reload flights
           loadRecentFlights();
           loadFlights();
         } else {
-          addToast("error", t("dashboard:errors.exportFailed"));
+          addToast("error", t("dashboard:errors.importFailed"));
         }
 
         if (settings.privacy.analyticsOptIn) {
@@ -534,7 +545,7 @@ export default function DashboardPage(): JSX.Element {
         }
       } catch (err) {
         logger.error("Import failed:", err);
-        addToast("error", t("dashboard:errors.exportFailed"));
+        addToast("error", t("dashboard:errors.importFailed"));
       } finally {
         setImporting(false);
         if (importInputRef.current) {
@@ -738,6 +749,12 @@ export default function DashboardPage(): JSX.Element {
                 >
                   {t("dashboard:import")}
                 </button>
+                <div
+                  className="px-4 pb-2 text-xs"
+                  style={{ color: "var(--text-muted)", opacity: 0.7 }}
+                >
+                  {t("dashboard:importHint")}
+                </div>
               </div>
             )}
           </div>
