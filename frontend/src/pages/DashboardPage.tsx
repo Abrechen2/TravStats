@@ -580,6 +580,12 @@ export default function DashboardPage(): JSX.Element {
         <OnboardingGuide
           onboarding={onboarding}
           onUpdate={(updates) => setOnboarding((prev) => ({ ...prev, ...updates }))}
+          onAddFlight={() => setShowFlightForm(true)}
+          onOpenFilter={() => {
+            setLeftOpen(true);
+            setRightOpen(false);
+            setOnboarding((prev) => ({ ...prev, usedFilter: true }));
+          }}
         />
       )}
 

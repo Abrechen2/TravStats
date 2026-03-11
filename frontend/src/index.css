@@ -3,7 +3,26 @@
 @tailwind utilities;
 
 /* ─── Design Tokens ──────────────────────────────────────── */
+
+/* Light theme (default) */
 :root {
+  --bg-base: #f6f8fa;
+  --bg-surface: #ffffff;
+  --bg-elevated: #f6f8fa;
+  --bg-muted: #eaeef2;
+  --color-border: #d0d7de;
+  --text-primary: #1f2328;
+  --text-muted: #636c76;
+  --accent: #e8a045;
+  --accent-dim: #c8842a;
+  --accent-glow: rgba(232, 160, 69, 0.18);
+  --success: #1a7f37;
+  --danger: #cf222e;
+  --warning: #9a6700;
+}
+
+/* Dark theme (html.dark) */
+html.dark {
   --bg-base: #0d1117;
   --bg-surface: #161b22;
   --bg-elevated: #1c2128;
@@ -18,8 +37,6 @@
   --danger: #f85149;
   --warning: #d29922;
 }
-
-/* Always dark — dark class applied on <html> in index.html */
 
 @layer base {
   body {

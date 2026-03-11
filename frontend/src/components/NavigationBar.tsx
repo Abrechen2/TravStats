@@ -212,7 +212,7 @@ export default function NavigationBar(): JSX.Element {
       {/* Mobile Menu Backdrop */}
       {mobileMenuOpen && (
         <div
-          className="xl:hidden fixed inset-0 bg-black/60 z-40"
+          className="xl:hidden fixed inset-0 bg-black/60 z-[55]"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
@@ -221,7 +221,7 @@ export default function NavigationBar(): JSX.Element {
       {mobileMenuOpen && (
         <div
           ref={mobileMenuRef}
-          className="xl:hidden fixed inset-y-0 left-0 w-72 z-50 flex flex-col"
+          className="xl:hidden fixed inset-y-0 left-0 w-72 z-[60] flex flex-col"
           style={{
             background: "var(--bg-surface)",
             borderRight: "1px solid var(--color-border)",
