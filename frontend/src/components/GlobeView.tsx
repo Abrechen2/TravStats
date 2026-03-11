@@ -48,10 +48,10 @@ const getHeatmapColor = (
   count: number,
   thresholds: { q25: number; q50: number; q75: number }
 ): string => {
-  if (count > thresholds.q75) return "#ef4444";
-  if (count > thresholds.q50) return "#f59e0b";
-  if (count > thresholds.q25) return "#eab308";
-  return "#10b981";
+  if (count > thresholds.q75) return "#ef4444"; // red — hotspot
+  if (count > thresholds.q50) return "#f97316"; // orange-500
+  if (count > thresholds.q25) return "#e8a045"; // brand amber
+  return "#64748b"; // slate-500 — muted
 };
 
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -319,13 +319,13 @@ export default function GlobeView({
 
   const legendRanges = useMemo(
     () => [
-      { color: "#10b981", label: `1–${Math.max(heatmapThresholds.q25, 1)}x` },
+      { color: "#64748b", label: `1–${Math.max(heatmapThresholds.q25, 1)}x` },
       {
-        color: "#eab308",
+        color: "#e8a045",
         label: `${heatmapThresholds.q25 + 1}–${heatmapThresholds.q50}x`,
       },
       {
-        color: "#f59e0b",
+        color: "#f97316",
         label: `${heatmapThresholds.q50 + 1}–${heatmapThresholds.q75}x`,
       },
       {

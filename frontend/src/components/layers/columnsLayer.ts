@@ -49,8 +49,8 @@ export function createColumnsLayer(flights: GeoJSONFeature[]): ColumnLayer<Colum
     getPosition: (d) => d.position,
     getElevation: (d) => (d.count / maxCount) * 500000,
     getFillColor: (d) => d.color,
-    diskResolution: 12,
-    radius: 30000,
+    diskResolution: 20,
+    radius: 22000,
     extruded: true,
     pickable: true,
   });
