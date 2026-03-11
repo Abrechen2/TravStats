@@ -31,6 +31,7 @@
   "showStats": "Show statistics",
   "flightMap": "Flight Map",
   "import": "Import",
+  "importHint": "CSV columns: depIata, arrIata, departureTime, arrivalTime (ISO 8601, e.g. 2025-12-01T07:30:00.000Z)",
   "filters": "Filters",
   "stats": "Stats",
   "flights": "Flights",
@@ -44,7 +45,9 @@
     "updateFlight": "Error updating flight. Please try again.",
     "deleteFlight": "Error deleting flight. Please try again.",
     "loadFlights": "Failed to load flights",
-    "exportFailed": "Export failed"
+    "exportFailed": "Export failed",
+    "importFailed": "Import failed",
+    "importPartial": "{{success}} of {{total}} flights imported ({{errors}} errors)"
   },
   "success": {
     "flightAdded": "Flight added successfully",
