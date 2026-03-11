@@ -72,6 +72,33 @@ function TripsIcon(): JSX.Element {
   );
 }
 
+function ContourIcon(): JSX.Element {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <ellipse cx="8" cy="9" rx="6" ry="3.5" stroke="currentColor" strokeWidth="1" opacity="0.35" />
+      <ellipse
+        cx="8"
+        cy="8.5"
+        rx="4"
+        ry="2.2"
+        stroke="currentColor"
+        strokeWidth="1.1"
+        opacity="0.6"
+      />
+      <ellipse
+        cx="8"
+        cy="8"
+        rx="2.2"
+        ry="1.2"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        opacity="0.85"
+      />
+      <circle cx="8" cy="8" r="0.9" fill="currentColor" />
+    </svg>
+  );
+}
+
 interface VisModeButton {
   mode: VisMode;
   label: string;
@@ -85,6 +112,7 @@ const BUTTONS: VisModeButton[] = [
   { mode: "hexagon", label: "Hex", Icon: HexagonIcon },
   { mode: "columns", label: "3D", Icon: ColumnsIcon },
   { mode: "trips", label: "Trips", Icon: TripsIcon },
+  { mode: "contour", label: "Iso", Icon: ContourIcon },
 ];
 
 interface VisModeSeelctorProps {

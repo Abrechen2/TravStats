@@ -1,4 +1,5 @@
-import { ArcLayer, ScatterplotLayer } from "@deck.gl/layers";
+import { ArcLayer, ScatterplotLayer, TextLayer } from "@deck.gl/layers";
+import type { Layer } from "@deck.gl/core";
 import type { GeoJSONFeature } from "../../types";
 import { calcQuantiles, getHeatmapColor } from "./layerTypes";
 import type { ArcDatum, PointDatum } from "./layerTypes";
@@ -75,13 +76,15 @@ export function buildRouteData(
     const count = routeCounts.get(key) ?? 0;
     if (count < minRouteCount || arcMap.has(key)) continue;
 
+    // Opacity scales with frequency: rare routes fade back, frequent ones glow
+    const alpha = Math.min(100 + count * 14, 230) as number;
     const color = getHeatmapColor(count, q25, q50, q75);
     arcMap.set(key, {
       sourcePosition: coords.depCoord,
       targetPosition: coords.arrCoord,
       count,
-      sourceColor: [...color, 200] as [number, number, number, number],
-      targetColor: [...color, 200] as [number, number, number, number],
+      sourceColor: [...color, alpha] as [number, number, number, number],
+      targetColor: [...color, alpha] as [number, number, number, number],
       flightIds: routeFlightIds.get(key) ?? [],
     });
   }
@@ -93,9 +96,10 @@ export function createRoutesLayers(
   flights: GeoJSONFeature[],
   minRouteCount: number,
   onFlightClick?: (flightId: string) => void
-): [ArcLayer<ArcDatum>, ScatterplotLayer<PointDatum>] {
+): Layer[] {
   const { arcs, points } = buildRouteData(flights, minRouteCount);
 
+  // Arc width scales with route frequency — dominant corridors are visually thicker
   const arcLayer = new ArcLayer<ArcDatum>({
     id: "routes-arc",
     data: arcs,
@@ -103,7 +107,8 @@ export function createRoutesLayers(
     getTargetPosition: (d) => d.targetPosition,
     getSourceColor: (d) => d.sourceColor,
     getTargetColor: (d) => d.targetColor,
-    getWidth: 1.5,
+    getWidth: (d) => Math.min(Math.sqrt(d.count) * 1.3, 7),
+    widthMinPixels: 1,
     pickable: !!onFlightClick,
     onClick: onFlightClick
       ? ({ object }) => {
@@ -113,14 +118,48 @@ export function createRoutesLayers(
       : undefined,
   });
 
-  const scatterLayer = new ScatterplotLayer<PointDatum>({
-    id: "routes-scatter",
+  // Outer ring — hollow circle around each airport
+  const ringLayer = new ScatterplotLayer<PointDatum>({
+    id: "routes-ring",
     data: points,
     getPosition: (d) => d.position,
     getRadius: (d) => Math.min(3 + d.count * 0.4, 10) * 1000,
-    getFillColor: [232, 160, 69, 150],
+    getFillColor: [0, 0, 0, 0],
+    getLineColor: [232, 160, 69, 180],
+    stroked: true,
+    filled: false,
+    lineWidthMinPixels: 1.2,
     pickable: false,
   });
 
-  return [arcLayer, scatterLayer];
+  // Inner dot — solid center marker
+  const dotLayer = new ScatterplotLayer<PointDatum>({
+    id: "routes-dot",
+    data: points,
+    getPosition: (d) => d.position,
+    getRadius: () => 2200,
+    getFillColor: [232, 160, 69, 220],
+    stroked: false,
+    pickable: false,
+  });
+
+  // IATA code labels — appear above each marker
+  const labelLayer = new TextLayer<PointDatum>({
+    id: "routes-labels",
+    data: points,
+    getPosition: (d) => d.position,
+    getText: (d) => d.iata,
+    getSize: 11,
+    getColor: [230, 230, 230, 220],
+    getBackgroundColor: [13, 17, 23, 170],
+    background: true,
+    backgroundPadding: [4, 2, 4, 2],
+    fontFamily: '"Inter", system-ui, monospace',
+    fontWeight: "bold",
+    getPixelOffset: [0, -18],
+    billboard: true,
+    characterSet: "auto",
+  });
+
+  return [arcLayer, ringLayer, dotLayer, labelLayer];
 }
