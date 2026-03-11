@@ -42,6 +42,7 @@
     "archiver": "^7.0.1",
     "axios": "^1.13.5",
     "bcrypt": "^5.1.1",
+    "cheerio": "^1.2.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "csv-parse": "^6.1.0",
