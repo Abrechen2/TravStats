@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import Map, { useControl, type MapRef } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
+import { LightingEffect, AmbientLight, DirectionalLight } from "@deck.gl/core";
 import type { Layer, MapViewState } from "@deck.gl/core";
 import type { GeoJSONFeature } from "../types";
 import type { VisMode } from "../types/visMode";
@@ -9,6 +10,7 @@ import { createHeatmapLayer } from "./layers/heatmapLayer";
 import { createHexagonLayer } from "./layers/hexagonLayer";
 import { createColumnsLayer } from "./layers/columnsLayer";
 import { createTripsLayer, buildTripsData, getTimeRange } from "./layers/tripsLayer";
+import { createContourLayer } from "./layers/contourLayer";
 import { TimeSlider } from "./TimeSlider";
 import { useThemeStore } from "../store/themeStore";
 
@@ -23,15 +25,25 @@ const INITIAL_VIEW_STATE: MapViewState = {
 const LIGHT_MAP_STYLE = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
+// Lighting effect for 3D modes — creates shadows/highlights on hexagons and columns
+const ambientLight = new AmbientLight({ color: [255, 255, 255], intensity: 0.6 });
+const directionalLight = new DirectionalLight({
+  color: [255, 255, 255],
+  intensity: 1.8,
+  direction: [-2, -3, -1],
+});
+const lightingEffect = new LightingEffect({ ambientLight, directionalLight });
+
 interface DeckOverlayProps {
   layers: Layer[];
+  effects: LightingEffect[];
 }
 
-function DeckGLOverlay({ layers }: DeckOverlayProps): null {
-  const overlay = useControl<MapboxOverlay>(() => new MapboxOverlay({ layers }), {
+function DeckGLOverlay({ layers, effects }: DeckOverlayProps): null {
+  const overlay = useControl<MapboxOverlay>(() => new MapboxOverlay({ layers, effects }), {
     position: "top-left",
   });
-  overlay.setProps({ layers });
+  overlay.setProps({ layers, effects });
   return null;
 }
 
@@ -90,10 +102,18 @@ export function DeckGLMap({
         return [createColumnsLayer(flights)];
       case "trips":
         return [createTripsLayer(trips, currentTime)];
+      case "contour":
+        return [createContourLayer(flights)];
       default:
         return [];
     }
   }, [visMode, flights, minRouteCount, trips, currentTime, onFlightClick]);
+
+  // Only enable lighting for 3D modes where it makes a visual difference
+  const effects = useMemo(
+    () => (visMode === "hexagon" || visMode === "columns" ? [lightingEffect] : []),
+    [visMode]
+  );
 
   const handleTimeChange = useCallback((value: number | ((prev: number) => number)): void => {
     setCurrentTime((prev) => (typeof value === "function" ? value(prev) : value));
@@ -107,7 +127,7 @@ export function DeckGLMap({
         mapStyle={isDarkMode ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
         style={{ position: "absolute", inset: "0" }}
       >
-        <DeckGLOverlay layers={layers} />
+        <DeckGLOverlay layers={layers} effects={effects} />
       </Map>
 
       {/* Time slider — bottom center, trips mode only */}
