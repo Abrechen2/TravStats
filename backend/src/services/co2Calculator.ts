@@ -11,7 +11,7 @@ export const CABIN_FACTORS = {
 
 type SeatClass = keyof typeof CABIN_FACTORS | null | undefined;
 
-interface Co2Input {
+export interface Co2Input {
   depLat: number | null;
   depLon: number | null;
   arrLat: number | null;
