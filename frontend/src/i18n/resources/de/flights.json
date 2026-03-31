@@ -298,5 +298,13 @@
   "enrichmentCount": "{{count}}x angereichert",
   "confidence": "Vertrauen",
   "sourceFlightsCount": "{{count}} {{count, plural, one {Quellflug} other {Quellflüge}}}",
-  "enrichmentHistory": "Anreicherungs-Historie"
+  "enrichmentHistory": "Anreicherungs-Historie",
+  "pdfImport": {
+    "label": "PDF",
+    "dropHint": "Buchungsbestätigung oder Bordkarte als PDF hier ablegen",
+    "dropHintSub": ".pdf • max. 20 MB",
+    "noFlights": "Keine Flugdaten in dieser PDF gefunden.",
+    "emptyPdf": "Die PDF enthält keinen lesbaren Text. Für gescannte Bordkarten nutze den Bordkarten-Scanner.",
+    "parseError": "PDF konnte nicht gelesen werden."
+  }
 }
