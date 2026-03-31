@@ -9,9 +9,10 @@ on:
         description: 'Tag to release (e.g. v0.9.1)'
         required: true
 
+run-name: Release ${{ github.ref_name }}
+
 concurrency:
   group: release
-  run-name: Release ${{ github.ref_name }}
 
 jobs:
   validate:
