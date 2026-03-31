@@ -32,6 +32,12 @@ export default function FlightEditModal({
     notes: flight.notes || "",
     tags: flight.tags?.join(", ") || "",
     receiptUrl: flight.receiptUrl || "",
+    actualDeparture: flight.actualDeparture
+      ? new Date(flight.actualDeparture).toISOString().slice(0, 16)
+      : "",
+    actualArrival: flight.actualArrival
+      ? new Date(flight.actualArrival).toISOString().slice(0, 16)
+      : "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -54,6 +60,12 @@ export default function FlightEditModal({
       notes: flight.notes || "",
       tags: flight.tags?.join(", ") || "",
       receiptUrl: flight.receiptUrl || "",
+      actualDeparture: flight.actualDeparture
+        ? new Date(flight.actualDeparture).toISOString().slice(0, 16)
+        : "",
+      actualArrival: flight.actualArrival
+        ? new Date(flight.actualArrival).toISOString().slice(0, 16)
+        : "",
     });
     setError("");
   }, [flight]);
@@ -84,6 +96,12 @@ export default function FlightEditModal({
               .filter(Boolean)
           : [],
         receiptUrl: formData.receiptUrl || undefined,
+        actualDeparture: formData.actualDeparture
+          ? new Date(formData.actualDeparture).toISOString()
+          : undefined,
+        actualArrival: formData.actualArrival
+          ? new Date(formData.actualArrival).toISOString()
+          : undefined,
       };
 
       await onSave(flight.id, updates);
@@ -312,6 +330,34 @@ export default function FlightEditModal({
               className="input"
               placeholder={t("flights:form.placeholders.tags")}
             />
+          </div>
+
+          {/* Actual Times — Phase 3 */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label" htmlFor="actualDeparture">
+                {t("flights:actualTimes.actualDeparture")}
+              </label>
+              <input
+                id="actualDeparture"
+                type="datetime-local"
+                className="input"
+                value={formData.actualDeparture}
+                onChange={(e) => setFormData({ ...formData, actualDeparture: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="label" htmlFor="actualArrival">
+                {t("flights:actualTimes.actualArrival")}
+              </label>
+              <input
+                id="actualArrival"
+                type="datetime-local"
+                className="input"
+                value={formData.actualArrival}
+                onChange={(e) => setFormData({ ...formData, actualArrival: e.target.value })}
+              />
+            </div>
           </div>
 
           <div>
