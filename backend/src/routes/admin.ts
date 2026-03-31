@@ -473,13 +473,26 @@ router.post('/parse-logs/promote', requireAdmin, async (_req: AuthRequest, res: 
     const events = await prisma.analyticsEvent.findMany({
       where: { type: 'parser_feedback' },
       select: { id: true, userId: true, payload: true },
+      take: 500,
+      orderBy: { createdAt: 'asc' },
     });
+
+    // Pre-load existing promoted originalFile keys to avoid duplicates
+    const existingOriginalFiles = new Set(
+      (await prisma.trainingData.findMany({
+        where: { originalFile: { startsWith: 'promoted:' } },
+        select: { originalFile: true },
+      })).map(r => r.originalFile)
+    );
 
     let promoted = 0;
 
     for (const event of events) {
       if (!isFeedbackPayload(event.payload)) continue;
       if (!event.payload.correctedResult || event.payload.correctedResult.length === 0) continue;
+
+      const originalFile = `promoted:${event.id}`;
+      if (existingOriginalFiles.has(originalFile)) continue; // already promoted
 
       const sourceType = event.payload.sourceType === 'email' ? 'email' : 'boarding_pass';
       const annotations = event.payload.originalData ?? {};
@@ -488,7 +501,7 @@ router.post('/parse-logs/promote', requireAdmin, async (_req: AuthRequest, res: 
         data: {
           userId: event.userId,
           type: sourceType,
-          originalFile: `promoted:${event.id}`,
+          originalFile,
           annotations: annotations as unknown as Prisma.InputJsonValue,
           extractedData: event.payload.correctedResult as unknown as Prisma.InputJsonValue,
           status: 'pending',

@@ -2,11 +2,15 @@ import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
 const mockAnalyticsEventFindMany = jest.fn();
 const mockTrainingDataCreate = jest.fn();
+const mockTrainingDataFindMany = jest.fn();
 
 jest.mock("../db", () => ({
   prisma: {
     analyticsEvent: { findMany: mockAnalyticsEventFindMany },
-    trainingData: { create: mockTrainingDataCreate },
+    trainingData: {
+      create: mockTrainingDataCreate,
+      findMany: mockTrainingDataFindMany,
+    },
   },
 }));
 jest.mock("../middleware/auth", () => ({
@@ -85,6 +89,7 @@ describe("POST /api/v1/admin/parse-logs/promote", () => {
   });
 
   it("creates TrainingData for events with correctedResult", async () => {
+    mockTrainingDataFindMany.mockResolvedValue([]);
     mockAnalyticsEventFindMany.mockResolvedValue([
       {
         id: "evt-1",
@@ -116,6 +121,7 @@ describe("POST /api/v1/admin/parse-logs/promote", () => {
   });
 
   it("skips events without correctedResult", async () => {
+    mockTrainingDataFindMany.mockResolvedValue([]);
     mockAnalyticsEventFindMany.mockResolvedValue([
       {
         id: "evt-2",
@@ -133,6 +139,7 @@ describe("POST /api/v1/admin/parse-logs/promote", () => {
   });
 
   it("skips events with empty correctedResult array", async () => {
+    mockTrainingDataFindMany.mockResolvedValue([]);
     mockAnalyticsEventFindMany.mockResolvedValue([
       {
         id: "evt-3",
@@ -142,6 +149,29 @@ describe("POST /api/v1/admin/parse-logs/promote", () => {
         createdAt: new Date(),
       },
     ]);
+
+    const res = await request(app).post("/api/v1/admin/parse-logs/promote").send({});
+    expect(res.status).toBe(200);
+    expect(res.body.promoted).toBe(0);
+    expect(mockTrainingDataCreate).not.toHaveBeenCalled();
+  });
+
+  it("skips already-promoted events on second call", async () => {
+    mockAnalyticsEventFindMany.mockResolvedValue([
+      {
+        id: "evt-1",
+        userId: "user-1",
+        type: "parser_feedback",
+        payload: {
+          sourceType: "email",
+          correctedResult: [{ flightNumber: "LH123" }],
+          originalData: {},
+        },
+        createdAt: new Date(),
+      },
+    ]);
+    // Simulate that this event was already promoted
+    mockTrainingDataFindMany.mockResolvedValue([{ originalFile: "promoted:evt-1" }]);
 
     const res = await request(app).post("/api/v1/admin/parse-logs/promote").send({});
     expect(res.status).toBe(200);
