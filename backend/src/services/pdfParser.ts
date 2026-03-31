@@ -13,8 +13,16 @@ export async function extractTextFromPdf(buffer: Buffer): Promise<string> {
   }
 
   const parser = new PDFParse({ data: buffer });
-  const result = await parser.getText();
-  const text = result.text ?? '';
+  let result: { text: string; total: number };
+  try {
+    result = await parser.getText() as { text: string; total: number };
+  } catch (err: unknown) {
+    logger.error({ operation: 'pdf_text_extraction', err }, '[PDF Parser] pdf-parse failed');
+    throw new Error('PDF text extraction failed', { cause: err });
+  } finally {
+    await parser.destroy();
+  }
+  const text = result.text;
 
   logger.debug({
     operation: 'pdf_text_extraction',
