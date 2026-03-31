@@ -425,8 +425,10 @@ router.get('/parse-logs/stats', requireAdmin, async (_req: AuthRequest, res: Res
 // GET /api/v1/admin/parse-logs/export — download anonymized ParseTrainingLog as JSONL
 router.get('/parse-logs/export', requireAdmin, adminExportLimiter, async (_req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const ROW_LIMIT = 50000;
     const logs = await prisma.parseTrainingLog.findMany({
       orderBy: { createdAt: 'asc' },
+      take: ROW_LIMIT,
       select: {
         id: true,
         airline: true,
@@ -442,6 +444,7 @@ router.get('/parse-logs/export', requireAdmin, adminExportLimiter, async (_req: 
     });
 
     res.setHeader('Content-Type', 'application/x-ndjson');
+    res.setHeader('X-Row-Limit', String(ROW_LIMIT));
     res.setHeader('Content-Disposition', 'attachment; filename="parse-training-logs.jsonl"');
 
     for (const log of logs) {
