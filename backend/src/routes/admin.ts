@@ -422,6 +422,37 @@ router.get('/parse-logs/stats', requireAdmin, async (_req: AuthRequest, res: Res
   }
 });
 
+// GET /api/v1/admin/parse-logs/export — download anonymized ParseTrainingLog as JSONL
+router.get('/parse-logs/export', requireAdmin, adminExportLimiter, async (_req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const logs = await prisma.parseTrainingLog.findMany({
+      orderBy: { createdAt: 'asc' },
+      select: {
+        id: true,
+        airline: true,
+        templateUsed: true,
+        templateHit: true,
+        confidence: true,
+        fieldCount: true,
+        missingFields: true,
+        parserProvider: true,
+        createdAt: true,
+        // userId intentionally omitted — anonymized export
+      },
+    });
+
+    res.setHeader('Content-Type', 'application/x-ndjson');
+    res.setHeader('Content-Disposition', 'attachment; filename="parse-training-logs.jsonl"');
+
+    for (const log of logs) {
+      res.write(JSON.stringify(log) + '\n');
+    }
+    res.end();
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Get admin parser settings
 router.get('/parser-settings', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
