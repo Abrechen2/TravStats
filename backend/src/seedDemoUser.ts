@@ -102,7 +102,7 @@ async function createParserFeedbackEvents(userId: string) {
 
   const feedbackEvents = [];
   const now = new Date();
-  
+
   // Generate 18 feedback events over the last 60 days
   for (let i = 0; i < 18; i++) {
     const daysAgo = Math.floor(Math.random() * 60);
@@ -112,16 +112,16 @@ async function createParserFeedbackEvents(userId: string) {
 
     const provider = providers[Math.floor(Math.random() * providers.length)];
     const sourceType = sourceTypes[Math.floor(Math.random() * sourceTypes.length)];
-    
+
     // Generate sample flight data with intentional errors
     const airline = airlines[Math.floor(Math.random() * airlines.length)];
     const route = flightRoutes[Math.floor(Math.random() * flightRoutes.length)];
     const depAirport = airports.find(a => a.iata === route.dep)!;
     const arrAirport = airports.find(a => a.iata === route.arr)!;
-    
+
     const flightNumber = airline.prefix + route.flightNum;
     const pnr = generatePNR();
-    
+
     // Create original (incorrect) and corrected results
     const errorType = Math.floor(Math.random() * 4);
     let originalResult: Array<{
@@ -167,7 +167,7 @@ async function createParserFeedbackEvents(userId: string) {
         });
         break;
 
-      case 1: // Departure code error
+      case 1: { // Departure code error
         const wrongDep = airports.find(a => a.iata !== depAirport.iata && a.iata !== arrAirport.iata)!.iata;
         originalResult = [{
           flightNumber: flightNumber,
@@ -192,6 +192,7 @@ async function createParserFeedbackEvents(userId: string) {
           corrected: depAirport.iata,
         });
         break;
+      }
 
       case 2: // PNR error
         originalResult = [{
@@ -247,7 +248,7 @@ async function createParserFeedbackEvents(userId: string) {
         break;
     }
 
-    const originalData = sourceType === 'email' 
+    const originalData = sourceType === 'email'
       ? {
           subject: `Your ${airline.name} Flight ${flightNumber} Confirmation`,
           text: `Flight ${flightNumber} from ${depAirport.iata} to ${arrAirport.iata}`,
@@ -482,7 +483,7 @@ async function seedDemoUser() {
     } else {
       console.log('✅ Demo user already exists');
       console.log('');
-      
+
       // Check if flights already exist
       const existingFlights = await prisma.flight.count({
         where: { userId: demoUser.id },
@@ -572,7 +573,7 @@ async function seedDemoUser() {
     // Create parser feedback events
     console.log('📊 Creating parser feedback events...');
     await createParserFeedbackEvents(demoUser.id);
-    
+
     // Create pattern suggestions
     console.log('🔍 Creating pattern suggestions...');
     await createPatternSuggestions(demoUser.id);

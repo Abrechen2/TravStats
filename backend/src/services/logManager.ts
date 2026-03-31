@@ -90,7 +90,7 @@ function extractCategory(filename: string): string {
  */
 function validateFilename(filename: string): boolean {
   // Only allow alphanumeric, dash, dot (for .log extension)
-  const validPattern = /^[a-zA-Z0-9\-\.]+\.log(\.gz)?$/;
+  const validPattern = /^[a-zA-Z0-9\-.]+\.log(\.gz)?$/;
   return validPattern.test(filename) && !filename.includes('..');
 }
 

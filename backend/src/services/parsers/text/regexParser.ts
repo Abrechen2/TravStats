@@ -32,7 +32,7 @@ const IATA_CONTEXT_PATTERNS = [
   /(?:von|ab|from|dep(?:arture)?)\s+([A-Z]{3})/g,
   /([A-Z]{3})\s+(?:nach|to|arr(?:ival)?)/g,
   /(?:nach|to|arr(?:ival)?)\s+([A-Z]{3})/g,
-  /([A-Z]{3})\s*(?:->|-\>|-|\u2192|\u2194|\u2013|\u2014|\u27f6)\s*([A-Z]{3})/g,
+  /([A-Z]{3})\s*(?:->|-|\u2192|\u2194|\u2013|\u2014|\u27f6)\s*([A-Z]{3})/g,
 ];
 
 /**
@@ -70,7 +70,7 @@ export class RegexTextParser implements ITextParser {
     logger.info('[Regex Parser] Starting email parsing');
 
     const source = [subject || '', text || '', this.extractText(html)].join('\n');
-    
+
     // Try to extract multiple flights (round-trip, multi-leg)
     const flights = this.parseMultipleFlights(source);
 
@@ -207,13 +207,13 @@ export class RegexTextParser implements ITextParser {
   private parseMultipleFlights(source: string): ParsedBooking[] {
     const flights: ParsedBooking[] = [];
     const sourceUpper = source.toUpperCase();
-    
+
     // Extract all flight numbers with context
     const flightNumberPatterns = [
       /(?:FLIGHT|FLUG)\s*:?\s*([A-Z]{2,3}\s?\d{1,4})\b/gi,
       /\b([A-Z]{2,3})\s*(\d{1,4})\b(?=.*(?:FLIGHT|FLUG|DEPARTURE|ABFLUG|BOARDING|GATE|TERMINAL))/gi,
     ];
-    
+
     const flightNumbers: Array<{ number: string; index: number }> = [];
     for (const pattern of flightNumberPatterns) {
       const matches = Array.from(source.matchAll(pattern));
@@ -227,25 +227,25 @@ export class RegexTextParser implements ITextParser {
         }
       }
     }
-    
+
     // Remove duplicates and sort by position
     const uniqueFlights = Array.from(
       new Map(flightNumbers.map(f => [f.number, f])).values()
     ).sort((a, b) => a.index - b.index);
-    
+
     // Extract all airport code pairs
     const airportPairs = this.extractAllAirportPairs(source);
-    
+
     // Extract all date/time pairs
     const timePairs = this.extractAllTimePairs(source);
-    
+
     // Extract shared PNR (should be same for all flights in one booking)
     const sharedPnr = this.extractSharedPNR(source);
-    
+
     // If we found multiple flight numbers, try to match them with routes
     if (uniqueFlights.length > 1) {
       logger.debug(`[Regex Parser] Found ${uniqueFlights.length} potential flights`);
-      
+
       // Try to match each flight number with a route
       for (let i = 0; i < uniqueFlights.length; i++) {
         const flightNum = uniqueFlights[i].number;
@@ -255,40 +255,40 @@ export class RegexTextParser implements ITextParser {
           pnr: sharedPnr,
           bookingReference: sharedPnr,
         };
-        
+
         // Try to find route for this flight (use airport pairs in order)
         if (airportPairs.length > i) {
           const departure = airportPairs[i].departure;
           const arrival = airportPairs[i].arrival;
-          flightData.departureCode = departure && this.isValidIATACode(departure) 
-            ? departure 
+          flightData.departureCode = departure && this.isValidIATACode(departure)
+            ? departure
             : undefined;
           flightData.arrivalCode = arrival && this.isValidIATACode(arrival)
             ? arrival
             : undefined;
         }
-        
+
         // Try to find time for this flight
         if (timePairs.length > i) {
           flightData.departureTime = timePairs[i].departure;
           flightData.arrivalTime = timePairs[i].arrival;
         }
-        
+
         const parsed = normalizeParsedBooking(flightData);
         if (parsed.flightNumber) {
           flights.push(parsed);
         }
       }
     }
-    
+
     // If we found multiple airport pairs but only one flight number, it might be a round-trip
     if (flights.length === 0 && airportPairs.length >= 2) {
       logger.debug(`[Regex Parser] Found ${airportPairs.length} airport pairs, treating as round-trip`);
-      
+
       for (let i = 0; i < airportPairs.length; i++) {
         const pair = airportPairs[i];
-        if (pair.departure && pair.arrival && 
-            this.isValidIATACode(pair.departure) && 
+        if (pair.departure && pair.arrival &&
+            this.isValidIATACode(pair.departure) &&
             this.isValidIATACode(pair.arrival)) {
           const flightData: Partial<ParsedBooking> = {
             departureCode: pair.departure,
@@ -296,29 +296,29 @@ export class RegexTextParser implements ITextParser {
             pnr: sharedPnr,
             bookingReference: sharedPnr,
           };
-          
+
           // Use first flight number for all, or try to find specific one
           if (uniqueFlights.length > 0) {
             flightData.flightNumber = uniqueFlights[Math.min(i, uniqueFlights.length - 1)].number;
             flightData.airline = flightData.flightNumber.slice(0, 2);
           }
-          
+
           if (timePairs.length > i) {
             flightData.departureTime = timePairs[i].departure;
             flightData.arrivalTime = timePairs[i].arrival;
           }
-          
+
           flights.push(normalizeParsedBooking(flightData));
         }
       }
     }
-    
+
     // Fallback to single flight parsing if no multi-flight pattern detected
     if (flights.length === 0) {
       const singleFlight = this.parseBookingEmailRegex(source);
       return [singleFlight];
     }
-    
+
     return flights;
   }
 
@@ -329,7 +329,7 @@ export class RegexTextParser implements ITextParser {
     const pairs: Array<{ departure?: string; arrival?: string }> = [];
     const sourceLower = source.toLowerCase();
     const sourceUpper = source.toUpperCase();
-    
+
     // Pattern 1: City names (von X nach Y)
     const cityPattern = /(?:von|ab|from)\s+([\p{L}\s-]+?)\s+(?:nach|to|bis)\s+([\p{L}\s-]+?)(?:\s+am|\s+on|\s+\d|$|\n)/giu;
     let cityMatch;
@@ -342,9 +342,9 @@ export class RegexTextParser implements ITextParser {
         pairs.push({ departure, arrival });
       }
     }
-    
+
     // Pattern 2: IATA codes in context (MUC → LUX, MUC-LUX, etc.)
-    const iataPattern = /([A-Z]{3})\s*(?:->|-\>|-|\u2192|\u2194|\u2013|\u2014|\u27f6)\s*([A-Z]{3})/g;
+    const iataPattern = /([A-Z]{3})\s*(?:->|-|\u2192|\u2194|\u2013|\u2014|\u27f6)\s*([A-Z]{3})/g;
     let iataMatch;
     while ((iataMatch = iataPattern.exec(sourceUpper)) !== null) {
       const dep = iataMatch[1];
@@ -353,7 +353,7 @@ export class RegexTextParser implements ITextParser {
         pairs.push({ departure: dep, arrival: arr });
       }
     }
-    
+
     // Pattern 3: Sequential IATA codes (MUC FRA LUX)
     const sequentialPattern = /\b([A-Z]{3})\s+([A-Z]{3})\b/g;
     const codes: string[] = [];
@@ -363,12 +363,12 @@ export class RegexTextParser implements ITextParser {
         codes.push(seqMatch[1], seqMatch[2]);
       }
     }
-    
+
     // Group sequential codes into pairs
     for (let i = 0; i < codes.length - 1; i += 2) {
       pairs.push({ departure: codes[i], arrival: codes[i + 1] });
     }
-    
+
     return pairs;
   }
 
@@ -377,12 +377,12 @@ export class RegexTextParser implements ITextParser {
    */
   private extractAllTimePairs(source: string): Array<{ departure?: string; arrival?: string }> {
     const pairs: Array<{ departure?: string; arrival?: string }> = [];
-    
+
     // ISO format dates
     const isoPattern = /\b(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?)\b/g;
     const isoMatches = Array.from(source.matchAll(isoPattern));
     const isoDates = isoMatches.map(m => m[1].replace(' ', 'T'));
-    
+
     // Group into pairs (departure, arrival)
     for (let i = 0; i < isoDates.length; i += 2) {
       pairs.push({
@@ -390,7 +390,7 @@ export class RegexTextParser implements ITextParser {
         arrival: isoDates[i + 1],
       });
     }
-    
+
     // German date format
     const germanPattern = /(\d{1,2})[.\s]+(\d{1,2}|[A-Z]{3})[.\s]+(\d{4})[,\s]+(\d{1,2}):(\d{2})/gi;
     const germanMatches = Array.from(source.matchAll(germanPattern));
@@ -399,7 +399,7 @@ export class RegexTextParser implements ITextParser {
       'JUN': '06', 'JUL': '07', 'AUG': '08', 'SEP': '09', 'OKT': '10', 'OCT': '10',
       'NOV': '11', 'DEZ': '12', 'DEC': '12',
     };
-    
+
     for (const match of germanMatches) {
       const day = match[1].padStart(2, '0');
       let month = match[2];
@@ -414,7 +414,7 @@ export class RegexTextParser implements ITextParser {
       const hour = match[4].padStart(2, '0');
       const minute = match[5];
       const isoTime = `${year}-${month}-${day}T${hour}:${minute}`;
-      
+
       // Add to pairs (assume first is departure, second is arrival)
       const existingPair = pairs.find(p => !p.departure);
       if (existingPair) {
@@ -423,7 +423,7 @@ export class RegexTextParser implements ITextParser {
         pairs.push({ departure: isoTime });
       }
     }
-    
+
     return pairs;
   }
 
