@@ -508,6 +508,27 @@ export const parseApi = {
     return data;
   },
 
+  parsePdf: async (
+    pdfBase64: string
+  ): Promise<{
+    flights: ParsedBooking[];
+    parserUsed: string;
+    ollamaAvailable: boolean;
+    fallbackUsed?: boolean;
+    pdfTextLength: number;
+    bcbpDetected: boolean;
+  }> => {
+    const { data } = await parserApi.post<{
+      flights: ParsedBooking[];
+      parserUsed: string;
+      ollamaAvailable: boolean;
+      fallbackUsed?: boolean;
+      pdfTextLength: number;
+      bcbpDetected: boolean;
+    }>("/parse-pdf", { pdfBase64 });
+    return data;
+  },
+
   checkOllamaVision: async (): Promise<OllamaVisionCheckResult> => {
     const { data } = await parserApi.get<OllamaVisionCheckResult>("/parse-boardingpass/check");
     return data;
