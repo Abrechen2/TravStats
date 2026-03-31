@@ -29,6 +29,7 @@ export const FILE_LIMITS = {
   RECEIPT_MAX_SIZE: 10 * 1024 * 1024, // 10 MB
   EMAIL_MAX_SIZE: 5 * 1024 * 1024, // 5 MB
   BOARDING_PASS_MAX_SIZE: 10 * 1024 * 1024, // 10 MB (for base64 images)
+  PDF_MAX_SIZE: 20 * 1024 * 1024, // 20 MB
 
   // Body parsing limits
   JSON_BODY_MAX_SIZE: '10mb',
