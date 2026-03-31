@@ -299,5 +299,13 @@
   "enrichmentCount": "Enriched {{count}}x",
   "confidence": "Confidence",
   "sourceFlightsCount": "{{count}} {{count, plural, one {source flight} other {source flights}}}",
-  "enrichmentHistory": "Enrichment History"
+  "enrichmentHistory": "Enrichment History",
+  "pdfImport": {
+    "label": "PDF",
+    "dropHint": "Drop booking confirmation or boarding pass PDF here",
+    "dropHintSub": ".pdf • max 20 MB",
+    "noFlights": "No flight data found in this PDF.",
+    "emptyPdf": "This PDF contains no readable text. For scanned boarding passes, use the Boarding Pass Scanner.",
+    "parseError": "Could not read PDF."
+  }
 }
