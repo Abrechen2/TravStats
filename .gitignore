@@ -18,11 +18,12 @@ node_modules/
 Agent.md
 CLAUDE.local.md
 
-# All markdown files except root README.md, CHANGELOG.md, CLAUDE.md (keep docs local only)
+# All markdown files except root README.md, CHANGELOG.md, CLAUDE.md, CONTRIBUTING.md (keep docs local only)
 *.md
 !README.md
 !CHANGELOG.md
 !CLAUDE.md
+!CONTRIBUTING.md
 
 
 # Build outputs
