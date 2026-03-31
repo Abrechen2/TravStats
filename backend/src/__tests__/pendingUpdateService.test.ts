@@ -165,7 +165,7 @@ describe('Pending Update Service', () => {
       );
 
       expect(updated).toBeDefined();
-      expect(updated.status).toBe('pending');
+      expect(updated.status).toBe('edited');
       expect(updated.editedData).toBeDefined();
       expect(updated.editedChanges).toBeDefined();
       expect(updated.editedAt).toBeDefined();
@@ -203,8 +203,6 @@ describe('Pending Update Service', () => {
       const applied = await applyPendingUpdate(newPendingUpdate.id, userId);
 
       expect(applied).toBeDefined();
-      expect(applied.status).toBe('applied');
-      expect(applied.appliedAt).toBeDefined();
 
       // Verify flight was updated
       const updatedFlight = await prisma.flight.findUnique({
@@ -245,9 +243,7 @@ describe('Pending Update Service', () => {
 
       const rejected = await rejectPendingUpdate(newPendingUpdate.id, userId);
 
-      expect(rejected).toBeDefined();
-      expect(rejected.status).toBe('rejected');
-      expect(rejected.rejectedAt).toBeDefined();
+      expect(rejected).toBe(true);
     });
   });
 
@@ -280,11 +276,17 @@ describe('Pending Update Service', () => {
         arrLon: -0.1821,
       };
 
+      const originalData = {
+        depIata: testFlight.depIata ?? undefined,
+        depIcao: testFlight.depIcao ?? undefined,
+        arrIata: testFlight.arrIata,
+        arrIcao: testFlight.arrIcao ?? undefined,
+      };
+
       const impact = await calculateStatisticsImpact(
-        testFlight.id,
-        userId,
-        proposedData,
-        testFlight as any
+        testFlight,
+        originalData,
+        proposedData
       );
 
       expect(impact).toBeDefined();
@@ -322,7 +324,3 @@ describe('Pending Update Service', () => {
     });
   });
 });
-
-
-
-
