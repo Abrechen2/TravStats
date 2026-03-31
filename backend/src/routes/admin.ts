@@ -482,6 +482,7 @@ router.post('/parse-logs/promote', requireAdmin, async (_req: AuthRequest, res: 
       (await prisma.trainingData.findMany({
         where: { originalFile: { startsWith: 'promoted:' } },
         select: { originalFile: true },
+        take: 5000,
       })).map(r => r.originalFile)
     );
 
