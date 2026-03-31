@@ -15,12 +15,13 @@ node_modules/
 .env.production.local
 .claude
 Agent.md
-CLAUDE.md
+CLAUDE.local.md
 
-# All markdown files except root README.md and CHANGELOG.md (keep docs local only)
+# All markdown files except root README.md, CHANGELOG.md, CLAUDE.md (keep docs local only)
 *.md
 !README.md
 !CHANGELOG.md
+!CLAUDE.md
 
 
 # Build outputs
