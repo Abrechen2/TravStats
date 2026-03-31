@@ -98,3 +98,8 @@ backend/data/training/training-*.jsonl
 backend/data/training/output-*/
 backend/data/training/test-output/
 backend/data/logs/training/
+
+# Tool-generated directories (never commit)
+.playwright-mcp/
+.superpowers/
+screenshots/
