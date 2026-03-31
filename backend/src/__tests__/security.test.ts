@@ -5,17 +5,17 @@ import { generateToken, verifyToken } from '../utils/jwt';
 import { hashPassword, comparePassword } from '../utils/password';
 import { prisma } from '../db';
 
-// Mock dependencies
-const mockCategoryLogger = {
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn(),
-  debug: jest.fn(),
-  trace: jest.fn(),
-  fatal: jest.fn(),
-};
-
-jest.mock('../utils/logger', () => ({
+// Mock dependencies (defined inline in factory to avoid jest hoisting TDZ)
+jest.mock('../utils/logger', () => {
+  const catLogger = () => ({
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+    trace: jest.fn(),
+    fatal: jest.fn(),
+  });
+  return {
   __esModule: true,
   default: {
     info: jest.fn(),
@@ -23,14 +23,14 @@ jest.mock('../utils/logger', () => ({
     error: jest.fn(),
     debug: jest.fn(),
   },
-  securityLogger: mockCategoryLogger,
-  dbLogger: mockCategoryLogger,
-  httpLogger: mockCategoryLogger,
-  parserLogger: mockCategoryLogger,
-  parserVisionLogger: mockCategoryLogger,
-  parserTextLogger: mockCategoryLogger,
-  parserFactoryLogger: mockCategoryLogger,
-  systemLogger: mockCategoryLogger,
+  securityLogger: catLogger(),
+  dbLogger: catLogger(),
+  httpLogger: catLogger(),
+  parserLogger: catLogger(),
+  parserVisionLogger: catLogger(),
+  parserTextLogger: catLogger(),
+  parserFactoryLogger: catLogger(),
+  systemLogger: catLogger(),
   initializeCategoryStreams: jest.fn(),
   reinitializeCategoryStreams: jest.fn(),
   PerformanceTracker: jest.fn().mockImplementation(() => ({
@@ -43,7 +43,8 @@ jest.mock('../utils/logger', () => ({
   logApiCall: jest.fn(),
   logAchievement: jest.fn(),
   logSecurityEvent: jest.fn(),
-}));
+  };
+});
 
 describe('Security Tests', () => {
   describe('JWT Utils', () => {

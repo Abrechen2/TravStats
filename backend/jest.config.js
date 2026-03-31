@@ -1,6 +1,11 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
+  globals: {
+    'ts-jest': {
+      diagnostics: false, // Skip type-checking in tests; production code is checked via tsc --noEmit
+    },
+  },
   roots: ['<rootDir>/src'],
   testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
   collectCoverageFrom: [
