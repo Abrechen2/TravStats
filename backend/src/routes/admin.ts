@@ -456,6 +456,54 @@ router.get('/parse-logs/export', requireAdmin, adminExportLimiter, async (_req: 
   }
 });
 
+// POST /api/v1/admin/parse-logs/promote
+// Promotes analytics_events parser_feedback corrections → TrainingData ground-truth labels
+router.post('/parse-logs/promote', requireAdmin, async (_req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    interface FeedbackPayload {
+      sourceType?: string;
+      correctedResult?: unknown[];
+      originalData?: Record<string, unknown>;
+    }
+
+    function isFeedbackPayload(val: unknown): val is FeedbackPayload {
+      return typeof val === 'object' && val !== null && 'sourceType' in val;
+    }
+
+    const events = await prisma.analyticsEvent.findMany({
+      where: { type: 'parser_feedback' },
+      select: { id: true, userId: true, payload: true },
+    });
+
+    let promoted = 0;
+
+    for (const event of events) {
+      if (!isFeedbackPayload(event.payload)) continue;
+      if (!event.payload.correctedResult || event.payload.correctedResult.length === 0) continue;
+
+      const sourceType = event.payload.sourceType === 'email' ? 'email' : 'boarding_pass';
+      const annotations = event.payload.originalData ?? {};
+
+      await prisma.trainingData.create({
+        data: {
+          userId: event.userId,
+          type: sourceType,
+          originalFile: `promoted:${event.id}`,
+          annotations: annotations as unknown as Prisma.InputJsonValue,
+          extractedData: event.payload.correctedResult as unknown as Prisma.InputJsonValue,
+          status: 'pending',
+          tags: ['auto-promoted'],
+        },
+      });
+      promoted++;
+    }
+
+    res.json({ promoted, message: `${promoted} correction(s) promoted to TrainingData` });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Get admin parser settings
 router.get('/parser-settings', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
