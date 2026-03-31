@@ -2,6 +2,7 @@
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Version](https://img.shields.io/badge/version-0.9.0--beta-orange.svg)](https://github.com/Abrechen2/TravStats/releases)
+[![CI](https://github.com/Abrechen2/TravStats/actions/workflows/ci.yml/badge.svg)](https://github.com/Abrechen2/TravStats/actions/workflows/ci.yml)
 
 > ### 🚧 Public Beta — v0.9.0-beta
 >
@@ -78,11 +79,11 @@ docker run -d \
 # Create .env file
 cp .env.prod.example .env
 
-# Adjust passwords and options
+# Adjust passwords and options in .env
 nano .env
 
 # Start containers
-docker-compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml up -d
 ```
 
 ## 🐳 Docker Hub
@@ -131,11 +132,6 @@ docker run -d --name ollama -v ollama-data:/root/.ollama ollama/ollama:latest
 OLLAMA_URL=http://ollama:11434
 OLLAMA_MODEL=llama3.2:3b
 OLLAMA_VISION_MODEL=llama3.2-vision
-
-# Training configuration (optional, can also be set in Admin UI)
-TRAINING_MODEL_OUTPUT_DIR=./data/training/models
-TRAINING_EMAIL_MODEL_NAME=travstats-email-custom
-TRAINING_VISION_MODEL_NAME=travstats-vision-custom
 ```
 
 ## 📖 Usage
@@ -171,57 +167,52 @@ Reminders are checked every 15 minutes and sent based on configured thresholds (
 
 ### Statistics
 - `GET /api/v1/stats/summary?year=YYYY&compareYear=YYYY` — Summary with optional year comparison
-  - Returns `{ current: SummaryStats, compare: SummaryStats }`
 - `GET /api/v1/stats/seats` — Seat distribution by position, zone, and cabin class
 - `GET /api/v1/stats/routes` — Top routes by frequency
 - `GET /api/v1/stats/airlines` — Flight count by airline
 
-### Admin (SMTP Configuration)
+### Admin
 - `GET /api/v1/admin/smtp` — Get SMTP config (password masked)
 - `PUT /api/v1/admin/smtp` — Update SMTP settings
-- `POST /api/v1/admin/smtp/test` — Test connection with credentials
+- `POST /api/v1/admin/smtp/test` — Test connection
 
-### User Settings
-- `GET /api/v1/settings/notifications` — Get notification preferences
-- `PUT /api/v1/settings/notifications` — Update email and reminder thresholds (24h/2h)
+**Rate Limiting:** Stats endpoints: 30 req/min · Admin export: 5 req/hr
 
-**Rate Limiting:**
-- Stats endpoints: 30 req/min per user
-- Admin export: 5 req/hr per admin
-
-For complete API docs, see backend source at `/backend/src/routes/`
+For complete API docs, see backend source at `backend/src/routes/`
 
 ## 🔒 Security
 
 - **Invite-only**: No public registration by default
-- **JWT Authentication**: Automatically generated secure secrets
-- **Rate Limiting**: Protection against abuse
+- **JWT Authentication**: HttpOnly cookie, automatically generated secure secrets
+- **Rate Limiting**: Protection against abuse on all sensitive endpoints
 - **Local Data**: All data stays on your server
 
 ## 🛠️ Development
 
 ```bash
-# Backend
-cd backend
-npm install
-cp .env.example .env
-npx prisma generate
+# Install all dependencies
+npm run install:all
+
+# Start backend (port 8000) + frontend (port 3000) simultaneously
 npm run dev
 
-# Frontend
-cd frontend
-npm install
-cp .env.example .env
-npm run dev
+# Type checks
+npm run typecheck
+
+# Tests (frontend only — backend requires PostgreSQL)
+npm run test:frontend
+
+# Linting
+npm run lint
 ```
+
+See [CLAUDE.md](CLAUDE.md) for the full developer reference and [CONTRIBUTING.md](CONTRIBUTING.md) for the contribution workflow.
 
 ## 📝 License
 
-Copyright (C) 2025 Dennis Wittke
+Copyright (C) 2026 Dennis Wittke
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
 
 **TL;DR:** You can use, modify, and distribute this software, but if you run it as a web service (even modified), you must make the complete source code (including your modifications) available under AGPL-3.0.
 
@@ -230,8 +221,10 @@ See [LICENSE](LICENSE) for full details.
 ## 🔗 Links
 
 - **Docker Hub**: [abrechen2/travstats](https://hub.docker.com/r/abrechen2/travstats)
+- **Changelog**: [CHANGELOG.md](CHANGELOG.md)
+- **Contributing**: [CONTRIBUTING.md](CONTRIBUTING.md)
 - **Issues**: [GitHub Issues](https://github.com/Abrechen2/TravStats/issues)
 
 ---
 
-**Made with ❤️ and a bit AI for flight enthusiasts**
+**Made with ❤️ and a bit of AI for flight enthusiasts**
