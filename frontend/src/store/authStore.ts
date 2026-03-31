@@ -12,22 +12,17 @@ interface AuthState {
   setHasHydrated: (value: boolean) => void;
 }
 
-// Event listener cleanup function
-let unauthorizedEventListener: ((event: Event) => void) | null = null;
-
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => {
       // Listen for unauthorized events from API interceptor
       if (typeof window !== "undefined") {
-        unauthorizedEventListener = async () => {
+        window.addEventListener("auth:unauthorized", async () => {
           const store = get();
           if (store.user) {
-            // User is logged in but got 401 - logout
             await store.logout();
           }
-        };
-        window.addEventListener("auth:unauthorized", unauthorizedEventListener);
+        });
       }
 
       return {
@@ -57,11 +52,6 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => ({ user: state.user }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
-        // Cleanup event listener on store rehydration
-        if (typeof window !== "undefined" && unauthorizedEventListener) {
-          window.removeEventListener("auth:unauthorized", unauthorizedEventListener);
-          unauthorizedEventListener = null;
-        }
       },
     }
   )

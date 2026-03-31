@@ -398,8 +398,8 @@ const handle401Error = (error: AxiosError): Promise<never> => {
     });
     window.dispatchEvent(event);
 
-    // Fallback: only redirect if the app didn't clear the persisted user state.
-    // In normal flow, authStore will logout (clears user) and route guards will navigate.
+    // Fallback: if React/authStore didn't clear the user within 500ms, do it here.
+    // Clears localStorage before redirecting so /login doesn't bounce back to /.
     setTimeout(() => {
       try {
         const publicPaths = new Set(["/login", "/register", "/setup"]);
@@ -417,12 +417,21 @@ const handle401Error = (error: AxiosError): Promise<never> => {
           (parsed as { state: { user?: unknown } }).state?.user
         );
         if (hasUser) {
+          // Clear auth state before redirecting to prevent /login → / bounce loop
+          try {
+            const data = parsed as { state: { user: unknown }; version: number };
+            data.state.user = null;
+            localStorage.setItem("auth-storage", JSON.stringify(data));
+          } catch {
+            localStorage.removeItem("auth-storage");
+          }
           window.location.href = "/login";
         }
       } catch {
+        localStorage.removeItem("auth-storage");
         window.location.href = "/login";
       }
-    }, 200);
+    }, 500);
   }
   return Promise.reject(error);
 };
