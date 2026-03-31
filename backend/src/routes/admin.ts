@@ -374,14 +374,14 @@ router.get('/export/all-data', adminExportLimiter, async (req: AuthRequest, res:
 });
 
 // GET /api/v1/admin/parse-logs/stats — aggregate parse log stats per airline
-router.get('/parse-logs/stats', async (_req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+router.get('/parse-logs/stats', requireAdmin, async (_req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const [totalLogs, logs] = await Promise.all([
-      prisma.parseTrainingLog.count(),
-      prisma.parseTrainingLog.findMany({
-        select: { airline: true, templateHit: true, missingFields: true },
-      }),
-    ]);
+    const logs = await prisma.parseTrainingLog.findMany({
+      select: { airline: true, templateHit: true, missingFields: true },
+      take: 10000, // safety cap for large deployments
+      orderBy: { createdAt: 'desc' },
+    });
+    const totalLogs = logs.length;
 
     const airlineMap = new Map<string, { total: number; hits: number; missingCounts: Map<string, number> }>();
 
@@ -410,7 +410,7 @@ router.get('/parse-logs/stats', async (_req: AuthRequest, res: Response, next: N
         airline,
         total: stats.total,
         hits: stats.hits,
-        hitRate: Math.round((stats.hits / stats.total) * 100),
+        hitRate: stats.total > 0 ? Math.round((stats.hits / stats.total) * 100) : 0,
         commonMissingFields,
       };
     }).sort((a, b) => b.total - a.total);
