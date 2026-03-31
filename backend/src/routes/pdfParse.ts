@@ -32,7 +32,7 @@ const parsePdfSchema = z.object({
 router.post('/parse-pdf', authenticate, pdfParseLimiter, async (req: AuthRequest, res: Response) => {
   try {
     const { pdfBase64 } = parsePdfSchema.parse(req.body);
-    const userId = req.userId!;
+    const userId = req.userId;
 
     const buffer = Buffer.from(pdfBase64, 'base64');
 
@@ -62,8 +62,7 @@ router.post('/parse-pdf', authenticate, pdfParseLimiter, async (req: AuthRequest
     const result = await parseBookingText(pdfText, userId);
 
     res.json({
-      flights: result.flights,
-      provider: result.parserUsed,
+      ...result,
       pdfTextLength: pdfText.length,
       bcbpDetected,
     });
