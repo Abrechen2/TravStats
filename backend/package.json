@@ -1,6 +1,6 @@
 {
   "name": "travstats-backend",
-  "version": "0.9.0-beta",
+  "version": "0.9.1-beta",
   "description": "Flight tracking backend API",
   "main": "dist/index.js",
   "scripts": {
