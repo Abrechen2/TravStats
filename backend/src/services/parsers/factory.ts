@@ -26,6 +26,7 @@ import { getOllamaTextParser } from './text/ollamaTextParser';
 import { getOpenAITextParser } from './text/openaiTextParser';
 import { getClaudeTextParser } from './text/claudeTextParser';
 import { getRegexParser } from './text/regexParser';
+import { TemplateParser } from './text/templateParser';
 
 /**
  * Parser Factory
@@ -148,7 +149,7 @@ export async function getParserConfig(
 ): Promise<ParserConfig> {
   // Import here to avoid circular dependency
   const { selectModelForParsing } = await import('../modelManager');
-  
+
   // Select models based on user settings and availability
   const selectedEmailModel = await selectModelForParsing('email', userId);
   const selectedVisionModel = await selectModelForParsing('vision', userId);
@@ -174,6 +175,7 @@ export async function getParserConfig(
     claudeApiKey: userSettings?.claudeApiKey || adminSettings?.globalClaudeApiKey || process.env.CLAUDE_API_KEY,
     claudeModel: process.env.CLAUDE_MODEL,
     claudeVisionModel: process.env.CLAUDE_VISION_MODEL,
+    userId,
   };
 }
 
@@ -611,12 +613,12 @@ export async function parseBoardingPass(
       } else {
         logger.info(`[Parser Factory] Attempting vision parse with: ${provider}`);
       }
-      
+
       const flight = await parser.parseImage(imageBase64, apiKey);
       const parseDuration = Date.now() - parseStartTime;
 
       const fallbackUsed = config.visionProvider !== 'auto' && config.visionProvider !== provider;
-      
+
       if (shouldLog) {
         visionLog.info({
           operation: 'vision_parse_success',
@@ -666,7 +668,7 @@ export async function parseBoardingPass(
             const tesseractStartTime = Date.now();
             const tesseractFlight = await tesseractParser.parseImage(imageBase64);
             const tesseractDuration = Date.now() - tesseractStartTime;
-            
+
             if (shouldLog) {
               visionLog.info({
                 operation: 'tesseract_fallback_completed',
@@ -808,6 +810,25 @@ export async function parseEmail(
     });
   }
 
+  // Template-Parser first (before LLM chain)
+  const templateParser = new TemplateParser();
+  const templateAvail = await templateParser.checkAvailability();
+  if (templateAvail.available) {
+    const templateResults = await templateParser.parseEmail(subject, text, html, config.userId);
+    if (templateResults.length > 0 && (templateResults[0].parserConfidence ?? 0) >= 30) {
+      logger.info(
+        { confidence: templateResults[0].parserConfidence, parserTemplate: templateResults[0].parserTemplate },
+        '[Parser Factory] Template parser matched with sufficient confidence, skipping LLM chain'
+      );
+      return {
+        flights: templateResults,
+        provider: 'regex' as const, // "template" is not in TextProvider union — map to nearest
+        fallbackUsed: false,
+      };
+    }
+  }
+  // End template block — LLM chain follows
+
   // Build the provider chain: preferred (if not auto) + fallbacks
   const providerChain: TextProvider[] =
     config.textProvider !== 'auto'
@@ -855,7 +876,7 @@ export async function parseEmail(
       } else {
         logger.info(`[Parser Factory] Attempting email parse with: ${provider}`);
       }
-      
+
       const flights = await parser.parseEmail(subject, text, html, apiKey);
       const parseDuration = Date.now() - parseStartTime;
 
@@ -931,7 +952,7 @@ export async function parseEmail(
             } else {
               logger.info(`[Parser Factory] Attempting LLM quality fallback with: ${llmProvider}`);
             }
-            
+
             const llmStartTime = Date.now();
             const llmFlights = await llmParser.parseEmail(subject, text, html, llmApiKey);
             const llmDuration = Date.now() - llmStartTime;
@@ -1010,7 +1031,7 @@ export async function parseEmail(
 
       const finalQuality = calculateParserQuality(finalFlights);
       const totalDuration = Date.now() - startTime;
-      
+
       if (shouldLog) {
         log.info({
           operation: 'parse_email_complete',

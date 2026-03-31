@@ -1,0 +1,26 @@
+{
+  "airline": "Swiss",
+  "iata": "LX",
+  "version": "2024-03",
+  "from": ["@swiss.com", "@newsletter.swiss.com"],
+  "subject": ["Buchungsbestätigung", "Your SWISS booking confirmation"],
+  "selectors": {
+    "flightNumber": ".flight-number, [data-flight]",
+    "pnr": ".booking-code, .pnr",
+    "departureCode": ".dep-iata, [data-dep-iata]",
+    "arrivalCode": ".arr-iata, [data-arr-iata]",
+    "departureTime": "[data-dep-datetime]",
+    "arrivalTime": "[data-arr-datetime]",
+    "seat": ".seat-info",
+    "seatClass": ".travel-class",
+    "price": ".total-price",
+    "currency": ".currency",
+    "taxes": ".taxes",
+    "baggage": ".baggage-info",
+    "frequentFlyer": ".senator-number, .ffn",
+    "ticketNumber": ".ticket-number",
+    "bookingClassLetter": ".booking-class"
+  },
+  "transforms": {},
+  "testCases": []
+}

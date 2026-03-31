@@ -23,11 +23,13 @@ import adminRoutes from './routes/admin';
 import trainingRoutes from './routes/training';
 import backupRoutes from './routes/backup';
 import pendingUpdatesRoutes from './routes/pendingUpdates';
+import templateStatusRoutes from './routes/templateStatus';
 import { errorHandler } from './middleware/errorHandler';
 import { requestLoggerMiddleware } from './middleware/requestLogger';
 import { prisma } from './db';
 import logger from './utils/logger';
 import { DATABASE_URL } from './utils/database';
+import { templateRegistry } from './services/parsers/templates/registry';
 
 // Load environment variables
 dotenv.config();
@@ -173,6 +175,7 @@ app.use('/api/v1/parser-feedback', parserFeedbackRoutes);
 app.use('/api/v1/training', trainingRoutes);
 app.use('/api/v1/backup', backupRoutes);
 app.use('/api/v1/pending-updates', pendingUpdatesRoutes);
+app.use('/api/v1/template-status', templateStatusRoutes);
 
 // Error handling
 app.use(errorHandler);
@@ -280,6 +283,23 @@ if (process.env.NODE_ENV !== 'test') {
       logger.warn({
         operation: 'server_start_reminder_scheduler_error',
         message: 'Failed to start flight reminder scheduler',
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+    }
+
+    // Initialize airline template registry
+    try {
+      await templateRegistry.initialize();
+      logger.info({
+        operation: 'server_start_template_registry',
+        message: 'Airline template registry initialized',
+      });
+    } catch (error) {
+      logger.warn({
+        operation: 'server_start_template_registry_error',
+        message: 'Failed to initialize airline template registry',
         error: {
           message: error instanceof Error ? error.message : 'Unknown error',
         },

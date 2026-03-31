@@ -1,0 +1,22 @@
+{
+  "airline": "Wizz Air",
+  "iata": "W6",
+  "version": "2024-03",
+  "from": ["@wizzair.com", "@info.wizzair.com"],
+  "subject": ["Booking confirmation", "Buchungsbestätigung"],
+  "selectors": {
+    "flightNumber": ".flight-number",
+    "pnr": ".booking-reference",
+    "departureCode": ".origin",
+    "arrivalCode": ".destination",
+    "departureTime": ".departure",
+    "arrivalTime": ".arrival",
+    "seat": ".seat",
+    "seatClass": ".fare-type",
+    "price": ".amount",
+    "currency": ".currency",
+    "baggage": ".baggage"
+  },
+  "transforms": {},
+  "testCases": []
+}

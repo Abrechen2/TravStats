@@ -109,6 +109,7 @@ export interface ParserConfig {
   claudeApiKey?: string;
   claudeModel?: string;
   claudeVisionModel?: string;
+  userId?: string;
 }
 
 /**

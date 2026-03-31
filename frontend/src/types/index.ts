@@ -108,6 +108,10 @@ export interface FlightInput {
   tags?: string[];
   companions?: string[];
   receiptUrl?: string;
+  baggageAllowance?: string;
+  frequentFlyerNumber?: string;
+  bookingClassLetter?: string;
+  coPassengers?: string[];
 }
 
 export interface ParsedBooking {
@@ -130,6 +134,14 @@ export interface ParsedBooking {
   boardingGroup?: string;
   taxes?: string;
   fees?: string;
+  // Phase 1: New fields
+  baggageAllowance?: string;
+  frequentFlyerNumber?: string;
+  bookingClassLetter?: string;
+  coPassengers?: string[];
+  parserTemplate?: string;
+  parserConfidence?: number;
+  airlineNotice?: string; // Transient: not persisted to DB, UI-only notice when no template found
   missing?: string[];
 }
 
