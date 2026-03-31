@@ -51,23 +51,16 @@ export class TesseractVisionParser implements IVisionParser {
   }
 
   async checkAvailability(): Promise<ProviderAvailability> {
-    try {
-      // Tesseract.js is always available (bundled)
-      return {
-        available: true,
-        metadata: {
-          provider: 'tesseract',
-          version: '4.x',
-          language: 'eng',
-          cost: 'free',
-        },
-      };
-    } catch (error) {
-      return {
-        available: false,
-        reason: error instanceof Error ? error.message : 'Unknown error',
-      };
-    }
+    // Tesseract.js is always available (bundled)
+    return {
+      available: true,
+      metadata: {
+        provider: 'tesseract',
+        version: '4.x',
+        language: 'eng',
+        cost: 'free',
+      },
+    };
   }
 
   async parseImage(imageBase64: string): Promise<ParsedBooking> {

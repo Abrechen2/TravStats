@@ -40,6 +40,10 @@ export default [
       'no-console': 'off', // Logger is preferred but console is used in bootstrap
       'no-undef': 'off', // TypeScript handles this
       'no-redeclare': 'off', // TypeScript handles this
+
+      // ESLint 9 recommended rules disabled for pre-existing codebase
+      'preserve-caught-error': 'off', // ~50 sites need cause chaining — defer to a dedicated cleanup pass
+      'no-useless-assignment': 'off', // Several pre-existing cases — defer cleanup
     },
   },
   {
