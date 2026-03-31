@@ -141,7 +141,7 @@ const IATA_CONTEXT_PATTERNS = [
   /(?:von|ab|from|dep(?:arture)?)\s+([A-Z]{3})/g,
   /([A-Z]{3})\s+(?:nach|to|arr(?:ival)?)/g,
   /(?:nach|to|arr(?:ival)?)\s+([A-Z]{3})/g,
-  /([A-Z]{3})\s*(?:->|-\>|-|\u2192|\u2194|\u2013|\u2014|\u27f6)\s*([A-Z]{3})/g, // MUC-LUX, MUC -> LUX, MUC → LUX
+  /([A-Z]{3})\s*(?:->|-|\u2192|\u2194|\u2013|\u2014|\u27f6)\s*([A-Z]{3})/g, // MUC-LUX, MUC -> LUX, MUC → LUX
 ];
 
 function extractText(html?: string): string {

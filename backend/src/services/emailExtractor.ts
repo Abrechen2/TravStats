@@ -157,13 +157,15 @@ export function extractEmailFromFile(file: Buffer | string, filename: string): E
       }
       return extractFromMsg(file);
 
-    case '.eml':
+    case '.eml': {
       const emlContent = Buffer.isBuffer(file) ? file.toString('utf-8') : file;
       return extractFromEml(emlContent);
+    }
 
-    case '.txt':
+    case '.txt': {
       const txtContent = Buffer.isBuffer(file) ? file.toString('utf-8') : file;
       return extractFromText(txtContent);
+    }
 
     default:
       throw new Error(`Unsupported email file type: ${extension}. Supported: .msg, .eml, .txt`);
