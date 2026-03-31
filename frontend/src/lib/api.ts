@@ -1044,6 +1044,27 @@ export const trainingApi = {
     const { data } = await api.delete<MessageResponse>(`/training/${id}`);
     return data;
   },
+  getParseLogStats: async (): Promise<import("../types").ParseLogStats> => {
+    const { data } = await api.get<import("../types").ParseLogStats>("/admin/parse-logs/stats");
+    return data;
+  },
+  exportParseLogs: async (): Promise<void> => {
+    const response = await api.get<Blob>("/admin/parse-logs/export", {
+      responseType: "blob",
+    });
+    const url = URL.createObjectURL(response.data);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "parse-training-logs.jsonl";
+    a.click();
+    URL.revokeObjectURL(url);
+  },
+  promoteCorrections: async (): Promise<import("../types").PromoteCorrectionsResult> => {
+    const { data } = await api.post<import("../types").PromoteCorrectionsResult>(
+      "/admin/parse-logs/promote"
+    );
+    return data;
+  },
 };
 
 // Upload API
