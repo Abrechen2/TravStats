@@ -1,8 +1,13 @@
 # .bandit.yml - Python security linter config
 skips:
   - B101  # assert statements (ok in scripts)
+  - B110  # try/except/pass (intentional in hardware detection fallbacks)
+  - B311  # random.sample (not used for crypto, used for ML dataset sampling)
+  - B310  # urllib.request.urlopen (controlled Ollama local URL, not user input)
+  - B404  # import subprocess (used safely in hardware info scripts)
   - B603  # subprocess without shell=True (we use shell=False explicitly)
   - B607  # partial path in subprocess (python3 cmd is fine)
+  - B615  # huggingface from_pretrained without revision (intentional for latest model loading)
 exclude_dirs:
   - node_modules
   - dist
