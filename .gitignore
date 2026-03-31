@@ -103,3 +103,6 @@ backend/data/logs/training/
 .playwright-mcp/
 .superpowers/
 screenshots/
+
+# Production logs (never commit)
+ProdLogs/
