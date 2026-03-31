@@ -10,7 +10,10 @@ FROM node:20-alpine AS frontend-builder
 WORKDIR /app/frontend
 
 COPY frontend/package*.json ./
-RUN npm ci
+RUN npm config set fetch-retries 5 \
+    && npm config set fetch-retry-mintimeout 30000 \
+    && npm config set fetch-retry-maxtimeout 300000 \
+    && npm ci
 
 COPY frontend/ ./
 # Build without VITE_API_URL - frontend will use relative path /api/v1
@@ -24,7 +27,10 @@ WORKDIR /app/backend
 
 COPY backend/package*.json ./
 COPY backend/prisma ./prisma/
-RUN npm ci
+RUN npm config set fetch-retries 5 \
+    && npm config set fetch-retry-mintimeout 30000 \
+    && npm config set fetch-retry-maxtimeout 300000 \
+    && npm ci
 
 COPY backend/ ./
 RUN npx prisma generate
@@ -62,7 +68,10 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app/backend
 COPY backend/package*.json ./
 COPY backend/prisma ./prisma/
-RUN npm ci --only=production
+RUN npm config set fetch-retries 5 \
+    && npm config set fetch-retry-mintimeout 30000 \
+    && npm config set fetch-retry-maxtimeout 300000 \
+    && npm ci --only=production
 COPY --from=backend-builder /app/backend/dist ./dist
 RUN npx prisma generate
 
