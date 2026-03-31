@@ -7,29 +7,27 @@ describe("VisModeSelector", () => {
     render(<VisModeSelector current="routes" onChange={vi.fn()} />);
     expect(screen.getByTitle("Routes")).toBeInTheDocument();
     expect(screen.getByTitle("Globe")).toBeInTheDocument();
-    expect(screen.getByTitle("Heatmap")).toBeInTheDocument();
-    expect(screen.getByTitle("Hexagon")).toBeInTheDocument();
-    expect(screen.getByTitle("3D Columns")).toBeInTheDocument();
+    expect(screen.getByTitle("Heat")).toBeInTheDocument();
+    expect(screen.getByTitle("Hex")).toBeInTheDocument();
+    expect(screen.getByTitle("3D")).toBeInTheDocument();
     expect(screen.getByTitle("Trips")).toBeInTheDocument();
   });
 
   it("calls onChange with correct mode on click", () => {
     const onChange = vi.fn();
     render(<VisModeSelector current="routes" onChange={onChange} />);
-    fireEvent.click(screen.getByTitle("Heatmap"));
+    fireEvent.click(screen.getByTitle("Heat"));
     expect(onChange).toHaveBeenCalledWith("heatmap");
   });
 
-  it("highlights the active mode button with ring class", () => {
+  it("marks the active mode button with aria-pressed=true", () => {
     render(<VisModeSelector current="heatmap" onChange={vi.fn()} />);
-    const activeBtn = screen.getByTitle("Heatmap");
-    expect(activeBtn.className).toContain("ring");
+    expect(screen.getByTitle("Heat")).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("does not highlight inactive buttons", () => {
+  it("marks inactive buttons with aria-pressed=false", () => {
     render(<VisModeSelector current="routes" onChange={vi.fn()} />);
-    const inactiveBtn = screen.getByTitle("Heatmap");
-    expect(inactiveBtn.className).not.toContain("ring");
+    expect(screen.getByTitle("Heat")).toHaveAttribute("aria-pressed", "false");
   });
 
   it("sets aria-pressed=true on active button", () => {

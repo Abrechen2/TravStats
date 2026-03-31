@@ -49,12 +49,18 @@ BEGIN
     END IF;
 END $$;
 
--- AlterTable
-ALTER TABLE "user_settings" ADD COLUMN IF NOT EXISTS "auto_update_enabled" BOOLEAN NOT NULL DEFAULT false,
-ADD COLUMN IF NOT EXISTS "auto_update_require_approval" BOOLEAN NOT NULL DEFAULT true,
-ADD COLUMN IF NOT EXISTS "auto_update_check_interval" INTEGER NOT NULL DEFAULT 15,
-ADD COLUMN IF NOT EXISTS "auto_update_only_during_flight" BOOLEAN NOT NULL DEFAULT true,
-ADD COLUMN IF NOT EXISTS "auto_update_expiry_hours" INTEGER NOT NULL DEFAULT 24;
+-- AlterTable (only if user_settings table exists)
+DO $$
+BEGIN
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'user_settings') THEN
+        ALTER TABLE "user_settings"
+            ADD COLUMN IF NOT EXISTS "auto_update_enabled" BOOLEAN NOT NULL DEFAULT false,
+            ADD COLUMN IF NOT EXISTS "auto_update_require_approval" BOOLEAN NOT NULL DEFAULT true,
+            ADD COLUMN IF NOT EXISTS "auto_update_check_interval" INTEGER NOT NULL DEFAULT 15,
+            ADD COLUMN IF NOT EXISTS "auto_update_only_during_flight" BOOLEAN NOT NULL DEFAULT true,
+            ADD COLUMN IF NOT EXISTS "auto_update_expiry_hours" INTEGER NOT NULL DEFAULT 24;
+    END IF;
+END $$;
 
 -- CreateIndex
 CREATE INDEX IF NOT EXISTS "pending_flight_updates_user_id_idx" ON "pending_flight_updates"("user_id");
@@ -91,30 +97,29 @@ DO $$
 BEGIN
     IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'flights') THEN
         IF NOT EXISTS (
-            SELECT 1 FROM information_schema.table_constraints 
+            SELECT 1 FROM information_schema.table_constraints
             WHERE constraint_name = 'pending_flight_updates_flight_id_fkey'
         ) THEN
-            ALTER TABLE "pending_flight_updates" ADD CONSTRAINT "pending_flight_updates_flight_id_fkey" 
+            ALTER TABLE "pending_flight_updates" ADD CONSTRAINT "pending_flight_updates_flight_id_fkey"
             FOREIGN KEY ("flight_id") REFERENCES "flights"("id") ON DELETE CASCADE ON UPDATE CASCADE;
         END IF;
     END IF;
-    
+
     IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'users') THEN
         IF NOT EXISTS (
-            SELECT 1 FROM information_schema.table_constraints 
+            SELECT 1 FROM information_schema.table_constraints
             WHERE constraint_name = 'pending_flight_updates_user_id_fkey'
         ) THEN
-            ALTER TABLE "pending_flight_updates" ADD CONSTRAINT "pending_flight_updates_user_id_fkey" 
+            ALTER TABLE "pending_flight_updates" ADD CONSTRAINT "pending_flight_updates_user_id_fkey"
             FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
         END IF;
-        
+
         IF NOT EXISTS (
-            SELECT 1 FROM information_schema.table_constraints 
+            SELECT 1 FROM information_schema.table_constraints
             WHERE constraint_name = 'pending_update_statistics_user_id_fkey'
         ) THEN
-            ALTER TABLE "pending_update_statistics" ADD CONSTRAINT "pending_update_statistics_user_id_fkey" 
+            ALTER TABLE "pending_update_statistics" ADD CONSTRAINT "pending_update_statistics_user_id_fkey"
             FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
         END IF;
     END IF;
 END $$;
-
