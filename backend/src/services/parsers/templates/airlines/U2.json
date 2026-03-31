@@ -1,0 +1,23 @@
+{
+  "airline": "easyJet",
+  "iata": "U2",
+  "version": "2024-03",
+  "from": ["@easyjet.com", "@email.easyjet.com"],
+  "subject": ["easyJet booking confirmation", "Your easyJet booking"],
+  "selectors": {
+    "flightNumber": ".flight-number, td.flightno",
+    "pnr": ".booking-reference, .pnr-code",
+    "departureCode": ".origin-airport-code",
+    "arrivalCode": ".destination-airport-code",
+    "departureTime": ".departure-time, [data-departure]",
+    "arrivalTime": ".arrival-time, [data-arrival]",
+    "seat": ".seat-number",
+    "seatClass": ".cabin-class",
+    "price": ".total-amount, .grand-total",
+    "currency": ".currency",
+    "baggage": ".baggage-allowance, .hold-bag",
+    "ticketNumber": ".booking-ref"
+  },
+  "transforms": {},
+  "testCases": []
+}

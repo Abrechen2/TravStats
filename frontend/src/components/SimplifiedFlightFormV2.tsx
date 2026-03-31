@@ -11,7 +11,7 @@
  */
 
 import { useState, useEffect, useMemo, useRef, lazy, Suspense } from "react";
-import { Airport, airportsApi, parseApi } from "../lib/api";
+import { Airport, airportsApi } from "../lib/api";
 import AirportAutocomplete from "./AirportAutocomplete";
 import HelpIcon from "./Help/HelpIcon";
 import { useTranslation } from "../hooks/useTranslation";
@@ -19,6 +19,7 @@ import { logger } from "../lib/logger";
 
 // Lazy load BoardingPassScanner as it's heavy (Tesseract.js)
 const BoardingPassScanner = lazy(() => import("./BoardingPassScanner"));
+const EmailImportTab = lazy(() => import("./import/EmailImportTab"));
 import FlightReviewModal from "./FlightReviewModal";
 import type { FlightInput } from "../types";
 import { useSettingsStore } from "../store/settingsStore";
@@ -93,9 +94,6 @@ export default function SimplifiedFlightFormV2({
   const [originalEmailData, setOriginalEmailData] = useState<
     { subject?: string; text?: string; html?: string } | undefined
   >();
-  const [emailUploading, setEmailUploading] = useState(false);
-  const emailFileInputRef = useRef<HTMLInputElement>(null);
-
   // Flight Lookup State
   const [flightNumber, setFlightNumber] = useState("");
   const [searchDate, setSearchDate] = useState("");
@@ -125,6 +123,10 @@ export default function SimplifiedFlightFormV2({
   const [tags, setTags] = useState<string[]>([]);
   const [companions, setCompanions] = useState<string[]>([]);
   const [companionInput, setCompanionInput] = useState("");
+  const [baggageAllowance, setBaggageAllowance] = useState<string | undefined>(undefined);
+  const [frequentFlyerNumber, setFrequentFlyerNumber] = useState<string | undefined>(undefined);
+  const [bookingClassLetter, setBookingClassLetter] = useState<string | undefined>(undefined);
+  const [coPassengers, setCoPassengers] = useState<string[]>([]);
 
   // Initialize defaults from settings
   useEffect(() => {
@@ -436,6 +438,10 @@ export default function SimplifiedFlightFormV2({
         category,
         tags: tags.length ? tags : undefined,
         companions: companions.length ? companions : undefined,
+        baggageAllowance,
+        frequentFlyerNumber,
+        bookingClassLetter,
+        coPassengers: coPassengers.length ? coPassengers : undefined,
       });
     } catch (err: unknown) {
       const errorObj = err as {
@@ -520,6 +526,10 @@ export default function SimplifiedFlightFormV2({
           category,
           tags: tags.length ? tags : undefined,
           companions: companions.length ? companions : undefined,
+          baggageAllowance,
+          frequentFlyerNumber,
+          bookingClassLetter,
+          coPassengers: coPassengers.length ? coPassengers : undefined,
         },
         true
       );
@@ -1240,107 +1250,40 @@ export default function SimplifiedFlightFormV2({
       {/* Email Uploader Modal */}
       {showEmailUploader && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className={`${bgClass} rounded-lg p-6 max-w-md w-full`}>
+          <div className={`${bgClass} rounded-lg p-6 max-w-md w-full mx-4`}>
             <h3 className={`text-xl font-bold ${textClass} mb-4`}>
               {t("flights:form.email.title")}
             </h3>
-
-            <input
-              ref={emailFileInputRef}
-              type="file"
-              accept=".eml,.msg,.txt"
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-
-                setEmailUploading(true);
-                setError("");
-
-                try {
-                  const result = await parseApi.parseEmailFile(file);
-
-                  if (
-                    result &&
-                    result.flights &&
-                    Array.isArray(result.flights) &&
-                    result.flights.length > 0
-                  ) {
-                    // Store parsed flights
-                    setParsedFlights(result.flights);
+            <Suspense fallback={<div className="p-6 text-center text-slate-400">Lädt...</div>}>
+              <EmailImportTab
+                onResult={(flights, subject, provider, text, html) => {
+                  if (flights.length > 0) {
+                    setParsedFlights(flights);
                     setCurrentFlightIndex(0);
-
-                    // Store parser provider and original data
-                    setParserProvider(result.provider || "unknown");
-                    setOriginalEmailData({
-                      subject: result.subject,
-                      text: result.text,
-                      html: result.html,
-                    });
-
-                    // Close email uploader and show flight review
+                    setParserProvider(provider ?? "template");
+                    setOriginalEmailData({ subject, text, html });
                     setShowEmailUploader(false);
                     setShowFlightReview(true);
                   } else {
                     setError(t("flights:form.noFlightsInEmail"));
                   }
-                } catch (err: unknown) {
-                  logger.error("Failed to parse email:", err);
-                  const axiosError = err as {
-                    response?: { data?: { error?: string } };
-                    message?: string;
-                  };
-                  setError(
-                    axiosError.response?.data?.error ||
-                      axiosError.message ||
-                      t("flights:form.noFlightsInEmail")
-                  );
-                } finally {
-                  setEmailUploading(false);
-                }
-              }}
-              className="hidden"
-              disabled={emailUploading}
-            />
-
-            {emailUploading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
-                <p className={`${mutedTextClass}`}>{t("flights:form.loadingScanner")}</p>
-              </div>
-            ) : (
-              <>
-                <div
-                  className={`border-2 border-dashed ${isDarkMode ? "border-[var(--color-border)]" : "border-[var(--color-border)]"} rounded-lg p-8 text-center cursor-pointer hover:border-blue-500 transition-colors mb-4`}
-                  onClick={() => emailFileInputRef.current?.click()}
-                >
-                  <div className="text-5xl mb-4">📧</div>
-                  <p className={`font-semibold ${textClass} mb-2`}>
-                    {t("flights:form.uploadEmail")}
-                  </p>
-                  <p className={`text-sm ${mutedTextClass}`}>
-                    {t("flights:form.email.description")}
-                  </p>
-                  <p className={`text-xs ${mutedTextClass} mt-2`}>.eml, .msg, .txt</p>
-                </div>
-
-                {error && (
-                  <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-                    {error}
-                  </div>
-                )}
-              </>
-            )}
-
-            <div className="flex gap-3 justify-end mt-4">
+                }}
+                onError={(message) => {
+                  setError(message);
+                  setShowEmailUploader(false);
+                }}
+              />
+            </Suspense>
+            <div className="flex justify-end mt-4">
               <button
+                type="button"
                 onClick={() => {
                   setShowEmailUploader(false);
                   setError("");
                 }}
                 className="btn-secondary"
-                disabled={emailUploading}
               >
-                {t("common:buttons.close")}
+                {t("common:buttons.cancel")}
               </button>
             </div>
           </div>
@@ -1357,7 +1300,19 @@ export default function SimplifiedFlightFormV2({
             setCurrentFlightIndex(0);
           }}
           onConfirm={async (flightData) => {
-            await onSubmit(flightData);
+            const sourceFlight = parsedFlights[currentFlightIndex];
+            setBaggageAllowance(sourceFlight?.baggageAllowance);
+            setFrequentFlyerNumber(sourceFlight?.frequentFlyerNumber);
+            setBookingClassLetter(sourceFlight?.bookingClassLetter);
+            setCoPassengers(sourceFlight?.coPassengers ?? []);
+
+            await onSubmit({
+              ...flightData,
+              baggageAllowance: sourceFlight?.baggageAllowance,
+              frequentFlyerNumber: sourceFlight?.frequentFlyerNumber,
+              bookingClassLetter: sourceFlight?.bookingClassLetter,
+              coPassengers: sourceFlight?.coPassengers,
+            });
 
             // Check if there are more flights to process
             const nextIndex = currentFlightIndex + 1;

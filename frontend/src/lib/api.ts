@@ -78,6 +78,7 @@ export interface EmailParseResult {
   subject?: string;
   text?: string;
   html?: string;
+  airlineNotice?: string | null;
 }
 
 /** Ollama vision check response */
@@ -397,8 +398,8 @@ const handle401Error = (error: AxiosError): Promise<never> => {
     });
     window.dispatchEvent(event);
 
-    // Fallback: only redirect if the app didn't clear the persisted user state.
-    // In normal flow, authStore will logout (clears user) and route guards will navigate.
+    // Fallback: if React/authStore didn't clear the user within 500ms, do it here.
+    // Clears localStorage before redirecting so /login doesn't bounce back to /.
     setTimeout(() => {
       try {
         const publicPaths = new Set(["/login", "/register", "/setup"]);
@@ -416,12 +417,21 @@ const handle401Error = (error: AxiosError): Promise<never> => {
           (parsed as { state: { user?: unknown } }).state?.user
         );
         if (hasUser) {
+          // Clear auth state before redirecting to prevent /login → / bounce loop
+          try {
+            const data = parsed as { state: { user: unknown }; version: number };
+            data.state.user = null;
+            localStorage.setItem("auth-storage", JSON.stringify(data));
+          } catch {
+            localStorage.removeItem("auth-storage");
+          }
           window.location.href = "/login";
         }
       } catch {
+        localStorage.removeItem("auth-storage");
         window.location.href = "/login";
       }
-    }, 200);
+    }, 500);
   }
   return Promise.reject(error);
 };
@@ -2037,6 +2047,26 @@ export const calculateDistance = (
 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
+};
+
+export interface TemplateStatusEntry {
+  iata: string;
+  airline: string;
+  version: string;
+  source: "builtin" | "cached";
+}
+
+export interface TemplateStatusResult {
+  templates: TemplateStatusEntry[];
+  total: number;
+  githubRepo: string;
+}
+
+export const templateApi = {
+  getStatus: async (): Promise<TemplateStatusResult> => {
+    const res = await api.get<TemplateStatusResult>("/template-status");
+    return res.data;
+  },
 };
 
 export default api;

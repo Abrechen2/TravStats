@@ -14,13 +14,17 @@ node_modules/
 .env.test.local
 .env.production.local
 .claude
+.claude/settings.json
 Agent.md
-CLAUDE.md
+CLAUDE.local.md
 
-# All markdown files except root README.md and CHANGELOG.md (keep docs local only)
+# All markdown files except root README.md, CHANGELOG.md, CLAUDE.md, CONTRIBUTING.md, docs/*.md
 *.md
 !README.md
 !CHANGELOG.md
+!CLAUDE.md
+!CONTRIBUTING.md
+!docs/*.md
 
 
 # Build outputs
@@ -94,3 +98,11 @@ backend/data/training/training-*.jsonl
 backend/data/training/output-*/
 backend/data/training/test-output/
 backend/data/logs/training/
+
+# Tool-generated directories (never commit)
+.playwright-mcp/
+.superpowers/
+screenshots/
+
+# Production logs (never commit)
+ProdLogs/

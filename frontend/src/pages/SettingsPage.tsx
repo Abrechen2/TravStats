@@ -7,6 +7,7 @@ import { useSettingsStore } from "../store/settingsStore";
 import { useThemeStore } from "../store/themeStore";
 import { useAuthStore } from "../store/authStore";
 import ParserConfiguration from "../components/Settings/ParserConfiguration";
+import TemplateStatusView from "../components/TemplateStatusView";
 import ApiKeyCard from "../components/Settings/ApiKeyCard";
 import NotificationPreferences from "../components/Settings/NotificationPreferences";
 import { settingsApi, authApi, backupApi } from "../lib/api";
@@ -1261,6 +1262,7 @@ export default function SettingsPage(): JSX.Element {
                   </p>
                 </div>
                 <ParserConfiguration />
+                <TemplateStatusView />
               </SectionCard>
             )}
             {/* Auto-Update */}
