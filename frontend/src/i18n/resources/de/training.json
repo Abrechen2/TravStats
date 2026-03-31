@@ -187,5 +187,23 @@
       "title": "Schritt 6: Training abbrechen/fortsetzen",
       "whenCancel": "Wann abbrechen?"
     }
+  },
+  "parseLogs": {
+    "title": "Parse-Log Statistiken",
+    "totalLogs": "Gesamt Parse-Logs",
+    "overallHitRate": "Gesamt-Trefferquote",
+    "airlineTable": "Trefferquote nach Airline",
+    "airline": "Airline",
+    "total": "Gesamt",
+    "hits": "Treffer",
+    "hitRate": "Trefferquote",
+    "missingFields": "Häufig fehlende Felder",
+    "exportBtn": "JSONL exportieren",
+    "promoteBtn": "Korrekturen hochstufen",
+    "promoting": "Hochstufen...",
+    "promoteSuccess": "{{count}} Korrekturen hochgestuft",
+    "promoteNone": "Keine neuen Korrekturen gefunden",
+    "noData": "Noch keine Parse-Logs vorhanden",
+    "loading": "Statistiken laden..."
   }
 }
