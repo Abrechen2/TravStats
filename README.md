@@ -2,9 +2,6 @@
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Version](https://img.shields.io/badge/version-0.9.0--beta-orange.svg)](https://github.com/Abrechen2/TravStats/releases)
-[![CI](https://github.com/Abrechen2/TravStats/actions/workflows/ci.yml/badge.svg)](https://github.com/Abrechen2/TravStats/actions/workflows/ci.yml)
-[![PayPal](https://img.shields.io/badge/Donate-PayPal-blue.svg)](https://www.paypal.com/donate?hosted_button_id=HW9MPYVURCT42)
-[![GitHub Stars](https://img.shields.io/github/stars/Abrechen2/TravStats?style=social)](https://github.com/Abrechen2/TravStats)
 
 > ### 🚧 Public Beta — v0.9.0-beta
 >
