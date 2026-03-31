@@ -40,7 +40,9 @@ export default function EmailImportTab({ onResult, onError }: EmailImportTabProp
           }
           const pdfBase64 = btoa(binary);
           const result = await parseApi.parsePdf(pdfBase64);
-          if (result.flights.length > 0) {
+          if (result.pdfTextLength === 0) {
+            onError(t("flights:pdfImport.emptyPdf"));
+          } else if (result.flights.length > 0) {
             onResult(result.flights, undefined, result.parserUsed);
           } else {
             onError(t("flights:pdfImport.noFlights"));
