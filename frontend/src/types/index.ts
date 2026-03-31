@@ -79,6 +79,11 @@ export interface Flight {
     source?: string;
     sourceFlightsCount?: number;
   }>;
+  // Phase 3: Actual Times, Delay, CO₂
+  actualDeparture?: string;
+  actualArrival?: string;
+  delayMinutes?: number;
+  co2Kg?: number;
 }
 
 export interface FlightInput {
@@ -112,6 +117,8 @@ export interface FlightInput {
   frequentFlyerNumber?: string;
   bookingClassLetter?: string;
   coPassengers?: string[];
+  actualDeparture?: string;
+  actualArrival?: string;
 }
 
 export interface ParsedBooking {
