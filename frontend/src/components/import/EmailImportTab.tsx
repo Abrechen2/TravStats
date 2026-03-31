@@ -26,13 +26,31 @@ export default function EmailImportTab({ onResult, onError }: EmailImportTabProp
 
   const handleFile = useCallback(
     async (file: File): Promise<void> => {
-      const allowed = [".eml", ".msg", ".txt"];
-      const isPdf = file.name.endsWith(".pdf");
+      const allowed = [".eml", ".msg", ".txt", ".pdf"];
+      const isPdf = file.name.toLowerCase().endsWith(".pdf");
 
       if (isPdf) {
-        onError(
-          "PDF-Dateien werden direkt noch nicht unterstützt. Öffne die Email in deinem Email-Client und nutze 'Weiterleiten' oder kopiere den Text."
-        );
+        setDropState("loading");
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const bytes = new Uint8Array(arrayBuffer);
+          let binary = "";
+          for (let i = 0; i < bytes.byteLength; i++) {
+            binary += String.fromCharCode(bytes[i]);
+          }
+          const pdfBase64 = btoa(binary);
+          const result = await parseApi.parsePdf(pdfBase64);
+          if (result.flights.length > 0) {
+            onResult(result.flights, undefined, result.parserUsed);
+          } else {
+            onError(t("flights:pdfImport.noFlights"));
+          }
+        } catch (err) {
+          logger.error("PDF parse failed", err);
+          onError(t("flights:pdfImport.parseError"));
+        } finally {
+          setDropState("idle");
+        }
         return;
       }
 
@@ -121,8 +139,7 @@ export default function EmailImportTab({ onResult, onError }: EmailImportTabProp
         <p className="font-medium text-slate-200">
           {dropState === "loading" ? t("common:messages.loading") : t("flights:form.uploadEmail")}
         </p>
-        <p className="text-sm text-slate-400 mt-1">.eml, .msg, .txt</p>
-        <p className="text-xs text-slate-500 mt-1">PDF: Nur Erkennung, kein automatisches Parsen</p>
+        <p className="text-sm text-slate-400 mt-1">.eml, .msg, .txt, .pdf</p>
       </div>
 
       {/* Airline Notice */}
