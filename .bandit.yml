@@ -1,6 +1,8 @@
 # .bandit.yml - Python security linter config
 skips:
   - B101  # assert statements (ok in scripts)
+  - B110  # try/except/pass (intentional in hardware detection fallbacks)
+  - B404  # import subprocess (used safely in hardware info scripts)
   - B603  # subprocess without shell=True (we use shell=False explicitly)
   - B607  # partial path in subprocess (python3 cmd is fine)
 exclude_dirs:
