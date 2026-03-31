@@ -306,5 +306,17 @@
     "noFlights": "Keine Flugdaten in dieser PDF gefunden.",
     "emptyPdf": "Die PDF enthält keinen lesbaren Text. Für gescannte Bordkarten nutze den Bordkarten-Scanner.",
     "parseError": "PDF konnte nicht gelesen werden."
+  },
+  "actualTimes": {
+    "label": "Tatsächliche Zeiten",
+    "actualDeparture": "Tatsächl. Abflug",
+    "actualArrival": "Tatsächl. Landung",
+    "delayLabel": "Verspätung",
+    "earlyLabel": "Früher",
+    "onTimeLabel": "Pünktlich",
+    "delayMinutes": "{{minutes}} Min. Verspätung",
+    "earlyMinutes": "{{minutes}} Min. früher",
+    "co2Label": "CO₂",
+    "co2Value": "{{kg}} kg CO₂"
   }
 }
