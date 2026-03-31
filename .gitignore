@@ -14,6 +14,7 @@ node_modules/
 .env.test.local
 .env.production.local
 .claude
+.claude/settings.json
 Agent.md
 CLAUDE.local.md
 

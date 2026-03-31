@@ -1,0 +1,38 @@
+# CLAUDE.local.md — Maschinen-spezifische Deployment-Infos
+# Diese Datei NICHT committen (gitignored).
+# Kopieren nach CLAUDE.local.md und befüllen.
+
+## Deployment: Underworld (Produktionsserver)
+
+```bash
+SERVER_IP="<UNDERWORLD_IP>"        # z.B. 192.168.178.xxx
+DEPLOY_PATH="/opt/travstats"       # Pfad auf dem Server
+
+# 1. Neues Image bauen und pushen (lokal, Docker Desktop muss laufen)
+VERSION=$(cat backend/VERSION)
+bash scripts/docker-build.sh
+
+# 2. Auf Server deployen
+ssh root@$SERVER_IP "cd $DEPLOY_PATH && docker compose pull && docker compose up -d"
+
+# 3. Alte Images aufräumen (verhindert Disk Full)
+ssh root@$SERVER_IP "docker system prune -f"
+
+# 4. Verifizieren
+curl -s http://$SERVER_IP:3000/api/v1/health
+```
+
+## Lokale Umgebung
+
+- Backend .env: `backend/.env`
+- Postgres: localhost:5432, DB: travstats, User: travstats
+- Ollama: http://localhost:11434
+
+## Fallback: Build auf Server (wenn Docker Desktop nicht läuft)
+
+```bash
+cd /d/Projekte/TravStats && tar -czf - \
+  --exclude='.git' --exclude='node_modules' --exclude='dist' \
+  . | ssh root@$SERVER_IP "cd /tmp && rm -rf ts-build && mkdir ts-build && tar -xzf - -C ts-build"
+ssh root@$SERVER_IP "cd /tmp/ts-build && docker build -t ghcr.io/abrechen2/travstats:$VERSION --build-arg VERSION=$VERSION ."
+```
