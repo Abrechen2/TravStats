@@ -75,6 +75,8 @@ const baseFlightSchema = z.object({
   }),
   departureTime: z.string().datetime(),
   arrivalTime: z.string().datetime(),
+  actualDeparture: z.string().datetime().optional().nullable(),
+  actualArrival:   z.string().datetime().optional().nullable(),
   status: z.enum(['scheduled', 'flown', 'cancelled']).default('scheduled'),
   notes: z.string().optional(),
   price: z.number().min(0).optional(),

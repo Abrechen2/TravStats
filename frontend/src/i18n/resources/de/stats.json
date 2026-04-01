@@ -273,5 +273,42 @@
     "avgRow": "Durchschn. Reihe",
     "noData": "Keine Sitzplatzdaten vorhanden",
     "seatClassTitle": "Sitzklasse"
+  },
+  "airlineRanking": {
+    "title": "Airline-Treue Ranking",
+    "airline": "Airline",
+    "flights": "Flüge",
+    "share": "Anteil",
+    "noData": "Noch keine Flüge vorhanden",
+    "loading": "Lädt...",
+    "topN": "Top {{n}} Airlines"
+  },
+  "countryDist": {
+    "title": "Länder-Verteilung (Abflugort)",
+    "country": "Land",
+    "flights": "Flüge",
+    "noData": "Noch keine Flüge vorhanden",
+    "loading": "Lädt..."
+  },
+  "yearReport": {
+    "btn": "PDF Jahresbericht",
+    "generating": "PDF wird erstellt...",
+    "title": "Mein Flieger-Jahr",
+    "subtitle": "Persönlicher Flugbericht",
+    "generatedOn": "Erstellt am",
+    "summary": "Zusammenfassung",
+    "totalFlights": "Gesamtflüge",
+    "totalDistance": "Gesamtdistanz",
+    "totalFlightTime": "Gesamtflugzeit",
+    "topAirline": "Meist geflogene Airline",
+    "topRoute": "Lieblingsroute",
+    "co2Total": "Gesamt CO₂",
+    "flightList": "Flugübersicht",
+    "colDate": "Datum",
+    "colRoute": "Route",
+    "colAirline": "Airline",
+    "colDistance": "Distanz (km)",
+    "colCo2": "CO₂ (kg)",
+    "noYear": "Bitte zuerst ein Jahr auswählen"
   }
 }

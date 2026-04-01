@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../db';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { calculateDistance } from '../utils/geo';
+import { getCachedAirports } from '../services/airportCache';
 import { Prisma } from '@prisma/client';
 import { calculateFunStats, calculateBusinessStats, calculateUniqueStats } from '../utils/statsCalculator';
 import logger from '../utils/logger';
@@ -669,6 +670,95 @@ router.get('/seats', async (req: AuthRequest, res: Response, next: NextFunction)
     };
 
     res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ─── Airline Ranking ─────────────────────────────────────────────────────────
+
+interface AirlineRankingItem {
+  airline: string;
+  count: number;
+  percentage: number;
+}
+
+interface AirlineRankingResponse {
+  airlines: AirlineRankingItem[];
+  total: number;
+}
+
+// GET /api/v1/stats/airlines — loyalty ranking by flight count
+router.get('/airlines', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.userId!;
+
+    const [total, airlineCounts] = await Promise.all([
+      prisma.flight.count({ where: { userId } }),
+      prisma.flight.groupBy({
+        by: ['airline'],
+        where: { userId },
+        _count: true,
+        orderBy: { _count: { airline: 'desc' } },
+      }),
+    ]);
+
+    const airlines: AirlineRankingItem[] = airlineCounts.map((row) => ({
+      airline: row.airline ?? 'Unknown',
+      count: row._count,
+      percentage: total > 0 ? Math.round((row._count / total) * 1000) / 10 : 0,
+    }));
+
+    const response: AirlineRankingResponse = { airlines, total };
+    res.json(response);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ─── Country Distribution ─────────────────────────────────────────────────────
+
+interface CountryStat {
+  country: string;
+  count: number;
+}
+
+interface CountryStatsResponse {
+  countries: CountryStat[];
+  total: number;
+}
+
+// GET /api/v1/stats/countries — departure country distribution
+router.get('/countries', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.userId!;
+
+    const flights = await prisma.flight.findMany({
+      where: { userId },
+      select: { depIata: true, depIcao: true },
+    });
+
+    const airportCodes = new Set<string>();
+    for (const f of flights) {
+      if (f.depIata) airportCodes.add(f.depIata);
+      else if (f.depIcao) airportCodes.add(f.depIcao);
+    }
+
+    const airportMap = await getCachedAirports([...airportCodes]);
+
+    const countryCounts = new Map<string, number>();
+    for (const f of flights) {
+      const code = f.depIata ?? f.depIcao;
+      const country = code ? (airportMap.get(code)?.country ?? 'Unknown') : 'Unknown';
+      countryCounts.set(country, (countryCounts.get(country) ?? 0) + 1);
+    }
+
+    const countries: CountryStat[] = [...countryCounts.entries()]
+      .map(([country, count]) => ({ country, count }))
+      .sort((a, b) => b.count - a.count);
+
+    const response: CountryStatsResponse = { countries, total: flights.length };
+    res.json(response);
   } catch (error) {
     next(error);
   }

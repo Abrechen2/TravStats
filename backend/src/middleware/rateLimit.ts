@@ -140,3 +140,15 @@ export const adminExportLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+/**
+ * Rate limiter for PDF parse endpoint
+ * Allows 20 requests per 15 minutes per user
+ */
+export const pdfParseLimiter = rateLimit({
+  windowMs: RATE_LIMITS.PDF_PARSE_WINDOW_MS,
+  max: RATE_LIMITS.PDF_PARSE_MAX,
+  message: 'Too many PDF parse requests, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
