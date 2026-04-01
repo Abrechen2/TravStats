@@ -674,4 +674,45 @@ router.get('/seats', async (req: AuthRequest, res: Response, next: NextFunction)
   }
 });
 
+// ─── Airline Ranking ─────────────────────────────────────────────────────────
+
+interface AirlineRankingItem {
+  airline: string;
+  count: number;
+  percentage: number;
+}
+
+interface AirlineRankingResponse {
+  airlines: AirlineRankingItem[];
+  total: number;
+}
+
+// GET /api/v1/stats/airlines — loyalty ranking by flight count
+router.get('/airlines', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.userId!;
+
+    const [total, airlineCounts] = await Promise.all([
+      prisma.flight.count({ where: { userId } }),
+      prisma.flight.groupBy({
+        by: ['airline'],
+        where: { userId },
+        _count: true,
+        orderBy: { _count: { airline: 'desc' } },
+      }),
+    ]);
+
+    const airlines: AirlineRankingItem[] = airlineCounts.map((row) => ({
+      airline: row.airline ?? 'Unknown',
+      count: row._count,
+      percentage: total > 0 ? Math.round((row._count / total) * 1000) / 10 : 0,
+    }));
+
+    const response: AirlineRankingResponse = { airlines, total };
+    res.json(response);
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;
