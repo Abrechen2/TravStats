@@ -29,6 +29,7 @@ export const FILE_LIMITS = {
   RECEIPT_MAX_SIZE: 10 * 1024 * 1024, // 10 MB
   EMAIL_MAX_SIZE: 5 * 1024 * 1024, // 5 MB
   BOARDING_PASS_MAX_SIZE: 10 * 1024 * 1024, // 10 MB (for base64 images)
+  PDF_MAX_SIZE: 20 * 1024 * 1024, // 20 MB
 
   // Body parsing limits
   JSON_BODY_MAX_SIZE: '10mb',
@@ -81,6 +82,10 @@ export const RATE_LIMITS = {
   // Admin export rate limits (loads entire DB)
   ADMIN_EXPORT_WINDOW_MS: 60 * 60 * 1000, // 1 hour
   ADMIN_EXPORT_MAX: 5, // 5 exports per hour
+
+  // PDF parse rate limits
+  PDF_PARSE_WINDOW_MS: 15 * 60 * 1000, // 15 minutes
+  PDF_PARSE_MAX: 20, // 20 requests per window
 } as const;
 
 // ========== DATABASE & QUERY LIMITS ==========

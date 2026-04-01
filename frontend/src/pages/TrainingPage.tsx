@@ -8,6 +8,7 @@ import TrainingDashboard from "../components/Training/TrainingDashboard";
 import EmailAnnotation from "../components/Training/EmailAnnotation";
 import BoardingPassAnnotation from "../components/Training/BoardingPassAnnotation";
 import TrainingGuide from "../components/Training/TrainingGuide";
+import ParseLogStats from "../components/Training/ParseLogStats";
 import InlineHelp from "../components/Help/InlineHelp";
 import { useTranslation } from "../hooks/useTranslation";
 
@@ -15,7 +16,9 @@ export default function TrainingPage(): JSX.Element {
   const { t } = useTranslation(["training", "common"]);
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
-  const [activeTab, setActiveTab] = useState<"upload" | "dashboard" | "guide">("upload");
+  const [activeTab, setActiveTab] = useState<"upload" | "dashboard" | "guide" | "parse-logs">(
+    "upload"
+  );
   const [uploadedFile, setUploadedFile] = useState<{ id: string; type: string } | null>(null);
   const [developerModeEnabled, setDeveloperModeEnabled] = useState(false);
   const emailFileInputRef = useRef<HTMLInputElement>(null);
@@ -139,6 +142,18 @@ export default function TrainingPage(): JSX.Element {
             >
               {t("training:guideTab")}
             </button>
+            {user?.isAdmin && (
+              <button
+                onClick={() => setActiveTab("parse-logs")}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === "parse-logs"
+                    ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
+                }`}
+              >
+                {t("training:parseLogs.title")}
+              </button>
+            )}
           </nav>
         </div>
 
@@ -262,6 +277,12 @@ export default function TrainingPage(): JSX.Element {
         )}
 
         {activeTab === "guide" && <TrainingGuide />}
+
+        {activeTab === "parse-logs" && user?.isAdmin && (
+          <div className="p-4">
+            <ParseLogStats />
+          </div>
+        )}
       </main>
     </div>
   );

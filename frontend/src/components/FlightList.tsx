@@ -109,6 +109,31 @@ export default function FlightList({
                   </h3>
                   {getStatusBadge(flight.status)}
                   {getCategoryBadge(flight.category)}
+                  {flight.delayMinutes != null && flight.delayMinutes !== 0 && (
+                    <span
+                      data-testid="delay-badge"
+                      className={`px-2 py-0.5 rounded text-xs font-medium ${
+                        flight.delayMinutes > 0
+                          ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                          : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                      }`}
+                    >
+                      {flight.delayMinutes > 0
+                        ? t("flights:actualTimes.delayMinutes", { minutes: flight.delayMinutes })
+                        : t("flights:actualTimes.earlyMinutes", {
+                            minutes: Math.abs(flight.delayMinutes),
+                          })}
+                    </span>
+                  )}
+                  {flight.co2Kg != null && (
+                    <span
+                      data-testid="co2-chip"
+                      className="px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                      title={t("flights:actualTimes.co2Label")}
+                    >
+                      {t("flights:actualTimes.co2Value", { kg: flight.co2Kg })}
+                    </span>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 text-sm">
