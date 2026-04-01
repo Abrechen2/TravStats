@@ -45,6 +45,7 @@ const mockFlight: Flight = {
   departureTime: "2026-01-15T08:00:00Z",
   arrivalTime: "2026-01-15T11:00:00Z",
   status: "flown",
+  createdAt: "2026-01-15T00:00:00Z",
   tags: [],
   companions: [],
   co2Kg: 450,
