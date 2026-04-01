@@ -719,6 +719,16 @@ export const statsApi = {
     });
     return data;
   },
+
+  getAirlineRanking: async (): Promise<import("../types").AirlineRankingResponse> => {
+    const { data } = await api.get<import("../types").AirlineRankingResponse>("/stats/airlines");
+    return data;
+  },
+
+  getCountryStats: async (): Promise<import("../types").CountryStatsResponse> => {
+    const { data } = await api.get<import("../types").CountryStatsResponse>("/stats/countries");
+    return data;
+  },
 };
 
 // Airport API

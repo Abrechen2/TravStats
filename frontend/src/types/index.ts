@@ -419,3 +419,24 @@ export interface PromoteCorrectionsResult {
   promoted: number;
   message: string;
 }
+
+export interface AirlineRankingItem {
+  airline: string;
+  count: number;
+  percentage: number;
+}
+
+export interface AirlineRankingResponse {
+  airlines: AirlineRankingItem[];
+  total: number;
+}
+
+export interface CountryStat {
+  country: string;
+  count: number;
+}
+
+export interface CountryStatsResponse {
+  countries: CountryStat[];
+  total: number;
+}
