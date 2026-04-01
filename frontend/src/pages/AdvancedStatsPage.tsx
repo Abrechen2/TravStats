@@ -11,6 +11,10 @@ import { useTranslation } from "../hooks/useTranslation";
 import { useSettingsStore } from "../store/settingsStore";
 import { useAuthStore } from "../store/authStore";
 import { FlightCertificate, type FlightCertificateStats } from "../components/FlightCertificate";
+import AirlineRankingCard from "../components/Stats/AirlineRankingCard";
+import CountryDistributionCard from "../components/Stats/CountryDistributionCard";
+import { generateYearReportPdf } from "../lib/yearReportPdf";
+import { useToastStore } from "../store/toastStore";
 import { convertDistance, formatDistance, formatCurrency, getDistanceLabel } from "../lib/units";
 import { logger } from "../lib/logger";
 import { SkeletonStatCards } from "../components/SkeletonLoader";
@@ -54,6 +58,7 @@ export default function AdvancedStatsPage(): JSX.Element {
   const { t } = useTranslation(["stats", "common"]);
   const { units } = useSettingsStore();
   const { user } = useAuthStore();
+  const addToast = useToastStore((state) => state.addToast);
   const [flights, setFlights] = useState<Flight[]>([]);
   const [loading, setLoading] = useState(true);
   const [funStats, setFunStats] = useState<FunStats | null>(null);
@@ -61,6 +66,7 @@ export default function AdvancedStatsPage(): JSX.Element {
   const [uniqueStats, setUniqueStats] = useState<UniqueStats | null>(null);
   const [seatStats, setSeatStats] = useState<SeatStats | null>(null);
   const [showCertificate, setShowCertificate] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
 
   // Year filter + comparison state
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
@@ -476,6 +482,28 @@ export default function AdvancedStatsPage(): JSX.Element {
     ),
   ];
 
+  const handleYearReport = async (): Promise<void> => {
+    if (!selectedYear) {
+      addToast("warning", t("stats:yearReport.noYear"));
+      return;
+    }
+    setGeneratingPdf(true);
+    try {
+      const yearFlights = flights.filter(
+        (f) => new Date(f.departureTime).getFullYear() === selectedYear
+      );
+      const pdfUnits = units.distanceUnit === "miles" ? "mi" : "km";
+      await generateYearReportPdf({
+        year: selectedYear,
+        flights: yearFlights,
+        userName: user?.username ?? "User",
+        units: pdfUnits,
+      });
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+
   const certificateStats: FlightCertificateStats = {
     totalFlights: flights.length,
     totalDistance,
@@ -528,6 +556,15 @@ export default function AdvancedStatsPage(): JSX.Element {
                 }}
               >
                 ✈ {t("stats:certificate.generate")}
+              </button>
+              <button
+                onClick={() => {
+                  void handleYearReport();
+                }}
+                disabled={generatingPdf || !selectedYear}
+                className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
+              >
+                {generatingPdf ? t("stats:yearReport.generating") : t("stats:yearReport.btn")}
               </button>
             </div>
           )}
@@ -2320,6 +2357,16 @@ export default function AdvancedStatsPage(): JSX.Element {
               </div>
             )
           )}
+
+          {/* Airline Loyalty Ranking */}
+          <div className="mt-8 bg-white dark:bg-gray-800 rounded-xl shadow p-6">
+            <AirlineRankingCard />
+          </div>
+
+          {/* Country Distribution */}
+          <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow p-6">
+            <CountryDistributionCard />
+          </div>
         </div>
       </div>
     </PageTransition>
