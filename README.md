@@ -1,9 +1,9 @@
 # ✈️ TravStats
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
-[![Version](https://img.shields.io/badge/version-0.9.0--beta-orange.svg)](https://github.com/Abrechen2/TravStats/releases)
+[![Version](https://img.shields.io/badge/version-0.9.1--beta-orange.svg)](https://github.com/Abrechen2/TravStats/releases)
 
-> ### 🚧 Public Beta — v0.9.0-beta
+> ### 🚧 Public Beta — v0.9.1-beta
 >
 > TravStats is functional and actively used, but not yet feature-complete. The following core features work well:
 > flight tracking, interactive 2D/3D maps, statistics, 58 achievements, boarding pass scanning, email import, and data export.

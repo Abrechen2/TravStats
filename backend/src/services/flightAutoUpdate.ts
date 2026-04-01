@@ -1,6 +1,6 @@
 /**
  * Flight Auto-Update Service
- * 
+ *
  * Automatically fetches current flight data from APIs during active flights
  * and creates pending updates for user review.
  */
@@ -65,6 +65,7 @@ export function calculateChanges(
   // Fields to compare
   const fieldsToCompare = [
     'airline',
+    'flightNumber',
     'aircraft',
     'gate',
     'terminal',
@@ -147,7 +148,7 @@ function hasSignificantChanges(changes: FlightChange[]): boolean {
 
 /**
  * Convert API flight data to proposed flight data format
- * 
+ *
  * Note: apiData.departureTime and apiData.arrivalTime should already be in UTC
  * (converted by lookupFlightDetails from local airport time to UTC)
  */
@@ -479,4 +480,3 @@ export async function checkAndUpdateAllFlights(): Promise<number> {
     return 0;
   }
 }
-
