@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../db';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { calculateDistance } from '../utils/geo';
+import { getCachedAirports } from '../services/airportCache';
 import { Prisma } from '@prisma/client';
 import { calculateFunStats, calculateBusinessStats, calculateUniqueStats } from '../utils/statsCalculator';
 import logger from '../utils/logger';
@@ -709,6 +710,54 @@ router.get('/airlines', async (req: AuthRequest, res: Response, next: NextFuncti
     }));
 
     const response: AirlineRankingResponse = { airlines, total };
+    res.json(response);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ─── Country Distribution ─────────────────────────────────────────────────────
+
+interface CountryStat {
+  country: string;
+  count: number;
+}
+
+interface CountryStatsResponse {
+  countries: CountryStat[];
+  total: number;
+}
+
+// GET /api/v1/stats/countries — departure country distribution
+router.get('/countries', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.userId!;
+
+    const flights = await prisma.flight.findMany({
+      where: { userId },
+      select: { depIata: true, depIcao: true },
+    });
+
+    const airportCodes = new Set<string>();
+    for (const f of flights) {
+      if (f.depIata) airportCodes.add(f.depIata);
+      else if (f.depIcao) airportCodes.add(f.depIcao);
+    }
+
+    const airportMap = await getCachedAirports([...airportCodes]);
+
+    const countryCounts = new Map<string, number>();
+    for (const f of flights) {
+      const code = f.depIata ?? f.depIcao;
+      const country = code ? (airportMap.get(code)?.country ?? 'Unknown') : 'Unknown';
+      countryCounts.set(country, (countryCounts.get(country) ?? 0) + 1);
+    }
+
+    const countries: CountryStat[] = [...countryCounts.entries()]
+      .map(([country, count]) => ({ country, count }))
+      .sort((a, b) => b.count - a.count);
+
+    const response: CountryStatsResponse = { countries, total: flights.length };
     res.json(response);
   } catch (error) {
     next(error);
