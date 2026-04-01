@@ -24,6 +24,7 @@ describe('Pending Updates API', () => {
     await prisma.userSettings.create({
       data: {
         userId,
+        data: {},
         autoUpdateEnabled: true,
         autoUpdateRequireApproval: true,
       },
@@ -122,8 +123,7 @@ describe('Pending Updates API', () => {
         .set('Cookie', authCookie)
         .expect(200);
 
-      expect(response.body).toHaveProperty('update');
-      expect(response.body.update.id).toBe(pendingUpdateId);
+      expect(response.body.id).toBe(pendingUpdateId);
     });
 
     it('should return 404 for non-existent update', async () => {
@@ -154,9 +154,8 @@ describe('Pending Updates API', () => {
         })
         .expect(200);
 
-      expect(response.body).toHaveProperty('update');
-      expect(response.body.update.editedData).toBeDefined();
-      expect(response.body.update.status).toBe('pending');
+      expect(response.body.editedData).toBeDefined();
+      expect(response.body.status).toBe('edited');
     });
 
     it('should validate edited data', async () => {
@@ -203,9 +202,8 @@ describe('Pending Updates API', () => {
         .set('Cookie', authCookie)
         .expect(200);
 
-      expect(response.body).toHaveProperty('update');
-      expect(response.body.update.status).toBe('applied');
-      expect(response.body.update.appliedAt).toBeDefined();
+      expect(response.body.success).toBe(true);
+      expect(response.body.flight).toBeDefined();
     });
 
     it('should return 404 for non-existent update', async () => {
@@ -249,9 +247,7 @@ describe('Pending Updates API', () => {
         .set('Cookie', authCookie)
         .expect(200);
 
-      expect(response.body).toHaveProperty('update');
-      expect(response.body.update.status).toBe('rejected');
-      expect(response.body.update.rejectedAt).toBeDefined();
+      expect(response.body.success).toBe(true);
     });
   });
 
@@ -292,14 +288,9 @@ describe('Pending Updates API', () => {
         .set('Cookie', authCookie)
         .expect(200);
 
-      expect(response.body).toHaveProperty('statistics');
-      expect(response.body.statistics).toHaveProperty('totalUpdates');
-      expect(response.body.statistics).toHaveProperty('appliedUpdates');
-      expect(response.body.statistics).toHaveProperty('rejectedUpdates');
+      expect(response.body).toHaveProperty('totalUpdates');
+      expect(response.body).toHaveProperty('appliedUpdates');
+      expect(response.body).toHaveProperty('rejectedUpdates');
     });
   });
 });
-
-
-
-

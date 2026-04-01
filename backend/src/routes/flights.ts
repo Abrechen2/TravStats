@@ -17,6 +17,7 @@ import {
   createHistoricalEnrichment,
 } from '../services/flightEnrichmentService';
 import { estimateRoute } from '../services/routeEstimationService';
+import { calculateCo2Kg } from '../services/co2Calculator';
 
 const router = Router();
 
@@ -48,6 +49,10 @@ interface FlightUpdateData {
   arrLon?: number;
   departureTime?: Date;
   arrivalTime?: Date;
+  actualDeparture?: Date | null;
+  actualArrival?: Date | null;
+  delayMinutes?: number | null;
+  co2Kg?: number | null;
   lastModifiedBy?: string;
 }
 
@@ -268,6 +273,21 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
         arrLon: enriched.arrival.lon,
         departureTime: new Date(data.departureTime),
         arrivalTime: new Date(data.arrivalTime),
+        actualDeparture: data.actualDeparture ? new Date(data.actualDeparture) : null,
+        actualArrival:   data.actualArrival   ? new Date(data.actualArrival)   : null,
+        delayMinutes:
+          data.actualDeparture
+            ? Math.round(
+                (new Date(data.actualDeparture).getTime() - new Date(data.departureTime).getTime()) / 60000
+              )
+            : null,
+        co2Kg: calculateCo2Kg({
+          depLat: enriched.departure.lat,
+          depLon: enriched.departure.lon,
+          arrLat: enriched.arrival.lat,
+          arrLon: enriched.arrival.lon,
+          seatClass: null,
+        }),
         status: data.status,
         notes: data.notes,
         price: data.price,
@@ -553,6 +573,35 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
 
     if (data.departureTime) updateData.departureTime = new Date(data.departureTime);
     if (data.arrivalTime) updateData.arrivalTime = new Date(data.arrivalTime);
+
+    // Actual times and delay
+    if (data.actualDeparture !== undefined) {
+      updateData.actualDeparture = data.actualDeparture ? new Date(data.actualDeparture) : null;
+      const scheduledDep = data.departureTime
+        ? new Date(data.departureTime)
+        : existingFlight.departureTime;
+      updateData.delayMinutes = data.actualDeparture
+        ? Math.round(
+            (new Date(data.actualDeparture).getTime() - scheduledDep.getTime()) / 60000
+          )
+        : null;
+    }
+    if (data.actualArrival !== undefined) {
+      updateData.actualArrival = data.actualArrival ? new Date(data.actualArrival) : null;
+    }
+
+    // Recalculate CO₂ when coordinates change or on any update (always keep in sync)
+    const depLat = data.departure?.lat ?? existingFlight.depLat;
+    const depLon = data.departure?.lon ?? existingFlight.depLon;
+    const arrLat = data.arrival?.lat  ?? existingFlight.arrLat;
+    const arrLon = data.arrival?.lon  ?? existingFlight.arrLon;
+    updateData.co2Kg = calculateCo2Kg({
+      depLat,
+      depLon,
+      arrLat,
+      arrLon,
+      seatClass: null,
+    });
 
     // Set lastModifiedBy when user updates
     updateData.lastModifiedBy = 'user';

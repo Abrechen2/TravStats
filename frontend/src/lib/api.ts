@@ -508,6 +508,27 @@ export const parseApi = {
     return data;
   },
 
+  parsePdf: async (
+    pdfBase64: string
+  ): Promise<{
+    flights: ParsedBooking[];
+    parserUsed: string;
+    ollamaAvailable: boolean;
+    fallbackUsed?: boolean;
+    pdfTextLength: number;
+    bcbpDetected: boolean;
+  }> => {
+    const { data } = await parserApi.post<{
+      flights: ParsedBooking[];
+      parserUsed: string;
+      ollamaAvailable: boolean;
+      fallbackUsed?: boolean;
+      pdfTextLength: number;
+      bcbpDetected: boolean;
+    }>("/parse-pdf", { pdfBase64 });
+    return data;
+  },
+
   checkOllamaVision: async (): Promise<OllamaVisionCheckResult> => {
     const { data } = await parserApi.get<OllamaVisionCheckResult>("/parse-boardingpass/check");
     return data;
@@ -696,6 +717,16 @@ export const statsApi = {
     const { data } = await api.get<import("../types").SeatStats>("/stats/seats", {
       params: filters,
     });
+    return data;
+  },
+
+  getAirlineRanking: async (): Promise<import("../types").AirlineRankingResponse> => {
+    const { data } = await api.get<import("../types").AirlineRankingResponse>("/stats/airlines");
+    return data;
+  },
+
+  getCountryStats: async (): Promise<import("../types").CountryStatsResponse> => {
+    const { data } = await api.get<import("../types").CountryStatsResponse>("/stats/countries");
     return data;
   },
 };
@@ -1021,6 +1052,27 @@ export const trainingApi = {
   },
   deleteTrainingData: async (id: string): Promise<MessageResponse> => {
     const { data } = await api.delete<MessageResponse>(`/training/${id}`);
+    return data;
+  },
+  getParseLogStats: async (): Promise<import("../types").ParseLogStats> => {
+    const { data } = await api.get<import("../types").ParseLogStats>("/admin/parse-logs/stats");
+    return data;
+  },
+  exportParseLogs: async (): Promise<void> => {
+    const response = await api.get<Blob>("/admin/parse-logs/export", {
+      responseType: "blob",
+    });
+    const url = URL.createObjectURL(response.data);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "parse-training-logs.jsonl";
+    a.click();
+    URL.revokeObjectURL(url);
+  },
+  promoteCorrections: async (): Promise<import("../types").PromoteCorrectionsResult> => {
+    const { data } = await api.post<import("../types").PromoteCorrectionsResult>(
+      "/admin/parse-logs/promote"
+    );
     return data;
   },
 };

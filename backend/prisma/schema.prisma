@@ -107,6 +107,12 @@ model Flight {
   lastModifiedBy   String?  @map("last_modified_by") // 'user', 'auto_update', 'historical_enrichment', 'api'
   enrichmentHistory Json?   @map("enrichment_history") // Array of enrichment events [{type, timestamp, confidence?, source?}]
 
+  // Phase 3: Actual Times, Delay, CO₂
+  actualDeparture     DateTime? @map("actual_departure")
+  actualArrival       DateTime? @map("actual_arrival")
+  delayMinutes        Int?      @map("delay_minutes")
+  co2Kg               Float?    @map("co2_kg")
+
   // Phase 1: Email Template Parsing
   baggageAllowance    String?  @map("baggage_allowance")
   frequentFlyerNumber String?  @map("frequent_flyer_number")

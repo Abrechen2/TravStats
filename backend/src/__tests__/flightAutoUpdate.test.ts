@@ -20,6 +20,7 @@ describe('Flight Auto-Update Service', () => {
     await prisma.userSettings.create({
       data: {
         userId: user.id,
+        data: {},
         autoUpdateEnabled: true,
         autoUpdateRequireApproval: true,
         autoUpdateCheckInterval: 15,
@@ -253,7 +254,3 @@ describe('Flight Auto-Update Service', () => {
     });
   });
 });
-
-
-
-

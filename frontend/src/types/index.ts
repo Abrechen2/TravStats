@@ -79,6 +79,11 @@ export interface Flight {
     source?: string;
     sourceFlightsCount?: number;
   }>;
+  // Phase 3: Actual Times, Delay, CO₂
+  actualDeparture?: string;
+  actualArrival?: string;
+  delayMinutes?: number;
+  co2Kg?: number;
 }
 
 export interface FlightInput {
@@ -112,6 +117,8 @@ export interface FlightInput {
   frequentFlyerNumber?: string;
   bookingClassLetter?: string;
   coPassengers?: string[];
+  actualDeparture?: string;
+  actualArrival?: string;
 }
 
 export interface ParsedBooking {
@@ -392,4 +399,44 @@ export interface SeatStats {
   mostCommonSeat: string | null;
   seatClassDistribution: Record<string, number>;
   avgRowNumber: number | null;
+}
+
+export interface ParseLogAirlineStat {
+  airline: string;
+  total: number;
+  hits: number;
+  hitRate: number;
+  commonMissingFields: string[];
+}
+
+export interface ParseLogStats {
+  totalLogs: number;
+  overallHitRate: number;
+  byAirline: ParseLogAirlineStat[];
+}
+
+export interface PromoteCorrectionsResult {
+  promoted: number;
+  message: string;
+}
+
+export interface AirlineRankingItem {
+  airline: string;
+  count: number;
+  percentage: number;
+}
+
+export interface AirlineRankingResponse {
+  airlines: AirlineRankingItem[];
+  total: number;
+}
+
+export interface CountryStat {
+  country: string;
+  count: number;
+}
+
+export interface CountryStatsResponse {
+  countries: CountryStat[];
+  total: number;
 }

@@ -1,6 +1,6 @@
 /**
  * Pending Updates Routes
- * 
+ *
  * API endpoints for managing pending flight updates
  */
 
@@ -165,6 +165,11 @@ router.post('/:id/apply', async (req: AuthRequest, res: Response, next: NextFunc
     const userId = req.userId!;
     const { id } = req.params;
 
+    const existing = await getPendingUpdateById(id, userId);
+    if (!existing) {
+      throw new AppError('Pending update not found', 404);
+    }
+
     const flight = await applyPendingUpdate(id, userId);
 
     if (!flight) {
@@ -242,4 +247,3 @@ router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction
 });
 
 export default router;
-

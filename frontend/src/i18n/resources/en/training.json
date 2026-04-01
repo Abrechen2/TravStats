@@ -187,5 +187,23 @@
       "title": "Step 6: Cancel/Resume Training",
       "whenCancel": "When to cancel?"
     }
+  },
+  "parseLogs": {
+    "title": "Parse Log Statistics",
+    "totalLogs": "Total Parse Logs",
+    "overallHitRate": "Overall Hit Rate",
+    "airlineTable": "Hit Rate by Airline",
+    "airline": "Airline",
+    "total": "Total",
+    "hits": "Hits",
+    "hitRate": "Hit Rate",
+    "missingFields": "Common Missing Fields",
+    "exportBtn": "Export JSONL",
+    "promoteBtn": "Promote Corrections",
+    "promoting": "Promoting...",
+    "promoteSuccess": "{{count}} correction(s) promoted",
+    "promoteNone": "No new corrections found",
+    "noData": "No parse logs yet",
+    "loading": "Loading statistics..."
   }
 }
