@@ -140,6 +140,15 @@ const uploadSchema = z.object({
 });
 
 // Annotation schema
+const textSelectionSchema = z.object({
+  text: z.string(),
+  label: z.string(),
+  start: z.number().int().min(0),
+  end: z.number().int().min(0),
+});
+
+const textSelectionsSchema = z.array(textSelectionSchema).optional();
+
 const annotationSchema = z.object({
   annotations: z.record(z.unknown()), // JSON object with text selections or bounding boxes
   extractedData: z.array(z.record(z.unknown())), // Array of ParsedBooking
@@ -255,10 +264,9 @@ router.post(
 
       // Derive parser template from annotation (non-blocking; errors are logged but not fatal)
       let templateId: string | undefined;
-      if (
-        payload.annotations &&
-        typeof (payload.annotations as Record<string, unknown>).textSelections !== "undefined"
-      ) {
+      const rawSelections = (payload.annotations as Record<string, unknown>).textSelections;
+      const textSelections = textSelectionsSchema.safeParse(rawSelections ?? []);
+      if (textSelections.success && textSelections.data && textSelections.data.length > 0) {
         try {
           templateId = await deriveTemplateFromAnnotation(id, userId);
         } catch (err: unknown) {

@@ -139,11 +139,12 @@ export async function deriveTemplateFromAnnotation(
 
     // Derive per-field patterns (skip time fields — handled by Reiseplan segments)
     const patterns: TemplatePatterns = {};
+    const safePatternKeys = new Set(Object.keys(FIELD_SPEC));
     for (const sel of textSelections) {
       if (sel.label === "departureTime" || sel.label === "arrivalTime") continue;
       const pattern = derivePatternFromSelection(sel, fullText);
-      if (pattern) {
-        (patterns as Record<string, unknown>)[sel.label] = pattern;
+      if (pattern && safePatternKeys.has(sel.label)) {
+        (patterns as Record<string, string>)[sel.label] = pattern;
       }
     }
 
