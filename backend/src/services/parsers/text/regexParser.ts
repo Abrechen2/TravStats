@@ -27,6 +27,14 @@ const CITY_TO_IATA: Record<string, string> = {
   budapest: 'BUD', istanbul: 'IST', athen: 'ATH', athens: 'ATH',
 };
 
+// PNR false positives (German words that match 6-char alphanumeric pattern)
+const PNR_FALSE_POSITIVES = new Set([
+  'VIELEN', 'DANKEN', 'SEHREN', 'WICHTIG', 'BESTEN', 'GRUSS', 'GRUESSE',
+  'HERZLI', 'FREUND', 'SCHONEN', 'GUTEN', 'GUTER', 'GUTES', 'NEUEN',
+  'NEUER', 'NEUES', 'ALTE', 'ALTEN', 'ALTES', 'GROSS', 'GROSSE',
+  'KLEIN', 'KLEINE', 'SCHON', 'SCHONE', 'SCHONER', 'SCHONES', 'NEUE',
+]);
+
 // Context-aware IATA code extraction patterns
 const IATA_CONTEXT_PATTERNS = [
   /(?:von|ab|from|dep(?:arture)?)\s+([A-Z]{3})/g,
@@ -69,24 +77,29 @@ export class RegexTextParser implements ITextParser {
   async parseEmail(subject: string, text: string, html?: string): Promise<ParsedBooking[]> {
     logger.info('[Regex Parser] Starting email parsing');
 
-    const source = [subject || '', text || '', this.extractText(html)].join('\n');
+    try {
+      const source = [subject || '', text || '', this.extractText(html)].join('\n');
 
-    // Try to extract multiple flights (round-trip, multi-leg)
-    const flights = this.parseMultipleFlights(source);
+      // Try to extract multiple flights (round-trip, multi-leg)
+      const flights = this.parseMultipleFlights(source);
 
-    logger.info(
-      {
-        flightCount: flights.length,
-        flights: flights.map(f => ({
-          flightNumber: f.flightNumber,
-          route: `${f.departureCode} → ${f.arrivalCode}`,
-          missing: f.missing.length,
-        })),
-      },
-      '[Regex Parser] Parsing complete'
-    );
+      logger.info(
+        {
+          flightCount: flights.length,
+          flights: flights.map(f => ({
+            flightNumber: f.flightNumber,
+            route: `${f.departureCode} → ${f.arrivalCode}`,
+            missing: f.missing.length,
+          })),
+        },
+        '[Regex Parser] Parsing complete'
+      );
 
-    return flights;
+      return flights;
+    } catch (error) {
+      logger.error({ error, subject }, '[Regex Parser] Unexpected error during parsing');
+      throw error;
+    }
   }
 
   /**
@@ -97,7 +110,8 @@ export class RegexTextParser implements ITextParser {
     try {
       const root = parse(html);
       return root.text || '';
-    } catch {
+    } catch (error) {
+      logger.warn({ error, htmlLength: html.length }, '[Regex Parser] HTML text extraction failed, proceeding without HTML content');
       return '';
     }
   }
@@ -428,19 +442,25 @@ export class RegexTextParser implements ITextParser {
   }
 
   /**
-   * Extract shared PNR (should be same for all flights)
+   * Find the first PNR candidate in an already-uppercased source string.
+   * A PNR is a 6-char alphanumeric token that contains at least one digit
+   * and is not a known German false-positive word.
    */
-  private extractSharedPNR(source: string): string | undefined {
-    const sourceUpper = source.toUpperCase();
-    const pnrFalsePositives = ['VIELEN', 'DANKEN', 'SEHREN', 'WICHTIG', 'BESTEN', 'GRUSS', 'GRUESSE', 'HERZLI', 'FREUND', 'BESTEN', 'SCHONEN', 'GUTEN', 'GUTER', 'GUTES', 'NEUEN', 'NEUER', 'NEUES', 'ALTE', 'ALTEN', 'ALTES', 'GROSS', 'GROSSE', 'KLEIN', 'KLEINE', 'SCHON', 'SCHONE', 'SCHONER', 'SCHONES', 'NEUE', 'NEUER', 'NEUES', 'ALTE', 'ALTEN', 'ALTES', 'GROSS', 'GROSSE', 'KLEIN', 'KLEINE'];
-    const pnrMatches = Array.from(sourceUpper.matchAll(PATTERNS.PNR));
-    for (const match of pnrMatches) {
+  private findPNRInSource(sourceUpper: string): string | undefined {
+    for (const match of sourceUpper.matchAll(/\b([A-Z0-9]{6})\b/g)) {
       const pnr = match[1];
-      if (!pnrFalsePositives.includes(pnr) && /[0-9]/.test(pnr)) {
+      if (!PNR_FALSE_POSITIVES.has(pnr) && /[0-9]/.test(pnr)) {
         return pnr;
       }
     }
     return undefined;
+  }
+
+  /**
+   * Extract shared PNR (should be same for all flights)
+   */
+  private extractSharedPNR(source: string): string | undefined {
+    return this.findPNRInSource(source.toUpperCase());
   }
 
   /**
@@ -492,19 +512,11 @@ export class RegexTextParser implements ITextParser {
       }
     }
 
-    // PNR - improved to avoid false matches like "VIELEN"
-    // Common false positives (German words, common text)
-    const pnrFalsePositives = ['VIELEN', 'DANKEN', 'SEHREN', 'WICHTIG', 'BESTEN', 'GRUSS', 'GRUESSE', 'HERZLI', 'FREUND', 'BESTEN', 'SCHONEN', 'GUTEN', 'GUTER', 'GUTES', 'NEUEN', 'NEUER', 'NEUES', 'ALTE', 'ALTEN', 'ALTES', 'GROSS', 'GROSSE', 'KLEIN', 'KLEINE', 'SCHON', 'SCHONE', 'SCHONER', 'SCHONES', 'NEUE', 'NEUER', 'NEUES', 'ALTE', 'ALTEN', 'ALTES', 'GROSS', 'GROSSE', 'KLEIN', 'KLEINE'];
-    const pnrMatches = Array.from(sourceUpper.matchAll(PATTERNS.PNR));
-    for (const match of pnrMatches) {
-      const pnr = match[1];
-      // PNR should be alphanumeric, not all letters (common words)
-      // And not in the false positives list
-      if (!pnrFalsePositives.includes(pnr) && /[0-9]/.test(pnr)) {
-        data.pnr = pnr;
-        data.bookingReference = pnr;
-        break;
-      }
+    // PNR - delegate to shared extraction logic
+    const pnr = this.findPNRInSource(sourceUpper);
+    if (pnr) {
+      data.pnr = pnr;
+      data.bookingReference = pnr;
     }
 
     // Airports
