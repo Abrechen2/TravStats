@@ -240,3 +240,35 @@ html.dark {
 .nav-icon-btn:hover {
   background-color: var(--bg-elevated);
 }
+
+/* ─── Map Theme Tokens ───────────────────────────────────── */
+
+[data-map-theme="glassmorphism"] {
+  --map-accent: #e8a045;
+  --map-fab-gradient: linear-gradient(135deg, #c8842a, #e8a045);
+  --map-fab-shadow: rgba(232, 160, 69, 0.4);
+  --map-fab-shadow-open: 0 4px 24px rgba(232, 160, 69, 0.6), 0 0 40px rgba(232, 160, 69, 0.2);
+  --map-active-bg: rgba(232, 160, 69, 0.2);
+  --map-active-border: rgba(232, 160, 69, 0.45);
+  --map-active-color: #fcd99a;
+  --map-active-label-bg: rgba(200, 132, 42, 0.2);
+  --map-active-label-border: rgba(232, 160, 69, 0.35);
+  --map-badge-bg: rgba(255, 255, 255, 0.06);
+  --map-badge-border: rgba(255, 255, 255, 0.12);
+  --map-badge-color: #94a3b8;
+}
+
+[data-map-theme="classic"] {
+  --map-accent: #e8a045;
+  --map-fab-gradient: linear-gradient(135deg, #c8842a, #e8a045);
+  --map-fab-shadow: rgba(232, 160, 69, 0.4);
+  --map-fab-shadow-open: 0 4px 24px rgba(232, 160, 69, 0.6);
+  --map-active-bg: rgba(232, 160, 69, 0.15);
+  --map-active-border: rgba(232, 160, 69, 0.4);
+  --map-active-color: #e8a045;
+  --map-active-label-bg: rgba(232, 160, 69, 0.1);
+  --map-active-label-border: rgba(232, 160, 69, 0.3);
+  --map-badge-bg: rgba(232, 160, 69, 0.1);
+  --map-badge-border: rgba(232, 160, 69, 0.25);
+  --map-badge-color: #e8a045;
+}

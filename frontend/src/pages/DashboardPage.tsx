@@ -610,6 +610,9 @@ export default function DashboardPage(): JSX.Element {
               visMode={visMode}
               onVisModeChange={handleVisModeChange}
               minRouteCount={filters.minRouteCount ?? 1}
+              filterSlot={
+                visMode !== "trips" ? <Filters onFilterChange={handleFilterChange} /> : undefined
+              }
             />
           </ErrorBoundary>
         </div>
@@ -765,21 +768,6 @@ export default function DashboardPage(): JSX.Element {
             )}
           </div>
         </div>
-
-        {/* Floating Bottom: Filters — hidden in trips mode (TimeSlider takes over) */}
-        {visMode !== "trips" && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 w-full max-w-3xl px-4">
-            <div
-              className="rounded-2xl p-2 backdrop-blur-md"
-              style={{
-                background: "rgba(22,27,34,0.85)",
-                border: "1px solid var(--color-border)",
-              }}
-            >
-              <Filters onFilterChange={handleFilterChange} />
-            </div>
-          </div>
-        )}
 
         {/* Left Overlay Panel: Flight List */}
         <AnimatePresence>

@@ -1,3 +1,5 @@
+import type { MapLayerColors } from "../../types/mapTheme";
+
 export interface ArcDatum {
   sourcePosition: [number, number];
   targetPosition: [number, number];
@@ -22,22 +24,29 @@ export interface TripDatum {
 export type HeatmapTier = "low" | "medium" | "high" | "critical";
 
 export const HEATMAP_COLORS: Record<HeatmapTier, [number, number, number]> = {
-  low: [100, 116, 139], // slate-500 — muted, recedes into map
-  medium: [232, 160, 69], // brand amber accent
-  high: [249, 115, 22], // orange-500 — warm intensity
-  critical: [239, 68, 68], // red-500 — hotspot
+  low: [100, 116, 139], // slate-500
+  medium: [232, 160, 69], // amber-400
+  high: [249, 115, 22], // orange-500
+  critical: [239, 68, 68], // red-500
 };
 
 export function getHeatmapColor(
   count: number,
   q25: number,
   q50: number,
-  q75: number
+  q75: number,
+  themeColors?: Pick<MapLayerColors, "low" | "mid" | "high" | "peak">
 ): [number, number, number] {
-  if (count <= q25) return HEATMAP_COLORS.low;
-  if (count <= q50) return HEATMAP_COLORS.medium;
-  if (count <= q75) return HEATMAP_COLORS.high;
-  return HEATMAP_COLORS.critical;
+  const c = themeColors ?? {
+    low: HEATMAP_COLORS.low,
+    mid: HEATMAP_COLORS.medium,
+    high: HEATMAP_COLORS.high,
+    peak: HEATMAP_COLORS.critical,
+  };
+  if (count <= q25) return c.low;
+  if (count <= q50) return c.mid;
+  if (count <= q75) return c.high;
+  return c.peak;
 }
 
 export function calcQuantiles(counts: number[]): { q25: number; q50: number; q75: number } {
