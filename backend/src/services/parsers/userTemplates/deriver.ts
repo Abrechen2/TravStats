@@ -109,89 +109,102 @@ export async function deriveTemplateFromAnnotation(
   trainingDataId: string,
   userId: string
 ): Promise<string | undefined> {
-  const td = await prisma.trainingData.findUnique({
-    where: { id: trainingDataId },
-  });
+  try {
+    const td = await prisma.trainingData.findUnique({
+      where: { id: trainingDataId },
+    });
 
-  if (!td?.annotations) {
-    logger.warn({ trainingDataId }, "TemplateDeriver: no annotations found");
-    return undefined;
-  }
-
-  const ann = td.annotations as Record<string, unknown>;
-  const fullText = typeof ann.fullText === "string" ? ann.fullText : "";
-  const textSelections: TextSelection[] = Array.isArray(ann.textSelections)
-    ? (ann.textSelections as TextSelection[])
-    : [];
-
-  if (!fullText || textSelections.length === 0) {
-    return undefined;
-  }
-
-  // Derive per-field patterns (skip time fields — handled by Reiseplan segments)
-  const patterns: TemplatePatterns = {};
-  for (const sel of textSelections) {
-    if (sel.label === "departureTime" || sel.label === "arrivalTime") continue;
-    const pattern = derivePatternFromSelection(sel, fullText);
-    if (pattern) {
-      (patterns as Record<string, unknown>)[sel.label] = pattern;
+    if (!td?.annotations) {
+      logger.warn({ trainingDataId }, "TemplateDeriver: no annotations found");
+      return undefined;
     }
-  }
 
-  // Use structural Reiseplan parser when the email contains the anchor keywords
-  if (fullText.includes("Reiseplan") && fullText.includes("Durchgeführt")) {
-    patterns.useReiseplanSegments = true;
-  }
+    const ann = td.annotations as Record<string, unknown>;
+    const fullText = typeof ann.fullText === "string" ? ann.fullText : "";
+    const textSelections: TextSelection[] = Array.isArray(ann.textSelections)
+      ? (ann.textSelections as unknown[]).filter(
+          (s): s is TextSelection =>
+            typeof s === "object" &&
+            s !== null &&
+            typeof (s as Record<string, unknown>).text === "string" &&
+            typeof (s as Record<string, unknown>).label === "string" &&
+            typeof (s as Record<string, unknown>).start === "number" &&
+            typeof (s as Record<string, unknown>).end === "number"
+        )
+      : [];
 
-  // Use Buchungsdetails IATA block when standard IATA labels are missing
-  if (!patterns.departureCode && fullText.includes("<https://")) {
-    patterns.detailsBlock =
-      "([A-Z]{3})\\s+<https?://[^>]+>\\s+([A-Z]{3})[\\s\\S]{1,300}?(\\d{2}:\\d{2})\\s*\\n\\s*(\\d{2}:\\d{2})";
-  }
+    if (!fullText || textSelections.length === 0) {
+      return undefined;
+    }
 
-  // Derive fingerprint from email content
-  const subjectMatch = /^Subject:\s*(.+)$/im.exec(fullText);
-  const subject = subjectMatch ? subjectMatch[1].trim() : "";
-  const fingerprint = extractFingerprint(fullText, subject);
+    // Derive per-field patterns (skip time fields — handled by Reiseplan segments)
+    const patterns: TemplatePatterns = {};
+    for (const sel of textSelections) {
+      if (sel.label === "departureTime" || sel.label === "arrivalTime") continue;
+      const pattern = derivePatternFromSelection(sel, fullText);
+      if (pattern) {
+        (patterns as Record<string, unknown>)[sel.label] = pattern;
+      }
+    }
 
-  // Name template from airline name if detectable
-  const airlineMatch =
-    /(?:Lufthansa|Swiss|Austrian|Ryanair|Eurowings|easyJet)/i.exec(fullText);
-  const airline = airlineMatch ? airlineMatch[0] : "Unknown";
-  const name = `${airline} (abgeleitet am ${new Date().toLocaleDateString("de-DE")})`;
+    // Use structural Reiseplan parser when the email contains the anchor keywords
+    if (fullText.includes("Reiseplan") && fullText.includes("Durchgeführt")) {
+      patterns.useReiseplanSegments = true;
+    }
 
-  const status = fingerprint.bodyMarkers.length >= 1 ? "active" : "pending";
+    // Use Buchungsdetails IATA block when standard IATA labels are missing
+    if (!patterns.departureCode && fullText.includes("<https://")) {
+      patterns.detailsBlock =
+        "([A-Z]{3})\\s+<https?://[^>]+>\\s+([A-Z]{3})[\\s\\S]{1,300}?(\\d{2}:\\d{2})\\s*\\n\\s*(\\d{2}:\\d{2})";
+    }
 
-  const existing = await prisma.parserTemplate.findFirst({
-    where: { userId, sourceId: trainingDataId },
-  });
+    // Derive fingerprint from email content
+    const subjectMatch = /^Subject:\s*(.+)$/im.exec(fullText);
+    const subject = subjectMatch ? subjectMatch[1].trim() : "";
+    const fingerprint = extractFingerprint(fullText, subject);
 
-  if (existing) {
-    const updated = await prisma.parserTemplate.update({
-      where: { id: existing.id },
+    // Name template from airline name if detectable
+    const airlineMatch =
+      /(?:Lufthansa|Swiss|Austrian|Ryanair|Eurowings|easyJet)/i.exec(fullText);
+    const airline = airlineMatch ? airlineMatch[0] : "Unknown";
+    const name = `${airline} (abgeleitet am ${new Date().toLocaleDateString("de-DE")})`;
+
+    const status = fingerprint.bodyMarkers.length >= 1 ? "active" : "pending";
+
+    const existing = await prisma.parserTemplate.findFirst({
+      where: { userId, sourceId: trainingDataId },
+    });
+
+    if (existing) {
+      const updated = await prisma.parserTemplate.update({
+        where: { id: existing.id },
+        data: {
+          patterns: patterns as unknown as Prisma.InputJsonValue,
+          fingerprint: fingerprint as unknown as Prisma.InputJsonValue,
+          status,
+          updatedAt: new Date(),
+        },
+      });
+      logger.info({ templateId: updated.id, status }, "TemplateDeriver: updated existing template");
+      return updated.id;
+    }
+
+    const created = await prisma.parserTemplate.create({
       data: {
-        patterns: patterns as unknown as Prisma.InputJsonValue,
-        fingerprint: fingerprint as unknown as Prisma.InputJsonValue,
+        userId,
+        name,
         status,
-        updatedAt: new Date(),
+        fingerprint: fingerprint as unknown as Prisma.InputJsonValue,
+        patterns: patterns as unknown as Prisma.InputJsonValue,
+        sourceId: trainingDataId,
+        stats: { matchCount: 0, successRate: 0 } as unknown as Prisma.InputJsonValue,
       },
     });
-    logger.info({ templateId: updated.id, status }, "TemplateDeriver: updated existing template");
-    return updated.id;
+
+    logger.info({ templateId: created.id, status, name }, "TemplateDeriver: derived new template");
+    return created.id;
+  } catch (err: unknown) {
+    logger.error({ err, trainingDataId }, "TemplateDeriver: unexpected error");
+    return undefined;
   }
-
-  const created = await prisma.parserTemplate.create({
-    data: {
-      userId,
-      name,
-      status,
-      fingerprint: fingerprint as unknown as Prisma.InputJsonValue,
-      patterns: patterns as unknown as Prisma.InputJsonValue,
-      sourceId: trainingDataId,
-      stats: { matchCount: 0, successRate: 0 } as unknown as Prisma.InputJsonValue,
-    },
-  });
-
-  logger.info({ templateId: created.id, status, name }, "TemplateDeriver: derived new template");
-  return created.id;
 }
