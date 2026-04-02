@@ -5,6 +5,18 @@ import { useAuthStore } from "../store/authStore";
 import { logger } from "../lib/logger";
 import { useTranslation } from "../hooks/useTranslation";
 
+function getFieldBorderClass(
+  fieldName: string,
+  fieldSources?: ParsedBooking["fieldSources"]
+): string {
+  if (!fieldSources) return "";
+  const source = fieldSources[fieldName as keyof NonNullable<ParsedBooking["fieldSources"]>];
+  if (source === "template") return "border-l-4 border-green-500";
+  if (source === "llm") return "border-l-4 border-yellow-400";
+  if (source === "empty") return "border-l-4 border-red-500";
+  return "";
+}
+
 interface FlightReviewModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -394,7 +406,7 @@ export default function FlightReviewModal({
                 type="text"
                 value={flightNumber}
                 onChange={(e) => setFlightNumber(e.target.value)}
-                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500 ${getFieldBorderClass("flightNumber", initialData.fieldSources)}`}
                 placeholder={t("flights:form.placeholders.flightNumber")}
                 required
               />
@@ -428,7 +440,7 @@ export default function FlightReviewModal({
                   setDepartureCode(code);
                   setDepartureAirport(null);
                 }}
-                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500 ${getFieldBorderClass("departureCode", initialData.fieldSources)}`}
                 placeholder={t("flights:form.placeholders.departureCode")}
                 maxLength={3}
                 required
@@ -455,7 +467,7 @@ export default function FlightReviewModal({
                   setArrivalCode(code);
                   setArrivalAirport(null);
                 }}
-                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500 ${getFieldBorderClass("arrivalCode", initialData.fieldSources)}`}
                 placeholder={t("flights:form.placeholders.arrivalCode")}
                 maxLength={3}
                 required
@@ -481,7 +493,7 @@ export default function FlightReviewModal({
                 type="datetime-local"
                 value={departureTime}
                 onChange={(e) => setDepartureTime(e.target.value)}
-                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500 ${getFieldBorderClass("departureTime", initialData.fieldSources)}`}
                 required
               />
             </div>
@@ -494,7 +506,7 @@ export default function FlightReviewModal({
                 type="datetime-local"
                 value={arrivalTime}
                 onChange={(e) => setArrivalTime(e.target.value)}
-                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500 ${getFieldBorderClass("arrivalTime", initialData.fieldSources)}`}
                 required
               />
             </div>
@@ -588,7 +600,7 @@ export default function FlightReviewModal({
                 type="text"
                 value={bookingReference}
                 onChange={(e) => setBookingReference(e.target.value.toUpperCase())}
-                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500 ${getFieldBorderClass("pnr", initialData.fieldSources)}`}
                 placeholder={t("flights:form.placeholders.bookingReference")}
                 maxLength={6}
               />
