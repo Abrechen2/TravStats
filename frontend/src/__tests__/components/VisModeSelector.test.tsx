@@ -2,26 +2,32 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { VisModeSelector } from "../../components/VisModeSelector";
 
+const FRAMER_PROPS = new Set([
+  "initial",
+  "animate",
+  "exit",
+  "transition",
+  "whileTap",
+  "whileHover",
+]);
+
+function filterFramerProps(props: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(props).filter(([k]) => !FRAMER_PROPS.has(k)));
+}
+
 vi.mock("framer-motion", () => ({
   motion: {
     div: ({
       children,
-      initial: _i,
-      animate: _a,
-      exit: _e,
-      transition: _t,
-      ...props
+      ...rest
     }: React.HTMLAttributes<HTMLDivElement> & Record<string, unknown>) => (
-      <div {...props}>{children}</div>
+      <div {...filterFramerProps(rest)}>{children}</div>
     ),
     button: ({
       children,
-      whileTap: _wt,
-      animate: _a,
-      transition: _t,
-      ...props
+      ...rest
     }: React.ButtonHTMLAttributes<HTMLButtonElement> & Record<string, unknown>) => (
-      <button {...props}>{children}</button>
+      <button {...filterFramerProps(rest)}>{children}</button>
     ),
   },
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
