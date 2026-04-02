@@ -150,6 +150,21 @@ export interface ParsedBooking {
   parserConfidence?: number;
   airlineNotice?: string; // Transient: not persisted to DB, UI-only notice when no template found
   missing?: string[];
+  fieldSources?: Partial<
+    Record<
+      | "flightNumber"
+      | "departureCode"
+      | "arrivalCode"
+      | "departureTime"
+      | "arrivalTime"
+      | "pnr"
+      | "aircraft"
+      | "seat"
+      | "terminal"
+      | "gate",
+      "template" | "llm" | "empty"
+    >
+  >;
 }
 
 export interface FlightLookupResult {
