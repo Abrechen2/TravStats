@@ -19,6 +19,7 @@ import HelpIcon from "../components/Help/HelpIcon";
 import { useClickOutside } from "../hooks/useClickOutside";
 import type { Flight, FlightInput, FlightFilters, GeoJSONFeature, OnboardingState } from "../types";
 import { useSettingsStore } from "../store/settingsStore";
+import { useThemeStore } from "../store/themeStore";
 import { API_LIMITS, STORAGE_KEYS } from "../lib/constants";
 import { toCsv, escapeXml, downloadBlob } from "../lib/export";
 import { motion, AnimatePresence } from "framer-motion";
@@ -88,6 +89,7 @@ export default function DashboardPage(): JSX.Element {
   }, []);
   const settings = useSettingsStore();
   const addToast = useToastStore((state) => state.addToast);
+  const { mapTheme, isDarkMode } = useThemeStore();
   const [newAchievements, setNewAchievements] = useState<import("../types").UserAchievement[]>([]);
   const [loadingOnboarding, setLoadingOnboarding] = useState(true);
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -771,10 +773,18 @@ export default function DashboardPage(): JSX.Element {
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 w-full max-w-3xl px-4">
             <div
               className="rounded-2xl p-2 backdrop-blur-md"
-              style={{
-                background: "rgba(22,27,34,0.85)",
-                border: "1px solid var(--color-border)",
-              }}
+              style={
+                mapTheme === "glassmorphism" && isDarkMode
+                  ? {
+                      background: "rgba(15, 10, 40, 0.6)",
+                      border: "1px solid rgba(99, 102, 241, 0.25)",
+                      boxShadow: "0 8px 32px rgba(99, 102, 241, 0.12)",
+                    }
+                  : {
+                      background: "rgba(22,27,34,0.85)",
+                      border: "1px solid var(--color-border)",
+                    }
+              }
             >
               <Filters onFilterChange={handleFilterChange} />
             </div>

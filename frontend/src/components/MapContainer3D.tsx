@@ -46,10 +46,7 @@ export default function MapContainer3D({
       className="relative h-full w-full rounded-lg shadow overflow-hidden bg-[var(--bg-surface)] flex items-center justify-center"
       style={{ touchAction: "pan-x pan-y pinch-zoom" }}
     >
-      <div
-        className="h-full w-full max-w-[1200px] flex items-center justify-center px-4"
-        style={{ touchAction: "pan-x pan-y pinch-zoom" }}
-      >
+      <div className="h-full w-full" style={{ touchAction: "pan-x pan-y pinch-zoom" }}>
         {visMode === "globe" ? (
           <Suspense
             fallback={

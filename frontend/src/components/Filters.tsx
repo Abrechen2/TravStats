@@ -5,6 +5,7 @@ import type { Flight, FlightFilters } from "../types";
 import { API_LIMITS } from "../lib/constants";
 import { useTranslation } from "../hooks/useTranslation";
 import { logger } from "../lib/logger";
+import { useThemeStore } from "../store/themeStore";
 
 interface FiltersProps {
   onFilterChange: (filters: FlightFilters & { minRouteCount?: number }) => void;
@@ -16,6 +17,8 @@ interface AirlineOption {
 }
 export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
   const { t } = useTranslation(["map", "common", "flights"]);
+  const { mapTheme, isDarkMode } = useThemeStore();
+  const isGlass = mapTheme === "glassmorphism" && isDarkMode;
 
   const MONTHS = [
     { value: 1, label: t("stats:months.jan") },
@@ -212,11 +215,19 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
       <button
         onClick={() => setShowFilters(!showFilters)}
         className="inline-flex items-center gap-2 px-4 py-2 rounded-lg shadow-sm transition-colors"
-        style={{
-          background: "var(--bg-surface)",
-          color: "var(--text-primary)",
-          border: "1px solid var(--color-border)",
-        }}
+        style={
+          isGlass
+            ? {
+                background: "rgba(99, 102, 241, 0.12)",
+                color: "#e0e7ff",
+                border: "1px solid rgba(99, 102, 241, 0.3)",
+              }
+            : {
+                background: "var(--bg-surface)",
+                color: "var(--text-primary)",
+                border: "1px solid var(--color-border)",
+              }
+        }
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path

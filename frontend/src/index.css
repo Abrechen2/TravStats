@@ -273,7 +273,7 @@ html.dark {
   --map-badge-color: #e8a045;
 }
 
-/* Blue tile tint — glassmorphism dark mode only */
+/* Blue tile tint — glassmorphism dark mode only (positron light style base) */
 html.dark [data-map-theme="glassmorphism"] canvas.maplibregl-canvas {
-  filter: hue-rotate(200deg) saturate(1.8) brightness(0.75);
+  filter: sepia(1) hue-rotate(195deg) saturate(4) brightness(0.35);
 }
