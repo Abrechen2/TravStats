@@ -822,7 +822,7 @@ export async function parseEmail(
       const userResults = applyUserTemplate(userTemplate, subject, text);
       const bestConfidence = userResults[0]?.parserConfidence ?? 0;
       if (bestConfidence >= 80) {
-        logger.info(
+        log.info(
           { templateName: userTemplate.name, flights: userResults.length, confidence: bestConfidence },
           "[Parser Factory] User-derived template matched (confidence >=80%), skipping LLM chain"
         );
