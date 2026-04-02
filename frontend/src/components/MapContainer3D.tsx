@@ -110,15 +110,15 @@ export default function MapContainer3D({
         </div>
       )}
 
-      {/* Bottom-right stack: filter FAB + mode FAB */}
+      {/* Bottom-right stack: mode FAB (top) + filter FAB (bottom) */}
       <div className="absolute bottom-4 right-4 z-20 flex flex-col items-end gap-2">
-        {filterSlot}
         <VisModeSelector
           current={visMode}
           onChange={onVisModeChange}
           isOpen={fabOpen}
           onOpenChange={setFabOpen}
         />
+        {filterSlot}
       </div>
     </div>
   );

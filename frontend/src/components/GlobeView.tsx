@@ -341,43 +341,43 @@ export default function GlobeView({
       className="h-full w-full relative flex items-center justify-center"
       style={{ touchAction: "pan-x pan-y pinch-zoom" }}
     >
-      {/* Control Panel */}
+      {/* Bottom-left stack: auto-rotation control + route legend */}
       <div
-        className="absolute bottom-4 left-4 z-[9999] bg-[var(--bg-surface)] rounded-lg shadow-lg p-4 border border-[var(--color-border)]"
+        className="absolute bottom-4 left-4 z-[9999] flex flex-col gap-2 items-start"
         style={{ touchAction: "auto", pointerEvents: "auto" }}
       >
-        <label className="flex items-center gap-2 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={autoRotate}
-            onChange={(e) => setAutoRotate(e.target.checked)}
-            className="checkbox"
-          />
-          <span className="text-sm font-medium text-[var(--text-primary)]">
-            🌍 {t("map:globe.autoRotation")}
-          </span>
-        </label>
-      </div>
-
-      {/* Heatmap Legend */}
-      {arcsData.length > 0 && (
-        <div
-          className="absolute bottom-4 left-4 z-[9999] bg-[var(--bg-surface)] rounded-lg shadow-lg p-3 border border-[var(--color-border)]"
-          style={{ touchAction: "auto", pointerEvents: "auto" }}
-        >
-          <div className="text-xs font-semibold text-[var(--text-primary)] mb-2">
-            {t("map:globe.routeFrequency")}
-          </div>
-          <div className="space-y-1">
-            {legendRanges.map(({ color, label }) => (
-              <div key={color} className="flex items-center gap-2">
-                <div className="w-8 h-0.5" style={{ backgroundColor: color }} />
-                <span className="text-xs text-[var(--text-muted)]">{label}</span>
-              </div>
-            ))}
-          </div>
+        {/* Control Panel */}
+        <div className="bg-[var(--bg-surface)] rounded-lg shadow-lg p-4 border border-[var(--color-border)]">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={autoRotate}
+              onChange={(e) => setAutoRotate(e.target.checked)}
+              className="checkbox"
+            />
+            <span className="text-sm font-medium text-[var(--text-primary)]">
+              🌍 {t("map:globe.autoRotation")}
+            </span>
+          </label>
         </div>
-      )}
+
+        {/* Heatmap Legend */}
+        {arcsData.length > 0 && (
+          <div className="bg-[var(--bg-surface)] rounded-lg shadow-lg p-3 border border-[var(--color-border)]">
+            <div className="text-xs font-semibold text-[var(--text-primary)] mb-2">
+              {t("map:globe.routeFrequency")}
+            </div>
+            <div className="space-y-1">
+              {legendRanges.map(({ color, label }) => (
+                <div key={color} className="flex items-center gap-2">
+                  <div className="w-8 h-0.5" style={{ backgroundColor: color }} />
+                  <span className="text-xs text-[var(--text-muted)]">{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
       <Globe
         ref={globeRef}
