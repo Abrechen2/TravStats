@@ -9,6 +9,22 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.9.2-beta] - 2026-04-02
+
+### Changed
+- **Map amber redesign**: Glassmorphism theme now uses TravStats brand colors (amber→orange→red) throughout all visualization modes. Replaces previous indigo/cyan color scheme.
+- **Filter as FAB**: Filter button relocated from bottom-center bar to bottom-right FAB stack (frosted-glass style, opens panel upward). Mode FAB stacked above filter.
+- **CSS tokens**: `--map-accent`, `--map-fab-gradient`, `--map-active-*`, `--map-badge-*` all updated to amber. Sepia CSS filter on map canvas removed. Dark-matter map style restored unconditionally.
+
+### Added
+- **Globe night earth**: Night-earth texture (`earth-night.jpg`) with amber atmosphere glow + starfield background (`night-sky.png`) in Globe mode.
+- **Globe legend stacking**: Auto-rotation toggle and route-frequency legend share bottom-left column (no overlap).
+
+### Fixed
+- Airport labels (`TextLayer`) now always render above arc lines (`depthCompare: "always"`).
+
+---
+
 ## [0.9.1-beta] - 2026-03-31
 
 ### Added
