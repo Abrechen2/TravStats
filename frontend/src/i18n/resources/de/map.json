@@ -36,6 +36,7 @@
     "hexagon": "Hexagon",
     "columns": "3D-Säulen",
     "trips": "Animation",
+    "contour": "Isolinien",
     "label": "Darstellung"
   },
   "timeSlider": {
@@ -48,5 +49,9 @@
     "timesFlown": "{{count}}x geflogen",
     "flight_one": "Flug",
     "flight_other": "Flüge"
+  },
+  "infoPill": {
+    "flights": "Flüge",
+    "routes": "Routen"
   }
 }
