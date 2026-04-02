@@ -30,6 +30,7 @@ model User {
   analyticsEvents       AnalyticsEvent[]
   createdInvitations    Invitation[]
   trainingData          TrainingData[]
+  parserTemplates       ParserTemplate[]
   pendingFlightUpdates  PendingFlightUpdate[]
   pendingUpdateStats    PendingUpdateStatistics?
   parseLogs             ParseTrainingLog[]
@@ -509,4 +510,39 @@ model PendingUpdateStatistics {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("pending_update_statistics")
+}
+
+model ParserTemplate {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  name        String
+  status      String   @default("pending") // pending | active | disabled
+  fingerprint Json
+  patterns    Json
+  stats       Json?
+  sourceId    String?  @map("source_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  corrections TemplateCorrection[]
+
+  @@index([userId, status])
+  @@map("parser_templates")
+}
+
+model TemplateCorrection {
+  id               String   @id @default(uuid())
+  templateId       String   @map("template_id")
+  userId           String   @map("user_id")
+  field            String
+  expected         String
+  got              String
+  emailFingerprint String?  @map("email_fingerprint")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  template ParserTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId, field])
+  @@map("template_corrections")
 }
