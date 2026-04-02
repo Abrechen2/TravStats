@@ -90,12 +90,19 @@ function extractReiseplanFlights(
     const depIata = m[1] as string;
     const arrIata = m[2] as string;
     const depTimeHHMM = m[3] as string;
-    for (const f of flights) {
-      if (f.departureCode === undefined && f.departureTime?.includes("T" + depTimeHHMM)) {
-        f.departureCode = depIata;
-        f.arrivalCode = arrIata;
-        f.fieldSources.departureCode = "template";
-        f.fieldSources.arrivalCode = "template";
+    for (let i = 0; i < flights.length; i++) {
+      const f = flights[i];
+      if (f && f.departureCode === undefined && f.departureTime?.includes("T" + depTimeHHMM)) {
+        flights[i] = {
+          ...f,
+          departureCode: depIata,
+          arrivalCode: arrIata,
+          fieldSources: {
+            ...f.fieldSources,
+            departureCode: "template" as const,
+            arrivalCode: "template" as const,
+          },
+        };
         break;
       }
     }

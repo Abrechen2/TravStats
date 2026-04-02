@@ -25,18 +25,28 @@ Buchungscode: ABCD12
 Reiseplan
 
 18.09.2025 - 08:25
-https://example.com/img LH2460
-MUC <https://example.com/arrow> HEL
-18:45
-21:00
+Munich
 
-18.09.2025 - 08:25
+18.09.2025 - 10:45
+Helsinki
 LH2460 Durchgeführt von: Lufthansa
 
 19.09.2025 - 15:30
+Helsinki
+
+19.09.2025 - 17:50
+Munich
+LH2461 Durchgeführt von: Lufthansa
+
+Buchungsdetails
+
+MUC <https://example.com/arrow> HEL
+08:25
+10:45
+
 HEL <https://example.com/arrow> MUC
-19.09.2025 - 15:30
-LH2461 Durchgeführt von: Lufthansa`;
+15:30
+17:50`;
 
 describe("applyUserTemplate — Reiseplan mode", () => {
   it("extracts PNR from pattern", () => {
@@ -98,10 +108,12 @@ describe("applyUserTemplate — simple patterns", () => {
     expect(result).toHaveLength(1);
   });
 
-  it("returns empty array when no fields match at all", () => {
+  it("still returns one booking with empty fields when nothing matches", () => {
     const body = "nothing relevant here";
     const result = applyUserTemplate(SIMPLE_TEMPLATE, "", body);
-    // Even with no matches, returns 1 booking (empty) — pnr will be undefined
+    expect(result).toHaveLength(1);
     expect(result[0]?.pnr).toBeUndefined();
+    expect(result[0]?.flightNumber).toBeUndefined();
+    expect(result[0]?.departureCode).toBeUndefined();
   });
 });
