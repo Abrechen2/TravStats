@@ -2121,4 +2121,26 @@ export const templateApi = {
   },
 };
 
+export interface UserTemplateItem {
+  id: string;
+  name: string;
+  status: "pending" | "active" | "disabled";
+  createdAt: string;
+  updatedAt: string;
+  stats?: { matchCount: number; successRate: number; lastUsedAt?: string };
+}
+
+export const parserTemplatesApi = {
+  list: async (): Promise<UserTemplateItem[]> => {
+    const res = await api.get<{ templates: UserTemplateItem[] }>("/parser-templates");
+    return res.data.templates;
+  },
+  setStatus: async (id: string, status: "active" | "disabled" | "pending"): Promise<void> => {
+    await api.patch(`/parser-templates/${id}`, { status });
+  },
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/parser-templates/${id}`);
+  },
+};
+
 export default api;
