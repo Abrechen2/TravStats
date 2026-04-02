@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useMemo } from "react";
+import React, { lazy, Suspense, useState, useMemo } from "react";
 import { DeckGLMap } from "./DeckGLMap";
 import { VisModeSelector } from "./VisModeSelector";
 import type { GeoJSONFeature } from "../types";
@@ -15,6 +15,7 @@ interface MapContainer3DProps {
   visMode: VisMode;
   onVisModeChange: (mode: VisMode) => void;
   minRouteCount?: number;
+  filterSlot?: React.ReactNode;
 }
 
 export default function MapContainer3D({
@@ -24,6 +25,7 @@ export default function MapContainer3D({
   visMode,
   onVisModeChange,
   minRouteCount = 1,
+  filterSlot,
 }: MapContainer3DProps): JSX.Element {
   const { t } = useTranslation(["common", "map"]);
   const mapTheme = useThemeStore((s) => s.mapTheme);
@@ -108,8 +110,9 @@ export default function MapContainer3D({
         </div>
       )}
 
-      {/* FAB — bottom right, always on top */}
-      <div className="absolute bottom-4 right-4 z-20">
+      {/* Bottom-right stack: filter FAB + mode FAB */}
+      <div className="absolute bottom-4 right-4 z-20 flex flex-col items-end gap-2">
+        {filterSlot}
         <VisModeSelector
           current={visMode}
           onChange={onVisModeChange}
