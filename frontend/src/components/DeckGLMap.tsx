@@ -127,7 +127,7 @@ export function DeckGLMap({
       <Map
         ref={mapRef}
         initialViewState={INITIAL_VIEW_STATE}
-        mapStyle={isDarkMode && mapTheme !== "glassmorphism" ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
+        mapStyle={isDarkMode ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
         style={{ position: "absolute", inset: "0" }}
       >
         <DeckGLOverlay layers={layers} effects={effects} />
