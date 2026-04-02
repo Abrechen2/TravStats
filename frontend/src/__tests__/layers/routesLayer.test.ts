@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildRouteData } from "../../components/layers/routesLayer";
+import { buildRouteData, createRoutesLayers } from "../../components/layers/routesLayer";
 import type { GeoJSONFeature } from "../../types";
 
 const mockFlight: GeoJSONFeature = {
@@ -66,5 +66,22 @@ describe("buildRouteData", () => {
     };
     const { arcs } = buildRouteData([incomplete], 1);
     expect(arcs).toHaveLength(0);
+  });
+});
+
+describe("createRoutesLayers", () => {
+  it("returns 5 layers: arc, ring-inner, ring-outer, dot, labels", () => {
+    const layers = createRoutesLayers([mockFlight], 1);
+    expect(layers).toHaveLength(5);
+  });
+
+  it("layer ids include routes-ring-inner and routes-ring-outer", () => {
+    const layers = createRoutesLayers([mockFlight], 1);
+    const ids = layers.map((l) => l.id);
+    expect(ids).toContain("routes-ring-inner");
+    expect(ids).toContain("routes-ring-outer");
+    expect(ids).toContain("routes-dot");
+    expect(ids).toContain("routes-arc");
+    expect(ids).toContain("routes-labels");
   });
 });
