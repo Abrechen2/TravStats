@@ -177,6 +177,7 @@ export function createRoutesLayers(
     getPixelOffset: [0, -18],
     billboard: true,
     characterSet: "auto",
+    parameters: { depthCompare: "always" as const },
   });
 
   return [arcLayer, ringInnerLayer, ringOuterLayer, dotLayer, labelLayer];
