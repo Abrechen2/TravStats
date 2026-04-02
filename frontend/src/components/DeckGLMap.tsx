@@ -13,6 +13,7 @@ import { createTripsLayer, buildTripsData, getTimeRange } from "./layers/tripsLa
 import { createContourLayer } from "./layers/contourLayer";
 import { TimeSlider } from "./TimeSlider";
 import { useThemeStore } from "../store/themeStore";
+import { MAP_LAYER_COLORS } from "../types/mapTheme";
 
 const INITIAL_VIEW_STATE: MapViewState = {
   longitude: 10,
@@ -62,6 +63,8 @@ export function DeckGLMap({
   onFlightClick,
 }: DeckGLMapProps): JSX.Element {
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
+  const mapTheme = useThemeStore((state) => state.mapTheme);
+  const themeColors = MAP_LAYER_COLORS[mapTheme];
   const mapRef = useRef<MapRef>(null);
 
   const [currentTime, setCurrentTime] = useState<number>(0);
@@ -93,13 +96,13 @@ export function DeckGLMap({
   const layers = useMemo((): Layer[] => {
     switch (visMode) {
       case "routes":
-        return createRoutesLayers(flights, minRouteCount, onFlightClick);
+        return createRoutesLayers(flights, minRouteCount, onFlightClick, themeColors);
       case "heatmap":
         return [createHeatmapLayer(flights)];
       case "hexagon":
-        return [createHexagonLayer(flights)];
+        return [createHexagonLayer(flights, themeColors)];
       case "columns":
-        return [createColumnsLayer(flights)];
+        return [createColumnsLayer(flights, themeColors)];
       case "trips":
         return [createTripsLayer(trips, currentTime)];
       case "contour":
@@ -107,7 +110,7 @@ export function DeckGLMap({
       default:
         return [];
     }
-  }, [visMode, flights, minRouteCount, trips, currentTime, onFlightClick]);
+  }, [visMode, flights, minRouteCount, trips, currentTime, onFlightClick, themeColors]);
 
   // Only enable lighting for 3D modes where it makes a visual difference
   const effects = useMemo(

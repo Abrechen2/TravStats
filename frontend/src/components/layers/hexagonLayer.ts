@@ -1,5 +1,7 @@
 import { HexagonLayer } from "@deck.gl/aggregation-layers";
 import type { GeoJSONFeature } from "../../types";
+import type { MapLayerColors } from "../../types/mapTheme";
+import { MAP_LAYER_COLORS } from "../../types/mapTheme";
 
 export interface HexDatum {
   position: [number, number];
@@ -16,7 +18,10 @@ export function buildHexData(flights: GeoJSONFeature[]): HexDatum[] {
   return points;
 }
 
-export function createHexagonLayer(flights: GeoJSONFeature[]): HexagonLayer<HexDatum> {
+export function createHexagonLayer(
+  flights: GeoJSONFeature[],
+  themeColors?: MapLayerColors
+): HexagonLayer<HexDatum> {
   return new HexagonLayer<HexDatum>({
     id: "hexagon",
     data: buildHexData(flights),
@@ -25,13 +30,11 @@ export function createHexagonLayer(flights: GeoJSONFeature[]): HexagonLayer<HexD
     elevationScale: 5000,
     extruded: true,
     pickable: true,
-    colorRange: [
-      [100, 116, 139, 190], // slate-500 — low density
-      [99, 102, 241, 200], // indigo-500
-      [139, 92, 246, 210], // violet-500
-      [232, 160, 69, 215], // brand amber
-      [249, 115, 22, 220], // orange-500
-      [239, 68, 68, 230], // red-500 — peak density
-    ] as [number, number, number, number][],
+    colorRange: (themeColors?.hexRange ?? MAP_LAYER_COLORS.glassmorphism.hexRange) as [
+      number,
+      number,
+      number,
+      number,
+    ][],
   });
 }

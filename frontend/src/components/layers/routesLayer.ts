@@ -3,6 +3,7 @@ import type { Layer } from "@deck.gl/core";
 import type { GeoJSONFeature } from "../../types";
 import { calcQuantiles, getHeatmapColor } from "./layerTypes";
 import type { ArcDatum, PointDatum } from "./layerTypes";
+import type { MapLayerColors } from "../../types/mapTheme";
 
 function routeKey(a: string, b: string): string {
   return [a, b].sort().join("-");
@@ -21,7 +22,8 @@ function getCoordsFromFeature(
 
 export function buildRouteData(
   flights: GeoJSONFeature[],
-  minRouteCount: number
+  minRouteCount: number,
+  themeColors?: MapLayerColors
 ): { arcs: ArcDatum[]; points: PointDatum[] } {
   const routeCounts = new Map<string, number>();
   const routeFlightIds = new Map<string, string[]>();
@@ -78,7 +80,7 @@ export function buildRouteData(
 
     // Opacity scales with frequency: rare routes fade back, frequent ones glow
     const alpha = Math.min(100 + count * 14, 230) as number;
-    const color = getHeatmapColor(count, q25, q50, q75);
+    const color = getHeatmapColor(count, q25, q50, q75, themeColors);
     arcMap.set(key, {
       sourcePosition: coords.depCoord,
       targetPosition: coords.arrCoord,
@@ -95,9 +97,11 @@ export function buildRouteData(
 export function createRoutesLayers(
   flights: GeoJSONFeature[],
   minRouteCount: number,
-  onFlightClick?: (flightId: string) => void
+  onFlightClick?: (flightId: string) => void,
+  themeColors?: MapLayerColors
 ): Layer[] {
-  const { arcs, points } = buildRouteData(flights, minRouteCount);
+  const { arcs, points } = buildRouteData(flights, minRouteCount, themeColors);
+  const dotRgb = themeColors?.airportDot ?? ([232, 160, 69] as [number, number, number]);
 
   // Arc width scales with route frequency — dominant corridors are visually thicker
   const arcLayer = new ArcLayer<ArcDatum>({
@@ -125,7 +129,7 @@ export function createRoutesLayers(
     getPosition: (d) => d.position,
     getRadius: (d) => Math.min(3 + d.count * 0.4, 10) * 1000,
     getFillColor: [0, 0, 0, 0],
-    getLineColor: [232, 160, 69, 180],
+    getLineColor: [...dotRgb, 180] as [number, number, number, number],
     stroked: true,
     filled: false,
     lineWidthMinPixels: 1.2,
@@ -138,7 +142,7 @@ export function createRoutesLayers(
     data: points,
     getPosition: (d) => d.position,
     getRadius: () => 2200,
-    getFillColor: [232, 160, 69, 220],
+    getFillColor: [...dotRgb, 220] as [number, number, number, number],
     stroked: false,
     pickable: false,
   });
