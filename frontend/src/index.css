@@ -244,18 +244,18 @@ html.dark {
 /* ─── Map Theme Tokens ───────────────────────────────────── */
 
 [data-map-theme="glassmorphism"] {
-  --map-accent: #818cf8;
-  --map-fab-gradient: linear-gradient(135deg, #4f46e5, #818cf8);
-  --map-fab-shadow: rgba(99, 102, 241, 0.55);
-  --map-fab-shadow-open: 0 4px 24px rgba(99, 102, 241, 0.7), 0 0 40px rgba(99, 102, 241, 0.3);
-  --map-active-bg: rgba(99, 102, 241, 0.25);
-  --map-active-border: rgba(99, 102, 241, 0.5);
-  --map-active-color: #a5b4fc;
-  --map-active-label-bg: rgba(79, 70, 229, 0.25);
-  --map-active-label-border: rgba(99, 102, 241, 0.35);
-  --map-badge-bg: rgba(79, 70, 229, 0.2);
-  --map-badge-border: rgba(99, 102, 241, 0.3);
-  --map-badge-color: #a5b4fc;
+  --map-accent: #e8a045;
+  --map-fab-gradient: linear-gradient(135deg, #c8842a, #e8a045);
+  --map-fab-shadow: rgba(232, 160, 69, 0.4);
+  --map-fab-shadow-open: 0 4px 24px rgba(232, 160, 69, 0.6), 0 0 40px rgba(232, 160, 69, 0.2);
+  --map-active-bg: rgba(232, 160, 69, 0.2);
+  --map-active-border: rgba(232, 160, 69, 0.45);
+  --map-active-color: #fcd99a;
+  --map-active-label-bg: rgba(200, 132, 42, 0.2);
+  --map-active-label-border: rgba(232, 160, 69, 0.35);
+  --map-badge-bg: rgba(255, 255, 255, 0.06);
+  --map-badge-border: rgba(255, 255, 255, 0.12);
+  --map-badge-color: #94a3b8;
 }
 
 [data-map-theme="classic"] {
@@ -271,9 +271,4 @@ html.dark {
   --map-badge-bg: rgba(232, 160, 69, 0.1);
   --map-badge-border: rgba(232, 160, 69, 0.25);
   --map-badge-color: #e8a045;
-}
-
-/* Blue tile tint — glassmorphism dark mode only (positron light style base) */
-html.dark [data-map-theme="glassmorphism"] canvas.maplibregl-canvas {
-  filter: sepia(1) hue-rotate(195deg) saturate(4) brightness(0.35);
 }
