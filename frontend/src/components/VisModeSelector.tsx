@@ -1,4 +1,7 @@
+import { useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import type { VisMode } from "../types/visMode";
+import { useTranslation } from "../hooks/useTranslation";
 
 function RoutesIcon(): JSX.Element {
   return (
@@ -99,59 +102,201 @@ function ContourIcon(): JSX.Element {
   );
 }
 
-interface VisModeButton {
-  mode: VisMode;
-  label: string;
-  Icon: () => JSX.Element;
+function PlusIcon(): JSX.Element {
+  return (
+    <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <line
+        x1="8"
+        y1="2"
+        x2="8"
+        y2="14"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <line
+        x1="2"
+        y1="8"
+        x2="14"
+        y2="8"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
 }
 
-const BUTTONS: VisModeButton[] = [
-  { mode: "routes", label: "Routes", Icon: RoutesIcon },
-  { mode: "globe", label: "Globe", Icon: GlobeIcon },
-  { mode: "heatmap", label: "Heat", Icon: HeatmapIcon },
-  { mode: "hexagon", label: "Hex", Icon: HexagonIcon },
-  { mode: "columns", label: "3D", Icon: ColumnsIcon },
-  { mode: "trips", label: "Trips", Icon: TripsIcon },
-  { mode: "contour", label: "Iso", Icon: ContourIcon },
+const MODE_ICONS: Record<VisMode, () => JSX.Element> = {
+  routes: RoutesIcon,
+  globe: GlobeIcon,
+  heatmap: HeatmapIcon,
+  hexagon: HexagonIcon,
+  columns: ColumnsIcon,
+  trips: TripsIcon,
+  contour: ContourIcon,
+};
+
+const MODES: { mode: VisMode; labelKey: string }[] = [
+  { mode: "routes", labelKey: "map:visMode.routes" },
+  { mode: "globe", labelKey: "map:visMode.globe" },
+  { mode: "heatmap", labelKey: "map:visMode.heatmap" },
+  { mode: "hexagon", labelKey: "map:visMode.hexagon" },
+  { mode: "columns", labelKey: "map:visMode.columns" },
+  { mode: "trips", labelKey: "map:visMode.trips" },
+  { mode: "contour", labelKey: "map:visMode.contour" },
 ];
 
 interface VisModeSeelctorProps {
   current: VisMode;
   onChange: (mode: VisMode) => void;
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-export function VisModeSelector({ current, onChange }: VisModeSeelctorProps): JSX.Element {
+export function VisModeSelector({
+  current,
+  onChange,
+  isOpen,
+  onOpenChange,
+}: VisModeSeelctorProps): JSX.Element {
+  const { t } = useTranslation("map");
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen) onOpenChange(false);
+    },
+    [isOpen, onOpenChange]
+  );
+
+  useEffect(() => {
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
+
+  const handleModeClick = useCallback(
+    (mode: VisMode) => {
+      onChange(mode);
+      onOpenChange(false);
+    },
+    [onChange, onOpenChange]
+  );
+
+  const ActiveIcon = MODE_ICONS[current];
+
   return (
-    <div
-      className="flex gap-0.5 p-1 rounded-xl border"
-      style={{
-        background: "rgba(13,17,23,0.92)",
-        borderColor: "rgba(48,54,61,0.8)",
-        backdropFilter: "blur(12px)",
-      }}
-    >
-      {BUTTONS.map(({ mode, label, Icon }) => {
-        const active = current === mode;
-        return (
-          <button
-            key={mode}
-            title={label}
-            aria-label={label}
-            aria-pressed={active}
-            onClick={() => onChange(mode)}
-            className="flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg transition-all duration-150"
-            style={{
-              background: active ? "rgba(232,160,69,0.15)" : "transparent",
-              color: active ? "#e8a045" : "#8b949e",
-            }}
+    <div className="relative flex flex-col items-end gap-1.5">
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.15 }}
+            className="flex flex-col items-end gap-1.5"
           >
-            <Icon />
-            <span className="text-[9px] font-medium leading-none tracking-wide uppercase">
-              {label}
-            </span>
-          </button>
-        );
-      })}
+            {[...MODES].reverse().map(({ mode, labelKey }) => {
+              const active = current === mode;
+              const Icon = MODE_ICONS[mode];
+              return (
+                <button
+                  key={mode}
+                  aria-label={t(labelKey)}
+                  aria-pressed={active}
+                  onClick={() => handleModeClick(mode)}
+                  className="flex items-center gap-2 cursor-pointer border-none p-0 bg-transparent"
+                >
+                  <span
+                    style={{
+                      padding: "3px 8px",
+                      borderRadius: "6px",
+                      fontSize: "9px",
+                      fontFamily: "'Inter', sans-serif",
+                      fontWeight: active ? 600 : 400,
+                      color: active ? "var(--map-active-color)" : "rgba(148,163,184,0.7)",
+                      background: active ? "var(--map-active-label-bg)" : "rgba(15,12,41,0.7)",
+                      border: active
+                        ? "1px solid var(--map-active-label-border)"
+                        : "1px solid transparent",
+                      backdropFilter: "blur(8px)",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {t(labelKey)}
+                    {active ? " ✓" : ""}
+                  </span>
+                  <div
+                    style={{
+                      width: "36px",
+                      height: "36px",
+                      borderRadius: "11px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: active ? "var(--map-active-bg)" : "rgba(255,255,255,0.06)",
+                      border: active
+                        ? "1px solid var(--map-active-border)"
+                        : "1px solid rgba(255,255,255,0.1)",
+                      backdropFilter: "blur(12px)",
+                      boxShadow: active ? "0 0 12px var(--map-fab-shadow)" : "none",
+                      color: active ? "var(--map-active-color)" : "rgba(148,163,184,0.6)",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Icon />
+                  </div>
+                </button>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Current mode badge — shown when FAB is closed */}
+      {!isOpen && (
+        <div
+          className="absolute right-12 top-1/2 -translate-y-1/2 pointer-events-none"
+          style={{
+            background: "var(--map-badge-bg)",
+            backdropFilter: "blur(8px)",
+            border: "1px solid var(--map-badge-border)",
+            borderRadius: "6px",
+            padding: "3px 8px",
+            fontSize: "9px",
+            color: "var(--map-badge-color)",
+            fontFamily: "'Inter', sans-serif",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {t(`map:visMode.${current}`)} ◀
+        </div>
+      )}
+
+      {/* FAB button */}
+      <motion.button
+        onClick={() => onOpenChange(!isOpen)}
+        aria-label={t("map:visMode.label")}
+        aria-expanded={isOpen}
+        whileTap={{ scale: 0.92 }}
+        style={{
+          width: "44px",
+          height: "44px",
+          borderRadius: "14px",
+          background: "var(--map-fab-gradient)",
+          border: "1px solid rgba(255,255,255,0.15)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          cursor: "pointer",
+          boxShadow: isOpen ? "var(--map-fab-shadow-open)" : `0 4px 24px var(--map-fab-shadow)`,
+          color: "white",
+          flexShrink: 0,
+        }}
+      >
+        <motion.div animate={{ rotate: isOpen ? 45 : 0 }} transition={{ duration: 0.2 }}>
+          {isOpen ? <PlusIcon /> : <ActiveIcon />}
+        </motion.div>
+      </motion.button>
     </div>
   );
 }
