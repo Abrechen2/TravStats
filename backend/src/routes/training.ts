@@ -14,6 +14,7 @@ import { enrichFlightAirports } from '../services/airportLookup';
 import { extractEmailFromFile } from '../services/emailExtractor';
 import { Prisma } from '@prisma/client';
 import { trainingTriggerLimiter } from '../middleware/rateLimit';
+import { deriveTemplateFromAnnotation } from '../services/parsers/userTemplates/deriver';
 
 const router = Router();
 
@@ -252,6 +253,19 @@ router.post(
 
       const flightsCreated = await createFlightsFromGroundTruth(userId, payload.extractedData);
 
+      // Derive parser template from annotation (non-blocking; errors are logged but not fatal)
+      let templateId: string | undefined;
+      if (
+        payload.annotations &&
+        typeof (payload.annotations as Record<string, unknown>).textSelections !== "undefined"
+      ) {
+        try {
+          templateId = await deriveTemplateFromAnnotation(id, userId);
+        } catch (err: unknown) {
+          logger.warn({ err, trainingDataId: id }, "TemplateDeriver failed — non-critical");
+        }
+      }
+
       logger.info({
         operation: 'training_annotate',
         message: 'Training data annotated',
@@ -264,6 +278,7 @@ router.post(
         annotations: updated.annotations,
         extractedData: updated.extractedData,
         flightsCreated,
+        templateId,
       });
     } catch (error) {
       next(error);
