@@ -27,6 +27,8 @@ import { getOpenAITextParser } from './text/openaiTextParser';
 import { getClaudeTextParser } from './text/claudeTextParser';
 import { getRegexParser } from './text/regexParser';
 import { TemplateParser } from './text/templateParser';
+import { findMatchingTemplate } from './userTemplates/matcher';
+import { applyUserTemplate } from './userTemplates/engine';
 
 /**
  * Parser Factory
@@ -809,6 +811,30 @@ export async function parseEmail(
       },
     });
   }
+
+  // Step 0: User-derived regex templates (before HTML-selector templates)
+  if (config.userId) {
+    const fromMatch = /^From:\s*(.+)$/im.exec(text);
+    const fromAddress = fromMatch ? fromMatch[1].trim() : "";
+
+    const userTemplate = await findMatchingTemplate(config.userId, fromAddress, subject, text);
+    if (userTemplate) {
+      const userResults = applyUserTemplate(userTemplate, subject, text);
+      const bestConfidence = userResults[0]?.parserConfidence ?? 0;
+      if (bestConfidence >= 80) {
+        logger.info(
+          { templateName: userTemplate.name, flights: userResults.length, confidence: bestConfidence },
+          "[Parser Factory] User-derived template matched (confidence >=80%), skipping LLM chain"
+        );
+        return {
+          flights: userResults as ParsedBooking[],
+          provider: "regex" as const,
+          fallbackUsed: false,
+        };
+      }
+    }
+  }
+  // End step 0 — fall through to HTML-selector templates
 
   // Template-Parser first (before LLM chain)
   const templateParser = new TemplateParser();
