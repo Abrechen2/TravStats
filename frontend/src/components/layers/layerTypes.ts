@@ -24,10 +24,10 @@ export interface TripDatum {
 export type HeatmapTier = "low" | "medium" | "high" | "critical";
 
 export const HEATMAP_COLORS: Record<HeatmapTier, [number, number, number]> = {
-  low: [100, 116, 139], // slate-500 — unchanged
-  medium: [99, 102, 241], // indigo-500
-  high: [139, 92, 246], // violet-500
-  critical: [34, 211, 153], // emerald-400
+  low: [100, 116, 139], // slate-500
+  medium: [232, 160, 69], // amber-400
+  high: [249, 115, 22], // orange-500
+  critical: [239, 68, 68], // red-500
 };
 
 export function getHeatmapColor(
