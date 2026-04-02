@@ -10,11 +10,99 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { triggerTraining, shouldTriggerTraining, cancelTraining, analyzeTrainingData } from '../services/trainingService';
 import { ParsedBooking } from '../services/bookingParser';
+import { enrichFlightAirports } from '../services/airportLookup';
 import { extractEmailFromFile } from '../services/emailExtractor';
 import { Prisma } from '@prisma/client';
 import { trainingTriggerLimiter } from '../middleware/rateLimit';
 
 const router = Router();
+
+/**
+ * Attempt to create real flights from training ground truth data.
+ * Skips entries that lack minimum required data (airport codes + times).
+ * Silently skips duplicates and enrichment failures — never blocks the save.
+ */
+async function createFlightsFromGroundTruth(userId: string, extractedData: unknown): Promise<number> {
+  if (!Array.isArray(extractedData)) return 0;
+
+  let created = 0;
+  for (const entry of extractedData) {
+    const b = entry as Record<string, unknown>;
+    const depCode = b.departureCode as string | undefined;
+    const arrCode = b.arrivalCode as string | undefined;
+    const depTimeStr = b.departureTime as string | undefined;
+    const arrTimeStr = b.arrivalTime as string | undefined;
+
+    if (!depCode || !arrCode || !depTimeStr || !arrTimeStr) continue;
+
+    let depTime: Date;
+    let arrTime: Date;
+    try {
+      depTime = new Date(depTimeStr);
+      arrTime = new Date(arrTimeStr);
+      if (isNaN(depTime.getTime()) || isNaN(arrTime.getTime())) continue;
+    } catch {
+      continue;
+    }
+
+    try {
+      const enriched = await enrichFlightAirports(
+        { departure: { iata: depCode }, arrival: { iata: arrCode } }
+      );
+
+      const depLat = enriched.departure.lat;
+      const depLon = enriched.departure.lon;
+      const arrLat = enriched.arrival.lat;
+      const arrLon = enriched.arrival.lon;
+      if (depLat == null || depLon == null || arrLat == null || arrLon == null) continue;
+
+      // Duplicate check: same user + same route + same departure day
+      const dayStart = new Date(depTime);
+      dayStart.setUTCHours(0, 0, 0, 0);
+      const dayEnd = new Date(depTime);
+      dayEnd.setUTCHours(23, 59, 59, 999);
+
+      const existing = await prisma.flight.findFirst({
+        where: { userId, depIata: depCode, arrIata: arrCode, departureTime: { gte: dayStart, lte: dayEnd } },
+        select: { id: true },
+      });
+      if (existing) continue;
+
+      const flightNumber = b.flightNumber as string | undefined;
+      await prisma.flight.create({
+        data: {
+          userId,
+          flightNumber: flightNumber ?? null,
+          airline: (b.airline as string | undefined) ?? (flightNumber ? flightNumber.slice(0, 2) : null),
+          depIata: enriched.departure.iata ?? depCode,
+          depIcao: enriched.departure.icao ?? null,
+          depName: enriched.departure.name ?? null,
+          depLat,
+          depLon,
+          arrIata: enriched.arrival.iata ?? arrCode,
+          arrIcao: enriched.arrival.icao ?? null,
+          arrName: enriched.arrival.name ?? null,
+          arrLat,
+          arrLon,
+          departureTime: depTime,
+          arrivalTime: arrTime,
+          bookingReference: (b.pnr as string | undefined) ?? (b.bookingReference as string | undefined) ?? null,
+          seatNumber: (b.seat as string | undefined) ?? null,
+          gate: (b.gate as string | undefined) ?? null,
+          terminal: (b.terminal as string | undefined) ?? null,
+          status: 'flown',
+          dataSource: 'email_import',
+          lastModifiedBy: 'user',
+        },
+      });
+      created++;
+    } catch (err) {
+      logger.warn({ err, depCode, arrCode }, '[Training] Failed to create flight from ground truth, skipping');
+    }
+  }
+
+  return created;
+}
 
 // All routes require authentication and training access
 router.use(authenticate);
@@ -162,13 +250,12 @@ router.post(
         },
       });
 
+      const flightsCreated = await createFlightsFromGroundTruth(userId, payload.extractedData);
+
       logger.info({
         operation: 'training_annotate',
         message: 'Training data annotated',
-        context: {
-          userId,
-          trainingDataId: id,
-        },
+        context: { userId, trainingDataId: id, flightsCreated },
       });
 
       res.json({
@@ -176,6 +263,7 @@ router.post(
         status: updated.status,
         annotations: updated.annotations,
         extractedData: updated.extractedData,
+        flightsCreated,
       });
     } catch (error) {
       next(error);
@@ -216,6 +304,8 @@ router.post(
           ...(payload.tags !== undefined && { tags: payload.tags }),
         },
       });
+
+      await createFlightsFromGroundTruth(userId, payload.extractedData);
 
       // Check if we should trigger training
       let trainingJobId: string | null = null;

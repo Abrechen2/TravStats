@@ -1,7 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { trainingApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
-import { Flight, getFlightColorClass, combineDateTime, splitDateTime } from "./types";
+import {
+  Flight,
+  getFlightColorClass,
+  combineDateTime,
+  splitDateTime,
+  parseAnnotationText,
+} from "./types";
 import { useTranslation } from "../../hooks/useTranslation";
 
 interface EmailAnnotationProps {
@@ -261,31 +267,20 @@ export default function EmailAnnotation({
         const label = selectedText.label;
 
         if (label === "departureDate" || label === "departureTime") {
-          // Try to parse ISO format or separate date/time
-          const { date, time } = splitDateTime(text);
-          if (label === "departureDate" && date) {
-            flight.departureDate = date;
-          } else if (label === "departureDate" && !date) {
-            // Assume it's just a date string
-            flight.departureDate = text;
+          const { date, time } = parseAnnotationText(text);
+          if (label === "departureDate") {
+            flight.departureDate = date ?? text;
           }
-          if (label === "departureTime" && time) {
-            flight.departureTime = time;
-          } else if (label === "departureTime" && !time) {
-            // Assume it's just a time string
-            flight.departureTime = text;
+          if (label === "departureTime") {
+            flight.departureTime = time ?? text;
           }
         } else if (label === "arrivalDate" || label === "arrivalTime") {
-          const { date, time } = splitDateTime(text);
-          if (label === "arrivalDate" && date) {
-            flight.arrivalDate = date;
-          } else if (label === "arrivalDate" && !date) {
-            flight.arrivalDate = text;
+          const { date, time } = parseAnnotationText(text);
+          if (label === "arrivalDate") {
+            flight.arrivalDate = date ?? text;
           }
-          if (label === "arrivalTime" && time) {
-            flight.arrivalTime = time;
-          } else if (label === "arrivalTime" && !time) {
-            flight.arrivalTime = text;
+          if (label === "arrivalTime") {
+            flight.arrivalTime = time ?? text;
           }
         } else {
           // Simple field mapping
