@@ -433,7 +433,8 @@ export class RegexTextParser implements ITextParser {
   private extractSharedPNR(source: string): string | undefined {
     const sourceUpper = source.toUpperCase();
     const pnrFalsePositives = ['VIELEN', 'DANKEN', 'SEHREN', 'WICHTIG', 'BESTEN', 'GRUSS', 'GRUESSE', 'HERZLI', 'FREUND', 'BESTEN', 'SCHONEN', 'GUTEN', 'GUTER', 'GUTES', 'NEUEN', 'NEUER', 'NEUES', 'ALTE', 'ALTEN', 'ALTES', 'GROSS', 'GROSSE', 'KLEIN', 'KLEINE', 'SCHON', 'SCHONE', 'SCHONER', 'SCHONES', 'NEUE', 'NEUER', 'NEUES', 'ALTE', 'ALTEN', 'ALTES', 'GROSS', 'GROSSE', 'KLEIN', 'KLEINE'];
-    const pnrMatches = Array.from(sourceUpper.matchAll(PATTERNS.PNR));
+    const pnrPattern = /\b([A-Z0-9]{6})\b/g;
+    const pnrMatches = Array.from(sourceUpper.matchAll(pnrPattern));
     for (const match of pnrMatches) {
       const pnr = match[1];
       if (!pnrFalsePositives.includes(pnr) && /[0-9]/.test(pnr)) {
@@ -495,7 +496,7 @@ export class RegexTextParser implements ITextParser {
     // PNR - improved to avoid false matches like "VIELEN"
     // Common false positives (German words, common text)
     const pnrFalsePositives = ['VIELEN', 'DANKEN', 'SEHREN', 'WICHTIG', 'BESTEN', 'GRUSS', 'GRUESSE', 'HERZLI', 'FREUND', 'BESTEN', 'SCHONEN', 'GUTEN', 'GUTER', 'GUTES', 'NEUEN', 'NEUER', 'NEUES', 'ALTE', 'ALTEN', 'ALTES', 'GROSS', 'GROSSE', 'KLEIN', 'KLEINE', 'SCHON', 'SCHONE', 'SCHONER', 'SCHONES', 'NEUE', 'NEUER', 'NEUES', 'ALTE', 'ALTEN', 'ALTES', 'GROSS', 'GROSSE', 'KLEIN', 'KLEINE'];
-    const pnrMatches = Array.from(sourceUpper.matchAll(PATTERNS.PNR));
+    const pnrMatches = Array.from(sourceUpper.matchAll(/\b([A-Z0-9]{6})\b/g));
     for (const match of pnrMatches) {
       const pnr = match[1];
       // PNR should be alphanumeric, not all letters (common words)
