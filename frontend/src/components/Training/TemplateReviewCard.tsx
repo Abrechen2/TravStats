@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { parserTemplatesApi, type UserTemplateItem } from "../../lib/api";
 import { useTranslation } from "../../hooks/useTranslation";
+import { logger } from "../../lib/logger";
 
 interface TemplateReviewCardProps {
   templateId: string;
@@ -16,25 +17,38 @@ export default function TemplateReviewCard({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    parserTemplatesApi
-      .list()
-      .then((list) => {
+    async function loadTemplate(): Promise<void> {
+      try {
+        const list = await parserTemplatesApi.list();
         const found = list.find((tpl) => tpl.id === templateId);
         setTemplate(found ?? null);
-      })
-      .finally(() => setLoading(false));
+      } catch (err: unknown) {
+        logger.error({ err }, "TemplateReviewCard: failed to load template");
+      } finally {
+        setLoading(false);
+      }
+    }
+    void loadTemplate();
   }, [templateId]);
 
   const handleActivate = async (): Promise<void> => {
     if (!template) return;
-    await parserTemplatesApi.setStatus(template.id, "active");
-    setTemplate({ ...template, status: "active" });
+    try {
+      await parserTemplatesApi.setStatus(template.id, "active");
+      setTemplate({ ...template, status: "active" });
+    } catch (err: unknown) {
+      logger.error({ err }, "TemplateReviewCard: failed to activate template");
+    }
   };
 
   const handleDisable = async (): Promise<void> => {
     if (!template) return;
-    await parserTemplatesApi.setStatus(template.id, "disabled");
-    setTemplate({ ...template, status: "disabled" });
+    try {
+      await parserTemplatesApi.setStatus(template.id, "disabled");
+      setTemplate({ ...template, status: "disabled" });
+    } catch (err: unknown) {
+      logger.error({ err }, "TemplateReviewCard: failed to disable template");
+    }
   };
 
   if (loading) return null;
