@@ -122,9 +122,9 @@ export function createRoutesLayers(
       : undefined,
   });
 
-  // Outer ring — hollow circle around each airport
-  const ringLayer = new ScatterplotLayer<PointDatum>({
-    id: "routes-ring",
+  // Inner ring — close to the airport dot
+  const ringInnerLayer = new ScatterplotLayer<PointDatum>({
+    id: "routes-ring-inner",
     data: points,
     getPosition: (d) => d.position,
     getRadius: (d) => Math.min(3 + d.count * 0.4, 10) * 1000,
@@ -133,6 +133,20 @@ export function createRoutesLayers(
     stroked: true,
     filled: false,
     lineWidthMinPixels: 1.2,
+    pickable: false,
+  });
+
+  // Outer ring — faint halo
+  const ringOuterLayer = new ScatterplotLayer<PointDatum>({
+    id: "routes-ring-outer",
+    data: points,
+    getPosition: (d) => d.position,
+    getRadius: (d) => Math.min(3 + d.count * 0.4, 10) * 1800,
+    getFillColor: [0, 0, 0, 0],
+    getLineColor: [...dotRgb, 60] as [number, number, number, number],
+    stroked: true,
+    filled: false,
+    lineWidthMinPixels: 0.8,
     pickable: false,
   });
 
@@ -165,5 +179,5 @@ export function createRoutesLayers(
     characterSet: "auto",
   });
 
-  return [arcLayer, ringLayer, dotLayer, labelLayer];
+  return [arcLayer, ringInnerLayer, ringOuterLayer, dotLayer, labelLayer];
 }
