@@ -25,6 +25,7 @@ CLAUDE.local.md
 !CLAUDE.md
 !CONTRIBUTING.md
 !docs/*.md
+!docs/**/*.md
 
 
 # Build outputs

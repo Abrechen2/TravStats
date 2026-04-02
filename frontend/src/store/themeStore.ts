@@ -1,11 +1,14 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { logger } from "../lib/logger";
+import type { MapTheme } from "../types/mapTheme";
 
 interface ThemeState {
   isDarkMode: boolean;
+  mapTheme: MapTheme;
   toggleDarkMode: () => void;
   setDarkMode: (isDark: boolean) => void;
+  setMapTheme: (theme: MapTheme) => void;
 }
 
 const updateDarkMode = (isDark: boolean) => {
@@ -58,6 +61,7 @@ export const useThemeStore = create<ThemeState>()(
 
       return {
         isDarkMode: initialTheme,
+        mapTheme: "glassmorphism" as MapTheme,
         toggleDarkMode: () =>
           set((state) => {
             const newMode = !state.isDarkMode;
@@ -68,6 +72,7 @@ export const useThemeStore = create<ThemeState>()(
           updateDarkMode(isDark);
           set({ isDarkMode: isDark });
         },
+        setMapTheme: (theme) => set({ mapTheme: theme }),
       };
     },
     {

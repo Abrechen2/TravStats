@@ -5,7 +5,6 @@ import type { Flight, FlightFilters } from "../types";
 import { API_LIMITS } from "../lib/constants";
 import { useTranslation } from "../hooks/useTranslation";
 import { logger } from "../lib/logger";
-
 interface FiltersProps {
   onFilterChange: (filters: FlightFilters & { minRouteCount?: number }) => void;
 }
@@ -211,11 +210,12 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
     <div ref={filterRef} className="relative">
       <button
         onClick={() => setShowFilters(!showFilters)}
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg shadow-sm transition-colors"
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg transition-colors"
         style={{
-          background: "var(--bg-surface)",
-          color: "var(--text-primary)",
-          border: "1px solid var(--color-border)",
+          background: "rgba(255, 255, 255, 0.06)",
+          color: "var(--text-secondary, #94a3b8)",
+          border: "1px solid rgba(255, 255, 255, 0.12)",
+          backdropFilter: "blur(8px)",
         }}
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
