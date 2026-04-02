@@ -362,7 +362,7 @@ export default function GlobeView({
       {/* Heatmap Legend */}
       {arcsData.length > 0 && (
         <div
-          className="absolute bottom-4 right-4 z-[9999] bg-[var(--bg-surface)] rounded-lg shadow-lg p-3 border border-[var(--color-border)]"
+          className="absolute bottom-4 left-4 z-[9999] bg-[var(--bg-surface)] rounded-lg shadow-lg p-3 border border-[var(--color-border)]"
           style={{ touchAction: "auto", pointerEvents: "auto" }}
         >
           <div className="text-xs font-semibold text-[var(--text-primary)] mb-2">
