@@ -19,11 +19,11 @@ export default function TemplateReviewCard({
   useEffect(() => {
     async function loadTemplate(): Promise<void> {
       try {
-        const list = await parserTemplatesApi.list();
-        const found = list.find((tpl) => tpl.id === templateId);
-        setTemplate(found ?? null);
+        const found = await parserTemplatesApi.getById(templateId);
+        setTemplate(found);
       } catch (err: unknown) {
         logger.error({ err }, "TemplateReviewCard: failed to load template");
+        setTemplate(null);
       } finally {
         setLoading(false);
       }

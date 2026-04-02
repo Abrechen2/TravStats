@@ -2136,6 +2136,10 @@ export const parserTemplatesApi = {
     const res = await api.get<{ templates: UserTemplateItem[] }>("/parser-templates");
     return res.data.templates;
   },
+  getById: async (id: string): Promise<UserTemplateItem> => {
+    const res = await api.get<{ template: UserTemplateItem }>(`/parser-templates/${id}`);
+    return res.data.template;
+  },
   setStatus: async (id: string, status: "active" | "disabled" | "pending"): Promise<void> => {
     await api.patch(`/parser-templates/${id}`, { status });
   },

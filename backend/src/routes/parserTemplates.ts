@@ -21,6 +21,22 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   }
 });
 
+// GET /api/v1/parser-templates/:id
+router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId!;
+    const { id } = req.params;
+
+    const template = await prisma.parserTemplate.findUnique({ where: { id } });
+    if (!template) throw new AppError("Template not found", 404);
+    if (template.userId !== userId) throw new AppError("Unauthorized", 403);
+
+    res.json({ template });
+  } catch (error) {
+    next(error);
+  }
+});
+
 const patchSchema = z.object({
   status: z.enum(["active", "disabled", "pending"]),
 });
