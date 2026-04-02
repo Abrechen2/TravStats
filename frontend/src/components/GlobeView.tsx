@@ -382,9 +382,9 @@ export default function GlobeView({
       <Globe
         ref={globeRef}
         style={{ width: "100%", height: "100%" }}
-        globeImageUrl="/earth-day.jpg"
+        globeImageUrl="/earth-night.jpg"
         bumpImageUrl="/earth-topology.png"
-        backgroundImageUrl={null}
+        backgroundImageUrl="/night-sky.png"
         arcsData={arcsData}
         arcColor={(arc: ArcData) => arc.color}
         arcStroke={dynamicStroke}
@@ -411,7 +411,7 @@ export default function GlobeView({
           return Math.min(Math.sqrt(p.size) * 0.08, 0.3);
         }}
         pointLabel={pointLabel}
-        atmosphereColor={isDarkMode ? "#4a5568" : "#3b82f6"}
+        atmosphereColor={isDarkMode ? "#e8a045" : "#3b82f6"}
         atmosphereAltitude={0.25}
         enablePointerInteraction={true}
         animateIn={true}
