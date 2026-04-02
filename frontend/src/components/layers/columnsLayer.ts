@@ -1,6 +1,7 @@
 import { ColumnLayer } from "@deck.gl/layers";
 import type { GeoJSONFeature } from "../../types";
 import { calcQuantiles, getHeatmapColor } from "./layerTypes";
+import type { MapLayerColors } from "../../types/mapTheme";
 
 export interface ColumnDatum {
   position: [number, number];
@@ -8,7 +9,10 @@ export interface ColumnDatum {
   color: [number, number, number, number];
 }
 
-export function buildColumnData(flights: GeoJSONFeature[]): ColumnDatum[] {
+export function buildColumnData(
+  flights: GeoJSONFeature[],
+  themeColors?: MapLayerColors
+): ColumnDatum[] {
   const counts = new Map<string, { position: [number, number]; count: number }>();
 
   for (const f of flights) {
@@ -35,12 +39,20 @@ export function buildColumnData(flights: GeoJSONFeature[]): ColumnDatum[] {
 
   return points.map((p) => ({
     ...p,
-    color: [...getHeatmapColor(p.count, q25, q50, q75), 220] as [number, number, number, number],
+    color: [...getHeatmapColor(p.count, q25, q50, q75, themeColors), 220] as [
+      number,
+      number,
+      number,
+      number,
+    ],
   }));
 }
 
-export function createColumnsLayer(flights: GeoJSONFeature[]): ColumnLayer<ColumnDatum> {
-  const data = buildColumnData(flights);
+export function createColumnsLayer(
+  flights: GeoJSONFeature[],
+  themeColors?: MapLayerColors
+): ColumnLayer<ColumnDatum> {
+  const data = buildColumnData(flights, themeColors);
   const maxCount = Math.max(...data.map((d) => d.count), 1);
 
   return new ColumnLayer<ColumnDatum>({
