@@ -20,7 +20,11 @@ const RE_DETAILS_BLOCK_DEFAULT = new RegExp(
   "g"
 );
 
+// Max body size for user-derived regex application (mitigates ReDoS on large emails)
+const MAX_BODY_BYTES = 200_000;
+
 function applyPattern(pattern: string, body: string): string | undefined {
+  if (body.length > MAX_BODY_BYTES) return undefined;
   try {
     const re = new RegExp(pattern, "s");
     const m = re.exec(body);
