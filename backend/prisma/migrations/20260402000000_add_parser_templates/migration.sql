@@ -39,3 +39,6 @@ ALTER TABLE "parser_templates" ADD CONSTRAINT "parser_templates_user_id_fkey" FO
 
 -- AddForeignKey
 ALTER TABLE "template_corrections" ADD CONSTRAINT "template_corrections_template_id_fkey" FOREIGN KEY ("template_id") REFERENCES "parser_templates"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "template_corrections" ADD CONSTRAINT "template_corrections_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
