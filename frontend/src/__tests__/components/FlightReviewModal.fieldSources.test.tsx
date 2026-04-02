@@ -19,7 +19,7 @@ const parsedData: ParsedBooking = {
 
 vi.mock("../../lib/api", () => ({
   airportsApi: { search: vi.fn().mockResolvedValue([]) },
-  parseApi: { feedbackCorrection: vi.fn() },
+  parseApi: { submitParserCorrection: vi.fn() },
 }));
 vi.mock("../../store/authStore", () => ({
   useAuthStore: () => ({ user: { id: "u1" } }),
