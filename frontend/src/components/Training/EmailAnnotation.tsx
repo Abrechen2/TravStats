@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { trainingApi } from "../../lib/api";
+import TemplateReviewCard from "./TemplateReviewCard";
 import { logger } from "../../lib/logger";
 import {
   Flight,
@@ -135,6 +136,7 @@ export default function EmailAnnotation({
   const [tagInput, setTagInput] = useState("");
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [derivedTemplateId, setDerivedTemplateId] = useState<string | null>(null);
   const textContainerRef = useRef<HTMLDivElement>(null);
   const labelSelectorRef = useRef<HTMLDivElement>(null);
 
@@ -374,10 +376,25 @@ export default function EmailAnnotation({
         return converted;
       });
 
+      let response;
       if (andTrain) {
-        await trainingApi.saveAndTrain(trainingDataId, annotationData, flightsForBackend, tags);
+        response = await trainingApi.saveAndTrain(
+          trainingDataId,
+          annotationData,
+          flightsForBackend,
+          tags
+        );
       } else {
-        await trainingApi.annotate(trainingDataId, annotationData, flightsForBackend, tags);
+        response = await trainingApi.annotate(
+          trainingDataId,
+          annotationData,
+          flightsForBackend,
+          tags
+        );
+      }
+
+      if (response.templateId) {
+        setDerivedTemplateId(response.templateId);
       }
 
       onComplete();
@@ -790,6 +807,13 @@ export default function EmailAnnotation({
             {saving ? t("training:annotation.saving") : t("training:annotation.saveAndTrain")}
           </button>
         </div>
+
+        {derivedTemplateId && (
+          <TemplateReviewCard
+            templateId={derivedTemplateId}
+            onDismiss={() => setDerivedTemplateId(null)}
+          />
+        )}
       </div>
     </div>
   );

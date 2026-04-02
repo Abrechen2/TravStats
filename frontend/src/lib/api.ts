@@ -205,6 +205,7 @@ export interface TrainingUploadResult {
 export interface TrainingAnnotationResult {
   success: boolean;
   message?: string;
+  templateId?: string;
 }
 
 export interface TrainingJobLog {
