@@ -33,17 +33,13 @@ export default function SettingsPage(): JSX.Element {
     units,
     defaults,
     map,
-    notifications,
     privacy,
-    backup,
     setProfile,
     setDisplay,
     setUnits,
     setDefaults,
     setMap,
-    setNotifications,
     setPrivacy,
-    setBackup,
     boardingPassParserStrategy,
     setBoardingPassParserStrategy,
     isDarkMode,
@@ -68,8 +64,6 @@ export default function SettingsPage(): JSX.Element {
     closePasswordModal,
     lastBackup,
     backupStatus,
-    retentionDays,
-    setRetentionDays,
     autoUpdateSettings,
     setAutoUpdateSettings,
     loadingAutoUpdateSettings,
@@ -168,24 +162,15 @@ export default function SettingsPage(): JSX.Element {
               <DefaultsSection defaults={defaults} onSetDefaults={setDefaults} />
             )}
             {activeSection === "map" && <MapSection map={map} onSetMap={setMap} />}
-            {activeSection === "notifications" && (
-              <NotificationsSection
-                notifications={notifications}
-                onSetNotifications={setNotifications}
-              />
-            )}
+            {activeSection === "notifications" && <NotificationsSection />}
             {activeSection === "privacy" && (
               <PrivacySection privacy={privacy} onSetPrivacy={setPrivacy} />
             )}
             {activeSection === "backup" && (
               <BackupSection
-                backup={backup}
-                retentionDays={retentionDays}
                 lastBackup={lastBackup}
                 backupStatus={backupStatus}
                 isAdmin={user?.isAdmin ?? false}
-                onSetBackup={setBackup}
-                onSetRetentionDays={setRetentionDays}
               />
             )}
             {activeSection === "parser" && (
