@@ -33,6 +33,7 @@ RUN npm config set fetch-retries 5 \
     && npm ci
 
 COPY backend/ ./
+RUN rm -rf dist
 RUN npx prisma generate
 RUN npm run build
 
