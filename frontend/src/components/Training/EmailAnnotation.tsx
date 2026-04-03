@@ -345,7 +345,7 @@ export default function EmailAnnotation({
     setTags(tags.filter((t) => t !== tagToRemove));
   };
 
-  const handleSave = async (andTrain: boolean) => {
+  const handleSave = async (): Promise<void> => {
     setSaving(true);
     try {
       const annotationData = {
@@ -354,10 +354,8 @@ export default function EmailAnnotation({
         textSelections: annotations,
       };
 
-      // Convert flights to backend format: combine date+time to ISO 8601
       const flightsForBackend = flights.map((flight) => {
         const converted = { ...flight };
-        // Combine departureDate + departureTime to departureTime (ISO 8601)
         if (flight.departureDate || flight.departureTime) {
           const combined = combineDateTime(flight.departureDate, flight.departureTime);
           if (combined) {
@@ -365,7 +363,6 @@ export default function EmailAnnotation({
           }
           delete converted.departureDate;
         }
-        // Combine arrivalDate + arrivalTime to arrivalTime (ISO 8601)
         if (flight.arrivalDate || flight.arrivalTime) {
           const combined = combineDateTime(flight.arrivalDate, flight.arrivalTime);
           if (combined) {
@@ -376,22 +373,12 @@ export default function EmailAnnotation({
         return converted;
       });
 
-      let response;
-      if (andTrain) {
-        response = await trainingApi.saveAndTrain(
-          trainingDataId,
-          annotationData,
-          flightsForBackend,
-          tags
-        );
-      } else {
-        response = await trainingApi.annotate(
-          trainingDataId,
-          annotationData,
-          flightsForBackend,
-          tags
-        );
-      }
+      const response = await trainingApi.annotate(
+        trainingDataId,
+        annotationData,
+        flightsForBackend,
+        tags
+      );
 
       if (response.templateId) {
         setDerivedTemplateId(response.templateId);
@@ -800,11 +787,8 @@ export default function EmailAnnotation({
               {t("common:buttons.cancel")}
             </button>
           )}
-          <button onClick={() => handleSave(false)} disabled={saving} className="btn-secondary">
+          <button onClick={() => void handleSave()} disabled={saving} className="btn-primary">
             {saving ? t("training:annotation.saving") : t("training:annotation.saveOnly")}
-          </button>
-          <button onClick={() => handleSave(true)} disabled={saving} className="btn-primary">
-            {saving ? t("training:annotation.saving") : t("training:annotation.saveAndTrain")}
           </button>
         </div>
 
