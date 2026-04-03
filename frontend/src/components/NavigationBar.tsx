@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
-import { settingsApi, pendingUpdatesApi } from "../lib/api";
+import { pendingUpdatesApi } from "../lib/api";
 import { useTranslation } from "../hooks/useTranslation";
 import { useClickOutside } from "../hooks/useClickOutside";
 import { logger } from "../lib/logger";
@@ -20,32 +20,12 @@ export default function NavigationBar(): JSX.Element {
   const location = useLocation();
   const { t } = useTranslation(["dashboard", "common"]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [developerModeEnabled, setDeveloperModeEnabled] = useState(false);
   const [pendingUpdatesCount, setPendingUpdatesCount] = useState(0);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
   useClickOutside(mobileMenuRef, closeMobileMenu);
 
   const hasTrainingAccess = user?.isAdmin || user?.canTrainLLM || false;
-
-  useEffect(() => {
-    if (hasTrainingAccess) {
-      settingsApi
-        .getDeveloperMode()
-        .then((data) => {
-          setDeveloperModeEnabled(data.enabled);
-        })
-        .catch((error) => {
-          if (error.response?.status === 403 || error.response?.status === 401) {
-            setDeveloperModeEnabled(false);
-          } else {
-            logger.error("Failed to load developer mode status:", error);
-          }
-        });
-    } else {
-      setDeveloperModeEnabled(false);
-    }
-  }, [hasTrainingAccess]);
 
   useEffect(() => {
     if (user) {
@@ -94,9 +74,9 @@ export default function NavigationBar(): JSX.Element {
       show: user?.isAdmin || false,
     },
     {
-      path: "/training",
-      label: t("dashboard:training"),
-      show: hasTrainingAccess && developerModeEnabled,
+      path: "/parser",
+      label: t("dashboard:parser"),
+      show: hasTrainingAccess,
     },
   ].filter((item) => item.show);
 

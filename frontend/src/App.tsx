@@ -23,7 +23,7 @@ const AdvancedStatsPage = lazy(() => import("./pages/AdvancedStatsPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const SetupPage = lazy(() => import("./pages/SetupPage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
-const TrainingPage = lazy(() => import("./pages/TrainingPage"));
+const ParserPage = lazy(() => import("./pages/ParserPage"));
 const PendingUpdatesPage = lazy(() => import("./pages/PendingUpdatesPage"));
 
 function LoadingFallback(): JSX.Element {
@@ -242,8 +242,8 @@ function AppContent() {
                 }
               />
               <Route
-                path="/training"
-                element={isAuthenticated ? <TrainingPage /> : <Navigate to="/login" />}
+                path="/parser"
+                element={isAuthenticated ? <ParserPage /> : <Navigate to="/login" />}
               />
               <Route
                 path="/pending-updates"

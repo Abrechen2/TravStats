@@ -74,13 +74,6 @@ export default function SettingsPage(): JSX.Element {
   } | null>(null);
   const [backupStatus, setBackupStatus] = useState<{ running: boolean } | null>(null);
   const [retentionDays, setRetentionDays] = useState(30);
-  const [trainingSettings, setTrainingSettings] = useState({
-    useTrainedModels: true,
-    preferredEmailModel: "auto" as "auto" | "trained" | "base",
-    preferredVisionModel: "auto" as "auto" | "trained" | "base",
-    trainingSeparateModels: true,
-  });
-  const [loadingTrainingSettings, setLoadingTrainingSettings] = useState(false);
   const [autoUpdateSettings, setAutoUpdateSettings] = useState({
     enabled: false,
     requireApproval: true,
@@ -121,24 +114,6 @@ export default function SettingsPage(): JSX.Element {
 
   // Check if user has training access (admin or canTrainLLM)
   const hasTrainingAccess = user?.isAdmin || user?.canTrainLLM || false;
-
-  // Load training settings
-  useEffect(() => {
-    const loadTrainingSettings = async () => {
-      try {
-        const data = await settingsApi.getTrainingSettings();
-        setTrainingSettings({
-          useTrainedModels: data.useTrainedModels,
-          preferredEmailModel: data.preferredEmailModel,
-          preferredVisionModel: data.preferredVisionModel,
-          trainingSeparateModels: data.trainingSeparateModels,
-        });
-      } catch (error) {
-        logger.error("Failed to load training settings:", error);
-      }
-    };
-    loadTrainingSettings();
-  }, []);
 
   // Load auto-update settings and boarding pass parser strategy
   useEffect(() => {
@@ -273,19 +248,6 @@ export default function SettingsPage(): JSX.Element {
     const timeoutId = setTimeout(saveSettings, 500);
     return () => clearTimeout(timeoutId);
   }, [units, saveRemoteSettings, addToast, t]);
-
-  const handleTrainingSettingsUpdate = async () => {
-    setLoadingTrainingSettings(true);
-    try {
-      await settingsApi.updateTrainingSettings(trainingSettings);
-      addToast("success", t("settings:training.updated"));
-    } catch (error) {
-      logger.error("Failed to update training settings:", error);
-      addToast("error", t("settings:training.updateFailed"));
-    } finally {
-      setLoadingTrainingSettings(false);
-    }
-  };
 
   // Load backup info
   useEffect(() => {
@@ -465,7 +427,6 @@ export default function SettingsPage(): JSX.Element {
     { id: "autoupdate", label: t("settings:autoUpdate.title") || "Auto-Update" },
     { id: "enrichment", label: t("settings:historicalEnrichment.title") || "Enrichment" },
     { id: "apikeys", label: t("settings:apiKeys.title") || "API Keys" },
-    { id: "training", label: t("settings:training.title") || "Training" },
     ...(hasTrainingAccess
       ? [{ id: "developer", label: t("settings:developer.title") || "Developer" }]
       : []),
@@ -1763,145 +1724,6 @@ export default function SettingsPage(): JSX.Element {
                       ? t("settings:apiKeys.saving") || "Saving..."
                       : t("settings:apiKeys.save") || "Save API Keys"}
                   </button>
-                </div>
-              </SectionCard>
-            )}
-            {/* Training */}
-            {activeSection === "training" && (
-              <SectionCard>
-                <SectionTitle
-                  title={t("settings:training.title")}
-                  description={t("settings:training.description")}
-                />
-                <InlineHelp
-                  title={t("settings:training.help.title")}
-                  category="expert"
-                  content={
-                    <div className="space-y-3">
-                      <p>{t("settings:training.help.description")}</p>
-                      <div>
-                        <p className="font-semibold mb-1">
-                          {t("settings:training.help.optionsTitle")}
-                        </p>
-                        <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
-                          <li>
-                            <strong>{t("settings:training.useTrainedModels")}:</strong>{" "}
-                            {t("settings:training.help.options.useTrainedModels")}
-                          </li>
-                          <li>
-                            <strong>{t("settings:training.preferredEmailModel")}:</strong>{" "}
-                            {t("settings:training.help.options.preferredEmailModel")}
-                          </li>
-                          <li>
-                            <strong>{t("settings:training.preferredVisionModel")}:</strong>{" "}
-                            {t("settings:training.help.options.preferredVisionModel")}
-                          </li>
-                          <li>
-                            <strong>{t("settings:training.trainingSeparateModels")}:</strong>{" "}
-                            {t("settings:training.help.options.trainingSeparateModels")}
-                          </li>
-                        </ul>
-                      </div>
-                    </div>
-                  }
-                />
-                <div className="space-y-4">
-                  <div
-                    className="flex items-center justify-between p-4 rounded-lg"
-                    style={{ background: "var(--bg-elevated)" }}
-                  >
-                    <div className="flex-1">
-                      <h3 className="font-semibold mb-1" style={{ color: "var(--text-primary)" }}>
-                        {t("settings:training.useTrainedModels")}
-                      </h3>
-                      <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                        {t("settings:training.useTrainedModelsDescription")}
-                      </p>
-                    </div>
-                    <AmberToggle
-                      checked={trainingSettings.useTrainedModels}
-                      onChange={(e) =>
-                        setTrainingSettings({
-                          ...trainingSettings,
-                          useTrainedModels: e.target.checked,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="p-4 rounded-lg" style={{ background: "var(--bg-elevated)" }}>
-                    <label className="label">{t("settings:training.preferredEmailModel")}</label>
-                    <select
-                      value={trainingSettings.preferredEmailModel}
-                      onChange={(e) =>
-                        setTrainingSettings({
-                          ...trainingSettings,
-                          preferredEmailModel: e.target.value as "auto" | "trained" | "base",
-                        })
-                      }
-                      className="input"
-                    >
-                      <option value="auto">{t("settings:training.modelOptions.auto")}</option>
-                      <option value="trained">{t("settings:training.modelOptions.trained")}</option>
-                      <option value="base">{t("settings:training.modelOptions.base")}</option>
-                    </select>
-                    <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-                      {t("settings:training.preferredEmailModelDescription")}
-                    </p>
-                  </div>
-                  <div className="p-4 rounded-lg" style={{ background: "var(--bg-elevated)" }}>
-                    <label className="label">{t("settings:training.preferredVisionModel")}</label>
-                    <select
-                      value={trainingSettings.preferredVisionModel}
-                      onChange={(e) =>
-                        setTrainingSettings({
-                          ...trainingSettings,
-                          preferredVisionModel: e.target.value as "auto" | "trained" | "base",
-                        })
-                      }
-                      className="input"
-                    >
-                      <option value="auto">{t("settings:training.modelOptions.auto")}</option>
-                      <option value="trained">{t("settings:training.modelOptions.trained")}</option>
-                      <option value="base">{t("settings:training.modelOptions.base")}</option>
-                    </select>
-                    <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-                      {t("settings:training.preferredVisionModelDescription")}
-                    </p>
-                  </div>
-                  <div
-                    className="flex items-center justify-between p-4 rounded-lg"
-                    style={{ background: "var(--bg-elevated)" }}
-                  >
-                    <div className="flex-1">
-                      <h3 className="font-semibold mb-1" style={{ color: "var(--text-primary)" }}>
-                        {t("settings:training.trainingSeparateModels")}
-                      </h3>
-                      <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                        {t("settings:training.trainingSeparateModelsDescription")}
-                      </p>
-                    </div>
-                    <AmberToggle
-                      checked={trainingSettings.trainingSeparateModels}
-                      onChange={(e) =>
-                        setTrainingSettings({
-                          ...trainingSettings,
-                          trainingSeparateModels: e.target.checked,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="flex justify-end pt-2">
-                    <button
-                      onClick={handleTrainingSettingsUpdate}
-                      disabled={loadingTrainingSettings}
-                      className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                      style={{ boxShadow: "0 0 16px rgba(232,160,69,0.25)" }}
-                    >
-                      {loadingTrainingSettings
-                        ? t("settings:training.savingSettings")
-                        : t("settings:training.saveSettings")}
-                    </button>
-                  </div>
                 </div>
               </SectionCard>
             )}

@@ -1,0 +1,41 @@
+{
+  "title": "Parser",
+  "description": "E-Mail- und Boarding-Pass-Templates verwalten",
+  "tabs": {
+    "annotate": "Annotieren",
+    "myTemplates": "Meine Templates",
+    "communityTemplates": "Community Templates",
+    "parseLogs": "Parse-Logs"
+  },
+  "annotate": {
+    "title": "Datei annotieren",
+    "description": "Lade eine E-Mail oder einen Boarding Pass hoch und markiere die Felder. TravStats leitet automatisch ein Regex-Template ab.",
+    "emailButton": "E-Mail hochladen",
+    "emailFormats": ".eml, .msg, .txt",
+    "boardingPassButton": "Boarding Pass hochladen",
+    "boardingPassFormats": ".png, .jpg, .jpeg",
+    "uploadError": "Datei konnte nicht hochgeladen werden."
+  },
+  "myTemplates": {
+    "empty": "Noch keine eigenen Templates",
+    "emptyHint": "Annotiere eine E-Mail oder einen Boarding Pass, um dein erstes Template zu erstellen.",
+    "matches": "Treffer",
+    "successRate": "Erfolgsrate",
+    "created": "Erstellt",
+    "activate": "Aktivieren",
+    "disable": "Deaktivieren",
+    "confirmDelete": "Template wirklich löschen?",
+    "loadError": "Templates konnten nicht geladen werden.",
+    "setStatusError": "Status konnte nicht geändert werden.",
+    "deleteError": "Template konnte nicht gelöscht werden.",
+    "status": {
+      "active": "aktiv",
+      "pending": "ausstehend",
+      "disabled": "deaktiviert"
+    }
+  },
+  "communityTemplates": {
+    "title": "Community Templates",
+    "description": "Vorgeladene Airline-Templates aus dem öffentlichen Repository"
+  }
+}
