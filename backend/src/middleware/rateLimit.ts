@@ -93,19 +93,6 @@ export const backupRestoreLimiter = rateLimit({
 });
 
 /**
- * Rate limiter for training trigger endpoint
- * Prevents resource exhaustion from repeated training runs
- * Allows 2 training triggers per hour per IP
- */
-export const trainingTriggerLimiter = rateLimit({
-  windowMs: RATE_LIMITS.TRAINING_TRIGGER_WINDOW_MS,
-  max: RATE_LIMITS.TRAINING_TRIGGER_MAX,
-  message: 'Too many training requests, please try again later',
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
-/**
  * Rate limiter for boarding pass parsing (expensive LLM/vision operation)
  * Allows 20 parses per 15 minutes per IP
  */
