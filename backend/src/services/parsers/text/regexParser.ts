@@ -497,8 +497,8 @@ export class RegexTextParser implements ITextParser {
   private extractLabeledDates(source: string): { departureTime?: string; arrivalTime?: string } {
     const result: { departureTime?: string; arrivalTime?: string } = {};
 
-    const DEP_LABELS = /(?:Abflug|Abflugzeit|Abreise|Departure|Departing|Departs|Dep)\s*:?\s*/gi;
-    const ARR_LABELS = /(?:Ankunft|Ankunftszeit|Arrival|Arriving|Arrives|Arr)\s*:?\s*/gi;
+    const DEP_LABELS = /(?:Abflug|Abflugzeit|Abreise|Departure|Departing|Departs|Dep(?=\s*:|\s+\d|\s+[A-Za-zÄÖÜäöü]{3}))\s*:?\s*/gi;
+    const ARR_LABELS = /(?:Ankunft|Ankunftszeit|Arrival|Arriving|Arrives|Arr(?=\s*:|\s+\d|\s+[A-Za-zÄÖÜäöü]{3}))\s*:?\s*/gi;
 
     const parseFromPos = (pos: number): string | undefined => {
       const slice = source.slice(pos, pos + 50);
