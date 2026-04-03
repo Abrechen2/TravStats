@@ -9,6 +9,17 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.9.5-beta] - 2026-04-03
+
+### Removed
+- **LLM Training dead code**: Deleted orphaned `TrainingDashboard`, `TrainingDataFilters`, `TrainingDataPreview` components (never imported after TrainingPage → ParserPage refactor).
+- **Save + Train button**: Removed LoRA fine-tuning trigger from `EmailAnnotation` and `BoardingPassAnnotation` — annotation now always derives templates via `annotate` endpoint only.
+- **Dead `trainingApi` methods**: `saveAndTrain`, `trainOnly`, `getData`, `getJobs`, `getJobLogs`, `triggerTraining`, `cancelTraining`, `deleteTrainingData` removed from frontend API client.
+- **Dead TypeScript types**: `TrainingJob`, `TrainingJobLog`, `TrainingJobLogsResponse` removed from `types/index.ts`.
+- **LLM-only backend endpoints**: `POST /:id/save-and-train`, `POST /:id/train-only`, `GET /data`, `GET /jobs`, `GET /jobs/:id/logs`, `DELETE /:id`, `POST /trigger`, `POST /jobs/:id/cancel`, `GET /data/analysis` removed from training route.
+
+---
+
 ## [0.9.3-beta] - 2026-04-03
 
 ### Added
