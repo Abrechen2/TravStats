@@ -64,6 +64,13 @@ jest.mock("../utils/encryption", () => ({
 jest.mock("../utils/logger", () => ({
   default: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() },
 }));
+jest.mock("../services/backupService", () => ({}));
+jest.mock("../services/backupScheduler", () => ({
+  startScheduler: jest.fn(),
+  stopScheduler: jest.fn(),
+  updateSchedule: jest.fn(),
+  getScheduleStatus: jest.fn(),
+}));
 jest.mock("./admin/smtp", () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const express = require("express") as typeof import("express");

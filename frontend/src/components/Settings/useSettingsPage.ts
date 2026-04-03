@@ -43,17 +43,13 @@ export function useSettingsPage() {
     units,
     defaults,
     map,
-    notifications,
     privacy,
-    backup,
     setProfile,
     setDisplay,
     setUnits,
     setDefaults,
     setMap,
-    setNotifications,
     setPrivacy,
-    setBackup,
     boardingPassParserStrategy,
     setBoardingPassParserStrategy,
     saveRemoteSettings,
@@ -88,7 +84,6 @@ export function useSettingsPage() {
     status: string;
   } | null>(null);
   const [backupStatus, setBackupStatus] = useState<{ running: boolean } | null>(null);
-  const [retentionDays, setRetentionDays] = useState(30);
 
   // Auto-update
   const [autoUpdateSettings, setAutoUpdateSettings] = useState<AutoUpdateSettings>({
@@ -414,17 +409,13 @@ export function useSettingsPage() {
     units,
     defaults,
     map,
-    notifications,
     privacy,
-    backup,
     setProfile,
     setDisplay,
     setUnits,
     setDefaults,
     setMap,
-    setNotifications,
     setPrivacy,
-    setBackup,
     boardingPassParserStrategy,
     setBoardingPassParserStrategy,
     isDarkMode,
@@ -455,8 +446,6 @@ export function useSettingsPage() {
     // Backup
     lastBackup,
     backupStatus,
-    retentionDays,
-    setRetentionDays,
     // Auto-update
     autoUpdateSettings,
     setAutoUpdateSettings,

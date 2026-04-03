@@ -137,7 +137,6 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
           useTrainedModels: true,
           preferredEmailModel: 'auto',
           preferredVisionModel: 'auto',
-          trainingSeparateModels: true,
           // Initialize auto-update settings with defaults
           autoUpdateEnabled: false,
           autoUpdateRequireApproval: true,
@@ -293,7 +292,6 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
         useTrainedModels: true,
         preferredEmailModel: 'auto',
         preferredVisionModel: 'auto',
-        trainingSeparateModels: true,
         // Initialize auto-update settings with defaults
         autoUpdateEnabled: payload.autoUpdate?.enabled ?? false,
         autoUpdateRequireApproval: payload.autoUpdate?.requireApproval ?? true,

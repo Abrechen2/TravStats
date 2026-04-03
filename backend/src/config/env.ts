@@ -68,6 +68,8 @@ const envSchema = z.object({
 
   // Backup Settings
   BACKUP_PATH: z.string().default('/app/data/backups'),
+  // DEPRECATED: backup toggle/interval/retention now stored in AdminSettings DB.
+  // Kept as optional fallback to avoid startup errors on existing deployments.
   BACKUP_RETENTION_DAYS: z.string().regex(/^\d+$/).transform(Number).default('30'),
   AUTO_BACKUP_ENABLED: z.string().transform((val) => val === 'true').default('false'),
   BACKUP_INTERVAL: z.enum(['daily', 'weekly', 'monthly']).default('weekly'),

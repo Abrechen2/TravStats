@@ -381,6 +381,15 @@
       "confirmText": "Wiederherstellen",
       "confirmButton": "Wiederherstellen"
     },
+    "settingsSaved": "Backup-Einstellungen gespeichert",
+    "settingsFailed": "Fehler beim Speichern der Einstellungen",
+    "schedule": {
+      "title": "Automatisches Backup",
+      "description": "Geplante Backups werden täglich um 2:00 Uhr ausgeführt.",
+      "enableAutoBackup": "Automatisches Backup aktivieren",
+      "interval": "Intervall",
+      "retentionDays": "Aufbewahrung (Tage)"
+    },
     "toasts": {
       "loadFailed": "Fehler beim Laden der Backups",
       "started": "Backup gestartet",

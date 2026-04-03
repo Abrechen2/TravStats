@@ -201,8 +201,6 @@ model UserSettings {
   useTrainedModels       Boolean @default(true) @map("use_trained_models")
   preferredEmailModel    String  @default("auto") @map("preferred_email_model") // "auto" | "trained" | "base"
   preferredVisionModel   String  @default("auto") @map("preferred_vision_model") // "auto" | "trained" | "base"
-  trainingSeparateModels Boolean @default(true) @map("training_separate_models")
-
   // Auto-update settings
   autoUpdateEnabled          Boolean @default(false) @map("auto_update_enabled")
   autoUpdateRequireApproval  Boolean @default(true) @map("auto_update_require_approval")
@@ -264,15 +262,6 @@ model Invitation {
   @@map("invitations")
 }
 
-model SystemSettings {
-  id        String   @id @default("global")
-  data      Json     @map("data")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@map("system_settings")
-}
-
 model AdminSettings {
   id Int @id @default(autoincrement())
 
@@ -289,19 +278,24 @@ model AdminSettings {
   globalOpenskyPassword String? @map("global_opensky_password")
 
   // User permissions
-  allowUserApiKeys   Boolean @default(true) @map("allow_user_api_keys")
-  requireUserApiKeys Boolean @default(false) @map("require_user_api_keys")
+  allowUserApiKeys         Boolean @default(true) @map("allow_user_api_keys")
   allowUserFlightApiKeys   Boolean @default(true) @map("allow_user_flight_api_keys")
-  requireUserFlightApiKeys Boolean @default(false) @map("require_user_flight_api_keys")
 
   // Default parser settings for new users
   defaultVisionParser String @default("auto") @map("default_vision_parser")
   defaultTextParser   String @default("auto") @map("default_text_parser")
 
-  // === LOGGING CONFIGURATION ===
-  // Enable enhanced debug logging (activates debug/trace levels + detailed instrumentation)
-  debugLoggingEnabled Boolean @default(false) @map("debug_logging_enabled")
+  // Ollama configuration (overrides OLLAMA_URL / OLLAMA_MODEL env vars)
+  ollamaUrl         String? @map("ollama_url")
+  ollamaModel       String? @map("ollama_model")
+  ollamaVisionModel String? @map("ollama_vision_model")
 
+  // Backup schedule configuration (overrides AUTO_BACKUP_ENABLED / BACKUP_INTERVAL env vars)
+  backupEnabled       Boolean @default(false) @map("backup_enabled")
+  backupInterval      String  @default("weekly") @map("backup_interval")
+  backupRetentionDays Int     @default(30) @map("backup_retention_days")
+
+  // === LOGGING CONFIGURATION ===
   // Log level for file output (error | warn | info | debug | trace)
   logLevel String @default("info") @map("log_level")
 

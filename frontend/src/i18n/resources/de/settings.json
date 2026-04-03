@@ -139,6 +139,8 @@
   "backup": {
     "title": "Backup & Sync",
     "description": "Regelmäßige Sicherungen und Cloud-Sync steuern.",
+    "adminNote": "Backup-Einstellungen werden im Admin-Panel verwaltet.",
+    "userNote": "Backups werden vom Administrator verwaltet.",
     "autoBackup": "Automatische Backups aktivieren",
     "backupInterval": "Backup-Intervall",
     "exportFormat": "Export-Format",

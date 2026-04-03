@@ -381,6 +381,15 @@
       "confirmText": "Restore",
       "confirmButton": "Restore"
     },
+    "settingsSaved": "Backup settings saved",
+    "settingsFailed": "Failed to save backup settings",
+    "schedule": {
+      "title": "Automatic Backup",
+      "description": "Scheduled backups run at 2:00 AM.",
+      "enableAutoBackup": "Enable automatic backup",
+      "interval": "Interval",
+      "retentionDays": "Retention (days)"
+    },
     "toasts": {
       "loadFailed": "Failed to load backups",
       "started": "Backup started",
