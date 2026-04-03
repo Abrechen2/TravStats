@@ -9,6 +9,28 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.9.6-beta] - 2026-04-03
+
+### Added
+- **Ollama config in Admin UI**: `ollamaUrl`, `ollamaModel`, `ollamaVisionModel` stored in `AdminSettings` DB table; editable in Admin → Parser Settings.
+- **Backup schedule in Admin UI**: `backupEnabled`, `backupInterval`, `backupRetentionDays` stored in `AdminSettings`; editable in Admin → Backup Management.
+- **`dateUtils.ts`**: Timezone-aware date/time formatting with `Intl.DateTimeFormat`; graceful UTC fallback for invalid timezone strings.
+- **Timezone-aware flights table**: `FlightsTablePage` now formats dates using the user's configured timezone from settings store.
+
+### Changed
+- **`getParserConfig()`**: Reads `ollamaUrl/Model/VisionModel` from `adminSettings` parameter with ENV fallback.
+- **`backupScheduler.ts`**: `getBackupSettings()` reads backup config from DB instead of ENV; runtime validation via `VALID_INTERVALS`/`toBackupInterval()`.
+- **`BackupSection`** (Settings): Now a read-only status view; backup schedule configuration moved to Admin → Backup Management.
+- **`NotificationsSection`** (Settings): Removed dead toggles; renders only `NotificationPreferences`.
+
+### Removed
+- **`debugLoggingEnabled`** + **`requireUserApiKeys`** from `AdminSettings` schema — log level from ENV, API keys always required.
+- **`trainingSeparateModels`** from `UserSettings` schema.
+- **`SystemSettings`** model dropped entirely.
+- **Ghost backup/notification fields** from `settingsStore`, `useSettingsPage`, API types.
+
+---
+
 ## [0.9.5-beta] - 2026-04-03
 
 ### Removed
