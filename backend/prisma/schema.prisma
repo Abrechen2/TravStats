@@ -353,40 +353,6 @@ model TrainingData {
   @@map("training_data")
 }
 
-model TrainingJob {
-  id              String    @id @default(uuid())
-  status          String // "pending" | "running" | "completed" | "failed"
-  trainingDataIds String[]  @map("training_data_ids") // Array of TrainingData IDs
-  modelName       String    @map("model_name") // z.B. "travstats-custom"
-  modelType       String    @default("combined") @map("model_type") // "email" | "vision" | "combined"
-  startedAt       DateTime? @map("started_at")
-  completedAt     DateTime? @map("completed_at")
-  errorMessage    String?   @map("error_message")
-  logFile         String?   @map("log_file") // Path to detailed log file
-  metrics         Json? // Training metrics (loss, accuracy, etc.)
-  createdAt       DateTime  @default(now()) @map("created_at")
-
-  logs TrainingLog[]
-
-  @@index([status])
-  @@map("training_jobs")
-}
-
-model TrainingLog {
-  id            String   @id @default(uuid())
-  trainingJobId String   @map("training_job_id")
-  level         String // "info" | "warn" | "error" | "debug"
-  message       String
-  metadata      Json? // Zusätzliche strukturierte Daten
-  timestamp     DateTime @default(now())
-
-  trainingJob TrainingJob @relation(fields: [trainingJobId], references: [id], onDelete: Cascade)
-
-  @@index([trainingJobId])
-  @@index([timestamp])
-  @@map("training_logs")
-}
-
 model AirportSeedingStatus {
   id                     String    @id @default(uuid())
   status                 String // "pending" | "running" | "completed" | "failed"
