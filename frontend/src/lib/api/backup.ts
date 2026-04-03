@@ -1,7 +1,25 @@
 import { api } from "./client";
 import type { BackupEntry } from "./types";
 
+export interface BackupScheduleSettings {
+  backupEnabled: boolean;
+  backupInterval: "daily" | "weekly" | "monthly";
+  backupRetentionDays: number;
+}
+
 export const backupApi = {
+  getBackupSettings: async (): Promise<BackupScheduleSettings> => {
+    const { data } = await api.get<BackupScheduleSettings>("/admin/backup-settings");
+    return data;
+  },
+
+  updateBackupSettings: async (
+    settings: Partial<BackupScheduleSettings>
+  ): Promise<BackupScheduleSettings> => {
+    const { data } = await api.put<BackupScheduleSettings>("/admin/backup-settings", settings);
+    return data;
+  },
+
   list: async (): Promise<{
     backups: BackupEntry[];
   }> => {
