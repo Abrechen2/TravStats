@@ -15,6 +15,11 @@ vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }));
 
+vi.mock("../../../store/toastStore", () => ({
+  useToastStore: (selector: (s: { addToast: () => void }) => unknown) =>
+    selector({ addToast: vi.fn() }),
+}));
+
 const mockTemplates = [
   {
     id: "t1",
@@ -35,6 +40,7 @@ const mockTemplates = [
 
 describe("MyTemplates", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.mocked(api.parserTemplatesApi.list).mockResolvedValue(mockTemplates);
     vi.mocked(api.parserTemplatesApi.setStatus).mockResolvedValue(undefined);
     vi.mocked(api.parserTemplatesApi.delete).mockResolvedValue(undefined);
@@ -74,7 +80,15 @@ describe("MyTemplates", () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     render(<MyTemplates />);
     await waitFor(() => screen.getByText("Lufthansa DE"));
-    fireEvent.click(screen.getAllByText("common:buttons.delete")[0]);
+    fireEvent.click(screen.getByTestId("delete-t1"));
     await waitFor(() => expect(api.parserTemplatesApi.delete).toHaveBeenCalledWith("t1"));
+  });
+
+  it("bricht Löschen ab wenn confirm verneint", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(<MyTemplates />);
+    await waitFor(() => screen.getByText("Lufthansa DE"));
+    fireEvent.click(screen.getByTestId("delete-t1"));
+    expect(api.parserTemplatesApi.delete).not.toHaveBeenCalled();
   });
 });

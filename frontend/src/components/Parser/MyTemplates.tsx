@@ -2,12 +2,15 @@ import { useEffect, useState } from "react";
 import { parserTemplatesApi, type UserTemplateItem } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useToastStore } from "../../store/toastStore";
 
 export default function MyTemplates(): JSX.Element {
   const { t } = useTranslation(["parser", "common"]);
   const [templates, setTemplates] = useState<UserTemplateItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const addToast = useToastStore((state) => state.addToast);
 
   useEffect(() => {
     const load = async (): Promise<void> => {
@@ -16,6 +19,7 @@ export default function MyTemplates(): JSX.Element {
         setTemplates(result);
       } catch (err: unknown) {
         logger.error({ err }, "MyTemplates: failed to load");
+        setError("parser:myTemplates.loadError");
       } finally {
         setLoading(false);
       }
@@ -30,6 +34,7 @@ export default function MyTemplates(): JSX.Element {
       setTemplates((prev) => prev.map((tmpl) => (tmpl.id === id ? { ...tmpl, status } : tmpl)));
     } catch (err: unknown) {
       logger.error({ err }, "MyTemplates: failed to set status");
+      addToast("error", t("parser:myTemplates.setStatusError"));
     } finally {
       setActionLoading(null);
     }
@@ -43,6 +48,7 @@ export default function MyTemplates(): JSX.Element {
       setTemplates((prev) => prev.filter((tmpl) => tmpl.id !== id));
     } catch (err: unknown) {
       logger.error({ err }, "MyTemplates: failed to delete");
+      addToast("error", t("parser:myTemplates.deleteError"));
     } finally {
       setActionLoading(null);
     }
@@ -65,6 +71,14 @@ export default function MyTemplates(): JSX.Element {
     return (
       <div className="flex justify-center py-12">
         <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-16 text-red-500 dark:text-red-400">
+        <p className="text-lg font-medium">{t(error)}</p>
       </div>
     );
   }
@@ -106,8 +120,7 @@ export default function MyTemplates(): JSX.Element {
                 </>
               )}
               <span>
-                {t("parser:myTemplates.created")}{" "}
-                {new Date(tmpl.createdAt).toLocaleDateString("de-DE")}
+                {t("parser:myTemplates.created")} {new Date(tmpl.createdAt).toLocaleDateString()}
               </span>
             </div>
           </div>
@@ -132,6 +145,7 @@ export default function MyTemplates(): JSX.Element {
               </button>
             )}
             <button
+              data-testid={`delete-${tmpl.id}`}
               onClick={() => handleDelete(tmpl.id)}
               disabled={actionLoading === tmpl.id}
               className="text-xs px-3 py-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50 disabled:opacity-50 transition-colors"
