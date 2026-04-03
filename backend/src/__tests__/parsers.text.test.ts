@@ -488,6 +488,85 @@ describe('Text Parsers', () => {
         }
       });
 
+      it('should handle ISO datetime with Z timezone suffix', async () => {
+        const subject = 'Flight booking';
+        const text = `
+          Flight: LH103
+          MUC → LUX
+          2025-11-18T23:45Z
+          2025-11-19T01:30Z
+        `;
+
+        const result = await parser.parseEmail(subject, text);
+
+        expect(result[0].departureTime).toBe('2025-11-18T23:45');
+        expect(result[0].arrivalTime).toBe('2025-11-19T01:30');
+      });
+
+      it('should handle ISO datetime with +HH:MM timezone offset', async () => {
+        const subject = 'Flight booking';
+        const text = `
+          Flight: LH103
+          MUC → LUX
+          2025-11-18T11:00+01:00
+          2025-11-18T12:55+01:00
+        `;
+
+        const result = await parser.parseEmail(subject, text);
+
+        expect(result[0].departureTime).toBe('2025-11-18T11:00');
+        expect(result[0].arrivalTime).toBe('2025-11-18T12:55');
+      });
+
+      it('should add 1 day when +1 next-day marker follows time', async () => {
+        const subject = 'Flight booking';
+        const text = `
+          Flight: OS431
+          VIE → JFK
+          10. March 2025, 10:30
+          10. March 2025, 14:45 +1
+        `;
+
+        const result = await parser.parseEmail(subject, text);
+
+        expect(result[0].arrivalTime).toBeDefined();
+        if (result[0].arrivalTime) {
+          expect(result[0].arrivalTime).toContain('2025-03-11');
+        }
+      });
+
+      it('should add 1 day when (+1) with parens follows time', async () => {
+        const subject = 'Flight booking';
+        const text = `
+          Flight: OS431
+          VIE → JFK
+          10. March 2025, 10:30
+          10. March 2025, 14:45 (+1)
+        `;
+
+        const result = await parser.parseEmail(subject, text);
+
+        expect(result[0].arrivalTime).toBeDefined();
+        if (result[0].arrivalTime) {
+          expect(result[0].arrivalTime).toContain('2025-03-11');
+        }
+      });
+
+      it('should NOT treat timezone offset +01:00 as next-day marker', async () => {
+        const subject = 'Flugbuchung';
+        const text = `
+          Flug: LH103
+          MUC → LUX
+          18. Nov 2025, 11:00 +01:00
+          18. Nov 2025, 12:55 +01:00
+        `;
+
+        const result = await parser.parseEmail(subject, text);
+
+        expect(result[0].departureTime).toContain('2025-11-18');
+        expect(result[0].arrivalTime).toContain('2025-11-18');
+      });
+
       it('should extract city names and convert to IATA codes', async () => {
         const subject = 'Flugbuchung';
         const text = `

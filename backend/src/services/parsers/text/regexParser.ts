@@ -35,6 +35,30 @@ const PNR_FALSE_POSITIVES = new Set([
   'KLEIN', 'KLEINE', 'SCHON', 'SCHONE', 'SCHONER', 'SCHONES', 'NEUE',
 ]);
 
+const MONTH_NAMES: Record<string, string> = {
+  'JAN': '01', 'FEB': '02', 'MAR': '03', 'APR': '04', 'MAI': '05', 'MAY': '05',
+  'JUN': '06', 'JUL': '07', 'AUG': '08', 'SEP': '09', 'OKT': '10', 'OCT': '10',
+  'NOV': '11', 'DEZ': '12', 'DEC': '12',
+  'JANUAR': '01', 'JANUARY': '01', 'FEBRUAR': '02', 'FEBRUARY': '02',
+  'MÄRZ': '03', 'MÄR': '03', 'MAERZ': '03', 'MARCH': '03',
+  'APRIL': '04', 'JUNI': '06', 'JUNE': '06', 'JULI': '07', 'JULY': '07', 'AUGUST': '08',
+  'SEPTEMBER': '09', 'OKTOBER': '10', 'OCTOBER': '10', 'NOVEMBER': '11',
+  'DEZEMBER': '12', 'DECEMBER': '12',
+};
+
+/** Add N calendar days to an ISO datetime string (YYYY-MM-DDTHH:MM) */
+function addDays(iso: string, days: number): string {
+  const tIdx = iso.indexOf('T');
+  const datePart = tIdx >= 0 ? iso.slice(0, tIdx) : iso;
+  const timePart = tIdx >= 0 ? iso.slice(tIdx + 1) : '00:00';
+  const [y, m, d] = datePart.split('-').map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d + days));
+  const yy = date.getUTCFullYear();
+  const mm = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(date.getUTCDate()).padStart(2, '0');
+  return `${yy}-${mm}-${dd}T${timePart}`;
+}
+
 // Context-aware IATA code extraction patterns
 const IATA_CONTEXT_PATTERNS = [
   /(?:von|ab|from|dep(?:arture)?)\s+([A-Z]{3})/g,
@@ -392,8 +416,8 @@ export class RegexTextParser implements ITextParser {
   private extractAllTimePairs(source: string): Array<{ departure?: string; arrival?: string }> {
     const pairs: Array<{ departure?: string; arrival?: string }> = [];
 
-    // ISO format dates
-    const isoPattern = /\b(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?)\b/g;
+    // ISO format dates — TZ offset/Z suffix is consumed but not captured (local time kept)
+    const isoPattern = /(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?)(?:[+-]\d{2}:?\d{2}|Z)?(?=[^\d]|$)/g;
     const isoMatches = Array.from(source.matchAll(isoPattern));
     const isoDates = isoMatches.map(m => m[1].replace(' ', 'T'));
 
@@ -405,34 +429,23 @@ export class RegexTextParser implements ITextParser {
       });
     }
 
-    // German date format — supports abbreviated (Nov) and full (November) month names, time optional
+    // German/English date format — abbreviated and full month names, time optional
     const germanPattern = /(\d{1,2})[.\s]+(\d{1,2}|[A-Za-zÄÖÜäöü]{3,9})[.\s]+(\d{4})(?:[,\s]+(\d{1,2}):(\d{2}))?/gi;
     const germanMatches = Array.from(source.matchAll(germanPattern));
-    const monthNames: Record<string, string> = {
-      'JAN': '01', 'FEB': '02', 'MAR': '03', 'APR': '04', 'MAI': '05', 'MAY': '05',
-      'JUN': '06', 'JUL': '07', 'AUG': '08', 'SEP': '09', 'OKT': '10', 'OCT': '10',
-      'NOV': '11', 'DEZ': '12', 'DEC': '12',
-      'JANUAR': '01', 'JANUARY': '01', 'FEBRUAR': '02', 'FEBRUARY': '02',
-      'MÄRZ': '03', 'MÄR': '03', 'MAERZ': '03', 'MARCH': '03',
-      'APRIL': '04', 'JUNI': '06', 'JUNE': '06', 'JULI': '07', 'JULY': '07', 'AUGUST': '08',
-      'SEPTEMBER': '09', 'OKTOBER': '10', 'OCTOBER': '10', 'NOVEMBER': '11',
-      'DEZEMBER': '12', 'DECEMBER': '12',
-    };
 
     for (const match of germanMatches) {
       const day = match[1].padStart(2, '0');
-      let month = match[2];
-      if (monthNames[month.toUpperCase()]) {
-        month = monthNames[month.toUpperCase()];
-      } else if (month.length <= 2) {
-        month = month.padStart(2, '0');
-      } else {
-        month = '01';
-      }
+      const raw = match[2].toUpperCase();
+      const month = MONTH_NAMES[raw] ?? (match[2].length <= 2 ? match[2].padStart(2, '0') : '01');
       const year = match[3];
       const hour = match[4] ? match[4].padStart(2, '0') : '00';
       const minute = match[5] ?? '00';
-      const isoTime = `${year}-${month}-${day}T${hour}:${minute}`;
+      let isoTime = `${year}-${month}-${day}T${hour}:${minute}`;
+
+      // Detect +N next-day marker (e.g. "+1", "(+1)") — exclude timezone offsets like +01:00
+      const after = source.slice(match.index! + match[0].length, match.index! + match[0].length + 8);
+      const nextDay = after.match(/^\s*\(?\+(\d)\)?(?!\d*:)/);
+      if (nextDay) isoTime = addDays(isoTime, Number(nextDay[1]));
 
       // Add to pairs (assume first is departure, second is arrival)
       const existingPair = pairs.find(p => !p.departure);
@@ -531,36 +544,34 @@ export class RegexTextParser implements ITextParser {
     data.arrivalCode = arrival && this.isValidIATACode(arrival) ? arrival : undefined;
 
     // Times - improved extraction with multiple formats
-    // ISO format
-    const isoTimeMatches = Array.from(source.matchAll(/\b(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?)\b/g));
+    // ISO format — TZ offset/Z suffix consumed but not captured (local time kept)
+    const isoTimeMatches = Array.from(
+      source.matchAll(/(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?)(?:[+-]\d{2}:?\d{2}|Z)?(?=[^\d]|$)/g)
+    );
     if (isoTimeMatches.length >= 1) data.departureTime = isoTimeMatches[0][1].replace(' ', 'T');
     if (isoTimeMatches.length >= 2) data.arrivalTime = isoTimeMatches[1][1].replace(' ', 'T');
 
-    // German date format: "18.11.2025 14:30", "18 Nov 2025, 14:30", "07. November 2024, 14:30", "07. November 2024"
+    // German/English date format — abbreviated and full month names, time optional
     if (!data.departureTime || !data.arrivalTime) {
       const germanDatePattern = /(\d{1,2})[.\s]+(\d{1,2}|[A-Za-zÄÖÜäöü]{3,9})[.\s]+(\d{4})(?:[,\s]+(\d{1,2}):(\d{2}))?/gi;
       const dateMatches = Array.from(source.matchAll(germanDatePattern));
-      const monthNames: Record<string, string> = {
-        'JAN': '01', 'FEB': '02', 'MAR': '03', 'APR': '04', 'MAI': '05', 'MAY': '05',
-        'JUN': '06', 'JUL': '07', 'AUG': '08', 'SEP': '09', 'OKT': '10', 'OCT': '10',
-        'NOV': '11', 'DEZ': '12', 'DEC': '12',
-        'JANUAR': '01', 'FEBRUARY': '02', 'FEBRUAR': '02', 'MÄRZ': '03', 'MÄR': '03', 'MAERZ': '03', 'MARCH': '03',
-        'APRIL': '04', 'JUNI': '06', 'JUNE': '06', 'JULI': '07', 'JULY': '07', 'AUGUST': '08',
-        'SEPTEMBER': '09', 'OKTOBER': '10', 'OCTOBER': '10', 'NOVEMBER': '11', 'DEZEMBER': '12', 'DECEMBER': '12',
-        'JANUARY': '01',
-      };
-      const toIso = (m: RegExpMatchArray): string => {
+      const toIso = (m: RegExpMatchArray, src: string): string => {
         const d = m[1].padStart(2, '0');
         const raw = m[2].toUpperCase();
-        const mo = monthNames[raw] ?? (m[2].length <= 2 ? m[2].padStart(2, '0') : '01');
+        const mo = MONTH_NAMES[raw] ?? (m[2].length <= 2 ? m[2].padStart(2, '0') : '01');
         const y = m[3];
         const h = m[4] ? m[4].padStart(2, '0') : '00';
         const min = m[5] ?? '00';
-        return `${y}-${mo}-${d}T${h}:${min}`;
+        let iso = `${y}-${mo}-${d}T${h}:${min}`;
+        // Detect +N next-day marker — exclude timezone offsets like +01:00
+        const after = src.slice(m.index! + m[0].length, m.index! + m[0].length + 8);
+        const nextDay = after.match(/^\s*\(?\+(\d)\)?(?!\d*:)/);
+        if (nextDay) iso = addDays(iso, Number(nextDay[1]));
+        return iso;
       };
       if (dateMatches.length > 0) {
-        if (!data.departureTime) data.departureTime = toIso(dateMatches[0]);
-        if (!data.arrivalTime && dateMatches.length > 1) data.arrivalTime = toIso(dateMatches[1]);
+        if (!data.departureTime) data.departureTime = toIso(dateMatches[0], source);
+        if (!data.arrivalTime && dateMatches.length > 1) data.arrivalTime = toIso(dateMatches[1], source);
       }
     }
 
