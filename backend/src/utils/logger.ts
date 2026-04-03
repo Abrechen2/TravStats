@@ -40,7 +40,7 @@ function createRotatingStream(category: string, maxSizeMB: number = 10, maxFiles
       } else {
         console.warn(`[Logger] Error writing to log file ${category}.log: ${error.message}`);
       }
-      
+
       // Close the stream gracefully
       try {
         if (typeof (stream as NodeJS.WritableStream & { end?: () => void }).end === 'function') {
@@ -217,7 +217,7 @@ export async function initializeCategoryStreams(): Promise<void> {
   try {
     const config = await getLoggingConfig();
     const fs = require('fs');
-    
+
     // Ensure log directory exists
     try {
       if (!fs.existsSync(LOG_DIR)) {
@@ -248,7 +248,7 @@ export async function initializeCategoryStreams(): Promise<void> {
     }
 
     // Parser logs (if enabled)
-    if (config.logParserOperations && config.debugLoggingEnabled) {
+    if (config.logParserOperations && (config.logLevel === 'debug' || config.logLevel === 'trace')) {
       // Main parser log (all parser operations)
       const parserStream = createRotatingStream('parser', config.maxLogFileSize, config.maxLogFiles);
       if (parserStream) {
@@ -285,7 +285,7 @@ export async function initializeCategoryStreams(): Promise<void> {
     }
 
     // HTTP logs (if enabled)
-    if (config.logHttpRequests && config.debugLoggingEnabled) {
+    if (config.logHttpRequests && (config.logLevel === 'debug' || config.logLevel === 'trace')) {
       const httpStream = createRotatingStream('http', config.maxLogFileSize, config.maxLogFiles);
       if (httpStream) {
         categoryStreams.set('http', {
@@ -296,7 +296,7 @@ export async function initializeCategoryStreams(): Promise<void> {
     }
 
     // Database logs (if enabled)
-    if (config.logDatabaseQueries && config.debugLoggingEnabled) {
+    if (config.logDatabaseQueries && (config.logLevel === 'debug' || config.logLevel === 'trace')) {
       const databaseStream = createRotatingStream('database', config.maxLogFileSize, config.maxLogFiles);
       if (databaseStream) {
         categoryStreams.set('database', {
@@ -324,10 +324,10 @@ export async function reinitializeCategoryStreams(): Promise<void> {
       (streamEntry.stream as NodeJS.WritableStream & { end: () => void }).end();
     }
   }
-  
+
   // Reset logger cache
   resetCategoryLoggerCache();
-  
+
   // Initialize new streams
   await initializeCategoryStreams();
 }
@@ -409,11 +409,11 @@ function resetCategoryLoggerCache(): void {
  * Category-specific loggers
  * These provide structured logging with automatic category tagging
  * and dedicated file streams when enabled in config
- * 
+ *
  * Loggers are created lazily on first use and cached.
  * After reinitializeCategoryStreams(), the cache is cleared and new loggers
  * will be created with updated streams on next use.
- * 
+ *
  * These loggers use the base logger but will also write to category-specific
  * files when streams are initialized via initializeCategoryStreams().
  */

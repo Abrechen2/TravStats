@@ -11,7 +11,6 @@ const trainingSettingsSchema = z.object({
   useTrainedModels: z.boolean().optional(),
   preferredEmailModel: z.enum(['auto', 'trained', 'base']).optional(),
   preferredVisionModel: z.enum(['auto', 'trained', 'base']).optional(),
-  trainingSeparateModels: z.boolean().optional(),
 });
 
 // GET /
@@ -25,7 +24,6 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
         useTrainedModels: true,
         preferredEmailModel: true,
         preferredVisionModel: true,
-        trainingSeparateModels: true,
       },
     });
 
@@ -33,7 +31,6 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
       useTrainedModels: settings?.useTrainedModels ?? true,
       preferredEmailModel: settings?.preferredEmailModel ?? 'auto',
       preferredVisionModel: settings?.preferredVisionModel ?? 'auto',
-      trainingSeparateModels: settings?.trainingSeparateModels ?? true,
     });
   } catch (error) {
     next(error);
@@ -57,9 +54,6 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
     if (payload.preferredVisionModel !== undefined) {
       updateData.preferredVisionModel = payload.preferredVisionModel;
     }
-    if (payload.trainingSeparateModels !== undefined) {
-      updateData.trainingSeparateModels = payload.trainingSeparateModels;
-    }
 
     const updated = await prisma.userSettings.upsert({
       where: { userId },
@@ -70,13 +64,11 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
         useTrainedModels: payload.useTrainedModels ?? true,
         preferredEmailModel: payload.preferredEmailModel ?? 'auto',
         preferredVisionModel: payload.preferredVisionModel ?? 'auto',
-        trainingSeparateModels: payload.trainingSeparateModels ?? true,
       },
       select: {
         useTrainedModels: true,
         preferredEmailModel: true,
         preferredVisionModel: true,
-        trainingSeparateModels: true,
       },
     });
 

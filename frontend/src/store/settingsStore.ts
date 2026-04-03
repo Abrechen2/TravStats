@@ -11,8 +11,6 @@ type FlightCategory = "business" | "private" | "vacation";
 type SeatClass = "economy" | "premium_economy" | "business" | "first";
 
 type FlightReminder = "off" | "24h" | "48h";
-type BackupInterval = "daily" | "weekly" | "monthly";
-type ExportFormat = "json" | "csv" | "pdf";
 
 type MapStyle = "osm" | "satellite";
 type MarkerStyle = "pin" | "circle" | "custom";
@@ -59,10 +57,7 @@ export interface MapSettings {
 }
 
 export interface NotificationSettings {
-  emailNotifications: boolean;
   flightReminder: FlightReminder;
-  checkInReminder: boolean;
-  featureUpdates: boolean;
 }
 
 export interface PrivacySettings {
@@ -73,12 +68,7 @@ export interface PrivacySettings {
   analyticsOptIn?: boolean;
 }
 
-export interface BackupSettings {
-  autoBackup: boolean;
-  backupInterval: BackupInterval;
-  exportFormat: ExportFormat;
-  cloudSync: boolean;
-}
+export type BackupSettings = Record<string, never>;
 
 export interface ApiKeyStatus {
   hasKey: boolean;
@@ -167,10 +157,7 @@ const defaultSettings: Omit<
     routeColor: "#2563eb",
   },
   notifications: {
-    emailNotifications: true,
     flightReminder: "24h",
-    checkInReminder: true,
-    featureUpdates: true,
   },
   privacy: {
     twoFactorAuth: false,
@@ -179,12 +166,7 @@ const defaultSettings: Omit<
     accountDeletionRequested: false,
     analyticsOptIn: false,
   },
-  backup: {
-    autoBackup: false,
-    backupInterval: "weekly",
-    exportFormat: "json",
-    cloudSync: false,
-  },
+  backup: {},
   apiKeys: null,
   boardingPassParserStrategy: null, // null = auto (LLM wenn verfügbar)
 };
@@ -221,10 +203,9 @@ export const useSettingsStore = create<SettingsState>()(
         set((state) => ({
           privacy: { ...state.privacy, ...updates },
         })),
-      setBackup: (updates) =>
-        set((state) => ({
-          backup: { ...state.backup, ...updates },
-        })),
+      setBackup: () => {
+        // BackupSettings has no fields; no-op
+      },
       setApiKeys: (status) =>
         set(() => ({
           apiKeys: status,

@@ -245,17 +245,21 @@ export const adminApi = {
     globalOpenaiApiKey?: string;
     globalClaudeApiKey?: string;
     allowUserApiKeys: boolean;
-    requireUserApiKeys: boolean;
     defaultVisionParser: string;
     defaultTextParser: string;
+    ollamaUrl: string | null;
+    ollamaModel: string | null;
+    ollamaVisionModel: string | null;
   }> => {
     const { data } = await api.get<{
       globalOpenaiApiKey?: string;
       globalClaudeApiKey?: string;
       allowUserApiKeys: boolean;
-      requireUserApiKeys: boolean;
       defaultVisionParser: string;
       defaultTextParser: string;
+      ollamaUrl: string | null;
+      ollamaModel: string | null;
+      ollamaVisionModel: string | null;
     }>("/admin/parser-settings");
     return data;
   },
@@ -264,9 +268,11 @@ export const adminApi = {
     globalOpenaiApiKey?: string;
     globalClaudeApiKey?: string;
     allowUserApiKeys?: boolean;
-    requireUserApiKeys?: boolean;
     defaultVisionParser?: string;
     defaultTextParser?: string;
+    ollamaUrl?: string | null;
+    ollamaModel?: string | null;
+    ollamaVisionModel?: string | null;
   }): Promise<MessageResponse> => {
     const { data } = await api.put<MessageResponse>("/admin/parser-settings", settings);
     return data;
