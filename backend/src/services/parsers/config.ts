@@ -108,8 +108,8 @@ export async function getParserConfig(
       getDefaultTextFallbackChain()
     ),
     ollamaUrl: adminSettings?.ollamaUrl || process.env.OLLAMA_URL,
-    ollamaModel: selectedEmailModel,
-    ollamaVisionModel: selectedVisionModel,
+    ollamaModel: adminSettings?.ollamaModel || selectedEmailModel,
+    ollamaVisionModel: adminSettings?.ollamaVisionModel || selectedVisionModel,
     openaiApiKey: userSettings?.openaiApiKey || adminSettings?.globalOpenaiApiKey || process.env.OPENAI_API_KEY,
     openaiModel: process.env.OPENAI_MODEL,
     openaiVisionModel: process.env.OPENAI_VISION_MODEL,
