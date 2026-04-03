@@ -7,6 +7,7 @@ import apiKeysRouter from './apiKeys';
 import loggingRouter from './logging';
 import parserSettingsRouter from './parserSettings';
 import smtpRouter from './smtp';
+import backupSettingsRouter from './backupSettings';
 
 const router = Router();
 
@@ -22,5 +23,6 @@ router.use('/', apiKeysRouter);
 router.use('/logging', loggingRouter);
 router.use('/', parserSettingsRouter);
 router.use('/smtp', smtpRouter);
+router.use('/', backupSettingsRouter);
 
 export default router;

@@ -9,18 +9,22 @@ interface ParserSettingsUpdateData {
   globalOpenaiApiKey?: string | null;
   globalClaudeApiKey?: string | null;
   allowUserApiKeys?: boolean;
-  requireUserApiKeys?: boolean;
   defaultVisionParser?: string;
   defaultTextParser?: string;
+  ollamaUrl?: string | null;
+  ollamaModel?: string | null;
+  ollamaVisionModel?: string | null;
 }
 
 const parserSettingsSchema = z.object({
   globalOpenaiApiKey: z.string().nullable().optional(),
   globalClaudeApiKey: z.string().nullable().optional(),
   allowUserApiKeys: z.boolean().optional(),
-  requireUserApiKeys: z.boolean().optional(),
   defaultVisionParser: z.string().optional(),
   defaultTextParser: z.string().optional(),
+  ollamaUrl: z.string().url().nullable().optional().or(z.literal("").transform(() => null)),
+  ollamaModel: z.string().max(100).nullable().optional(),
+  ollamaVisionModel: z.string().max(100).nullable().optional(),
 });
 
 // Training configuration schema
@@ -52,7 +56,7 @@ router.get('/parser-settings', async (req: AuthRequest, res: Response, next: Nex
       adminSettings = await prisma.adminSettings.create({
         data: {
           allowUserApiKeys: true,
-          requireUserApiKeys: false,
+          allowUserFlightApiKeys: true,
           defaultVisionParser: 'auto',
           defaultTextParser: 'auto',
         },
@@ -67,14 +71,13 @@ router.get('/parser-settings', async (req: AuthRequest, res: Response, next: Nex
       globalAviationstackApiKey: decryptApiKey(adminSettings.globalAviationstackApiKey) || undefined,
       globalOpenskyClientId: decryptApiKey(adminSettings.globalOpenskyClientId) || undefined,
       globalOpenskyClientSecret: decryptApiKey(adminSettings.globalOpenskyClientSecret) || undefined,
-      globalOpenskyUsername: decryptApiKey(adminSettings.globalOpenskyUsername) || undefined,
-      globalOpenskyPassword: decryptApiKey(adminSettings.globalOpenskyPassword) || undefined,
       allowUserApiKeys: adminSettings.allowUserApiKeys,
-      requireUserApiKeys: adminSettings.requireUserApiKeys,
       allowUserFlightApiKeys: adminSettings.allowUserFlightApiKeys,
-      requireUserFlightApiKeys: adminSettings.requireUserFlightApiKeys,
       defaultVisionParser: adminSettings.defaultVisionParser,
       defaultTextParser: adminSettings.defaultTextParser,
+      ollamaUrl: adminSettings.ollamaUrl || process.env.OLLAMA_URL || null,
+      ollamaModel: adminSettings.ollamaModel || process.env.OLLAMA_MODEL || null,
+      ollamaVisionModel: adminSettings.ollamaVisionModel || process.env.OLLAMA_VISION_MODEL || null,
     });
   } catch (error) {
     next(error);
@@ -88,9 +91,11 @@ router.put('/parser-settings', async (req: AuthRequest, res: Response, next: Nex
       globalOpenaiApiKey,
       globalClaudeApiKey,
       allowUserApiKeys,
-      requireUserApiKeys,
       defaultVisionParser,
       defaultTextParser,
+      ollamaUrl,
+      ollamaModel,
+      ollamaVisionModel,
     } = parserSettingsSchema.parse(req.body);
 
     // Get or create admin settings
@@ -109,14 +114,20 @@ router.put('/parser-settings', async (req: AuthRequest, res: Response, next: Nex
     if (allowUserApiKeys !== undefined) {
       updateData.allowUserApiKeys = allowUserApiKeys;
     }
-    if (requireUserApiKeys !== undefined) {
-      updateData.requireUserApiKeys = requireUserApiKeys;
-    }
     if (defaultVisionParser !== undefined) {
       updateData.defaultVisionParser = defaultVisionParser;
     }
     if (defaultTextParser !== undefined) {
       updateData.defaultTextParser = defaultTextParser;
+    }
+    if (ollamaUrl !== undefined) {
+      updateData.ollamaUrl = ollamaUrl;
+    }
+    if (ollamaModel !== undefined) {
+      updateData.ollamaModel = ollamaModel;
+    }
+    if (ollamaVisionModel !== undefined) {
+      updateData.ollamaVisionModel = ollamaVisionModel;
     }
 
     if (adminSettings) {
@@ -132,11 +143,12 @@ router.put('/parser-settings', async (req: AuthRequest, res: Response, next: Nex
           globalOpenaiApiKey: encryptApiKey(globalOpenaiApiKey),
           globalClaudeApiKey: encryptApiKey(globalClaudeApiKey),
           allowUserApiKeys: allowUserApiKeys ?? true,
-          requireUserApiKeys: requireUserApiKeys ?? false,
           allowUserFlightApiKeys: true,
-          requireUserFlightApiKeys: false,
           defaultVisionParser: defaultVisionParser || 'auto',
           defaultTextParser: defaultTextParser || 'auto',
+          ollamaUrl: ollamaUrl ?? null,
+          ollamaModel: ollamaModel ?? null,
+          ollamaVisionModel: ollamaVisionModel ?? null,
         },
       });
     }
@@ -147,9 +159,11 @@ router.put('/parser-settings', async (req: AuthRequest, res: Response, next: Nex
         globalOpenaiApiKey: decryptApiKey(adminSettings.globalOpenaiApiKey) || undefined,
         globalClaudeApiKey: decryptApiKey(adminSettings.globalClaudeApiKey) || undefined,
         allowUserApiKeys: adminSettings.allowUserApiKeys,
-        requireUserApiKeys: adminSettings.requireUserApiKeys,
         defaultVisionParser: adminSettings.defaultVisionParser,
         defaultTextParser: adminSettings.defaultTextParser,
+        ollamaUrl: adminSettings.ollamaUrl || process.env.OLLAMA_URL || null,
+        ollamaModel: adminSettings.ollamaModel || process.env.OLLAMA_MODEL || null,
+        ollamaVisionModel: adminSettings.ollamaVisionModel || process.env.OLLAMA_VISION_MODEL || null,
       },
     });
   } catch (error) {
@@ -218,7 +232,7 @@ router.put('/training-config', async (req: AuthRequest, res: Response, next: Nex
       adminSettings = await prisma.adminSettings.create({
         data: {
           allowUserApiKeys: true,
-          requireUserApiKeys: false,
+          allowUserFlightApiKeys: true,
           defaultVisionParser: 'auto',
           defaultTextParser: 'auto',
           ...updateData,
