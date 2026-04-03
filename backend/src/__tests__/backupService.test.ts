@@ -4,6 +4,7 @@ import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 const mockBackupFindMany = jest.fn();
 const mockBackupFindUnique = jest.fn();
 const mockBackupDelete = jest.fn();
+const mockAdminSettingsFindFirst = jest.fn();
 
 jest.mock("../db", () => ({
   prisma: {
@@ -11,6 +12,9 @@ jest.mock("../db", () => ({
       findMany: mockBackupFindMany,
       findUnique: mockBackupFindUnique,
       delete: mockBackupDelete,
+    },
+    adminSettings: {
+      findFirst: mockAdminSettingsFindFirst,
     },
   },
 }));
