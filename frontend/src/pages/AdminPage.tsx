@@ -257,7 +257,6 @@ export default function AdminPage(): JSX.Element {
           globalOpenaiApiKey: parserSettings?.globalOpenaiApiKey,
           globalClaudeApiKey: parserSettings?.globalClaudeApiKey,
           allowUserApiKeys: parserSettings?.allowUserApiKeys,
-          requireUserApiKeys: parserSettings?.requireUserApiKeys,
         }),
       ]);
       addToast("success", t("admin:globalApiKeys.saved") || "API keys saved successfully");
@@ -540,7 +539,6 @@ export default function AdminPage(): JSX.Element {
                       globalOpenaiApiKey: parserSettings.globalOpenaiApiKey,
                       globalClaudeApiKey: parserSettings.globalClaudeApiKey,
                       allowUserApiKeys: parserSettings.allowUserApiKeys,
-                      requireUserApiKeys: parserSettings.requireUserApiKeys,
                     }
                   : null
               }
@@ -554,7 +552,6 @@ export default function AdminPage(): JSX.Element {
                     globalOpenaiApiKey: apiKeySettings.globalOpenaiApiKey,
                     globalClaudeApiKey: apiKeySettings.globalClaudeApiKey,
                     allowUserApiKeys: apiKeySettings.allowUserApiKeys,
-                    requireUserApiKeys: apiKeySettings.requireUserApiKeys,
                   });
                 }
               }}

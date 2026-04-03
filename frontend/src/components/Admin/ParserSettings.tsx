@@ -5,7 +5,6 @@ export interface ParserSettingsData {
   globalOpenaiApiKey?: string;
   globalClaudeApiKey?: string;
   allowUserApiKeys: boolean;
-  requireUserApiKeys: boolean;
   defaultVisionParser: string;
   defaultTextParser: string;
   ollamaUrl: string | null;
