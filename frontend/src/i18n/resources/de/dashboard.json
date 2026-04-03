@@ -38,7 +38,7 @@
   "achievements": "Erfolge",
   "settings": "Einstellungen",
   "admin": "Admin",
-  "training": "Training",
+  "parser": "Parser",
   "logout": "Abmelden",
   "errors": {
     "addFlight": "Fehler beim Hinzufügen des Fluges. Bitte versuchen Sie es erneut.",

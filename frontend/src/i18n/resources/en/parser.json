@@ -1,0 +1,41 @@
+{
+  "title": "Parser",
+  "description": "Manage email and boarding pass templates",
+  "tabs": {
+    "annotate": "Annotate",
+    "myTemplates": "My Templates",
+    "communityTemplates": "Community Templates",
+    "parseLogs": "Parse Logs"
+  },
+  "annotate": {
+    "title": "Annotate file",
+    "description": "Upload an email or boarding pass and mark the fields. TravStats automatically derives a regex template.",
+    "emailButton": "Upload email",
+    "emailFormats": ".eml, .msg, .txt",
+    "boardingPassButton": "Upload boarding pass",
+    "boardingPassFormats": ".png, .jpg, .jpeg",
+    "uploadError": "Could not upload file."
+  },
+  "myTemplates": {
+    "empty": "No custom templates yet",
+    "emptyHint": "Annotate an email or boarding pass to create your first template.",
+    "matches": "matches",
+    "successRate": "success rate",
+    "created": "Created",
+    "activate": "Activate",
+    "disable": "Disable",
+    "confirmDelete": "Really delete this template?",
+    "loadError": "Could not load templates.",
+    "setStatusError": "Could not update status.",
+    "deleteError": "Could not delete template.",
+    "status": {
+      "active": "active",
+      "pending": "pending",
+      "disabled": "disabled"
+    }
+  },
+  "communityTemplates": {
+    "title": "Community Templates",
+    "description": "Pre-loaded airline templates from the public repository"
+  }
+}

@@ -10,7 +10,6 @@ import UserManagement from "../components/Admin/UserManagement";
 import InvitationManagement from "../components/Admin/InvitationManagement";
 import GlobalApiKeysManager from "../components/Admin/GlobalApiKeysManager";
 import ParserSettingsTab from "../components/Admin/ParserSettings";
-import TrainingConfigTab from "../components/Admin/TrainingConfig";
 import LoggingManager from "../components/Admin/LoggingManager";
 import SmtpManager from "../components/Admin/SmtpManager";
 import FeedbackAnalytics from "../components/Admin/FeedbackAnalytics";
@@ -21,7 +20,6 @@ import type { SystemInfoData, HardwareInfo, AdminUser } from "../components/Admi
 import type { Invitation } from "../components/Admin/InvitationManagement";
 import type { GlobalApiKeys, ParserApiKeySettings } from "../components/Admin/GlobalApiKeysManager";
 import type { ParserSettingsData } from "../components/Admin/ParserSettings";
-import type { TrainingConfigData } from "../components/Admin/TrainingConfig";
 import type { LoggingConfig, LogFile, LogStats } from "../components/Admin/LoggingManager";
 import type { FeedbackStats, FeedbackDetails } from "../components/Admin/FeedbackAnalytics";
 import type { PatternData } from "../components/Admin/PatternManagement";
@@ -45,7 +43,6 @@ type ActiveSection =
   | "invitations"
   | "system"
   | "parsers"
-  | "training"
   | "logging"
   | "feedback"
   | "patterns"
@@ -74,8 +71,6 @@ export default function AdminPage(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [loadingHardwareInfo, setLoadingHardwareInfo] = useState(false);
   const [activeSection, setActiveSection] = useState<ActiveSection>("system");
-  const [trainingConfig, setTrainingConfig] = useState<TrainingConfigData | null>(null);
-  const [savingTrainingConfig, setSavingTrainingConfig] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [savingParsers, setSavingParsers] = useState(false);
   const [savingLogging, setSavingLogging] = useState(false);
@@ -114,28 +109,22 @@ export default function AdminPage(): JSX.Element {
       if (!parserSettings) {
         loadData();
       }
-    } else if (activeSection === "training") {
-      loadTrainingConfig();
     }
   }, [activeSection, feedbackDays]);
 
   const loadData = async (): Promise<void> => {
     setLoading(true);
     try {
-      const [infoData, usersData, invitationsData, parserData, trainingData] = await Promise.all([
+      const [infoData, usersData, invitationsData, parserData] = await Promise.all([
         adminApi.getSystemInfo(),
         adminApi.getUsers(),
         adminApi.getInvitations(),
         adminApi.getAdminParserSettings(),
-        adminApi.getTrainingConfig().catch(() => null),
       ]);
       setSystemInfo(infoData as SystemInfoData);
       setUsers(usersData.users);
       setInvitations(invitationsData.invitations);
       setParserSettings(parserData);
-      if (trainingData) {
-        setTrainingConfig(trainingData);
-      }
     } catch (error) {
       logger.error("Failed to load admin data:", error);
     } finally {
@@ -149,15 +138,6 @@ export default function AdminPage(): JSX.Element {
       setGlobalApiKeys(data);
     } catch (error) {
       logger.error("Failed to load global API keys:", error);
-    }
-  };
-
-  const loadTrainingConfig = async (): Promise<void> => {
-    try {
-      const data = await adminApi.getTrainingConfig();
-      setTrainingConfig(data);
-    } catch (error) {
-      logger.error("Failed to load training config:", error);
     }
   };
 
@@ -312,25 +292,6 @@ export default function AdminPage(): JSX.Element {
     }
   };
 
-  const handleSaveTrainingConfig = async (): Promise<void> => {
-    if (!trainingConfig) return;
-    setSavingTrainingConfig(true);
-    try {
-      await adminApi.updateTrainingConfig({
-        trainingModelOutputDir: trainingConfig.trainingModelOutputDir || null,
-        trainingEmailModelName: trainingConfig.trainingEmailModelName || null,
-        trainingVisionModelName: trainingConfig.trainingVisionModelName || null,
-      });
-      addToast("success", t("admin:toasts.trainingConfigSaved"));
-      await loadTrainingConfig();
-    } catch (error: unknown) {
-      logger.error("Failed to save training config:", error);
-      addToast("error", getErrorMessage(error, t("admin:toasts.trainingConfigFailed")));
-    } finally {
-      setSavingTrainingConfig(false);
-    }
-  };
-
   const handleToggleDebugLogging = async (): Promise<void> => {
     if (!loggingConfig) return;
     const newState = loggingConfig.logLevel !== "debug";
@@ -471,7 +432,6 @@ export default function AdminPage(): JSX.Element {
     { id: "invitations", label: t("admin:tabs.invitations") },
     { id: "apiKeys", label: t("admin:tabs.apiKeys") },
     { id: "parsers", label: t("admin:tabs.parsers") },
-    { id: "training", label: t("admin:tabs.training") },
     { id: "logging", label: t("admin:tabs.logging") },
     {
       id: "feedback",
@@ -607,15 +567,6 @@ export default function AdminPage(): JSX.Element {
               savingParsers={savingParsers}
               onSave={handleSaveParserSettings}
               onParserSettingsChange={setParserSettings}
-            />
-          )}
-
-          {activeSection === "training" && trainingConfig && (
-            <TrainingConfigTab
-              trainingConfig={trainingConfig}
-              savingTrainingConfig={savingTrainingConfig}
-              onSave={handleSaveTrainingConfig}
-              onTrainingConfigChange={setTrainingConfig}
             />
           )}
 

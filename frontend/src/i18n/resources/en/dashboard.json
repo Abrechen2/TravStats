@@ -38,7 +38,7 @@
   "achievements": "Achievements",
   "settings": "Settings",
   "admin": "Admin",
-  "training": "Training",
+  "parser": "Parser",
   "logout": "Logout",
   "errors": {
     "addFlight": "Error adding flight. Please try again.",
