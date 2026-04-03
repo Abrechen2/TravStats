@@ -43,7 +43,9 @@ export default function FlightsTablePage(): JSX.Element {
   const loadFlights = async () => {
     try {
       setLoading(true);
-      const { minRouteCount: _mc, ...apiFilters } = filters; // eslint-disable-line @typescript-eslint/no-unused-vars
+      // minRouteCount is a map-only filter — not applied to API queries
+      const { minRouteCount: _mapOnly, ...apiFilters } = filters;
+      void _mapOnly;
       let allFlights: Flight[] = [];
       let offset = 0;
       const limit = API_LIMITS.MAX_PAGE_SIZE;
