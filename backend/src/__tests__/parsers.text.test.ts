@@ -322,6 +322,39 @@ describe('Text Parsers', () => {
         }
       });
 
+      it('should parse German date format with full month name', async () => {
+        const subject = 'Flugbuchung';
+        const text = `
+          Flug: LH103
+          MUC → LUX
+          07. November 2024, 14:30
+          Ankunft: 07. November 2024, 16:15
+        `;
+
+        const result = await parser.parseEmail(subject, text);
+
+        expect(result[0].departureTime).toBeDefined();
+        if (result[0].departureTime) {
+          expect(result[0].departureTime).toContain('2024-11-07');
+        }
+      });
+
+      it('should parse German date-only format with full month name', async () => {
+        const subject = 'Flugbuchung';
+        const text = `
+          Flug: LH103
+          MUC → LUX
+          07. November 2024
+        `;
+
+        const result = await parser.parseEmail(subject, text);
+
+        expect(result[0].departureTime).toBeDefined();
+        if (result[0].departureTime) {
+          expect(result[0].departureTime).toContain('2024-11-07');
+        }
+      });
+
       it('should extract city names and convert to IATA codes', async () => {
         const subject = 'Flugbuchung';
         const text = `

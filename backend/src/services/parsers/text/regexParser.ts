@@ -405,13 +405,16 @@ export class RegexTextParser implements ITextParser {
       });
     }
 
-    // German date format
-    const germanPattern = /(\d{1,2})[.\s]+(\d{1,2}|[A-Z]{3})[.\s]+(\d{4})[,\s]+(\d{1,2}):(\d{2})/gi;
+    // German date format — supports abbreviated (Nov) and full (November) month names, time optional
+    const germanPattern = /(\d{1,2})[.\s]+(\d{1,2}|[A-Za-zÄÖÜäöü]{3,9})[.\s]+(\d{4})(?:[,\s]+(\d{1,2}):(\d{2}))?/gi;
     const germanMatches = Array.from(source.matchAll(germanPattern));
     const monthNames: Record<string, string> = {
       'JAN': '01', 'FEB': '02', 'MAR': '03', 'APR': '04', 'MAI': '05', 'MAY': '05',
       'JUN': '06', 'JUL': '07', 'AUG': '08', 'SEP': '09', 'OKT': '10', 'OCT': '10',
       'NOV': '11', 'DEZ': '12', 'DEC': '12',
+      'JANUAR': '01', 'FEBRUAR': '02', 'MÄRZ': '03', 'MÄR': '03', 'MAERZ': '03',
+      'APRIL': '04', 'JUNI': '06', 'JULI': '07', 'AUGUST': '08',
+      'SEPTEMBER': '09', 'OKTOBER': '10', 'NOVEMBER': '11', 'DEZEMBER': '12',
     };
 
     for (const match of germanMatches) {
@@ -425,8 +428,8 @@ export class RegexTextParser implements ITextParser {
         month = '01';
       }
       const year = match[3];
-      const hour = match[4].padStart(2, '0');
-      const minute = match[5];
+      const hour = match[4] ? match[4].padStart(2, '0') : '00';
+      const minute = match[5] ?? '00';
       const isoTime = `${year}-${month}-${day}T${hour}:${minute}`;
 
       // Add to pairs (assume first is departure, second is arrival)
@@ -531,49 +534,30 @@ export class RegexTextParser implements ITextParser {
     if (isoTimeMatches.length >= 1) data.departureTime = isoTimeMatches[0][1].replace(' ', 'T');
     if (isoTimeMatches.length >= 2) data.arrivalTime = isoTimeMatches[1][1].replace(' ', 'T');
 
-    // German date format: "18.11.2025 14:30" or "18 Nov 2025, 14:30"
+    // German date format: "18.11.2025 14:30", "18 Nov 2025, 14:30", "07. November 2024, 14:30", "07. November 2024"
     if (!data.departureTime || !data.arrivalTime) {
-      const germanDatePattern = /(\d{1,2})[.\s]+(\d{1,2}|[A-Z]{3})[.\s]+(\d{4})[,\s]+(\d{1,2}):(\d{2})/gi;
+      const germanDatePattern = /(\d{1,2})[.\s]+(\d{1,2}|[A-Za-zÄÖÜäöü]{3,9})[.\s]+(\d{4})(?:[,\s]+(\d{1,2}):(\d{2}))?/gi;
       const dateMatches = Array.from(source.matchAll(germanDatePattern));
+      const monthNames: Record<string, string> = {
+        'JAN': '01', 'FEB': '02', 'MAR': '03', 'APR': '04', 'MAI': '05', 'MAY': '05',
+        'JUN': '06', 'JUL': '07', 'AUG': '08', 'SEP': '09', 'OKT': '10', 'OCT': '10',
+        'NOV': '11', 'DEZ': '12', 'DEC': '12',
+        'JANUAR': '01', 'FEBRUAR': '02', 'MÄRZ': '03', 'MÄR': '03', 'MAERZ': '03',
+        'APRIL': '04', 'JUNI': '06', 'JULI': '07', 'AUGUST': '08',
+        'SEPTEMBER': '09', 'OKTOBER': '10', 'NOVEMBER': '11', 'DEZEMBER': '12',
+      };
+      const toIso = (m: RegExpMatchArray): string => {
+        const d = m[1].padStart(2, '0');
+        const raw = m[2].toUpperCase();
+        const mo = monthNames[raw] ?? (m[2].length <= 2 ? m[2].padStart(2, '0') : '01');
+        const y = m[3];
+        const h = m[4] ? m[4].padStart(2, '0') : '00';
+        const min = m[5] ?? '00';
+        return `${y}-${mo}-${d}T${h}:${min}`;
+      };
       if (dateMatches.length > 0) {
-        // Convert first match to ISO format
-        const match = dateMatches[0];
-        const day = match[1].padStart(2, '0');
-        let month = match[2];
-        // Convert month name to number if needed
-        const monthNames: Record<string, string> = {
-          'JAN': '01', 'FEB': '02', 'MAR': '03', 'APR': '04', 'MAI': '05', 'MAY': '05',
-          'JUN': '06', 'JUL': '07', 'AUG': '08', 'SEP': '09', 'OKT': '10', 'OCT': '10',
-          'NOV': '11', 'DEZ': '12', 'DEC': '12',
-        };
-        if (monthNames[month.toUpperCase()]) {
-          month = monthNames[month.toUpperCase()];
-        } else if (month.length <= 2) {
-          month = month.padStart(2, '0');
-        } else {
-          month = '01'; // fallback
-        }
-        const year = match[3];
-        const hour = match[4].padStart(2, '0');
-        const minute = match[5];
-        const isoTime = `${year}-${month}-${day}T${hour}:${minute}`;
-        if (!data.departureTime) data.departureTime = isoTime;
-        else if (!data.arrivalTime && dateMatches.length > 1) {
-          const match2 = dateMatches[1];
-          const day2 = match2[1].padStart(2, '0');
-          let month2 = match2[2];
-          if (monthNames[month2.toUpperCase()]) {
-            month2 = monthNames[month2.toUpperCase()];
-          } else if (month2.length <= 2) {
-            month2 = month2.padStart(2, '0');
-          } else {
-            month2 = '01';
-          }
-          const year2 = match2[3];
-          const hour2 = match2[4].padStart(2, '0');
-          const minute2 = match2[5];
-          data.arrivalTime = `${year2}-${month2}-${day2}T${hour2}:${minute2}`;
-        }
+        if (!data.departureTime) data.departureTime = toIso(dateMatches[0]);
+        if (!data.arrivalTime && dateMatches.length > 1) data.arrivalTime = toIso(dateMatches[1]);
       }
     }
 
