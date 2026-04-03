@@ -203,7 +203,7 @@ export const useSettingsStore = create<SettingsState>()(
         set((state) => ({
           privacy: { ...state.privacy, ...updates },
         })),
-      setBackup: (_updates) => {
+      setBackup: () => {
         // BackupSettings has no fields; no-op
       },
       setApiKeys: (status) =>
