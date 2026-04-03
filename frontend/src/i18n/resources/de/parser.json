@@ -13,7 +13,8 @@
     "emailButton": "E-Mail hochladen",
     "emailFormats": ".eml, .msg, .txt",
     "boardingPassButton": "Boarding Pass hochladen",
-    "boardingPassFormats": ".png, .jpg, .jpeg"
+    "boardingPassFormats": ".png, .jpg, .jpeg",
+    "uploadError": "Datei konnte nicht hochgeladen werden."
   },
   "myTemplates": {
     "empty": "Noch keine eigenen Templates",

@@ -13,7 +13,8 @@
     "emailButton": "Upload email",
     "emailFormats": ".eml, .msg, .txt",
     "boardingPassButton": "Upload boarding pass",
-    "boardingPassFormats": ".png, .jpg, .jpeg"
+    "boardingPassFormats": ".png, .jpg, .jpeg",
+    "uploadError": "Could not upload file."
   },
   "myTemplates": {
     "empty": "No custom templates yet",

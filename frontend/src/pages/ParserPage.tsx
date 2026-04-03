@@ -8,6 +8,7 @@ import BoardingPassAnnotation from "../components/Training/BoardingPassAnnotatio
 import ParseLogStats from "../components/Training/ParseLogStats";
 import TemplateStatusView from "../components/TemplateStatusView";
 import MyTemplates from "../components/Parser/MyTemplates";
+import { useToastStore } from "../store/toastStore";
 import { useTranslation } from "../hooks/useTranslation";
 
 type Tab = "annotate" | "my-templates" | "community" | "parse-logs";
@@ -15,6 +16,7 @@ type Tab = "annotate" | "my-templates" | "community" | "parse-logs";
 export default function ParserPage(): JSX.Element {
   const { t } = useTranslation(["parser", "common"]);
   const user = useAuthStore((s) => s.user);
+  const addToast = useToastStore((state) => state.addToast);
   const [activeTab, setActiveTab] = useState<Tab>("annotate");
   const [uploadedFile, setUploadedFile] = useState<{ id: string; type: string } | null>(null);
   const emailFileInputRef = useRef<HTMLInputElement>(null);
@@ -26,6 +28,7 @@ export default function ParserPage(): JSX.Element {
       setUploadedFile({ id: result.id, type: result.type });
     } catch (error) {
       logger.error({ err: error }, "ParserPage: upload failed");
+      addToast("error", t("parser:annotate.uploadError"));
     }
   };
 
