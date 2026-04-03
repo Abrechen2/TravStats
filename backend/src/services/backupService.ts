@@ -1054,8 +1054,10 @@ export async function restoreBackup(id: string, options: RestoreOptions): Promis
  * Cleanup old backups based on retention policy
  */
 export async function cleanupOldBackups(): Promise<number> {
+  const adminSettings = await prisma.adminSettings.findFirst();
+  const retentionDays = adminSettings?.backupRetentionDays ?? RETENTION_DAYS;
   const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() - RETENTION_DAYS);
+  cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
 
   const oldBackups = await prisma.backup.findMany({
     where: {

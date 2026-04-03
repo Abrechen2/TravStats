@@ -6,6 +6,22 @@ import { createBackup } from './backupService';
 let scheduledJob: cron.ScheduledTask | null = null;
 
 /**
+ * Read backup settings from AdminSettings DB row
+ */
+async function getBackupSettings(): Promise<{
+  enabled: boolean;
+  interval: 'daily' | 'weekly' | 'monthly';
+  retentionDays: number;
+}> {
+  const adminSettings = await prisma.adminSettings.findFirst();
+  return {
+    enabled: adminSettings?.backupEnabled ?? false,
+    interval: (adminSettings?.backupInterval as 'daily' | 'weekly' | 'monthly') ?? 'weekly',
+    retentionDays: adminSettings?.backupRetentionDays ?? 30,
+  };
+}
+
+/**
  * Get cron pattern for backup interval
  */
 function getCronPattern(interval: 'daily' | 'weekly' | 'monthly'): string {
@@ -26,11 +42,7 @@ function getCronPattern(interval: 'daily' | 'weekly' | 'monthly'): string {
  */
 async function checkAndRunBackup(): Promise<void> {
   try {
-    // Get admin settings to check backup configuration
-    // Note: Backup settings are stored in UserSettings for the admin user
-    // For now, we'll check system-wide settings or use environment variables
-    const autoBackup = process.env.AUTO_BACKUP_ENABLED === 'true';
-    const backupInterval = (process.env.BACKUP_INTERVAL as 'daily' | 'weekly' | 'monthly') || 'weekly';
+    const { enabled: autoBackup, interval: backupInterval } = await getBackupSettings();
 
     if (!autoBackup) {
       logger.debug({
@@ -89,9 +101,7 @@ export async function startScheduler(): Promise<void> {
     return;
   }
 
-  // Get settings from environment or default
-  const autoBackup = process.env.AUTO_BACKUP_ENABLED === 'true';
-  const backupInterval = (process.env.BACKUP_INTERVAL as 'daily' | 'weekly' | 'monthly') || 'weekly';
+  const { enabled: autoBackup, interval: backupInterval } = await getBackupSettings();
 
   if (!autoBackup) {
     logger.info({
@@ -147,13 +157,16 @@ export async function updateSchedule(): Promise<void> {
 /**
  * Get current schedule status
  */
-export function getScheduleStatus(): { running: boolean; cronPattern?: string; interval?: string } {
+export async function getScheduleStatus(): Promise<{
+  running: boolean;
+  cronPattern?: string;
+  interval?: string;
+}> {
   if (!scheduledJob) {
     return { running: false };
   }
 
-  const autoBackup = process.env.AUTO_BACKUP_ENABLED === 'true';
-  const backupInterval = (process.env.BACKUP_INTERVAL as 'daily' | 'weekly' | 'monthly') || 'weekly';
+  const { enabled: autoBackup, interval: backupInterval } = await getBackupSettings();
 
   if (!autoBackup) {
     return { running: false };
@@ -165,17 +178,3 @@ export function getScheduleStatus(): { running: boolean; cronPattern?: string; i
     interval: backupInterval,
   };
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
