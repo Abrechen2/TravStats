@@ -64,8 +64,10 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
         const limit = API_LIMITS.MAX_PAGE_SIZE; // match backend max to avoid validation errors and fewer requests
 
         // Fetch all flights to build complete filter options
-        // eslint-disable-next-line no-constant-condition
-        while (true) {
+        const MAX_PAGES = 200;
+        let pages = 0;
+        while (pages < MAX_PAGES) {
+          pages++;
           const { flights } = await flightsApi.getAll({ limit, offset });
           allFlights = [...allFlights, ...flights];
 

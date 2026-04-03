@@ -105,6 +105,18 @@ export const boardingPassParseLimiter = rateLimit({
 });
 
 /**
+ * Rate limiter for email parsing (triggers expensive LLM operations)
+ * Allows 10 parses per 15 minutes per IP
+ */
+export const emailParseLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  message: { error: 'Too many parse requests, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/**
  * Rate limiter for stats calculation endpoints (expensive DB aggregations)
  * Allows 30 requests per minute per IP
  */

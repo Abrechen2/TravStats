@@ -102,8 +102,10 @@ export default function AdvancedStatsPage(): JSX.Element {
       let offset = 0;
       const limit = 100;
 
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
+      const MAX_PAGES = 200;
+      let pages = 0;
+      while (pages < MAX_PAGES) {
+        pages++;
         const data = await flightsApi.getAll({ limit, offset });
         allFlights = [...allFlights, ...data.flights];
         if (data.flights.length < limit) {
