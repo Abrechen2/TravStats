@@ -208,34 +208,6 @@ export interface TrainingAnnotationResult {
   templateId?: string;
 }
 
-export interface TrainingJobLog {
-  timestamp: string;
-  level: string;
-  message: string;
-  metadata?: Record<string, unknown>;
-}
-
-export interface TrainingJob {
-  id: string;
-  modelName: string;
-  status: "pending" | "running" | "completed" | "failed" | "cancelled";
-  type?: string;
-  startedAt?: string;
-  completedAt?: string;
-  error?: string;
-  errorMessage?: string;
-  progress?: number;
-  createdAt: string;
-  updatedAt?: string;
-  trainingDataIds?: string[];
-}
-
-export interface TrainingJobLogsResponse {
-  job: TrainingJob;
-  logs: TrainingJobLog[];
-  logFileContent?: string | null;
-}
-
 // ==================== Pending Updates Interfaces ====================
 
 export interface FlightUpdateChange {
