@@ -19,6 +19,12 @@ const CITY_TO_IATA: Record<string, string> = {
   paris: 'CDG', london: 'LHR', amsterdam: 'AMS',
   brüssel: 'BRU', brussel: 'BRU', bruessel: 'BRU', brussels: 'BRU',
   wien: 'VIE', vienna: 'VIE',
+  salzburg: 'SZG',
+  graz: 'GRZ',
+  innsbruck: 'INN',
+  linz: 'LNZ',
+  basel: 'BSL',
+  bern: 'BRN',
   zürich: 'ZRH', zurich: 'ZRH', genf: 'GVA', geneva: 'GVA',
   rom: 'FCO', rome: 'FCO', mailand: 'MXP', milan: 'MXP',
   barcelona: 'BCN', madrid: 'MAD', lissabon: 'LIS', lisbon: 'LIS',
@@ -164,6 +170,8 @@ export class RegexTextParser implements ITextParser {
       'LUX', 'CDG', 'ORY', 'LHR', 'LGW', 'STN', 'AMS', 'BRU', 'VIE', 'ZRH', 'GVA',
       'FCO', 'MXP', 'BCN', 'MAD', 'LIS', 'CPH', 'ARN', 'OSL', 'PRG', 'WAW', 'BUD', 'IST', 'ATH',
       'HEL', 'DUB', 'EDI', 'MAN', 'BHX', 'BRS', 'NCL', 'LPL', 'EMA', 'SOU',
+      // DACH airports
+      'SZG', 'GRZ', 'INN', 'LNZ', 'BSL', 'BRN',
       // Major US airports
       'JFK', 'EWR', 'LGA', 'LAX', 'SFO', 'ORD', 'DFW', 'DEN', 'ATL', 'MIA', 'SEA', 'BOS', 'IAD', 'DCA',
       'PHX', 'LAS', 'MCO', 'CLT', 'DTW', 'PHL', 'MSP', 'BWI', 'SLC', 'HNL',
@@ -220,7 +228,7 @@ export class RegexTextParser implements ITextParser {
     const falsePositives = [
       'UND', 'DER', 'DIE', 'DAS', 'VON', 'BIS', 'FUR', 'MIT', 'AUF', 'AUS',
       'FUR', 'FÜR', 'EIN', 'EINE', 'EINER', 'EINEM', 'EINEN', 'EINES',
-      'OGO', 'CRA', 'VIE', 'DAN', 'VIEL', 'DANK', 'SEHR', 'WICHT', 'BEST',
+      'OGO', 'CRA', 'DAN', 'VIEL', 'DANK', 'SEHR', 'WICHT', 'BEST',
       'GRU', 'HER', 'FRE', 'SCH', 'GUT', 'NEU', 'ALT', 'GRO', 'KLE',
       'THE', 'AND', 'FOR', 'ARE', 'BUT', 'NOT', 'YOU', 'ALL', 'CAN', 'HER',
       'WAS', 'ONE', 'OUR', 'OUT', 'DAY', 'GET', 'HAS', 'HIM', 'HIS', 'HOW',
@@ -248,7 +256,7 @@ export class RegexTextParser implements ITextParser {
 
     // Extract all flight numbers with context
     const flightNumberPatterns = [
-      /(?:FLIGHT|FLUG)\s*:?\s*([A-Z]{2,3}\s?\d{1,4})\b/gi,
+      /(?:FLIGHT|FLUG|FLUGNUMMER|FLUG-NR|FLT\.?)\s*:?\s*([A-Z]{2,3}\s?\d{1,4})\b/gi,
       /\b([A-Z]{2,3})\s*(\d{1,4})\b(?=.*(?:FLIGHT|FLUG|DEPARTURE|ABFLUG|BOARDING|GATE|TERMINAL))/gi,
     ];
 

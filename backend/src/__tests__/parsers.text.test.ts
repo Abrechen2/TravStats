@@ -581,6 +581,66 @@ describe('Text Parsers', () => {
         expect(result[0].arrivalCode).toBeDefined();
       });
 
+      it('should recognize VIE as Vienna airport code', async () => {
+        const subject = 'Flight booking';
+        const text = `
+          Flight: OS431
+          VIE → MUC
+          2025-03-10T10:30
+          2025-03-10T11:45
+        `;
+        const result = await parser.parseEmail(subject, text);
+        const found = result.find(r => r.departureCode === 'VIE' || r.arrivalCode === 'VIE');
+        expect(found).toBeDefined();
+      });
+
+      it('should map Wien to VIE', async () => {
+        const subject = 'Flugbuchung';
+        const text = `
+          Flug: OS431
+          Von Wien nach München
+          am 10. März 2025, 10:30
+        `;
+        const result = await parser.parseEmail(subject, text);
+        expect(result[0].departureCode).toBe('VIE');
+        expect(result[0].arrivalCode).toBe('MUC');
+      });
+
+      it('should map Salzburg to SZG', async () => {
+        const subject = 'Flight booking';
+        const text = `
+          Flight: OS123
+          Von Salzburg nach Wien
+          am 10. März 2025, 08:00
+        `;
+        const result = await parser.parseEmail(subject, text);
+        expect(result[0].departureCode).toBe('SZG');
+      });
+
+      it('should extract flight number from Flugnummer keyword', async () => {
+        const subject = 'Buchungsbestätigung';
+        const text = `
+          Flugnummer: LH103
+          MUC → LUX
+          2025-11-18T11:00
+          2025-11-18T12:55
+        `;
+        const result = await parser.parseEmail(subject, text);
+        expect(result[0].flightNumber).toBe('LH103');
+      });
+
+      it('should extract flight number from Flt keyword', async () => {
+        const subject = 'Booking confirmation';
+        const text = `
+          Flt. LH103
+          MUC → LUX
+          2025-11-18T11:00
+          2025-11-18T12:55
+        `;
+        const result = await parser.parseEmail(subject, text);
+        expect(result[0].flightNumber).toBe('LH103');
+      });
+
       it('should have provider property set to regex', () => {
         expect(parser.provider).toBe('regex');
       });

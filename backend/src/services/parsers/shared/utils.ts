@@ -27,7 +27,7 @@ export function getClaudeTextModels(): string[] {
  * Get the latest Claude model for text parsing
  * Returns the model from CLAUDE_MODEL env var if set, otherwise the latest available model
  * Models are ordered by release date (newest first)
- * 
+ *
  * Note: Anthropic recommends using specific model versions for production.
  * This function returns the newest known model, but you can override it with CLAUDE_MODEL env var.
  */
@@ -60,7 +60,7 @@ export function getClaudeVisionModels(): string[] {
 /**
  * Get the latest Claude model for vision parsing
  * Returns the model from CLAUDE_VISION_MODEL env var if set, otherwise the latest available model
- * 
+ *
  * Note: Anthropic recommends using specific model versions for production.
  * This function returns the newest known model, but you can override it with CLAUDE_VISION_MODEL env var.
  */
@@ -99,12 +99,12 @@ export function validateIATACode(code: string | null | undefined, strict: boolea
   if (!code) return undefined;
   const cleaned = code.toUpperCase().trim();
   if (!/^[A-Z]{3}$/.test(cleaned)) return undefined;
-  
+
   // If strict mode, check against whitelist of common valid codes
   if (strict && !COMMON_VALID_IATA_CODES.has(cleaned)) {
     return undefined;
   }
-  
+
   return cleaned;
 }
 
@@ -212,7 +212,7 @@ export const PATTERNS = {
   IATA_CODE: /\b([A-Z]{3})\b/g,
   PNR: /\b([A-Z0-9]{6})\b/,
   SEAT: /\b([0-9]{1,2}[A-F])\b/i,
-  GATE: /(?:Gate|Boarding)\s*:?\s*([A-Z]?\d{1,3}[A-Z]?)/i,
+  GATE: /(?:Gate|Boarding|Ausgang|Steig)\s*:?\s*([A-Z]?\d{1,3}[A-Z]?)/i,
   TERMINAL: /Terminal\s*:?\s*([A-Z0-9]+)/i,
   DATE_ISO: /\b(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?)/g,
   PRICE_EUR: /(\d{1,5}[.,]\d{2})\s?(EUR|€)/i,
