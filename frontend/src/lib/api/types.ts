@@ -139,10 +139,7 @@ export interface UserSettings {
     routeColor?: string;
   };
   notifications?: {
-    emailNotifications?: boolean;
     flightReminder?: string;
-    checkInReminder?: boolean;
-    featureUpdates?: boolean;
   };
   privacy?: {
     twoFactorAuth?: boolean;
@@ -151,12 +148,7 @@ export interface UserSettings {
     accountDeletionRequested?: boolean;
     analyticsOptIn?: boolean;
   };
-  backup?: {
-    autoBackup?: boolean;
-    backupInterval?: string;
-    exportFormat?: string;
-    cloudSync?: boolean;
-  };
+  backup?: Record<string, never>;
   autoUpdate?: AutoUpdateSettings;
   historicalEnrichment?: HistoricalEnrichmentSettings;
   boardingPassParserStrategy?: "parser-only" | "parser-with-api" | "api-only" | null;
