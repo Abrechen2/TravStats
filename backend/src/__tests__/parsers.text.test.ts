@@ -355,6 +355,139 @@ describe('Text Parsers', () => {
         }
       });
 
+      it('should parse English abbreviated month name with time', async () => {
+        const subject = 'Flight booking';
+        const text = `
+          Flight: LH103
+          MUC → LUX
+          07 Dec 2024, 14:30
+          Arrival: 07 Dec 2024, 16:15
+        `;
+
+        const result = await parser.parseEmail(subject, text);
+
+        expect(result[0].departureTime).toBeDefined();
+        if (result[0].departureTime) {
+          expect(result[0].departureTime).toContain('2024-12-07');
+        }
+      });
+
+      it('should parse English full month name with time', async () => {
+        const subject = 'Flight booking';
+        const text = `
+          Flight: LH103
+          MUC → LUX
+          07 December 2024, 14:30
+          Arrival: 07 December 2024, 16:15
+        `;
+
+        const result = await parser.parseEmail(subject, text);
+
+        expect(result[0].departureTime).toBeDefined();
+        if (result[0].departureTime) {
+          expect(result[0].departureTime).toContain('2024-12-07');
+        }
+      });
+
+      it('should parse English full month name without time', async () => {
+        const subject = 'Flight booking';
+        const text = `
+          Flight: LH103
+          MUC → LUX
+          07 December 2024
+        `;
+
+        const result = await parser.parseEmail(subject, text);
+
+        expect(result[0].departureTime).toBeDefined();
+        if (result[0].departureTime) {
+          expect(result[0].departureTime).toContain('2024-12-07');
+        }
+      });
+
+      it('should parse English January (full name)', async () => {
+        const subject = 'Flight booking';
+        const text = `
+          Flight: LH103
+          MUC → LUX
+          15 January 2025, 09:00
+        `;
+
+        const result = await parser.parseEmail(subject, text);
+
+        expect(result[0].departureTime).toBeDefined();
+        if (result[0].departureTime) {
+          expect(result[0].departureTime).toContain('2025-01-15');
+        }
+      });
+
+      it('should parse English March (full name)', async () => {
+        const subject = 'Flight booking';
+        const text = `
+          Flight: LH103
+          MUC → LUX
+          22 March 2025, 11:45
+        `;
+
+        const result = await parser.parseEmail(subject, text);
+
+        expect(result[0].departureTime).toBeDefined();
+        if (result[0].departureTime) {
+          expect(result[0].departureTime).toContain('2025-03-22');
+        }
+      });
+
+      it('should parse German März (umlaut)', async () => {
+        const subject = 'Flugbuchung';
+        const text = `
+          Flug: LH103
+          MUC → LUX
+          22. März 2025, 11:45
+        `;
+
+        const result = await parser.parseEmail(subject, text);
+
+        expect(result[0].departureTime).toBeDefined();
+        if (result[0].departureTime) {
+          expect(result[0].departureTime).toContain('2025-03-22');
+        }
+      });
+
+      it('should parse English June and July (full names)', async () => {
+        const subjectJune = 'Flight booking';
+        const textJune = `
+          Flight: LH103
+          MUC → LUX
+          10 June 2025, 08:00
+        `;
+        const resultJune = await parser.parseEmail(subjectJune, textJune);
+        expect(resultJune[0].departureTime).toContain('2025-06-10');
+
+        const textJuly = `
+          Flight: LH103
+          MUC → LUX
+          10 July 2025, 08:00
+        `;
+        const resultJuly = await parser.parseEmail(subjectJune, textJuly);
+        expect(resultJuly[0].departureTime).toContain('2025-07-10');
+      });
+
+      it('should parse English October (full name)', async () => {
+        const subject = 'Flight booking';
+        const text = `
+          Flight: LH103
+          MUC → LUX
+          31 October 2025, 20:00
+        `;
+
+        const result = await parser.parseEmail(subject, text);
+
+        expect(result[0].departureTime).toBeDefined();
+        if (result[0].departureTime) {
+          expect(result[0].departureTime).toContain('2025-10-31');
+        }
+      });
+
       it('should extract city names and convert to IATA codes', async () => {
         const subject = 'Flugbuchung';
         const text = `
