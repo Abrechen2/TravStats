@@ -1,6 +1,6 @@
 import { Router, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { AuthRequest, requireAdmin } from '../../middleware/auth';
+import { AuthRequest } from '../../middleware/auth';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../db';
 import { adminExportLimiter } from '../../middleware/rateLimit';
@@ -44,7 +44,7 @@ const autoApplySchema = z.object({
 const router = Router();
 
 // GET /api/v1/admin/parse-logs/stats — aggregate parse log stats per airline
-router.get('/parse-logs/stats', requireAdmin, async (_req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+router.get('/parse-logs/stats', async (_req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const logs = await prisma.parseTrainingLog.findMany({
       select: { airline: true, templateHit: true, missingFields: true },
@@ -93,7 +93,7 @@ router.get('/parse-logs/stats', requireAdmin, async (_req: AuthRequest, res: Res
 });
 
 // GET /api/v1/admin/parse-logs/export — download anonymized ParseTrainingLog as JSONL
-router.get('/parse-logs/export', requireAdmin, adminExportLimiter, async (_req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+router.get('/parse-logs/export', adminExportLimiter, async (_req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const ROW_LIMIT = 50000;
     const logs = await prisma.parseTrainingLog.findMany({
@@ -128,7 +128,7 @@ router.get('/parse-logs/export', requireAdmin, adminExportLimiter, async (_req: 
 
 // POST /api/v1/admin/parse-logs/promote
 // Promotes analytics_events parser_feedback corrections → TrainingData ground-truth labels
-router.post('/parse-logs/promote', requireAdmin, async (_req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+router.post('/parse-logs/promote', async (_req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     interface FeedbackPayload {
       sourceType?: string;

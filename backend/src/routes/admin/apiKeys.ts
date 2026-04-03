@@ -1,6 +1,6 @@
 import { Router, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { AuthRequest, requireAdmin } from '../../middleware/auth';
+import { AuthRequest } from '../../middleware/auth';
 import { prisma } from '../../db';
 import { decryptApiKey, encryptApiKey } from '../../utils/encryption';
 import logger from '../../utils/logger';
@@ -51,7 +51,7 @@ const testOpenSkySchema = z.object({
 const router = Router();
 
 // Get global API keys
-router.get('/api-keys', requireAdmin, async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get('/api-keys', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const adminSettings = await prisma.adminSettings.findFirst();
 
@@ -90,7 +90,7 @@ router.get('/api-keys', requireAdmin, async (req: AuthRequest, res: Response, ne
 });
 
 // Update global API keys
-router.put('/api-keys', requireAdmin, async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.put('/api-keys', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const payload = globalApiKeysSchema.parse(req.body);
 
@@ -162,7 +162,7 @@ router.put('/api-keys', requireAdmin, async (req: AuthRequest, res: Response, ne
 });
 
 // Test API key endpoints (admin)
-router.post('/api-keys/test/openai', requireAdmin, async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post('/api-keys/test/openai', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { apiKey } = testApiKeySchema.parse(req.body);
     const result = await testOpenAIKey(apiKey);
@@ -172,7 +172,7 @@ router.post('/api-keys/test/openai', requireAdmin, async (req: AuthRequest, res:
   }
 });
 
-router.post('/api-keys/test/claude', requireAdmin, async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post('/api-keys/test/claude', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { apiKey } = testApiKeySchema.parse(req.body);
     const result = await testClaudeKey(apiKey);
@@ -182,7 +182,7 @@ router.post('/api-keys/test/claude', requireAdmin, async (req: AuthRequest, res:
   }
 });
 
-router.post('/api-keys/test/airlabs', requireAdmin, async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post('/api-keys/test/airlabs', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { apiKey } = testApiKeySchema.parse(req.body);
     const result = await testAirlabsKey(apiKey);
@@ -192,7 +192,7 @@ router.post('/api-keys/test/airlabs', requireAdmin, async (req: AuthRequest, res
   }
 });
 
-router.post('/api-keys/test/aviationstack', requireAdmin, async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post('/api-keys/test/aviationstack', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { apiKey } = testApiKeySchema.parse(req.body);
     const result = await testAviationstackKey(apiKey);
@@ -202,7 +202,7 @@ router.post('/api-keys/test/aviationstack', requireAdmin, async (req: AuthReques
   }
 });
 
-router.post('/api-keys/test/opensky', requireAdmin, async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post('/api-keys/test/opensky', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { clientId, clientSecret, username, password } = testOpenSkySchema.parse(req.body);
     const result = await testOpenSkyCredentials({ clientId, clientSecret, username, password });

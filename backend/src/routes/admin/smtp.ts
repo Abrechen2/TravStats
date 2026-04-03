@@ -1,6 +1,6 @@
 import { Router, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { authenticate, requireAdmin, AuthRequest } from '../../middleware/auth';
+import { AuthRequest } from '../../middleware/auth';
 import { prisma } from '../../db';
 import { testSmtpConnection } from '../../services/emailService';
 
@@ -23,7 +23,7 @@ export const smtpUpdateSchema = smtpConfigSchema.extend({
 
 const smtpRouter = Router();
 
-smtpRouter.get('/', authenticate, requireAdmin, async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+smtpRouter.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const config = await prisma.smtpConfig.findUnique({ where: { id: SMTP_CONFIG_ID } });
     if (!config) {
@@ -46,7 +46,7 @@ smtpRouter.get('/', authenticate, requireAdmin, async (req: AuthRequest, res: Re
   }
 });
 
-smtpRouter.put('/', authenticate, requireAdmin, async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+smtpRouter.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const data = smtpUpdateSchema.parse(req.body);
     const updateData = {
@@ -89,7 +89,7 @@ smtpRouter.put('/', authenticate, requireAdmin, async (req: AuthRequest, res: Re
   }
 });
 
-smtpRouter.post('/test', authenticate, requireAdmin, async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+smtpRouter.post('/test', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const data = smtpConfigSchema.parse(req.body);
     await testSmtpConnection(data);

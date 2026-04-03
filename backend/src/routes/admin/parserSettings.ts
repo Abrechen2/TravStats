@@ -1,6 +1,6 @@
 import { Router, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { AuthRequest, requireAdmin } from '../../middleware/auth';
+import { AuthRequest } from '../../middleware/auth';
 import { prisma } from '../../db';
 import { decryptApiKey, encryptApiKey } from '../../utils/encryption';
 import logger from '../../utils/logger';
@@ -158,7 +158,7 @@ router.put('/parser-settings', async (req: AuthRequest, res: Response, next: Nex
 });
 
 // Get training configuration
-router.get('/training-config', requireAdmin, async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get('/training-config', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const adminSettings = await prisma.adminSettings.findFirst();
     const trainingModelOutputDir = adminSettings?.trainingModelOutputDir
@@ -187,7 +187,7 @@ router.get('/training-config', requireAdmin, async (req: AuthRequest, res: Respo
 });
 
 // Update training configuration
-router.put('/training-config', requireAdmin, async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.put('/training-config', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const payload = trainingConfigSchema.parse(req.body);
 
