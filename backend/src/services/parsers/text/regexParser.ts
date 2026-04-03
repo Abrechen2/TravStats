@@ -412,9 +412,11 @@ export class RegexTextParser implements ITextParser {
       'JAN': '01', 'FEB': '02', 'MAR': '03', 'APR': '04', 'MAI': '05', 'MAY': '05',
       'JUN': '06', 'JUL': '07', 'AUG': '08', 'SEP': '09', 'OKT': '10', 'OCT': '10',
       'NOV': '11', 'DEZ': '12', 'DEC': '12',
-      'JANUAR': '01', 'FEBRUAR': '02', 'MÄRZ': '03', 'MÄR': '03', 'MAERZ': '03',
-      'APRIL': '04', 'JUNI': '06', 'JULI': '07', 'AUGUST': '08',
-      'SEPTEMBER': '09', 'OKTOBER': '10', 'NOVEMBER': '11', 'DEZEMBER': '12',
+      'JANUAR': '01', 'JANUARY': '01', 'FEBRUAR': '02', 'FEBRUARY': '02',
+      'MÄRZ': '03', 'MÄR': '03', 'MAERZ': '03', 'MARCH': '03',
+      'APRIL': '04', 'JUNI': '06', 'JUNE': '06', 'JULI': '07', 'JULY': '07', 'AUGUST': '08',
+      'SEPTEMBER': '09', 'OKTOBER': '10', 'OCTOBER': '10', 'NOVEMBER': '11',
+      'DEZEMBER': '12', 'DECEMBER': '12',
     };
 
     for (const match of germanMatches) {
@@ -542,9 +544,10 @@ export class RegexTextParser implements ITextParser {
         'JAN': '01', 'FEB': '02', 'MAR': '03', 'APR': '04', 'MAI': '05', 'MAY': '05',
         'JUN': '06', 'JUL': '07', 'AUG': '08', 'SEP': '09', 'OKT': '10', 'OCT': '10',
         'NOV': '11', 'DEZ': '12', 'DEC': '12',
-        'JANUAR': '01', 'FEBRUAR': '02', 'MÄRZ': '03', 'MÄR': '03', 'MAERZ': '03',
-        'APRIL': '04', 'JUNI': '06', 'JULI': '07', 'AUGUST': '08',
-        'SEPTEMBER': '09', 'OKTOBER': '10', 'NOVEMBER': '11', 'DEZEMBER': '12',
+        'JANUAR': '01', 'FEBRUARY': '02', 'FEBRUAR': '02', 'MÄRZ': '03', 'MÄR': '03', 'MAERZ': '03', 'MARCH': '03',
+        'APRIL': '04', 'JUNI': '06', 'JUNE': '06', 'JULI': '07', 'JULY': '07', 'AUGUST': '08',
+        'SEPTEMBER': '09', 'OKTOBER': '10', 'OCTOBER': '10', 'NOVEMBER': '11', 'DEZEMBER': '12', 'DECEMBER': '12',
+        'JANUARY': '01',
       };
       const toIso = (m: RegExpMatchArray): string => {
         const d = m[1].padStart(2, '0');
