@@ -20,7 +20,6 @@ interface GlobalApiKeysUpdateData {
   globalOpenskyUsername?: string | null;
   globalOpenskyPassword?: string | null;
   allowUserFlightApiKeys?: boolean;
-  requireUserFlightApiKeys?: boolean;
 }
 
 const globalApiKeysSchema = z.object({
@@ -31,7 +30,6 @@ const globalApiKeysSchema = z.object({
   globalOpenskyUsername: z.string().optional().nullable(),
   globalOpenskyPassword: z.string().optional().nullable(),
   allowUserFlightApiKeys: z.boolean().optional(),
-  requireUserFlightApiKeys: z.boolean().optional(),
 }).partial();
 
 const testApiKeySchema = z.object({
@@ -64,7 +62,6 @@ router.get('/api-keys', async (req: AuthRequest, res: Response, next: NextFuncti
         globalOpenskyUsername: undefined,
         globalOpenskyPassword: undefined,
         allowUserFlightApiKeys: true,
-        requireUserFlightApiKeys: false,
       });
     }
 
@@ -76,7 +73,6 @@ router.get('/api-keys', async (req: AuthRequest, res: Response, next: NextFuncti
       globalOpenskyUsername: decryptApiKey(adminSettings.globalOpenskyUsername) || undefined,
       globalOpenskyPassword: decryptApiKey(adminSettings.globalOpenskyPassword) || undefined,
       allowUserFlightApiKeys: adminSettings.allowUserFlightApiKeys ?? true,
-      requireUserFlightApiKeys: adminSettings.requireUserFlightApiKeys ?? false,
     });
   } catch (error) {
     logger.error({
@@ -120,9 +116,6 @@ router.put('/api-keys', async (req: AuthRequest, res: Response, next: NextFuncti
     if (payload.allowUserFlightApiKeys !== undefined) {
       updateData.allowUserFlightApiKeys = payload.allowUserFlightApiKeys;
     }
-    if (payload.requireUserFlightApiKeys !== undefined) {
-      updateData.requireUserFlightApiKeys = payload.requireUserFlightApiKeys;
-    }
 
     if (adminSettings) {
       adminSettings = await prisma.adminSettings.update({
@@ -133,11 +126,9 @@ router.put('/api-keys', async (req: AuthRequest, res: Response, next: NextFuncti
       adminSettings = await prisma.adminSettings.create({
         data: {
           allowUserApiKeys: true,
-          requireUserApiKeys: false,
           defaultVisionParser: 'auto',
           defaultTextParser: 'auto',
           allowUserFlightApiKeys: true,
-          requireUserFlightApiKeys: false,
           ...updateData,
         },
       });
@@ -153,7 +144,6 @@ router.put('/api-keys', async (req: AuthRequest, res: Response, next: NextFuncti
         globalOpenskyUsername: decryptApiKey(adminSettings.globalOpenskyUsername) || undefined,
         globalOpenskyPassword: decryptApiKey(adminSettings.globalOpenskyPassword) || undefined,
         allowUserFlightApiKeys: adminSettings.allowUserFlightApiKeys,
-        requireUserFlightApiKeys: adminSettings.requireUserFlightApiKeys,
       },
     });
   } catch (error) {

@@ -80,6 +80,11 @@ jest.mock("../services/parsers/config", () => ({
   getParserConfig: jest.fn(),
 }));
 
+// ── Model manager ─────────────────────────────────────────────────────────────
+jest.mock("../services/modelManager", () => ({
+  selectModelForParsing: jest.fn().mockResolvedValue(undefined),
+}));
+
 // ── BoardingPass quality ──────────────────────────────────────────────────────
 jest.mock("../services/parsers/boardingPass", () => ({
   calculateParserQuality: jest.fn(),
@@ -238,6 +243,21 @@ describe("parseEmail — fallback chain", () => {
     expect(result.flights[0].flightNumber).toBe("BA200");
     // regex provider was invoked
     expect(mockGetTextParserInstance).toHaveBeenCalledWith("regex");
+  });
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // Test 5: getParserConfig picks up ollamaUrl from adminSettings
+  // ────────────────────────────────────────────────────────────────────────────
+  it("uses ollamaUrl from adminSettings when provided", async () => {
+    const { getParserConfig } = (await jest.requireActual(
+      "../services/parsers/config"
+    )) as typeof import("../services/parsers/config");
+    const config = await getParserConfig(
+      undefined,
+      { globalOpenaiApiKey: null, globalClaudeApiKey: null, ollamaUrl: "http://custom-ollama:11434" },
+      undefined
+    );
+    expect(config.ollamaUrl).toBe("http://custom-ollama:11434");
   });
 
   // ────────────────────────────────────────────────────────────────────────────
