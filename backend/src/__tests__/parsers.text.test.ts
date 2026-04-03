@@ -641,6 +641,18 @@ describe('Text Parsers', () => {
         expect(result[0].flightNumber).toBe('LH103');
       });
 
+      it('should extract gate from Ausgang keyword', async () => {
+        const subject = 'Boarding pass';
+        const text = `
+          Flight: OS431
+          MUC → VIE
+          2025-03-10T10:30
+          Ausgang: B12
+        `;
+        const result = await parser.parseEmail(subject, text);
+        expect(result[0].gate).toBe('B12');
+      });
+
       it('should have provider property set to regex', () => {
         expect(parser.provider).toBe('regex');
       });

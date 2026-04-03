@@ -500,7 +500,7 @@ export class RegexTextParser implements ITextParser {
     // Must be in context of "Flight", "LH", or near airport codes
     // Avoid matching "AM18" from "am 18 September" by requiring context
     const flightPatterns = [
-      /(?:FLIGHT|FLUG)\s*:?\s*([A-Z]{2,3}\s?\d{1,4})\b/i,
+      /(?:FLIGHT|FLUG|FLUGNUMMER|FLUG-NR|FLT\.?)\s*:?\s*([A-Z]{2,3}\s?\d{1,4})\b/i,
       /\b([A-Z]{2,3})\s*(\d{1,4})\b(?=.*(?:FLIGHT|FLUG|DEPARTURE|ABFLUG|BOARDING|GATE|TERMINAL))/i,
       /\b([A-Z]{2,3})\s*(\d{1,4})\b(?=.*[A-Z]{3}.*[A-Z]{3})/i, // Near airport codes
     ];
