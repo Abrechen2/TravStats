@@ -17,6 +17,7 @@ import enSetup from "./resources/en/setup.json";
 import enOnboarding from "./resources/en/onboarding.json";
 import enMap from "./resources/en/map.json";
 import enPendingUpdates from "./resources/en/pendingUpdates.json";
+import enParser from "./resources/en/parser.json";
 
 import deCommon from "./resources/de/common.json";
 import deDashboard from "./resources/de/dashboard.json";
@@ -32,6 +33,7 @@ import deSetup from "./resources/de/setup.json";
 import deOnboarding from "./resources/de/onboarding.json";
 import deMap from "./resources/de/map.json";
 import dePendingUpdates from "./resources/de/pendingUpdates.json";
+import deParser from "./resources/de/parser.json";
 
 // Get initial language from settings store
 const getInitialLanguage = (): string => {
@@ -65,6 +67,7 @@ const resources = {
     onboarding: enOnboarding,
     map: enMap,
     pendingUpdates: enPendingUpdates,
+    parser: enParser,
   },
   de: {
     common: deCommon,
@@ -81,6 +84,7 @@ const resources = {
     onboarding: deOnboarding,
     map: deMap,
     pendingUpdates: dePendingUpdates,
+    parser: deParser,
   },
 };
 
@@ -106,6 +110,7 @@ i18n.use(initReactI18next).init({
     "onboarding",
     "map",
     "pendingUpdates",
+    "parser",
   ],
   interpolation: {
     escapeValue: false, // React already escapes values
