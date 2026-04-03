@@ -121,7 +121,6 @@ export interface TrainingSettingsUpdateData {
   useTrainedModels?: boolean;
   preferredEmailModel?: string;
   preferredVisionModel?: string;
-  trainingSeparateModels?: boolean;
 }
 
 export interface ApiKeysUpdateData {
