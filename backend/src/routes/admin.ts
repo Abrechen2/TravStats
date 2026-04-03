@@ -24,12 +24,6 @@ interface ParseLogStatsResponse {
   byAirline: AirlineStat[];
 }
 
-interface TrainingConfigUpdateData {
-  trainingModelOutputDir?: string | null;
-  trainingEmailModelName?: string | null;
-  trainingVisionModelName?: string | null;
-}
-
 interface GlobalApiKeysUpdateData {
   globalAirlabsApiKey?: string | null;
   globalAviationstackApiKey?: string | null;
@@ -95,10 +89,6 @@ import { getHardwareInfo } from '../services/hardwareService';
 import smtpRouter from './admin/smtp';
 
 // ---- Zod validation schemas ----
-const trainingAccessSchema = z.object({
-  canTrainLLM: z.boolean(),
-});
-
 const createInvitationSchema = z.object({
   email: z.string().email('Invalid email address').optional(),
   expiresInDays: z.number().int().min(1).max(90).optional().default(7),
@@ -234,52 +224,6 @@ router.patch('/users/:id/toggle-active', async (req: AuthRequest, res: Response,
     });
 
     res.json({ user: updatedUser });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Update user training access
-router.put('/users/:id/training-access', async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params;
-    const { canTrainLLM } = trainingAccessSchema.parse(req.body);
-
-    const user = await prisma.user.findUnique({
-      where: { id },
-      select: { id: true, username: true, isAdmin: true },
-    });
-
-    if (!user) {
-      throw new AppError('User not found', 404);
-    }
-
-    // Admins always have training access, so this is only for non-admins
-    if (user.isAdmin) {
-      return res.json({
-        message: 'Admin users always have training access',
-        user: {
-          ...user,
-          canTrainLLM: true,
-        },
-      });
-    }
-
-    const updatedUser = await prisma.user.update({
-      where: { id },
-      data: { canTrainLLM },
-      select: {
-        id: true,
-        username: true,
-        isAdmin: true,
-        canTrainLLM: true,
-      },
-    });
-
-    res.json({
-      message: `Training access ${canTrainLLM ? 'granted' : 'revoked'} for user`,
-      user: updatedUser,
-    });
   } catch (error) {
     next(error);
   }
@@ -578,17 +522,21 @@ const trainingConfigSchema = z.object({
 router.get('/training-config', requireAdmin, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const adminSettings = await prisma.adminSettings.findFirst();
-    const { getTrainingConfig } = await import('../services/trainingService');
-    const trainingConfig = await getTrainingConfig();
+    const trainingModelOutputDir = adminSettings?.trainingModelOutputDir
+      || process.env.TRAINING_MODEL_OUTPUT_DIR || './data/training/models';
+    const trainingEmailModelName = adminSettings?.trainingEmailModelName
+      || process.env.TRAINING_EMAIL_MODEL_NAME || 'travstats-email-custom';
+    const trainingVisionModelName = adminSettings?.trainingVisionModelName
+      || process.env.TRAINING_VISION_MODEL_NAME || 'travstats-vision-custom';
 
     res.json({
       trainingModelOutputDir: adminSettings?.trainingModelOutputDir || null,
       trainingEmailModelName: adminSettings?.trainingEmailModelName || null,
       trainingVisionModelName: adminSettings?.trainingVisionModelName || null,
       // Current effective values (from ENV if not set in admin)
-      currentTrainingModelOutputDir: trainingConfig.modelOutputDir,
-      currentTrainingEmailModelName: trainingConfig.emailModelName,
-      currentTrainingVisionModelName: trainingConfig.visionModelName,
+      currentTrainingModelOutputDir: trainingModelOutputDir,
+      currentTrainingEmailModelName: trainingEmailModelName,
+      currentTrainingVisionModelName: trainingVisionModelName,
       // ENV fallback values
       envTrainingModelOutputDir: process.env.TRAINING_MODEL_OUTPUT_DIR || './data/training/models',
       envTrainingEmailModelName: process.env.TRAINING_EMAIL_MODEL_NAME || 'travstats-email-custom',
@@ -604,7 +552,11 @@ router.put('/training-config', requireAdmin, async (req: AuthRequest, res: Respo
   try {
     const payload = trainingConfigSchema.parse(req.body);
 
-    const updateData: TrainingConfigUpdateData = {};
+    const updateData: {
+      trainingModelOutputDir?: string | null;
+      trainingEmailModelName?: string | null;
+      trainingVisionModelName?: string | null;
+    } = {};
 
     if (payload.trainingModelOutputDir !== undefined) {
       updateData.trainingModelOutputDir = payload.trainingModelOutputDir || null;
@@ -645,8 +597,12 @@ router.put('/training-config', requireAdmin, async (req: AuthRequest, res: Respo
     });
 
     // Get updated effective values
-    const { getTrainingConfig } = await import('../services/trainingService');
-    const trainingConfig = await getTrainingConfig();
+    const currentTrainingModelOutputDir = adminSettings.trainingModelOutputDir
+      || process.env.TRAINING_MODEL_OUTPUT_DIR || './data/training/models';
+    const currentTrainingEmailModelName = adminSettings.trainingEmailModelName
+      || process.env.TRAINING_EMAIL_MODEL_NAME || 'travstats-email-custom';
+    const currentTrainingVisionModelName = adminSettings.trainingVisionModelName
+      || process.env.TRAINING_VISION_MODEL_NAME || 'travstats-vision-custom';
 
     res.json({
       message: 'Training configuration updated successfully',
@@ -654,9 +610,9 @@ router.put('/training-config', requireAdmin, async (req: AuthRequest, res: Respo
         trainingModelOutputDir: adminSettings.trainingModelOutputDir,
         trainingEmailModelName: adminSettings.trainingEmailModelName,
         trainingVisionModelName: adminSettings.trainingVisionModelName,
-        currentTrainingModelOutputDir: trainingConfig.modelOutputDir,
-        currentTrainingEmailModelName: trainingConfig.emailModelName,
-        currentTrainingVisionModelName: trainingConfig.visionModelName,
+        currentTrainingModelOutputDir,
+        currentTrainingEmailModelName,
+        currentTrainingVisionModelName,
       },
     });
   } catch (error) {
