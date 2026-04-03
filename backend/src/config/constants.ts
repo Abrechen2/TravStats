@@ -67,10 +67,6 @@ export const RATE_LIMITS = {
   BACKUP_RESTORE_WINDOW_MS: 60 * 60 * 1000, // 1 hour
   BACKUP_RESTORE_MAX: 3, // 3 restores per hour
 
-  // Training trigger rate limits
-  TRAINING_TRIGGER_WINDOW_MS: 60 * 60 * 1000, // 1 hour
-  TRAINING_TRIGGER_MAX: 2, // 2 training runs per hour
-
   // Boarding pass parse rate limits
   BOARDING_PASS_PARSE_WINDOW_MS: 15 * 60 * 1000, // 15 minutes
   BOARDING_PASS_PARSE_MAX: 20, // parses per window

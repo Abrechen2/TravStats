@@ -48,8 +48,10 @@ export default function FlightsTablePage(): JSX.Element {
       let offset = 0;
       const limit = API_LIMITS.MAX_PAGE_SIZE;
 
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
+      const MAX_PAGES = 200;
+      let pages = 0;
+      while (pages < MAX_PAGES) {
+        pages++;
         const data = await flightsApi.getAll({ ...apiFilters, limit, offset });
         allFlights = [...allFlights, ...data.flights];
 
