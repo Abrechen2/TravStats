@@ -4,7 +4,6 @@ import { z } from 'zod';
  * Schema for logging configuration
  */
 export const loggingConfigSchema = z.object({
-  debugLoggingEnabled: z.boolean().optional(),
   logLevel: z.enum(['error', 'warn', 'info', 'debug', 'trace']).optional(),
   maxLogFileSize: z.number().min(1).max(100).optional(), // 1-100 MB
   maxLogFiles: z.number().min(1).max(30).optional(), // Keep 1-30 files
