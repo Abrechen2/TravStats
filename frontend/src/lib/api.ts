@@ -208,34 +208,6 @@ export interface TrainingAnnotationResult {
   templateId?: string;
 }
 
-export interface TrainingJobLog {
-  timestamp: string;
-  level: string;
-  message: string;
-  metadata?: Record<string, unknown>;
-}
-
-export interface TrainingJob {
-  id: string;
-  modelName: string;
-  status: "pending" | "running" | "completed" | "failed" | "cancelled";
-  type?: string;
-  startedAt?: string;
-  completedAt?: string;
-  error?: string;
-  errorMessage?: string;
-  progress?: number;
-  createdAt: string;
-  updatedAt?: string;
-  trainingDataIds?: string[];
-}
-
-export interface TrainingJobLogsResponse {
-  job: TrainingJob;
-  logs: TrainingJobLog[];
-  logFileContent?: string | null;
-}
-
 // ==================== Pending Updates Interfaces ====================
 
 export interface FlightUpdateChange {
@@ -1007,52 +979,8 @@ export const trainingApi = {
     });
     return data;
   },
-  saveAndTrain: async (
-    id: string,
-    annotations: Record<string, unknown>,
-    extractedData: Record<string, unknown>[],
-    tags?: string[]
-  ): Promise<TrainingAnnotationResult> => {
-    const { data } = await api.post<TrainingAnnotationResult>(`/training/${id}/save-and-train`, {
-      annotations,
-      extractedData,
-      tags: tags || [],
-    });
-    return data;
-  },
-  trainOnly: async (id: string): Promise<TrainingAnnotationResult> => {
-    const { data } = await api.post<TrainingAnnotationResult>(`/training/${id}/train-only`);
-    return data;
-  },
   getById: async (id: string): Promise<TrainingDataEntry> => {
     const { data } = await api.get<TrainingDataEntry>(`/training/${id}`);
-    return data;
-  },
-  getData: async (queryString?: string): Promise<{ trainingData: TrainingDataEntry[] }> => {
-    const url = `/training/data${queryString ? `?${queryString}` : ""}`;
-    const { data } = await api.get<{ trainingData: TrainingDataEntry[] }>(url);
-    return data;
-  },
-  getJobs: async (): Promise<{ jobs: TrainingJob[] }> => {
-    const { data } = await api.get<{ jobs: TrainingJob[] }>("/training/jobs");
-    return data;
-  },
-  getJobLogs: async (jobId: string): Promise<TrainingJobLogsResponse> => {
-    const { data } = await api.get<TrainingJobLogsResponse>(`/training/jobs/${jobId}/logs`);
-    return data;
-  },
-  triggerTraining: async (): Promise<{ trainingJobId: string; message: string }> => {
-    const { data } = await api.post<{ trainingJobId: string; message: string }>(
-      "/training/trigger"
-    );
-    return data;
-  },
-  cancelTraining: async (jobId: string): Promise<{ message: string }> => {
-    const { data } = await api.post<{ message: string }>(`/training/jobs/${jobId}/cancel`);
-    return data;
-  },
-  deleteTrainingData: async (id: string): Promise<MessageResponse> => {
-    const { data } = await api.delete<MessageResponse>(`/training/${id}`);
     return data;
   },
   getParseLogStats: async (): Promise<import("../types").ParseLogStats> => {
