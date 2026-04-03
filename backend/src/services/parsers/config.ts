@@ -82,6 +82,9 @@ export async function getParserConfig(
   adminSettings?: {
     globalOpenaiApiKey?: string | null;
     globalClaudeApiKey?: string | null;
+    ollamaUrl?: string | null;
+    ollamaModel?: string | null;
+    ollamaVisionModel?: string | null;
   },
   userId?: string
 ): Promise<ParserConfig> {
@@ -104,7 +107,7 @@ export async function getParserConfig(
       userSettings?.textFallbackChain || undefined,
       getDefaultTextFallbackChain()
     ),
-    ollamaUrl: process.env.OLLAMA_URL,
+    ollamaUrl: adminSettings?.ollamaUrl || process.env.OLLAMA_URL,
     ollamaModel: selectedEmailModel,
     ollamaVisionModel: selectedVisionModel,
     openaiApiKey: userSettings?.openaiApiKey || adminSettings?.globalOpenaiApiKey || process.env.OPENAI_API_KEY,
