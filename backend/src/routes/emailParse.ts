@@ -1,5 +1,6 @@
 import { Router, Response } from 'express';
 import { authenticate, AuthRequest } from '../middleware/auth';
+import { emailParseLimiter } from '../middleware/rateLimit';
 import { parseBookingEmail } from '../services/bookingParser';
 import { extractEmailFromFile } from '../services/emailExtractor';
 import { uploadEmailFile } from '../middleware/upload';
@@ -38,7 +39,7 @@ const parseEmailSchema = z.object({
  * - parserUsed: 'ollama' | 'regex' - Which parser was used
  * - ollamaAvailable: boolean - Whether Ollama was available
  */
-router.post('/parse-email', authenticate, async (req: AuthRequest, res: Response) => {
+router.post('/parse-email', authenticate, emailParseLimiter, async (req: AuthRequest, res: Response) => {
   try {
     const parsed = parseEmailSchema.parse(req.body);
     const emailContent = parsed.emailContent;

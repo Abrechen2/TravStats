@@ -24,7 +24,7 @@ interface RestoreOptions {
 // Use BACKUP_PATH from environment if set (e.g., in Docker: /app/data/backups)
 // Otherwise use a platform-appropriate default
 const BACKUP_BASE_DIR = process.env.BACKUP_PATH || (
-  process.platform === 'win32' 
+  process.platform === 'win32'
     ? path.join(process.cwd(), 'data', 'backups')
     : '/app/data/backups'
 );
@@ -47,8 +47,8 @@ try {
 } catch (error: unknown) {
   // Log warning but don't prevent startup - directory will be created on first backup attempt
   const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-  console.warn(`[Backup] Could not create backup directory ${BACKUP_BASE_DIR}:`, errorMsg);
-  console.warn('[Backup] Backups may fail until directory permissions are fixed');
+  logger.warn({ operation: 'backup_dir_creation_warning', message: `Could not create backup directory ${BACKUP_BASE_DIR}: ${errorMsg}` });
+  logger.warn({ operation: 'backup_dir_creation_warning', message: 'Backups may fail until directory permissions are fixed' });
   logger.warn({
     operation: 'backup_dir_creation_failed',
     message: `Could not create backup directory: ${BACKUP_BASE_DIR}`,
@@ -65,7 +65,7 @@ function parseDatabaseUrl(url: string): { host: string; port: string; user: stri
     // Replace postgresql:// with http:// for URL parsing (URL class doesn't support postgresql://)
     const httpUrl = url.replace(/^postgresql:\/\//, 'http://');
     const dbUrl = new URL(httpUrl);
-    
+
     return {
       user: decodeURIComponent(dbUrl.username),
       password: decodeURIComponent(dbUrl.password),
@@ -89,16 +89,16 @@ async function createDatabaseDump(outputPath: string, targetDatabaseUrl?: string
   const isDocker = process.env.DOCKER === 'true';
   const dbContainer = process.env.DOCKER_DB_CONTAINER || DOCKER_DB_CONTAINER;
   const isWindows = process.platform === 'win32';
-  
+
   // Check if we're running inside Docker by checking for /.dockerenv or docker hostname
-  const isRunningInDocker = fs.existsSync('/.dockerenv') || 
-                            fs.existsSync('/proc/self/cgroup') && 
+  const isRunningInDocker = fs.existsSync('/.dockerenv') ||
+                            fs.existsSync('/proc/self/cgroup') &&
                             fs.readFileSync('/proc/self/cgroup', 'utf8').includes('docker');
 
   // Check if database is in Docker (docker hostname) or localhost
   const isDockerHostname = dbInfo.host === 'db' || dbInfo.host === 'travstats-db-dev';
   const isLocalhost = dbInfo.host === 'localhost' || dbInfo.host === '127.0.0.1';
-  
+
   // If database is not localhost and not a docker hostname, it's likely remote
   // In this case, we should use direct pg_dump connection, not docker exec
   const isRemoteDatabase = !isDockerHostname && !isLocalhost;
@@ -121,7 +121,7 @@ async function createDatabaseDump(outputPath: string, targetDatabaseUrl?: string
   // If database is remote or localhost (not docker hostname), skip Docker check and use direct connection
   let dockerCommandAvailable = false;
   let dockerDaemonRunning = false;
-  
+
   if (isDockerHostname) {
     // Database might be in Docker, check if Docker is available
     try {
@@ -131,7 +131,7 @@ async function createDatabaseDump(outputPath: string, targetDatabaseUrl?: string
         operation: 'backup_docker_command_available',
         message: 'Docker command is available',
       });
-      
+
       // Check if Docker daemon is actually running
       try {
         await execAsync('docker ps');
@@ -166,7 +166,7 @@ async function createDatabaseDump(outputPath: string, targetDatabaseUrl?: string
   // Try multiple container names (dev and prod)
   let dockerAvailable = false;
   let actualContainerName = dbContainer;
-  
+
   if (dockerCommandAvailable && dockerDaemonRunning) {
     const possibleContainers = [
       dbContainer,
@@ -192,7 +192,7 @@ async function createDatabaseDump(outputPath: string, targetDatabaseUrl?: string
         // First try to list all containers and search for matching names
         const allContainersResult = await execAsync('docker ps --format "{{.Names}}"');
         const allContainers = allContainersResult.stdout.trim().split('\n').filter(c => c);
-        
+
         logger.debug({
           operation: 'backup_docker_list_containers',
           message: 'Listed all running containers',
@@ -329,7 +329,7 @@ async function createDatabaseDump(outputPath: string, targetDatabaseUrl?: string
       });
 
       pgDump.stdout.pipe(outputFile);
-      
+
       let stderrData = '';
       pgDump.stderr.on('data', (data) => {
         stderrData += data.toString();
@@ -419,7 +419,7 @@ async function createDatabaseDump(outputPath: string, targetDatabaseUrl?: string
         });
 
         dockerExec.stdout.pipe(outputFile);
-        
+
         let stderrData = '';
         dockerExec.stderr.on('data', (data) => {
           stderrData += data.toString();
@@ -506,16 +506,16 @@ async function createDatabaseDump(outputPath: string, targetDatabaseUrl?: string
 async function archiveUploads(outputPath: string): Promise<number> {
   return new Promise((resolve, reject) => {
     const uploadsDir = path.join(__dirname, '../../uploads');
-    
+
     if (!fs.existsSync(uploadsDir)) {
       logger.warn({ operation: 'backup_files_missing', message: 'Uploads directory not found' });
       // Create empty archive
       const archive = archiver('tar', { gzip: true });
       const output = fs.createWriteStream(outputPath);
-      
+
       archive.pipe(output);
       archive.finalize();
-      
+
       output.on('close', () => resolve(0));
       output.on('error', reject);
       return;
@@ -646,7 +646,7 @@ export async function createBackup(options: BackupOptions = {}): Promise<string>
       backupPath: finalArchivePath,
       backupDir,
     });
-    
+
     backup = await prisma.backup.create({
       data: {
         type: options.type || 'full',
@@ -658,7 +658,7 @@ export async function createBackup(options: BackupOptions = {}): Promise<string>
         startedAt: new Date(),
       },
     });
-    
+
     logger.info({
       operation: 'backup_record_created',
       message: 'Backup record created successfully',
@@ -667,7 +667,7 @@ export async function createBackup(options: BackupOptions = {}): Promise<string>
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     const errorStack = error instanceof Error ? error.stack : undefined;
-    
+
     logger.error({
       operation: 'backup_record_creation_failed',
       message: 'Failed to create backup record in database',
@@ -676,7 +676,7 @@ export async function createBackup(options: BackupOptions = {}): Promise<string>
       backupPath: finalArchivePath,
       backupDir,
     });
-    
+
     // Cleanup temp directory
     try {
       if (fs.existsSync(backupDir)) {
@@ -689,12 +689,12 @@ export async function createBackup(options: BackupOptions = {}): Promise<string>
         error: cleanupError instanceof Error ? cleanupError.message : 'Unknown error',
       });
     }
-    
+
     // Provide more specific error message
     if (errorMessage.includes('does not exist') || errorMessage.includes('relation') || errorMessage.includes('table')) {
       throw new Error(`Backup table does not exist. Please run database migrations: ${errorMessage}`);
     }
-    
+
     throw new Error(`Failed to create backup record: ${errorMessage}`);
   }
 
@@ -1090,11 +1090,3 @@ export async function cleanupOldBackups(): Promise<number> {
 
   return deletedCount;
 }
-
-
-
-
-
-
-
-

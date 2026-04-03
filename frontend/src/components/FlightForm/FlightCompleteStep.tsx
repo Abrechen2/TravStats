@@ -1,0 +1,549 @@
+import HelpIcon from "../Help/HelpIcon";
+import AirportAutocomplete from "../AirportAutocomplete";
+import { useTranslation } from "../../hooks/useTranslation";
+import { calculateDistance } from "../../lib/geo";
+import type { Airport } from "../../lib/api";
+
+interface FlightLookupResult {
+  flightNumber: string;
+  airline: string;
+  departure: {
+    iata?: string;
+    name?: string;
+    scheduledTime?: string;
+    terminal?: string;
+    gate?: string;
+  };
+  arrival: {
+    iata?: string;
+    name?: string;
+    scheduledTime?: string;
+    terminal?: string;
+    gate?: string;
+  };
+  aircraft?: string;
+  status?: string;
+}
+
+export interface TimeEstimationWarning {
+  show: boolean;
+  source: "historical" | "heuristic";
+  confidence: "high" | "medium" | "low";
+  sampleCount?: number;
+}
+
+export interface FlightCompleteStepProps {
+  // Lookup context
+  selectedFlight: FlightLookupResult | null;
+  timeEstimationWarning: TimeEstimationWarning | null;
+  // Airports
+  departure: Airport | null;
+  arrival: Airport | null;
+  setDeparture: (a: Airport | null) => void;
+  setArrival: (a: Airport | null) => void;
+  // Date / Time
+  departureDate: string;
+  departureTime: string;
+  arrivalDate: string;
+  arrivalTime: string;
+  setDepartureDate: (v: string) => void;
+  setDepartureTime: (v: string) => void;
+  setArrivalDate: (v: string) => void;
+  setArrivalTime: (v: string) => void;
+  // Flight info
+  airline: string;
+  flightNumber: string;
+  aircraft: string;
+  terminal: string;
+  gate: string;
+  seatNumber: string;
+  seatClass: "economy" | "premium_economy" | "business" | "first";
+  status: "scheduled" | "flown" | "cancelled";
+  category: "business" | "private" | "vacation";
+  setAirline: (v: string) => void;
+  setFlightNumber: (v: string) => void;
+  setAircraft: (v: string) => void;
+  setTerminal: (v: string) => void;
+  setGate: (v: string) => void;
+  setSeatNumber: (v: string) => void;
+  setSeatClass: (v: "economy" | "premium_economy" | "business" | "first") => void;
+  setStatus: (v: "scheduled" | "flown" | "cancelled") => void;
+  setCategory: (v: "business" | "private" | "vacation") => void;
+  // Price
+  price: number | undefined;
+  currency: "EUR" | "USD" | "GBP" | "CHF";
+  setPrice: (v: number | undefined) => void;
+  setCurrency: (v: "EUR" | "USD" | "GBP" | "CHF") => void;
+  // Tags & companions
+  tags: string[];
+  companions: string[];
+  companionInput: string;
+  setTags: (v: string[]) => void;
+  setCompanions: React.Dispatch<React.SetStateAction<string[]>>;
+  setCompanionInput: (v: string) => void;
+  // Notes
+  notes: string;
+  setNotes: (v: string) => void;
+  // Theme
+  isDarkMode: boolean;
+  textClass: string;
+  mutedTextClass: string;
+  sizedInputClass: string;
+  // Warning dismiss
+  setTimeEstimationWarning: (v: TimeEstimationWarning | null) => void;
+}
+
+export default function FlightCompleteStep({
+  selectedFlight,
+  timeEstimationWarning,
+  departure,
+  arrival,
+  setDeparture,
+  setArrival,
+  departureDate,
+  departureTime,
+  arrivalDate,
+  arrivalTime,
+  setDepartureDate,
+  setDepartureTime,
+  setArrivalDate,
+  setArrivalTime,
+  airline,
+  flightNumber,
+  aircraft,
+  terminal,
+  gate,
+  seatNumber,
+  seatClass,
+  status,
+  category,
+  setAirline,
+  setFlightNumber,
+  setAircraft,
+  setTerminal,
+  setGate,
+  setSeatNumber,
+  setSeatClass,
+  setStatus,
+  setCategory,
+  price,
+  currency,
+  setPrice,
+  setCurrency,
+  tags,
+  companions,
+  companionInput,
+  setTags,
+  setCompanions,
+  setCompanionInput,
+  notes,
+  setNotes,
+  isDarkMode,
+  textClass,
+  mutedTextClass,
+  sizedInputClass,
+  setTimeEstimationWarning,
+}: FlightCompleteStepProps): JSX.Element {
+  const { t } = useTranslation(["flights"]);
+
+  return (
+    <div className="space-y-6">
+      {/* Flight Details (if from lookup) */}
+      {selectedFlight && (
+        <div
+          className={`p-4 rounded-lg ${isDarkMode ? "bg-green-900" : "bg-green-50"} border ${isDarkMode ? "border-green-700" : "border-green-200"}`}
+        >
+          <div
+            className={`text-sm font-medium ${isDarkMode ? "text-green-200" : "text-green-800"}`}
+          >
+            {t("flights:form.lookupLoaded", {
+              airline: selectedFlight.airline,
+              flightNumber: selectedFlight.flightNumber,
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Time Estimation Warning */}
+      {timeEstimationWarning?.show && (
+        <div
+          className={`p-4 rounded-lg ${isDarkMode ? "bg-yellow-900" : "bg-yellow-50"} border ${isDarkMode ? "border-yellow-700" : "border-yellow-200"}`}
+        >
+          <div
+            className={`font-medium ${isDarkMode ? "text-yellow-200" : "text-yellow-800"} flex items-center gap-2`}
+          >
+            {t("flights:form.estimatedTimes")}
+          </div>
+          <div className={`text-sm ${isDarkMode ? "text-yellow-300" : "text-yellow-700"} mt-2`}>
+            {timeEstimationWarning.source === "historical" ? (
+              <>
+                <strong>
+                  {t("flights:form.estimatedTimesHistorical", {
+                    count: timeEstimationWarning.sampleCount,
+                  })}
+                </strong>
+                <br />
+                {t("flights:form.estimatedTimesCalculated")}
+              </>
+            ) : (
+              <>
+                <strong>{t("flights:form.estimatedTimesAutomatic")}</strong>
+                <br />
+                {t("flights:form.estimatedTimesAssumption", {
+                  minutes: Math.round(
+                    (calculateDistance(
+                      departure?.lat || 0,
+                      departure?.lon || 0,
+                      arrival?.lat || 0,
+                      arrival?.lon || 0
+                    ) /
+                      800) *
+                      60 +
+                      15
+                  ),
+                })}
+              </>
+            )}
+          </div>
+          <div
+            className={`text-sm ${isDarkMode ? "text-yellow-300" : "text-yellow-700"} mt-2 font-semibold`}
+          >
+            {t("flights:form.reviewTimes")}
+          </div>
+          <button
+            type="button"
+            onClick={() => setTimeEstimationWarning(null)}
+            className={`text-xs ${isDarkMode ? "text-yellow-400 hover:text-yellow-300" : "text-yellow-600 hover:text-yellow-800"} mt-2 underline`}
+          >
+            {t("flights:form.hideWarning")}
+          </button>
+        </div>
+      )}
+
+      {/* Airports */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <label className={`label ${textClass}`}>{t("flights:form.from")}</label>
+            <HelpIcon content={t("flights:form.help.departureAirport")} position="top" />
+          </div>
+          <AirportAutocomplete
+            value={departure}
+            onChange={setDeparture}
+            label=""
+            placeholder={t("flights:form.placeholders.departureAirport")}
+            required
+          />
+        </div>
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <label className={`label ${textClass}`}>{t("flights:form.to")}</label>
+            <HelpIcon content={t("flights:form.help.arrivalAirport")} position="top" />
+          </div>
+          <AirportAutocomplete
+            value={arrival}
+            onChange={setArrival}
+            label=""
+            placeholder={t("flights:form.placeholders.arrivalAirport")}
+            required
+          />
+        </div>
+      </div>
+
+      {/* Date & Time */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className={`label ${textClass} flex items-center gap-2`}>
+            {t("flights:form.departureDate")}
+            <HelpIcon content={t("flights:form.help.departureDate")} position="top" />
+          </label>
+          <input
+            type="date"
+            value={departureDate}
+            onChange={(e) => setDepartureDate(e.target.value)}
+            className={`input ${sizedInputClass}`}
+            required
+          />
+        </div>
+        <div>
+          <label className={`label ${textClass} flex items-center gap-2`}>
+            {t("flights:form.departureTime")}
+            <HelpIcon
+              content={t("flights:form.help.departureTime")}
+              expandedContent={t("flights:form.help.departureTimeExpanded")}
+              position="top"
+            />
+          </label>
+          <input
+            type="time"
+            value={departureTime}
+            onChange={(e) => setDepartureTime(e.target.value)}
+            className={`input ${sizedInputClass}`}
+          />
+        </div>
+      </div>
+
+      {/* Arrival Date & Time */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className={`label ${textClass} flex items-center gap-2`}>
+            {t("flights:form.arrivalDate")} *
+            <HelpIcon content={t("flights:form.help.arrivalDate")} position="top" />
+          </label>
+          <input
+            type="date"
+            value={arrivalDate}
+            onChange={(e) => setArrivalDate(e.target.value)}
+            className={`input ${sizedInputClass}`}
+            required
+          />
+        </div>
+        <div>
+          <label className={`label ${textClass} flex items-center gap-2`}>
+            {t("flights:form.arrivalTime")}
+            <HelpIcon
+              content={t("flights:form.help.arrivalTime")}
+              expandedContent={t("flights:form.help.arrivalTimeExpanded")}
+              position="top"
+            />
+          </label>
+          <input
+            type="time"
+            value={arrivalTime}
+            onChange={(e) => setArrivalTime(e.target.value)}
+            className={`input ${sizedInputClass}`}
+          />
+        </div>
+      </div>
+
+      {/* Additional Fields */}
+      <div className="grid grid-cols-3 gap-4">
+        <div>
+          <label className={`label ${textClass}`}>{t("flights:form.airline")}</label>
+          <input
+            type="text"
+            value={airline}
+            onChange={(e) => setAirline(e.target.value)}
+            className={`input ${sizedInputClass}`}
+            placeholder={t("flights:form.placeholders.airline")}
+          />
+        </div>
+        <div>
+          <label className={`label ${textClass}`}>{t("flights:form.flightNumber")}</label>
+          <input
+            type="text"
+            value={flightNumber}
+            onChange={(e) => setFlightNumber(e.target.value.toUpperCase())}
+            className={`input ${sizedInputClass}`}
+            placeholder={t("flights:form.placeholders.flightNumber")}
+            maxLength={10}
+          />
+        </div>
+        <div>
+          <label className={`label ${textClass}`}>{t("flights:form.status")}</label>
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value as "scheduled" | "flown" | "cancelled")}
+            className={`input ${sizedInputClass}`}
+          >
+            <option value="flown">{t("flights:status.flown")}</option>
+            <option value="scheduled">{t("flights:status.scheduled")}</option>
+            <option value="cancelled">{t("flights:status.cancelled")}</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Equipment / Gate / Seat / Category */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className={`label ${textClass}`}>{t("flights:form.aircraft")}</label>
+          <input
+            type="text"
+            value={aircraft}
+            onChange={(e) => setAircraft(e.target.value)}
+            className={`input ${sizedInputClass}`}
+            placeholder={t("flights:form.placeholders.aircraft")}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className={`label ${textClass}`}>{t("flights:form.terminal")}</label>
+            <input
+              type="text"
+              value={terminal}
+              onChange={(e) => setTerminal(e.target.value)}
+              className={`input ${sizedInputClass}`}
+              placeholder={t("flights:form.placeholders.terminal")}
+            />
+          </div>
+          <div>
+            <label className={`label ${textClass}`}>{t("flights:form.gate")}</label>
+            <input
+              type="text"
+              value={gate}
+              onChange={(e) => setGate(e.target.value)}
+              className={`input ${sizedInputClass}`}
+              placeholder={t("flights:form.placeholders.gate")}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        <div>
+          <label className={`label ${textClass}`}>{t("flights:form.seat")}</label>
+          <input
+            type="text"
+            value={seatNumber}
+            onChange={(e) => setSeatNumber(e.target.value.toUpperCase())}
+            className={`input ${sizedInputClass}`}
+            placeholder={t("flights:form.placeholders.seat")}
+          />
+        </div>
+        <div>
+          <label className={`label ${textClass}`}>{t("flights:form.seatClass")}</label>
+          <select
+            value={seatClass}
+            onChange={(e) =>
+              setSeatClass(e.target.value as "economy" | "premium_economy" | "business" | "first")
+            }
+            className={`input ${sizedInputClass}`}
+          >
+            <option value="economy">{t("flights:seatClass.economy")}</option>
+            <option value="premium_economy">{t("flights:seatClass.premium_economy")}</option>
+            <option value="business">{t("flights:seatClass.business")}</option>
+            <option value="first">{t("flights:seatClass.first")}</option>
+          </select>
+        </div>
+        <div>
+          <label className={`label ${textClass}`}>{t("flights:form.category")}</label>
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value as "business" | "private" | "vacation")}
+            className={`input ${sizedInputClass}`}
+          >
+            <option value="business">{t("flights:category.business")}</option>
+            <option value="private">{t("flights:category.private")}</option>
+            <option value="vacation">{t("flights:category.vacation")}</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Price & Currency */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="col-span-2">
+          <label className={`label ${textClass} flex items-center gap-2`}>
+            {t("flights:form.price")}
+            <HelpIcon
+              content={t("flights:form.help.price")}
+              expandedContent={t("flights:form.help.price")}
+              position="top"
+            />
+          </label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={price ?? ""}
+            onChange={(e) => setPrice(e.target.value ? parseFloat(e.target.value) : undefined)}
+            className={`input ${sizedInputClass}`}
+            placeholder={t("flights:form.placeholders.price")}
+          />
+        </div>
+        <div>
+          <label className={`label ${textClass}`}>{t("flights:form.currency")}</label>
+          <select
+            value={currency}
+            onChange={(e) => setCurrency(e.target.value as "EUR" | "USD" | "GBP" | "CHF")}
+            className={`input ${sizedInputClass}`}
+          >
+            <option value="EUR">{t("flights:currency.EUR")}</option>
+            <option value="USD">{t("flights:currency.USD")}</option>
+            <option value="GBP">{t("flights:currency.GBP")}</option>
+            <option value="CHF">{t("flights:currency.CHF")}</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Tags */}
+      <div>
+        <label className={`label ${textClass} flex items-center gap-2`}>
+          {t("flights:form.tags")}
+          <HelpIcon
+            content={t("flights:form.help.tags")}
+            expandedContent={t("flights:form.help.tagsExpanded")}
+            position="top"
+          />
+        </label>
+        <input
+          type="text"
+          value={tags.join(", ")}
+          onChange={(e) =>
+            setTags(
+              e.target.value
+                .split(",")
+                .map((tag) => tag.trim())
+                .filter(Boolean)
+            )
+          }
+          className={`input ${sizedInputClass}`}
+          placeholder={t("flights:form.placeholders.tags")}
+        />
+        <p className={`text-xs ${mutedTextClass} mt-1`}>{t("flights:form.tagsHint")}</p>
+      </div>
+
+      {/* Travel Companions */}
+      <div>
+        <label className={`label ${textClass}`}>{t("flights:form.companions")}</label>
+        <div className="flex flex-wrap gap-2 mb-2">
+          {companions.map((companion, idx) => (
+            <span
+              key={idx}
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-sm bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
+            >
+              {companion}
+              <button
+                type="button"
+                onClick={() => setCompanions((prev) => prev.filter((_, i) => i !== idx))}
+                className="ml-1 hover:text-red-500 leading-none"
+                aria-label={`Remove ${companion}`}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+        <input
+          type="text"
+          value={companionInput}
+          onChange={(e) => setCompanionInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === ",") {
+              e.preventDefault();
+              const name = companionInput.trim().replace(/,$/, "");
+              if (name && !companions.includes(name)) {
+                setCompanions((prev) => [...prev, name]);
+              }
+              setCompanionInput("");
+            }
+          }}
+          className={`input ${sizedInputClass}`}
+          placeholder={t("flights:form.placeholders.companions")}
+        />
+        <p className={`text-xs ${mutedTextClass} mt-1`}>{t("flights:form.companionsHint")}</p>
+      </div>
+
+      {/* Notes */}
+      <div>
+        <label className={`label ${textClass}`}>{t("flights:form.notes")}</label>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          className={`input ${sizedInputClass}`}
+          rows={3}
+          placeholder={t("flights:form.placeholders.notes")}
+        />
+      </div>
+    </div>
+  );
+}
