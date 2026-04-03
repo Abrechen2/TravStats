@@ -17,7 +17,6 @@ export interface ParserApiKeySettings {
   globalOpenaiApiKey?: string;
   globalClaudeApiKey?: string;
   allowUserApiKeys: boolean;
-  requireUserApiKeys: boolean;
 }
 
 interface GlobalApiKeysManagerProps {
@@ -233,27 +232,6 @@ export default function GlobalApiKeysManager({
                       </span>
                       <p className="text-sm text-[var(--text-muted)]">
                         {t("admin:globalApiKeys.allowUserParserApiKeysDescription")}
-                      </p>
-                    </div>
-                  </label>
-                  <label className="flex items-start gap-3">
-                    <input
-                      type="checkbox"
-                      checked={parserSettings.requireUserApiKeys}
-                      onChange={(e) =>
-                        onParserSettingsChange({
-                          ...parserSettings,
-                          requireUserApiKeys: e.target.checked,
-                        })
-                      }
-                      className="checkbox mt-1"
-                    />
-                    <div>
-                      <span className="font-medium text-[var(--text-primary)]">
-                        {t("admin:globalApiKeys.requireUserParserApiKeys")}
-                      </span>
-                      <p className="text-sm text-[var(--text-muted)]">
-                        {t("admin:globalApiKeys.requireUserParserApiKeysDescription")}
                       </p>
                     </div>
                   </label>

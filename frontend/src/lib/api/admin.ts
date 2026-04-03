@@ -245,7 +245,6 @@ export const adminApi = {
     globalOpenaiApiKey?: string;
     globalClaudeApiKey?: string;
     allowUserApiKeys: boolean;
-    requireUserApiKeys: boolean;
     defaultVisionParser: string;
     defaultTextParser: string;
     ollamaUrl: string | null;
@@ -256,7 +255,6 @@ export const adminApi = {
       globalOpenaiApiKey?: string;
       globalClaudeApiKey?: string;
       allowUserApiKeys: boolean;
-      requireUserApiKeys: boolean;
       defaultVisionParser: string;
       defaultTextParser: string;
       ollamaUrl: string | null;
@@ -270,7 +268,6 @@ export const adminApi = {
     globalOpenaiApiKey?: string;
     globalClaudeApiKey?: string;
     allowUserApiKeys?: boolean;
-    requireUserApiKeys?: boolean;
     defaultVisionParser?: string;
     defaultTextParser?: string;
     ollamaUrl?: string | null;
