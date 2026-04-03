@@ -35,8 +35,10 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
         let allFlights: Flight[] = [];
         let offset = 0;
 
-        // eslint-disable-next-line no-constant-condition
-        while (true) {
+        const MAX_PAGES = 200;
+        let pages = 0;
+        while (pages < MAX_PAGES) {
+          pages++;
           const { flights } = await flightsApi.getAll({ ...apiFilters, limit, offset });
           allFlights = [...allFlights, ...flights];
           if (flights.length < limit) break;
