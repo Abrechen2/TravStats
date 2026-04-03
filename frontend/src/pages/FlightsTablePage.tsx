@@ -14,7 +14,9 @@ import SimplifiedFlightFormV2 from "../components/SimplifiedFlightFormV2";
 import FlightEditModal from "../components/FlightEditModal";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import { useToastStore } from "../store/toastStore";
-import { API_LIMITS, DATE_FORMATS, getDateLocale } from "../lib/constants";
+import { useSettingsStore } from "../store/settingsStore";
+import { API_LIMITS } from "../lib/constants";
+import { formatDateInTimezone } from "../lib/dateUtils";
 import { useTranslation } from "../hooks/useTranslation";
 import DataSourceBadges from "../components/DataSourceBadges";
 import { logger } from "../lib/logger";
@@ -35,6 +37,7 @@ export default function FlightsTablePage(): JSX.Element {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [showAddFlight, setShowAddFlight] = useState(false);
   const addToast = useToastStore((state) => state.addToast);
+  const timezone = useSettingsStore((s) => s.display.timezone);
 
   useEffect(() => {
     loadFlights();
@@ -151,9 +154,7 @@ export default function FlightsTablePage(): JSX.Element {
     }
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString(getDateLocale(), DATE_FORMATS.DEFAULT);
-  };
+  const formatDate = (date: string): string => formatDateInTimezone(date, timezone);
 
   const formatDurationHours = (departure: string, arrival: string) => {
     const minutes = getDurationMinutes({
