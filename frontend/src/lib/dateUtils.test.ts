@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatDateInTimezone, formatDateTimeInTimezone } from "./dateUtils";
+import { formatDateInTimezone, formatDateTimeInTimezone, formatTimeInTimezone } from "./dateUtils";
 
 describe("dateUtils", () => {
   const date = new Date("2026-05-01T10:00:00Z"); // 10:00 UTC
@@ -27,5 +27,16 @@ describe("dateUtils", () => {
   it("returns fallback for invalid date", () => {
     const result = formatDateInTimezone("not-a-date", "UTC");
     expect(result).toBe("—");
+  });
+
+  it("falls back to UTC for invalid timezone", () => {
+    const result = formatDateInTimezone(date, "Invalid/Timezone");
+    // Should not throw — returns a valid date string
+    expect(result).toMatch(/\d{2}\.\d{2}\.\d{4}/);
+  });
+
+  it("formats time-only with formatTimeInTimezone", () => {
+    const result = formatTimeInTimezone(date, "UTC");
+    expect(result).toContain("10:00");
   });
 });
