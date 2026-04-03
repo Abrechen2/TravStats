@@ -9,6 +9,26 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.9.3-beta] - 2026-04-03
+
+### Added
+- **Annotation-Driven Template Parser**: Users can annotate parsed email fields to derive regex-based templates. Annotated patterns are stored as `ParserTemplate` records and applied as step 0 in the parser factory for future emails from the same airline.
+- **TemplateDeriver**: Derives multi-flight regex templates from user annotations (`textSelections`) with field source tracking (`fieldSources`).
+- **FingerprintMatcher**: Matches incoming emails to existing user templates by airline/subject fingerprint.
+- **UserTemplateEngine**: Executes derived templates against email bodies with multi-flight extraction.
+- **Parser Templates CRUD API**: `GET/POST/DELETE /api/v1/parser-templates` — list, activate, disable, delete user-derived templates.
+- **TemplateReviewCard**: UI card shown after annotation save to display the newly derived template with confidence score.
+- **Colour-coded confidence borders** in `FlightReviewModal`: green (template match), yellow (LLM fallback).
+- **`fieldSources`** on `ParsedBooking` — tracks which field was extracted by which method.
+
+### Fixed
+- Regex PNR `matchAll` missing `g` flag — caused 500 error during email parsing.
+- `GET /api/v1/parser-templates/:id` endpoint added (was missing).
+- Body length guard against ReDoS attacks in parser template routes.
+- `TemplateReviewCard` async error handling and loading states.
+
+---
+
 ## [0.9.2-beta] - 2026-04-02
 
 ### Changed
