@@ -490,6 +490,50 @@ export class RegexTextParser implements ITextParser {
   }
 
   /**
+   * Scan source for dep/arr label keywords immediately followed by a parseable date.
+   * Returns whichever of {departureTime, arrivalTime} it finds.
+   * Caller uses positional fallback for any field not found here.
+   */
+  private extractLabeledDates(source: string): { departureTime?: string; arrivalTime?: string } {
+    const result: { departureTime?: string; arrivalTime?: string } = {};
+
+    const DEP_LABELS = /(?:Abflug|Abflugzeit|Abreise|Departure|Departing|Departs|Dep)\s*:?\s*/gi;
+    const ARR_LABELS = /(?:Ankunft|Ankunftszeit|Arrival|Arriving|Arrives|Arr)\s*:?\s*/gi;
+
+    const parseFromPos = (pos: number): string | undefined => {
+      const slice = source.slice(pos, pos + 50);
+      // ISO format (TZ suffix stripped)
+      const isoM = slice.match(/^(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?)(?:[+-]\d{2}:?\d{2}|Z)?/);
+      if (isoM) return isoM[1].replace(' ', 'T');
+      // German/English date format
+      const deM = slice.match(
+        /^(\d{1,2})[.\s]+(\d{1,2}|[A-Za-zÄÖÜäöü]{3,9})[.\s]+(\d{4})(?:[,\s]+(\d{1,2}):(\d{2}))?/
+      );
+      if (deM) {
+        const d = deM[1].padStart(2, '0');
+        const raw = deM[2].toUpperCase();
+        const mo = MONTH_NAMES[raw] ?? (deM[2].length <= 2 ? deM[2].padStart(2, '0') : '01');
+        const h = deM[4] ? deM[4].padStart(2, '0') : '00';
+        const min = deM[5] ?? '00';
+        return `${deM[3]}-${mo}-${d}T${h}:${min}`;
+      }
+      return undefined;
+    };
+
+    for (const m of source.matchAll(DEP_LABELS)) {
+      const t = parseFromPos(m.index! + m[0].length);
+      if (t) { result.departureTime = t; break; }
+    }
+
+    for (const m of source.matchAll(ARR_LABELS)) {
+      const t = parseFromPos(m.index! + m[0].length);
+      if (t) { result.arrivalTime = t; break; }
+    }
+
+    return result;
+  }
+
+  /**
    * Parse booking email using regex patterns (single flight)
    */
   private parseBookingEmailRegex(source: string): ParsedBooking {
@@ -551,13 +595,19 @@ export class RegexTextParser implements ITextParser {
     data.departureCode = departure && this.isValidIATACode(departure) ? departure : undefined;
     data.arrivalCode = arrival && this.isValidIATACode(arrival) ? arrival : undefined;
 
-    // Times - improved extraction with multiple formats
-    // ISO format — TZ offset/Z suffix consumed but not captured (local time kept)
-    const isoTimeMatches = Array.from(
-      source.matchAll(/(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?)(?:[+-]\d{2}:?\d{2}|Z)?(?=[^\d]|$)/g)
-    );
-    if (isoTimeMatches.length >= 1) data.departureTime = isoTimeMatches[0][1].replace(' ', 'T');
-    if (isoTimeMatches.length >= 2) data.arrivalTime = isoTimeMatches[1][1].replace(' ', 'T');
+    // Times — label-based first (Option A), positional fallback
+    const labeled = this.extractLabeledDates(source);
+    if (labeled.departureTime) data.departureTime = labeled.departureTime;
+    if (labeled.arrivalTime) data.arrivalTime = labeled.arrivalTime;
+
+    if (!data.departureTime || !data.arrivalTime) {
+      // ISO format — TZ offset/Z suffix consumed but not captured (local time kept)
+      const isoTimeMatches = Array.from(
+        source.matchAll(/(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?)(?:[+-]\d{2}:?\d{2}|Z)?(?=[^\d]|$)/g)
+      );
+      if (!data.departureTime && isoTimeMatches.length >= 1) data.departureTime = isoTimeMatches[0][1].replace(' ', 'T');
+      if (!data.arrivalTime && isoTimeMatches.length >= 2) data.arrivalTime = isoTimeMatches[1][1].replace(' ', 'T');
+    }
 
     // German/English date format — abbreviated and full month names, time optional
     if (!data.departureTime || !data.arrivalTime) {

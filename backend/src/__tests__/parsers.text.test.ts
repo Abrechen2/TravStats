@@ -653,6 +653,60 @@ describe('Text Parsers', () => {
         expect(result[0].gate).toBe('B12');
       });
 
+      it('should assign departureTime from Abflug label', async () => {
+        const subject = 'Buchungsbestätigung';
+        const text = `
+          Buchungsdatum: 01. November 2025
+          Flug: LH103
+          MUC → LUX
+          Abflug: 18. November 2025, 11:00
+          Ankunft: 18. November 2025, 12:55
+        `;
+        const result = await parser.parseEmail(subject, text);
+        expect(result[0].departureTime).toContain('2025-11-18T11:00');
+        expect(result[0].arrivalTime).toContain('2025-11-18T12:55');
+      });
+
+      it('should assign departureTime from Departure label (EN)', async () => {
+        const subject = 'Booking confirmation';
+        const text = `
+          Booking date: 01 November 2025
+          Flight: LH103
+          MUC → LUX
+          Departure: 18 November 2025, 11:00
+          Arrival: 18 November 2025, 12:55
+        `;
+        const result = await parser.parseEmail(subject, text);
+        expect(result[0].departureTime).toContain('2025-11-18T11:00');
+        expect(result[0].arrivalTime).toContain('2025-11-18T12:55');
+      });
+
+      it('should use Departure label to skip earlier booking date', async () => {
+        const subject = 'Booking confirmation';
+        const text = `
+          Issue date: 2025-10-01
+          Flight: LH103
+          MUC → LUX
+          Departure: 2025-11-18T11:00
+          Arrival: 2025-11-18T12:55
+        `;
+        const result = await parser.parseEmail(subject, text);
+        expect(result[0].departureTime).toBe('2025-11-18T11:00');
+        expect(result[0].arrivalTime).toBe('2025-11-18T12:55');
+      });
+
+      it('should work with partial labels — only Abflug found', async () => {
+        const subject = 'Buchungsbestätigung';
+        const text = `
+          Flug: LH103
+          MUC → LUX
+          Abflug: 18. November 2025, 11:00
+          18. November 2025, 12:55
+        `;
+        const result = await parser.parseEmail(subject, text);
+        expect(result[0].departureTime).toContain('2025-11-18T11:00');
+      });
+
       it('should have provider property set to regex', () => {
         expect(parser.provider).toBe('regex');
       });
