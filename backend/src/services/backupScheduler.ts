@@ -3,6 +3,16 @@ import { prisma } from '../db';
 import logger from '../utils/logger';
 import { createBackup } from './backupService';
 
+const VALID_INTERVALS = ['daily', 'weekly', 'monthly'] as const;
+type BackupInterval = (typeof VALID_INTERVALS)[number];
+
+function toBackupInterval(value: string | null | undefined): BackupInterval {
+  if (value && (VALID_INTERVALS as readonly string[]).includes(value)) {
+    return value as BackupInterval;
+  }
+  return 'weekly';
+}
+
 let scheduledJob: cron.ScheduledTask | null = null;
 
 /**
@@ -16,7 +26,7 @@ async function getBackupSettings(): Promise<{
   const adminSettings = await prisma.adminSettings.findFirst();
   return {
     enabled: adminSettings?.backupEnabled ?? false,
-    interval: (adminSettings?.backupInterval as 'daily' | 'weekly' | 'monthly') ?? 'weekly',
+    interval: toBackupInterval(adminSettings?.backupInterval),
     retentionDays: adminSettings?.backupRetentionDays ?? 30,
   };
 }
