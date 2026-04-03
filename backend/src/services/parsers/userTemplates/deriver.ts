@@ -61,7 +61,7 @@ export function extractFingerprint(
   subject: string
 ): TemplateFingerprint {
   // Sender domain from "From:" header line
-  const fromMatch = /^From:\s*.*?@([\w.\-]+)/im.exec(fullText);
+  const fromMatch = /^From:\s*.*?@([\w.-]+)/im.exec(fullText);
   const senderDomains = fromMatch ? [fromMatch[1].toLowerCase()] : [];
 
   // Subject pattern (stripped of user-specific data — dates, booking codes)
