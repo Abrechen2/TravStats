@@ -69,4 +69,12 @@ describe("MyTemplates", () => {
       expect(api.parserTemplatesApi.setStatus).toHaveBeenCalledWith("t1", "disabled")
     );
   });
+
+  it("löscht ein Template nach Bestätigung", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(<MyTemplates />);
+    await waitFor(() => screen.getByText("Lufthansa DE"));
+    fireEvent.click(screen.getAllByText("common:buttons.delete")[0]);
+    await waitFor(() => expect(api.parserTemplatesApi.delete).toHaveBeenCalledWith("t1"));
+  });
 });

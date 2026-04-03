@@ -10,11 +10,17 @@ export default function MyTemplates(): JSX.Element {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
-    parserTemplatesApi
-      .list()
-      .then(setTemplates)
-      .catch((err: unknown) => logger.error({ err }, "MyTemplates: failed to load"))
-      .finally(() => setLoading(false));
+    const load = async (): Promise<void> => {
+      try {
+        const result = await parserTemplatesApi.list();
+        setTemplates(result);
+      } catch (err: unknown) {
+        logger.error({ err }, "MyTemplates: failed to load");
+      } finally {
+        setLoading(false);
+      }
+    };
+    void load();
   }, []);
 
   const handleSetStatus = async (id: string, status: "active" | "disabled"): Promise<void> => {
