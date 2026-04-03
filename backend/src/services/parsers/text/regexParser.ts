@@ -497,6 +497,9 @@ export class RegexTextParser implements ITextParser {
   private extractLabeledDates(source: string): { departureTime?: string; arrivalTime?: string } {
     const result: { departureTime?: string; arrivalTime?: string } = {};
 
+    // DEP_LABELS: The lookahead (?=\s*:|\s+\d|\s+[A-Za-zÄÖÜäöü]{3}) on "Dep"/"Arr" is zero-width
+    // (not consumed). The trailing \s*:?\s* then consumes the actual separator, so m[0].length
+    // correctly positions past "Dep: " or "Dep " before the date value. No offset bug.
     const DEP_LABELS = /(?:Abflug|Abflugzeit|Abreise|Departure|Departing|Departs|Dep(?=\s*:|\s+\d|\s+[A-Za-zÄÖÜäöü]{3}))\s*:?\s*/gi;
     const ARR_LABELS = /(?:Ankunft|Ankunftszeit|Arrival|Arriving|Arrives|Arr(?=\s*:|\s+\d|\s+[A-Za-zÄÖÜäöü]{3}))\s*:?\s*/gi;
 
@@ -504,7 +507,13 @@ export class RegexTextParser implements ITextParser {
       const slice = source.slice(pos, pos + 50);
       // ISO format (TZ suffix stripped)
       const isoM = slice.match(/^(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?)(?:[+-]\d{2}:?\d{2}|Z)?/);
-      if (isoM) return isoM[1].replace(' ', 'T');
+      if (isoM) {
+        const iso = isoM[1].replace(' ', 'T');
+        // Check for +N next-day marker after ISO datetime (exclude +HH:MM timezone offsets)
+        const afterIso = slice.slice(isoM[0].length, isoM[0].length + 8);
+        const nextDay = afterIso.match(/^\s*\(?\+(\d)\)?(?!\d*:)/);
+        return nextDay ? addDays(iso, Number(nextDay[1])) : iso;
+      }
       // German/English date format
       const deM = slice.match(
         /^(\d{1,2})[.\s]+(\d{1,2}|[A-Za-zÄÖÜäöü]{3,9})[.\s]+(\d{4})(?:[,\s]+(\d{1,2}):(\d{2}))?/
@@ -515,7 +524,12 @@ export class RegexTextParser implements ITextParser {
         const mo = MONTH_NAMES[raw] ?? (deM[2].length <= 2 ? deM[2].padStart(2, '0') : '01');
         const h = deM[4] ? deM[4].padStart(2, '0') : '00';
         const min = deM[5] ?? '00';
-        return `${deM[3]}-${mo}-${d}T${h}:${min}`;
+        let iso = `${deM[3]}-${mo}-${d}T${h}:${min}`;
+        // Check for +N next-day marker (exclude +HH:MM timezone offsets)
+        const afterDate = slice.slice(deM[0].length, deM[0].length + 8);
+        const nextDay = afterDate.match(/^\s*\(?\+(\d)\)?(?!\d*:)/);
+        if (nextDay) iso = addDays(iso, Number(nextDay[1]));
+        return iso;
       }
       return undefined;
     };

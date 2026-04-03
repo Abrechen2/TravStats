@@ -683,10 +683,12 @@ describe('Text Parsers', () => {
 
       it('should use Departure label to skip earlier booking date', async () => {
         const subject = 'Booking confirmation';
+        // Without label logic, positional scan picks 2025-10-01 (first ISO date) as departureTime.
+        // With label logic, Departure: label must override to 2025-11-18T11:00.
         const text = `
-          Issue date: 2025-10-01
           Flight: LH103
           MUC → LUX
+          2025-10-01T00:00
           Departure: 2025-11-18T11:00
           Arrival: 2025-11-18T12:55
         `;
@@ -705,6 +707,8 @@ describe('Text Parsers', () => {
         `;
         const result = await parser.parseEmail(subject, text);
         expect(result[0].departureTime).toContain('2025-11-18T11:00');
+        // arrivalTime should be picked up by positional fallback
+        expect(result[0].arrivalTime).toContain('2025-11-18');
       });
 
       it('should have provider property set to regex', () => {
