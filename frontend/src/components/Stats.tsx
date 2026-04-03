@@ -27,7 +27,9 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
 
   const loadStats = async () => {
     try {
-      const { minRouteCount: _minRouteCount, ...apiFilters } = filters; // eslint-disable-line @typescript-eslint/no-unused-vars
+      // minRouteCount is a map-only filter — not applied to API queries
+      const { minRouteCount: _mapOnly, ...apiFilters } = filters;
+      void _mapOnly;
       const hasBackendFilters = Object.keys(apiFilters).length > 0;
       // If filters are applied, calculate stats from filtered flights
       if (hasBackendFilters) {

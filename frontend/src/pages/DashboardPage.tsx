@@ -187,7 +187,9 @@ export default function DashboardPage(): JSX.Element {
   const loadFlights = async () => {
     try {
       setLoadingMap(true);
-      const { minRouteCount: _mc, ...apiFilters } = filters; // eslint-disable-line @typescript-eslint/no-unused-vars
+      // minRouteCount is a map-only filter — not applied to API queries
+      const { minRouteCount: _mapOnly, ...apiFilters } = filters;
+      void _mapOnly;
 
       // Load all flights by pagination (with safety limit)
       const MAX_PAGES = 100;
@@ -305,7 +307,9 @@ export default function DashboardPage(): JSX.Element {
         analyticsApi.track("export", { format });
       }
       if (format === "geojson") {
-        const { minRouteCount: _mc, ...apiFilters } = filters; // eslint-disable-line @typescript-eslint/no-unused-vars
+        // minRouteCount is a map-only filter — not applied to API queries
+        const { minRouteCount: _mapOnly, ...apiFilters } = filters;
+        void _mapOnly;
         const geoData = await flightsApi.getGeoJSON(apiFilters);
         const blob = new Blob([JSON.stringify(geoData, null, 2)], {
           type: "application/json",
@@ -318,7 +322,9 @@ export default function DashboardPage(): JSX.Element {
         URL.revokeObjectURL(url);
       } else {
         // CSV/PDF/KML export
-        const { minRouteCount: _mc, ...apiFilters } = filters; // eslint-disable-line @typescript-eslint/no-unused-vars
+        // minRouteCount is a map-only filter — not applied to API queries
+        const { minRouteCount: _mapOnly2, ...apiFilters } = filters;
+        void _mapOnly2;
         const data = await flightsApi.getAll(apiFilters);
 
         // Build rows with proper structure (not pre-joined)
