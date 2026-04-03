@@ -1,0 +1,185 @@
+import type { OnboardingState } from "../../types";
+
+import { api } from "./client";
+import type {
+  ApiKeyTestResponse,
+  MessageResponse,
+  NotificationPreferences,
+  SmtpConfigInput,
+  SmtpConfigResponse,
+  UserSettings,
+} from "./types";
+
+// Settings API
+export const settingsApi = {
+  get: async (): Promise<UserSettings> => {
+    const { data } = await api.get<UserSettings>("/settings");
+    return data;
+  },
+  update: async (payload: Partial<UserSettings>): Promise<UserSettings> => {
+    const { data } = await api.put<UserSettings>("/settings", payload);
+    return data;
+  },
+  getParserSettings: async (): Promise<{
+    preferredVisionParser?: string;
+    preferredTextParser?: string;
+    visionFallbackChain?: string;
+    textFallbackChain?: string;
+    openaiApiKey?: string;
+    claudeApiKey?: string;
+  }> => {
+    const { data } = await api.get<{
+      preferredVisionParser?: string;
+      preferredTextParser?: string;
+      visionFallbackChain?: string;
+      textFallbackChain?: string;
+      openaiApiKey?: string;
+      claudeApiKey?: string;
+    }>("/settings/parser");
+    return data;
+  },
+  updateParserSettings: async (payload: {
+    preferredVisionParser?: string;
+    preferredTextParser?: string;
+    visionFallbackChain?: string;
+    textFallbackChain?: string;
+    openaiApiKey?: string;
+    claudeApiKey?: string;
+  }): Promise<MessageResponse> => {
+    const { data } = await api.put<MessageResponse>("/settings/parser", payload);
+    return data;
+  },
+  getDeveloperMode: async (): Promise<{
+    enabled: boolean;
+    confirmedAt: string | null;
+  }> => {
+    const { data } = await api.get<{
+      enabled: boolean;
+      confirmedAt: string | null;
+    }>("/settings/developer-mode");
+    return data;
+  },
+  updateDeveloperMode: async (payload: {
+    enabled: boolean;
+    confirmed?: boolean;
+  }): Promise<MessageResponse> => {
+    const { data } = await api.put<MessageResponse>("/settings/developer-mode", payload);
+    return data;
+  },
+  getTrainingSettings: async (): Promise<{
+    useTrainedModels: boolean;
+    preferredEmailModel: "auto" | "trained" | "base";
+    preferredVisionModel: "auto" | "trained" | "base";
+    trainingSeparateModels: boolean;
+  }> => {
+    const { data } = await api.get<{
+      useTrainedModels: boolean;
+      preferredEmailModel: "auto" | "trained" | "base";
+      preferredVisionModel: "auto" | "trained" | "base";
+      trainingSeparateModels: boolean;
+    }>("/settings/training");
+    return data;
+  },
+  updateTrainingSettings: async (payload: {
+    useTrainedModels?: boolean;
+    preferredEmailModel?: "auto" | "trained" | "base";
+    preferredVisionModel?: "auto" | "trained" | "base";
+    trainingSeparateModels?: boolean;
+  }): Promise<MessageResponse> => {
+    const { data } = await api.put<MessageResponse>("/settings/training", payload);
+    return data;
+  },
+  uploadProfilePicture: async (file: File): Promise<{ profilePictureUrl: string }> => {
+    const formData = new FormData();
+    formData.append("profilePicture", file);
+    const { data } = await api.post<{ profilePictureUrl: string }>(
+      "/settings/profile-picture",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return data;
+  },
+  getOnboardingState: async (): Promise<OnboardingState> => {
+    const { data } = await api.get<OnboardingState>("/settings/onboarding-state");
+    return data;
+  },
+  updateOnboardingState: async (state: OnboardingState): Promise<OnboardingState> => {
+    const { data } = await api.put<OnboardingState>("/settings/onboarding-state", state);
+    return data;
+  },
+  getApiKeys: async (): Promise<{
+    openai: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+    claude: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+    airlabs: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+    aviationstack: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+    opensky: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+  }> => {
+    const { data } = await api.get<{
+      openai: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+      claude: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+      airlabs: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+      aviationstack: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+      opensky: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+    }>("/settings/api-keys");
+    return data;
+  },
+  updateApiKeys: async (payload: {
+    openaiApiKey?: string | null;
+    claudeApiKey?: string | null;
+    airlabsApiKey?: string | null;
+    aviationstackApiKey?: string | null;
+    openskyClientId?: string | null;
+    openskyClientSecret?: string | null;
+    openskyUsername?: string | null;
+    openskyPassword?: string | null;
+  }): Promise<MessageResponse> => {
+    const { data } = await api.put<MessageResponse>("/settings/api-keys", payload);
+    return data;
+  },
+  testApiKey: async (
+    provider: "openai" | "claude" | "airlabs" | "aviationstack" | "opensky",
+    apiKey?: string,
+    openskyCredentials?: {
+      clientId?: string;
+      clientSecret?: string;
+      username?: string;
+      password?: string;
+    }
+  ): Promise<ApiKeyTestResponse> => {
+    const endpoint = `/settings/api-keys/test/${provider}`;
+    const payload = provider === "opensky" ? openskyCredentials : { apiKey };
+    const { data } = await api.post<ApiKeyTestResponse>(endpoint, payload);
+    return data;
+  },
+  getNotificationPreferences: async (): Promise<NotificationPreferences> => {
+    const { data } = await api.get<NotificationPreferences>("/settings/notifications");
+    return data;
+  },
+  updateNotificationPreferences: async (
+    prefs: Partial<NotificationPreferences>
+  ): Promise<NotificationPreferences> => {
+    const { data } = await api.put<NotificationPreferences>("/settings/notifications", prefs);
+    return data;
+  },
+  getSmtpConfig: async (): Promise<SmtpConfigResponse> => {
+    const { data } = await api.get<SmtpConfigResponse>("/admin/smtp");
+    return data;
+  },
+  saveSmtpConfig: async (config: SmtpConfigInput): Promise<SmtpConfigResponse> => {
+    const { data } = await api.put<SmtpConfigResponse>("/admin/smtp", config);
+    return data;
+  },
+  testSmtpConnection: async (
+    config: SmtpConfigInput
+  ): Promise<{ success: boolean; error?: string }> => {
+    const { data } = await api.post<{ success: boolean; error?: string }>(
+      "/admin/smtp/test",
+      config
+    );
+    return data;
+  },
+};
