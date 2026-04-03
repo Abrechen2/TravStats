@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { backupApi } from "../../lib/api";
+import type { BackupScheduleSettings } from "../../lib/api/backup";
 import { useToastStore } from "../../store/toastStore";
 import { format } from "date-fns";
 import { logger } from "../../lib/logger";
@@ -167,7 +168,7 @@ function RestoreModal({ backup, onClose, onConfirm }: RestoreModalProps): JSX.El
 }
 
 export default function BackupManagement(): JSX.Element {
-  const { t } = useTranslation(["admin", "common"]);
+  const { t } = useTranslation(["admin", "common", "settings"]);
   const addToast = useToastStore((state) => state.addToast);
   const [backups, setBackups] = useState<Backup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -177,6 +178,12 @@ export default function BackupManagement(): JSX.Element {
     running: boolean;
     currentBackup: { id: string; status: string; startedAt: string | null } | null;
   } | null>(null);
+  const [backupSettings, setBackupSettings] = useState<BackupScheduleSettings>({
+    backupEnabled: false,
+    backupInterval: "weekly",
+    backupRetentionDays: 30,
+  });
+  const [savingSettings, setSavingSettings] = useState(false);
 
   const loadBackups = async () => {
     try {
@@ -210,6 +217,13 @@ export default function BackupManagement(): JSX.Element {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    backupApi
+      .getBackupSettings()
+      .then(setBackupSettings)
+      .catch((err: unknown) => logger.error("Failed to load backup settings", err));
+  }, []);
+
   const handleCreateBackup = async () => {
     try {
       setCreating(true);
@@ -224,6 +238,20 @@ export default function BackupManagement(): JSX.Element {
       addToast("error", t("admin:backup.toasts.createFailed"));
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleSaveBackupSettings = async (): Promise<void> => {
+    setSavingSettings(true);
+    try {
+      const updated = await backupApi.updateBackupSettings(backupSettings);
+      setBackupSettings(updated);
+      addToast("success", t("admin:backup.settingsSaved"));
+    } catch (err: unknown) {
+      addToast("error", t("admin:backup.settingsFailed"));
+      logger.error("Failed to save backup settings", err);
+    } finally {
+      setSavingSettings(false);
     }
   };
 
@@ -397,6 +425,82 @@ export default function BackupManagement(): JSX.Element {
           </div>
         }
       />
+
+      {/* Backup Schedule Settings */}
+      <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+              {t("admin:backup.schedule.title")}
+            </h3>
+            <p className="text-sm text-[var(--text-muted)] mt-1">
+              {t("admin:backup.schedule.description")}
+            </p>
+          </div>
+          <button
+            onClick={handleSaveBackupSettings}
+            disabled={savingSettings}
+            className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-lg transition font-medium text-sm"
+          >
+            {savingSettings ? t("common:buttons.saving") : t("common:buttons.save")}
+          </button>
+        </div>
+        <div className="space-y-4">
+          <label className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              checked={backupSettings.backupEnabled}
+              onChange={(e) =>
+                setBackupSettings({ ...backupSettings, backupEnabled: e.target.checked })
+              }
+              className="w-4 h-4 rounded"
+            />
+            <span className="text-sm font-medium text-[var(--text-primary)]">
+              {t("admin:backup.schedule.enableAutoBackup")}
+            </span>
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
+                {t("admin:backup.schedule.interval")}
+              </label>
+              <select
+                value={backupSettings.backupInterval}
+                onChange={(e) =>
+                  setBackupSettings({
+                    ...backupSettings,
+                    backupInterval: e.target.value as BackupScheduleSettings["backupInterval"],
+                  })
+                }
+                disabled={!backupSettings.backupEnabled}
+                className="input w-full disabled:opacity-50"
+              >
+                <option value="daily">{t("settings:backup.intervals.daily")}</option>
+                <option value="weekly">{t("settings:backup.intervals.weekly")}</option>
+                <option value="monthly">{t("settings:backup.intervals.monthly")}</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
+                {t("admin:backup.schedule.retentionDays")}
+              </label>
+              <input
+                type="number"
+                value={backupSettings.backupRetentionDays}
+                onChange={(e) =>
+                  setBackupSettings({
+                    ...backupSettings,
+                    backupRetentionDays: parseInt(e.target.value, 10) || 30,
+                  })
+                }
+                min="1"
+                max="365"
+                className="input w-full"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
 
       {status?.running && status.currentBackup && (
         <div
