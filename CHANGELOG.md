@@ -9,6 +9,25 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.10.0-beta] - 2026-04-04
+
+### Added
+- **Enrichment two-mode system**: flights < 1 year → Full enrichment (aircraft, ICAO codes, route, terminal, gate); flights ≥ 1 year → Slim enrichment (ICAO codes + terminal only).
+- **`getEnrichmentMode()`**: Exported helper that determines enrichment mode from flight age.
+- **Route median interpolation**: `aggregateRoutes` now resamples all reference routes to 20 points and computes per-position median lat/lon — replaces "take newest route" approach.
+- **Enrichment badge in PendingUpdateCard**: Full (green) / Slim (amber) badge + "Vorschlag · nicht verifiziert" disclaimer with reference flight count and confidence score.
+- **Two-mode explanation panel** in Settings → Enrichment tab.
+
+### Changed
+- **`findEnrichmentCandidates`**: Now excludes flights with `pending` or `rejected` pending updates (previously only `applied` was excluded — caused infinite nightly re-processing).
+- **Settings simplified**: `requireApproval` and `autoProcess` removed — enrichments always create a pending update requiring manual confirmation. Settings reduced from 6 to 3 fields (`enabled`, `minConfidence`, `maxPerDay`).
+- **Scheduler**: Runs for all users with `historicalEnrichmentEnabled=true` (no longer gated on `autoProcess`).
+
+### Removed
+- **`historicalEnrichmentMaxAgeYears`**, **`historicalEnrichmentAutoProcess`**, **`historicalEnrichmentRequireApproval`** from `UserSettings` schema and DB.
+
+---
+
 ## [0.9.6-beta] - 2026-04-03
 
 ### Added
