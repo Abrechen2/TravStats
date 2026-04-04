@@ -1,6 +1,6 @@
 /**
  * Flight Enrichment Service
- * 
+ *
  * Handles historical flight data enrichment by aggregating data from
  * live-tracked flights with the same flight number.
  */
@@ -18,18 +18,13 @@ interface RouteWaypoint {
   country?: string;
 }
 
-/** Route data that may have a distance property */
-interface RouteWithDistance {
-  distance?: number;
-}
+
+export type EnrichmentMode = 'full' | 'slim';
 
 export interface UserEnrichmentSettings {
   enabled: boolean;
   minConfidence: number;
-  maxAgeYears: number;
-  autoProcess: boolean;
   maxPerDay: number;
-  requireApproval: boolean;
 }
 
 export interface EnrichmentCandidate {
@@ -39,6 +34,7 @@ export interface EnrichmentCandidate {
   missingRoute: boolean;
   ageYears: number;
   confidence: number;
+  enrichmentMode: EnrichmentMode;
 }
 
 export interface RouteAnomaly {
@@ -57,14 +53,14 @@ export interface AggregatedFlightData {
   arrIata?: string;
   gate?: string;
   terminal?: string;
-  
+
   // Route-Daten
   typicalRoute?: {
     waypoints: Array<{lat: number; lon: number}>;
     overflownCountries: string[];
     routeDistance: number;
   };
-  
+
   // Metadaten
   sourceFlightsCount: number;
   confidence: number;
@@ -88,10 +84,7 @@ export async function getUserEnrichmentSettings(userId: string): Promise<UserEnr
     return {
       enabled: userSettings.historicalEnrichmentEnabled ?? false,
       minConfidence: userSettings.historicalEnrichmentMinConfidence ?? 60,
-      maxAgeYears: userSettings.historicalEnrichmentMaxAgeYears ?? 5,
-      autoProcess: userSettings.historicalEnrichmentAutoProcess ?? false,
       maxPerDay: userSettings.historicalEnrichmentMaxPerDay ?? 50,
-      requireApproval: userSettings.historicalEnrichmentRequireApproval ?? true,
     };
   } catch (error) {
     logger.error({
@@ -107,6 +100,17 @@ export async function getUserEnrichmentSettings(userId: string): Promise<UserEnr
 }
 
 /**
+ * Determine enrichment mode based on flight age.
+ * < 1 year  → full  (aircraft, ICAO, route, terminal, gate)
+ * ≥ 1 year  → slim  (ICAO codes + terminal only)
+ */
+export function getEnrichmentMode(departureTime: Date): EnrichmentMode {
+  const ageMs = Date.now() - departureTime.getTime();
+  const ageYears = ageMs / (1000 * 60 * 60 * 24 * 365.25);
+  return ageYears < 1 ? 'full' : 'slim';
+}
+
+/**
  * Find flights that are candidates for historical enrichment
  */
 export async function findEnrichmentCandidates(
@@ -116,14 +120,15 @@ export async function findEnrichmentCandidates(
   try {
     // Get settings if not provided
     const enrichmentSettings = settings || await getUserEnrichmentSettings(userId);
-    
+
     if (!enrichmentSettings || !enrichmentSettings.enabled) {
       return [];
     }
 
     const now = new Date();
+    const MAX_ENRICHMENT_AGE_YEARS = 10;
     const maxAgeDate = new Date();
-    maxAgeDate.setFullYear(maxAgeDate.getFullYear() - enrichmentSettings.maxAgeYears);
+    maxAgeDate.setFullYear(maxAgeDate.getFullYear() - MAX_ENRICHMENT_AGE_YEARS);
 
     // Find flights without accepted pending updates
     const flights = await prismaClient.flight.findMany({
@@ -136,7 +141,7 @@ export async function findEnrichmentCandidates(
         NOT: {
           pendingUpdates: {
             some: {
-              status: 'applied',
+              status: { in: ['applied', 'pending', 'rejected'] },
             },
           },
         },
@@ -176,6 +181,7 @@ export async function findEnrichmentCandidates(
         missingRoute,
         ageYears,
         confidence,
+        enrichmentMode: getEnrichmentMode(flight.departureTime),
       });
     }
 
@@ -225,7 +231,8 @@ function calculateBasicConfidence(flight: Flight, missingFields: string[]): numb
 export async function aggregateFlightData(
   flightNumber: string,
   excludeFlightId: string,
-  minFlights: number = 5
+  minFlights: number = 5,
+  mode: EnrichmentMode = 'full'
 ): Promise<AggregatedFlightData | null> {
   try {
     // Find flights with live tracking and same flight number
@@ -258,27 +265,33 @@ export async function aggregateFlightData(
       return null;
     }
 
-    // Aggregate basic fields
-    const aircrafts = referenceFlights.map(f => f.aircraft).filter(Boolean) as string[];
+    // Always collected (stable across time)
     const depIcaos = referenceFlights.map(f => f.depIcao).filter(Boolean) as string[];
     const arrIcaos = referenceFlights.map(f => f.arrIcao).filter(Boolean) as string[];
-    const gates = referenceFlights.map(f => f.gate).filter(Boolean) as string[];
     const terminals = referenceFlights.map(f => f.terminal).filter(Boolean) as string[];
 
-    // Calculate most common values
-    const mostCommonAircraft = getMostCommon(aircrafts);
     const mostCommonDepIcao = getMostCommon(depIcaos);
     const mostCommonArrIcao = getMostCommon(arrIcaos);
-    const mostCommonGate = getMostCommon(gates);
     const mostCommonTerminal = getMostCommon(terminals);
 
-    // Aggregate route data
-    const routes = referenceFlights
-      .map(f => f.actualRoute)
-      .filter(Boolean) as Prisma.JsonValue[];
+    // Full mode only (unreliable for flights ≥1 year old)
+    let mostCommonAircraft: string | undefined;
+    let mostCommonGate: string | undefined;
+    let typicalRoute: AggregatedFlightData['typicalRoute'];
+    let routeConsistency: 'high' | 'medium' | 'low' = 'low';
 
-    const typicalRoute = aggregateRoutes(routes);
-    const routeConsistency = calculateRouteConsistency(routes);
+    if (mode === 'full') {
+      const aircrafts = referenceFlights.map(f => f.aircraft).filter(Boolean) as string[];
+      const gates = referenceFlights.map(f => f.gate).filter(Boolean) as string[];
+      mostCommonAircraft = getMostCommon(aircrafts);
+      mostCommonGate = getMostCommon(gates);
+
+      const routes = referenceFlights
+        .map(f => f.actualRoute)
+        .filter(Boolean) as Prisma.JsonValue[];
+      typicalRoute = aggregateRoutes(routes);
+      routeConsistency = calculateRouteConsistency(routes);
+    }
 
     // Detect anomalies
     const anomalies = detectRouteAnomalies(referenceFlights, {
@@ -291,8 +304,9 @@ export async function aggregateFlightData(
       referenceFlights.length,
       routeConsistency,
       anomalies,
-      referenceFlights[0]?.departureTime ? 
-        (Date.now() - referenceFlights[0].departureTime.getTime()) / (1000 * 60 * 60 * 24 * 365.25) : 0
+      referenceFlights[0]?.departureTime
+        ? (Date.now() - referenceFlights[0].departureTime.getTime()) / (1000 * 60 * 60 * 24 * 365.25)
+        : 0
     );
 
     return {
@@ -346,59 +360,121 @@ function getMostCommon<T>(arr: T[]): T | undefined {
   return mostCommon;
 }
 
+const RESAMPLE_POINTS = 20;
+
+/** Cumulative Euclidean distances along a route (in degrees — approximate) */
+function cumulativeDistances(wps: Array<{ lat: number; lon: number }>): number[] {
+  const dists = [0];
+  for (let i = 1; i < wps.length; i++) {
+    const dlat = wps[i].lat - wps[i - 1].lat;
+    const dlon = wps[i].lon - wps[i - 1].lon;
+    dists.push(dists[i - 1] + Math.sqrt(dlat * dlat + dlon * dlon));
+  }
+  return dists;
+}
+
+/** Resample a route to exactly n evenly-spaced points by linear interpolation */
+function resampleRoute(
+  wps: Array<{ lat: number; lon: number }>,
+  n: number
+): Array<{ lat: number; lon: number }> {
+  if (wps.length === 0) return [];
+  if (wps.length === 1) return Array(n).fill({ ...wps[0] });
+
+  const dists = cumulativeDistances(wps);
+  const total = dists[dists.length - 1];
+  if (total === 0) return Array(n).fill({ ...wps[0] });
+
+  const result: Array<{ lat: number; lon: number }> = [];
+  for (let i = 0; i < n; i++) {
+    const target = (i / (n - 1)) * total;
+    let seg = dists.findIndex((d, idx) => idx > 0 && dists[idx - 1] <= target && d >= target);
+    if (seg <= 0) seg = 1;
+    const segStart = dists[seg - 1];
+    const segEnd = dists[seg];
+    const t = segEnd === segStart ? 0 : (target - segStart) / (segEnd - segStart);
+    result.push({
+      lat: wps[seg - 1].lat + t * (wps[seg].lat - wps[seg - 1].lat),
+      lon: wps[seg - 1].lon + t * (wps[seg].lon - wps[seg - 1].lon),
+    });
+  }
+  return result;
+}
+
+/** Median of a number array */
+function medianOf(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 !== 0
+    ? sorted[mid]
+    : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
 /**
- * Aggregate routes from multiple flights
+ * Aggregate multiple routes into a typical route using resampling + median.
+ * Exported for testing.
  */
-function aggregateRoutes(routes: Prisma.JsonValue[]): {
-  waypoints: Array<{lat: number; lon: number}>;
-  overflownCountries: string[];
-  routeDistance: number;
-} | undefined {
-  if (routes.length === 0) return undefined;
+export function aggregateRoutesForTest(
+  rawRoutes: Array<Array<{ lat: number; lon: number }>>
+): { waypoints: Array<{ lat: number; lon: number }>; overflownCountries: string[]; routeDistance: number } | undefined {
+  const validRoutes = rawRoutes.filter(r => r.length >= 2);
+  if (validRoutes.length === 0) return undefined;
 
-  // For now, use the most recent route as typical
-  // TODO: Implement proper median/consensus calculation
-  const latestRoute = routes[0];
+  const resampled = validRoutes.map(r => resampleRoute(r, RESAMPLE_POINTS));
 
-  if (!Array.isArray(latestRoute) || latestRoute.length === 0) {
-    return undefined;
+  const waypoints: Array<{ lat: number; lon: number }> = [];
+  for (let i = 0; i < RESAMPLE_POINTS; i++) {
+    waypoints.push({
+      lat: medianOf(resampled.map(r => r[i].lat)),
+      lon: medianOf(resampled.map(r => r[i].lon)),
+    });
   }
 
-  // Extract waypoints
-  const waypoints = latestRoute
-    .filter((wp): wp is Prisma.JsonObject =>
-      typeof wp === 'object' && wp !== null && !Array.isArray(wp) && 'lat' in wp && 'lon' in wp &&
-      typeof wp['lat'] === 'number' && typeof wp['lon'] === 'number'
-    )
-    .map((wp) => ({ lat: wp['lat'] as number, lon: wp['lon'] as number }));
+  const dists = cumulativeDistances(waypoints);
+  const routeDistance = dists[dists.length - 1] * 111; // approximate degrees → km
 
-  // Extract countries
+  return { waypoints, overflownCountries: [], routeDistance };
+}
+
+/**
+ * Aggregate routes from Prisma JsonValue array.
+ * Internal wrapper used by aggregateFlightData.
+ */
+function aggregateRoutes(routes: Prisma.JsonValue[]): AggregatedFlightData['typicalRoute'] {
+  const parsed = routes
+    .filter(Array.isArray)
+    .map((r) =>
+      (r as Prisma.JsonValue[])
+        .filter(
+          (wp): wp is Prisma.JsonObject =>
+            typeof wp === 'object' && wp !== null && !Array.isArray(wp) &&
+            typeof wp['lat'] === 'number' && typeof wp['lon'] === 'number'
+        )
+        .map((wp) => ({ lat: wp['lat'] as number, lon: wp['lon'] as number }))
+    )
+    .filter((r) => r.length >= 2);
+
+  const result = aggregateRoutesForTest(parsed);
+  if (!result) return undefined;
+
+  // Collect overflown countries from all routes
   const allCountries = new Set<string>();
   for (const route of routes) {
     if (Array.isArray(route)) {
       for (const wp of route) {
-        if (typeof wp === 'object' && wp !== null && !Array.isArray(wp) && 'country' in wp) {
-          const country = (wp as Prisma.JsonObject)['country'];
-          if (typeof country === 'string') {
-            allCountries.add(country);
-          }
+        if (
+          typeof wp === 'object' && wp !== null && !Array.isArray(wp) &&
+          typeof (wp as Prisma.JsonObject)['country'] === 'string'
+        ) {
+          allCountries.add((wp as Prisma.JsonObject)['country'] as string);
         }
       }
     }
   }
 
-  // Calculate average distance (simplified)
-  const distances = routes
-    .map((r) => typeof r === 'object' && r !== null && 'distance' in r ? (r as RouteWithDistance).distance : undefined)
-    .filter((d): d is number => typeof d === 'number');
-  const avgDistance = distances.length > 0
-    ? distances.reduce((a, b) => a + b, 0) / distances.length
-    : undefined;
-
   return {
-    waypoints,
+    ...result,
     overflownCountries: Array.from(allCountries),
-    routeDistance: avgDistance || 0,
   };
 }
 
@@ -525,6 +601,8 @@ export async function createHistoricalEnrichment(
       return null;
     }
 
+    const mode = getEnrichmentMode(flight.departureTime);
+
     // Get user settings
     const settings = await getUserEnrichmentSettings(flight.userId);
     if (!settings || !settings.enabled) {
@@ -569,19 +647,30 @@ export async function createHistoricalEnrichment(
     };
 
     // Create proposed data
-    const proposedData = {
-      ...originalData,
-      aircraft: aggregatedData.aircraft || flight.aircraft,
-      depIcao: aggregatedData.depIcao || flight.depIcao,
-      depIata: aggregatedData.depIata || flight.depIata,
-      arrIcao: aggregatedData.arrIcao || flight.arrIcao,
-      arrIata: aggregatedData.arrIata || flight.arrIata,
-      gate: aggregatedData.gate || flight.gate,
-      terminal: aggregatedData.terminal || flight.terminal,
-      actualRoute: aggregatedData.typicalRoute?.waypoints || flight.actualRoute,
-      overflownCountries: aggregatedData.typicalRoute?.overflownCountries || flight.overflownCountries,
-      routeDistance: aggregatedData.typicalRoute?.routeDistance || flight.routeDistance,
-    };
+    const proposedData =
+      mode === 'full'
+        ? {
+            ...originalData,
+            aircraft: aggregatedData.aircraft ?? flight.aircraft,
+            depIcao: aggregatedData.depIcao ?? flight.depIcao,
+            depIata: aggregatedData.depIata ?? flight.depIata,
+            arrIcao: aggregatedData.arrIcao ?? flight.arrIcao,
+            arrIata: aggregatedData.arrIata ?? flight.arrIata,
+            gate: aggregatedData.gate ?? flight.gate,
+            terminal: aggregatedData.terminal ?? flight.terminal,
+            actualRoute: aggregatedData.typicalRoute?.waypoints ?? flight.actualRoute,
+            overflownCountries: aggregatedData.typicalRoute?.overflownCountries ?? flight.overflownCountries,
+            routeDistance: aggregatedData.typicalRoute?.routeDistance ?? flight.routeDistance,
+          }
+        : {
+            // Slim mode: only ICAO codes and terminal — aircraft and route are unreliable for old flights
+            ...originalData,
+            depIcao: aggregatedData.depIcao ?? flight.depIcao,
+            depIata: aggregatedData.depIata ?? flight.depIata,
+            arrIcao: aggregatedData.arrIcao ?? flight.arrIcao,
+            arrIata: aggregatedData.arrIata ?? flight.arrIata,
+            terminal: aggregatedData.terminal ?? flight.terminal,
+          };
 
     // Calculate changes
     const { calculateChanges } = await import('./flightAutoUpdate');
@@ -630,6 +719,7 @@ export async function createHistoricalEnrichment(
       confidence: aggregatedData.confidence,
       anomalies: aggregatedData.anomalies,
       isHistoricalEnrichment: true,
+      enrichmentMode: mode,
       routeConsistency: aggregatedData.routeConsistency,
     };
 
@@ -701,4 +791,3 @@ export async function createHistoricalEnrichment(
     return null;
   }
 }
-

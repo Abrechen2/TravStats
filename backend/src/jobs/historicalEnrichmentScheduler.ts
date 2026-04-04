@@ -1,6 +1,6 @@
 /**
  * Historical Enrichment Scheduler
- * 
+ *
  * Background job that processes historical enrichment candidates
  * for users who have auto-processing enabled.
  */
@@ -28,21 +28,21 @@ export async function processUserHistoricalEnrichment(userId: string): Promise<{
 }> {
   try {
     const settings = await getUserEnrichmentSettings(userId);
-    
-    if (!settings || !settings.enabled || !settings.autoProcess) {
+
+    if (!settings || !settings.enabled) {
       return { processed: 0, created: 0, skipped: 0 };
     }
 
     // Find candidates
     const candidates = await findEnrichmentCandidates(userId, settings);
-    
+
     if (candidates.length === 0) {
       return { processed: 0, created: 0, skipped: 0 };
     }
 
     // Limit to maxPerDay
     const candidatesToProcess = candidates.slice(0, settings.maxPerDay);
-    
+
     let created = 0;
     let skipped = 0;
 
@@ -143,11 +143,10 @@ export async function processAllUsersHistoricalEnrichment(): Promise<{
   totalSkipped: number;
 }> {
   try {
-    // Find all users with auto-processing enabled
+    // Find all users with enrichment enabled
     const users = await prisma.userSettings.findMany({
       where: {
         historicalEnrichmentEnabled: true,
-        historicalEnrichmentAutoProcess: true,
       },
       select: {
         userId: true,

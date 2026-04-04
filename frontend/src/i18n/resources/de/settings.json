@@ -342,35 +342,29 @@
   },
   "historicalEnrichment": {
     "title": "Historische Anreicherung",
-    "description": "Ergänzt historische Flüge (2-5 Jahre) mit Daten von Live-getrackten Flügen derselben Flugnummer",
+    "description": "Ergänzt Flüge mit fehlenden Daten durch Aggregation von Referenzflügen derselben Flugnummer",
     "info": {
       "title": "Wie funktioniert die historische Anreicherung?",
-      "description": "Die historische Anreicherung findet Flüge mit derselben Flugnummer, die bereits Live getrackt wurden, und verwendet deren Daten (Route, Flugzeug, etc.) um Ihre historischen Flüge zu ergänzen.",
-      "benefits": {
-        "title": "Vorteile:",
-        "completeData": "Vollständige Flugdaten für alte Flüge",
-        "routeTracking": "Genau Route-Tracking (überflogene Länder)",
-        "statistics": "Präzisere Statistiken und Achievements",
-        "automatic": "Automatische Erkennung von Anreicherungs-Kandidaten"
+      "description": "Das System sucht Flüge mit derselben Flugnummer, die live getrackt wurden, und aggregiert deren Daten. Je nach Alter des Fluges werden unterschiedliche Felder ergänzt.",
+      "modes": {
+        "title": "Zwei Anreicherungs-Modi:",
+        "fullLabel": "Vollständig",
+        "fullDescription": "Flüge < 1 Jahr: Flugzeugtyp, ICAO-Codes, Route, Terminal, Gate werden ergänzt.",
+        "slimLabel": "Basis",
+        "slimDescription": "Flüge ≥ 1 Jahr: Nur ICAO-Codes und Terminal — Flugzeugtyp und Route sind zu unsicher für ältere Flüge."
       },
       "warning": {
-        "title": "Hinweis (Beta):",
-        "description": "Diese Funktion ist noch in der Beta-Phase. Alle Anreicherungen müssen manuell bestätigt werden. Routen können sich über die Zeit ändern (z.B. Russland-Sperrzone seit 2022)."
+        "title": "Wichtig:",
+        "description": "Alle Vorschläge sind Schätzungen basierend auf ähnlichen Flügen. Jede Anreicherung muss manuell bestätigt werden bevor sie gespeichert wird."
       }
     },
     "enabled": "Historische Flugdaten-Anreicherung aktivieren",
-    "minConfidence": "Min Confidence (%)",
-    "minConfidenceDescription": "Nur Anreicherungen mit mindestens X% Confidence anzeigen",
-    "maxPerDay": "Max pro Tag",
-    "maxPerDayDescription": "Maximale Anzahl Anreicherungen pro Tag",
-    "minAgeYears": "Min Alter (Jahre)",
-    "minAgeYearsDescription": "Minimales Alter von Flügen für Anreicherung",
-    "maxAgeYears": "Max Alter (Jahre)",
-    "maxAgeYearsDescription": "Maximales Alter von Flügen für Anreicherung",
-    "autoProcess": "Automatisch nachts nach Anreicherungs-Kandidaten suchen",
-    "requireApproval": "Jede Anreicherung muss manuell bestätigt werden",
-    "saved": "Historische Anreicherungs-Einstellungen erfolgreich gespeichert",
-    "saveFailed": "Fehler beim Speichern der historischen Anreicherungs-Einstellungen"
+    "minConfidence": "Min. Konfidenz (%)",
+    "minConfidenceDescription": "Nur Vorschläge mit mindestens X% Konfidenz anzeigen",
+    "maxPerDay": "Max. pro Tag",
+    "maxPerDayDescription": "Maximale Anzahl neuer Vorschläge pro Nacht",
+    "saved": "Anreicherungs-Einstellungen gespeichert",
+    "saveFailed": "Fehler beim Speichern der Anreicherungs-Einstellungen"
   },
   "apiKeys": {
     "title": "API-Schlüssel",

@@ -122,8 +122,12 @@
   "apiSource": {
     "airlabs": "AirLabs API",
     "aviationstack": "Aviationstack API",
-    "opensky": "OpenSky Network"
+    "opensky": "OpenSky Network",
+    "historicalAggregation": "Historical Enrichment"
+  },
+  "enrichment": {
+    "fullBadge": "Full",
+    "slimBadge": "Basic",
+    "disclaimer": "Suggestion · unverified · based on {{count}} reference flights ({{confidence}}% confidence)"
   }
 }
-
-
