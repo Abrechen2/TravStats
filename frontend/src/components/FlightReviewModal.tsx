@@ -1,5 +1,4 @@
 ﻿import { useState, useEffect } from "react";
-import { flushSync } from "react-dom";
 import { Airport, FlightInput, ParsedBooking } from "../types";
 import { airportsApi, parseApi } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
@@ -374,7 +373,7 @@ export default function FlightReviewModal({
                 className="flex items-center gap-2 mt-1.5 flex-wrap"
               >
                 <span className="text-xs text-[var(--text-muted)] flex items-center gap-1">
-                  <span>🤖</span>
+                  <span aria-hidden="true">🤖</span>
                   <span>{initialData.parserTemplate ?? t("flights:review.unknownParser")}</span>
                 </span>
                 {initialData.parserConfidence !== undefined && (
@@ -387,7 +386,7 @@ export default function FlightReviewModal({
                 {originalData?.text && (
                   <button
                     type="button"
-                    onClick={() => flushSync(() => setShowSourceText((v) => !v))}
+                    onClick={() => setShowSourceText((v) => !v)}
                     className="text-xs px-2 py-0.5 rounded border border-[var(--color-border)] text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] transition-colors"
                   >
                     {showSourceText
