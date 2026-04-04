@@ -64,10 +64,13 @@ export function extractFingerprint(
   const fromMatch = /^From:\s*.*?@([\w.-]+)/im.exec(fullText);
   const senderDomains = fromMatch ? [fromMatch[1].toLowerCase()] : [];
 
-  // Subject pattern (stripped of user-specific data — dates, booking codes)
+  // Subject pattern (stripped of user-specific data — dates, booking codes, routes)
   const cleanSubject = subject
-    .replace(/\d{2}\.\d{2}\.\d{4}/g, "")
-    .replace(/[A-Z0-9]{5,8}/g, "")
+    .replace(/\d{2}\.\d{2}\.\d{4}/g, "")           // DD.MM.YYYY
+    .replace(/\b\d{1,2}\s+\w+\s+\d{4}\b/g, "")     // "14 November 2024"
+    .replace(/\b[A-Z]{3}-[A-Z]{3}\b/g, "")          // "MUC-FRA"
+    .replace(/[A-Z0-9]{5,8}/g, "")                  // booking codes
+    .replace(/[_|\s]+/g, " ")                        // collapse separators
     .trim();
   const subjectPatterns = cleanSubject.length > 4 ? [cleanSubject] : [subject];
 
