@@ -75,10 +75,7 @@ export interface AutoUpdateResponseSettings {
 export interface HistoricalEnrichmentResponseSettings {
   enabled: boolean;
   minConfidence: number;
-  maxAgeYears: number;
-  autoProcess: boolean;
   maxPerDay: number;
-  requireApproval: boolean;
 }
 
 export interface SettingsResponse extends SettingsDataJson {
@@ -96,10 +93,7 @@ export interface UserSettingsUpdateData {
   autoUpdateExpiryHours?: number;
   historicalEnrichmentEnabled?: boolean;
   historicalEnrichmentMinConfidence?: number;
-  historicalEnrichmentMaxAgeYears?: number;
-  historicalEnrichmentAutoProcess?: boolean;
   historicalEnrichmentMaxPerDay?: number;
-  historicalEnrichmentRequireApproval?: boolean;
   boardingPassParserStrategy?: string | null;
 }
 

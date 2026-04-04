@@ -746,7 +746,6 @@ router.post('/:id/enrich-historical', async (req: AuthRequest, res: Response, ne
     res.json({
       pendingUpdateId,
       confidence: aggregatedData.confidence,
-      requiresApproval: settings.requireApproval,
       sourceFlightsCount: aggregatedData.sourceFlightsCount,
       anomalies: aggregatedData.anomalies,
     });

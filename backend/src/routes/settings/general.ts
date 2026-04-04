@@ -68,14 +68,14 @@ const settingsSchema = z.object({
     onlyDuringFlight: z.boolean().optional(),
     expiryHours: z.number().min(1).max(168).optional(), // 1 hour to 1 week
   }).partial().optional(),
-  historicalEnrichment: z.object({
-    enabled: z.boolean().optional(),
-    minConfidence: z.number().min(0).max(100).optional(),
-    maxAgeYears: z.number().min(1).max(10).optional(),
-    autoProcess: z.boolean().optional(),
-    maxPerDay: z.number().min(1).max(1000).optional(),
-    requireApproval: z.boolean().optional(),
-  }).partial().optional(),
+  historicalEnrichment: z
+    .object({
+      enabled: z.boolean().optional(),
+      minConfidence: z.number().min(0).max(100).optional(),
+      maxPerDay: z.number().min(1).max(1000).optional(),
+    })
+    .partial()
+    .optional(),
   boardingPassParserStrategy: z.enum(['parser-only', 'parser-with-api', 'api-only']).nullable().optional(),
 }).partial();
 
@@ -90,10 +90,7 @@ function buildSettingsResponse(record: {
   boardingPassParserStrategy: string | null;
   historicalEnrichmentEnabled: boolean | null;
   historicalEnrichmentMinConfidence: number | null;
-  historicalEnrichmentMaxAgeYears: number | null;
-  historicalEnrichmentAutoProcess: boolean | null;
   historicalEnrichmentMaxPerDay: number | null;
-  historicalEnrichmentRequireApproval: boolean | null;
 }): SettingsResponse {
   const baseData = (typeof record.data === 'object' && record.data !== null
     ? record.data
@@ -112,10 +109,7 @@ function buildSettingsResponse(record: {
     historicalEnrichment: {
       enabled: record.historicalEnrichmentEnabled ?? false,
       minConfidence: record.historicalEnrichmentMinConfidence ?? 60,
-      maxAgeYears: record.historicalEnrichmentMaxAgeYears ?? 5,
-      autoProcess: record.historicalEnrichmentAutoProcess ?? false,
       maxPerDay: record.historicalEnrichmentMaxPerDay ?? 50,
-      requireApproval: record.historicalEnrichmentRequireApproval ?? true,
     },
   };
 }
@@ -148,10 +142,7 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
           // Initialize historical enrichment settings with defaults
           historicalEnrichmentEnabled: false,
           historicalEnrichmentMinConfidence: 60,
-          historicalEnrichmentMaxAgeYears: 5,
-          historicalEnrichmentAutoProcess: false,
           historicalEnrichmentMaxPerDay: 50,
-          historicalEnrichmentRequireApproval: true,
         },
       });
       const response = buildSettingsResponse(created);
@@ -250,26 +241,14 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
       if (payload.historicalEnrichment.minConfidence !== undefined) {
         updateData.historicalEnrichmentMinConfidence = payload.historicalEnrichment.minConfidence;
       }
-      if (payload.historicalEnrichment.maxAgeYears !== undefined) {
-        updateData.historicalEnrichmentMaxAgeYears = payload.historicalEnrichment.maxAgeYears;
-      }
-      if ('autoProcess' in payload.historicalEnrichment) {
-        updateData.historicalEnrichmentAutoProcess = payload.historicalEnrichment.autoProcess;
-      }
       if (payload.historicalEnrichment.maxPerDay !== undefined) {
         updateData.historicalEnrichmentMaxPerDay = payload.historicalEnrichment.maxPerDay;
-      }
-      if ('requireApproval' in payload.historicalEnrichment) {
-        updateData.historicalEnrichmentRequireApproval = payload.historicalEnrichment.requireApproval;
       }
     } else if (existing) {
       // Preserve existing historical enrichment settings if not in payload
       updateData.historicalEnrichmentEnabled = existing.historicalEnrichmentEnabled;
       updateData.historicalEnrichmentMinConfidence = existing.historicalEnrichmentMinConfidence;
-      updateData.historicalEnrichmentMaxAgeYears = existing.historicalEnrichmentMaxAgeYears;
-      updateData.historicalEnrichmentAutoProcess = existing.historicalEnrichmentAutoProcess;
       updateData.historicalEnrichmentMaxPerDay = existing.historicalEnrichmentMaxPerDay;
-      updateData.historicalEnrichmentRequireApproval = existing.historicalEnrichmentRequireApproval;
     }
 
     // Handle boarding pass parser strategy
@@ -299,10 +278,7 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
         autoUpdateOnlyDuringFlight: payload.autoUpdate?.onlyDuringFlight ?? true,
         historicalEnrichmentEnabled: payload.historicalEnrichment?.enabled ?? false,
         historicalEnrichmentMinConfidence: payload.historicalEnrichment?.minConfidence ?? 60,
-        historicalEnrichmentMaxAgeYears: payload.historicalEnrichment?.maxAgeYears ?? 5,
-        historicalEnrichmentAutoProcess: payload.historicalEnrichment?.autoProcess ?? false,
         historicalEnrichmentMaxPerDay: payload.historicalEnrichment?.maxPerDay ?? 50,
-        historicalEnrichmentRequireApproval: payload.historicalEnrichment?.requireApproval ?? true,
         autoUpdateExpiryHours: payload.autoUpdate?.expiryHours ?? 24,
         // Initialize boarding pass parser strategy (null = auto)
         boardingPassParserStrategy: boardingPassParserStrategy ?? null,
