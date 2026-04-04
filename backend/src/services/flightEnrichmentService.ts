@@ -601,6 +601,8 @@ export async function createHistoricalEnrichment(
       return null;
     }
 
+    const mode = getEnrichmentMode(flight.departureTime);
+
     // Get user settings
     const settings = await getUserEnrichmentSettings(flight.userId);
     if (!settings || !settings.enabled) {
@@ -645,19 +647,30 @@ export async function createHistoricalEnrichment(
     };
 
     // Create proposed data
-    const proposedData = {
-      ...originalData,
-      aircraft: aggregatedData.aircraft || flight.aircraft,
-      depIcao: aggregatedData.depIcao || flight.depIcao,
-      depIata: aggregatedData.depIata || flight.depIata,
-      arrIcao: aggregatedData.arrIcao || flight.arrIcao,
-      arrIata: aggregatedData.arrIata || flight.arrIata,
-      gate: aggregatedData.gate || flight.gate,
-      terminal: aggregatedData.terminal || flight.terminal,
-      actualRoute: aggregatedData.typicalRoute?.waypoints || flight.actualRoute,
-      overflownCountries: aggregatedData.typicalRoute?.overflownCountries || flight.overflownCountries,
-      routeDistance: aggregatedData.typicalRoute?.routeDistance || flight.routeDistance,
-    };
+    const proposedData =
+      mode === 'full'
+        ? {
+            ...originalData,
+            aircraft: aggregatedData.aircraft ?? flight.aircraft,
+            depIcao: aggregatedData.depIcao ?? flight.depIcao,
+            depIata: aggregatedData.depIata ?? flight.depIata,
+            arrIcao: aggregatedData.arrIcao ?? flight.arrIcao,
+            arrIata: aggregatedData.arrIata ?? flight.arrIata,
+            gate: aggregatedData.gate ?? flight.gate,
+            terminal: aggregatedData.terminal ?? flight.terminal,
+            actualRoute: aggregatedData.typicalRoute?.waypoints ?? flight.actualRoute,
+            overflownCountries: aggregatedData.typicalRoute?.overflownCountries ?? flight.overflownCountries,
+            routeDistance: aggregatedData.typicalRoute?.routeDistance ?? flight.routeDistance,
+          }
+        : {
+            // Slim mode: only ICAO codes and terminal — aircraft and route are unreliable for old flights
+            ...originalData,
+            depIcao: aggregatedData.depIcao ?? flight.depIcao,
+            depIata: aggregatedData.depIata ?? flight.depIata,
+            arrIcao: aggregatedData.arrIcao ?? flight.arrIcao,
+            arrIata: aggregatedData.arrIata ?? flight.arrIata,
+            terminal: aggregatedData.terminal ?? flight.terminal,
+          };
 
     // Calculate changes
     const { calculateChanges } = await import('./flightAutoUpdate');
@@ -706,6 +719,7 @@ export async function createHistoricalEnrichment(
       confidence: aggregatedData.confidence,
       anomalies: aggregatedData.anomalies,
       isHistoricalEnrichment: true,
+      enrichmentMode: mode,
       routeConsistency: aggregatedData.routeConsistency,
     };
 
