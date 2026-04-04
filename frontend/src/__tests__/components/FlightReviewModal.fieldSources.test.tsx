@@ -43,3 +43,71 @@ describe("FlightReviewModal fieldSources", () => {
     expect(input.className).toMatch(/border-green/);
   });
 });
+
+describe("FlightReviewModal parser info", () => {
+  const parsedWithMeta: ParsedBooking = {
+    flightNumber: "LH105",
+    departureCode: "MUC",
+    arrivalCode: "FRA",
+    missing: [],
+    parserTemplate: "Lufthansa Buchungsdetails",
+    parserConfidence: 75,
+    fieldSources: { flightNumber: "template" },
+  };
+
+  it("renders parser template name when parserTemplate is set", () => {
+    render(
+      <FlightReviewModal
+        isOpen={true}
+        onClose={() => {}}
+        onConfirm={async () => {}}
+        initialData={parsedWithMeta}
+        source="email"
+      />
+    );
+    expect(screen.getByText("Lufthansa Buchungsdetails")).toBeInTheDocument();
+  });
+
+  it("renders confidence pill when parserConfidence is set", () => {
+    render(
+      <FlightReviewModal
+        isOpen={true}
+        onClose={() => {}}
+        onConfirm={async () => {}}
+        initialData={parsedWithMeta}
+        source="email"
+      />
+    );
+    expect(screen.getByText(/75/)).toBeInTheDocument();
+  });
+
+  it("shows source text panel when toggle is clicked", async () => {
+    const { getByText, queryByText } = render(
+      <FlightReviewModal
+        isOpen={true}
+        onClose={() => {}}
+        onConfirm={async () => {}}
+        initialData={parsedWithMeta}
+        source="email"
+        originalData={{ text: "Buchungscode: K9NB9B\nFlug: LH105" }}
+      />
+    );
+    expect(queryByText("Buchungscode: K9NB9B\nFlug: LH105")).not.toBeInTheDocument();
+    const btn = getByText("flights:review.sourceText");
+    btn.click();
+    expect(getByText("Buchungscode: K9NB9B\nFlug: LH105")).toBeInTheDocument();
+  });
+
+  it("does not render parser info row when both parserTemplate and parserConfidence are absent", () => {
+    const { container } = render(
+      <FlightReviewModal
+        isOpen={true}
+        onClose={() => {}}
+        onConfirm={async () => {}}
+        initialData={{ flightNumber: "LH1", departureCode: "MUC", arrivalCode: "FRA", missing: [] }}
+        source="email"
+      />
+    );
+    expect(container.querySelector("[data-testid='parser-info-row']")).toBeNull();
+  });
+});
