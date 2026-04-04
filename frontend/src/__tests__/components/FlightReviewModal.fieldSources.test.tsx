@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
+import userEvent from "@testing-library/user-event";
 import FlightReviewModal from "../../components/FlightReviewModal";
 import type { ParsedBooking } from "../../types";
 
@@ -82,6 +83,7 @@ describe("FlightReviewModal parser info", () => {
   });
 
   it("shows source text panel when toggle is clicked", async () => {
+    const user = userEvent.setup();
     const { getByText, queryByText } = render(
       <FlightReviewModal
         isOpen={true}
@@ -93,8 +95,7 @@ describe("FlightReviewModal parser info", () => {
       />
     );
     expect(queryByText(/Buchungscode: K9NB9B/)).not.toBeInTheDocument();
-    const btn = getByText("flights:review.sourceText");
-    btn.click();
+    await user.click(getByText("flights:review.sourceText"));
     expect(getByText(/Buchungscode: K9NB9B/)).toBeInTheDocument();
   });
 
