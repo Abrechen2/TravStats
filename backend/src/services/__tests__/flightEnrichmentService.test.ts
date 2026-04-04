@@ -118,3 +118,35 @@ describe('aggregateFlightData — mode parameter', () => {
     // just verify aircraft is present
   });
 });
+
+describe('aggregateRoutesForTest — median interpolation', () => {
+  it('returns undefined for empty input', async () => {
+    const { aggregateRoutesForTest } = await import('../flightEnrichmentService');
+    expect(aggregateRoutesForTest([])).toBeUndefined();
+  });
+
+  it('returns undefined when all routes have fewer than 2 points', async () => {
+    const { aggregateRoutesForTest } = await import('../flightEnrichmentService');
+    expect(aggregateRoutesForTest([[{ lat: 50, lon: 8 }]])).toBeUndefined();
+  });
+
+  it('returns exactly RESAMPLE_POINTS (20) waypoints', async () => {
+    const { aggregateRoutesForTest } = await import('../flightEnrichmentService');
+    const route = [{ lat: 50, lon: 8 }, { lat: 40, lon: -73 }];
+    const result = aggregateRoutesForTest([route, route]);
+    expect(result).not.toBeUndefined();
+    expect(result!.waypoints.length).toBe(20);
+  });
+
+  it('median is close to normal routes, not pulled by outlier', async () => {
+    const { aggregateRoutesForTest } = await import('../flightEnrichmentService');
+    // 3 routes starting near lat=50, one outlier starting at lat=70
+    const normal1 = [{ lat: 50, lon: 8 }, { lat: 40, lon: -73 }];
+    const normal2 = [{ lat: 50, lon: 8 }, { lat: 40, lon: -73 }];
+    const outlier = [{ lat: 70, lon: 8 }, { lat: 40, lon: -73 }];
+    const result = aggregateRoutesForTest([normal1, normal2, outlier]);
+    expect(result).not.toBeUndefined();
+    // Median of [50, 50, 70] = 50 — outlier should not dominate
+    expect(result!.waypoints[0].lat).toBeCloseTo(50, 0);
+  });
+});

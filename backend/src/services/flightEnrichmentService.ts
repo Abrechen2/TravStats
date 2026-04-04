@@ -18,10 +18,6 @@ interface RouteWaypoint {
   country?: string;
 }
 
-/** Route data that may have a distance property */
-interface RouteWithDistance {
-  distance?: number;
-}
 
 export type EnrichmentMode = 'full' | 'slim';
 
@@ -364,59 +360,121 @@ function getMostCommon<T>(arr: T[]): T | undefined {
   return mostCommon;
 }
 
+const RESAMPLE_POINTS = 20;
+
+/** Cumulative Euclidean distances along a route (in degrees — approximate) */
+function cumulativeDistances(wps: Array<{ lat: number; lon: number }>): number[] {
+  const dists = [0];
+  for (let i = 1; i < wps.length; i++) {
+    const dlat = wps[i].lat - wps[i - 1].lat;
+    const dlon = wps[i].lon - wps[i - 1].lon;
+    dists.push(dists[i - 1] + Math.sqrt(dlat * dlat + dlon * dlon));
+  }
+  return dists;
+}
+
+/** Resample a route to exactly n evenly-spaced points by linear interpolation */
+function resampleRoute(
+  wps: Array<{ lat: number; lon: number }>,
+  n: number
+): Array<{ lat: number; lon: number }> {
+  if (wps.length === 0) return [];
+  if (wps.length === 1) return Array(n).fill({ ...wps[0] });
+
+  const dists = cumulativeDistances(wps);
+  const total = dists[dists.length - 1];
+  if (total === 0) return Array(n).fill({ ...wps[0] });
+
+  const result: Array<{ lat: number; lon: number }> = [];
+  for (let i = 0; i < n; i++) {
+    const target = (i / (n - 1)) * total;
+    let seg = dists.findIndex((d, idx) => idx > 0 && dists[idx - 1] <= target && d >= target);
+    if (seg <= 0) seg = 1;
+    const segStart = dists[seg - 1];
+    const segEnd = dists[seg];
+    const t = segEnd === segStart ? 0 : (target - segStart) / (segEnd - segStart);
+    result.push({
+      lat: wps[seg - 1].lat + t * (wps[seg].lat - wps[seg - 1].lat),
+      lon: wps[seg - 1].lon + t * (wps[seg].lon - wps[seg - 1].lon),
+    });
+  }
+  return result;
+}
+
+/** Median of a number array */
+function medianOf(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 !== 0
+    ? sorted[mid]
+    : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
 /**
- * Aggregate routes from multiple flights
+ * Aggregate multiple routes into a typical route using resampling + median.
+ * Exported for testing.
  */
-function aggregateRoutes(routes: Prisma.JsonValue[]): {
-  waypoints: Array<{lat: number; lon: number}>;
-  overflownCountries: string[];
-  routeDistance: number;
-} | undefined {
-  if (routes.length === 0) return undefined;
+export function aggregateRoutesForTest(
+  rawRoutes: Array<Array<{ lat: number; lon: number }>>
+): { waypoints: Array<{ lat: number; lon: number }>; overflownCountries: string[]; routeDistance: number } | undefined {
+  const validRoutes = rawRoutes.filter(r => r.length >= 2);
+  if (validRoutes.length === 0) return undefined;
 
-  // For now, use the most recent route as typical
-  // TODO: Implement proper median/consensus calculation
-  const latestRoute = routes[0];
+  const resampled = validRoutes.map(r => resampleRoute(r, RESAMPLE_POINTS));
 
-  if (!Array.isArray(latestRoute) || latestRoute.length === 0) {
-    return undefined;
+  const waypoints: Array<{ lat: number; lon: number }> = [];
+  for (let i = 0; i < RESAMPLE_POINTS; i++) {
+    waypoints.push({
+      lat: medianOf(resampled.map(r => r[i].lat)),
+      lon: medianOf(resampled.map(r => r[i].lon)),
+    });
   }
 
-  // Extract waypoints
-  const waypoints = latestRoute
-    .filter((wp): wp is Prisma.JsonObject =>
-      typeof wp === 'object' && wp !== null && !Array.isArray(wp) && 'lat' in wp && 'lon' in wp &&
-      typeof wp['lat'] === 'number' && typeof wp['lon'] === 'number'
-    )
-    .map((wp) => ({ lat: wp['lat'] as number, lon: wp['lon'] as number }));
+  const dists = cumulativeDistances(waypoints);
+  const routeDistance = dists[dists.length - 1] * 111; // approximate degrees → km
 
-  // Extract countries
+  return { waypoints, overflownCountries: [], routeDistance };
+}
+
+/**
+ * Aggregate routes from Prisma JsonValue array.
+ * Internal wrapper used by aggregateFlightData.
+ */
+function aggregateRoutes(routes: Prisma.JsonValue[]): AggregatedFlightData['typicalRoute'] {
+  const parsed = routes
+    .filter(Array.isArray)
+    .map((r) =>
+      (r as Prisma.JsonValue[])
+        .filter(
+          (wp): wp is Prisma.JsonObject =>
+            typeof wp === 'object' && wp !== null && !Array.isArray(wp) &&
+            typeof wp['lat'] === 'number' && typeof wp['lon'] === 'number'
+        )
+        .map((wp) => ({ lat: wp['lat'] as number, lon: wp['lon'] as number }))
+    )
+    .filter((r) => r.length >= 2);
+
+  const result = aggregateRoutesForTest(parsed);
+  if (!result) return undefined;
+
+  // Collect overflown countries from all routes
   const allCountries = new Set<string>();
   for (const route of routes) {
     if (Array.isArray(route)) {
       for (const wp of route) {
-        if (typeof wp === 'object' && wp !== null && !Array.isArray(wp) && 'country' in wp) {
-          const country = (wp as Prisma.JsonObject)['country'];
-          if (typeof country === 'string') {
-            allCountries.add(country);
-          }
+        if (
+          typeof wp === 'object' && wp !== null && !Array.isArray(wp) &&
+          typeof (wp as Prisma.JsonObject)['country'] === 'string'
+        ) {
+          allCountries.add((wp as Prisma.JsonObject)['country'] as string);
         }
       }
     }
   }
 
-  // Calculate average distance (simplified)
-  const distances = routes
-    .map((r) => typeof r === 'object' && r !== null && 'distance' in r ? (r as RouteWithDistance).distance : undefined)
-    .filter((d): d is number => typeof d === 'number');
-  const avgDistance = distances.length > 0
-    ? distances.reduce((a, b) => a + b, 0) / distances.length
-    : undefined;
-
   return {
-    waypoints,
+    ...result,
     overflownCountries: Array.from(allCountries),
-    routeDistance: avgDistance || 0,
   };
 }
 
