@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect } from "react";
+import { flushSync } from "react-dom";
 import { Airport, FlightInput, ParsedBooking } from "../types";
 import { airportsApi, parseApi } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
@@ -15,6 +16,13 @@ function getFieldBorderClass(
   if (source === "llm") return "border-l-4 border-yellow-400";
   if (source === "empty") return "border-l-4 border-red-500";
   return "";
+}
+
+function getConfidenceColor(confidence: number): string {
+  if (confidence >= 70) return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+  if (confidence >= 40)
+    return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
+  return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
 }
 
 interface FlightReviewModalProps {
@@ -77,6 +85,7 @@ export default function FlightReviewModal({
   // UI state
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showSourceText, setShowSourceText] = useState(false);
 
   // Initialize form with parsed data
   useEffect(() => {
@@ -359,6 +368,35 @@ export default function FlightReviewModal({
                 {t("flights:review.flightIndex", { index: flightIndex! + 1, total: totalFlights })}
               </p>
             )}
+            {(initialData.parserTemplate || initialData.parserConfidence !== undefined) && (
+              <div
+                data-testid="parser-info-row"
+                className="flex items-center gap-2 mt-1.5 flex-wrap"
+              >
+                <span className="text-xs text-[var(--text-muted)] flex items-center gap-1">
+                  <span>🤖</span>
+                  <span>{initialData.parserTemplate ?? t("flights:review.unknownParser")}</span>
+                </span>
+                {initialData.parserConfidence !== undefined && (
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${getConfidenceColor(initialData.parserConfidence)}`}
+                  >
+                    {initialData.parserConfidence}% {t("flights:review.confidenceLabel")}
+                  </span>
+                )}
+                {originalData?.text && (
+                  <button
+                    type="button"
+                    onClick={() => flushSync(() => setShowSourceText((v) => !v))}
+                    className="text-xs px-2 py-0.5 rounded border border-[var(--color-border)] text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] transition-colors"
+                  >
+                    {showSourceText
+                      ? t("flights:review.hideSourceText")
+                      : t("flights:review.sourceText")}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
           <button
             onClick={onClose}
@@ -375,6 +413,15 @@ export default function FlightReviewModal({
             </svg>
           </button>
         </div>
+
+        {/* Source text panel */}
+        {showSourceText && originalData?.text && (
+          <div className="border-b border-[var(--color-border)] bg-[var(--bg-elevated)] px-6 py-3">
+            <pre className="whitespace-pre-wrap font-mono text-xs text-[var(--text-secondary)] max-h-48 overflow-y-auto leading-relaxed">
+              {originalData.text}
+            </pre>
+          </div>
+        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
