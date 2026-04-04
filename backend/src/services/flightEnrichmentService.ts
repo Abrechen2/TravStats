@@ -145,7 +145,7 @@ export async function findEnrichmentCandidates(
         NOT: {
           pendingUpdates: {
             some: {
-              status: 'applied',
+              status: { in: ['applied', 'pending', 'rejected'] },
             },
           },
         },
