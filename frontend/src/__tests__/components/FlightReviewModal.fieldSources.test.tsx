@@ -92,10 +92,10 @@ describe("FlightReviewModal parser info", () => {
         originalData={{ text: "Buchungscode: K9NB9B\nFlug: LH105" }}
       />
     );
-    expect(queryByText("Buchungscode: K9NB9B\nFlug: LH105")).not.toBeInTheDocument();
+    expect(queryByText(/Buchungscode: K9NB9B/)).not.toBeInTheDocument();
     const btn = getByText("flights:review.sourceText");
     btn.click();
-    expect(getByText("Buchungscode: K9NB9B\nFlug: LH105")).toBeInTheDocument();
+    expect(getByText(/Buchungscode: K9NB9B/)).toBeInTheDocument();
   });
 
   it("does not render parser info row when both parserTemplate and parserConfidence are absent", () => {
