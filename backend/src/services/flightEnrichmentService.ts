@@ -1,6 +1,6 @@
 /**
  * Flight Enrichment Service
- * 
+ *
  * Handles historical flight data enrichment by aggregating data from
  * live-tracked flights with the same flight number.
  */
@@ -23,13 +23,12 @@ interface RouteWithDistance {
   distance?: number;
 }
 
+export type EnrichmentMode = 'full' | 'slim';
+
 export interface UserEnrichmentSettings {
   enabled: boolean;
   minConfidence: number;
-  maxAgeYears: number;
-  autoProcess: boolean;
   maxPerDay: number;
-  requireApproval: boolean;
 }
 
 export interface EnrichmentCandidate {
@@ -39,6 +38,7 @@ export interface EnrichmentCandidate {
   missingRoute: boolean;
   ageYears: number;
   confidence: number;
+  enrichmentMode: EnrichmentMode;
 }
 
 export interface RouteAnomaly {
@@ -57,14 +57,14 @@ export interface AggregatedFlightData {
   arrIata?: string;
   gate?: string;
   terminal?: string;
-  
+
   // Route-Daten
   typicalRoute?: {
     waypoints: Array<{lat: number; lon: number}>;
     overflownCountries: string[];
     routeDistance: number;
   };
-  
+
   // Metadaten
   sourceFlightsCount: number;
   confidence: number;
@@ -88,10 +88,7 @@ export async function getUserEnrichmentSettings(userId: string): Promise<UserEnr
     return {
       enabled: userSettings.historicalEnrichmentEnabled ?? false,
       minConfidence: userSettings.historicalEnrichmentMinConfidence ?? 60,
-      maxAgeYears: userSettings.historicalEnrichmentMaxAgeYears ?? 5,
-      autoProcess: userSettings.historicalEnrichmentAutoProcess ?? false,
       maxPerDay: userSettings.historicalEnrichmentMaxPerDay ?? 50,
-      requireApproval: userSettings.historicalEnrichmentRequireApproval ?? true,
     };
   } catch (error) {
     logger.error({
@@ -107,6 +104,17 @@ export async function getUserEnrichmentSettings(userId: string): Promise<UserEnr
 }
 
 /**
+ * Determine enrichment mode based on flight age.
+ * < 1 year  → full  (aircraft, ICAO, route, terminal, gate)
+ * ≥ 1 year  → slim  (ICAO codes + terminal only)
+ */
+export function getEnrichmentMode(departureTime: Date): EnrichmentMode {
+  const ageMs = Date.now() - departureTime.getTime();
+  const ageYears = ageMs / (1000 * 60 * 60 * 24 * 365.25);
+  return ageYears < 1 ? 'full' : 'slim';
+}
+
+/**
  * Find flights that are candidates for historical enrichment
  */
 export async function findEnrichmentCandidates(
@@ -116,7 +124,7 @@ export async function findEnrichmentCandidates(
   try {
     // Get settings if not provided
     const enrichmentSettings = settings || await getUserEnrichmentSettings(userId);
-    
+
     if (!enrichmentSettings || !enrichmentSettings.enabled) {
       return [];
     }
@@ -291,7 +299,7 @@ export async function aggregateFlightData(
       referenceFlights.length,
       routeConsistency,
       anomalies,
-      referenceFlights[0]?.departureTime ? 
+      referenceFlights[0]?.departureTime ?
         (Date.now() - referenceFlights[0].departureTime.getTime()) / (1000 * 60 * 60 * 24 * 365.25) : 0
     );
 
@@ -701,4 +709,3 @@ export async function createHistoricalEnrichment(
     return null;
   }
 }
-
