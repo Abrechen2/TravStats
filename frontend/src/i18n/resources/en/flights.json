@@ -202,7 +202,11 @@
     "loadingAirports": "Loading airports...",
     "departureNotFound": "Departure airport {{code}} not found",
     "arrivalNotFound": "Arrival airport {{code}} not found",
-    "selectedAirport": "Selected: {{name}} ({{code}})"
+    "selectedAirport": "Selected: {{name}} ({{code}})",
+    "unknownParser": "Unknown",
+    "confidenceLabel": "Confidence",
+    "sourceText": "Source text",
+    "hideSourceText": "Hide"
   },
   "lookup": {
     "resultsTitle": "Found {{count}} {{count, plural, one {flight} other {flights}}}",
