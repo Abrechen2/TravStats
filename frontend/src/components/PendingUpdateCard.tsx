@@ -48,6 +48,12 @@ interface PendingUpdate {
   apiSource: string;
   fetchedAt: string;
   expiresAt: string;
+  metadata?: {
+    isHistoricalEnrichment?: boolean;
+    enrichmentMode?: "full" | "slim";
+    confidence?: number;
+    sourceFlightsCount?: number;
+  };
   appliedAt?: string;
   rejectedAt?: string;
   statisticsImpact?: StatisticsImpact;
@@ -105,8 +111,14 @@ export default function PendingUpdateCard({
     return t(`pendingUpdates:status.${status}`);
   };
 
-  const getApiSourceLabel = (source: string) => {
-    return source.charAt(0).toUpperCase() + source.slice(1);
+  const getApiSourceLabel = (source: string): string => {
+    const labels: Record<string, string> = {
+      historical_aggregation: t("pendingUpdates:apiSource.historicalAggregation"),
+      airlabs: "AirLabs API",
+      aviationstack: "Aviationstack API",
+      opensky: "OpenSky Network",
+    };
+    return labels[source] ?? source.charAt(0).toUpperCase() + source.slice(1);
   };
 
   const timeUntilExpiry = () => {
@@ -146,6 +158,25 @@ export default function PendingUpdateCard({
               <span className="text-xs text-[var(--text-muted)]">
                 {getApiSourceLabel(update.apiSource)}
               </span>
+              {update.metadata?.isHistoricalEnrichment && (
+                <span
+                  className="px-2 py-0.5 text-xs font-semibold rounded-full"
+                  style={{
+                    background:
+                      update.metadata.enrichmentMode === "full"
+                        ? "rgba(34,197,94,0.15)"
+                        : "rgba(232,160,69,0.15)",
+                    color:
+                      update.metadata.enrichmentMode === "full"
+                        ? "rgb(22,163,74)"
+                        : "var(--accent)",
+                  }}
+                >
+                  {update.metadata.enrichmentMode === "full"
+                    ? t("pendingUpdates:enrichment.fullBadge")
+                    : t("pendingUpdates:enrichment.slimBadge")}
+                </span>
+              )}
             </div>
             {update.status === "pending" && (
               <span className="text-xs text-[var(--text-muted)]">
@@ -162,6 +193,14 @@ export default function PendingUpdateCard({
                 {update.flight.depIata} → {update.flight.arrIata}
               </p>
             </div>
+          )}
+          {update.metadata?.isHistoricalEnrichment && (
+            <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+              {t("pendingUpdates:enrichment.disclaimer", {
+                count: update.metadata.sourceFlightsCount ?? 0,
+                confidence: update.metadata.confidence ?? 0,
+              })}
+            </p>
           )}
         </div>
 
