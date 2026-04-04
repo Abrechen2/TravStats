@@ -15,6 +15,7 @@ import { AppError } from '../middleware/errorHandler';
 import { prisma } from '../db';
 import logger from '../utils/logger';
 import { deriveTemplateFromAnnotation } from '../services/parsers/userTemplates/deriver';
+import { extractEmailFromFile } from '../services/emailExtractor';
 
 const router = Router();
 router.use(authenticate);
@@ -72,12 +73,31 @@ router.post(
         throw new AppError('type must be "email" or "boarding_pass"', 400);
       }
 
+      // Pre-populate annotations with file content so annotation components can render it
+      const fileExt = path.extname(req.file.originalname).toLowerCase();
+      let initialAnnotations: Record<string, unknown> = {};
+      try {
+        if (type === 'email') {
+          const buffer = fs.readFileSync(req.file.path);
+          const extracted = extractEmailFromFile(buffer, req.file.originalname);
+          // Strip NUL bytes — PostgreSQL jsonb rejects them
+          const fullText = (extracted.text || extracted.subject || '').replace(/\0/g, '');
+          if (fullText) initialAnnotations = { fullText };
+        } else if (type === 'boarding_pass') {
+          const buffer = fs.readFileSync(req.file.path);
+          const mimeType = req.file.mimetype || 'image/jpeg';
+          initialAnnotations = { imageBase64: `data:${mimeType};base64,${buffer.toString('base64')}` };
+        }
+      } catch (readErr) {
+        logger.warn({ operation: 'training_upload_read', err: readErr }, 'Could not pre-read file content');
+      }
+
       const record = await prisma.trainingData.create({
         data: {
           userId,
           type,
           originalFile: req.file.path,
-          annotations: {},
+          annotations: initialAnnotations as Parameters<typeof prisma.trainingData.create>[0]['data']['annotations'],
           extractedData: [],
           status: 'pending',
           tags: [],
