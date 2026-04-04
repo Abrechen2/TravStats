@@ -201,7 +201,11 @@
     "loadingAirports": "Flughäfen werden geladen...",
     "departureNotFound": "Abflughafen {{code}} nicht gefunden",
     "arrivalNotFound": "Ankunftsflughafen {{code}} nicht gefunden",
-    "selectedAirport": "Ausgewählt: {{name}} ({{code}})"
+    "selectedAirport": "Ausgewählt: {{name}} ({{code}})",
+    "unknownParser": "Unbekannt",
+    "confidenceLabel": "Konfidenz",
+    "sourceText": "Quelltext",
+    "hideSourceText": "Ausblenden"
   },
   "lookup": {
     "resultsTitle": "{{count}} {{count, plural, one {Flug} other {Flüge}}} gefunden",
