@@ -130,8 +130,9 @@ export async function findEnrichmentCandidates(
     }
 
     const now = new Date();
+    const MAX_ENRICHMENT_AGE_YEARS = 10;
     const maxAgeDate = new Date();
-    maxAgeDate.setFullYear(maxAgeDate.getFullYear() - enrichmentSettings.maxAgeYears);
+    maxAgeDate.setFullYear(maxAgeDate.getFullYear() - MAX_ENRICHMENT_AGE_YEARS);
 
     // Find flights without accepted pending updates
     const flights = await prismaClient.flight.findMany({
@@ -184,6 +185,7 @@ export async function findEnrichmentCandidates(
         missingRoute,
         ageYears,
         confidence,
+        enrichmentMode: getEnrichmentMode(flight.departureTime),
       });
     }
 
