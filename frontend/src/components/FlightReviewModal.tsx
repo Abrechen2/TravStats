@@ -92,6 +92,7 @@ export default function FlightReviewModal({
       // Reset form state when switching to a new flight
       setError("");
       setAirportError("");
+      setShowSourceText(false);
       setDepartureAirport(null);
       setArrivalAirport(null);
 
