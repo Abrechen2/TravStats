@@ -235,7 +235,8 @@ function calculateBasicConfidence(flight: Flight, missingFields: string[]): numb
 export async function aggregateFlightData(
   flightNumber: string,
   excludeFlightId: string,
-  minFlights: number = 5
+  minFlights: number = 5,
+  mode: EnrichmentMode = 'full'
 ): Promise<AggregatedFlightData | null> {
   try {
     // Find flights with live tracking and same flight number
@@ -268,27 +269,33 @@ export async function aggregateFlightData(
       return null;
     }
 
-    // Aggregate basic fields
-    const aircrafts = referenceFlights.map(f => f.aircraft).filter(Boolean) as string[];
+    // Always collected (stable across time)
     const depIcaos = referenceFlights.map(f => f.depIcao).filter(Boolean) as string[];
     const arrIcaos = referenceFlights.map(f => f.arrIcao).filter(Boolean) as string[];
-    const gates = referenceFlights.map(f => f.gate).filter(Boolean) as string[];
     const terminals = referenceFlights.map(f => f.terminal).filter(Boolean) as string[];
 
-    // Calculate most common values
-    const mostCommonAircraft = getMostCommon(aircrafts);
     const mostCommonDepIcao = getMostCommon(depIcaos);
     const mostCommonArrIcao = getMostCommon(arrIcaos);
-    const mostCommonGate = getMostCommon(gates);
     const mostCommonTerminal = getMostCommon(terminals);
 
-    // Aggregate route data
-    const routes = referenceFlights
-      .map(f => f.actualRoute)
-      .filter(Boolean) as Prisma.JsonValue[];
+    // Full mode only (unreliable for flights ≥1 year old)
+    let mostCommonAircraft: string | undefined;
+    let mostCommonGate: string | undefined;
+    let typicalRoute: AggregatedFlightData['typicalRoute'];
+    let routeConsistency: 'high' | 'medium' | 'low' = 'low';
 
-    const typicalRoute = aggregateRoutes(routes);
-    const routeConsistency = calculateRouteConsistency(routes);
+    if (mode === 'full') {
+      const aircrafts = referenceFlights.map(f => f.aircraft).filter(Boolean) as string[];
+      const gates = referenceFlights.map(f => f.gate).filter(Boolean) as string[];
+      mostCommonAircraft = getMostCommon(aircrafts);
+      mostCommonGate = getMostCommon(gates);
+
+      const routes = referenceFlights
+        .map(f => f.actualRoute)
+        .filter(Boolean) as Prisma.JsonValue[];
+      typicalRoute = aggregateRoutes(routes);
+      routeConsistency = calculateRouteConsistency(routes);
+    }
 
     // Detect anomalies
     const anomalies = detectRouteAnomalies(referenceFlights, {
@@ -301,8 +308,9 @@ export async function aggregateFlightData(
       referenceFlights.length,
       routeConsistency,
       anomalies,
-      referenceFlights[0]?.departureTime ?
-        (Date.now() - referenceFlights[0].departureTime.getTime()) / (1000 * 60 * 60 * 24 * 365.25) : 0
+      referenceFlights[0]?.departureTime
+        ? (Date.now() - referenceFlights[0].departureTime.getTime()) / (1000 * 60 * 60 * 24 * 365.25)
+        : 0
     );
 
     return {
