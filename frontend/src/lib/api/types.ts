@@ -103,10 +103,7 @@ export interface AutoUpdateSettings {
 export interface HistoricalEnrichmentSettings {
   enabled: boolean;
   minConfidence: number;
-  maxAgeYears: number;
-  autoProcess: boolean;
   maxPerDay: number;
-  requireApproval: boolean;
 }
 
 export interface UserSettings {

@@ -218,10 +218,7 @@ model UserSettings {
   // Historical enrichment settings (Beta)
   historicalEnrichmentEnabled Boolean @default(false) @map("historical_enrichment_enabled")
   historicalEnrichmentMinConfidence Int @default(60) @map("historical_enrichment_min_confidence")
-  historicalEnrichmentMaxAgeYears Int @default(5) @map("historical_enrichment_max_age_years")
-  historicalEnrichmentAutoProcess Boolean @default(false) @map("historical_enrichment_auto_process")
   historicalEnrichmentMaxPerDay Int @default(50) @map("historical_enrichment_max_per_day")
-  historicalEnrichmentRequireApproval Boolean @default(true) @map("historical_enrichment_require_approval")
 
   updatedAt DateTime @updatedAt @map("updated_at")
   createdAt DateTime @default(now()) @map("created_at")

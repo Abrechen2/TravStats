@@ -18,10 +18,7 @@ interface AutoUpdateSettings {
 interface HistoricalEnrichmentSettings {
   enabled: boolean;
   minConfidence: number;
-  maxAgeYears: number;
-  autoProcess: boolean;
   maxPerDay: number;
-  requireApproval: boolean;
 }
 
 interface ApiKeysFormState {
@@ -100,10 +97,7 @@ export function useSettingsPage() {
     useState<HistoricalEnrichmentSettings>({
       enabled: false,
       minConfidence: 60,
-      maxAgeYears: 5,
-      autoProcess: false,
       maxPerDay: 50,
-      requireApproval: true,
     });
   const [loadingHistoricalEnrichmentSettings, setLoadingHistoricalEnrichmentSettings] =
     useState(false);
@@ -148,10 +142,7 @@ export function useSettingsPage() {
         setHistoricalEnrichmentSettings({
           enabled: settings.historicalEnrichment?.enabled ?? false,
           minConfidence: settings.historicalEnrichment?.minConfidence ?? 60,
-          maxAgeYears: settings.historicalEnrichment?.maxAgeYears ?? 5,
-          autoProcess: settings.historicalEnrichment?.autoProcess ?? false,
           maxPerDay: settings.historicalEnrichment?.maxPerDay ?? 50,
-          requireApproval: settings.historicalEnrichment?.requireApproval ?? true,
         });
       } catch (error) {
         logger.error("Failed to load settings:", error);
