@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { FlightGroupItem } from "../../components/FlightPanel/FlightGroupItem";
-import { useFlightSelectionStore } from "../../store/flightSelectionStore";
 import type { Flight } from "../../types";
 
 const setSelection = vi.fn();
