@@ -287,6 +287,8 @@ export default function DashboardPage(): JSX.Element {
     async (flightId: string) => {
       // Optimistically remove from UI immediately
       setRecentFlights((prev) => prev.filter((f) => f.id !== flightId));
+      setFlights((prev) => prev.filter((f) => f.id !== flightId));
+      setGeoFlights((prev) => prev.filter((f) => f.properties.id !== flightId));
       setTotalFlightsCount((prev) => prev - 1);
 
       try {
@@ -372,7 +374,7 @@ export default function DashboardPage(): JSX.Element {
         addToast("error", t("dashboard:errors.duplicateFlight"));
       }
     },
-    [addToast, loadFlights]
+    [addToast, loadFlights, t]
   );
 
   const handleFilterChange = (newFilters: FlightFilters) => {
