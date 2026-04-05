@@ -94,8 +94,8 @@ export function buildRouteData(
   return { arcs: [...arcMap.values()], points: [...airportMap.values()] };
 }
 
-// Accent color used for the highlighted route — matches the app's --accent variable
-const HIGHLIGHT_COLOR: [number, number, number, number] = [129, 140, 248, 255];
+// Amber highlight color — stands out clearly against both dark and light map tiles
+const HIGHLIGHT_COLOR: [number, number, number, number] = [245, 158, 11, 255];
 // How many alpha units to keep for dimmed routes (out of 255)
 const DIM_ALPHA = 18;
 

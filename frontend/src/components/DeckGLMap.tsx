@@ -271,7 +271,7 @@ export function DeckGLMap({
         getRadius: radiusPx,
         radiusUnits: "pixels",
         getFillColor: [0, 0, 0, 0] as [number, number, number, number],
-        getLineColor: [129, 140, 248, alpha] as [number, number, number, number],
+        getLineColor: [245, 158, 11, alpha] as [number, number, number, number],
         stroked: true,
         filled: false,
         lineWidthMinPixels: 1.5,
