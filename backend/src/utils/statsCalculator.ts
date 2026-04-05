@@ -374,21 +374,27 @@ export function calculateBusinessStats(flights: FlightData[]): BusinessStats {
 export async function calculateUniqueStats(flights: FlightData[]): Promise<UniqueStats> {
   const flownFlights = flights.filter(f => f.status === 'flown');
 
-  // Time travel index - flights that arrive "before" departure due to timezones
+  // Time travel index - flights where local arrival time appears to be before local departure time.
+  //
+  // TODO: Proper implementation requires per-airport timezone data (e.g. "Europe/Berlin").
+  // The FlightData type does not currently include depTimezone/arrTimezone fields.
+  // A schema migration adding those fields would allow: convert dep/arr UTC times to local
+  // times using the respective timezone, then compare local hours.
+  //
+  // Current approximation: flag flights where UTC arrival is before UTC departure (data-entry
+  // errors only, not real timezone-crossing flights) or where the reported duration is
+  // implausibly short for the distance (< 1 hour for > 1000 km). This is a weak heuristic
+  // and will miss genuine westward long-haul flights (e.g. JFK→LHR arrives "earlier" locally).
   let timeTravelFlights = 0;
   flownFlights.forEach(f => {
-    // Check if arrival time (in UTC) is before departure time (in UTC) due to timezone crossing
-    // This is a simplified check - actual timezone calculation would be more complex
     const depTime = new Date(f.departureTime);
     const arrTime = new Date(f.arrivalTime);
 
-    // If flight duration is negative or very short for a long distance, it might be time travel
     const duration = arrTime.getTime() - depTime.getTime();
     const distance = f.depLat != null && f.depLon != null && f.arrLat != null && f.arrLon != null
       ? calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon)
       : 0;
 
-    // If duration is negative or very short for long distance, likely timezone crossing
     if (duration < 0 || (duration < 3600000 && distance > 1000)) {
       timeTravelFlights++;
     }
@@ -778,19 +784,21 @@ export async function calculateUniqueStats(flights: FlightData[]): Promise<Uniqu
 
 /**
  * Get continent from coordinates (simplified)
- * Similar to getContinent in achievements.ts but returns more specific continents
+ * Similar to getContinent in achievements.ts — keep both in sync when updating boundaries.
  */
 function getContinentFromCoordinates(lat: number, lon: number): string | null {
-  // Simplified continent detection based on coordinates
+  // Simplified continent detection based on coordinates — rough approximation.
   if (lat > 70 || lat < -60) return 'Antarctica';
   if (lon >= -170 && lon <= -30) {
     return lat > 15 ? 'North America' : 'South America';
   }
-  if (lon >= -30 && lon <= 60) {
-    if (lat > 35) return 'Europe';
-    if (lat > -35) return 'Africa';
-    return 'Antarctica';
-  }
+  // Middle East: roughly Israel/Jordan east to Iran/UAE, lat 10°–42°N
+  // Lower lon bound at 30° keeps Turkey (Istanbul lon ~29) in Europe.
+  if (lon >= 30 && lon <= 63 && lat >= 10 && lat <= 42) return 'Middle East';
+  // Europe: lon -30° to 40°, lat > 35°N
+  if (lon >= -30 && lon <= 40 && lat > 35) return 'Europe';
+  // Africa: lon -20° to 55°, lat -35° to 35°
+  if (lon >= -20 && lon <= 55 && lat >= -35 && lat < 35) return 'Africa';
   if (lon >= 60 && lon <= 150) return 'Asia';
   if (lon >= 150 || lon <= -170) return 'Oceania';
   return null;
