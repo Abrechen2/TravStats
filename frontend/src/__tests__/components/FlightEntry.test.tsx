@@ -49,14 +49,14 @@ describe("FlightEntry", () => {
   });
 
   it("calls setSelection with flight on click", () => {
-    const { setSelection } = useFlightSelectionStore() as {
+    const mockStore = useFlightSelectionStore() as unknown as {
       setSelection: ReturnType<typeof vi.fn>;
     };
     render(
       <FlightEntry flight={flight} onEdit={vi.fn()} onDuplicate={vi.fn()} onDelete={vi.fn()} />
     );
     fireEvent.click(screen.getByRole("button"));
-    expect(setSelection).toHaveBeenCalledWith([flight]);
+    expect(mockStore.setSelection).toHaveBeenCalledWith([flight]);
   });
 
   it("shows stats when stats toggle is clicked", () => {
