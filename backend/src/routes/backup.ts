@@ -41,6 +41,8 @@ const restoreBackupSchema = z.object({
   targetDatabaseUrl: z.string().url().optional(),
 });
 
+// ─── Literal routes (must be defined before parametric /:id routes) ──────────
+
 /**
  * GET /api/v1/backup
  * List all backups
@@ -60,11 +62,10 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
  */
 router.get('/status', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const runningBackup = await getBackup('').catch(() => null);
-
-    // Find running backup
-    const { listBackups } = await import('../services/backupService');
-    const allBackups = await listBackups();
+    // Find running backup (listBackups is re-imported to avoid hoisting issues with
+    // the top-level import that is also used in POST /)
+    const { listBackups: listBackupsLocal } = await import('../services/backupService');
+    const allBackups = await listBackupsLocal();
     const running = allBackups.find((b) => b.status === 'running');
 
     res.json({
@@ -88,6 +89,10 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
     // This reduces (but cannot fully eliminate at the application layer) the TOCTOU race
     // between concurrent POST /backup requests. The serializable isolation ensures the
     // findFirst and the subsequent createBackup start are guarded against concurrent reads.
+    // TODO: createBackup muss in die Transaktion — derzeit wird das 'running'-Insert nach dem
+    // Serializable-Check außerhalb der Transaktion ausgeführt. Idealerweise würde createBackup
+    // einen tx-Parameter akzeptieren und das initiale backup.create({ status: 'running' })
+    // innerhalb derselben Transaktion durchführen, um das Zeitfenster vollständig zu schließen.
     await prisma.$transaction(async (tx) => {
       const running = await tx.backup.findFirst({ where: { status: 'running' } });
       if (running) {
@@ -120,115 +125,6 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
 });
 
 /**
- * GET /api/v1/backup/:id
- * Get backup details
- */
-router.get('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params;
-    const backup = await getBackup(id);
-    res.json({ backup: serializeBigInt(backup) });
-  } catch (error) {
-    if (error instanceof Error && error.message === 'Backup not found') {
-      next(new AppError('Backup not found', 404));
-    } else {
-      next(error);
-    }
-  }
-});
-
-/**
- * GET /api/v1/backup/:id/download
- * Download backup file
- */
-router.get('/:id/download', async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params;
-    const backup = await getBackup(id);
-
-    if (backup.status !== 'completed') {
-      throw new AppError('Backup is not completed', 400);
-    }
-
-    if (!backup.backupPath || !fs.existsSync(backup.backupPath)) {
-      throw new AppError('Backup file not found', 404);
-    }
-
-    const filename = path.basename(backup.backupPath);
-    res.setHeader('Content-Type', 'application/gzip');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.setHeader('Content-Length', fs.statSync(backup.backupPath).size);
-
-    const fileStream = fs.createReadStream(backup.backupPath);
-    fileStream.pipe(res);
-  } catch (error) {
-    next(error);
-  }
-});
-
-/**
- * POST /api/v1/backup/:id/restore
- * Restore backup
- */
-router.post('/:id/restore', backupRestoreLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params;
-    const body = restoreBackupSchema.parse(req.body);
-
-    // Check if there's already a running backup or restore
-    const { listBackups } = await import('../services/backupService');
-    const allBackups = await listBackups();
-    const running = allBackups.find((b) => b.status === 'running');
-
-    if (running) {
-      throw new AppError('A backup operation is already running', 409);
-    }
-
-    logger.info({
-      operation: 'restore_start',
-      message: 'Starting backup restore',
-      backupId: id,
-      scope: body.scope,
-      createBackupBefore: body.createBackupBefore,
-    });
-
-    await restoreBackup(id, {
-      scope: body.scope,
-      createBackupBefore: body.createBackupBefore,
-      targetDatabaseUrl: body.targetDatabaseUrl,
-    });
-
-    res.json({
-      success: true,
-      message: 'Backup restored successfully',
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-/**
- * DELETE /api/v1/backup/:id
- * Delete backup
- */
-router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params;
-    await deleteBackup(id);
-    res.json({
-      success: true,
-      message: 'Backup deleted successfully',
-    });
-  } catch (error) {
-    if (error instanceof Error && error.message === 'Backup not found') {
-      next(new AppError('Backup not found', 404));
-    } else {
-      next(error);
-    }
-  }
-});
-
-/**
  * POST /api/v1/backup/cleanup
  * Cleanup old backups
  */
@@ -239,23 +135,6 @@ router.post('/cleanup', async (req: AuthRequest, res: Response, next: NextFuncti
       success: true,
       deletedCount,
       message: `Cleaned up ${deletedCount} old backup(s)`,
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-/**
- * POST /api/v1/backup/:id/sync
- * Sync backup to WebDAV
- */
-router.post('/:id/sync', async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params;
-    await syncToCloud(id);
-    res.json({
-      success: true,
-      message: 'Backup synced to cloud successfully',
     });
   } catch (error) {
     next(error);
@@ -324,6 +203,134 @@ router.post('/cloud/download', async (req: AuthRequest, res: Response, next: Nex
       success: true,
       message: 'Backup downloaded from cloud successfully',
       localPath: localPathResolved,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ─── Parametric routes (/:id must come after all literal routes) ──────────────
+
+/**
+ * GET /api/v1/backup/:id
+ * Get backup details
+ */
+router.get('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const backup = await getBackup(id);
+    res.json({ backup: serializeBigInt(backup) });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Backup not found') {
+      next(new AppError('Backup not found', 404));
+    } else {
+      next(error);
+    }
+  }
+});
+
+/**
+ * GET /api/v1/backup/:id/download
+ * Download backup file
+ */
+router.get('/:id/download', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const backup = await getBackup(id);
+
+    if (backup.status !== 'completed') {
+      throw new AppError('Backup is not completed', 400);
+    }
+
+    if (!backup.backupPath || !fs.existsSync(backup.backupPath)) {
+      throw new AppError('Backup file not found', 404);
+    }
+
+    const filename = path.basename(backup.backupPath);
+    res.setHeader('Content-Type', 'application/gzip');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', fs.statSync(backup.backupPath).size);
+
+    const fileStream = fs.createReadStream(backup.backupPath);
+    fileStream.pipe(res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/backup/:id/restore
+ * Restore backup
+ */
+router.post('/:id/restore', backupRestoreLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const body = restoreBackupSchema.parse(req.body);
+
+    // Check if there's already a running backup or restore
+    const { listBackups: listBackupsLocal } = await import('../services/backupService');
+    const allBackups = await listBackupsLocal();
+    const running = allBackups.find((b) => b.status === 'running');
+
+    if (running) {
+      throw new AppError('A backup operation is already running', 409);
+    }
+
+    logger.info({
+      operation: 'restore_start',
+      message: 'Starting backup restore',
+      backupId: id,
+      scope: body.scope,
+      createBackupBefore: body.createBackupBefore,
+    });
+
+    await restoreBackup(id, {
+      scope: body.scope,
+      createBackupBefore: body.createBackupBefore,
+      targetDatabaseUrl: body.targetDatabaseUrl,
+    });
+
+    res.json({
+      success: true,
+      message: 'Backup restored successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * DELETE /api/v1/backup/:id
+ * Delete backup
+ */
+router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    await deleteBackup(id);
+    res.json({
+      success: true,
+      message: 'Backup deleted successfully',
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Backup not found') {
+      next(new AppError('Backup not found', 404));
+    } else {
+      next(error);
+    }
+  }
+});
+
+/**
+ * POST /api/v1/backup/:id/sync
+ * Sync backup to WebDAV
+ */
+router.post('/:id/sync', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    await syncToCloud(id);
+    res.json({
+      success: true,
+      message: 'Backup synced to cloud successfully',
     });
   } catch (error) {
     next(error);

@@ -67,11 +67,11 @@ function buildWhere(
 }
 
 async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummaryStats> {
-  // Distance and flight time only count flown flights; status/airline/category counts use the
-  // original where so that planned and cancelled flights are visible in the breakdown.
+  // Distance and flight time only count flown flights; totalFlights, status/airline/category
+  // counts use the original where so that planned and cancelled flights are visible.
   const flownWhere: Prisma.FlightWhereInput = { ...where, status: 'flown' };
 
-  const [flights, statusCounts, airlineCounts, categoryCounts, costAgg] = await Promise.all([
+  const [flownFlights, totalFlights, statusCounts, airlineCounts, categoryCounts, costAgg] = await Promise.all([
     prisma.flight.findMany({
       where: flownWhere,
       select: {
@@ -83,6 +83,7 @@ async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummarySt
         arrivalTime: true,
       },
     }),
+    prisma.flight.count({ where }),
     prisma.flight.groupBy({
       by: ['status'],
       where,
@@ -111,7 +112,7 @@ async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummarySt
   let totalDistance = 0;
   let totalFlightTime = 0;
 
-  flights.forEach(flight => {
+  flownFlights.forEach(flight => {
     const distance = calculateDistance(
       flight.depLat,
       flight.depLon,
@@ -125,7 +126,7 @@ async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummarySt
     totalFlightTime += flightTime;
   });
 
-  const avgDistance = flights.length > 0 ? totalDistance / flights.length : 0;
+  const avgDistance = flownFlights.length > 0 ? totalDistance / flownFlights.length : 0;
 
   const byStatus = statusCounts.reduce((acc, item) => {
     acc[item.status] = item._count;
@@ -152,7 +153,7 @@ async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummarySt
   const totalCost = costParts.length > 0 ? costParts.reduce((a, b) => a + b, 0) : 0;
 
   return {
-    totalFlights: flights.length,
+    totalFlights,
     totalDistance: Math.round(totalDistance),
     totalFlightTime: Math.round(totalFlightTime),
     avgDistance: Math.round(avgDistance),
