@@ -138,14 +138,6 @@ export interface UserSettings {
   notifications?: {
     flightReminder?: string;
   };
-  privacy?: {
-    twoFactorAuth?: boolean;
-    loginAlerts?: boolean;
-    dataExportRequested?: boolean;
-    accountDeletionRequested?: boolean;
-    analyticsOptIn?: boolean;
-  };
-  backup?: Record<string, never>;
   autoUpdate?: AutoUpdateSettings;
   historicalEnrichment?: HistoricalEnrichmentSettings;
   boardingPassParserStrategy?: "parser-only" | "parser-with-api" | "api-only" | null;

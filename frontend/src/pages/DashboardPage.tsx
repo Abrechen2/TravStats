@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import type { VisMode } from "../types/visMode";
 
 import { useAuthStore } from "../store/authStore";
-import { flightsApi, analyticsApi, settingsApi } from "../lib/api";
+import { flightsApi, settingsApi } from "../lib/api";
 import { useToastStore } from "../store/toastStore";
 import { logger } from "../lib/logger";
 import { useTranslation } from "../hooks/useTranslation";
@@ -19,7 +19,6 @@ import OnboardingGuide from "../components/Onboarding/OnboardingGuide";
 import HelpIcon from "../components/Help/HelpIcon";
 import { useClickOutside } from "../hooks/useClickOutside";
 import type { Flight, FlightInput, FlightFilters, GeoJSONFeature, OnboardingState } from "../types";
-import { useSettingsStore } from "../store/settingsStore";
 import { API_LIMITS, STORAGE_KEYS } from "../lib/constants";
 import { toCsv, escapeXml, downloadBlob } from "../lib/export";
 import { motion, AnimatePresence } from "framer-motion";
@@ -87,7 +86,6 @@ export default function DashboardPage(): JSX.Element {
     };
     loadOnboardingState();
   }, []);
-  const settings = useSettingsStore();
   const addToast = useToastStore((state) => state.addToast);
   const [newAchievements, setNewAchievements] = useState<import("../types").UserAchievement[]>([]);
   const [loadingOnboarding, setLoadingOnboarding] = useState(true);
@@ -254,10 +252,6 @@ export default function DashboardPage(): JSX.Element {
       if (result.newAchievements && result.newAchievements.length > 0) {
         setNewAchievements(result.newAchievements);
       }
-
-      if (settings.privacy.analyticsOptIn) {
-        analyticsApi.track("flight_created", { method: "simplified_form" });
-      }
     } catch (error) {
       logger.error("Failed to add flight:", error);
       addToast("error", t("dashboard:errors.addFlight"));
@@ -281,10 +275,6 @@ export default function DashboardPage(): JSX.Element {
       // Show achievement popup if new achievements were unlocked
       if (result.newAchievements && result.newAchievements.length > 0) {
         setNewAchievements(result.newAchievements);
-      }
-
-      if (settings.privacy.analyticsOptIn) {
-        analyticsApi.track("flight_updated", { flightId: id });
       }
     } catch (error) {
       logger.error("Failed to update flight:", error);
@@ -402,17 +392,11 @@ export default function DashboardPage(): JSX.Element {
   const handleFilterChange = (newFilters: FlightFilters) => {
     setFilters(newFilters);
     setOnboarding((prev) => ({ ...prev, usedFilter: true }));
-    if (settings.privacy.analyticsOptIn) {
-      analyticsApi.track("filter_applied", { filters: newFilters });
-    }
   };
 
   const handleExport = async (format: "csv" | "geojson" | "pdf" | "kml") => {
     try {
       setOnboarding((prev) => ({ ...prev, exported: true }));
-      if (settings.privacy.analyticsOptIn) {
-        analyticsApi.track("export", { format });
-      }
       if (format === "geojson") {
         // minRouteCount is a map-only filter — not applied to API queries
         const { minRouteCount: _mapOnly, ...apiFilters } = filters;
@@ -647,14 +631,6 @@ export default function DashboardPage(): JSX.Element {
           loadFlights();
         } else {
           addToast("error", t("dashboard:errors.importFailed"));
-        }
-
-        if (settings.privacy.analyticsOptIn) {
-          analyticsApi.track("import", {
-            count: parsed.length,
-            success: successCount,
-            errors: errorCount,
-          });
         }
       } catch (err) {
         logger.error("Import failed:", err);
