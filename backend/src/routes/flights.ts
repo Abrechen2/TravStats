@@ -703,8 +703,8 @@ router.post('/:id/enrich-historical', async (req: AuthRequest, res: Response, ne
       throw new AppError('Flight number is required for historical enrichment', 400);
     }
 
-    // Aggregate data from similar flights
-    const aggregatedData = await aggregateFlightData(flight.flightNumber, flight.id);
+    // Aggregate data from similar flights — pass userId so gate/terminal come from own flights only
+    const aggregatedData = await aggregateFlightData(flight.flightNumber, flight.id, 5, 'full', userId);
 
     if (!aggregatedData) {
       return res.status(404).json({
