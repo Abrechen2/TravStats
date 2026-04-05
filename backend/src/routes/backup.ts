@@ -82,24 +82,59 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
   try {
     const body = createBackupSchema.parse(req.body);
 
-    // Use a transaction to atomically check for a running backup before starting a new one.
-    // This reduces (but cannot fully eliminate at the application layer) the TOCTOU race
-    // between concurrent POST /backup requests. The serializable isolation ensures the
-    // findFirst and the subsequent createBackup start are guarded against concurrent reads.
-    // TODO: createBackup muss in die Transaktion — derzeit wird das 'running'-Insert nach dem
-    // Serializable-Check außerhalb der Transaktion ausgeführt. Idealerweise würde createBackup
-    // einen tx-Parameter akzeptieren und das initiale backup.create({ status: 'running' })
-    // innerhalb derselben Transaktion durchführen, um das Zeitfenster vollständig zu schließen.
+    // Pre-compute paths so we can store them in the DB record created inside the transaction.
+    // The BACKUP_PATH env and path logic must match backupService.ts exactly.
+    const BACKUP_BASE_DIR = process.env.BACKUP_PATH || (
+      process.platform === 'win32'
+        ? path.join(process.cwd(), 'data', 'backups')
+        : '/app/data/backups'
+    );
+    const RETENTION_DAYS = parseInt(process.env.BACKUP_RETENTION_DAYS || '30', 10);
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const precomputedId = `backup-${timestamp}`;
+    const backupDir = path.join(BACKUP_BASE_DIR, precomputedId);
+    const tempDir = path.join(backupDir, 'temp');
+    const dbBackupPath = path.join(tempDir, 'database.sql');
+    const filesBackupPath = path.join(tempDir, 'uploads.tar.gz');
+    const finalArchivePath = path.join(backupDir, `${precomputedId}.tar.gz`);
+
+    // Atomically check for a running backup AND insert the new 'running' record in one
+    // Serializable transaction. This fully closes the TOCTOU window between concurrent
+    // POST /backup requests: no second request can sneak past the findFirst check and
+    // also insert its own record before ours is visible to the DB.
+    // Atomically check for a running backup AND insert the new 'running' record in one
+    // Serializable transaction. This fully closes the TOCTOU window between concurrent
+    // POST /backup requests: no second request can sneak past the findFirst check and
+    // also insert its own record before ours is visible to the DB.
     await prisma.$transaction(async (tx) => {
       const running = await tx.backup.findFirst({ where: { status: 'running' } });
       if (running) {
         throw new AppError('A backup is already running', 409);
       }
+
+      await tx.backup.create({
+        data: {
+          id: precomputedId,
+          type: body.type || 'full',
+          status: 'running',
+          backupPath: finalArchivePath,
+          dbBackupPath,
+          filesBackupPath,
+          retentionDays: body.retentionDays || RETENTION_DAYS,
+          startedAt: new Date(),
+        },
+      });
     }, { isolationLevel: 'Serializable' });
 
     const backupId = await createBackup({
       type: body.type,
       retentionDays: body.retentionDays,
+      existingRecord: {
+        id: precomputedId,
+        backupPath: finalArchivePath,
+        dbBackupPath,
+        filesBackupPath,
+      },
     });
 
     res.status(201).json({
