@@ -7,7 +7,7 @@ import logger from "../../../utils/logger";
 const BUILTIN_DIR = path.join(__dirname, "airlines");
 const CACHE_DIR = path.join(process.cwd(), ".template-cache");
 const GITHUB_RAW_BASE =
-  "https://raw.githubusercontent.com/travstats-community/airline-templates/main/templates";
+  "https://raw.githubusercontent.com/Abrechen2/travstats-airline-templates/main/templates";
 const INDEX_URL = `${GITHUB_RAW_BASE}/index.json`;
 const SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24h
 

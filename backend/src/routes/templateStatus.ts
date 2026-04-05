@@ -9,7 +9,7 @@ router.get("/", authenticate, (_req: AuthRequest, res: Response): void => {
   res.json({
     templates: templateRegistry.getStatus(),
     total: templateRegistry.getAll().length,
-    githubRepo: "https://github.com/travstats-community/airline-templates",
+    githubRepo: "https://github.com/Abrechen2/travstats-airline-templates",
   });
 });
 
