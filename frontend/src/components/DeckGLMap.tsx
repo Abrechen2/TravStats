@@ -314,12 +314,9 @@ export function DeckGLMap({
           minRouteCount,
           onFlightClick,
           themeColors,
-          0.3
-        ).map((layer) =>
-          (layer as unknown as { clone: (props: Record<string, unknown>) => Layer }).clone({
-            opacity: 0.08,
-            id: `${layer.id}-dimmed`,
-          })
+          0.3,
+          0.08,
+          "-dimmed"
         );
 
         const highlightLayers = createRoutesLayers(
@@ -327,20 +324,19 @@ export function DeckGLMap({
           1,
           onFlightClick,
           themeColors,
-          0.3
-        ).map((layer) =>
-          (layer as unknown as { clone: (props: Record<string, unknown>) => Layer }).clone({
-            id: `${layer.id}-highlight`,
-          })
+          0.3,
+          undefined,
+          "-highlight"
         );
 
-        const glowLayers = createRoutesLayers(selectedFeatures, 1, undefined, themeColors, 0.3).map(
-          (layer) =>
-            (layer as unknown as { clone: (props: Record<string, unknown>) => Layer }).clone({
-              id: `${layer.id}-glow`,
-              widthMinPixels: 10,
-              opacity: 0.35,
-            })
+        const glowLayers = createRoutesLayers(
+          selectedFeatures,
+          1,
+          undefined,
+          themeColors,
+          0.3,
+          0.35,
+          "-glow"
         );
 
         return [...dimmedLayers, ...glowLayers, ...highlightLayers];
