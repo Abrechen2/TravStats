@@ -532,7 +532,7 @@ router.get('/unique', async (req: AuthRequest, res: Response, next: NextFunction
         continentalExplorer: 0,
         continents: [],
         tropicsTraveler: 0,
-        eastWestBalance: { eastFlights: 0, westFlights: 0, ratio: 0 },
+        eastWestBalance: { eastward: 0, westward: 0, ratio: 0 },
         sameDayReturns: 0,
         midnightFlights: 0,
         seasonalExplorer: false,
