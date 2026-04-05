@@ -12,7 +12,7 @@ export interface Flight {
   arrivalDate?: string; // Format: YYYY-MM-DD
   arrivalTime?: string; // Format: HH:MM
   pnr?: string;
-  aircraftType?: string;
+  aircraft?: string;
   seat?: string;
   seatClass?: string;
   gate?: string;
