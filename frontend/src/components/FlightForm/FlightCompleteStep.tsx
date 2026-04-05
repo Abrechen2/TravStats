@@ -53,6 +53,7 @@ export interface FlightCompleteStepProps {
   setArrivalTime: (v: string) => void;
   // Flight info
   airline: string;
+  operatingAirline: string;
   flightNumber: string;
   aircraft: string;
   terminal: string;
@@ -62,6 +63,7 @@ export interface FlightCompleteStepProps {
   status: "scheduled" | "flown" | "cancelled";
   category: "business" | "private" | "vacation";
   setAirline: (v: string) => void;
+  setOperatingAirline: (v: string) => void;
   setFlightNumber: (v: string) => void;
   setAircraft: (v: string) => void;
   setTerminal: (v: string) => void;
@@ -110,6 +112,7 @@ export default function FlightCompleteStep({
   setArrivalDate,
   setArrivalTime,
   airline,
+  operatingAirline,
   flightNumber,
   aircraft,
   terminal,
@@ -119,6 +122,7 @@ export default function FlightCompleteStep({
   status,
   category,
   setAirline,
+  setOperatingAirline,
   setFlightNumber,
   setAircraft,
   setTerminal,
@@ -318,7 +322,7 @@ export default function FlightCompleteStep({
       </div>
 
       {/* Additional Fields */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-4 gap-4">
         <div>
           <label className={`label ${textClass}`}>{t("flights:form.airline")}</label>
           <input
@@ -330,6 +334,22 @@ export default function FlightCompleteStep({
             list="airline-suggestions"
           />
           <datalist id="airline-suggestions">
+            {AIRLINES.map((a) => (
+              <option key={a.iata} value={a.name} />
+            ))}
+          </datalist>
+        </div>
+        <div>
+          <label className={`label ${textClass}`}>{t("flights:form.operatingAirline")}</label>
+          <input
+            type="text"
+            value={operatingAirline}
+            onChange={(e) => setOperatingAirline(e.target.value)}
+            className={`input ${sizedInputClass}`}
+            placeholder="z.B. Eurowings, Deutsche Bahn…"
+            list="operating-airline-suggestions"
+          />
+          <datalist id="operating-airline-suggestions">
             {AIRLINES.map((a) => (
               <option key={a.iata} value={a.name} />
             ))}

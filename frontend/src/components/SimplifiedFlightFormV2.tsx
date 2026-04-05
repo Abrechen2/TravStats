@@ -127,6 +127,7 @@ export default function SimplifiedFlightFormV2({
               setArrivalDate={form.setArrivalDate}
               setArrivalTime={form.setArrivalTime}
               airline={form.airline}
+              operatingAirline={form.operatingAirline}
               flightNumber={form.flightNumber}
               aircraft={form.aircraft}
               terminal={form.terminal}
@@ -136,6 +137,7 @@ export default function SimplifiedFlightFormV2({
               status={form.status}
               category={form.category}
               setAirline={form.setAirline}
+              setOperatingAirline={form.setOperatingAirline}
               setFlightNumber={form.setFlightNumber}
               setAircraft={form.setAircraft}
               setTerminal={form.setTerminal}

@@ -58,6 +58,7 @@ const emptyStringToUndefined = z.string().optional().transform((v) => (v === "" 
 
 const baseFlightSchema = z.object({
   airline: emptyStringToUndefined,
+  operatingAirline: emptyStringToUndefined,
   flightNumber: emptyStringToUndefined,
   callsign: z.string().optional(),
   aircraft: z.string().optional(),

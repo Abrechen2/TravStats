@@ -542,6 +542,16 @@ export const AIRLINE_IATA_MAP: Record<string, string> = {
   WS: 'WestJet',
   F9: 'Frontier Airlines',
   NK: 'Spirit Airlines',
+  // Rail / Bus / Ferry (for codeshare / operated-by)
+  DB: 'Deutsche Bahn',
+  FLX: 'FlixTrain',
+  FLB: 'Flixbus',
+  RJ: 'Railjet (ÖBB)',
+  OBB: 'ÖBB',
+  SBB: 'SBB',
+  TGV: 'TGV (SNCF)',
+  ICE: 'ICE (DB)',
+  EUR: 'Eurostar',
   // Africa / Latin America / Others
   ET: 'Ethiopian Airlines',
   KQ: 'Kenya Airways',

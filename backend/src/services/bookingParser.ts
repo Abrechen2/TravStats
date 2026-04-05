@@ -3,6 +3,7 @@ import logger from '../utils/logger';
 
 export interface ParsedBooking {
   airline?: string;
+  operatingAirline?: string;
   flightNumber?: string;
   departureCode?: string;
   arrivalCode?: string;

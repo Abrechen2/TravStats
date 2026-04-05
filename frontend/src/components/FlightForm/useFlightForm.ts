@@ -78,6 +78,7 @@ export function useFlightForm(
   const [arrivalDate, setArrivalDate] = useState("");
   const [arrivalTime, setArrivalTime] = useState("14:00");
   const [airline, setAirline] = useState("");
+  const [operatingAirline, setOperatingAirline] = useState("");
   const [aircraft, setAircraft] = useState("");
   const [terminal, setTerminal] = useState("");
   const [gate, setGate] = useState("");
@@ -214,6 +215,7 @@ export function useFlightForm(
       if (arrAirport) setArrival(arrAirport);
 
       setAirline(flight.airline);
+      setOperatingAirline("");
       setAircraft(flight.aircraft || "");
       setTerminal(flight.departure.terminal || "");
       setGate(flight.departure.gate || "");
@@ -305,6 +307,7 @@ export function useFlightForm(
       lon: arrival!.lon,
     },
     airline: airline || undefined,
+    operatingAirline: operatingAirline || undefined,
     flightNumber: flightNumber || undefined,
     aircraft: aircraft || undefined,
     seatClass: seatClass || undefined,
@@ -447,6 +450,7 @@ export function useFlightForm(
     arrivalDate,
     arrivalTime,
     airline,
+    operatingAirline,
     aircraft,
     terminal,
     gate,
@@ -483,6 +487,7 @@ export function useFlightForm(
     setArrivalDate,
     setArrivalTime,
     setAirline,
+    setOperatingAirline,
     setAircraft,
     setTerminal,
     setGate,
