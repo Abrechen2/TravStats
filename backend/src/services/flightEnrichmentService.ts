@@ -7,6 +7,7 @@
 
 import { PrismaClient, Flight, UserSettings, Prisma } from '@prisma/client';
 import { prisma } from '../db';
+import { calculateDistance } from '../utils/geo';
 import logger from '../utils/logger';
 
 const prismaClient = prisma as PrismaClient;
@@ -412,18 +413,7 @@ function getMostCommon<T>(arr: T[]): T | undefined {
 
 const RESAMPLE_POINTS = 20;
 
-/** Cumulative Euclidean distances along a route (in degrees — approximate) */
-function cumulativeDistances(wps: Array<{ lat: number; lon: number }>): number[] {
-  const dists = [0];
-  for (let i = 1; i < wps.length; i++) {
-    const dlat = wps[i].lat - wps[i - 1].lat;
-    const dlon = wps[i].lon - wps[i - 1].lon;
-    dists.push(dists[i - 1] + Math.sqrt(dlat * dlat + dlon * dlon));
-  }
-  return dists;
-}
-
-/** Resample a route to exactly n evenly-spaced points by linear interpolation */
+/** Resample a route to exactly n evenly-spaced points using Haversine distances */
 function resampleRoute(
   wps: Array<{ lat: number; lon: number }>,
   n: number
@@ -431,17 +421,20 @@ function resampleRoute(
   if (wps.length === 0) return [];
   if (wps.length === 1) return Array(n).fill({ ...wps[0] });
 
-  const dists = cumulativeDistances(wps);
-  const total = dists[dists.length - 1];
-  if (total === 0) return Array(n).fill({ ...wps[0] });
+  const cumDist: number[] = [0];
+  for (let i = 1; i < wps.length; i++) {
+    cumDist.push(cumDist[i - 1] + calculateDistance(wps[i - 1].lat, wps[i - 1].lon, wps[i].lat, wps[i].lon));
+  }
+  const totalDist = cumDist[cumDist.length - 1];
+  if (totalDist === 0) return Array(n).fill({ ...wps[0] });
 
   const result: Array<{ lat: number; lon: number }> = [];
   for (let i = 0; i < n; i++) {
-    const target = (i / (n - 1)) * total;
-    let seg = dists.findIndex((d, idx) => idx > 0 && dists[idx - 1] <= target && d >= target);
+    const target = (i / (n - 1)) * totalDist;
+    let seg = cumDist.findIndex((d, idx) => idx > 0 && cumDist[idx - 1] <= target && d >= target);
     if (seg <= 0) seg = 1;
-    const segStart = dists[seg - 1];
-    const segEnd = dists[seg];
+    const segStart = cumDist[seg - 1];
+    const segEnd = cumDist[seg];
     const t = segEnd === segStart ? 0 : (target - segStart) / (segEnd - segStart);
     result.push({
       lat: wps[seg - 1].lat + t * (wps[seg].lat - wps[seg - 1].lat),
@@ -480,8 +473,11 @@ export function aggregateRoutesForTest(
     });
   }
 
-  const dists = cumulativeDistances(waypoints);
-  const routeDistance = dists[dists.length - 1] * 111; // approximate degrees → km
+  // Sum Haversine distances along the median route for accurate km estimate
+  let routeDistance = 0;
+  for (let i = 1; i < waypoints.length; i++) {
+    routeDistance += calculateDistance(waypoints[i - 1].lat, waypoints[i - 1].lon, waypoints[i].lat, waypoints[i].lon);
+  }
 
   return { waypoints, overflownCountries: [], routeDistance };
 }
@@ -529,18 +525,51 @@ function aggregateRoutes(routes: Prisma.JsonValue[]): AggregatedFlightData['typi
 }
 
 /**
- * Calculate route consistency
+ * Parse a Prisma JsonValue route into waypoints.
+ * actualRoute is stored as a direct array of {lat, lon} objects.
+ */
+function parseRouteWaypoints(route: Prisma.JsonValue): RouteWaypoint[] | null {
+  if (!Array.isArray(route)) return null;
+  const parsed = route
+    .filter((w): w is { lat: number; lon: number } =>
+      typeof w === 'object' && w !== null &&
+      typeof (w as { lat?: unknown }).lat === 'number' &&
+      typeof (w as { lon?: unknown }).lon === 'number',
+    )
+    .map(w => ({ lat: w.lat, lon: w.lon }));
+  return parsed.length >= 2 ? parsed : null;
+}
+
+/**
+ * Calculate route consistency by comparing resampled geographic paths.
+ * Two routes are "similar" if their average Haversine deviation is < 150 km.
  */
 function calculateRouteConsistency(routes: Prisma.JsonValue[]): 'high' | 'medium' | 'low' {
   if (routes.length < 3) return 'low';
 
-  // Simplified: Check if routes are similar
-  // TODO: Implement proper route comparison
-  const uniqueRouteCounts = new Set(routes.map(r => JSON.stringify(r))).size;
-  const consistencyRatio = 1 - (uniqueRouteCounts / routes.length);
+  const SAMPLE_POINTS = 10;
+  const SIMILAR_THRESHOLD_KM = 150;
 
-  if (consistencyRatio > 0.8) return 'high';
-  if (consistencyRatio > 0.5) return 'medium';
+  const resampled = routes
+    .map(r => parseRouteWaypoints(r))
+    .filter((wps): wps is RouteWaypoint[] => wps !== null)
+    .map(wps => resampleRoute(wps, SAMPLE_POINTS));
+
+  if (resampled.length < 3) return 'low';
+
+  // Use the first route as reference and count how many are "similar"
+  const reference = resampled[0];
+  let similarCount = 0;
+  for (let i = 1; i < resampled.length; i++) {
+    const avgDev =
+      reference.reduce((sum, pt, j) => sum + calculateDistance(pt.lat, pt.lon, resampled[i][j].lat, resampled[i][j].lon), 0) /
+      SAMPLE_POINTS;
+    if (avgDev < SIMILAR_THRESHOLD_KM) similarCount++;
+  }
+
+  const similarRatio = similarCount / (resampled.length - 1);
+  if (similarRatio > 0.8) return 'high';
+  if (similarRatio > 0.5) return 'medium';
   return 'low';
 }
 
