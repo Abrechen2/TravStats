@@ -454,6 +454,42 @@ router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) =
   }
 });
 
+// Get enrichment candidates
+router.get('/enrichment-candidates', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId!;
+    const rawLimit = req.query.limit;
+    const limit = rawLimit !== undefined
+      ? Math.min(500, Math.max(1, parseInt(String(rawLimit), 10) || 10))
+      : undefined;
+
+    // Get user settings
+    const settings = await getUserEnrichmentSettings(userId);
+    if (!settings || !settings.enabled) {
+      return res.json({
+        candidates: [],
+        settings: null,
+        message: 'Historical enrichment is disabled. Enable it in settings.',
+      });
+    }
+
+    // Find candidates
+    let candidates = await findEnrichmentCandidates(userId, settings);
+
+    // Apply limit if provided
+    if (limit !== undefined) {
+      candidates = candidates.slice(0, limit);
+    }
+
+    res.json({
+      candidates,
+      settings,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Get single flight
 router.get('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -653,39 +689,6 @@ router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction
     });
 
     res.status(204).send();
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Get enrichment candidates
-router.get('/enrichment-candidates', async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const userId = req.userId!;
-    const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
-
-    // Get user settings
-    const settings = await getUserEnrichmentSettings(userId);
-    if (!settings || !settings.enabled) {
-      return res.json({
-        candidates: [],
-        settings: null,
-        message: 'Historical enrichment is disabled. Enable it in settings.',
-      });
-    }
-
-    // Find candidates
-    let candidates = await findEnrichmentCandidates(userId, settings);
-
-    // Apply limit if provided
-    if (limit) {
-      candidates = candidates.slice(0, limit);
-    }
-
-    res.json({
-      candidates,
-      settings,
-    });
   } catch (error) {
     next(error);
   }
