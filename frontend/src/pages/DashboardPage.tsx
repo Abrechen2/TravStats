@@ -28,7 +28,7 @@ import { FlightPanel } from "../components/FlightPanel";
 export default function DashboardPage(): JSX.Element {
   const { t } = useTranslation(["dashboard", "common", "flights", "training"]);
   const { user } = useAuthStore();
-  const [, setFlights] = useState<Flight[]>([]); // Filtered flights for map (not directly rendered)
+  const [allFlights, setFlights] = useState<Flight[]>([]); // Filtered flights for map (not directly rendered)
   const [recentFlights, setRecentFlights] = useState<Flight[]>([]); // Unfiltered recent flights for sidebar
   const [totalFlightsCount, setTotalFlightsCount] = useState(0); // Total number of all flights
   const [geoFlights, setGeoFlights] = useState<GeoJSONFeature[]>([]);
@@ -698,7 +698,8 @@ export default function DashboardPage(): JSX.Element {
               onVisModeChange={handleVisModeChange}
               minRouteCount={filters.minRouteCount ?? 1}
               onFlightClick={(id) => {
-                const flight = recentFlights.find((f) => f.id === id);
+                const flight =
+                  allFlights.find((f) => f.id === id) ?? recentFlights.find((f) => f.id === id);
                 if (flight) useFlightSelectionStore.getState().setSelection([flight]);
               }}
               onEdit={(flight) => setEditingFlight(flight)}
@@ -946,7 +947,7 @@ export default function DashboardPage(): JSX.Element {
       )}
 
       <HelpIcon
-        content={visMode === "globe" ? t("dashboard:map.help2d") : t("dashboard:map.help3d")}
+        content={visMode === "globe" ? t("dashboard:map.help3d") : t("dashboard:map.help2d")}
         expandedContent={t("dashboard:map.helpExpanded")}
         position="bottom"
       />

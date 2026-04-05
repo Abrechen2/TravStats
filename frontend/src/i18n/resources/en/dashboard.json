@@ -76,6 +76,7 @@
     "exported": "Exported:",
     "totalFlights": "Total Flights:"
   },
+  "allFlights": "All Flights",
   "flightsTitle": "Flights",
   "statsTitle": "Stats",
   "unknownDate": "Unknown date"
