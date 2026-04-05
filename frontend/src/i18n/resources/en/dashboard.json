@@ -44,6 +44,7 @@
     "addFlight": "Error adding flight. Please try again.",
     "updateFlight": "Error updating flight. Please try again.",
     "deleteFlight": "Error deleting flight. Please try again.",
+    "duplicateFlight": "Error duplicating flight",
     "loadFlights": "Failed to load flights",
     "exportFailed": "Export failed",
     "importFailed": "Import failed",
@@ -52,7 +53,9 @@
   "success": {
     "flightAdded": "Flight added successfully",
     "flightUpdated": "Flight updated successfully",
-    "flightDeleted": "Flight deleted successfully"
+    "flightDeleted": "Flight deleted successfully",
+    "flightDeletedPending": "Flight deleted",
+    "flightDuplicated": "Flight duplicated"
   },
   "navigation": {
     "title": "Navigation"

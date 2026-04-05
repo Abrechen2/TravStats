@@ -44,6 +44,7 @@
     "addFlight": "Fehler beim Hinzufügen des Fluges. Bitte versuchen Sie es erneut.",
     "updateFlight": "Fehler beim Aktualisieren des Fluges. Bitte versuchen Sie es erneut.",
     "deleteFlight": "Fehler beim Löschen des Fluges. Bitte versuchen Sie es erneut.",
+    "duplicateFlight": "Fehler beim Duplizieren",
     "loadFlights": "Fehler beim Laden der Flüge",
     "exportFailed": "Export fehlgeschlagen",
     "importFailed": "Import fehlgeschlagen",
@@ -52,7 +53,9 @@
   "success": {
     "flightAdded": "Flug erfolgreich hinzugefügt",
     "flightUpdated": "Flug erfolgreich aktualisiert",
-    "flightDeleted": "Flug erfolgreich gelöscht"
+    "flightDeleted": "Flug erfolgreich gelöscht",
+    "flightDeletedPending": "Flug gelöscht",
+    "flightDuplicated": "Flug dupliziert"
   },
   "navigation": {
     "title": "Navigation"
