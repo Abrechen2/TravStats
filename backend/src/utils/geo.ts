@@ -96,6 +96,19 @@ const interpolateGreatCircle = (
     )
   );
 
+  // Guard: identical points — return departure point
+  if (Math.abs(d) < 1e-10) {
+    return { lat: lat1, lon: lon1 };
+  }
+
+  // Guard: antipodal points (d ≈ π) — great-circle is undefined, fall back to linear interpolation
+  if (Math.abs(d - Math.PI) < 1e-10) {
+    return {
+      lat: lat1 + (lat2 - lat1) * fraction,
+      lon: lon1 + (lon2 - lon1) * fraction,
+    };
+  }
+
   const a = Math.sin((1 - fraction) * d) / Math.sin(d);
   const b = Math.sin(fraction * d) / Math.sin(d);
 

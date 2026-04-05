@@ -67,9 +67,13 @@ function buildWhere(
 }
 
 async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummaryStats> {
+  // Distance and flight time only count flown flights; status/airline/category counts use the
+  // original where so that planned and cancelled flights are visible in the breakdown.
+  const flownWhere: Prisma.FlightWhereInput = { ...where, status: 'flown' };
+
   const [flights, statusCounts, airlineCounts, categoryCounts, costAgg] = await Promise.all([
     prisma.flight.findMany({
-      where,
+      where: flownWhere,
       select: {
         depLat: true,
         depLon: true,
@@ -206,7 +210,7 @@ router.get('/routes', async (req: AuthRequest, res: Response, next: NextFunction
     const limit = parsed.data.limit ?? 10;
 
     const flights = await prisma.flight.findMany({
-      where: { userId },
+      where: { userId, status: 'flown' },
       select: {
         depIata: true,
         depIcao: true,

@@ -1,6 +1,6 @@
 import { Router, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { authenticate, AuthRequest } from '../../middleware/auth';
+import { AuthRequest } from '../../middleware/auth';
 import { prisma } from '../../db';
 
 const router = Router();
@@ -11,7 +11,7 @@ const notificationPrefsSchema = z.object({
   notifyBefore2h: z.boolean().optional(),
 });
 
-router.get('/', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId;
     if (!userId) {
@@ -39,7 +39,7 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response, next: Next
   }
 });
 
-router.put('/', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.put('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId;
     if (!userId) {

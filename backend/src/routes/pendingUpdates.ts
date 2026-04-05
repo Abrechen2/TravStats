@@ -145,9 +145,10 @@ router.post('/:id/preview', async (req: AuthRequest, res: Response, next: NextFu
   try {
     const userId = req.userId!;
     const { id } = req.params;
-    const { editedData } = req.body;
+    const editedDataSchema = z.record(z.unknown());
+    const parsedEditedData = editedDataSchema.parse(req.body.editedData ?? {});
 
-    const impact = await previewStatisticsImpact(id, userId, editedData);
+    const impact = await previewStatisticsImpact(id, userId, parsedEditedData);
 
     if (!impact) {
       throw new AppError('Failed to calculate statistics impact', 500);

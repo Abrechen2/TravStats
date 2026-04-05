@@ -214,7 +214,7 @@ async function calculateUserStats(flights: FlightData[]): Promise<UserStats> {
   try {
     const cachedAirports = await getCachedAirports(Array.from(airportCodes));
     airportMap = new Map();
-    
+
     // Convert cached airports to the format we need
     for (const [code, airport] of cachedAirports.entries()) {
       if (airport) {
@@ -541,7 +541,10 @@ function getContinent(lat: number, lon: number): string | null {
   if (lon >= -170 && lon <= -30) {
     return lat > 15 ? 'North America' : 'South America';
   }
-  if (lon >= -30 && lon <= 60) return 'Europe/Africa';
+  if (lon >= -30 && lon <= 60) {
+    // ~15°N is the rough Sahara boundary between Europe/Middle East and sub-Saharan Africa
+    return lat >= 15 ? 'Europe' : 'Africa';
+  }
   if (lon >= 60 && lon <= 150) return 'Asia';
   if (lon >= 150 || lon <= -170) return 'Oceania';
   return null;

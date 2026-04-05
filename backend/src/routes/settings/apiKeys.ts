@@ -176,11 +176,11 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
       }
       updateData.openskyClientSecret = encryptApiKey(payload.openskyClientSecret);
     }
-    if (payload.openskyUsername !== undefined) {
-      updateData.openskyUsername = null;
-    }
-    if (payload.openskyPassword !== undefined) {
-      updateData.openskyPassword = null;
+    if (payload.openskyUsername !== undefined || payload.openskyPassword !== undefined) {
+      res.status(400).json({
+        error: 'OpenSky username/password authentication is no longer supported, use client credentials instead',
+      });
+      return;
     }
 
     await prisma.userSettings.upsert({

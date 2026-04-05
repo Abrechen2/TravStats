@@ -155,10 +155,6 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
 router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
-    logger.info({
-      operation: 'received_settings_update',
-      body: req.body,
-    });
     const payload = settingsSchema.parse(req.body);
     logger.info({
       operation: 'parsed_settings_payload',

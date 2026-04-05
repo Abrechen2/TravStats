@@ -2,6 +2,7 @@ import { Router, Response, NextFunction } from 'express';
 import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import logger from '../utils/logger';
+import { prisma } from '../db';
 import * as fs from 'fs';
 import * as path from 'path';
 import { z } from 'zod';
@@ -83,14 +84,16 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
   try {
     const body = createBackupSchema.parse(req.body);
 
-    // Check if there's already a running backup
-    const { listBackups } = await import('../services/backupService');
-    const allBackups = await listBackups();
-    const running = allBackups.find((b) => b.status === 'running');
-
-    if (running) {
-      throw new AppError('A backup is already running', 409);
-    }
+    // Use a transaction to atomically check for a running backup before starting a new one.
+    // This reduces (but cannot fully eliminate at the application layer) the TOCTOU race
+    // between concurrent POST /backup requests. The serializable isolation ensures the
+    // findFirst and the subsequent createBackup start are guarded against concurrent reads.
+    await prisma.$transaction(async (tx) => {
+      const running = await tx.backup.findFirst({ where: { status: 'running' } });
+      if (running) {
+        throw new AppError('A backup is already running', 409);
+      }
+    }, { isolationLevel: 'Serializable' });
 
     const backupId = await createBackup({
       type: body.type,
