@@ -527,6 +527,19 @@ router.get('/unique', async (req: AuthRequest, res: Response, next: NextFunction
         fastestRoute: null,
         mostCountriesInDay: 0,
         mostCountriesDate: null,
+        hemisphereHops: 0,
+        dateLineCrossings: 0,
+        continentalExplorer: 0,
+        continents: [],
+        tropicsTraveler: 0,
+        eastWestBalance: { eastFlights: 0, westFlights: 0, ratio: 0 },
+        sameDayReturns: 0,
+        midnightFlights: 0,
+        seasonalExplorer: false,
+        seasonsCount: 0,
+        internationalVsDomestic: { international: 0, domestic: 0, ratio: 0 },
+        longestLayover: null,
+        roundTripMaster: 0,
       };
     }
 

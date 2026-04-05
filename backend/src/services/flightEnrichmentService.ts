@@ -592,12 +592,13 @@ function calculateConfidence(
  */
 export async function createHistoricalEnrichment(
   flightId: string,
-  aggregatedData: AggregatedFlightData
+  aggregatedData: AggregatedFlightData,
+  userId?: string
 ): Promise<string | null> {
   try {
-    const flight = await prismaClient.flight.findUnique({
-      where: { id: flightId },
-    });
+    const flight = userId
+      ? await prismaClient.flight.findFirst({ where: { id: flightId, userId } })
+      : await prismaClient.flight.findUnique({ where: { id: flightId } });
 
     if (!flight) {
       logger.warn({
