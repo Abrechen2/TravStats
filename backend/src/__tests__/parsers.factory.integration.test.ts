@@ -124,16 +124,11 @@ const mockShouldLogParserOperations = shouldLogParserOperations as jest.MockedFu
 
 // ── Base config used across tests ─────────────────────────────────────────────
 const BASE_CONFIG = {
-  visionProvider: "auto" as const,
-  textProvider: "auto" as const,
+  visionProvider: "tesseract" as const,
+  textProvider: "regex" as const,
   visionFallbacks: [] as never[],
   textFallbacks: ["regex"] as TextProvider[],
   userId: undefined,
-  openaiApiKey: undefined,
-  claudeApiKey: undefined,
-  ollamaModel: undefined,
-  allowUserApiKeys: false,
-  requireUserApiKeys: false,
 };
 
 const MOCK_FLIGHT = {
@@ -246,18 +241,15 @@ describe("parseEmail — fallback chain", () => {
   });
 
   // ────────────────────────────────────────────────────────────────────────────
-  // Test 5: getParserConfig picks up ollamaUrl from adminSettings
+  // Test 5: getParserConfig returns correct providers (Tesseract + Regex only)
   // ────────────────────────────────────────────────────────────────────────────
-  it("uses ollamaUrl from adminSettings when provided", async () => {
+  it("returns tesseract/regex providers from getParserConfig", async () => {
     const { getParserConfig } = (await jest.requireActual(
       "../services/parsers/config"
     )) as typeof import("../services/parsers/config");
-    const config = await getParserConfig(
-      undefined,
-      { globalOpenaiApiKey: null, globalClaudeApiKey: null, ollamaUrl: "http://custom-ollama:11434" },
-      undefined
-    );
-    expect(config.ollamaUrl).toBe("http://custom-ollama:11434");
+    const config = await getParserConfig(undefined, undefined, undefined);
+    expect(config.visionProvider).toBe("tesseract");
+    expect(config.textProvider).toBe("regex");
   });
 
   // ────────────────────────────────────────────────────────────────────────────

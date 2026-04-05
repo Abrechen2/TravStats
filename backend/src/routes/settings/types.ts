@@ -47,19 +47,6 @@ export interface SettingsDataJson {
     checkInReminder?: boolean;
     featureUpdates?: boolean;
   };
-  privacy?: {
-    twoFactorAuth?: boolean;
-    loginAlerts?: boolean;
-    dataExportRequested?: boolean;
-    accountDeletionRequested?: boolean;
-    analyticsOptIn?: boolean;
-  };
-  backup?: {
-    autoBackup?: boolean;
-    backupInterval?: string;
-    exportFormat?: string;
-    cloudSync?: boolean;
-  };
   onboarding?: OnboardingState;
   [key: string]: unknown;
 }
@@ -98,12 +85,8 @@ export interface UserSettingsUpdateData {
 }
 
 export interface ParserSettingsUpdateData {
-  preferredVisionParser?: string;
-  preferredTextParser?: string;
-  visionFallbackChain?: string;
-  textFallbackChain?: string;
-  openaiApiKey?: string | null;
-  claudeApiKey?: string | null;
+  visionProvider?: string;
+  textProvider?: string;
 }
 
 export interface DeveloperModeUpdateData {
@@ -118,8 +101,6 @@ export interface TrainingSettingsUpdateData {
 }
 
 export interface ApiKeysUpdateData {
-  openaiApiKey?: string | null;
-  claudeApiKey?: string | null;
   airlabsApiKey?: string | null;
   aviationstackApiKey?: string | null;
   openskyClientId?: string | null;
@@ -129,8 +110,6 @@ export interface ApiKeysUpdateData {
 }
 
 export interface UserApiKeySettings {
-  openaiApiKey: string | null;
-  claudeApiKey: string | null;
   airlabsApiKey: string | null;
   aviationstackApiKey: string | null;
   openskyClientId: string | null;
@@ -151,6 +130,4 @@ export const defaultSettings = {
   defaults: { flightStatus: 'scheduled', seatClass: 'economy', favoriteAirline: 'Lufthansa', flightCategory: 'business' },
   map: { mapStyle: 'osm', zoomLevel: 3, markerStyle: 'pin', routeColor: '#2563eb' },
   notifications: { emailNotifications: true, flightReminder: '24h', checkInReminder: true, featureUpdates: true },
-  privacy: { twoFactorAuth: false, loginAlerts: true, dataExportRequested: false, accountDeletionRequested: false, analyticsOptIn: false },
-  backup: { autoBackup: false, backupInterval: 'weekly', exportFormat: 'json', cloudSync: false },
 };

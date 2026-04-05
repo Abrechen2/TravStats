@@ -53,13 +53,8 @@ router.post('/parse-boardingpass', authenticate, boardingPassParseLimiter, async
 
     logger.info(`[Boarding Pass Parse] Starting parsing for user ${userId}`);
 
-    // Get user and admin settings for parser configuration (with decrypted API keys)
-    const { getUserParserSettings, getAdminParserSettings } = await import('../services/parserSettings');
-    const userSettings = await getUserParserSettings(userId);
-    const adminSettings = await getAdminParserSettings();
-
-    // Get parser config
-    const config = await getParserConfig(userSettings || undefined, adminSettings || undefined, userId);
+    // Get parser config (Tesseract OCR + manual fallback only)
+    const config = await getParserConfig(undefined, undefined, userId);
 
     // Parse boarding pass
     const result = await parseBoardingPass(imageBase64, config);
@@ -144,18 +139,8 @@ router.post('/parse-boardingpass', authenticate, boardingPassParseLimiter, async
  */
 router.get('/parse-boardingpass/providers', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.userId!;
-
-    // Get user and admin settings (with decrypted API keys)
-    const { getUserParserSettings, getAdminParserSettings } = await import('../services/parserSettings');
-    const userSettings = await getUserParserSettings(userId);
-    const adminSettings = await getAdminParserSettings();
-
-    // Get parser config
-    const config = await getParserConfig(userSettings || undefined, adminSettings || undefined, userId);
-
-    // Get available providers
-    const providers = await getAvailableProviders(config);
+    // Get available providers (Tesseract + Regex only)
+    const providers = await getAvailableProviders();
 
     res.json({
       vision: providers.vision,
@@ -177,33 +162,17 @@ router.get('/parse-boardingpass/providers', authenticate, async (req: AuthReques
  */
 router.get('/parse-boardingpass/availability', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.userId!;
-
-    // Get user and admin settings (with decrypted API keys)
-    const { getUserParserSettings, getAdminParserSettings } = await import('../services/parserSettings');
-    const userSettings = await getUserParserSettings(userId);
-    const adminSettings = await getAdminParserSettings();
-
-    // Get parser config
-    const config = await getParserConfig(userSettings || undefined, adminSettings || undefined, userId);
-
     // Get available providers
-    const providers = await getAvailableProviders(config);
-
-    // Extract availability info
-    const ollamaAvailable = providers.vision.find(p => p.provider === 'ollama')?.availability.available || false;
-    const openaiAvailable = providers.vision.find(p => p.provider === 'openai')?.availability.available || false;
-    const claudeAvailable = providers.vision.find(p => p.provider === 'claude')?.availability.available || false;
+    const providers = await getAvailableProviders();
+    const tesseractAvailable = providers.vision.find(p => p.provider === 'tesseract')?.availability.available || false;
 
     res.json({
-      ollama: ollamaAvailable,
-      openai: openaiAvailable,
-      claude: claudeAvailable,
-      // Detailed info for each provider
+      ollama: false,
+      openai: false,
+      claude: false,
+      tesseract: tesseractAvailable,
       providers: {
-        ollama: providers.vision.find(p => p.provider === 'ollama')?.availability,
-        openai: providers.vision.find(p => p.provider === 'openai')?.availability,
-        claude: providers.vision.find(p => p.provider === 'claude')?.availability,
+        tesseract: providers.vision.find(p => p.provider === 'tesseract')?.availability,
       },
     });
   } catch (error) {
@@ -221,25 +190,14 @@ router.get('/parse-boardingpass/availability', authenticate, async (req: AuthReq
  */
 router.get('/parse-boardingpass/check', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.userId!;
-
-    // Get user and admin settings (with decrypted API keys)
-    const { getUserParserSettings, getAdminParserSettings } = await import('../services/parserSettings');
-    const userSettings = await getUserParserSettings(userId);
-    const adminSettings = await getAdminParserSettings();
-
-    const config = await getParserConfig(userSettings || undefined, adminSettings || undefined, userId);
-    const providers = await getAvailableProviders(config);
-
-    // Find the preferred provider or first available
-    const preferred = config.visionProvider;
-    const preferredProvider = providers.vision.find((p) => p.provider === preferred);
+    const providers = await getAvailableProviders();
+    const tesseractProvider = providers.vision.find((p) => p.provider === 'tesseract');
 
     res.json({
-      available: preferredProvider?.availability.available || false,
-      provider: preferred,
-      reason: preferredProvider?.availability.reason,
-      metadata: preferredProvider?.availability.metadata,
+      available: tesseractProvider?.availability.available || false,
+      provider: 'tesseract',
+      reason: tesseractProvider?.availability.reason,
+      metadata: tesseractProvider?.availability.metadata,
     });
   } catch (error) {
     logger.error({ error }, '[Boarding Pass Parse] Check failed');

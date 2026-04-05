@@ -1,15 +1,9 @@
-import InlineHelp from "../Help/InlineHelp";
 import { useTranslation } from "../../hooks/useTranslation";
 
 export interface ParserSettingsData {
-  globalOpenaiApiKey?: string;
-  globalClaudeApiKey?: string;
   allowUserApiKeys: boolean;
   defaultVisionParser: string;
   defaultTextParser: string;
-  ollamaUrl: string | null;
-  ollamaModel: string | null;
-  ollamaVisionModel: string | null;
 }
 
 interface ParserSettingsProps {
@@ -48,152 +42,60 @@ export default function ParserSettings({
         </button>
       </div>
 
-      <InlineHelp
-        title={t("admin:parserSettings.help.title")}
-        category="advanced"
-        content={
-          <div className="space-y-2">
-            <p>{t("admin:parserSettings.help.description")}</p>
-            <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
-              <li>
-                <strong>{t("admin:parserSettings.help.freeTitle")}</strong>{" "}
-                {t("admin:parserSettings.help.free")}
-              </li>
-              <li>
-                <strong>{t("admin:parserSettings.help.cloudTitle")}</strong>{" "}
-                {t("admin:parserSettings.help.cloud")}
-              </li>
-              <li>
-                <strong>{t("admin:parserSettings.help.autoTitle")}</strong>{" "}
-                {t("admin:parserSettings.help.auto")}
-              </li>
-            </ul>
-          </div>
-        }
-      />
-
-      {/* Default Parser Settings */}
+      {/* Parser Info */}
       <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
+        <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
           {t("admin:parserSettings.defaultSettings")}
         </h3>
         <p className="text-sm text-[var(--text-muted)] mb-4">
           {t("admin:parserSettings.defaultSettingsDescription")}
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-              {t("admin:parserSettings.visionParser")}
-            </label>
-            <select
-              value={parserSettings.defaultVisionParser}
-              onChange={(e) =>
-                onParserSettingsChange({ ...parserSettings, defaultVisionParser: e.target.value })
-              }
-              className="w-full px-3 py-2 bg-[var(--bg-surface)] border border-[var(--color-border)] rounded-lg text-[var(--text-primary)]"
-            >
-              <option value="auto">Auto (Recommended)</option>
-              <option value="ollama">Ollama Vision</option>
-              <option value="openai">OpenAI GPT-4 Vision</option>
-              <option value="claude">Claude 3.5 Vision</option>
-              <option value="tesseract">Tesseract OCR</option>
-              <option value="manual">Manual Entry</option>
-            </select>
-            <p className="text-xs text-[var(--text-muted)] mt-1">
-              {t("admin:parserSettings.autoHelp")}
-            </p>
+          <div className="flex items-center gap-2 p-3 bg-[var(--bg-base)] rounded-lg">
+            <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <div>
+              <p className="text-sm font-medium text-[var(--text-primary)]">Tesseract OCR</p>
+              <p className="text-xs text-[var(--text-muted)]">Boarding pass image parsing</p>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-              {t("admin:parserSettings.textParser")}
-            </label>
-            <select
-              value={parserSettings.defaultTextParser}
-              onChange={(e) =>
-                onParserSettingsChange({ ...parserSettings, defaultTextParser: e.target.value })
-              }
-              className="w-full px-3 py-2 bg-[var(--bg-surface)] border border-[var(--color-border)] rounded-lg text-[var(--text-primary)]"
-            >
-              <option value="auto">Auto (Recommended)</option>
-              <option value="ollama">Ollama</option>
-              <option value="openai">OpenAI GPT-4</option>
-              <option value="claude">Claude 3.5</option>
-              <option value="regex">Regex Fallback</option>
-            </select>
-            <p className="text-xs text-[var(--text-muted)] mt-1">
-              {t("admin:parserSettings.autoHelp")}
-            </p>
+          <div className="flex items-center gap-2 p-3 bg-[var(--bg-base)] rounded-lg">
+            <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <div>
+              <p className="text-sm font-medium text-[var(--text-primary)]">Regex Templates</p>
+              <p className="text-xs text-[var(--text-muted)]">Email booking parsing</p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Ollama Configuration */}
+      {/* User API Key Permissions */}
       <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-1">
-          Ollama Configuration
-        </h3>
-        <p className="text-sm text-[var(--text-muted)] mb-4">
-          Configure the local Ollama instance used for AI parsing. Leave blank to use the{" "}
-          <code className="text-xs bg-[var(--bg-elevated)] px-1 rounded">OLLAMA_URL</code>{" "}
-          environment variable.
-        </p>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
-              Ollama URL
-            </label>
-            <input
-              type="url"
-              value={parserSettings.ollamaUrl ?? ""}
-              onChange={(e) =>
-                onParserSettingsChange({
-                  ...parserSettings,
-                  ollamaUrl: e.target.value || null,
-                })
-              }
-              placeholder="http://192.168.178.155:11434"
-              className="input w-full"
-            />
-            <p className="text-xs text-[var(--text-muted)] mt-1">
-              Full URL including port. DB value overrides OLLAMA_URL env var.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
-                Text Model
-              </label>
-              <input
-                type="text"
-                value={parserSettings.ollamaModel ?? ""}
-                onChange={(e) =>
-                  onParserSettingsChange({
-                    ...parserSettings,
-                    ollamaModel: e.target.value || null,
-                  })
-                }
-                placeholder="qwen2.5:7b"
-                className="input w-full"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[var(--text-primary)] mb-1">
-                Vision Model
-              </label>
-              <input
-                type="text"
-                value={parserSettings.ollamaVisionModel ?? ""}
-                onChange={(e) =>
-                  onParserSettingsChange({
-                    ...parserSettings,
-                    ollamaVisionModel: e.target.value || null,
-                  })
-                }
-                placeholder="llama3.2-vision"
-                className="input w-full"
-              />
-            </div>
-          </div>
+        <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">User Permissions</h3>
+        <div className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            id="allowUserApiKeys"
+            checked={parserSettings.allowUserApiKeys}
+            onChange={(e) =>
+              onParserSettingsChange({ ...parserSettings, allowUserApiKeys: e.target.checked })
+            }
+            className="w-4 h-4 rounded border-[var(--color-border)]"
+          />
+          <label htmlFor="allowUserApiKeys" className="text-sm text-[var(--text-primary)]">
+            Allow users to add their own flight data API keys (Airlabs, Aviationstack, OpenSky)
+          </label>
         </div>
       </div>
     </div>

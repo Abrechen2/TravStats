@@ -11,8 +11,8 @@ export const API_LIMITS = {
   DEFAULT_PAGE_SIZE: 100,
   /** Maximum page size allowed by backend */
   MAX_PAGE_SIZE: 500,
-  /** Number of recent flights to show in sidebar */
-  RECENT_FLIGHTS: 10,
+  /** Number of flights to show in sidebar (max backend allows) */
+  RECENT_FLIGHTS: 500,
   /** Number of top routes to display */
   TOP_ROUTES: 5,
   /** Maximum airlines to show in filter dropdown */

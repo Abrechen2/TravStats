@@ -65,13 +65,6 @@ export interface EmailParseResult {
   airlineNotice?: string | null;
 }
 
-/** Ollama vision check response */
-export interface OllamaVisionCheckResult {
-  available: boolean;
-  model?: string;
-  reason?: string;
-}
-
 /** Generic message response */
 export interface MessageResponse {
   message: string;
@@ -138,17 +131,8 @@ export interface UserSettings {
   notifications?: {
     flightReminder?: string;
   };
-  privacy?: {
-    twoFactorAuth?: boolean;
-    loginAlerts?: boolean;
-    dataExportRequested?: boolean;
-    accountDeletionRequested?: boolean;
-    analyticsOptIn?: boolean;
-  };
-  backup?: Record<string, never>;
   autoUpdate?: AutoUpdateSettings;
   historicalEnrichment?: HistoricalEnrichmentSettings;
-  boardingPassParserStrategy?: "parser-only" | "parser-with-api" | "api-only" | null;
   [key: string]: unknown;
 }
 

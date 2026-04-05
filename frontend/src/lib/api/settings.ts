@@ -21,32 +21,17 @@ export const settingsApi = {
     return data;
   },
   getParserSettings: async (): Promise<{
-    preferredVisionParser?: string;
-    preferredTextParser?: string;
-    visionFallbackChain?: string;
-    textFallbackChain?: string;
-    openaiApiKey?: string;
-    claudeApiKey?: string;
+    visionProvider?: string;
+    textProvider?: string;
   }> => {
     const { data } = await api.get<{
-      preferredVisionParser?: string;
-      preferredTextParser?: string;
-      visionFallbackChain?: string;
-      textFallbackChain?: string;
-      openaiApiKey?: string;
-      claudeApiKey?: string;
+      visionProvider?: string;
+      textProvider?: string;
     }>("/settings/parser");
     return data;
   },
-  updateParserSettings: async (payload: {
-    preferredVisionParser?: string;
-    preferredTextParser?: string;
-    visionFallbackChain?: string;
-    textFallbackChain?: string;
-    openaiApiKey?: string;
-    claudeApiKey?: string;
-  }): Promise<MessageResponse> => {
-    const { data } = await api.put<MessageResponse>("/settings/parser", payload);
+  updateParserSettings: async (_payload: Record<string, unknown>): Promise<MessageResponse> => {
+    const { data } = await api.put<MessageResponse>("/settings/parser", {});
     return data;
   },
   getDeveloperMode: async (): Promise<{
@@ -112,15 +97,11 @@ export const settingsApi = {
     return data;
   },
   getApiKeys: async (): Promise<{
-    openai: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
-    claude: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     airlabs: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     aviationstack: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     opensky: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
   }> => {
     const { data } = await api.get<{
-      openai: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
-      claude: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
       airlabs: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
       aviationstack: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
       opensky: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
@@ -128,8 +109,6 @@ export const settingsApi = {
     return data;
   },
   updateApiKeys: async (payload: {
-    openaiApiKey?: string | null;
-    claudeApiKey?: string | null;
     airlabsApiKey?: string | null;
     aviationstackApiKey?: string | null;
     openskyClientId?: string | null;
@@ -141,7 +120,7 @@ export const settingsApi = {
     return data;
   },
   testApiKey: async (
-    provider: "openai" | "claude" | "airlabs" | "aviationstack" | "opensky",
+    provider: "airlabs" | "aviationstack" | "opensky",
     apiKey?: string,
     openskyCredentials?: {
       clientId?: string;

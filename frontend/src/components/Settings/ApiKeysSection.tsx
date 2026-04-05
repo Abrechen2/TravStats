@@ -3,16 +3,12 @@ import ApiKeyCard from "./ApiKeyCard";
 import { useTranslation } from "../../hooks/useTranslation";
 
 interface ApiKeysStatus {
-  openai: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
-  claude: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
   airlabs: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
   aviationstack: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
   opensky: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
 }
 
 interface ApiKeysFormState {
-  openaiApiKey: string;
-  claudeApiKey: string;
   airlabsApiKey: string;
   aviationstackApiKey: string;
   openskyClientId: string;
@@ -43,35 +39,6 @@ export default function ApiKeysSection({
         description={t("settings:apiKeys.description")}
       />
       <div className="space-y-6">
-        <div>
-          <h3 className="text-lg font-medium mb-3" style={{ color: "var(--text-primary)" }}>
-            {t("settings:apiKeys.parserApis")}
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <ApiKeyCard
-              provider="openai"
-              label={t("settings:apiKeys.openai.label")}
-              description={t("settings:apiKeys.openai.description")}
-              getKeyUrl="https://platform.openai.com/api-keys"
-              isShared={apiKeysStatus?.openai.isShared || false}
-              hasAccess={apiKeysStatus?.openai.hasAccess || false}
-              value={apiKeys.openaiApiKey}
-              onChange={(value) => onSetApiKeys({ ...apiKeys, openaiApiKey: value })}
-              onClear={() => onSetApiKeys({ ...apiKeys, openaiApiKey: "" })}
-            />
-            <ApiKeyCard
-              provider="claude"
-              label={t("settings:apiKeys.claude.label")}
-              description={t("settings:apiKeys.claude.description")}
-              getKeyUrl="https://console.anthropic.com/settings/keys"
-              isShared={apiKeysStatus?.claude.isShared || false}
-              hasAccess={apiKeysStatus?.claude.hasAccess || false}
-              value={apiKeys.claudeApiKey}
-              onChange={(value) => onSetApiKeys({ ...apiKeys, claudeApiKey: value })}
-              onClear={() => onSetApiKeys({ ...apiKeys, claudeApiKey: "" })}
-            />
-          </div>
-        </div>
         <div>
           <h3 className="text-lg font-medium mb-3" style={{ color: "var(--text-primary)" }}>
             {t("settings:apiKeys.flightApis")}

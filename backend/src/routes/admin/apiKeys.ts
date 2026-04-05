@@ -5,8 +5,6 @@ import { prisma } from '../../db';
 import { decryptApiKey, encryptApiKey } from '../../utils/encryption';
 import logger from '../../utils/logger';
 import {
-  testOpenAIKey,
-  testClaudeKey,
   testAirlabsKey,
   testAviationstackKey,
   testOpenSkyCredentials,
@@ -152,26 +150,6 @@ router.put('/api-keys', async (req: AuthRequest, res: Response, next: NextFuncti
 });
 
 // Test API key endpoints (admin)
-router.post('/api-keys/test/openai', async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const { apiKey } = testApiKeySchema.parse(req.body);
-    const result = await testOpenAIKey(apiKey);
-    res.json(result);
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.post('/api-keys/test/claude', async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const { apiKey } = testApiKeySchema.parse(req.body);
-    const result = await testClaudeKey(apiKey);
-    res.json(result);
-  } catch (error) {
-    next(error);
-  }
-});
-
 router.post('/api-keys/test/airlabs', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { apiKey } = testApiKeySchema.parse(req.body);

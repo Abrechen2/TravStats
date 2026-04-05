@@ -48,17 +48,11 @@ router.post('/parse-email', authenticate, emailParseLimiter, async (req: AuthReq
 
     logger.info(`[Email Parse] Parsing email for user ${userId}`);
 
-    // Get user and admin settings for parser configuration (with decrypted API keys)
-    const { getUserParserSettings, getAdminParserSettings } = await import('../services/parserSettings');
-    const userSettings = userId ? await getUserParserSettings(userId) : null;
-    const adminSettings = await getAdminParserSettings();
-
     const result = await parseBookingEmail(
       subject || undefined,
       emailContent,
       undefined,
-      userId ? { ...userSettings, userId } : userSettings || undefined,
-      adminSettings || undefined
+      userId ? { userId } : undefined
     );
 
     logger.info(`[Email Parse] Parsing complete: ${result.flights.length} flight(s) found using ${result.parserUsed}`);
@@ -172,18 +166,12 @@ router.post(
         hasHtml: !!extracted.html,
       }, '[Email Parse File] Email extracted from file');
 
-      // Get user and admin settings for parser configuration (with decrypted API keys)
-      const { getUserParserSettings, getAdminParserSettings } = await import('../services/parserSettings');
-      const userSettings = userId ? await getUserParserSettings(userId) : null;
-      const adminSettings = await getAdminParserSettings();
-
       // Parse email with configured parser
       const result = await parseBookingEmail(
         extracted.subject,
         extracted.text,
         extracted.html,
-        userId ? { ...userSettings, userId } : userSettings || undefined,
-        adminSettings || undefined
+        userId ? { userId } : undefined
       );
 
       logger.info(

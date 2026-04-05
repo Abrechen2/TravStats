@@ -19,7 +19,6 @@ type DateFormat = "DD.MM.YYYY" | "MM/DD/YYYY" | "YYYY-MM-DD";
 type TimeFormat = "24h" | "12h";
 
 type FlightStatusDefault = "scheduled" | "flown";
-type BoardingPassParserStrategy = "parser-only" | "parser-with-api" | "api-only" | null;
 
 type SettingsUpdater<T> = (updates: Partial<T>) => void;
 
@@ -60,16 +59,6 @@ export interface NotificationSettings {
   flightReminder: FlightReminder;
 }
 
-export interface PrivacySettings {
-  twoFactorAuth: boolean;
-  loginAlerts: boolean;
-  dataExportRequested: boolean;
-  accountDeletionRequested: boolean;
-  analyticsOptIn?: boolean;
-}
-
-export type BackupSettings = Record<string, never>;
-
 export interface ApiKeyStatus {
   hasKey: boolean;
   isShared: boolean;
@@ -77,8 +66,6 @@ export interface ApiKeyStatus {
 }
 
 export interface ApiKeysStatus {
-  openai: ApiKeyStatus;
-  claude: ApiKeyStatus;
   airlabs: ApiKeyStatus;
   aviationstack: ApiKeyStatus;
   opensky: ApiKeyStatus;
@@ -91,20 +78,14 @@ export interface SettingsState {
   defaults: DefaultsSettings;
   map: MapSettings;
   notifications: NotificationSettings;
-  privacy: PrivacySettings;
-  backup: BackupSettings;
   apiKeys: ApiKeysStatus | null;
-  boardingPassParserStrategy: BoardingPassParserStrategy;
   setProfile: SettingsUpdater<ProfileSettings>;
   setDisplay: SettingsUpdater<DisplaySettings>;
   setUnits: SettingsUpdater<UnitsSettings>;
   setDefaults: SettingsUpdater<DefaultsSettings>;
   setMap: SettingsUpdater<MapSettings>;
   setNotifications: SettingsUpdater<NotificationSettings>;
-  setPrivacy: SettingsUpdater<PrivacySettings>;
-  setBackup: SettingsUpdater<BackupSettings>;
   setApiKeys: (status: ApiKeysStatus) => void;
-  setBoardingPassParserStrategy: (strategy: BoardingPassParserStrategy) => void;
   loadApiKeysStatus: () => Promise<void>;
   resetSettings: () => void;
   loadRemoteSettings: () => Promise<void>;
@@ -119,10 +100,7 @@ const defaultSettings: Omit<
   | "setDefaults"
   | "setMap"
   | "setNotifications"
-  | "setPrivacy"
-  | "setBackup"
   | "setApiKeys"
-  | "setBoardingPassParserStrategy"
   | "loadApiKeysStatus"
   | "resetSettings"
   | "loadRemoteSettings"
@@ -159,16 +137,7 @@ const defaultSettings: Omit<
   notifications: {
     flightReminder: "24h",
   },
-  privacy: {
-    twoFactorAuth: false,
-    loginAlerts: true,
-    dataExportRequested: false,
-    accountDeletionRequested: false,
-    analyticsOptIn: false,
-  },
-  backup: {},
   apiKeys: null,
-  boardingPassParserStrategy: null, // null = auto (LLM wenn verfügbar)
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -199,20 +168,9 @@ export const useSettingsStore = create<SettingsState>()(
         set((state) => ({
           notifications: { ...state.notifications, ...updates },
         })),
-      setPrivacy: (updates) =>
-        set((state) => ({
-          privacy: { ...state.privacy, ...updates },
-        })),
-      setBackup: () => {
-        // BackupSettings has no fields; no-op
-      },
       setApiKeys: (status) =>
         set(() => ({
           apiKeys: status,
-        })),
-      setBoardingPassParserStrategy: (strategy) =>
-        set(() => ({
-          boardingPassParserStrategy: strategy,
         })),
       loadApiKeysStatus: async () => {
         try {
@@ -234,6 +192,8 @@ export const useSettingsStore = create<SettingsState>()(
               const {
                 autoUpdate: _au,
                 historicalEnrichment: _he,
+                privacy: _privacy,
+                backup: _backup,
                 ...remoteWithoutDirectFields
               } = remoteRecord;
               /* eslint-enable @typescript-eslint/no-unused-vars */
@@ -241,10 +201,6 @@ export const useSettingsStore = create<SettingsState>()(
                 ...state,
                 ...remoteWithoutDirectFields,
               };
-              // Set boarding pass parser strategy if present
-              if (remote.boardingPassParserStrategy !== undefined) {
-                newState.boardingPassParserStrategy = remote.boardingPassParserStrategy;
-              }
               // Sync language to i18n if it changed (will be handled by App.tsx useEffect, but we do it here too for immediate update)
               if (remote.display?.language && remote.display.language !== state.display.language) {
                 // The language sync will be handled by the useEffect in App.tsx
@@ -270,6 +226,13 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: "settings-storage",
+      // Strip removed fields from persisted state so stale localStorage doesn't crash the app
+      migrate: (persisted: unknown) => {
+        const s = persisted as Record<string, unknown>;
+        delete s["privacy"];
+        delete s["backup"];
+        return s;
+      },
     }
   )
 );
