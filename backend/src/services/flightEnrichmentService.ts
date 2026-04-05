@@ -5,7 +5,7 @@
  * live-tracked flights with the same flight number.
  */
 
-import { PrismaClient, Flight, UserSettings, Prisma } from '@prisma/client';
+import { PrismaClient, Flight, Prisma } from '@prisma/client';
 import { prisma } from '../db';
 import { calculateDistance } from '../utils/geo';
 import logger from '../utils/logger';

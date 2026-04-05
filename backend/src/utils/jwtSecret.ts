@@ -5,8 +5,6 @@ import logger from './logger';
 
 const PROJECT_CWD = process.cwd();
 const DEV_DATA_DIR = join(PROJECT_CWD, '.travstats-data');
-const RESOLVED_DATA_DIR =
-  process.env.DATA_DIR || (process.env.NODE_ENV === 'production' ? '/app/data' : DEV_DATA_DIR);
 // Store JWT secret in a separate, non-mounted directory for security
 // This prevents the secret from being accessible via mounted volumes
 const SECRETS_DIR = process.env.SECRETS_DIR || (process.env.NODE_ENV === 'production' ? '/app/secrets' : join(DEV_DATA_DIR, 'secrets'));
@@ -188,7 +186,7 @@ while (!validation.isValid && retryCount < maxRetries) {
     message: 'Generated JWT secret failed validation, regenerating...',
     context: { reason: validation.message, attempt: retryCount + 1 },
   });
-  
+
   // Force generation of new secret by clearing environment and file
   delete process.env.JWT_SECRET;
   try {
@@ -198,7 +196,7 @@ while (!validation.isValid && retryCount < maxRetries) {
   } catch {
     // Ignore errors deleting old secret file
   }
-  
+
   // Generate new secret
   JWT_SECRET = getJWTSecret();
   validation = validateJWTSecret(JWT_SECRET);
@@ -229,7 +227,7 @@ if (!validation.isValid) {
   logger.error({
     operation: 'jwt_secret_validation_failed',
     message: 'JWT_SECRET validation failed - server start blocked',
-    context: { 
+    context: {
       reason: validation.message,
       errorMessage: errorMessage.trim(),
     },

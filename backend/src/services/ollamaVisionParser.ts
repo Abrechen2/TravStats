@@ -186,7 +186,7 @@ export async function checkOllamaVisionAvailability(): Promise<boolean> {
     }
 
     return hasVisionModel;
-  } catch (error) {
+  } catch (_error) {
     logger.warn('[Ollama Vision Parser] Ollama service not available');
     return false;
   }

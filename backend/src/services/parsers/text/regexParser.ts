@@ -252,7 +252,6 @@ export class RegexTextParser implements ITextParser {
    */
   private parseMultipleFlights(source: string): ParsedBooking[] {
     const flights: ParsedBooking[] = [];
-    const sourceUpper = source.toUpperCase();
 
     // Extract all flight numbers with context
     const flightNumberPatterns = [

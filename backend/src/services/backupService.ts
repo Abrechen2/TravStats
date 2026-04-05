@@ -39,8 +39,6 @@ const BACKUP_BASE_DIR = process.env.BACKUP_PATH || (
 );
 const RETENTION_DAYS = parseInt(process.env.BACKUP_RETENTION_DAYS || '30', 10);
 const DOCKER_DB_CONTAINER = process.env.DOCKER_DB_CONTAINER || 'travstats-db';
-const DB_NAME = process.env.POSTGRES_DB || 'flights';
-const DB_USER = process.env.POSTGRES_USER || 'flights';
 
 // Ensure backup directory exists
 // Wrap in try-catch to prevent startup failures if permissions are missing
@@ -355,7 +353,7 @@ async function createDatabaseDump(outputPath: string, targetDatabaseUrl?: string
           if (fs.existsSync(outputPath)) {
             fs.unlinkSync(outputPath);
           }
-        } catch (unlinkError) {
+        } catch (_unlinkError) {
           // Ignore unlink errors
         }
         reject(new Error(
@@ -388,7 +386,7 @@ async function createDatabaseDump(outputPath: string, targetDatabaseUrl?: string
               if (fs.existsSync(outputPath)) {
                 fs.unlinkSync(outputPath);
               }
-            } catch (unlinkError) {
+            } catch (_unlinkError) {
               // Ignore unlink errors
             }
             reject(new Error(`pg_dump exited with code ${code}${stderrData ? ': ' + stderrData : ''}`));
@@ -445,7 +443,7 @@ async function createDatabaseDump(outputPath: string, targetDatabaseUrl?: string
             if (fs.existsSync(outputPath)) {
               fs.unlinkSync(outputPath);
             }
-          } catch (unlinkError) {
+          } catch (_unlinkError) {
             // Ignore unlink errors
           }
           reject(new Error(`Failed to start docker exec: ${error.message}`));
@@ -475,7 +473,7 @@ async function createDatabaseDump(outputPath: string, targetDatabaseUrl?: string
                 if (fs.existsSync(outputPath)) {
                   fs.unlinkSync(outputPath);
                 }
-              } catch (unlinkError) {
+              } catch (_unlinkError) {
                 // Ignore unlink errors
               }
               reject(new Error(`docker exec pg_dump exited with code ${code}${stderrData ? ': ' + stderrData : ''}`));
@@ -733,11 +731,11 @@ export async function createBackup(options: BackupOptions = {}): Promise<string>
     // Step 1: Backup database
     logger.info({ operation: 'backup_db_start', message: 'Backing up database' });
     await createDatabaseDump(dbBackupPath);
-    const dbSize = fs.statSync(dbBackupPath).size;
+    fs.statSync(dbBackupPath); // verify dump was created
 
     // Step 2: Archive uploads
     logger.info({ operation: 'backup_files_start', message: 'Archiving upload files' });
-    const filesSize = await archiveUploads(filesBackupPath);
+    await archiveUploads(filesBackupPath);
 
     // Step 3: Get metadata
     const metadata = await getMetadata();
@@ -951,7 +949,7 @@ export async function restoreBackup(id: string, options: RestoreOptions): Promis
         try {
           await execAsync(`docker ps --filter name=${dbContainer} --format "{{.Names}}"`);
           command = `cat ${dbBackupPath} | docker exec -i ${dbContainer} psql -U ${dbInfo.user} ${dbInfo.database}`;
-        } catch (error) {
+        } catch (_error) {
           // Use environment variable instead of inline PGPASSWORD for cross-platform support
           command = `psql -h ${dbInfo.host} -p ${dbInfo.port} -U ${dbInfo.user} ${dbInfo.database} < ${dbBackupPath}`;
         }

@@ -275,15 +275,12 @@ export function calculateBusinessStats(flights: FlightData[]): BusinessStats {
     : 0;
 
   // Cost per flight hour — only include hours for flights that have a cost entry.
-  let totalFlightHours = 0;
   let totalCostForHours = 0;
   let totalFlightHoursWithCost = 0;
 
   flownFlights.forEach(f => {
     const hours = (new Date(f.arrivalTime).getTime() - new Date(f.departureTime).getTime()) / (1000 * 60 * 60);
     if (hours > 0) {
-      totalFlightHours += hours;
-
       const flightCost = (f.price || 0) + (f.taxes || 0) + (f.fees || 0);
       if (flightCost > 0) {
         totalCostForHours += flightCost;
@@ -757,7 +754,6 @@ export async function calculateUniqueStats(flights: FlightData[]): Promise<Uniqu
 
     if (depCode && arrCode) {
       const routeKey = `${depCode}-${arrCode}`;
-      const returnKey = `${arrCode}-${depCode}`;
 
       // Check if return flight exists
       const hasReturn = flownFlights.some(flight => {

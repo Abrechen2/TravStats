@@ -1,5 +1,5 @@
 import { prisma } from '../db';
-import logger, { systemLogger } from '../utils/logger';
+import { systemLogger } from '../utils/logger';
 import { CACHE_TTL, LOGGING_DEFAULTS } from '../config/constants';
 
 /**

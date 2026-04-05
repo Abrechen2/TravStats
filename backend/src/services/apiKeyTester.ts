@@ -4,7 +4,6 @@
  */
 
 import axios from 'axios';
-import logger from '../utils/logger';
 import { getApiKey, getOpenSkyCredentials } from './apiKeyResolver';
 
 export interface ApiKeyTestResult {
@@ -200,18 +199,18 @@ export async function testAirlabsKey(apiKey: string, userId?: string): Promise<A
           details: response.data,
         };
       }
-      
+
       // Check for error in response
       if (response.data?.error) {
-        const errorMsg = typeof response.data.error === 'string' 
-          ? response.data.error 
+        const errorMsg = typeof response.data.error === 'string'
+          ? response.data.error
           : response.data.error.message || 'API error';
         return {
           success: false,
           message: errorMsg,
         };
       }
-      
+
       // If we get 200 but no clear success/error, assume it's valid
       return {
         success: true,
@@ -390,4 +389,3 @@ export async function testOpenSkyCredentials(
     };
   }
 }
-

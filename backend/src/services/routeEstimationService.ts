@@ -177,7 +177,7 @@ function estimatePolarRoute(
   depLon: number,
   arrLat: number,
   arrLon: number,
-  date: Date
+  _date: Date
 ): EstimatedRoute {
   // Polar route typically goes over Greenland or northern Canada
   const midLat = Math.max(depLat, arrLat) + 10; // Go further north
@@ -262,11 +262,11 @@ function mightNeedRussiaCircumvention(
  * Find known route from database
  */
 function findKnownRoute(
-  depLat: number,
-  depLon: number,
-  arrLat: number,
-  arrLon: number,
-  flightNumber: string
+  _depLat: number,
+  _depLon: number,
+  _arrLat: number,
+  _arrLon: number,
+  _flightNumber: string
 ): EstimatedRoute | null {
   // Known routes could be loaded from a database or config file.
   // Currently returns null; route estimation falls through to geometric estimation.

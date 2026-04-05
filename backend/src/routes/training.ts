@@ -74,7 +74,7 @@ router.post(
       }
 
       // Pre-populate annotations with file content so annotation components can render it
-      const fileExt = path.extname(req.file.originalname).toLowerCase();
+      const _fileExt = path.extname(req.file.originalname).toLowerCase();
       let initialAnnotations: Record<string, unknown> = {};
       try {
         if (type === 'email') {

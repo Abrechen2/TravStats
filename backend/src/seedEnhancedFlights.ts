@@ -133,7 +133,6 @@ const airlines = [
   },
 ];
 
-const seatClasses = ['economy', 'premium_economy', 'business', 'first'];
 const boardingGroups = ['1', '2', '3', '4', '5', 'A', 'B', 'C', 'D'];
 const gates = ['A1', 'A2', 'A3', 'B4', 'B5', 'C1', 'C2', 'D1', 'E5', 'F3', 'G7', 'H2'];
 const terminals = ['1', '2', '3', 'A', 'B', 'C'];
@@ -165,7 +164,7 @@ function generateBookingRef(): string {
 }
 
 // Hilfsfunktion für Ticket Number
-function generateTicketNumber(airlinePrefix: string): string {
+function generateTicketNumber(_airlinePrefix: string): string {
   const airlineCode = String(Math.floor(Math.random() * 900) + 100);
   const ticketNum = String(Math.floor(Math.random() * 9000000000) + 1000000000);
   return `${airlineCode}-${ticketNum}`;

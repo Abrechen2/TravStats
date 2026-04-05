@@ -4,7 +4,6 @@ import fs from 'fs';
 import crypto from 'crypto';
 import { PrismaClient } from '@prisma/client';
 import logger from '../utils/logger';
-import { validateReceiptFile, validateEmailFile, validateBoardingPassImage } from '../utils/fileValidation';
 import { FILE_LIMITS, CLEANUP } from '../config/constants';
 
 // Upload directories

@@ -129,7 +129,7 @@ export function decrypt(encryptedText: string): string {
     decrypted = Buffer.concat([decrypted, decipher.final()]);
 
     return decrypted.toString('utf8');
-  } catch (error) {
+  } catch (_error) {
     // Don't log here - let the caller (decryptApiKey) handle logging
     // This prevents duplicate log entries
     throw new Error('Decryption failed - value may be corrupted or encrypted with different key');
@@ -201,13 +201,13 @@ export function decryptApiKey(encryptedApiKey: string | null | undefined): strin
     // Only log warning if we haven't seen this specific encrypted value before
     // or if enough time has passed since last warning
     const now = Date.now();
-    const shouldWarn = !failedDecryptionCache.has(encryptedApiKey) || 
+    const shouldWarn = !failedDecryptionCache.has(encryptedApiKey) ||
                        (now - lastDecryptionWarning) > DECRYPTION_WARN_INTERVAL;
 
     if (shouldWarn) {
       failedDecryptionCache.add(encryptedApiKey);
       lastDecryptionWarning = now;
-      
+
       logger.warn({
         operation: 'api_key_decryption_error',
         message: 'Failed to decrypt API key - value may be corrupted or encrypted with different key',
@@ -217,10 +217,9 @@ export function decryptApiKey(encryptedApiKey: string | null | undefined): strin
         },
       });
     }
-    
+
     // Return null on decryption failure rather than throwing
     // This allows the system to continue functioning
     return null;
   }
 }
-

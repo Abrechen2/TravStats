@@ -96,7 +96,7 @@ function extractFromEml(content: string): ExtractedEmail {
       try {
         const root = parseHtml(html);
         text = root.textContent || body;
-      } catch (htmlError) {
+      } catch (_htmlError) {
         // If HTML parsing fails, use raw body
         text = body;
       }

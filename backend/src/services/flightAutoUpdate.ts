@@ -5,13 +5,11 @@
  * and creates pending updates for user review.
  */
 
-import { PrismaClient, Flight, UserSettings, Prisma } from '@prisma/client';
+import { PrismaClient, Flight, Prisma } from '@prisma/client';
 import { lookupFlightDetails, FlightLookupResult } from './flightLookup';
 import { prisma } from '../db';
 import logger from '../utils/logger';
-import { calculateDistance } from '../utils/geo';
 import { getApiKey } from './apiKeyResolver';
-import { aggregateFlightData, type AggregatedFlightData } from './flightEnrichmentService';
 import type { FlightDataSnapshot } from './pendingUpdateService';
 
 const prismaClient = prisma as PrismaClient;
@@ -323,7 +321,6 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
 
     // Find active flights for this user
     const now = new Date();
-    const bufferEnd = new Date(now.getTime() + FLIGHT_ACTIVE_BUFFER_HOURS * 60 * 60 * 1000);
 
     const activeFlights = await prismaClient.flight.findMany({
       where: {
