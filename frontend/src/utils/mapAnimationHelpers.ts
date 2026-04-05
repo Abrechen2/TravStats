@@ -36,7 +36,14 @@ export function arcPosition(
   const lat1 = source[1] * toRad;
   const lon1 = source[0] * toRad;
   const lat2 = target[1] * toRad;
-  const lon2 = target[0] * toRad;
+
+  // Normalize lon2 to the hemisphere closest to lon1 to avoid antimeridian jumps
+  // (e.g. LAX ≈ -118° to NRT ≈ +140° should travel eastward across the Pacific,
+  // not westward across Europe)
+  let adjustedLon2 = target[0] * toRad;
+  if (adjustedLon2 - lon1 > Math.PI) adjustedLon2 -= 2 * Math.PI;
+  if (adjustedLon2 - lon1 < -Math.PI) adjustedLon2 += 2 * Math.PI;
+  const lon2 = adjustedLon2;
 
   // Angular distance between the two points on the unit sphere
   const d =
