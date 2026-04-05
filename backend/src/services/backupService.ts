@@ -10,9 +10,18 @@ import { Backup } from '@prisma/client';
 
 const execAsync = promisify(exec);
 
+interface ExistingBackupRecord {
+  id: string;
+  backupPath: string;
+  dbBackupPath: string | null;
+  filesBackupPath: string | null;
+}
+
 interface BackupOptions {
   type?: 'full' | 'partial';
   retentionDays?: number;
+  /** When provided, skip creating a new DB record and use this pre-created one. */
+  existingRecord?: ExistingBackupRecord;
 }
 
 interface RestoreOptions {
@@ -586,6 +595,10 @@ export async function createBackup(options: BackupOptions = {}): Promise<string>
     docker: process.env.DOCKER,
   });
 
+  // When the route pre-creates the DB record inside a Serializable transaction it also
+  // pre-computes the paths and passes them via existingRecord. Reuse those paths so
+  // the filesystem layout matches what is already stored in the database.
+  // When called without an existingRecord (e.g. from restoreBackup), generate fresh paths.
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const backupId = `backup-${timestamp}`;
   const backupDir = path.join(BACKUP_BASE_DIR, backupId);
@@ -633,69 +646,81 @@ export async function createBackup(options: BackupOptions = {}): Promise<string>
     throw new Error(`Failed to create temp directory: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 
-  const dbBackupPath = path.join(tempDir, 'database.sql');
-  const filesBackupPath = path.join(tempDir, 'uploads.tar.gz');
-  const finalArchivePath = path.join(backupDir, `${backupId}.tar.gz`);
+  // When an existingRecord is provided, its paths already match what was stored in the DB.
+  // Otherwise derive them from the locally generated backupId (same formula as always).
+  const dbBackupPath = options.existingRecord?.dbBackupPath ?? path.join(tempDir, 'database.sql');
+  const filesBackupPath = options.existingRecord?.filesBackupPath ?? path.join(tempDir, 'uploads.tar.gz');
+  const finalArchivePath = options.existingRecord?.backupPath ?? path.join(backupDir, `${backupId}.tar.gz`);
 
-  // Create backup record
-  let backup;
-  try {
+  // Create backup record — or reuse one that was already created atomically inside a
+  // Serializable transaction by the route handler (TOCTOU prevention).
+  let backup: { id: string };
+  if (options.existingRecord) {
+    backup = { id: options.existingRecord.id };
     logger.info({
-      operation: 'backup_record_creation_start',
-      message: 'Creating backup record in database',
-      backupPath: finalArchivePath,
-      backupDir,
-    });
-
-    backup = await prisma.backup.create({
-      data: {
-        type: options.type || 'full',
-        status: 'running',
-        backupPath: finalArchivePath,
-        dbBackupPath,
-        filesBackupPath,
-        retentionDays: options.retentionDays || RETENTION_DAYS,
-        startedAt: new Date(),
-      },
-    });
-
-    logger.info({
-      operation: 'backup_record_created',
-      message: 'Backup record created successfully',
+      operation: 'backup_record_reused',
+      message: 'Reusing backup record created inside transaction',
       backupId: backup.id,
     });
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    const errorStack = error instanceof Error ? error.stack : undefined;
-
-    logger.error({
-      operation: 'backup_record_creation_failed',
-      message: 'Failed to create backup record in database',
-      error: errorMessage,
-      stack: errorStack,
-      backupPath: finalArchivePath,
-      backupDir,
-    });
-
-    // Cleanup temp directory
+  } else {
     try {
-      if (fs.existsSync(backupDir)) {
-        fs.rmSync(backupDir, { recursive: true, force: true });
-      }
-    } catch (cleanupError) {
-      logger.warn({
-        operation: 'backup_cleanup_failed',
-        message: 'Failed to cleanup temp directory after error',
-        error: cleanupError instanceof Error ? cleanupError.message : 'Unknown error',
+      logger.info({
+        operation: 'backup_record_creation_start',
+        message: 'Creating backup record in database',
+        backupPath: finalArchivePath,
+        backupDir,
       });
-    }
 
-    // Provide more specific error message
-    if (errorMessage.includes('does not exist') || errorMessage.includes('relation') || errorMessage.includes('table')) {
-      throw new Error(`Backup table does not exist. Please run database migrations: ${errorMessage}`);
-    }
+      backup = await prisma.backup.create({
+        data: {
+          type: options.type || 'full',
+          status: 'running',
+          backupPath: finalArchivePath,
+          dbBackupPath,
+          filesBackupPath,
+          retentionDays: options.retentionDays || RETENTION_DAYS,
+          startedAt: new Date(),
+        },
+      });
 
-    throw new Error(`Failed to create backup record: ${errorMessage}`);
+      logger.info({
+        operation: 'backup_record_created',
+        message: 'Backup record created successfully',
+        backupId: backup.id,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+
+      logger.error({
+        operation: 'backup_record_creation_failed',
+        message: 'Failed to create backup record in database',
+        error: errorMessage,
+        stack: errorStack,
+        backupPath: finalArchivePath,
+        backupDir,
+      });
+
+      // Cleanup temp directory
+      try {
+        if (fs.existsSync(backupDir)) {
+          fs.rmSync(backupDir, { recursive: true, force: true });
+        }
+      } catch (cleanupError) {
+        logger.warn({
+          operation: 'backup_cleanup_failed',
+          message: 'Failed to cleanup temp directory after error',
+          error: cleanupError instanceof Error ? cleanupError.message : 'Unknown error',
+        });
+      }
+
+      // Provide more specific error message
+      if (errorMessage.includes('does not exist') || errorMessage.includes('relation') || errorMessage.includes('table')) {
+        throw new Error(`Backup table does not exist. Please run database migrations: ${errorMessage}`);
+      }
+
+      throw new Error(`Failed to create backup record: ${errorMessage}`);
+    }
   }
 
   try {
