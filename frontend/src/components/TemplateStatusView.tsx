@@ -7,8 +7,9 @@ export default function TemplateStatusView(): JSX.Element {
   const [templates, setTemplates] = useState<TemplateStatusEntry[]>([]);
   const [githubRepo, setGithubRepo] = useState("");
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
 
-  useEffect(() => {
+  const loadStatus = (): void => {
     void templateApi
       .getStatus()
       .then((data) => {
@@ -17,7 +18,21 @@ export default function TemplateStatusView(): JSX.Element {
       })
       .catch((err: unknown) => logger.error("Failed to load template status", err))
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  useEffect(loadStatus, []);
+
+  const handleSync = (): void => {
+    setSyncing(true);
+    void templateApi
+      .sync()
+      .then((data) => {
+        setTemplates(data.templates);
+        setGithubRepo(data.githubRepo);
+      })
+      .catch((err: unknown) => logger.error("Template sync failed", err))
+      .finally(() => setSyncing(false));
+  };
 
   if (loading) {
     return <div className="text-slate-400 text-sm">Lade Templates...</div>;
@@ -27,16 +42,25 @@ export default function TemplateStatusView(): JSX.Element {
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-slate-200">Airline Email Templates</h3>
-        {githubRepo && (
-          <a
-            href={`${githubRepo}/blob/main/README.md`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-blue-400 hover:text-blue-300 underline"
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            className="text-xs text-slate-400 hover:text-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            Template hinzufügen →
-          </a>
-        )}
+            {syncing ? "Aktualisiere..." : "Jetzt aktualisieren"}
+          </button>
+          {githubRepo && (
+            <a
+              href={`${githubRepo}/blob/main/README.md`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-blue-400 hover:text-blue-300 underline"
+            >
+              Template hinzufügen →
+            </a>
+          )}
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {templates.map((t) => (

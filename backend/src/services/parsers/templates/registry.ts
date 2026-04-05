@@ -89,6 +89,12 @@ class TemplateRegistry {
     }));
   }
 
+  /** Trigger an immediate GitHub sync and return the new template count. */
+  async syncNow(): Promise<number> {
+    await this.syncFromGitHub();
+    return this.templates.size;
+  }
+
   private scheduleSync(): void {
     setTimeout(() => {
       void this.syncFromGitHub();
