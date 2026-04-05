@@ -7,6 +7,7 @@ import { useToastStore } from "../store/toastStore";
 import { logger } from "../lib/logger";
 import { useTranslation } from "../hooks/useTranslation";
 import MapContainer3D from "../components/MapContainer3D";
+import { useFlightSelectionStore } from "../store/flightSelectionStore";
 import SimplifiedFlightFormV2 from "../components/SimplifiedFlightFormV2";
 import FlightEditModal from "../components/FlightEditModal";
 import Stats from "../components/Stats";
@@ -720,6 +721,11 @@ export default function DashboardPage(): JSX.Element {
               visMode={visMode}
               onVisModeChange={handleVisModeChange}
               minRouteCount={filters.minRouteCount ?? 1}
+              onFlightClick={(id) => {
+                const flight = recentFlights.find((f) => f.id === id);
+                if (flight) useFlightSelectionStore.getState().setSelection([flight]);
+              }}
+              onEdit={(flight) => setEditingFlight(flight)}
               filterSlot={
                 visMode !== "trips" ? <Filters onFilterChange={handleFilterChange} /> : undefined
               }
