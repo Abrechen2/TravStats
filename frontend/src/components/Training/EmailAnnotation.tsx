@@ -132,6 +132,10 @@ export default function EmailAnnotation({
   >([]);
   const [flights, setFlights] = useState<Flight[]>([{}]);
   const [selectedFlightIndex, setSelectedFlightIndex] = useState<number>(0); // Flug-Auswahl vor dem Labeln
+  const [annotationHistory, setAnnotationHistory] = useState<
+    Array<Array<{ start: number; end: number; text: string; label: string; flightIndex?: number }>>
+  >([]);
+  const [flightHistory, setFlightHistory] = useState<Flight[][]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [saving, setSaving] = useState(false);
@@ -216,6 +220,24 @@ export default function EmailAnnotation({
     }
   }, [showFiltered, originalEmailText]);
 
+  /**
+   * Walk text nodes within a container to compute character offset to a given node+offset.
+   * More reliable than Range.toString() which breaks when startContainer is an element node
+   * (can happen when selection starts/ends at a <mark> or <span> boundary).
+   */
+  const getTextNodeOffset = (container: Node, targetNode: Node, targetOffset: number): number => {
+    let accumulated = 0;
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      if (node === targetNode) {
+        return accumulated + targetOffset;
+      }
+      accumulated += (node.textContent ?? "").length;
+    }
+    return accumulated;
+  };
+
   const handleTextSelect = () => {
     const selection = window.getSelection();
     if (!selection || !selection.toString().trim() || !textContainerRef.current) {
@@ -223,31 +245,37 @@ export default function EmailAnnotation({
     }
 
     const container = textContainerRef.current;
-
-    // Finde die Positionen im ursprünglichen Text
-    // Suche nach dem ersten Vorkommen des ausgewählten Textes
     const range = selection.getRangeAt(0);
 
-    // Erstelle einen Range vom Anfang des Containers bis zum Start der Auswahl
-    const startRange = document.createRange();
-    startRange.setStart(container, 0);
-    startRange.setEnd(range.startContainer, range.startOffset);
-    const start = startRange.toString().length;
+    // Verify selection is within our container
+    if (!container.contains(range.startContainer) || !container.contains(range.endContainer)) {
+      return;
+    }
 
-    // Erstelle einen Range vom Anfang des Containers bis zum Ende der Auswahl
-    const endRange = document.createRange();
-    endRange.setStart(container, 0);
-    endRange.setEnd(range.endContainer, range.endOffset);
-    const end = endRange.toString().length;
+    const start = getTextNodeOffset(container, range.startContainer, range.startOffset);
+    const end = start + range.toString().length;
 
-    // Verwende den aktuell ausgewählten Flug
     setSelectedText({ start, end, label: "", flightIndex: selectedFlightIndex });
+  };
+
+  const handleUndo = () => {
+    if (annotationHistory.length === 0) return;
+    const prevAnnotations = annotationHistory[annotationHistory.length - 1];
+    const prevFlights = flightHistory[flightHistory.length - 1];
+    setAnnotations(prevAnnotations);
+    setFlights(prevFlights);
+    setAnnotationHistory(annotationHistory.slice(0, -1));
+    setFlightHistory(flightHistory.slice(0, -1));
   };
 
   const handleSaveAnnotation = () => {
     if (selectedText && selectedText.label && selectedText.label !== "") {
-      const text = emailText.substring(selectedText.start, selectedText.end).trim();
+      const text = displayText.substring(selectedText.start, selectedText.end).trim();
       const flightIndex = selectedText.flightIndex ?? selectedFlightIndex;
+
+      // Save current state to history for undo
+      setAnnotationHistory([...annotationHistory, annotations]);
+      setFlightHistory([...flightHistory, flights]);
 
       // Annotation hinzufügen
       setAnnotations([
@@ -552,6 +580,11 @@ export default function EmailAnnotation({
               <button onClick={() => setSelectedText(null)} className="btn-secondary">
                 {t("common:buttons.cancel")}
               </button>
+              {annotationHistory.length > 0 && (
+                <button onClick={handleUndo} className="btn-secondary">
+                  ↩ Undo
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -785,6 +818,11 @@ export default function EmailAnnotation({
           {onCancel && (
             <button onClick={onCancel} disabled={saving} className="btn-secondary">
               {t("common:buttons.cancel")}
+            </button>
+          )}
+          {annotationHistory.length > 0 && (
+            <button onClick={handleUndo} disabled={saving} className="btn-secondary">
+              ↩ Undo
             </button>
           )}
           <button onClick={() => void handleSave()} disabled={saving} className="btn-primary">
