@@ -1,0 +1,60 @@
+{
+  "airline": "Lufthansa (Buchungsdetails)",
+  "iata": "LH-old",
+  "version": "2025-04",
+  "from": ["@lufthansa.com", "@miles-and-more.com", "@lufthansa.de"],
+  "subject": ["Buchungsdetails", "Booking details"],
+  "selectors": {},
+  "textPatterns": {
+    "flightNumber": [
+      "Flugnr\\.?:\\s*([A-Z]{2}\\s?\\d{1,4})\\b",
+      "Flug-Nr\\.?:\\s*([A-Z]{2}\\s?\\d{1,4})\\b"
+    ],
+    "pnr": [
+      "Buchungscode:\\s*([A-Z0-9]{5,8})\\b",
+      "Buchungsreferenz:\\s*([A-Z0-9]{5,8})\\b"
+    ],
+    "departureCode": [
+      "(?:Von|Ab):[^(\\n]*\\(([A-Z]{3})\\)"
+    ],
+    "arrivalCode": [
+      "(?:Nach|In):[^(\\n]*\\(([A-Z]{3})\\)"
+    ],
+    "departureTime": [
+      "Abflug:\\s*(?:[A-Za-z]{2,3}\\.?\\s+)?(\\d{1,2}\\.\\s*\\w+\\s+\\d{4}\\s+\\d{1,2}:\\d{2})"
+    ],
+    "arrivalTime": [
+      "Ankunft:\\s*(\\d{1,2}:\\d{2})(?:\\s*Uhr)?"
+    ],
+    "seat": [
+      "Sitzplatz:\\s*([0-9]{1,3}[A-F])",
+      "Platz:\\s*([0-9]{1,3}[A-F])"
+    ],
+    "seatClass": [
+      "(?:Reiseklasse|Klasse):\\s*(Economy|Business|First|Premium[\\w\\s]*)"
+    ],
+    "ticketNumber": [
+      "Ticketnummer:\\s*([0-9]{10,14})",
+      "\\b(220[0-9]{10})\\b"
+    ]
+  },
+  "transforms": {
+    "flightNumber": "removeSpaces",
+    "pnr": "uppercase",
+    "departureCode": "uppercase",
+    "arrivalCode": "uppercase",
+    "departureTime": "parseIso"
+  },
+  "testCases": [
+    {
+      "input": "Flugnr.: LH 2062\nVon: München München (MUC)\nNach: Luxemburg Luxembourg (LUX)\nBuchungscode: XY7Z89\nAbflug: So. 13. Dezember 2024 16:05 Uhr\nAnkunft: 17:35 Uhr",
+      "expected": {
+        "flightNumber": "LH2062",
+        "departureCode": "MUC",
+        "arrivalCode": "LUX",
+        "pnr": "XY7Z89",
+        "departureTime": "2024-12-13T16:05"
+      }
+    }
+  ]
+}

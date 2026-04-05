@@ -1,27 +1,73 @@
 {
   "airline": "Lufthansa",
   "iata": "LH",
-  "version": "2024-03",
-  "from": ["@lufthansa.com", "@miles-and-more.com"],
-  "subject": ["Buchungsbestätigung", "Booking Confirmation", "Ihre Buchung"],
+  "version": "2025-04",
+  "from": ["@lufthansa.com", "@miles-and-more.com", "@lufthansa.de"],
+  "subject": ["Buchungsbestätigung", "Booking Confirmation", "Ihre Buchung", "München nach", "Flugbuchung"],
   "selectors": {
     "flightNumber": "td.flightno, .flight-number, [data-flight-number]",
-    "pnr": ".booking-code, .pnr, [data-pnr], td.pnr",
+    "pnr": ".booking-code, .pnr, [data-pnr]",
     "departureCode": ".dep-airport-code, [data-dep-iata]",
     "arrivalCode": ".arr-airport-code, [data-arr-iata]",
     "departureTime": "[data-dep-datetime], .departure-time",
     "arrivalTime": "[data-arr-datetime], .arrival-time",
     "seat": ".seat-number, [data-seat]",
     "seatClass": ".cabin-class, .travel-class",
-    "price": ".total-price, [data-total-price]",
-    "currency": ".currency",
-    "taxes": ".taxes-amount",
-    "fees": ".fees-amount",
-    "baggage": ".baggage-info, .gepäck",
-    "frequentFlyer": ".miles-more-number, .ffn",
-    "ticketNumber": ".ticket-number, [data-ticket]",
-    "bookingClassLetter": ".booking-class, [data-booking-class]"
+    "ticketNumber": ".ticket-number, [data-ticket]"
   },
-  "transforms": {},
-  "testCases": []
+  "textPatterns": {
+    "flightNumber": [
+      "Flugnummer:\\s*([A-Z]{2}\\s?\\d{1,4})\\b",
+      "Flight\\s*(?:number)?:\\s*([A-Z]{2}\\s?\\d{1,4})\\b"
+    ],
+    "pnr": [
+      "Buchungsreferenz:\\s*([A-Z0-9]{5,8})\\b",
+      "Booking\\s*Reference:\\s*([A-Z0-9]{5,8})\\b",
+      "PNR:\\s*([A-Z0-9]{5,8})\\b"
+    ],
+    "departureCode": [
+      "(?:Von|Ab):[^(\\n]*\\(([A-Z]{3})\\)"
+    ],
+    "arrivalCode": [
+      "(?:In|Nach|To):[^(\\n]*\\(([A-Z]{3})\\)"
+    ],
+    "departureTime": [
+      "Abflug\\s*-\\s*Datum:\\s*(\\d{1,2}\\s+\\w+\\s+\\d{4})[\\s\\S]{0,80}?Zeit:\\s*(\\d{1,2}:\\d{2})"
+    ],
+    "arrivalTime": [
+      "Ankunft\\s*-\\s*Datum:\\s*(\\d{1,2}\\s+\\w+\\s+\\d{4})[\\s\\S]{0,80}?Zeit:\\s*(\\d{1,2}:\\d{2})"
+    ],
+    "seat": [
+      "Sitzplatz:\\s*([0-9]{1,3}[A-F])",
+      "Seat:\\s*([0-9]{1,3}[A-F])"
+    ],
+    "seatClass": [
+      "(?:Reiseklasse|Kabine|Klasse):\\s*(Economy|Business|First|Premium[\\w\\s]*)"
+    ],
+    "ticketNumber": [
+      "Ticketnummer:\\s*([0-9]{10,14})",
+      "\\b(220[0-9]{10})\\b"
+    ]
+  },
+  "transforms": {
+    "flightNumber": "removeSpaces",
+    "pnr": "uppercase",
+    "departureCode": "uppercase",
+    "arrivalCode": "uppercase",
+    "departureTime": "parseIso",
+    "arrivalTime": "parseIso"
+  },
+  "testCases": [
+    {
+      "input": "Flugnummer: LH 2062\nVon: München (MUC)\nIn: Helsinki (HEL)\nAbflug - Datum: 18 Sep 2025\nZeit:           07:25\nAnkunft - Datum: 18 Sep 2025\nZeit:           10:50\nBuchungsreferenz: ABC123",
+      "expected": {
+        "flightNumber": "LH2062",
+        "departureCode": "MUC",
+        "arrivalCode": "HEL",
+        "pnr": "ABC123",
+        "departureTime": "2025-09-18T07:25",
+        "arrivalTime": "2025-09-18T10:50"
+      }
+    }
+  ]
 }
