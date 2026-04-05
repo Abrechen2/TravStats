@@ -29,12 +29,12 @@ export default function TemplateStatusView(): JSX.Element {
         <h3 className="font-semibold text-slate-200">Airline Email Templates</h3>
         {githubRepo && (
           <a
-            href={githubRepo}
+            href={`${githubRepo}/blob/main/README.md`}
             target="_blank"
             rel="noopener noreferrer"
             className="text-xs text-blue-400 hover:text-blue-300 underline"
           >
-            Templates beisteuern →
+            Template hinzufügen →
           </a>
         )}
       </div>
