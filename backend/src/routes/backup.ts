@@ -62,10 +62,7 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
  */
 router.get('/status', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    // Find running backup (listBackups is re-imported to avoid hoisting issues with
-    // the top-level import that is also used in POST /)
-    const { listBackups: listBackupsLocal } = await import('../services/backupService');
-    const allBackups = await listBackupsLocal();
+    const allBackups = await listBackups();
     const running = allBackups.find((b) => b.status === 'running');
 
     res.json({
@@ -268,8 +265,7 @@ router.post('/:id/restore', backupRestoreLimiter, async (req: AuthRequest, res: 
     const body = restoreBackupSchema.parse(req.body);
 
     // Check if there's already a running backup or restore
-    const { listBackups: listBackupsLocal } = await import('../services/backupService');
-    const allBackups = await listBackupsLocal();
+    const allBackups = await listBackups();
     const running = allBackups.find((b) => b.status === 'running');
 
     if (running) {

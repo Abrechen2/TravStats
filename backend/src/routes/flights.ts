@@ -499,26 +499,6 @@ router.get('/enrichment-candidates', async (req: AuthRequest, res: Response, nex
   }
 });
 
-// Get single flight
-router.get('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const userId = req.userId!;
-    const { id } = req.params;
-
-    const flight = await prisma.flight.findFirst({
-      where: { id, userId },
-    });
-
-    if (!flight) {
-      throw new AppError('Flight not found', 404);
-    }
-
-    res.json(flight);
-  } catch (error) {
-    next(error);
-  }
-});
-
 // Update flight
 router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -535,7 +515,11 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
       throw new AppError('Flight not found', 404);
     }
 
-    // Enrich airport data if departure or arrival is being updated
+    // Enrich airport data if departure or arrival is being updated.
+    // Use immutable references — never mutate the Zod-parsed `data` object.
+    let enrichedDeparture = data.departure ?? null;
+    let enrichedArrival = data.arrival ?? null;
+
     if (data.departure || data.arrival) {
       const enriched = await enrichFlightAirports({
         departure: data.departure ? {
@@ -566,21 +550,11 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
         },
       });
 
-      // Only update airport data if enrichment was performed
       if (data.departure) {
-        data.departure.icao = enriched.departure.icao;
-        data.departure.iata = enriched.departure.iata;
-        data.departure.name = enriched.departure.name;
-        data.departure.lat = enriched.departure.lat;
-        data.departure.lon = enriched.departure.lon;
+        enrichedDeparture = { ...data.departure, ...enriched.departure };
       }
-
       if (data.arrival) {
-        data.arrival.icao = enriched.arrival.icao;
-        data.arrival.iata = enriched.arrival.iata;
-        data.arrival.name = enriched.arrival.name;
-        data.arrival.lat = enriched.arrival.lat;
-        data.arrival.lon = enriched.arrival.lon;
+        enrichedArrival = { ...data.arrival, ...enriched.arrival };
       }
     }
 
@@ -601,20 +575,20 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     if (data.companions !== undefined) updateData.companions = data.companions;
     if (data.receiptUrl !== undefined) updateData.receiptUrl = data.receiptUrl;
 
-    if (data.departure) {
-      updateData.depIcao = data.departure.icao;
-      updateData.depIata = data.departure.iata;
-      updateData.depName = data.departure.name;
-      updateData.depLat = data.departure.lat;
-      updateData.depLon = data.departure.lon;
+    if (enrichedDeparture) {
+      updateData.depIcao = enrichedDeparture.icao;
+      updateData.depIata = enrichedDeparture.iata;
+      updateData.depName = enrichedDeparture.name;
+      updateData.depLat = enrichedDeparture.lat;
+      updateData.depLon = enrichedDeparture.lon;
     }
 
-    if (data.arrival) {
-      updateData.arrIcao = data.arrival.icao;
-      updateData.arrIata = data.arrival.iata;
-      updateData.arrName = data.arrival.name;
-      updateData.arrLat = data.arrival.lat;
-      updateData.arrLon = data.arrival.lon;
+    if (enrichedArrival) {
+      updateData.arrIcao = enrichedArrival.icao;
+      updateData.arrIata = enrichedArrival.iata;
+      updateData.arrName = enrichedArrival.name;
+      updateData.arrLat = enrichedArrival.lat;
+      updateData.arrLon = enrichedArrival.lon;
     }
 
     if (data.departureTime) updateData.departureTime = new Date(data.departureTime);
@@ -637,10 +611,10 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     }
 
     // Recalculate CO₂ when coordinates change or on any update (always keep in sync)
-    const depLat = data.departure?.lat ?? existingFlight.depLat;
-    const depLon = data.departure?.lon ?? existingFlight.depLon;
-    const arrLat = data.arrival?.lat  ?? existingFlight.arrLat;
-    const arrLon = data.arrival?.lon  ?? existingFlight.arrLon;
+    const depLat = enrichedDeparture?.lat ?? existingFlight.depLat;
+    const depLon = enrichedDeparture?.lon ?? existingFlight.depLon;
+    const arrLat = enrichedArrival?.lat  ?? existingFlight.arrLat;
+    const arrLon = enrichedArrival?.lon  ?? existingFlight.arrLon;
     updateData.co2Kg = calculateCo2Kg({
       depLat,
       depLon,

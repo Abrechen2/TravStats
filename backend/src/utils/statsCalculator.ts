@@ -320,13 +320,13 @@ export function calculateBusinessStats(flights: FlightData[]): BusinessStats {
   const mostCommonCategory = Object.entries(categoryCounts)
     .sort(([, a], [, b]) => b - a)[0]?.[0] || null;
 
-  // Airport diversity
+  // Airport diversity — prefer IATA, fall back to ICAO; one code per physical airport.
   const uniqueAirports = new Set<string>();
   flownFlights.forEach(f => {
-    if (f.depIata) uniqueAirports.add(f.depIata);
-    if (f.depIcao) uniqueAirports.add(f.depIcao);
-    if (f.arrIata) uniqueAirports.add(f.arrIata);
-    if (f.arrIcao) uniqueAirports.add(f.arrIcao);
+    const dep = f.depIata || f.depIcao;
+    if (dep) uniqueAirports.add(dep);
+    const arr = f.arrIata || f.arrIcao;
+    if (arr) uniqueAirports.add(arr);
   });
 
   // Average flight duration
