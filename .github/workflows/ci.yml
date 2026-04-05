@@ -1,10 +1,6 @@
 name: CI
 
 on:
-  push:
-    branches: [Main, DEV]
-  pull_request:
-    branches: [Main]
   workflow_call:
 
 concurrency:
