@@ -7,7 +7,7 @@
  */
 
 import { BoardingPassParser } from "./IParser";
-import { BoardingPassData } from "../bcbpParser";
+import { BoardingPassData } from "./bcbpHelpers";
 import { logger } from "../logger";
 
 /**

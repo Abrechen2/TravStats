@@ -6,7 +6,7 @@
  */
 
 import { BoardingPassParser } from "./IParser";
-import { BoardingPassData, getAirlineName, mapCompartmentToSeatClass } from "../bcbpParser";
+import { BoardingPassData, getAirlineName, mapCompartmentToSeatClass } from "./bcbpHelpers";
 import { logger } from "../logger";
 
 /**

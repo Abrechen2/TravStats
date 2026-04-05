@@ -9,7 +9,7 @@ import ParserRegistry from "./parserRegistry";
 import { StandardBCBPParser } from "./standardBCBPParser";
 import { URLParser } from "./urlParser";
 import { FallbackParser } from "./fallbackParser";
-import { BoardingPassData } from "../bcbpParser";
+import { BoardingPassData } from "./bcbpHelpers";
 
 // Get singleton registry instance
 const registry = ParserRegistry.getInstance();
