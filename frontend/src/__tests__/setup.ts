@@ -30,7 +30,7 @@ vi.mock("../store/settingsStore", async () => {
     useSettingsStore: vi.fn((selector?: (state: Record<string, unknown>) => unknown) => {
       const defaultState = {
         display: { language: "en" },
-        units: { currency: "EUR", distance: "km" },
+        units: { currency: "EUR", distanceUnit: "kilometers" },
         defaults: {
           flightCategory: "business",
           seatClass: "economy",

@@ -45,7 +45,9 @@ describe("FlightEntry", () => {
       <FlightEntry flight={flight} onEdit={vi.fn()} onDuplicate={vi.fn()} onDelete={vi.fn()} />
     );
     expect(screen.getByText("MUC → JFK")).toBeInTheDocument();
-    expect(screen.getByText(/14\.3\.2024/)).toBeInTheDocument();
+    // Date is formatted with the active i18n locale (en in tests → "03/14" or similar)
+    const dateEl = screen.getByText(/\d{2}[./]\d{2}/);
+    expect(dateEl).toBeInTheDocument();
   });
 
   it("calls setSelection with flight on click", () => {
@@ -66,6 +68,7 @@ describe("FlightEntry", () => {
     // Hover to show quick actions
     fireEvent.mouseEnter(screen.getByRole("button"));
     fireEvent.click(screen.getByLabelText("Stats"));
-    expect(screen.getByText(/km/)).toBeInTheDocument();
+    // InlineStats uses i18n key in tests
+    expect(screen.getByText(/stats:distance\.kilometers/)).toBeInTheDocument();
   });
 });

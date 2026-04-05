@@ -1,4 +1,7 @@
 import { calculateDistance, calculateFlightDuration } from "../../lib/geo";
+import { formatDistance } from "../../lib/units";
+import { useSettingsStore } from "../../store/settingsStore";
+import { useTranslation } from "../../hooks/useTranslation";
 import type { Flight } from "../../types";
 
 interface InlineStatsProps {
@@ -12,6 +15,9 @@ function formatDuration(minutes: number): string {
 }
 
 export function InlineStats({ flight }: InlineStatsProps): JSX.Element {
+  const { t } = useTranslation(["stats"]);
+  const distanceUnit = useSettingsStore((state) => state.units.distanceUnit);
+
   const distanceKm =
     flight.routeDistance != null
       ? Math.round(flight.routeDistance)
@@ -28,11 +34,13 @@ export function InlineStats({ flight }: InlineStatsProps): JSX.Element {
       : null;
 
   const stats: string[] = [];
-  if (distanceKm !== null) stats.push(`${distanceKm.toLocaleString("de-DE")} km`);
+  if (distanceKm !== null) stats.push(formatDistance(distanceKm, distanceUnit, t));
   if (durationMin !== null) stats.push(formatDuration(durationMin));
   if (flight.seatClass) stats.push(flight.seatClass.replace("_", " "));
   if (flight.co2Kg != null)
-    stats.push(`CO₂: ${Math.round(flight.co2Kg).toLocaleString("de-DE")} kg`);
+    stats.push(
+      `CO₂: ${Math.round(flight.co2Kg).toLocaleString(undefined, { maximumFractionDigits: 0 })} kg`
+    );
   if (flight.aircraft) stats.push(flight.aircraft);
 
   return (

@@ -3,6 +3,7 @@ import type { Flight } from "../../types";
 import { QuickActions } from "./QuickActions";
 import { InlineStats } from "./InlineStats";
 import { useFlightSelectionStore } from "../../store/flightSelectionStore";
+import { useTranslation } from "../../hooks/useTranslation";
 
 interface FlightEntryProps {
   flight: Flight;
@@ -22,6 +23,7 @@ export function FlightEntry({
   const [hovered, setHovered] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
   const { selectedIds, setSelection } = useFlightSelectionStore();
+  const { i18n } = useTranslation(["common"]);
   const isSelected = selectedIds.includes(flight.id);
 
   return (
@@ -55,8 +57,11 @@ export function FlightEntry({
             </div>
             <div className="text-xs" style={{ color: "var(--text-muted)" }}>
               {flight.departureTime
-                ? new Date(flight.departureTime).toLocaleDateString("de-DE")
-                : "Unbekannt"}
+                ? new Date(flight.departureTime).toLocaleDateString(i18n.language, {
+                    day: "2-digit",
+                    month: "2-digit",
+                  })
+                : "—"}
               {flight.flightNumber ? ` · ${flight.flightNumber}` : ""}
             </div>
           </div>

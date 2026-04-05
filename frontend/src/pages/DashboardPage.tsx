@@ -102,7 +102,7 @@ export default function DashboardPage(): JSX.Element {
   });
 
   // Load recent flights and total count (unfiltered) once on mount
-  const loadRecentFlights = async () => {
+  const loadRecentFlights = useCallback(async () => {
     try {
       setLoadingRecent(true);
       const data = await flightsApi.getAll({ limit: API_LIMITS.RECENT_FLIGHTS, offset: 0 });
@@ -113,15 +113,11 @@ export default function DashboardPage(): JSX.Element {
     } finally {
       setLoadingRecent(false);
     }
-  };
-
-  useEffect(() => {
-    loadRecentFlights();
   }, []);
 
   useEffect(() => {
-    loadFlights();
-  }, [filters]);
+    loadRecentFlights();
+  }, [loadRecentFlights]);
 
   // Auto-detect onboarding steps
   useEffect(() => {
@@ -183,7 +179,7 @@ export default function DashboardPage(): JSX.Element {
     }
   }, [user]);
 
-  const loadFlights = async () => {
+  const loadFlights = useCallback(async () => {
     try {
       setLoadingMap(true);
       // minRouteCount is a map-only filter — not applied to API queries
@@ -231,7 +227,11 @@ export default function DashboardPage(): JSX.Element {
     } finally {
       setLoadingMap(false);
     }
-  };
+  }, [filters]);
+
+  useEffect(() => {
+    loadFlights();
+  }, [loadFlights]);
 
   const handleAddFlight = async (flight: FlightInput) => {
     try {
@@ -283,42 +283,35 @@ export default function DashboardPage(): JSX.Element {
     }
   };
 
-  const pendingDeletes = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
-
   const handleDeleteFlight = useCallback(
-    (flightId: string) => {
+    async (flightId: string) => {
+      // Optimistically remove from UI immediately
       setRecentFlights((prev) => prev.filter((f) => f.id !== flightId));
       setTotalFlightsCount((prev) => prev - 1);
-      addToast("info", t("dashboard:success.flightDeletedPending"));
 
-      const timer = setTimeout(() => {
-        pendingDeletes.current.delete(flightId);
-        void (async () => {
-          try {
-            await flightsApi.delete(flightId);
-            loadFlights();
-            const recentData = await flightsApi.getAll({
-              limit: API_LIMITS.RECENT_FLIGHTS,
-              offset: 0,
-            });
-            setRecentFlights(recentData.flights);
-            setTotalFlightsCount(recentData.total);
-          } catch (error) {
-            logger.error("Failed to delete flight:", error);
-            addToast("error", t("dashboard:errors.deleteFlight"));
-            const recentData = await flightsApi.getAll({
-              limit: API_LIMITS.RECENT_FLIGHTS,
-              offset: 0,
-            });
-            setRecentFlights(recentData.flights);
-            setTotalFlightsCount(recentData.total);
-          }
-        })();
-      }, 3000);
-
-      pendingDeletes.current.set(flightId, timer);
+      try {
+        await flightsApi.delete(flightId);
+        addToast("success", t("dashboard:success.flightDeleted"));
+        loadFlights();
+        const recentData = await flightsApi.getAll({
+          limit: API_LIMITS.RECENT_FLIGHTS,
+          offset: 0,
+        });
+        setRecentFlights(recentData.flights);
+        setTotalFlightsCount(recentData.total);
+      } catch (error) {
+        logger.error("Failed to delete flight:", error);
+        addToast("error", t("dashboard:errors.deleteFlight"));
+        // Reload to restore the flight in the UI since delete failed
+        const recentData = await flightsApi.getAll({
+          limit: API_LIMITS.RECENT_FLIGHTS,
+          offset: 0,
+        });
+        setRecentFlights(recentData.flights);
+        setTotalFlightsCount(recentData.total);
+      }
     },
-    [addToast, loadFlights]
+    [addToast, loadFlights, t]
   );
 
   const handleDuplicateFlight = useCallback(
@@ -381,13 +374,6 @@ export default function DashboardPage(): JSX.Element {
     },
     [addToast, loadFlights]
   );
-
-  useEffect(() => {
-    const timers = pendingDeletes.current;
-    return () => {
-      timers.forEach((timer) => clearTimeout(timer));
-    };
-  }, []);
 
   const handleFilterChange = (newFilters: FlightFilters) => {
     setFilters(newFilters);
