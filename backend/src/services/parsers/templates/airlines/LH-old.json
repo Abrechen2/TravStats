@@ -7,31 +7,30 @@
   "selectors": {},
   "textPatterns": {
     "flightNumber": [
-      "Flugnr\\.?:\\s*([A-Z]{2}\\s?\\d{1,4})\\b",
-      "Flug-Nr\\.?:\\s*([A-Z]{2}\\s?\\d{1,4})\\b"
+      "\\t([A-Z]{2}\\s+\\d{3,4})[\\t \\r\\n]",
+      "Flugnr\\.?:\\s*([A-Z]{2}\\s?\\d{1,4})\\b"
     ],
     "pnr": [
-      "Buchungscode:\\s*([A-Z0-9]{5,8})\\b",
-      "Buchungsreferenz:\\s*([A-Z0-9]{5,8})\\b"
+      "(?:Buchungscode|Buchungsreferenz):\\s*([A-Z0-9]{5,8})\\b"
     ],
     "departureCode": [
-      "(?:Von|Ab):[^(\\n]*\\(([A-Z]{3})\\)"
+      "\\d{1,2}:\\d{2}\\s+Uhr\\s+[^\\n(]+\\(([A-Z]{3})\\)"
     ],
     "arrivalCode": [
-      "(?:Nach|In):[^(\\n]*\\(([A-Z]{3})\\)"
+      "\\d{1,2}:\\d{2}\\s+Uhr[^\\n]+\\n[\\s\\S]+?\\d{1,2}:\\d{2}\\s+Uhr[^\\n]+\\(([A-Z]{3})\\)"
     ],
     "departureTime": [
-      "Abflug:\\s*(?:[A-Za-z]{2,3}\\.?\\s+)?(\\d{1,2}\\.\\s*\\w+\\s+\\d{4}\\s+\\d{1,2}:\\d{2})"
+      "[A-Za-z]{2,3}\\.\\s+(\\d{1,2}\\.?\\s+[A-Za-zÄÖÜäöü]+\\s+\\d{4})[\\s\\S]+?(\\d{1,2}:\\d{2})\\s+Uhr"
     ],
     "arrivalTime": [
-      "Ankunft:\\s*(\\d{1,2}:\\d{2})(?:\\s*Uhr)?"
+      "[A-Za-z]{2,3}\\.\\s+(\\d{1,2}\\.?\\s+[A-Za-zÄÖÜäöü]+\\s+\\d{4})[\\s\\S]+?\\d{1,2}:\\d{2}\\s+Uhr[\\s\\S]+?(\\d{1,2}:\\d{2})\\s+Uhr"
     ],
     "seat": [
-      "Sitzplatz:\\s*([0-9]{1,3}[A-F])",
-      "Platz:\\s*([0-9]{1,3}[A-F])"
+      "Sitzplätze:\\s*([0-9]{1,3}[A-F])",
+      "Sitzplatz:\\s*([0-9]{1,3}[A-F])"
     ],
     "seatClass": [
-      "(?:Reiseklasse|Klasse):\\s*(Economy|Business|First|Premium[\\w\\s]*)"
+      "Klasse:\\s*(Economy[\\w\\s]*|Business[\\w\\s]*|First[\\w\\s]*)"
     ],
     "ticketNumber": [
       "Ticketnummer:\\s*([0-9]{10,14})",
@@ -43,17 +42,19 @@
     "pnr": "uppercase",
     "departureCode": "uppercase",
     "arrivalCode": "uppercase",
-    "departureTime": "parseIso"
+    "departureTime": "parseIso",
+    "arrivalTime": "parseIso"
   },
   "testCases": [
     {
-      "input": "Flugnr.: LH 2062\nVon: München München (MUC)\nNach: Luxemburg Luxembourg (LUX)\nBuchungscode: XY7Z89\nAbflug: So. 13. Dezember 2024 16:05 Uhr\nAnkunft: 17:35 Uhr",
+      "input": "Do. 16. Januar 2025: München – Luxemburg\n07:55 Uhr\tMünchen Munich (MUC)\nTerminal 2\n09:00 Uhr\tLuxemburg Luxembourg (LUX)\n<img.png>\tLH 2316\t\nLufthansa Buchungscode:\nJD4TWQ\n",
       "expected": {
-        "flightNumber": "LH2062",
+        "flightNumber": "LH2316",
         "departureCode": "MUC",
         "arrivalCode": "LUX",
-        "pnr": "XY7Z89",
-        "departureTime": "2024-12-13T16:05"
+        "pnr": "JD4TWQ",
+        "departureTime": "2025-01-16T07:55",
+        "arrivalTime": "2025-01-16T09:00"
       }
     }
   ]
