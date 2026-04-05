@@ -74,6 +74,7 @@ export function DeckGLMap({
 
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [playing, setPlaying] = useState<boolean>(false);
+  const deckClickedRef = useRef(false);
 
   // Store subscription
   const { selectedIds, selectedFlights, clearSelection } = useFlightSelectionStore();
@@ -84,6 +85,13 @@ export function DeckGLMap({
     if (!map) return;
     const is3D = visMode === "hexagon" || visMode === "columns";
     map.easeTo({ pitch: is3D ? 45 : 0, duration: 600 });
+  }, [visMode]);
+
+  // Reset playing state when leaving trips mode (Bug 3)
+  useEffect(() => {
+    if (visMode !== "trips") {
+      setPlaying(false);
+    }
   }, [visMode]);
 
   const trips = useMemo(
@@ -205,7 +213,8 @@ export function DeckGLMap({
     ];
   }, [planePositions]);
 
-  // Airport pulse — smooth sine-wave animation via rAF
+  // Airport pulse — smooth sine-wave animation via rAF, throttled to ~30fps to avoid
+  // 60× per second React re-renders (Bug 2)
   const [pulseTime, setPulseTime] = useState(0);
   const pulseRafRef = useRef<number | null>(null);
 
@@ -218,8 +227,12 @@ export function DeckGLMap({
     if (selectedFlights.length === 0) return;
 
     const startTime = performance.now();
+    let lastUpdate = 0;
     const animate = (ts: number): void => {
-      setPulseTime(ts - startTime);
+      if (ts - lastUpdate > 33) {
+        lastUpdate = ts;
+        setPulseTime(ts - startTime);
+      }
       pulseRafRef.current = requestAnimationFrame(animate);
     };
     pulseRafRef.current = requestAnimationFrame(animate);
@@ -305,13 +318,23 @@ export function DeckGLMap({
     return () => clearTimeout(timer);
   }, [selectedFlights]);
 
+  // Wrap onFlightClick so that a deck.gl layer click sets the guard ref BEFORE the
+  // Map onClick fires and would otherwise clear the selection immediately (Bug 1).
+  const handleFlightClick = useCallback(
+    (flightId: string): void => {
+      deckClickedRef.current = true;
+      onFlightClick?.(flightId);
+    },
+    [onFlightClick]
+  );
+
   const layers = useMemo((): Layer[] => {
     switch (visMode) {
       case "routes":
         return createRoutesLayers(
           flights,
           minRouteCount,
-          onFlightClick,
+          handleFlightClick,
           themeColors,
           0.3,
           selectedIds
@@ -335,7 +358,7 @@ export function DeckGLMap({
     minRouteCount,
     trips,
     currentTime,
-    onFlightClick,
+    handleFlightClick,
     themeColors,
     selectedIds,
   ]);
@@ -358,6 +381,11 @@ export function DeckGLMap({
         mapStyle={isDarkMode ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
         style={{ position: "absolute", inset: "0" }}
         onClick={() => {
+          // If deck.gl handled this click (e.g. arc click), ignore the Map event (Bug 1)
+          if (deckClickedRef.current) {
+            deckClickedRef.current = false;
+            return;
+          }
           clearSelection();
         }}
       >

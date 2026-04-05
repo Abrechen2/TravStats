@@ -4,6 +4,7 @@ import type { Flight } from "../types";
 import { groupFlights } from "../utils/groupFlights";
 import { FlightEntry } from "./FlightPanel/FlightEntry";
 import { FlightGroupItem } from "./FlightPanel/FlightGroupItem";
+import { useTranslation } from "../hooks/useTranslation";
 
 interface FlightPanelProps {
   flights: Flight[];
@@ -26,6 +27,7 @@ export function FlightPanel({
   onDelete,
   onAddFlight,
 }: FlightPanelProps): JSX.Element {
+  const { t } = useTranslation(["dashboard", "common"]);
   const groups = useMemo(() => groupFlights(flights), [flights]);
 
   return (
@@ -51,7 +53,7 @@ export function FlightPanel({
               style={{ borderBottom: "1px solid var(--color-border)" }}
             >
               <h2 className="text-sm font-semibold flex items-center gap-2">
-                Alle Flüge
+                {t("dashboard:allFlights")}
                 <span
                   className="px-1.5 py-0.5 text-xs rounded-full"
                   style={{ background: "var(--accent)", color: "white" }}
@@ -62,7 +64,7 @@ export function FlightPanel({
               <button
                 type="button"
                 onClick={onClose}
-                aria-label="Panel schließen"
+                aria-label={t("common:buttons.close")}
                 className="text-sm transition-colors"
                 style={{ color: "var(--text-muted)" }}
               >
@@ -100,7 +102,7 @@ export function FlightPanel({
               style={{ borderTop: "1px solid var(--color-border)" }}
             >
               <button type="button" onClick={onAddFlight} className="btn-primary w-full text-sm">
-                + Flug hinzufügen
+                + {t("dashboard:addFlight")}
               </button>
             </div>
           </motion.div>

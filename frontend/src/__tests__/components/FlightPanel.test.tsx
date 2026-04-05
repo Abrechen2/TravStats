@@ -90,7 +90,7 @@ describe("FlightPanel", () => {
         onAddFlight={vi.fn()}
       />
     );
-    await user.click(screen.getByRole("button", { name: "Panel schließen" }));
+    await user.click(screen.getByRole("button", { name: "common:buttons.close" }));
     expect(onClose).toHaveBeenCalledOnce();
   });
 
