@@ -298,7 +298,7 @@ export default function DashboardPage(): JSX.Element {
     (flightId: string) => {
       setRecentFlights((prev) => prev.filter((f) => f.id !== flightId));
       setTotalFlightsCount((prev) => prev - 1);
-      addToast("info", "Flug gelöscht");
+      addToast("info", t("dashboard:success.flightDeletedPending"));
 
       const timer = setTimeout(() => {
         pendingDeletes.current.delete(flightId);
@@ -314,7 +314,7 @@ export default function DashboardPage(): JSX.Element {
             setTotalFlightsCount(recentData.total);
           } catch (error) {
             logger.error("Failed to delete flight:", error);
-            addToast("error", "Fehler beim Löschen des Fluges");
+            addToast("error", t("dashboard:errors.deleteFlight"));
             const recentData = await flightsApi.getAll({
               limit: API_LIMITS.RECENT_FLIGHTS,
               offset: 0,
@@ -382,14 +382,21 @@ export default function DashboardPage(): JSX.Element {
         setRecentFlights(recentData.flights);
         setTotalFlightsCount(recentData.total);
         loadFlights();
-        addToast("success", "Flug dupliziert");
+        addToast("success", t("dashboard:success.flightDuplicated"));
       } catch (error) {
         logger.error("Failed to duplicate flight:", error);
-        addToast("error", "Fehler beim Duplizieren");
+        addToast("error", t("dashboard:errors.duplicateFlight"));
       }
     },
     [addToast, loadFlights]
   );
+
+  useEffect(() => {
+    const timers = pendingDeletes.current;
+    return () => {
+      timers.forEach((timer) => clearTimeout(timer));
+    };
+  }, []);
 
   const handleFilterChange = (newFilters: FlightFilters) => {
     setFilters(newFilters);
