@@ -57,6 +57,25 @@ describe("arcPosition", () => {
     expect(lon).toBeGreaterThan(-180);
     expect(lon).toBeLessThan(180);
   });
+
+  it("antimeridian route (LAX → NRT) produces midpoint in the Pacific, not over Europe", () => {
+    // LAX lon ≈ -118°, NRT lon ≈ +140°
+    // The short path crosses the Pacific (antimeridian); midpoint should be near lon 180° / -180°
+    // and NOT near 0° (which would indicate the route went westward through Europe)
+    const [lon] = arcPosition([-118.41, 33.94], [139.77, 35.76], 0.5);
+    // Midpoint must NOT be near the Greenwich meridian (Europe route)
+    expect(Math.abs(lon)).toBeGreaterThan(90);
+  });
+
+  it("antimeridian route endpoints are returned correctly at t=0 and t=1", () => {
+    const [lon0, lat0] = arcPosition([-118.41, 33.94], [139.77, 35.76], 0);
+    expect(lon0).toBeCloseTo(-118.41);
+    expect(lat0).toBeCloseTo(33.94);
+
+    const [lon1, lat1] = arcPosition([-118.41, 33.94], [139.77, 35.76], 1);
+    expect(lon1).toBeCloseTo(139.77);
+    expect(lat1).toBeCloseTo(35.76);
+  });
 });
 
 describe("easeInOut", () => {
