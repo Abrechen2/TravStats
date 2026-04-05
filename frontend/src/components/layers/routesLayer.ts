@@ -100,7 +100,7 @@ export function createRoutesLayers(
   onFlightClick?: (flightId: string) => void,
   themeColors?: MapLayerColors,
   arcHeight: number = 1,
-  opacity?: number,
+  opacity: number = 1,
   idSuffix: string = ""
 ): Layer[] {
   const { arcs, points } = buildRouteData(flights, minRouteCount, themeColors);
