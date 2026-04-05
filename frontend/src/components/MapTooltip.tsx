@@ -48,7 +48,8 @@ export function MapTooltip({
   if (distanceKm !== null) statParts.push(`${distanceKm.toLocaleString("de-DE")} km`);
   if (durationMin !== null) statParts.push(formatDuration(durationMin));
   if (flight.seatClass) statParts.push(flight.seatClass.replace("_", " "));
-  if (flight.co2Kg != null) statParts.push(`CO₂: ${flight.co2Kg.toFixed(1)}t`);
+  if (flight.co2Kg != null)
+    statParts.push(`CO₂: ${Math.round(flight.co2Kg).toLocaleString("de-DE")} kg`);
 
   const departureDate = flight.departureTime
     ? new Date(flight.departureTime).toLocaleDateString("de-DE")

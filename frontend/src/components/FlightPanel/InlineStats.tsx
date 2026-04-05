@@ -31,7 +31,8 @@ export function InlineStats({ flight }: InlineStatsProps): JSX.Element {
   if (distanceKm !== null) stats.push(`${distanceKm.toLocaleString("de-DE")} km`);
   if (durationMin !== null) stats.push(formatDuration(durationMin));
   if (flight.seatClass) stats.push(flight.seatClass.replace("_", " "));
-  if (flight.co2Kg != null) stats.push(`CO₂: ${flight.co2Kg.toFixed(1)}t`);
+  if (flight.co2Kg != null)
+    stats.push(`CO₂: ${Math.round(flight.co2Kg).toLocaleString("de-DE")} kg`);
   if (flight.aircraft) stats.push(flight.aircraft);
 
   return (
