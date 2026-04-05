@@ -316,10 +316,17 @@ export default function EmailAnnotation({
           // Simple field mapping
           const labelToField: Record<string, keyof Flight> = {
             flightNumber: "flightNumber",
+            airline: "airline",
             departureCode: "departureCode",
             arrivalCode: "arrivalCode",
             pnr: "pnr",
             aircraftType: "aircraftType",
+            seat: "seat",
+            seatClass: "seatClass",
+            terminal: "terminal",
+            gate: "gate",
+            ticketNumber: "ticketNumber",
+            boardingGroup: "boardingGroup",
           };
 
           const field = labelToField[label];
@@ -562,15 +569,30 @@ export default function EmailAnnotation({
                   className="input w-full"
                 >
                   <option value="">{t("training:annotation.selectLabel")}</option>
-                  <option value="flightNumber">Flight Number</option>
-                  <option value="departureCode">Departure Code</option>
-                  <option value="arrivalCode">Arrival Code</option>
-                  <option value="departureDate">Departure Date</option>
-                  <option value="departureTime">Departure Time</option>
-                  <option value="arrivalDate">Arrival Date</option>
-                  <option value="arrivalTime">Arrival Time</option>
-                  <option value="pnr">PNR</option>
-                  <option value="aircraftType">Aircraft Type</option>
+                  <optgroup label="Flug">
+                    <option value="flightNumber">Flight Number</option>
+                    <option value="airline">Airline</option>
+                    <option value="aircraftType">Aircraft Type</option>
+                  </optgroup>
+                  <optgroup label="Route">
+                    <option value="departureCode">Departure Code</option>
+                    <option value="arrivalCode">Arrival Code</option>
+                    <option value="departureDate">Departure Date</option>
+                    <option value="departureTime">Departure Time</option>
+                    <option value="arrivalDate">Arrival Date</option>
+                    <option value="arrivalTime">Arrival Time</option>
+                  </optgroup>
+                  <optgroup label="Boarding">
+                    <option value="seat">Seat</option>
+                    <option value="seatClass">Seat Class</option>
+                    <option value="terminal">Terminal</option>
+                    <option value="gate">Gate</option>
+                    <option value="boardingGroup">Boarding Group</option>
+                  </optgroup>
+                  <optgroup label="Buchung">
+                    <option value="pnr">PNR / Booking Reference</option>
+                    <option value="ticketNumber">Ticket Number</option>
+                  </optgroup>
                 </select>
               </div>
               <button
@@ -654,6 +676,7 @@ export default function EmailAnnotation({
                   )}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* Flug */}
                   <div>
                     <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
                       Flight Number
@@ -668,16 +691,29 @@ export default function EmailAnnotation({
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
-                      PNR
+                      Airline
                     </label>
                     <input
                       type="text"
-                      value={flight.pnr || ""}
-                      onChange={(e) => handleFlightChange(index, "pnr", e.target.value)}
+                      value={flight.airline || ""}
+                      onChange={(e) => handleFlightChange(index, "airline", e.target.value)}
                       className="input w-full"
-                      placeholder="ABC123"
+                      placeholder="Lufthansa"
                     />
                   </div>
+                  <div>
+                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                      Aircraft Type
+                    </label>
+                    <input
+                      type="text"
+                      value={flight.aircraftType || ""}
+                      onChange={(e) => handleFlightChange(index, "aircraftType", e.target.value)}
+                      className="input w-full"
+                      placeholder="A320, Boeing 737"
+                    />
+                  </div>
+                  {/* Route */}
                   <div>
                     <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
                       Departure Code
@@ -752,16 +788,94 @@ export default function EmailAnnotation({
                       className="input w-full"
                     />
                   </div>
+                  {/* Boarding */}
                   <div>
                     <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
-                      Aircraft Type
+                      Seat
                     </label>
                     <input
                       type="text"
-                      value={flight.aircraftType || ""}
-                      onChange={(e) => handleFlightChange(index, "aircraftType", e.target.value)}
+                      value={flight.seat || ""}
+                      onChange={(e) => handleFlightChange(index, "seat", e.target.value)}
                       className="input w-full"
-                      placeholder="A320, Boeing 737"
+                      placeholder="12A"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                      Seat Class
+                    </label>
+                    <select
+                      value={flight.seatClass || ""}
+                      onChange={(e) => handleFlightChange(index, "seatClass", e.target.value)}
+                      className="input w-full"
+                    >
+                      <option value="">–</option>
+                      <option value="economy">Economy</option>
+                      <option value="premium_economy">Premium Economy</option>
+                      <option value="business">Business</option>
+                      <option value="first">First</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                      Terminal
+                    </label>
+                    <input
+                      type="text"
+                      value={flight.terminal || ""}
+                      onChange={(e) => handleFlightChange(index, "terminal", e.target.value)}
+                      className="input w-full"
+                      placeholder="2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                      Gate
+                    </label>
+                    <input
+                      type="text"
+                      value={flight.gate || ""}
+                      onChange={(e) => handleFlightChange(index, "gate", e.target.value)}
+                      className="input w-full"
+                      placeholder="A12"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                      Boarding Group
+                    </label>
+                    <input
+                      type="text"
+                      value={flight.boardingGroup || ""}
+                      onChange={(e) => handleFlightChange(index, "boardingGroup", e.target.value)}
+                      className="input w-full"
+                      placeholder="1"
+                    />
+                  </div>
+                  {/* Buchung */}
+                  <div>
+                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                      PNR / Booking Reference
+                    </label>
+                    <input
+                      type="text"
+                      value={flight.pnr || ""}
+                      onChange={(e) => handleFlightChange(index, "pnr", e.target.value)}
+                      className="input w-full"
+                      placeholder="ABC123"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-[var(--text-primary)] mb-1">
+                      Ticket Number
+                    </label>
+                    <input
+                      type="text"
+                      value={flight.ticketNumber || ""}
+                      onChange={(e) => handleFlightChange(index, "ticketNumber", e.target.value)}
+                      className="input w-full"
+                      placeholder="2202236084346"
                     />
                   </div>
                 </div>
