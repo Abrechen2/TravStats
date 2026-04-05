@@ -54,9 +54,11 @@ export const airportSchema = z.object({
   lon: z.number().min(-180).max(180),
 });
 
+const emptyStringToUndefined = z.string().optional().transform((v) => (v === "" ? undefined : v));
+
 const baseFlightSchema = z.object({
-  airline: z.string().min(1).optional(),
-  flightNumber: z.string().min(1).optional(),
+  airline: emptyStringToUndefined,
+  flightNumber: emptyStringToUndefined,
   callsign: z.string().optional(),
   aircraft: z.string().optional(),
   departure: z.object({
