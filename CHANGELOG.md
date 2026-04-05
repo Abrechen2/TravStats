@@ -9,6 +9,27 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.10.0-beta] - 2026-04-05 (Update 2)
+
+### Added
+- **`operatingAirline` Feld**: Neues optionales DB-Feld `operating_airline` (Migration `20260405000000_add_operating_airline`). Speichert den durchführenden Carrier bei Codeshare-Flügen sowie Bahn/Bus-Tickets.
+- **"Durchgeführt von"-Formularfeld**: In `FlightEditModal` und `FlightCompleteStep` mit `<datalist>`-Autovervollständigung.
+- **Airline-Autovervollständigung**: Alle Airline-Felder haben jetzt browser-native `<datalist>` mit ~75 Airlines inkl. Bahn/Bus-Betreiber (DB, FlixTrain, Flixbus, ÖBB, SBB, TGV, Eurostar).
+- **`cleanEmailBody()` Utility**: Bereinigt plain-text E-Mail-Body vor dem Parsen — entfernt HTML-Tags, URLs, normalisiert Whitespace. Spiegelt die `filterEmailText`-Funktion der Annotation-Ansicht.
+
+### Changed
+- **Parser nutzt bereinigten Text**: `parseEmail()` wendet `cleanEmailBody()` an bevor Text an alle Parser übergeben wird — Parser und Annotation-Ansicht sehen jetzt identischen Text.
+- **`EmailAnnotation` speichert gefilterten Text**: `fullText` in Annotations wird als `filterEmailText(raw)` gespeichert statt roh — Annotation-Positionen und Pattern-Ableitungen sind konsistent.
+- **Airline auto-ableiten**: Post-Processing leitet Airline-Name aus Flugnummer-Prefix ab (`LH2316` → `LH` → `"Lufthansa"`) wenn `airline` leer.
+- **Parser erkennt `operated by`**: `"operated by X"` / `"durchgeführt von X"` Muster werden automatisch als `operatingAirline` erfasst.
+- **`AIRLINE_IATA_MAP`** von 15 auf ~75 Airlines erweitert.
+
+### Fixed
+- **400-Fehler beim Hinzufügen**: Zod-Schema warf Fehler wenn `airline: ""` (Leerstring) übergeben wurde. Fix: `emptyStringToUndefined` Transform für `airline` und `flightNumber` in `baseFlightSchema`.
+- **LH-old Template**: `flightNumber`-Pattern auf `^([A-Z]{2}\s+\d{3,4})$` geändert — funktioniert nach `cleanEmailBody()` da `<img.png>\tLH 2316\t` → `LH 2316` (eigene Zeile). Template-Version auf `2025-04b` gebumpt und zu GitHub-Templates-Repo gepusht.
+
+---
+
 ## [0.10.0-beta] - 2026-04-04
 
 ### Added
