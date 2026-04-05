@@ -20,6 +20,7 @@ export default function FlightEditModal({
   const { t } = useTranslation(["flights", "common", "errors"]);
   const [formData, setFormData] = useState({
     airline: flight.airline || "",
+    operatingAirline: flight.operatingAirline || "",
     flightNumber: flight.flightNumber || "",
     aircraft: flight.aircraft || "",
     status: flight.status || "scheduled",
@@ -48,6 +49,7 @@ export default function FlightEditModal({
     // Reset form when flight changes
     setFormData({
       airline: flight.airline || "",
+      operatingAirline: flight.operatingAirline || "",
       flightNumber: flight.flightNumber || "",
       aircraft: flight.aircraft || "",
       status: flight.status || "scheduled",
@@ -79,6 +81,7 @@ export default function FlightEditModal({
     try {
       const updates: Partial<Flight> = {
         airline: formData.airline || undefined,
+        operatingAirline: formData.operatingAirline || undefined,
         flightNumber: formData.flightNumber || undefined,
         aircraft: formData.aircraft || undefined,
         status: formData.status as Flight["status"],
@@ -159,7 +162,7 @@ export default function FlightEditModal({
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="label">{t("flights:form.airline")}</label>
               <input
@@ -171,6 +174,23 @@ export default function FlightEditModal({
                 list="airline-suggestions-edit"
               />
               <datalist id="airline-suggestions-edit">
+                {AIRLINES.map((a) => (
+                  <option key={a.iata} value={a.name} />
+                ))}
+              </datalist>
+            </div>
+
+            <div>
+              <label className="label">{t("flights:form.operatingAirline")}</label>
+              <input
+                type="text"
+                value={formData.operatingAirline}
+                onChange={(e) => setFormData({ ...formData, operatingAirline: e.target.value })}
+                className="input"
+                placeholder="z.B. Eurowings, Deutsche Bahn…"
+                list="operating-airline-suggestions-edit"
+              />
+              <datalist id="operating-airline-suggestions-edit">
                 {AIRLINES.map((a) => (
                   <option key={a.iata} value={a.name} />
                 ))}

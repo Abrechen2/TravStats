@@ -32,6 +32,7 @@ const router = Router();
 // Interface for flight update data
 interface FlightUpdateData {
   airline?: string;
+  operatingAirline?: string | null;
   flightNumber?: string;
   callsign?: string | null;
   aircraft?: string | null;
@@ -265,6 +266,7 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
       data: {
         userId,
         airline: data.airline,
+        operatingAirline: data.operatingAirline,
         flightNumber: data.flightNumber,
         callsign: data.callsign,
         aircraft: data.aircraft,
@@ -418,6 +420,7 @@ router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) =
         properties: {
           id: flight.id,
           airline: flight.airline,
+          operatingAirline: flight.operatingAirline,
           flightNumber: flight.flightNumber,
           callsign: flight.callsign,
           aircraft: flight.aircraft,
@@ -560,6 +563,7 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
 
     const updateData: FlightUpdateData = {};
     if (data.airline) updateData.airline = data.airline;
+    if (data.operatingAirline !== undefined) updateData.operatingAirline = data.operatingAirline;
     if (data.flightNumber) updateData.flightNumber = data.flightNumber;
     if (data.callsign !== undefined) updateData.callsign = data.callsign;
     if (data.aircraft !== undefined) updateData.aircraft = data.aircraft;

@@ -41,12 +41,25 @@ function applyEmailRegexPostProcessing(
       enhanced.seat = regexData.seat;
     }
 
-    // Derive airline name from flight number prefix if not already set
+    // Derive marketing airline name from flight number prefix if not already set
     if (!enhanced.airline && enhanced.flightNumber) {
       const iataPrefix = enhanced.flightNumber.match(/^([A-Z0-9]{2})/)?.[1];
       if (iataPrefix) {
         const name = getAirlineName(iataPrefix);
         if (name) enhanced.airline = name;
+      }
+    }
+
+    // Extract operating carrier from "operated by X" / "durchgeführt von X" patterns
+    if (!enhanced.operatingAirline) {
+      const operatedByPattern = /(?:operated\s+by|durchgeführt\s+von|betrieb(?:en)?\s+von|Durchführender\s+Carrier|operating\s+carrier)[:\s]+([^\n,;]{2,50})/i;
+      const opMatch = operatedByPattern.exec(combinedText);
+      if (opMatch) {
+        const opName = opMatch[1].trim();
+        // Only set if different from marketing airline
+        if (opName && opName.toLowerCase() !== (enhanced.airline ?? "").toLowerCase()) {
+          enhanced.operatingAirline = opName;
+        }
       }
     }
 

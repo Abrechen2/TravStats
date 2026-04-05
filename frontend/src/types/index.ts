@@ -22,6 +22,7 @@ export interface Flight {
   id: string;
   userId: string;
   airline: string;
+  operatingAirline?: string;
   flightNumber: string;
   callsign?: string;
   aircraft?: string;
@@ -88,6 +89,7 @@ export interface Flight {
 
 export interface FlightInput {
   airline?: string;
+  operatingAirline?: string;
   flightNumber?: string;
   callsign?: string;
   aircraft?: string;

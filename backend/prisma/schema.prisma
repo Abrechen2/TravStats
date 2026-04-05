@@ -62,6 +62,7 @@ model Flight {
   id               String   @id @default(uuid())
   userId           String   @map("user_id")
   airline          String?
+  operatingAirline String?  @map("operating_airline")
   flightNumber     String?  @map("flight_number")
   callsign         String?
   aircraft         String?
