@@ -21,13 +21,14 @@ const baseFlight: Flight = {
 describe("InlineStats", () => {
   it("shows distance derived from coordinates", () => {
     render(<InlineStats flight={baseFlight} />);
-    // MUC to JFK is ~8280 km, expect some distance text
-    expect(screen.getByText(/km/)).toBeInTheDocument();
+    // MUC to JFK is ~8280 km; t() returns the i18n key in tests
+    expect(screen.getByText(/stats:distance\.kilometers/)).toBeInTheDocument();
   });
 
   it("prefers routeDistance over calculated distance", () => {
     render(<InlineStats flight={{ ...baseFlight, routeDistance: 9999 }} />);
-    expect(screen.getByText(/9\.999 km/)).toBeInTheDocument();
+    // t() returns the i18n key; value is 9,999 formatted
+    expect(screen.getByText(/9.999.*stats:distance\.kilometers/)).toBeInTheDocument();
   });
 
   it("shows duration", () => {

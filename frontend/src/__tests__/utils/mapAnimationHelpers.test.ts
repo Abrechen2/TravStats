@@ -22,17 +22,40 @@ describe("computeBbox", () => {
 
 describe("arcPosition", () => {
   it("returns source at t=0", () => {
-    expect(arcPosition([0, 0], [10, 10], 0)).toEqual([0, 0]);
+    const [lon, lat] = arcPosition([0, 0], [10, 10], 0);
+    expect(lon).toBeCloseTo(0);
+    expect(lat).toBeCloseTo(0);
   });
 
   it("returns target at t=1", () => {
-    expect(arcPosition([0, 0], [10, 10], 1)).toEqual([10, 10]);
+    const [lon, lat] = arcPosition([0, 0], [10, 10], 1);
+    expect(lon).toBeCloseTo(10);
+    expect(lat).toBeCloseTo(10);
   });
 
-  it("returns midpoint at t=0.5", () => {
+  it("midpoint lies between source and target", () => {
     const [lon, lat] = arcPosition([0, 0], [10, 10], 0.5);
-    expect(lon).toBeCloseTo(5);
-    expect(lat).toBeCloseTo(5);
+    // Great-circle midpoint is close to the linear midpoint for short arcs
+    expect(lon).toBeCloseTo(5, 0);
+    expect(lat).toBeCloseTo(5, 0);
+  });
+
+  it("handles identical source and target (zero distance fallback)", () => {
+    const [lon, lat] = arcPosition([11.79, 48.35], [11.79, 48.35], 0.5);
+    expect(lon).toBeCloseTo(11.79);
+    expect(lat).toBeCloseTo(48.35);
+  });
+
+  it("long-haul arc midpoint is not the linear midpoint", () => {
+    // MUC [11.79, 48.35] → LAX [-118.41, 33.94]
+    // On the great circle the midpoint diverges noticeably from the linear midpoint
+    const [lon, lat] = arcPosition([11.79, 48.35], [-118.41, 33.94], 0.5);
+    const linearLat = (48.35 + 33.94) / 2;
+    // The slerp midpoint latitude should be higher than the linear midpoint (polar arc)
+    expect(lat).toBeGreaterThan(linearLat);
+    // Longitude stays in the same general hemisphere
+    expect(lon).toBeGreaterThan(-180);
+    expect(lon).toBeLessThan(180);
   });
 });
 
