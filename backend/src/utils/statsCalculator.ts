@@ -374,31 +374,57 @@ export function calculateBusinessStats(flights: FlightData[]): BusinessStats {
 export async function calculateUniqueStats(flights: FlightData[]): Promise<UniqueStats> {
   const flownFlights = flights.filter(f => f.status === 'flown');
 
-  // Time travel index - flights where local arrival time appears to be before local departure time.
-  //
-  // TODO: Proper implementation requires per-airport timezone data (e.g. "Europe/Berlin").
-  // The FlightData type does not currently include depTimezone/arrTimezone fields.
-  // A schema migration adding those fields would allow: convert dep/arr UTC times to local
-  // times using the respective timezone, then compare local hours.
-  //
-  // Current approximation: flag flights where UTC arrival is before UTC departure (data-entry
-  // errors only, not real timezone-crossing flights) or where the reported duration is
-  // implausibly short for the distance (< 1 hour for > 1000 km). This is a weak heuristic
-  // and will miss genuine westward long-haul flights (e.g. JFK→LHR arrives "earlier" locally).
+  // Time travel index - flights where local arrival time (at destination) appears to be before
+  // local departure time (at origin), e.g. departing NYC at 23:00 EST and arriving London at
+  // 11:00 GMT — the clock "went back" by 5 hours so the local arrival hour is earlier.
   let timeTravelFlights = 0;
-  flownFlights.forEach(f => {
-    const depTime = new Date(f.departureTime);
-    const arrTime = new Date(f.arrivalTime);
 
-    const duration = arrTime.getTime() - depTime.getTime();
-    const distance = f.depLat != null && f.depLon != null && f.arrLat != null && f.arrLon != null
-      ? calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon)
-      : 0;
+  // Collect all airport codes needed for timezone lookups; reused later for altitude etc.
+  const airportCodes = new Set<string>();
+  for (const f of flownFlights) {
+    if (f.depIata) airportCodes.add(f.depIata);
+    if (f.depIcao) airportCodes.add(f.depIcao);
+    if (f.arrIata) airportCodes.add(f.arrIata);
+    if (f.arrIcao) airportCodes.add(f.arrIcao);
+  }
 
-    if (duration < 0 || (duration < 3600000 && distance > 1000)) {
+  // Build a timezone map from the cached airport data (code → IANA timezone string)
+  const timezoneMap = new Map<string, string>();
+  let airportsForTimezone: Map<string, import('../services/airportLookup').AirportData> = new Map();
+  try {
+    airportsForTimezone = await getCachedAirports(Array.from(airportCodes));
+    for (const [code, airport] of airportsForTimezone.entries()) {
+      if (airport?.timezone) {
+        timezoneMap.set(code, airport.timezone);
+      }
+    }
+  } catch (error) {
+    logger.error({
+      operation: 'calculate_unique_stats',
+      message: 'Failed to fetch airports for time-travel calculation',
+      error,
+    });
+  }
+
+  for (const f of flownFlights) {
+    const depTz =
+      (f.depIata && timezoneMap.get(f.depIata)) ||
+      (f.depIcao && timezoneMap.get(f.depIcao)) ||
+      null;
+    const arrTz =
+      (f.arrIata && timezoneMap.get(f.arrIata)) ||
+      (f.arrIcao && timezoneMap.get(f.arrIcao)) ||
+      null;
+
+    if (!depTz || !arrTz) {
+      // No timezone data available — skip rather than guess
+      continue;
+    }
+
+    if (toLocalMinutes(f.arrivalTime, arrTz) < toLocalMinutes(f.departureTime, depTz)) {
       timeTravelFlights++;
     }
-  });
+  }
 
   // Equator crossings
   let equatorCrossings = 0;
@@ -425,20 +451,15 @@ export async function calculateUniqueStats(flights: FlightData[]): Promise<Uniqu
     return dist > 5000;
   }).length;
 
-  // Highest airport (altitude)
-  const airportCodes = new Set<string>();
-  flownFlights.forEach(f => {
-    if (f.depIata) airportCodes.add(f.depIata);
-    if (f.depIcao) airportCodes.add(f.depIcao);
-    if (f.arrIata) airportCodes.add(f.arrIata);
-    if (f.arrIcao) airportCodes.add(f.arrIcao);
-  });
-
+  // Highest airport (altitude) — reuse the airport data already fetched for timezone lookups
   let highestAirport: { code: string; name: string; altitude: number } | null = null;
 
   try {
-    const airports = await getCachedAirports(Array.from(airportCodes));
-    for (const [code, airport] of airports.entries()) {
+    // If the timezone fetch above failed, do a fresh fetch; otherwise reuse cached data
+    const airportsForAltitude = airportsForTimezone.size > 0
+      ? airportsForTimezone
+      : await getCachedAirports(Array.from(airportCodes));
+    for (const [code, airport] of airportsForAltitude.entries()) {
       if (airport && airport.altitude != null) {
         if (!highestAirport || airport.altitude > highestAirport.altitude) {
           highestAirport = {
@@ -538,7 +559,9 @@ export async function calculateUniqueStats(flights: FlightData[]): Promise<Uniqu
   let mostCountriesDate: string | null = null;
 
   try {
-    const airports = await getCachedAirports(Array.from(airportCodes));
+    const airports = airportsForTimezone.size > 0
+      ? airportsForTimezone
+      : await getCachedAirports(Array.from(airportCodes));
 
     Object.entries(flightsByDate).forEach(([date, dayFlights]) => {
       const countries = new Set<string>();
@@ -592,7 +615,9 @@ export async function calculateUniqueStats(flights: FlightData[]): Promise<Uniqu
   // Continental explorer - count unique continents
   const continents = new Set<string>();
   try {
-    const airports = await getCachedAirports(Array.from(airportCodes));
+    const airports = airportsForTimezone.size > 0
+      ? airportsForTimezone
+      : await getCachedAirports(Array.from(airportCodes));
     flownFlights.forEach(f => {
       const depCode = f.depIata || f.depIcao;
       const arrCode = f.arrIata || f.arrIcao;
@@ -671,7 +696,9 @@ export async function calculateUniqueStats(flights: FlightData[]): Promise<Uniqu
   let internationalFlights = 0;
   let domesticFlights = 0;
   try {
-    const airports = await getCachedAirports(Array.from(airportCodes));
+    const airports = airportsForTimezone.size > 0
+      ? airportsForTimezone
+      : await getCachedAirports(Array.from(airportCodes));
     flownFlights.forEach(f => {
       const depCode = f.depIata || f.depIcao;
       const arrCode = f.arrIata || f.arrIcao;
@@ -780,6 +807,28 @@ export async function calculateUniqueStats(flights: FlightData[]): Promise<Uniqu
     longestLayover,
     roundTripMaster: roundTripCount,
   };
+}
+
+/**
+ * Convert a UTC Date to minutes-since-midnight in the given IANA timezone.
+ * Used for the time-travel index: if local arrival < local departure the
+ * clock appeared to go backwards.
+ */
+function toLocalMinutes(date: Date, timezone: string): number {
+  try {
+    const parts = new Intl.DateTimeFormat('en', {
+      timeZone: timezone,
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: false,
+    }).formatToParts(date);
+    const h = parseInt(parts.find(p => p.type === 'hour')?.value ?? '0', 10);
+    const m = parseInt(parts.find(p => p.type === 'minute')?.value ?? '0', 10);
+    return h * 60 + m;
+  } catch {
+    // Fallback to UTC if the timezone string is invalid/unrecognised
+    return date.getUTCHours() * 60 + date.getUTCMinutes();
+  }
 }
 
 /**
