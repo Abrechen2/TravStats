@@ -151,7 +151,11 @@ export default function FlightReviewModal({
   }, [initialData, flightIndex]); // Also depend on flightIndex to ensure update when switching flights
 
   // Format datetime for datetime-local input
+  // Avoid UTC conversion for timezone-naive strings like "2023-10-17T00:00"
+  // which would shift the date by the local UTC offset
   const formatDateTimeLocal = (isoString: string): string => {
+    const match = isoString.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/);
+    if (match) return `${match[1]}T${match[2]}`;
     try {
       return new Date(isoString).toISOString().slice(0, 16);
     } catch {
