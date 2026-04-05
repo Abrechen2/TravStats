@@ -6,10 +6,18 @@ interface DetectionRule {
 }
 
 const DETECTION_RULES: DetectionRule[] = [
+  // Old Lufthansa format ("Buchungsdetails" in subject) — no domain match, subject-only detection
+  // must come before generic LH rule so it wins on matching subjects
+  {
+    iata: "LH-old",
+    fromDomains: [],
+    subjectPatterns: [/buchungsdetails/i],
+    htmlFingerprints: [],
+  },
   {
     iata: "LH",
-    fromDomains: ["@lufthansa.com", "@miles-and-more.com"],
-    subjectPatterns: [/buchungsbest.?tigung/i, /lufthansa.*booking confirmation/i, /ihre buchung/i],
+    fromDomains: ["@lufthansa.com", "@miles-and-more.com", "@lufthansa.de"],
+    subjectPatterns: [/buchungsbest.?tigung/i, /lufthansa.*booking confirmation/i, /ihre buchung/i, /m.nchen nach/i, /flugbuchung/i],
     htmlFingerprints: ["lufthansa.com", "miles-and-more.com"],
   },
   {

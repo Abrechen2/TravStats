@@ -31,6 +31,20 @@ const CITY_TO_IATA: Record<string, string> = {
   kopenhagen: 'CPH', copenhagen: 'CPH', stockholm: 'ARN', oslo: 'OSL',
   prag: 'PRG', prague: 'PRG', warschau: 'WAW', warsaw: 'WAW',
   budapest: 'BUD', istanbul: 'IST', athen: 'ATH', athens: 'ATH',
+  helsinki: 'HEL',
+  osaka: 'KIX', 'osaka-kansai': 'KIX', kansai: 'KIX',
+  tokyo: 'NRT', tokio: 'NRT', narita: 'NRT',
+  'tokyo-haneda': 'HND', haneda: 'HND',
+  dubai: 'DXB', 'abu dhabi': 'AUH', abudhabi: 'AUH', doha: 'DOH',
+  singapur: 'SIN', singapore: 'SIN',
+  bangkok: 'BKK',
+  seoul: 'ICN', hongkong: 'HKG', 'hong kong': 'HKG',
+  peking: 'PEK', beijing: 'PEK', schanghai: 'PVG', shanghai: 'PVG',
+  delhi: 'DEL', mumbai: 'BOM', bombay: 'BOM',
+  'new york': 'JFK', 'new york jfk': 'JFK', 'new york newark': 'EWR',
+  'los angeles': 'LAX', chicago: 'ORD', miami: 'MIA',
+  toronto: 'YYZ', montreal: 'YUL', vancouver: 'YVR',
+  sydney: 'SYD', melbourne: 'MEL',
 };
 
 // PNR false positives (German words that match 6-char alphanumeric pattern)
@@ -193,7 +207,14 @@ export class RegexTextParser implements ITextParser {
     const sourceLower = source.toLowerCase();
     const sourceUpper = source.toUpperCase();
 
-    // Try city name mapping first
+    // Highest priority: "Von: City (MUC)" / "In: City (LUX)" lines
+    const depM = source.match(/(?:^|\n)\s*(?:Von|Ab|From|Departure|Abflug(?:\s*-?\s*Ort)?)\s*:?\s*[^(\n]*\(([A-Z]{3})\)/im);
+    const arrM = source.match(/(?:^|\n)\s*(?:In|Nach|To|Arrival|Ankunft(?:\s*-?\s*Ort)?)\s*:?\s*[^(\n]*\(([A-Z]{3})\)/im);
+    if (depM && this.isValidIATACode(depM[1])) {
+      return { departure: depM[1], arrival: arrM && this.isValidIATACode(arrM[1]) ? arrM[1] : undefined };
+    }
+
+    // Try city name mapping
     const cityPattern = /(?:von|ab|from)\s+([\p{L}\s-]+?)\s+(?:nach|to|bis)\s+([\p{L}\s-]+?)(?:\s+am|\s+on|\s+\d|$|\n)/iu;
     const cityMatch = cityPattern.exec(sourceLower);
 
@@ -255,7 +276,7 @@ export class RegexTextParser implements ITextParser {
 
     // Extract all flight numbers with context
     const flightNumberPatterns = [
-      /(?:FLIGHT|FLUG|FLUGNUMMER|FLUG-NR|FLT\.?)\s*:?\s*([A-Z]{2,3}\s?\d{1,4})\b/gi,
+      /(?:FLIGHT|FLUG|FLUGNUMMER|FLUGNR\.?|FLUG-NR|FLT\.?)\s*:?\s*([A-Z]{2,3}\s?\d{1,4})\b/gi,
       /\b([A-Z]{2,3})\s*(\d{1,4})\b(?=.*(?:FLIGHT|FLUG|DEPARTURE|ABFLUG|BOARDING|GATE|TERMINAL))/gi,
     ];
 
@@ -375,6 +396,26 @@ export class RegexTextParser implements ITextParser {
     const sourceLower = source.toLowerCase();
     const sourceUpper = source.toUpperCase();
 
+    // Pattern 0 (highest priority): "Von: City Name (MUC)" / "In: City Name (LUX)" format
+    // Common in new Lufthansa emails. Each line has a keyword + city + IATA in parens.
+    const depIataMatches: Array<{ code: string; index: number }> = [];
+    const arrIataMatches: Array<{ code: string; index: number }> = [];
+    const depLinePattern = /(?:^|\n)\s*(?:von|ab|from|departure|abflug(?:\s*-?\s*ort)?)\s*:?\s*[^(\n]*\(([A-Z]{3})\)/gim;
+    const arrLinePattern = /(?:^|\n)\s*(?:in|nach|to|arrival|ankunft(?:\s*-?\s*ort)?)\s*:?\s*[^(\n]*\(([A-Z]{3})\)/gim;
+    for (const m of source.matchAll(depLinePattern)) {
+      if (this.isValidIATACode(m[1])) depIataMatches.push({ code: m[1], index: m.index! });
+    }
+    for (const m of source.matchAll(arrLinePattern)) {
+      if (this.isValidIATACode(m[1])) arrIataMatches.push({ code: m[1], index: m.index! });
+    }
+    if (depIataMatches.length > 0 || arrIataMatches.length > 0) {
+      const count = Math.max(depIataMatches.length, arrIataMatches.length);
+      for (let i = 0; i < count; i++) {
+        pairs.push({ departure: depIataMatches[i]?.code, arrival: arrIataMatches[i]?.code });
+      }
+      return pairs; // high-confidence result — skip lower-priority patterns
+    }
+
     // Pattern 1: City names (von X nach Y)
     const cityPattern = /(?:von|ab|from)\s+([\p{L}\s-]+?)\s+(?:nach|to|bis)\s+([\p{L}\s-]+?)(?:\s+am|\s+on|\s+\d|$|\n)/giu;
     let cityMatch;
@@ -485,6 +526,11 @@ export class RegexTextParser implements ITextParser {
    * Extract shared PNR (should be same for all flights)
    */
   private extractSharedPNR(source: string): string | undefined {
+    // Label-based extraction first (more reliable) — covers both old and new Lufthansa formats
+    const labeledPnr = source.match(
+      /(?:Buchungsreferenz|Buchungscode|Booking\s*(?:Reference|Code)|PNR|Confirmation\s*(?:Number|Code))\s*:?\s*([A-Z0-9]{5,8})\b/i
+    );
+    if (labeledPnr) return labeledPnr[1].toUpperCase();
     return this.findPNRInSource(source.toUpperCase());
   }
 
@@ -496,26 +542,57 @@ export class RegexTextParser implements ITextParser {
   private extractLabeledDates(source: string): { departureTime?: string; arrivalTime?: string } {
     const result: { departureTime?: string; arrivalTime?: string } = {};
 
+    // Strategy A: new Lufthansa format — "Abflug - Datum: 06 Jun 2025\n  Zeit: 09:30"
+    // Match "Abflug[-]Datum:" and "Ankunft[-]Datum:" blocks, then look for Zeit: nearby.
+    const datumZeitPattern =
+      /(?:Abflug|Departure)\s*[-–]\s*(?:Datum|Date)\s*:?\s*([\w\s.]+?)\s*\n(?:[^\n]*\n)?\s*Zeit\s*:?\s*(\d{1,2}:\d{2})/gi;
+    const datumZeitArrPattern =
+      /(?:Ankunft|Arrival)\s*[-–]\s*(?:Datum|Date)\s*:?\s*([\w\s.]+?)\s*\n(?:[^\n]*\n)?\s*Zeit\s*:?\s*(\d{1,2}:\d{2})/gi;
+
+    const parseDateTimePair = (dateStr: string, timeStr: string): string | undefined => {
+      const m = dateStr.trim().match(/^(\d{1,2})[.\s]+([A-Za-zÄÖÜäöü]{3,9}|\d{1,2})[.\s]+(\d{4})$/);
+      if (!m) return undefined;
+      const d = m[1].padStart(2, '0');
+      const raw = m[2].toUpperCase();
+      const mo = MONTH_NAMES[raw] ?? (m[2].length <= 2 ? m[2].padStart(2, '0') : undefined);
+      if (!mo) return undefined;
+      const h = timeStr.split(':')[0].padStart(2, '0');
+      const min = timeStr.split(':')[1] ?? '00';
+      return `${m[3]}-${mo}-${d}T${h}:${min}`;
+    };
+
+    for (const m of source.matchAll(datumZeitPattern)) {
+      const iso = parseDateTimePair(m[1], m[2]);
+      if (iso) { result.departureTime = iso; break; }
+    }
+    for (const m of source.matchAll(datumZeitArrPattern)) {
+      const iso = parseDateTimePair(m[1], m[2]);
+      if (iso) { result.arrivalTime = iso; break; }
+    }
+
+    if (result.departureTime && result.arrivalTime) return result;
+
+    // Strategy B: label-based parsing for combined datetime or date-only labels.
     // DEP_LABELS: The lookahead (?=\s*:|\s+\d|\s+[A-Za-zÄÖÜäöü]{3}) on "Dep"/"Arr" is zero-width
-    // (not consumed). The trailing \s*:?\s* then consumes the actual separator, so m[0].length
-    // correctly positions past "Dep: " or "Dep " before the date value. No offset bug.
-    const DEP_LABELS = /(?:Abflug|Abflugzeit|Abreise|Departure|Departing|Departs|Dep(?=\s*:|\s+\d|\s+[A-Za-zÄÖÜäöü]{3}))\s*:?\s*/gi;
-    const ARR_LABELS = /(?:Ankunft|Ankunftszeit|Arrival|Arriving|Arrives|Arr(?=\s*:|\s+\d|\s+[A-Za-zÄÖÜäöü]{3}))\s*:?\s*/gi;
+    // (not consumed). The trailing \s*:?\s* then consumes the actual separator.
+    const DEP_LABELS =
+      /(?:Abflug(?!\s*[-–]\s*(?:Datum|Ort))|Abflugzeit|Abreise|Departure|Departing|Departs|Dep(?=\s*:|\s+\d|\s+[A-Za-zÄÖÜäöü]{3}))\s*:?\s*/gi;
+    const ARR_LABELS =
+      /(?:Ankunft(?!\s*[-–]\s*(?:Datum|Ort))|Ankunftszeit|Arrival|Arriving|Arrives|Arr(?=\s*:|\s+\d|\s+[A-Za-zÄÖÜäöü]{3}))\s*:?\s*/gi;
 
     const parseFromPos = (pos: number): string | undefined => {
-      const slice = source.slice(pos, pos + 50);
+      const slice = source.slice(pos, pos + 60);
       // ISO format (TZ suffix stripped)
       const isoM = slice.match(/^(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?)(?:[+-]\d{2}:?\d{2}|Z)?/);
       if (isoM) {
         const iso = isoM[1].replace(' ', 'T');
-        // Check for +N next-day marker after ISO datetime (exclude +HH:MM timezone offsets)
         const afterIso = slice.slice(isoM[0].length, isoM[0].length + 8);
         const nextDay = afterIso.match(/^\s*\(?\+(\d)\)?(?!\d*:)/);
         return nextDay ? addDays(iso, Number(nextDay[1])) : iso;
       }
-      // German/English date format
+      // German/English date format (time optional, with "Uhr" suffix)
       const deM = slice.match(
-        /^(\d{1,2})[.\s]+(\d{1,2}|[A-Za-zÄÖÜäöü]{3,9})[.\s]+(\d{4})(?:[,\s]+(\d{1,2}):(\d{2}))?/
+        /^(\d{1,2})[.\s]+(\d{1,2}|[A-Za-zÄÖÜäöü]{3,9})[.\s]+(\d{4})(?:[,\s]+(\d{1,2}):(\d{2})(?:\s*Uhr)?)?/
       );
       if (deM) {
         const d = deM[1].padStart(2, '0');
@@ -524,23 +601,40 @@ export class RegexTextParser implements ITextParser {
         const h = deM[4] ? deM[4].padStart(2, '0') : '00';
         const min = deM[5] ?? '00';
         let iso = `${deM[3]}-${mo}-${d}T${h}:${min}`;
-        // Check for +N next-day marker (exclude +HH:MM timezone offsets)
         const afterDate = slice.slice(deM[0].length, deM[0].length + 8);
         const nextDay = afterDate.match(/^\s*\(?\+(\d)\)?(?!\d*:)/);
         if (nextDay) iso = addDays(iso, Number(nextDay[1]));
         return iso;
       }
+      // Weekday prefix "So. 22. Oktober..." — skip weekday and retry
+      const weekdayPrefixM = slice.match(/^[A-Za-z]{2,3}\.\s+/);
+      if (weekdayPrefixM) {
+        return parseFromPos(pos + weekdayPrefixM[0].length);
+      }
       return undefined;
     };
 
-    for (const m of source.matchAll(DEP_LABELS)) {
-      const t = parseFromPos(m.index! + m[0].length);
-      if (t) { result.departureTime = t; break; }
+    if (!result.departureTime) {
+      for (const m of source.matchAll(DEP_LABELS)) {
+        const t = parseFromPos(m.index! + m[0].length);
+        if (t) { result.departureTime = t; break; }
+      }
     }
 
-    for (const m of source.matchAll(ARR_LABELS)) {
-      const t = parseFromPos(m.index! + m[0].length);
-      if (t) { result.arrivalTime = t; break; }
+    if (!result.arrivalTime) {
+      for (const m of source.matchAll(ARR_LABELS)) {
+        const pos = m.index! + m[0].length;
+        const slice = source.slice(pos, pos + 20);
+        // Time-only arrival (e.g. "Ankunft: 19:05 Uhr") — combine with departure date
+        const timeOnly = slice.match(/^(\d{1,2}:\d{2})(?:\s*Uhr)?/);
+        if (timeOnly && result.departureTime) {
+          const depDate = result.departureTime.slice(0, 10); // YYYY-MM-DD
+          result.arrivalTime = `${depDate}T${timeOnly[1].padStart(5, '0')}`;
+          break;
+        }
+        const t = parseFromPos(pos);
+        if (t) { result.arrivalTime = t; break; }
+      }
     }
 
     return result;
@@ -557,7 +651,7 @@ export class RegexTextParser implements ITextParser {
     // Must be in context of "Flight", "LH", or near airport codes
     // Avoid matching "AM18" from "am 18 September" by requiring context
     const flightPatterns = [
-      /(?:FLIGHT|FLUG|FLUGNUMMER|FLUG-NR|FLT\.?)\s*:?\s*([A-Z]{2,3}\s?\d{1,4})\b/i,
+      /(?:FLIGHT|FLUG|FLUGNUMMER|FLUGNR\.?|FLUG-NR|FLT\.?)\s*:?\s*([A-Z]{2,3}\s?\d{1,4})\b/i,
       /\b([A-Z]{2,3})\s*(\d{1,4})\b(?=.*(?:FLIGHT|FLUG|DEPARTURE|ABFLUG|BOARDING|GATE|TERMINAL))/i,
       /\b([A-Z]{2,3})\s*(\d{1,4})\b(?=.*[A-Z]{3}.*[A-Z]{3})/i, // Near airport codes
     ];

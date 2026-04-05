@@ -29,9 +29,34 @@ const SELECTOR_TO_BOOKING_KEY: Partial<Record<SelectorKey, keyof ParsedBooking>>
   gate: "gate",
 };
 
+/**
+ * Try regex patterns from textPatterns against plain text.
+ * Returns all non-empty capture groups joined with "T" (for date+time combos), or undefined.
+ */
+function applyTextPatterns(patterns: string[], text: string): string | undefined {
+  for (const pattern of patterns) {
+    try {
+      const m = text.match(new RegExp(pattern, "im"));
+      if (!m) continue;
+      // Collect all non-empty capture groups (m[1], m[2], ...)
+      const groups: string[] = [];
+      for (let i = 1; i < m.length; i++) {
+        if (m[i]) groups.push(m[i].trim());
+      }
+      if (groups.length === 0) continue;
+      // Two groups → date+time → join with "T"
+      if (groups.length === 2) return `${groups[0]}T${groups[1]}`;
+      return groups[0];
+    } catch {
+      // ignore invalid regex
+    }
+  }
+  return undefined;
+}
+
 export function applyTemplate(
   template: AirlineTemplate,
-  _plainText: string,
+  plainText: string,
   htmlContent: string
 ): ParsedBooking {
   const $ = htmlContent ? cheerio.load(htmlContent) : null;
@@ -48,16 +73,23 @@ export function applyTemplate(
 
   for (const [sKey, bookingKey] of entries) {
     const selector = template.selectors[sKey];
-    if (!selector) continue;
+    const textPats = template.textPatterns?.[sKey];
+    if (!selector && !textPats?.length) continue;
 
     totalFields++;
     let value: string | undefined;
 
-    if ($) {
+    // Try HTML selector first
+    if ($ && selector) {
       const el = $(selector);
       if (el.length > 0) {
         value = el.first().text().trim() || el.first().attr("data-value")?.trim();
       }
+    }
+
+    // Fallback to text patterns
+    if (!value && textPats?.length && plainText) {
+      value = applyTextPatterns(textPats, plainText);
     }
 
     if (value) {
