@@ -66,6 +66,45 @@ export function splitDateTime(dateTime?: string): { date?: string; time?: string
  * Handles common formats found in booking confirmation emails.
  * Returns values in YYYY-MM-DD and HH:MM format suitable for <input type="date/time">.
  */
+const MONTH_NAME_MAP: Record<string, string> = {
+  januar: "01",
+  january: "01",
+  jan: "01",
+  februar: "02",
+  february: "02",
+  feb: "02",
+  märz: "03",
+  maerz: "03",
+  march: "03",
+  mar: "03",
+  mär: "03",
+  april: "04",
+  apr: "04",
+  mai: "05",
+  may: "05",
+  juni: "06",
+  june: "06",
+  jun: "06",
+  juli: "07",
+  july: "07",
+  jul: "07",
+  august: "08",
+  aug: "08",
+  september: "09",
+  sep: "09",
+  sept: "09",
+  oktober: "10",
+  october: "10",
+  okt: "10",
+  oct: "10",
+  november: "11",
+  nov: "11",
+  dezember: "12",
+  december: "12",
+  dez: "12",
+  dec: "12",
+};
+
 export function parseAnnotationText(text: string): { date?: string; time?: string } {
   const t = text.trim();
 
@@ -92,6 +131,36 @@ export function parseAnnotationText(text: string): { date?: string; time?: strin
 
   // ISO date only: 2024-03-18
   if (t.match(/^\d{4}-\d{2}-\d{2}$/)) return { date: t };
+
+  // Written month name: "17. Oktober 2023", "17 Oct 2023", "October 17, 2023", "17. Oct 2023 14:30"
+  const monthNameMatch = t.match(
+    /^(\d{1,2})\.?\s+([A-Za-zäöüÄÖÜ]{3,9})\.?\s+(\d{4})(?:\s+(\d{1,2}:\d{2}))?/i
+  );
+  if (monthNameMatch) {
+    const [, d, monthStr, y, time] = monthNameMatch;
+    const m = MONTH_NAME_MAP[monthStr.toLowerCase()];
+    if (m) {
+      return {
+        date: `${y}-${m}-${d.padStart(2, "0")}`,
+        ...(time ? { time: time.padStart(5, "0") } : {}),
+      };
+    }
+  }
+
+  // "October 17, 2023" or "Oktober 17, 2023"
+  const monthFirstMatch = t.match(
+    /^([A-Za-zäöüÄÖÜ]{3,9})\.?\s+(\d{1,2}),?\s+(\d{4})(?:\s+(\d{1,2}:\d{2}))?/i
+  );
+  if (monthFirstMatch) {
+    const [, monthStr, d, y, time] = monthFirstMatch;
+    const m = MONTH_NAME_MAP[monthStr.toLowerCase()];
+    if (m) {
+      return {
+        date: `${y}-${m}-${d.padStart(2, "0")}`,
+        ...(time ? { time: time.padStart(5, "0") } : {}),
+      };
+    }
+  }
 
   // Time only: 14:30, 14:30:00, 14:30 Uhr, 2:30 PM
   const timeMatch = t.match(/^(\d{1,2}:\d{2})(?::\d{2})?(?:\s*Uhr)?$/i);
