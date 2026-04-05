@@ -10,7 +10,6 @@ import UnitsSection from "../components/Settings/UnitsSection";
 import DefaultsSection from "../components/Settings/DefaultsSection";
 import MapSection from "../components/Settings/MapSection";
 import NotificationsSection from "../components/Settings/NotificationsSection";
-import PrivacySection from "../components/Settings/PrivacySection";
 import BackupSection from "../components/Settings/BackupSection";
 import ParserSection from "../components/Settings/ParserSection";
 import AutoUpdateSection from "../components/Settings/AutoUpdateSection";
@@ -33,13 +32,11 @@ export default function SettingsPage(): JSX.Element {
     units,
     defaults,
     map,
-    privacy,
     setProfile,
     setDisplay,
     setUnits,
     setDefaults,
     setMap,
-    setPrivacy,
     boardingPassParserStrategy,
     setBoardingPassParserStrategy,
     isDarkMode,
@@ -87,7 +84,6 @@ export default function SettingsPage(): JSX.Element {
     { id: "defaults", label: t("settings:defaults.title") || "Defaults" },
     { id: "map", label: t("settings:map.title") || "Map" },
     { id: "notifications", label: t("settings:notifications.title") || "Notifications" },
-    { id: "privacy", label: t("settings:privacy.title") || "Privacy" },
     { id: "backup", label: t("settings:backup.title") || "Backup" },
     { id: "parser", label: "Parser" },
     { id: "autoupdate", label: t("settings:autoUpdate.title") || "Auto-Update" },
@@ -139,13 +135,11 @@ export default function SettingsPage(): JSX.Element {
             {activeSection === "profile" && (
               <ProfileSection
                 profile={profile}
-                privacy={privacy}
                 savingProfile={savingProfile}
                 uploadingProfilePicture={uploadingProfilePicture}
                 onSaveProfile={saveProfileSettings}
                 onAvatarUpload={handleAvatarUpload}
                 onSetProfile={setProfile}
-                onSetPrivacy={setPrivacy}
                 onShowPasswordModal={() => setShowPasswordModal(true)}
               />
             )}
@@ -163,9 +157,6 @@ export default function SettingsPage(): JSX.Element {
             )}
             {activeSection === "map" && <MapSection map={map} onSetMap={setMap} />}
             {activeSection === "notifications" && <NotificationsSection />}
-            {activeSection === "privacy" && (
-              <PrivacySection privacy={privacy} onSetPrivacy={setPrivacy} />
-            )}
             {activeSection === "backup" && (
               <BackupSection
                 lastBackup={lastBackup}

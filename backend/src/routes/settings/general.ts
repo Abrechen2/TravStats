@@ -48,19 +48,6 @@ const settingsSchema = z.object({
     checkInReminder: z.boolean().optional(),
     featureUpdates: z.boolean().optional(),
   }).partial().optional(),
-  privacy: z.object({
-    twoFactorAuth: z.boolean().optional(),
-    loginAlerts: z.boolean().optional(),
-    dataExportRequested: z.boolean().optional(),
-    accountDeletionRequested: z.boolean().optional(),
-    analyticsOptIn: z.boolean().optional(),
-  }).partial().optional(),
-  backup: z.object({
-    autoBackup: z.boolean().optional(),
-    backupInterval: z.enum(['daily', 'weekly', 'monthly']).optional(),
-    exportFormat: z.enum(['json', 'csv', 'pdf']).optional(),
-    cloudSync: z.boolean().optional(),
-  }).partial().optional(),
   autoUpdate: z.object({
     enabled: z.boolean().optional(),
     requireApproval: z.boolean().optional(),

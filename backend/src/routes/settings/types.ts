@@ -47,19 +47,6 @@ export interface SettingsDataJson {
     checkInReminder?: boolean;
     featureUpdates?: boolean;
   };
-  privacy?: {
-    twoFactorAuth?: boolean;
-    loginAlerts?: boolean;
-    dataExportRequested?: boolean;
-    accountDeletionRequested?: boolean;
-    analyticsOptIn?: boolean;
-  };
-  backup?: {
-    autoBackup?: boolean;
-    backupInterval?: string;
-    exportFormat?: string;
-    cloudSync?: boolean;
-  };
   onboarding?: OnboardingState;
   [key: string]: unknown;
 }
@@ -151,6 +138,4 @@ export const defaultSettings = {
   defaults: { flightStatus: 'scheduled', seatClass: 'economy', favoriteAirline: 'Lufthansa', flightCategory: 'business' },
   map: { mapStyle: 'osm', zoomLevel: 3, markerStyle: 'pin', routeColor: '#2563eb' },
   notifications: { emailNotifications: true, flightReminder: '24h', checkInReminder: true, featureUpdates: true },
-  privacy: { twoFactorAuth: false, loginAlerts: true, dataExportRequested: false, accountDeletionRequested: false, analyticsOptIn: false },
-  backup: { autoBackup: false, backupInterval: 'weekly', exportFormat: 'json', cloudSync: false },
 };

@@ -60,16 +60,6 @@ export interface NotificationSettings {
   flightReminder: FlightReminder;
 }
 
-export interface PrivacySettings {
-  twoFactorAuth: boolean;
-  loginAlerts: boolean;
-  dataExportRequested: boolean;
-  accountDeletionRequested: boolean;
-  analyticsOptIn?: boolean;
-}
-
-export type BackupSettings = Record<string, never>;
-
 export interface ApiKeyStatus {
   hasKey: boolean;
   isShared: boolean;
@@ -91,8 +81,6 @@ export interface SettingsState {
   defaults: DefaultsSettings;
   map: MapSettings;
   notifications: NotificationSettings;
-  privacy: PrivacySettings;
-  backup: BackupSettings;
   apiKeys: ApiKeysStatus | null;
   boardingPassParserStrategy: BoardingPassParserStrategy;
   setProfile: SettingsUpdater<ProfileSettings>;
@@ -101,8 +89,6 @@ export interface SettingsState {
   setDefaults: SettingsUpdater<DefaultsSettings>;
   setMap: SettingsUpdater<MapSettings>;
   setNotifications: SettingsUpdater<NotificationSettings>;
-  setPrivacy: SettingsUpdater<PrivacySettings>;
-  setBackup: SettingsUpdater<BackupSettings>;
   setApiKeys: (status: ApiKeysStatus) => void;
   setBoardingPassParserStrategy: (strategy: BoardingPassParserStrategy) => void;
   loadApiKeysStatus: () => Promise<void>;
@@ -119,8 +105,6 @@ const defaultSettings: Omit<
   | "setDefaults"
   | "setMap"
   | "setNotifications"
-  | "setPrivacy"
-  | "setBackup"
   | "setApiKeys"
   | "setBoardingPassParserStrategy"
   | "loadApiKeysStatus"
@@ -159,14 +143,6 @@ const defaultSettings: Omit<
   notifications: {
     flightReminder: "24h",
   },
-  privacy: {
-    twoFactorAuth: false,
-    loginAlerts: true,
-    dataExportRequested: false,
-    accountDeletionRequested: false,
-    analyticsOptIn: false,
-  },
-  backup: {},
   apiKeys: null,
   boardingPassParserStrategy: null, // null = auto (LLM wenn verfügbar)
 };
@@ -199,13 +175,6 @@ export const useSettingsStore = create<SettingsState>()(
         set((state) => ({
           notifications: { ...state.notifications, ...updates },
         })),
-      setPrivacy: (updates) =>
-        set((state) => ({
-          privacy: { ...state.privacy, ...updates },
-        })),
-      setBackup: () => {
-        // BackupSettings has no fields; no-op
-      },
       setApiKeys: (status) =>
         set(() => ({
           apiKeys: status,
