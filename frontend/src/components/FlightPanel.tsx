@@ -51,7 +51,7 @@ export function FlightPanel({
               style={{ borderBottom: "1px solid var(--color-border)" }}
             >
               <h2 className="text-sm font-semibold flex items-center gap-2">
-                Letzte Flüge
+                Alle Flüge
                 <span
                   className="px-1.5 py-0.5 text-xs rounded-full"
                   style={{ background: "var(--accent)", color: "white" }}
