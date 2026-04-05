@@ -4,6 +4,7 @@
 
 export interface Flight {
   flightNumber?: string;
+  airline?: string;
   departureCode?: string;
   arrivalCode?: string;
   departureDate?: string; // Format: YYYY-MM-DD
@@ -11,11 +12,14 @@ export interface Flight {
   arrivalDate?: string; // Format: YYYY-MM-DD
   arrivalTime?: string; // Format: HH:MM
   pnr?: string;
-  aircraftType?: string; // Statt price
+  aircraftType?: string;
   seat?: string;
+  seatClass?: string;
   gate?: string;
   terminal?: string;
-  [key: string]: string | undefined; // Für zusätzliche Felder
+  ticketNumber?: string;
+  boardingGroup?: string;
+  [key: string]: string | undefined;
 }
 
 /**
