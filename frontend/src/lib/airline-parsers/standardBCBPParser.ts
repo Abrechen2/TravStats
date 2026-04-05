@@ -11,7 +11,7 @@ import {
   julianDateToDate,
   mapCompartmentToSeatClass,
   getAirlineName,
-} from "../bcbpParser";
+} from "./bcbpHelpers";
 import { logger } from "../logger";
 
 /**

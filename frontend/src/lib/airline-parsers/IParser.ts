@@ -5,7 +5,7 @@
  * Parsers are executed in priority order until one succeeds.
  */
 
-import { BoardingPassData } from "../bcbpParser";
+import { BoardingPassData } from "./bcbpHelpers";
 
 /**
  * Parser category for organization and logging
