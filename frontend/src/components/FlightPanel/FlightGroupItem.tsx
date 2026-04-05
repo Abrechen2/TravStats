@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import type { Flight } from "../../types";
 import { FlightEntry } from "./FlightEntry";
 import { useFlightSelectionStore } from "../../store/flightSelectionStore";
@@ -20,13 +21,17 @@ export function FlightGroupItem({
 }: FlightGroupItemProps): JSX.Element {
   const { setSelection } = useFlightSelectionStore();
 
-  const totalDistanceKm = Math.round(
-    flights.reduce((sum, f) => {
-      if (f.depLat != null && f.depLon != null && f.arrLat != null && f.arrLon != null) {
-        return sum + calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon);
-      }
-      return sum;
-    }, 0)
+  const totalDistanceKm = useMemo(
+    () =>
+      Math.round(
+        flights.reduce((sum, f) => {
+          if (f.depLat != null && f.depLon != null && f.arrLat != null && f.arrLon != null) {
+            return sum + calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon);
+          }
+          return sum;
+        }, 0)
+      ),
+    [flights]
   );
 
   return (

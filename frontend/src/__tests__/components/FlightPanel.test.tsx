@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { FlightPanel } from "../../components/FlightPanel";
 import type { Flight } from "../../types";
 
@@ -72,6 +73,25 @@ describe("FlightPanel", () => {
       />
     );
     expect(screen.getByText("42")).toBeInTheDocument();
+  });
+
+  it("calls onClose when close button is clicked", async () => {
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <FlightPanel
+        flights={flights}
+        totalCount={1}
+        isOpen={true}
+        onClose={onClose}
+        onEdit={vi.fn()}
+        onDuplicate={vi.fn()}
+        onDelete={vi.fn()}
+        onAddFlight={vi.fn()}
+      />
+    );
+    await user.click(screen.getByRole("button", { name: "Panel schließen" }));
+    expect(onClose).toHaveBeenCalledOnce();
   });
 
   it("renders nothing when closed", () => {
