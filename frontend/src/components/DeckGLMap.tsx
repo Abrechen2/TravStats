@@ -307,52 +307,15 @@ export function DeckGLMap({
 
   const layers = useMemo((): Layer[] => {
     switch (visMode) {
-      case "routes": {
-        const baseLayers = createRoutesLayers(
+      case "routes":
+        return createRoutesLayers(
           flights,
           minRouteCount,
           onFlightClick,
           themeColors,
-          0.3
-        );
-
-        if (selectedIds.length === 0) return baseLayers;
-
-        const selectedFeatures = flights.filter((f) => selectedIds.includes(f.properties.id));
-        const nonSelectedFeatures = flights.filter((f) => !selectedIds.includes(f.properties.id));
-
-        const dimmedLayers = createRoutesLayers(
-          nonSelectedFeatures,
-          minRouteCount,
-          onFlightClick,
-          themeColors,
           0.3,
-          0.08,
-          "-dimmed"
+          selectedIds
         );
-
-        const highlightLayers = createRoutesLayers(
-          selectedFeatures,
-          1,
-          onFlightClick,
-          themeColors,
-          0.3,
-          1,
-          "-highlight"
-        );
-
-        const glowLayers = createRoutesLayers(
-          selectedFeatures,
-          1,
-          undefined,
-          themeColors,
-          0.3,
-          0.35,
-          "-glow"
-        );
-
-        return [...dimmedLayers, ...glowLayers, ...highlightLayers];
-      }
       case "heatmap":
         return [createHeatmapLayer(flights)];
       case "hexagon":
