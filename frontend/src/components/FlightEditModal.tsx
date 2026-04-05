@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import type { Flight } from "../types";
 import ReceiptUpload from "./ReceiptUpload";
 import { useTranslation } from "../hooks/useTranslation";
+import { AIRLINES } from "../lib/constants";
 
 interface FlightEditModalProps {
   flight: Flight;
@@ -167,7 +168,13 @@ export default function FlightEditModal({
                 onChange={(e) => setFormData({ ...formData, airline: e.target.value })}
                 className="input"
                 placeholder={t("flights:form.placeholders.airline")}
+                list="airline-suggestions-edit"
               />
+              <datalist id="airline-suggestions-edit">
+                {AIRLINES.map((a) => (
+                  <option key={a.iata} value={a.name} />
+                ))}
+              </datalist>
             </div>
 
             <div>
