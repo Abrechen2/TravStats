@@ -50,6 +50,7 @@ registry.register(new FallbackParser());
 ## Why This Hybrid Approach?
 
 ### ✅ Advantages
+
 - **⚡ Performance:** Barcode parsing <10ms (vs. LLM 2-5s)
 - **💰 Cost:** Barcode parsing is free (client-side) vs. API costs
 - **🌐 Offline:** Works without internet connection
@@ -87,18 +88,18 @@ Users can choose parsing strategy via settings:
 ```typescript
 // frontend/src/lib/airline-parsers/myCustomParser.ts
 
-import { BoardingPassParser } from './IParser';
-import { BoardingPassData } from '../bcbpParser';
-import { logger } from '../logger';
+import { BoardingPassParser } from "./IParser";
+import { BoardingPassData } from "../bcbpParser";
+import { logger } from "../logger";
 
 export class MyCustomParser implements BoardingPassParser {
-  name = 'my-custom';
+  name = "my-custom";
   priority = 30; // Between Standard BCBP (10) and URL (20) or after URL
-  category: 'core' = 'core';
+  category: "core" = "core";
 
   canParse(barcodeData: string): boolean {
     // Quick check - should be fast
-    return barcodeData.includes('MY_CUSTOM_INDICATOR');
+    return barcodeData.includes("MY_CUSTOM_INDICATOR");
   }
 
   parse(barcodeData: string): BoardingPassData | null {
@@ -106,7 +107,7 @@ export class MyCustomParser implements BoardingPassParser {
       // Parse logic here
       const extracted: Partial<BoardingPassData> = {
         raw: barcodeData,
-        formatCode: 'MY_CUSTOM',
+        formatCode: "MY_CUSTOM",
         // ... extract fields
       };
 
@@ -117,7 +118,7 @@ export class MyCustomParser implements BoardingPassParser {
 
       return extracted as BoardingPassData;
     } catch (error) {
-      logger.error('[MyCustom Parser] Error:', error);
+      logger.error("[MyCustom Parser] Error:", error);
       return null;
     }
   }
@@ -129,7 +130,7 @@ export class MyCustomParser implements BoardingPassParser {
 ```typescript
 // frontend/src/lib/airline-parsers/index.ts
 
-import { MyCustomParser } from './myCustomParser';
+import { MyCustomParser } from "./myCustomParser";
 
 const registry = ParserRegistry.getInstance();
 
@@ -150,6 +151,7 @@ registry.register(new FallbackParser()); // Always last
 ## Available Parsers
 
 ### ✅ Implemented (Frontend Parsers)
+
 - **Standard IATA BCBP** (`StandardBCBPParser`) - Priority 10
   - Works for ~80% of all airlines worldwide
   - Parses IATA BCBP standard format
@@ -162,12 +164,15 @@ registry.register(new FallbackParser()); // Always last
   - Always runs last as catch-all
 
 ### 🔄 Backend Parsers (LLM/API)
+
 - **Ollama Vision** - Preferred (free, local, fast)
 - **OpenAI Vision** - Fallback if Ollama unavailable
 - **Claude Vision** - Alternative fallback
 
 ### Note on Airline-Specific Parsers
+
 Airline-specific parsers (Ryanair, easyJet, etc.) have been **removed** because:
+
 - Standard BCBP parser covers most airlines
 - LLM can handle all airline-specific formats robustly
 - Reduces code complexity and maintenance burden
@@ -176,6 +181,7 @@ Airline-specific parsers (Ryanair, easyJet, etc.) have been **removed** because:
 ## Common Patterns by Airline
 
 ### Ryanair
+
 - **Format:** Proprietary QR code
 - **Indicators:** Contains "RYANAIR" or "FR"
 - **Flight Number:** `FR####` (4 digits)
@@ -184,11 +190,13 @@ Airline-specific parsers (Ryanair, easyJet, etc.) have been **removed** because:
 - **PNR:** 6-character alphanumeric
 
 ### easyJet (TODO)
+
 - **Format:** Usually IATA BCBP standard
 - **Airline Code:** `U2` or `EC`
 - **Fallback:** Often works with standard parser
 
 ### Lufthansa (TODO)
+
 - **Format:** Aztec code (non-BCBP)
 - **Indicators:** "LUFTHANSA", "LH"
 - **Pattern:** Structured text with labeled fields
@@ -196,11 +204,13 @@ Airline-specific parsers (Ryanair, easyJet, etc.) have been **removed** because:
 ### Low-Cost vs. Legacy Carriers
 
 **Low-Cost (Ryanair, easyJet, Wizz Air):**
+
 - Often use proprietary QR codes
 - Simpler structure (fewer fields)
 - May omit some IATA fields
 
 **Legacy Carriers (Lufthansa, BA, Emirates):**
+
 - Usually follow IATA BCBP standard
 - May have additional proprietary fields
 - Better structured data
@@ -208,30 +218,33 @@ Airline-specific parsers (Ryanair, easyJet, etc.) have been **removed** because:
 ## Testing Strategy
 
 ### 1. Unit Tests
+
 ```typescript
 // frontend/src/lib/airline-parsers/__tests__/ryanairParser.test.ts
 
-import { parseRyanairBoardingPass } from '../ryanairParser';
+import { parseRyanairBoardingPass } from "../ryanairParser";
 
-describe('Ryanair Parser', () => {
-  it('should parse valid Ryanair boarding pass', () => {
-    const mockData = 'RYANAIR FR1234 DUB-STN SEAT: 12A ...';
+describe("Ryanair Parser", () => {
+  it("should parse valid Ryanair boarding pass", () => {
+    const mockData = "RYANAIR FR1234 DUB-STN SEAT: 12A ...";
     const result = parseRyanairBoardingPass(mockData);
 
     expect(result).not.toBeNull();
-    expect(result?.flightNumber).toBe('1234');
-    expect(result?.departureAirport).toBe('DUB');
-    expect(result?.arrivalAirport).toBe('STN');
+    expect(result?.flightNumber).toBe("1234");
+    expect(result?.departureAirport).toBe("DUB");
+    expect(result?.arrivalAirport).toBe("STN");
   });
 });
 ```
 
 ### 2. Integration Tests
+
 - Test full scan → parse → form-fill flow
 - Test fallback chain (standard fails → Ryanair succeeds)
 - Test unknown format → fallback parser
 
 ### 3. Manual Testing
+
 - Use real boarding pass images
 - Test with debug mode enabled
 - Verify console logs show parsing steps
@@ -239,6 +252,7 @@ describe('Ryanair Parser', () => {
 ## Debugging Tips
 
 ### Enable Debug Mode
+
 1. Scan boarding pass
 2. Click "Show Raw Data"
 3. Check:
@@ -247,6 +261,7 @@ describe('Ryanair Parser', () => {
    - **Format:** IATA BCBP / URL / Unknown
 
 ### Console Logs
+
 ```
 🔍 Attempting fallback parsing on: [raw text]
 ✓ Airports found: LUX → MUC
@@ -258,6 +273,7 @@ describe('Ryanair Parser', () => {
 ```
 
 ### Common Issues
+
 - **No barcode found:** Check image quality, lighting
 - **Barcode found but not recognized:** Check if format is in parser chain
 - **Wrong data extracted:** Regex pattern may need adjustment
