@@ -17,7 +17,15 @@ import {
   createHistoricalEnrichment,
 } from '../services/flightEnrichmentService';
 import { estimateRoute } from '../services/routeEstimationService';
-import { calculateCo2Kg } from '../services/co2Calculator';
+import { calculateCo2Kg, CABIN_FACTORS } from '../services/co2Calculator';
+
+type SeatClass = keyof typeof CABIN_FACTORS | null | undefined;
+
+/** Narrow a Prisma string | null into the SeatClass union, returning null for unknown values. */
+function toSeatClass(value: string | null | undefined): SeatClass {
+  if (value === null || value === undefined) return null;
+  return (value in CABIN_FACTORS) ? (value as keyof typeof CABIN_FACTORS) : null;
+}
 
 const router = Router();
 
@@ -34,6 +42,7 @@ interface FlightUpdateData {
   fees?: number | null;
   currency?: string | null;
   category?: string | null;
+  seatClass?: string | null;
   tags?: string[];
   companions?: string[];
   receiptUrl?: string | null;
@@ -286,7 +295,7 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
           depLon: enriched.departure.lon,
           arrLat: enriched.arrival.lat,
           arrLon: enriched.arrival.lon,
-          seatClass: null,
+          seatClass: toSeatClass(data.seatClass),
         }),
         status: data.status,
         notes: data.notes,
@@ -587,6 +596,7 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     if (data.fees !== undefined) updateData.fees = data.fees;
     if (data.currency !== undefined) updateData.currency = data.currency;
     if (data.category !== undefined) updateData.category = data.category;
+    if (data.seatClass !== undefined) updateData.seatClass = data.seatClass;
     if (data.tags !== undefined) updateData.tags = data.tags;
     if (data.companions !== undefined) updateData.companions = data.companions;
     if (data.receiptUrl !== undefined) updateData.receiptUrl = data.receiptUrl;
@@ -636,14 +646,14 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
       depLon,
       arrLat,
       arrLon,
-      seatClass: null,
+      seatClass: toSeatClass(data.seatClass ?? existingFlight.seatClass),
     });
 
     // Set lastModifiedBy when user updates
     updateData.lastModifiedBy = 'user';
 
     const flight = await prisma.flight.update({
-      where: { id },
+      where: { id, userId },
       data: updateData,
     });
 
@@ -685,7 +695,7 @@ router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction
     }
 
     await prisma.flight.delete({
-      where: { id },
+      where: { id, userId },
     });
 
     res.status(204).send();

@@ -156,10 +156,7 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
   try {
     const userId = req.userId!;
     const payload = settingsSchema.parse(req.body);
-    logger.info({
-      operation: 'parsed_settings_payload',
-      payload,
-    });
+    logger.info({ operation: 'settings_update', userId });
 
     const existing = await prisma.userSettings.findUnique({
       where: { userId },
@@ -238,11 +235,6 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
     if (boardingPassParserStrategy !== undefined) {
       updateData.boardingPassParserStrategy = boardingPassParserStrategy;
     }
-
-    logger.info({
-      operation: 'update_data_before_save',
-      updateData,
-    });
 
     const saved = await prisma.userSettings.upsert({
       where: { userId },

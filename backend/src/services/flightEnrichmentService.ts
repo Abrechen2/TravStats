@@ -265,6 +265,13 @@ export async function aggregateFlightData(
       return null;
     }
 
+    // Reference flights are intentionally cross-user: route geometry (ICAO codes, waypoints)
+    // is shared public data that represents the flight path, not user-specific information.
+    // TODO: gate/terminal sollten nur aus eigenen Flügen kommen — gate und terminal des
+    // anfragenden Users können von anderen Usern stammen. Für eine vollständige Lösung müsste
+    // aggregateFlightData einen userId-Parameter erhalten und gate/terminal nur aus
+    // Flügen desselben Users aggregieren (oder ganz weglassen).
+
     // Always collected (stable across time)
     const depIcaos = referenceFlights.map(f => f.depIcao).filter(Boolean) as string[];
     const arrIcaos = referenceFlights.map(f => f.arrIcao).filter(Boolean) as string[];
