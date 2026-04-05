@@ -39,7 +39,7 @@ describe("useFlightSelectionStore", () => {
   it("sets single selection and highlightMode to 'single'", () => {
     const { result } = renderHook(() => useFlightSelectionStore());
     const flight = mockFlight("f1");
-    act(() => result.current.setSelection(["f1"], [flight]));
+    act(() => result.current.setSelection([flight]));
     expect(result.current.selectedIds).toEqual(["f1"]);
     expect(result.current.selectedFlights).toEqual([flight]);
     expect(result.current.highlightMode).toBe("single");
@@ -49,14 +49,15 @@ describe("useFlightSelectionStore", () => {
     const { result } = renderHook(() => useFlightSelectionStore());
     const f1 = mockFlight("f1");
     const f2 = mockFlight("f2");
-    act(() => result.current.setSelection(["f1", "f2"], [f1, f2]));
+    act(() => result.current.setSelection([f1, f2]));
     expect(result.current.selectedIds).toEqual(["f1", "f2"]);
+    expect(result.current.selectedFlights).toEqual([f1, f2]);
     expect(result.current.highlightMode).toBe("group");
   });
 
   it("clearSelection resets all state", () => {
     const { result } = renderHook(() => useFlightSelectionStore());
-    act(() => result.current.setSelection(["f1"], [mockFlight("f1")]));
+    act(() => result.current.setSelection([mockFlight("f1")]));
     act(() => result.current.clearSelection());
     expect(result.current.selectedIds).toEqual([]);
     expect(result.current.selectedFlights).toEqual([]);
