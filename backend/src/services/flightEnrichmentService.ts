@@ -226,13 +226,19 @@ function calculateBasicConfidence(flight: Flight, missingFields: string[]): numb
 }
 
 /**
- * Aggregate flight data from reference flights with the same flight number
+ * Aggregate flight data from reference flights with the same flight number.
+ *
+ * @param userId - When provided, gate and terminal are sourced exclusively from this
+ *   user's own live-tracked flights rather than from the cross-user reference set.
+ *   Route geometry (ICAO codes, waypoints) is intentionally cross-user: it represents
+ *   shared public flight-path data, not personal information.
  */
 export async function aggregateFlightData(
   flightNumber: string,
   excludeFlightId: string,
   minFlights: number = 5,
-  mode: EnrichmentMode = 'full'
+  mode: EnrichmentMode = 'full',
+  userId?: string
 ): Promise<AggregatedFlightData | null> {
   try {
     // Find flights with live tracking and same flight number
@@ -267,19 +273,38 @@ export async function aggregateFlightData(
 
     // Reference flights are intentionally cross-user: route geometry (ICAO codes, waypoints)
     // is shared public data that represents the flight path, not user-specific information.
-    // TODO: gate/terminal sollten nur aus eigenen Flügen kommen — gate und terminal des
-    // anfragenden Users können von anderen Usern stammen. Für eine vollständige Lösung müsste
-    // aggregateFlightData einen userId-Parameter erhalten und gate/terminal nur aus
-    // Flügen desselben Users aggregieren (oder ganz weglassen).
+    // Gate and terminal are personal data — they are sourced from the requesting user's own
+    // flights only (when userId is provided).
 
     // Always collected (stable across time)
     const depIcaos = referenceFlights.map(f => f.depIcao).filter(Boolean) as string[];
     const arrIcaos = referenceFlights.map(f => f.arrIcao).filter(Boolean) as string[];
-    const terminals = referenceFlights.map(f => f.terminal).filter(Boolean) as string[];
 
     const mostCommonDepIcao = getMostCommon(depIcaos);
     const mostCommonArrIcao = getMostCommon(arrIcaos);
-    const mostCommonTerminal = getMostCommon(terminals);
+
+    // Terminal: use only the requesting user's own flights when userId is known.
+    // Falls back to cross-user terminal data only when userId is not provided (legacy path).
+    let mostCommonTerminal: string | undefined;
+    if (userId) {
+      const ownFlightsForTerminal = await prismaClient.flight.findMany({
+        where: {
+          flightNumber: flightNumber.toUpperCase(),
+          id: { not: excludeFlightId },
+          userId,
+          hasLiveTracking: true,
+          terminal: { not: null },
+        },
+        select: { terminal: true },
+      });
+      mostCommonTerminal = getMostCommon(
+        ownFlightsForTerminal.map(f => f.terminal).filter(Boolean) as string[]
+      );
+    } else {
+      mostCommonTerminal = getMostCommon(
+        referenceFlights.map(f => f.terminal).filter(Boolean) as string[]
+      );
+    }
 
     // Full mode only (unreliable for flights ≥1 year old)
     let mostCommonAircraft: string | undefined;
@@ -289,9 +314,27 @@ export async function aggregateFlightData(
 
     if (mode === 'full') {
       const aircrafts = referenceFlights.map(f => f.aircraft).filter(Boolean) as string[];
-      const gates = referenceFlights.map(f => f.gate).filter(Boolean) as string[];
       mostCommonAircraft = getMostCommon(aircrafts);
-      mostCommonGate = getMostCommon(gates);
+
+      // Gate: use only the requesting user's own flights when userId is known.
+      if (userId) {
+        const ownFlightsForGate = await prismaClient.flight.findMany({
+          where: {
+            flightNumber: flightNumber.toUpperCase(),
+            id: { not: excludeFlightId },
+            userId,
+            hasLiveTracking: true,
+            gate: { not: null },
+          },
+          select: { gate: true },
+        });
+        mostCommonGate = getMostCommon(
+          ownFlightsForGate.map(f => f.gate).filter(Boolean) as string[]
+        );
+      } else {
+        const gates = referenceFlights.map(f => f.gate).filter(Boolean) as string[];
+        mostCommonGate = getMostCommon(gates);
+      }
 
       const routes = referenceFlights
         .map(f => f.actualRoute)

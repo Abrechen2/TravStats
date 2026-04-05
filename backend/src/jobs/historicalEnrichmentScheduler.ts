@@ -58,10 +58,13 @@ export async function processUserHistoricalEnrichment(userId: string): Promise<{
           continue;
         }
 
-        // Aggregate data from similar flights
+        // Aggregate data from similar flights — pass userId so gate/terminal come from own flights only
         const aggregatedData = await aggregateFlightData(
           flight.flightNumber,
-          flight.id
+          flight.id,
+          5,
+          'full',
+          userId
         );
 
         if (!aggregatedData) {

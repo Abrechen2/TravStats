@@ -102,10 +102,6 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
     // Serializable transaction. This fully closes the TOCTOU window between concurrent
     // POST /backup requests: no second request can sneak past the findFirst check and
     // also insert its own record before ours is visible to the DB.
-    // Atomically check for a running backup AND insert the new 'running' record in one
-    // Serializable transaction. This fully closes the TOCTOU window between concurrent
-    // POST /backup requests: no second request can sneak past the findFirst check and
-    // also insert its own record before ours is visible to the DB.
     await prisma.$transaction(async (tx) => {
       const running = await tx.backup.findFirst({ where: { status: 'running' } });
       if (running) {
