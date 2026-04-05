@@ -205,68 +205,80 @@ export function DeckGLMap({
     ];
   }, [planePositions]);
 
-  // Airport pulse
-  const [pulsePhase, setPulsePhase] = useState(0);
-  const pulseIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Airport pulse — smooth sine-wave animation via rAF
+  const [pulseTime, setPulseTime] = useState(0);
+  const pulseRafRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (pulseIntervalRef.current) {
-      clearInterval(pulseIntervalRef.current);
-      pulseIntervalRef.current = null;
+    if (pulseRafRef.current !== null) {
+      cancelAnimationFrame(pulseRafRef.current);
+      pulseRafRef.current = null;
     }
-    setPulsePhase(0);
+    setPulseTime(0);
     if (selectedFlights.length === 0) return;
 
-    pulseIntervalRef.current = setInterval(() => {
-      setPulsePhase((p) => (p + 1) % 3);
-    }, 800);
+    const startTime = performance.now();
+    const animate = (ts: number): void => {
+      setPulseTime(ts - startTime);
+      pulseRafRef.current = requestAnimationFrame(animate);
+    };
+    pulseRafRef.current = requestAnimationFrame(animate);
 
     return () => {
-      if (pulseIntervalRef.current) clearInterval(pulseIntervalRef.current);
+      if (pulseRafRef.current !== null) cancelAnimationFrame(pulseRafRef.current);
     };
   }, [selectedFlights]);
 
-  const pulseLayers = useMemo((): Layer[] => {
-    if (selectedFlights.length === 0) return [];
-
+  // Unique dep/arr airport positions for selected flights
+  const pulsePoints = useMemo((): Array<[number, number]> => {
     const pts = selectedFlights.flatMap((f) => {
       const res: Array<[number, number]> = [];
       if (f.depLon != null && f.depLat != null) res.push([f.depLon, f.depLat]);
       if (f.arrLon != null && f.arrLat != null) res.push([f.arrLon, f.arrLat]);
       return res;
     });
-
     const seen = new Set<string>();
-    const unique = pts.filter(([lon, lat]) => {
+    return pts.filter(([lon, lat]) => {
       const key = `${lon.toFixed(4)},${lat.toFixed(4)}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     });
+  }, [selectedFlights]);
 
-    const BASE_RADIUS = 80000;
-    const rings: Array<{ multiplier: number; opacities: [number, number, number] }> = [
-      { multiplier: 1, opacities: [200, 80, 20] },
-      { multiplier: 2, opacities: [80, 200, 80] },
-      { multiplier: 3.5, opacities: [20, 80, 200] },
+  const pulseLayers = useMemo((): Layer[] => {
+    if (pulsePoints.length === 0) return [];
+
+    // Three rings in pixels (zoom-invariant), each offset by 1/3 period
+    const PERIOD_MS = 1800;
+    const rings: Array<{ radiusPx: number; phaseOffset: number }> = [
+      { radiusPx: 12, phaseOffset: 0 },
+      { radiusPx: 22, phaseOffset: 0.33 },
+      { radiusPx: 36, phaseOffset: 0.66 },
     ];
+    const data = pulsePoints.map((position) => ({ position }));
 
-    return rings.map(
-      ({ multiplier, opacities }) =>
-        new ScatterplotLayer({
-          id: `pulse-ring-${multiplier}`,
-          data: unique.map((position) => ({ position })),
-          getPosition: (d: { position: [number, number] }) => d.position,
-          getRadius: BASE_RADIUS * multiplier,
-          getFillColor: [0, 0, 0, 0] as [number, number, number, number],
-          getLineColor: [129, 140, 248, opacities[pulsePhase]] as [number, number, number, number],
-          stroked: true,
-          filled: false,
-          lineWidthMinPixels: 1.5,
-          pickable: false,
-        })
-    );
-  }, [selectedFlights, pulsePhase]);
+    return rings.map(({ radiusPx, phaseOffset }) => {
+      const phase = (((pulseTime / PERIOD_MS + phaseOffset) % 1) + 1) % 1;
+      // sin² gives a smooth 0→1→0 pulse per period
+      const opacity = Math.sin(phase * Math.PI) ** 2;
+      const alpha = Math.round(opacity * 210) as number;
+
+      return new ScatterplotLayer({
+        id: `pulse-ring-${radiusPx}`,
+        data,
+        getPosition: (d: { position: [number, number] }) => d.position,
+        getRadius: radiusPx,
+        radiusUnits: "pixels",
+        getFillColor: [0, 0, 0, 0] as [number, number, number, number],
+        getLineColor: [129, 140, 248, alpha] as [number, number, number, number],
+        stroked: true,
+        filled: false,
+        lineWidthMinPixels: 1.5,
+        pickable: false,
+      });
+    });
+  }, [pulsePoints, pulseTime]);
 
   // Tooltip state
   const [tooltipVisible, setTooltipVisible] = useState(false);
