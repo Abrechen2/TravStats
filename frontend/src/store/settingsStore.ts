@@ -226,12 +226,10 @@ export const useSettingsStore = create<SettingsState>()(
       name: "settings-storage",
       // Strip removed fields from persisted state so stale localStorage doesn't crash the app
       migrate: (persisted: unknown) => {
-        const {
-          privacy: _privacy,
-          backup: _backup,
-          ...rest
-        } = persisted as Record<string, unknown>;
-        return rest;
+        const s = { ...(persisted as Record<string, unknown>) };
+        delete s["privacy"];
+        delete s["backup"];
+        return s;
       },
     }
   )
