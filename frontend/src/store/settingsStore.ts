@@ -19,7 +19,6 @@ type DateFormat = "DD.MM.YYYY" | "MM/DD/YYYY" | "YYYY-MM-DD";
 type TimeFormat = "24h" | "12h";
 
 type FlightStatusDefault = "scheduled" | "flown";
-type BoardingPassParserStrategy = "parser-only" | "parser-with-api" | "api-only" | null;
 
 type SettingsUpdater<T> = (updates: Partial<T>) => void;
 
@@ -67,8 +66,6 @@ export interface ApiKeyStatus {
 }
 
 export interface ApiKeysStatus {
-  openai: ApiKeyStatus;
-  claude: ApiKeyStatus;
   airlabs: ApiKeyStatus;
   aviationstack: ApiKeyStatus;
   opensky: ApiKeyStatus;
@@ -82,7 +79,6 @@ export interface SettingsState {
   map: MapSettings;
   notifications: NotificationSettings;
   apiKeys: ApiKeysStatus | null;
-  boardingPassParserStrategy: BoardingPassParserStrategy;
   setProfile: SettingsUpdater<ProfileSettings>;
   setDisplay: SettingsUpdater<DisplaySettings>;
   setUnits: SettingsUpdater<UnitsSettings>;
@@ -90,7 +86,6 @@ export interface SettingsState {
   setMap: SettingsUpdater<MapSettings>;
   setNotifications: SettingsUpdater<NotificationSettings>;
   setApiKeys: (status: ApiKeysStatus) => void;
-  setBoardingPassParserStrategy: (strategy: BoardingPassParserStrategy) => void;
   loadApiKeysStatus: () => Promise<void>;
   resetSettings: () => void;
   loadRemoteSettings: () => Promise<void>;
@@ -106,7 +101,6 @@ const defaultSettings: Omit<
   | "setMap"
   | "setNotifications"
   | "setApiKeys"
-  | "setBoardingPassParserStrategy"
   | "loadApiKeysStatus"
   | "resetSettings"
   | "loadRemoteSettings"
@@ -144,7 +138,6 @@ const defaultSettings: Omit<
     flightReminder: "24h",
   },
   apiKeys: null,
-  boardingPassParserStrategy: null, // null = auto (LLM wenn verfügbar)
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -179,10 +172,6 @@ export const useSettingsStore = create<SettingsState>()(
         set(() => ({
           apiKeys: status,
         })),
-      setBoardingPassParserStrategy: (strategy) =>
-        set(() => ({
-          boardingPassParserStrategy: strategy,
-        })),
       loadApiKeysStatus: async () => {
         try {
           const status = await settingsApi.getApiKeys();
@@ -212,10 +201,6 @@ export const useSettingsStore = create<SettingsState>()(
                 ...state,
                 ...remoteWithoutDirectFields,
               };
-              // Set boarding pass parser strategy if present
-              if (remote.boardingPassParserStrategy !== undefined) {
-                newState.boardingPassParserStrategy = remote.boardingPassParserStrategy;
-              }
               // Sync language to i18n if it changed (will be handled by App.tsx useEffect, but we do it here too for immediate update)
               if (remote.display?.language && remote.display.language !== state.display.language) {
                 // The language sync will be handled by the useEffect in App.tsx

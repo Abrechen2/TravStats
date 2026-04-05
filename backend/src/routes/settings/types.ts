@@ -85,12 +85,8 @@ export interface UserSettingsUpdateData {
 }
 
 export interface ParserSettingsUpdateData {
-  preferredVisionParser?: string;
-  preferredTextParser?: string;
-  visionFallbackChain?: string;
-  textFallbackChain?: string;
-  openaiApiKey?: string | null;
-  claudeApiKey?: string | null;
+  visionProvider?: string;
+  textProvider?: string;
 }
 
 export interface DeveloperModeUpdateData {
@@ -105,8 +101,6 @@ export interface TrainingSettingsUpdateData {
 }
 
 export interface ApiKeysUpdateData {
-  openaiApiKey?: string | null;
-  claudeApiKey?: string | null;
   airlabsApiKey?: string | null;
   aviationstackApiKey?: string | null;
   openskyClientId?: string | null;
@@ -116,8 +110,6 @@ export interface ApiKeysUpdateData {
 }
 
 export interface UserApiKeySettings {
-  openaiApiKey: string | null;
-  claudeApiKey: string | null;
   airlabsApiKey: string | null;
   aviationstackApiKey: string | null;
   openskyClientId: string | null;

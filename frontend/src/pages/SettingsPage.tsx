@@ -37,8 +37,6 @@ export default function SettingsPage(): JSX.Element {
     setUnits,
     setDefaults,
     setMap,
-    boardingPassParserStrategy,
-    setBoardingPassParserStrategy,
     isDarkMode,
     hasTrainingAccess,
     developerModeEnabled,
@@ -164,12 +162,7 @@ export default function SettingsPage(): JSX.Element {
                 isAdmin={user?.isAdmin ?? false}
               />
             )}
-            {activeSection === "parser" && (
-              <ParserSection
-                boardingPassParserStrategy={boardingPassParserStrategy}
-                onSetBoardingPassParserStrategy={setBoardingPassParserStrategy}
-              />
-            )}
+            {activeSection === "parser" && <ParserSection />}
             {activeSection === "autoupdate" && (
               <AutoUpdateSection
                 autoUpdateSettings={autoUpdateSettings}

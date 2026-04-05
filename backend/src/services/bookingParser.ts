@@ -41,7 +41,7 @@ export interface ParsedBooking {
 
 export interface ParseResult {
   flights: ParsedBooking[];
-  parserUsed: 'ollama' | 'openai' | 'claude' | 'regex';
+  parserUsed: 'regex';
   ollamaAvailable: boolean;
   fallbackUsed?: boolean;
 }
@@ -351,15 +351,7 @@ export async function parseBookingEmail(
   text: string | undefined,
   html?: string,
   userSettings?: {
-    preferredTextParser?: string | null;
-    textFallbackChain?: string | null;
-    openaiApiKey?: string | null;
-    claudeApiKey?: string | null;
     userId?: string;
-  },
-  adminSettings?: {
-    globalOpenaiApiKey?: string | null;
-    globalClaudeApiKey?: string | null;
   }
 ): Promise<ParseResult> {
   logger.debug({
@@ -367,8 +359,8 @@ export async function parseBookingEmail(
     message: 'Starting email parsing with factory system',
   });
 
-  // Get parser config from settings (user settings take precedence over admin settings)
-  const config = await getParserConfig(userSettings, adminSettings, userSettings?.userId);
+  // Get parser config (regex/template only)
+  const config = await getParserConfig(undefined, undefined, userSettings?.userId);
 
   // Parse email using factory
   const result = await parseEmail(
@@ -391,8 +383,8 @@ export async function parseBookingEmail(
   // Map to legacy format for backward compatibility
   return {
     flights: result.flights,
-    parserUsed: result.provider as ParseResult['parserUsed'], // Map provider to legacy format
-    ollamaAvailable: result.provider === 'ollama' || !result.fallbackUsed,
+    parserUsed: 'regex',
+    ollamaAvailable: false,
     fallbackUsed: result.fallbackUsed,
   };
 }

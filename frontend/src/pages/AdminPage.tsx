@@ -254,8 +254,6 @@ export default function AdminPage(): JSX.Element {
       await Promise.all([
         adminApi.updateGlobalApiKeys(globalApiKeys || {}),
         adminApi.updateAdminParserSettings({
-          globalOpenaiApiKey: parserSettings?.globalOpenaiApiKey,
-          globalClaudeApiKey: parserSettings?.globalClaudeApiKey,
           allowUserApiKeys: parserSettings?.allowUserApiKeys,
         }),
       ]);
@@ -536,8 +534,6 @@ export default function AdminPage(): JSX.Element {
               parserSettings={
                 parserSettings
                   ? {
-                      globalOpenaiApiKey: parserSettings.globalOpenaiApiKey,
-                      globalClaudeApiKey: parserSettings.globalClaudeApiKey,
                       allowUserApiKeys: parserSettings.allowUserApiKeys,
                     }
                   : null
@@ -549,8 +545,6 @@ export default function AdminPage(): JSX.Element {
                 if (parserSettings) {
                   setParserSettings({
                     ...parserSettings,
-                    globalOpenaiApiKey: apiKeySettings.globalOpenaiApiKey,
-                    globalClaudeApiKey: apiKeySettings.globalClaudeApiKey,
                     allowUserApiKeys: apiKeySettings.allowUserApiKeys,
                   });
                 }

@@ -45,27 +45,7 @@ function applyEmailRegexPostProcessing(
 }
 
 /**
- * Check if result quality is too low and should trigger LLM fallback
- */
-function shouldUseLLMFallback(
-  flights: ParsedBooking[],
-  provider: TextProvider,
-  qualityThreshold: number = 40
-): boolean {
-  // Only check for regex parser (low quality expected)
-  if (provider !== 'regex') return false;
-
-  const quality = calculateParserQuality(flights);
-  logger.debug(
-    { quality, threshold: qualityThreshold, provider },
-    '[Parser Factory] Quality check for LLM fallback'
-  );
-
-  return quality < qualityThreshold;
-}
-
-/**
- * Parse email with automatic provider selection and fallback on errors
+ * Parse email using regex/template-based parsing only
  */
 export async function parseEmail(
   subject: string,
@@ -86,7 +66,6 @@ export async function parseEmail(
         subject,
         textLength: text.length,
         htmlLength: html ? html.length : 0,
-        requestedProvider: config.textProvider,
         fallbackChain: config.textFallbacks,
       },
     });
@@ -104,7 +83,7 @@ export async function parseEmail(
       if (bestConfidence >= 80) {
         log.info(
           { templateName: userTemplate.name, flights: userResults.length, confidence: bestConfidence },
-          "[Parser Factory] User-derived template matched (confidence >=80%), skipping LLM chain"
+          "[Parser Factory] User-derived template matched (confidence >=80%)"
         );
         return {
           flights: userResults as ParsedBooking[],
@@ -114,9 +93,8 @@ export async function parseEmail(
       }
     }
   }
-  // End step 0 — fall through to HTML-selector templates
 
-  // Template-Parser first (before LLM chain)
+  // Template-Parser (HTML-selector based templates)
   const templateParser = new TemplateParser();
   const templateAvail = await templateParser.checkAvailability();
   if (templateAvail.available) {
@@ -124,41 +102,31 @@ export async function parseEmail(
     if (templateResults.length > 0 && (templateResults[0].parserConfidence ?? 0) >= 30) {
       logger.info(
         { confidence: templateResults[0].parserConfidence, parserTemplate: templateResults[0].parserTemplate },
-        '[Parser Factory] Template parser matched with sufficient confidence, skipping LLM chain'
+        '[Parser Factory] Template parser matched with sufficient confidence'
       );
       return {
         flights: templateResults,
-        provider: 'regex' as const, // "template" is not in TextProvider union — map to nearest
+        provider: 'regex' as const,
         fallbackUsed: false,
       };
     }
   }
-  // End template block — LLM chain follows
 
-  // Build the provider chain: preferred (if not auto) + fallbacks
-  const providerChain: TextProvider[] =
-    config.textProvider !== 'auto'
-      ? [config.textProvider, ...config.textFallbacks.filter(p => p !== config.textProvider)]
-      : config.textFallbacks;
+  // Regex provider chain
+  const providerChain: TextProvider[] = config.textFallbacks;
 
   // Try each provider in order
   for (const provider of providerChain) {
     try {
       const parser = getTextParserInstance(provider);
-      const apiKey = provider === 'openai' ? config.openaiApiKey :
-                     provider === 'claude' ? config.claudeApiKey : undefined;
 
       // Check availability first
-      const availability = await checkProviderAvailability(parser, apiKey);
+      const availability = await checkProviderAvailability(parser);
       if (!availability.available) {
         if (shouldLog) {
           textLog.debug({
             operation: 'text_parser_skipped',
-            context: {
-              provider,
-              reason: availability.reason,
-              availability,
-            },
+            context: { provider, reason: availability.reason },
           });
         } else {
           logger.debug(`[Parser Factory] Skipping unavailable text parser: ${provider} - ${availability.reason}`);
@@ -172,168 +140,22 @@ export async function parseEmail(
       if (shouldLog) {
         textLog.info({
           operation: 'text_parse_attempt',
-          context: {
-            provider,
-            textLength: text.length,
-            htmlLength: html ? html.length : 0,
-            availability,
-          },
+          context: { provider, textLength: text.length, htmlLength: html ? html.length : 0 },
         });
       } else {
         logger.info(`[Parser Factory] Attempting email parse with: ${provider}`);
       }
 
-      const flights = await parser.parseEmail(subject, text, html, apiKey);
+      const flights = await parser.parseEmail(subject, text, html);
       const parseDuration = Date.now() - parseStartTime;
 
       if (!flights || flights.length === 0) {
         throw new Error('Parser returned no flights');
       }
 
-      const enhancedFlights = applyEmailRegexPostProcessing(flights, subject, text, html);
-
-      // Check quality and auto-fallback to LLM if regex quality is too low
-      let finalFlights = enhancedFlights;
-      let finalProvider = provider;
-      let finalFallbackUsed = config.textProvider !== 'auto' && config.textProvider !== provider;
-
-      if (shouldUseLLMFallback(enhancedFlights, provider, 40)) {
-        const regexQuality = calculateParserQuality(enhancedFlights);
-        if (shouldLog) {
-          textLog.warn({
-            operation: 'text_parse_quality_low',
-            context: {
-              provider,
-              quality: regexQuality,
-              threshold: 40,
-              flightCount: enhancedFlights.length,
-            },
-          });
-        } else {
-          logger.warn(
-            {
-              quality: regexQuality,
-              provider,
-            },
-            '[Parser Factory] Regex parser quality too low, attempting LLM fallback'
-          );
-        }
-
-        // Try LLM parsers in order (skip regex)
-        const llmProviders: TextProvider[] = ['openai', 'claude', 'ollama'];
-        for (const llmProvider of llmProviders) {
-          try {
-            const llmParser = getTextParserInstance(
-              llmProvider,
-              llmProvider === 'ollama' ? config.ollamaModel : undefined
-            );
-            const llmApiKey = llmProvider === 'openai' ? config.openaiApiKey :
-                             llmProvider === 'claude' ? config.claudeApiKey : undefined;
-
-            const llmAvailability = await checkProviderAvailability(llmParser, llmApiKey);
-            if (!llmAvailability.available) {
-              if (shouldLog) {
-                textLog.debug({
-                  operation: 'llm_fallback_unavailable',
-                  context: {
-                    llmProvider,
-                    reason: llmAvailability.reason,
-                  },
-                });
-              } else {
-                logger.debug(`[Parser Factory] LLM provider ${llmProvider} unavailable for quality fallback`);
-              }
-              continue;
-            }
-
-            if (shouldLog) {
-              textLog.info({
-                operation: 'llm_fallback_attempt',
-                context: {
-                  llmProvider,
-                  originalProvider: provider,
-                  originalQuality: regexQuality,
-                },
-              });
-            } else {
-              logger.info(`[Parser Factory] Attempting LLM quality fallback with: ${llmProvider}`);
-            }
-
-            const llmStartTime = Date.now();
-            const llmFlights = await llmParser.parseEmail(subject, text, html, llmApiKey);
-            const llmDuration = Date.now() - llmStartTime;
-
-            if (llmFlights && llmFlights.length > 0) {
-              const llmQuality = calculateParserQuality(llmFlights);
-
-              if (llmQuality > regexQuality) {
-                if (shouldLog) {
-                  textLog.info({
-                    operation: 'llm_fallback_success',
-                    context: {
-                      llmProvider,
-                      originalProvider: provider,
-                      regexQuality,
-                      llmQuality,
-                      improvement: llmQuality - regexQuality,
-                      llmDuration,
-                    },
-                  });
-                } else {
-                  logger.info(
-                    {
-                      regexQuality,
-                      llmQuality,
-                      llmProvider,
-                    },
-                    '[Parser Factory] LLM fallback successful, using LLM result'
-                  );
-                }
-                finalFlights = applyEmailRegexPostProcessing(llmFlights, subject, text, html);
-                finalProvider = llmProvider;
-                finalFallbackUsed = true;
-                break;
-              } else {
-                if (shouldLog) {
-                  textLog.debug({
-                    operation: 'llm_fallback_no_improvement',
-                    context: {
-                      llmProvider,
-                      regexQuality,
-                      llmQuality,
-                      llmDuration,
-                    },
-                  });
-                } else {
-                  logger.debug(
-                    {
-                      regexQuality,
-                      llmQuality,
-                    },
-                    '[Parser Factory] LLM quality not better, keeping regex result'
-                  );
-                }
-              }
-            }
-          } catch (llmError) {
-            if (shouldLog) {
-              textLog.warn({
-                operation: 'llm_fallback_failed',
-                context: {
-                  llmProvider,
-                  error: llmError instanceof Error ? llmError.message : 'Unknown error',
-                },
-              });
-            } else {
-              logger.warn(
-                { error: llmError, llmProvider },
-                '[Parser Factory] LLM quality fallback failed, keeping regex result'
-              );
-            }
-            // Continue to next LLM provider or keep regex result
-          }
-        }
-      }
+      const finalFlights = applyEmailRegexPostProcessing(flights, subject, text, html);
+      const finalProvider = provider;
+      const finalFallbackUsed = config.textProvider !== provider;
 
       const finalQuality = calculateParserQuality(finalFlights);
       const totalDuration = Date.now() - startTime;
@@ -365,7 +187,7 @@ export async function parseEmail(
       // Collect feedback for low-quality results (async, don't await)
       if (finalQuality < 50) {
         collectLowQualityFeedback(
-          undefined, // userId - could be passed from route if available
+          undefined,
           'email',
           finalProvider,
           finalFlights,
@@ -394,9 +216,8 @@ export async function parseEmail(
       }
       errors.push({ provider, error: errorMsg });
 
-      // Invalidate cache for this provider to prevent future attempts in this session
-      const cacheKey = `${provider}-${config.openaiApiKey || config.claudeApiKey || 'default'}`;
-      deleteAvailabilityCacheEntry(cacheKey);
+      // Invalidate cache for this provider
+      deleteAvailabilityCacheEntry(`${provider}-default`);
 
       // Continue to next provider
       continue;
@@ -408,11 +229,7 @@ export async function parseEmail(
   if (shouldLog) {
     log.error({
       operation: 'parse_email_failed',
-      context: {
-        errors,
-        totalDuration,
-        triedProviders: providerChain,
-      },
+      context: { errors, totalDuration, triedProviders: providerChain },
     });
   } else {
     logger.error({ errors }, '[Parser Factory] All text parsers failed');
