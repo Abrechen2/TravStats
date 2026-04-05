@@ -30,7 +30,7 @@ export const settingsApi = {
     }>("/settings/parser");
     return data;
   },
-  updateParserSettings: async (_payload: Record<string, unknown>): Promise<MessageResponse> => {
+  updateParserSettings: async (): Promise<MessageResponse> => {
     const { data } = await api.put<MessageResponse>("/settings/parser", {});
     return data;
   },
