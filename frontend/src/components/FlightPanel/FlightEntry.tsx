@@ -42,9 +42,11 @@ export function FlightEntry({
           style={{
             paddingLeft: indented ? "2rem" : "1rem",
             paddingRight: "0.75rem",
+            borderTop: "none",
+            borderRight: "none",
+            borderBottom: "none",
             borderLeft: isSelected ? "3px solid var(--accent)" : "3px solid transparent",
             background: "transparent",
-            border: "none",
           }}
         >
           <div className="min-w-0">
