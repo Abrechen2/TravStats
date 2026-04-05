@@ -36,8 +36,8 @@ describe("InlineStats", () => {
   });
 
   it("shows CO₂ when present", () => {
-    render(<InlineStats flight={{ ...baseFlight, co2Kg: 0.9 }} />);
-    expect(screen.getByText(/CO₂: 0\.9t/)).toBeInTheDocument();
+    render(<InlineStats flight={{ ...baseFlight, co2Kg: 450 }} />);
+    expect(screen.getByText(/CO₂: 450 kg/)).toBeInTheDocument();
   });
 
   it("shows aircraft when present", () => {
