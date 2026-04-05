@@ -3,10 +3,7 @@ import { z } from 'zod';
 import { AuthRequest } from '../../middleware/auth';
 import { prisma } from '../../db';
 import { encryptApiKey } from '../../utils/encryption';
-import { hasApiKeyAccess } from '../../services/apiKeyResolver';
 import {
-  testOpenAIKey,
-  testClaudeKey,
   testAirlabsKey,
   testAviationstackKey,
   testOpenSkyCredentials,
@@ -22,8 +19,6 @@ import {
 const router = Router();
 
 const apiKeysSchema = z.object({
-  openaiApiKey: z.string().optional().nullable(),
-  claudeApiKey: z.string().optional().nullable(),
   airlabsApiKey: z.string().optional().nullable(),
   aviationstackApiKey: z.string().optional().nullable(),
   openskyClientId: z.string().optional().nullable(),
@@ -51,14 +46,11 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
   try {
     const userId = req.userId!;
 
-    // Try to get user settings - handle case where fields might not exist
-    let settings: UserApiKeySettings | null = null;
+    let settings: Pick<UserApiKeySettings, 'airlabsApiKey' | 'aviationstackApiKey' | 'openskyClientId' | 'openskyClientSecret' | 'openskyUsername' | 'openskyPassword'> | null = null;
     try {
       settings = await prisma.userSettings.findUnique({
         where: { userId },
         select: {
-          openaiApiKey: true,
-          claudeApiKey: true,
           airlabsApiKey: true,
           aviationstackApiKey: true,
           openskyClientId: true,
@@ -68,7 +60,6 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
         },
       });
     } catch (error: unknown) {
-      // If fields don't exist, settings will be null
       const prismaError = error as PrismaErrorWithCode;
       if (prismaError.code !== 'P2009' && prismaError.code !== 'P2025') {
         throw error;
@@ -80,7 +71,6 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
       });
     }
 
-    // Get admin settings to check for shared keys
     let adminSettings: Awaited<ReturnType<typeof prisma.adminSettings.findFirst>> = null;
     try {
       adminSettings = await prisma.adminSettings.findFirst();
@@ -92,16 +82,12 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
       });
     }
 
-    // Check access status for each provider - handle errors gracefully
-    let openaiAccess = { hasAccess: false, isShared: false };
-    let claudeAccess = { hasAccess: false, isShared: false };
     let airlabsAccess = { hasAccess: false, isShared: false };
     let aviationstackAccess = { hasAccess: false, isShared: false };
 
     try {
-      [openaiAccess, claudeAccess, airlabsAccess, aviationstackAccess] = await Promise.all([
-        hasApiKeyAccess('openai', userId),
-        hasApiKeyAccess('claude', userId),
+      const { hasApiKeyAccess } = await import('../../services/apiKeyResolver');
+      [airlabsAccess, aviationstackAccess] = await Promise.all([
         hasApiKeyAccess('airlabs', userId),
         hasApiKeyAccess('aviationstack', userId),
       ]);
@@ -113,7 +99,6 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
       });
     }
 
-    // Check OpenSky (has multiple credentials)
     const hasUserOpensky = settings && (settings.openskyClientId || settings.openskyUsername);
     const hasGlobalOpensky = adminSettings && (
       adminSettings.globalOpenskyClientId ||
@@ -122,16 +107,6 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
     const openskyShared = hasGlobalOpensky && !hasUserOpensky;
 
     res.json({
-      openai: {
-        hasKey: !!settings?.openaiApiKey,
-        isShared: openaiAccess.isShared,
-        hasAccess: openaiAccess.hasAccess,
-      },
-      claude: {
-        hasKey: !!settings?.claudeApiKey,
-        isShared: claudeAccess.isShared,
-        hasAccess: claudeAccess.hasAccess,
-      },
       airlabs: {
         hasKey: !!settings?.airlabsApiKey,
         isShared: airlabsAccess.isShared,
@@ -168,71 +143,39 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
     const userId = req.userId!;
     const payload = apiKeysSchema.parse(req.body);
 
-    // Get admin settings to check permissions
     const adminSettings = await prisma.adminSettings.findFirst();
-    const allowUserApiKeys = adminSettings?.allowUserApiKeys ?? true;
     const allowUserFlightApiKeys = adminSettings?.allowUserFlightApiKeys ?? true;
 
     const updateData: ApiKeysUpdateData = {};
 
-    // Encrypt parser API keys before storing
-    if (payload.openaiApiKey !== undefined) {
-      if (!allowUserApiKeys) {
-        res.status(403).json({
-          error: 'User API keys are not allowed by administrator',
-        });
-        return;
-      }
-      updateData.openaiApiKey = encryptApiKey(payload.openaiApiKey);
-    }
-    if (payload.claudeApiKey !== undefined) {
-      if (!allowUserApiKeys) {
-        res.status(403).json({
-          error: 'User API keys are not allowed by administrator',
-        });
-        return;
-      }
-      updateData.claudeApiKey = encryptApiKey(payload.claudeApiKey);
-    }
-
-    // Encrypt flight lookup API keys before storing
     if (payload.airlabsApiKey !== undefined) {
       if (!allowUserFlightApiKeys) {
-        res.status(403).json({
-          error: 'User flight API keys are not allowed by administrator',
-        });
+        res.status(403).json({ error: 'User flight API keys are not allowed by administrator' });
         return;
       }
       updateData.airlabsApiKey = encryptApiKey(payload.airlabsApiKey);
     }
     if (payload.aviationstackApiKey !== undefined) {
       if (!allowUserFlightApiKeys) {
-        res.status(403).json({
-          error: 'User flight API keys are not allowed by administrator',
-        });
+        res.status(403).json({ error: 'User flight API keys are not allowed by administrator' });
         return;
       }
       updateData.aviationstackApiKey = encryptApiKey(payload.aviationstackApiKey);
     }
     if (payload.openskyClientId !== undefined) {
       if (!allowUserFlightApiKeys) {
-        res.status(403).json({
-          error: 'User flight API keys are not allowed by administrator',
-        });
+        res.status(403).json({ error: 'User flight API keys are not allowed by administrator' });
         return;
       }
       updateData.openskyClientId = encryptApiKey(payload.openskyClientId);
     }
     if (payload.openskyClientSecret !== undefined) {
       if (!allowUserFlightApiKeys) {
-        res.status(403).json({
-          error: 'User flight API keys are not allowed by administrator',
-        });
+        res.status(403).json({ error: 'User flight API keys are not allowed by administrator' });
         return;
       }
       updateData.openskyClientSecret = encryptApiKey(payload.openskyClientSecret);
     }
-    // Clear username/password if they are sent as null/empty (OpenSky now only uses OAuth2)
     if (payload.openskyUsername !== undefined) {
       updateData.openskyUsername = null;
     }
@@ -240,7 +183,6 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
       updateData.openskyPassword = null;
     }
 
-    // Update settings
     await prisma.userSettings.upsert({
       where: { userId },
       update: updateData,
@@ -251,10 +193,8 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
       },
     });
 
-    // Return updated status
-    const [openaiAccess, claudeAccess, airlabsAccess, aviationstackAccess] = await Promise.all([
-      hasApiKeyAccess('openai', userId),
-      hasApiKeyAccess('claude', userId),
+    const { hasApiKeyAccess } = await import('../../services/apiKeyResolver');
+    const [airlabsAccess, aviationstackAccess] = await Promise.all([
       hasApiKeyAccess('airlabs', userId),
       hasApiKeyAccess('aviationstack', userId),
     ]);
@@ -273,14 +213,6 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
     res.json({
       message: 'API keys updated successfully',
       apiKeys: {
-        openai: {
-          hasKey: !!updateData.openaiApiKey || openaiAccess.hasAccess,
-          isShared: openaiAccess.isShared,
-        },
-        claude: {
-          hasKey: !!updateData.claudeApiKey || claudeAccess.hasAccess,
-          isShared: claudeAccess.isShared,
-        },
         airlabs: {
           hasKey: !!updateData.airlabsApiKey || airlabsAccess.hasAccess,
           isShared: airlabsAccess.isShared,
@@ -295,28 +227,6 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
         },
       },
     });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// POST /test/openai
-router.post('/test/openai', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const { apiKey } = testApiKeySchema.parse(req.body);
-    const result = await testOpenAIKey(apiKey, req.userId!);
-    res.json(result);
-  } catch (error) {
-    next(error);
-  }
-});
-
-// POST /test/claude
-router.post('/test/claude', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const { apiKey } = testApiKeySchema.parse(req.body);
-    const result = await testClaudeKey(apiKey, req.userId!);
-    res.json(result);
   } catch (error) {
     next(error);
   }

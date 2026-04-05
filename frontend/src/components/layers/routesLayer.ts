@@ -94,24 +94,61 @@ export function buildRouteData(
   return { arcs: [...arcMap.values()], points: [...airportMap.values()] };
 }
 
+// Amber highlight color — stands out clearly against both dark and light map tiles
+const HIGHLIGHT_COLOR: [number, number, number, number] = [245, 158, 11, 255];
+// How many alpha units to keep for dimmed routes (out of 255)
+const DIM_ALPHA = 18;
+
 export function createRoutesLayers(
   flights: GeoJSONFeature[],
   minRouteCount: number,
   onFlightClick?: (flightId: string) => void,
-  themeColors?: MapLayerColors
+  themeColors?: MapLayerColors,
+  arcHeight: number = 1,
+  selectedIds: string[] = []
 ): Layer[] {
   const { arcs, points } = buildRouteData(flights, minRouteCount, themeColors);
   const dotRgb = themeColors?.airportDot ?? ([232, 160, 69] as [number, number, number]);
 
-  // Arc width scales with route frequency — dominant corridors are visually thicker
+  const selectedSet = new Set(selectedIds);
+  const hasSelection = selectedIds.length > 0;
+  // Airport opacity: dim when a route is highlighted so pulse rings stand out
+  const airportOpacity = hasSelection ? 0.15 : 1;
+
+  // Arc width scales with route frequency. Selected arc is visually thicker.
   const arcLayer = new ArcLayer<ArcDatum>({
     id: "routes-arc",
     data: arcs,
     getSourcePosition: (d) => d.sourcePosition,
     getTargetPosition: (d) => d.targetPosition,
-    getSourceColor: (d) => d.sourceColor,
-    getTargetColor: (d) => d.targetColor,
-    getWidth: (d) => Math.min(Math.sqrt(d.count) * 1.3, 7),
+    getSourceColor: (d) => {
+      if (!hasSelection) return d.sourceColor;
+      const isSelected = d.flightIds.some((id) => selectedSet.has(id));
+      if (isSelected) return HIGHLIGHT_COLOR;
+      return [d.sourceColor[0], d.sourceColor[1], d.sourceColor[2], DIM_ALPHA] as [
+        number,
+        number,
+        number,
+        number,
+      ];
+    },
+    getTargetColor: (d) => {
+      if (!hasSelection) return d.targetColor;
+      const isSelected = d.flightIds.some((id) => selectedSet.has(id));
+      if (isSelected) return HIGHLIGHT_COLOR;
+      return [d.targetColor[0], d.targetColor[1], d.targetColor[2], DIM_ALPHA] as [
+        number,
+        number,
+        number,
+        number,
+      ];
+    },
+    getWidth: (d) => {
+      const base = Math.min(Math.sqrt(d.count) * 1.3, 7);
+      if (!hasSelection) return base;
+      return d.flightIds.some((id) => selectedSet.has(id)) ? Math.max(base * 2, 5) : base;
+    },
+    getHeight: arcHeight,
     widthMinPixels: 1,
     pickable: !!onFlightClick,
     onClick: onFlightClick
@@ -120,6 +157,11 @@ export function createRoutesLayers(
           if (lastId) onFlightClick(lastId);
         }
       : undefined,
+    updateTriggers: {
+      getSourceColor: selectedIds,
+      getTargetColor: selectedIds,
+      getWidth: selectedIds,
+    },
   });
 
   // Inner ring — close to the airport dot
@@ -133,6 +175,7 @@ export function createRoutesLayers(
     stroked: true,
     filled: false,
     lineWidthMinPixels: 1.2,
+    opacity: airportOpacity,
     pickable: false,
   });
 
@@ -147,6 +190,7 @@ export function createRoutesLayers(
     stroked: true,
     filled: false,
     lineWidthMinPixels: 0.8,
+    opacity: airportOpacity,
     pickable: false,
   });
 
@@ -158,6 +202,7 @@ export function createRoutesLayers(
     getRadius: () => 2200,
     getFillColor: [...dotRgb, 220] as [number, number, number, number],
     stroked: false,
+    opacity: airportOpacity,
     pickable: false,
   });
 
@@ -177,6 +222,7 @@ export function createRoutesLayers(
     getPixelOffset: [0, -18],
     billboard: true,
     characterSet: "auto",
+    opacity: airportOpacity,
     parameters: { depthCompare: "always" as const },
   });
 

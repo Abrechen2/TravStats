@@ -43,16 +43,14 @@ export function deleteAvailabilityCacheEntry(cacheKey: string): void {
  * Get default fallback chain for vision parsers
  */
 export function getDefaultVisionFallbackChain(): VisionProvider[] {
-  // Priority: Cloud AI > Local AI > OCR > Manual
-  return ['openai', 'claude', 'ollama', 'tesseract', 'manual'];
+  return ['tesseract', 'manual'];
 }
 
 /**
  * Get default fallback chain for text parsers
  */
 export function getDefaultTextFallbackChain(): TextProvider[] {
-  // Priority: Cloud AI > Local AI > Regex
-  return ['openai', 'claude', 'ollama', 'regex'];
+  return ['regex'];
 }
 
 /**
@@ -66,62 +64,25 @@ export function parseFallbackChain<T extends string>(chain: string | undefined, 
 }
 
 /**
- * Get parser configuration from environment and user settings
- * @param userSettings - User settings (API keys should already be decrypted)
- * @param adminSettings - Optional admin settings (API keys should already be decrypted)
+ * Get parser configuration
+ * @param userId - Optional user ID for template lookup
  */
 export async function getParserConfig(
-  userSettings?: {
-    preferredVisionParser?: string | null;
-    preferredTextParser?: string | null;
-    visionFallbackChain?: string | null;
-    textFallbackChain?: string | null;
-    openaiApiKey?: string | null;
-    claudeApiKey?: string | null;
-  },
-  adminSettings?: {
-    globalOpenaiApiKey?: string | null;
-    globalClaudeApiKey?: string | null;
-    ollamaUrl?: string | null;
-    ollamaModel?: string | null;
-    ollamaVisionModel?: string | null;
-  },
+  _userSettings?: Record<string, unknown>,
+  _adminSettings?: Record<string, unknown>,
   userId?: string
 ): Promise<ParserConfig> {
-  // Import here to avoid circular dependency
-  const { selectModelForParsing } = await import('../modelManager');
-
-  // Select models based on user settings and availability
-  const selectedEmailModel = await selectModelForParsing('email', userId);
-  const selectedVisionModel = await selectModelForParsing('vision', userId);
-  // Note: API keys in userSettings and adminSettings should already be decrypted when passed to this function
-  // Priority: userSettings API keys > adminSettings global keys > environment variables
   return {
-    visionProvider: (userSettings?.preferredVisionParser as VisionProvider | 'auto') || 'auto',
-    textProvider: (userSettings?.preferredTextParser as TextProvider | 'auto') || 'auto',
-    visionFallbacks: parseFallbackChain(
-      userSettings?.visionFallbackChain || undefined,
-      getDefaultVisionFallbackChain()
-    ),
-    textFallbacks: parseFallbackChain(
-      userSettings?.textFallbackChain || undefined,
-      getDefaultTextFallbackChain()
-    ),
-    ollamaUrl: adminSettings?.ollamaUrl || process.env.OLLAMA_URL,
-    ollamaModel: adminSettings?.ollamaModel || selectedEmailModel,
-    ollamaVisionModel: adminSettings?.ollamaVisionModel || selectedVisionModel,
-    openaiApiKey: userSettings?.openaiApiKey || adminSettings?.globalOpenaiApiKey || process.env.OPENAI_API_KEY,
-    openaiModel: process.env.OPENAI_MODEL,
-    openaiVisionModel: process.env.OPENAI_VISION_MODEL,
-    claudeApiKey: userSettings?.claudeApiKey || adminSettings?.globalClaudeApiKey || process.env.CLAUDE_API_KEY,
-    claudeModel: process.env.CLAUDE_MODEL,
-    claudeVisionModel: process.env.CLAUDE_VISION_MODEL,
+    visionProvider: 'tesseract',
+    textProvider: 'regex',
+    visionFallbacks: getDefaultVisionFallbackChain(),
+    textFallbacks: getDefaultTextFallbackChain(),
     userId,
   };
 }
 
 /**
- * Clear availability cache (useful for testing API keys)
+ * Clear availability cache (useful for testing)
  */
 export function clearAvailabilityCache(): void {
   availabilityCache.clear();

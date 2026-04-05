@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, useState, useMemo } from "react";
 import { DeckGLMap } from "./DeckGLMap";
 import { VisModeSelector } from "./VisModeSelector";
-import type { GeoJSONFeature } from "../types";
+import type { GeoJSONFeature, Flight } from "../types";
 import type { VisMode } from "../types/visMode";
 import { useTranslation } from "../hooks/useTranslation";
 import { useThemeStore } from "../store/themeStore";
@@ -10,8 +10,8 @@ const GlobeView = lazy(() => import("./GlobeView"));
 
 interface MapContainer3DProps {
   flights: GeoJSONFeature[];
-  selectedFlightId?: string;
   onFlightClick?: (flightId: string) => void;
+  onEdit?: (flight: Flight) => void;
   visMode: VisMode;
   onVisModeChange: (mode: VisMode) => void;
   minRouteCount?: number;
@@ -20,8 +20,8 @@ interface MapContainer3DProps {
 
 export default function MapContainer3D({
   flights,
-  selectedFlightId,
   onFlightClick,
+  onEdit,
   visMode,
   onVisModeChange,
   minRouteCount = 1,
@@ -62,7 +62,6 @@ export default function MapContainer3D({
           >
             <GlobeView
               flights={flights}
-              selectedFlightId={selectedFlightId}
               onFlightClick={onFlightClick}
               minRouteCount={minRouteCount}
             />
@@ -70,8 +69,8 @@ export default function MapContainer3D({
         ) : (
           <DeckGLMap
             flights={flights}
-            selectedFlightId={selectedFlightId}
             onFlightClick={onFlightClick}
+            onEdit={onEdit}
             visMode={visMode}
             minRouteCount={minRouteCount}
           />

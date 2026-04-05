@@ -3,8 +3,8 @@ import { ParsedBooking } from '../bookingParser';
 /**
  * Provider types for vision and text parsing
  */
-export type VisionProvider = 'ollama' | 'openai' | 'claude' | 'tesseract' | 'manual';
-export type TextProvider = 'ollama' | 'openai' | 'claude' | 'regex';
+export type VisionProvider = 'tesseract' | 'manual';
+export type TextProvider = 'regex';
 
 /**
  * Common interface for all vision parsers
@@ -98,17 +98,8 @@ export interface ParserConfig {
   textFallbacks: TextProvider[];
 
   /**
-   * API keys and service URLs
+   * Optional user ID for template lookup
    */
-  ollamaUrl?: string;
-  ollamaModel?: string;
-  ollamaVisionModel?: string;
-  openaiApiKey?: string;
-  openaiModel?: string;
-  openaiVisionModel?: string;
-  claudeApiKey?: string;
-  claudeModel?: string;
-  claudeVisionModel?: string;
   userId?: string;
 }
 

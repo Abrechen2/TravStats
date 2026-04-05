@@ -242,37 +242,20 @@ export const adminApi = {
   },
 
   getAdminParserSettings: async (): Promise<{
-    globalOpenaiApiKey?: string;
-    globalClaudeApiKey?: string;
     allowUserApiKeys: boolean;
     defaultVisionParser: string;
     defaultTextParser: string;
-    ollamaUrl: string | null;
-    ollamaModel: string | null;
-    ollamaVisionModel: string | null;
   }> => {
     const { data } = await api.get<{
-      globalOpenaiApiKey?: string;
-      globalClaudeApiKey?: string;
       allowUserApiKeys: boolean;
       defaultVisionParser: string;
       defaultTextParser: string;
-      ollamaUrl: string | null;
-      ollamaModel: string | null;
-      ollamaVisionModel: string | null;
     }>("/admin/parser-settings");
     return data;
   },
 
   updateAdminParserSettings: async (settings: {
-    globalOpenaiApiKey?: string;
-    globalClaudeApiKey?: string;
     allowUserApiKeys?: boolean;
-    defaultVisionParser?: string;
-    defaultTextParser?: string;
-    ollamaUrl?: string | null;
-    ollamaModel?: string | null;
-    ollamaVisionModel?: string | null;
   }): Promise<MessageResponse> => {
     const { data } = await api.put<MessageResponse>("/admin/parser-settings", settings);
     return data;

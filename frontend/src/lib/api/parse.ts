@@ -4,11 +4,17 @@ import { api, parserApi } from "./client";
 import type {
   BoardingPassParseResult,
   EmailParseResult,
-  OllamaVisionCheckResult,
   ParserCorrectionPayload,
   ProviderAvailability,
   SuccessResponse,
 } from "./types";
+
+interface ParserCheckResult {
+  available: boolean;
+  provider?: string;
+  reason?: string;
+  metadata?: Record<string, unknown>;
+}
 
 // Parse API (Email & Boarding Pass) - Uses parserApi with 180s timeout
 export const parseApi = {
@@ -64,8 +70,8 @@ export const parseApi = {
     return data;
   },
 
-  checkOllamaVision: async (): Promise<OllamaVisionCheckResult> => {
-    const { data } = await parserApi.get<OllamaVisionCheckResult>("/parse-boardingpass/check");
+  checkOllamaVision: async (): Promise<ParserCheckResult> => {
+    const { data } = await parserApi.get<ParserCheckResult>("/parse-boardingpass/check");
     return data;
   },
 

@@ -14,8 +14,6 @@ export interface GlobalApiKeys {
 }
 
 export interface ParserApiKeySettings {
-  globalOpenaiApiKey?: string;
-  globalClaudeApiKey?: string;
   allowUserApiKeys: boolean;
 }
 
@@ -67,10 +65,6 @@ export default function GlobalApiKeysManager({
             <p>{t("admin:globalApiKeys.help.description")}</p>
             <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
               <li>
-                <strong>{t("admin:globalApiKeys.help.parserTitle")}</strong>{" "}
-                {t("admin:globalApiKeys.help.parser")}
-              </li>
-              <li>
                 <strong>{t("admin:globalApiKeys.help.flightTitle")}</strong>{" "}
                 {t("admin:globalApiKeys.help.flight")}
               </li>
@@ -96,50 +90,6 @@ export default function GlobalApiKeysManager({
 
       {globalApiKeys && parserSettings && (
         <>
-          {/* Parser APIs */}
-          <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
-              {t("admin:globalApiKeys.parserApis")}
-            </h3>
-            <p className="text-sm text-[var(--text-muted)] mb-4">
-              {t("admin:globalApiKeys.parserApisDescription")}
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <ApiKeyCard
-                provider="openai"
-                label={t("admin:globalApiKeys.openai.label")}
-                description={t("admin:globalApiKeys.openai.description")}
-                getKeyUrl="https://platform.openai.com/api-keys"
-                isShared={false}
-                hasAccess={!!parserSettings.globalOpenaiApiKey}
-                value={parserSettings.globalOpenaiApiKey || ""}
-                onChange={(value) =>
-                  onParserSettingsChange({ ...parserSettings, globalOpenaiApiKey: value })
-                }
-                onClear={() =>
-                  onParserSettingsChange({ ...parserSettings, globalOpenaiApiKey: "" })
-                }
-                isAdmin={true}
-              />
-              <ApiKeyCard
-                provider="claude"
-                label={t("admin:globalApiKeys.claude.label")}
-                description={t("admin:globalApiKeys.claude.description")}
-                getKeyUrl="https://console.anthropic.com/settings/keys"
-                isShared={false}
-                hasAccess={!!parserSettings.globalClaudeApiKey}
-                value={parserSettings.globalClaudeApiKey || ""}
-                onChange={(value) =>
-                  onParserSettingsChange({ ...parserSettings, globalClaudeApiKey: value })
-                }
-                onClear={() =>
-                  onParserSettingsChange({ ...parserSettings, globalClaudeApiKey: "" })
-                }
-                isAdmin={true}
-              />
-            </div>
-          </div>
-
           {/* Flight Lookup APIs */}
           <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
@@ -208,34 +158,27 @@ export default function GlobalApiKeysManager({
               {t("admin:globalApiKeys.permissionsDescription")}
             </p>
             <div className="space-y-4">
-              {/* Parser API Permissions */}
+              {/* Parser Permissions */}
               <div className="border-b border-[var(--color-border)] pb-4">
                 <h4 className="text-md font-medium text-[var(--text-primary)] mb-3">
-                  {t("admin:globalApiKeys.parserPermissions")}
+                  Parser-Berechtigungen
                 </h4>
-                <div className="space-y-3">
-                  <label className="flex items-start gap-3">
-                    <input
-                      type="checkbox"
-                      checked={parserSettings.allowUserApiKeys}
-                      onChange={(e) =>
-                        onParserSettingsChange({
-                          ...parserSettings,
-                          allowUserApiKeys: e.target.checked,
-                        })
-                      }
-                      className="checkbox mt-1"
-                    />
-                    <div>
-                      <span className="font-medium text-[var(--text-primary)]">
-                        {t("admin:globalApiKeys.allowUserParserApiKeys")}
-                      </span>
-                      <p className="text-sm text-[var(--text-muted)]">
-                        {t("admin:globalApiKeys.allowUserParserApiKeysDescription")}
-                      </p>
-                    </div>
-                  </label>
-                </div>
+                <label className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={parserSettings.allowUserApiKeys}
+                    onChange={(e) => onParserSettingsChange({ allowUserApiKeys: e.target.checked })}
+                    className="checkbox mt-1"
+                  />
+                  <div>
+                    <span className="font-medium text-[var(--text-primary)]">
+                      {t("admin:globalApiKeys.allowUserParserApiKeys")}
+                    </span>
+                    <p className="text-sm text-[var(--text-muted)]">
+                      {t("admin:globalApiKeys.allowUserParserApiKeysDescription")}
+                    </p>
+                  </div>
+                </label>
               </div>
 
               {/* Flight API Permissions */}
