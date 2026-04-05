@@ -94,30 +94,62 @@ export function buildRouteData(
   return { arcs: [...arcMap.values()], points: [...airportMap.values()] };
 }
 
+// Accent color used for the highlighted route — matches the app's --accent variable
+const HIGHLIGHT_COLOR: [number, number, number, number] = [129, 140, 248, 255];
+// How many alpha units to keep for dimmed routes (out of 255)
+const DIM_ALPHA = 18;
+
 export function createRoutesLayers(
   flights: GeoJSONFeature[],
   minRouteCount: number,
   onFlightClick?: (flightId: string) => void,
   themeColors?: MapLayerColors,
   arcHeight: number = 1,
-  opacity: number = 1,
-  idSuffix: string = ""
+  selectedIds: string[] = []
 ): Layer[] {
   const { arcs, points } = buildRouteData(flights, minRouteCount, themeColors);
   const dotRgb = themeColors?.airportDot ?? ([232, 160, 69] as [number, number, number]);
 
-  // Arc width scales with route frequency — dominant corridors are visually thicker
+  const selectedSet = new Set(selectedIds);
+  const hasSelection = selectedIds.length > 0;
+  // Airport opacity: dim when a route is highlighted so pulse rings stand out
+  const airportOpacity = hasSelection ? 0.15 : 1;
+
+  // Arc width scales with route frequency. Selected arc is visually thicker.
   const arcLayer = new ArcLayer<ArcDatum>({
-    id: `routes-arc${idSuffix}`,
+    id: "routes-arc",
     data: arcs,
     getSourcePosition: (d) => d.sourcePosition,
     getTargetPosition: (d) => d.targetPosition,
-    getSourceColor: (d) => d.sourceColor,
-    getTargetColor: (d) => d.targetColor,
-    getWidth: (d) => Math.min(Math.sqrt(d.count) * 1.3, 7),
+    getSourceColor: (d) => {
+      if (!hasSelection) return d.sourceColor;
+      const isSelected = d.flightIds.some((id) => selectedSet.has(id));
+      if (isSelected) return HIGHLIGHT_COLOR;
+      return [d.sourceColor[0], d.sourceColor[1], d.sourceColor[2], DIM_ALPHA] as [
+        number,
+        number,
+        number,
+        number,
+      ];
+    },
+    getTargetColor: (d) => {
+      if (!hasSelection) return d.targetColor;
+      const isSelected = d.flightIds.some((id) => selectedSet.has(id));
+      if (isSelected) return HIGHLIGHT_COLOR;
+      return [d.targetColor[0], d.targetColor[1], d.targetColor[2], DIM_ALPHA] as [
+        number,
+        number,
+        number,
+        number,
+      ];
+    },
+    getWidth: (d) => {
+      const base = Math.min(Math.sqrt(d.count) * 1.3, 7);
+      if (!hasSelection) return base;
+      return d.flightIds.some((id) => selectedSet.has(id)) ? Math.max(base * 2, 5) : base;
+    },
     getHeight: arcHeight,
     widthMinPixels: 1,
-    opacity,
     pickable: !!onFlightClick,
     onClick: onFlightClick
       ? ({ object }) => {
@@ -125,11 +157,16 @@ export function createRoutesLayers(
           if (lastId) onFlightClick(lastId);
         }
       : undefined,
+    updateTriggers: {
+      getSourceColor: selectedIds,
+      getTargetColor: selectedIds,
+      getWidth: selectedIds,
+    },
   });
 
   // Inner ring — close to the airport dot
   const ringInnerLayer = new ScatterplotLayer<PointDatum>({
-    id: `routes-ring-inner${idSuffix}`,
+    id: "routes-ring-inner",
     data: points,
     getPosition: (d) => d.position,
     getRadius: (d) => Math.min(3 + d.count * 0.4, 10) * 1000,
@@ -138,13 +175,13 @@ export function createRoutesLayers(
     stroked: true,
     filled: false,
     lineWidthMinPixels: 1.2,
-    opacity,
+    opacity: airportOpacity,
     pickable: false,
   });
 
   // Outer ring — faint halo
   const ringOuterLayer = new ScatterplotLayer<PointDatum>({
-    id: `routes-ring-outer${idSuffix}`,
+    id: "routes-ring-outer",
     data: points,
     getPosition: (d) => d.position,
     getRadius: (d) => Math.min(3 + d.count * 0.4, 10) * 1800,
@@ -153,25 +190,25 @@ export function createRoutesLayers(
     stroked: true,
     filled: false,
     lineWidthMinPixels: 0.8,
-    opacity,
+    opacity: airportOpacity,
     pickable: false,
   });
 
   // Inner dot — solid center marker
   const dotLayer = new ScatterplotLayer<PointDatum>({
-    id: `routes-dot${idSuffix}`,
+    id: "routes-dot",
     data: points,
     getPosition: (d) => d.position,
     getRadius: () => 2200,
     getFillColor: [...dotRgb, 220] as [number, number, number, number],
     stroked: false,
-    opacity,
+    opacity: airportOpacity,
     pickable: false,
   });
 
   // IATA code labels — appear above each marker
   const labelLayer = new TextLayer<PointDatum>({
-    id: `routes-labels${idSuffix}`,
+    id: "routes-labels",
     data: points,
     getPosition: (d) => d.position,
     getText: (d) => d.iata,
@@ -185,7 +222,7 @@ export function createRoutesLayers(
     getPixelOffset: [0, -18],
     billboard: true,
     characterSet: "auto",
-    opacity,
+    opacity: airportOpacity,
     parameters: { depthCompare: "always" as const },
   });
 

@@ -32,7 +32,7 @@ export function FlightPanel({
     <AnimatePresence>
       {isOpen && (
         <>
-          <div className="fixed inset-0 bg-black/40 z-30" onClick={onClose} aria-hidden="true" />
+          <div className="fixed inset-0 z-30" onClick={onClose} aria-hidden="true" />
           <motion.div
             initial={{ x: -380 }}
             animate={{ x: 0 }}
