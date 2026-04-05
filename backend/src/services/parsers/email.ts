@@ -2,7 +2,7 @@ import { TextProvider, ParserConfig, ParserResult } from './types';
 import { ParsedBooking } from '../bookingParser';
 import logger, { parserFactoryLogger, parserTextLogger } from '../../utils/logger';
 import { shouldLogParserOperations } from '../loggingConfig';
-import { extractFlightDataFromText } from './shared/utils';
+import { extractFlightDataFromText, cleanEmailBody } from './shared/utils';
 import { collectLowQualityFeedback } from '../parserFeedback';
 import { checkProviderAvailability, deleteAvailabilityCacheEntry } from './config';
 import { getTextParserInstance } from './providers';
@@ -59,12 +59,21 @@ export async function parseEmail(
   const textLog = shouldLog ? parserTextLogger : logger;
   const startTime = Date.now();
 
+  // Clean the plain-text body before any parsing so parsers see the same
+  // filtered content that the annotation view shows (URLs, HTML fragments removed,
+  // whitespace normalised).  The From: header is extracted from the raw text first
+  // so that email-address-based template detection is unaffected.
+  const fromMatch = /^From:\s*(.+)$/im.exec(text);
+  const fromAddress = fromMatch ? fromMatch[1].trim() : "";
+  const cleanedText = cleanEmailBody(text);
+
   if (shouldLog) {
     log.info({
       operation: 'parse_email_start',
       context: {
         subject,
         textLength: text.length,
+        cleanedTextLength: cleanedText.length,
         htmlLength: html ? html.length : 0,
         fallbackChain: config.textFallbacks,
       },
@@ -73,12 +82,10 @@ export async function parseEmail(
 
   // Step 0: User-derived regex templates (before HTML-selector templates)
   if (config.userId) {
-    const fromMatch = /^From:\s*(.+)$/im.exec(text);
-    const fromAddress = fromMatch ? fromMatch[1].trim() : "";
 
-    const userTemplate = await findMatchingTemplate(config.userId, fromAddress, subject, text);
+    const userTemplate = await findMatchingTemplate(config.userId, fromAddress, subject, cleanedText);
     if (userTemplate) {
-      const userResults = applyUserTemplate(userTemplate, subject, text);
+      const userResults = applyUserTemplate(userTemplate, subject, cleanedText);
       const bestConfidence = userResults[0]?.parserConfidence ?? 0;
       if (bestConfidence >= 80) {
         log.info(
@@ -98,7 +105,7 @@ export async function parseEmail(
   const templateParser = new TemplateParser();
   const templateAvail = await templateParser.checkAvailability();
   if (templateAvail.available) {
-    const templateResults = await templateParser.parseEmail(subject, text, html, config.userId);
+    const templateResults = await templateParser.parseEmail(subject, cleanedText, html, config.userId);
     if (templateResults.length > 0 && (templateResults[0].parserConfidence ?? 0) >= 30) {
       logger.info(
         { confidence: templateResults[0].parserConfidence, parserTemplate: templateResults[0].parserTemplate },
@@ -140,20 +147,20 @@ export async function parseEmail(
       if (shouldLog) {
         textLog.info({
           operation: 'text_parse_attempt',
-          context: { provider, textLength: text.length, htmlLength: html ? html.length : 0 },
+          context: { provider, textLength: cleanedText.length, htmlLength: html ? html.length : 0 },
         });
       } else {
         logger.info(`[Parser Factory] Attempting email parse with: ${provider}`);
       }
 
-      const flights = await parser.parseEmail(subject, text, html);
+      const flights = await parser.parseEmail(subject, cleanedText, html);
       const parseDuration = Date.now() - parseStartTime;
 
       if (!flights || flights.length === 0) {
         throw new Error('Parser returned no flights');
       }
 
-      const finalFlights = applyEmailRegexPostProcessing(flights, subject, text, html);
+      const finalFlights = applyEmailRegexPostProcessing(flights, subject, cleanedText, html);
       const finalProvider = provider;
       const finalFallbackUsed = config.textProvider !== provider;
 
