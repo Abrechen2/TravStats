@@ -98,21 +98,26 @@ export function createRoutesLayers(
   flights: GeoJSONFeature[],
   minRouteCount: number,
   onFlightClick?: (flightId: string) => void,
-  themeColors?: MapLayerColors
+  themeColors?: MapLayerColors,
+  arcHeight: number = 1,
+  opacity?: number,
+  idSuffix: string = ""
 ): Layer[] {
   const { arcs, points } = buildRouteData(flights, minRouteCount, themeColors);
   const dotRgb = themeColors?.airportDot ?? ([232, 160, 69] as [number, number, number]);
 
   // Arc width scales with route frequency — dominant corridors are visually thicker
   const arcLayer = new ArcLayer<ArcDatum>({
-    id: "routes-arc",
+    id: `routes-arc${idSuffix}`,
     data: arcs,
     getSourcePosition: (d) => d.sourcePosition,
     getTargetPosition: (d) => d.targetPosition,
     getSourceColor: (d) => d.sourceColor,
     getTargetColor: (d) => d.targetColor,
     getWidth: (d) => Math.min(Math.sqrt(d.count) * 1.3, 7),
+    getHeight: arcHeight,
     widthMinPixels: 1,
+    opacity,
     pickable: !!onFlightClick,
     onClick: onFlightClick
       ? ({ object }) => {
@@ -124,7 +129,7 @@ export function createRoutesLayers(
 
   // Inner ring — close to the airport dot
   const ringInnerLayer = new ScatterplotLayer<PointDatum>({
-    id: "routes-ring-inner",
+    id: `routes-ring-inner${idSuffix}`,
     data: points,
     getPosition: (d) => d.position,
     getRadius: (d) => Math.min(3 + d.count * 0.4, 10) * 1000,
@@ -133,12 +138,13 @@ export function createRoutesLayers(
     stroked: true,
     filled: false,
     lineWidthMinPixels: 1.2,
+    opacity,
     pickable: false,
   });
 
   // Outer ring — faint halo
   const ringOuterLayer = new ScatterplotLayer<PointDatum>({
-    id: "routes-ring-outer",
+    id: `routes-ring-outer${idSuffix}`,
     data: points,
     getPosition: (d) => d.position,
     getRadius: (d) => Math.min(3 + d.count * 0.4, 10) * 1800,
@@ -147,23 +153,25 @@ export function createRoutesLayers(
     stroked: true,
     filled: false,
     lineWidthMinPixels: 0.8,
+    opacity,
     pickable: false,
   });
 
   // Inner dot — solid center marker
   const dotLayer = new ScatterplotLayer<PointDatum>({
-    id: "routes-dot",
+    id: `routes-dot${idSuffix}`,
     data: points,
     getPosition: (d) => d.position,
     getRadius: () => 2200,
     getFillColor: [...dotRgb, 220] as [number, number, number, number],
     stroked: false,
+    opacity,
     pickable: false,
   });
 
   // IATA code labels — appear above each marker
   const labelLayer = new TextLayer<PointDatum>({
-    id: "routes-labels",
+    id: `routes-labels${idSuffix}`,
     data: points,
     getPosition: (d) => d.position,
     getText: (d) => d.iata,
@@ -177,6 +185,7 @@ export function createRoutesLayers(
     getPixelOffset: [0, -18],
     billboard: true,
     characterSet: "auto",
+    opacity,
     parameters: { depthCompare: "always" as const },
   });
 
