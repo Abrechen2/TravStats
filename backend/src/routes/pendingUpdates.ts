@@ -238,7 +238,7 @@ router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction
     }
 
     await prisma.pendingFlightUpdate.delete({
-      where: { id },
+      where: { id, userId },
     });
 
     res.status(204).send();
