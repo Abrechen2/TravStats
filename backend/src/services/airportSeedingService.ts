@@ -27,7 +27,6 @@ interface CSVAirport {
 }
 
 let seedingInProgress = false;
-let seedingStatusId: string | null = null;
 
 async function downloadCSV(url: string, destination: string): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -324,7 +323,7 @@ async function seedAirportsFromCSVAsync(statusId: string): Promise<void> {
     seedingInProgress = false;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
+
     await updateSeedingStatus(statusId, {
       status: 'failed',
       error: errorMessage,
@@ -417,7 +416,7 @@ export async function startAirportSeeding(): Promise<string> {
     throw error;
   }
 
-  seedingStatusId = status.id;
+  // status.id available if needed for status tracking in the future
   seedingInProgress = true;
 
   // Start seeding asynchronously (don't await)
@@ -498,11 +497,3 @@ export async function getSeedingStatus(): Promise<{
 export function isSeedingInProgress(): boolean {
   return seedingInProgress;
 }
-
-
-
-
-
-
-
-

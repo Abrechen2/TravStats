@@ -67,7 +67,7 @@ export async function analyzeFeedbackForPatterns(
     if (data.count < 3) continue; // Only suggest for issues that appear at least 3 times
 
     const uniqueExamples = [...new Set(data.examples)].slice(0, 10);
-    
+
     if (issue.includes('flightNumber') && uniqueExamples.length > 0) {
       // Analyze flight number patterns
       const patterns = analyzeFlightNumberPatterns(uniqueExamples);
@@ -132,11 +132,11 @@ export async function analyzeFeedbackForPatterns(
  */
 function analyzeFlightNumberPatterns(examples: string[]): Array<{ regex: string; confidence: number }> {
   const patterns: Array<{ regex: string; confidence: number }> = [];
-  
+
   // Check for common patterns
   const airlineCodes = new Set<string>();
   const numberLengths = new Set<number>();
-  
+
   for (const example of examples) {
     const match = example.match(/^([A-Z]{2,3})(\d+)$/);
     if (match) {
@@ -146,10 +146,9 @@ function analyzeFlightNumberPatterns(examples: string[]): Array<{ regex: string;
   }
 
   if (airlineCodes.size > 0 && numberLengths.size > 0) {
-    const avgLength = Array.from(numberLengths).reduce((a, b) => a + b, 0) / numberLengths.size;
     const minLength = Math.min(...numberLengths);
     const maxLength = Math.max(...numberLengths);
-    
+
     // Generate pattern based on observed patterns
     if (minLength === maxLength) {
       patterns.push({
@@ -176,12 +175,12 @@ function analyzePNRPatterns(examples: string[]): { regex: string; confidence: nu
   // Check if all examples have same length
   const lengths = examples.map(e => e.length);
   const uniqueLengths = [...new Set(lengths)];
-  
+
   if (uniqueLengths.length === 1) {
     const length = uniqueLengths[0];
     // Check if alphanumeric
     const isAlphanumeric = examples.every(e => /^[A-Z0-9]+$/.test(e));
-    
+
     if (isAlphanumeric) {
       return {
         regex: `\\b([A-Z0-9]{${length}})\\b`,
@@ -205,7 +204,7 @@ function analyzeAirportCodePatterns(examples: string[]): { regex: string; confid
 
   // Check if all are 3-letter codes
   const allThreeLetters = examples.every(e => /^[A-Z]{3}$/.test(e));
-  
+
   if (allThreeLetters) {
     return {
       regex: `\\b([A-Z]{3})\\b`,
@@ -261,4 +260,3 @@ export async function getPatternAnalysisSummary(days: number = 30): Promise<{
     topIssues,
   };
 }
-

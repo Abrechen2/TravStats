@@ -6,11 +6,9 @@ import { extractEmailFromFile } from '../services/emailExtractor';
 import { uploadEmailFile } from '../middleware/upload';
 import { z } from 'zod';
 import logger from '../utils/logger';
-import { prisma } from '../db';
 import fs from 'fs';
 import path from 'path';
 import { validateEmailFile } from '../utils/fileValidation';
-import { AppError } from '../middleware/errorHandler';
 import { collectLowQualityFeedback } from '../services/parserFeedback';
 
 const router = Router();

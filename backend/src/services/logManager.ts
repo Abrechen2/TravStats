@@ -201,7 +201,7 @@ export async function readLogFile(filename: string, options: ReadOptions = {}): 
 
         entries.push(entry);
         collected++;
-      } catch (parseError) {
+      } catch (_parseError) {
         // Skip malformed log lines
         continue;
       }

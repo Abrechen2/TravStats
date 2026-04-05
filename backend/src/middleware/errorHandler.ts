@@ -35,7 +35,7 @@ export const errorHandler = async (
   err: ApiError | ZodError,
   req: AuthRequest,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) => {
   const debugEnabled = await isDebugEnabled().catch(() => false);
   const errorCategory = categorizeError(err);

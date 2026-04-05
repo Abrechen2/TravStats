@@ -163,7 +163,7 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
     });
 
     // Extract direct fields from payload since they're not part of JSON data
-    const { boardingPassParserStrategy, autoUpdate, historicalEnrichment, ...payloadWithoutDirectFields } = payload;
+    const { boardingPassParserStrategy, autoUpdate: _autoUpdate, historicalEnrichment: _historicalEnrichment, ...payloadWithoutDirectFields } = payload;
 
     const merged: SettingsDataJson = {
       ...defaultSettings,

@@ -209,7 +209,7 @@ export async function lookupFlightByNumber(
     flightCache.set(cacheKey, flights, isHistorical ? CACHE_TTL_SECONDS : RECENT_CACHE_TTL_SECONDS);
 
     return flights;
-  } catch (error: unknown) {
+  } catch (_error: unknown) {
     // node-cache handles expiry, no stale fallback needed
     return [];
   }

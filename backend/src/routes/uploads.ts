@@ -61,7 +61,7 @@ router.post(
       if (filePath && fs.existsSync(filePath)) {
         try {
           fs.unlinkSync(filePath);
-        } catch (cleanupError) {
+        } catch (_cleanupError) {
           logger.error({
             operation: 'receipt_upload_cleanup_error',
             message: 'Failed to cleanup file after validation error',

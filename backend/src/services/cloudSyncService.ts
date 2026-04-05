@@ -40,7 +40,7 @@ export async function testConnection(): Promise<{ success: boolean; message: str
     }
 
     const client = getWebDAVClient();
-    const directoryItems = await client.getDirectoryContents('/');
+    await client.getDirectoryContents('/');
 
     return {
       success: true,
@@ -90,7 +90,7 @@ export async function syncToCloud(backupId: string): Promise<void> {
     // Ensure backup directory exists on WebDAV
     try {
       await client.createDirectory(WEBDAV_BACKUP_PATH, { recursive: true });
-    } catch (error) {
+    } catch (_error) {
       // Directory might already exist, ignore
     }
 
@@ -148,7 +148,7 @@ export async function listCloudBackups(): Promise<Array<{ name: string; size: nu
     // Ensure directory exists
     try {
       await client.createDirectory(WEBDAV_BACKUP_PATH, { recursive: true });
-    } catch (error) {
+    } catch (_error) {
       // Directory might already exist
     }
 
@@ -221,17 +221,3 @@ export async function downloadFromCloud(backupName: string, localPath: string): 
     throw error;
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

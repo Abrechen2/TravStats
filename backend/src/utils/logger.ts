@@ -46,7 +46,7 @@ function createRotatingStream(category: string, maxSizeMB: number = 10, maxFiles
         if (typeof (stream as NodeJS.WritableStream & { end?: () => void }).end === 'function') {
           (stream as NodeJS.WritableStream & { end: () => void }).end();
         }
-      } catch (closeError) {
+      } catch (_closeError) {
         // Ignore errors when closing
       }
     });
@@ -63,7 +63,6 @@ function createRotatingStream(category: string, maxSizeMB: number = 10, maxFiles
 
 // Cache for dynamic category streams
 const categoryStreams: Map<string, pino.StreamEntry> = new Map();
-let streamsInitialized = false;
 
 // Pino configuration for AI-optimized output
 const pinoConfig: pino.LoggerOptions = {
@@ -306,10 +305,8 @@ export async function initializeCategoryStreams(): Promise<void> {
       }
     }
 
-    streamsInitialized = true;
   } catch (error) {
     console.warn('Could not initialize category streams:', error);
-    streamsInitialized = false;
   }
 }
 
@@ -373,7 +370,7 @@ function createCategoryStreams(category: string): pino.StreamEntry[] {
         categoryStreamsArray.push({ level: 'error', stream: errorStream });
       }
     }
-  } catch (error) {
+  } catch (_error) {
     // Ignore errors for base streams
   }
 

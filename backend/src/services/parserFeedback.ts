@@ -220,7 +220,6 @@ function calculateQualityScore(flights: ParsedBooking[]): number {
   let totalScore = 0;
   for (const flight of flights) {
     let score = 0;
-    const maxScore = 100;
 
     // Critical fields (40 points)
     if (flight.flightNumber) score += 10;
@@ -346,27 +345,3 @@ export async function getParserFeedbackStats(
     commonIssues,
   };
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

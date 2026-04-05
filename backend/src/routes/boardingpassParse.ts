@@ -4,9 +4,7 @@ import { boardingPassParseLimiter } from '../middleware/rateLimit';
 import { z } from 'zod';
 import logger from '../utils/logger';
 import { getParserConfig, parseBoardingPass, getAvailableProviders } from '../services/parsers/factory';
-import { prisma } from '../db';
 import { validateBoardingPassImageBase64 } from '../utils/fileValidation';
-import { AppError } from '../middleware/errorHandler';
 
 const router = Router();
 

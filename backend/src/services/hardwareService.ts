@@ -130,7 +130,7 @@ async function checkPythonAvailability(): Promise<PythonInfo> {
             pytorchVersion = hardwareInfo.python.pytorch.version;
           }
         }
-      } catch (scriptError) {
+      } catch (_scriptError) {
         // Fallback: Try direct PyTorch import check
         try {
           const checkScript = `import sys; import torch; print(f"PyTorch {torch.__version__}")`;
@@ -262,7 +262,7 @@ export async function getHardwareInfo(): Promise<HardwareInfo> {
     let python: PythonInfo = { available: false, error: 'Not checked yet' };
     let gpu: GPUInfo = { available: false, error: 'Not checked yet' };
     let platformInfo: PlatformInfo | undefined;
-    
+
     try {
       const scriptPath = path.join(__dirname, '../scripts/checkHardware.py');
       const devScriptPath = path.join(__dirname, '../../src/scripts/checkHardware.py');
@@ -273,7 +273,7 @@ export async function getHardwareInfo(): Promise<HardwareInfo> {
           timeout: 30000, // 30 second timeout (PyTorch import can be slow on first run)
         });
         const hardwareInfo = JSON.parse(stdout);
-        
+
         // Extract info from single script execution
         python = hardwareInfo.python || { available: false, error: 'Not available' };
         gpu = hardwareInfo.gpu || { available: false, error: 'Not available' };
@@ -291,7 +291,7 @@ export async function getHardwareInfo(): Promise<HardwareInfo> {
           error: error instanceof Error ? error.message : 'Unknown error',
         },
       });
-      
+
       // Fallback: check separately
       python = await checkPythonAvailability();
       gpu = await checkGPUSupport();
@@ -327,4 +327,3 @@ export async function getHardwareInfo(): Promise<HardwareInfo> {
     };
   }
 }
-

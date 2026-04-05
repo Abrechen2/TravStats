@@ -1,10 +1,10 @@
 /**
  * Timezone Utilities
- * 
+ *
  * Functions for converting flight times between local airport time and UTC
  */
 
-import { toZonedTime, fromZonedTime, format } from 'date-fns-tz';
+import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 import { getCachedAirport } from '../services/airportCache';
 import logger from './logger';
 
@@ -65,7 +65,7 @@ export async function convertLocalTimeToUtc(
     // If the time string already has timezone info, Date will use that
     // Otherwise, we need to treat it as local time in the airport's timezone
     let localDate: Date;
-    
+
     // Check if timeString already has timezone information
     if (timeString.includes('Z') || timeString.includes('+') || timeString.match(/[+-]\d{2}:\d{2}$/)) {
       // Already has timezone info, parse directly
@@ -199,7 +199,7 @@ export async function convertAviationstackTimeToUtc(
 
     // Extract date components
     const [, year, month, day, hour, minute, second] = dateMatch;
-    
+
     // Create a date object with the time components
     // zonedTimeToUtc will interpret this date as if it's in the airport's timezone
     // and convert it to UTC
@@ -209,14 +209,14 @@ export async function convertAviationstackTimeToUtc(
     const hourNum = parseInt(hour, 10);
     const minuteNum = parseInt(minute, 10);
     const secondNum = parseInt(second, 10);
-    
+
     // Create a date object using the local time components
     // We create it as if it's in UTC, but zonedTimeToUtc will reinterpret it
     // as if it's in the airport's timezone
     // The key: create the date with UTC components, then zonedTimeToUtc will
     // treat those UTC components as if they were local time in the airport's timezone
     const localDate = new Date(Date.UTC(yearNum, monthNum, dayNum, hourNum, minuteNum, secondNum));
-    
+
     if (isNaN(localDate.getTime())) {
       logger.warn({
         operation: 'convert_aviationstack_time_parse_error',
@@ -292,4 +292,3 @@ export async function convertAirlabsTimeToUtc(
     return null;
   }
 }
-

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { httpLogger, generateRequestId, enrichWithRequest } from '../utils/logger';
+import { httpLogger, generateRequestId } from '../utils/logger';
 import { shouldLogHttpRequests } from '../services/loggingConfig';
 
 // Cache for shouldLogHttpRequests result (5 min TTL)
