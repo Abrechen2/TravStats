@@ -1,7 +1,7 @@
 {
   "airline": "Lufthansa (Buchungsdetails)",
   "iata": "LH-old",
-  "version": "2025-04",
+  "version": "2025-04b",
   "from": ["@lufthansa.com", "@miles-and-more.com", "@lufthansa.de"],
   "subject": ["Buchungsdetails", "Booking details"],
   "selectors": {},
