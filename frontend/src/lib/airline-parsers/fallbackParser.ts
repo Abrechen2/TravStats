@@ -48,8 +48,9 @@ function getAirlineName(iataCode: string): string {
 
 function mapCompartmentToSeatClass(
   code: string
-): "economy" | "premium_economy" | "business" | "first" {
-  const c = code.toUpperCase();
+): "economy" | "premium_economy" | "business" | "first" | null {
+  if (!code || code.trim().length === 0) return null;
+  const c = code.trim().toUpperCase();
   if ("FAP".includes(c)) return "first";
   if ("CJDZ".includes(c)) return "business";
   if ("WPE".includes(c)) return "premium_economy";
@@ -264,7 +265,7 @@ export class FallbackParser implements BoardingPassParser {
       for (const [keyword, code] of Object.entries(classKeywords)) {
         if (barcodeData.includes(keyword)) {
           extracted.compartmentCode = code;
-          extracted.seatClass = mapCompartmentToSeatClass(code);
+          extracted.seatClass = mapCompartmentToSeatClass(code) ?? undefined;
           logger.debug("[Fallback Parser] Class found:", keyword);
           break;
         }

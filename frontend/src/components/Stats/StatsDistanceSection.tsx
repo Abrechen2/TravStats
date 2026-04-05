@@ -48,9 +48,9 @@ export default function StatsDistanceSection({
             {t("stats:distance.totalDistance")}
           </h3>
           <p className="text-4xl font-bold">
-            {convertDistance(totalDistance, units.distanceUnit)
-              .toFixed(0)
-              .replace(/\B(?=(\d{3})+(?!\d))/g, ".")}
+            {convertDistance(totalDistance, units.distanceUnit).toLocaleString(undefined, {
+              maximumFractionDigits: 0,
+            })}
           </p>
           <p className="text-sm opacity-75 mt-1">{getDistanceLabel(units.distanceUnit, t)}</p>
         </div>

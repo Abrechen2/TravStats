@@ -240,11 +240,11 @@ export default function AdvancedStatsPage(): JSX.Element {
 
   const longestFlight =
     flightDurations.length > 0
-      ? flightDurations.sort((a, b) => b.duration - a.duration)[0]
+      ? [...flightDurations].sort((a, b) => b.duration - a.duration)[0]
       : undefined;
   const shortestFlight =
     flightDurations.length > 0
-      ? flightDurations.sort((a, b) => a.duration - b.duration)[0]
+      ? [...flightDurations].sort((a, b) => a.duration - b.duration)[0]
       : undefined;
 
   const flightDistances = flights.map((f) => {
@@ -261,14 +261,16 @@ export default function AdvancedStatsPage(): JSX.Element {
   });
 
   const totalDistance = flightDistances.reduce((sum, f) => sum + f.distance, 0);
-  const avgDistance = flights.length > 0 ? totalDistance / flights.length : 0;
+  const flightsWithDistance = flightDistances.filter((f) => f.distance > 0);
+  const avgDistance =
+    flightsWithDistance.length > 0 ? totalDistance / flightsWithDistance.length : 0;
   const longestDistance =
-    flightDistances.length > 0
-      ? flightDistances.sort((a, b) => b.distance - a.distance)[0]
+    flightsWithDistance.length > 0
+      ? [...flightsWithDistance].sort((a, b) => b.distance - a.distance)[0]
       : undefined;
   const shortestDistance =
-    flightDistances.length > 0
-      ? flightDistances.sort((a, b) => a.distance - b.distance)[0]
+    flightsWithDistance.length > 0
+      ? [...flightsWithDistance].sort((a, b) => a.distance - b.distance)[0]
       : undefined;
 
   const airportVisits = flights.reduce(
