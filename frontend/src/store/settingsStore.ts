@@ -203,6 +203,8 @@ export const useSettingsStore = create<SettingsState>()(
               const {
                 autoUpdate: _au,
                 historicalEnrichment: _he,
+                privacy: _privacy,
+                backup: _backup,
                 ...remoteWithoutDirectFields
               } = remoteRecord;
               /* eslint-enable @typescript-eslint/no-unused-vars */
