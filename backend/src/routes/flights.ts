@@ -724,7 +724,7 @@ router.post('/:id/enrich-historical', async (req: AuthRequest, res: Response, ne
     }
 
     // Create pending update
-    const pendingUpdateId = await createHistoricalEnrichment(flight.id, aggregatedData);
+    const pendingUpdateId = await createHistoricalEnrichment(flight.id, aggregatedData, userId);
 
     if (!pendingUpdateId) {
       throw new AppError('Failed to create historical enrichment', 500);

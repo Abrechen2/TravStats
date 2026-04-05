@@ -304,7 +304,8 @@ export default function DashboardPage(): JSX.Element {
       } catch (error) {
         logger.error("Failed to delete flight:", error);
         addToast("error", t("dashboard:errors.deleteFlight"));
-        // Reload to restore the flight in the UI since delete failed
+        // Reload everything to restore the flight in all views (sidebar + map)
+        loadFlights();
         const recentData = await flightsApi.getAll({
           limit: API_LIMITS.RECENT_FLIGHTS,
           offset: 0,
