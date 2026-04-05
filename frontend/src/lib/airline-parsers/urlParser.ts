@@ -31,19 +31,13 @@ export class URLParser implements BoardingPassParser {
         return null;
       }
 
-      // URL-based boarding passes typically need backend processing
-      // to fetch and decode the actual boarding pass data.
-      // For now, we log and return null - this would require backend integration.
-
+      // URL-based boarding passes require fetching and decoding external content.
+      // This is intentionally unsupported on the client side — backend integration
+      // would be needed to proxy and parse the URL content safely.
       logger.warn(
-        "[URL Parser] URL-based boarding pass detected, but parsing not yet implemented:",
+        "[URL Parser] URL-based boarding pass detected, client-side parsing not supported:",
         barcodeData.substring(0, 100)
       );
-
-      // TODO: In the future, this could:
-      // 1. Extract URL parameters
-      // 2. Make backend request to fetch boarding pass data
-      // 3. Parse the fetched data
 
       return null;
     } catch (error) {
