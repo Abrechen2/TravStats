@@ -13,4 +13,16 @@ router.get("/", authenticate, (_req: AuthRequest, res: Response): void => {
   });
 });
 
+router.post("/sync", authenticate, (_req: AuthRequest, res: Response): void => {
+  void templateRegistry.syncNow().then((count) => {
+    res.json({
+      templates: templateRegistry.getStatus(),
+      total: count,
+      githubRepo: "https://github.com/Abrechen2/travstats-airline-templates",
+    });
+  }).catch((err: unknown) => {
+    res.status(500).json({ error: String(err) });
+  });
+});
+
 export default router;

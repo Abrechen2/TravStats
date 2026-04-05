@@ -27,6 +27,10 @@ export const templateApi = {
     const res = await api.get<TemplateStatusResult>("/template-status");
     return res.data;
   },
+  sync: async (): Promise<TemplateStatusResult> => {
+    const res = await api.post<TemplateStatusResult>("/template-status/sync");
+    return res.data;
+  },
 };
 
 export const parserTemplatesApi = {
