@@ -215,10 +215,8 @@ export const useSettingsStore = create<SettingsState>()(
       },
       saveRemoteSettings: async () => {
         try {
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const { resetSettings, loadRemoteSettings, saveRemoteSettings, ...rest } = get();
-          // Don't send autoUpdate and historicalEnrichment as they are managed separately
-          await settingsApi.update(rest);
+          const { profile, display, units, defaults, map, notifications } = get();
+          await settingsApi.update({ profile, display, units, defaults, map, notifications });
         } catch (error) {
           logger.warn("Failed to save settings remotely", error);
         }

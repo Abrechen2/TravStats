@@ -35,6 +35,9 @@ function julianDateToDate(julianDate: string): string {
   if (diffDays > 300) {
     adjustedYear = year - 1;
     logger.debug("[Standard BCBP Parser] Date is >300 days in future, assuming PREVIOUS year");
+  } else if (diffDays < -180) {
+    adjustedYear = year + 1;
+    logger.debug("[Standard BCBP Parser] Date is >180 days in past, assuming NEXT year");
   }
 
   const finalDate = new Date(Date.UTC(adjustedYear, 0, dayOfYear));
@@ -45,8 +48,9 @@ function julianDateToDate(julianDate: string): string {
 
 function mapCompartmentToSeatClass(
   code: string
-): "economy" | "premium_economy" | "business" | "first" {
-  const c = code.toUpperCase();
+): "economy" | "premium_economy" | "business" | "first" | null {
+  if (!code || code.trim().length === 0) return null;
+  const c = code.trim().toUpperCase();
   if ("FAP".includes(c)) return "first";
   if ("CJDZ".includes(c)) return "business";
   if ("WPE".includes(c)) return "premium_economy";
@@ -236,7 +240,7 @@ export class StandardBCBPParser implements BoardingPassParser {
       // Convert Julian date to actual date
       const dateOfFlight = julianDateToDate(julianDate);
       logger.debug("[Standard BCBP Parser] Converted to date:", dateOfFlight);
-      const seatClass = mapCompartmentToSeatClass(compartmentCode);
+      const seatClass = mapCompartmentToSeatClass(compartmentCode) ?? undefined;
       const airlineName = getAirlineName(operatingCarrierDesignator);
 
       return {

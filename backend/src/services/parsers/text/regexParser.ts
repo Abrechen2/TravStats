@@ -455,10 +455,10 @@ export class RegexTextParser implements ITextParser {
       const nextDay = after.match(/^\s*\(?\+(\d)\)?(?!\d*:)/);
       if (nextDay) isoTime = addDays(isoTime, Number(nextDay[1]));
 
-      // Add to pairs (assume first is departure, second is arrival)
-      const existingPair = pairs.find(p => !p.departure);
+      // Add to pairs: first German date becomes departure, second becomes arrival of same pair
+      const existingPair = pairs.find(p => p.departure && !p.arrival);
       if (existingPair) {
-        existingPair.departure = isoTime;
+        existingPair.arrival = isoTime;
       } else {
         pairs.push({ departure: isoTime });
       }

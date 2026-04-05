@@ -122,7 +122,9 @@ function calculateAverageDuration(samples: HistoricalFlightTime[]): number {
   const durations = samples.map((sample) => {
     const departure = new Date(`1970-01-01T${sample.departureTime}`);
     const arrival = new Date(`1970-01-01T${sample.arrivalTime}`);
-    return (arrival.getTime() - departure.getTime()) / (1000 * 60); // minutes
+    let diff = arrival.getTime() - departure.getTime();
+    if (diff < 0) diff += 24 * 60 * 60 * 1000; // Overnight flight: arrival is next day
+    return diff / (1000 * 60); // minutes
   });
 
   const avgDuration = durations.reduce((sum, val) => sum + val, 0) / durations.length;

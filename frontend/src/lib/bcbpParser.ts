@@ -117,11 +117,13 @@ export function julianDateToDate(julianDate: string): string {
     // This means it's actually from last year
     adjustedYear = year - 1;
     logger.debug("Date is >300 days in future, assuming PREVIOUS year");
-  } else if (diffDays < -365) {
-    // Date is more than a year in the past - keep current year
-    logger.debug("Date is >365 days in past, keeping current year");
+  } else if (diffDays < -180) {
+    // Date is more than 180 days in the past — it must belong to next year
+    // (e.g., scanning a December boarding pass in January: day 335 looks ~330 days ago)
+    adjustedYear = year + 1;
+    logger.debug("Date is >180 days in past, assuming NEXT year");
   } else {
-    // Date is reasonable (within ±300 days) - keep current year
+    // Date is reasonable (within ±180–300 days) - keep current year
     logger.debug("Date is within reasonable range, keeping current year");
   }
 
@@ -138,8 +140,9 @@ export function julianDateToDate(julianDate: string): string {
  */
 export function mapCompartmentToSeatClass(
   code: string
-): "economy" | "premium_economy" | "business" | "first" {
-  const c = code.toUpperCase();
+): "economy" | "premium_economy" | "business" | "first" | null {
+  if (!code || code.trim().length === 0) return null;
+  const c = code.trim().toUpperCase();
   if ("FAP".includes(c)) return "first";
   if ("CJDZ".includes(c)) return "business";
   if ("WPE".includes(c)) return "premium_economy";
