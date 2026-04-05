@@ -388,7 +388,7 @@ export default function EmailAnnotation({
     try {
       const annotationData = {
         type: "email",
-        fullText: originalEmailText,
+        fullText: filterEmailText(originalEmailText),
         textSelections: annotations,
       };
 

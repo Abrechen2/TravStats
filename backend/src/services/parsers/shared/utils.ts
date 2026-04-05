@@ -511,3 +511,25 @@ EMAIL BODY: ${cleanText}
 
 JSON ARRAY OUTPUT:`;
 }
+
+/**
+ * Strip HTML-tag fragments and bare URLs from plain-text email bodies, then
+ * normalise whitespace — mirrors the frontend `filterEmailText` shown in the
+ * annotation view.  Email addresses are intentionally preserved so that the
+ * From: header can still be used for template/airline detection.
+ */
+export function cleanEmailBody(text: string): string {
+  let out = text;
+  // Remove angle-bracket fragments: <https://...>, <img.png>, etc.
+  out = out.replace(/<[^>]+>/g, "");
+  // Remove bare http/https and www URLs
+  out = out.replace(/https?:\/\/[^\s<>]+/gi, "");
+  out = out.replace(/www\.[^\s<>]+/gi, "");
+  // Trim leading/trailing whitespace on every line (removes stray tab/space prefix from tab-delimited blocks)
+  out = out.split("\n").map((l) => l.trim()).join("\n");
+  // Collapse runs of 2+ consecutive blank lines to one
+  out = out.replace(/\n{2,}/g, "\n");
+  // Collapse multiple spaces/tabs within a line to a single space
+  out = out.replace(/[ \t]{2,}/g, " ");
+  return out.trim();
+}

@@ -7,7 +7,7 @@
   "selectors": {},
   "textPatterns": {
     "flightNumber": [
-      "\\t([A-Z]{2}\\s+\\d{3,4})[\\t \\r\\n]",
+      "^([A-Z]{2}\\s+\\d{3,4})$",
       "Flugnr\\.?:\\s*([A-Z]{2}\\s?\\d{1,4})\\b"
     ],
     "pnr": [
@@ -47,7 +47,7 @@
   },
   "testCases": [
     {
-      "input": "Do. 16. Januar 2025: München – Luxemburg\n07:55 Uhr\tMünchen Munich (MUC)\nTerminal 2\n09:00 Uhr\tLuxemburg Luxembourg (LUX)\n<img.png>\tLH 2316\t\nLufthansa Buchungscode:\nJD4TWQ\n",
+      "input": "Do. 16. Januar 2025: München – Luxemburg\n07:55 Uhr\tMünchen Munich (MUC)\nTerminal 2\n09:00 Uhr\tLuxemburg Luxembourg (LUX)\nLH 2316\nLufthansa Buchungscode:\nJD4TWQ",
       "expected": {
         "flightNumber": "LH2316",
         "departureCode": "MUC",
