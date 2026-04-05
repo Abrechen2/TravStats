@@ -5,7 +5,7 @@ interface FlightSelectionState {
   selectedIds: string[];
   selectedFlights: Flight[];
   highlightMode: "single" | "group" | null;
-  setSelection: (ids: string[], flights: Flight[]) => void;
+  setSelection: (flights: Flight[]) => void;
   clearSelection: () => void;
 }
 
@@ -13,11 +13,11 @@ export const useFlightSelectionStore = create<FlightSelectionState>()((set) => (
   selectedIds: [],
   selectedFlights: [],
   highlightMode: null,
-  setSelection: (ids, flights) =>
+  setSelection: (flights) =>
     set({
-      selectedIds: ids,
       selectedFlights: flights,
-      highlightMode: ids.length === 0 ? null : ids.length === 1 ? "single" : "group",
+      selectedIds: flights.map((f) => f.id),
+      highlightMode: flights.length === 0 ? null : flights.length === 1 ? "single" : "group",
     }),
   clearSelection: () => set({ selectedIds: [], selectedFlights: [], highlightMode: null }),
 }));
