@@ -6,56 +6,8 @@
  */
 
 import { BoardingPassParser } from "./IParser";
-import { BoardingPassData } from "../bcbpParser";
+import { BoardingPassData, getAirlineName, mapCompartmentToSeatClass } from "../bcbpParser";
 import { logger } from "../logger";
-
-function getAirlineName(iataCode: string): string {
-  const airlines: Record<string, string> = {
-    LH: "Lufthansa",
-    EN: "AirDolomiti",
-    BA: "British Airways",
-    AF: "Air France",
-    KL: "KLM",
-    LX: "Swiss",
-    OS: "Austrian Airlines",
-    SN: "Brussels Airlines",
-    SK: "SAS Scandinavian Airlines",
-    AY: "Finnair",
-    TP: "TAP Air Portugal",
-    IB: "Iberia",
-    VY: "Vueling",
-    FR: "Ryanair",
-    U2: "easyJet",
-    W6: "Wizz Air",
-    EW: "Eurowings",
-    UA: "United Airlines",
-    AA: "American Airlines",
-    DL: "Delta Air Lines",
-    WN: "Southwest Airlines",
-    B6: "JetBlue",
-    AC: "Air Canada",
-    EK: "Emirates",
-    QR: "Qatar Airways",
-    TK: "Turkish Airlines",
-    SQ: "Singapore Airlines",
-    CX: "Cathay Pacific",
-    NH: "ANA",
-    JL: "Japan Airlines",
-  };
-
-  return airlines[iataCode.trim()] || iataCode.trim();
-}
-
-function mapCompartmentToSeatClass(
-  code: string
-): "economy" | "premium_economy" | "business" | "first" | null {
-  if (!code || code.trim().length === 0) return null;
-  const c = code.trim().toUpperCase();
-  if ("FAP".includes(c)) return "first";
-  if ("CJDZ".includes(c)) return "business";
-  if ("WPE".includes(c)) return "premium_economy";
-  return "economy";
-}
 
 /**
  * Fallback Boarding Pass Parser
@@ -153,6 +105,9 @@ export class FallbackParser implements BoardingPassParser {
       const likelyAirports = airports.filter((code) => {
         if (validAirportCodes.includes(code)) return true;
         if (knownNonAirports.includes(code)) return false;
+        // Filters out trivial repetitions like "AAA", "BBB", "CCC" (all three chars equal).
+        // Equivalent to: !(code[0] === code[1] && code[1] === code[2])
+        // This is intentionally narrow — most other false positives are caught by knownNonAirports above.
         return code[0] !== code[1] || code[1] !== code[2];
       });
 

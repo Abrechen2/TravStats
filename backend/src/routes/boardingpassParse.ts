@@ -68,7 +68,14 @@ router.post('/parse-boardingpass', authenticate, boardingPassParseLimiter, async
 
     // Optional: Enrich with Flight Lookup API
     let enriched = false;
-    const flight = result.flights[0];
+    const rawFlight = result.flights[0];
+
+    if (!rawFlight) {
+      res.status(422).json({ error: 'No flight data could be extracted from the boarding pass' });
+      return;
+    }
+
+    let flight = rawFlight;
 
     if (
       enrichWithApi &&
@@ -80,10 +87,10 @@ router.post('/parse-boardingpass', authenticate, boardingPassParseLimiter, async
       try {
         const { lookupFlightByNumber } = await import('../services/flightLookup');
         const date = new Date(flight.departureTime);
-        const flights = await lookupFlightByNumber(flight.flightNumber, date);
+        const apiFlights = await lookupFlightByNumber(flight.flightNumber, date);
 
-        if (flights.length > 0) {
-          const apiData = flights[0];
+        if (apiFlights.length > 0) {
+          const apiData = apiFlights[0];
 
           // Validate that API data matches boarding pass data
           const departureDateMatch = apiData.departure?.iata === flight.departureCode;
@@ -92,14 +99,15 @@ router.post('/parse-boardingpass', authenticate, boardingPassParseLimiter, async
           if (departureDateMatch && arrivalDateMatch) {
             logger.info('[Boarding Pass Parse] Enriching with API data');
 
-            // Merge data: Vision parser is Source of Truth, API fills gaps
-            Object.assign(flight, {
+            // Merge data immutably: Vision parser is Source of Truth, API fills gaps
+            flight = {
+              ...flight,
               aircraft: flight.aircraft || apiData.aircraft,
               terminal: flight.terminal || apiData.departure?.terminal,
               gate: flight.gate || apiData.departure?.gate,
               arrivalTime: flight.arrivalTime || apiData.arrival?.scheduledTime,
               airline: flight.airline || apiData.airline,
-            });
+            };
 
             enriched = true;
           }

@@ -6,93 +6,13 @@
  */
 
 import { BoardingPassParser } from "./IParser";
-import { BoardingPassData } from "../bcbpParser";
+import {
+  BoardingPassData,
+  julianDateToDate,
+  mapCompartmentToSeatClass,
+  getAirlineName,
+} from "../bcbpParser";
 import { logger } from "../logger";
-
-/**
- * Convert Julian date (day of year) to ISO date string
- */
-function julianDateToDate(julianDate: string): string {
-  const dayOfYear = parseInt(julianDate, 10);
-  logger.debug("[Standard BCBP Parser] Julian day conversion: Input day of year =", dayOfYear);
-
-  const year = new Date().getFullYear();
-  logger.debug("[Standard BCBP Parser] Current year:", year);
-
-  const date = new Date(Date.UTC(year, 0, dayOfYear));
-  logger.debug(
-    "[Standard BCBP Parser] Calculated date (before year adjustment):",
-    date.toISOString().split("T")[0]
-  );
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const diffDays = Math.floor((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-
-  logger.debug("[Standard BCBP Parser] Days difference from today:", diffDays);
-
-  let adjustedYear = year;
-  if (diffDays > 300) {
-    adjustedYear = year - 1;
-    logger.debug("[Standard BCBP Parser] Date is >300 days in future, assuming PREVIOUS year");
-  } else if (diffDays < -180) {
-    adjustedYear = year + 1;
-    logger.debug("[Standard BCBP Parser] Date is >180 days in past, assuming NEXT year");
-  }
-
-  const finalDate = new Date(Date.UTC(adjustedYear, 0, dayOfYear));
-  const result = finalDate.toISOString().split("T")[0];
-  logger.debug("[Standard BCBP Parser] Final converted date:", result);
-  return result;
-}
-
-function mapCompartmentToSeatClass(
-  code: string
-): "economy" | "premium_economy" | "business" | "first" | null {
-  if (!code || code.trim().length === 0) return null;
-  const c = code.trim().toUpperCase();
-  if ("FAP".includes(c)) return "first";
-  if ("CJDZ".includes(c)) return "business";
-  if ("WPE".includes(c)) return "premium_economy";
-  return "economy";
-}
-
-function getAirlineName(iataCode: string): string {
-  const airlines: Record<string, string> = {
-    LH: "Lufthansa",
-    EN: "AirDolomiti",
-    BA: "British Airways",
-    AF: "Air France",
-    KL: "KLM",
-    LX: "Swiss",
-    OS: "Austrian Airlines",
-    SN: "Brussels Airlines",
-    SK: "SAS Scandinavian Airlines",
-    AY: "Finnair",
-    TP: "TAP Air Portugal",
-    IB: "Iberia",
-    VY: "Vueling",
-    FR: "Ryanair",
-    U2: "easyJet",
-    W6: "Wizz Air",
-    EW: "Eurowings",
-    UA: "United Airlines",
-    AA: "American Airlines",
-    DL: "Delta Air Lines",
-    WN: "Southwest Airlines",
-    B6: "JetBlue",
-    AC: "Air Canada",
-    EK: "Emirates",
-    QR: "Qatar Airways",
-    TK: "Turkish Airlines",
-    SQ: "Singapore Airlines",
-    CX: "Cathay Pacific",
-    NH: "ANA",
-    JL: "Japan Airlines",
-  };
-
-  return airlines[iataCode.trim()] || iataCode.trim();
-}
 
 /**
  * Standard IATA BCBP Parser
