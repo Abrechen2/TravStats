@@ -226,7 +226,9 @@ export default function AdvancedStatsPage(): JSX.Element {
   );
 
   const totalFlightTime = flights.reduce((sum, flight) => {
-    return sum + calculateDuration(flight.departureTime, flight.arrivalTime);
+    if (!flight.departureTime || !flight.arrivalTime) return sum;
+    const dur = calculateDuration(flight.departureTime, flight.arrivalTime);
+    return isNaN(dur) || dur <= 0 ? sum : sum + dur;
   }, 0);
 
   const avgFlightDuration = flights.length > 0 ? totalFlightTime / flights.length : 0;
