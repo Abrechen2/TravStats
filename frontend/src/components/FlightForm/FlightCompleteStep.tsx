@@ -2,6 +2,7 @@ import HelpIcon from "../Help/HelpIcon";
 import AirportAutocomplete from "../AirportAutocomplete";
 import { useTranslation } from "../../hooks/useTranslation";
 import { calculateDistance } from "../../lib/geo";
+import { AIRLINES } from "../../lib/constants";
 import type { Airport } from "../../lib/api";
 
 interface FlightLookupResult {
@@ -326,7 +327,13 @@ export default function FlightCompleteStep({
             onChange={(e) => setAirline(e.target.value)}
             className={`input ${sizedInputClass}`}
             placeholder={t("flights:form.placeholders.airline")}
+            list="airline-suggestions"
           />
+          <datalist id="airline-suggestions">
+            {AIRLINES.map((a) => (
+              <option key={a.iata} value={a.name} />
+            ))}
+          </datalist>
         </div>
         <div>
           <label className={`label ${textClass}`}>{t("flights:form.flightNumber")}</label>

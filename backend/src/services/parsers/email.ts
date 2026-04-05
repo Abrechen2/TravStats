@@ -3,6 +3,7 @@ import { ParsedBooking } from '../bookingParser';
 import logger, { parserFactoryLogger, parserTextLogger } from '../../utils/logger';
 import { shouldLogParserOperations } from '../loggingConfig';
 import { extractFlightDataFromText, cleanEmailBody } from './shared/utils';
+import { getAirlineName } from '../flightLookup';
 import { collectLowQualityFeedback } from '../parserFeedback';
 import { checkProviderAvailability, deleteAvailabilityCacheEntry } from './config';
 import { getTextParserInstance } from './providers';
@@ -38,6 +39,15 @@ function applyEmailRegexPostProcessing(
 
     if (flights.length === 1 && !enhanced.seat && regexData.seat) {
       enhanced.seat = regexData.seat;
+    }
+
+    // Derive airline name from flight number prefix if not already set
+    if (!enhanced.airline && enhanced.flightNumber) {
+      const iataPrefix = enhanced.flightNumber.match(/^([A-Z0-9]{2})/)?.[1];
+      if (iataPrefix) {
+        const name = getAirlineName(iataPrefix);
+        if (name) enhanced.airline = name;
+      }
     }
 
     return enhanced;
