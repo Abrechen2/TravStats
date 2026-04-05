@@ -451,6 +451,9 @@ export default function EmailAnnotation({
     let lastIndex = 0;
 
     sortedAnnotations.forEach((annotation) => {
+      // Skip overlapping annotations (same or overlapping range already rendered)
+      if (annotation.start < lastIndex) return;
+
       // Add text before annotation
       if (annotation.start > lastIndex) {
         segments.push({
