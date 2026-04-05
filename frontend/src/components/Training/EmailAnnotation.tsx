@@ -190,9 +190,12 @@ export default function EmailAnnotation({
               if (date) converted.arrivalDate = date;
               if (time) converted.arrivalTime = time;
             }
-            // Migrate price to aircraftType if needed (backward compatibility)
-            if (flight.price && !flight.aircraftType) {
-              converted.aircraftType = flight.price;
+            // Migrate legacy field names for backward compatibility
+            if (flight.price && !flight.aircraft) {
+              converted.aircraft = flight.price;
+            }
+            if ((flight as Record<string, string | undefined>).aircraftType && !flight.aircraft) {
+              converted.aircraft = (flight as Record<string, string | undefined>).aircraftType;
             }
             return converted;
           });
@@ -320,7 +323,7 @@ export default function EmailAnnotation({
             departureCode: "departureCode",
             arrivalCode: "arrivalCode",
             pnr: "pnr",
-            aircraftType: "aircraftType",
+            aircraft: "aircraft",
             seat: "seat",
             seatClass: "seatClass",
             terminal: "terminal",
@@ -572,7 +575,7 @@ export default function EmailAnnotation({
                   <optgroup label="Flug">
                     <option value="flightNumber">Flight Number</option>
                     <option value="airline">Airline</option>
-                    <option value="aircraftType">Aircraft Type</option>
+                    <option value="aircraft">Aircraft Type</option>
                   </optgroup>
                   <optgroup label="Route">
                     <option value="departureCode">Departure Code</option>
@@ -707,8 +710,8 @@ export default function EmailAnnotation({
                     </label>
                     <input
                       type="text"
-                      value={flight.aircraftType || ""}
-                      onChange={(e) => handleFlightChange(index, "aircraftType", e.target.value)}
+                      value={flight.aircraft || ""}
+                      onChange={(e) => handleFlightChange(index, "aircraft", e.target.value)}
                       className="input w-full"
                       placeholder="A320, Boeing 737"
                     />
