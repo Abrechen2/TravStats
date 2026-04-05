@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import type { VisMode } from "../types/visMode";
 
 import { useAuthStore } from "../store/authStore";
@@ -22,6 +22,7 @@ import { useSettingsStore } from "../store/settingsStore";
 import { API_LIMITS, STORAGE_KEYS } from "../lib/constants";
 import { toCsv, escapeXml, downloadBlob } from "../lib/export";
 import { motion, AnimatePresence } from "framer-motion";
+import { FlightPanel } from "../components/FlightPanel";
 // jsPDF and autoTable are dynamically imported when needed to reduce bundle size
 
 export default function DashboardPage(): JSX.Element {
@@ -31,12 +32,11 @@ export default function DashboardPage(): JSX.Element {
   const [recentFlights, setRecentFlights] = useState<Flight[]>([]); // Unfiltered recent flights for sidebar
   const [totalFlightsCount, setTotalFlightsCount] = useState(0); // Total number of all flights
   const [geoFlights, setGeoFlights] = useState<GeoJSONFeature[]>([]);
-  const [selectedFlightId, setSelectedFlightId] = useState<string>();
   const [showFlightForm, setShowFlightForm] = useState(false);
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
   const [filters, setFilters] = useState<FlightFilters>({});
   const [, setLoadingMap] = useState(true); // Loading indicator for map
-  const [loadingRecent, setLoadingRecent] = useState(true);
+  const [, setLoadingRecent] = useState(true);
   const [visMode, setVisMode] = useState<VisMode>("routes");
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -291,6 +291,105 @@ export default function DashboardPage(): JSX.Element {
       throw error;
     }
   };
+
+  const pendingDeletes = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  const handleDeleteFlight = useCallback(
+    (flightId: string) => {
+      setRecentFlights((prev) => prev.filter((f) => f.id !== flightId));
+      setTotalFlightsCount((prev) => prev - 1);
+      addToast("info", "Flug gelöscht");
+
+      const timer = setTimeout(() => {
+        pendingDeletes.current.delete(flightId);
+        void (async () => {
+          try {
+            await flightsApi.delete(flightId);
+            loadFlights();
+            const recentData = await flightsApi.getAll({
+              limit: API_LIMITS.RECENT_FLIGHTS,
+              offset: 0,
+            });
+            setRecentFlights(recentData.flights);
+            setTotalFlightsCount(recentData.total);
+          } catch (error) {
+            logger.error("Failed to delete flight:", error);
+            addToast("error", "Fehler beim Löschen des Fluges");
+            const recentData = await flightsApi.getAll({
+              limit: API_LIMITS.RECENT_FLIGHTS,
+              offset: 0,
+            });
+            setRecentFlights(recentData.flights);
+            setTotalFlightsCount(recentData.total);
+          }
+        })();
+      }, 3000);
+
+      pendingDeletes.current.set(flightId, timer);
+    },
+    [addToast, loadFlights]
+  );
+
+  const handleDuplicateFlight = useCallback(
+    async (flight: Flight): Promise<void> => {
+      try {
+        const input: FlightInput = {
+          airline: flight.airline,
+          flightNumber: flight.flightNumber,
+          callsign: flight.callsign,
+          aircraft: flight.aircraft,
+          departure: {
+            iata: flight.depIata,
+            icao: flight.depIcao,
+            name: flight.depName,
+            lat: flight.depLat,
+            lon: flight.depLon,
+          },
+          arrival: {
+            iata: flight.arrIata,
+            icao: flight.arrIcao,
+            name: flight.arrName,
+            lat: flight.arrLat,
+            lon: flight.arrLon,
+          },
+          departureTime: flight.departureTime,
+          arrivalTime: flight.arrivalTime,
+          status: flight.status,
+          notes: flight.notes,
+          seatNumber: flight.seatNumber,
+          seatClass: flight.seatClass,
+          boardingGroup: flight.boardingGroup,
+          gate: flight.gate,
+          terminal: flight.terminal,
+          bookingReference: flight.bookingReference,
+          ticketNumber: flight.ticketNumber,
+          price: flight.price,
+          currency: flight.currency,
+          taxes: flight.taxes,
+          fees: flight.fees,
+          category: flight.category,
+          tags: flight.tags,
+          companions: flight.companions,
+          receiptUrl: flight.receiptUrl,
+          actualDeparture: flight.actualDeparture,
+          actualArrival: flight.actualArrival,
+        };
+        await flightsApi.create(input);
+        const recentData = await flightsApi.getAll({
+          limit: API_LIMITS.RECENT_FLIGHTS,
+          offset: 0,
+        });
+        setRecentFlights(recentData.flights);
+        setTotalFlightsCount(recentData.total);
+        loadFlights();
+        addToast("success", "Flug dupliziert");
+      } catch (error) {
+        logger.error("Failed to duplicate flight:", error);
+        addToast("error", "Fehler beim Duplizieren");
+      }
+    },
+    [addToast, loadFlights]
+  );
 
   const handleFilterChange = (newFilters: FlightFilters) => {
     setFilters(newFilters);
@@ -611,8 +710,6 @@ export default function DashboardPage(): JSX.Element {
           >
             <MapContainer3D
               flights={geoFlights}
-              selectedFlightId={selectedFlightId}
-              onFlightClick={setSelectedFlightId}
               visMode={visMode}
               onVisModeChange={handleVisModeChange}
               minRouteCount={filters.minRouteCount ?? 1}
@@ -776,154 +873,16 @@ export default function DashboardPage(): JSX.Element {
         </div>
 
         {/* Left Overlay Panel: Flight List */}
-        <AnimatePresence>
-          {leftOpen && (
-            <>
-              <div className="fixed inset-0 bg-black/40 z-30" onClick={() => setLeftOpen(false)} />
-              <motion.div
-                initial={{ x: -380 }}
-                animate={{ x: 0 }}
-                exit={{ x: -380 }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className="fixed left-0 top-14 bottom-0 w-80 z-40 flex flex-col overflow-hidden"
-                style={{
-                  background: "rgba(22,27,34,0.95)",
-                  backdropFilter: "blur(20px)",
-                  borderRight: "1px solid var(--color-border)",
-                }}
-              >
-                {/* Panel header */}
-                <div
-                  className="flex items-center justify-between px-4 py-3"
-                  style={{ borderBottom: "1px solid var(--color-border)" }}
-                >
-                  <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                    {t("dashboard:recentFlights")}
-                    <span className="ml-2 text-xs font-mono" style={{ color: "var(--text-muted)" }}>
-                      ({totalFlightsCount})
-                    </span>
-                  </span>
-                  <button onClick={() => setLeftOpen(false)} style={{ color: "var(--text-muted)" }}>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-                </div>
-
-                {/* Flight list */}
-                <div className="flex-1 overflow-y-auto">
-                  {loadingRecent ? (
-                    <div
-                      className="flex items-center justify-center h-20"
-                      style={{ color: "var(--text-muted)" }}
-                    >
-                      <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                        />
-                      </svg>
-                    </div>
-                  ) : recentFlights.length === 0 ? (
-                    <div className="p-6 text-center text-sm" style={{ color: "var(--text-muted)" }}>
-                      {t("dashboard:noFlights")}
-                    </div>
-                  ) : (
-                    <motion.ul
-                      initial="hidden"
-                      animate="visible"
-                      variants={{
-                        hidden: {},
-                        visible: { transition: { staggerChildren: 0.04 } },
-                      }}
-                    >
-                      {recentFlights.map((flight) => (
-                        <motion.li
-                          key={flight.id}
-                          variants={{
-                            hidden: { opacity: 0, x: -16 },
-                            visible: { opacity: 1, x: 0 },
-                          }}
-                        >
-                          <button
-                            onClick={() => {
-                              setSelectedFlightId(flight.id);
-                            }}
-                            className="w-full text-left px-4 py-3 transition-colors border-b"
-                            style={{
-                              borderColor: "var(--color-border)",
-                              background:
-                                selectedFlightId === flight.id
-                                  ? "var(--bg-elevated)"
-                                  : "transparent",
-                              borderLeft:
-                                selectedFlightId === flight.id
-                                  ? "3px solid var(--accent)"
-                                  : "3px solid transparent",
-                            }}
-                            onMouseEnter={(e) => {
-                              if (selectedFlightId !== flight.id)
-                                (e.currentTarget as HTMLButtonElement).style.background =
-                                  "var(--bg-elevated)";
-                            }}
-                            onMouseLeave={(e) => {
-                              if (selectedFlightId !== flight.id)
-                                (e.currentTarget as HTMLButtonElement).style.background =
-                                  "transparent";
-                            }}
-                          >
-                            <div className="flex items-center justify-between mb-0.5">
-                              <span
-                                className="font-mono text-sm font-semibold"
-                                style={{ color: "var(--text-primary)" }}
-                              >
-                                {flight.depIata || flight.depIcao || "?"} →{" "}
-                                {flight.arrIata || flight.arrIcao || "?"}
-                              </span>
-                              <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-                                {flight.airline || ""}
-                              </span>
-                            </div>
-                            <div className="text-xs" style={{ color: "var(--text-muted)" }}>
-                              {flight.departureTime
-                                ? new Date(flight.departureTime).toLocaleDateString()
-                                : t("dashboard:unknownDate")}
-                              {flight.flightNumber && ` · ${flight.flightNumber}`}
-                            </div>
-                          </button>
-                        </motion.li>
-                      ))}
-                    </motion.ul>
-                  )}
-                </div>
-
-                {/* Quick actions at bottom */}
-                <div className="p-3" style={{ borderTop: "1px solid var(--color-border)" }}>
-                  <button
-                    onClick={() => setShowFlightForm(true)}
-                    className="btn-primary w-full text-sm"
-                  >
-                    + {t("dashboard:addFlight")}
-                  </button>
-                </div>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
+        <FlightPanel
+          flights={recentFlights}
+          totalCount={totalFlightsCount}
+          isOpen={leftOpen}
+          onClose={() => setLeftOpen(false)}
+          onEdit={(flight) => setEditingFlight(flight)}
+          onDuplicate={handleDuplicateFlight}
+          onDelete={handleDeleteFlight}
+          onAddFlight={() => setShowFlightForm(true)}
+        />
 
         {/* Right Overlay Panel: Stats */}
         <AnimatePresence>
