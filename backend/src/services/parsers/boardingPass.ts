@@ -47,15 +47,8 @@ export function calculateParserQuality(flights: ParsedBooking[]): number {
   return Math.round(totalScore / flights.length);
 }
 
-function isSuspiciousBoardingPassResult(flight: ParsedBooking): boolean {
-  const criticalFields = ['flightNumber', 'departureCode', 'arrivalCode', 'departureTime'];
-  const missingCritical = criticalFields.filter((field) => flight.missing.includes(field)).length;
-
-  return missingCritical >= 2 || !flight.flightNumber || flight.missing.length >= 3;
-}
-
 /**
- * Parse boarding pass with automatic provider selection and fallback on errors
+ * Parse boarding pass using Tesseract OCR with manual fallback
  */
 export async function parseBoardingPass(
   imageBase64: string,
@@ -72,39 +65,26 @@ export async function parseBoardingPass(
       operation: 'parse_boarding_pass_start',
       context: {
         imageSize: imageBase64.length,
-        requestedProvider: config.visionProvider,
         fallbackChain: config.visionFallbacks,
       },
     });
   }
 
-  // Build the provider chain: preferred (if not auto) + fallbacks
-  const providerChain: VisionProvider[] =
-    config.visionProvider !== 'auto'
-      ? [config.visionProvider, ...config.visionFallbacks.filter(p => p !== config.visionProvider)]
-      : config.visionFallbacks;
+  // Build the provider chain from fallbacks (tesseract → manual)
+  const providerChain: VisionProvider[] = config.visionFallbacks;
 
   // Try each provider in order
   for (const provider of providerChain) {
     try {
-      const parser = getVisionParserInstance(
-        provider,
-        provider === 'ollama' ? config.ollamaVisionModel : undefined
-      );
-      const apiKey = provider === 'openai' ? config.openaiApiKey :
-                     provider === 'claude' ? config.claudeApiKey : undefined;
+      const parser = getVisionParserInstance(provider);
 
       // Check availability first
-      const availability = await checkProviderAvailability(parser, apiKey);
+      const availability = await checkProviderAvailability(parser);
       if (!availability.available) {
         if (shouldLog) {
           visionLog.debug({
             operation: 'vision_parser_skipped',
-            context: {
-              provider,
-              reason: availability.reason,
-              availability,
-            },
+            context: { provider, reason: availability.reason },
           });
         } else {
           logger.debug(`[Parser Factory] Skipping unavailable vision parser: ${provider} - ${availability.reason}`);
@@ -118,20 +98,16 @@ export async function parseBoardingPass(
       if (shouldLog) {
         visionLog.info({
           operation: 'vision_parse_attempt',
-          context: {
-            provider,
-            imageSize: imageBase64.length,
-            availability,
-          },
+          context: { provider, imageSize: imageBase64.length },
         });
       } else {
         logger.info(`[Parser Factory] Attempting vision parse with: ${provider}`);
       }
 
-      const flight = await parser.parseImage(imageBase64, apiKey);
+      const flight = await parser.parseImage(imageBase64);
       const parseDuration = Date.now() - parseStartTime;
 
-      const fallbackUsed = config.visionProvider !== 'auto' && config.visionProvider !== provider;
+      const fallbackUsed = config.visionProvider !== provider;
 
       if (shouldLog) {
         visionLog.info({
@@ -150,107 +126,24 @@ export async function parseBoardingPass(
         logger.info(`[Parser Factory] Vision parse successful with: ${provider}${fallbackUsed ? ' (fallback)' : ''}`);
       }
 
-      let finalFlight = flight;
-      let finalProvider: VisionProvider = provider;
-      let finalFallbackUsed = fallbackUsed;
-
-      if (provider !== 'tesseract' && isSuspiciousBoardingPassResult(flight)) {
-        if (shouldLog) {
-          visionLog.warn({
-            operation: 'vision_result_suspicious',
-            context: {
-              provider,
-              missingFields: flight.missing,
-              quality: calculateParserQuality([flight]),
-            },
-          });
-        } else {
-          logger.warn(
-            {
-              missingFields: flight.missing,
-              provider,
-            },
-            '[Parser Factory] Suspicious vision result detected, attempting Tesseract fallback'
-          );
-        }
-
-        try {
-          const tesseractParser = getVisionParserInstance('tesseract', undefined);
-          const tesseractAvail = await checkProviderAvailability(tesseractParser);
-
-          if (tesseractAvail.available) {
-            const tesseractStartTime = Date.now();
-            const tesseractFlight = await tesseractParser.parseImage(imageBase64);
-            const tesseractDuration = Date.now() - tesseractStartTime;
-
-            if (shouldLog) {
-              visionLog.info({
-                operation: 'tesseract_fallback_completed',
-                context: {
-                  originalMissing: flight.missing.length,
-                  tesseractMissing: tesseractFlight.missing.length,
-                  tesseractDuration,
-                  improved: tesseractFlight.missing.length < finalFlight.missing.length,
-                },
-              });
-            } else {
-              logger.info(
-                {
-                  missingFields: tesseractFlight.missing,
-                },
-                '[Parser Factory] Tesseract fallback completed'
-              );
-            }
-
-            if (tesseractFlight.missing.length < finalFlight.missing.length) {
-              finalFlight = tesseractFlight;
-              finalProvider = 'tesseract';
-              finalFallbackUsed = true;
-            }
-          } else {
-            if (shouldLog) {
-              visionLog.debug({
-                operation: 'tesseract_unavailable',
-                context: {
-                  reason: tesseractAvail.reason,
-                },
-              });
-            } else {
-              logger.debug('[Parser Factory] Tesseract unavailable for fallback');
-            }
-          }
-        } catch (fallbackError) {
-          if (shouldLog) {
-            visionLog.warn({
-              operation: 'tesseract_fallback_failed',
-              context: {
-                error: fallbackError instanceof Error ? fallbackError.message : 'Unknown error',
-              },
-            });
-          } else {
-            logger.warn({ fallbackError }, '[Parser Factory] Tesseract fallback failed');
-          }
-        }
-      }
-
       const totalDuration = Date.now() - startTime;
       if (shouldLog) {
         log.info({
           operation: 'parse_boarding_pass_complete',
           context: {
-            provider: finalProvider,
-            fallbackUsed: finalFallbackUsed,
+            provider,
+            fallbackUsed,
             totalDuration,
-            quality: calculateParserQuality([finalFlight]),
-            missingFields: finalFlight.missing.length,
+            quality: calculateParserQuality([flight]),
+            missingFields: flight.missing.length,
           },
         });
       }
 
       return {
-        flights: [finalFlight],
-        provider: finalProvider,
-        fallbackUsed: finalFallbackUsed,
+        flights: [flight],
+        provider,
+        fallbackUsed,
       };
     } catch (error: unknown) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -268,9 +161,8 @@ export async function parseBoardingPass(
       }
       errors.push({ provider, error: errorMsg });
 
-      // Invalidate cache for this provider to prevent future attempts in this session
-      const cacheKey = `${provider}-${config.openaiApiKey || config.claudeApiKey || 'default'}`;
-      deleteAvailabilityCacheEntry(cacheKey);
+      // Invalidate cache for this provider
+      deleteAvailabilityCacheEntry(`${provider}-default`);
 
       // Continue to next provider
       continue;
@@ -282,11 +174,7 @@ export async function parseBoardingPass(
   if (shouldLog) {
     log.error({
       operation: 'parse_boarding_pass_failed',
-      context: {
-        errors,
-        totalDuration,
-        triedProviders: providerChain,
-      },
+      context: { errors, totalDuration, triedProviders: providerChain },
     });
   } else {
     logger.error({ errors }, '[Parser Factory] All vision parsers failed');

@@ -9,32 +9,18 @@ import logger, { parserFactoryLogger, parserVisionLogger, parserTextLogger } fro
 import { shouldLogParserOperations } from '../loggingConfig';
 import { checkProviderAvailability } from './config';
 
-// Import all vision parsers
-import { getOllamaVisionParser } from './vision/ollamaVisionParser';
-import { getOpenAIVisionParser } from './vision/openaiVisionParser';
-import { getClaudeVisionParser } from './vision/claudeVisionParser';
+// Import vision parsers
 import { getTesseractParser } from './vision/tesseractParser';
 import { getManualParser } from './vision/manualParser';
 
-// Import all text parsers
-import { getOllamaTextParser } from './text/ollamaTextParser';
-import { getOpenAITextParser } from './text/openaiTextParser';
-import { getClaudeTextParser } from './text/claudeTextParser';
+// Import text parsers
 import { getRegexParser } from './text/regexParser';
 
 /**
  * Get vision parser instance by provider
- * @param provider - Vision provider
- * @param modelName - Optional model name (for Ollama)
  */
-export function getVisionParserInstance(provider: VisionProvider, modelName?: string): IVisionParser {
+export function getVisionParserInstance(provider: VisionProvider): IVisionParser {
   switch (provider) {
-    case 'ollama':
-      return getOllamaVisionParser(modelName);
-    case 'openai':
-      return getOpenAIVisionParser();
-    case 'claude':
-      return getClaudeVisionParser();
     case 'tesseract':
       return getTesseractParser();
     case 'manual':
@@ -46,17 +32,9 @@ export function getVisionParserInstance(provider: VisionProvider, modelName?: st
 
 /**
  * Get text parser instance by provider
- * @param provider - Text provider
- * @param modelName - Optional model name (for Ollama)
  */
-export function getTextParserInstance(provider: TextProvider, modelName?: string): ITextParser {
+export function getTextParserInstance(provider: TextProvider): ITextParser {
   switch (provider) {
-    case 'ollama':
-      return getOllamaTextParser(modelName);
-    case 'openai':
-      return getOpenAITextParser();
-    case 'claude':
-      return getClaudeTextParser();
     case 'regex':
       return getRegexParser();
     default:
@@ -80,82 +58,26 @@ export async function getVisionParser(
       context: {
         preferred: config.visionProvider,
         fallbackChain: config.visionFallbacks,
-        mode: config.visionProvider === 'auto' ? 'auto' : 'manual',
       },
     });
   } else {
     logger.info(
-      {
-        preferred: config.visionProvider,
-        fallbackChain: config.visionFallbacks,
-      },
+      { preferred: config.visionProvider, fallbackChain: config.visionFallbacks },
       '[Parser Factory] Resolving vision parser'
     );
   }
 
-  // If specific provider requested (not auto)
-  if (config.visionProvider !== 'auto') {
-    const parser = getVisionParserInstance(
-      config.visionProvider,
-      config.visionProvider === 'ollama' ? config.ollamaVisionModel : undefined
-    );
-    const apiKey = config.visionProvider === 'openai' ? config.openaiApiKey :
-                   config.visionProvider === 'claude' ? config.claudeApiKey : undefined;
-
-    const availability = await checkProviderAvailability(parser, apiKey);
-
-    if (availability.available) {
-      if (shouldLog) {
-        visionLog.info({
-          operation: 'vision_parser_selected',
-          context: {
-            provider: config.visionProvider,
-            fallbackUsed: false,
-            availability,
-          },
-        });
-      } else {
-        logger.info(`[Parser Factory] Using requested vision parser: ${config.visionProvider}`);
-      }
-      return { parser, provider: config.visionProvider, fallbackUsed: false };
-    }
-
-    if (shouldLog) {
-      visionLog.warn({
-        operation: 'vision_parser_unavailable',
-        context: {
-          provider: config.visionProvider,
-          reason: availability.reason,
-          availability,
-        },
-      });
-    } else {
-      logger.warn(`[Parser Factory] Requested vision parser '${config.visionProvider}' unavailable: ${availability.reason}`);
-    }
-  }
-
-  // Auto mode or fallback: try each provider in chain
+  // Try each provider in chain
   for (const provider of config.visionFallbacks) {
-    const parser = getVisionParserInstance(
-      provider,
-      provider === 'ollama' ? config.ollamaVisionModel : undefined
-    );
-    const apiKey = provider === 'openai' ? config.openaiApiKey :
-                   provider === 'claude' ? config.claudeApiKey : undefined;
-
-    const availability = await checkProviderAvailability(parser, apiKey);
+    const parser = getVisionParserInstance(provider);
+    const availability = await checkProviderAvailability(parser);
 
     if (availability.available) {
-      const fallbackUsed = config.visionProvider !== 'auto' && config.visionProvider !== provider;
+      const fallbackUsed = config.visionProvider !== provider;
       if (shouldLog) {
         visionLog.info({
           operation: 'vision_parser_selected',
-          context: {
-            provider,
-            fallbackUsed,
-            availability,
-            requestedProvider: config.visionProvider,
-          },
+          context: { provider, fallbackUsed, availability },
         });
       } else {
         logger.info(`[Parser Factory] Using vision parser: ${provider}${fallbackUsed ? ' (fallback)' : ''}`);
@@ -166,11 +88,7 @@ export async function getVisionParser(
     if (shouldLog) {
       visionLog.debug({
         operation: 'vision_parser_skipped',
-        context: {
-          provider,
-          reason: availability.reason,
-          availability,
-        },
+        context: { provider, reason: availability.reason },
       });
     } else {
       logger.debug(`[Parser Factory] Vision parser '${provider}' unavailable: ${availability.reason}`);
@@ -181,10 +99,7 @@ export async function getVisionParser(
   if (shouldLog) {
     visionLog.warn({
       operation: 'vision_parser_fallback_manual',
-      context: {
-        requestedProvider: config.visionProvider,
-        triedProviders: config.visionFallbacks,
-      },
+      context: { triedProviders: config.visionFallbacks },
     });
   } else {
     logger.warn('[Parser Factory] All vision parsers unavailable, using manual fallback');
@@ -209,82 +124,26 @@ export async function getTextParser(
       context: {
         preferred: config.textProvider,
         fallbackChain: config.textFallbacks,
-        mode: config.textProvider === 'auto' ? 'auto' : 'manual',
       },
     });
   } else {
     logger.info(
-      {
-        preferred: config.textProvider,
-        fallbackChain: config.textFallbacks,
-      },
+      { preferred: config.textProvider, fallbackChain: config.textFallbacks },
       '[Parser Factory] Resolving text parser'
     );
   }
 
-  // If specific provider requested (not auto)
-  if (config.textProvider !== 'auto') {
-    const parser = getTextParserInstance(
-      config.textProvider,
-      config.textProvider === 'ollama' ? config.ollamaModel : undefined
-    );
-    const apiKey = config.textProvider === 'openai' ? config.openaiApiKey :
-                   config.textProvider === 'claude' ? config.claudeApiKey : undefined;
-
-    const availability = await checkProviderAvailability(parser, apiKey);
-
-    if (availability.available) {
-      if (shouldLog) {
-        textLog.info({
-          operation: 'text_parser_selected',
-          context: {
-            provider: config.textProvider,
-            fallbackUsed: false,
-            availability,
-          },
-        });
-      } else {
-        logger.info(`[Parser Factory] Using requested text parser: ${config.textProvider}`);
-      }
-      return { parser, provider: config.textProvider, fallbackUsed: false };
-    }
-
-    if (shouldLog) {
-      textLog.warn({
-        operation: 'text_parser_unavailable',
-        context: {
-          provider: config.textProvider,
-          reason: availability.reason,
-          availability,
-        },
-      });
-    } else {
-      logger.warn(`[Parser Factory] Requested text parser '${config.textProvider}' unavailable: ${availability.reason}`);
-    }
-  }
-
-  // Auto mode or fallback: try each provider in chain
+  // Try each provider in chain
   for (const provider of config.textFallbacks) {
-    const parser = getTextParserInstance(
-      provider,
-      provider === 'ollama' ? config.ollamaModel : undefined
-    );
-    const apiKey = provider === 'openai' ? config.openaiApiKey :
-                   provider === 'claude' ? config.claudeApiKey : undefined;
-
-    const availability = await checkProviderAvailability(parser, apiKey);
+    const parser = getTextParserInstance(provider);
+    const availability = await checkProviderAvailability(parser);
 
     if (availability.available) {
-      const fallbackUsed = config.textProvider !== 'auto' && config.textProvider !== provider;
+      const fallbackUsed = config.textProvider !== provider;
       if (shouldLog) {
         textLog.info({
           operation: 'text_parser_selected',
-          context: {
-            provider,
-            fallbackUsed,
-            availability,
-            requestedProvider: config.textProvider,
-          },
+          context: { provider, fallbackUsed, availability },
         });
       } else {
         logger.info(`[Parser Factory] Using text parser: ${provider}${fallbackUsed ? ' (fallback)' : ''}`);
@@ -295,11 +154,7 @@ export async function getTextParser(
     if (shouldLog) {
       textLog.debug({
         operation: 'text_parser_skipped',
-        context: {
-          provider,
-          reason: availability.reason,
-          availability,
-        },
+        context: { provider, reason: availability.reason },
       });
     } else {
       logger.debug(`[Parser Factory] Text parser '${provider}' unavailable: ${availability.reason}`);
@@ -310,10 +165,7 @@ export async function getTextParser(
   if (shouldLog) {
     textLog.warn({
       operation: 'text_parser_fallback_regex',
-      context: {
-        requestedProvider: config.textProvider,
-        triedProviders: config.textFallbacks,
-      },
+      context: { triedProviders: config.textFallbacks },
     });
   } else {
     logger.warn('[Parser Factory] All text parsers unavailable, using regex fallback');

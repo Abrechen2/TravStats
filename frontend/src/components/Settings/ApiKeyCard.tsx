@@ -9,7 +9,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { settingsApi, adminApi } from "../../lib/api";
 
 export interface ApiKeyCardProps {
-  provider: "openai" | "claude" | "airlabs" | "aviationstack" | "opensky";
+  provider: "airlabs" | "aviationstack" | "opensky";
   label: string;
   description: string;
   getKeyUrl: string;

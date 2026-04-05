@@ -1,85 +1,74 @@
 import { useState, useEffect } from "react";
-import { parseApi, settingsApi } from "../../lib/api";
-import InlineHelp from "../Help/InlineHelp";
+import { parseApi } from "../../lib/api";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 
-const parserProviderOptions = {
-  vision: [
-    {
-      value: "auto",
-      label: "🤖 Auto (Recommended)",
-      description: "Automatically selects best available parser",
-    },
-    { value: "ollama", label: "🖥️ Ollama Vision", description: "Local AI (free, needs GPU)" },
-    { value: "openai", label: "☁️ OpenAI GPT-4", description: "Cloud AI (~$0.01-0.05/image)" },
-    { value: "claude", label: "☁️ Claude 3.5", description: "Cloud AI (~$0.01-0.03/image)" },
-    {
-      value: "tesseract",
-      label: "📝 Tesseract OCR",
-      description: "Local OCR (free, no GPU needed)",
-    },
-    { value: "manual", label: "✋ Manual", description: "OCR + manual entry" },
-  ],
-  text: [
-    {
-      value: "auto",
-      label: "🤖 Auto (Recommended)",
-      description: "Automatically selects best available parser",
-    },
-    { value: "ollama", label: "🖥️ Ollama", description: "Local AI (free, qwen2.5:7b)" },
-    { value: "openai", label: "☁️ OpenAI GPT-4", description: "Cloud AI (~$0.002-0.01/email)" },
-    { value: "claude", label: "☁️ Claude 3.5", description: "Cloud AI (~$0.003-0.015/email)" },
-    { value: "regex", label: "🔤 Regex", description: "Pattern matching (free fallback)" },
-  ],
-};
+interface ProviderEntry {
+  provider: string;
+  availability: {
+    available: boolean;
+    reason?: string;
+  };
+}
+
+interface ProvidersData {
+  vision: ProviderEntry[];
+  text: ProviderEntry[];
+}
 
 interface ParserConfigurationProps {
   className?: string;
+}
+
+function ProviderStatusBadge({
+  available,
+  reason,
+}: {
+  available: boolean;
+  reason?: string;
+}): JSX.Element {
+  if (available) {
+    return (
+      <div className="flex items-center gap-1 text-xs text-green-600">
+        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+          <path
+            fillRule="evenodd"
+            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+            clipRule="evenodd"
+          />
+        </svg>
+        <span>Available</span>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center gap-1 text-xs text-yellow-600" title={reason}>
+      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+        <path
+          fillRule="evenodd"
+          d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+          clipRule="evenodd"
+        />
+      </svg>
+      <span>Unavailable</span>
+    </div>
+  );
 }
 
 export default function ParserConfiguration({
   className = "",
 }: ParserConfigurationProps): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
-  interface ProviderEntry {
-    provider: string;
-    availability: {
-      available: boolean;
-      reason?: string;
-    };
-  }
-
-  interface ProvidersData {
-    vision: ProviderEntry[];
-    text: ProviderEntry[];
-  }
-
   const [providers, setProviders] = useState<ProvidersData | null>(null);
   const [loadingProviders, setLoadingProviders] = useState(true);
-  const [saving, setSaving] = useState(false);
 
-  // Parser settings (in real app, would come from settingsStore or API)
-  const [settings, setSettings] = useState({
-    preferredVisionParser: "auto",
-    preferredTextParser: "auto",
-  });
-
-  // Load parser settings and available providers
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [providersData, settingsData] = await Promise.all([
-          parseApi.getProviders(),
-          settingsApi.getParserSettings(),
-        ]);
+        const providersData = await parseApi.getProviders();
         setProviders(providersData);
-        setSettings({
-          preferredVisionParser: settingsData.preferredVisionParser || "auto",
-          preferredTextParser: settingsData.preferredTextParser || "auto",
-        });
       } catch (error) {
-        logger.error("Failed to load parser data:", error);
+        logger.error("Failed to load parser providers:", error);
       } finally {
         setLoadingProviders(false);
       }
@@ -89,211 +78,47 @@ export default function ParserConfiguration({
 
   const getProviderStatus = (providerType: "vision" | "text", providerName: string) => {
     if (!providers) return null;
-    const provider = providers[providerType]?.find(
-      (p: ProviderEntry) => p.provider === providerName
-    );
-    return provider?.availability;
+    return providers[providerType]?.find((p) => p.provider === providerName)?.availability ?? null;
   };
 
-  const renderProviderStatus = (providerType: "vision" | "text", providerName: string) => {
-    if (loadingProviders) {
-      return (
-        <span className="text-xs text-[var(--text-muted)]">{t("common:buttons.loading")}</span>
-      );
-    }
-
-    const status = getProviderStatus(providerType, providerName);
-    if (!status) return null;
-
-    if (status.available) {
-      return (
-        <div className="flex items-center gap-1 text-xs text-green-600">
-          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fillRule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-              clipRule="evenodd"
-            />
-          </svg>
-          <span>{t("settings:parser.available")}</span>
-        </div>
-      );
-    }
-
-    return (
-      <div className="flex items-center gap-1 text-xs text-yellow-600" title={status.reason}>
-        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-          <path
-            fillRule="evenodd"
-            d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-            clipRule="evenodd"
-          />
-        </svg>
-        <span>{t("settings:parser.unavailable")}</span>
-      </div>
-    );
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      await settingsApi.updateParserSettings({
-        preferredVisionParser: settings.preferredVisionParser,
-        preferredTextParser: settings.preferredTextParser,
-      });
-      alert(t("settings:parser.saved"));
-    } catch (error: unknown) {
-      logger.error("Failed to save settings:", error);
-      const errorObj = error as { response?: { data?: { error?: string } } };
-      const errorMessage = errorObj.response?.data?.error || t("settings:parser.saveFailed");
-      alert(errorMessage);
-    } finally {
-      setSaving(false);
-    }
-  };
+  const tesseractStatus = getProviderStatus("vision", "tesseract");
+  const regexStatus = getProviderStatus("text", "regex");
 
   return (
-    <div className={`card space-y-6 ${className}`}>
-      {/* Header */}
+    <div className={`card space-y-4 ${className}`}>
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-xl font-semibold">{t("settings:parser.title")}</h2>
-          <button onClick={handleSave} disabled={saving} className="btn-primary text-sm">
-            {saving ? t("common:buttons.saving") : t("settings:parser.saveSettings")}
-          </button>
-        </div>
-        <p className="text-sm text-[var(--text-muted)]">{t("settings:parser.description")}</p>
+        <h2 className="text-xl font-semibold">{t("settings:parser.title")}</h2>
+        <p className="text-sm text-[var(--text-muted)] mt-1">{t("settings:parser.description")}</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Vision Parser (Boarding Pass) */}
-        <div className="space-y-4">
-          <div>
-            <h3 className="font-medium text-[var(--text-primary)] mb-1">
-              {t("settings:parser.vision.title")}
-            </h3>
-            <p className="text-xs text-[var(--text-muted)]">
-              {t("settings:parser.vision.description")}
-            </p>
-          </div>
+      <div className="bg-[var(--bg-base)] rounded-lg p-4 space-y-3">
+        <p className="text-xs font-medium text-[var(--text-primary)]">Parser Status:</p>
 
-          <div>
-            <label className="label">{t("settings:parser.preferred")}</label>
-            <select
-              value={settings.preferredVisionParser}
-              onChange={(e) => setSettings({ ...settings, preferredVisionParser: e.target.value })}
-              className="input"
-            >
-              {parserProviderOptions.vision.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-[var(--text-muted)] mt-1">
-              {
-                parserProviderOptions.vision.find((o) => o.value === settings.preferredVisionParser)
-                  ?.description
-              }
-            </p>
-          </div>
-
-          {/* Provider Status List */}
-          <div className="bg-[var(--bg-base)] rounded-lg p-3 space-y-2">
-            <p className="text-xs font-medium text-[var(--text-primary)]">Provider Status:</p>
-            {parserProviderOptions.vision.map((option) => (
-              <div key={option.value} className="flex items-center justify-between text-sm">
-                <span className="text-[var(--text-muted)]">{option.label}</span>
-                {renderProviderStatus("vision", option.value)}
-              </div>
-            ))}
-          </div>
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-[var(--text-muted)]">Tesseract OCR (Boarding Pass)</span>
+          {loadingProviders ? (
+            <span className="text-xs text-[var(--text-muted)]">{t("common:buttons.loading")}</span>
+          ) : tesseractStatus ? (
+            <ProviderStatusBadge
+              available={tesseractStatus.available}
+              reason={tesseractStatus.reason}
+            />
+          ) : (
+            <ProviderStatusBadge available={true} />
+          )}
         </div>
 
-        {/* Text Parser (Email) */}
-        <div className="space-y-4">
-          <div>
-            <h3 className="font-medium text-[var(--text-primary)] mb-1">
-              {t("settings:parser.text.title")}
-            </h3>
-            <p className="text-xs text-[var(--text-muted)]">
-              {t("settings:parser.text.description")}
-            </p>
-          </div>
-
-          <div>
-            <label className="label">{t("settings:parser.preferred")}</label>
-            <select
-              value={settings.preferredTextParser}
-              onChange={(e) => setSettings({ ...settings, preferredTextParser: e.target.value })}
-              className="input"
-            >
-              {parserProviderOptions.text.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-[var(--text-muted)] mt-1">
-              {
-                parserProviderOptions.text.find((o) => o.value === settings.preferredTextParser)
-                  ?.description
-              }
-            </p>
-          </div>
-
-          {/* Provider Status List */}
-          <div className="bg-[var(--bg-base)] rounded-lg p-3 space-y-2">
-            <p className="text-xs font-medium text-[var(--text-primary)]">Provider Status:</p>
-            {parserProviderOptions.text.map((option) => (
-              <div key={option.value} className="flex items-center justify-between text-sm">
-                <span className="text-[var(--text-muted)]">{option.label}</span>
-                {renderProviderStatus("text", option.value)}
-              </div>
-            ))}
-          </div>
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-[var(--text-muted)]">Regex Templates (Email)</span>
+          {loadingProviders ? (
+            <span className="text-xs text-[var(--text-muted)]">{t("common:buttons.loading")}</span>
+          ) : regexStatus ? (
+            <ProviderStatusBadge available={regexStatus.available} reason={regexStatus.reason} />
+          ) : (
+            <ProviderStatusBadge available={true} />
+          )}
         </div>
       </div>
-
-      {/* Help Section */}
-      <InlineHelp
-        title={t("settings:parser.help.title")}
-        category="advanced"
-        content={
-          <div className="space-y-3">
-            <div>
-              <p className="font-semibold mb-1">{t("settings:parser.help.modes.title")}</p>
-              <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
-                <li>
-                  <strong>{t("settings:parser.help.modes.auto")}:</strong>{" "}
-                  {t("settings:parser.help.modes.autoDesc")}
-                </li>
-                <li>
-                  <strong>{t("settings:parser.help.modes.ollama")}:</strong>{" "}
-                  {t("settings:parser.help.modes.ollamaDesc")}
-                </li>
-                <li>
-                  <strong>{t("settings:parser.help.modes.cloud")}:</strong>{" "}
-                  {t("settings:parser.help.modes.cloudDesc")}
-                </li>
-                <li>
-                  <strong>{t("settings:parser.help.modes.fallback")}:</strong>{" "}
-                  {t("settings:parser.help.modes.fallbackDesc")}
-                </li>
-              </ul>
-            </div>
-            <div>
-              <p className="font-semibold mb-1">{t("settings:parser.help.bestPractices.title")}</p>
-              <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
-                <li>{t("settings:parser.help.bestPractices.auto")}</li>
-                <li>{t("settings:parser.help.bestPractices.ollama")}</li>
-                <li>{t("settings:parser.help.bestPractices.cloud")}</li>
-                <li>{t("settings:parser.help.bestPractices.trained")}</li>
-              </ul>
-            </div>
-          </div>
-        }
-      />
     </div>
   );
 }

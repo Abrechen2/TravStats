@@ -22,8 +22,6 @@ interface HistoricalEnrichmentSettings {
 }
 
 interface ApiKeysFormState {
-  openaiApiKey: string;
-  claudeApiKey: string;
   airlabsApiKey: string;
   aviationstackApiKey: string;
   openskyClientId: string;
@@ -45,8 +43,6 @@ export function useSettingsPage() {
     setUnits,
     setDefaults,
     setMap,
-    boardingPassParserStrategy,
-    setBoardingPassParserStrategy,
     saveRemoteSettings,
   } = useSettingsStore();
 
@@ -102,15 +98,11 @@ export function useSettingsPage() {
 
   // API keys
   const [apiKeysStatus, setApiKeysStatus] = useState<{
-    openai: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
-    claude: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     airlabs: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     aviationstack: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     opensky: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
   } | null>(null);
   const [apiKeys, setApiKeys] = useState<ApiKeysFormState>({
-    openaiApiKey: "",
-    claudeApiKey: "",
     airlabsApiKey: "",
     aviationstackApiKey: "",
     openskyClientId: "",
@@ -134,9 +126,6 @@ export function useSettingsPage() {
           onlyDuringFlight: settings.autoUpdate?.onlyDuringFlight ?? true,
           expiryHours: settings.autoUpdate?.expiryHours ?? 24,
         });
-        if (settings.boardingPassParserStrategy !== undefined) {
-          setBoardingPassParserStrategy(settings.boardingPassParserStrategy);
-        }
         setHistoricalEnrichmentSettings({
           enabled: settings.historicalEnrichment?.enabled ?? false,
           minConfidence: settings.historicalEnrichment?.minConfidence ?? 60,
@@ -363,8 +352,6 @@ export function useSettingsPage() {
       const status = await settingsApi.getApiKeys();
       setApiKeysStatus(status);
       setApiKeys({
-        openaiApiKey: "",
-        claudeApiKey: "",
         airlabsApiKey: "",
         aviationstackApiKey: "",
         openskyClientId: "",
@@ -403,8 +390,6 @@ export function useSettingsPage() {
     setUnits,
     setDefaults,
     setMap,
-    boardingPassParserStrategy,
-    setBoardingPassParserStrategy,
     isDarkMode,
     // Derived
     hasTrainingAccess,

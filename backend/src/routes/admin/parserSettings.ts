@@ -2,29 +2,18 @@ import { Router, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { AuthRequest } from '../../middleware/auth';
 import { prisma } from '../../db';
-import { decryptApiKey, encryptApiKey } from '../../utils/encryption';
 import logger from '../../utils/logger';
 
 interface ParserSettingsUpdateData {
-  globalOpenaiApiKey?: string | null;
-  globalClaudeApiKey?: string | null;
   allowUserApiKeys?: boolean;
   defaultVisionParser?: string;
   defaultTextParser?: string;
-  ollamaUrl?: string | null;
-  ollamaModel?: string | null;
-  ollamaVisionModel?: string | null;
 }
 
 const parserSettingsSchema = z.object({
-  globalOpenaiApiKey: z.string().nullable().optional(),
-  globalClaudeApiKey: z.string().nullable().optional(),
   allowUserApiKeys: z.boolean().optional(),
   defaultVisionParser: z.string().optional(),
   defaultTextParser: z.string().optional(),
-  ollamaUrl: z.string().url().nullable().optional().or(z.literal("").transform(() => null)),
-  ollamaModel: z.string().max(100).nullable().optional(),
-  ollamaVisionModel: z.string().max(100).nullable().optional(),
 });
 
 // Training configuration schema
@@ -48,36 +37,28 @@ const router = Router();
 // Get admin parser settings
 router.get('/parser-settings', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    // Get or create admin settings (ID is always 1 for singleton)
     let adminSettings = await prisma.adminSettings.findFirst();
 
     if (!adminSettings) {
-      // Create default admin settings if they don't exist
       adminSettings = await prisma.adminSettings.create({
         data: {
           allowUserApiKeys: true,
           allowUserFlightApiKeys: true,
-          defaultVisionParser: 'auto',
-          defaultTextParser: 'auto',
+          defaultVisionParser: 'tesseract',
+          defaultTextParser: 'regex',
         },
       });
     }
 
-    // Return settings (API keys are decrypted for frontend)
     res.json({
-      globalOpenaiApiKey: decryptApiKey(adminSettings.globalOpenaiApiKey) || undefined,
-      globalClaudeApiKey: decryptApiKey(adminSettings.globalClaudeApiKey) || undefined,
-      globalAirlabsApiKey: decryptApiKey(adminSettings.globalAirlabsApiKey) || undefined,
-      globalAviationstackApiKey: decryptApiKey(adminSettings.globalAviationstackApiKey) || undefined,
-      globalOpenskyClientId: decryptApiKey(adminSettings.globalOpenskyClientId) || undefined,
-      globalOpenskyClientSecret: decryptApiKey(adminSettings.globalOpenskyClientSecret) || undefined,
+      globalAirlabsApiKey: undefined,
+      globalAviationstackApiKey: undefined,
+      globalOpenskyClientId: undefined,
+      globalOpenskyClientSecret: undefined,
       allowUserApiKeys: adminSettings.allowUserApiKeys,
       allowUserFlightApiKeys: adminSettings.allowUserFlightApiKeys,
-      defaultVisionParser: adminSettings.defaultVisionParser,
-      defaultTextParser: adminSettings.defaultTextParser,
-      ollamaUrl: adminSettings.ollamaUrl || process.env.OLLAMA_URL || null,
-      ollamaModel: adminSettings.ollamaModel || process.env.OLLAMA_MODEL || null,
-      ollamaVisionModel: adminSettings.ollamaVisionModel || process.env.OLLAMA_VISION_MODEL || null,
+      defaultVisionParser: 'tesseract',
+      defaultTextParser: 'regex',
     });
   } catch (error) {
     next(error);
@@ -87,30 +68,13 @@ router.get('/parser-settings', async (req: AuthRequest, res: Response, next: Nex
 // Update admin parser settings
 router.put('/parser-settings', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const {
-      globalOpenaiApiKey,
-      globalClaudeApiKey,
-      allowUserApiKeys,
-      defaultVisionParser,
-      defaultTextParser,
-      ollamaUrl,
-      ollamaModel,
-      ollamaVisionModel,
-    } = parserSettingsSchema.parse(req.body);
+    const { allowUserApiKeys, defaultVisionParser, defaultTextParser } =
+      parserSettingsSchema.parse(req.body);
 
-    // Get or create admin settings
     let adminSettings = await prisma.adminSettings.findFirst();
 
     const updateData: ParserSettingsUpdateData = {};
 
-    // Only update fields that are provided
-    // Encrypt API keys before storing
-    if (globalOpenaiApiKey !== undefined) {
-      updateData.globalOpenaiApiKey = encryptApiKey(globalOpenaiApiKey);
-    }
-    if (globalClaudeApiKey !== undefined) {
-      updateData.globalClaudeApiKey = encryptApiKey(globalClaudeApiKey);
-    }
     if (allowUserApiKeys !== undefined) {
       updateData.allowUserApiKeys = allowUserApiKeys;
     }
@@ -120,35 +84,19 @@ router.put('/parser-settings', async (req: AuthRequest, res: Response, next: Nex
     if (defaultTextParser !== undefined) {
       updateData.defaultTextParser = defaultTextParser;
     }
-    if (ollamaUrl !== undefined) {
-      updateData.ollamaUrl = ollamaUrl;
-    }
-    if (ollamaModel !== undefined) {
-      updateData.ollamaModel = ollamaModel;
-    }
-    if (ollamaVisionModel !== undefined) {
-      updateData.ollamaVisionModel = ollamaVisionModel;
-    }
 
     if (adminSettings) {
-      // Update existing settings
       adminSettings = await prisma.adminSettings.update({
         where: { id: adminSettings.id },
         data: updateData,
       });
     } else {
-      // Create new settings with provided data
       adminSettings = await prisma.adminSettings.create({
         data: {
-          globalOpenaiApiKey: encryptApiKey(globalOpenaiApiKey),
-          globalClaudeApiKey: encryptApiKey(globalClaudeApiKey),
           allowUserApiKeys: allowUserApiKeys ?? true,
           allowUserFlightApiKeys: true,
-          defaultVisionParser: defaultVisionParser || 'auto',
-          defaultTextParser: defaultTextParser || 'auto',
-          ollamaUrl: ollamaUrl ?? null,
-          ollamaModel: ollamaModel ?? null,
-          ollamaVisionModel: ollamaVisionModel ?? null,
+          defaultVisionParser: 'tesseract',
+          defaultTextParser: 'regex',
         },
       });
     }
@@ -156,14 +104,9 @@ router.put('/parser-settings', async (req: AuthRequest, res: Response, next: Nex
     res.json({
       message: 'Parser settings updated successfully',
       settings: {
-        globalOpenaiApiKey: decryptApiKey(adminSettings.globalOpenaiApiKey) || undefined,
-        globalClaudeApiKey: decryptApiKey(adminSettings.globalClaudeApiKey) || undefined,
         allowUserApiKeys: adminSettings.allowUserApiKeys,
-        defaultVisionParser: adminSettings.defaultVisionParser,
-        defaultTextParser: adminSettings.defaultTextParser,
-        ollamaUrl: adminSettings.ollamaUrl || process.env.OLLAMA_URL || null,
-        ollamaModel: adminSettings.ollamaModel || process.env.OLLAMA_MODEL || null,
-        ollamaVisionModel: adminSettings.ollamaVisionModel || process.env.OLLAMA_VISION_MODEL || null,
+        defaultVisionParser: 'tesseract',
+        defaultTextParser: 'regex',
       },
     });
   } catch (error) {
@@ -186,11 +129,9 @@ router.get('/training-config', async (req: AuthRequest, res: Response, next: Nex
       trainingModelOutputDir: adminSettings?.trainingModelOutputDir || null,
       trainingEmailModelName: adminSettings?.trainingEmailModelName || null,
       trainingVisionModelName: adminSettings?.trainingVisionModelName || null,
-      // Current effective values (from ENV if not set in admin)
       currentTrainingModelOutputDir: trainingModelOutputDir,
       currentTrainingEmailModelName: trainingEmailModelName,
       currentTrainingVisionModelName: trainingVisionModelName,
-      // ENV fallback values
       envTrainingModelOutputDir: process.env.TRAINING_MODEL_OUTPUT_DIR || './data/training/models',
       envTrainingEmailModelName: process.env.TRAINING_EMAIL_MODEL_NAME || 'travstats-email-custom',
       envTrainingVisionModelName: process.env.TRAINING_VISION_MODEL_NAME || 'travstats-vision-custom',
@@ -233,8 +174,8 @@ router.put('/training-config', async (req: AuthRequest, res: Response, next: Nex
         data: {
           allowUserApiKeys: true,
           allowUserFlightApiKeys: true,
-          defaultVisionParser: 'auto',
-          defaultTextParser: 'auto',
+          defaultVisionParser: 'tesseract',
+          defaultTextParser: 'regex',
           ...updateData,
         },
       });
@@ -243,13 +184,9 @@ router.put('/training-config', async (req: AuthRequest, res: Response, next: Nex
     logger.info({
       operation: 'training_config_updated',
       message: 'Training configuration updated',
-      context: {
-        userId: req.userId,
-        settings: updateData,
-      },
+      context: { userId: req.userId, settings: updateData },
     });
 
-    // Get updated effective values
     const currentTrainingModelOutputDir = adminSettings.trainingModelOutputDir
       || process.env.TRAINING_MODEL_OUTPUT_DIR || './data/training/models';
     const currentTrainingEmailModelName = adminSettings.trainingEmailModelName

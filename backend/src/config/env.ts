@@ -50,18 +50,6 @@ const envSchema = z.object({
   OPENSKY_PASSWORD: z.string().optional(),
   AVIATIONSTACK_API_KEY: z.string().optional(),
 
-  // LLM Parser Settings (optional)
-  OLLAMA_URL: z.string().url().optional(),
-  OLLAMA_MODEL: z.string().optional(),
-  OLLAMA_VISION_MODEL: z.string().optional(),
-  USE_LLM_PARSER: z.string().transform((val) => val !== 'false').default('true'),
-  OPENAI_API_KEY: z.string().optional(),
-  OPENAI_MODEL: z.string().optional(),
-  OPENAI_VISION_MODEL: z.string().optional(),
-  CLAUDE_API_KEY: z.string().optional(),
-  CLAUDE_MODEL: z.string().optional(),
-  CLAUDE_VISION_MODEL: z.string().optional(),
-
   // Training Settings
   PYTHON_CMD: z.string().default('python3'),
   DOCKER: z.string().transform((val) => val === 'true').optional(),
