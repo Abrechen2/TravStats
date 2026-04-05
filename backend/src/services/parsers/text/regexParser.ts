@@ -286,7 +286,7 @@ export class RegexTextParser implements ITextParser {
       for (const match of matches) {
         const potential = (match[1] + (match[2] || '')).replace(/\s+/g, '');
         if (/^[A-Z]{2,3}\d{2,4}$/.test(potential)) {
-          const falsePositives = ['AM', 'PM', 'VI', 'AN', 'IN', 'ON', 'AT', 'TO', 'OF', 'OR', 'IS', 'AS', 'BE', 'WE', 'HE', 'ME', 'MY', 'BY', 'GO', 'NO', 'SO', 'UP', 'US', 'IT', 'IF', 'DO', 'OK', 'HI', 'OH', 'AH', 'EH', 'UM', 'ER', 'OR', 'UR', 'YA', 'YE', 'YO', 'ZA', 'ZE', 'ZO'];
+          const falsePositives = ['AB', 'AM', 'PM', 'VI', 'AN', 'IN', 'ON', 'AT', 'TO', 'OF', 'OR', 'IS', 'AS', 'BE', 'WE', 'HE', 'ME', 'MY', 'BY', 'GO', 'NO', 'SO', 'UP', 'US', 'IT', 'IF', 'DO', 'OK', 'HI', 'OH', 'AH', 'EH', 'UM', 'ER', 'OR', 'UR', 'YA', 'YE', 'YO', 'ZA', 'ZE', 'ZO'];
           if (!falsePositives.includes(potential.slice(0, 2))) {
             flightNumbers.push({ number: potential, index: match.index || 0 });
           }
@@ -396,8 +396,8 @@ export class RegexTextParser implements ITextParser {
     const sourceLower = source.toLowerCase();
     const sourceUpper = source.toUpperCase();
 
-    // Pattern 0 (highest priority): "Von: City Name (MUC)" / "In: City Name (LUX)" format
-    // Common in new Lufthansa emails. Each line has a keyword + city + IATA in parens.
+    // Pattern 0 (highest priority): labelled IATA codes
+    // Variant A: "Von: City Name (MUC)" / "In: City Name (LUX)" — IATA in parens
     const depIataMatches: Array<{ code: string; index: number }> = [];
     const arrIataMatches: Array<{ code: string; index: number }> = [];
     const depLinePattern = /(?:^|\n)\s*(?:von|ab|from|departure|abflug(?:\s*-?\s*ort)?)\s*:?\s*[^(\n]*\(([A-Z]{3})\)/gim;
@@ -408,6 +408,16 @@ export class RegexTextParser implements ITextParser {
     for (const m of source.matchAll(arrLinePattern)) {
       if (this.isValidIATACode(m[1])) arrIataMatches.push({ code: m[1], index: m.index! });
     }
+
+    // Variant B: "IATA-Code des Abflughafens MUC" / "IATA-Code des Ankunftsflughafens HEL"
+    // Used in new Lufthansa 2025 plain-text emails
+    for (const m of source.matchAll(/IATA-Code\s+des\s+Abflughafens\s+([A-Z]{3})\b/g)) {
+      if (this.isValidIATACode(m[1])) depIataMatches.push({ code: m[1], index: m.index! });
+    }
+    for (const m of source.matchAll(/IATA-Code\s+des\s+Ankunftsflughafens\s+([A-Z]{3})\b/g)) {
+      if (this.isValidIATACode(m[1])) arrIataMatches.push({ code: m[1], index: m.index! });
+    }
+
     if (depIataMatches.length > 0 || arrIataMatches.length > 0) {
       const count = Math.max(depIataMatches.length, arrIataMatches.length);
       for (let i = 0; i < count; i++) {
@@ -440,8 +450,10 @@ export class RegexTextParser implements ITextParser {
       }
     }
 
-    // Pattern 3: Sequential IATA codes (MUC FRA LUX)
-    const sequentialPattern = /\b([A-Z]{3})\s+([A-Z]{3})\b/g;
+    // Pattern 3: Sequential IATA codes on same line (MUC FRA LUX)
+    // Use whitespace boundaries (not \b) to avoid false positives from German umlauts
+    // creating word boundaries inside words like "ÜBER DEN" → "BER" "DEN"
+    const sequentialPattern = /(?:^|[ \t])([A-Z]{3})[ \t]+([A-Z]{3})(?=[ \t\r\n]|$)/gm;
     const codes: string[] = [];
     let seqMatch;
     while ((seqMatch = sequentialPattern.exec(sourceUpper)) !== null) {
@@ -477,8 +489,22 @@ export class RegexTextParser implements ITextParser {
       });
     }
 
+    // High-priority: "Datum der Abreise DD.MM.YYYY Abflugzeit HH:MM"
+    // New Lufthansa format — date and time separated by a keyword on the same line.
+    // Each occurrence is a separate flight segment departure.
+    const datumAbflugPattern = /Datum\s+der\s+Abreise\s+(\d{1,2})\.(\d{1,2})\.(\d{4})\s+Abflugzeit\s+(\d{1,2}):(\d{2})/gi;
+    for (const m of source.matchAll(datumAbflugPattern)) {
+      const iso = `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}T${m[4].padStart(2, '0')}:${m[5]}`;
+      pairs.push({ departure: iso });
+    }
+
+    // If "Datum der Abreise" found all segments, return now — generic German date scanning
+    // would corrupt arrivals by matching dates that are actually departure repeats.
+    if (pairs.length > 0) return pairs;
+
     // German/English date format — abbreviated and full month names, time optional
-    const germanPattern = /(\d{1,2})[.\s]+(\d{1,2}|[A-Za-zÄÖÜäöü]{3,9})[.\s]+(\d{4})(?:[,\s]+(\d{1,2}):(\d{2}))?/gi;
+    // Also handles dash-separated time: "18.09.2025 - 08:25"
+    const germanPattern = /(\d{1,2})[.\s]+(\d{1,2}|[A-Za-zÄÖÜäöü]{3,9})[.\s]+(\d{4})(?:[,\s]+(?:-\s*)?(\d{1,2}):(\d{2}))?/gi;
     const germanMatches = Array.from(source.matchAll(germanPattern));
 
     for (const match of germanMatches) {
@@ -576,7 +602,7 @@ export class RegexTextParser implements ITextParser {
     // DEP_LABELS: The lookahead (?=\s*:|\s+\d|\s+[A-Za-zÄÖÜäöü]{3}) on "Dep"/"Arr" is zero-width
     // (not consumed). The trailing \s*:?\s* then consumes the actual separator.
     const DEP_LABELS =
-      /(?:Abflug(?!\s*[-–]\s*(?:Datum|Ort))|Abflugzeit|Abreise|Departure|Departing|Departs|Dep(?=\s*:|\s+\d|\s+[A-Za-zÄÖÜäöü]{3}))\s*:?\s*/gi;
+      /(?:Abflug(?!\s*[-–]\s*(?:Datum|Ort))|Abflugzeit|Abflugszeit|Datum\s+der\s+Abreise|Abreise|Departure(?:\s*Date)?|Departing|Departs|Dep(?=\s*:|\s+\d|\s+[A-Za-zÄÖÜäöü]{3}))\s*:?\s*/gi;
     const ARR_LABELS =
       /(?:Ankunft(?!\s*[-–]\s*(?:Datum|Ort))|Ankunftszeit|Arrival|Arriving|Arrives|Arr(?=\s*:|\s+\d|\s+[A-Za-zÄÖÜäöü]{3}))\s*:?\s*/gi;
 
@@ -590,9 +616,9 @@ export class RegexTextParser implements ITextParser {
         const nextDay = afterIso.match(/^\s*\(?\+(\d)\)?(?!\d*:)/);
         return nextDay ? addDays(iso, Number(nextDay[1])) : iso;
       }
-      // German/English date format (time optional, with "Uhr" suffix)
+      // German/English date format (time optional, dash or comma separator, "Uhr" suffix)
       const deM = slice.match(
-        /^(\d{1,2})[.\s]+(\d{1,2}|[A-Za-zÄÖÜäöü]{3,9})[.\s]+(\d{4})(?:[,\s]+(\d{1,2}):(\d{2})(?:\s*Uhr)?)?/
+        /^(\d{1,2})[.\s]+(\d{1,2}|[A-Za-zÄÖÜäöü]{3,9})[.\s]+(\d{4})(?:[,\s]+(?:-\s*)?(\d{1,2}):(\d{2})(?:\s*Uhr)?)?/
       );
       if (deM) {
         const d = deM[1].padStart(2, '0');
@@ -637,6 +663,24 @@ export class RegexTextParser implements ITextParser {
       }
     }
 
+    // Strategy C: standalone "HH:MM Uhr" times (old Buchungsdetails format)
+    // When a date was found but T00:00, fill in the real time from "HH:MM Uhr" occurrences.
+    const uhrPattern = /(\d{1,2}):(\d{2})\s+Uhr/gi;
+    const uhrMatches = [...source.matchAll(uhrPattern)];
+    if (uhrMatches.length > 0 && result.departureTime?.endsWith('T00:00')) {
+      const h = uhrMatches[0][1].padStart(2, '0');
+      const min = uhrMatches[0][2];
+      result.departureTime = result.departureTime.slice(0, 11) + `${h}:${min}`;
+    }
+    if (uhrMatches.length > 1 && result.departureTime && !result.departureTime.endsWith('T00:00')) {
+      const h = uhrMatches[1][1].padStart(2, '0');
+      const min = uhrMatches[1][2];
+      const depDate = result.departureTime.slice(0, 10);
+      if (!result.arrivalTime || result.arrivalTime.endsWith('T00:00')) {
+        result.arrivalTime = `${depDate}T${h}:${min}`;
+      }
+    }
+
     return result;
   }
 
@@ -651,6 +695,8 @@ export class RegexTextParser implements ITextParser {
     // Must be in context of "Flight", "LH", or near airport codes
     // Avoid matching "AM18" from "am 18 September" by requiring context
     const flightPatterns = [
+      // Tab-delimited standalone airline code — old Buchungsdetails format (e.g. "\tLH 2316\t")
+      /[\t >]([A-Z]{2}\s+\d{3,4})(?:[\t \r\n]|$)/m,
       /(?:FLIGHT|FLUG|FLUGNUMMER|FLUGNR\.?|FLUG-NR|FLT\.?)\s*:?\s*([A-Z]{2,3}\s?\d{1,4})\b/i,
       /\b([A-Z]{2,3})\s*(\d{1,4})\b(?=.*(?:FLIGHT|FLUG|DEPARTURE|ABFLUG|BOARDING|GATE|TERMINAL))/i,
       /\b([A-Z]{2,3})\s*(\d{1,4})\b(?=.*[A-Z]{3}.*[A-Z]{3})/i, // Near airport codes
@@ -663,7 +709,7 @@ export class RegexTextParser implements ITextParser {
         // Validate it's not a false positive (e.g., "AM18" from "am 18")
         const potentialFlight = (flightMatch[1] + (flightMatch[2] || '')).replace(/\s+/g, '');
         // Common false positives to exclude
-        const falsePositives = ['AM', 'PM', 'VI', 'AN', 'IN', 'ON', 'AT', 'TO', 'OF', 'OR', 'IS', 'AS', 'BE', 'WE', 'HE', 'ME', 'MY', 'BY', 'GO', 'NO', 'SO', 'UP', 'US', 'IT', 'IF', 'DO', 'OK', 'HI', 'OH', 'AH', 'EH', 'UM', 'ER', 'OR', 'UR', 'YA', 'YE', 'YO', 'ZA', 'ZE', 'ZO'];
+        const falsePositives = ['AB', 'AM', 'PM', 'VI', 'AN', 'IN', 'ON', 'AT', 'TO', 'OF', 'OR', 'IS', 'AS', 'BE', 'WE', 'HE', 'ME', 'MY', 'BY', 'GO', 'NO', 'SO', 'UP', 'US', 'IT', 'IF', 'DO', 'OK', 'HI', 'OH', 'AH', 'EH', 'UM', 'ER', 'OR', 'UR', 'YA', 'YE', 'YO', 'ZA', 'ZE', 'ZO'];
         if (!falsePositives.includes(potentialFlight.slice(0, 2))) {
           data.flightNumber = potentialFlight;
           data.airline = potentialFlight.slice(0, 2);
@@ -716,9 +762,9 @@ export class RegexTextParser implements ITextParser {
       if (!data.arrivalTime && isoTimeMatches.length >= 2) data.arrivalTime = isoTimeMatches[1][1].replace(' ', 'T');
     }
 
-    // German/English date format — abbreviated and full month names, time optional
+    // German/English date format — abbreviated and full month names, time optional (dash OK)
     if (!data.departureTime || !data.arrivalTime) {
-      const germanDatePattern = /(\d{1,2})[.\s]+(\d{1,2}|[A-Za-zÄÖÜäöü]{3,9})[.\s]+(\d{4})(?:[,\s]+(\d{1,2}):(\d{2}))?/gi;
+      const germanDatePattern = /(\d{1,2})[.\s]+(\d{1,2}|[A-Za-zÄÖÜäöü]{3,9})[.\s]+(\d{4})(?:[,\s]+(?:-\s*)?(\d{1,2}):(\d{2}))?/gi;
       const dateMatches = Array.from(source.matchAll(germanDatePattern));
       const toIso = (m: RegExpMatchArray, src: string): string => {
         const d = m[1].padStart(2, '0');
