@@ -27,7 +27,7 @@ import templateStatusRoutes from './routes/templateStatus';
 import parserTemplatesRoutes from './routes/parserTemplates';
 import trainingRoutes from './routes/training';
 import tripsRoutes from './routes/trips';
-import { errorHandler } from './middleware/errorHandler';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { requestLoggerMiddleware } from './middleware/requestLogger';
 import { prisma } from './db';
 import logger from './utils/logger';
@@ -182,6 +182,9 @@ app.use('/api/v1/pending-updates', pendingUpdatesRoutes);
 app.use('/api/v1/template-status', templateStatusRoutes);
 app.use('/api/v1/training', trainingRoutes);
 app.use('/api/v1', tripsRoutes);
+
+// 404 handler for unmatched routes (must be before errorHandler)
+app.use(notFoundHandler);
 
 // Error handling
 app.use(errorHandler);

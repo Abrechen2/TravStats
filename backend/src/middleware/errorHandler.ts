@@ -32,14 +32,23 @@ function categorizeError(err: ApiError | ZodError): string {
   return 'unknown_error';
 }
 
+export const notFoundHandler = (_req: Request, res: Response): void => {
+  res.status(404).json({ error: 'Not found' });
+};
+
 export const errorHandler = async (
-  err: ApiError | ZodError | Prisma.PrismaClientInitializationError | Prisma.PrismaClientKnownRequestError,
+  err: ApiError | ZodError | Prisma.PrismaClientInitializationError | Prisma.PrismaClientKnownRequestError | SyntaxError,
   req: AuthRequest,
   res: Response,
   _next: NextFunction
 ) => {
+  // Handle invalid JSON body — return generic 400 without internal parser details
+  if (err instanceof SyntaxError && 'body' in err) {
+    return res.status(400).json({ error: 'Invalid JSON in request body' });
+  }
+
   const debugEnabled = await isDebugEnabled().catch(() => false);
-  const errorCategory = categorizeError(err);
+  const errorCategory = categorizeError(err as ApiError | ZodError);
 
   // Structured AI-friendly error logging
   logger.error({

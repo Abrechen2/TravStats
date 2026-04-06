@@ -81,7 +81,7 @@ const baseFlightSchema = z.object({
   actualDeparture: z.string().datetime().optional().nullable(),
   actualArrival:   z.string().datetime().optional().nullable(),
   status: z.enum(['scheduled', 'flown', 'cancelled']).default('scheduled'),
-  notes: z.string().optional(),
+  notes: z.string().transform((v) => v.replace(/<[^>]*>/g, '')).optional(),
   price: z.number().min(0).optional(),
   currency: z.enum(['EUR', 'USD', 'GBP', 'CHF']).optional(),
   taxes: z.number().min(0).optional(),
