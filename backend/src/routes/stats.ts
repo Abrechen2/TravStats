@@ -417,6 +417,8 @@ router.get('/business', async (req: AuthRequest, res: Response, next: NextFuncti
         category: true,
         seatClass: true,
         createdAt: true,
+        bookingId: true,
+        booking: { select: { id: true, price: true, currency: true } },
       },
     });
 
