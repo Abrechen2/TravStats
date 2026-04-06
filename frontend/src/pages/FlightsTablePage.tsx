@@ -4,7 +4,7 @@
  * Dedicated page for viewing all flights in a comprehensive table format
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { flightsApi, tripsApi } from "../lib/api";
 import ContextualHint from "../components/Onboarding/ContextualHint";
 import NavigationBar from "../components/NavigationBar";
@@ -146,26 +146,32 @@ export default function FlightsTablePage(): JSX.Element {
   const getDurationMinutes = (flight: Flight) =>
     (new Date(flight.arrivalTime).getTime() - new Date(flight.departureTime).getTime()) / 60000;
 
-  const sortedFlights = [...flights].sort((a, b) => {
-    let comparison = 0;
+  const tripMap = useMemo(() => new Map(trips.map((t) => [t.id, t])), [trips]);
 
-    switch (sortBy) {
-      case "departureTime":
-        comparison = new Date(a.departureTime).getTime() - new Date(b.departureTime).getTime();
-        break;
-      case "airline":
-        comparison = (a.airline || "").localeCompare(b.airline || "");
-        break;
-      case "status":
-        comparison = a.status.localeCompare(b.status);
-        break;
-      case "duration":
-        comparison = getDurationMinutes(a) - getDurationMinutes(b);
-        break;
-    }
+  const sortedFlights = useMemo(
+    () =>
+      [...flights].sort((a, b) => {
+        let comparison = 0;
 
-    return sortOrder === "asc" ? comparison : -comparison;
-  });
+        switch (sortBy) {
+          case "departureTime":
+            comparison = new Date(a.departureTime).getTime() - new Date(b.departureTime).getTime();
+            break;
+          case "airline":
+            comparison = (a.airline || "").localeCompare(b.airline || "");
+            break;
+          case "status":
+            comparison = a.status.localeCompare(b.status);
+            break;
+          case "duration":
+            comparison = getDurationMinutes(a) - getDurationMinutes(b);
+            break;
+        }
+
+        return sortOrder === "asc" ? comparison : -comparison;
+      }),
+    [flights, sortBy, sortOrder]
+  );
 
   const handleSort = (column: typeof sortBy) => {
     if (sortBy === column) {
@@ -176,14 +182,16 @@ export default function FlightsTablePage(): JSX.Element {
     }
   };
 
-  const tripMap = new Map(trips.map((trip) => [trip.id, trip]));
-
-  const displayedFlights = sortedFlights.filter((f) => {
-    if (tripFilter === "all") return true;
-    if (tripFilter === "with") return !!f.tripId;
-    if (tripFilter === "without") return !f.tripId;
-    return f.tripId === tripFilter;
-  });
+  const displayedFlights = useMemo(
+    () =>
+      sortedFlights.filter((f) => {
+        if (tripFilter === "all") return true;
+        if (tripFilter === "with") return !!f.tripId;
+        if (tripFilter === "without") return !f.tripId;
+        return f.tripId === tripFilter;
+      }),
+    [sortedFlights, tripFilter]
+  );
 
   const formatDate = (date: string): string => formatDateInTimezone(date, timezone);
 
@@ -434,162 +442,167 @@ export default function FlightsTablePage(): JSX.Element {
                         </tr>
                       </thead>
                       <tbody>
-                        {displayedFlights.map((flight, index) => (
-                          <tr
-                            key={flight.id}
-                            className="transition-colors"
-                            style={{
-                              background:
-                                index % 2 === 0 ? "var(--bg-surface)" : "var(--bg-elevated)",
-                            }}
-                            onMouseEnter={(e) => {
-                              (e.currentTarget as HTMLTableRowElement).style.background =
-                                "var(--bg-muted)";
-                            }}
-                            onMouseLeave={(e) => {
-                              (e.currentTarget as HTMLTableRowElement).style.background =
-                                index % 2 === 0 ? "var(--bg-surface)" : "var(--bg-elevated)";
-                            }}
-                          >
-                            <td className="px-4 py-3" style={{ color: "var(--text-primary)" }}>
-                              <div className="font-medium">
-                                {flight.airline || t("common:labels.notAvailable")}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3" style={{ color: "var(--text-muted)" }}>
-                              {flight.flightNumber || t("common:labels.notAvailable")}
-                            </td>
-                            <td className="px-4 py-3" style={{ color: "var(--text-primary)" }}>
-                              <div className="flex items-center gap-2">
-                                <span
-                                  className="font-mono font-semibold"
-                                  style={{ color: "var(--accent)" }}
-                                >
-                                  {flight.depIata || flight.depIcao}
-                                </span>
-                                <span style={{ color: "var(--text-muted)" }}>
-                                  {t("common:labels.routeSeparator")}
-                                </span>
-                                <span
-                                  className="font-mono font-semibold"
-                                  style={{ color: "var(--accent)" }}
-                                >
-                                  {flight.arrIata || flight.arrIcao}
-                                </span>
-                              </div>
-                              <div className="text-xs" style={{ color: "var(--text-muted)" }}>
-                                {flight.depName?.substring(0, 20)}{" "}
-                                {t("common:labels.routeSeparator")}{" "}
-                                {flight.arrName?.substring(0, 20)}
-                              </div>
-                            </td>
-                            <td
-                              className="px-4 py-3 text-sm"
-                              style={{ color: "var(--text-muted)" }}
+                        {displayedFlights.map((flight, index) => {
+                          const tripEntry = flight.tripId ? tripMap.get(flight.tripId) : undefined;
+                          return (
+                            <tr
+                              key={flight.id}
+                              className="transition-colors"
+                              style={{
+                                background:
+                                  index % 2 === 0 ? "var(--bg-surface)" : "var(--bg-elevated)",
+                              }}
+                              onMouseEnter={(e) => {
+                                (e.currentTarget as HTMLTableRowElement).style.background =
+                                  "var(--bg-muted)";
+                              }}
+                              onMouseLeave={(e) => {
+                                (e.currentTarget as HTMLTableRowElement).style.background =
+                                  index % 2 === 0 ? "var(--bg-surface)" : "var(--bg-elevated)";
+                              }}
                             >
-                              {formatDate(flight.departureTime)}
-                            </td>
-                            <td
-                              className="px-4 py-3 text-sm"
-                              style={{ color: "var(--text-muted)" }}
-                            >
-                              {formatDate(flight.arrivalTime)}
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="flex flex-col gap-2">
-                                <span
-                                  className="px-2 py-1 text-xs font-semibold rounded-full"
-                                  style={
-                                    flight.status === "flown"
-                                      ? {
-                                          background: "rgba(63,185,80,0.15)",
-                                          color: "var(--success)",
-                                        }
-                                      : flight.status === "scheduled"
-                                        ? {
-                                            background: "rgba(56,139,253,0.15)",
-                                            color: "#388bfd",
-                                          }
-                                        : {
-                                            background: "rgba(248,81,73,0.15)",
-                                            color: "var(--danger)",
-                                          }
-                                  }
-                                >
-                                  {t(`flights:status.${flight.status}`, {
-                                    defaultValue: flight.status,
-                                  })}
-                                </span>
-                                <DataSourceBadges flight={flight} />
-                              </div>
-                            </td>
-                            <td
-                              className="px-4 py-3 text-sm"
-                              style={{ color: "var(--text-muted)" }}
-                            >
-                              {formatDurationHours(flight.departureTime, flight.arrivalTime)}
-                            </td>
-                            <td
-                              className="px-4 py-3 text-sm"
-                              style={{ color: "var(--text-muted)" }}
-                            >
-                              {flight.aircraft || t("common:labels.notAvailable")}
-                            </td>
-                            <td
-                              className="px-4 py-3 text-sm"
-                              style={{ color: "var(--text-muted)" }}
-                            >
-                              {flight.price
-                                ? `${flight.price.toFixed(2)} ${flight.currency || "EUR"}`
-                                : t("common:labels.notAvailable")}
-                            </td>
-                            <td className="px-3 py-2">
-                              {flight.tripId && tripMap.has(flight.tripId) ? (
-                                <button
-                                  onClick={() => setActiveTab("trips")}
-                                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium border transition-all hover:brightness-110"
-                                  style={{
-                                    background: `${tripMap.get(flight.tripId)!.color}18`,
-                                    borderColor: `${tripMap.get(flight.tripId)!.color}44`,
-                                    color: tripMap.get(flight.tripId)!.color,
-                                  }}
-                                >
+                              <td className="px-4 py-3" style={{ color: "var(--text-primary)" }}>
+                                <div className="font-medium">
+                                  {flight.airline || t("common:labels.notAvailable")}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3" style={{ color: "var(--text-muted)" }}>
+                                {flight.flightNumber || t("common:labels.notAvailable")}
+                              </td>
+                              <td className="px-4 py-3" style={{ color: "var(--text-primary)" }}>
+                                <div className="flex items-center gap-2">
                                   <span
-                                    className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                                    style={{ background: tripMap.get(flight.tripId)!.color }}
-                                  />
-                                  {tripMap.get(flight.tripId)!.name}
-                                </button>
-                              ) : (
-                                <span style={{ color: "var(--text-muted)", opacity: 0.3 }}>—</span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3 text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                <button
-                                  onClick={() => setEditingFlight(flight)}
-                                  className="px-3 py-1 text-xs font-medium rounded"
-                                  style={{
-                                    background: "rgba(56,139,253,0.15)",
-                                    color: "#388bfd",
-                                  }}
-                                >
-                                  {t("common:buttons.edit")}
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteClick(flight.id)}
-                                  className="px-3 py-1 text-xs font-medium rounded"
-                                  style={{
-                                    background: "rgba(248,81,73,0.15)",
-                                    color: "var(--danger)",
-                                  }}
-                                >
-                                  {t("common:buttons.delete")}
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
+                                    className="font-mono font-semibold"
+                                    style={{ color: "var(--accent)" }}
+                                  >
+                                    {flight.depIata || flight.depIcao}
+                                  </span>
+                                  <span style={{ color: "var(--text-muted)" }}>
+                                    {t("common:labels.routeSeparator")}
+                                  </span>
+                                  <span
+                                    className="font-mono font-semibold"
+                                    style={{ color: "var(--accent)" }}
+                                  >
+                                    {flight.arrIata || flight.arrIcao}
+                                  </span>
+                                </div>
+                                <div className="text-xs" style={{ color: "var(--text-muted)" }}>
+                                  {flight.depName?.substring(0, 20)}{" "}
+                                  {t("common:labels.routeSeparator")}{" "}
+                                  {flight.arrName?.substring(0, 20)}
+                                </div>
+                              </td>
+                              <td
+                                className="px-4 py-3 text-sm"
+                                style={{ color: "var(--text-muted)" }}
+                              >
+                                {formatDate(flight.departureTime)}
+                              </td>
+                              <td
+                                className="px-4 py-3 text-sm"
+                                style={{ color: "var(--text-muted)" }}
+                              >
+                                {formatDate(flight.arrivalTime)}
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex flex-col gap-2">
+                                  <span
+                                    className="px-2 py-1 text-xs font-semibold rounded-full"
+                                    style={
+                                      flight.status === "flown"
+                                        ? {
+                                            background: "rgba(63,185,80,0.15)",
+                                            color: "var(--success)",
+                                          }
+                                        : flight.status === "scheduled"
+                                          ? {
+                                              background: "rgba(56,139,253,0.15)",
+                                              color: "#388bfd",
+                                            }
+                                          : {
+                                              background: "rgba(248,81,73,0.15)",
+                                              color: "var(--danger)",
+                                            }
+                                    }
+                                  >
+                                    {t(`flights:status.${flight.status}`, {
+                                      defaultValue: flight.status,
+                                    })}
+                                  </span>
+                                  <DataSourceBadges flight={flight} />
+                                </div>
+                              </td>
+                              <td
+                                className="px-4 py-3 text-sm"
+                                style={{ color: "var(--text-muted)" }}
+                              >
+                                {formatDurationHours(flight.departureTime, flight.arrivalTime)}
+                              </td>
+                              <td
+                                className="px-4 py-3 text-sm"
+                                style={{ color: "var(--text-muted)" }}
+                              >
+                                {flight.aircraft || t("common:labels.notAvailable")}
+                              </td>
+                              <td
+                                className="px-4 py-3 text-sm"
+                                style={{ color: "var(--text-muted)" }}
+                              >
+                                {flight.price
+                                  ? `${flight.price.toFixed(2)} ${flight.currency || "EUR"}`
+                                  : t("common:labels.notAvailable")}
+                              </td>
+                              <td className="px-3 py-2">
+                                {tripEntry ? (
+                                  <button
+                                    onClick={() => setActiveTab("trips")}
+                                    className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium border transition-all hover:brightness-110"
+                                    style={{
+                                      background: `${tripEntry.color}18`,
+                                      borderColor: `${tripEntry.color}44`,
+                                      color: tripEntry.color,
+                                    }}
+                                  >
+                                    <span
+                                      className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                      style={{ background: tripEntry.color }}
+                                    />
+                                    {tripEntry.name}
+                                  </button>
+                                ) : (
+                                  <span style={{ color: "var(--text-muted)", opacity: 0.3 }}>
+                                    —
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <button
+                                    onClick={() => setEditingFlight(flight)}
+                                    className="px-3 py-1 text-xs font-medium rounded"
+                                    style={{
+                                      background: "rgba(56,139,253,0.15)",
+                                      color: "#388bfd",
+                                    }}
+                                  >
+                                    {t("common:buttons.edit")}
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteClick(flight.id)}
+                                    className="px-3 py-1 text-xs font-medium rounded"
+                                    style={{
+                                      background: "rgba(248,81,73,0.15)",
+                                      color: "var(--danger)",
+                                    }}
+                                  >
+                                    {t("common:buttons.delete")}
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   )}
@@ -623,10 +636,7 @@ export default function FlightsTablePage(): JSX.Element {
                 )}
               </>
             ) : (
-              <div className="p-4">
-                {/* TripsTab will be imported and rendered here in Task 7 */}
-                <p style={{ color: "var(--text-muted)" }}>Trips Tab — kommt in Task 7</p>
-              </div>
+              <div className="p-4">{/* TripsTab component will be rendered here in Task 7 */}</div>
             )}
           </div>
         </div>
