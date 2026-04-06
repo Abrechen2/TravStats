@@ -315,24 +315,20 @@ export function DeckGLMap({
       if (!map || selectedFlights.length === 0) return;
 
       if (highlightMode === "group") {
-        // Trip highlight: position at geographic center of all flight midpoints
-        const lons: number[] = [];
-        const lats: number[] = [];
+        // Trip highlight: position above the bounding box of all airports so the card
+        // doesn't overlap the arc lines. Collect screen coords → use top-center.
+        const screenPts: Array<{ x: number; y: number }> = [];
         for (const f of selectedFlights) {
-          if (f.depLon != null && f.depLat != null) {
-            lons.push(f.depLon);
-            lats.push(f.depLat);
-          }
-          if (f.arrLon != null && f.arrLat != null) {
-            lons.push(f.arrLon);
-            lats.push(f.arrLat);
-          }
+          if (f.depLon != null && f.depLat != null)
+            screenPts.push(map.project([f.depLon, f.depLat]));
+          if (f.arrLon != null && f.arrLat != null)
+            screenPts.push(map.project([f.arrLon, f.arrLat]));
         }
-        if (lons.length === 0) return;
-        const centerLon = lons.reduce((s, v) => s + v, 0) / lons.length;
-        const centerLat = lats.reduce((s, v) => s + v, 0) / lats.length;
-        const screenPt = map.project([centerLon, centerLat]);
-        setTooltipPos({ x: screenPt.x, y: screenPt.y });
+        if (screenPts.length === 0) return;
+        const minX = Math.min(...screenPts.map((p) => p.x));
+        const maxX = Math.max(...screenPts.map((p) => p.x));
+        const minY = Math.min(...screenPts.map((p) => p.y)); // topmost on screen
+        setTooltipPos({ x: (minX + maxX) / 2, y: minY });
       } else {
         // Single flight: position at arc midpoint
         const f = selectedFlights[0];
