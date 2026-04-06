@@ -366,6 +366,9 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
         orderBy: { departureTime: 'desc' },
         skip: query.offset,
         take: query.limit,
+        include: {
+          trip: { select: { id: true, name: true, color: true } },
+        },
       }),
       prisma.flight.count({ where }),
     ]);
