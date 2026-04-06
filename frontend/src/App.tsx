@@ -25,6 +25,7 @@ const SetupPage = lazy(() => import("./pages/SetupPage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const ParserPage = lazy(() => import("./pages/ParserPage"));
 const PendingUpdatesPage = lazy(() => import("./pages/PendingUpdatesPage"));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 
 function LoadingFallback(): JSX.Element {
   return (
@@ -209,6 +210,7 @@ function AppContent() {
                 path="/register"
                 element={isAuthenticated ? <Navigate to="/" /> : <RegisterPage />}
               />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
 
               {/* Protected routes */}
               <Route
