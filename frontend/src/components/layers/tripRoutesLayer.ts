@@ -16,9 +16,12 @@ function hexToRgba(hex: string, alpha = 200): [number, number, number, number] {
 }
 
 interface ArcData {
-  flight: Flight;
-  baseColor: [number, number, number, number];
   flightId: string;
+  sourcePosition: [number, number];
+  targetPosition: [number, number];
+  // Color is pre-computed so deck.gl detects data change on re-render
+  color: [number, number, number, number];
+  width: number;
 }
 
 interface PointData {
@@ -50,21 +53,46 @@ export function createTripRoutesLayer(
       f.arrLon !== 0
   );
 
+  // Pre-compute colors and widths in the data — ensures deck.gl sees a real data change
+  // whenever selectedIds or activeTripId changes, guaranteeing a full layer re-render.
   const arcData: ArcData[] = validFlights.map((f) => {
-    const tripColor = f.tripId
-      ? (tripColorMap.get(f.tripId) ?? [100, 100, 120, 200])
-      : [100, 100, 120, 100];
-    const baseColor =
-      activeTripId && f.tripId !== activeTripId
-        ? dimmedTripColor
-        : (tripColor as [number, number, number, number]);
-    return { flight: f, baseColor, flightId: f.id };
+    const isSelected = hasSelection && selectedSet.has(f.id);
+    const isActive = !activeTripId || f.tripId === activeTripId;
+
+    let color: [number, number, number, number];
+    if (isSelected) {
+      color = HIGHLIGHT_COLOR;
+    } else {
+      const tripColor = f.tripId
+        ? (tripColorMap.get(f.tripId) ?? ([100, 100, 120, 200] as [number, number, number, number]))
+        : ([100, 100, 120, 100] as [number, number, number, number]);
+      const baseColor = isActive ? tripColor : dimmedTripColor;
+      color = hasSelection
+        ? ([baseColor[0], baseColor[1], baseColor[2], DIM_ALPHA] as [
+            number,
+            number,
+            number,
+            number,
+          ])
+        : baseColor;
+    }
+
+    const width = isSelected ? 5 : isActive ? 3 : 2;
+
+    return {
+      flightId: f.id,
+      sourcePosition: [f.depLon!, f.depLat!],
+      targetPosition: [f.arrLon!, f.arrLat!],
+      color,
+      width,
+    };
   });
 
-  // Airport markers: only for the active trip (or all trips if none highlighted)
+  // Airport markers: only for the active trip (or all trip flights if none highlighted)
   const airportMap = new Map<string, PointData>();
   for (const f of validFlights) {
     if (activeTripId && f.tripId !== activeTripId) continue;
+    if (!f.tripId) continue; // only show airports for trip-assigned flights
     if (f.depIata) {
       airportMap.set(f.depIata, { position: [f.depLon!, f.depLat!], iata: f.depIata });
     }
@@ -78,46 +106,16 @@ export function createTripRoutesLayer(
   const arcLayer = new ArcLayer<ArcData>({
     id: "trip-routes-arc",
     data: arcData,
-    getSourcePosition: (d) => [d.flight.depLon!, d.flight.depLat!],
-    getTargetPosition: (d) => [d.flight.arrLon!, d.flight.arrLat!],
-    getSourceColor: (d) => {
-      if (!hasSelection) return d.baseColor;
-      if (selectedSet.has(d.flightId)) return HIGHLIGHT_COLOR;
-      return [d.baseColor[0], d.baseColor[1], d.baseColor[2], DIM_ALPHA] as [
-        number,
-        number,
-        number,
-        number,
-      ];
-    },
-    getTargetColor: (d) => {
-      if (!hasSelection) return d.baseColor;
-      if (selectedSet.has(d.flightId)) return HIGHLIGHT_COLOR;
-      return [d.baseColor[0], d.baseColor[1], d.baseColor[2], DIM_ALPHA] as [
-        number,
-        number,
-        number,
-        number,
-      ];
-    },
-    getWidth: (d) => {
-      const isActive = activeTripId ? d.flight.tripId === activeTripId : true;
-      const base = isActive ? 3 : 2;
-      if (!hasSelection) return base;
-      return selectedSet.has(d.flightId) ? Math.max(base * 2, 5) : base;
-    },
+    getSourcePosition: (d) => d.sourcePosition,
+    getTargetPosition: (d) => d.targetPosition,
+    getSourceColor: (d) => d.color,
+    getTargetColor: (d) => d.color,
+    getWidth: (d) => d.width,
     getHeight: 0.3,
     widthMinPixels: 1,
-    pickable: !!onFlightClick,
-    onClick: onFlightClick
-      ? ({ object }) => {
-          if (object?.flightId) onFlightClick(object.flightId);
-        }
-      : undefined,
-    updateTriggers: {
-      getSourceColor: [selectedIds, activeTripId],
-      getTargetColor: [selectedIds, activeTripId],
-      getWidth: [selectedIds, activeTripId],
+    pickable: true,
+    onClick: ({ object }) => {
+      if (object?.flightId) onFlightClick?.(object.flightId);
     },
   });
 
