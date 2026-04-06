@@ -1,0 +1,62 @@
+import { api } from "./client";
+import type { Trip, Booking } from "../../types";
+
+export interface CreateTripInput {
+  name: string;
+  description?: string;
+  color?: string;
+}
+
+export interface UpdateTripInput {
+  name?: string;
+  description?: string | null;
+  color?: string;
+}
+
+export interface AssignFlightsInput {
+  flightIds: string[];
+  action: "add" | "remove";
+}
+
+export interface CreateBookingInput {
+  tripId?: string;
+  pnr?: string;
+  price?: number;
+  currency?: "EUR" | "USD" | "GBP" | "CHF";
+  flightIds?: string[];
+}
+
+export const tripsApi = {
+  getAll: async (): Promise<Trip[]> => {
+    const { data } = await api.get<{ trips: Trip[] }>("/trips");
+    return data.trips;
+  },
+
+  getById: async (id: string): Promise<Trip> => {
+    const { data } = await api.get<{ trip: Trip }>(`/trips/${id}`);
+    return data.trip;
+  },
+
+  create: async (input: CreateTripInput): Promise<Trip> => {
+    const { data } = await api.post<{ trip: Trip }>("/trips", input);
+    return data.trip;
+  },
+
+  update: async (id: string, input: UpdateTripInput): Promise<Trip> => {
+    const { data } = await api.patch<{ trip: Trip }>(`/trips/${id}`, input);
+    return data.trip;
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/trips/${id}`);
+  },
+
+  assignFlights: async (tripId: string, input: AssignFlightsInput): Promise<void> => {
+    await api.post(`/trips/${tripId}/flights`, input);
+  },
+
+  createBooking: async (input: CreateBookingInput): Promise<Booking> => {
+    const { data } = await api.post<{ booking: Booking }>("/trips/bookings", input);
+    return data.booking;
+  },
+};
