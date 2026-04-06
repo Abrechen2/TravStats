@@ -133,3 +133,63 @@ export async function testSmtpConnection(config: SmtpConfigInput): Promise<void>
 
   await transporter.verify();
 }
+
+export async function sendPasswordResetEmail(
+  to: string,
+  resetUrl: string,
+  username: string,
+): Promise<void> {
+  const config = await prisma.smtpConfig.findUnique({ where: { id: SMTP_CONFIG_ID } });
+  if (!config || !config.enabled) {
+    logger.info({
+      operation: 'password_reset_email_skipped',
+      message: 'SMTP not configured or disabled',
+    });
+    return;
+  }
+
+  const transporter = createTransporterFromConfig(config);
+  const subject = 'TravStats — Passwort zurücksetzen';
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h2 style="color: #2563eb;">Passwort zurücksetzen</h2>
+  <p>Hallo ${username},</p>
+  <p>du hast eine Passwortzurücksetzung angefordert.</p>
+  <p>
+    <a href="${resetUrl}" style="display: inline-block; background: #2563eb; color: #fff;
+       padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold;">
+      Passwort zurücksetzen
+    </a>
+  </p>
+  <p style="color: #6b7280; font-size: 14px;">Link (gültig 30 Minuten): ${resetUrl}</p>
+  <p style="color: #6b7280; font-size: 14px;">Falls du das nicht angefordert hast, kannst du diese E-Mail ignorieren.</p>
+  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+  <p style="color: #6b7280; font-size: 14px;">&mdash; TravStats</p>
+</body>
+</html>`.trim();
+
+  try {
+    await transporter.sendMail({
+      from: `"${config.fromName}" <${config.fromEmail}>`,
+      to,
+      subject,
+      html,
+    });
+    logger.info({
+      operation: 'password_reset_email_sent',
+      to,
+      username,
+    });
+  } catch (error) {
+    logger.error({
+      operation: 'password_reset_email_failed',
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+      },
+    });
+    throw error;
+  }
+}
