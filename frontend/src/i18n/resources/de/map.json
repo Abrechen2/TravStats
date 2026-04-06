@@ -37,6 +37,7 @@
     "columns": "3D-Säulen",
     "trips": "Animation",
     "contour": "Isolinien",
+    "tripRoutes": "Trip-Routen",
     "label": "Darstellung"
   },
   "timeSlider": {

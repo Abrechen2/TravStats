@@ -102,6 +102,29 @@ function ContourIcon(): JSX.Element {
   );
 }
 
+function TripRoutesIcon(): JSX.Element {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M2 13 C5 3, 11 3, 14 7"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        opacity="0.9"
+      />
+      <path
+        d="M2 10 C5 5, 11 5, 14 10"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        opacity="0.55"
+      />
+      <circle cx="2" cy="13" r="1.2" fill="currentColor" />
+      <circle cx="14" cy="7" r="1.2" fill="currentColor" />
+    </svg>
+  );
+}
+
 function PlusIcon(): JSX.Element {
   return (
     <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -135,6 +158,7 @@ const MODE_ICONS: Record<VisMode, () => JSX.Element> = {
   columns: ColumnsIcon,
   trips: TripsIcon,
   contour: ContourIcon,
+  "trip-routes": TripRoutesIcon,
 };
 
 const MODES: { mode: VisMode; labelKey: string }[] = [
@@ -145,6 +169,7 @@ const MODES: { mode: VisMode; labelKey: string }[] = [
   { mode: "columns", labelKey: "map:visMode.columns" },
   { mode: "trips", labelKey: "map:visMode.trips" },
   { mode: "contour", labelKey: "map:visMode.contour" },
+  { mode: "trip-routes", labelKey: "map:visMode.tripRoutes" },
 ];
 
 interface VisModeSeelctorProps {

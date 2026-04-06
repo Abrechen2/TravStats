@@ -685,6 +685,7 @@ export default function DashboardPage(): JSX.Element {
           >
             <MapContainer3D
               flights={geoFlights}
+              flightList={allFlights}
               visMode={visMode}
               onVisModeChange={handleVisModeChange}
               minRouteCount={filters.minRouteCount ?? 1}

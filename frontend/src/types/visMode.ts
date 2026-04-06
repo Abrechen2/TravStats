@@ -1,4 +1,12 @@
-export type VisMode = "routes" | "globe" | "heatmap" | "hexagon" | "columns" | "trips" | "contour";
+export type VisMode =
+  | "routes"
+  | "globe"
+  | "heatmap"
+  | "hexagon"
+  | "columns"
+  | "trips"
+  | "contour"
+  | "trip-routes";
 
 export const VIS_MODES: VisMode[] = [
   "routes",
@@ -8,6 +16,7 @@ export const VIS_MODES: VisMode[] = [
   "columns",
   "trips",
   "contour",
+  "trip-routes",
 ];
 
 export const VIS_MODE_LABELS: Record<VisMode, string> = {
@@ -18,4 +27,5 @@ export const VIS_MODE_LABELS: Record<VisMode, string> = {
   columns: "3D Columns",
   trips: "Trips",
   contour: "Contour",
+  "trip-routes": "Trip Routes",
 };
