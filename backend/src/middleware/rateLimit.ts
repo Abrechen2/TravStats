@@ -151,3 +151,16 @@ export const pdfParseLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+/**
+ * Rate limiter for batch flight creation
+ * More restrictive than single-flight limiter: 1 batch = up to 20 flights.
+ * Allows 10 batch requests per hour (max ~200 flights per hour).
+ */
+export const batchCreationLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10, // 10 batch requests per hour
+  message: 'Too many batch requests, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
