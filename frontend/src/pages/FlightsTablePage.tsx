@@ -5,10 +5,10 @@
  */
 
 import { useState, useEffect } from "react";
-import { flightsApi } from "../lib/api";
+import { flightsApi, tripsApi } from "../lib/api";
 import ContextualHint from "../components/Onboarding/ContextualHint";
 import NavigationBar from "../components/NavigationBar";
-import type { Flight, FlightFilters, FlightInput } from "../types";
+import type { Flight, FlightFilters, FlightInput, Trip } from "../types";
 import Filters from "../components/Filters";
 import SimplifiedFlightFormV2 from "../components/SimplifiedFlightFormV2";
 import FlightEditModal from "../components/FlightEditModal";
@@ -24,8 +24,11 @@ import PageTransition from "../components/PageTransition";
 import { SkeletonTable } from "../components/SkeletonLoader";
 
 export default function FlightsTablePage(): JSX.Element {
-  const { t } = useTranslation(["flights", "common", "dashboard"]);
+  const { t } = useTranslation(["flights", "common", "dashboard", "trips"]);
   const [flights, setFlights] = useState<Flight[]>([]);
+  const [activeTab, setActiveTab] = useState<"flights" | "trips">("flights");
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [tripFilter, setTripFilter] = useState<"all" | "with" | "without" | string>("all");
   const [filters, setFilters] = useState<FlightFilters>({});
   const [loading, setLoading] = useState(true);
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
@@ -42,6 +45,19 @@ export default function FlightsTablePage(): JSX.Element {
   useEffect(() => {
     loadFlights();
   }, [filters]);
+
+  useEffect(() => {
+    void loadTrips();
+  }, []);
+
+  const loadTrips = async () => {
+    try {
+      const data = await tripsApi.getAll();
+      setTrips(data);
+    } catch (err) {
+      logger.warn({ err }, "Failed to load trips");
+    }
+  };
 
   const loadFlights = async () => {
     try {
@@ -160,6 +176,15 @@ export default function FlightsTablePage(): JSX.Element {
     }
   };
 
+  const tripMap = new Map(trips.map((trip) => [trip.id, trip]));
+
+  const displayedFlights = sortedFlights.filter((f) => {
+    if (tripFilter === "all") return true;
+    if (tripFilter === "with") return !!f.tripId;
+    if (tripFilter === "without") return !f.tripId;
+    return f.tripId === tripFilter;
+  });
+
   const formatDate = (date: string): string => formatDateInTimezone(date, timezone);
 
   const formatDurationHours = (departure: string, arrival: string) => {
@@ -222,266 +247,385 @@ export default function FlightsTablePage(): JSX.Element {
             </button>
           </div>
 
+          {/* Tab bar */}
+          <div
+            className="flex border-b rounded-t-lg overflow-hidden"
+            style={{ background: "var(--bg-surface)", borderColor: "var(--color-border)" }}
+          >
+            <button
+              onClick={() => setActiveTab("flights")}
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === "flights"
+                  ? "border-[var(--accent)] text-[var(--accent)]"
+                  : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+              }`}
+            >
+              ✈ {t("trips:tabFlights")}
+            </button>
+            <button
+              onClick={() => setActiveTab("trips")}
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === "trips"
+                  ? "border-[var(--accent)] text-[var(--accent)]"
+                  : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+              }`}
+            >
+              🗺 {t("trips:tab")}
+              {trips.length > 0 && (
+                <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded-full bg-[var(--bg-muted)]">
+                  {trips.length}
+                </span>
+              )}
+            </button>
+          </div>
+
           {/* Table */}
           <div
-            className="rounded-lg shadow-sm overflow-hidden"
-            style={{ border: "1px solid var(--color-border)" }}
+            className="rounded-b-lg shadow-sm overflow-hidden"
+            style={{ border: "1px solid var(--color-border)", borderTop: "none" }}
           >
-            <div className="overflow-x-auto">
-              {loading ? (
-                <SkeletonTable rows={10} />
-              ) : sortedFlights.length === 0 ? (
-                <div className="text-center py-12" style={{ color: "var(--text-muted)" }}>
-                  <p className="text-lg mb-2">{t("flights:table.noFlights")}</p>
-                  <p className="text-sm">{t("flights:table.noFlightsHint")}</p>
+            {activeTab === "flights" ? (
+              <>
+                {/* Trip filter chips */}
+                <div
+                  className="flex flex-wrap gap-2 px-4 py-2"
+                  style={{ borderBottom: "1px solid var(--color-border)" }}
+                >
+                  {(["all", "with", "without"] as const).map((f) => (
+                    <button
+                      key={f}
+                      onClick={() => setTripFilter(f)}
+                      className={`px-3 py-1 rounded-full text-xs border transition-colors ${
+                        tripFilter === f
+                          ? "bg-[var(--accent)]/20 border-[var(--accent)]/50 text-[var(--accent)]"
+                          : "border-[var(--color-border)] text-[var(--text-muted)]"
+                      }`}
+                    >
+                      {t(`trips:filter.${f}`)}
+                    </button>
+                  ))}
+                  {trips.map((trip) => (
+                    <button
+                      key={trip.id}
+                      onClick={() => setTripFilter(tripFilter === trip.id ? "all" : trip.id)}
+                      className="px-3 py-1 rounded-full text-xs border transition-colors"
+                      style={{
+                        background: tripFilter === trip.id ? `${trip.color}22` : "transparent",
+                        borderColor: `${trip.color}55`,
+                        color: trip.color,
+                      }}
+                    >
+                      ● {trip.name}
+                    </button>
+                  ))}
                 </div>
-              ) : (
-                <table className="w-full">
-                  <thead
+
+                <div className="overflow-x-auto">
+                  {loading ? (
+                    <SkeletonTable rows={10} />
+                  ) : displayedFlights.length === 0 ? (
+                    <div className="text-center py-12" style={{ color: "var(--text-muted)" }}>
+                      <p className="text-lg mb-2">{t("flights:table.noFlights")}</p>
+                      <p className="text-sm">{t("flights:table.noFlightsHint")}</p>
+                    </div>
+                  ) : (
+                    <table className="w-full">
+                      <thead
+                        style={{
+                          background: "var(--bg-elevated)",
+                          borderBottom: "1px solid var(--color-border)",
+                        }}
+                      >
+                        <tr>
+                          <th
+                            className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
+                            style={thStyle}
+                          >
+                            <button
+                              onClick={() => handleSort("airline")}
+                              className="flex items-center gap-1"
+                              style={sortBy === "airline" ? activeSortStyle : undefined}
+                            >
+                              {t("flights:table.airline")}
+                              {sortBy === "airline" && (sortOrder === "asc" ? "▼" : "▲")}
+                            </button>
+                          </th>
+                          <th
+                            className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
+                            style={thStyle}
+                          >
+                            {t("flights:table.flightNumber")}
+                          </th>
+                          <th
+                            className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
+                            style={thStyle}
+                          >
+                            {t("flights:table.route")}
+                          </th>
+                          <th
+                            className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
+                            style={thStyle}
+                          >
+                            <button
+                              onClick={() => handleSort("departureTime")}
+                              className="flex items-center gap-1"
+                              style={sortBy === "departureTime" ? activeSortStyle : undefined}
+                            >
+                              {t("flights:table.departure")}
+                              {sortBy === "departureTime" && (sortOrder === "asc" ? "▼" : "▲")}
+                            </button>
+                          </th>
+                          <th
+                            className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
+                            style={thStyle}
+                          >
+                            {t("flights:table.arrival")}
+                          </th>
+                          <th
+                            className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
+                            style={thStyle}
+                          >
+                            <button
+                              onClick={() => handleSort("status")}
+                              className="flex items-center gap-1"
+                              style={sortBy === "status" ? activeSortStyle : undefined}
+                            >
+                              {t("flights:table.status")}
+                              {sortBy === "status" && (sortOrder === "asc" ? "▼" : "▲")}
+                            </button>
+                          </th>
+                          <th
+                            className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
+                            style={thStyle}
+                          >
+                            <button
+                              onClick={() => handleSort("duration")}
+                              className="flex items-center gap-1"
+                              style={sortBy === "duration" ? activeSortStyle : undefined}
+                            >
+                              {t("flights:table.flightTime")}
+                              {sortBy === "duration" && (sortOrder === "asc" ? "▼" : "▲")}
+                            </button>
+                          </th>
+                          <th
+                            className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
+                            style={thStyle}
+                          >
+                            {t("flights:table.aircraft")}
+                          </th>
+                          <th
+                            className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
+                            style={thStyle}
+                          >
+                            {t("flights:table.price")}
+                          </th>
+                          <th
+                            className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider"
+                            style={thStyle}
+                          >
+                            {t("trips:tab")}
+                          </th>
+                          <th
+                            className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider"
+                            style={thStyle}
+                          >
+                            {t("flights:table.actions")}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {displayedFlights.map((flight, index) => (
+                          <tr
+                            key={flight.id}
+                            className="transition-colors"
+                            style={{
+                              background:
+                                index % 2 === 0 ? "var(--bg-surface)" : "var(--bg-elevated)",
+                            }}
+                            onMouseEnter={(e) => {
+                              (e.currentTarget as HTMLTableRowElement).style.background =
+                                "var(--bg-muted)";
+                            }}
+                            onMouseLeave={(e) => {
+                              (e.currentTarget as HTMLTableRowElement).style.background =
+                                index % 2 === 0 ? "var(--bg-surface)" : "var(--bg-elevated)";
+                            }}
+                          >
+                            <td className="px-4 py-3" style={{ color: "var(--text-primary)" }}>
+                              <div className="font-medium">
+                                {flight.airline || t("common:labels.notAvailable")}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3" style={{ color: "var(--text-muted)" }}>
+                              {flight.flightNumber || t("common:labels.notAvailable")}
+                            </td>
+                            <td className="px-4 py-3" style={{ color: "var(--text-primary)" }}>
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className="font-mono font-semibold"
+                                  style={{ color: "var(--accent)" }}
+                                >
+                                  {flight.depIata || flight.depIcao}
+                                </span>
+                                <span style={{ color: "var(--text-muted)" }}>
+                                  {t("common:labels.routeSeparator")}
+                                </span>
+                                <span
+                                  className="font-mono font-semibold"
+                                  style={{ color: "var(--accent)" }}
+                                >
+                                  {flight.arrIata || flight.arrIcao}
+                                </span>
+                              </div>
+                              <div className="text-xs" style={{ color: "var(--text-muted)" }}>
+                                {flight.depName?.substring(0, 20)}{" "}
+                                {t("common:labels.routeSeparator")}{" "}
+                                {flight.arrName?.substring(0, 20)}
+                              </div>
+                            </td>
+                            <td
+                              className="px-4 py-3 text-sm"
+                              style={{ color: "var(--text-muted)" }}
+                            >
+                              {formatDate(flight.departureTime)}
+                            </td>
+                            <td
+                              className="px-4 py-3 text-sm"
+                              style={{ color: "var(--text-muted)" }}
+                            >
+                              {formatDate(flight.arrivalTime)}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex flex-col gap-2">
+                                <span
+                                  className="px-2 py-1 text-xs font-semibold rounded-full"
+                                  style={
+                                    flight.status === "flown"
+                                      ? {
+                                          background: "rgba(63,185,80,0.15)",
+                                          color: "var(--success)",
+                                        }
+                                      : flight.status === "scheduled"
+                                        ? {
+                                            background: "rgba(56,139,253,0.15)",
+                                            color: "#388bfd",
+                                          }
+                                        : {
+                                            background: "rgba(248,81,73,0.15)",
+                                            color: "var(--danger)",
+                                          }
+                                  }
+                                >
+                                  {t(`flights:status.${flight.status}`, {
+                                    defaultValue: flight.status,
+                                  })}
+                                </span>
+                                <DataSourceBadges flight={flight} />
+                              </div>
+                            </td>
+                            <td
+                              className="px-4 py-3 text-sm"
+                              style={{ color: "var(--text-muted)" }}
+                            >
+                              {formatDurationHours(flight.departureTime, flight.arrivalTime)}
+                            </td>
+                            <td
+                              className="px-4 py-3 text-sm"
+                              style={{ color: "var(--text-muted)" }}
+                            >
+                              {flight.aircraft || t("common:labels.notAvailable")}
+                            </td>
+                            <td
+                              className="px-4 py-3 text-sm"
+                              style={{ color: "var(--text-muted)" }}
+                            >
+                              {flight.price
+                                ? `${flight.price.toFixed(2)} ${flight.currency || "EUR"}`
+                                : t("common:labels.notAvailable")}
+                            </td>
+                            <td className="px-3 py-2">
+                              {flight.tripId && tripMap.has(flight.tripId) ? (
+                                <button
+                                  onClick={() => setActiveTab("trips")}
+                                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium border transition-all hover:brightness-110"
+                                  style={{
+                                    background: `${tripMap.get(flight.tripId)!.color}18`,
+                                    borderColor: `${tripMap.get(flight.tripId)!.color}44`,
+                                    color: tripMap.get(flight.tripId)!.color,
+                                  }}
+                                >
+                                  <span
+                                    className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                    style={{ background: tripMap.get(flight.tripId)!.color }}
+                                  />
+                                  {tripMap.get(flight.tripId)!.name}
+                                </button>
+                              ) : (
+                                <span style={{ color: "var(--text-muted)", opacity: 0.3 }}>—</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  onClick={() => setEditingFlight(flight)}
+                                  className="px-3 py-1 text-xs font-medium rounded"
+                                  style={{
+                                    background: "rgba(56,139,253,0.15)",
+                                    color: "#388bfd",
+                                  }}
+                                >
+                                  {t("common:buttons.edit")}
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteClick(flight.id)}
+                                  className="px-3 py-1 text-xs font-medium rounded"
+                                  style={{
+                                    background: "rgba(248,81,73,0.15)",
+                                    color: "var(--danger)",
+                                  }}
+                                >
+                                  {t("common:buttons.delete")}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+
+                {/* Footer */}
+                {!loading && displayedFlights.length > 0 && (
+                  <div
+                    className="px-4 py-3"
                     style={{
                       background: "var(--bg-elevated)",
-                      borderBottom: "1px solid var(--color-border)",
+                      borderTop: "1px solid var(--color-border)",
+                      color: "var(--text-muted)",
                     }}
                   >
-                    <tr>
-                      <th
-                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
-                        style={thStyle}
-                      >
-                        <button
-                          onClick={() => handleSort("airline")}
-                          className="flex items-center gap-1"
-                          style={sortBy === "airline" ? activeSortStyle : undefined}
-                        >
-                          {t("flights:table.airline")}
-                          {sortBy === "airline" && (sortOrder === "asc" ? "▼" : "▲")}
-                        </button>
-                      </th>
-                      <th
-                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
-                        style={thStyle}
-                      >
-                        {t("flights:table.flightNumber")}
-                      </th>
-                      <th
-                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
-                        style={thStyle}
-                      >
-                        {t("flights:table.route")}
-                      </th>
-                      <th
-                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
-                        style={thStyle}
-                      >
-                        <button
-                          onClick={() => handleSort("departureTime")}
-                          className="flex items-center gap-1"
-                          style={sortBy === "departureTime" ? activeSortStyle : undefined}
-                        >
-                          {t("flights:table.departure")}
-                          {sortBy === "departureTime" && (sortOrder === "asc" ? "▼" : "▲")}
-                        </button>
-                      </th>
-                      <th
-                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
-                        style={thStyle}
-                      >
-                        {t("flights:table.arrival")}
-                      </th>
-                      <th
-                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
-                        style={thStyle}
-                      >
-                        <button
-                          onClick={() => handleSort("status")}
-                          className="flex items-center gap-1"
-                          style={sortBy === "status" ? activeSortStyle : undefined}
-                        >
-                          {t("flights:table.status")}
-                          {sortBy === "status" && (sortOrder === "asc" ? "▼" : "▲")}
-                        </button>
-                      </th>
-                      <th
-                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
-                        style={thStyle}
-                      >
-                        <button
-                          onClick={() => handleSort("duration")}
-                          className="flex items-center gap-1"
-                          style={sortBy === "duration" ? activeSortStyle : undefined}
-                        >
-                          {t("flights:table.flightTime")}
-                          {sortBy === "duration" && (sortOrder === "asc" ? "▼" : "▲")}
-                        </button>
-                      </th>
-                      <th
-                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
-                        style={thStyle}
-                      >
-                        {t("flights:table.aircraft")}
-                      </th>
-                      <th
-                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider"
-                        style={thStyle}
-                      >
-                        {t("flights:table.price")}
-                      </th>
-                      <th
-                        className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider"
-                        style={thStyle}
-                      >
-                        {t("flights:table.actions")}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedFlights.map((flight, index) => (
-                      <tr
-                        key={flight.id}
-                        className="transition-colors"
-                        style={{
-                          background: index % 2 === 0 ? "var(--bg-surface)" : "var(--bg-elevated)",
-                        }}
-                        onMouseEnter={(e) => {
-                          (e.currentTarget as HTMLTableRowElement).style.background =
-                            "var(--bg-muted)";
-                        }}
-                        onMouseLeave={(e) => {
-                          (e.currentTarget as HTMLTableRowElement).style.background =
-                            index % 2 === 0 ? "var(--bg-surface)" : "var(--bg-elevated)";
-                        }}
-                      >
-                        <td className="px-4 py-3" style={{ color: "var(--text-primary)" }}>
-                          <div className="font-medium">
-                            {flight.airline || t("common:labels.notAvailable")}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3" style={{ color: "var(--text-muted)" }}>
-                          {flight.flightNumber || t("common:labels.notAvailable")}
-                        </td>
-                        <td className="px-4 py-3" style={{ color: "var(--text-primary)" }}>
-                          <div className="flex items-center gap-2">
-                            <span
-                              className="font-mono font-semibold"
-                              style={{ color: "var(--accent)" }}
-                            >
-                              {flight.depIata || flight.depIcao}
-                            </span>
-                            <span style={{ color: "var(--text-muted)" }}>
-                              {t("common:labels.routeSeparator")}
-                            </span>
-                            <span
-                              className="font-mono font-semibold"
-                              style={{ color: "var(--accent)" }}
-                            >
-                              {flight.arrIata || flight.arrIcao}
-                            </span>
-                          </div>
-                          <div className="text-xs" style={{ color: "var(--text-muted)" }}>
-                            {flight.depName?.substring(0, 20)} {t("common:labels.routeSeparator")}{" "}
-                            {flight.arrName?.substring(0, 20)}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-sm" style={{ color: "var(--text-muted)" }}>
-                          {formatDate(flight.departureTime)}
-                        </td>
-                        <td className="px-4 py-3 text-sm" style={{ color: "var(--text-muted)" }}>
-                          {formatDate(flight.arrivalTime)}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-col gap-2">
-                            <span
-                              className="px-2 py-1 text-xs font-semibold rounded-full"
-                              style={
-                                flight.status === "flown"
-                                  ? {
-                                      background: "rgba(63,185,80,0.15)",
-                                      color: "var(--success)",
-                                    }
-                                  : flight.status === "scheduled"
-                                    ? {
-                                        background: "rgba(56,139,253,0.15)",
-                                        color: "#388bfd",
-                                      }
-                                    : {
-                                        background: "rgba(248,81,73,0.15)",
-                                        color: "var(--danger)",
-                                      }
-                              }
-                            >
-                              {t(`flights:status.${flight.status}`, {
-                                defaultValue: flight.status,
-                              })}
-                            </span>
-                            <DataSourceBadges flight={flight} />
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-sm" style={{ color: "var(--text-muted)" }}>
-                          {formatDurationHours(flight.departureTime, flight.arrivalTime)}
-                        </td>
-                        <td className="px-4 py-3 text-sm" style={{ color: "var(--text-muted)" }}>
-                          {flight.aircraft || t("common:labels.notAvailable")}
-                        </td>
-                        <td className="px-4 py-3 text-sm" style={{ color: "var(--text-muted)" }}>
-                          {flight.price
-                            ? `${flight.price.toFixed(2)} ${flight.currency || "EUR"}`
-                            : t("common:labels.notAvailable")}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => setEditingFlight(flight)}
-                              className="px-3 py-1 text-xs font-medium rounded"
-                              style={{
-                                background: "rgba(56,139,253,0.15)",
-                                color: "#388bfd",
-                              }}
-                            >
-                              {t("common:buttons.edit")}
-                            </button>
-                            <button
-                              onClick={() => handleDeleteClick(flight.id)}
-                              className="px-3 py-1 text-xs font-medium rounded"
-                              style={{
-                                background: "rgba(248,81,73,0.15)",
-                                color: "var(--danger)",
-                              }}
-                            >
-                              {t("common:buttons.delete")}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-
-            {/* Footer */}
-            {!loading && sortedFlights.length > 0 && (
-              <div
-                className="px-4 py-3"
-                style={{
-                  background: "var(--bg-elevated)",
-                  borderTop: "1px solid var(--color-border)",
-                  color: "var(--text-muted)",
-                }}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="text-sm">
-                    {t("flights:table.footer.showing", { count: sortedFlights.length })}
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm">
+                        {t("flights:table.footer.showing", { count: displayedFlights.length })}
+                      </div>
+                      <div className="text-sm">
+                        {t("flights:table.footer.sortedBy", {
+                          label: sortLabels[sortBy],
+                          direction:
+                            sortOrder === "asc"
+                              ? t("common:sort.ascending")
+                              : t("common:sort.descending"),
+                        })}
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-sm">
-                    {t("flights:table.footer.sortedBy", {
-                      label: sortLabels[sortBy],
-                      direction:
-                        sortOrder === "asc"
-                          ? t("common:sort.ascending")
-                          : t("common:sort.descending"),
-                    })}
-                  </div>
-                </div>
+                )}
+              </>
+            ) : (
+              <div className="p-4">
+                {/* TripsTab will be imported and rendered here in Task 7 */}
+                <p style={{ color: "var(--text-muted)" }}>Trips Tab — kommt in Task 7</p>
               </div>
             )}
           </div>
