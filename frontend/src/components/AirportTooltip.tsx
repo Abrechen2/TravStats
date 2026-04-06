@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import type { Flight } from "../types";
 import { calculateDistance } from "../lib/geo";
+import { useLocale } from "../hooks/useLocale";
 
 interface AirportTooltipProps {
   iata: string;
@@ -10,9 +11,9 @@ interface AirportTooltipProps {
   onClose: () => void;
 }
 
-function formatKm(km: number): string {
+function formatKm(km: number, locale: string): string {
   if (km >= 1_000_000) return `${(km / 1_000_000).toFixed(1)} Mio. km`;
-  return `${Math.round(km).toLocaleString("de-DE")} km`;
+  return `${Math.round(km).toLocaleString(locale)} km`;
 }
 
 export function AirportTooltip({
@@ -22,6 +23,7 @@ export function AirportTooltip({
   flights,
   onClose,
 }: AirportTooltipProps): JSX.Element {
+  const locale = useLocale();
   const [visible, setVisible] = useState(false);
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 50);
@@ -150,7 +152,7 @@ export function AirportTooltip({
       {/* Distance + airlines */}
       {stats.totalKm > 0 && (
         <div className="text-xs" style={{ color: "var(--text-muted)" }}>
-          {formatKm(stats.totalKm)} geflogen
+          {formatKm(stats.totalKm, locale)} geflogen
         </div>
       )}
       {stats.airlines.length > 0 && (
