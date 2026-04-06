@@ -61,7 +61,7 @@ export function usePulseAnimation(selectedFlights: Flight[]): Layer[] {
     return RINGS.map(({ radiusPx, phaseOffset }) => {
       const phase = (((pulseTime / PERIOD_MS + phaseOffset) % 1) + 1) % 1;
       const opacity = Math.sin(phase * Math.PI) ** 2;
-      const alpha = Math.round(opacity * 210) as number;
+      const alpha = Math.round(opacity * 210);
 
       return new ScatterplotLayer({
         id: `pulse-ring-${radiusPx}`,
