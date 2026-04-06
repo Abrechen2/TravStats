@@ -558,6 +558,8 @@ export default function AdminPage(): JSX.Element {
               savingParsers={savingParsers}
               onSave={handleSaveParserSettings}
               onParserSettingsChange={setParserSettings}
+              onTestOllama={() => undefined}
+              ollamaTestState={{ status: "idle" }}
             />
           )}
 
