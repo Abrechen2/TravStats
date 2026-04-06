@@ -1,4 +1,5 @@
 import { Router, Request, Response, NextFunction, CookieOptions } from 'express';
+import crypto from 'crypto';
 import { prisma } from '../db';
 import { hashPassword, comparePassword } from '../utils/password';
 import { generateToken } from '../utils/jwt';
@@ -19,13 +20,13 @@ function getCookieSecure(req: Request): boolean {
   if (process.env.COOKIE_SECURE !== undefined) {
     return process.env.COOKIE_SECURE !== 'false';
   }
-  
+
   // Auto-detect: Check if request is over HTTPS (via proxy header)
   // req.protocol is automatically set by Express when trust proxy is enabled
   if (process.env.NODE_ENV === 'production') {
     return req.protocol === 'https' || req.get('x-forwarded-proto') === 'https';
   }
-  
+
   // In development, default to false (allow HTTP)
   return false;
 }
@@ -158,6 +159,22 @@ router.post('/login', authLimiter, async (req: Request, res: Response, next: Nex
       throw new AppError('Invalid credentials', 401);
     }
 
+    // Check if user must change password before allowing login
+    if (user.mustChangePassword) {
+      const plainChangeToken = crypto.randomBytes(32).toString('hex');
+      const hashedChangeToken = crypto.createHash('sha256').update(plainChangeToken).digest('hex');
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          changeToken: hashedChangeToken,
+          changeTokenExpiry: new Date(Date.now() + 10 * 60 * 1000), // 10 min
+        },
+      });
+
+      return res.json({ requiresPasswordChange: true, changeToken: plainChangeToken });
+    }
+
     // Generate token
     const token = generateToken(user.id);
 
@@ -169,7 +186,7 @@ router.post('/login', authLimiter, async (req: Request, res: Response, next: Nex
       const airportCount = await prisma.airport.count();
       const seedAirportsEnv = process.env.SEED_AIRPORTS;
       const shouldSeedAirports = seedAirportsEnv !== 'false';
-      
+
       if (shouldSeedAirports && airportCount === 0) {
         // Check if seeding is already running
         const existingStatus = await prisma.airportSeedingStatus.findFirst({
