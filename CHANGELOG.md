@@ -4,6 +4,22 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.12.1-beta] - 2026-04-06
+
+### Security
+- **CORS verschärft** — CORS-Wildcard gilt jetzt nur noch im Development-Modus (`NODE_ENV === development`), nicht mehr in allen Nicht-Production-Umgebungen.
+- **Rate-Limiting ergänzt** — Upload-Endpoint (30/Std.) und alle Settings-Routen (60/15min) haben jetzt Rate-Limiting gegen Disk-Exhaustion und Enumeration.
+- **Passwort-Mindestlänge erhöht** — Mindestlänge von 6 auf 8 Zeichen angehoben.
+
+### Fixed
+- **Datenbank-Startfehler sofort erkennbar** — Fehlende DB-Konfiguration bricht den Server-Start jetzt ab statt nur zu warnen.
+- **Globale Error-Handler** — Unhandled Promise Rejections und uncaught Exceptions aus Schedulern werden jetzt geloggt statt den Server lautlos zum Absturz zu bringen.
+- **Parser-Settings-Endpoint korrigiert** — PUT `/api/v1/settings/parser` gab fälschlicherweise 200 OK zurück ohne etwas zu speichern; gibt jetzt korrekt 501 Not Implemented zurück.
+- **Query-Parameter-Validierung** — `parseInt()` in Admin-Parse-Log-Routen durch Zod-Schemas ersetzt (verhindert NaN in DB-Queries).
+- **Trip-Listen-Query begrenzt** — GET `/trips` lädt jetzt maximal 500 Trips + 200 Flights pro Trip (war: unbegrenzt).
+- **ErrorBoundary-Logging** — `console.error` im ErrorBoundary ist jetzt auf Development-Mode beschränkt.
+- **package.json versioniert** — `backend/package.json` und `frontend/package.json` auf `0.12.1-beta` synchronisiert.
+
 ## [0.12.0-beta] - 2026-04-06
 
 ### Added
