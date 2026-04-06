@@ -34,7 +34,8 @@ export function createTripRoutesLayer(
   trips: Array<{ id: string; color: string }>,
   activeTripId?: string | null,
   onFlightClick?: (flightId: string) => void,
-  selectedIds: string[] = []
+  selectedIds: string[] = [],
+  onAirportClick?: (iata: string, screenX: number, screenY: number) => void
 ): Layer[] {
   const tripColorMap = new Map(trips.map((t) => [t.id, hexToRgba(t.color)]));
   const dimmedTripColor: [number, number, number, number] = [80, 80, 90, 40];
@@ -155,7 +156,12 @@ export function createTripRoutesLayer(
     getFillColor: [...DOT_RGB, 220] as [number, number, number, number],
     stroked: false,
     opacity: airportOpacity,
-    pickable: false,
+    pickable: !!onAirportClick,
+    onClick: onAirportClick
+      ? ({ object, x, y }) => {
+          if (object?.iata) onAirportClick(object.iata, x, y);
+        }
+      : undefined,
   });
 
   const labelLayer = new TextLayer<PointData>({
@@ -174,6 +180,12 @@ export function createTripRoutesLayer(
     billboard: true,
     characterSet: "auto",
     opacity: airportOpacity,
+    pickable: !!onAirportClick,
+    onClick: onAirportClick
+      ? ({ object, x, y }) => {
+          if (object?.iata) onAirportClick(object.iata, x, y);
+        }
+      : undefined,
     parameters: { depthCompare: "always" as const },
   });
 
