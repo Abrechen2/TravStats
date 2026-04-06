@@ -18,7 +18,7 @@ import {
   createHistoricalEnrichment,
 } from '../services/flightEnrichmentService';
 import { estimateRoute } from '../services/routeEstimationService';
-import { calculateCo2Kg, CABIN_FACTORS, toSeatClass } from '../services/co2Calculator';
+import { calculateCo2Kg, toSeatClass } from '../services/co2Calculator';
 import batchRouter from './flightsBatch';
 
 const router = Router();

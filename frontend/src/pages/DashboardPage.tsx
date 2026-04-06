@@ -64,7 +64,7 @@ export default function DashboardPage(): JSX.Element {
     if (state?.tripId) {
       setActiveTripId(state.tripId);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // intentionally empty — only run on mount to read initial navigation state
 
   // Load onboarding state from server (with localStorage fallback)
   useEffect(() => {
