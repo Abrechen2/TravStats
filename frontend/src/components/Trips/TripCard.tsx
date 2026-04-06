@@ -16,34 +16,38 @@ export default function TripCard({
   onDelete,
   onShowOnMap,
 }: TripCardProps): JSX.Element {
-  const { t } = useTranslation(["trips"]);
+  const { t, i18n } = useTranslation(["trips"]);
   const { features } = useSettingsStore();
+
+  // Sorted flights (shared by route chain + date range)
+  const sorted = trip.flights
+    ? [...trip.flights].sort(
+        (a, b) => new Date(a.departureTime).getTime() - new Date(b.departureTime).getTime()
+      )
+    : [];
 
   // Build IATA route chain from sorted flights
   const routeChain: string[] = [];
-  if (trip.flights && trip.flights.length > 0) {
-    const sorted = [...trip.flights].sort(
-      (a, b) => new Date(a.departureTime).getTime() - new Date(b.departureTime).getTime()
-    );
+  if (sorted.length > 0) {
     sorted.forEach((f, i) => {
       if (i === 0 && f.depIata) routeChain.push(f.depIata);
       if (f.arrIata) routeChain.push(f.arrIata);
     });
   }
 
-  // Date range
-  const firstFlight = trip.flights?.[0];
-  const lastFlight = trip.flights?.[trip.flights.length - 1];
+  // Date range (uses sorted)
+  const firstFlight = sorted[0];
+  const lastFlight = sorted[sorted.length - 1];
   const startDate = firstFlight ? new Date(firstFlight.departureTime) : null;
   const endDate = lastFlight ? new Date(lastFlight.arrivalTime) : null;
   const nights = startDate && endDate ? differenceInDays(endDate, startDate) : null;
 
   const dateRangeStr =
     startDate && endDate
-      ? `${startDate.toLocaleDateString("de-DE", {
+      ? `${startDate.toLocaleDateString(i18n.language, {
           day: "2-digit",
           month: "short",
-        })} – ${endDate.toLocaleDateString("de-DE", {
+        })} – ${endDate.toLocaleDateString(i18n.language, {
           day: "2-digit",
           month: "short",
           year: "numeric",
@@ -60,7 +64,7 @@ export default function TripCard({
 
   const flightCount = trip._count?.flights ?? trip.flights?.length ?? 0;
 
-  const formattedCost = new Intl.NumberFormat("de-DE", {
+  const formattedCost = new Intl.NumberFormat(i18n.language, {
     style: "currency",
     currency,
     maximumFractionDigits: 0,

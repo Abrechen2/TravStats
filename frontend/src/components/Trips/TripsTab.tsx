@@ -16,20 +16,27 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
   const addToast = useToastStore((s) => s.addToast);
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Trip | null>(null);
 
-  const handleDelete = async (trip: Trip) => {
-    if (!window.confirm(t("trips:deleteTripConfirm", { name: trip.name }))) return;
+  const handleDelete = async (trip: Trip): Promise<void> => {
+    setDeleteTarget(trip);
+  };
+
+  const handleConfirmDelete = async (): Promise<void> => {
+    if (!deleteTarget) return;
     try {
-      await tripsApi.delete(trip.id);
+      await tripsApi.delete(deleteTarget.id);
       addToast("success", t("trips:toasts.deleted"));
+      setDeleteTarget(null);
       onTripsChange();
     } catch {
       addToast("error", t("trips:toasts.deleteError"));
+      setDeleteTarget(null);
     }
   };
 
-  const handleShowOnMap = (_trip: Trip) => {
-    // Map trip-routes layer will be added in Task 11
+  const handleShowOnMap = (_trip: Trip): void => {
+    addToast("info", "Map view coming soon");
   };
 
   return (
@@ -101,6 +108,42 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
             onTripsChange();
           }}
         />
+      )}
+
+      {deleteTarget !== null && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setDeleteTarget(null);
+          }}
+        >
+          <div
+            className="w-full max-w-sm rounded-xl shadow-2xl p-6 space-y-4"
+            role="dialog"
+            aria-modal="true"
+            style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+          >
+            <h2 className="text-base font-semibold" style={{ color: "var(--text-primary)" }}>
+              {t("trips:deleteTripConfirm", { name: deleteTarget.name })}
+            </h2>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="px-4 py-2 rounded-lg text-sm"
+                style={{ color: "var(--text-muted)" }}
+              >
+                {t("trips:modal.cancel")}
+              </button>
+              <button
+                onClick={() => void handleConfirmDelete()}
+                className="px-4 py-2 rounded-lg text-sm font-medium"
+                style={{ background: "var(--color-error, #f87171)", color: "#fff" }}
+              >
+                {t("trips:deleteTrip")}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
