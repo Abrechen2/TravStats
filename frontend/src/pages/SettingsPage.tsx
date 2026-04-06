@@ -17,6 +17,7 @@ import ApiKeysSection from "../components/Settings/ApiKeysSection";
 import DeveloperSection from "../components/Settings/DeveloperSection";
 import AdminSection from "../components/Settings/AdminSection";
 import AboutSection from "../components/Settings/AboutSection";
+import FeaturesSection from "../components/Settings/FeaturesSection";
 import PasswordModal from "../components/Settings/PasswordModal";
 import DeveloperConfirmDialog from "../components/Settings/DeveloperConfirmDialog";
 
@@ -81,6 +82,7 @@ export default function SettingsPage(): JSX.Element {
     { id: "defaults", label: t("settings:defaults.title") || "Defaults" },
     { id: "map", label: t("settings:map.title") || "Map" },
     { id: "notifications", label: t("settings:notifications.title") || "Notifications" },
+    { id: "features", label: t("settings:features.title") || "Features" },
     { id: "backup", label: t("settings:backup.title") || "Backup" },
     { id: "autoupdate", label: t("settings:autoUpdate.title") || "Auto-Update" },
     { id: "enrichment", label: t("settings:historicalEnrichment.title") || "Enrichment" },
@@ -153,6 +155,7 @@ export default function SettingsPage(): JSX.Element {
             )}
             {activeSection === "map" && <MapSection map={map} onSetMap={setMap} />}
             {activeSection === "notifications" && <NotificationsSection />}
+            {activeSection === "features" && <FeaturesSection />}
             {activeSection === "backup" && (
               <BackupSection
                 lastBackup={lastBackup}

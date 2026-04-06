@@ -4,6 +4,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { calculateDistance } from "../../lib/geo";
 import { AIRLINES } from "../../lib/constants";
 import type { Airport } from "../../lib/api";
+import { useSettingsStore } from "../../store/settingsStore";
 
 interface FlightLookupResult {
   flightNumber: string;
@@ -150,6 +151,7 @@ export default function FlightCompleteStep({
   setTimeEstimationWarning,
 }: FlightCompleteStepProps): JSX.Element {
   const { t } = useTranslation(["flights"]);
+  const { features } = useSettingsStore();
 
   return (
     <div className="space-y-6">
@@ -457,40 +459,42 @@ export default function FlightCompleteStep({
       </div>
 
       {/* Price & Currency */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="col-span-2">
-          <label className={`label ${textClass} flex items-center gap-2`}>
-            {t("flights:form.price")}
-            <HelpIcon
-              content={t("flights:form.help.price")}
-              expandedContent={t("flights:form.help.price")}
-              position="top"
+      {features.enableCostTracking && (
+        <div className="grid grid-cols-3 gap-4">
+          <div className="col-span-2">
+            <label className={`label ${textClass} flex items-center gap-2`}>
+              {t("flights:form.price")}
+              <HelpIcon
+                content={t("flights:form.help.price")}
+                expandedContent={t("flights:form.help.price")}
+                position="top"
+              />
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={price ?? ""}
+              onChange={(e) => setPrice(e.target.value ? parseFloat(e.target.value) : undefined)}
+              className={`input ${sizedInputClass}`}
+              placeholder={t("flights:form.placeholders.price")}
             />
-          </label>
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            value={price ?? ""}
-            onChange={(e) => setPrice(e.target.value ? parseFloat(e.target.value) : undefined)}
-            className={`input ${sizedInputClass}`}
-            placeholder={t("flights:form.placeholders.price")}
-          />
+          </div>
+          <div>
+            <label className={`label ${textClass}`}>{t("flights:form.currency")}</label>
+            <select
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value as "EUR" | "USD" | "GBP" | "CHF")}
+              className={`input ${sizedInputClass}`}
+            >
+              <option value="EUR">{t("flights:currency.EUR")}</option>
+              <option value="USD">{t("flights:currency.USD")}</option>
+              <option value="GBP">{t("flights:currency.GBP")}</option>
+              <option value="CHF">{t("flights:currency.CHF")}</option>
+            </select>
+          </div>
         </div>
-        <div>
-          <label className={`label ${textClass}`}>{t("flights:form.currency")}</label>
-          <select
-            value={currency}
-            onChange={(e) => setCurrency(e.target.value as "EUR" | "USD" | "GBP" | "CHF")}
-            className={`input ${sizedInputClass}`}
-          >
-            <option value="EUR">{t("flights:currency.EUR")}</option>
-            <option value="USD">{t("flights:currency.USD")}</option>
-            <option value="GBP">{t("flights:currency.GBP")}</option>
-            <option value="CHF">{t("flights:currency.CHF")}</option>
-          </select>
-        </div>
-      </div>
+      )}
 
       {/* Tags */}
       <div>
