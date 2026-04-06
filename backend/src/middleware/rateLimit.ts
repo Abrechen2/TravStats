@@ -190,3 +190,16 @@ export const settingsLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+/**
+ * Rate limiter for password reset endpoints
+ * Prevents brute-force on reset token endpoints
+ * Allows 5 attempts per 15 minutes per IP
+ */
+export const passwordResetLimiter = rateLimit({
+  windowMs: RATE_LIMITS.PASSWORD_RESET_WINDOW_MS,
+  max: RATE_LIMITS.PASSWORD_RESET_MAX,
+  message: 'Too many password reset attempts, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
