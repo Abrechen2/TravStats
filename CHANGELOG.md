@@ -4,6 +4,17 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.12.2-beta] - 2026-04-06
+
+### Security
+- **nginx-Versionsleak behoben** — `server_tokens off` in der nginx-Konfiguration verhindert die Offenlegung der nginx-Version in Response-Headern.
+- **Doppelte Security-Header entfernt** — nginx setzt keine Security-Header mehr; Helmet übernimmt sie vollständig und vermeidet Konflikte bei X-XSS-Protection, Referrer-Policy und HSTS.
+- **XSS-Sanitierung in Flight-Notes** — HTML-Tags werden im Backend aus dem `notes`-Feld herausgefiltert bevor sie gespeichert werden.
+
+### Fixed
+- **Express-404-Seiten** — Nicht gefundene Routen geben jetzt `{"error":"Not found"}` statt der internen Express-HTML-Seite zurück.
+- **JSON-Parse-Fehler anonymisiert** — Ungültiger JSON-Body gibt jetzt eine generische Fehlermeldung zurück statt des internen Parser-Fehlertexts.
+
 ## [0.12.1-beta] - 2026-04-06
 
 ### Security
