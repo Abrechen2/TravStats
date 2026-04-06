@@ -10,7 +10,7 @@ import { AppError } from '../middleware/errorHandler';
 import { calculateDistance, generateArcPoints } from '../utils/geo';
 import { checkAndUpdateAchievements } from '../utils/achievements';
 import { enrichFlightAirports } from '../services/airportLookup';
-import { flightCreationLimiter } from '../middleware/rateLimit';
+import { flightCreationLimiter, batchCreationLimiter } from '../middleware/rateLimit';
 import { lookupFlightDetails } from '../services/flightLookup';
 import {
   findEnrichmentCandidates,
@@ -348,7 +348,7 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
 });
 
 // Create multiple flights in a batch — auto-creates Trip+Booking for shared PNRs
-router.post('/batch', flightCreationLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post('/batch', batchCreationLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
 
@@ -361,8 +361,8 @@ router.post('/batch', flightCreationLimiter, async (req: AuthRequest, res: Respo
     // Validate each flight entry
     const parsedFlights = rawBody.map((entry: unknown) => createFlightSchema.parse(entry));
 
-    // Create all flights
-    const createdFlights = await Promise.all(
+    // Step 1: Enrich airports OUTSIDE the transaction (async I/O, not DB ops)
+    const enrichedDataList = await Promise.all(
       parsedFlights.map(async (data) => {
         const enriched = await enrichFlightAirports({
           departure: {
@@ -380,8 +380,16 @@ router.post('/batch', flightCreationLimiter, async (req: AuthRequest, res: Respo
             lon: data.arrival.lon,
           },
         });
+        return { data, enriched };
+      })
+    );
 
-        return prisma.flight.create({
+    // Step 2: All DB writes inside a single transaction — if any step fails, all are rolled back
+    const createdFlights = await prisma.$transaction(async (tx) => {
+      // Create all flights
+      const flights = [];
+      for (const { data, enriched } of enrichedDataList) {
+        const flight = await tx.flight.create({
           data: {
             userId,
             airline: data.airline,
@@ -440,52 +448,55 @@ router.post('/batch', flightCreationLimiter, async (req: AuthRequest, res: Respo
             lastModifiedBy: 'user',
           },
         });
-      })
-    );
-
-    // Group by bookingReference to auto-create Trips+Bookings
-    type CreatedFlight = (typeof createdFlights)[number];
-    const pnrGroups = new Map<string, CreatedFlight[]>();
-    for (const f of createdFlights) {
-      if (f.bookingReference) {
-        const group = pnrGroups.get(f.bookingReference) ?? [];
-        group.push(f);
-        pnrGroups.set(f.bookingReference, group);
+        flights.push(flight);
       }
-    }
 
-    for (const [pnr, groupFlights] of pnrGroups.entries()) {
-      if (groupFlights.length < 2) continue;
+      // Group by bookingReference to auto-create Trips+Bookings
+      type CreatedFlight = (typeof flights)[number];
+      const pnrGroups = new Map<string, CreatedFlight[]>();
+      for (const f of flights) {
+        if (f.bookingReference) {
+          const group = pnrGroups.get(f.bookingReference) ?? [];
+          group.push(f);
+          pnrGroups.set(f.bookingReference, group);
+        }
+      }
 
-      const count = await prisma.trip.count({ where: { userId } });
-      const color = TRIP_COLORS[count % TRIP_COLORS.length];
+      for (const [pnr, groupFlights] of pnrGroups.entries()) {
+        if (groupFlights.length < 2) continue;
 
-      const sorted = [...groupFlights].sort(
-        (a, b) => a.departureTime.getTime() - b.departureTime.getTime()
-      );
-      const origin = sorted[0]?.depIata ?? '?';
-      const dest = sorted[Math.ceil(sorted.length / 2) - 1]?.arrIata ?? '?';
-      const month = sorted[0]?.departureTime.toLocaleDateString('en', { month: 'short', year: 'numeric' });
-      const name = `${origin} – ${dest} · ${month}`;
+        const count = await tx.trip.count({ where: { userId } });
+        const color = TRIP_COLORS[count % TRIP_COLORS.length];
 
-      const trip = await prisma.trip.create({ data: { userId, name, color } });
-      const booking = await prisma.booking.create({
-        data: { userId, tripId: trip.id, pnr },
-      });
+        const sorted = [...groupFlights].sort(
+          (a, b) => a.departureTime.getTime() - b.departureTime.getTime()
+        );
+        const origin = sorted[0]?.depIata ?? '?';
+        const dest = sorted[Math.ceil(sorted.length / 2) - 1]?.arrIata ?? '?';
+        const month = sorted[0]?.departureTime.toLocaleDateString('en', { month: 'short', year: 'numeric' });
+        const name = `${origin} – ${dest} · ${month}`;
 
-      const flightIds = groupFlights.map((f) => f.id);
-      await prisma.flight.updateMany({
-        where: { id: { in: flightIds } },
-        data: { tripId: trip.id, bookingId: booking.id },
-      });
+        const trip = await tx.trip.create({ data: { userId, name, color } });
+        const booking = await tx.booking.create({
+          data: { userId, tripId: trip.id, pnr },
+        });
 
-      logger.info(
-        { tripId: trip.id, pnr, flightCount: flightIds.length },
-        '[Batch] Auto-created trip from PNR group'
-      );
-    }
+        const flightIds = groupFlights.map((f) => f.id);
+        await tx.flight.updateMany({
+          where: { id: { in: flightIds } },
+          data: { tripId: trip.id, bookingId: booking.id },
+        });
 
-    // Check achievements for any flown flights
+        logger.info(
+          { tripId: trip.id, pnr, flightCount: flightIds.length },
+          '[Batch] Auto-created trip from PNR group'
+        );
+      }
+
+      return flights;
+    });
+
+    // Check achievements for any flown flights (outside transaction — non-critical)
     const hasFlown = parsedFlights.some((f) => f.status === 'flown');
     if (hasFlown) {
       try {

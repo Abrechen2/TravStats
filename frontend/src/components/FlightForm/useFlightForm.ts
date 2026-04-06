@@ -133,6 +133,11 @@ export function useFlightForm(
   // Accumulates confirmed flight inputs during multi-flight email import
   const confirmedFlightsRef = useRef<FlightInput[]>([]);
 
+  // Reset accumulated flights whenever a new email import session begins
+  useEffect(() => {
+    confirmedFlightsRef.current = [];
+  }, [parsedFlights]);
+
   // Auto-suggest arrival time based on estimated flight duration
   useEffect(() => {
     if (departureDate && departureTime && departure && arrival && !arrivalDateSetRef.current) {
@@ -413,6 +418,9 @@ export function useFlightForm(
       frequentFlyerNumber: sourceFlight?.frequentFlyerNumber,
       bookingClassLetter: sourceFlight?.bookingClassLetter,
       coPassengers: sourceFlight?.coPassengers,
+      // Propagate PNR from parsed email so backend can group flights into Trip+Booking
+      bookingReference:
+        sourceFlight?.bookingReference ?? sourceFlight?.pnr ?? flightData.bookingReference,
     };
 
     const nextIndex = currentFlightIndex + 1;
