@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { authApi } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
 import { useTranslation } from "../hooks/useTranslation";
@@ -14,8 +14,24 @@ export default function LoginPage(): JSX.Element {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [successMessage] = useState(state?.message || "");
   const navigate = useNavigate();
   const { setAuth } = useAuthStore();
+
+  // Forgot password modal state
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [smtpEnabled, setSmtpEnabled] = useState<boolean | null>(null);
+  const [forgotUsername, setForgotUsername] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSuccess, setForgotSuccess] = useState(false);
+  const [forgotError, setForgotError] = useState("");
+
+  useEffect(() => {
+    authApi
+      .getSmtpStatus()
+      .then((r) => setSmtpEnabled(r.smtpEnabled))
+      .catch(() => setSmtpEnabled(false));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
@@ -23,14 +39,12 @@ export default function LoginPage(): JSX.Element {
     setLoading(true);
     try {
       const result = await authApi.login(username, password);
-      if ("requiresPasswordChange" in result) {
-        navigate("/change-password", {
-          state: { changeToken: result.changeToken },
-        });
-        return;
+      if ("requiresPasswordChange" in result && result.requiresPasswordChange) {
+        navigate("/change-password", { state: { changeToken: result.changeToken } });
+      } else if ("user" in result) {
+        setAuth(result.user);
+        navigate("/");
       }
-      setAuth(result.user);
-      navigate("/");
     } catch (err: unknown) {
       const errorObj = err as {
         response?: { status?: number; data?: { error?: string; code?: string } };
@@ -48,6 +62,27 @@ export default function LoginPage(): JSX.Element {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleForgotSubmit = async (e: React.FormEvent): Promise<void> => {
+    e.preventDefault();
+    setForgotError("");
+    setForgotLoading(true);
+    try {
+      await authApi.forgotPassword(forgotUsername);
+      setForgotSuccess(true);
+    } catch {
+      setForgotError(t("login.failed"));
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const handleCloseForgotModal = (): void => {
+    setShowForgotModal(false);
+    setForgotUsername("");
+    setForgotSuccess(false);
+    setForgotError("");
   };
 
   return (
@@ -86,78 +121,156 @@ export default function LoginPage(): JSX.Element {
             borderTop: "2px solid var(--accent)",
           }}
         >
-          {state?.message && (
-            <div
-              className="px-4 py-3 rounded-lg mb-4 text-sm"
-              style={{
-                background: "rgba(63,185,80,0.12)",
-                border: "1px solid var(--success)",
-                color: "var(--success)",
-              }}
-            >
-              {state.message}
+          {successMessage && (
+            <div className="mb-4 p-3 rounded-lg bg-green-900/20 border border-green-500/30">
+              <p className="text-sm text-green-400">{successMessage}</p>
             </div>
           )}
 
-          {error && (
-            <div
-              className="px-4 py-3 rounded-lg mb-4 text-sm"
-              style={{
-                background: "rgba(248,81,73,0.12)",
-                border: "1px solid var(--danger)",
-                color: "var(--danger)",
-              }}
-            >
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label htmlFor="login-username" className="label">
+              <label
+                htmlFor="username"
+                className="block text-sm font-medium mb-1.5"
+                style={{ color: "var(--text-secondary)" }}
+              >
                 {t("login.username")}
               </label>
               <input
-                id="login-username"
+                id="username"
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="input"
+                className="input-field w-full"
                 autoComplete="username"
-                required
+                autoFocus
               />
             </div>
+
             <div>
-              <label htmlFor="login-password" className="label">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium mb-1.5"
+                style={{ color: "var(--text-secondary)" }}
+              >
                 {t("login.password")}
               </label>
               <input
-                id="login-password"
+                id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="input"
+                className="input-field w-full"
                 autoComplete="current-password"
-                required
               />
             </div>
-            <button type="submit" disabled={loading} className="btn-primary w-full mt-2">
+
+            {error && <p className="text-sm text-red-400">{error}</p>}
+
+            <button type="submit" disabled={loading} className="btn-primary w-full py-2.5">
               {loading ? t("login.submitting") : t("login.submit")}
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm" style={{ color: "var(--text-muted)" }}>
-            {t("login.noAccount")}{" "}
-            <Link
-              to="/register"
-              className="font-medium transition-colors"
+          <div className="mt-4 flex justify-between items-center text-sm">
+            <span style={{ color: "var(--text-muted)" }}>
+              {t("login.noAccount")}{" "}
+              <Link to="/register" className="hover:underline" style={{ color: "var(--accent)" }}>
+                {t("login.register")}
+              </Link>
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowForgotModal(true)}
+              className="hover:underline"
               style={{ color: "var(--accent)" }}
             >
-              {t("login.register")}
-            </Link>
-          </p>
+              {t("login.forgotPassword")}
+            </button>
+          </div>
         </div>
       </motion.div>
+
+      {/* Forgot Password Modal */}
+      <AnimatePresence>
+        {showForgotModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: "rgba(0,0,0,0.7)" }}
+            onClick={handleCloseForgotModal}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm rounded-2xl p-6"
+              style={{
+                background: "var(--bg-surface)",
+                border: "1px solid var(--color-border)",
+              }}
+            >
+              <h2 className="text-lg font-semibold mb-4" style={{ color: "var(--text-primary)" }}>
+                {t("login.forgotPasswordModal.title")}
+              </h2>
+
+              {smtpEnabled === false ? (
+                <p className="text-sm mb-4" style={{ color: "var(--text-muted)" }}>
+                  {t("login.forgotPasswordModal.noSmtp")}
+                </p>
+              ) : forgotSuccess ? (
+                <p className="text-sm text-green-400 mb-4">
+                  {t("login.forgotPasswordModal.success")}
+                </p>
+              ) : (
+                <form onSubmit={handleForgotSubmit} className="space-y-4">
+                  <div>
+                    <label
+                      htmlFor="forgotUsername"
+                      className="block text-sm font-medium mb-1.5"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      {t("login.forgotPasswordModal.usernameLabel")}
+                    </label>
+                    <input
+                      id="forgotUsername"
+                      type="text"
+                      value={forgotUsername}
+                      onChange={(e) => setForgotUsername(e.target.value)}
+                      className="input-field w-full"
+                      placeholder={t("login.forgotPasswordModal.usernamePlaceholder")}
+                      required
+                      autoFocus
+                    />
+                  </div>
+                  {forgotError && <p className="text-sm text-red-400">{forgotError}</p>}
+                  <button
+                    type="submit"
+                    disabled={forgotLoading}
+                    className="btn-primary w-full py-2"
+                  >
+                    {forgotLoading
+                      ? t("login.forgotPasswordModal.submitting")
+                      : t("login.forgotPasswordModal.submit")}
+                  </button>
+                </form>
+              )}
+
+              <button
+                type="button"
+                onClick={handleCloseForgotModal}
+                className="mt-4 w-full text-sm hover:underline"
+                style={{ color: "var(--text-muted)" }}
+              >
+                {t("login.forgotPasswordModal.close")}
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
