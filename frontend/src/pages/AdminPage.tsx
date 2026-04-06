@@ -80,6 +80,10 @@ export default function AdminPage(): JSX.Element {
   const [showAutoApplyConfirm, setShowAutoApplyConfirm] = useState(false);
   const [globalApiKeys, setGlobalApiKeys] = useState<GlobalApiKeys | null>(null);
   const [savingGlobalApiKeys, setSavingGlobalApiKeys] = useState(false);
+  const [ollamaTestState, setOllamaTestState] = useState<{
+    status: "idle" | "loading" | "ok" | "error" | "warn";
+    message?: string;
+  }>({ status: "idle" });
 
   // ==================== Data Loading ====================
 
@@ -286,6 +290,38 @@ export default function AdminPage(): JSX.Element {
       addToast("error", getErrorMessage(error, t("admin:toasts.parserSettingsFailed")));
     } finally {
       setSavingParsers(false);
+    }
+  };
+
+  const handleTestOllama = async (): Promise<void> => {
+    if (!parserSettings?.ollamaUrl || !parserSettings?.ollamaModel) return;
+    setOllamaTestState({ status: "loading" });
+    try {
+      const result = await adminApi.testOllamaConnection(
+        parserSettings.ollamaUrl,
+        parserSettings.ollamaModel
+      );
+      if (result.success) {
+        const modelCount = result.models?.length ?? 0;
+        if (result.warning) {
+          setOllamaTestState({
+            status: "warn",
+            message: `${result.warning} — ${t("admin:parserSettings.ollama.modelsAvailable")}: ${result.models?.join(", ")}`,
+          });
+        } else {
+          setOllamaTestState({
+            status: "ok",
+            message: t("admin:toasts.ollamaTestSuccess", { count: modelCount }),
+          });
+        }
+      } else {
+        setOllamaTestState({ status: "error", message: result.error });
+      }
+    } catch (error: unknown) {
+      setOllamaTestState({
+        status: "error",
+        message: getErrorMessage(error, t("admin:toasts.ollamaTestFailed")),
+      });
     }
   };
 
@@ -558,8 +594,8 @@ export default function AdminPage(): JSX.Element {
               savingParsers={savingParsers}
               onSave={handleSaveParserSettings}
               onParserSettingsChange={setParserSettings}
-              onTestOllama={() => undefined}
-              ollamaTestState={{ status: "idle" }}
+              onTestOllama={handleTestOllama}
+              ollamaTestState={ollamaTestState}
             />
           )}
 
