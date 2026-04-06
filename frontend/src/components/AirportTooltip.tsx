@@ -113,7 +113,7 @@ export function AirportTooltip({
       {/* Total flights */}
       <div className="text-xs mb-2" style={{ color: "var(--text-primary)" }}>
         <span className="font-semibold">{total}</span>{" "}
-        <span style={{ color: "var(--text-muted)" }}>Flug{total !== 1 ? "¨e" : ""} gesamt</span>
+        <span style={{ color: "var(--text-muted)" }}>{total !== 1 ? "Flüge" : "Flug"} gesamt</span>
         <span style={{ color: "var(--text-muted)" }}>
           {" "}
           · {stats.departures}↑ {stats.arrivals}↓
