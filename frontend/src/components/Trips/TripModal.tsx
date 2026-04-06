@@ -39,7 +39,7 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
     }
   }, [trip]);
 
-  const handleSave = async () => {
+  const handleSave = async (): Promise<void> => {
     if (!name.trim()) return;
     setSaving(true);
     try {
@@ -67,9 +67,16 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onClose();
+      }}
+    >
       <div
         className="w-full max-w-md rounded-xl shadow-2xl"
+        role="dialog"
+        aria-modal="true"
         style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
       >
         <div className="p-5 border-b" style={{ borderColor: "var(--color-border)" }}>
@@ -135,6 +142,8 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
                 <button
                   key={c}
                   onClick={() => setColor(c)}
+                  aria-label={c}
+                  aria-pressed={color === c}
                   className="w-7 h-7 rounded-full transition-transform hover:scale-110"
                   style={{
                     background: c,
