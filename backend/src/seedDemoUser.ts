@@ -446,10 +446,18 @@ const flightRoutes = [
   { dep: 'MUC', arr: 'HKG', airline: 'Lufthansa', flightNum: '796', duration: 11 },
   { dep: 'MUC', arr: 'HND', airline: 'Lufthansa', flightNum: '714', duration: 11.5 },
 
+  // Skandinavien-interne Verbindungen (für Skandinavien Tour)
+  { dep: 'CPH', arr: 'ARN', airline: 'SAS', flightNum: '505', duration: 1.3 },
+  { dep: 'ARN', arr: 'OSL', airline: 'SAS', flightNum: '502', duration: 1.2 },
+  { dep: 'OSL', arr: 'MUC', airline: 'Lufthansa', flightNum: '2447', duration: 2.2 },
+
   // Rückflüge
   { dep: 'JFK', arr: 'MUC', airline: 'Lufthansa', flightNum: '411', duration: 8 },
   { dep: 'LAX', arr: 'FRA', airline: 'Lufthansa', flightNum: '453', duration: 10.5 },
   { dep: 'FRA', arr: 'MUC', airline: 'Lufthansa', flightNum: '115', duration: 1 },
+  { dep: 'HND', arr: 'MUC', airline: 'Lufthansa', flightNum: '715', duration: 12 },
+  { dep: 'BCN', arr: 'MUC', airline: 'Lufthansa', flightNum: '1811', duration: 2 },
+  { dep: 'DXB', arr: 'SIN', airline: 'Emirates', flightNum: '352', duration: 7 },
   { dep: 'SIN', arr: 'MUC', airline: 'Singapore Airlines', flightNum: '327', duration: 13 },
   { dep: 'DXB', arr: 'MUC', airline: 'Emirates', flightNum: '051', duration: 6 },
   { dep: 'SYD', arr: 'DXB', airline: 'Emirates', flightNum: '412', duration: 14 },
@@ -485,6 +493,7 @@ async function createDemoTrips(userId: string): Promise<void> {
       currency: 'EUR',
       routePairs: [
         { depIata: 'MUC', arrIata: 'HND' },
+        { depIata: 'HND', arrIata: 'MUC' },
       ],
     },
     {
@@ -495,7 +504,8 @@ async function createDemoTrips(userId: string): Promise<void> {
       currency: 'EUR',
       routePairs: [
         { depIata: 'MUC', arrIata: 'DXB' },
-        { depIata: 'DXB', arrIata: 'MUC' },
+        { depIata: 'DXB', arrIata: 'SIN' },
+        { depIata: 'SIN', arrIata: 'MUC' },
       ],
     },
     {
@@ -507,8 +517,9 @@ async function createDemoTrips(userId: string): Promise<void> {
       currency: undefined,
       routePairs: [
         { depIata: 'MUC', arrIata: 'CPH' },
-        { depIata: 'MUC', arrIata: 'ARN' },
-        { depIata: 'MUC', arrIata: 'OSL' },
+        { depIata: 'CPH', arrIata: 'ARN' },
+        { depIata: 'ARN', arrIata: 'OSL' },
+        { depIata: 'OSL', arrIata: 'MUC' },
       ],
     },
     {
@@ -519,6 +530,7 @@ async function createDemoTrips(userId: string): Promise<void> {
       currency: 'EUR',
       routePairs: [
         { depIata: 'MUC', arrIata: 'BCN' },
+        { depIata: 'BCN', arrIata: 'MUC' },
       ],
     },
   ];
