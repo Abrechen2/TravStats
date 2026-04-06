@@ -3,19 +3,7 @@ import type { Trip } from "../../types";
 import { tripsApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
-
-const PALETTE = [
-  "#818cf8",
-  "#38bdf8",
-  "#34d399",
-  "#fb923c",
-  "#f472b6",
-  "#a78bfa",
-  "#22d3ee",
-  "#86efac",
-  "#fbbf24",
-  "#f87171",
-];
+import { TRIP_COLORS as PALETTE } from "../../lib/tripColors";
 
 interface TripModalProps {
   trip: Trip | null; // null = create mode
