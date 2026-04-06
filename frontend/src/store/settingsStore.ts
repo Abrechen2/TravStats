@@ -226,8 +226,16 @@ export const useSettingsStore = create<SettingsState>()(
       },
       saveRemoteSettings: async () => {
         try {
-          const { profile, display, units, defaults, map, notifications } = get();
-          await settingsApi.update({ profile, display, units, defaults, map, notifications });
+          const { profile, display, units, defaults, map, notifications, features } = get();
+          await settingsApi.update({
+            profile,
+            display,
+            units,
+            defaults,
+            map,
+            notifications,
+            features,
+          });
         } catch (error) {
           logger.warn("Failed to save settings remotely", error);
         }
