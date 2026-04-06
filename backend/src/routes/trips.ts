@@ -51,6 +51,11 @@ router.post("/trips/bookings", authenticate, async (req: AuthRequest, res: Respo
     const userId = req.userId!;
     const body = createBookingSchema.parse(req.body);
 
+    if (body.tripId) {
+      const trip = await prisma.trip.findFirst({ where: { id: body.tripId, userId } });
+      if (!trip) throw new AppError("Trip not found", 404);
+    }
+
     const booking = await prisma.booking.create({
       data: {
         userId,
@@ -150,7 +155,7 @@ router.delete("/trips/:id", authenticate, async (req: AuthRequest, res: Response
 
     await prisma.trip.delete({ where: { id: req.params.id } });
     logger.info({ tripId: req.params.id, userId }, "[Trips] Deleted trip");
-    res.json({ message: "Trip deleted" });
+    res.status(204).send();
   } catch (error) {
     next(error);
   }

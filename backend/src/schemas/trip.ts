@@ -18,7 +18,7 @@ export const updateTripSchema = z.object({
 });
 
 export const assignFlightsSchema = z.object({
-  flightIds: z.array(z.string().uuid()),
+  flightIds: z.array(z.string().uuid()).min(1),
   action: z.enum(["add", "remove"]),
 });
 
