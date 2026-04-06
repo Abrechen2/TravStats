@@ -306,8 +306,42 @@ export function DeckGLMap({
   const [tooltipVisible, setTooltipVisible] = useState(false);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
+  // Geographic anchor points for the tooltip — stored so we can reproject on map move
+  const tooltipGeoRef = useRef<{
+    mode: "group" | "single";
+    points: Array<[number, number]>; // [lon, lat]
+  } | null>(null);
+
+  const recomputeTooltipPos = useCallback(() => {
+    const map = mapRef.current?.getMap();
+    const anchor = tooltipGeoRef.current;
+    if (!map || !anchor) return;
+
+    if (anchor.mode === "group") {
+      const screenPts = anchor.points.map((p) => map.project(p));
+      const minX = Math.min(...screenPts.map((p) => p.x));
+      const maxX = Math.max(...screenPts.map((p) => p.x));
+      const minY = Math.min(...screenPts.map((p) => p.y));
+      setTooltipPos({ x: (minX + maxX) / 2, y: minY });
+    } else {
+      const pt = map.project(anchor.points[0]);
+      setTooltipPos({ x: pt.x, y: pt.y });
+    }
+  }, []);
+
+  // Recompute tooltip position on every map move (pan / zoom)
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+    map.on("move", recomputeTooltipPos);
+    return () => {
+      map.off("move", recomputeTooltipPos);
+    };
+  }, [recomputeTooltipPos]);
+
   useEffect(() => {
     setTooltipVisible(false);
+    tooltipGeoRef.current = null;
     if (selectedFlights.length === 0) return;
 
     const timer = setTimeout(() => {
@@ -316,32 +350,30 @@ export function DeckGLMap({
 
       if (highlightMode === "group") {
         // Trip highlight: position above the bounding box of all airports so the card
-        // doesn't overlap the arc lines. Collect screen coords → use top-center.
-        const screenPts: Array<{ x: number; y: number }> = [];
+        // doesn't overlap the arc lines. Store geo points → project to top-center.
+        const pts: Array<[number, number]> = [];
         for (const f of selectedFlights) {
-          if (f.depLon != null && f.depLat != null)
-            screenPts.push(map.project([f.depLon, f.depLat]));
-          if (f.arrLon != null && f.arrLat != null)
-            screenPts.push(map.project([f.arrLon, f.arrLat]));
+          if (f.depLon != null && f.depLat != null) pts.push([f.depLon, f.depLat]);
+          if (f.arrLon != null && f.arrLat != null) pts.push([f.arrLon, f.arrLat]);
         }
-        if (screenPts.length === 0) return;
-        const minX = Math.min(...screenPts.map((p) => p.x));
-        const maxX = Math.max(...screenPts.map((p) => p.x));
-        const minY = Math.min(...screenPts.map((p) => p.y)); // topmost on screen
-        setTooltipPos({ x: (minX + maxX) / 2, y: minY });
+        if (pts.length === 0) return;
+        tooltipGeoRef.current = { mode: "group", points: pts };
       } else {
         // Single flight: position at arc midpoint
         const f = selectedFlights[0];
         if (f.depLon == null || f.arrLon == null || f.depLat == null || f.arrLat == null) return;
-        const screenPt = map.project([(f.depLon + f.arrLon) / 2, (f.depLat + f.arrLat) / 2]);
-        setTooltipPos({ x: screenPt.x, y: screenPt.y });
+        tooltipGeoRef.current = {
+          mode: "single",
+          points: [[(f.depLon + f.arrLon) / 2, (f.depLat + f.arrLat) / 2]],
+        };
       }
 
+      recomputeTooltipPos();
       setTooltipVisible(true);
     }, 1800);
 
     return () => clearTimeout(timer);
-  }, [selectedFlights, highlightMode]);
+  }, [selectedFlights, highlightMode, recomputeTooltipPos]);
 
   // Wrap onFlightClick so that a deck.gl layer click sets the guard ref BEFORE the
   // Map onClick fires and would otherwise clear the selection immediately (Bug 1).
