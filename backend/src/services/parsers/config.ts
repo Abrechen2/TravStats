@@ -7,6 +7,7 @@ import {
   ParserConfig,
 } from './types';
 import logger from '../../utils/logger';
+import { getAdminParserSettings } from '../parserSettings';
 
 // Availability cache (5 minutes TTL)
 const availabilityCache = new Map<string, { availability: ProviderAvailability; timestamp: number }>();
@@ -50,7 +51,7 @@ export function getDefaultVisionFallbackChain(): VisionProvider[] {
  * Get default fallback chain for text parsers
  */
 export function getDefaultTextFallbackChain(): TextProvider[] {
-  return ['regex'];
+  return ['ollama', 'regex'];
 }
 
 /**
@@ -72,11 +73,18 @@ export async function getParserConfig(
   _adminSettings?: Record<string, unknown>,
   userId?: string
 ): Promise<ParserConfig> {
+  const adminSettings = await getAdminParserSettings();
+
+  const ollamaUrl = adminSettings?.ollamaUrl ?? process.env.OLLAMA_URL ?? undefined;
+  const ollamaModel = adminSettings?.ollamaModel ?? process.env.OLLAMA_MODEL ?? undefined;
+
   return {
     visionProvider: 'tesseract',
     textProvider: 'regex',
     visionFallbacks: getDefaultVisionFallbackChain(),
     textFallbacks: getDefaultTextFallbackChain(),
+    ollamaUrl: ollamaUrl ?? undefined,
+    ollamaModel: ollamaModel ?? undefined,
     userId,
   };
 }
