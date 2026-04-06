@@ -199,7 +199,6 @@ export function FlightPanel({
                       type="button"
                       onClick={() => {
                         onTripSelect?.(trip.id);
-                        onClose();
                       }}
                       className="w-full text-left px-4 py-3 transition-colors hover:bg-white/5 flex items-start gap-3"
                       style={{ borderBottom: "1px solid var(--color-border)" }}
