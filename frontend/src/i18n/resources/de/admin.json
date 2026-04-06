@@ -90,7 +90,9 @@
         "mustChange": "Muss Passwort beim nächsten Login ändern",
         "tempPasswordLabel": "Temporäres Passwort (einmalig anzeigen):",
         "copy": "Kopieren",
-        "copied": "Kopiert!"
+        "copied": "Kopiert!",
+        "regenerate": "Neues Passwort generieren",
+        "generating": "Wird generiert..."
       },
       "set": {
         "description": "Setzt das Passwort des Benutzers direkt.",
