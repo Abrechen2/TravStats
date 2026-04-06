@@ -82,6 +82,14 @@ export const RATE_LIMITS = {
   // PDF parse rate limits
   PDF_PARSE_WINDOW_MS: 15 * 60 * 1000, // 15 minutes
   PDF_PARSE_MAX: 20, // 20 requests per window
+
+  // Receipt upload rate limits (prevent disk exhaustion)
+  UPLOAD_RECEIPT_WINDOW_MS: 60 * 60 * 1000, // 1 hour
+  UPLOAD_RECEIPT_MAX: 30, // 30 uploads per hour
+
+  // Settings change rate limits (prevent enumeration/abuse)
+  SETTINGS_WINDOW_MS: 15 * 60 * 1000, // 15 minutes
+  SETTINGS_MAX_REQUESTS: 60, // 60 changes per 15 minutes
 } as const;
 
 // ========== DATABASE & QUERY LIMITS ==========

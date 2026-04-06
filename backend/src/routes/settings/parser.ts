@@ -35,19 +35,11 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
   }
 });
 
-// PUT / — kept as a no-op stub so existing clients don't break
-router.put('/', async (_req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    res.json({
-      message: 'Parser settings updated successfully',
-      settings: {
-        visionProvider: 'tesseract',
-        textProvider: 'regex',
-      },
-    });
-  } catch (error) {
-    next(error);
-  }
+// PUT / — parser providers are fixed (Tesseract OCR + Regex), no configurable settings
+router.put('/', (_req: AuthRequest, res: Response): void => {
+  res.status(501).json({
+    error: 'Parser settings are not configurable. Vision provider is Tesseract OCR, text provider is Regex.',
+  });
 });
 
 export default router;

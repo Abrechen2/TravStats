@@ -4,6 +4,8 @@ import { airportsApi, parseApi } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
 import { logger } from "../lib/logger";
 import { useTranslation } from "../hooks/useTranslation";
+import { filterEmailText } from "../lib/filterEmailText";
+import { getAirlineFromFlightNumber } from "../lib/airlineUtils";
 
 function getFieldBorderClass(
   fieldName: string,
@@ -231,6 +233,14 @@ export default function FlightReviewModal({
     }
   }, [arrivalCode]);
 
+  // Auto-derive airline from flight number prefix when airline field is empty
+  useEffect(() => {
+    if (flightNumber && !airline) {
+      const derived = getAirlineFromFlightNumber(flightNumber);
+      if (derived) setAirline(derived);
+    }
+  }, [flightNumber]);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     setError("");
@@ -422,7 +432,7 @@ export default function FlightReviewModal({
         {showSourceText && originalData?.text && (
           <div className="border-b border-[var(--color-border)] bg-[var(--bg-elevated)] px-6 py-3">
             <pre className="whitespace-pre-wrap font-mono text-xs text-[var(--text-secondary)] max-h-48 overflow-y-auto leading-relaxed">
-              {originalData.text}
+              {filterEmailText(originalData.text)}
             </pre>
           </div>
         )}

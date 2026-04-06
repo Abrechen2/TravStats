@@ -41,6 +41,16 @@ const autoApplySchema = z.object({
   threshold: z.number().min(0).max(1).optional().default(0.9),
 });
 
+const daysQuerySchema = z.object({
+  days: z.coerce.number().int().min(1).max(365).default(30),
+});
+
+const feedbackDetailsQuerySchema = z.object({
+  days: z.coerce.number().int().min(1).max(365).default(30),
+  limit: z.coerce.number().int().min(1).max(500).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
 const router = Router();
 
 // GET /api/v1/admin/parse-logs/stats — aggregate parse log stats per airline
@@ -193,7 +203,7 @@ router.get('/parser-feedback/stats', async (req: AuthRequest, res: Response, nex
   try {
     const provider = req.query.provider as string | undefined;
     const sourceType = req.query.sourceType as 'email' | 'boardingpass' | undefined;
-    const days = parseInt(req.query.days as string) || 30;
+    const { days } = daysQuerySchema.parse(req.query);
 
     const stats = await getParserFeedbackStats(provider, sourceType, days);
     res.json(stats);
@@ -205,7 +215,7 @@ router.get('/parser-feedback/stats', async (req: AuthRequest, res: Response, nex
 // Get pattern analysis and suggestions
 router.get('/parser-feedback/patterns', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const days = parseInt(req.query.days as string) || 30;
+    const { days } = daysQuerySchema.parse(req.query);
     const [suggestions, summary, pendingSuggestions, stats] = await Promise.all([
       analyzeFeedbackForPatterns(days),
       getPatternAnalysisSummary(days),
@@ -255,9 +265,7 @@ router.get('/parser-feedback/details', async (req: AuthRequest, res: Response, n
   try {
     const provider = req.query.provider as string | undefined;
     const sourceType = req.query.sourceType as 'email' | 'boardingpass' | undefined;
-    const days = parseInt(req.query.days as string) || 30;
-    const limit = parseInt(req.query.limit as string) || 50;
-    const offset = parseInt(req.query.offset as string) || 0;
+    const { days, limit, offset } = feedbackDetailsQuerySchema.parse(req.query);
 
     const since = new Date();
     since.setDate(since.getDate() - days);

@@ -2,6 +2,7 @@ import { Router, Response, NextFunction } from 'express';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { uploadReceipt, deleteReceiptFile, getUploadDir } from '../middleware/upload';
 import { AppError } from '../middleware/errorHandler';
+import { uploadReceiptLimiter } from '../middleware/rateLimit';
 import path from 'path';
 import fs from 'fs';
 import { prisma } from '../db';
@@ -17,6 +18,7 @@ const router = Router();
 router.post(
   '/receipt',
   authenticate,
+  uploadReceiptLimiter,
   uploadReceipt.single('receipt'),
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     let filePath: string | undefined;

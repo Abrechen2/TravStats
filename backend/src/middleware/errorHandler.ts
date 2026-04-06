@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
+import { Prisma } from '@prisma/client';
 import logger from '../utils/logger';
 import { isDebugEnabled } from '../services/loggingConfig';
 
@@ -32,7 +33,7 @@ function categorizeError(err: ApiError | ZodError): string {
 }
 
 export const errorHandler = async (
-  err: ApiError | ZodError,
+  err: ApiError | ZodError | Prisma.PrismaClientInitializationError | Prisma.PrismaClientKnownRequestError,
   req: AuthRequest,
   res: Response,
   _next: NextFunction
@@ -56,7 +57,7 @@ export const errorHandler = async (
       username: req.user?.username,
       requestId: req.requestId,
       errorCategory,
-      statusCode: err instanceof ZodError ? 400 : err.statusCode || 500,
+      statusCode: err instanceof ZodError ? 400 : (err as ApiError).statusCode || 500,
     },
     error: {
       name: err.name,
@@ -85,8 +86,20 @@ export const errorHandler = async (
     });
   }
 
+  // Prisma database connection errors → 503
+  if (
+    err instanceof Prisma.PrismaClientInitializationError ||
+    (err instanceof Prisma.PrismaClientKnownRequestError &&
+      (err.code === 'P1001' || err.code === 'P1002' || err.code === 'P1008'))
+  ) {
+    return res.status(503).json({
+      error: 'Datenbankverbindung fehlgeschlagen. Bitte versuche es später erneut.',
+      code: 'DB_UNAVAILABLE',
+    });
+  }
+
   // Custom API errors
-  const statusCode = err.statusCode || 500;
+  const statusCode = (err as ApiError).statusCode || 500;
   const message = err.message || 'Internal server error';
 
   res.status(statusCode).json({

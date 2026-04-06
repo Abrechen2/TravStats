@@ -74,6 +74,8 @@ router.post('/parse-email', authenticate, emailParseLimiter, async (req: AuthReq
 
     res.json({
       ...result,
+      text: emailContent,
+      subject: subject ?? undefined,
       airlineNotice: result.flights[0]?.airlineNotice ?? null,
     });
   } catch (error) {
@@ -185,8 +187,8 @@ router.post(
       res.json({
         ...result,
         subject: extracted.subject,
-        text: extracted.text.substring(0, 1000), // Truncate for feedback (first 1000 chars)
-        html: extracted.html ? extracted.html.substring(0, 1000) : undefined, // Truncate for feedback
+        text: extracted.text,
+        html: extracted.html ?? undefined,
         airlineNotice: result.flights[0]?.airlineNotice ?? null,
       });
     } catch (error) {

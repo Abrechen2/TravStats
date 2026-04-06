@@ -90,12 +90,11 @@ export function validateEnv(): EnvConfig {
   }
 
   try {
-    // Check if DATABASE_URL or DB components are set
+    // Check if DATABASE_URL or DB components are set — required for operation
     if (!process.env.DATABASE_URL && !process.env.DB_HOST) {
-      logger.warn({
-        operation: 'env_validation_warning',
-        message: 'Neither DATABASE_URL nor DB_HOST is set. Database connection may fail.',
-      });
+      throw new Error(
+        'Database configuration missing: set DATABASE_URL or DB_HOST before starting the server.'
+      );
     }
 
     validatedEnv = envSchema.parse(process.env);
