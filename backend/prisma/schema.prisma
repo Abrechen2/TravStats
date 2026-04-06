@@ -35,6 +35,8 @@ model User {
   pendingFlightUpdates  PendingFlightUpdate[]
   pendingUpdateStats    PendingUpdateStatistics?
   parseLogs             ParseTrainingLog[]
+  trips    Trip[]
+  bookings Booking[]
 
   @@map("users")
 }
@@ -124,7 +126,12 @@ model Flight {
   parserTemplate      String?  @map("parser_template")       // e.g. "LH" or null
   parserConfidence    Int?     @map("parser_confidence")     // 0–100
 
+  tripId    String?  @map("trip_id")
+  bookingId String?  @map("booking_id")
+
   user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip      Trip?    @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  booking   Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   pendingUpdates    PendingFlightUpdate[]
 
   @@index([userId])
@@ -132,6 +139,8 @@ model Flight {
   @@index([status])
   @@index([airline])
   @@index([flightNumber])
+  @@index([tripId])
+  @@index([bookingId])
   @@map("flights")
 }
 
@@ -505,4 +514,38 @@ model TemplateCorrection {
 
   @@index([templateId, field])
   @@map("template_corrections")
+}
+
+model Trip {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  name        String
+  description String?
+  color       String   @default("#818cf8") @map("color")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flights  Flight[]
+  bookings Booking[]
+
+  @@index([userId])
+  @@map("trips")
+}
+
+model Booking {
+  id       String  @id @default(uuid())
+  userId   String  @map("user_id")
+  tripId   String? @map("trip_id")
+  pnr      String?
+  price    Float?
+  currency String? @default("EUR")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip    Trip?   @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  flights Flight[]
+
+  @@index([userId])
+  @@index([tripId])
+  @@map("bookings")
 }
