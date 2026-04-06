@@ -46,10 +46,11 @@ interface DeckOverlayProps {
 }
 
 function DeckGLOverlay({ layers, effects }: DeckOverlayProps): null {
-  const overlay = useControl<MapboxOverlay>(() => new MapboxOverlay({ layers, effects }), {
-    position: "top-left",
-  });
-  overlay.setProps({ layers, effects });
+  const overlay = useControl<MapboxOverlay>(
+    () => new MapboxOverlay({ layers, effects, pickingRadius: 5 }),
+    { position: "top-left" }
+  );
+  overlay.setProps({ layers, effects, pickingRadius: 5 });
   return null;
 }
 
