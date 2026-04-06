@@ -24,6 +24,7 @@ export default function FeaturesSection(): JSX.Element {
         </div>
         <button
           onClick={() => setFeatures({ enableCostTracking: !features.enableCostTracking })}
+          aria-label={t("settings:features.costTracking")}
           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
             features.enableCostTracking ? "bg-[var(--accent)]" : "bg-gray-600"
           }`}
