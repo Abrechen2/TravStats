@@ -347,6 +347,24 @@ export function DeckGLMap({
     }
   }, []);
 
+  const moveRafRef = useRef<number | null>(null);
+
+  const handleMapMove = useCallback(() => {
+    if (moveRafRef.current !== null) return; // already scheduled
+    moveRafRef.current = requestAnimationFrame(() => {
+      moveRafRef.current = null;
+      recomputeAllPositions();
+    });
+  }, [recomputeAllPositions]);
+
+  useEffect(() => {
+    return () => {
+      if (moveRafRef.current !== null) {
+        cancelAnimationFrame(moveRafRef.current);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     setTooltipVisible(false);
     tooltipGeoRef.current = null;
@@ -476,7 +494,7 @@ export function DeckGLMap({
         initialViewState={INITIAL_VIEW_STATE}
         mapStyle={isDarkMode ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
         style={{ position: "absolute", inset: "0" }}
-        onMove={recomputeAllPositions}
+        onMove={handleMapMove}
         onClick={() => {
           // If deck.gl handled this click (e.g. arc click), ignore the Map event (Bug 1)
           if (deckClickedRef.current) {
