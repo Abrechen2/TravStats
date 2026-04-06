@@ -71,7 +71,9 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    console.error("Error caught by boundary:", error, errorInfo);
+    if (import.meta.env.MODE === "development") {
+      console.error("Error caught by boundary:", error, errorInfo);
+    }
     // #region agent log
     debugLog(
       "ErrorBoundary.tsx:componentDidCatch",

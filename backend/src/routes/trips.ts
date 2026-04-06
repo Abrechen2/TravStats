@@ -20,6 +20,7 @@ router.get("/trips", authenticate, async (req: AuthRequest, res: Response, next:
     const trips = await prisma.trip.findMany({
       where: { userId },
       orderBy: { createdAt: "desc" },
+      take: 500, // safety cap — users are unlikely to have more than 500 trips
       include: {
         _count: { select: { flights: true } },
         bookings: { select: { id: true, pnr: true, price: true, currency: true } },
@@ -36,6 +37,7 @@ router.get("/trips", authenticate, async (req: AuthRequest, res: Response, next:
             arrLon: true,
           },
           orderBy: { departureTime: "asc" },
+          take: 200, // cap nested flights per trip — use GET /trips/:id for full flight list
         },
       },
     });

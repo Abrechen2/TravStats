@@ -99,7 +99,7 @@ const corsOrigin =
 if (corsOrigin) {
   const allowedOrigins =
     corsOrigin === '*' ? [] : corsOrigin.split(',').map((o) => o.trim()).filter(Boolean);
-  const allowAllOrigins = corsOrigin === '*' || process.env.NODE_ENV !== 'production';
+  const allowAllOrigins = corsOrigin === '*' || process.env.NODE_ENV === 'development';
 
   app.use(
     cors({
@@ -185,6 +185,30 @@ app.use('/api/v1', tripsRoutes);
 
 // Error handling
 app.use(errorHandler);
+
+// Global error handlers — prevent silent crashes from async scheduler errors
+process.on('unhandledRejection', (reason: unknown) => {
+  logger.error({
+    operation: 'unhandled_rejection',
+    message: 'Unhandled promise rejection',
+    error: {
+      message: reason instanceof Error ? reason.message : String(reason),
+      stack: reason instanceof Error ? reason.stack : undefined,
+    },
+  });
+});
+
+process.on('uncaughtException', (error: Error) => {
+  logger.error({
+    operation: 'uncaught_exception',
+    message: 'Uncaught exception — process will exit',
+    error: {
+      message: error.message,
+      stack: error.stack,
+    },
+  });
+  process.exit(1);
+});
 
 // Graceful shutdown
 process.on('SIGINT', async () => {

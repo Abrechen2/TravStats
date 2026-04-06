@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '../../middleware/auth';
+import { settingsLimiter } from '../../middleware/rateLimit';
 import generalRouter from './general';
 import parserRouter from './parser';
 import apiKeysRouter from './apiKeys';
@@ -10,8 +11,9 @@ import notificationsRouter from './notifications';
 
 const router = Router();
 
-// All routes require authentication
+// All routes require authentication and are rate-limited
 router.use(authenticate);
+router.use(settingsLimiter);
 
 // Mount sub-routers
 router.use('/', generalRouter);

@@ -164,3 +164,29 @@ export const batchCreationLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+/**
+ * Rate limiter for receipt file uploads
+ * Prevents disk exhaustion through repeated uploads
+ * Allows 30 uploads per hour per IP
+ */
+export const uploadReceiptLimiter = rateLimit({
+  windowMs: RATE_LIMITS.UPLOAD_RECEIPT_WINDOW_MS,
+  max: RATE_LIMITS.UPLOAD_RECEIPT_MAX,
+  message: 'Too many file uploads, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/**
+ * Rate limiter for settings endpoints
+ * Prevents enumeration and brute-force of settings values
+ * Allows 60 requests per 15 minutes per IP
+ */
+export const settingsLimiter = rateLimit({
+  windowMs: RATE_LIMITS.SETTINGS_WINDOW_MS,
+  max: RATE_LIMITS.SETTINGS_MAX_REQUESTS,
+  message: 'Too many settings requests, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
