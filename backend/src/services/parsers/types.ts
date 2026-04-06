@@ -4,7 +4,7 @@ import { ParsedBooking } from '../bookingParser';
  * Provider types for vision and text parsing
  */
 export type VisionProvider = 'tesseract' | 'manual';
-export type TextProvider = 'regex';
+export type TextProvider = 'regex' | 'ollama';
 
 /**
  * Common interface for all vision parsers
@@ -96,6 +96,16 @@ export interface ParserConfig {
    * Fallback chain for text parsing
    */
   textFallbacks: TextProvider[];
+
+  /**
+   * Ollama server URL — overrides OLLAMA_URL env var
+   */
+  ollamaUrl?: string;
+
+  /**
+   * Ollama model name — overrides OLLAMA_MODEL env var
+   */
+  ollamaModel?: string;
 
   /**
    * Optional user ID for template lookup
