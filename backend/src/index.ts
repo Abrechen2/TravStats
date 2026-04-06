@@ -27,6 +27,7 @@ import templateStatusRoutes from './routes/templateStatus';
 import parserTemplatesRoutes from './routes/parserTemplates';
 import trainingRoutes from './routes/training';
 import tripsRoutes from './routes/trips';
+import passwordResetRoutes from './routes/passwordReset';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { requestLoggerMiddleware } from './middleware/requestLogger';
 import { prisma } from './db';
@@ -164,6 +165,7 @@ app.get('/health', (req, res) => {
 app.use('/api/v1/setup', setupRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/auth', passwordResetRoutes);
 app.use('/api/v1/flights', flightRoutes);
 app.use('/api/v1/flight-lookup', flightLookupRoutes);
 app.use('/api/v1/stats', statsRoutes);
