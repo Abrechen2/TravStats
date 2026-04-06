@@ -38,7 +38,7 @@ export interface DuplicateFlight {
 }
 
 export function useFlightForm(
-  onSubmit: (flight: FlightInput, force?: boolean) => Promise<void>,
+  onSubmit: (flight: FlightInput, force?: boolean, hasMoreFlights?: boolean) => Promise<void>,
   onCancel: () => void
 ) {
   const { t } = useTranslation(["flights", "errors"]);
@@ -403,16 +403,22 @@ export function useFlightForm(
     setBookingClassLetter(sourceFlight?.bookingClassLetter);
     setCoPassengers(sourceFlight?.coPassengers ?? []);
 
-    await onSubmit({
-      ...flightData,
-      baggageAllowance: sourceFlight?.baggageAllowance,
-      frequentFlyerNumber: sourceFlight?.frequentFlyerNumber,
-      bookingClassLetter: sourceFlight?.bookingClassLetter,
-      coPassengers: sourceFlight?.coPassengers,
-    });
-
     const nextIndex = currentFlightIndex + 1;
-    if (nextIndex < parsedFlights.length) {
+    const hasMoreFlights = nextIndex < parsedFlights.length;
+
+    await onSubmit(
+      {
+        ...flightData,
+        baggageAllowance: sourceFlight?.baggageAllowance,
+        frequentFlyerNumber: sourceFlight?.frequentFlyerNumber,
+        bookingClassLetter: sourceFlight?.bookingClassLetter,
+        coPassengers: sourceFlight?.coPassengers,
+      },
+      false,
+      hasMoreFlights
+    );
+
+    if (hasMoreFlights) {
       setCurrentFlightIndex(nextIndex);
     } else {
       setShowFlightReview(false);
