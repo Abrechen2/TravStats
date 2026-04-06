@@ -30,6 +30,7 @@ export function AirportTooltip({
 
   const stats = useMemo(() => {
     let name: string | null = null;
+    let icao: string | null = null;
     let departures = 0;
     let arrivals = 0;
     let totalKm = 0;
@@ -44,6 +45,7 @@ export function AirportTooltip({
       if (isDep) {
         departures++;
         if (!name && f.depName) name = f.depName;
+        if (!icao && f.depIcao) icao = f.depIcao;
         if (f.arrIata) {
           routeCounts.set(f.arrIata, (routeCounts.get(f.arrIata) ?? 0) + 1);
         }
@@ -51,6 +53,7 @@ export function AirportTooltip({
       if (isArr) {
         arrivals++;
         if (!name && f.arrName) name = f.arrName;
+        if (!icao && f.arrIcao) icao = f.arrIcao;
         if (f.depIata) {
           routeCounts.set(f.depIata, (routeCounts.get(f.depIata) ?? 0) + 1);
         }
@@ -67,6 +70,7 @@ export function AirportTooltip({
 
     return {
       name,
+      icao,
       departures,
       arrivals,
       totalKm,
@@ -85,11 +89,19 @@ export function AirportTooltip({
       minWidth="220px"
       maxWidth="300px"
     >
-      {/* IATA + name */}
+      {/* IATA + ICAO + name */}
       <div className="flex items-baseline gap-2 mb-1">
         <span className="font-mono font-bold text-base" style={{ color: "rgb(232,160,69)" }}>
           {iata}
         </span>
+        {stats.icao && (
+          <span
+            className="font-mono text-xs px-1 rounded"
+            style={{ background: "rgba(232,160,69,0.12)", color: "rgba(232,160,69,0.7)" }}
+          >
+            {stats.icao}
+          </span>
+        )}
         {stats.name && (
           <span className="text-xs truncate" style={{ color: "var(--text-muted)" }}>
             {stats.name}
