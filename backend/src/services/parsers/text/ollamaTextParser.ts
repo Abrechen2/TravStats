@@ -50,6 +50,30 @@ function fetchJson(url: string, body: string): Promise<string> {
   });
 }
 
+function fetchGet(url: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const parsed = new URL(url);
+    const isHttps = parsed.protocol === "https:";
+    const lib = isHttps ? https : http;
+    const req = lib.request(
+      {
+        hostname: parsed.hostname,
+        port: parsed.port || (isHttps ? 443 : 80),
+        path: parsed.pathname + (parsed.search ?? ""),
+        method: "GET",
+      },
+      (res) => {
+        let data = "";
+        res.on("data", (chunk: string) => { data += chunk; });
+        res.on("end", () => resolve(data));
+      }
+    );
+    req.setTimeout(5_000, () => req.destroy(new Error("Ollama availability check timeout")));
+    req.on("error", reject);
+    req.end();
+  });
+}
+
 function mapSeatClass(raw: string | null | undefined): string | undefined {
   if (!raw) return undefined;
   const lower = raw.toLowerCase();
@@ -86,7 +110,7 @@ export class OllamaTextParser implements ITextParser {
 
   async checkAvailability(): Promise<ProviderAvailability> {
     try {
-      const res = await fetchJson(`${this.url}/api/tags`, "{}");
+      const res = await fetchGet(`${this.url}/api/tags`);
       const parsed: unknown = JSON.parse(res);
       if (typeof parsed === "object" && parsed !== null && "models" in parsed) {
         return {
