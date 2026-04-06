@@ -9,7 +9,13 @@ export const CABIN_FACTORS = {
   first:           4.0,
 } as const;
 
-type SeatClass = keyof typeof CABIN_FACTORS | null | undefined;
+export type SeatClass = keyof typeof CABIN_FACTORS | null | undefined;
+
+/** Narrow a Prisma string | null into the SeatClass union, returning null for unknown values. */
+export function toSeatClass(value: string | null | undefined): SeatClass {
+  if (value === null || value === undefined) return null;
+  return value in CABIN_FACTORS ? (value as keyof typeof CABIN_FACTORS) : null;
+}
 
 export interface Co2Input {
   depLat: number | null;
