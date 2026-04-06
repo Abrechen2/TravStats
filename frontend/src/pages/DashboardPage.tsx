@@ -720,6 +720,10 @@ export default function DashboardPage(): JSX.Element {
               }}
               onEdit={(flight) => setEditingFlight(flight)}
               activeTripId={activeTripId}
+              onResetTrip={() => {
+                setActiveTripId(null);
+                setVisMode("routes");
+              }}
               filterSlot={
                 visMode !== "trips" ? <Filters onFilterChange={handleFilterChange} /> : undefined
               }

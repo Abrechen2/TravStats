@@ -19,6 +19,7 @@ interface MapContainer3DProps {
   minRouteCount?: number;
   filterSlot?: React.ReactNode;
   activeTripId?: string | null;
+  onResetTrip?: () => void;
 }
 
 export default function MapContainer3D({
@@ -31,6 +32,7 @@ export default function MapContainer3D({
   minRouteCount = 1,
   filterSlot,
   activeTripId,
+  onResetTrip,
 }: MapContainer3DProps): JSX.Element {
   const { t } = useTranslation(["common", "map"]);
   const mapTheme = useThemeStore((s) => s.mapTheme);
@@ -94,6 +96,7 @@ export default function MapContainer3D({
             visMode={visMode}
             minRouteCount={minRouteCount}
             activeTripId={activeTripId}
+            onResetTrip={onResetTrip}
           />
         )}
       </div>
