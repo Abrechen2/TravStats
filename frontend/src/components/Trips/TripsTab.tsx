@@ -35,8 +35,8 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
     }
   };
 
-  const handleShowOnMap = (_trip: Trip): void => {
-    addToast("info", "Map view coming soon");
+  const handleShowOnMap = (trip: Trip): void => {
+    addToast("info", `"${trip.name}" – map view coming soon`);
   };
 
   return (
