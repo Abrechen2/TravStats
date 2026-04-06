@@ -27,6 +27,10 @@ export default function FlightEditModal({
     category: flight.category || "",
     seatClass: flight.seatClass || "",
     seatNumber: flight.seatNumber || "",
+    gate: flight.gate || "",
+    terminal: flight.terminal || "",
+    boardingGroup: flight.boardingGroup || "",
+    companions: flight.companions?.join(", ") || "",
     price: flight.price || 0,
     currency: flight.currency || "EUR",
     taxes: flight.taxes || 0,
@@ -56,6 +60,10 @@ export default function FlightEditModal({
       category: flight.category || "",
       seatClass: flight.seatClass || "",
       seatNumber: flight.seatNumber || "",
+      gate: flight.gate || "",
+      terminal: flight.terminal || "",
+      boardingGroup: flight.boardingGroup || "",
+      companions: flight.companions?.join(", ") || "",
       price: flight.price || 0,
       currency: flight.currency || "EUR",
       taxes: flight.taxes || 0,
@@ -88,6 +96,15 @@ export default function FlightEditModal({
         category: (formData.category || undefined) as Flight["category"],
         seatClass: (formData.seatClass || undefined) as Flight["seatClass"],
         seatNumber: formData.seatNumber || undefined,
+        gate: formData.gate || undefined,
+        terminal: formData.terminal || undefined,
+        boardingGroup: formData.boardingGroup || undefined,
+        companions: formData.companions
+          ? formData.companions
+              .split(",")
+              .map((c) => c.trim())
+              .filter(Boolean)
+          : [],
         price: formData.price > 0 ? formData.price : undefined,
         currency: formData.currency as Flight["currency"],
         taxes: formData.taxes > 0 ? formData.taxes : undefined,
@@ -277,6 +294,50 @@ export default function FlightEditModal({
               onChange={(e) => setFormData({ ...formData, seatNumber: e.target.value })}
               className="input"
               placeholder={t("flights:form.placeholders.seat")}
+            />
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="label">{t("flights:form.gate")}</label>
+              <input
+                type="text"
+                value={formData.gate}
+                onChange={(e) => setFormData({ ...formData, gate: e.target.value })}
+                className="input"
+                placeholder={t("flights:form.placeholders.gate")}
+              />
+            </div>
+            <div>
+              <label className="label">{t("flights:form.terminal")}</label>
+              <input
+                type="text"
+                value={formData.terminal}
+                onChange={(e) => setFormData({ ...formData, terminal: e.target.value })}
+                className="input"
+                placeholder={t("flights:form.placeholders.terminal")}
+              />
+            </div>
+            <div>
+              <label className="label">{t("flights:form.boardingGroup")}</label>
+              <input
+                type="text"
+                value={formData.boardingGroup}
+                onChange={(e) => setFormData({ ...formData, boardingGroup: e.target.value })}
+                className="input"
+                placeholder={t("flights:form.placeholders.boardingGroup")}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="label">{t("flights:form.companions")}</label>
+            <input
+              type="text"
+              value={formData.companions}
+              onChange={(e) => setFormData({ ...formData, companions: e.target.value })}
+              className="input"
+              placeholder={t("flights:form.placeholders.companions")}
             />
           </div>
 
