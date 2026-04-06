@@ -64,6 +64,7 @@ interface DeckGLMapProps {
   tripList?: Array<{ id: string; color: string }>;
   flightList?: Flight[];
   activeTripId?: string | null;
+  onResetTrip?: () => void;
 }
 
 export function DeckGLMap({
@@ -75,6 +76,7 @@ export function DeckGLMap({
   tripList,
   flightList,
   activeTripId,
+  onResetTrip,
 }: DeckGLMapProps): JSX.Element {
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
   const mapTheme = useThemeStore((state) => state.mapTheme);
@@ -493,6 +495,7 @@ export function DeckGLMap({
           onClose={() => {
             clearSelection();
             setTooltipVisible(false);
+            onResetTrip?.();
           }}
         />
       )}
