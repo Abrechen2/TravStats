@@ -17,9 +17,11 @@ interface TripRoutesData {
 
 export function createTripRoutesLayer(
   flights: Flight[],
-  trips: Array<{ id: string; color: string }>
+  trips: Array<{ id: string; color: string }>,
+  activeTripId?: string | null
 ): ArcLayer<TripRoutesData> {
   const tripColorMap = new Map(trips.map((t) => [t.id, hexToRgba(t.color)]));
+  const dimmedColor: [number, number, number, number] = [80, 80, 90, 40];
 
   const data: TripRoutesData[] = flights
     .filter(
@@ -33,10 +35,12 @@ export function createTripRoutesLayer(
         f.arrLon != null &&
         f.arrLon !== 0
     )
-    .map((f) => ({
-      flight: f,
-      color: f.tripId ? (tripColorMap.get(f.tripId) ?? DEFAULT_COLOR) : DEFAULT_COLOR,
-    }));
+    .map((f) => {
+      const tripColor = f.tripId ? (tripColorMap.get(f.tripId) ?? DEFAULT_COLOR) : DEFAULT_COLOR;
+      // If an activeTripId is set, dim all other trips
+      const color = activeTripId && f.tripId !== activeTripId ? dimmedColor : tripColor;
+      return { flight: f, color };
+    });
 
   return new ArcLayer<TripRoutesData>({
     id: "trip-routes-layer",
@@ -45,7 +49,7 @@ export function createTripRoutesLayer(
     getTargetPosition: (d) => [d.flight.arrLon!, d.flight.arrLat!],
     getSourceColor: (d) => d.color,
     getTargetColor: (d) => d.color,
-    getWidth: 2,
+    getWidth: (d) => (activeTripId && d.flight.tripId === activeTripId ? 3 : 2),
     pickable: true,
   });
 }
