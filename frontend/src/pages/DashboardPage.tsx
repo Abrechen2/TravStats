@@ -233,12 +233,14 @@ export default function DashboardPage(): JSX.Element {
     loadFlights();
   }, [loadFlights]);
 
-  const handleAddFlight = async (flight: FlightInput) => {
+  const handleAddFlight = async (flight: FlightInput, force = false, hasMoreFlights = false) => {
     try {
-      const result = (await flightsApi.create(flight)) as Flight & {
+      const result = (await flightsApi.create(flight, force)) as Flight & {
         newAchievements?: import("../types").UserAchievement[];
       };
-      setShowFlightForm(false);
+      if (!hasMoreFlights) {
+        setShowFlightForm(false);
+      }
       loadFlights();
 
       // Reload recent flights and total count for sidebar

@@ -22,7 +22,7 @@ import { useFlightForm } from "./FlightForm/useFlightForm";
 import type { FlightInput } from "../types";
 
 interface SimplifiedFlightFormProps {
-  onSubmit: (flight: FlightInput, force?: boolean) => Promise<void>;
+  onSubmit: (flight: FlightInput, force?: boolean, hasMoreFlights?: boolean) => Promise<void>;
   onCancel: () => void;
 }
 

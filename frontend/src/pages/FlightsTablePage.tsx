@@ -109,11 +109,17 @@ export default function FlightsTablePage(): JSX.Element {
     }
   };
 
-  const handleAddFlight = async (flight: FlightInput, force = false): Promise<void> => {
+  const handleAddFlight = async (
+    flight: FlightInput,
+    force = false,
+    hasMoreFlights = false
+  ): Promise<void> => {
     try {
       await flightsApi.create(flight, force);
       addToast("success", t("flights:table.toast.updated"));
-      setShowAddFlight(false);
+      if (!hasMoreFlights) {
+        setShowAddFlight(false);
+      }
       void loadFlights();
     } catch (error) {
       logger.error("Failed to add flight:", error);
