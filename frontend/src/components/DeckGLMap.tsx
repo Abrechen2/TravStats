@@ -15,9 +15,10 @@ import { createTripRoutesLayer } from "./layers/tripRoutesLayer";
 import { TimeSlider } from "./TimeSlider";
 import { useThemeStore } from "../store/themeStore";
 import { MAP_LAYER_COLORS } from "../types/mapTheme";
-import { ScatterplotLayer, TextLayer } from "@deck.gl/layers";
 import { useFlightSelectionStore } from "../store/flightSelectionStore";
-import { computeBbox, arcPosition, easeInOut } from "../utils/mapAnimationHelpers";
+import { computeBbox } from "../utils/mapAnimationHelpers";
+import { usePlaneAnimation } from "../hooks/usePlaneAnimation";
+import { usePulseAnimation } from "../hooks/usePulseAnimation";
 import { MapTooltip } from "./MapTooltip";
 import { TripTooltip } from "./TripTooltip";
 import { AirportTooltip } from "./AirportTooltip";
@@ -148,162 +149,8 @@ export function DeckGLMap({
     map.flyTo({ center: [centerLon, centerLat], zoom, duration: 600, essential: true });
   }, [selectedIds, selectedFlights]);
 
-  // Plane animation
-  const [planePositions, setPlanePositions] = useState<Array<[number, number]>>([]);
-  const animFrameRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (animFrameRef.current !== null) {
-      cancelAnimationFrame(animFrameRef.current);
-      animFrameRef.current = null;
-    }
-    setPlanePositions([]);
-
-    if (selectedFlights.length === 0) return;
-
-    const legs: Array<{ source: [number, number]; target: [number, number] }> = selectedFlights
-      .filter((f) => f.depLon != null && f.depLat != null && f.arrLon != null && f.arrLat != null)
-      .map((f) => ({
-        source: [f.depLon, f.depLat] as [number, number],
-        target: [f.arrLon, f.arrLat] as [number, number],
-      }));
-
-    if (legs.length === 0) return;
-
-    const LEG_DURATION = 1500;
-    const DELAY_AFTER_FLYTO = 500;
-    const totalDuration = legs.length * LEG_DURATION;
-    let startTime: number | null = null;
-
-    const animate = (ts: number): void => {
-      if (startTime === null) startTime = ts;
-      const elapsed = ts - startTime - DELAY_AFTER_FLYTO;
-      if (elapsed < 0) {
-        animFrameRef.current = requestAnimationFrame(animate);
-        return;
-      }
-
-      const positions: Array<[number, number]> = legs.map((leg, i) => {
-        const legStart = i * LEG_DURATION;
-        const legElapsed = elapsed - legStart;
-        if (legElapsed < 0) return leg.source;
-        if (legElapsed >= LEG_DURATION) return leg.target;
-        const t = easeInOut(legElapsed / LEG_DURATION);
-        return arcPosition(leg.source, leg.target, t);
-      });
-
-      setPlanePositions(positions);
-
-      if (elapsed < totalDuration) {
-        animFrameRef.current = requestAnimationFrame(animate);
-      }
-    };
-
-    animFrameRef.current = requestAnimationFrame(animate);
-
-    return () => {
-      if (animFrameRef.current !== null) {
-        cancelAnimationFrame(animFrameRef.current);
-      }
-    };
-  }, [selectedFlights]);
-
-  const planeLayers = useMemo((): Layer[] => {
-    if (planePositions.length === 0) return [];
-    return [
-      new TextLayer({
-        id: "plane-marker",
-        data: planePositions.map((position, i) => ({ position, index: i })),
-        getText: () => "✈",
-        getPosition: (d: { position: [number, number] }) => d.position,
-        getSize: 20,
-        getColor: [255, 255, 255, 230] as [number, number, number, number],
-        getAngle: 0,
-        fontFamily: "Arial, sans-serif",
-        billboard: true,
-      }),
-    ];
-  }, [planePositions]);
-
-  // Airport pulse — smooth sine-wave animation via rAF, throttled to ~30fps to avoid
-  // 60× per second React re-renders (Bug 2)
-  const [pulseTime, setPulseTime] = useState(0);
-  const pulseRafRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (pulseRafRef.current !== null) {
-      cancelAnimationFrame(pulseRafRef.current);
-      pulseRafRef.current = null;
-    }
-    setPulseTime(0);
-    if (selectedFlights.length === 0) return;
-
-    const startTime = performance.now();
-    let lastUpdate = 0;
-    const animate = (ts: number): void => {
-      if (ts - lastUpdate > 33) {
-        lastUpdate = ts;
-        setPulseTime(ts - startTime);
-      }
-      pulseRafRef.current = requestAnimationFrame(animate);
-    };
-    pulseRafRef.current = requestAnimationFrame(animate);
-
-    return () => {
-      if (pulseRafRef.current !== null) cancelAnimationFrame(pulseRafRef.current);
-    };
-  }, [selectedFlights]);
-
-  // Unique dep/arr airport positions for selected flights
-  const pulsePoints = useMemo((): Array<[number, number]> => {
-    const pts = selectedFlights.flatMap((f) => {
-      const res: Array<[number, number]> = [];
-      if (f.depLon != null && f.depLat != null) res.push([f.depLon, f.depLat]);
-      if (f.arrLon != null && f.arrLat != null) res.push([f.arrLon, f.arrLat]);
-      return res;
-    });
-    const seen = new Set<string>();
-    return pts.filter(([lon, lat]) => {
-      const key = `${lon.toFixed(4)},${lat.toFixed(4)}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-  }, [selectedFlights]);
-
-  const pulseLayers = useMemo((): Layer[] => {
-    if (pulsePoints.length === 0) return [];
-
-    // Three rings in pixels (zoom-invariant), each offset by 1/3 period
-    const PERIOD_MS = 1800;
-    const rings: Array<{ radiusPx: number; phaseOffset: number }> = [
-      { radiusPx: 12, phaseOffset: 0 },
-      { radiusPx: 22, phaseOffset: 0.33 },
-      { radiusPx: 36, phaseOffset: 0.66 },
-    ];
-    const data = pulsePoints.map((position) => ({ position }));
-
-    return rings.map(({ radiusPx, phaseOffset }) => {
-      const phase = (((pulseTime / PERIOD_MS + phaseOffset) % 1) + 1) % 1;
-      // sin² gives a smooth 0→1→0 pulse per period
-      const opacity = Math.sin(phase * Math.PI) ** 2;
-      const alpha = Math.round(opacity * 210) as number;
-
-      return new ScatterplotLayer({
-        id: `pulse-ring-${radiusPx}`,
-        data,
-        getPosition: (d: { position: [number, number] }) => d.position,
-        getRadius: radiusPx,
-        radiusUnits: "pixels",
-        getFillColor: [0, 0, 0, 0] as [number, number, number, number],
-        getLineColor: [245, 158, 11, alpha] as [number, number, number, number],
-        stroked: true,
-        filled: false,
-        lineWidthMinPixels: 1.5,
-        pickable: false,
-      });
-    });
-  }, [pulsePoints, pulseTime]);
+  const planeLayers = usePlaneAnimation(selectedFlights);
+  const pulseLayers = usePulseAnimation(selectedFlights);
 
   // ── Tooltip geo anchors ─────────────────────────────────────────────────────
   // All tooltips store geographic coordinates so they reproject correctly on move.
