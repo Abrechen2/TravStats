@@ -24,10 +24,10 @@ model User {
   notificationEmail     String?                 @map("notification_email")
   notifyBefore24h       Boolean                 @default(false) @map("notify_before_24h")
   notifyBefore2h        Boolean                 @default(false) @map("notify_before_2h")
-  resetToken         String?   @map("reset_token")
+  resetToken         String?   @unique @map("reset_token")
   resetTokenExpiry   DateTime? @map("reset_token_expiry")
   mustChangePassword Boolean   @default(false) @map("must_change_password")
-  changeToken        String?   @map("change_token")
+  changeToken        String?   @unique @map("change_token")
   changeTokenExpiry  DateTime? @map("change_token_expiry")
   flights               Flight[]
   userAchievements      UserAchievement[]
