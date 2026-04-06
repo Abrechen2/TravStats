@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import type { VisMode } from "../types/visMode";
 
 import { useAuthStore } from "../store/authStore";
@@ -38,6 +39,8 @@ export default function DashboardPage(): JSX.Element {
   const [, setLoadingMap] = useState(true); // Loading indicator for map
   const [, setLoadingRecent] = useState(true);
   const [visMode, setVisMode] = useState<VisMode>("routes");
+  const [activeTripId, setActiveTripId] = useState<string | null>(null);
+  const location = useLocation();
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
   const [leftOpen, setLeftOpen] = useState(false);
@@ -51,6 +54,17 @@ export default function DashboardPage(): JSX.Element {
     achievementsViewed: false,
     dismissed: false,
   });
+
+  // On mount: read location.state to set initial visMode and activeTripId (e.g. from "Show on Map")
+  useEffect(() => {
+    const state = location.state as { visMode?: string; tripId?: string } | null;
+    if (state?.visMode) {
+      setVisMode(state.visMode as VisMode);
+    }
+    if (state?.tripId) {
+      setActiveTripId(state.tripId);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load onboarding state from server (with localStorage fallback)
   useEffect(() => {
@@ -695,6 +709,7 @@ export default function DashboardPage(): JSX.Element {
                 if (flight) useFlightSelectionStore.getState().setSelection([flight]);
               }}
               onEdit={(flight) => setEditingFlight(flight)}
+              activeTripId={activeTripId}
               filterSlot={
                 visMode !== "trips" ? <Filters onFilterChange={handleFilterChange} /> : undefined
               }

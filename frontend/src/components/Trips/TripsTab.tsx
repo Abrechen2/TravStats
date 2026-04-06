@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { Trip } from "../../types";
 import TripCard from "./TripCard";
 import TripModal from "./TripModal";
@@ -14,6 +15,7 @@ interface TripsTabProps {
 export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.Element {
   const { t } = useTranslation(["trips"]);
   const addToast = useToastStore((s) => s.addToast);
+  const navigate = useNavigate();
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Trip | null>(null);
@@ -36,7 +38,7 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
   };
 
   const handleShowOnMap = (trip: Trip): void => {
-    addToast("info", `"${trip.name}" – map view coming soon`);
+    navigate("/", { state: { visMode: "trip-routes", tripId: trip.id } });
   };
 
   return (

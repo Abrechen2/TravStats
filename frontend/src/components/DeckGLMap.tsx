@@ -61,6 +61,7 @@ interface DeckGLMapProps {
   onEdit?: (flight: Flight) => void;
   tripList?: Array<{ id: string; color: string }>;
   flightList?: Flight[];
+  activeTripId?: string | null;
 }
 
 export function DeckGLMap({
@@ -71,6 +72,7 @@ export function DeckGLMap({
   onEdit,
   tripList,
   flightList,
+  activeTripId,
 }: DeckGLMapProps): JSX.Element {
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
   const mapTheme = useThemeStore((state) => state.mapTheme);
@@ -355,7 +357,7 @@ export function DeckGLMap({
       case "contour":
         return [createContourLayer(flights)];
       case "trip-routes":
-        return [createTripRoutesLayer(flightList ?? [], tripList ?? [])];
+        return [createTripRoutesLayer(flightList ?? [], tripList ?? [], activeTripId)];
       default:
         return [];
     }
@@ -366,6 +368,7 @@ export function DeckGLMap({
     trips,
     tripList,
     flightList,
+    activeTripId,
     currentTime,
     handleFlightClick,
     themeColors,
