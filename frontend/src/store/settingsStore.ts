@@ -59,6 +59,10 @@ export interface NotificationSettings {
   flightReminder: FlightReminder;
 }
 
+export interface FeaturesSettings {
+  enableCostTracking: boolean;
+}
+
 export interface ApiKeyStatus {
   hasKey: boolean;
   isShared: boolean;
@@ -78,6 +82,7 @@ export interface SettingsState {
   defaults: DefaultsSettings;
   map: MapSettings;
   notifications: NotificationSettings;
+  features: FeaturesSettings;
   apiKeys: ApiKeysStatus | null;
   setProfile: SettingsUpdater<ProfileSettings>;
   setDisplay: SettingsUpdater<DisplaySettings>;
@@ -85,6 +90,7 @@ export interface SettingsState {
   setDefaults: SettingsUpdater<DefaultsSettings>;
   setMap: SettingsUpdater<MapSettings>;
   setNotifications: SettingsUpdater<NotificationSettings>;
+  setFeatures: SettingsUpdater<FeaturesSettings>;
   setApiKeys: (status: ApiKeysStatus) => void;
   loadApiKeysStatus: () => Promise<void>;
   resetSettings: () => void;
@@ -100,6 +106,7 @@ const defaultSettings: Omit<
   | "setDefaults"
   | "setMap"
   | "setNotifications"
+  | "setFeatures"
   | "setApiKeys"
   | "loadApiKeysStatus"
   | "resetSettings"
@@ -137,6 +144,9 @@ const defaultSettings: Omit<
   notifications: {
     flightReminder: "24h",
   },
+  features: {
+    enableCostTracking: true,
+  },
   apiKeys: null,
 };
 
@@ -168,6 +178,7 @@ export const useSettingsStore = create<SettingsState>()(
         set((state) => ({
           notifications: { ...state.notifications, ...updates },
         })),
+      setFeatures: (updates) => set((state) => ({ features: { ...state.features, ...updates } })),
       setApiKeys: (status) =>
         set(() => ({
           apiKeys: status,

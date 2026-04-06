@@ -254,6 +254,11 @@
     "description": "Verwalte Benutzer, Einladungen und Systemeinstellungen",
     "openAdminPanel": "Admin-Panel öffnen"
   },
+  "features": {
+    "title": "Funktionen",
+    "costTracking": "Kostenerfassung",
+    "costTrackingDesc": "Preis- und Kostenfelder in Formularen anzeigen und Business-Statistiken auswerten."
+  },
   "autoSaved": {
     "title": "Automatisch gespeichert",
     "description": "Alle Einstellungen werden lokal gespeichert und sind sofort aktiv."

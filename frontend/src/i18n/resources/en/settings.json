@@ -254,6 +254,11 @@
     "description": "Manage users, invitations, and system settings",
     "openAdminPanel": "Open Admin Panel"
   },
+  "features": {
+    "title": "Features",
+    "costTracking": "Cost Tracking",
+    "costTrackingDesc": "Show price and cost fields in forms and enable business cost statistics."
+  },
   "autoSaved": {
     "title": "Auto-saved",
     "description": "All settings are saved locally and are immediately active."

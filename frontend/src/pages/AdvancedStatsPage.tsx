@@ -30,7 +30,7 @@ import PageTransition from "../components/PageTransition";
 
 export default function AdvancedStatsPage(): JSX.Element {
   const { t } = useTranslation(["stats", "common"]);
-  const { units } = useSettingsStore();
+  const { units, features } = useSettingsStore();
   const { user } = useAuthStore();
   const addToast = useToastStore((state) => state.addToast);
   const [flights, setFlights] = useState<Flight[]>([]);
@@ -569,7 +569,9 @@ export default function AdvancedStatsPage(): JSX.Element {
           {funStats && <StatsFunSection funStats={funStats} />}
 
           {/* Business Statistics */}
-          {businessStats && <StatsBusinessSection businessStats={businessStats} />}
+          {features.enableCostTracking && businessStats && (
+            <StatsBusinessSection businessStats={businessStats} />
+          )}
 
           {/* Unique Statistics */}
           <StatsUniqueSection uniqueStats={uniqueStats} />
