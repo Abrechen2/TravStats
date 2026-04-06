@@ -140,21 +140,31 @@ export default function AdminPasswordResetModal({
             </label>
 
             {generatedPassword ? (
-              <div
-                className="rounded-lg p-3 flex items-center justify-between gap-2"
-                style={{ background: "var(--bg-elevated)" }}
-              >
-                <code className="text-sm font-mono" style={{ color: "var(--text-primary)" }}>
-                  {generatedPassword}
-                </code>
+              <div className="space-y-2">
+                <div
+                  className="rounded-lg p-3 flex items-center justify-between gap-2"
+                  style={{ background: "var(--bg-elevated)" }}
+                >
+                  <code className="text-sm font-mono" style={{ color: "var(--text-primary)" }}>
+                    {generatedPassword}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={handleCopy}
+                    className="text-xs px-3 py-1 rounded btn-secondary shrink-0"
+                  >
+                    {copied
+                      ? t("admin:users.resetPasswordModal.generate.copied")
+                      : t("admin:users.resetPasswordModal.generate.copy")}
+                  </button>
+                </div>
                 <button
                   type="button"
-                  onClick={handleCopy}
-                  className="text-xs px-3 py-1 rounded btn-secondary shrink-0"
+                  onClick={() => setGeneratedPassword("")}
+                  className="text-xs w-full text-center hover:underline"
+                  style={{ color: "var(--text-muted)" }}
                 >
-                  {copied
-                    ? t("admin:users.resetPasswordModal.generate.copied")
-                    : t("admin:users.resetPasswordModal.generate.copy")}
+                  {t("admin:users.resetPasswordModal.generate.regenerate")}
                 </button>
               </div>
             ) : (
@@ -164,7 +174,9 @@ export default function AdminPasswordResetModal({
                 disabled={generateLoading}
                 className="btn-primary w-full py-2"
               >
-                {generateLoading ? "..." : t("admin:users.resetPasswordModal.generate.button")}
+                {generateLoading
+                  ? t("admin:users.resetPasswordModal.generate.generating")
+                  : t("admin:users.resetPasswordModal.generate.button")}
               </button>
             )}
           </div>
