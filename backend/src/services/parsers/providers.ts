@@ -15,6 +15,7 @@ import { getManualParser } from './vision/manualParser';
 
 // Import text parsers
 import { getRegexParser } from './text/regexParser';
+import { getOllamaTextParser } from './text/ollamaTextParser';
 
 /**
  * Get vision parser instance by provider
@@ -33,10 +34,12 @@ export function getVisionParserInstance(provider: VisionProvider): IVisionParser
 /**
  * Get text parser instance by provider
  */
-export function getTextParserInstance(provider: TextProvider): ITextParser {
+export function getTextParserInstance(provider: TextProvider, config?: ParserConfig): ITextParser {
   switch (provider) {
     case 'regex':
       return getRegexParser();
+    case 'ollama':
+      return getOllamaTextParser(config?.ollamaUrl, config?.ollamaModel);
     default:
       throw new Error(`Unknown text provider: ${provider}`);
   }
@@ -135,7 +138,7 @@ export async function getTextParser(
 
   // Try each provider in chain
   for (const provider of config.textFallbacks) {
-    const parser = getTextParserInstance(provider);
+    const parser = getTextParserInstance(provider, config);
     const availability = await checkProviderAvailability(parser);
 
     if (availability.available) {
