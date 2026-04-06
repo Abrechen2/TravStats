@@ -4,6 +4,32 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.12.0-beta] - 2026-04-06
+
+### Added
+- **Leere Karten-Ansicht** — Neue Nutzer sehen jetzt eine Hinweiskarte mit
+  direktem „Flug hinzufügen"-Button statt eines leeren Globus.
+- **ICAO-Code im Flughafen-Tooltip** — Der Klick auf ein Flughafen-Label
+  zeigt nun zusätzlich den ICAO-Code als Badge neben dem IATA-Code an.
+- **Gate, Terminal, Boarding-Gruppe & Begleiter im Edit-Modal** — Diese
+  vier Felder sind jetzt vollständig im Flug-Bearbeitungs-Dialog editierbar.
+
+### Fixed
+- **Sprachunterstützung** — Hardcodierte deutsche Texte in Karten-Tooltip,
+  Trips-Tab und Flug-Zähler durch i18n-Keys ersetzt; tote ContextualHint-
+  Referenz entfernt. Alle Texte reagieren jetzt korrekt auf die Spracheinstellung.
+- **Flug-Umlaut-Fehler** — „¨e" (Prettier-Bug) im Plural „Flüge" behoben.
+- **Highlight-Modus verlassen** — Klick auf leere Kartenfläche beendet
+  Trip- oder Flug-Highlight zuverlässig.
+
+### Changed
+- **Tooltip-Performance** — `onMove`-Handler per requestAnimationFrame
+  gedrosselt; Tooltip-Neuberechnung läuft maximal einmal pro Frame statt
+  bis zu 60× pro Sekunde.
+- **Code-Qualität** — Plane- und Puls-Animation aus DeckGLMap in eigene
+  Hooks extrahiert (DeckGLMap: 582 → 430 Zeilen); TooltipContainer und
+  formatDuration als gemeinsame Primitive bereitgestellt.
+
 ## [0.11.0-beta] - 2026-04-06
 
 ### Added
