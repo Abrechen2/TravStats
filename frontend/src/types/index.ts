@@ -97,7 +97,7 @@ export interface Booking {
   tripId: string | null;
   pnr: string | null;
   price: number | null;
-  currency: string | null;
+  currency: "EUR" | "USD" | "GBP" | "CHF" | null;
 }
 
 export interface Trip {
