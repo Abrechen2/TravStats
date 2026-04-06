@@ -731,6 +731,32 @@ export default function DashboardPage(): JSX.Element {
           </ErrorBoundary>
         </div>
 
+        {/* Empty state — shown when user has no flights yet */}
+        {totalFlightsCount === 0 && !loadingOnboarding && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
+            <div
+              className="flex flex-col items-center gap-4 px-8 py-6 rounded-2xl text-center pointer-events-auto"
+              style={{
+                background: "rgba(15,23,42,0.85)",
+                border: "1px solid var(--color-border)",
+                backdropFilter: "blur(12px)",
+                maxWidth: "340px",
+              }}
+            >
+              <span style={{ fontSize: "2.5rem" }}>✈️</span>
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                {t("dashboard:noFlights")}
+              </p>
+              <button
+                onClick={() => setShowFlightForm(true)}
+                className="btn-primary text-sm px-4 py-2"
+              >
+                {t("dashboard:addFlight")}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Floating Top-Left Controls: sidebar toggles */}
         <div className="absolute top-3 left-3 z-20 flex gap-2">
           <button
