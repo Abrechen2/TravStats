@@ -66,6 +66,16 @@ export default function DashboardPage(): JSX.Element {
     }
   }, []); // intentionally empty — only run on mount to read initial navigation state
 
+  // Auto-select all flights of the highlighted trip so airport rings + tooltip appear automatically.
+  // Only fires when a specific trip is active in trip-routes mode (e.g. from "Show on Map").
+  useEffect(() => {
+    if (visMode !== "trip-routes" || !activeTripId) return;
+    const tripFlights = allFlights.filter((f) => f.tripId === activeTripId);
+    if (tripFlights.length > 0) {
+      useFlightSelectionStore.getState().setSelection(tripFlights);
+    }
+  }, [activeTripId, visMode, allFlights]);
+
   // Load onboarding state from server (with localStorage fallback)
   useEffect(() => {
     const loadOnboardingState = async () => {
