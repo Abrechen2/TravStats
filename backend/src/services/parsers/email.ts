@@ -124,6 +124,37 @@ export async function parseEmail(
     }
   }
 
+  // Determine if Ollama should be tried before templates
+  // When Ollama is explicitly configured (ollamaUrl set), it takes priority over templates.
+  // Templates become the fallback when Ollama is unavailable or returns no results.
+  const ollamaConfigured = !!config.ollamaUrl && config.textFallbacks.includes('ollama');
+
+  if (ollamaConfigured) {
+    // Try Ollama first (before templates) when explicitly configured
+    try {
+      const ollamaParser = getTextParserInstance('ollama', config);
+      const ollamaAvail = await checkProviderAvailability(ollamaParser);
+      if (ollamaAvail.available) {
+        logger.info('[Parser Factory] Ollama configured — trying LLM before templates');
+        const ollamaFlights = await ollamaParser.parseEmail(subject, cleanedText, html);
+        if (ollamaFlights && ollamaFlights.length > 0) {
+          const finalFlights = applyEmailRegexPostProcessing(ollamaFlights, subject, cleanedText, html);
+          logger.info({ flightCount: finalFlights.length }, '[Parser Factory] Ollama succeeded — skipping templates');
+          return {
+            flights: finalFlights,
+            provider: 'ollama' as const,
+            fallbackUsed: false,
+          };
+        }
+        logger.info('[Parser Factory] Ollama returned no flights — falling back to templates');
+      } else {
+        logger.info(`[Parser Factory] Ollama unavailable (${ollamaAvail.reason}) — falling back to templates`);
+      }
+    } catch (err) {
+      logger.warn(`[Parser Factory] Ollama failed — falling back to templates: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
   // Template-Parser (HTML-selector based templates)
   const templateParser = new TemplateParser();
   const templateAvail = await templateParser.checkAvailability();
@@ -142,13 +173,15 @@ export async function parseEmail(
     }
   }
 
-  // Regex provider chain
-  const providerChain: TextProvider[] = config.textFallbacks;
+  // Regex provider chain (ollama already tried above if configured, skip it here)
+  const providerChain: TextProvider[] = ollamaConfigured
+    ? config.textFallbacks.filter((p) => p !== 'ollama')
+    : config.textFallbacks;
 
   // Try each provider in order
   for (const provider of providerChain) {
     try {
-      const parser = getTextParserInstance(provider);
+      const parser = getTextParserInstance(provider, config);
 
       // Check availability first
       const availability = await checkProviderAvailability(parser);
