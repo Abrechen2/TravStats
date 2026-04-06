@@ -105,7 +105,8 @@ export function createRoutesLayers(
   onFlightClick?: (flightId: string) => void,
   themeColors?: MapLayerColors,
   arcHeight: number = 1,
-  selectedIds: string[] = []
+  selectedIds: string[] = [],
+  onAirportClick?: (iata: string, screenX: number, screenY: number) => void
 ): Layer[] {
   const { arcs, points } = buildRouteData(flights, minRouteCount, themeColors);
   const dotRgb = themeColors?.airportDot ?? ([232, 160, 69] as [number, number, number]);
@@ -203,7 +204,12 @@ export function createRoutesLayers(
     getFillColor: [...dotRgb, 220] as [number, number, number, number],
     stroked: false,
     opacity: airportOpacity,
-    pickable: false,
+    pickable: !!onAirportClick,
+    onClick: onAirportClick
+      ? ({ object, x, y }) => {
+          if (object?.iata) onAirportClick(object.iata, x, y);
+        }
+      : undefined,
   });
 
   // IATA code labels — appear above each marker
@@ -223,6 +229,12 @@ export function createRoutesLayers(
     billboard: true,
     characterSet: "auto",
     opacity: airportOpacity,
+    pickable: !!onAirportClick,
+    onClick: onAirportClick
+      ? ({ object, x, y }) => {
+          if (object?.iata) onAirportClick(object.iata, x, y);
+        }
+      : undefined,
     parameters: { depthCompare: "always" as const },
   });
 

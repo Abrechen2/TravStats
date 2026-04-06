@@ -20,6 +20,7 @@ import { useFlightSelectionStore } from "../store/flightSelectionStore";
 import { computeBbox, arcPosition, easeInOut } from "../utils/mapAnimationHelpers";
 import { MapTooltip } from "./MapTooltip";
 import { TripTooltip } from "./TripTooltip";
+import { AirportTooltip } from "./AirportTooltip";
 
 const INITIAL_VIEW_STATE: MapViewState = {
   longitude: 10,
@@ -377,14 +378,32 @@ export function DeckGLMap({
     return () => clearTimeout(timer);
   }, [selectedFlights, highlightMode, recomputeTooltipPos]);
 
+  // Airport tooltip state
+  const [airportTooltip, setAirportTooltip] = useState<{
+    iata: string;
+    screenX: number;
+    screenY: number;
+  } | null>(null);
+
   // Wrap onFlightClick so that a deck.gl layer click sets the guard ref BEFORE the
   // Map onClick fires and would otherwise clear the selection immediately (Bug 1).
   const handleFlightClick = useCallback(
     (flightId: string): void => {
       deckClickedRef.current = true;
+      setAirportTooltip(null);
       onFlightClick?.(flightId);
     },
     [onFlightClick]
+  );
+
+  const handleAirportClick = useCallback(
+    (iata: string, screenX: number, screenY: number): void => {
+      deckClickedRef.current = true;
+      clearSelection();
+      setTooltipVisible(false);
+      setAirportTooltip({ iata, screenX, screenY });
+    },
+    [clearSelection]
   );
 
   const layers = useMemo((): Layer[] => {
@@ -396,7 +415,8 @@ export function DeckGLMap({
           handleFlightClick,
           themeColors,
           0.3,
-          selectedIds
+          selectedIds,
+          handleAirportClick
         );
       case "heatmap":
         return [createHeatmapLayer(flights)];
@@ -414,7 +434,8 @@ export function DeckGLMap({
           tripList ?? [],
           activeTripId,
           handleFlightClick,
-          selectedIds
+          selectedIds,
+          handleAirportClick
         );
       default:
         return [];
@@ -429,6 +450,7 @@ export function DeckGLMap({
     activeTripId,
     currentTime,
     handleFlightClick,
+    handleAirportClick,
     themeColors,
     selectedIds,
   ]);
@@ -457,6 +479,7 @@ export function DeckGLMap({
             return;
           }
           clearSelection();
+          setAirportTooltip(null);
         }}
       >
         <DeckGLOverlay layers={[...layers, ...pulseLayers, ...planeLayers]} effects={effects} />
@@ -513,6 +536,16 @@ export function DeckGLMap({
             clearSelection();
             setTooltipVisible(false);
           }}
+        />
+      )}
+
+      {airportTooltip && (
+        <AirportTooltip
+          iata={airportTooltip.iata}
+          screenX={airportTooltip.screenX}
+          screenY={airportTooltip.screenY}
+          flights={flightList ?? []}
+          onClose={() => setAirportTooltip(null)}
         />
       )}
     </div>
