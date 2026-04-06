@@ -541,11 +541,15 @@ model Booking {
   price    Float?
   currency String? @default("EUR")
 
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   trip    Trip?   @relation(fields: [tripId], references: [id], onDelete: SetNull)
   flights Flight[]
 
   @@index([userId])
+  @@index([userId, createdAt])
   @@index([tripId])
   @@map("bookings")
 }
