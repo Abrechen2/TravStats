@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
 import { calculateDistance, calculateFlightDuration } from "../lib/geo";
 import { useLocale } from "../hooks/useLocale";
+import { formatDuration } from "../lib/formatters";
+import { TooltipContainer } from "./TooltipContainer";
 import type { Flight } from "../types";
 
 interface MapTooltipProps {
@@ -11,12 +12,6 @@ interface MapTooltipProps {
   onClose: () => void;
 }
 
-function formatDuration(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = Math.round(minutes % 60);
-  return `${h}h ${m}m`;
-}
-
 export function MapTooltip({
   flight,
   screenX,
@@ -25,11 +20,6 @@ export function MapTooltip({
   onClose,
 }: MapTooltipProps): JSX.Element {
   const locale = useLocale();
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    const t = setTimeout(() => setVisible(true), 50);
-    return () => clearTimeout(t);
-  }, []);
 
   const distanceKm =
     flight.routeDistance != null
@@ -65,25 +55,7 @@ export function MapTooltip({
   ].filter((x): x is string => x !== null && x !== undefined);
 
   return (
-    <div
-      style={{
-        position: "absolute",
-        left: screenX,
-        top: screenY,
-        transform: "translate(-50%, -100%) translateY(-12px)",
-        opacity: visible ? 1 : 0,
-        transition: "opacity 0.2s ease",
-        zIndex: 100,
-        pointerEvents: "auto",
-        background: "rgba(15,23,42,0.95)",
-        border: "1px solid var(--accent)",
-        borderRadius: "8px",
-        padding: "0.75rem 1rem",
-        minWidth: "220px",
-        backdropFilter: "blur(12px)",
-        boxShadow: "0 4px 24px rgba(0,0,0,0.4)",
-      }}
-    >
+    <TooltipContainer screenX={screenX} screenY={screenY} minWidth="220px">
       <div className="font-mono font-bold text-sm" style={{ color: "var(--accent)" }}>
         {flight.depIata ?? flight.depIcao ?? "?"} → {flight.arrIata ?? flight.arrIcao ?? "?"}
       </div>
@@ -118,6 +90,6 @@ export function MapTooltip({
           ✕
         </button>
       </div>
-    </div>
+    </TooltipContainer>
   );
 }
