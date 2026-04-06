@@ -41,7 +41,7 @@ export interface ParsedBooking {
 
 export interface ParseResult {
   flights: ParsedBooking[];
-  parserUsed: 'regex';
+  parserUsed: 'regex' | 'ollama';
   ollamaAvailable: boolean;
   fallbackUsed?: boolean;
 }
@@ -95,10 +95,12 @@ export async function parseBookingEmail(
   });
 
   // Map to legacy format for backward compatibility
+  const ollamaAvailable = config.textFallbacks.includes('ollama');
+
   return {
     flights: result.flights,
-    parserUsed: 'regex',
-    ollamaAvailable: false,
+    parserUsed: result.provider as 'regex' | 'ollama',
+    ollamaAvailable,
     fallbackUsed: result.fallbackUsed,
   };
 }
