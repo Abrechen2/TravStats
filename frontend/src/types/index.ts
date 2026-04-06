@@ -85,6 +85,43 @@ export interface Flight {
   actualArrival?: string;
   delayMinutes?: number;
   co2Kg?: number;
+  // Trips
+  tripId?: string | null;
+  bookingId?: string | null;
+  trip?: { id: string; name: string; color: string } | null;
+}
+
+export interface Booking {
+  id: string;
+  userId: string;
+  tripId: string | null;
+  pnr: string | null;
+  price: number | null;
+  currency: string | null;
+}
+
+export interface Trip {
+  id: string;
+  userId: string;
+  name: string;
+  description: string | null;
+  color: string;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { flights: number };
+  bookings?: Booking[];
+  flights?: Pick<
+    Flight,
+    | "id"
+    | "depIata"
+    | "arrIata"
+    | "departureTime"
+    | "arrivalTime"
+    | "depLat"
+    | "depLon"
+    | "arrLat"
+    | "arrLon"
+  >[];
 }
 
 export interface FlightInput {

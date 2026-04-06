@@ -17,3 +17,10 @@ export * from "./notifications";
 export * from "./pendingUpdates";
 export * from "./backup";
 export * from "./template";
+export { tripsApi } from "./trips";
+export type {
+  CreateTripInput,
+  UpdateTripInput,
+  AssignFlightsInput,
+  CreateBookingInput,
+} from "./trips";
