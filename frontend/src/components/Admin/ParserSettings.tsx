@@ -4,6 +4,8 @@ export interface ParserSettingsData {
   allowUserApiKeys: boolean;
   defaultVisionParser: string;
   defaultTextParser: string;
+  ollamaUrl: string | null;
+  ollamaModel: string | null;
 }
 
 interface ParserSettingsProps {
@@ -11,6 +13,8 @@ interface ParserSettingsProps {
   savingParsers: boolean;
   onSave: () => void;
   onParserSettingsChange: (settings: ParserSettingsData) => void;
+  onTestOllama: () => void;
+  ollamaTestState: { status: "idle" | "loading" | "ok" | "error" | "warn"; message?: string };
 }
 
 export default function ParserSettings({
@@ -18,6 +22,8 @@ export default function ParserSettings({
   savingParsers,
   onSave,
   onParserSettingsChange,
+  onTestOllama,
+  ollamaTestState,
 }: ParserSettingsProps): JSX.Element {
   const { t } = useTranslation(["admin", "common"]);
 
@@ -77,6 +83,83 @@ export default function ParserSettings({
               <p className="text-xs text-[var(--text-muted)]">Email booking parsing</p>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Ollama LLM Parser */}
+      <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+            {t("admin:parserSettings.ollama.title")}
+          </h3>
+          {ollamaTestState.status !== "idle" && (
+            <span
+              className={`text-xs font-medium px-2 py-1 rounded-full ${
+                ollamaTestState.status === "ok"
+                  ? "bg-green-100 text-green-700"
+                  : ollamaTestState.status === "warn"
+                    ? "bg-yellow-100 text-yellow-700"
+                    : ollamaTestState.status === "error"
+                      ? "bg-red-100 text-red-700"
+                      : "bg-gray-100 text-gray-500"
+              }`}
+            >
+              {ollamaTestState.status === "ok" && t("admin:parserSettings.ollama.statusConnected")}
+              {ollamaTestState.status === "warn" && t("admin:parserSettings.ollama.modelNotFound")}
+              {ollamaTestState.status === "error" &&
+                t("admin:parserSettings.ollama.statusDisconnected")}
+              {ollamaTestState.status === "loading" && t("admin:parserSettings.ollama.testing")}
+            </span>
+          )}
+        </div>
+        <p className="text-sm text-[var(--text-muted)] mb-4">
+          {t("admin:parserSettings.ollama.description")}
+        </p>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-medium text-[var(--text-muted)] mb-1">
+              {t("admin:parserSettings.ollama.urlLabel")}
+            </label>
+            <input
+              type="url"
+              value={parserSettings.ollamaUrl ?? ""}
+              onChange={(e) =>
+                onParserSettingsChange({ ...parserSettings, ollamaUrl: e.target.value || null })
+              }
+              placeholder={t("admin:parserSettings.ollama.urlPlaceholder")}
+              className="w-full px-3 py-2 text-sm border border-[var(--color-border)] rounded-lg bg-[var(--bg-base)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-[var(--text-muted)] mb-1">
+              {t("admin:parserSettings.ollama.modelLabel")}
+            </label>
+            <input
+              type="text"
+              value={parserSettings.ollamaModel ?? ""}
+              onChange={(e) =>
+                onParserSettingsChange({ ...parserSettings, ollamaModel: e.target.value || null })
+              }
+              placeholder={t("admin:parserSettings.ollama.modelPlaceholder")}
+              className="w-full px-3 py-2 text-sm border border-[var(--color-border)] rounded-lg bg-[var(--bg-base)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+          {ollamaTestState.message && (
+            <p className="text-xs text-[var(--text-muted)] mt-1">{ollamaTestState.message}</p>
+          )}
+          <button
+            onClick={onTestOllama}
+            disabled={
+              ollamaTestState.status === "loading" ||
+              !parserSettings.ollamaUrl ||
+              !parserSettings.ollamaModel
+            }
+            className="mt-1 px-3 py-1.5 text-sm border border-[var(--color-border)] rounded-lg hover:bg-[var(--bg-base)] disabled:opacity-50 transition"
+          >
+            {ollamaTestState.status === "loading"
+              ? t("admin:parserSettings.ollama.testing")
+              : t("admin:parserSettings.ollama.testButton")}
+          </button>
         </div>
       </div>
 
