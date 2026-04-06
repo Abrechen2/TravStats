@@ -75,7 +75,32 @@
     },
     "actions": {
       "deactivate": "Deaktivieren",
-      "activate": "Aktivieren"
+      "activate": "Aktivieren",
+      "resetPassword": "Passwort zurücksetzen"
+    },
+    "resetPasswordModal": {
+      "title": "Passwort zurücksetzen",
+      "tabs": {
+        "generate": "Generieren",
+        "set": "Manuell setzen"
+      },
+      "generate": {
+        "description": "Generiert ein zufälliges temporäres Passwort (12 Zeichen).",
+        "button": "Temporäres Passwort generieren",
+        "mustChange": "Muss Passwort beim nächsten Login ändern",
+        "tempPasswordLabel": "Temporäres Passwort (einmalig anzeigen):",
+        "copy": "Kopieren",
+        "copied": "Kopiert!"
+      },
+      "set": {
+        "description": "Setzt das Passwort des Benutzers direkt.",
+        "passwordLabel": "Neues Passwort",
+        "mustChange": "Muss Passwort beim nächsten Login ändern",
+        "submit": "Passwort setzen",
+        "submitting": "Wird gesetzt..."
+      },
+      "close": "Schließen",
+      "success": "Passwort erfolgreich zurückgesetzt."
     }
   },
   "invitations": {

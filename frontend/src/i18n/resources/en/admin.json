@@ -75,7 +75,32 @@
     },
     "actions": {
       "deactivate": "Deactivate",
-      "activate": "Activate"
+      "activate": "Activate",
+      "resetPassword": "Reset Password"
+    },
+    "resetPasswordModal": {
+      "title": "Reset Password",
+      "tabs": {
+        "generate": "Generate",
+        "set": "Set Manually"
+      },
+      "generate": {
+        "description": "Generates a random temporary password (12 characters).",
+        "button": "Generate Temporary Password",
+        "mustChange": "Must change password on next login",
+        "tempPasswordLabel": "Temporary Password (shown once):",
+        "copy": "Copy",
+        "copied": "Copied!"
+      },
+      "set": {
+        "description": "Sets the user's password directly.",
+        "passwordLabel": "New Password",
+        "mustChange": "Must change password on next login",
+        "submit": "Set Password",
+        "submitting": "Setting..."
+      },
+      "close": "Close",
+      "success": "Password reset successfully."
     }
   },
   "invitations": {
