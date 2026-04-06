@@ -19,6 +19,7 @@ import { ScatterplotLayer, TextLayer } from "@deck.gl/layers";
 import { useFlightSelectionStore } from "../store/flightSelectionStore";
 import { computeBbox, arcPosition, easeInOut } from "../utils/mapAnimationHelpers";
 import { MapTooltip } from "./MapTooltip";
+import { TripTooltip } from "./TripTooltip";
 
 const INITIAL_VIEW_STATE: MapViewState = {
   longitude: 10,
@@ -85,7 +86,7 @@ export function DeckGLMap({
   const deckClickedRef = useRef(false);
 
   // Store subscription
-  const { selectedIds, selectedFlights, clearSelection } = useFlightSelectionStore();
+  const { selectedIds, selectedFlights, highlightMode, clearSelection } = useFlightSelectionStore();
 
   // Auto-pitch: 3D layers need pitch > 0 to be visible
   useEffect(() => {
@@ -313,18 +314,38 @@ export function DeckGLMap({
       const map = mapRef.current?.getMap();
       if (!map || selectedFlights.length === 0) return;
 
-      const f = selectedFlights[0];
-      if (f.depLon == null || f.arrLon == null || f.depLat == null || f.arrLat == null) return;
+      if (highlightMode === "group") {
+        // Trip highlight: position at geographic center of all flight midpoints
+        const lons: number[] = [];
+        const lats: number[] = [];
+        for (const f of selectedFlights) {
+          if (f.depLon != null && f.depLat != null) {
+            lons.push(f.depLon);
+            lats.push(f.depLat);
+          }
+          if (f.arrLon != null && f.arrLat != null) {
+            lons.push(f.arrLon);
+            lats.push(f.arrLat);
+          }
+        }
+        if (lons.length === 0) return;
+        const centerLon = lons.reduce((s, v) => s + v, 0) / lons.length;
+        const centerLat = lats.reduce((s, v) => s + v, 0) / lats.length;
+        const screenPt = map.project([centerLon, centerLat]);
+        setTooltipPos({ x: screenPt.x, y: screenPt.y });
+      } else {
+        // Single flight: position at arc midpoint
+        const f = selectedFlights[0];
+        if (f.depLon == null || f.arrLon == null || f.depLat == null || f.arrLat == null) return;
+        const screenPt = map.project([(f.depLon + f.arrLon) / 2, (f.depLat + f.arrLat) / 2]);
+        setTooltipPos({ x: screenPt.x, y: screenPt.y });
+      }
 
-      const midLon = (f.depLon + f.arrLon) / 2;
-      const midLat = (f.depLat + f.arrLat) / 2;
-      const screenPt = map.project([midLon, midLat]);
-      setTooltipPos({ x: screenPt.x, y: screenPt.y });
       setTooltipVisible(true);
     }, 1800);
 
     return () => clearTimeout(timer);
-  }, [selectedFlights]);
+  }, [selectedFlights, highlightMode]);
 
   // Wrap onFlightClick so that a deck.gl layer click sets the guard ref BEFORE the
   // Map onClick fires and would otherwise clear the selection immediately (Bug 1).
@@ -436,7 +457,19 @@ export function DeckGLMap({
         </div>
       )}
 
-      {tooltipVisible && selectedFlights.length > 0 && (
+      {tooltipVisible && highlightMode === "group" && selectedFlights.length > 1 && (
+        <TripTooltip
+          flights={selectedFlights}
+          screenX={tooltipPos.x}
+          screenY={tooltipPos.y}
+          onClose={() => {
+            clearSelection();
+            setTooltipVisible(false);
+          }}
+        />
+      )}
+
+      {tooltipVisible && highlightMode !== "group" && selectedFlights.length > 0 && (
         <MapTooltip
           flight={selectedFlights[0]}
           screenX={tooltipPos.x}
