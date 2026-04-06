@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
 import { calculateDistance, calculateFlightDuration } from "../lib/geo";
 import { useLocale } from "../hooks/useLocale";
+import { formatDuration } from "../lib/formatters";
+import { TooltipContainer } from "./TooltipContainer";
 import type { Flight } from "../types";
 
 interface TripTooltipProps {
@@ -43,21 +44,8 @@ function formatDateRange(sorted: Flight[], locale: string): string {
   return `${d1.toLocaleDateString(locale, opts(true))} – ${d2.toLocaleDateString(locale, opts(true))}`;
 }
 
-function formatDuration(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = Math.round(minutes % 60);
-  if (h === 0) return `${m}min`;
-  if (m === 0) return `${h}h`;
-  return `${h}h ${m}min`;
-}
-
 export function TripTooltip({ flights, screenX, screenY, onClose }: TripTooltipProps): JSX.Element {
   const locale = useLocale();
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    const t = setTimeout(() => setVisible(true), 50);
-    return () => clearTimeout(t);
-  }, []);
 
   const sorted = [...flights].sort(
     (a, b) => new Date(a.departureTime).getTime() - new Date(b.departureTime).getTime()
@@ -90,25 +78,12 @@ export function TripTooltip({ flights, screenX, screenY, onClose }: TripTooltipP
     statsRow2.push(`${Math.round(totalDistanceKm).toLocaleString(locale)} km`);
 
   return (
-    <div
-      style={{
-        position: "absolute",
-        left: screenX,
-        top: screenY,
-        transform: "translate(-50%, -100%) translateY(-12px)",
-        opacity: visible ? 1 : 0,
-        transition: "opacity 0.2s ease",
-        zIndex: 100,
-        pointerEvents: "auto",
-        background: "rgba(15,23,42,0.95)",
-        border: `1px solid ${tripColor}`,
-        borderRadius: "8px",
-        padding: "0.75rem 1rem",
-        minWidth: "260px",
-        maxWidth: "340px",
-        backdropFilter: "blur(12px)",
-        boxShadow: "0 4px 24px rgba(0,0,0,0.4)",
-      }}
+    <TooltipContainer
+      screenX={screenX}
+      screenY={screenY}
+      borderColor={tripColor}
+      minWidth="260px"
+      maxWidth="340px"
     >
       {/* Trip name */}
       {tripName && (
@@ -156,6 +131,6 @@ export function TripTooltip({ flights, screenX, screenY, onClose }: TripTooltipP
           ✕
         </button>
       </div>
-    </div>
+    </TooltipContainer>
   );
 }

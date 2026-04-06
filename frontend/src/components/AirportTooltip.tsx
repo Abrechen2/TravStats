@@ -1,7 +1,8 @@
-import { useEffect, useState, useMemo } from "react";
+import { useMemo } from "react";
 import type { Flight } from "../types";
 import { calculateDistance } from "../lib/geo";
 import { useLocale } from "../hooks/useLocale";
+import { TooltipContainer } from "./TooltipContainer";
 
 interface AirportTooltipProps {
   iata: string;
@@ -24,11 +25,6 @@ export function AirportTooltip({
   onClose,
 }: AirportTooltipProps): JSX.Element {
   const locale = useLocale();
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    const t = setTimeout(() => setVisible(true), 50);
-    return () => clearTimeout(t);
-  }, []);
 
   const stats = useMemo(() => {
     let name: string | null = null;
@@ -80,25 +76,12 @@ export function AirportTooltip({
   const total = stats.departures + stats.arrivals;
 
   return (
-    <div
-      style={{
-        position: "absolute",
-        left: screenX,
-        top: screenY,
-        transform: "translate(-50%, -100%) translateY(-12px)",
-        opacity: visible ? 1 : 0,
-        transition: "opacity 0.2s ease",
-        zIndex: 100,
-        pointerEvents: "auto",
-        background: "rgba(15,23,42,0.95)",
-        border: "1px solid rgba(232,160,69,0.6)",
-        borderRadius: "8px",
-        padding: "0.75rem 1rem",
-        minWidth: "220px",
-        maxWidth: "300px",
-        backdropFilter: "blur(12px)",
-        boxShadow: "0 4px 24px rgba(0,0,0,0.4)",
-      }}
+    <TooltipContainer
+      screenX={screenX}
+      screenY={screenY}
+      borderColor="rgba(232,160,69,0.6)"
+      minWidth="220px"
+      maxWidth="300px"
     >
       {/* IATA + name */}
       <div className="flex items-baseline gap-2 mb-1">
@@ -171,6 +154,6 @@ export function AirportTooltip({
           ✕
         </button>
       </div>
-    </div>
+    </TooltipContainer>
   );
 }
