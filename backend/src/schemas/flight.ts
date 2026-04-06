@@ -91,6 +91,17 @@ const baseFlightSchema = z.object({
   tags: z.array(z.string().max(40)).optional(),
   companions: z.array(z.string().max(100)).max(50).optional().default([]),
   receiptUrl: receiptUrlValidator,
+  // Boarding pass / email import fields
+  seatNumber: z.string().max(10).optional(),
+  boardingGroup: z.string().max(20).optional(),
+  gate: z.string().max(20).optional(),
+  terminal: z.string().max(20).optional(),
+  bookingReference: z.string().max(20).optional(),
+  ticketNumber: z.string().max(30).optional(),
+  baggageAllowance: z.string().max(50).optional(),
+  frequentFlyerNumber: z.string().max(30).optional(),
+  bookingClassLetter: z.string().max(5).optional(),
+  coPassengers: z.array(z.string().max(100)).max(50).optional(),
 });
 
 export const createFlightSchema = baseFlightSchema.refine(

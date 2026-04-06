@@ -57,4 +57,12 @@ export const flightsApi = {
     const { data } = await api.get<FlightLookupResult>("/flights/lookup", { params });
     return data;
   },
+
+  createBatch: async (flights: FlightInput[]): Promise<{ flights: Flight[]; count: number }> => {
+    const { data } = await api.post<{ flights: Flight[]; count: number }>(
+      "/flights/batch",
+      flights
+    );
+    return data;
+  },
 };

@@ -4,6 +4,8 @@ import { prisma } from '../db';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { createFlightSchema, updateFlightSchema, flightQuerySchema } from '../schemas/flight';
 import type { FlightQueryInput } from '../schemas/flight';
+import logger from '../utils/logger';
+import { TRIP_COLORS } from '../schemas/trip';
 import { AppError } from '../middleware/errorHandler';
 import { calculateDistance, generateArcPoints } from '../utils/geo';
 import { checkAndUpdateAchievements } from '../utils/achievements';
@@ -309,6 +311,17 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
         tags: data.tags ?? [],
         companions: data.companions ?? [],
         receiptUrl: data.receiptUrl,
+        // Boarding pass / email import fields
+        seatNumber: data.seatNumber,
+        boardingGroup: data.boardingGroup,
+        gate: data.gate,
+        terminal: data.terminal,
+        bookingReference: data.bookingReference,
+        ticketNumber: data.ticketNumber,
+        baggageAllowance: data.baggageAllowance,
+        frequentFlyerNumber: data.frequentFlyerNumber,
+        bookingClassLetter: data.bookingClassLetter,
+        coPassengers: data.coPassengers ?? [],
         // Data source tracking
         dataSource: 'manual',
         lastModifiedBy: 'user',
@@ -321,10 +334,7 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
       try {
         newAchievements = await checkAndUpdateAchievements(userId);
       } catch (err: unknown) {
-        // Import logger locally to avoid circular dependencies
-        import('../utils/logger').then(({ default: logger }) => {
-          logger.error({ type: 'achievement_check_failed', userId, error: err instanceof Error ? err.message : 'Unknown error' });
-        });
+        logger.error({ type: 'achievement_check_failed', userId, error: err instanceof Error ? err.message : 'Unknown error' });
       }
     }
 
@@ -332,6 +342,160 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
       flight,
       newAchievements: newAchievements.length > 0 ? newAchievements : undefined
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Create multiple flights in a batch — auto-creates Trip+Booking for shared PNRs
+router.post('/batch', flightCreationLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId!;
+
+    const rawBody = req.body;
+    if (!Array.isArray(rawBody) || rawBody.length === 0 || rawBody.length > 20) {
+      res.status(400).json({ error: 'Request body must be an array of 1–20 flights' });
+      return;
+    }
+
+    // Validate each flight entry
+    const parsedFlights = rawBody.map((entry: unknown) => createFlightSchema.parse(entry));
+
+    // Create all flights
+    const createdFlights = await Promise.all(
+      parsedFlights.map(async (data) => {
+        const enriched = await enrichFlightAirports({
+          departure: {
+            iata: data.departure.iata ?? undefined,
+            icao: data.departure.icao ?? undefined,
+            name: data.departure.name ?? undefined,
+            lat: data.departure.lat,
+            lon: data.departure.lon,
+          },
+          arrival: {
+            iata: data.arrival.iata ?? undefined,
+            icao: data.arrival.icao ?? undefined,
+            name: data.arrival.name ?? undefined,
+            lat: data.arrival.lat,
+            lon: data.arrival.lon,
+          },
+        });
+
+        return prisma.flight.create({
+          data: {
+            userId,
+            airline: data.airline,
+            operatingAirline: data.operatingAirline,
+            flightNumber: data.flightNumber,
+            callsign: data.callsign,
+            aircraft: data.aircraft,
+            depIcao: enriched.departure.icao,
+            depIata: enriched.departure.iata,
+            depName: enriched.departure.name,
+            depLat: enriched.departure.lat,
+            depLon: enriched.departure.lon,
+            arrIcao: enriched.arrival.icao,
+            arrIata: enriched.arrival.iata,
+            arrName: enriched.arrival.name,
+            arrLat: enriched.arrival.lat,
+            arrLon: enriched.arrival.lon,
+            departureTime: new Date(data.departureTime),
+            arrivalTime: new Date(data.arrivalTime),
+            actualDeparture: data.actualDeparture ? new Date(data.actualDeparture) : null,
+            actualArrival:   data.actualArrival   ? new Date(data.actualArrival)   : null,
+            delayMinutes:
+              data.actualDeparture
+                ? Math.round(
+                    (new Date(data.actualDeparture).getTime() - new Date(data.departureTime).getTime()) / 60000
+                  )
+                : null,
+            co2Kg: calculateCo2Kg({
+              depLat: enriched.departure.lat,
+              depLon: enriched.departure.lon,
+              arrLat: enriched.arrival.lat,
+              arrLon: enriched.arrival.lon,
+              seatClass: toSeatClass(data.seatClass),
+            }),
+            status: data.status,
+            notes: data.notes,
+            price: data.price,
+            taxes: data.taxes,
+            fees: data.fees,
+            currency: data.currency,
+            category: data.category,
+            tags: data.tags ?? [],
+            companions: data.companions ?? [],
+            receiptUrl: data.receiptUrl,
+            seatNumber: data.seatNumber,
+            boardingGroup: data.boardingGroup,
+            gate: data.gate,
+            terminal: data.terminal,
+            bookingReference: data.bookingReference,
+            ticketNumber: data.ticketNumber,
+            baggageAllowance: data.baggageAllowance,
+            frequentFlyerNumber: data.frequentFlyerNumber,
+            bookingClassLetter: data.bookingClassLetter,
+            coPassengers: data.coPassengers ?? [],
+            dataSource: 'email_import',
+            lastModifiedBy: 'user',
+          },
+        });
+      })
+    );
+
+    // Group by bookingReference to auto-create Trips+Bookings
+    type CreatedFlight = (typeof createdFlights)[number];
+    const pnrGroups = new Map<string, CreatedFlight[]>();
+    for (const f of createdFlights) {
+      if (f.bookingReference) {
+        const group = pnrGroups.get(f.bookingReference) ?? [];
+        group.push(f);
+        pnrGroups.set(f.bookingReference, group);
+      }
+    }
+
+    for (const [pnr, groupFlights] of pnrGroups.entries()) {
+      if (groupFlights.length < 2) continue;
+
+      const count = await prisma.trip.count({ where: { userId } });
+      const color = TRIP_COLORS[count % TRIP_COLORS.length];
+
+      const sorted = [...groupFlights].sort(
+        (a, b) => a.departureTime.getTime() - b.departureTime.getTime()
+      );
+      const origin = sorted[0]?.depIata ?? '?';
+      const dest = sorted[Math.ceil(sorted.length / 2) - 1]?.arrIata ?? '?';
+      const month = sorted[0]?.departureTime.toLocaleDateString('en', { month: 'short', year: 'numeric' });
+      const name = `${origin} – ${dest} · ${month}`;
+
+      const trip = await prisma.trip.create({ data: { userId, name, color } });
+      const booking = await prisma.booking.create({
+        data: { userId, tripId: trip.id, pnr },
+      });
+
+      const flightIds = groupFlights.map((f) => f.id);
+      await prisma.flight.updateMany({
+        where: { id: { in: flightIds } },
+        data: { tripId: trip.id, bookingId: booking.id },
+      });
+
+      logger.info(
+        { tripId: trip.id, pnr, flightCount: flightIds.length },
+        '[Batch] Auto-created trip from PNR group'
+      );
+    }
+
+    // Check achievements for any flown flights
+    const hasFlown = parsedFlights.some((f) => f.status === 'flown');
+    if (hasFlown) {
+      try {
+        await checkAndUpdateAchievements(userId);
+      } catch (err: unknown) {
+        logger.error({ type: 'achievement_check_failed', userId, error: err instanceof Error ? err.message : 'Unknown error' });
+      }
+    }
+
+    res.status(201).json({ flights: createdFlights, count: createdFlights.length });
   } catch (error) {
     next(error);
   }
@@ -644,10 +808,7 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
       try {
         newAchievements = await checkAndUpdateAchievements(userId);
       } catch (err: unknown) {
-        // Import logger locally to avoid circular dependencies
-        import('../utils/logger').then(({ default: logger }) => {
-          logger.error({ type: 'achievement_check_failed', userId, error: err instanceof Error ? err.message : 'Unknown error' });
-        });
+        logger.error({ type: 'achievement_check_failed', userId, error: err instanceof Error ? err.message : 'Unknown error' });
       }
     }
 

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Airport, airportsApi } from "../../lib/api";
+import { flightsApi } from "../../lib/api/flights";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { useSettingsStore } from "../../store/settingsStore";
@@ -128,6 +129,9 @@ export function useFlightForm(
 
   // Track if arrival date has been set manually
   const arrivalDateSetRef = useRef(false);
+
+  // Accumulates confirmed flight inputs during multi-flight email import
+  const confirmedFlightsRef = useRef<FlightInput[]>([]);
 
   // Auto-suggest arrival time based on estimated flight duration
   useEffect(() => {
@@ -403,28 +407,57 @@ export function useFlightForm(
     setBookingClassLetter(sourceFlight?.bookingClassLetter);
     setCoPassengers(sourceFlight?.coPassengers ?? []);
 
+    const enrichedFlight: FlightInput = {
+      ...flightData,
+      baggageAllowance: sourceFlight?.baggageAllowance,
+      frequentFlyerNumber: sourceFlight?.frequentFlyerNumber,
+      bookingClassLetter: sourceFlight?.bookingClassLetter,
+      coPassengers: sourceFlight?.coPassengers,
+    };
+
     const nextIndex = currentFlightIndex + 1;
     const hasMoreFlights = nextIndex < parsedFlights.length;
+    const isMultiFlight = parsedFlights.length > 1;
 
-    await onSubmit(
-      {
-        ...flightData,
-        baggageAllowance: sourceFlight?.baggageAllowance,
-        frequentFlyerNumber: sourceFlight?.frequentFlyerNumber,
-        bookingClassLetter: sourceFlight?.bookingClassLetter,
-        coPassengers: sourceFlight?.coPassengers,
-      },
-      false,
-      hasMoreFlights
-    );
+    if (isMultiFlight) {
+      // Accumulate and send as batch on last flight
+      confirmedFlightsRef.current = [...confirmedFlightsRef.current, enrichedFlight];
 
-    if (hasMoreFlights) {
-      setCurrentFlightIndex(nextIndex);
+      if (hasMoreFlights) {
+        // Advance to next flight without calling API yet
+        setCurrentFlightIndex(nextIndex);
+      } else {
+        // Last flight — send the whole batch
+        setLoading(true);
+        setError("");
+        try {
+          await flightsApi.createBatch(confirmedFlightsRef.current);
+        } catch (err: unknown) {
+          const errorObj = err as { response?: { data?: { error?: string } } };
+          setError(errorObj.response?.data?.error ?? t("errors:saveFailed"));
+          setLoading(false);
+          return;
+        } finally {
+          setLoading(false);
+        }
+        confirmedFlightsRef.current = [];
+        setShowFlightReview(false);
+        setParsedFlights([]);
+        setCurrentFlightIndex(0);
+        onCancel();
+      }
     } else {
-      setShowFlightReview(false);
-      setParsedFlights([]);
-      setCurrentFlightIndex(0);
-      onCancel();
+      // Single flight — use the existing onSubmit callback
+      await onSubmit(enrichedFlight, false, hasMoreFlights);
+
+      if (hasMoreFlights) {
+        setCurrentFlightIndex(nextIndex);
+      } else {
+        setShowFlightReview(false);
+        setParsedFlights([]);
+        setCurrentFlightIndex(0);
+        onCancel();
+      }
     }
   };
 
