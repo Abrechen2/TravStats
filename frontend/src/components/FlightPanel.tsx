@@ -216,7 +216,7 @@ export function FlightPanel({
                           {trip.name}
                         </div>
                         <div className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
-                          {stats ? `${stats.count} Flug${stats.count !== 1 ? "¨e" : ""}` : "–"}
+                          {stats ? `${stats.count} ${stats.count !== 1 ? "Flüge" : "Flug"}` : "–"}
                           {year ? ` · ${year}` : ""}
                           {km ? ` · ${km}` : ""}
                         </div>
