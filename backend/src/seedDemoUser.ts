@@ -456,6 +456,128 @@ const flightRoutes = [
   { dep: 'DXB', arr: 'MUC', airline: 'Emirates', flightNum: '053', duration: 6 },
 ];
 
+async function createDemoTrips(userId: string): Promise<void> {
+  // Skip if trips already exist
+  const existing = await prisma.trip.count({ where: { userId } });
+  if (existing > 0) {
+    console.log(`   Found ${existing} existing trips (skipping)`);
+    return;
+  }
+
+  // Trip definitions: each specifies a color, optional booking, and route pairs to find
+  const tripDefs = [
+    {
+      name: 'New York Business Trip',
+      color: '#38bdf8',
+      pnr: 'LH4Z9X',
+      price: 1490,
+      currency: 'EUR',
+      routePairs: [
+        { depIata: 'MUC', arrIata: 'JFK' },
+        { depIata: 'JFK', arrIata: 'MUC' },
+      ],
+    },
+    {
+      name: 'Tokyo · Japan',
+      color: '#f472b6',
+      pnr: 'LH7K2M',
+      price: 2240,
+      currency: 'EUR',
+      routePairs: [
+        { depIata: 'MUC', arrIata: 'HND' },
+      ],
+    },
+    {
+      name: 'Dubai & Singapur',
+      color: '#fb923c',
+      pnr: 'EK3T7P',
+      price: 1870,
+      currency: 'EUR',
+      routePairs: [
+        { depIata: 'MUC', arrIata: 'DXB' },
+        { depIata: 'DXB', arrIata: 'MUC' },
+      ],
+    },
+    {
+      name: 'Skandinavien Tour',
+      color: '#818cf8',
+      // No booking — manual trip grouping
+      pnr: undefined,
+      price: undefined,
+      currency: undefined,
+      routePairs: [
+        { depIata: 'MUC', arrIata: 'CPH' },
+        { depIata: 'MUC', arrIata: 'ARN' },
+        { depIata: 'MUC', arrIata: 'OSL' },
+      ],
+    },
+    {
+      name: 'Barcelona Wochenende',
+      color: '#34d399',
+      pnr: 'LH9W5R',
+      price: 219,
+      currency: 'EUR',
+      routePairs: [
+        { depIata: 'MUC', arrIata: 'BCN' },
+      ],
+    },
+  ];
+
+  let createdCount = 0;
+
+  for (const def of tripDefs) {
+    // Find one unused flight per route pair
+    const flightIds: string[] = [];
+    for (const pair of def.routePairs) {
+      const flight = await prisma.flight.findFirst({
+        where: { userId, depIata: pair.depIata, arrIata: pair.arrIata, tripId: null },
+        orderBy: { departureTime: 'asc' },
+        select: { id: true },
+      });
+      if (flight) flightIds.push(flight.id);
+    }
+
+    if (flightIds.length === 0) {
+      console.log(`   Skipping "${def.name}" — no matching flights found`);
+      continue;
+    }
+
+    // Create trip
+    const trip = await prisma.trip.create({
+      data: { userId, name: def.name, color: def.color },
+    });
+
+    // Create booking (only if price/PNR defined)
+    let bookingId: string | null = null;
+    if (def.pnr !== undefined) {
+      const booking = await prisma.booking.create({
+        data: {
+          userId,
+          tripId: trip.id,
+          pnr: def.pnr,
+          price: def.price ?? null,
+          currency: def.currency ?? 'EUR',
+        },
+      });
+      bookingId = booking.id;
+    }
+
+    // Link flights to trip (and optionally booking)
+    await prisma.flight.updateMany({
+      where: { id: { in: flightIds } },
+      data: {
+        tripId: trip.id,
+        ...(bookingId ? { bookingId } : {}),
+      },
+    });
+
+    console.log(`   ✅ "${def.name}" — ${flightIds.length} flight(s)${def.pnr ? `, PNR ${def.pnr}` : ' (manual)'}`);
+    createdCount++;
+  }
+
+  console.log(`   Created ${createdCount} trips`);
+}
+
 async function seedDemoUser() {
   console.log('🔐 Creating demo user with sample flights...');
 
@@ -577,6 +699,10 @@ async function seedDemoUser() {
     // Create pattern suggestions
     console.log('🔍 Creating pattern suggestions...');
     await createPatternSuggestions(demoUser.id);
+
+    // Create demo trips
+    console.log('🗺  Creating demo trips...');
+    await createDemoTrips(demoUser.id);
 
     console.log('');
     console.log('✅ Demo user setup complete!');
