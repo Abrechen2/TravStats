@@ -1,7 +1,10 @@
+import { useState } from "react";
 import { format } from "date-fns";
+import { AnimatePresence } from "framer-motion";
 import InlineHelp from "../Help/InlineHelp";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { AdminUser } from "./SystemInfo";
+import AdminPasswordResetModal from "./AdminPasswordResetModal";
 
 interface UserManagementProps {
   users: AdminUser[];
@@ -13,6 +16,9 @@ export default function UserManagement({
   onToggleUserActive,
 }: UserManagementProps): JSX.Element {
   const { t } = useTranslation(["admin", "common"]);
+  const [resetModalUser, setResetModalUser] = useState<{ id: string; username: string } | null>(
+    null
+  );
 
   return (
     <div className="space-y-4">
@@ -109,12 +115,28 @@ export default function UserManagement({
                       ? t("admin:users.actions.deactivate")
                       : t("admin:users.actions.activate")}
                   </button>
+                  {" · "}
+                  <button
+                    onClick={() => setResetModalUser({ id: user.id, username: user.username })}
+                    className="text-orange-500 hover:text-orange-400"
+                  >
+                    {t("admin:users.actions.resetPassword")}
+                  </button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      <AnimatePresence>
+        {resetModalUser && (
+          <AdminPasswordResetModal
+            userId={resetModalUser.id}
+            username={resetModalUser.username}
+            onClose={() => setResetModalUser(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
