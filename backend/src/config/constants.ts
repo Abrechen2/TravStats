@@ -90,6 +90,10 @@ export const RATE_LIMITS = {
   // Settings change rate limits (prevent enumeration/abuse)
   SETTINGS_WINDOW_MS: 15 * 60 * 1000, // 15 minutes
   SETTINGS_MAX_REQUESTS: 60, // 60 changes per 15 minutes
+
+  // Password reset rate limits
+  PASSWORD_RESET_WINDOW_MS: 15 * 60 * 1000, // 15 minutes
+  PASSWORD_RESET_MAX: 5,
 } as const;
 
 // ========== DATABASE & QUERY LIMITS ==========
