@@ -305,42 +305,47 @@ export function DeckGLMap({
     });
   }, [pulsePoints, pulseTime]);
 
-  // Tooltip state
+  // ── Tooltip geo anchors ─────────────────────────────────────────────────────
+  // All tooltips store geographic coordinates so they reproject correctly on move.
+
+  // Flight / trip tooltip
   const [tooltipVisible, setTooltipVisible] = useState(false);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-
-  // Geographic anchor points for the tooltip — stored so we can reproject on map move
   const tooltipGeoRef = useRef<{
     mode: "group" | "single";
     points: Array<[number, number]>; // [lon, lat]
   } | null>(null);
 
-  const recomputeTooltipPos = useCallback(() => {
-    const map = mapRef.current?.getMap();
-    const anchor = tooltipGeoRef.current;
-    if (!map || !anchor) return;
+  // Airport tooltip
+  const [airportIata, setAirportIata] = useState<string | null>(null);
+  const [airportPos, setAirportPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const airportGeoRef = useRef<[number, number] | null>(null); // [lon, lat]
 
-    if (anchor.mode === "group") {
-      const screenPts = anchor.points.map((p) => map.project(p));
-      const minX = Math.min(...screenPts.map((p) => p.x));
-      const maxX = Math.max(...screenPts.map((p) => p.x));
-      const minY = Math.min(...screenPts.map((p) => p.y));
-      setTooltipPos({ x: (minX + maxX) / 2, y: minY });
-    } else {
-      const pt = map.project(anchor.points[0]);
-      setTooltipPos({ x: pt.x, y: pt.y });
-    }
-  }, []);
-
-  // Recompute tooltip position on every map move (pan / zoom)
-  useEffect(() => {
+  // Reproject all active tooltips — called on every map move/zoom via onMove
+  const recomputeAllPositions = useCallback(() => {
     const map = mapRef.current?.getMap();
     if (!map) return;
-    map.on("move", recomputeTooltipPos);
-    return () => {
-      map.off("move", recomputeTooltipPos);
-    };
-  }, [recomputeTooltipPos]);
+
+    const anchor = tooltipGeoRef.current;
+    if (anchor) {
+      if (anchor.mode === "group") {
+        const screenPts = anchor.points.map((p) => map.project(p));
+        const minX = Math.min(...screenPts.map((p) => p.x));
+        const maxX = Math.max(...screenPts.map((p) => p.x));
+        const minY = Math.min(...screenPts.map((p) => p.y));
+        setTooltipPos({ x: (minX + maxX) / 2, y: minY });
+      } else {
+        const pt = map.project(anchor.points[0]);
+        setTooltipPos({ x: pt.x, y: pt.y });
+      }
+    }
+
+    const airportAnchor = airportGeoRef.current;
+    if (airportAnchor) {
+      const pt = map.project(airportAnchor);
+      setAirportPos({ x: pt.x, y: pt.y });
+    }
+  }, []);
 
   useEffect(() => {
     setTooltipVisible(false);
@@ -352,8 +357,6 @@ export function DeckGLMap({
       if (!map || selectedFlights.length === 0) return;
 
       if (highlightMode === "group") {
-        // Trip highlight: position above the bounding box of all airports so the card
-        // doesn't overlap the arc lines. Store geo points → project to top-center.
         const pts: Array<[number, number]> = [];
         for (const f of selectedFlights) {
           if (f.depLon != null && f.depLat != null) pts.push([f.depLon, f.depLat]);
@@ -362,7 +365,6 @@ export function DeckGLMap({
         if (pts.length === 0) return;
         tooltipGeoRef.current = { mode: "group", points: pts };
       } else {
-        // Single flight: position at arc midpoint
         const f = selectedFlights[0];
         if (f.depLon == null || f.arrLon == null || f.depLat == null || f.arrLat == null) return;
         tooltipGeoRef.current = {
@@ -371,37 +373,39 @@ export function DeckGLMap({
         };
       }
 
-      recomputeTooltipPos();
+      recomputeAllPositions();
       setTooltipVisible(true);
     }, 1800);
 
     return () => clearTimeout(timer);
-  }, [selectedFlights, highlightMode, recomputeTooltipPos]);
-
-  // Airport tooltip state
-  const [airportTooltip, setAirportTooltip] = useState<{
-    iata: string;
-    screenX: number;
-    screenY: number;
-  } | null>(null);
+  }, [selectedFlights, highlightMode, recomputeAllPositions]);
 
   // Wrap onFlightClick so that a deck.gl layer click sets the guard ref BEFORE the
   // Map onClick fires and would otherwise clear the selection immediately (Bug 1).
   const handleFlightClick = useCallback(
     (flightId: string): void => {
       deckClickedRef.current = true;
-      setAirportTooltip(null);
+      setAirportIata(null);
+      airportGeoRef.current = null;
       onFlightClick?.(flightId);
     },
     [onFlightClick]
   );
 
   const handleAirportClick = useCallback(
-    (iata: string, screenX: number, screenY: number): void => {
+    (iata: string, lon: number, lat: number): void => {
       deckClickedRef.current = true;
       clearSelection();
       setTooltipVisible(false);
-      setAirportTooltip({ iata, screenX, screenY });
+      tooltipGeoRef.current = null;
+      airportGeoRef.current = [lon, lat];
+      setAirportIata(iata);
+      // Initial screen position
+      const map = mapRef.current?.getMap();
+      if (map) {
+        const pt = map.project([lon, lat]);
+        setAirportPos({ x: pt.x, y: pt.y });
+      }
     },
     [clearSelection]
   );
@@ -472,6 +476,7 @@ export function DeckGLMap({
         initialViewState={INITIAL_VIEW_STATE}
         mapStyle={isDarkMode ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
         style={{ position: "absolute", inset: "0" }}
+        onMove={recomputeAllPositions}
         onClick={() => {
           // If deck.gl handled this click (e.g. arc click), ignore the Map event (Bug 1)
           if (deckClickedRef.current) {
@@ -479,7 +484,8 @@ export function DeckGLMap({
             return;
           }
           clearSelection();
-          setAirportTooltip(null);
+          setAirportIata(null);
+          airportGeoRef.current = null;
         }}
       >
         <DeckGLOverlay layers={[...layers, ...pulseLayers, ...planeLayers]} effects={effects} />
@@ -539,13 +545,16 @@ export function DeckGLMap({
         />
       )}
 
-      {airportTooltip && (
+      {airportIata && (
         <AirportTooltip
-          iata={airportTooltip.iata}
-          screenX={airportTooltip.screenX}
-          screenY={airportTooltip.screenY}
+          iata={airportIata}
+          screenX={airportPos.x}
+          screenY={airportPos.y}
           flights={flightList ?? []}
-          onClose={() => setAirportTooltip(null)}
+          onClose={() => {
+            setAirportIata(null);
+            airportGeoRef.current = null;
+          }}
         />
       )}
     </div>

@@ -106,7 +106,7 @@ export function createRoutesLayers(
   themeColors?: MapLayerColors,
   arcHeight: number = 1,
   selectedIds: string[] = [],
-  onAirportClick?: (iata: string, screenX: number, screenY: number) => void
+  onAirportClick?: (iata: string, lon: number, lat: number) => void
 ): Layer[] {
   const { arcs, points } = buildRouteData(flights, minRouteCount, themeColors);
   const dotRgb = themeColors?.airportDot ?? ([232, 160, 69] as [number, number, number]);
@@ -206,8 +206,8 @@ export function createRoutesLayers(
     opacity: airportOpacity,
     pickable: !!onAirportClick,
     onClick: onAirportClick
-      ? ({ object, x, y }) => {
-          if (object?.iata) onAirportClick(object.iata, x, y);
+      ? ({ object }) => {
+          if (object?.iata) onAirportClick(object.iata, object.position[0], object.position[1]);
         }
       : undefined,
   });
@@ -231,8 +231,8 @@ export function createRoutesLayers(
     opacity: airportOpacity,
     pickable: !!onAirportClick,
     onClick: onAirportClick
-      ? ({ object, x, y }) => {
-          if (object?.iata) onAirportClick(object.iata, x, y);
+      ? ({ object }) => {
+          if (object?.iata) onAirportClick(object.iata, object.position[0], object.position[1]);
         }
       : undefined,
     parameters: { depthCompare: "always" as const },
