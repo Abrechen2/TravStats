@@ -241,6 +241,8 @@
     "cleanupFailed": "Fehler beim Aufräumen der Logs",
     "patternApplyError": "Fehler beim Anwenden des Patterns",
     "autoApplyError": "Fehler beim automatischen Anwenden",
+    "ollamaTestSuccess": "Ollama erreichbar – {{count}} Modell(e) gefunden",
+    "ollamaTestFailed": "Verbindung zu Ollama fehlgeschlagen",
     "enabled": "aktiviert",
     "disabled": "deaktiviert"
   },
@@ -323,6 +325,22 @@
     "visionParser": "Standard Vision-Parser (Bordkarte)",
     "textParser": "Standard Text-Parser (E-Mail)",
     "autoHelp": "Auto-Modus wählt automatisch den besten verfügbaren Parser",
+    "ollama": {
+      "title": "Ollama LLM Parser",
+      "description": "Ollama läuft lokal oder im Netzwerk und analysiert Buchungsbestätigungen mit einem LLM. Ideal für Multi-Stopp und komplexe E-Mails.",
+      "urlLabel": "Ollama URL",
+      "urlPlaceholder": "http://192.168.178.155:11434",
+      "modelLabel": "Modell",
+      "modelPlaceholder": "qwen2.5:14b",
+      "testButton": "Verbindung testen",
+      "testing": "Wird getestet…",
+      "statusConnected": "Verbunden",
+      "statusDisconnected": "Nicht erreichbar",
+      "modelNotFound": "Modell nicht gefunden",
+      "modelsAvailable": "Verfügbare Modelle",
+      "connectionSuccess": "Ollama erreichbar",
+      "connectionFailed": "Verbindung fehlgeschlagen"
+    },
     "help": {
       "title": "Parser-Konfiguration",
       "description": "Konfiguriert die Standard-Parser für alle Benutzer.",

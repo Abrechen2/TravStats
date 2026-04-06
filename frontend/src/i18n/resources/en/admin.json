@@ -241,6 +241,8 @@
     "cleanupFailed": "Failed to cleanup logs",
     "patternApplyError": "Error applying pattern",
     "autoApplyError": "Error auto-applying patterns",
+    "ollamaTestSuccess": "Ollama reachable – {{count}} model(s) found",
+    "ollamaTestFailed": "Ollama connection failed",
     "enabled": "enabled",
     "disabled": "disabled"
   },
@@ -323,6 +325,22 @@
     "visionParser": "Default Vision Parser (Boarding Pass)",
     "textParser": "Default Text Parser (Email)",
     "autoHelp": "Auto mode automatically selects the best available parser",
+    "ollama": {
+      "title": "Ollama LLM Parser",
+      "description": "Ollama runs locally or on your network and analyzes booking confirmations with an LLM. Ideal for multi-stop and complex emails.",
+      "urlLabel": "Ollama URL",
+      "urlPlaceholder": "http://192.168.178.155:11434",
+      "modelLabel": "Model",
+      "modelPlaceholder": "qwen2.5:14b",
+      "testButton": "Test Connection",
+      "testing": "Testing…",
+      "statusConnected": "Connected",
+      "statusDisconnected": "Not reachable",
+      "modelNotFound": "Model not found",
+      "modelsAvailable": "Available models",
+      "connectionSuccess": "Ollama reachable",
+      "connectionFailed": "Connection failed"
+    },
     "help": {
       "title": "Parser Configuration",
       "description": "Configures the default parsers used for all users.",
