@@ -486,6 +486,7 @@ export function DeckGLMap({
           clearSelection();
           setAirportIata(null);
           airportGeoRef.current = null;
+          onResetTrip?.();
         }}
       >
         <DeckGLOverlay layers={[...layers, ...pulseLayers, ...planeLayers]} effects={effects} />
