@@ -893,6 +893,11 @@ export default function DashboardPage(): JSX.Element {
           onDuplicate={handleDuplicateFlight}
           onDelete={handleDeleteFlight}
           onAddFlight={() => setShowFlightForm(true)}
+          allFlights={allFlights}
+          onTripSelect={(tripId) => {
+            setActiveTripId(tripId);
+            setVisMode("trip-routes");
+          }}
         />
 
         {/* Right Overlay Panel: Stats */}
