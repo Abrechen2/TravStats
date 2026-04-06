@@ -6,7 +6,6 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { flightsApi, tripsApi } from "../lib/api";
-import ContextualHint from "../components/Onboarding/ContextualHint";
 import NavigationBar from "../components/NavigationBar";
 import type { Flight, FlightFilters, FlightInput, Trip } from "../types";
 import Filters from "../components/Filters";
@@ -240,13 +239,6 @@ export default function FlightsTablePage(): JSX.Element {
         {/* Main Content */}
         <div className="container mx-auto px-4 py-6 max-w-7xl">
           <div className="flex items-center justify-between mb-4">
-            <ContextualHint
-              id="flights-table-page-hint"
-              title={t("flights:table.welcome")}
-              message={t("flights:table.description")}
-              linkTo="/"
-              linkText={t("flights:table.backToDashboard")}
-            />
             <button
               className="btn-primary flex items-center gap-2 whitespace-nowrap"
               onClick={() => setShowAddFlight(true)}
