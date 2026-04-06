@@ -4,6 +4,26 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.13.0-beta] - 2026-04-06
+
+### Added
+- **Password Reset per E-Mail** — Nutzer können über "Passwort vergessen?" auf der Login-Seite
+  einen Reset-Link anfordern. Der Link wird per E-Mail zugestellt (nur wenn SMTP konfiguriert).
+- **Admin-seitige Passwort-Zurücksetzung** — Admins können in der Benutzerverwaltung das
+  Passwort eines Nutzers zurücksetzen: entweder ein zufälliges temporäres Passwort generieren
+  (einmalig sichtbar, mit Kopierfunktion) oder ein eigenes Passwort direkt setzen. Optional
+  kann "Muss Passwort beim nächsten Login ändern" aktiviert werden.
+- **Erzwungener Passwort-Wechsel** — Wenn ein Admin das Flag setzt, muss der Nutzer beim
+  nächsten Login ein neues Passwort festlegen, bevor er auf die App zugreifen kann.
+- **Rate Limiting auf Reset-Endpunkten** — Passwort-Reset-Anfragen sind auf 5 Requests
+  pro 15 Minuten begrenzt, um Missbrauch zu verhindern.
+
+### Fixed
+- **Route für erzwungenen Passwort-Wechsel** — Nach dem Login wurde fälschlicherweise
+  `/force-change-password` statt `/change-password` aufgerufen; korrigiert.
+- **Unique-Constraint auf Token-Feldern** — Reset- und Change-Token erhalten einen
+  Datenbank-Unique-Index, der Single-Use-Semantik auf DB-Ebene erzwingt.
+
 ## [0.12.2-beta] - 2026-04-06
 
 ### Security
