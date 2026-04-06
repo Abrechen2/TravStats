@@ -37,6 +37,7 @@
     "columns": "3D Columns",
     "trips": "Trips",
     "contour": "Contour",
+    "tripRoutes": "Trip Routes",
     "label": "Visualization"
   },
   "timeSlider": {

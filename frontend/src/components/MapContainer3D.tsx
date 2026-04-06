@@ -1,15 +1,17 @@
-import React, { lazy, Suspense, useState, useMemo } from "react";
+import React, { lazy, Suspense, useState, useMemo, useEffect } from "react";
 import { DeckGLMap } from "./DeckGLMap";
 import { VisModeSelector } from "./VisModeSelector";
-import type { GeoJSONFeature, Flight } from "../types";
+import type { GeoJSONFeature, Flight, Trip } from "../types";
 import type { VisMode } from "../types/visMode";
 import { useTranslation } from "../hooks/useTranslation";
 import { useThemeStore } from "../store/themeStore";
+import { tripsApi } from "../lib/api";
 
 const GlobeView = lazy(() => import("./GlobeView"));
 
 interface MapContainer3DProps {
   flights: GeoJSONFeature[];
+  flightList?: Flight[];
   onFlightClick?: (flightId: string) => void;
   onEdit?: (flight: Flight) => void;
   visMode: VisMode;
@@ -20,6 +22,7 @@ interface MapContainer3DProps {
 
 export default function MapContainer3D({
   flights,
+  flightList,
   onFlightClick,
   onEdit,
   visMode,
@@ -30,6 +33,19 @@ export default function MapContainer3D({
   const { t } = useTranslation(["common", "map"]);
   const mapTheme = useThemeStore((s) => s.mapTheme);
   const [fabOpen, setFabOpen] = useState(false);
+  const [tripList, setTripList] = useState<Trip[]>([]);
+
+  useEffect(() => {
+    const loadTrips = async (): Promise<void> => {
+      try {
+        const data = await tripsApi.getAll();
+        setTripList(data);
+      } catch {
+        // Non-critical — map still works without trips
+      }
+    };
+    void loadTrips();
+  }, []);
 
   const routeCount = useMemo(() => {
     if (visMode !== "routes") return null;
@@ -69,6 +85,8 @@ export default function MapContainer3D({
         ) : (
           <DeckGLMap
             flights={flights}
+            flightList={flightList}
+            tripList={tripList.map((t) => ({ id: t.id, color: t.color }))}
             onFlightClick={onFlightClick}
             onEdit={onEdit}
             visMode={visMode}
