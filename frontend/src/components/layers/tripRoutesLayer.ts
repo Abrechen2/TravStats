@@ -35,7 +35,7 @@ export function createTripRoutesLayer(
   activeTripId?: string | null,
   onFlightClick?: (flightId: string) => void,
   selectedIds: string[] = [],
-  onAirportClick?: (iata: string, screenX: number, screenY: number) => void
+  onAirportClick?: (iata: string, lon: number, lat: number) => void
 ): Layer[] {
   const tripColorMap = new Map(trips.map((t) => [t.id, hexToRgba(t.color)]));
   const dimmedTripColor: [number, number, number, number] = [80, 80, 90, 40];
@@ -158,8 +158,8 @@ export function createTripRoutesLayer(
     opacity: airportOpacity,
     pickable: !!onAirportClick,
     onClick: onAirportClick
-      ? ({ object, x, y }) => {
-          if (object?.iata) onAirportClick(object.iata, x, y);
+      ? ({ object }) => {
+          if (object?.iata) onAirportClick(object.iata, object.position[0], object.position[1]);
         }
       : undefined,
   });
@@ -182,8 +182,8 @@ export function createTripRoutesLayer(
     opacity: airportOpacity,
     pickable: !!onAirportClick,
     onClick: onAirportClick
-      ? ({ object, x, y }) => {
-          if (object?.iata) onAirportClick(object.iata, x, y);
+      ? ({ object }) => {
+          if (object?.iata) onAirportClick(object.iata, object.position[0], object.position[1]);
         }
       : undefined,
     parameters: { depthCompare: "always" as const },
