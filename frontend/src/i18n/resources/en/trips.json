@@ -1,0 +1,48 @@
+{
+  "tab": "Trips",
+  "tabFlights": "Flights",
+  "count": "{{count}} Trip",
+  "count_plural": "{{count}} Trips",
+  "nights": "{{count}} Night",
+  "nights_plural": "{{count}} Nights",
+  "noTrips": "No trips yet.",
+  "noTripsDesc": "Trips are auto-detected on email import or can be created manually.",
+  "createTrip": "Create Trip",
+  "newTrip": "Create New Trip",
+  "newTripDesc": "Group flights manually or auto-created on email import",
+  "editTrip": "Edit Trip",
+  "deleteTrip": "Delete Trip",
+  "deleteTripConfirm": "Delete trip \"{{name}}\"? Flights will be kept.",
+  "showOnMap": "Show on Map",
+  "flightCount": "{{count}} Flight",
+  "flightCount_plural": "{{count}} Flights",
+  "pnrLabel": "Booking ref.",
+  "totalCost": "Total Cost",
+  "costPerKm": "Cost/km",
+  "distance": "Distance",
+  "modal": {
+    "nameLabel": "Trip Name",
+    "namePlaceholder": "e.g. Trondheim Jun 2024",
+    "descLabel": "Description (optional)",
+    "descPlaceholder": "Notes about the trip...",
+    "colorLabel": "Color",
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "badge": {
+    "noTrip": "—"
+  },
+  "filter": {
+    "all": "All",
+    "withTrip": "With Trip",
+    "withoutTrip": "Without Trip"
+  },
+  "toasts": {
+    "created": "Trip created",
+    "updated": "Trip updated",
+    "deleted": "Trip deleted",
+    "createError": "Failed to create trip",
+    "updateError": "Failed to update trip",
+    "deleteError": "Failed to delete trip"
+  }
+}
