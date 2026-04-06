@@ -23,6 +23,9 @@ import { MapTooltip } from "./MapTooltip";
 import { TripTooltip } from "./TripTooltip";
 import { AirportTooltip } from "./AirportTooltip";
 
+// Delay before showing the flight tooltip — lets the flyTo animation settle first
+const TOOLTIP_DELAY_MS = 1800;
+
 const INITIAL_VIEW_STATE: MapViewState = {
   longitude: 10,
   latitude: 30,
@@ -240,7 +243,7 @@ export function DeckGLMap({
 
       recomputeAllPositions();
       setTooltipVisible(true);
-    }, 1800);
+    }, TOOLTIP_DELAY_MS);
 
     return () => clearTimeout(timer);
   }, [selectedFlights, highlightMode, recomputeAllPositions]);
