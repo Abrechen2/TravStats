@@ -4,7 +4,13 @@ import { BrowserRouter } from "react-router-dom";
 import { authApi } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
 
-vi.mock("../lib/api");
+vi.mock("../lib/api", () => ({
+  authApi: {
+    login: vi.fn(),
+    getSmtpStatus: vi.fn().mockResolvedValue({ smtpEnabled: false }),
+    forgotPassword: vi.fn(),
+  },
+}));
 vi.mock("../store/authStore");
 
 const mockNavigate = vi.fn();
@@ -43,6 +49,7 @@ describe("LoginPage", () => {
       hash: "",
       state: null,
     });
+    vi.mocked(authApi.getSmtpStatus).mockResolvedValue({ smtpEnabled: false });
   });
 
   it("should render login form", () => {
@@ -93,5 +100,46 @@ describe("LoginPage", () => {
     // Register link text is i18n key: login.register
     const registerLink = screen.getByRole("link", { name: /login\.register/i });
     expect(registerLink).toHaveAttribute("href", "/register");
+  });
+
+  it("shows forgot password link", () => {
+    render(
+      <BrowserRouter>
+        <LoginPage />
+      </BrowserRouter>
+    );
+    expect(screen.getByText(/login\.forgotPassword/i)).toBeInTheDocument();
+  });
+
+  it("opens forgot password modal when link clicked", async () => {
+    render(
+      <BrowserRouter>
+        <LoginPage />
+      </BrowserRouter>
+    );
+    fireEvent.click(screen.getByText(/login\.forgotPassword/i));
+    await waitFor(() => {
+      expect(screen.getByText(/login\.forgotPasswordModal\.title/i)).toBeInTheDocument();
+    });
+  });
+
+  it("redirects to /change-password when login returns requiresPasswordChange", async () => {
+    vi.mocked(authApi.login).mockResolvedValue({
+      requiresPasswordChange: true as const,
+      changeToken: "test-token",
+    });
+    render(
+      <BrowserRouter>
+        <LoginPage />
+      </BrowserRouter>
+    );
+    fireEvent.change(screen.getByLabelText(/login\.username/i), { target: { value: "user" } });
+    fireEvent.change(screen.getByLabelText(/login\.password/i), { target: { value: "pass" } });
+    fireEvent.click(screen.getByRole("button", { name: /login\.submit/i }));
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith("/change-password", {
+        state: { changeToken: "test-token" },
+      });
+    });
   });
 });
