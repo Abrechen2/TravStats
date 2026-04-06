@@ -690,4 +690,17 @@ export const adminApi = {
     );
     return data;
   },
+
+  adminResetPassword: async (
+    userId: string,
+    mode: "generate" | "set",
+    password?: string,
+    mustChangePassword?: boolean
+  ): Promise<{ message: string; temporaryPassword?: string }> => {
+    const { data } = await api.post<{ message: string; temporaryPassword?: string }>(
+      `/admin/users/${userId}/reset-password`,
+      { mode, password, mustChangePassword }
+    );
+    return data;
+  },
 };
