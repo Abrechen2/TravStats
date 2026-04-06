@@ -24,8 +24,8 @@ export default function LoginPage(): JSX.Element {
     try {
       const result = await authApi.login(username, password);
       if ("requiresPasswordChange" in result) {
-        navigate("/force-change-password", {
-          state: { changeToken: result.changeToken, username },
+        navigate("/change-password", {
+          state: { changeToken: result.changeToken },
         });
         return;
       }
