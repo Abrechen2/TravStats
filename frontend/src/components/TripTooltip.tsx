@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { calculateDistance, calculateFlightDuration } from "../lib/geo";
+import { useLocale } from "../hooks/useLocale";
 import type { Flight } from "../types";
 
 interface TripTooltipProps {
@@ -20,7 +21,7 @@ function buildRouteChain(sorted: Flight[]): string {
   return iatas.join(" → ");
 }
 
-function formatDateRange(sorted: Flight[]): string {
+function formatDateRange(sorted: Flight[], locale: string): string {
   const times = sorted
     .map((f) => (f.departureTime ? new Date(f.departureTime).getTime() : NaN))
     .filter((t) => !isNaN(t));
@@ -32,14 +33,14 @@ function formatDateRange(sorted: Flight[]): string {
     month: "short",
     ...(year ? { year: "numeric" } : {}),
   });
-  if (d1.getTime() === d2.getTime()) return d1.toLocaleDateString("de-DE", opts(true));
+  if (d1.getTime() === d2.getTime()) return d1.toLocaleDateString(locale, opts(true));
   if (d1.getFullYear() === d2.getFullYear()) {
     if (d1.getMonth() === d2.getMonth()) {
-      return `${d1.getDate()}. – ${d2.toLocaleDateString("de-DE", opts(true))}`;
+      return `${d1.getDate()}. – ${d2.toLocaleDateString(locale, opts(true))}`;
     }
-    return `${d1.toLocaleDateString("de-DE", opts())} – ${d2.toLocaleDateString("de-DE", opts(true))}`;
+    return `${d1.toLocaleDateString(locale, opts())} – ${d2.toLocaleDateString(locale, opts(true))}`;
   }
-  return `${d1.toLocaleDateString("de-DE", opts(true))} – ${d2.toLocaleDateString("de-DE", opts(true))}`;
+  return `${d1.toLocaleDateString(locale, opts(true))} – ${d2.toLocaleDateString(locale, opts(true))}`;
 }
 
 function formatDuration(minutes: number): string {
@@ -51,6 +52,7 @@ function formatDuration(minutes: number): string {
 }
 
 export function TripTooltip({ flights, screenX, screenY, onClose }: TripTooltipProps): JSX.Element {
+  const locale = useLocale();
   const [visible, setVisible] = useState(false);
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 50);
@@ -64,7 +66,7 @@ export function TripTooltip({ flights, screenX, screenY, onClose }: TripTooltipP
   const tripName = sorted[0]?.trip?.name;
   const tripColor = sorted[0]?.trip?.color ?? "#f59e0b";
   const route = buildRouteChain(sorted);
-  const dateRange = formatDateRange(sorted);
+  const dateRange = formatDateRange(sorted, locale);
 
   const totalDurationMin = sorted.reduce((sum, f) => {
     if (!f.departureTime || !f.arrivalTime) return sum;
@@ -85,7 +87,7 @@ export function TripTooltip({ flights, screenX, screenY, onClose }: TripTooltipP
   const statsRow2: string[] = [];
   if (totalDurationMin > 0) statsRow2.push(formatDuration(totalDurationMin));
   if (totalDistanceKm > 0)
-    statsRow2.push(`${Math.round(totalDistanceKm).toLocaleString("de-DE")} km`);
+    statsRow2.push(`${Math.round(totalDistanceKm).toLocaleString(locale)} km`);
 
   return (
     <div

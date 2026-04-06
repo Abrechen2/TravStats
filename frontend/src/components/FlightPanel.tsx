@@ -5,6 +5,7 @@ import { groupFlights } from "../utils/groupFlights";
 import { FlightEntry } from "./FlightPanel/FlightEntry";
 import { FlightGroupItem } from "./FlightPanel/FlightGroupItem";
 import { useTranslation } from "../hooks/useTranslation";
+import { useLocale } from "../hooks/useLocale";
 import { tripsApi } from "../lib/api";
 import { calculateDistance } from "../lib/geo";
 
@@ -36,6 +37,7 @@ export function FlightPanel({
   allFlights = [],
 }: FlightPanelProps): JSX.Element {
   const { t } = useTranslation(["dashboard", "common"]);
+  const locale = useLocale();
   const groups = useMemo(() => groupFlights(flights), [flights]);
 
   const [tab, setTab] = useState<PanelTab>("flights");
@@ -191,7 +193,7 @@ export function FlightPanel({
                     stats && isFinite(stats.minDate) ? new Date(stats.minDate).getFullYear() : null;
                   const km =
                     stats && stats.totalKm > 0
-                      ? `${Math.round(stats.totalKm).toLocaleString("de-DE")} km`
+                      ? `${Math.round(stats.totalKm).toLocaleString(locale)} km`
                       : null;
                   return (
                     <button

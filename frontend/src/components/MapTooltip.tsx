@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { calculateDistance, calculateFlightDuration } from "../lib/geo";
+import { useLocale } from "../hooks/useLocale";
 import type { Flight } from "../types";
 
 interface MapTooltipProps {
@@ -23,6 +24,7 @@ export function MapTooltip({
   onEdit,
   onClose,
 }: MapTooltipProps): JSX.Element {
+  const locale = useLocale();
   const [visible, setVisible] = useState(false);
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 50);
@@ -45,14 +47,14 @@ export function MapTooltip({
       : null;
 
   const statParts: string[] = [];
-  if (distanceKm !== null) statParts.push(`${distanceKm.toLocaleString("de-DE")} km`);
+  if (distanceKm !== null) statParts.push(`${distanceKm.toLocaleString(locale)} km`);
   if (durationMin !== null) statParts.push(formatDuration(durationMin));
   if (flight.seatClass) statParts.push(flight.seatClass.replace("_", " "));
   if (flight.co2Kg != null)
-    statParts.push(`CO₂: ${Math.round(flight.co2Kg).toLocaleString("de-DE")} kg`);
+    statParts.push(`CO₂: ${Math.round(flight.co2Kg).toLocaleString(locale)} kg`);
 
   const departureDate = flight.departureTime
-    ? new Date(flight.departureTime).toLocaleDateString("de-DE")
+    ? new Date(flight.departureTime).toLocaleDateString(locale)
     : null;
 
   const metaParts: string[] = [
