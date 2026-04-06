@@ -22,8 +22,14 @@ export default function LoginPage(): JSX.Element {
     setError("");
     setLoading(true);
     try {
-      const { user } = await authApi.login(username, password);
-      setAuth(user);
+      const result = await authApi.login(username, password);
+      if ("requiresPasswordChange" in result) {
+        navigate("/force-change-password", {
+          state: { changeToken: result.changeToken, username },
+        });
+        return;
+      }
+      setAuth(result.user);
       navigate("/");
     } catch (err: unknown) {
       const errorObj = err as {
