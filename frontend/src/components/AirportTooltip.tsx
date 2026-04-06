@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { Flight } from "../types";
 import { calculateDistance } from "../lib/geo";
 import { useLocale } from "../hooks/useLocale";
+import { useTranslation } from "../hooks/useTranslation";
 import { TooltipContainer } from "./TooltipContainer";
 
 interface AirportTooltipProps {
@@ -25,6 +26,7 @@ export function AirportTooltip({
   onClose,
 }: AirportTooltipProps): JSX.Element {
   const locale = useLocale();
+  const { t } = useTranslation(["dashboard"]);
 
   const stats = useMemo(() => {
     let name: string | null = null;
@@ -98,7 +100,9 @@ export function AirportTooltip({
       {/* Total flights */}
       <div className="text-xs mb-2" style={{ color: "var(--text-primary)" }}>
         <span className="font-semibold">{total}</span>{" "}
-        <span style={{ color: "var(--text-muted)" }}>{total !== 1 ? "Flüge" : "Flug"} gesamt</span>
+        <span style={{ color: "var(--text-muted)" }}>
+          {t("dashboard:airport.flightsTotal", { count: total })}
+        </span>
         <span style={{ color: "var(--text-muted)" }}>
           {" "}
           · {stats.departures}↑ {stats.arrivals}↓
@@ -109,7 +113,7 @@ export function AirportTooltip({
       {stats.topRoutes.length > 0 && (
         <div className="mb-2">
           <div className="text-xs font-medium mb-1" style={{ color: "var(--text-muted)" }}>
-            Häufigste Routen
+            {t("dashboard:airport.topRoutes")}
           </div>
           <div className="space-y-0.5">
             {stats.topRoutes.map(({ dest, count }) => (
@@ -135,7 +139,7 @@ export function AirportTooltip({
       {/* Distance + airlines */}
       {stats.totalKm > 0 && (
         <div className="text-xs" style={{ color: "var(--text-muted)" }}>
-          {formatKm(stats.totalKm, locale)} geflogen
+          {formatKm(stats.totalKm, locale)} {t("dashboard:airport.flown")}
         </div>
       )}
       {stats.airlines.length > 0 && (

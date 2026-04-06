@@ -114,7 +114,7 @@ export function FlightPanel({
                   </>
                 ) : (
                   <>
-                    Trips
+                    {t("dashboard:trips.label")}
                     <span
                       className="px-1.5 py-0.5 text-xs rounded-full"
                       style={{ background: "var(--accent)", color: "white" }}
@@ -151,7 +151,7 @@ export function FlightPanel({
                     borderBottom: tab === id ? "2px solid var(--accent)" : "2px solid transparent",
                   }}
                 >
-                  {id === "flights" ? t("dashboard:allFlights") : "Trips"}
+                  {id === "flights" ? t("dashboard:allFlights") : t("dashboard:trips.label")}
                 </button>
               ))}
             </div>
@@ -184,7 +184,7 @@ export function FlightPanel({
                   className="px-4 py-8 text-center text-xs"
                   style={{ color: "var(--text-muted)" }}
                 >
-                  Keine Trips vorhanden
+                  {t("dashboard:trips.noTrips")}
                 </div>
               ) : (
                 trips.map((trip) => {
@@ -218,7 +218,9 @@ export function FlightPanel({
                           {trip.name}
                         </div>
                         <div className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
-                          {stats ? `${stats.count} ${stats.count !== 1 ? "Flüge" : "Flug"}` : "–"}
+                          {stats
+                            ? `${stats.count} ${t("dashboard:trips.flights", { count: stats.count })}`
+                            : "–"}
                           {year ? ` · ${year}` : ""}
                           {km ? ` · ${km}` : ""}
                         </div>

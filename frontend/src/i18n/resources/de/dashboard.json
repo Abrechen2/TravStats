@@ -79,5 +79,17 @@
   "allFlights": "Alle Flüge",
   "flightsTitle": "Flüge",
   "statsTitle": "Statistiken",
-  "unknownDate": "Unbekanntes Datum"
+  "unknownDate": "Unbekanntes Datum",
+  "trips": {
+    "noTrips": "Keine Trips vorhanden",
+    "label": "Trips",
+    "flights_one": "Flug",
+    "flights_other": "Flüge"
+  },
+  "airport": {
+    "flightsTotal_one": "Flug gesamt",
+    "flightsTotal_other": "Flüge gesamt",
+    "topRoutes": "Häufigste Routen",
+    "flown": "geflogen"
+  }
 }
