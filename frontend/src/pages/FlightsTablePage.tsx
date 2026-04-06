@@ -22,6 +22,7 @@ import DataSourceBadges from "../components/DataSourceBadges";
 import { logger } from "../lib/logger";
 import PageTransition from "../components/PageTransition";
 import { SkeletonTable } from "../components/SkeletonLoader";
+import TripsTab from "../components/Trips/TripsTab";
 
 export default function FlightsTablePage(): JSX.Element {
   const { t } = useTranslation(["flights", "common", "dashboard", "trips"]);
@@ -636,7 +637,7 @@ export default function FlightsTablePage(): JSX.Element {
                 )}
               </>
             ) : (
-              <div className="p-4">{/* TripsTab component will be rendered here in Task 7 */}</div>
+              <TripsTab trips={trips} onTripsChange={() => void loadTrips()} />
             )}
           </div>
         </div>
