@@ -245,19 +245,43 @@ export const adminApi = {
     allowUserApiKeys: boolean;
     defaultVisionParser: string;
     defaultTextParser: string;
+    ollamaUrl: string | null;
+    ollamaModel: string | null;
   }> => {
     const { data } = await api.get<{
       allowUserApiKeys: boolean;
       defaultVisionParser: string;
       defaultTextParser: string;
+      ollamaUrl: string | null;
+      ollamaModel: string | null;
     }>("/admin/parser-settings");
     return data;
   },
 
   updateAdminParserSettings: async (settings: {
     allowUserApiKeys?: boolean;
+    ollamaUrl?: string | null;
+    ollamaModel?: string | null;
   }): Promise<MessageResponse> => {
     const { data } = await api.put<MessageResponse>("/admin/parser-settings", settings);
+    return data;
+  },
+
+  testOllamaConnection: async (
+    ollamaUrl: string,
+    ollamaModel: string
+  ): Promise<{
+    success: boolean;
+    models?: string[];
+    warning?: string | null;
+    error?: string;
+  }> => {
+    const { data } = await api.post<{
+      success: boolean;
+      models?: string[];
+      warning?: string | null;
+      error?: string;
+    }>("/admin/test-ollama", { ollamaUrl, ollamaModel });
     return data;
   },
 
