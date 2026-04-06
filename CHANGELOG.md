@@ -3,6 +3,37 @@
 All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
+
+## [0.11.0-beta] - 2026-04-06
+
+### Added
+- **Trips-Tab in der Seitenleiste** — Schnellauswahl aller gespeicherten Trips direkt
+  aus dem Flug-Panel heraus, inklusive Fluganzahl, Jahr und Gesamtkilometer.
+- **TripTooltip auf der Karte** — Beim Auswählen eines Trips erscheint eine Info-Karte
+  mit Routenkette, Reisedaten, Gesamtdauer, Distanz, Airlines und Flugzeugtypen.
+- **Airport-Statistik-Tooltip** — Klick auf einen IATA-Code oder Airport-Punkt öffnet
+  eine Statistik-Karte mit Abflügen/Ankünften, häufigsten Routen, Gesamtkilometern
+  und operierenden Airlines für diesen Flughafen.
+- **Auto-Highlight beim „Auf Karte zeigen"** — Alle Flüge eines Trips werden automatisch
+  ausgewählt, sobald über „Auf Karte zeigen" in die Trip-Routen-Ansicht gewechselt wird.
+- **Flughafen-Marker im Trip-Routen-Layer** — Gepulste Ringe und Beschriftungen für
+  alle Abflug- und Zielflughäfen des aktiven Trips.
+- **5 Demo-Trips** — Seed-Daten für neue Nutzer enthalten jetzt fünf vordefinierte Trips
+  (Barcelona, Dubai & Singapur, Japan, Skandinavien, USA Westküste).
+
+### Fixed
+- **Tooltips folgen der Karte** — Alle Info-Fenster (Flug, Trip, Flughafen) aktualisieren
+  ihre Position beim Scrollen und Zoomen über geo-verankerte Projektion.
+- **Trip-Info-Karte über den Bögen** — Tooltip wird oberhalb der Bounding Box aller
+  Airports positioniert, damit er nicht über den Routenlinien liegt.
+- **Seitenleiste bleibt offen** — Beim Auswählen eines Trips im Seitenleisten-Panel
+  schließt sich dieses nicht mehr automatisch.
+- **Zurück zur Normalansicht** — Schließen des Trip-Tooltips setzt visMode auf „routes"
+  zurück und hebt die Trip-Auswahl auf.
+- **Arc-Klick-Toleranz** — `pickingRadius: 5` auf dem MapboxOverlay behebt das Problem,
+  dass Klicks auf schmale Bögen nicht registriert wurden.
+- **Deck.gl Layer-Neurendering** — Farben werden vorberechnet in den Daten gespeichert,
+  damit deck.gl bei Selektion zuverlässig neu zeichnet.
 Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
