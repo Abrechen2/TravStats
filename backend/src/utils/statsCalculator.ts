@@ -93,6 +93,8 @@ interface FlightData {
   category?: string | null;
   seatClass?: string | null;
   createdAt: Date;
+  bookingId?: string | null;
+  booking?: { id: string; price?: number | null; currency?: string | null } | null;
 }
 
 /**
@@ -246,11 +248,14 @@ export function calculateBusinessStats(flights: FlightData[]): BusinessStats {
 
   // Cost per kilometer — only consider flights that have a cost entry so the denominator
   // (distance) is not inflated by cost-free flights.
+  // Deduplicate costs: if flights share a booking, count the booking price once.
   let totalDistance = 0;
   let totalCost = 0;
   let totalDistanceWithCost = 0;
 
-  flownFlights.forEach(f => {
+  const seenBookingIds = new Set<string>();
+
+  for (const f of flownFlights) {
     const hasCoordsForDistance =
       f.depLat != null && f.depLon != null && f.arrLat != null && f.arrLon != null;
     const dist = hasCoordsForDistance
@@ -261,33 +266,64 @@ export function calculateBusinessStats(flights: FlightData[]): BusinessStats {
       totalDistance += dist;
     }
 
-    const flightCost = (f.price || 0) + (f.taxes || 0) + (f.fees || 0);
+    let flightCost = 0;
+    if (f.bookingId && f.booking?.price) {
+      // Use booking price — count only once per booking
+      if (!seenBookingIds.has(f.bookingId)) {
+        seenBookingIds.add(f.bookingId);
+        flightCost = f.booking.price;
+      }
+    } else {
+      // No booking — use per-flight price (legacy)
+      flightCost = (f.price ?? 0) + (f.taxes ?? 0) + (f.fees ?? 0);
+    }
+
     if (flightCost > 0) {
       totalCost += flightCost;
-      if (hasCoordsForDistance) {
-        totalDistanceWithCost += dist;
-      }
     }
-  });
+
+    // Count distance for all flights with any cost attribution
+    const hasCostAttribution =
+      flightCost > 0 ||
+      (f.bookingId != null && seenBookingIds.has(f.bookingId) && (f.booking?.price ?? 0) > 0);
+    if (hasCostAttribution && hasCoordsForDistance) {
+      totalDistanceWithCost += dist;
+    }
+  }
 
   const costPerKm = totalDistanceWithCost > 0 && totalCost > 0
     ? Math.round((totalCost / totalDistanceWithCost) * 100) / 100
     : 0;
 
   // Cost per flight hour — only include hours for flights that have a cost entry.
+  // Deduplicate costs the same way as above (booking price counted once).
   let totalCostForHours = 0;
   let totalFlightHoursWithCost = 0;
 
-  flownFlights.forEach(f => {
+  const seenBookingIdsHours = new Set<string>();
+
+  for (const f of flownFlights) {
     const hours = (new Date(f.arrivalTime).getTime() - new Date(f.departureTime).getTime()) / (1000 * 60 * 60);
     if (hours > 0) {
-      const flightCost = (f.price || 0) + (f.taxes || 0) + (f.fees || 0);
+      let flightCost = 0;
+      if (f.bookingId && f.booking?.price) {
+        if (!seenBookingIdsHours.has(f.bookingId)) {
+          seenBookingIdsHours.add(f.bookingId);
+          flightCost = f.booking.price;
+        }
+      } else {
+        flightCost = (f.price ?? 0) + (f.taxes ?? 0) + (f.fees ?? 0);
+      }
+
       if (flightCost > 0) {
         totalCostForHours += flightCost;
         totalFlightHoursWithCost += hours;
+      } else if (f.bookingId != null && seenBookingIdsHours.has(f.bookingId) && (f.booking?.price ?? 0) > 0) {
+        // Additional flight in same booking — count its hours but no extra cost
+        totalFlightHoursWithCost += hours;
       }
     }
-  });
+  }
 
   const costPerHour = totalFlightHoursWithCost > 0 && totalCostForHours > 0
     ? Math.round((totalCostForHours / totalFlightHoursWithCost) * 100) / 100
