@@ -357,7 +357,13 @@ export function DeckGLMap({
       case "contour":
         return [createContourLayer(flights)];
       case "trip-routes":
-        return [createTripRoutesLayer(flightList ?? [], tripList ?? [], activeTripId)];
+        return createTripRoutesLayer(
+          flightList ?? [],
+          tripList ?? [],
+          activeTripId,
+          handleFlightClick,
+          selectedIds
+        );
       default:
         return [];
     }
