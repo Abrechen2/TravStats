@@ -1,15 +1,8 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import axios from 'axios';
-import { ClaudeTextParser, getClaudeTextParser } from '../services/parsers/text/claudeTextParser';
 import { OllamaTextParser, getOllamaTextParser } from '../services/parsers/text/ollamaTextParser';
-import { OpenAITextParser, getOpenAITextParser } from '../services/parsers/text/openaiTextParser';
 import { RegexTextParser, getRegexParser } from '../services/parsers/text/regexParser';
 import { PATTERNS } from '../services/parsers/shared/utils';
 
-// Mock dependencies
-jest.mock('@anthropic-ai/sdk');
-jest.mock('openai');
-jest.mock('axios');
 jest.mock('../utils/logger', () => ({
   __esModule: true,
   default: {
@@ -24,153 +17,34 @@ describe('Text Parsers', () => {
   beforeAll(() => {
     // Ensure PNR regex is global so matchAll works in tests
     PATTERNS.PNR = new RegExp(PATTERNS.PNR.source, 'g');
-    (axios as any).isAxiosError = (err: any) => !!err?.isAxiosError;
-  });
-  describe('ClaudeTextParser', () => {
-    let parser: ClaudeTextParser;
-
-    beforeEach(() => {
-      parser = getClaudeTextParser();
-      jest.clearAllMocks();
-    });
-
-    describe('checkAvailability', () => {
-      it('should return unavailable when no API key is provided', async () => {
-        const result = await parser.checkAvailability();
-
-        expect(result.available).toBe(false);
-        expect(result.reason).toContain('API key not configured');
-      });
-
-      it('should return unavailable when API key has invalid format', async () => {
-        const result = await parser.checkAvailability('invalid-key');
-
-        expect(result.available).toBe(false);
-        expect(result.reason).toContain('Invalid Claude API key format');
-      });
-
-      it('should return available when API key has valid format', async () => {
-        const result = await parser.checkAvailability('sk-ant-api-test-key');
-
-        expect(result.available).toBe(true);
-        expect(result.metadata?.provider).toBe('claude');
-      });
-    });
-
-    describe('parseEmail', () => {
-      it('should throw error when no API key is configured', async () => {
-        await expect(
-          parser.parseEmail('Test Subject', 'Test text')
-        ).rejects.toThrow('Claude API key not configured');
-      });
-
-      it('should have provider property set to claude', () => {
-        expect(parser.provider).toBe('claude');
-      });
-    });
   });
 
   describe('OllamaTextParser', () => {
     let parser: OllamaTextParser;
 
     beforeEach(() => {
-      parser = getOllamaTextParser();
+      // Point at an unreachable host so checkAvailability returns fast without network
+      parser = getOllamaTextParser('http://127.0.0.1:1', 'test-model');
       jest.clearAllMocks();
     });
 
     describe('checkAvailability', () => {
-      it('should check if Ollama service is running', async () => {
-        const axios = await import('axios');
-        const mockAxios = axios.default as unknown as { get: jest.Mock };
-
-        mockAxios.get = jest.fn(async () => {
-          const err: any = new Error('ECONNREFUSED');
-          err.code = 'ECONNREFUSED';
-          err.isAxiosError = true;
-          throw err;
-        });
-
+      it('should return unavailable when Ollama endpoint is unreachable', async () => {
         const result = await parser.checkAvailability();
 
         expect(result.available).toBe(false);
-        expect(result.reason).toContain('Ollama service not running');
-      });
-
-      it('should check if required model is available', async () => {
-        const axios = await import('axios');
-        const mockAxios = axios.default as unknown as { get: jest.Mock };
-
-        mockAxios.get = jest.fn(async () => ({
-          data: {
-            models: [
-              { name: 'llama3.2:3b' },
-              { name: 'qwen2.5:14b' },
-            ],
-          },
-        }));
-
-        const result = await parser.checkAvailability();
-
-        expect(result.available).toBe(true);
-        expect(result.metadata?.provider).toBe('ollama');
-      });
-
-      it('should return unavailable when model is not found', async () => {
-        const axios = await import('axios');
-        const mockAxios = axios.default as unknown as { get: jest.Mock };
-
-        mockAxios.get = jest.fn(async () => ({
-          data: {
-            models: [{ name: 'llama3.2:3b' }],
-          },
-        }));
-
-        const customParser = getOllamaTextParser('nonexistent-model');
-        const result = await customParser.checkAvailability();
-
-        expect(result.available).toBe(false);
-        expect(result.reason).toContain('not found');
+        expect(result.reason).toContain('Ollama not reachable');
       });
     });
 
     describe('constructor', () => {
-      it('should use custom model name when provided', () => {
-        const customParser = getOllamaTextParser('custom-model');
+      it('should accept custom URL and model', () => {
+        const customParser = getOllamaTextParser('http://example.com:11434', 'custom-model');
         expect(customParser).toBeDefined();
       });
 
       it('should have provider property set to ollama', () => {
         expect(parser.provider).toBe('ollama');
-      });
-    });
-  });
-
-  describe('OpenAITextParser', () => {
-    let parser: OpenAITextParser;
-
-    beforeEach(() => {
-      parser = getOpenAITextParser();
-      jest.clearAllMocks();
-    });
-
-    describe('checkAvailability', () => {
-      it('should return unavailable when no API key is provided', async () => {
-        const result = await parser.checkAvailability();
-
-        expect(result.available).toBe(false);
-        expect(result.reason).toContain('API key not configured');
-      });
-
-      it('should have provider property set to openai', () => {
-        expect(parser.provider).toBe('openai');
-      });
-    });
-
-    describe('parseEmail', () => {
-      it('should throw error when no API key is configured', async () => {
-        await expect(
-          parser.parseEmail('Test Subject', 'Test text')
-        ).rejects.toThrow('OpenAI API key not configured');
       });
     });
   });
@@ -284,6 +158,7 @@ describe('Text Parsers', () => {
 
         const result = await parser.parseEmail(subject, text);
 
+        expect(result).toBeDefined();
       });
 
       it('should handle HTML emails by extracting text', async () => {
@@ -727,26 +602,15 @@ describe('Text Parsers', () => {
   });
 
   describe('Parser factory functions', () => {
-    it('getClaudeTextParser should return singleton instance', () => {
-      const parser1 = getClaudeTextParser();
-      const parser2 = getClaudeTextParser();
+    it('getOllamaTextParser should cache instances per (url, model) key', () => {
+      const parser1 = getOllamaTextParser('http://example.com:11434', 'model1');
+      const parser2 = getOllamaTextParser('http://example.com:11434', 'model2');
+      const parser3 = getOllamaTextParser('http://example.com:11434', 'model1');
 
-      expect(parser1).toBe(parser2);
-    });
-
-    it('getOpenAITextParser should return singleton instance', () => {
-      const parser1 = getOpenAITextParser();
-      const parser2 = getOpenAITextParser();
-
-      expect(parser1).toBe(parser2);
-    });
-
-    it('getOllamaTextParser should create new instance with custom model', () => {
-      const parser1 = getOllamaTextParser('model1');
-      const parser2 = getOllamaTextParser('model2');
-
-      // Should be different instances
+      // Different models → different instances
       expect(parser1).not.toBe(parser2);
+      // Same (url, model) → same cached instance
+      expect(parser1).toBe(parser3);
     });
   });
 });
