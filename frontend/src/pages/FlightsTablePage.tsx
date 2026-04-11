@@ -16,6 +16,7 @@ import { useToastStore } from "../store/toastStore";
 import { useSettingsStore } from "../store/settingsStore";
 import { API_LIMITS } from "../lib/constants";
 import { formatDateInTimezone } from "../lib/dateUtils";
+import { resolveAirlineDisplay } from "../lib/airlineUtils";
 import { useTranslation } from "../hooks/useTranslation";
 import DataSourceBadges from "../components/DataSourceBadges";
 import { logger } from "../lib/logger";
@@ -456,7 +457,8 @@ export default function FlightsTablePage(): JSX.Element {
                             >
                               <td className="px-4 py-3" style={{ color: "var(--text-primary)" }}>
                                 <div className="font-medium">
-                                  {flight.airline || t("common:labels.notAvailable")}
+                                  {resolveAirlineDisplay(flight.airline, flight.flightNumber) ||
+                                    t("common:labels.notAvailable")}
                                 </div>
                               </td>
                               <td className="px-4 py-3" style={{ color: "var(--text-muted)" }}>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Flight } from "../types";
 import { useTranslation } from "../hooks/useTranslation";
+import { resolveAirlineDisplay } from "../lib/airlineUtils";
 
 interface FlightCalendarProps {
   flights: Flight[];
@@ -222,7 +223,8 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-[var(--text-primary)]">
-                      {flight.airline} {flight.flightNumber}
+                      {resolveAirlineDisplay(flight.airline, flight.flightNumber) || flight.airline}{" "}
+                      {flight.flightNumber}
                     </p>
                     <p className="text-sm text-[var(--text-muted)]">
                       {flight.depIata || flight.depIcao} → {flight.arrIata || flight.arrIcao}

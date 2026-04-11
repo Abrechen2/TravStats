@@ -3,6 +3,7 @@ import type { Flight } from "../types";
 import { useTranslation } from "../hooks/useTranslation";
 import { useSettingsStore } from "../store/settingsStore";
 import { formatCurrency as formatCurrencyUtil } from "../lib/units";
+import { resolveAirlineDisplay } from "../lib/airlineUtils";
 import DataSourceBadges from "./DataSourceBadges";
 
 interface FlightListProps {
@@ -105,7 +106,8 @@ export default function FlightList({
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
                   <h3 className="font-semibold text-lg" style={{ color: "var(--text-primary)" }}>
-                    {flight.airline} {flight.flightNumber}
+                    {resolveAirlineDisplay(flight.airline, flight.flightNumber) || flight.airline}{" "}
+                    {flight.flightNumber}
                   </h3>
                   {getStatusBadge(flight.status)}
                   {getCategoryBadge(flight.category)}

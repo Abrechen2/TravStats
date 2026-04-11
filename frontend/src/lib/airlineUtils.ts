@@ -95,3 +95,31 @@ export function getAirlineFromFlightNumber(flightNumber: string): string | null 
   const prefix = flightNumber.slice(0, 2).toUpperCase();
   return AIRLINE_IATA_MAP[prefix] ?? null;
 }
+
+/**
+ * Resolve a display-ready airline name from the stored airline field and
+ * optionally the flight number. Normalizes inconsistent storage where some
+ * flights hold the full name ("Lufthansa") and others only the IATA code
+ * ("LH"). Fallback order:
+ *   1. Stored airline: if it is a known 2-char IATA code, expand to full name
+ *   2. Stored airline as-is (if non-empty, > 2 chars)
+ *   3. IATA prefix of the flight number
+ *   4. null
+ */
+export function resolveAirlineDisplay(
+  airline: string | null | undefined,
+  flightNumber?: string | null
+): string | null {
+  if (airline) {
+    const trimmed = airline.trim();
+    if (trimmed.length === 2) {
+      const resolved = AIRLINE_IATA_MAP[trimmed.toUpperCase()];
+      if (resolved) return resolved;
+    }
+    if (trimmed.length > 0) return trimmed;
+  }
+  if (flightNumber) {
+    return getAirlineFromFlightNumber(flightNumber);
+  }
+  return null;
+}
