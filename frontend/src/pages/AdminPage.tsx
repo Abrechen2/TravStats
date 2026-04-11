@@ -8,6 +8,9 @@ import BackupManagement from "../components/Admin/BackupManagement";
 import SystemInfoTab from "../components/Admin/SystemInfo";
 import UserManagement from "../components/Admin/UserManagement";
 import InvitationManagement from "../components/Admin/InvitationManagement";
+import CreateLinkInviteModal from "../components/Admin/CreateLinkInviteModal";
+import CreateEmailInviteModal from "../components/Admin/CreateEmailInviteModal";
+import InviteSuccessModal from "../components/Admin/InviteSuccessModal";
 import GlobalApiKeysManager from "../components/Admin/GlobalApiKeysManager";
 import ParserSettingsTab from "../components/Admin/ParserSettings";
 import LoggingManager from "../components/Admin/LoggingManager";
@@ -71,7 +74,18 @@ export default function AdminPage(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [loadingHardwareInfo, setLoadingHardwareInfo] = useState(false);
   const [activeSection, setActiveSection] = useState<ActiveSection>("system");
-  const [copiedUrl, setCopiedUrl] = useState(false);
+  const [inviteLinkModalOpen, setInviteLinkModalOpen] = useState(false);
+  const [inviteEmailModalOpen, setInviteEmailModalOpen] = useState(false);
+  const [inviteCreating, setInviteCreating] = useState(false);
+  const [inviteSuccess, setInviteSuccess] = useState<{
+    inviteUrl: string;
+    emailSent: boolean | undefined;
+    emailError: string | null;
+    recipientEmail: string | null;
+  } | null>(null);
+  const [invitationStatusFilter, setInvitationStatusFilter] = useState<
+    "all" | "active" | "used" | "expired"
+  >("active");
   const [savingParsers, setSavingParsers] = useState(false);
   const [savingLogging, setSavingLogging] = useState(false);
   const [feedbackDays, setFeedbackDays] = useState(30);
@@ -89,7 +103,7 @@ export default function AdminPage(): JSX.Element {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [invitationStatusFilter]);
 
   useEffect(() => {
     if (activeSection === "system") {
@@ -122,7 +136,7 @@ export default function AdminPage(): JSX.Element {
       const [infoData, usersData, invitationsData, parserData] = await Promise.all([
         adminApi.getSystemInfo(),
         adminApi.getUsers(),
-        adminApi.getInvitations(),
+        adminApi.getInvitations(invitationStatusFilter),
         adminApi.getAdminParserSettings(),
       ]);
       setSystemInfo(infoData as SystemInfoData);
@@ -219,17 +233,77 @@ export default function AdminPage(): JSX.Element {
     }
   };
 
-  const handleCreateInvitation = async (): Promise<void> => {
-    const email = prompt(t("admin:prompts.enterEmail"));
+  const handleCreateLinkInvitation = async (expiresInDays: 1 | 7 | 30): Promise<void> => {
+    setInviteCreating(true);
     try {
-      const { inviteUrl } = await adminApi.createInvitation(email || undefined, 7);
-      await navigator.clipboard.writeText(inviteUrl);
-      setCopiedUrl(true);
-      setTimeout(() => setCopiedUrl(false), 3000);
-      addToast("success", t("admin:toasts.invitationCopied", { inviteUrl }));
+      const { inviteUrl } = await adminApi.createLinkInvitation(expiresInDays);
+      setInviteLinkModalOpen(false);
+      setInviteSuccess({
+        inviteUrl,
+        emailSent: undefined,
+        emailError: null,
+        recipientEmail: null,
+      });
       await loadData();
     } catch (error: unknown) {
       addToast("error", getErrorMessage(error, t("admin:toasts.invitationFailed")));
+    } finally {
+      setInviteCreating(false);
+    }
+  };
+
+  const handleCreateEmailInvitation = async (
+    email: string,
+    expiresInDays: 1 | 7 | 30
+  ): Promise<void> => {
+    setInviteCreating(true);
+    try {
+      const { inviteUrl, emailSent, emailError } = await adminApi.createEmailInvitation(
+        email,
+        expiresInDays
+      );
+      setInviteEmailModalOpen(false);
+      setInviteSuccess({ inviteUrl, emailSent, emailError, recipientEmail: email });
+      await loadData();
+    } catch (error: unknown) {
+      addToast("error", getErrorMessage(error, t("admin:toasts.invitationFailed")));
+    } finally {
+      setInviteCreating(false);
+    }
+  };
+
+  const handleCopyInvitationLink = async (invitation: Invitation): Promise<void> => {
+    const frontendOrigin = window.location.origin;
+    const inviteUrl = `${frontendOrigin}/register?token=${invitation.token}`;
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      addToast("success", t("admin:invitations.success.copiedToClipboard"));
+    } catch {
+      addToast("error", t("admin:invitations.success.copyFailed"));
+    }
+  };
+
+  const handleResendInvitationEmail = async (invitation: Invitation): Promise<void> => {
+    try {
+      const { emailSent, emailError } = await adminApi.resendInvitationEmail(invitation.id);
+      if (emailSent) {
+        addToast("success", t("admin:invitations.toasts.resent"));
+      } else {
+        addToast("error", `${t("admin:invitations.toasts.resendFailed")}: ${emailError ?? ""}`);
+      }
+      await loadData();
+    } catch (error: unknown) {
+      addToast("error", getErrorMessage(error, t("admin:invitations.toasts.resendFailed")));
+    }
+  };
+
+  const handleRevokeInvitation = async (id: string): Promise<void> => {
+    try {
+      await adminApi.revokeInvitation(id);
+      addToast("success", t("admin:invitations.toasts.revoked"));
+      await loadData();
+    } catch (error: unknown) {
+      addToast("error", getErrorMessage(error, t("admin:invitations.toasts.revokeFailed")));
     }
   };
 
@@ -557,11 +631,44 @@ export default function AdminPage(): JSX.Element {
           )}
 
           {activeSection === "invitations" && (
-            <InvitationManagement
-              invitations={invitations}
-              copiedUrl={copiedUrl}
-              onCreateInvitation={handleCreateInvitation}
-            />
+            <>
+              <InvitationManagement
+                invitations={invitations}
+                statusFilter={invitationStatusFilter}
+                onStatusFilterChange={setInvitationStatusFilter}
+                onCreateLink={() => setInviteLinkModalOpen(true)}
+                onCreateEmail={() => setInviteEmailModalOpen(true)}
+                onCopyLink={handleCopyInvitationLink}
+                onResendEmail={handleResendInvitationEmail}
+                onRevoke={handleRevokeInvitation}
+              />
+
+              {inviteLinkModalOpen && (
+                <CreateLinkInviteModal
+                  onCreate={handleCreateLinkInvitation}
+                  onClose={() => setInviteLinkModalOpen(false)}
+                  creating={inviteCreating}
+                />
+              )}
+
+              {inviteEmailModalOpen && (
+                <CreateEmailInviteModal
+                  onCreate={handleCreateEmailInvitation}
+                  onClose={() => setInviteEmailModalOpen(false)}
+                  creating={inviteCreating}
+                />
+              )}
+
+              {inviteSuccess && (
+                <InviteSuccessModal
+                  inviteUrl={inviteSuccess.inviteUrl}
+                  emailSent={inviteSuccess.emailSent}
+                  emailError={inviteSuccess.emailError}
+                  recipientEmail={inviteSuccess.recipientEmail}
+                  onClose={() => setInviteSuccess(null)}
+                />
+              )}
+            </>
           )}
 
           {activeSection === "apiKeys" && (

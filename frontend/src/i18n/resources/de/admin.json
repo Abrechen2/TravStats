@@ -121,16 +121,74 @@
     "invitationLinks": "Einladungslinks",
     "createButton": "+ Einladung erstellen",
     "copiedToClipboard": "Einladungslink in die Zwischenablage kopiert!",
+    "actions": {
+      "createLink": "+ Link erstellen",
+      "createEmail": "✉ Einladung per E-Mail",
+      "copyLink": "📋 Link kopieren",
+      "sendEmail": "✉ Senden",
+      "resendEmail": "✉ Nochmal senden",
+      "revoke": "🗑 Widerrufen"
+    },
+    "confirmRevoke": "Diese Einladung wirklich widerrufen? Der Link wird sofort ungültig.",
+    "expiresLegend": "Gültig für",
+    "expires": {
+      "24h": "24 Stunden",
+      "7d": "7 Tage",
+      "30d": "30 Tage"
+    },
+    "filter": {
+      "label": "Status-Filter",
+      "all": "Alle",
+      "active": "Aktiv",
+      "used": "Verwendet",
+      "expired": "Abgelaufen"
+    },
+    "createLinkModal": {
+      "title": "Neuen Einladungs-Link erstellen",
+      "description": "Erzeugt einen einmaligen Link, den du frei teilen kannst.",
+      "submit": "Link erstellen",
+      "creating": "Wird erstellt..."
+    },
+    "createEmailModal": {
+      "title": "Einladung per E-Mail senden",
+      "description": "Wir erstellen einen einmaligen Link und schicken ihn direkt an die eingetragene Adresse.",
+      "emailLabel": "E-Mail-Adresse",
+      "emailPlaceholder": "jane@example.com",
+      "emailRequired": "E-Mail ist erforderlich",
+      "emailInvalid": "Keine gültige E-Mail-Adresse",
+      "submit": "Einladung senden",
+      "sending": "Wird versendet..."
+    },
+    "success": {
+      "title": "Einladung erstellt",
+      "linkLabel": "Einladungs-Link",
+      "copyLink": "Link kopieren",
+      "copiedToClipboard": "Link in die Zwischenablage kopiert",
+      "copyFailed": "Link konnte nicht kopiert werden",
+      "emailSent": "E-Mail versendet an",
+      "emailFailed": "E-Mail-Versand fehlgeschlagen",
+      "linkStillValid": "Der Link unten ist trotzdem gültig — du kannst ihn manuell teilen.",
+      "done": "Fertig"
+    },
+    "toasts": {
+      "resent": "Einladung erneut versendet",
+      "resendFailed": "Erneuter Versand fehlgeschlagen",
+      "revoked": "Einladung widerrufen",
+      "revokeFailed": "Widerrufen fehlgeschlagen"
+    },
     "table": {
       "email": "E-Mail",
       "createdBy": "Erstellt von",
       "expires": "Läuft ab",
-      "status": "Status"
+      "usedBy": "Verwendet von",
+      "status": "Status",
+      "actions": "Aktionen"
     },
     "status": {
       "usedOn": "Verwendet am {{date}}",
       "expired": "Abgelaufen",
-      "active": "Aktiv"
+      "active": "Aktiv",
+      "emailFailed": "Mail fehlgeschlagen"
     }
   },
   "userLimitWarning": {
