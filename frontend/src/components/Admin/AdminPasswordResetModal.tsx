@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { adminApi } from "../../lib/api";
 import { useTranslation } from "../../hooks/useTranslation";
+import { copyToClipboard } from "../../lib/clipboard";
 
 interface AdminPasswordResetModalProps {
   userId: string;
@@ -50,14 +51,14 @@ export default function AdminPasswordResetModal({
     }
   };
 
-  const handleCopy = (): void => {
-    navigator.clipboard
-      .writeText(generatedPassword)
-      .then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      })
-      .catch(() => undefined);
+  const handleCopy = async (): Promise<void> => {
+    try {
+      await copyToClipboard(generatedPassword);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // ignore — UI stays in its current state
+    }
   };
 
   const handleSet = async (e: React.FormEvent): Promise<void> => {
