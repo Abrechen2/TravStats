@@ -4,6 +4,53 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.15.0-beta] - 2026-04-11
+
+### Added
+- **Invitation system v2** — The admin invitation surface is rebuilt
+  end-to-end. Two distinct entry points replace the browser `prompt()`:
+  a "Create link" modal that generates a shareable URL with an
+  expiration radio (24h / 7d / 30d), and a "Create by email" modal
+  that additionally sends the invitation through SMTP to a given
+  recipient. The success modal keeps the link visible with a copy
+  button until the admin dismisses it, so the URL is never "lost in
+  a toast" again. On SMTP failure the invitation is still created
+  and the modal shows an amber warning with the concrete error and
+  the fallback link.
+- **Row-level invitation management** — Every invitation row in the
+  admin list now has context-aware actions: re-copy the link on any
+  active invitation, resend the email (only for rows with an email
+  attached and a null/failed send status), and revoke (hard-delete)
+  any non-used invitation. A filter chip row above the table
+  (`Alle` / `Aktiv` / `Verwendet` / `Abgelaufen`) narrows the view,
+  and a new "Verwendet von" column shows which user consumed each
+  used invitation.
+- **`MAX_USERS` enforcement at invitation create time** — Both
+  create endpoints now run a serializable transaction that counts
+  `users + active invitations` and rejects with `409 User limit
+  reached` before any row is inserted. `MAX_USERS` was previously
+  only a warning log that never actually blocked anything.
+- **Auto-populated `notificationEmail` on invited registrations** —
+  When a user registers through an invitation that carried an email
+  address, that address is copied into the new user's
+  `notificationEmail` field during the same insert. Password reset
+  works for invited users out of the box without a manual visit to
+  the settings page.
+- **Email delivery tracking per invitation** — The `invitations`
+  table gets three new columns (`email_status`, `email_error`,
+  `email_sent_at`) so the list row can show the last send outcome
+  and the resend action can target failed deliveries specifically.
+  The `used_by` foreign key is tightened to `ON DELETE SET NULL`
+  so deleting a user no longer cascades to historical invitation
+  rows.
+- **Dedicated `sendInvitationEmail` helper** — A new function in
+  `emailService.ts` mirrors the existing `sendPasswordResetEmail`
+  pattern but throws on SMTP misconfiguration instead of silently
+  returning. The route handler catches the throw, marks the
+  invitation `email_status='failed'` with the underlying error
+  text, and still returns 200 — the *invitation* create succeeded
+  even when the *email send* did not.
+
 ## [0.14.1-beta] - 2026-04-11
 
 ### Fixed
