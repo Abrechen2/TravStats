@@ -34,8 +34,8 @@
   },
   "filter": {
     "all": "Alle",
-    "withTrip": "Mit Trip",
-    "withoutTrip": "Ohne Trip"
+    "with": "Mit Trip",
+    "without": "Ohne Trip"
   },
   "toasts": {
     "created": "Trip erstellt",

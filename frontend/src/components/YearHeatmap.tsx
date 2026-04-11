@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Flight } from "../types";
 import { useTranslation } from "../hooks/useTranslation";
+import { resolveAirlineDisplay } from "../lib/airlineUtils";
 
 interface YearHeatmapProps {
   flights: Flight[];
@@ -214,7 +215,8 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
           <div className="space-y-1">
             {hoveredCell.flights.map((flight) => (
               <div key={flight.id} className="text-xs text-[var(--text-primary)]">
-                {flight.airline} {flight.flightNumber}: {flight.depIata || flight.depIcao}{" "}
+                {resolveAirlineDisplay(flight.airline, flight.flightNumber) || flight.airline}{" "}
+                {flight.flightNumber}: {flight.depIata || flight.depIcao}{" "}
                 {t("common:labels.routeSeparator")} {flight.arrIata || flight.arrIcao}
               </div>
             ))}

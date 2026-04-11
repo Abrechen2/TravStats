@@ -1,4 +1,5 @@
 import { useTranslation } from "../../hooks/useTranslation";
+import { resolveAirlineDisplay } from "../../lib/airlineUtils";
 
 interface FlightLookupResult {
   flightNumber: string;
@@ -59,7 +60,8 @@ export default function FlightSelectStep({
           <div className="flex justify-between items-start">
             <div>
               <div className={`font-bold ${textClass}`}>
-                {flight.airline} {flight.flightNumber}
+                {resolveAirlineDisplay(flight.airline, flight.flightNumber) || flight.airline}{" "}
+                {flight.flightNumber}
               </div>
               <div className={`text-sm ${mutedTextClass}`}>
                 {flight.departure.iata} {t("common:labels.routeSeparator")} {flight.arrival.iata}
