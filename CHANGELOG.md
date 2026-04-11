@@ -4,6 +4,48 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.14.0-beta] - 2026-04-11
+
+### Added
+- **Hilfetexte auf allen Einstellungs- und Admin-Seiten** — 10 Komponenten
+  (SmtpManager, ParserSettings, ApiKeys, Backup, Defaults, Features, Map,
+  Notifications, Profile, Units) haben jetzt aufklappbare InlineHelp-Blöcke
+  mit DE + EN Erklärungen zu Scope, Abhängigkeiten und Stolperfallen.
+  Abdeckung jetzt 27 Komponenten mit 198 geprüften i18n-Keys.
+- **Help-Audit-Skript** — `scripts/audit-inline-help.mjs` scannt alle
+  InlineHelp- und HelpIcon-Elemente und verifiziert jeden `t()`-Key gegen
+  DE und EN. Exit-Code 1 bei fehlenden Übersetzungen, nutzbar als CI-Gate.
+
+### Fixed
+- **Backup-Erstellung über die UI** — Der Route-Handler übergab vorberechnete
+  Pfade via `existingRecord` an den Service, der aber intern einen neuen
+  Timestamp generierte und deshalb `mkdirSync` auf einem anderen Ordner
+  ausführte als er anschließend beschreiben wollte. Ergebnis: `pg_dump >
+  .../temp/database.sql: Directory nonexistent`. Der Service übernimmt jetzt
+  `backupDir`/`tempDir` direkt aus `existingRecord`.
+- **"Datum unbekannt" in der Backup-Tabelle** — `serializeBigInt()` fiel
+  bei Date-Objekten in den `typeof === 'object'`-Pfad und machte daraus `{}`,
+  weil `Object.entries(date) === []`. Fix: Non-plain Objekte werden unverändert
+  durchgereicht, Express ruft dann `Date.toJSON()` für die Wire-Serialisierung
+  auf. +7 Regression-Tests.
+- **Airline-Spalte konsistent** — Manche Flüge zeigten "Lufthansa", andere
+  "LH". Eine neue `resolveAirlineDisplay()`-Funktion expandiert 2-Zeichen-
+  IATA-Codes zum vollen Airline-Namen; überall angewendet (FlightsTablePage,
+  FlightList, FlightCalendar, FlightSelectStep, YearHeatmap).
+- **Trip-Filter-Chips** — Die Buttons zeigten rohe i18n-Keys `filter.with` /
+  `filter.without`, weil im JSON `withTrip` / `withoutTrip` hinterlegt war.
+  Keys in DE + EN an den Code angeglichen.
+- **Fehlende Lib-Files committed** — `airlineUtils.ts` und `filterEmailText.ts`
+  wurden von `FlightReviewModal` und `EmailAnnotation` importiert, existierten
+  aber nur lokal (untracked). Ein frischer Clone hätte nicht gebaut.
+- **Weiße Input-Felder auf Auth-Seiten** — LoginPage, ForceChangePasswordPage,
+  ResetPasswordPage und AdminPasswordResetModal nutzten eine nicht existierende
+  CSS-Klasse `.input-field` und fielen auf den Browser-Default (weiß) zurück.
+  Umgestellt auf die existierende `.input`-Klasse.
+- **"Hinweis"-Label im Developer Mode** — Der Key
+  `settings:developer.help.noteLabel` fehlte in beiden Sprachen, sodass die UI
+  beim Aufklappen den rohen i18n-Key gerendert hat. Ergänzt in DE + EN.
+
 ## [0.13.0-beta] - 2026-04-06
 
 ### Added
