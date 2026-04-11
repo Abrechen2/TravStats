@@ -4,6 +4,25 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.14.1-beta] - 2026-04-11
+
+### Fixed
+- **Invitation system wired end-to-end** — The register flow never
+  forwarded the invitation token to the backend, so invited users
+  silently registered as normal uninvited users and the invitation
+  record stayed forever "active" in the admin list. `authApi.register`
+  now accepts a third `invitationToken` argument, `RegisterPage` reads
+  the `?token=` query parameter via `useSearchParams`, and a green
+  "you are registering with an invitation" banner confirms that the
+  link was picked up. Companion prod-config change: `FRONTEND_URL=
+  http://192.168.178.120:3010` and `ALLOW_REGISTRATION=false` added to
+  the CT 100 docker-compose.yml so invite URLs no longer point to
+  localhost and public registration is actually gated on a valid
+  invite. Verified end-to-end against a local dev instance: registration
+  without a token is blocked, an admin-created invite flows through
+  the register page, the `invitedBy` column is populated, and a second
+  use of the same token is rejected by the database unique constraint.
+
 ## [0.14.0-beta] - 2026-04-11
 
 ### Added
