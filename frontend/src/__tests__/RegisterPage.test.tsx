@@ -1,12 +1,31 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { BrowserRouter } from "react-router-dom";
 import RegisterPage from "../pages/RegisterPage";
 import { useAuthStore } from "../store/authStore";
 
 vi.mock("../lib/api");
 vi.mock("../store/authStore");
+
+// Mock the custom useTranslation hook to avoid async state updates from
+// the settings-store-backed language sync effect
+vi.mock("../hooks/useTranslation", () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: { language: "en", changeLanguage: vi.fn() },
+    ready: true,
+  }),
+}));
+
+// Mock framer-motion to avoid animation-triggered state updates outside act()
+vi.mock("framer-motion", () => ({
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  motion: {
+    div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+      <div {...props}>{children}</div>
+    ),
+  },
+}));
 
 const mockUseAuthStore = vi.mocked(useAuthStore);
 
@@ -34,7 +53,6 @@ describe("RegisterPage", () => {
   });
 
   it("should validate password mismatch", async () => {
-    const user = userEvent.setup();
     const { container } = render(
       <BrowserRouter>
         <RegisterPage />
@@ -45,8 +63,8 @@ describe("RegisterPage", () => {
     const confirmPasswordInput = screen.getByLabelText(/register\.confirmPassword/i);
     const form = container.querySelector("form");
 
-    await user.type(passwordInput, "password123");
-    await user.type(confirmPasswordInput, "password456");
+    fireEvent.change(passwordInput, { target: { value: "password123" } });
+    fireEvent.change(confirmPasswordInput, { target: { value: "password456" } });
 
     if (form) {
       fireEvent.submit(form);
@@ -62,7 +80,6 @@ describe("RegisterPage", () => {
   });
 
   it("should validate minimum password length", async () => {
-    const user = userEvent.setup();
     const { container } = render(
       <BrowserRouter>
         <RegisterPage />
@@ -73,8 +90,8 @@ describe("RegisterPage", () => {
     const confirmPasswordInput = screen.getByLabelText(/register\.confirmPassword/i);
     const form = container.querySelector("form");
 
-    await user.type(passwordInput, "12345");
-    await user.type(confirmPasswordInput, "12345");
+    fireEvent.change(passwordInput, { target: { value: "12345" } });
+    fireEvent.change(confirmPasswordInput, { target: { value: "12345" } });
 
     if (form) {
       fireEvent.submit(form);
