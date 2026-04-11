@@ -6,10 +6,15 @@ export type LoginResult = { user: User } | { requiresPasswordChange: true; chang
 
 // Auth API
 export const authApi = {
-  register: async (username: string, password: string): Promise<{ user: User }> => {
+  register: async (
+    username: string,
+    password: string,
+    invitationToken?: string
+  ): Promise<{ user: User }> => {
     const { data } = await api.post<{ user: User }>("/auth/register", {
       username,
       password,
+      ...(invitationToken ? { invitationToken } : {}),
     });
     return data;
   },

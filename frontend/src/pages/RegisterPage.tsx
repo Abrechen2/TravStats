@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { authApi } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
@@ -7,6 +7,8 @@ import { useTranslation } from "../hooks/useTranslation";
 
 export default function RegisterPage(): JSX.Element {
   const { t } = useTranslation(["auth", "common"]);
+  const [searchParams] = useSearchParams();
+  const invitationToken = searchParams.get("token") ?? undefined;
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -28,7 +30,7 @@ export default function RegisterPage(): JSX.Element {
     }
     setLoading(true);
     try {
-      const { user } = await authApi.register(username, password);
+      const { user } = await authApi.register(username, password, invitationToken);
       setAuth(user);
       navigate("/");
     } catch (err: unknown) {
@@ -71,6 +73,19 @@ export default function RegisterPage(): JSX.Element {
             borderTop: "2px solid var(--accent)",
           }}
         >
+          {invitationToken && (
+            <div
+              className="px-4 py-3 rounded-lg mb-4 text-sm"
+              style={{
+                background: "rgba(34,197,94,0.12)",
+                border: "1px solid rgba(34,197,94,0.5)",
+                color: "#22c55e",
+              }}
+            >
+              {t("register.invitationDetected")}
+            </div>
+          )}
+
           {error && (
             <div
               className="px-4 py-3 rounded-lg mb-4 text-sm"
