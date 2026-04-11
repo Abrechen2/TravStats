@@ -1,23 +1,28 @@
 import request from 'supertest';
 import app from '../index';
 import { prisma } from '../db';
+import { hashPassword } from '../utils/password';
+import { generateToken } from '../utils/jwt';
 
 describe('Flights API', () => {
   let authCookie: string;
   let userId: string;
 
   beforeAll(async () => {
-    // Create test user and get auth cookie
-    const response = await request(app)
-      .post('/api/v1/auth/register')
-      .send({
-        username: 'flighttest',
-        password: 'password123',
-      });
+    // Seed the test user directly via Prisma + sign a JWT so the suite
+    // doesn't depend on POST /auth/register (which is gated by
+    // ALLOW_REGISTRATION in the test env).
+    await prisma.flight.deleteMany({ where: { user: { username: 'flighttest' } } });
+    await prisma.user.deleteMany({ where: { username: 'flighttest' } });
 
-    // Extract cookie from set-cookie header
-    authCookie = response.headers['set-cookie'][0];
-    userId = response.body.user.id;
+    const user = await prisma.user.create({
+      data: {
+        username: 'flighttest',
+        passwordHash: await hashPassword('password123'),
+      },
+    });
+    userId = user.id;
+    authCookie = `auth_token=${generateToken(user.id)}`;
   });
 
   afterAll(async () => {
