@@ -6,6 +6,12 @@ module.exports = {
       diagnostics: false, // Skip type-checking in tests; production code is checked via tsc --noEmit
     },
   },
+  // Integration tests hit a shared Postgres database and a lot of them do
+  // `prisma.user.deleteMany()` / `prisma.invitation.deleteMany()` in
+  // beforeEach/beforeAll. Running workers in parallel against one DB makes
+  // those wipes step on each other's test data. Run serially — the suite is
+  // small enough that the throughput hit is acceptable.
+  maxWorkers: 1,
   roots: ['<rootDir>/src'],
   testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
   collectCoverageFrom: [
