@@ -3,7 +3,11 @@ import crypto from 'crypto';
 import { Prisma } from '@prisma/client';
 import { AuthRequest } from '../../middleware/auth';
 import { prisma } from '../../db';
-import { createLinkInvitationSchema } from '../../schemas/invitation';
+import {
+  createLinkInvitationSchema,
+  createEmailInvitationSchema,
+} from '../../schemas/invitation';
+import { sendInvitationEmail } from '../../services/emailService';
 import { AppError } from '../../middleware/errorHandler';
 
 const router = Router();
@@ -61,6 +65,69 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
         expiresAt: invitation.expiresAt,
       },
       inviteUrl: buildInviteUrl(invitation.token),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /admin/invitations/email — create invitation and send via SMTP
+ */
+router.post('/email', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { email, expiresInDays } = createEmailInvitationSchema.parse(req.body);
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000);
+
+    const invitation = await prisma.$transaction(
+      async (tx) => {
+        await ensureUserLimitNotReached(tx);
+        return tx.invitation.create({
+          data: {
+            email,
+            token,
+            createdBy: req.userId!,
+            expiresAt,
+          },
+        });
+      },
+      { isolationLevel: 'Serializable' },
+    );
+
+    const inviteUrl = buildInviteUrl(invitation.token);
+    const creator = await prisma.user.findUnique({
+      where: { id: req.userId! },
+      select: { username: true },
+    });
+
+    let emailSent = false;
+    let emailError: string | null = null;
+    try {
+      await sendInvitationEmail(email, inviteUrl, creator?.username ?? 'an admin', expiresAt);
+      emailSent = true;
+      await prisma.invitation.update({
+        where: { id: invitation.id },
+        data: { emailStatus: 'sent', emailSentAt: new Date(), emailError: null },
+      });
+    } catch (err) {
+      emailError = err instanceof Error ? err.message : 'Unknown send error';
+      await prisma.invitation.update({
+        where: { id: invitation.id },
+        data: { emailStatus: 'failed', emailError },
+      });
+    }
+
+    res.json({
+      invitation: {
+        id: invitation.id,
+        email: invitation.email,
+        token: invitation.token,
+        expiresAt: invitation.expiresAt,
+      },
+      inviteUrl,
+      emailSent,
+      emailError,
     });
   } catch (error) {
     next(error);

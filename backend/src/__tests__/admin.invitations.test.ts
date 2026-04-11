@@ -88,3 +88,65 @@ describe('admin/invitations — POST /', () => {
     expect(res.body.error).toMatch(/user limit reached/i);
   });
 });
+
+describe('admin/invitations — POST /email', () => {
+  beforeEach(async () => {
+    mockSendInvitationEmail.mockReset();
+    await prisma.invitation.deleteMany();
+    await prisma.user.deleteMany();
+    process.env.MAX_USERS = '10';
+    const admin = await createAdminUser();
+    adminUserId = admin.id;
+    adminToken = admin.token;
+  });
+
+  it('creates an invitation and marks emailStatus=sent on SMTP success', async () => {
+    mockSendInvitationEmail.mockResolvedValue(undefined);
+
+    const res = await request(app)
+      .post('/api/v1/admin/invitations/email')
+      .set('Cookie', [`auth_token=${adminToken}`])
+      .send({ email: 'jane@example.com', expiresInDays: 7 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.emailSent).toBe(true);
+    expect(res.body.emailError).toBeNull();
+    expect(mockSendInvitationEmail).toHaveBeenCalledTimes(1);
+
+    const stored = await prisma.invitation.findUnique({
+      where: { id: res.body.invitation.id },
+    });
+    expect(stored?.email).toBe('jane@example.com');
+    expect(stored?.emailStatus).toBe('sent');
+    expect(stored?.emailSentAt).not.toBeNull();
+  });
+
+  it('creates an invitation and marks emailStatus=failed on SMTP throw', async () => {
+    mockSendInvitationEmail.mockRejectedValue(new Error('SMTP auth failed'));
+
+    const res = await request(app)
+      .post('/api/v1/admin/invitations/email')
+      .set('Cookie', [`auth_token=${adminToken}`])
+      .send({ email: 'jane@example.com', expiresInDays: 7 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.emailSent).toBe(false);
+    expect(res.body.emailError).toContain('SMTP auth failed');
+
+    const stored = await prisma.invitation.findUnique({
+      where: { id: res.body.invitation.id },
+    });
+    expect(stored?.emailStatus).toBe('failed');
+    expect(stored?.emailError).toContain('SMTP auth failed');
+  });
+
+  it('rejects invalid email with 400', async () => {
+    const res = await request(app)
+      .post('/api/v1/admin/invitations/email')
+      .set('Cookie', [`auth_token=${adminToken}`])
+      .send({ email: 'not-an-email', expiresInDays: 7 });
+
+    expect(res.status).toBe(400);
+    expect(mockSendInvitationEmail).not.toHaveBeenCalled();
+  });
+});
