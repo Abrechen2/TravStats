@@ -35,6 +35,7 @@ jest.mock("../db", () => ({
   prisma: {
     userTemplate: { findMany: jest.fn() },
     logConfig: { findUnique: jest.fn() },
+    adminSettings: { findFirst: jest.fn().mockResolvedValue(null) },
   },
 }));
 
@@ -99,7 +100,10 @@ jest.mock("../services/parserFeedback", () => ({
 }));
 
 // ── Shared utils (extractFlightDataFromText used in post-processing) ──────────
+// Spread the real module so utilities not explicitly mocked (e.g. cleanEmailBody,
+// PATTERNS, getMissingFields) keep their production behaviour.
 jest.mock("../services/parsers/shared/utils", () => ({
+  ...(jest.requireActual("../services/parsers/shared/utils") as object),
   extractFlightDataFromText: jest.fn().mockReturnValue({}),
 }));
 
@@ -236,8 +240,9 @@ describe("parseEmail — fallback chain", () => {
 
     expect(result.flights).toHaveLength(1);
     expect(result.flights[0].flightNumber).toBe("BA200");
-    // regex provider was invoked
-    expect(mockGetTextParserInstance).toHaveBeenCalledWith("regex");
+    // regex provider was invoked (production call site passes the config
+    // object as a second argument — match on the first positional arg only)
+    expect(mockGetTextParserInstance).toHaveBeenCalledWith("regex", expect.any(Object));
   });
 
   // ────────────────────────────────────────────────────────────────────────────
