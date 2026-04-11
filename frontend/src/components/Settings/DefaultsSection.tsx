@@ -1,4 +1,5 @@
 import { SectionCard, SectionTitle } from "./SettingsShared";
+import InlineHelp from "../Help/InlineHelp";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { DefaultsSettings } from "../../store/settingsStore";
 
@@ -18,6 +19,23 @@ export default function DefaultsSection({
       <SectionTitle
         title={t("settings:defaults.title")}
         description={t("settings:defaults.description")}
+      />
+      <InlineHelp
+        title={t("settings:defaults.help.title")}
+        category="basic"
+        content={
+          <div className="space-y-2">
+            <p>{t("settings:defaults.help.description")}</p>
+            <div>
+              <p className="font-semibold">{t("settings:defaults.help.statusTitle")}</p>
+              <p className="ml-2 text-sm">{t("settings:defaults.help.status")}</p>
+            </div>
+            <div>
+              <p className="font-semibold">{t("settings:defaults.help.categoryTitle")}</p>
+              <p className="ml-2 text-sm">{t("settings:defaults.help.category")}</p>
+            </div>
+          </div>
+        }
       />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>

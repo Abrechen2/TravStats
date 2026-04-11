@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { adminApi, type SmtpConfigInput } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
+import InlineHelp from "../Help/InlineHelp";
 
 const DEFAULT_CONFIG: SmtpConfigInput = {
   host: "",
@@ -112,6 +113,34 @@ export default function SmtpManager(): JSX.Element {
       <h3 className="font-semibold text-base" style={{ color: "var(--text-primary)" }}>
         {t("settings:notifications.smtpTitle")}
       </h3>
+
+      <InlineHelp
+        title={t("settings:notifications.smtpHelp.title")}
+        category="expert"
+        content={
+          <div className="space-y-2">
+            <p>{t("settings:notifications.smtpHelp.description")}</p>
+            <div>
+              <p className="font-semibold">{t("settings:notifications.smtpHelp.portsTitle")}</p>
+              <p className="ml-2 text-sm">{t("settings:notifications.smtpHelp.ports")}</p>
+            </div>
+            <div>
+              <p className="font-semibold">
+                {t("settings:notifications.smtpHelp.credentialsTitle")}
+              </p>
+              <p className="ml-2 text-sm">{t("settings:notifications.smtpHelp.credentials")}</p>
+            </div>
+            <div>
+              <p className="font-semibold">{t("settings:notifications.smtpHelp.senderTitle")}</p>
+              <p className="ml-2 text-sm">{t("settings:notifications.smtpHelp.sender")}</p>
+            </div>
+            <div>
+              <p className="font-semibold">{t("settings:notifications.smtpHelp.testTitle")}</p>
+              <p className="ml-2 text-sm">{t("settings:notifications.smtpHelp.test")}</p>
+            </div>
+          </div>
+        }
+      />
 
       {/* Enable toggle */}
       <label className="flex items-center gap-3">

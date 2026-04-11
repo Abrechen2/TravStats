@@ -1,4 +1,5 @@
 import { SectionCard, SectionTitle } from "./SettingsShared";
+import InlineHelp from "../Help/InlineHelp";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { MapSettings } from "../../store/settingsStore";
 
@@ -15,6 +16,23 @@ export default function MapSection({ map, onSetMap }: MapSectionProps): JSX.Elem
   return (
     <SectionCard>
       <SectionTitle title={t("settings:map.title")} description={t("settings:map.description")} />
+      <InlineHelp
+        title={t("settings:map.help.title")}
+        category="basic"
+        content={
+          <div className="space-y-2">
+            <p>{t("settings:map.help.description")}</p>
+            <div>
+              <p className="font-semibold">{t("settings:map.help.styleTitle")}</p>
+              <p className="ml-2 text-sm">{t("settings:map.help.style")}</p>
+            </div>
+            <div>
+              <p className="font-semibold">{t("settings:map.help.colorTitle")}</p>
+              <p className="ml-2 text-sm">{t("settings:map.help.color")}</p>
+            </div>
+          </div>
+        }
+      />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="label">{t("settings:map.mapStyle")}</label>

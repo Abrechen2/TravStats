@@ -1,4 +1,5 @@
 import { SectionCard, SectionTitle } from "./SettingsShared";
+import InlineHelp from "../Help/InlineHelp";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { UnitsSettings } from "../../store/settingsStore";
 
@@ -15,6 +16,23 @@ export default function UnitsSection({ units, onSetUnits }: UnitsSectionProps): 
       <SectionTitle
         title={t("settings:units.title")}
         description={t("settings:units.description")}
+      />
+      <InlineHelp
+        title={t("settings:units.help.title")}
+        category="basic"
+        content={
+          <div className="space-y-2">
+            <p>{t("settings:units.help.description")}</p>
+            <div>
+              <p className="font-semibold">{t("settings:units.help.distanceTitle")}</p>
+              <p className="ml-2 text-sm">{t("settings:units.help.distance")}</p>
+            </div>
+            <div>
+              <p className="font-semibold">{t("settings:units.help.currencyTitle")}</p>
+              <p className="ml-2 text-sm">{t("settings:units.help.currency")}</p>
+            </div>
+          </div>
+        }
       />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
