@@ -4,6 +4,23 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.15.2-beta] - 2026-04-11
+
+### Fixed
+- **Password min length aligned with the backend on the invited
+  register page** — The client-side check rejected passwords below 6
+  characters while the backend Zod schema already required at least 8,
+  so 6- or 7-character passwords slipped past the client and hit the
+  generic "Validation error" envelope from the backend error handler.
+  The invited user saw a red box with no explanation. Fix: the client
+  check is now 8 characters to match, the `register.passwordTooShort`
+  string in both DE and EN says "mindestens 8" / "at least 8", and the
+  error handler now prefers `details[0].message` (the actual Zod
+  per-field message) over the generic envelope when the backend does
+  return one. Verified locally against a fresh invitation: a 7-char
+  password now surfaces the exact "at least 8" message client-side,
+  a valid 10-char password completes the flow.
+
 ## [0.15.1-beta] - 2026-04-11
 
 ### Fixed
