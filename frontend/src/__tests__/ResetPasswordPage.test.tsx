@@ -9,6 +9,26 @@ vi.mock("../lib/api", () => ({
   },
 }));
 
+// Mock the custom useTranslation hook to avoid async state updates from
+// the settings-store-backed language sync effect
+vi.mock("../hooks/useTranslation", () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: { language: "en", changeLanguage: vi.fn() },
+    ready: true,
+  }),
+}));
+
+// Mock framer-motion to avoid animation-triggered state updates outside act()
+vi.mock("framer-motion", () => ({
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  motion: {
+    div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+      <div {...props}>{children}</div>
+    ),
+  },
+}));
+
 const mockNavigate = vi.fn();
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
