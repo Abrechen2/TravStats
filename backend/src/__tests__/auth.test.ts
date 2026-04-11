@@ -3,14 +3,16 @@ import app from '../index';
 import { prisma } from '../db';
 
 describe('Auth API', () => {
-  beforeAll(async () => {
-    // Clean up test data
-    await prisma.user.deleteMany({
-      where: { username: { startsWith: 'testuser' } },
-    });
+  beforeEach(async () => {
+    // Wipe all users and invitations so each register call hits the
+    // isFirstUser=true bypass (ALLOW_REGISTRATION=false in test env).
+    await prisma.invitation.deleteMany();
+    await prisma.user.deleteMany();
   });
 
   afterAll(async () => {
+    await prisma.invitation.deleteMany();
+    await prisma.user.deleteMany();
     await prisma.$disconnect();
   });
 
