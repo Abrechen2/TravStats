@@ -2,21 +2,21 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Ersetze die LLM-Training-zentrierte TrainingPage durch eine aufgeräumte „Parser"-Seite mit 4 Tabs: Annotieren, Meine Templates, Community Templates, Parse-Logs.
+**Goal:** Replace the LLM-training-centric TrainingPage with a clean "Parser" page containing 4 tabs: Annotate, My Templates, Community Templates, Parse Logs.
 
-**Architecture:** `TrainingPage.tsx` wird durch `ParserPage.tsx` ersetzt. Ein neues `MyTemplates`-Komponente listet User-Templates via `parserTemplatesApi`. Der Developer-Mode-Gate fliegt raus — Template-Management ist produktiv, nicht experimentell. TrainingGuide und Admin-TrainingConfig werden gelöscht. Training-Einstellungen aus der SettingsPage entfernt.
+**Architecture:** `TrainingPage.tsx` is replaced by `ParserPage.tsx`. A new `MyTemplates` component lists user templates via `parserTemplatesApi`. The developer-mode gate is removed — template management is a productive feature, not experimental. TrainingGuide and the admin TrainingConfig are deleted. Training settings are removed from SettingsPage.
 
-**Tech Stack:** React 18, TypeScript strict, Vitest, Tailwind CSS, react-i18next (`useTranslation` eigener Hook)
+**Tech Stack:** React 18, TypeScript strict, Vitest, Tailwind CSS, react-i18next (`useTranslation` is our own hook)
 
 ---
 
-### Task 1: MyTemplates-Komponente + Tests
+### Task 1: MyTemplates component + tests
 
 **Files:**
 - Create: `frontend/src/components/Parser/MyTemplates.tsx`
 - Create: `frontend/src/__tests__/components/Parser/MyTemplates.test.tsx`
 
-- [ ] **Step 1: Test schreiben**
+- [ ] **Step 1: Write the test**
 
 ```tsx
 // frontend/src/__tests__/components/Parser/MyTemplates.test.tsx
@@ -94,15 +94,15 @@ describe("MyTemplates", () => {
 });
 ```
 
-- [ ] **Step 2: Test laufen lassen — muss FAIL**
+- [ ] **Step 2: Run the test — must FAIL**
 
 ```bash
 cd /d/Projekte/TravStats/frontend && npx vitest --run src/__tests__/components/Parser/MyTemplates.test.tsx
 ```
 
-Erwartet: FAIL — `Cannot find module '../../../components/Parser/MyTemplates'`
+Expected: FAIL — `Cannot find module '../../../components/Parser/MyTemplates'`
 
-- [ ] **Step 3: MyTemplates implementieren**
+- [ ] **Step 3: Implement MyTemplates**
 
 ```tsx
 // frontend/src/components/Parser/MyTemplates.tsx
@@ -248,13 +248,13 @@ export default function MyTemplates(): JSX.Element {
 }
 ```
 
-- [ ] **Step 4: Test laufen lassen — muss PASS**
+- [ ] **Step 4: Run the test — must PASS**
 
 ```bash
 cd /d/Projekte/TravStats/frontend && npx vitest --run src/__tests__/components/Parser/MyTemplates.test.tsx
 ```
 
-Erwartet: 4 Tests PASS
+Expected: 4 tests PASS
 
 - [ ] **Step 5: Commit**
 
@@ -272,16 +272,16 @@ git commit -m "feat: MyTemplates component — list/activate/disable/delete user
 **Files:**
 - Create: `frontend/src/i18n/resources/de/parser.json`
 - Create: `frontend/src/i18n/resources/en/parser.json`
-- Modify: `frontend/src/i18n/resources/de/dashboard.json` — Key `"training"` → `"parser"`
-- Modify: `frontend/src/i18n/resources/en/dashboard.json` — Key `"training"` → `"parser"`
-- Modify: `frontend/src/i18n/i18n.ts` (oder wo die Namespaces registriert sind) — `parser` hinzufügen
+- Modify: `frontend/src/i18n/resources/de/dashboard.json` — key `"training"` → `"parser"`
+- Modify: `frontend/src/i18n/resources/en/dashboard.json` — key `"training"` → `"parser"`
+- Modify: `frontend/src/i18n/i18n.ts` (or wherever the namespaces are registered) — add `parser`
 
-Zuerst prüfen wie Namespaces registriert werden:
+First check how namespaces are registered:
 ```bash
 grep -n "training\|namespace\|resources" /d/Projekte/TravStats/frontend/src/i18n/i18n.ts | head -20
 ```
 
-- [ ] **Step 1: DE parser.json erstellen**
+- [ ] **Step 1: Create DE parser.json**
 
 ```json
 // frontend/src/i18n/resources/de/parser.json
@@ -324,7 +324,7 @@ grep -n "training\|namespace\|resources" /d/Projekte/TravStats/frontend/src/i18n
 }
 ```
 
-- [ ] **Step 2: EN parser.json erstellen**
+- [ ] **Step 2: Create EN parser.json**
 
 ```json
 // frontend/src/i18n/resources/en/parser.json
@@ -367,31 +367,31 @@ grep -n "training\|namespace\|resources" /d/Projekte/TravStats/frontend/src/i18n
 }
 ```
 
-- [ ] **Step 3: Navigation-Label aktualisieren**
+- [ ] **Step 3: Update the navigation label**
 
-In `frontend/src/i18n/resources/de/dashboard.json` Zeile mit `"training": "Training"` → `"parser": "Parser"`:
+In `frontend/src/i18n/resources/de/dashboard.json`, change the line `"training": "Training"` → `"parser": "Parser"`:
 ```json
 "parser": "Parser"
 ```
 
-Gleich in `frontend/src/i18n/resources/en/dashboard.json`.
+Same in `frontend/src/i18n/resources/en/dashboard.json`.
 
-- [ ] **Step 4: `parser` Namespace in i18n.ts registrieren**
+- [ ] **Step 4: Register the `parser` namespace in i18n.ts**
 
-Zunächst prüfen:
+First check:
 ```bash
 grep -n "training" /d/Projekte/TravStats/frontend/src/i18n/i18n.ts | head -10
 ```
 
-Dann `parser` analog zu `training` einfügen (import + resources-Eintrag).
+Then add `parser` analogously to `training` (import + entry in the resources object).
 
-- [ ] **Step 5: TypeScript-Check**
+- [ ] **Step 5: TypeScript check**
 
 ```bash
 cd /d/Projekte/TravStats/frontend && npx tsc --noEmit
 ```
 
-Erwartet: keine Fehler
+Expected: no errors
 
 - [ ] **Step 6: Commit**
 
@@ -407,14 +407,14 @@ git commit -m "feat: add parser i18n namespace, rename nav label"
 
 ---
 
-### Task 3: ParserPage.tsx erstellen
+### Task 3: Create ParserPage.tsx
 
 **Files:**
 - Create: `frontend/src/pages/ParserPage.tsx`
 
-Ersetzt `TrainingPage.tsx` vollständig. Kein Developer-Mode-Gate, kein LLM-Jargon, keine Jobs/Dashboard/Guide Tabs.
+Replaces `TrainingPage.tsx` entirely. No developer-mode gate, no LLM jargon, no Jobs/Dashboard/Guide tabs.
 
-- [ ] **Step 1: ParserPage.tsx erstellen**
+- [ ] **Step 1: Create ParserPage.tsx**
 
 ```tsx
 // frontend/src/pages/ParserPage.tsx
@@ -614,13 +614,13 @@ export default function ParserPage(): JSX.Element {
 }
 ```
 
-- [ ] **Step 2: TypeScript-Check**
+- [ ] **Step 2: TypeScript check**
 
 ```bash
 cd /d/Projekte/TravStats/frontend && npx tsc --noEmit
 ```
 
-Erwartet: keine Fehler
+Expected: no errors
 
 - [ ] **Step 3: Commit**
 
@@ -632,20 +632,20 @@ git commit -m "feat: ParserPage — 4 tabs: Annotieren, Meine Templates, Communi
 
 ---
 
-### Task 4: Routing + Navigation auf Parser umstellen
+### Task 4: Switch routing + navigation to Parser
 
 **Files:**
-- Modify: `frontend/src/App.tsx` — lazy import + Route
-- Modify: `frontend/src/components/NavigationBar.tsx` — Pfad, Label, Bedingung
+- Modify: `frontend/src/App.tsx` — lazy import + route
+- Modify: `frontend/src/components/NavigationBar.tsx` — path, label, condition
 
-- [ ] **Step 1: App.tsx aktualisieren**
+- [ ] **Step 1: Update App.tsx**
 
-Zeile mit `const TrainingPage = lazy(...)`:
+Line with `const TrainingPage = lazy(...)`:
 ```tsx
 const ParserPage = lazy(() => import("./pages/ParserPage"));
 ```
 
-Route ändern (Zeile mit `path="/training"`):
+Change the route (line with `path="/training"`):
 ```tsx
 <Route
   path="/parser"
@@ -653,23 +653,23 @@ Route ändern (Zeile mit `path="/training"`):
 />
 ```
 
-- [ ] **Step 2: NavigationBar aktualisieren**
+- [ ] **Step 2: Update NavigationBar**
 
-Zeile mit `path: "/training"` → `/parser`, Label → `t("dashboard:parser")`.
+Line with `path: "/training"` → `/parser`, label → `t("dashboard:parser")`.
 
-Developer-Mode-Gate entfernen: Den `developerModeEnabled`-State und den `settingsApi.getDeveloperMode()`-Aufruf in NavigationBar entfernen, `show`-Bedingung zu `show: hasTrainingAccess`.
+Remove the developer-mode gate: drop the `developerModeEnabled` state and the `settingsApi.getDeveloperMode()` call in NavigationBar, change the `show` condition to `show: hasTrainingAccess`.
 
-Vorher:
+Before:
 ```tsx
 show: hasTrainingAccess && developerModeEnabled,
 ```
 
-Nachher:
+After:
 ```tsx
 show: hasTrainingAccess,
 ```
 
-Den `developerModeEnabled` useState und den `useEffect` zum Laden des Dev-Mode in NavigationBar **vollständig entfernen** (falls kein anderer Code dort darauf zugreift — mit `grep -n "developerMode" frontend/src/components/NavigationBar.tsx` prüfen).
+**Completely remove** the `developerModeEnabled` useState and the `useEffect` that loads dev mode in NavigationBar (if no other code there relies on them — verify with `grep -n "developerMode" frontend/src/components/NavigationBar.tsx`).
 
 - [ ] **Step 3: TypeScript + Lint**
 
@@ -677,15 +677,15 @@ Den `developerModeEnabled` useState und den `useEffect` zum Laden des Dev-Mode i
 cd /d/Projekte/TravStats/frontend && npx tsc --noEmit && npm run lint
 ```
 
-Erwartet: keine Fehler
+Expected: no errors
 
-- [ ] **Step 4: Tests laufen lassen**
+- [ ] **Step 4: Run the tests**
 
 ```bash
 cd /d/Projekte/TravStats/frontend && npx vitest --run
 ```
 
-Erwartet: alle Tests PASS (NavigationBar-Tests ggf. Mocks anpassen falls sie `developerMode` mocken)
+Expected: all tests PASS (NavigationBar tests may need their mocks adjusted if they mock `developerMode`)
 
 - [ ] **Step 5: Commit**
 
@@ -697,33 +697,33 @@ git commit -m "feat: route /training → /parser, nav label + remove developer-m
 
 ---
 
-### Task 5: Training-Abschnitt aus SettingsPage entfernen
+### Task 5: Remove the training section from SettingsPage
 
 **Files:**
 - Modify: `frontend/src/pages/SettingsPage.tsx`
 
-Entfernen:
-- Den Eintrag `{ id: "training", label: ... }` aus dem Sections-Array (Zeile ~468)
-- Den gesamten `{activeSection === "training" && (...)}` Block (Zeile ~1770–1870, ca. 100 Zeilen)
-- Die State-Variablen `trainingSettings` und `savingTrainingConfig` falls danach ungenutzt
-- Die Funktionen `loadTrainingConfig` und `handleSaveTrainingConfig` falls danach ungenutzt
+Remove:
+- The `{ id: "training", label: ... }` entry from the sections array (line ~468)
+- The entire `{activeSection === "training" && (...)}` block (lines ~1770–1870, around 100 lines)
+- The state variables `trainingSettings` and `savingTrainingConfig` if unused afterwards
+- The functions `loadTrainingConfig` and `handleSaveTrainingConfig` if unused afterwards
 
-- [ ] **Step 1: Training-Section aus SettingsPage entfernen**
+- [ ] **Step 1: Remove the training section from SettingsPage**
 
 ```bash
 grep -n "training" /d/Projekte/TravStats/frontend/src/pages/SettingsPage.tsx | head -30
 ```
 
-Dann die identifizierten Blöcke mit dem Edit-Tool entfernen.
+Then remove the identified blocks with the Edit tool.
 
-- [ ] **Step 2: Ungenutzte Imports prüfen und entfernen**
+- [ ] **Step 2: Check for unused imports and remove them**
 
 ```bash
 cd /d/Projekte/TravStats/frontend && npx tsc --noEmit 2>&1 | grep "SettingsPage"
 npm run lint 2>&1 | grep "SettingsPage"
 ```
 
-Alle unused-Warnungen aus SettingsPage beheben.
+Fix all unused warnings in SettingsPage.
 
 - [ ] **Step 3: Tests**
 
@@ -731,7 +731,7 @@ Alle unused-Warnungen aus SettingsPage beheben.
 cd /d/Projekte/TravStats/frontend && npx vitest --run
 ```
 
-Erwartet: alle Tests PASS
+Expected: all tests PASS
 
 - [ ] **Step 4: Commit**
 
@@ -743,29 +743,29 @@ git commit -m "refactor: remove LLM training section from settings"
 
 ---
 
-### Task 6: Training-Tab aus AdminPage entfernen + TrainingConfig.tsx löschen
+### Task 6: Remove the training tab from AdminPage and delete TrainingConfig.tsx
 
 **Files:**
 - Modify: `frontend/src/pages/AdminPage.tsx`
 - Delete: `frontend/src/components/Admin/TrainingConfig.tsx`
 
-- [ ] **Step 1: Training-Tab aus AdminPage entfernen**
+- [ ] **Step 1: Remove the training tab from AdminPage**
 
-Aus `AdminPage.tsx` entfernen:
+Remove from `AdminPage.tsx`:
 - `import TrainingConfigTab from "../components/Admin/TrainingConfig";`
 - `import type { TrainingConfigData } from "../components/Admin/TrainingConfig";`
-- Den `{ id: "training", ... }` Eintrag aus dem Tabs-Array (Zeile ~474)
-- Den `<TrainingConfigTab ...>` Render-Block (Zeile ~614)
-- Die State-Variablen `trainingConfig` und `savingTrainingConfig`
-- Die Funktion `handleSaveTrainingConfig` und `loadTrainingConfig`
+- The `{ id: "training", ... }` entry from the tabs array (line ~474)
+- The `<TrainingConfigTab ...>` render block (line ~614)
+- The state variables `trainingConfig` and `savingTrainingConfig`
+- The functions `handleSaveTrainingConfig` and `loadTrainingConfig`
 
-- [ ] **Step 2: TrainingConfig.tsx löschen**
+- [ ] **Step 2: Delete TrainingConfig.tsx**
 
 ```bash
 rm /d/Projekte/TravStats/frontend/src/components/Admin/TrainingConfig.tsx
 ```
 
-- [ ] **Step 3: TrainingGuide.tsx löschen**
+- [ ] **Step 3: Delete TrainingGuide.tsx**
 
 ```bash
 rm /d/Projekte/TravStats/frontend/src/components/Training/TrainingGuide.tsx
@@ -777,7 +777,7 @@ rm /d/Projekte/TravStats/frontend/src/components/Training/TrainingGuide.tsx
 cd /d/Projekte/TravStats/frontend && npx tsc --noEmit && npm run lint
 ```
 
-Erwartet: keine Fehler, keine Warnings für gelöschte Dateien
+Expected: no errors, no warnings for the deleted files
 
 - [ ] **Step 5: Tests**
 
@@ -785,7 +785,7 @@ Erwartet: keine Fehler, keine Warnings für gelöschte Dateien
 cd /d/Projekte/TravStats/frontend && npx vitest --run
 ```
 
-Erwartet: alle Tests PASS
+Expected: all tests PASS
 
 - [ ] **Step 6: Commit**
 
@@ -799,33 +799,33 @@ git commit -m "refactor: remove training config from admin, delete TrainingGuide
 
 ---
 
-### Task 7: TrainingPage.tsx löschen + Volltest
+### Task 7: Delete TrainingPage.tsx + full test run
 
 **Files:**
 - Delete: `frontend/src/pages/TrainingPage.tsx`
-- Verify: alle Tests laufen durch
+- Verify: all tests pass
 
-- [ ] **Step 1: TrainingPage.tsx löschen**
+- [ ] **Step 1: Delete TrainingPage.tsx**
 
 ```bash
 rm /d/Projekte/TravStats/frontend/src/pages/TrainingPage.tsx
 ```
 
-- [ ] **Step 2: Etwaige Test-Dateien für TrainingPage prüfen**
+- [ ] **Step 2: Check for any TrainingPage test files**
 
 ```bash
 ls /d/Projekte/TravStats/frontend/src/pages/TrainingPage*.test.tsx 2>/dev/null
 ```
 
-Falls vorhanden: prüfen ob sie auf `ParserPage` umgeschrieben werden können oder gelöscht werden sollen.
+If present: decide whether they can be rewritten against `ParserPage` or should be deleted.
 
-- [ ] **Step 3: Volles Test-Suite**
+- [ ] **Step 3: Full test suite**
 
 ```bash
 cd /d/Projekte/TravStats/frontend && npx vitest --run
 ```
 
-Erwartet: alle Tests PASS
+Expected: all tests PASS
 
 - [ ] **Step 4: TypeScript + Lint**
 
@@ -833,17 +833,17 @@ Erwartet: alle Tests PASS
 cd /d/Projekte/TravStats/frontend && npx tsc --noEmit && npm run lint
 ```
 
-Erwartet: sauber
+Expected: clean
 
-- [ ] **Step 5: Backend TypeCheck**
+- [ ] **Step 5: Backend type check**
 
 ```bash
 cd /d/Projekte/TravStats/backend && npx tsc --noEmit && npm run lint
 ```
 
-Erwartet: keine Fehler (Backend unverändert)
+Expected: no errors (backend is unchanged)
 
-- [ ] **Step 6: Final Commit**
+- [ ] **Step 6: Final commit**
 
 ```bash
 cd /d/Projekte/TravStats
@@ -855,14 +855,14 @@ git commit -m "refactor: delete TrainingPage — replaced by ParserPage"
 
 ---
 
-## Zusammenfassung
+## Summary
 
-| Task | Ergebnis |
+| Task | Result |
 |------|---------|
-| 1 — MyTemplates | Neue Komponente: Templates listen, aktivieren, deaktivieren, löschen |
-| 2 — i18n | `parser`-Namespace (de + en), Nav-Label "Parser" |
-| 3 — ParserPage | Neue Seite mit 4 Tabs, kein LLM-Jargon |
-| 4 — Routing/Nav | `/parser` Route, Dev-Mode-Gate weg |
-| 5 — Settings | Training-Abschnitt entfernt |
-| 6 — Admin | Training-Tab + TrainingConfig.tsx + TrainingGuide.tsx entfernt |
-| 7 — Cleanup | TrainingPage.tsx gelöscht, Volltest grün |
+| 1 — MyTemplates | New component: list, activate, deactivate, delete templates |
+| 2 — i18n | `parser` namespace (de + en), nav label "Parser" |
+| 3 — ParserPage | New page with 4 tabs, no LLM jargon |
+| 4 — Routing/Nav | `/parser` route, dev-mode gate gone |
+| 5 — Settings | Training section removed |
+| 6 — Admin | Training tab + TrainingConfig.tsx + TrainingGuide.tsx removed |
+| 7 — Cleanup | TrainingPage.tsx deleted, full test run green |

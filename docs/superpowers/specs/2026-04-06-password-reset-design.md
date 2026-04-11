@@ -1,23 +1,23 @@
 # Password Reset — Design Spec
 
-**Datum:** 2026-04-06
+**Date:** 2026-04-06
 **Status:** Approved
 
 ---
 
-## Überblick
+## Overview
 
-Zwei unabhängige Reset-Wege:
-1. **Email-Reset** — User fordert Link an (setzt SMTP voraus)
-2. **Admin-Reset** — Admin setzt Passwort direkt im Admin-Panel (immer verfügbar)
+Two independent reset paths:
+1. **Email reset** — User requests a link (requires SMTP)
+2. **Admin reset** — Admin sets the password directly in the admin panel (always available)
 
-Beide Wege unterstützen `mustChangePassword`: User muss Passwort beim nächsten Login zwingend ändern.
+Both paths support `mustChangePassword`: the user is forced to change their password on next login.
 
 ---
 
-## Datenmodell
+## Data Model
 
-Drei neue Felder auf dem `User`-Model (Prisma-Migration):
+Three new fields on the `User` model (Prisma migration):
 
 ```prisma
 resetToken         String?   // gehashter Reset-Token (crypto.randomBytes(32))
@@ -25,42 +25,42 @@ resetTokenExpiry   DateTime? // 30 Min (Email-Flow) / 24h (Admin-generiert)
 mustChangePassword Boolean   @default(false)
 ```
 
-Token wird als Klartext-Hex generiert, mit `bcrypt.hash()` gespeichert, nach Verwendung auf `null` gesetzt.
+The token is generated as plaintext hex, stored via `bcrypt.hash()`, and set to `null` after use.
 
 ---
 
 ## Backend API
 
-**Neues Route-File:** `backend/src/routes/passwordReset.ts`
-**Eingebunden in:** `backend/src/index.ts` unter `/api/v1/auth`
+**New route file:** `backend/src/routes/passwordReset.ts`
+**Mounted in:** `backend/src/index.ts` under `/api/v1/auth`
 
 ### Public Endpoints
 
 #### `POST /api/v1/auth/forgot-password`
 - Body: `{ username: string }`
-- Immer HTTP 200 (verhindert User-Enumeration)
-- Wenn SMTP nicht aktiv: nur 200, keine Email
-- Wenn SMTP aktiv + User existiert: Reset-Token generieren, hashen, in DB speichern (Expiry: 30 Min), Email mit Link senden
-- Link-Format: `{FRONTEND_URL}/reset-password?token={plainToken}`
+- Always returns HTTP 200 (prevents user enumeration)
+- If SMTP is not active: returns 200 only, no email
+- If SMTP is active and the user exists: generate a reset token, hash it, store it in the DB (expiry: 30 min), send an email with the link
+- Link format: `{FRONTEND_URL}/reset-password?token={plainToken}`
 
 #### `POST /api/v1/auth/reset-password`
-- Body: `{ token: string, newPassword: string }` (Zod-validiert, min 8 Zeichen)
-- Token gegen DB-Hash prüfen, Expiry prüfen
-- Bei Erfolg: Passwort setzen, Token + Expiry auf null, `mustChangePassword: false`
-- Rate-Limit: 5 Versuche / 15 Min (neuer `passwordResetLimiter`)
+- Body: `{ token: string, newPassword: string }` (Zod-validated, min 8 characters)
+- Verify the token against the DB hash, check expiry
+- On success: set the password, clear token + expiry to null, set `mustChangePassword: false`
+- Rate limit: 5 attempts / 15 min (new `passwordResetLimiter`)
 
 ### Admin Endpoint
 
 #### `POST /api/v1/admin/users/:id/reset-password`
 - Auth: `requireAdmin`
 - Body: `{ mode: "generate" | "set", password?: string, mustChangePassword?: boolean }`
-- `mode: "generate"`: zufälliges 12-Zeichen Passwort generieren (Klartext einmalig zurückgeben), `mustChangePassword` default `true`
-- `mode: "set"`: `password` aus Body nehmen (min 8 Zeichen), `mustChangePassword` default `false`
-- Passwort hashen, in DB speichern, `resetToken`/`resetTokenExpiry` clearen
+- `mode: "generate"`: generate a random 12-character password (return the plaintext once), `mustChangePassword` defaults to `true`
+- `mode: "set"`: take `password` from the body (min 8 characters), `mustChangePassword` defaults to `false`
+- Hash the password, store it in the DB, clear `resetToken`/`resetTokenExpiry`
 
-### Auth-Login Ergänzung (`auth.ts`)
+### Auth Login Addition (`auth.ts`)
 
-Nach erfolgreichem Login prüfen:
+After a successful login, check:
 ```typescript
 if (user.mustChangePassword) {
   return res.json({ requiresPasswordChange: true });
@@ -70,9 +70,9 @@ if (user.mustChangePassword) {
 
 ---
 
-## Email-Template
+## Email Template
 
-Einfaches Plain-Text + HTML-Email via bestehendem `emailService.ts`:
+Simple plain-text + HTML email via the existing `emailService.ts`:
 
 ```
 Betreff: TravStats — Passwort zurücksetzen
@@ -85,49 +85,49 @@ Link (gültig 30 Minuten): {resetUrl}
 Falls du das nicht angefordert hast, kannst du diese Email ignorieren.
 ```
 
-Neues Interface `sendPasswordResetEmail(to: string, resetUrl: string, username: string)` in `emailService.ts`.
+New interface `sendPasswordResetEmail(to: string, resetUrl: string, username: string)` in `emailService.ts`.
 
 ---
 
 ## Frontend
 
-### Login-Seite (`LoginPage.tsx`)
+### Login Page (`LoginPage.tsx`)
 
-- Link "Passwort vergessen?" unter dem Login-Formular
-- Klick öffnet Modal:
-  - **SMTP konfiguriert**: Username-Eingabe + "Reset-Link senden"-Button → generische Erfolgsmeldung
-  - **SMTP nicht konfiguriert**: Hinweis "Email nicht eingerichtet — bitte Admin kontaktieren" (kein Formular)
-- SMTP-Status: neuer public Endpoint `GET /api/v1/auth/smtp-status` → `{ smtpEnabled: boolean }`
+- "Forgot password?" link below the login form
+- Click opens a modal:
+  - **SMTP configured**: username input + "Send reset link" button → generic success message
+  - **SMTP not configured**: notice "Email not set up — please contact your admin" (no form)
+- SMTP status: new public endpoint `GET /api/v1/auth/smtp-status` → `{ smtpEnabled: boolean }`
 
-### Neue Route `/reset-password`
+### New Route `/reset-password`
 
-- Seite `ResetPasswordPage.tsx`
-- Token aus URL-Parameter lesen
-- Formular: "Neues Passwort" + "Passwort bestätigen"
-- Bei Erfolg: Weiterleitung zu Login mit Erfolgsmeldung
-- Bei ungültigem/abgelaufenem Token: Fehlermeldung + Link zurück zu "Passwort vergessen"
+- Page `ResetPasswordPage.tsx`
+- Read the token from the URL parameter
+- Form: "New password" + "Confirm password"
+- On success: redirect to login with a success message
+- On invalid/expired token: error message + link back to "Forgot password"
 
-### Force-Change-Flow
+### Force-Change Flow
 
-Nach Login mit `requiresPasswordChange: true`:
-- Kein Cookie gesetzt → User landet auf Login, aber mit Flag im State
-- Weiterleitung zu `/change-password` (neue Seite `ForceChangePasswordPage.tsx`)
-- Formular: nur "Neues Passwort" + "Bestätigen" (kein altes Passwort nötig)
-- Sonderfall: User ist noch nicht eingeloggt → einmaliges Token für diese Aktion nötig
+After login with `requiresPasswordChange: true`:
+- No cookie is set → user lands on login, but with a flag in state
+- Redirect to `/change-password` (new page `ForceChangePasswordPage.tsx`)
+- Form: only "New password" + "Confirm" (no old password required)
+- Edge case: the user is not yet logged in → a one-time token is needed for this action
 
-**Technische Lösung für Force-Change ohne Session:**
-Login-Response bei `mustChangePassword: true` gibt temporäres `changeToken` zurück (separat von `auth_token`, kurze Gültigkeit 10 Min). `ForceChangePasswordPage` schickt dieses Token mit dem neuen Passwort an `POST /api/v1/auth/force-change-password`.
+**Technical solution for force-change without a session:**
+The login response with `mustChangePassword: true` returns a temporary `changeToken` (separate from `auth_token`, short validity 10 min). `ForceChangePasswordPage` sends this token along with the new password to `POST /api/v1/auth/force-change-password`.
 
-### Admin-Panel (`AdminPage` / User-Liste)
+### Admin Panel (`AdminPage` / user list)
 
-- "Reset"-Button in der User-Zeile öffnet Modal
-- Modal mit zwei Tabs:
-  - **"Generieren"**: Button "Temporäres Passwort generieren" → zeigt Passwort einmalig in einem kopierbaren Feld. Checkbox "Muss Passwort beim nächsten Login ändern" (default: an)
-  - **"Manuell setzen"**: Passwort-Eingabefeld (min 8 Zeichen). Checkbox "Muss Passwort beim nächsten Login ändern" (default: aus)
+- A "Reset" button in the user row opens a modal
+- Modal with two tabs:
+  - **"Generate"**: a "Generate temporary password" button → displays the password once in a copyable field. Checkbox "Must change password on next login" (default: on)
+  - **"Set manually"**: password input field (min 8 characters). Checkbox "Must change password on next login" (default: off)
 
 ---
 
-## Neue Zod-Schemas (`backend/src/schemas/auth.ts`)
+## New Zod Schemas (`backend/src/schemas/auth.ts`)
 
 ```typescript
 export const forgotPasswordSchema = z.object({
@@ -153,13 +153,13 @@ export const adminResetPasswordSchema = z.object({
 
 ---
 
-## Rate-Limiting
+## Rate Limiting
 
-Neuer `passwordResetLimiter` in `middleware/rateLimit.ts`:
-- 5 Versuche / 15 Min / IP
-- Gilt für: `POST /forgot-password`, `POST /reset-password`
+New `passwordResetLimiter` in `middleware/rateLimit.ts`:
+- 5 attempts / 15 min / IP
+- Applies to: `POST /forgot-password`, `POST /reset-password`
 
-Konstanten in `config/constants.ts`:
+Constants in `config/constants.ts`:
 ```typescript
 PASSWORD_RESET_WINDOW_MS: 15 * 60 * 1000,
 PASSWORD_RESET_MAX: 5,
@@ -169,7 +169,7 @@ PASSWORD_RESET_MAX: 5,
 
 ## i18n
 
-Neue Keys in `de` und `en`:
+New keys in `de` and `en`:
 - `login.forgotPassword`, `login.forgotPasswordModal.*`
 - `resetPassword.*`
 - `forceChangePassword.*`
@@ -177,9 +177,9 @@ Neue Keys in `de` und `en`:
 
 ---
 
-## Was nicht implementiert wird (YAGNI)
+## Out of Scope (YAGNI)
 
-- Passwort-Stärke-Meter (min 8 Zeichen reicht)
-- Mehrere aktive Reset-Tokens pro User
-- SMS/andere Kanäle
-- Audit-Log für Reset-Aktionen
+- Password strength meter (min 8 characters is enough)
+- Multiple active reset tokens per user
+- SMS or other channels
+- Audit log for reset actions

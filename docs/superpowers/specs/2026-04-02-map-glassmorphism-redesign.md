@@ -7,36 +7,36 @@
 
 ## Overview
 
-Vollständiges visuelles Redesign der Map-Ansicht im Glassmorphism-Stil. Betrifft Map-Tiles, Daten-Layer-Farben, Airport-Marker, den VisModeSelector (neu als FAB) und alle Map-UI-Elemente.
+Full visual redesign of the map view in glassmorphism style. Affects map tiles, data layer colors, airport markers, the VisModeSelector (now a FAB), and all map UI elements.
 
-Roadmap-Vorhaben: Nutzer können später (separates Feature) zwischen Glassmorphism, Neon Cyberpunk, Dark Premium und Sci-Fi Terminal wechseln. Diese Spec betrifft ausschließlich die Glassmorphism-Implementierung als Default.
+Roadmap intent: users will later (separate feature) be able to switch between Glassmorphism, Neon Cyberpunk, Dark Premium, and Sci-Fi Terminal. This spec covers only the Glassmorphism implementation as the default.
 
 ---
 
-## Architektur
+## Architecture
 
-### Betroffene Dateien
+### Affected Files
 
-| Datei | Änderung |
+| File | Change |
 |---|---|
-| `components/DeckGLMap.tsx` | Map-Tile-Style + CSS-Filter-Klasse, Grid-Overlay |
-| `components/VisModeSelector.tsx` | Komplett ersetzen durch FAB-Komponente |
-| `components/MapContainer3D.tsx` | FAB-Integration, Info-Pill, Dim-Overlay |
-| `components/layers/layerTypes.ts` | `HEATMAP_COLORS` → Indigo/Cyan Palette |
-| `components/layers/routesLayer.ts` | Dritter ScatterplotLayer für äußeren Ring |
-| `components/layers/hexagonLayer.ts` | `colorRange` auf neue Palette abstimmen |
-| `components/layers/heatmapLayer.ts` | Farb-Intensitäten (colorRange) anpassen |
-| `components/layers/columnsLayer.ts` | colorRange auf neue Palette |
-| `i18n/resources/de/map.json` | `visMode.contour` Key hinzufügen |
-| `i18n/resources/en/map.json` | `visMode.contour` Key hinzufügen |
+| `components/DeckGLMap.tsx` | Map tile style + CSS filter class, grid overlay |
+| `components/VisModeSelector.tsx` | Fully replace with FAB component |
+| `components/MapContainer3D.tsx` | FAB integration, info pill, dim overlay |
+| `components/layers/layerTypes.ts` | `HEATMAP_COLORS` → indigo/cyan palette |
+| `components/layers/routesLayer.ts` | Third ScatterplotLayer for the outer ring |
+| `components/layers/hexagonLayer.ts` | Tune `colorRange` to the new palette |
+| `components/layers/heatmapLayer.ts` | Adjust color intensities (colorRange) |
+| `components/layers/columnsLayer.ts` | colorRange to the new palette |
+| `i18n/resources/de/map.json` | Add `visMode.contour` key |
+| `i18n/resources/en/map.json` | Add `visMode.contour` key |
 
 ---
 
-## Komponenten
+## Components
 
-### 1. Map-Tile Blautönung
+### 1. Map Tile Blue Tint
 
-**Ansatz:** CSS-Filter auf dem MapLibre-Canvas-Element. Der deck.gl-Canvas liegt auf einer separaten Ebene darüber und wird nicht beeinflusst.
+**Approach:** CSS filter on the MapLibre canvas element. The deck.gl canvas sits on a separate layer above and is unaffected.
 
 ```css
 /* Nur auf MapLibre-Canvas anwenden */
@@ -45,19 +45,19 @@ Roadmap-Vorhaben: Nutzer können später (separates Feature) zwischen Glassmorph
 }
 ```
 
-Die Klasse `maplibre-blue-tint` wird im `Map`-Wrapper-Div gesetzt. Nur im Dark Mode aktiv — Light Mode behält `positron` Style unverändert.
+The `maplibre-blue-tint` class is set on the `Map` wrapper div. Active in dark mode only — light mode keeps the `positron` style unchanged.
 
-### 2. Subtiles Grid-Overlay
+### 2. Subtle Grid Overlay
 
-SVG-Pattern als absolutes `<div>` über der Map, `pointer-events: none`, `opacity: 0.06`. Nur im Dark Mode sichtbar.
+SVG pattern as an absolute `<div>` over the map, `pointer-events: none`, `opacity: 0.06`. Only visible in dark mode.
 
 ```
 Grid: 40×40px, Stroke #818cf8 (indigo), Stärke 0.5px
 ```
 
-### 3. Farb-Palette (layerTypes.ts)
+### 3. Color Palette (layerTypes.ts)
 
-Amber/Orange/Rot → Indigo/Violett/Cyan:
+Amber/orange/red → indigo/violet/cyan:
 
 ```
 low:      [100, 116, 139]  → slate-500 (unverändert)
@@ -66,80 +66,80 @@ high:     [249, 115,  22]  → [139, 92, 246]   violet-500
 critical: [239,  68,  68]  → [34, 211, 153]   emerald-400 (Akzent)
 ```
 
-Arc-Farben in `routesLayer.ts` nutzen `getHeatmapColor` — werden automatisch übernommen.
+Arc colors in `routesLayer.ts` use `getHeatmapColor` — they update automatically.
 
-### 4. Airport-Marker (routesLayer.ts)
+### 4. Airport Markers (routesLayer.ts)
 
-Drei konzentrische ScatterplotLayer (statisch):
+Three concentric ScatterplotLayers (static):
 
-| Layer | Radius | Farbe | Opacity |
+| Layer | Radius | Color | Opacity |
 |---|---|---|---|
-| `routes-dot` | 2200m | `#93c5fd` (per Route-Farbe) | 220 |
-| `routes-ring-inner` | dynamisch (3–10km) | gleiche Farbe | 90 |
-| `routes-ring-outer` | `inner × 1.8` | gleiche Farbe | 35 |
+| `routes-dot` | 2200m | `#93c5fd` (per route color) | 220 |
+| `routes-ring-inner` | dynamic (3–10km) | same color | 90 |
+| `routes-ring-outer` | `inner × 1.8` | same color | 35 |
 
-> Animated Pulse (Rings mit Opacity-Oszillation per `useInterval`) ist als **Follow-up** vorgesehen, nicht Teil dieser Spec.
+> Animated pulse (rings with opacity oscillation via `useInterval`) is planned as a **follow-up**, not part of this spec.
 
-### 5. VisModeSelector → FAB-Komponente
+### 5. VisModeSelector → FAB Component
 
-`VisModeSelector.tsx` wird vollständig neu geschrieben. Interface bleibt identisch (`current`, `onChange` Props).
+`VisModeSelector.tsx` is rewritten from scratch. The interface stays identical (`current`, `onChange` props).
 
-**Collapsed State:**
-- 44×44px Gradient-Button (`indigo-600 → indigo-400`), `border-radius: 14px`
-- Icon: aktueller Modus als SVG
-- Positionierung: `absolute bottom-4 right-4` (von `top-16 right-3` geändert)
-- Badge links daneben: Name des aktiven Modus (z.B. "Routen ◀"), Frosted-Glass
+**Collapsed state:**
+- 44×44px gradient button (`indigo-600 → indigo-400`), `border-radius: 14px`
+- Icon: current mode as SVG
+- Positioning: `absolute bottom-4 right-4` (changed from `top-16 right-3`)
+- Badge to its left: name of the active mode (e.g. "Routen ◀"), frosted glass
 
-**Expanded State:**
-- FAB-Icon wechselt zu `×` (mit framer-motion rotate-Animation)
-- Liste klappt nach oben auf (`AnimatePresence` + `motion.div` mit `y`-Animation)
-- Pro Modus: Icon-Button (36×36px, Frosted-Glass) + Label-Pill links
-- Aktiver Modus: Indigo-Hintergrund + Glow-Shadow + Checkmark im Label
-- Klick auf einen Modus: Mode setzen + schließen
+**Expanded state:**
+- FAB icon switches to `×` (with framer-motion rotate animation)
+- List unfolds upward (`AnimatePresence` + `motion.div` with `y` animation)
+- Per mode: icon button (36×36px, frosted glass) + label pill on the left
+- Active mode: indigo background + glow shadow + checkmark in the label
+- Click on a mode: set the mode and close
 
 **Backdrop:**
-- Absolutes `div` in `MapContainer3D`, `opacity: 0` → `opacity: 1` wenn FAB offen
+- Absolute `div` in `MapContainer3D`, `opacity: 0` → `opacity: 1` when the FAB is open
 - `background: rgba(10, 8, 30, 0.45)`, `backdrop-filter: blur(1px)`
-- Klick auf Backdrop schließt den FAB
+- Click on the backdrop closes the FAB
 
-**Keyboard:** `Escape` schließt den FAB.
+**Keyboard:** `Escape` closes the FAB.
 
-### 6. Info-Pill (MapContainer3D.tsx)
+### 6. Info Pill (MapContainer3D.tsx)
 
-Frosted-Glass-Pill oben links, zeigt Fluganzahl + Routenanzahl:
+Frosted-glass pill in the top left, showing flight count + route count:
 
 ```
 [247 Flüge · 89 Routen]
 ```
 
-- Nur im `routes`-Modus sichtbar (andere Modi haben keine Routen-Semantik)
-- Fluganzahl: `flights.length`
-- Routenanzahl: aus `buildRouteData(flights, minRouteCount).arcs.length`
+- Only visible in `routes` mode (other modes have no route semantics)
+- Flight count: `flights.length`
+- Route count: from `buildRouteData(flights, minRouteCount).arcs.length`
 
 ---
 
-## Datenfluss
+## Data Flow
 
 ```
 DashboardPage
   └── MapContainer3D (visMode, flights, ...)
-        ├── Info-Pill (flights.length, route count) — nur routes-Modus
-        ├── Grid-Overlay (dark mode only)
+        ├── Info pill (flights.length, route count) — routes mode only
+        ├── Grid overlay (dark mode only)
         ├── DeckGLMap
         │     ├── Map (maplibre, blue-tint CSS class)
-        │     └── DeckGLOverlay → Layer mit neuer Farbpalette
-        ├── GlobeView (unverändert)
+        │     └── DeckGLOverlay → Layer with new colour palette
+        ├── GlobeView (unchanged)
         ├── FAB (VisModeSelector, current, onChange)
-        └── Backdrop-Overlay (isOpen state)
+        └── Backdrop overlay (isOpen state)
 ```
 
-`isOpen`-State für den FAB lebt in `MapContainer3D`, damit der Backdrop darüber gesteuert werden kann.
+The FAB's `isOpen` state lives in `MapContainer3D` so the backdrop above it can be controlled.
 
 ---
 
 ## i18n
 
-Fehlender Key in `de/map.json` und `en/map.json`:
+Missing key in `de/map.json` and `en/map.json`:
 
 ```json
 "visMode": {
@@ -151,19 +151,19 @@ Fehlender Key in `de/map.json` und `en/map.json`:
 
 ---
 
-## Was sich NICHT ändert
+## What Does NOT Change
 
-- Alle 7 VisModi (routes, globe, heatmap, hexagon, columns, trips, contour) bleiben erhalten
-- GlobeView-Komponente ist unverändert
-- TimeSlider bleibt funktional (visuelles Restyling optional, nicht in dieser Spec)
-- Light Mode: keine Änderungen (nur Dark Mode betroffen)
-- Backend, API, Routing: keine Änderungen
+- All 7 vis modes (routes, globe, heatmap, hexagon, columns, trips, contour) remain
+- The GlobeView component is unchanged
+- TimeSlider stays functional (visual restyling optional, not in this spec)
+- Light mode: no changes (only dark mode is affected)
+- Backend, API, routing: no changes
 
 ---
 
 ## Out of Scope (Roadmap)
 
-- Animierte Pulsringe bei Airport-Markern
-- Theme-Switcher (Neon Cyberpunk / Dark Premium / Sci-Fi Terminal)
-- TimeSlider visuelles Redesign
-- GlobeView Glassmorphism-Anpassung
+- Animated pulse rings on airport markers
+- Theme switcher (Neon Cyberpunk / Dark Premium / Sci-Fi Terminal)
+- TimeSlider visual redesign
+- GlobeView glassmorphism adaptation

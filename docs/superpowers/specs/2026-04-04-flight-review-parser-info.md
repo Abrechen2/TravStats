@@ -1,42 +1,42 @@
-# Flight Review Modal — Parser Info & Quelltext Design
+# Flight Review Modal — Parser Info & Source Text Design
 
 ## Goal
 
-Zeige im "Flug überprüfen" Modal welches Template genutzt wurde, wie hoch die Konfidenz ist, und ermögliche dem User den Original-E-Mail-Text aufzuklappen zur manuellen Kontrolle.
+Show in the "Review flight" modal which template was used and how high the confidence is, and let the user expand the original email text for manual inspection.
 
 ## Architecture
 
-Reine Frontend-Änderung. Alle nötigen Daten sind bereits vorhanden:
-- `initialData.parserTemplate` (string | undefined) — Template-Name, z.B. "Lufthansa Buchungsdetails"
+Pure frontend change. All required data is already available:
+- `initialData.parserTemplate` (string | undefined) — template name, e.g. "Lufthansa Buchungsdetails"
 - `initialData.parserConfidence` (number | undefined) — 0–100
-- `originalData.text` (string | undefined) — Plaintext der E-Mail
+- `originalData.text` (string | undefined) — plain text of the email
 
-Keine Backend-Änderungen, keine neuen API-Endpoints, keine neuen Props.
+No backend changes, no new API endpoints, no new props.
 
 ## Components
 
 ### FlightReviewModal.tsx (modify only)
 
-**Neuer State:**
+**New state:**
 ```typescript
 const [showSourceText, setShowSourceText] = useState(false);
 ```
 
-**Parser-Info-Zeile** — unter der "Flug X von Y" Zeile im sticky Header:
-- Zeigt `initialData.parserTemplate ?? t("flights:review.unknownParser")`
-- Konfidenz-Pill mit Farbe: grün (≥70), gelb (≥40), rot (<40)
-- Nur rendern wenn `parserTemplate` oder `parserConfidence` vorhanden
-- "Quelltext"-Toggle-Button rechts in derselben Zeile, nur wenn `originalData?.text` vorhanden
+**Parser info row** — under the "Flight X of Y" line in the sticky header:
+- Shows `initialData.parserTemplate ?? t("flights:review.unknownParser")`
+- Confidence pill colored: green (≥70), yellow (≥40), red (<40)
+- Only render when `parserTemplate` or `parserConfidence` is present
+- "Source text" toggle button on the right of the same row, only when `originalData?.text` is present
 
-**Quelltext-Panel** — zwischen Header-`div` und Form:
-- Nur gerendert wenn `showSourceText && originalData?.text`
+**Source text panel** — between the header `div` and the form:
+- Only rendered when `showSourceText && originalData?.text`
 - `<pre className="whitespace-pre-wrap font-mono text-xs ... max-h-48 overflow-y-auto">`
-- Hintergrund: `bg-[var(--bg-elevated)]`, dünner Border
-- Padding px-6 py-3 damit es bündig mit Header/Form liegt
+- Background: `bg-[var(--bg-elevated)]`, thin border
+- Padding px-6 py-3 so it lines up flush with the header/form
 
 ## i18n Keys
 
-`frontend/src/i18n/de/flights.ts` und `en/flights.ts`:
+`frontend/src/i18n/de/flights.ts` and `en/flights.ts`:
 
 ```typescript
 // flights:review namespace
@@ -88,11 +88,11 @@ function getConfidenceColor(confidence: number): string {
 
 ## Testing
 
-- Vorhandene Tests in `FlightReviewModal.fieldSources.test.tsx` müssen weiterhin bestehen
-- Kein neuer Test nötig (pure render logic, kein State-Management, kein API-Call)
+- Existing tests in `FlightReviewModal.fieldSources.test.tsx` must continue to pass
+- No new test required (pure render logic, no state management, no API call)
 
 ## Out of Scope
 
-- Text-Highlighting (Pattern-Matches farbig markieren) — YAGNI
-- Tab-Layout im Modal
-- Backend-Änderungen
+- Text highlighting (color-coding pattern matches) — YAGNI
+- Tab layout in the modal
+- Backend changes

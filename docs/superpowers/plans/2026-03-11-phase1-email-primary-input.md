@@ -1,26 +1,26 @@
-# Phase 1: Email als primärer Eingabetyp — Implementation Plan
+# Phase 1: Email as the primary input type — Implementation Plan
 
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Email-Buchungsbestätigungen werden zur primären Eingabemethode mit einem Community-Plugin-System für airline-spezifische Templates, während Boarding Pass und manueller Import sekundär werden.
+**Goal:** Email booking confirmations become the primary input method, with a community plugin system for airline-specific templates, while boarding pass and manual import become secondary.
 
-**Architecture:** Ein neuer `AirlineTemplateEngine`-Service sitzt vor dem bestehenden LLM-Fallback in der Parsing-Pipeline. Templates sind JSON-Dateien in einem separaten GitHub-Repo und werden täglich gecacht. Die bestehende `factory.ts` wird erweitert, nicht ersetzt.
+**Architecture:** A new `AirlineTemplateEngine` service sits in front of the existing LLM fallback in the parsing pipeline. Templates are JSON files in a separate GitHub repo and are cached daily. The existing `factory.ts` is extended, not replaced.
 
-**Tech Stack:** TypeScript, Prisma, cheerio (HTML-Parsing), node-cron (Sync), React tabs (Frontend-Umstrukturierung)
+**Tech Stack:** TypeScript, Prisma, cheerio (HTML parsing), node-cron (sync), React tabs (frontend restructuring)
 
 ---
 
-## Chunk 1: Backend — Datenmodell-Erweiterungen
+## Chunk 1: Backend — Data model extensions
 
-### Task 1: Neue Felder in Prisma Schema
+### Task 1: New fields in the Prisma schema
 
 **Files:**
 - Modify: `backend/prisma/schema.prisma` (Flight model, ~line 58–118)
 - Create: `backend/prisma/migrations/` (auto-generated)
 
-- [ ] **Step 1: Neue Felder zum Flight-Modell hinzufügen**
+- [ ] **Step 1: Add new fields to the Flight model**
 
-In `schema.prisma`, nach dem `enrichmentHistory`-Feld (ca. Zeile 115) einfügen:
+In `schema.prisma`, insert after the `enrichmentHistory` field (around line 115):
 
 ```prisma
   // Phase 1: Email Template Parsing
@@ -32,31 +32,31 @@ In `schema.prisma`, nach dem `enrichmentHistory`-Feld (ca. Zeile 115) einfügen:
   parserConfidence    Int?     @map("parser_confidence")     // 0–100
 ```
 
-- [ ] **Step 2: Migration erstellen**
+- [ ] **Step 2: Create a migration**
 
 ```bash
 cd /d/Projekte/TravStats/backend
 npx prisma migrate dev --name "add_phase1_email_fields"
 ```
 
-Expected: Migration-Datei angelegt + DB aktualisiert. Kein Fehler.
+Expected: Migration file created and database updated. No errors.
 
-- [ ] **Step 3: TypeScript-Client neu generieren**
+- [ ] **Step 3: Regenerate the TypeScript client**
 
 ```bash
 cd /d/Projekte/TravStats/backend
 npx prisma generate
 ```
 
-Expected: `@prisma/client` enthält neue Felder ohne TypeScript-Fehler.
+Expected: `@prisma/client` contains the new fields with no TypeScript errors.
 
-- [ ] **Step 4: Backend Type-Check**
+- [ ] **Step 4: Backend type check**
 
 ```bash
 cd /d/Projekte/TravStats/backend && npx tsc --noEmit
 ```
 
-Expected: Keine Fehler.
+Expected: No errors.
 
 - [ ] **Step 5: Commit**
 
@@ -67,15 +67,15 @@ git commit -m "feat: add phase1 email parsing fields to Flight model"
 
 ---
 
-### Task 2: ParsedBooking-Interface erweitern
+### Task 2: Extend the ParsedBooking interface
 
 **Files:**
 - Modify: `backend/src/services/bookingParser.ts` (interface ParsedBooking, ~line 1–30)
 - Modify: `frontend/src/types/index.ts` (ParsedBooking interface, ~line 113–134)
 
-- [ ] **Step 1: Backend ParsedBooking erweitern**
+- [ ] **Step 1: Extend the backend ParsedBooking**
 
-In `backend/src/services/bookingParser.ts` die `ParsedBooking`-Interface um folgende Felder ergänzen (nach `fees?`):
+In `backend/src/services/bookingParser.ts`, add the following fields to the `ParsedBooking` interface (after `fees?`):
 
 ```typescript
   // Phase 1: New fields
@@ -88,9 +88,9 @@ In `backend/src/services/bookingParser.ts` die `ParsedBooking`-Interface um folg
   airlineNotice?: string;         // User-facing notice if no template found
 ```
 
-- [ ] **Step 2: Frontend ParsedBooking erweitern**
+- [ ] **Step 2: Extend the frontend ParsedBooking**
 
-In `frontend/src/types/index.ts` identische Felder ergänzen (nach Zeile ~134):
+In `frontend/src/types/index.ts`, add the same fields (after line ~134):
 
 ```typescript
   baggageAllowance?: string;
@@ -102,22 +102,22 @@ In `frontend/src/types/index.ts` identische Felder ergänzen (nach Zeile ~134):
   airlineNotice?: string;
 ```
 
-- [ ] **Step 3: Type-Check beider Seiten**
+- [ ] **Step 3: Type check on both sides**
 
 ```bash
 cd /d/Projekte/TravStats/backend && npx tsc --noEmit
 cd /d/Projekte/TravStats/frontend && npx tsc --noEmit
 ```
 
-Expected: Keine Fehler.
+Expected: No errors.
 
-- [ ] **Step 4: Frontend-Tests laufen lassen**
+- [ ] **Step 4: Run the frontend tests**
 
 ```bash
 cd /d/Projekte/TravStats/frontend && npx vitest --run
 ```
 
-Expected: Alle Tests grün. Kein Test bricht durch neue optionale Felder.
+Expected: All tests green. No test breaks because of the new optional fields.
 
 - [ ] **Step 5: Commit**
 
@@ -130,14 +130,14 @@ git commit -m "feat: extend ParsedBooking with phase1 fields (baggage, FFN, book
 
 ## Chunk 2: Backend — Airline Template Engine
 
-### Task 3: Template-Typen definieren
+### Task 3: Define template types
 
 **Files:**
 - Create: `backend/src/services/parsers/templates/types.ts`
 
-- [ ] **Step 1: Failing test schreiben**
+- [ ] **Step 1: Write a failing test**
 
-Neue Datei `backend/src/__tests__/templates/types.test.ts`:
+New file `backend/src/__tests__/templates/types.test.ts`:
 
 ```typescript
 import { isValidAirlineTemplate } from "../../services/parsers/templates/types";
@@ -163,7 +163,7 @@ describe("isValidAirlineTemplate", () => {
 });
 ```
 
-- [ ] **Step 2: Test ausführen — muss fehlschlagen**
+- [ ] **Step 2: Run the test — it must fail**
 
 ```bash
 cd /d/Projekte/TravStats/backend && npx jest --testPathPattern="templates/types" --forceExit
@@ -171,9 +171,9 @@ cd /d/Projekte/TravStats/backend && npx jest --testPathPattern="templates/types"
 
 Expected: FAIL — "Cannot find module"
 
-- [ ] **Step 3: types.ts implementieren**
+- [ ] **Step 3: Implement types.ts**
 
-Datei `backend/src/services/parsers/templates/types.ts` erstellen:
+Create file `backend/src/services/parsers/templates/types.ts`:
 
 ```typescript
 export interface AirlineTemplateSelectors {
@@ -231,7 +231,7 @@ export function isValidAirlineTemplate(obj: unknown): obj is AirlineTemplate {
 }
 ```
 
-- [ ] **Step 4: Test laufen lassen — muss grün sein**
+- [ ] **Step 4: Run the test — it must pass**
 
 ```bash
 cd /d/Projekte/TravStats/backend && npx jest --testPathPattern="templates/types" --forceExit
@@ -254,7 +254,7 @@ git commit -m "feat: airline template type definitions"
 - Create: `backend/src/services/parsers/templates/detector.ts`
 - Create: `backend/src/__tests__/templates/detector.test.ts`
 
-- [ ] **Step 1: Failing test schreiben**
+- [ ] **Step 1: Write a failing test**
 
 `backend/src/__tests__/templates/detector.test.ts`:
 
@@ -280,7 +280,7 @@ describe("detectAirline", () => {
 });
 ```
 
-- [ ] **Step 2: Test ausführen — muss fehlschlagen**
+- [ ] **Step 2: Run the test — it must fail**
 
 ```bash
 cd /d/Projekte/TravStats/backend && npx jest --testPathPattern="templates/detector" --forceExit
@@ -288,7 +288,7 @@ cd /d/Projekte/TravStats/backend && npx jest --testPathPattern="templates/detect
 
 Expected: FAIL
 
-- [ ] **Step 3: detector.ts implementieren**
+- [ ] **Step 3: Implement detector.ts**
 
 `backend/src/services/parsers/templates/detector.ts`:
 
@@ -371,7 +371,7 @@ export function detectAirline(
 }
 ```
 
-- [ ] **Step 4: Tests grün**
+- [ ] **Step 4: Tests green**
 
 ```bash
 cd /d/Projekte/TravStats/backend && npx jest --testPathPattern="templates/detector" --forceExit
@@ -388,23 +388,23 @@ git commit -m "feat: airline detector by from-address, subject and html fingerpr
 
 ---
 
-### Task 5: Template Engine (CSS-Selektor + Transform-Ausführung)
+### Task 5: Template Engine (CSS selector + transform execution)
 
 **Files:**
 - Create: `backend/src/services/parsers/templates/engine.ts`
 - Create: `backend/src/__tests__/templates/engine.test.ts`
 
-Prerequisite: `npm install cheerio` im Backend.
+Prerequisite: `npm install cheerio` in the backend.
 
-- [ ] **Step 1: cheerio installieren**
+- [ ] **Step 1: Install cheerio**
 
 ```bash
 cd /d/Projekte/TravStats/backend && npm install cheerio
 ```
 
-Expected: Kein Fehler. `package.json` enthält cheerio. (Cheerio v1.x bringt eigene TypeScript-Typen mit — kein `@types/cheerio` nötig.)
+Expected: No error. `package.json` contains cheerio. (Cheerio v1.x ships its own TypeScript types — no `@types/cheerio` needed.)
 
-- [ ] **Step 2: Failing test schreiben**
+- [ ] **Step 2: Write a failing test**
 
 `backend/src/__tests__/templates/engine.test.ts`:
 
@@ -470,7 +470,7 @@ describe("applyTemplate", () => {
 });
 ```
 
-- [ ] **Step 3: Test ausführen — fehlschlagen**
+- [ ] **Step 3: Run the test — it must fail**
 
 ```bash
 cd /d/Projekte/TravStats/backend && npx jest --testPathPattern="templates/engine" --forceExit
@@ -478,7 +478,7 @@ cd /d/Projekte/TravStats/backend && npx jest --testPathPattern="templates/engine
 
 Expected: FAIL
 
-- [ ] **Step 4: engine.ts implementieren**
+- [ ] **Step 4: Implement engine.ts**
 
 `backend/src/services/parsers/templates/engine.ts`:
 
@@ -574,7 +574,7 @@ export function applyTemplate(
 }
 ```
 
-- [ ] **Step 5: Tests grün**
+- [ ] **Step 5: Tests green**
 
 ```bash
 cd /d/Projekte/TravStats/backend && npx jest --testPathPattern="templates/engine" --forceExit
@@ -582,13 +582,13 @@ cd /d/Projekte/TravStats/backend && npx jest --testPathPattern="templates/engine
 
 Expected: PASS (4 tests)
 
-- [ ] **Step 6: Type-Check**
+- [ ] **Step 6: Type check**
 
 ```bash
 cd /d/Projekte/TravStats/backend && npx tsc --noEmit
 ```
 
-Expected: Keine Fehler.
+Expected: No errors.
 
 - [ ] **Step 7: Commit**
 
@@ -599,7 +599,7 @@ git commit -m "feat: airline template engine with CSS selectors and sandboxed tr
 
 ---
 
-### Task 6: Template Registry mit GitHub-Sync
+### Task 6: Template Registry with GitHub sync
 
 **Files:**
 - Create: `backend/src/services/parsers/templates/registry.ts`
@@ -612,7 +612,7 @@ git commit -m "feat: airline template engine with CSS selectors and sandboxed tr
 - Create: `backend/src/services/parsers/templates/airlines/W6.json`
 - Create: `backend/src/services/parsers/templates/airlines/SN.json`
 
-- [ ] **Step 1: LH.json erstellen (Lufthansa-Template)**
+- [ ] **Step 1: Create LH.json (Lufthansa template)**
 
 `backend/src/services/parsers/templates/airlines/LH.json`:
 
@@ -646,7 +646,7 @@ git commit -m "feat: airline template engine with CSS selectors and sandboxed tr
 }
 ```
 
-- [ ] **Step 2: Restliche Templates erstellen**
+- [ ] **Step 2: Create the remaining templates**
 
 `FR.json` (Ryanair):
 ```json
@@ -837,9 +837,9 @@ git commit -m "feat: airline template engine with CSS selectors and sandboxed tr
 }
 ```
 
-Hinweis: Alle Selektoren sind strukturell vollständig. Da keine echten Sample-Emails vorliegen, werden die CSS-Selektoren nach dem ersten echten Test mit dem Template-Registry-CI verfeinert. Die Test-Cases-Arrays bleiben vorerst leer — sie werden durch Community-Beiträge mit anonymisierten Sample-Emails befüllt.
+Note: All selectors are structurally complete. Since there are no real sample emails on hand, the CSS selectors will be refined after the first real test via the template registry CI. The test cases arrays stay empty for now — they will be populated by community contributions of anonymized sample emails.
 
-- [ ] **Step 3: registry.ts implementieren**
+- [ ] **Step 3: Implement registry.ts**
 
 `backend/src/services/parsers/templates/registry.ts`:
 
@@ -973,9 +973,9 @@ class TemplateRegistry {
 export const templateRegistry = new TemplateRegistry();
 ```
 
-- [ ] **Step 4: Registry beim App-Start initialisieren**
+- [ ] **Step 4: Initialize the registry on app startup**
 
-In `backend/src/app.ts` (oder `server.ts` — wo der Express-Server gestartet wird), nach dem DB-Connect:
+In `backend/src/app.ts` (or `server.ts` — wherever the Express server is started), after the DB connect:
 
 ```typescript
 import { templateRegistry } from "./services/parsers/templates/registry";
@@ -984,13 +984,13 @@ import { templateRegistry } from "./services/parsers/templates/registry";
 await templateRegistry.initialize();
 ```
 
-- [ ] **Step 5: Type-Check**
+- [ ] **Step 5: Type check**
 
 ```bash
 cd /d/Projekte/TravStats/backend && npx tsc --noEmit
 ```
 
-Expected: Keine Fehler.
+Expected: No errors.
 
 - [ ] **Step 6: Commit**
 
@@ -1001,16 +1001,16 @@ git commit -m "feat: airline template registry with builtin templates and GitHub
 
 ---
 
-## Chunk 3: Backend — Pipeline-Integration
+## Chunk 3: Backend — Pipeline integration
 
 ### Task 7: Training Recorder Service
 
 **Files:**
 - Create: `backend/src/services/trainingRecorder.ts`
 
-- [ ] **Step 1: trainingRecorder.ts erstellen**
+- [ ] **Step 1: Create trainingRecorder.ts**
 
-Designentscheidung: `userId` wird gespeichert (für Raten-Limits + Debugging), aber niemals im Training-Export mitgegeben. Der Export-Prozess (Phase 4) anonymisiert die Daten. Das ist ein bewusster Trade-off zwischen Debuggbarkeit und Anonymisierung.
+Design decision: `userId` is stored (for rate limits and debugging) but is never included in the training export. The export process (Phase 4) anonymizes the data. This is a deliberate trade-off between debuggability and anonymization.
 
 ```typescript
 import { getPrismaClient } from "../lib/prisma";
@@ -1054,9 +1054,9 @@ export function buildAirlineNotice(detectedAirline: string | null): string | und
 }
 ```
 
-- [ ] **Step 2: ParseTrainingLog zu Prisma Schema hinzufügen**
+- [ ] **Step 2: Add ParseTrainingLog to the Prisma schema**
 
-In `backend/prisma/schema.prisma` neues Model ergänzen:
+In `backend/prisma/schema.prisma`, add a new model:
 
 ```prisma
 model ParseTrainingLog {
@@ -1080,7 +1080,7 @@ model ParseTrainingLog {
 }
 ```
 
-- [ ] **Step 3: Migration + Generate**
+- [ ] **Step 3: Migration + generate**
 
 ```bash
 cd /d/Projekte/TravStats/backend
@@ -1089,7 +1089,7 @@ npx prisma generate
 npx tsc --noEmit
 ```
 
-Expected: Keine Fehler.
+Expected: No errors.
 
 - [ ] **Step 4: Commit**
 
@@ -1100,14 +1100,14 @@ git commit -m "feat: training recorder service and ParseTrainingLog model"
 
 ---
 
-### Task 8: Template-Parser als ITextParser implementieren
+### Task 8: Implement template parser as ITextParser
 
 **Files:**
 - Create: `backend/src/services/parsers/text/templateParser.ts`
-- Modify: `backend/src/services/parsers/factory.ts` (Template-Parser in Chain einfügen)
-- Modify: `backend/src/routes/emailParse.ts` (airlineNotice zurückgeben)
+- Modify: `backend/src/services/parsers/factory.ts` (insert template parser into the chain)
+- Modify: `backend/src/routes/emailParse.ts` (return airlineNotice)
 
-- [ ] **Step 1: templateParser.ts erstellen**
+- [ ] **Step 1: Create templateParser.ts**
 
 `backend/src/services/parsers/text/templateParser.ts`:
 
@@ -1165,9 +1165,9 @@ export class TemplateParser implements ITextParser {
 }
 ```
 
-- [ ] **Step 2: factory.ts anpassen — Template-Parser als ersten Schritt**
+- [ ] **Step 2: Adjust factory.ts — template parser as the first step**
 
-Die `parseEmail`-Funktion in `backend/src/services/parsers/factory.ts` hat diese Signatur (Zeile 786):
+The `parseEmail` function in `backend/src/services/parsers/factory.ts` has this signature (line 786):
 
 ```typescript
 export async function parseEmail(
@@ -1178,14 +1178,14 @@ export async function parseEmail(
 ): Promise<ParserResult>
 ```
 
-Den `userId` bekommt die Funktion über `config` — `config.userId` ergänzen (siehe ParserConfig-Interface in factory.ts, Zeile ~134).
+The function gets `userId` via `config` — add `config.userId` (see the ParserConfig interface in factory.ts, line ~134).
 
-**Änderung 1:** Import am Anfang der factory.ts ergänzen (nach den bestehenden Parser-Imports):
+**Change 1:** Add an import at the top of factory.ts (after the existing parser imports):
 ```typescript
 import { TemplateParser } from "./text/templateParser";
 ```
 
-**Änderung 2:** Direkt nach Zeile 815 (`const providerChain: TextProvider[] = ...`) vor der `for`-Schleife (Zeile 818) einfügen:
+**Change 2:** Insert directly after line 815 (`const providerChain: TextProvider[] = ...`) and before the `for` loop (line 818):
 
 ```typescript
   // Template-Parser als erster Schritt (vor LLM-Chain)
@@ -1210,11 +1210,11 @@ import { TemplateParser } from "./text/templateParser";
   // Ende Template-Block — LLM-Chain folgt unverändert
 ```
 
-**Änderung 3:** `ParserConfig`-Interface (Zeile ~134) um `userId?: string` ergänzen. Die Route `emailParse.ts` muss `userId` aus dem JWT-Token an `getParserConfig()` übergeben.
+**Change 3:** Extend the `ParserConfig` interface (line ~134) with `userId?: string`. The `emailParse.ts` route must pass `userId` from the JWT token to `getParserConfig()`.
 
-- [ ] **Step 3: emailParse.ts — airlineNotice im Response**
+- [ ] **Step 3: emailParse.ts — return airlineNotice in the response**
 
-In `backend/src/routes/emailParse.ts`, in der POST `/parse-email` Route, das Response-Objekt erweitern:
+In `backend/src/routes/emailParse.ts`, in the POST `/parse-email` route, extend the response object:
 
 ```typescript
 res.json({
@@ -1225,14 +1225,14 @@ res.json({
 });
 ```
 
-- [ ] **Step 4: Type-Check + Tests**
+- [ ] **Step 4: Type check + tests**
 
 ```bash
 cd /d/Projekte/TravStats/backend && npx tsc --noEmit
 cd /d/Projekte/TravStats/backend && npx jest --forceExit --passWithNoTests
 ```
 
-Expected: Keine TypeScript-Fehler. Keine regressiven Tests.
+Expected: No TypeScript errors. No regressions in tests.
 
 - [ ] **Step 5: Commit**
 
@@ -1243,19 +1243,19 @@ git commit -m "feat: template parser integrated as primary email parsing step be
 
 ---
 
-## Chunk 4: Frontend — Email als primäre Eingabe
+## Chunk 4: Frontend — Email as the primary input
 
-### Task 9: EmailImportTab als eigene Komponente
+### Task 9: EmailImportTab as its own component
 
 **Files:**
 - Create: `frontend/src/components/import/EmailImportTab.tsx`
-- Modify: `frontend/src/lib/api.ts` (airlineNotice im Response-Typ)
+- Modify: `frontend/src/lib/api.ts` (airlineNotice in the response type)
 
-Der Email-Import ist aktuell ein eingebettetes Overlay in `SimplifiedFlightFormV2.tsx` (Zeilen ~1241–1340). Es wird extrahiert und aufgewertet.
+The email import is currently an embedded overlay in `SimplifiedFlightFormV2.tsx` (lines ~1241–1340). It will be extracted and promoted.
 
-- [ ] **Step 1: api.ts — airlineNotice ergänzen**
+- [ ] **Step 1: api.ts — add airlineNotice**
 
-In `frontend/src/lib/api.ts`, Interface `EmailParseResult`:
+In `frontend/src/lib/api.ts`, the `EmailParseResult` interface:
 
 ```typescript
 export interface EmailParseResult {
@@ -1268,7 +1268,7 @@ export interface EmailParseResult {
 }
 ```
 
-- [ ] **Step 2: EmailImportTab.tsx erstellen**
+- [ ] **Step 2: Create EmailImportTab.tsx**
 
 `frontend/src/components/import/EmailImportTab.tsx`:
 
@@ -1416,13 +1416,13 @@ export default function EmailImportTab({ onResult, onError }: EmailImportTabProp
 }
 ```
 
-- [ ] **Step 3: Type-Check**
+- [ ] **Step 3: Type check**
 
 ```bash
 cd /d/Projekte/TravStats/frontend && npx tsc --noEmit
 ```
 
-Expected: Keine Fehler.
+Expected: No errors.
 
 - [ ] **Step 4: Commit**
 
@@ -1433,28 +1433,28 @@ git commit -m "feat: EmailImportTab component with drag & drop, airline notice, 
 
 ---
 
-### Task 10: SimplifiedFlightFormV2 umstrukturieren
+### Task 10: Restructure SimplifiedFlightFormV2
 
 **Files:**
-- Modify: `frontend/src/components/SimplifiedFlightFormV2.tsx` (Tab-Reihenfolge + EmailImportTab einbauen)
+- Modify: `frontend/src/components/SimplifiedFlightFormV2.tsx` (tab order + integrate EmailImportTab)
 
-Hinweis: Die Datei ist 1419 Zeilen. Nur die nötigen Stellen werden geändert.
+Note: This file is 1419 lines. Only the required spots are changed.
 
-- [ ] **Step 1: Import hinzufügen**
+- [ ] **Step 1: Add the import**
 
-Am Anfang der Datei (nach bestehendem `lazy()`-Import für `BoardingPassScanner`):
+At the top of the file (after the existing `lazy()` import for `BoardingPassScanner`):
 
 ```typescript
 const EmailImportTab = lazy(() => import("./import/EmailImportTab"));
 ```
 
-- [ ] **Step 2: showEmailUploader durch EmailImportTab ersetzen**
+- [ ] **Step 2: Replace showEmailUploader with EmailImportTab**
 
-Den bestehenden Email-Overlay-Block (Zeilen 1241–1347 in `SimplifiedFlightFormV2.tsx`) **ersetzen**. Der Block beginnt mit `{showEmailUploader && (` und endet mit dem schließenden `)}`.
+**Replace** the existing email overlay block (lines 1241–1347 in `SimplifiedFlightFormV2.tsx`). The block starts with `{showEmailUploader && (` and ends with the closing `)}`.
 
-Die bestehende Logik (Zeilen 1260–1282) tut bereits das Richtige: Sie ruft `setParsedFlights(result.flights)`, `setParserProvider(...)`, `setOriginalEmailData(...)`, `setShowFlightReview(true)` auf — dieser Flow bleibt erhalten. `EmailImportTab` wird nur als UI-Wrapper verwendet, der intern `parseApi.parseEmailFile` aufruft und das Resultat zurückgibt.
+The existing logic (lines 1260–1282) already does the right thing: it calls `setParsedFlights(result.flights)`, `setParserProvider(...)`, `setOriginalEmailData(...)`, `setShowFlightReview(true)` — that flow stays intact. `EmailImportTab` is used purely as a UI wrapper that internally calls `parseApi.parseEmailFile` and returns the result.
 
-**Ersetzen mit:**
+**Replace with:**
 
 ```tsx
 {showEmailUploader && (
@@ -1496,7 +1496,7 @@ Die bestehende Logik (Zeilen 1260–1282) tut bereits das Richtige: Sie ruft `se
 )}
 ```
 
-Dafür muss `EmailImportTab.tsx` die `onResult`-Callback-Signatur anpassen:
+To make this work, `EmailImportTab.tsx` must adjust the `onResult` callback signature:
 
 ```typescript
 interface EmailImportTabProps {
@@ -1511,19 +1511,19 @@ interface EmailImportTabProps {
 }
 ```
 
-Und in `handleFile` / `handleTextParse` in `EmailImportTab.tsx`:
+And in `handleFile` / `handleTextParse` in `EmailImportTab.tsx`:
 
 ```typescript
 onResult(result.flights, result.subject, result.provider, result.text, result.html);
 ```
 
-**Tab-Reihenfolge:** Den Bereich Zeile ~610–650 (wo "Email" und "Boarding Pass" Buttons sind) anpassen — Email-Button zuerst, dann Boarding Pass, dann Manuell.
+**Tab order:** Adjust the area at line ~610–650 (where the "Email" and "Boarding Pass" buttons live) — Email button first, then Boarding Pass, then Manual.
 
-- [ ] **Step 3: Neue Felder im Form-State und Submit**
+- [ ] **Step 3: New fields in form state and submit**
 
-Die neuen Felder kommen aus dem `ParsedBooking`-Result und müssen über den `FlightReviewModal` zum Submit fließen. Dazu:
+The new fields come from the `ParsedBooking` result and need to flow through `FlightReviewModal` into the submit. To do this:
 
-**3a. Neue State-Variablen in `SimplifiedFlightFormV2.tsx`** (nach bestehenden States, ca. Zeile 130):
+**3a. New state variables in `SimplifiedFlightFormV2.tsx`** (after the existing states, around line 130):
 ```typescript
 const [baggageAllowance, setBaggageAllowance] = useState<string | undefined>(undefined);
 const [frequentFlyerNumber, setFrequentFlyerNumber] = useState<string | undefined>(undefined);
@@ -1531,7 +1531,7 @@ const [bookingClassLetter, setBookingClassLetter] = useState<string | undefined>
 const [coPassengers, setCoPassengers] = useState<string[]>([]);
 ```
 
-**3b. States aus ParsedBooking befüllen** — In `FlightReviewModal`'s `onConfirm`-Callback (oder wo `setParsedFlights` verarbeitet wird), nach den bestehenden Feld-Zuweisungen ergänzen:
+**3b. Populate states from ParsedBooking** — In `FlightReviewModal`'s `onConfirm` callback (or wherever `setParsedFlights` is processed), add after the existing field assignments:
 ```typescript
 setBaggageAllowance(flight.baggageAllowance);
 setFrequentFlyerNumber(flight.frequentFlyerNumber);
@@ -1539,7 +1539,7 @@ setBookingClassLetter(flight.bookingClassLetter);
 setCoPassengers(flight.coPassengers ?? []);
 ```
 
-**3c. Im handleSubmit-Block** (wo `FlightInput` gebaut wird, Zeile ~430–520), nach `ticketNumber`:
+**3c. In the handleSubmit block** (where `FlightInput` is built, line ~430–520), after `ticketNumber`:
 ```typescript
 baggageAllowance,
 frequentFlyerNumber,
@@ -1547,16 +1547,16 @@ bookingClassLetter,
 coPassengers,
 ```
 
-**3d. `FlightInput`-Typ** in `frontend/src/types/index.ts` muss diese Felder ebenfalls enthalten — sie wurden in Task 2 zu `ParsedBooking` hinzugefügt, müssen aber auch in `FlightInput` ergänzt werden (gleiche optionale Felder).
+**3d. The `FlightInput` type** in `frontend/src/types/index.ts` must contain these fields too — they were added to `ParsedBooking` in Task 2, but they also need to be added to `FlightInput` (same optional fields).
 
-- [ ] **Step 4: Type-Check + Tests**
+- [ ] **Step 4: Type check + tests**
 
 ```bash
 cd /d/Projekte/TravStats/frontend && npx tsc --noEmit
 cd /d/Projekte/TravStats/frontend && npx vitest --run
 ```
 
-Expected: Keine Fehler, keine regressiven Tests.
+Expected: No errors, no test regressions.
 
 - [ ] **Step 5: Commit**
 
@@ -1569,14 +1569,14 @@ git commit -m "feat: email import promoted to primary tab in flight form"
 
 ## Chunk 5: Frontend — Template Status View
 
-### Task 11: Template-Status API Route
+### Task 11: Template status API route
 
 **Files:**
 - Create: `backend/src/routes/templateStatus.ts`
-- Modify: `backend/src/app.ts` (Route registrieren)
-- Modify: `frontend/src/lib/api.ts` (templateApi ergänzen)
+- Modify: `backend/src/app.ts` (register the route)
+- Modify: `frontend/src/lib/api.ts` (add templateApi)
 
-- [ ] **Step 1: templateStatus.ts erstellen**
+- [ ] **Step 1: Create templateStatus.ts**
 
 ```typescript
 import { Router, type Request, type Response } from "express";
@@ -1596,14 +1596,14 @@ router.get("/", authenticateJwt, (_req: Request, res: Response): void => {
 export default router;
 ```
 
-- [ ] **Step 2: Route in app.ts registrieren**
+- [ ] **Step 2: Register the route in app.ts**
 
 ```typescript
 import templateStatusRouter from "./routes/templateStatus";
 app.use("/api/v1/template-status", templateStatusRouter);
 ```
 
-- [ ] **Step 3: api.ts ergänzen**
+- [ ] **Step 3: Extend api.ts**
 
 ```typescript
 export interface TemplateStatusEntry {
@@ -1640,9 +1640,9 @@ git commit -m "feat: template status API endpoint"
 
 **Files:**
 - Create: `frontend/src/components/TemplateStatusView.tsx`
-- Modify: `frontend/src/pages/SettingsPage.tsx` (Sektion ergänzen)
+- Modify: `frontend/src/pages/SettingsPage.tsx` (add a section)
 
-- [ ] **Step 1: TemplateStatusView.tsx erstellen**
+- [ ] **Step 1: Create TemplateStatusView.tsx**
 
 ```typescript
 import { useEffect, useState } from "react";
@@ -1705,9 +1705,9 @@ export default function TemplateStatusView(): JSX.Element {
 }
 ```
 
-- [ ] **Step 2: In SettingsPage einbinden**
+- [ ] **Step 2: Wire it into SettingsPage**
 
-In `frontend/src/pages/SettingsPage.tsx`, in der Parser/Import-Sektion:
+In `frontend/src/pages/SettingsPage.tsx`, in the parser/import section:
 
 ```tsx
 import TemplateStatusView from "../components/TemplateStatusView";
@@ -1716,16 +1716,16 @@ import TemplateStatusView from "../components/TemplateStatusView";
 <TemplateStatusView />
 ```
 
-- [ ] **Step 3: Type-Check + Tests**
+- [ ] **Step 3: Type check + tests**
 
 ```bash
 cd /d/Projekte/TravStats/frontend && npx tsc --noEmit
 cd /d/Projekte/TravStats/frontend && npx vitest --run
 ```
 
-Expected: Alle Tests grün.
+Expected: All tests green.
 
-- [ ] **Step 4: Finaler Commit**
+- [ ] **Step 4: Final commit**
 
 ```bash
 git add frontend/src/components/TemplateStatusView.tsx frontend/src/pages/SettingsPage.tsx
@@ -1734,11 +1734,11 @@ git commit -m "feat: template status view in settings with GitHub link"
 
 ---
 
-## Abschluss-Verifikation
+## Final verification
 
-- [ ] Backend Type-Check: `cd /d/Projekte/TravStats/backend && npx tsc --noEmit`
-- [ ] Frontend Type-Check: `cd /d/Projekte/TravStats/frontend && npx tsc --noEmit`
-- [ ] Frontend Tests: `cd /d/Projekte/TravStats/frontend && npx vitest --run`
-- [ ] Manueller Test: Email `.eml`-Datei hochladen → Airline-Template greift → Felder befüllt
-- [ ] Manueller Test: Unbekannte Airline → LLM-Fallback + Hinweis in UI sichtbar
-- [ ] Template-Status in Settings sichtbar mit allen 8 Airline-Templates
+- [ ] Backend type check: `cd /d/Projekte/TravStats/backend && npx tsc --noEmit`
+- [ ] Frontend type check: `cd /d/Projekte/TravStats/frontend && npx tsc --noEmit`
+- [ ] Frontend tests: `cd /d/Projekte/TravStats/frontend && npx vitest --run`
+- [ ] Manual test: upload an email `.eml` file → airline template kicks in → fields populated
+- [ ] Manual test: unknown airline → LLM fallback + notice visible in UI
+- [ ] Template status visible in settings with all 8 airline templates

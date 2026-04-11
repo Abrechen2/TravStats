@@ -1,34 +1,34 @@
 # TravStats — Learnings
 
-Festgehaltene Erkenntnisse aus Bugs, Reviews und Incidents.
-Neue Einträge oben einfügen.
+Lessons captured from bugs, reviews, and incidents.
+Add new entries at the top.
 
 ---
 
-## 2026-03-31 — Auth-Reload-Loop nach Store-Hydration
+## 2026-03-31 — Auth reload loop after store hydration
 
-**Problem:** `onRehydrateStorage` in `authStore.ts` entfernte den `auth:unauthorized` Event-Listener nach der Hydration aber fügte keinen neuen hinzu. Ergebnis: 401-Fehler lösten keinen Logout mehr aus, sondern nur den Fallback-Hard-Reload mit `window.location.href`. Da der User noch in localStorage stand, redirectete `/login` sofort zurück zu `/` → Endlos-Loop.
+**Problem:** `onRehydrateStorage` in `authStore.ts` removed the `auth:unauthorized` event listener after hydration but did not add a new one. Result: 401 errors no longer triggered a logout, only the fallback hard reload via `window.location.href`. Because the user was still in localStorage, `/login` immediately redirected back to `/` → infinite loop.
 
-**Fix:** Event-Listener-Cleanup aus `onRehydrateStorage` entfernt. Der Listener überlebt jetzt die Hydration, da `get()` immer den aktuellen Store-State liefert. Fallback-Timeout von 200ms auf 500ms erhöht + löscht localStorage vor Hard-Reload als Defense-in-Depth.
+**Fix:** Removed the event listener cleanup from `onRehydrateStorage`. The listener now survives hydration, since `get()` always returns the current store state. Increased the fallback timeout from 200ms to 500ms and clear localStorage before the hard reload as defense in depth.
 
-**Lesson:** Zustand `onRehydrateStorage` nur für echte Cleanup-Logik verwenden — nicht für Event-Listener die dauerhaft gebraucht werden.
-
----
-
-## 2026-03 — deck.gl + MapLibre WebGL-Konflikt
-
-**Problem:** `<DeckGL>` React-Komponente + MapLibre 5.x erstellen zwei getrennte WebGL-Kontexte → einer wird sofort zerstört.
-
-**Fix:** `MapboxOverlay` + `useControl` Hook aus `@deck.gl/mapbox` — deck.gl rendert als Overlay in MapLibres WebGL-Kontext.
-
-**Lesson:** Bei Map-Bibliotheken immer prüfen ob WebGL-Sharing nötig ist. Nie zwei unabhängige GL-Kontexte auf demselben Canvas.
+**Lesson:** Only use Zustand `onRehydrateStorage` for genuine cleanup logic — not for event listeners that need to live on permanently.
 
 ---
 
-## 2026-02 — Prisma `any` in JSON-Feldern
+## 2026-03 — deck.gl + MapLibre WebGL conflict
 
-**Problem:** `Record<string, unknown>` kann nicht direkt zu `Prisma.InputJsonObject` zugewiesen werden (TypeScript-Fehler).
+**Problem:** The `<DeckGL>` React component + MapLibre 5.x create two separate WebGL contexts → one is destroyed immediately.
 
-**Fix:** `as unknown as Prisma.InputJsonValue` — zweistufiger Cast über `unknown`.
+**Fix:** Use the `MapboxOverlay` + `useControl` hook from `@deck.gl/mapbox` — deck.gl renders as an overlay inside MapLibre's WebGL context.
 
-**Lesson:** Prisma's JSON-Typen sind extra-strikt. Immer `Prisma.InputJsonValue` als Ziel-Typ verwenden.
+**Lesson:** Always check whether WebGL sharing is required when using map libraries. Never put two independent GL contexts on the same canvas.
+
+---
+
+## 2026-02 — Prisma `any` in JSON fields
+
+**Problem:** `Record<string, unknown>` cannot be assigned directly to `Prisma.InputJsonObject` (TypeScript error).
+
+**Fix:** `as unknown as Prisma.InputJsonValue` — a two-step cast via `unknown`.
+
+**Lesson:** Prisma's JSON types are extra strict. Always use `Prisma.InputJsonValue` as the target type.

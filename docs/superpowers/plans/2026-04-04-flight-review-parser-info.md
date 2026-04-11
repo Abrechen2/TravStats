@@ -1,10 +1,10 @@
-# Flight Review Modal — Parser Info & Quelltext Implementation Plan
+# Flight Review Modal — Parser Info & Source Text Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Im "Flug überprüfen" Modal Template-Name und Konfidenz im Header anzeigen, plus aufklappbaren Quelltext-Panel für manuelle Kontrolle.
+**Goal:** Show the template name and confidence in the header of the "Review flight" modal, plus an expandable source-text panel for manual checks.
 
-**Architecture:** Reine Frontend-Änderung. `initialData.parserTemplate` und `initialData.parserConfidence` sind bereits auf `ParsedBooking` vorhanden und werden vom Backend gesetzt. `originalData.text` wird bereits als Prop übergeben. Nur `FlightReviewModal.tsx` und die beiden i18n-JSON-Dateien werden geändert.
+**Architecture:** Frontend-only change. `initialData.parserTemplate` and `initialData.parserConfidence` already exist on `ParsedBooking` and are set by the backend. `originalData.text` is already passed in as a prop. Only `FlightReviewModal.tsx` and the two i18n JSON files are touched.
 
 **Tech Stack:** React 18, TypeScript (strict), Tailwind CSS, Vitest + Testing Library, react-i18next
 
@@ -14,22 +14,22 @@
 
 | File | Change |
 |------|--------|
-| `frontend/src/components/FlightReviewModal.tsx` | Modify: neuer State, Parser-Info-Zeile, Quelltext-Panel |
-| `frontend/src/i18n/resources/de/flights.json` | Modify: 4 neue Keys in `review` |
-| `frontend/src/i18n/resources/en/flights.json` | Modify: 4 neue Keys in `review` |
-| `frontend/src/__tests__/components/FlightReviewModal.fieldSources.test.tsx` | Modify: 2 neue Tests hinzufügen |
+| `frontend/src/components/FlightReviewModal.tsx` | Modify: new state, parser info row, source-text panel |
+| `frontend/src/i18n/resources/de/flights.json` | Modify: 4 new keys in `review` |
+| `frontend/src/i18n/resources/en/flights.json` | Modify: 4 new keys in `review` |
+| `frontend/src/__tests__/components/FlightReviewModal.fieldSources.test.tsx` | Modify: add 2 new tests |
 
 ---
 
-### Task 1: i18n Keys hinzufügen
+### Task 1: Add i18n keys
 
 **Files:**
-- Modify: `frontend/src/i18n/resources/de/flights.json` (Zeile ~204, nach `selectedAirport`)
-- Modify: `frontend/src/i18n/resources/en/flights.json` (gleiche Stelle)
+- Modify: `frontend/src/i18n/resources/de/flights.json` (line ~204, after `selectedAirport`)
+- Modify: `frontend/src/i18n/resources/en/flights.json` (same place)
 
-- [ ] **Step 1: Neue Keys in `de/flights.json` eintragen**
+- [ ] **Step 1: Add new keys to `de/flights.json`**
 
-Öffne `frontend/src/i18n/resources/de/flights.json`. Suche den Block `"review": {` (ca. Zeile 190). Füge **vor** der schließenden `}` des `review`-Objekts (nach `"selectedAirport"`) folgende 4 Zeilen ein:
+Open `frontend/src/i18n/resources/de/flights.json`. Find the block `"review": {` (around line 190). Insert these 4 lines **before** the closing `}` of the `review` object (after `"selectedAirport"`):
 
 ```json
     "unknownParser": "Unbekannt",
@@ -38,7 +38,7 @@
     "hideSourceText": "Ausblenden"
 ```
 
-Das `review`-Objekt sieht danach so aus (Auszug):
+The `review` object then looks like this (excerpt):
 ```json
   "review": {
     "title": "Flug überprüfen",
@@ -62,9 +62,9 @@ Das `review`-Objekt sieht danach so aus (Auszug):
   },
 ```
 
-- [ ] **Step 2: Gleiche Keys in `en/flights.json` eintragen**
+- [ ] **Step 2: Add the same keys to `en/flights.json`**
 
-Öffne `frontend/src/i18n/resources/en/flights.json`. Gleiche Stelle im `review`-Objekt (nach `selectedAirport`):
+Open `frontend/src/i18n/resources/en/flights.json`. Same place inside the `review` object (after `selectedAirport`):
 
 ```json
     "unknownParser": "Unknown",
@@ -73,13 +73,13 @@ Das `review`-Objekt sieht danach so aus (Auszug):
     "hideSourceText": "Hide"
 ```
 
-- [ ] **Step 3: TypeScript-Check**
+- [ ] **Step 3: TypeScript check**
 
 ```bash
 cd frontend && npx tsc --noEmit
 ```
 
-Erwartet: keine Fehler
+Expected: no errors
 
 - [ ] **Step 4: Commit**
 
@@ -90,14 +90,14 @@ git commit -m "feat: add parser info i18n keys to flights review namespace"
 
 ---
 
-### Task 2: Tests schreiben (TDD)
+### Task 2: Write the tests (TDD)
 
 **Files:**
 - Modify: `frontend/src/__tests__/components/FlightReviewModal.fieldSources.test.tsx`
 
-- [ ] **Step 1: Tests hinzufügen**
+- [ ] **Step 1: Add the tests**
 
-Öffne `frontend/src/__tests__/components/FlightReviewModal.fieldSources.test.tsx`. Die Datei hat bereits Mocks für `airportsApi`, `parseApi`, `authStore` und `useTranslation`. Füge nach dem bestehenden `describe`-Block einen neuen Block an:
+Open `frontend/src/__tests__/components/FlightReviewModal.fieldSources.test.tsx`. The file already mocks `airportsApi`, `parseApi`, `authStore` and `useTranslation`. Append a new block after the existing `describe`:
 
 ```typescript
 describe("FlightReviewModal parser info", () => {
@@ -169,13 +169,13 @@ describe("FlightReviewModal parser info", () => {
 });
 ```
 
-- [ ] **Step 2: Tests laufen lassen — müssen FEHLSCHLAGEN**
+- [ ] **Step 2: Run the tests — they must FAIL**
 
 ```bash
 cd frontend && npx vitest --run src/__tests__/components/FlightReviewModal.fieldSources.test.tsx
 ```
 
-Erwartet: Die 4 neuen Tests schlagen fehl (Component zeigt die Infos noch nicht an). Der bestehende Test ("applies green border class") muss weiterhin bestehen.
+Expected: the 4 new tests fail (the component does not render the info yet). The existing test ("applies green border class") must still pass.
 
 - [ ] **Step 3: Commit (failing tests)**
 
@@ -186,22 +186,22 @@ git commit -m "test: FlightReviewModal parser info + source text toggle tests (R
 
 ---
 
-### Task 3: FlightReviewModal implementieren
+### Task 3: Implement FlightReviewModal
 
 **Files:**
 - Modify: `frontend/src/components/FlightReviewModal.tsx`
 
-- [ ] **Step 1: `showSourceText` State hinzufügen**
+- [ ] **Step 1: Add the `showSourceText` state**
 
-Öffne `frontend/src/components/FlightReviewModal.tsx`. Die bestehenden States beginnen ab ca. Zeile 50. Füge direkt nach der letzten `useState`-Deklaration (suche nach dem letzten `useState` vor dem ersten `useEffect`) folgende Zeile ein:
+Open `frontend/src/components/FlightReviewModal.tsx`. The existing states start around line 50. Insert this line directly after the last `useState` declaration (look for the last `useState` before the first `useEffect`):
 
 ```typescript
 const [showSourceText, setShowSourceText] = useState(false);
 ```
 
-- [ ] **Step 2: Hilfsfunktion `getConfidenceColor` hinzufügen**
+- [ ] **Step 2: Add the helper function `getConfidenceColor`**
 
-Füge diese Funktion direkt nach der bestehenden `getFieldBorderClass`-Funktion ein (ca. Zeile 18, vor `interface FlightReviewModalProps`):
+Add this function directly after the existing `getFieldBorderClass` function (around line 18, before `interface FlightReviewModalProps`):
 
 ```typescript
 function getConfidenceColor(confidence: number): string {
@@ -211,9 +211,9 @@ function getConfidenceColor(confidence: number): string {
 }
 ```
 
-- [ ] **Step 3: Parser-Info-Zeile in den Header einfügen**
+- [ ] **Step 3: Insert the parser info row into the header**
 
-Im JSX-Return, im Header-Block (ca. Zeile 354–377). Suche diesen exakten Block:
+In the JSX return, in the header block (around line 354–377). Find this exact block:
 
 ```tsx
           <div>
@@ -226,7 +226,7 @@ Im JSX-Return, im Header-Block (ca. Zeile 354–377). Suche diesen exakten Block
           </div>
 ```
 
-Ersetze es durch:
+Replace it with:
 
 ```tsx
           <div>
@@ -268,16 +268,16 @@ Ersetze es durch:
           </div>
 ```
 
-- [ ] **Step 4: Quelltext-Panel zwischen Header und Form einfügen**
+- [ ] **Step 4: Insert the source-text panel between header and form**
 
-Suche im JSX diesen exakten Kommentar + öffnende Form-Zeile:
+In the JSX, find this exact comment + opening form line:
 
 ```tsx
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
 ```
 
-Ersetze es durch:
+Replace it with:
 
 ```tsx
         {/* Source text panel */}
@@ -293,29 +293,29 @@ Ersetze es durch:
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
 ```
 
-- [ ] **Step 5: TypeScript-Check**
+- [ ] **Step 5: TypeScript check**
 
 ```bash
 cd frontend && npx tsc --noEmit
 ```
 
-Erwartet: keine Fehler
+Expected: no errors
 
-- [ ] **Step 6: Tests laufen lassen — müssen alle BESTEHEN**
+- [ ] **Step 6: Run the tests — all must PASS**
 
 ```bash
 cd frontend && npx vitest --run src/__tests__/components/FlightReviewModal.fieldSources.test.tsx
 ```
 
-Erwartet: alle 5 Tests grün (1 bestehend + 4 neue)
+Expected: all 5 tests green (1 existing + 4 new)
 
-- [ ] **Step 7: Alle Frontend-Tests**
+- [ ] **Step 7: All frontend tests**
 
 ```bash
 cd frontend && npx vitest --run
 ```
 
-Erwartet: alle Tests grün
+Expected: all tests green
 
 - [ ] **Step 8: Commit**
 
@@ -326,40 +326,40 @@ git commit -m "feat: show parser template name, confidence and source text toggl
 
 ---
 
-### Task 4: Lokal testen
+### Task 4: Test locally
 
-- [ ] **Step 1: Dev-Server starten (falls nicht läuft)**
+- [ ] **Step 1: Start the dev server (if not already running)**
 
 ```bash
 # Im Root-Verzeichnis:
 npm run dev
 ```
 
-Backend läuft auf Port 8000, Frontend auf Port 3000.
+Backend on port 8000, frontend on port 3000.
 
-- [ ] **Step 2: E-Mail hochladen und parsen**
+- [ ] **Step 2: Upload and parse an email**
 
-1. Browser öffnen: `http://localhost:3000`
-2. Als `dennis` oder `demo` einloggen
-3. Auf **"+ Flug hinzufügen"** klicken → **"E-Mail importieren"**
-4. Eine MSG-Datei aus `test-samples/emails/` hochladen (z.B. `Buchungsdetails _ Abflug_ 14 November 2024 _ MUC-FRA_.msg`)
-5. Das "Flug überprüfen" Modal öffnet sich
+1. Open the browser: `http://localhost:3000`
+2. Log in as `dennis` or `demo`
+3. Click **"+ Flug hinzufügen"** → **"E-Mail importieren"**
+4. Upload an MSG file from `test-samples/emails/` (e.g. `Buchungsdetails _ Abflug_ 14 November 2024 _ MUC-FRA_.msg`)
+5. The "Review flight" modal opens
 
-- [ ] **Step 3: Parser-Info prüfen**
+- [ ] **Step 3: Verify the parser info**
 
-Erwartetes Ergebnis im Modal-Header:
-- Unter "Flug 1 von 1" erscheint die Parser-Info-Zeile
-- Template-Name: `🤖 Lufthansa Buchungsdetails` (wenn Template matcht) oder der Built-in-Name
-- Konfidenz-Pill mit Farbe (grün/gelb/rot)
-- Button "Quelltext"
+Expected result in the modal header:
+- The parser info row appears below "Flug 1 von 1"
+- Template name: `🤖 Lufthansa Buchungsdetails` (when a template matches) or the built-in name
+- Confidence pill with color (green/yellow/red)
+- A "Quelltext" button
 
-- [ ] **Step 4: Quelltext-Toggle prüfen**
+- [ ] **Step 4: Verify the source text toggle**
 
-1. Auf "Quelltext" klicken
-2. Panel öffnet sich mit dem E-Mail-Plaintext (scrollbar, max ~200px)
-3. Button zeigt jetzt "Ausblenden"
-4. Nochmal klicken → Panel schließt sich
+1. Click "Quelltext"
+2. The panel opens showing the email plaintext (scrollable, max ~200px)
+3. The button now reads "Ausblenden"
+4. Click again → the panel closes
 
-- [ ] **Step 5: Commit falls alles OK**
+- [ ] **Step 5: Commit if everything is OK**
 
-Wenn der manuelle Test besteht, ist das Feature fertig. Kein weiterer Commit nötig (alles bereits committed in Task 1–3).
+If the manual test passes, the feature is done. No further commit needed (everything is already committed in tasks 1–3).

@@ -1,51 +1,51 @@
-# Phase 1: Email als primärer Eingabetyp — Design Spec
+# Phase 1: Email as Primary Input Type — Design Spec
 
-**Datum:** 2026-03-11
+**Date:** 2026-03-11
 **Status:** Approved
-**Scope:** Email-Parsing Pipeline, Community Plugin-System, neue Datenfelder, LLM Training Signal
+**Scope:** Email parsing pipeline, community plugin system, new data fields, LLM training signal
 
 ---
 
-## Ziel
+## Goal
 
-Email-Buchungsbestätigungen werden zum primären Eingabeweg für Flugdaten. Boarding Pass und manueller Import werden zu sekundären Optionen. Ein Community-Plugin-System ermöglicht airline-spezifische Templates mit niedrigem Einstiegs-Barrier.
+Email booking confirmations become the primary input path for flight data. Boarding pass and manual import become secondary options. A community plugin system enables airline-specific templates with a low entry barrier.
 
 ---
 
-## 1. Email-Parsing Pipeline
+## 1. Email Parsing Pipeline
 
-### Ablauf
+### Flow
 
 ```
-Email (.eml / .msg / .txt / PDF-Attachment)
+Email (.eml / .msg / .txt / PDF attachment)
   → Airline Detector (From / Subject / Domain)
-  → Template Registry (JSON + optionale Transforms)
-  → ParsedBooking (erweiterte Felder)
+  → Template Registry (JSON + optional transforms)
+  → ParsedBooking (extended fields)
 
-Kein Template gefunden:
-  → LLM Fallback (wie bisher)
-  → User Notice: "Kein Template für [Airline] — möchtest du eines beitragen?"
-  → Miss wird anonym für LLM-Training gespeichert
+No template found:
+  → LLM fallback (as before)
+  → User notice: "No template for [Airline] — would you like to contribute one?"
+  → Miss is stored anonymously for LLM training
 ```
 
 ### Airline Detector
 
-Erkennt die Airline anhand (Priorität absteigend):
-1. `From`-Adresse (z.B. `@lufthansa.com`, `@ryanair.com`)
-2. `Subject`-Pattern (z.B. "Buchungsbestätigung", "Your booking confirmation")
-3. HTML-Domain-Fingerprint (falls andere Felder fehlen)
+Detects the airline based on (priority descending):
+1. `From` address (e.g. `@lufthansa.com`, `@ryanair.com`)
+2. `Subject` pattern (e.g. "Buchungsbestätigung", "Your booking confirmation")
+3. HTML domain fingerprint (if other fields are missing)
 
 ### Template Registry
 
-- Templates werden beim App-Start aus lokalem Cache geladen
-- Täglicher Background-Sync mit GitHub-Registry
-- Fallback auf eingebaute Core-Templates (Top-20-Airlines) falls kein Internet
+- Templates are loaded from a local cache at app startup
+- Daily background sync with the GitHub registry
+- Falls back to built-in core templates (top 20 airlines) if there is no internet
 
 ---
 
-## 2. Community Plugin-System
+## 2. Community Plugin System
 
-### Template-Format (Hybrid JSON + Transforms)
+### Template Format (Hybrid JSON + Transforms)
 
 ```json
 {
@@ -89,49 +89,49 @@ Erkennt die Airline anhand (Priorität absteigend):
 
 ### Distribution
 
-- **Repo:** `travstats-airline-templates` (separates öffentliches GitHub-Repo)
-- **Struktur:** `templates/<IATA>.json` + `samples/<IATA>/` (anonymisierte Test-Emails)
-- **CI/CD:** GitHub Actions führt alle `testCases` automatisch aus bei jedem PR
-- **BCBP Validierung:** Wenn Test-Email einen Barcode enthält, wird BCBP-Dekodierung als Ground-Truth genutzt
+- **Repo:** `travstats-airline-templates` (separate public GitHub repo)
+- **Structure:** `templates/<IATA>.json` + `samples/<IATA>/` (anonymized test emails)
+- **CI/CD:** GitHub Actions runs all `testCases` automatically on every PR
+- **BCBP validation:** When a test email contains a barcode, BCBP decoding is used as ground truth
 
-### In-App Template-Ansicht
+### In-App Template View
 
-- Liste aller erkannten Airlines im eigenen Datensatz
-- Template-Status: ✅ Template vorhanden / ⚠️ LLM-Fallback / ❌ Kein Template
-- Template-Version + letztes Update-Datum
-- "Update verfügbar" Badge bei neuen Versionen
-- Link zu GitHub für Beiträge
+- List of all airlines detected in the user's own dataset
+- Template status: ✅ template available / ⚠️ LLM fallback / ❌ no template
+- Template version + last update date
+- "Update available" badge on new versions
+- Link to GitHub for contributions
 
 ---
 
-## 3. Neue Datenfelder (Prisma Schema)
+## 3. New Data Fields (Prisma Schema)
 
-| Feld | Typ | Quelle |
+| Field | Type | Source |
 |------|-----|--------|
 | `baggageAllowance` | `String?` | Email/Boarding Pass |
 | `frequentFlyerNumber` | `String?` | Email/BCBP |
-| `bookingClassLetter` | `String?` | Email/BCBP (z.B. "Y", "C", "J") |
+| `bookingClassLetter` | `String?` | Email/BCBP (e.g. "Y", "C", "J") |
 | `coPassengers` | `String[]` | Email |
-| `parserTemplate` | `String?` | Tracking: welches Template genutzt |
-| `parserConfidence` | `Int?` | Konfidenz 0–100 |
+| `parserTemplate` | `String?` | Tracking: which template was used |
+| `parserConfidence` | `Int?` | Confidence 0–100 |
 
 ---
 
-## 4. UI-Priorisierung
+## 4. UI Prioritization
 
-Import-Dialog wird umgebaut:
+The import dialog is reorganized:
 
 ```
-Tab 1: 📧 Email  ← NEU PRIMÄR
-  - Drag & Drop für .eml, .msg, .txt
-  - PDF-Attachment-Erkennung
-  - Paste-Bereich für Email-Text
+Tab 1: 📧 Email  ← NEW PRIMARY
+  - Drag & drop for .eml, .msg, .txt
+  - PDF attachment detection
+  - Paste area for email text
 
-Tab 2: 📷 Boarding Pass  ← bisher primär
-  - Bild-Upload wie bisher
-  - BCBP Barcode-Upload (Phase 2)
+Tab 2: 📷 Boarding Pass  ← previously primary
+  - Image upload as before
+  - BCBP barcode upload (phase 2)
 
-Tab 3: ✏️ Manuell  ← bisher sekundär
+Tab 3: ✏️ Manual  ← previously secondary
   - Formular wie bisher
 ```
 
@@ -139,7 +139,7 @@ Tab 3: ✏️ Manuell  ← bisher sekundär
 
 ## 5. LLM Training Signal
 
-Jeder Parse-Vorgang erzeugt einen Trainings-Datenpunkt:
+Each parse operation produces a training data point:
 
 ```typescript
 interface ParseTrainingRecord {
@@ -156,30 +156,30 @@ interface ParseTrainingRecord {
 }
 ```
 
-- Template-Miss → sofort gespeichert (hilft Community zu priorisieren)
-- User-Korrekturen → Ground Truth Label für Fine-Tuning
-- BCBP-Match → automatische Validierung der Parsing-Qualität
+- Template miss → stored immediately (helps the community prioritize)
+- User corrections → ground-truth labels for fine-tuning
+- BCBP match → automatic validation of parsing quality
 
 ---
 
-## Implementierungsreihenfolge
+## Implementation Order
 
-1. `AirlineDetector` Service (From/Subject Matching)
-2. Template-Loader (lokales JSON + GitHub Sync)
-3. Template-Engine (CSS-Selektor + Transform-Ausführung)
-4. Neue Prisma-Felder + Migrations
-5. LLM Fallback mit User-Notice
-6. Training-Record Speicherung
-7. UI: Tab-Reihenfolge + Drag & Drop
-8. In-App Template-Ansicht
-9. Initiale Templates: LH, LX, OS, SN, FR, U2, W6, EW
+1. `AirlineDetector` service (From/Subject matching)
+2. Template loader (local JSON + GitHub sync)
+3. Template engine (CSS selector + transform execution)
+4. New Prisma fields + migrations
+5. LLM fallback with user notice
+6. Training record storage
+7. UI: tab order + drag & drop
+8. In-app template view
+9. Initial templates: LH, LX, OS, SN, FR, U2, W6, EW
 
 ---
 
-## Nicht in Scope (Phase 1)
+## Out of Scope (Phase 1)
 
-- BCBP Barcode-Decoder (→ Phase 2)
-- PDF-Bordkarten-Parsing (→ Phase 2)
-- CO₂-Berechnung (→ Phase 3)
-- Actual Times / Delay-Tracking (→ Phase 3)
-- Fine-Tuning Ausführung (→ Phase 4)
+- BCBP barcode decoder (→ Phase 2)
+- PDF boarding pass parsing (→ Phase 2)
+- CO₂ calculation (→ Phase 3)
+- Actual times / delay tracking (→ Phase 3)
+- Fine-tuning execution (→ Phase 4)

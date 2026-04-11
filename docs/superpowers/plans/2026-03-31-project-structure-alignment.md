@@ -2,42 +2,42 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Übertrage Sublarrs bewährte Projektstruktur auf TravStats — Monorepo-Orchestrierung, GitHub Workflows (Release, Claude, Dependabot), neue Dev/Ops-Scripts, überarbeitetes CLAUDE.md und ergänzende Projektdokumentation.
+**Goal:** Port Sublarr's proven project structure to TravStats — monorepo orchestration, GitHub workflows (Release, Claude, Dependabot), new dev/ops scripts, a reworked CLAUDE.md, and supplementary project documentation.
 
-**Architecture:** Keine Code-Logik ändert sich. Alle Änderungen sind Infrastruktur: package.json, Shell-Scripts, GitHub Actions Workflows, Markdown-Docs. Maschinen-spezifische Deployment-Infos werden in `CLAUDE.local.md` (gitignored) ausgelagert.
+**Architecture:** No code logic changes. All changes are infrastructure: package.json, shell scripts, GitHub Actions workflows, Markdown docs. Machine-specific deployment information is moved into `CLAUDE.local.md` (gitignored).
 
 **Tech Stack:** bash/PowerShell, GitHub Actions, Conventional Commits, Keep a Changelog, Semantic Versioning
 
 ---
 
-## Übersicht der betroffenen Dateien
+## Overview of affected files
 
-| Aktion | Datei | Zweck |
+| Action | File | Purpose |
 |--------|-------|-------|
-| Modify | `package.json` (root) | Monorepo-Orchestrierung: dev, install:all, test |
-| Create | `scripts/dev-all.sh` + `.ps1` | Startet Backend + Frontend parallel |
-| Create | `scripts/check-status.sh` + `.ps1` | Health-Check: Build, Tests, Git-Status, Version |
-| Create | `scripts/run-tests.sh` + `.ps1` | Alle Tests (backend + frontend + e2e) |
-| Create | `scripts/security-scan.sh` | npm audit + bandit auf scripts/ |
+| Modify | `package.json` (root) | Monorepo orchestration: dev, install:all, test |
+| Create | `scripts/dev-all.sh` + `.ps1` | Starts backend + frontend in parallel |
+| Create | `scripts/check-status.sh` + `.ps1` | Health check: build, tests, git status, version |
+| Create | `scripts/run-tests.sh` + `.ps1` | All tests (backend + frontend + e2e) |
+| Create | `scripts/security-scan.sh` | npm audit + bandit on scripts/ |
 | Create | `.github/workflows/release.yml` | Tag → CI → Docker → GitHub Release |
-| Create | `.github/workflows/claude.yml` | @claude-Mentions in Issues/PRs |
-| Create | `.github/workflows/claude-code-review.yml` | Auto-Review bei PR-Open/Sync |
-| Create | `.github/dependabot.yml` | Wöchentliche Dependency-Updates |
-| Modify | `CLAUDE.md` | Sublarr-Stil: präzise, action-fokussiert, mit Gotchas |
-| Create | `CLAUDE.local.md.example` | Template für maschinen-spezifische Deploy-Infos |
-| Modify | `.gitignore` | CLAUDE.local.md + .claude/settings.json ignorieren |
-| Create | `CONTRIBUTING.md` | Beitragsleitfaden (Branch, PR, Commit-Format) |
-| Create | `docs/INCIDENT_RUNBOOK.md` | Schritt-für-Schritt bei Produktionsausfall |
-| Create | `docs/LEARNINGS.md` | Festgehaltene Erkenntnisse aus Bugs/Reviews |
+| Create | `.github/workflows/claude.yml` | @claude mentions in issues/PRs |
+| Create | `.github/workflows/claude-code-review.yml` | Auto-review on PR open/sync |
+| Create | `.github/dependabot.yml` | Weekly dependency updates |
+| Modify | `CLAUDE.md` | Sublarr style: precise, action-focused, with gotchas |
+| Create | `CLAUDE.local.md.example` | Template for machine-specific deployment info |
+| Modify | `.gitignore` | Ignore CLAUDE.local.md + .claude/settings.json |
+| Create | `CONTRIBUTING.md` | Contribution guide (branch, PR, commit format) |
+| Create | `docs/INCIDENT_RUNBOOK.md` | Step-by-step procedure for production outages |
+| Create | `docs/LEARNINGS.md` | Recorded insights from bugs/reviews |
 
 ---
 
-## Task 1: Root `package.json` — Monorepo-Orchestrierung
+## Task 1: Root `package.json` — Monorepo orchestration
 
 **Files:**
 - Modify: `package.json` (root)
 
-- [ ] **Schreibe das neue Root `package.json`**
+- [ ] **Write the new root `package.json`**
 
 ```json
 {
@@ -68,19 +68,19 @@
 }
 ```
 
-- [ ] **Installiere concurrently**
+- [ ] **Install concurrently**
 
 ```bash
 cd /d/Projekte/TravStats && npm install --save-dev concurrently
 ```
 
-- [ ] **Verifiziere: `npm run typecheck` läuft durch**
+- [ ] **Verify: `npm run typecheck` passes**
 
 ```bash
 cd /d/Projekte/TravStats && npm run typecheck
 ```
 
-Expected: Beide Typechecks erfolgreich, keine Fehler.
+Expected: Both type checks succeed, no errors.
 
 - [ ] **Commit**
 
@@ -99,7 +99,7 @@ git commit -m "chore: root package.json als Monorepo-Orchestrator mit dev/test/l
 - Create: `scripts/run-tests.sh`, `scripts/run-tests.ps1`
 - Create: `scripts/security-scan.sh`
 
-- [ ] **Erstelle `scripts/dev-all.sh`**
+- [ ] **Create `scripts/dev-all.sh`**
 
 ```bash
 #!/bin/bash
@@ -118,7 +118,7 @@ trap "kill $BACKEND_PID $FRONTEND_PID 2>/dev/null; exit" INT TERM
 wait
 ```
 
-- [ ] **Erstelle `scripts/dev-all.ps1`**
+- [ ] **Create `scripts/dev-all.ps1`**
 
 ```powershell
 # Startet Backend (Port 8000) und Frontend (Port 3000) parallel.
@@ -131,7 +131,7 @@ Write-Host "Beide Prozesse stoppen: taskkill /F /PID $($backend.Id) /PID $($fron
 Wait-Process -Id $backend.Id, $frontend.Id
 ```
 
-- [ ] **Erstelle `scripts/check-status.sh`**
+- [ ] **Create `scripts/check-status.sh`**
 
 ```bash
 #!/bin/bash
@@ -158,7 +158,7 @@ echo ""
 echo "==========================="
 ```
 
-- [ ] **Erstelle `scripts/check-status.ps1`**
+- [ ] **Create `scripts/check-status.ps1`**
 
 ```powershell
 $root    = Split-Path -Parent $PSScriptRoot
@@ -181,7 +181,7 @@ Set-Location $root
 Write-Host "===========================" -ForegroundColor Cyan
 ```
 
-- [ ] **Erstelle `scripts/run-tests.sh`**
+- [ ] **Create `scripts/run-tests.sh`**
 
 ```bash
 #!/bin/bash
@@ -208,7 +208,7 @@ echo ""
 echo "=== Alle Tests abgeschlossen ==="
 ```
 
-- [ ] **Erstelle `scripts/run-tests.ps1`**
+- [ ] **Create `scripts/run-tests.ps1`**
 
 ```powershell
 param([switch]$SkipE2E)
@@ -228,7 +228,7 @@ Write-Host "=== Alle Tests abgeschlossen ===" -ForegroundColor Green
 Set-Location $root
 ```
 
-- [ ] **Erstelle `scripts/security-scan.sh`**
+- [ ] **Create `scripts/security-scan.sh`**
 
 ```bash
 #!/bin/bash
@@ -261,7 +261,7 @@ echo ""
 echo "✓ Security-Scan abgeschlossen — keine High/Critical gefunden."
 ```
 
-- [ ] **Mache Shell-Scripts ausführbar**
+- [ ] **Make shell scripts executable**
 
 ```bash
 chmod +x /d/Projekte/TravStats/scripts/dev-all.sh
@@ -279,14 +279,14 @@ git commit -m "chore: dev-all, check-status, run-tests, security-scan scripts hi
 
 ---
 
-## Task 3: GitHub Workflow — `release.yml`
+## Task 3: GitHub workflow — `release.yml`
 
 **Files:**
 - Create: `.github/workflows/release.yml`
 
-Der Workflow: Push eines Tags `v*.*.*` → CI (reuse) → Docker Build → GitHub Release mit CHANGELOG-Extraktion.
+The workflow: pushing a `v*.*.*` tag → CI (reuse) → Docker build → GitHub Release with CHANGELOG extraction.
 
-- [ ] **Erstelle `.github/workflows/release.yml`**
+- [ ] **Create `.github/workflows/release.yml`**
 
 ```yaml
 name: Release
@@ -414,14 +414,14 @@ git commit -m "ci: release workflow (validate VERSION → CI → Docker → GitH
 
 ---
 
-## Task 4: GitHub Workflows — Claude & Dependabot
+## Task 4: GitHub workflows — Claude & Dependabot
 
 **Files:**
 - Create: `.github/workflows/claude.yml`
 - Create: `.github/workflows/claude-code-review.yml`
 - Create: `.github/dependabot.yml`
 
-- [ ] **Erstelle `.github/workflows/claude.yml`**
+- [ ] **Create `.github/workflows/claude.yml`**
 
 ```yaml
 name: Claude
@@ -447,7 +447,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-- [ ] **Erstelle `.github/workflows/claude-code-review.yml`**
+- [ ] **Create `.github/workflows/claude-code-review.yml`**
 
 ```yaml
 name: Claude Code Review
@@ -475,7 +475,7 @@ jobs:
             Be concise — only report issues that actually matter.
 ```
 
-- [ ] **Erstelle `.github/dependabot.yml`**
+- [ ] **Create `.github/dependabot.yml`**
 
 ```yaml
 version: 2
@@ -525,14 +525,14 @@ git commit -m "ci: Claude workflows (@mention + auto code-review) und Dependabot
 
 ---
 
-## Task 5: CLAUDE.md — Sublarr-inspirierter Rewrite
+## Task 5: CLAUDE.md — Sublarr-inspired rewrite
 
 **Files:**
 - Modify: `CLAUDE.md`
 
-CLAUDE.md wird kürzer, action-fokussiert, mit kritischen Gotchas und Deployment-Sektion. Maschinen-spezifische Infos (Server-IP, etc.) kommen in `CLAUDE.local.md` (gitignored).
+CLAUDE.md becomes shorter, action-focused, with critical gotchas and a deployment section. Machine-specific information (server IP, etc.) moves into `CLAUDE.local.md` (gitignored).
 
-- [ ] **Ersetze `CLAUDE.md` vollständig**
+- [ ] **Replace `CLAUDE.md` entirely**
 
 ```markdown
 # TravStats
@@ -578,122 +578,122 @@ git add backend/VERSION && git commit -m "chore: bump version to 0.9.1"
 git tag v0.9.1 && git push origin v0.9.1   # startet release.yml
 \```
 
-## Commit-Anforderung
+## Commit Requirement
 
-**Jede Änderung muss vor Session-Ende committed sein.**
+**Every change must be committed before the session ends.**
 
-## PR Workflow (KRITISCH)
+## PR Workflow (CRITICAL)
 
-1. **Kein Merge ohne grünes CI.** Vor jedem Merge: `gh pr checks <number>` — alle Checks grün. Kein `--admin`-Bypass.
-2. **Immer Änderungen zeigen vor Merge.** Zusammenfassung präsentieren, explizite Bestätigung abwarten, bevor nach `Main` gemergt oder in Prod deployed wird.
+1. **No merge without green CI.** Before every merge: `gh pr checks <number>` — all checks green. No `--admin` bypass.
+2. **Always show changes before merge.** Present a summary and wait for explicit confirmation before merging into `Main` or deploying to prod.
 
-## Architektur
+## Architecture
 
 \```
 backend/src/
-  index.ts          # Express App Entry
-  routes/           # Route-Handler — eine Datei pro Domain
-  middleware/        # auth, rateLimit, error
-  services/          # Business Logic
-  schemas/           # Zod Validation Schemas
-  utils/             # Helper (logger, password, etc.)
-  db.ts              # Prisma Client Singleton
+  index.ts          # Express app entry
+  routes/           # Route handlers — one file per domain
+  middleware/       # auth, rateLimit, error
+  services/         # Business logic
+  schemas/          # Zod validation schemas
+  utils/            # Helpers (logger, password, etc.)
+  db.ts             # Prisma client singleton
 
 frontend/src/
-  pages/             # Route-Level Komponenten
-  components/        # Wiederverwendbare UI-Komponenten
-  store/             # Zustand State Stores
-  lib/               # API Client (api.ts), Logger
-  hooks/             # Custom React Hooks
-  i18n/              # react-i18next Übersetzungen (de/en)
+  pages/            # Route-level components
+  components/       # Reusable UI components
+  store/            # Zustand state stores
+  lib/              # API client (api.ts), logger
+  hooks/            # Custom React hooks
+  i18n/             # react-i18next translations (de/en)
 \```
 
-## Kritische Gotchas
+## Critical Gotchas
 
-- **`any` ist VERBOTEN** — immer `unknown` + Type Guards. Ausnahme: `.d.ts`-Dateien.
-- **Pino Logger** — kein `console.log`. Import: `import { logger } from '../utils/logger'`
-- **Prisma JSON-Felder** — `as unknown as Prisma.InputJsonValue` casten, nie direkt `Record<string, unknown>`
-- **deck.gl + MapLibre** — `MapboxOverlay` + `useControl` Pattern verwenden (NICHT `<DeckGL>` React-Komponente — WebGL-Konflikt mit MapLibre 5.x)
-- **GeoJSON-Koordinaten** — kommen aus `geometry.coordinates` (LineString), NICHT aus `departureAirport.lat/lon` (nicht befüllt)
-- **Auth Cookie** — JWT ist HttpOnly Cookie (kein Bearer-Token). `withCredentials: true` in allen Axios-Instanzen.
-- **Prisma Migrations** — Schema-Änderungen immer mit `npx prisma migrate dev` (nie manuell)
-- **React Hooks** — `useTranslation` aus `'../hooks/useTranslation'` (eigener Wrapper), nicht direkt aus `react-i18next`
-- **Zod** — Pflicht für alle User-Inputs und API-Requests. Schema liegt in `backend/src/schemas/`
+- **`any` is FORBIDDEN** — always use `unknown` + type guards. Exception: `.d.ts` files.
+- **Pino logger** — no `console.log`. Import: `import { logger } from '../utils/logger'`
+- **Prisma JSON fields** — cast via `as unknown as Prisma.InputJsonValue`, never directly from `Record<string, unknown>`
+- **deck.gl + MapLibre** — use the `MapboxOverlay` + `useControl` pattern (NOT the `<DeckGL>` React component — WebGL conflict with MapLibre 5.x)
+- **GeoJSON coordinates** — come from `geometry.coordinates` (LineString), NOT from `departureAirport.lat/lon` (unpopulated)
+- **Auth cookie** — the JWT is an HttpOnly cookie (not a bearer token). `withCredentials: true` on every Axios instance.
+- **Prisma migrations** — schema changes always via `npx prisma migrate dev` (never manually)
+- **React hooks** — `useTranslation` is imported from `'../hooks/useTranslation'` (a project wrapper), not directly from `react-i18next`
+- **Zod** — mandatory for all user input and API requests. Schemas live in `backend/src/schemas/`.
 
 ## Code Style
 
-- TypeScript: `strict: true`, ESLint + Prettier (printWidth 100, singleQuote false)
-- Async: immer `async/await`, kein `.then()`
-- Immutabilität: Spread `{...obj, field: value}`, kein In-Place-Mutation
-- Fehlerbehandlung: Explizit auf jeder Ebene, kein Silent Swallow
-- Dateigrößen: 200–400 Zeilen ideal, **800 Zeilen Maximum**
+- TypeScript: `strict: true`, ESLint + Prettier (printWidth 100, `singleQuote: false`)
+- Async: always `async/await`, never `.then()`
+- Immutability: spread `{...obj, field: value}`, no in-place mutation
+- Error handling: explicit at every level, never swallow silently
+- File sizes: 200–400 lines ideal, **800 lines hard maximum**
 
 ## Version
 
-Source of Truth: `backend/VERSION` (aktuell: `0.9.0-beta`)
+Source of truth: `backend/VERSION` (currently: `0.9.0-beta`)
 
-Neuen Release erstellen:
-1. `backend/VERSION` auf neue Version setzen
-2. `CHANGELOG.md` aktualisieren (Unreleased → neuer Abschnitt)
-3. Committen + Tag `v{VERSION}` pushen → `release.yml` startet automatisch
+Cutting a new release:
+1. Update `backend/VERSION` to the new version
+2. Update `CHANGELOG.md` (Unreleased → new section)
+3. Commit and push tag `v{VERSION}` → `release.yml` starts automatically
 
-Script für Vorschlag: `scripts/suggest-next-version.sh` / `.ps1`
+Suggestion script: `scripts/suggest-next-version.sh` / `.ps1`
 
 ## Security
 
-- Alle User-Inputs via **Zod-Schema** validieren (System-Boundaries)
-- Rate Limiting auf allen Auth- und teuren Endpoints (express-rate-limit)
-- Keine Hardcoded Secrets — `.env`-Datei (gitignored), im Container via Secrets-Volume
-- JWT in HttpOnly Cookie (kein localStorage)
-- XSS: React escaped automatisch; kein `dangerouslySetInnerHTML`
-- SQL Injection: Prisma ORM (parametrisierte Queries)
-- Security-Scan: `scripts/security-scan.sh`
+- Validate all user input via **Zod schemas** (system boundaries)
+- Rate limiting on every auth and expensive endpoint (`express-rate-limit`)
+- No hardcoded secrets — `.env` file (gitignored), in the container via a secrets volume
+- JWT in an HttpOnly cookie (never `localStorage`)
+- XSS: React escapes automatically; no `dangerouslySetInnerHTML`
+- SQL injection: Prisma ORM (parameterised queries)
+- Security scan: `scripts/security-scan.sh`
 
-Security-Befunde: `PENTEST_FINDINGS.md` (falls vorhanden)
+Security findings: `PENTEST_FINDINGS.md` (when present)
 
 ## Testing
 
 \```bash
-# Frontend (Vitest, kein DB nötig)
+# Frontend (Vitest, no DB required)
 cd frontend && npx vitest --run
 
-# Backend (Jest, benötigt PostgreSQL)
+# Backend (Jest, requires PostgreSQL)
 cd backend && npm test -- --forceExit
 
-# E2E (Playwright, benötigt laufenden Dev-Server)
+# E2E (Playwright, requires a running dev server)
 npx playwright test
 
-# Alles auf einmal
-bash scripts/run-tests.sh   # oder: scripts/run-tests.ps1
+# Everything at once
+bash scripts/run-tests.sh   # alternative: scripts/run-tests.ps1
 \```
 
 ## Monitoring & Logs
 
-- Logs in `data/logs/` (app.log, error.log, http.log, parser*.log)
-- Pino structured JSON — `LOG_LEVEL` Env-Var steuert Verbosity
-- Gesundheits-Check: `GET /api/v1/health`
+- Logs in `data/logs/` (`app.log`, `error.log`, `http.log`, `parser*.log`)
+- Pino structured JSON — the `LOG_LEVEL` env var controls verbosity
+- Health check: `GET /api/v1/health`
 
-## Maschinen-spezifische Infos
+## Machine-specific Info
 
-→ Siehe **`CLAUDE.local.md`** für: Server-IP (Underworld), SSH-Pfade, Docker-Compose-Pfade, lokale Port-Mappings.
+→ See **`CLAUDE.local.md`** for: server IP (Underworld), SSH paths, Docker Compose paths, local port mappings.
 ```
 
 - [ ] **Commit**
 
 ```bash
 git add CLAUDE.md
-git commit -m "docs: CLAUDE.md nach Sublarr-Vorbild überarbeitet (präziser, Gotchas, Deployment-Split)"
+git commit -m "docs: rewrite CLAUDE.md along the Sublarr template (tighter, gotchas, deployment split)"
 ```
 
 ---
 
-## Task 6: CLAUDE.local.md — Maschinen-spezifische Deployment-Infos
+## Task 6: CLAUDE.local.md — Machine-specific deployment info
 
 **Files:**
 - Create: `CLAUDE.local.md.example`
 - Modify: `.gitignore`
 
-- [ ] **Erstelle `CLAUDE.local.md.example`**
+- [ ] **Create `CLAUDE.local.md.example`**
 
 ```markdown
 # CLAUDE.local.md — Maschinen-spezifische Deployment-Infos
@@ -736,7 +736,7 @@ ssh root@$SERVER_IP "cd /tmp/ts-build && docker build -t ghcr.io/abrechen2/travs
 \```
 ```
 
-- [ ] **Ergänze `.gitignore`** um CLAUDE.local.md und project-level Claude settings
+- [ ] **Extend `.gitignore`** with CLAUDE.local.md and project-level Claude settings
 
 ```bash
 # Diese Zeilen an .gitignore anhängen
@@ -762,7 +762,7 @@ git commit -m "docs: CLAUDE.local.md.example für Deployment-Infos + .gitignore 
 **Files:**
 - Create: `CONTRIBUTING.md`
 
-- [ ] **Erstelle `CONTRIBUTING.md`**
+- [ ] **Create `CONTRIBUTING.md`**
 
 ```markdown
 # Contributing to TravStats
@@ -855,7 +855,7 @@ git commit -m "docs: CONTRIBUTING.md mit Branch-Workflow, Commit-Format und Rele
 - Create: `docs/INCIDENT_RUNBOOK.md`
 - Create: `docs/LEARNINGS.md`
 
-- [ ] **Erstelle `docs/INCIDENT_RUNBOOK.md`**
+- [ ] **Create `docs/INCIDENT_RUNBOOK.md`**
 
 ```markdown
 # TravStats — Incident Runbook
@@ -933,7 +933,7 @@ ssh root@<SERVER_IP> "cd /opt/travstats && \
 - CI-Tests ergänzen die Schwachstelle abdecken
 ```
 
-- [ ] **Erstelle `docs/LEARNINGS.md`**
+- [ ] **Create `docs/LEARNINGS.md`**
 
 ```markdown
 # TravStats — Learnings
@@ -981,13 +981,13 @@ git commit -m "docs: INCIDENT_RUNBOOK und LEARNINGS hinzugefügt"
 
 ---
 
-## Task 9: Versionssynchronisation & CHANGELOG
+## Task 9: Version synchronization & CHANGELOG
 
 **Files:**
-- Modify: `frontend/package.json`, `backend/package.json` (version field alignment-check)
-- Modify: `CHANGELOG.md` (sicherstellen dass Format korrekt ist)
+- Modify: `frontend/package.json`, `backend/package.json` (version field alignment check)
+- Modify: `CHANGELOG.md` (ensure the format is correct)
 
-- [ ] **Prüfe Version-Konsistenz**
+- [ ] **Verify version consistency**
 
 ```bash
 echo "backend/VERSION: $(cat /d/Projekte/TravStats/backend/VERSION)"
@@ -996,15 +996,15 @@ echo "frontend/package.json: $(node -p "require('./frontend/package.json').versi
 echo "root/package.json: $(node -p "require('./package.json').version")"
 ```
 
-Expected: Alle zeigen `0.9.0-beta`.
+Expected: All show `0.9.0-beta`.
 
-- [ ] **Synchronisiere falls abweichend** — `backend/VERSION` ist die Source of Truth. Alle `package.json`-Version-Felder müssen übereinstimmen.
+- [ ] **Synchronize if they diverge** — `backend/VERSION` is the source of truth. All `package.json` version fields must match it.
 
-- [ ] **Stelle sicher dass `release.yml` den CHANGELOG-Abschnitt findet**
+- [ ] **Make sure `release.yml` finds the CHANGELOG section**
 
-`CHANGELOG.md` muss den Abschnitt `## [0.9.0-beta]` enthalten (eckige Klammern). Falls er `## [0.9.0-beta]` noch nicht hat (nur `## [Unreleased]`), erst beim nächsten Release-Commit ergänzen.
+`CHANGELOG.md` must contain the section `## [0.9.0-beta]` (with square brackets). If it does not yet have `## [0.9.0-beta]` (only `## [Unreleased]`), add it as part of the next release commit.
 
-- [ ] **Commit falls Änderungen nötig**
+- [ ] **Commit if changes are required**
 
 ```bash
 git add CHANGELOG.md backend/package.json frontend/package.json
@@ -1013,12 +1013,12 @@ git commit -m "chore: Versionsfelder synchronisiert auf 0.9.0-beta"
 
 ---
 
-## Weitere Vorschläge (nicht im Plan enthalten, aber empfohlen)
+## Additional suggestions (not part of this plan, but recommended)
 
-Diese Punkte sind nicht Teil des aktuellen Plans, wären aber sinnvolle nächste Schritte:
+These items are not part of the current plan, but would be sensible next steps:
 
-### 1. Stop-Hook: Uncommitted Changes warnen
-Ergänze `.claude/settings.json` (gitignored) mit einem Stop-Hook der warnt, wenn Session endet ohne Commit:
+### 1. Stop hook: warn on uncommitted changes
+Extend `.claude/settings.json` (gitignored) with a Stop hook that warns when a session ends without a commit:
 ```json
 {
   "hooks": {
@@ -1034,19 +1034,19 @@ Ergänze `.claude/settings.json` (gitignored) mit einem Stop-Hook der warnt, wen
 ```
 
 ### 2. Monitoring (Prometheus + Grafana)
-TravStats hat bereits `/api/v1/health` — ein einfaches `monitoring/` Verzeichnis mit Grafana-Dashboard (ähnlich Sublarr) wäre der nächste Schritt. Benötigt `prom-client` im Backend.
+TravStats already has `/api/v1/health` — a simple `monitoring/` directory with a Grafana dashboard (similar to Sublarr) would be the next step. Requires `prom-client` in the backend.
 
 ### 3. `PENTEST_FINDINGS.md`
-Wenn ein Security-Review stattfindet, Findings wie in Sublarr dokumentieren.
+If a security review takes place, document findings the same way as in Sublarr.
 
-### 4. Vitest Coverage-Thresholds erhöhen
-Aktuell: 30% lines / 20% functions. Ziel (CLAUDE.md verlangt 80%): schrittweise erhöhen auf 50% → 70% → 80%.
+### 4. Raise Vitest coverage thresholds
+Currently: 30% lines / 20% functions. Target (CLAUDE.md requires 80%): increase incrementally to 50% → 70% → 80%.
 
-### 5. Pre-commit Hook verbessern
-`.pre-commit-config.yaml` mit `detect-private-key` und `check-merge-conflict` erweitern (bereits in Sublarr).
+### 5. Improve pre-commit hook
+Extend `.pre-commit-config.yaml` with `detect-private-key` and `check-merge-conflict` (already in Sublarr).
 
-### 6. Unraid-Template aktualisieren
-`unraid-template.xml` existiert bereits — mit neuen Env-Vars (SMTP, Ollama, etc.) aktuell halten.
+### 6. Update Unraid template
+`unraid-template.xml` already exists — keep it current with new env vars (SMTP, Ollama, etc.).
 
-### 7. `LICENSE_WHITELIST.txt` mit `license-check.sh` verbinden
-Script prüft ob alle Dependencies in der Whitelist sind.
+### 7. Wire `LICENSE_WHITELIST.txt` into `license-check.sh`
+The script checks whether all dependencies are on the whitelist.

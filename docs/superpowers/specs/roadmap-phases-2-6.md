@@ -1,84 +1,84 @@
 # TravStats — Feature Roadmap Phase 2–6
 
-**Stand:** 2026-03-11
-**Phase 1:** ✅ Abgeschlossen (PR #32) — Email als primärer Eingabetyp + Community Template System
+**As of:** 2026-03-11
+**Phase 1:** ✅ Completed (PR #32) — Email as primary input type + community template system
 
 ---
 
-## Phase 2: BCBP Barcode-Decoder + PDF-Support
+## Phase 2: BCBP Barcode Decoder + PDF Support
 
-**Ziel:** Boarding Pass als vollwertiger zweiter Eingabeweg
+**Goal:** Boarding pass becomes a fully-fledged second input path
 
-- BCBP (Bar Coded Boarding Pass, IATA Standard) Decoder
-  - Liest Barcode-Daten direkt aus Bild-Uploads (QR/Aztec/PDF417)
-  - Ground-Truth für Template-Validierung (Vergleich mit Email-Parsing)
-- PDF-Attachment-Erkennung und -Parsing
-  - PDF-Bordkarten und Buchungsbestätigungen als PDF
-  - Text-Extraktion aus PDFs (pdfjs oder pdf-parse)
-- BCBP-Daten in ParsedBooking integrieren
-- Nicht in Scope: CO₂, Fine-Tuning
+- BCBP (Bar Coded Boarding Pass, IATA standard) decoder
+  - Reads barcode data directly from image uploads (QR/Aztec/PDF417)
+  - Ground truth for template validation (compared against email parsing)
+- PDF attachment detection and parsing
+  - PDF boarding passes and PDF booking confirmations
+  - Text extraction from PDFs (pdfjs or pdf-parse)
+- Integrate BCBP data into ParsedBooking
+- Out of scope: CO₂, fine-tuning
 
 ---
 
-## Phase 3: Actual Times, Delay-Tracking, CO₂
+## Phase 3: Actual Times, Delay Tracking, CO₂
 
-**Ziel:** Flugdaten um Echtzeit- und Umweltdaten erweitern
+**Goal:** Extend flight data with real-time and environmental data
 
 - Actual departure/arrival times (vs. scheduled)
-- Delay-Berechnung und -Anzeige
-- CO₂-Fußabdruck-Berechnung pro Flug
-  - Formel: Distanz × Emissionsfaktor × Kabinenfaktor
-  - Anzeige in kg und "Elefanten"-Äquivalent (wie in FunStats vorbereitet)
-- Neue Felder im Prisma-Schema: `actualDeparture`, `actualArrival`, `delayMinutes`, `co2Kg`
+- Delay calculation and display
+- CO₂ footprint calculation per flight
+  - Formula: distance × emission factor × cabin factor
+  - Display in kg and "elephant" equivalent (as prepared in FunStats)
+- New fields in the Prisma schema: `actualDeparture`, `actualArrival`, `delayMinutes`, `co2Kg`
 
 ---
 
 ## Phase 4: LLM Training Pipeline
 
-**Ziel:** Gesammelte ParseTrainingLog-Daten für Fine-Tuning nutzen
+**Goal:** Use the collected ParseTrainingLog data for fine-tuning
 
-- Export-Funktion für anonymisierte Trainingsdaten
-  - Felder: airline, templateUsed, templateHit, fields+confidence, missing
-  - Kein userId/PII im Export
-- Fine-Tuning Workflow (OpenAI / Anthropic)
-- User-Korrekturen als Ground-Truth Labels erfassen
-  - Wenn User Parsed-Felder in FlightReview korrigiert → als Korrektur speichern
-- Admin-Dashboard: Training-Datensatz-Übersicht, Export-Button
-- Nicht in Scope: Fine-Tuning Ausführung selbst (→ manuell/extern)
-
----
-
-## Phase 5: Erweiterte Statistiken
-
-**Ziel:** Mehr Insights aus den Flugdaten
-
-- Airline-Treue-Score und Ranking
-- Kosten-pro-km und Kosten-pro-Stunde (BusinessStats bereits teilweise implementiert)
-- Sitzplatz-Analyse erweitern (Fenster/Gang/Mitte Trends)
-- Zeitzonenhopping-Statistiken
-- Länderverteilung und Kontinent-Explorer
-- Verbesserte Visualisierungen für bestehende FunStats/UniqueStats
-- Export als PDF-Report ("Mein Flieger-Jahr")
+- Export function for anonymized training data
+  - Fields: airline, templateUsed, templateHit, fields+confidence, missing
+  - No userId/PII in the export
+- Fine-tuning workflow (OpenAI / Anthropic)
+- Capture user corrections as ground-truth labels
+  - When the user corrects parsed fields in FlightReview → store as a correction
+- Admin dashboard: training dataset overview, export button
+- Out of scope: fine-tuning execution itself (→ manual/external)
 
 ---
 
-## Phase 6: Kalender-Import (ICS) — Optional
+## Phase 5: Extended Statistics
 
-**Ziel:** Flüge aus Kalender-Einladungen importieren
+**Goal:** More insights from the flight data
 
-- ICS/iCal Datei-Parsing
-- Erkennung von Flug-Events (Airline, Flugnummer, Zeiten aus Kalendereinträgen)
-- Integration in bestehenden Import-Flow als vierter Tab
-- Niedrige Priorität — nur wenn Phases 2–5 abgeschlossen
+- Airline loyalty score and ranking
+- Cost per km and cost per hour (BusinessStats already partially implemented)
+- Expand seat analysis (window/aisle/middle trends)
+- Time-zone hopping statistics
+- Country distribution and continent explorer
+- Improved visualizations for existing FunStats/UniqueStats
+- Export as a PDF report ("My flying year")
 
 ---
 
-## Implementierungsreihenfolge
+## Phase 6: Calendar Import (ICS) — Optional
+
+**Goal:** Import flights from calendar invitations
+
+- ICS/iCal file parsing
+- Detect flight events (airline, flight number, times from calendar entries)
+- Integrate into the existing import flow as a fourth tab
+- Low priority — only after Phases 2–5 are complete
+
+---
+
+## Implementation Order
 
 ```
-Phase 2 → BCBP + PDF  (technische Grundlage für bessere Datenqualität)
-Phase 3 → Actual Times + CO₂  (erweitert Datenbasis)
-Phase 4 → LLM Training  (nutzt gesammelte Phase 1-3 Daten)
-Phase 5 → Statistiken  (baut auf vollständiger Datenbasis auf)
+Phase 2 → BCBP + PDF  (technical foundation for better data quality)
+Phase 3 → Actual Times + CO₂  (extends the data basis)
+Phase 4 → LLM Training  (uses data collected in phases 1-3)
+Phase 5 → Statistics  (builds on a complete data basis)
 Phase 6 → ICS  (nice-to-have)
 ```
