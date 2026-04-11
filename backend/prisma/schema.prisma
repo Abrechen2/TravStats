@@ -33,7 +33,8 @@ model User {
   userAchievements      UserAchievement[]
   settings              UserSettings?
   analyticsEvents       AnalyticsEvent[]
-  createdInvitations    Invitation[]
+  createdInvitations    Invitation[] @relation("CreatedInvitations")
+  usedInvitations       Invitation[] @relation("UsedInvitations")
   trainingData          TrainingData[]
   parserTemplates       ParserTemplate[]
   templateCorrections   TemplateCorrection[]
@@ -258,16 +259,21 @@ model AnalyticsEvent {
 }
 
 model Invitation {
-  id        String    @id @default(uuid())
-  email     String?
-  token     String    @unique
-  createdBy String    @map("created_by")
-  expiresAt DateTime  @map("expires_at")
-  usedAt    DateTime? @map("used_at")
-  usedBy    String?   @map("used_by")
-  createdAt DateTime  @default(now()) @map("created_at")
+  id          String    @id @default(uuid())
+  email       String?
+  token       String    @unique
+  createdBy   String    @map("created_by")
+  expiresAt   DateTime  @map("expires_at")
+  usedAt      DateTime? @map("used_at")
+  usedBy      String?   @map("used_by")
+  createdAt   DateTime  @default(now()) @map("created_at")
 
-  creator User @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  emailStatus String?   @map("email_status")
+  emailError  String?   @map("email_error")
+  emailSentAt DateTime? @map("email_sent_at")
+
+  creator User  @relation("CreatedInvitations", fields: [createdBy], references: [id], onDelete: Cascade)
+  user    User? @relation("UsedInvitations",    fields: [usedBy],    references: [id], onDelete: SetNull)
 
   @@index([token])
   @@index([createdBy])
