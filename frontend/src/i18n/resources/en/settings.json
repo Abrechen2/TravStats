@@ -246,7 +246,8 @@
           "trainingData": "At least 5 annotated training data"
         }
       },
-      "note": "Note: This feature is experimental and may heavily load system resources."
+      "noteLabel": "Note",
+      "note": "This feature is experimental and may heavily load system resources."
     }
   },
   "admin": {

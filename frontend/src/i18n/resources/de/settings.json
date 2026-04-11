@@ -246,7 +246,8 @@
           "trainingData": "Mindestens 5 annotierte Trainingsdaten"
         }
       },
-      "note": "Hinweis: Diese Funktion ist experimentell und kann Systemressourcen stark belasten."
+      "noteLabel": "Hinweis",
+      "note": "Diese Funktion ist experimentell und kann Systemressourcen stark belasten."
     }
   },
   "admin": {
