@@ -109,7 +109,7 @@ export default function ForceChangePasswordPage(): JSX.Element {
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="input-field w-full"
+                className="input w-full"
                 required
                 autoFocus
               />
@@ -128,7 +128,7 @@ export default function ForceChangePasswordPage(): JSX.Element {
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="input-field w-full"
+                className="input w-full"
                 required
               />
             </div>

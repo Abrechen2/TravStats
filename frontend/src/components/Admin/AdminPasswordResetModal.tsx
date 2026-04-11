@@ -207,7 +207,7 @@ export default function AdminPasswordResetModal({
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="input-field w-full"
+                    className="input w-full"
                     minLength={8}
                     required
                   />

@@ -141,7 +141,7 @@ export default function LoginPage(): JSX.Element {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="input-field w-full"
+                className="input w-full"
                 autoComplete="username"
                 autoFocus
               />
@@ -160,7 +160,7 @@ export default function LoginPage(): JSX.Element {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="input-field w-full"
+                className="input w-full"
                 autoComplete="current-password"
               />
             </div>
@@ -240,7 +240,7 @@ export default function LoginPage(): JSX.Element {
                       type="text"
                       value={forgotUsername}
                       onChange={(e) => setForgotUsername(e.target.value)}
-                      className="input-field w-full"
+                      className="input w-full"
                       placeholder={t("login.forgotPasswordModal.usernamePlaceholder")}
                       required
                       autoFocus
