@@ -256,3 +256,43 @@ describe('admin/invitations — POST /:id/resend', () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe('admin/invitations — DELETE /:id', () => {
+  beforeEach(async () => {
+    mockSendInvitationEmail.mockReset();
+    await prisma.invitation.deleteMany();
+    await prisma.user.deleteMany();
+    const admin = await createAdminUser();
+    adminUserId = admin.id;
+    adminToken = admin.token;
+  });
+
+  it('hard-deletes an active invitation', async () => {
+    const invitation = await prisma.invitation.create({
+      data: {
+        token: 'tok-delete-me',
+        createdBy: adminUserId,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    const res = await request(app)
+      .delete(`/api/v1/admin/invitations/${invitation.id}`)
+      .set('Cookie', [`auth_token=${adminToken}`])
+      .send();
+
+    expect(res.status).toBe(200);
+
+    const stored = await prisma.invitation.findUnique({ where: { id: invitation.id } });
+    expect(stored).toBeNull();
+  });
+
+  it('returns 404 on unknown id', async () => {
+    const res = await request(app)
+      .delete('/api/v1/admin/invitations/00000000-0000-0000-0000-000000000000')
+      .set('Cookie', [`auth_token=${adminToken}`])
+      .send();
+
+    expect(res.status).toBe(404);
+  });
+});

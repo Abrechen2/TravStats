@@ -189,6 +189,22 @@ router.post('/:id/resend', async (req: AuthRequest, res: Response, next: NextFun
 });
 
 /**
+ * DELETE /admin/invitations/:id — hard-delete an invitation
+ */
+router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const result = await prisma.invitation.deleteMany({ where: { id } });
+    if (result.count === 0) {
+      throw new AppError('Invitation not found', 404);
+    }
+    res.json({ success: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * GET /admin/invitations — list invitations
  */
 router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
