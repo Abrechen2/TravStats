@@ -69,6 +69,7 @@ router.post('/register', authLimiter, async (req: Request, res: Response, next: 
 
     // Validate invitation token if provided
     let invitedBy: string | undefined;
+    let invitationEmail: string | undefined;
     if (invitationToken) {
       const invitation = await prisma.invitation.findUnique({
         where: { token: invitationToken },
@@ -87,6 +88,7 @@ router.post('/register', authLimiter, async (req: Request, res: Response, next: 
       }
 
       invitedBy = invitation.createdBy;
+      invitationEmail = invitation.email ?? undefined;
     }
 
     // Warning if approaching user limit
@@ -106,6 +108,7 @@ router.post('/register', authLimiter, async (req: Request, res: Response, next: 
         passwordHash,
         isAdmin: isFirstUser,
         invitedBy,
+        notificationEmail: invitationEmail,
       },
     });
 
