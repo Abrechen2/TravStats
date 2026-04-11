@@ -1,6 +1,8 @@
 import request from 'supertest';
 import app from '../index';
 import { prisma } from '../db';
+import { hashPassword } from '../utils/password';
+import { generateToken } from '../utils/jwt';
 
 describe('Pending Updates API', () => {
   let authCookie: string;
@@ -9,16 +11,18 @@ describe('Pending Updates API', () => {
   let pendingUpdateId: string;
 
   beforeAll(async () => {
-    // Create test user and get auth cookie
-    const response = await request(app)
-      .post('/api/v1/auth/register')
-      .send({
-        username: `testpendingapi${Date.now()}`,
-        password: 'password123',
-      });
-
-    authCookie = response.headers['set-cookie'][0];
-    userId = response.body.user.id;
+    // Seed the test user directly via Prisma + sign a JWT so the suite
+    // doesn't depend on POST /auth/register (which is gated by
+    // ALLOW_REGISTRATION in the test env).
+    const username = `testpendingapi${Date.now()}`;
+    const user = await prisma.user.create({
+      data: {
+        username,
+        passwordHash: await hashPassword('password123'),
+      },
+    });
+    userId = user.id;
+    authCookie = `auth_token=${generateToken(user.id)}`;
 
     // Create user settings
     await prisma.userSettings.create({
