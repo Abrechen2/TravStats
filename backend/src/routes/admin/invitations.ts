@@ -6,6 +6,7 @@ import { prisma } from '../../db';
 import {
   createLinkInvitationSchema,
   createEmailInvitationSchema,
+  listInvitationsQuerySchema,
 } from '../../schemas/invitation';
 import { sendInvitationEmail } from '../../services/emailService';
 import { AppError } from '../../middleware/errorHandler';
@@ -205,11 +206,24 @@ router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction
 });
 
 /**
- * GET /admin/invitations — list invitations
+ * GET /admin/invitations — list invitations (with status filter)
  */
 router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
+    const { status } = listInvitationsQuerySchema.parse(req.query);
+    const now = new Date();
+
+    const where =
+      status === 'active'
+        ? { usedAt: null, expiresAt: { gt: now } }
+        : status === 'used'
+          ? { NOT: { usedAt: null } }
+          : status === 'expired'
+            ? { usedAt: null, expiresAt: { lte: now } }
+            : {};
+
     const invitations = await prisma.invitation.findMany({
+      where,
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,
@@ -218,7 +232,11 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
         expiresAt: true,
         usedAt: true,
         createdAt: true,
+        emailStatus: true,
+        emailError: true,
+        emailSentAt: true,
         creator: { select: { username: true } },
+        user: { select: { username: true } },
       },
     });
 

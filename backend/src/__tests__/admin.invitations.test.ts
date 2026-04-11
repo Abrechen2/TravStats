@@ -296,3 +296,84 @@ describe('admin/invitations — DELETE /:id', () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe('admin/invitations — GET / with status filter', () => {
+  beforeEach(async () => {
+    mockSendInvitationEmail.mockReset();
+    await prisma.invitation.deleteMany();
+    await prisma.user.deleteMany();
+    const admin = await createAdminUser();
+    adminUserId = admin.id;
+    adminToken = admin.token;
+
+    // active
+    await prisma.invitation.create({
+      data: {
+        token: 'tok-active',
+        createdBy: adminUserId,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+    // used
+    const usedByUser = await prisma.user.create({
+      data: { username: 'usedBy', passwordHash: 'x' },
+    });
+    await prisma.invitation.create({
+      data: {
+        token: 'tok-used',
+        createdBy: adminUserId,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        usedAt: new Date(),
+        usedBy: usedByUser.id,
+      },
+    });
+    // expired
+    await prisma.invitation.create({
+      data: {
+        token: 'tok-expired',
+        createdBy: adminUserId,
+        expiresAt: new Date(Date.now() - 1000),
+      },
+    });
+  });
+
+  it('filters by status=active (default)', async () => {
+    const res = await request(app)
+      .get('/api/v1/admin/invitations')
+      .set('Cookie', [`auth_token=${adminToken}`]);
+
+    expect(res.status).toBe(200);
+    expect(res.body.invitations).toHaveLength(1);
+    expect(res.body.invitations[0].token).toBe('tok-active');
+  });
+
+  it('filters by status=used and includes the registered user', async () => {
+    const res = await request(app)
+      .get('/api/v1/admin/invitations?status=used')
+      .set('Cookie', [`auth_token=${adminToken}`]);
+
+    expect(res.status).toBe(200);
+    expect(res.body.invitations).toHaveLength(1);
+    expect(res.body.invitations[0].token).toBe('tok-used');
+    expect(res.body.invitations[0].user?.username).toBe('usedBy');
+  });
+
+  it('filters by status=expired', async () => {
+    const res = await request(app)
+      .get('/api/v1/admin/invitations?status=expired')
+      .set('Cookie', [`auth_token=${adminToken}`]);
+
+    expect(res.status).toBe(200);
+    expect(res.body.invitations).toHaveLength(1);
+    expect(res.body.invitations[0].token).toBe('tok-expired');
+  });
+
+  it('returns all three when status=all', async () => {
+    const res = await request(app)
+      .get('/api/v1/admin/invitations?status=all')
+      .set('Cookie', [`auth_token=${adminToken}`]);
+
+    expect(res.status).toBe(200);
+    expect(res.body.invitations).toHaveLength(3);
+  });
+});
