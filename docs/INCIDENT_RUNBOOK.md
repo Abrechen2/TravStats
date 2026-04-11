@@ -1,8 +1,8 @@
 # TravStats — Incident Runbook
 
-Schritt-für-Schritt bei Produktionsausfällen.
+Step-by-step guide for production outages.
 
-## 1. Erster Check (< 2 Minuten)
+## 1. First Check (< 2 minutes)
 
 ```bash
 # Health-Check
@@ -15,9 +15,9 @@ ssh root@<SERVER_IP> "cd /opt/travstats && docker compose ps"
 ssh root@<SERVER_IP> "docker compose logs --tail=100 app"
 ```
 
-## 2. Häufige Probleme
+## 2. Common Problems
 
-### App startet nicht / gibt 500 zurück
+### App does not start / returns 500
 
 ```bash
 # Logs lesen
@@ -30,7 +30,7 @@ ssh root@<SERVER_IP> "docker compose config app | grep -i env"
 ssh root@<SERVER_IP> "docker compose exec app npx prisma db status"
 ```
 
-### Datenbank nicht erreichbar
+### Database not reachable
 
 ```bash
 # Postgres-Container läuft?
@@ -50,11 +50,11 @@ ssh root@<SERVER_IP> "docker system prune -af --volumes"
 ssh root@<SERVER_IP> "du -sh /opt/travstats/data/logs/*"
 ```
 
-### Reload-Loop (Login → / → /login)
+### Reload loop (Login → / → /login)
 
-Ursache: JWT-Cookie abgelaufen aber User noch in `auth-storage` localStorage.
-Fix: `localStorage.removeItem('auth-storage')` in der Browser-Konsole, dann neu einloggen.
-Dauerhafter Fix: `authStore.ts` — `onRehydrateStorage` darf Event-Listener nicht entfernen (bereits gefixt ab 0.9.1).
+Cause: JWT cookie expired but the user is still in `auth-storage` localStorage.
+Fix: `localStorage.removeItem('auth-storage')` in the browser console, then log in again.
+Permanent fix: `authStore.ts` — `onRehydrateStorage` must not remove the event listener (already fixed in 0.9.1+).
 
 ## 3. Rollback
 
@@ -66,8 +66,8 @@ ssh root@<SERVER_IP> "cd /opt/travstats && \
   docker compose pull && docker compose up -d"
 ```
 
-## 4. Nach Incident
+## 4. After the Incident
 
-- Root Cause in `docs/LEARNINGS.md` festhalten
-- Wenn Datenverlust: Backup-Restore via `scripts/backup.sh`
-- CI-Tests ergänzen die Schwachstelle abdecken
+- Record the root cause in `docs/LEARNINGS.md`
+- If data was lost: backup restore via `scripts/backup.sh`
+- Add CI tests that cover the weakness

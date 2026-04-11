@@ -2,22 +2,22 @@
 
 ## Branches
 
-| Branch | Zweck |
+| Branch | Purpose |
 |--------|-------|
-| `Main` | Stabile Produktionsbasis — nur via PR |
-| `feature/...` | Neue Features |
-| `fix/...` | Bugfixes |
-| `chore/...` | Infrastruktur, Deps, Refactoring ohne Feature-Impact |
+| `Main` | Stable production base — only via PR |
+| `feature/...` | New features |
+| `fix/...` | Bug fixes |
+| `chore/...` | Infrastructure, deps, refactoring without feature impact |
 
 ## Workflow
 
-1. Branch von `Main` erstellen
-2. Änderungen committen (Conventional Commits, s.u.)
-3. Build-Checks lokal ausführen: `npm run typecheck && npm run lint`
-4. PR nach `Main` öffnen — CI muss grün sein
-5. Kein Merge ohne Review und grünes CI
+1. Create a branch from `Main`
+2. Commit changes (Conventional Commits, see below)
+3. Run build checks locally: `npm run typecheck && npm run lint`
+4. Open a PR against `Main` — CI must be green
+5. No merge without review and green CI
 
-## Commit-Format (Conventional Commits)
+## Commit Format (Conventional Commits)
 
 ```
 <type>: <kurze Beschreibung>
@@ -25,49 +25,49 @@
 [optionaler Body]
 ```
 
-| Type | Wann |
+| Type | When |
 |------|------|
-| `feat` | Neues Feature |
-| `fix` | Bugfix |
-| `chore` | Build, CI, Deps (kein Feature/Fix) |
-| `docs` | Nur Dokumentation |
-| `refactor` | Kein Feature, kein Fix — Code-Struktur |
-| `perf` | Performance-Verbesserung |
-| `test` | Tests hinzufügen/korrigieren |
-| `ci` | CI/CD-Änderungen |
+| `feat` | New feature |
+| `fix` | Bug fix |
+| `chore` | Build, CI, deps (no feature/fix) |
+| `docs` | Documentation only |
+| `refactor` | No feature, no fix — code structure |
+| `perf` | Performance improvement |
+| `test` | Add/correct tests |
+| `ci` | CI/CD changes |
 
-Beispiele:
+Examples:
 ```
 feat: Email-Import als primären Tab in Flug-hinzufügen-Modal
 fix: authStore 401-Handler nach Store-Hydration wiederherstellen
 chore: Abhängigkeiten auf aktuelle Versionen aktualisiert
 ```
 
-## Versionierung
+## Versioning
 
 Semantic Versioning: `MAJOR.MINOR.PATCH[-prerelease]`
 
-- **MAJOR** — Breaking Changes (API, DB-Schema)
-- **MINOR** — Neue Features, rückwärtskompatibel
-- **PATCH** — Bugfixes
+- **MAJOR** — Breaking changes (API, DB schema)
+- **MINOR** — New features, backwards compatible
+- **PATCH** — Bug fixes
 
-Vorschlag berechnen: `bash scripts/suggest-next-version.sh`
+Compute a suggestion: `bash scripts/suggest-next-version.sh`
 
-## Release-Prozess
+## Release Process
 
-1. `backend/VERSION` auf neue Version setzen
-2. `CHANGELOG.md` aktualisieren — Unreleased → `[VERSION] - YYYY-MM-DD`
-3. `package.json` (root + frontend + backend) version-Feld aktualisieren
+1. Set `backend/VERSION` to the new version
+2. Update `CHANGELOG.md` — Unreleased → `[VERSION] - YYYY-MM-DD`
+3. Update the version field in `package.json` (root + frontend + backend)
 4. Commit: `chore: bump version to X.Y.Z`
 5. Tag: `git tag vX.Y.Z && git push origin vX.Y.Z`
-6. `release.yml` Workflow startet automatisch (CI → Docker → GitHub Release)
+6. The `release.yml` workflow starts automatically (CI → Docker → GitHub Release)
 
-## Code-Standards
+## Code Standards
 
-Siehe [CLAUDE.md](CLAUDE.md) für vollständige Regeln.
-Kurzfassung: kein `any`, Pino statt `console.log`, Immutability, Zod für Validierung.
+See [CLAUDE.md](CLAUDE.md) for the full rules.
+Short version: no `any`, Pino instead of `console.log`, immutability, Zod for validation.
 
-## Sicherheit
+## Security
 
-Sicherheitslücken bitte **nicht** als öffentliches Issue melden.
-Stattdessen direkt an den Maintainer.
+Please do **not** report security vulnerabilities as a public issue.
+Instead, contact the maintainer directly.

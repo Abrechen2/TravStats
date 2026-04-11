@@ -5,34 +5,39 @@ Flight tracker — Express/TypeScript backend + React/Vite/TypeScript frontend.
 ## Dev Commands
 
 ```bash
-# Alles installieren
+# Install everything
 npm run install:all
 
-# Backend + Frontend gleichzeitig starten
-npm run dev           # oder: scripts/dev-all.sh
+# Run backend + frontend together
+npm run dev           # alternative: scripts/dev-all.sh
 
-# Einzeln
-npm run dev:backend   # Port 8000
-npm run dev:frontend  # Port 3000
+# Run them separately
+npm run dev:backend   # port 8000
+npm run dev:frontend  # port 3000
 ```
 
 ## Deploy & Release Workflow
 
-**Keine PRs.** Solo-Projekt — Commits gehen direkt auf `main`. Keine Branches, keine Pull Requests.
+**No PRs.** Solo project — commits land directly on `main`. No branches,
+no pull requests.
 
-### `/deploy` — Entwicklungs-Iteration (täglich)
-`deploy` Skill verwenden. Läuft vollautomatisch:
-1. Analysiert Commits seit letztem Version-Bump
-2. Bestimmt Bump-Typ automatisch (`feat:` → minor, `fix:/chore:/…` → patch)
-3. Formuliert Changelog-Eintrag als Prosa
-4. Zeigt Version + Changelog-Draft → **eine Bestätigung**
-5. Schreibt `backend/VERSION` + `CHANGELOG.md` + committet
-6. Baut Docker-Image, pusht zu GHCR, deployed zu Prod, Health-Check + Cleanup
+### `/deploy` — development iteration (daily)
+Use the `deploy` skill. Runs fully automatically:
+1. Analyses commits since the last version bump.
+2. Auto-determines the bump type (`feat:` → minor, `fix:/chore:/…` →
+   patch).
+3. Drafts the changelog entry as prose.
+4. Shows version + changelog draft → **one confirmation**.
+5. Writes `backend/VERSION` + `CHANGELOG.md` and commits.
+6. Builds the Docker image, pushes to GHCR, deploys to prod, health
+   check and cleanup.
 
-### `/release` — GitHub Release (bewusste Meilensteine)
-`release` Skill verwenden. Aggregiert alle Changelog-Einträge seit letztem GitHub Release, erstellt Git-Tag, veröffentlicht GitHub Release mit `--latest`. Kein neuer Deploy — Code läuft bereits.
+### `/release` — GitHub release (deliberate milestones)
+Use the `release` skill. Aggregates every changelog entry since the
+last GitHub release, creates a git tag, publishes a GitHub release
+with `--latest`. No new deploy — the code is already running.
 
-## Build-Checks (PFLICHT vor `/deploy`)
+## Build Checks (MANDATORY before `/deploy`)
 
 ```bash
 # Backend
@@ -44,93 +49,120 @@ cd frontend && npx tsc --noEmit && npm run lint && npx vitest --run
 
 ## Docker & Deployment
 
-Deployment-Details (Server-IP, SSH-Befehle, Compose-Pfade) → **`CLAUDE.local.md`** (gitignored, lokal anlegen).
+Deployment details (server IP, SSH commands, compose paths) live in
+**`CLAUDE.local.md`** (gitignored, created locally).
 
-## Commit-Anforderung
+## Commit Requirement
 
-**Jede Änderung muss vor Session-Ende committed sein.**
+**Every change must be committed before the session ends.**
 
-## Architektur
+## Architecture
 
 ```
 backend/src/
-  index.ts          # Express App Entry
-  routes/           # Route-Handler — eine Datei pro Domain
+  index.ts           # Express app entry
+  routes/            # Route handlers — one file per domain
   middleware/        # auth, rateLimit, error
-  services/          # Business Logic
-  schemas/           # Zod Validation Schemas
-  utils/             # Helper (logger, password, etc.)
-  db.ts              # Prisma Client Singleton
+  services/          # Business logic
+  schemas/           # Zod validation schemas
+  utils/             # Helpers (logger, password, …)
+  db.ts              # Prisma client singleton
 
 frontend/src/
-  pages/             # Route-Level Komponenten
-  components/        # Wiederverwendbare UI-Komponenten
-  store/             # Zustand State Stores
-  lib/               # API Client (api.ts), Logger
-  hooks/             # Custom React Hooks
-  i18n/              # react-i18next Übersetzungen (de/en)
+  pages/             # Route-level components
+  components/        # Reusable UI components
+  store/             # Zustand state stores
+  lib/               # API client (api.ts), logger
+  hooks/             # Custom React hooks
+  i18n/              # react-i18next translations (de/en)
 ```
 
-## Kritische Gotchas
+## Language Policy
 
-- **`any` ist VERBOTEN** — immer `unknown` + Type Guards. Ausnahme: `.d.ts`-Dateien.
-- **Pino Logger** — kein `console.log`. Import: `import { logger } from '../utils/logger'`
-- **Prisma JSON-Felder** — `as unknown as Prisma.InputJsonValue` casten, nie direkt `Record<string, unknown>`
-- **deck.gl + MapLibre** — `MapboxOverlay` + `useControl` Pattern verwenden (NICHT `<DeckGL>` React-Komponente — WebGL-Konflikt mit MapLibre 5.x)
-- **GeoJSON-Koordinaten** — kommen aus `geometry.coordinates` (LineString), NICHT aus `departureAirport.lat/lon` (nicht befüllt)
-- **Auth Cookie** — JWT ist HttpOnly Cookie (kein Bearer-Token). `withCredentials: true` in allen Axios-Instanzen.
-- **Prisma Migrations** — Schema-Änderungen immer mit `npx prisma migrate dev` (nie manuell)
-- **React Hooks** — `useTranslation` aus `'../hooks/useTranslation'` (eigener Wrapper), nicht direkt aus `react-i18next`
-- **Zod** — Pflicht für alle User-Inputs und API-Requests. Schema liegt in `backend/src/schemas/`
+- **Code, comments, commits, CHANGELOG, README, ADRs, runbooks — always
+  English**, globally (see `~/.claude/rules/common/language.md`).
+- **Frontend user-facing copy**: German primary, English secondary.
+  When adding i18n strings, always update DE and EN together.
+
+## Critical Gotchas
+
+- **`any` is FORBIDDEN** — always use `unknown` + type guards. The only
+  exception is `.d.ts` files.
+- **Pino logger** — no `console.log`. Import:
+  `import { logger } from '../utils/logger'`.
+- **Prisma JSON fields** — cast via
+  `as unknown as Prisma.InputJsonValue`, never directly from
+  `Record<string, unknown>`.
+- **deck.gl + MapLibre** — use the `MapboxOverlay` + `useControl`
+  pattern (NOT the `<DeckGL>` React component — causes a WebGL
+  conflict with MapLibre 5.x).
+- **GeoJSON coordinates** — come from `geometry.coordinates`
+  (LineString), NOT from `departureAirport.lat/lon` (which are
+  unpopulated).
+- **Auth cookie** — the JWT is an HttpOnly cookie (not a bearer
+  token). Set `withCredentials: true` on every Axios instance.
+- **Prisma migrations** — schema changes always via
+  `npx prisma migrate dev` (never manually).
+- **React hooks** — `useTranslation` is imported from
+  `'../hooks/useTranslation'` (a project wrapper), not directly from
+  `react-i18next`.
+- **Zod** — mandatory for all user input and API requests. Schemas live
+  in `backend/src/schemas/`.
 
 ## Code Style
 
-- TypeScript: `strict: true`, ESLint + Prettier (printWidth 100, singleQuote false)
-- Async: immer `async/await`, kein `.then()`
-- Immutabilität: Spread `{...obj, field: value}`, kein In-Place-Mutation
-- Fehlerbehandlung: Explizit auf jeder Ebene, kein Silent Swallow
-- Dateigrößen: 200–400 Zeilen ideal, **800 Zeilen Maximum**
+- TypeScript: `strict: true`, ESLint + Prettier (printWidth 100,
+  `singleQuote: false`).
+- Async: always `async/await`, never `.then()`.
+- Immutability: spread `{...obj, field: value}`, no in-place mutation.
+- Error handling: explicit at every level, never swallow silently.
+- File size: 200–400 lines ideal, **800 lines hard maximum**.
 
 ## Version
 
-Source of Truth: `backend/VERSION`
+Source of truth: `backend/VERSION`.
 
-Version-Bump und Changelog werden durch den `/deploy` Skill automatisch erledigt — nicht manuell ändern.
+Version bumps and changelog entries are managed by the `/deploy` skill
+— do not edit them manually.
 
 ## Security
 
-- Alle User-Inputs via **Zod-Schema** validieren (System-Boundaries)
-- Rate Limiting auf allen Auth- und teuren Endpoints (express-rate-limit)
-- Keine Hardcoded Secrets — `.env`-Datei (gitignored), im Container via Secrets-Volume
-- JWT in HttpOnly Cookie (kein localStorage)
-- XSS: React escaped automatisch; kein `dangerouslySetInnerHTML`
-- SQL Injection: Prisma ORM (parametrisierte Queries)
-- Security-Scan: `scripts/security-scan.sh`
+- Validate all user input via **Zod schemas** (system boundaries).
+- Rate limiting on every auth and expensive endpoint
+  (`express-rate-limit`).
+- No hardcoded secrets — `.env` file (gitignored), in the container
+  via a secrets volume.
+- JWT in an HttpOnly cookie (never `localStorage`).
+- XSS: React escapes automatically; no `dangerouslySetInnerHTML`.
+- SQL injection: Prisma ORM (parameterised queries).
+- Security scan: `scripts/security-scan.sh`.
 
-Security-Befunde: `PENTEST_FINDINGS.md` (falls vorhanden)
+Security findings: `PENTEST_FINDINGS.md` (when present).
 
 ## Testing
 
 ```bash
-# Frontend (Vitest, kein DB nötig)
+# Frontend (Vitest, no DB required)
 cd frontend && npx vitest --run
 
-# Backend (Jest, benötigt PostgreSQL)
+# Backend (Jest, requires PostgreSQL)
 cd backend && npm test -- --forceExit
 
-# E2E (Playwright, benötigt laufenden Dev-Server)
+# E2E (Playwright, requires a running dev server)
 npx playwright test
 
-# Alles auf einmal
-bash scripts/run-tests.sh   # oder: scripts/run-tests.ps1
+# Everything at once
+bash scripts/run-tests.sh   # alternative: scripts/run-tests.ps1
 ```
 
 ## Monitoring & Logs
 
-- Logs in `data/logs/` (app.log, error.log, http.log, parser*.log)
-- Pino structured JSON — `LOG_LEVEL` Env-Var steuert Verbosity
-- Gesundheits-Check: `GET /api/v1/health`
+- Logs in `data/logs/` (`app.log`, `error.log`, `http.log`,
+  `parser*.log`).
+- Pino structured JSON — the `LOG_LEVEL` env var controls verbosity.
+- Health check: `GET /api/v1/health`.
 
-## Maschinen-spezifische Infos
+## Machine-specific Info
 
-→ Siehe **`CLAUDE.local.md`** für: Server-IP (Underworld), SSH-Pfade, Docker-Compose-Pfade, lokale Port-Mappings.
+→ See **`CLAUDE.local.md`** for: server IP (Underworld), SSH paths,
+Docker Compose paths, local port mappings.
