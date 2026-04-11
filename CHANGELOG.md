@@ -4,6 +4,23 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.15.1-beta] - 2026-04-11
+
+### Fixed
+- **Copy-to-clipboard on insecure HTTP origins** — Every "Copy link"
+  button in the admin area silently did nothing when TravStats was
+  accessed over plain HTTP on a LAN IP (the typical deployment), because
+  `navigator.clipboard.writeText` is only available in a secure context
+  (HTTPS or `localhost`). A new shared `copyToClipboard` utility tries
+  the modern API first and falls back to a hidden-textarea plus
+  `document.execCommand("copy")` path when the modern API is
+  unavailable or rejects. The fix is wired into the invitation success
+  modal, the row-level copy action in the invitation list, and the
+  admin temporary-password reveal. Verified locally by running the dev
+  server on a LAN IP (`window.isSecureContext === false`,
+  `navigator.clipboard === undefined`) — both copy buttons now surface
+  the success toast and actually write to the clipboard.
+
 ## [0.15.0-beta] - 2026-04-11
 
 ### Added
