@@ -121,16 +121,74 @@
     "invitationLinks": "Invitation Links",
     "createButton": "+ Create Invitation",
     "copiedToClipboard": "Invitation link copied to clipboard!",
+    "actions": {
+      "createLink": "+ Create link",
+      "createEmail": "✉ Invite by email",
+      "copyLink": "📋 Copy link",
+      "sendEmail": "✉ Send",
+      "resendEmail": "✉ Resend",
+      "revoke": "🗑 Revoke"
+    },
+    "confirmRevoke": "Really revoke this invitation? The link becomes invalid immediately.",
+    "expiresLegend": "Valid for",
+    "expires": {
+      "24h": "24 hours",
+      "7d": "7 days",
+      "30d": "30 days"
+    },
+    "filter": {
+      "label": "Status filter",
+      "all": "All",
+      "active": "Active",
+      "used": "Used",
+      "expired": "Expired"
+    },
+    "createLinkModal": {
+      "title": "Create a new invitation link",
+      "description": "Generates a single-use link you can share however you like.",
+      "submit": "Create link",
+      "creating": "Creating..."
+    },
+    "createEmailModal": {
+      "title": "Invite by email",
+      "description": "We create a single-use link and mail it directly to the address you enter.",
+      "emailLabel": "Email address",
+      "emailPlaceholder": "jane@example.com",
+      "emailRequired": "Email is required",
+      "emailInvalid": "Not a valid email address",
+      "submit": "Send invitation",
+      "sending": "Sending..."
+    },
+    "success": {
+      "title": "Invitation created",
+      "linkLabel": "Invitation link",
+      "copyLink": "Copy link",
+      "copiedToClipboard": "Link copied to clipboard",
+      "copyFailed": "Could not copy link",
+      "emailSent": "Email sent to",
+      "emailFailed": "Email delivery failed",
+      "linkStillValid": "The link below is still valid — share it manually.",
+      "done": "Done"
+    },
+    "toasts": {
+      "resent": "Invitation resent",
+      "resendFailed": "Resend failed",
+      "revoked": "Invitation revoked",
+      "revokeFailed": "Revoke failed"
+    },
     "table": {
       "email": "Email",
       "createdBy": "Created By",
       "expires": "Expires",
-      "status": "Status"
+      "usedBy": "Used by",
+      "status": "Status",
+      "actions": "Actions"
     },
     "status": {
       "usedOn": "Used on {{date}}",
       "expired": "Expired",
-      "active": "Active"
+      "active": "Active",
+      "emailFailed": "Email failed"
     }
   },
   "userLimitWarning": {

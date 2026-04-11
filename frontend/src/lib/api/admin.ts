@@ -183,56 +183,83 @@ export const adminApi = {
     return data;
   },
 
-  createInvitation: async (
-    email?: string,
-    expiresInDays: number = 7
+  createLinkInvitation: async (
+    expiresInDays: 1 | 7 | 30 = 7
   ): Promise<{
-    invitation: {
-      id: string;
-      email?: string;
-      token: string;
-      expiresAt: string;
-    };
+    invitation: { id: string; email: string | null; token: string; expiresAt: string };
     inviteUrl: string;
   }> => {
     const { data } = await api.post<{
-      invitation: {
-        id: string;
-        email?: string;
-        token: string;
-        expiresAt: string;
-      };
+      invitation: { id: string; email: string | null; token: string; expiresAt: string };
       inviteUrl: string;
-    }>("/admin/invitations", { email, expiresInDays });
+    }>("/admin/invitations", { expiresInDays });
     return data;
   },
 
-  getInvitations: async (): Promise<{
+  createEmailInvitation: async (
+    email: string,
+    expiresInDays: 1 | 7 | 30 = 7
+  ): Promise<{
+    invitation: { id: string; email: string | null; token: string; expiresAt: string };
+    inviteUrl: string;
+    emailSent: boolean;
+    emailError: string | null;
+  }> => {
+    const { data } = await api.post<{
+      invitation: { id: string; email: string | null; token: string; expiresAt: string };
+      inviteUrl: string;
+      emailSent: boolean;
+      emailError: string | null;
+    }>("/admin/invitations/email", { email, expiresInDays });
+    return data;
+  },
+
+  resendInvitationEmail: async (
+    id: string
+  ): Promise<{ emailSent: boolean; emailError: string | null }> => {
+    const { data } = await api.post<{ emailSent: boolean; emailError: string | null }>(
+      `/admin/invitations/${id}/resend`
+    );
+    return data;
+  },
+
+  revokeInvitation: async (id: string): Promise<{ success: true }> => {
+    const { data } = await api.delete<{ success: true }>(`/admin/invitations/${id}`);
+    return data;
+  },
+
+  getInvitations: async (
+    status: "all" | "active" | "used" | "expired" = "active"
+  ): Promise<{
     invitations: Array<{
       id: string;
-      email?: string;
+      email: string | null;
       token: string;
       expiresAt: string;
-      usedAt?: string;
+      usedAt: string | null;
       createdAt: string;
-      creator: {
-        username: string;
-      };
+      emailStatus: string | null;
+      emailError: string | null;
+      emailSentAt: string | null;
+      creator: { username: string };
+      user: { username: string } | null;
     }>;
   }> => {
     const { data } = await api.get<{
       invitations: Array<{
         id: string;
-        email?: string;
+        email: string | null;
         token: string;
         expiresAt: string;
-        usedAt?: string;
+        usedAt: string | null;
         createdAt: string;
-        creator: {
-          username: string;
-        };
+        emailStatus: string | null;
+        emailError: string | null;
+        emailSentAt: string | null;
+        creator: { username: string };
+        user: { username: string } | null;
       }>;
-    }>("/admin/invitations");
+    }>("/admin/invitations", { params: { status } });
     return data;
   },
 
