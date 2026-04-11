@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authenticate, requireAdmin } from '../../middleware/auth';
 import systemRouter from './system';
 import usersRouter from './users';
+import invitationsRouter from './invitations';
 import parseLogsRouter from './parseLogs';
 import apiKeysRouter from './apiKeys';
 import loggingRouter from './logging';
@@ -18,6 +19,7 @@ router.use(requireAdmin);
 // Mount sub-routers
 router.use('/', systemRouter);
 router.use('/', usersRouter);
+router.use('/invitations', invitationsRouter);
 router.use('/', parseLogsRouter);
 router.use('/', apiKeysRouter);
 router.use('/logging', loggingRouter);
