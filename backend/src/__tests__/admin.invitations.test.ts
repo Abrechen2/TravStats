@@ -150,3 +150,109 @@ describe('admin/invitations — POST /email', () => {
     expect(mockSendInvitationEmail).not.toHaveBeenCalled();
   });
 });
+
+describe('admin/invitations — POST /:id/resend', () => {
+  beforeEach(async () => {
+    mockSendInvitationEmail.mockReset();
+    await prisma.invitation.deleteMany();
+    await prisma.user.deleteMany();
+    const admin = await createAdminUser();
+    adminUserId = admin.id;
+    adminToken = admin.token;
+  });
+
+  it('resends an active invitation with email', async () => {
+    mockSendInvitationEmail.mockResolvedValue(undefined);
+    const invitation = await prisma.invitation.create({
+      data: {
+        email: 'jane@example.com',
+        token: 'tok-active-with-email',
+        createdBy: adminUserId,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        emailStatus: 'failed',
+        emailError: 'previous failure',
+      },
+    });
+
+    const res = await request(app)
+      .post(`/api/v1/admin/invitations/${invitation.id}/resend`)
+      .set('Cookie', [`auth_token=${adminToken}`])
+      .send();
+
+    expect(res.status).toBe(200);
+    expect(res.body.emailSent).toBe(true);
+    expect(mockSendInvitationEmail).toHaveBeenCalledTimes(1);
+
+    const updated = await prisma.invitation.findUnique({ where: { id: invitation.id } });
+    expect(updated?.emailStatus).toBe('sent');
+    expect(updated?.emailError).toBeNull();
+  });
+
+  it('returns 400 when invitation has no email', async () => {
+    const invitation = await prisma.invitation.create({
+      data: {
+        token: 'tok-no-email',
+        createdBy: adminUserId,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    const res = await request(app)
+      .post(`/api/v1/admin/invitations/${invitation.id}/resend`)
+      .set('Cookie', [`auth_token=${adminToken}`])
+      .send();
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/no email/i);
+  });
+
+  it('returns 400 when invitation is already used', async () => {
+    const usedBy = (await createAdminUser()).id;
+    const invitation = await prisma.invitation.create({
+      data: {
+        email: 'jane@example.com',
+        token: 'tok-used',
+        createdBy: adminUserId,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        usedAt: new Date(),
+        usedBy,
+      },
+    });
+
+    const res = await request(app)
+      .post(`/api/v1/admin/invitations/${invitation.id}/resend`)
+      .set('Cookie', [`auth_token=${adminToken}`])
+      .send();
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/already used/i);
+  });
+
+  it('returns 400 when invitation is expired', async () => {
+    const invitation = await prisma.invitation.create({
+      data: {
+        email: 'jane@example.com',
+        token: 'tok-expired',
+        createdBy: adminUserId,
+        expiresAt: new Date(Date.now() - 1000),
+      },
+    });
+
+    const res = await request(app)
+      .post(`/api/v1/admin/invitations/${invitation.id}/resend`)
+      .set('Cookie', [`auth_token=${adminToken}`])
+      .send();
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/expired/i);
+  });
+
+  it('returns 404 on unknown id', async () => {
+    const res = await request(app)
+      .post('/api/v1/admin/invitations/00000000-0000-0000-0000-000000000000/resend')
+      .set('Cookie', [`auth_token=${adminToken}`])
+      .send();
+
+    expect(res.status).toBe(404);
+  });
+});
