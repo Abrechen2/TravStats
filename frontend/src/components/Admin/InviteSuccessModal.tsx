@@ -1,5 +1,6 @@
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
+import { copyToClipboard } from "../../lib/clipboard";
 
 interface InviteSuccessModalProps {
   inviteUrl: string;
@@ -21,7 +22,7 @@ export default function InviteSuccessModal({
 
   const copyLink = async (): Promise<void> => {
     try {
-      await navigator.clipboard.writeText(inviteUrl);
+      await copyToClipboard(inviteUrl);
       addToast("success", t("admin:invitations.success.copiedToClipboard"));
     } catch {
       addToast("error", t("admin:invitations.success.copyFailed"));

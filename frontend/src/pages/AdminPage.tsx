@@ -18,6 +18,7 @@ import SmtpManager from "../components/Admin/SmtpManager";
 import FeedbackAnalytics from "../components/Admin/FeedbackAnalytics";
 import PatternManagement from "../components/Admin/PatternManagement";
 import { useTranslation } from "../hooks/useTranslation";
+import { copyToClipboard } from "../lib/clipboard";
 
 import type { SystemInfoData, HardwareInfo, AdminUser } from "../components/Admin/SystemInfo";
 import type { Invitation } from "../components/Admin/InvitationManagement";
@@ -276,7 +277,7 @@ export default function AdminPage(): JSX.Element {
     const frontendOrigin = window.location.origin;
     const inviteUrl = `${frontendOrigin}/register?token=${invitation.token}`;
     try {
-      await navigator.clipboard.writeText(inviteUrl);
+      await copyToClipboard(inviteUrl);
       addToast("success", t("admin:invitations.success.copiedToClipboard"));
     } catch {
       addToast("error", t("admin:invitations.success.copyFailed"));
