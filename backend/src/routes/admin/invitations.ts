@@ -135,6 +135,60 @@ router.post('/email', async (req: AuthRequest, res: Response, next: NextFunction
 });
 
 /**
+ * POST /admin/invitations/:id/resend — resend invitation email
+ */
+router.post('/:id/resend', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const invitation = await prisma.invitation.findUnique({ where: { id } });
+    if (!invitation) {
+      throw new AppError('Invitation not found', 404);
+    }
+    if (!invitation.email) {
+      throw new AppError('Invitation has no email', 400);
+    }
+    if (invitation.usedAt) {
+      throw new AppError('Invitation already used', 400);
+    }
+    if (invitation.expiresAt <= new Date()) {
+      throw new AppError('Invitation expired', 400);
+    }
+
+    const inviteUrl = buildInviteUrl(invitation.token);
+    const creator = await prisma.user.findUnique({
+      where: { id: invitation.createdBy },
+      select: { username: true },
+    });
+
+    let emailSent = false;
+    let emailError: string | null = null;
+    try {
+      await sendInvitationEmail(
+        invitation.email,
+        inviteUrl,
+        creator?.username ?? 'an admin',
+        invitation.expiresAt,
+      );
+      emailSent = true;
+      await prisma.invitation.update({
+        where: { id: invitation.id },
+        data: { emailStatus: 'sent', emailSentAt: new Date(), emailError: null },
+      });
+    } catch (err) {
+      emailError = err instanceof Error ? err.message : 'Unknown send error';
+      await prisma.invitation.update({
+        where: { id: invitation.id },
+        data: { emailStatus: 'failed', emailError },
+      });
+    }
+
+    res.json({ emailSent, emailError });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * GET /admin/invitations — list invitations
  */
 router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
