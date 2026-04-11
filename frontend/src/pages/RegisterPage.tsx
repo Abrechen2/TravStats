@@ -24,7 +24,7 @@ export default function RegisterPage(): JSX.Element {
       setError(t("register.passwordsNotMatch"));
       return;
     }
-    if (password.length < 6) {
+    if (password.length < 8) {
       setError(t("register.passwordTooShort"));
       return;
     }
@@ -34,8 +34,19 @@ export default function RegisterPage(): JSX.Element {
       setAuth(user);
       navigate("/");
     } catch (err: unknown) {
-      const errorObj = err as { response?: { data?: { error?: string } } };
-      setError(errorObj.response?.data?.error || t("register.failed"));
+      const errorObj = err as {
+        response?: {
+          data?: {
+            error?: string;
+            details?: Array<{ field?: string; message?: string }>;
+          };
+        };
+      };
+      // Prefer the specific Zod validation message over the generic
+      // "Validation error" envelope when the backend returns one.
+      const detail = errorObj.response?.data?.details?.[0]?.message;
+      const envelope = errorObj.response?.data?.error;
+      setError(detail || envelope || t("register.failed"));
     } finally {
       setLoading(false);
     }
