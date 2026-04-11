@@ -1,37 +1,57 @@
 import { Router, Response, NextFunction } from 'express';
 import crypto from 'crypto';
-import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import { AuthRequest } from '../../middleware/auth';
 import { prisma } from '../../db';
+import { createLinkInvitationSchema } from '../../schemas/invitation';
+import { AppError } from '../../middleware/errorHandler';
 
 const router = Router();
 
-// Legacy create body — intentionally permissive during the refactor.
-// Task 5 replaces this with createLinkInvitationSchema.
-const legacyCreateSchema = z.object({
-  email: z.string().email().optional(),
-  expiresInDays: z.number().int().min(1).max(90).optional().default(7),
-});
+const MAX_USERS_DEFAULT = 10;
+
+async function ensureUserLimitNotReached(tx: Prisma.TransactionClient): Promise<void> {
+  const maxUsers = parseInt(process.env.MAX_USERS || String(MAX_USERS_DEFAULT), 10);
+  const userCount = await tx.user.count();
+  const activeInviteCount = await tx.invitation.count({
+    where: {
+      usedAt: null,
+      expiresAt: { gt: new Date() },
+    },
+  });
+  if (userCount + activeInviteCount >= maxUsers) {
+    throw new AppError('User limit reached', 409);
+  }
+}
+
+function buildInviteUrl(token: string): string {
+  const frontendUrl =
+    process.env.FRONTEND_URL || process.env.CORS_ORIGIN?.split(',')[0] || 'http://localhost:3000';
+  return `${frontendUrl}/register?token=${token}`;
+}
 
 /**
- * POST /admin/invitations — create invitation
+ * POST /admin/invitations — create link-only invitation
  */
 router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { email, expiresInDays } = legacyCreateSchema.parse(req.body);
+    const { expiresInDays } = createLinkInvitationSchema.parse(req.body);
     const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000);
 
-    const invitation = await prisma.invitation.create({
-      data: {
-        email,
-        token,
-        createdBy: req.userId!,
-        expiresAt: new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000),
+    const invitation = await prisma.$transaction(
+      async (tx) => {
+        await ensureUserLimitNotReached(tx);
+        return tx.invitation.create({
+          data: {
+            token,
+            createdBy: req.userId!,
+            expiresAt,
+          },
+        });
       },
-    });
-
-    const frontendUrl = process.env.FRONTEND_URL || process.env.CORS_ORIGIN || 'http://localhost:3000';
-    const inviteUrl = `${frontendUrl}/register?token=${token}`;
+      { isolationLevel: 'Serializable' },
+    );
 
     res.json({
       invitation: {
@@ -40,7 +60,7 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
         token: invitation.token,
         expiresAt: invitation.expiresAt,
       },
-      inviteUrl,
+      inviteUrl: buildInviteUrl(invitation.token),
     });
   } catch (error) {
     next(error);
