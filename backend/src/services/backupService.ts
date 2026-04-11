@@ -13,8 +13,8 @@ const execAsync = promisify(exec);
 interface ExistingBackupRecord {
   id: string;
   backupPath: string;
-  dbBackupPath: string | null;
-  filesBackupPath: string | null;
+  dbBackupPath: string;
+  filesBackupPath: string;
 }
 
 interface BackupOptions {
@@ -595,12 +595,24 @@ export async function createBackup(options: BackupOptions = {}): Promise<string>
 
   // When the route pre-creates the DB record inside a Serializable transaction it also
   // pre-computes the paths and passes them via existingRecord. Reuse those paths so
-  // the filesystem layout matches what is already stored in the database.
+  // the filesystem layout matches what is already stored in the database — critically
+  // including backupDir/tempDir, otherwise pg_dump writes into a directory that was
+  // never created and fails with "Directory nonexistent".
   // When called without an existingRecord (e.g. from restoreBackup), generate fresh paths.
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const backupId = `backup-${timestamp}`;
-  const backupDir = path.join(BACKUP_BASE_DIR, backupId);
-  const tempDir = path.join(backupDir, 'temp');
+  let backupId: string;
+  let backupDir: string;
+  let tempDir: string;
+  if (options.existingRecord) {
+    backupId = options.existingRecord.id;
+    // existingRecord.dbBackupPath is <backupDir>/temp/database.sql
+    tempDir = path.dirname(options.existingRecord.dbBackupPath);
+    backupDir = path.dirname(tempDir);
+  } else {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    backupId = `backup-${timestamp}`;
+    backupDir = path.join(BACKUP_BASE_DIR, backupId);
+    tempDir = path.join(backupDir, 'temp');
+  }
 
   // Ensure backup base directory exists
   try {
