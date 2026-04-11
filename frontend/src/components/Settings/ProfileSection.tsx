@@ -1,5 +1,6 @@
 import React from "react";
 import { SectionCard, SectionTitle } from "./SettingsShared";
+import InlineHelp from "../Help/InlineHelp";
 import { useTranslation } from "../../hooks/useTranslation";
 
 interface ProfileSectionProps {
@@ -38,6 +39,24 @@ export default function ProfileSection({
           {t("settings:profile.changePassword")}
         </button>
       </div>
+
+      <InlineHelp
+        title={t("settings:profile.help.title")}
+        category="basic"
+        content={
+          <div className="space-y-2">
+            <p>{t("settings:profile.help.description")}</p>
+            <div>
+              <p className="font-semibold">{t("settings:profile.help.avatarTitle")}</p>
+              <p className="ml-2 text-sm">{t("settings:profile.help.avatar")}</p>
+            </div>
+            <div>
+              <p className="font-semibold">{t("settings:profile.help.passwordTitle")}</p>
+              <p className="ml-2 text-sm">{t("settings:profile.help.password")}</p>
+            </div>
+          </div>
+        }
+      />
 
       <div className="flex items-center gap-4">
         <div

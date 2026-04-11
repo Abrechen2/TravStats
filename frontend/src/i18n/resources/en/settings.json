@@ -20,7 +20,15 @@
     "uploadError": "Error uploading profile picture",
     "save": "Save profile",
     "saved": "Profile saved",
-    "saveFailed": "Failed to save profile"
+    "saveFailed": "Failed to save profile",
+    "help": {
+      "title": "Profile & password",
+      "description": "Username, email and profile picture are only visible to you. The email is also used for password reset and optional notifications.",
+      "avatarTitle": "Profile picture:",
+      "avatar": "PNG or JPG, max. 5 MB. Stored locally in the database — never sent to an external service.",
+      "passwordTitle": "Change password:",
+      "password": "Opens a separate modal that requires the current password for verification before a new one can be set."
+    }
   },
   "display": {
     "title": "Display & Language",
@@ -60,6 +68,14 @@
       "CHF": "CHF (Fr)",
       "celsius": "Celsius",
       "fahrenheit": "Fahrenheit"
+    },
+    "help": {
+      "title": "Units & formats",
+      "description": "Controls how distances and costs are displayed throughout the app — dashboard, statistics, flight details and exports.",
+      "distanceTitle": "Distance:",
+      "distance": "Kilometers (EU standard), miles (US) or nautical miles (as used by airlines). The underlying calculation stays the same — only the display changes.",
+      "currencyTitle": "Currency:",
+      "currency": "Used for ticket prices and cost statistics. No automatic conversion of existing flights — old values remain stored in their original currency."
     }
   },
   "defaults": {
@@ -78,6 +94,14 @@
       "first": "First",
       "private": "Private",
       "vacation": "Vacation"
+    },
+    "help": {
+      "title": "Defaults for new flights",
+      "description": "These values are pre-selected when you add a flight manually or import one from email. You can still edit every individual flight afterwards.",
+      "statusTitle": "Status:",
+      "status": "\"Scheduled\" makes sense for upcoming flights; \"Flown\" is convenient when quickly entering past flights.",
+      "categoryTitle": "Flight category:",
+      "category": "Business / private / vacation — only relevant for your statistics, has no effect on live data or cost calculation."
     }
   },
   "map": {
@@ -93,11 +117,29 @@
       "pin": "Pin",
       "circle": "Circle",
       "custom": "Custom"
+    },
+    "help": {
+      "title": "Map appearance",
+      "description": "These settings apply to the 2D flight map (routes/heatmap/columns modes). The globe mode uses its own base maps.",
+      "styleTitle": "Base map:",
+      "style": "OpenStreetMap is ad-free and free to use. Satellite uses MapLibre tiles — heavier, but useful for terrain context.",
+      "colorTitle": "Route color:",
+      "color": "Applied to arc and path layers on the map. The same color is used for all routes — for trip-based coloring, use the Trips feature instead."
     }
   },
   "notifications": {
     "title": "Notifications",
     "description": "Control reminders and updates.",
+    "help": {
+      "title": "Notifications",
+      "description": "Control which events you want to be notified about via email. The actual SMTP configuration lives in the admin area.",
+      "emailTitle": "Email notifications:",
+      "email": "Requires a verified email address in your profile. Without SMTP set up in the admin panel, this option has no effect even when enabled.",
+      "remindersTitle": "Reminders:",
+      "reminders": "Flight reminders are sent 24 h or 48 h before departure depending on the selected option. Check-in reminders require an airline integration.",
+      "privacyTitle": "Privacy:",
+      "privacy": "Notifications are triggered locally — no data is sent to any external service outside your own SMTP server."
+    },
     "emailNotifications": "Enable email notifications",
     "flightReminder": "Flight Reminder",
     "checkInReminder": "Check-in Reminder",
@@ -124,7 +166,19 @@
     "testConnection": "Test connection",
     "testSuccess": "Connection successful!",
     "testFailed": "Connection failed: {{error}}",
-    "loadError": "Failed to load configuration"
+    "loadError": "Failed to load configuration",
+    "smtpHelp": {
+      "title": "Set up SMTP server",
+      "description": "TravStats sends password reset links and notifications through an SMTP server. Without a valid SMTP configuration these features are disabled.",
+      "portsTitle": "Ports & encryption:",
+      "ports": "587 + STARTTLS (standard, leave \"Secure (TLS)\" off), 465 + implicit TLS (turn \"Secure (TLS)\" on), 25 only for local unauthenticated relays.",
+      "credentialsTitle": "Credentials:",
+      "credentials": "Gmail/Outlook require app passwords instead of the account password (2FA is a prerequisite). Self-hosted Postfix servers typically allow SMTP-AUTH with a system user.",
+      "senderTitle": "Sender:",
+      "sender": "The From email should match the SMTP server's domain — otherwise mails are frequently flagged as spam. SPF/DKIM DNS records improve deliverability.",
+      "testTitle": "Test the connection:",
+      "test": "\"Test connection\" verifies login and TLS handshake without sending an actual mail — safe to use before the first save."
+    }
   },
   "privacy": {
     "title": "Privacy & Security",
@@ -164,6 +218,16 @@
       "json": "JSON",
       "csv": "CSV",
       "pdf": "PDF"
+    },
+    "help": {
+      "title": "Backups & restore",
+      "description": "A backup is a .tar.gz archive that freezes the full database and uploaded files (boarding passes, receipts) at a point in time.",
+      "scopeTitle": "Contents:",
+      "scope": "PostgreSQL dump (pg_dump) + the uploads/ directory. Logs and API caches are not backed up — they are reproducible.",
+      "adminTitle": "Admin area:",
+      "admin": "Management (manual trigger, download, restore, interval, cloud sync) happens in the admin panel. This section here is a read-only status view for non-admins.",
+      "restoreTitle": "Restore:",
+      "restore": "A restore completely replaces the existing database. Always create an extra backup beforehand using the checkbox in the restore dialog."
     }
   },
   "password": {
@@ -258,7 +322,13 @@
   "features": {
     "title": "Features",
     "costTracking": "Cost Tracking",
-    "costTrackingDesc": "Show price and cost fields in forms and enable business cost statistics."
+    "costTrackingDesc": "Show price and cost fields in forms and enable business cost statistics.",
+    "help": {
+      "title": "Optional features",
+      "description": "Toggle features on and off to tailor the UI to your usage. Disabled features stay in the code and can be re-enabled any time.",
+      "costTitle": "Cost tracking:",
+      "cost": "Shows price, tax and cost fields on the flight forms. Only useful if you bill business trips or track a private travel budget — otherwise it just clutters the form."
+    }
   },
   "autoSaved": {
     "title": "Auto-saved",
@@ -375,6 +445,16 @@
   "apiKeys": {
     "title": "API Keys",
     "description": "Manage API keys for external services. Keys shared by the administrator are automatically used.",
+    "help": {
+      "title": "External API keys",
+      "description": "TravStats can enrich live flight data (positions, delays, gates) and additional airport information through third-party APIs. Every provider offers a free tier — keys are optional.",
+      "sharedTitle": "Shared keys:",
+      "shared": "If the administrator has configured a key for a provider, it is used automatically — you do not need to enter anything. Your own keys take precedence.",
+      "providersTitle": "Providers:",
+      "providers": "Airlabs (general flight tracking, free tier with rate limit), Aviationstack (accurate schedule data, free 100/month tier), OpenSky (open-source flight tracker, requires client id + secret).",
+      "securityTitle": "Security:",
+      "security": "Keys are stored encrypted in the database and never sent back to the browser UI. After saving, the field only shows a placeholder dot pattern."
+    },
     "parserApis": "Parser APIs",
     "flightApis": "Flight Lookup APIs",
     "shared": "Shared",
