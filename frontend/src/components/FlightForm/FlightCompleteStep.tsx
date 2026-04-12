@@ -150,7 +150,7 @@ export default function FlightCompleteStep({
   sizedInputClass,
   setTimeEstimationWarning,
 }: FlightCompleteStepProps): JSX.Element {
-  const { t } = useTranslation(["flights"]);
+  const { t, i18n } = useTranslation(["flights"]);
   const { features } = useSettingsStore();
 
   return (
@@ -281,74 +281,128 @@ export default function FlightCompleteStep({
         )}
       </div>
 
-      {/* Date & Time (hidden for historical flights) */}
-      {status !== "historical" && (
+      {/* Date & Time — full inputs for normal flights, year/month for historical */}
+      {status === "historical" ? (
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className={`label ${textClass} flex items-center gap-2`}>
-              {t("flights:form.departureDate")}
-              <HelpIcon content={t("flights:form.help.departureDate")} position="top" />
-            </label>
+            <label className={`label ${textClass}`}>{t("flights:historicalYear")}</label>
             <input
-              type="date"
-              value={departureDate}
-              onChange={(e) => setDepartureDate(e.target.value)}
+              type="number"
+              min={1950}
+              max={new Date().getFullYear()}
+              placeholder={t("flights:historicalYearPlaceholder")}
+              value={departureDate ? new Date(departureDate + "T00:00").getFullYear() : ""}
+              onChange={(e) => {
+                const y = e.target.value;
+                if (!y) {
+                  setDepartureDate("");
+                  setArrivalDate("");
+                  return;
+                }
+                const currentMonth = departureDate
+                  ? String(new Date(departureDate + "T00:00").getMonth() + 1).padStart(2, "0")
+                  : "01";
+                setDepartureDate(`${y}-${currentMonth}-01`);
+                setArrivalDate(`${y}-${currentMonth}-01`);
+              }}
               className={`input ${sizedInputClass}`}
-              required
             />
           </div>
           <div>
-            <label className={`label ${textClass} flex items-center gap-2`}>
-              {t("flights:form.departureTime")}
-              <HelpIcon
-                content={t("flights:form.help.departureTime")}
-                expandedContent={t("flights:form.help.departureTimeExpanded")}
-                position="top"
-              />
-            </label>
-            <input
-              type="time"
-              value={departureTime}
-              onChange={(e) => setDepartureTime(e.target.value)}
+            <label className={`label ${textClass}`}>{t("flights:historicalMonth")}</label>
+            <select
+              value={departureDate ? String(new Date(departureDate + "T00:00").getMonth() + 1) : ""}
+              onChange={(e) => {
+                const m = e.target.value;
+                const y = departureDate
+                  ? new Date(departureDate + "T00:00").getFullYear()
+                  : new Date().getFullYear();
+                if (!m) {
+                  setDepartureDate(`${y}-01-01`);
+                  setArrivalDate(`${y}-01-01`);
+                } else {
+                  setDepartureDate(`${y}-${m.padStart(2, "0")}-01`);
+                  setArrivalDate(`${y}-${m.padStart(2, "0")}-01`);
+                }
+              }}
               className={`input ${sizedInputClass}`}
-            />
+            >
+              <option value="">{t("flights:historicalMonthNone")}</option>
+              {Array.from({ length: 12 }, (_, i) => (
+                <option key={i + 1} value={String(i + 1)}>
+                  {new Date(2000, i).toLocaleDateString(i18n.language, { month: "long" })}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
-      )}
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={`label ${textClass} flex items-center gap-2`}>
+                {t("flights:form.departureDate")}
+                <HelpIcon content={t("flights:form.help.departureDate")} position="top" />
+              </label>
+              <input
+                type="date"
+                value={departureDate}
+                onChange={(e) => setDepartureDate(e.target.value)}
+                className={`input ${sizedInputClass}`}
+                required
+              />
+            </div>
+            <div>
+              <label className={`label ${textClass} flex items-center gap-2`}>
+                {t("flights:form.departureTime")}
+                <HelpIcon
+                  content={t("flights:form.help.departureTime")}
+                  expandedContent={t("flights:form.help.departureTimeExpanded")}
+                  position="top"
+                />
+              </label>
+              <input
+                type="time"
+                value={departureTime}
+                onChange={(e) => setDepartureTime(e.target.value)}
+                className={`input ${sizedInputClass}`}
+              />
+            </div>
+          </div>
 
-      {/* Arrival Date & Time (hidden for historical flights) */}
-      {status !== "historical" && (
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className={`label ${textClass} flex items-center gap-2`}>
-              {t("flights:form.arrivalDate")} *
-              <HelpIcon content={t("flights:form.help.arrivalDate")} position="top" />
-            </label>
-            <input
-              type="date"
-              value={arrivalDate}
-              onChange={(e) => setArrivalDate(e.target.value)}
-              className={`input ${sizedInputClass}`}
-              required
-            />
-          </div>
-          <div>
-            <label className={`label ${textClass} flex items-center gap-2`}>
-              {t("flights:form.arrivalTime")}
-              <HelpIcon
-                content={t("flights:form.help.arrivalTime")}
-                expandedContent={t("flights:form.help.arrivalTimeExpanded")}
-                position="top"
+          {/* Arrival Date & Time */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={`label ${textClass} flex items-center gap-2`}>
+                {t("flights:form.arrivalDate")} *
+                <HelpIcon content={t("flights:form.help.arrivalDate")} position="top" />
+              </label>
+              <input
+                type="date"
+                value={arrivalDate}
+                onChange={(e) => setArrivalDate(e.target.value)}
+                className={`input ${sizedInputClass}`}
+                required
               />
-            </label>
-            <input
-              type="time"
-              value={arrivalTime}
-              onChange={(e) => setArrivalTime(e.target.value)}
-              className={`input ${sizedInputClass}`}
-            />
+            </div>
+            <div>
+              <label className={`label ${textClass} flex items-center gap-2`}>
+                {t("flights:form.arrivalTime")}
+                <HelpIcon
+                  content={t("flights:form.help.arrivalTime")}
+                  expandedContent={t("flights:form.help.arrivalTimeExpanded")}
+                  position="top"
+                />
+              </label>
+              <input
+                type="time"
+                value={arrivalTime}
+                onChange={(e) => setArrivalTime(e.target.value)}
+                className={`input ${sizedInputClass}`}
+              />
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* Additional Fields */}

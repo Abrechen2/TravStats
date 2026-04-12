@@ -222,7 +222,11 @@
     "historical": "Historical"
   },
   "historicalCheckbox": "Historical flight (route only)",
-  "historicalHint": "Only departure and arrival airports required. Date, time, and all other fields are optional.",
+  "historicalHint": "Only departure and arrival airports required. Year, month, and all other fields are optional.",
+  "historicalYear": "Year",
+  "historicalYearPlaceholder": "e.g. 2015",
+  "historicalMonth": "Month (optional)",
+  "historicalMonthNone": "— unknown —",
   "category": {
     "business": "Business",
     "private": "Private",

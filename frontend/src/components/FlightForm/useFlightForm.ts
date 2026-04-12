@@ -329,13 +329,15 @@ export function useFlightForm(
     seatNumber: seatNumber || undefined,
     terminal: terminal || undefined,
     gate: gate || undefined,
-    departureTime:
-      status === "historical" || !departureDate
-        ? undefined
+    departureTime: !departureDate
+      ? undefined
+      : status === "historical"
+        ? new Date(`${departureDate}T00:00:00`).toISOString()
         : new Date(`${departureDate}T${departureTime}:00`).toISOString(),
-    arrivalTime:
-      status === "historical" || !arrivalDate
-        ? undefined
+    arrivalTime: !arrivalDate
+      ? undefined
+      : status === "historical"
+        ? new Date(`${arrivalDate}T00:00:00`).toISOString()
         : new Date(`${arrivalDate}T${arrivalTime}:00`).toISOString(),
     status,
     notes: notes || undefined,

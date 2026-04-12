@@ -221,7 +221,11 @@
     "historical": "Historisch"
   },
   "historicalCheckbox": "Historischer Flug (nur Route bekannt)",
-  "historicalHint": "Nur Abflug- und Ankunftsflughafen erforderlich. Datum, Uhrzeit und alle weiteren Angaben sind optional.",
+  "historicalHint": "Nur Abflug- und Ankunftsflughafen erforderlich. Jahr, Monat und alle weiteren Angaben sind optional.",
+  "historicalYear": "Jahr",
+  "historicalYearPlaceholder": "z. B. 2015",
+  "historicalMonth": "Monat (optional)",
+  "historicalMonthNone": "— unbekannt —",
   "category": {
     "business": "Geschäftlich",
     "private": "Privat",
