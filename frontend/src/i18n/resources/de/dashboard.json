@@ -57,6 +57,13 @@
     "flightDeletedPending": "Flug gelöscht",
     "flightDuplicated": "Flug dupliziert"
   },
+  "duplicateDialog": {
+    "title": "Flug duplizieren",
+    "description": "Wie möchten Sie den Flug {{route}} duplizieren?",
+    "outbound": "Hinflug (gleiche Route)",
+    "return": "Rückflug (Route tauschen)",
+    "cancel": "Abbrechen"
+  },
   "navigation": {
     "title": "Navigation"
   },

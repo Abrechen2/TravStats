@@ -35,6 +35,7 @@ export default function DashboardPage(): JSX.Element {
   const [geoFlights, setGeoFlights] = useState<GeoJSONFeature[]>([]);
   const [showFlightForm, setShowFlightForm] = useState(false);
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
+  const [duplicatingFlight, setDuplicatingFlight] = useState<Flight | null>(null);
   const [filters, setFilters] = useState<FlightFilters>({});
   const [, setLoadingMap] = useState(true); // Loading indicator for map
   const [, setLoadingRecent] = useState(true);
@@ -368,49 +369,55 @@ export default function DashboardPage(): JSX.Element {
     [addToast, loadFlights, t]
   );
 
-  const handleDuplicateFlight = useCallback(
-    async (flight: Flight): Promise<void> => {
+  const handleDuplicateFlight = useCallback((flight: Flight): void => {
+    setDuplicatingFlight(flight);
+  }, []);
+
+  const executeDuplicate = useCallback(
+    async (flight: Flight, mode: "outbound" | "return"): Promise<void> => {
+      setDuplicatingFlight(null);
       try {
+        const isReturn = mode === "return";
         const input: FlightInput = {
           airline: flight.airline,
-          flightNumber: flight.flightNumber,
+          flightNumber: isReturn ? undefined : flight.flightNumber,
           callsign: flight.callsign,
           aircraft: flight.aircraft,
-          departure: {
-            iata: flight.depIata,
-            icao: flight.depIcao,
-            name: flight.depName,
-            lat: flight.depLat,
-            lon: flight.depLon,
-          },
-          arrival: {
-            iata: flight.arrIata,
-            icao: flight.arrIcao,
-            name: flight.arrName,
-            lat: flight.arrLat,
-            lon: flight.arrLon,
-          },
-          departureTime: flight.departureTime ?? undefined,
-          arrivalTime: flight.arrivalTime ?? undefined,
+          departure: isReturn
+            ? {
+                iata: flight.arrIata,
+                icao: flight.arrIcao,
+                name: flight.arrName,
+                lat: flight.arrLat,
+                lon: flight.arrLon,
+              }
+            : {
+                iata: flight.depIata,
+                icao: flight.depIcao,
+                name: flight.depName,
+                lat: flight.depLat,
+                lon: flight.depLon,
+              },
+          arrival: isReturn
+            ? {
+                iata: flight.depIata,
+                icao: flight.depIcao,
+                name: flight.depName,
+                lat: flight.depLat,
+                lon: flight.depLon,
+              }
+            : {
+                iata: flight.arrIata,
+                icao: flight.arrIcao,
+                name: flight.arrName,
+                lat: flight.arrLat,
+                lon: flight.arrLon,
+              },
           status: flight.status,
-          notes: flight.notes,
-          seatNumber: flight.seatNumber,
           seatClass: flight.seatClass,
-          boardingGroup: flight.boardingGroup,
-          gate: flight.gate,
-          terminal: flight.terminal,
-          bookingReference: flight.bookingReference,
-          ticketNumber: flight.ticketNumber,
-          price: flight.price,
-          currency: flight.currency,
-          taxes: flight.taxes,
-          fees: flight.fees,
           category: flight.category,
           tags: flight.tags,
           companions: flight.companions,
-          receiptUrl: flight.receiptUrl,
-          actualDeparture: flight.actualDeparture,
-          actualArrival: flight.actualArrival,
         };
         await flightsApi.create(input);
         const recentData = await flightsApi.getAll({
@@ -1032,6 +1039,51 @@ export default function DashboardPage(): JSX.Element {
           onClose={() => setEditingFlight(null)}
           onSave={handleUpdateFlight}
         />
+      )}
+
+      {/* Duplicate Flight Dialog */}
+      {duplicatingFlight && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div
+            className="rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl"
+            style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+          >
+            <h3 className="text-lg font-bold mb-2" style={{ color: "var(--text-primary)" }}>
+              {t("dashboard:duplicateDialog.title")}
+            </h3>
+            <p className="mb-4" style={{ color: "var(--text-muted)" }}>
+              {t("dashboard:duplicateDialog.description", {
+                route: `${duplicatingFlight.depIata ?? "?"} → ${duplicatingFlight.arrIata ?? "?"}`,
+              })}
+            </p>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => void executeDuplicate(duplicatingFlight, "outbound")}
+                className="w-full px-4 py-2 rounded-lg font-medium transition-colors"
+                style={{ background: "rgba(56,139,253,0.15)", color: "#388bfd" }}
+              >
+                ✈️ {t("dashboard:duplicateDialog.outbound")}
+              </button>
+              <button
+                type="button"
+                onClick={() => void executeDuplicate(duplicatingFlight, "return")}
+                className="w-full px-4 py-2 rounded-lg font-medium transition-colors"
+                style={{ background: "rgba(63,185,80,0.15)", color: "var(--success)" }}
+              >
+                🔄 {t("dashboard:duplicateDialog.return")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setDuplicatingFlight(null)}
+                className="w-full px-4 py-2 rounded-lg transition-colors"
+                style={{ border: "1px solid var(--color-border)", color: "var(--text-muted)" }}
+              >
+                {t("dashboard:duplicateDialog.cancel")}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <HelpIcon
