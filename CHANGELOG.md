@@ -4,6 +4,26 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.17.0-beta] - 2026-04-12
+
+### Added
+- **Ollama model selector** — The admin parser settings page now
+  shows a dropdown of all models available on the Ollama server
+  instead of a free-text field. A "Pull model" section lets admins
+  download new models directly from the UI.
+- **Cost tracking feature gate** — The cost breakdown section
+  (price, currency, taxes, fees) in the flight review modal is now
+  hidden unless the enableCostTracking feature flag is active.
+
+### Fixed
+- **Timezone-aware flight durations** — Flight duration calculations
+  now account for timezone differences between departure and arrival
+  airports using IANA timezone data. Fixes inflated durations for
+  international flights (e.g. LAX→MUC showed 20h instead of ~11h).
+- **Achievement checks for all flights** — Achievement progress is
+  now evaluated after every flight creation, not only for flights
+  with status "flown".
+
 ## [0.16.1-beta] - 2026-04-12
 
 ### Fixed
