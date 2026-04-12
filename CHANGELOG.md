@@ -4,6 +4,43 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.16.0-beta] - 2026-04-12
+
+### Security
+- **Full pentest with 32 findings resolved** — Comprehensive code review
+  uncovered 4 critical, 10 high, 12 medium, and 6 low severity issues.
+  All 32 have been fixed: admin data export no longer leaks password
+  hashes or decrypted API keys; shell injection in backup restore
+  replaced with safe `spawn()` calls; Bearer header fallback removed
+  (JWT only via HttpOnly cookie); force-change-password token now
+  delivered via HttpOnly cookie instead of response body; login timing
+  oracle eliminated (constant-time bcrypt for unknown users); MAX_USERS
+  hard limit enforced even with ALLOW_REGISTRATION=true; SSRF
+  protection on Ollama URL; invitation registration wrapped in
+  serializable transaction; SameSite upgraded to Strict; CORS dev
+  bypass removed; DB password default removed from prod compose; rate
+  limiters keyed by userId on authenticated endpoints; nginx security
+  headers on static routes. Zero npm audit vulnerabilities in both
+  backend and frontend.
+
+### Added
+- **Default Ollama model switched to gemma3:12b** — Benchmarked at 100%
+  accuracy across all test email samples, replacing qwen2.5:7b.
+
+### Changed
+- **Dead LLM training system removed** — Deleted modelManager,
+  trainingAuth middleware, training settings route, 6 Python scripts,
+  and ~2 GB of PyTorch dependencies from the Docker image. Dead Prisma
+  schema fields dropped via migration.
+- **Oversized files split** — regexParser.ts (824 to 338 lines + 4
+  modules), backupService.ts (1129 to 378 + 4 modules), statsCalculator.ts
+  (886 to 17 barrel + 4 modules). All files now under the 800-line limit.
+
+### Tests
+- **Backend test isolation improved** — 7 test suites refactored to seed
+  users via Prisma instead of the register endpoint, run serially via
+  `maxWorkers=1`, and wipe state before each test.
+
 ## [0.15.2-beta] - 2026-04-11
 
 ### Fixed
