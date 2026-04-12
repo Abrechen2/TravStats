@@ -8,7 +8,11 @@ import type { FlightData, UniqueStats } from './types';
  * Calculate unique/special statistics
  */
 export async function calculateUniqueStats(flights: FlightData[]): Promise<UniqueStats> {
-  const flownFlights = flights.filter(f => f.status === 'flown');
+  // Narrow to flown flights with known times (historical flights have null times)
+  const flownFlights = flights.filter(
+    (f): f is typeof f & { departureTime: Date; arrivalTime: Date } =>
+      f.status === 'flown' && f.departureTime !== null && f.arrivalTime !== null
+  );
 
   // Time travel index - flights where local arrival time (at destination) appears to be before
   // local departure time (at origin), e.g. departing NYC at 23:00 EST and arriving London at

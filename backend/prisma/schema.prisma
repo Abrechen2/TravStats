@@ -84,9 +84,9 @@ model Flight {
   arrName          String?  @map("arr_name")
   arrLat           Float    @map("arr_lat")
   arrLon           Float    @map("arr_lon")
-  departureTime    DateTime @map("departure_time")
-  arrivalTime      DateTime @map("arrival_time")
-  status           String   @default("scheduled") // scheduled, flown, cancelled
+  departureTime    DateTime? @map("departure_time")
+  arrivalTime      DateTime? @map("arrival_time")
+  status           String   @default("scheduled") // scheduled, flown, cancelled, historical
   notes            String?
   // Boarding Pass Information
   seatNumber       String?  @map("seat_number")

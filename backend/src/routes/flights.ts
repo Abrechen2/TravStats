@@ -208,7 +208,7 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
 
     // Duplicate check: same userId + flightNumber + same calendar day
     const forceCreate = req.query['force'] === 'true';
-    if (data.flightNumber && !forceCreate) {
+    if (data.flightNumber && !forceCreate && data.departureTime) {
       const depDate = new Date(data.departureTime);
       const dayStart = new Date(depDate);
       dayStart.setUTCHours(0, 0, 0, 0);
@@ -279,12 +279,12 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
         arrName: enriched.arrival.name,
         arrLat: enriched.arrival.lat,
         arrLon: enriched.arrival.lon,
-        departureTime: new Date(data.departureTime),
-        arrivalTime: new Date(data.arrivalTime),
+        departureTime: data.departureTime ? new Date(data.departureTime) : null,
+        arrivalTime: data.arrivalTime ? new Date(data.arrivalTime) : null,
         actualDeparture: data.actualDeparture ? new Date(data.actualDeparture) : null,
         actualArrival:   data.actualArrival   ? new Date(data.actualArrival)   : null,
         delayMinutes:
-          data.actualDeparture
+          data.actualDeparture && data.departureTime
             ? Math.round(
                 (new Date(data.actualDeparture).getTime() - new Date(data.departureTime).getTime()) / 60000
               )
@@ -403,9 +403,9 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
         || null;
       return {
         ...f,
-        durationMinutes: Math.round(tzAwareDurationMinutes(
-          f.departureTime, f.arrivalTime, depTz, arrTz,
-        )),
+        durationMinutes: (f.departureTime && f.arrivalTime)
+          ? Math.round(tzAwareDurationMinutes(f.departureTime, f.arrivalTime, depTz, arrTz))
+          : null,
       };
     });
 
@@ -640,10 +640,10 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     // Actual times and delay
     if (data.actualDeparture !== undefined) {
       updateData.actualDeparture = data.actualDeparture ? new Date(data.actualDeparture) : null;
-      const scheduledDep = data.departureTime
+      const scheduledDep: Date | null = data.departureTime
         ? new Date(data.departureTime)
         : existingFlight.departureTime;
-      updateData.delayMinutes = data.actualDeparture
+      updateData.delayMinutes = (data.actualDeparture && scheduledDep)
         ? Math.round(
             (new Date(data.actualDeparture).getTime() - scheduledDep.getTime()) / 60000
           )
@@ -808,14 +808,14 @@ router.get('/:id/route-estimation', async (req: AuthRequest, res: Response, next
       });
     }
 
-    // Estimate route
+    // Estimate route (use current time as fallback for historical flights with null departureTime)
     const estimatedRoute = estimateRoute(
       flight.depLat,
       flight.depLon,
       flight.arrLat,
       flight.arrLon,
       flight.flightNumber || '',
-      flight.departureTime
+      flight.departureTime ?? new Date()
     );
 
     res.json({

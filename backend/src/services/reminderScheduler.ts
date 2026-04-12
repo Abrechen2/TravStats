@@ -32,7 +32,7 @@ async function checkAndSendReminders(): Promise<void> {
       depIata: string | null;
       arrName: string | null;
       arrIata: string | null;
-      departureTime: Date;
+      departureTime: Date | null;
       userId: string;
       user: {
         notificationEmail: string | null;

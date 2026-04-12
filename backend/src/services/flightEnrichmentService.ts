@@ -168,8 +168,8 @@ export async function findEnrichmentCandidates(
         continue; // Flight already has all data
       }
 
-      // Calculate age in years
-      const ageMs = now.getTime() - flight.departureTime.getTime();
+      // Calculate age in years (historical flights with null times get age 0)
+      const ageMs = flight.departureTime ? now.getTime() - flight.departureTime.getTime() : 0;
       const ageYears = ageMs / (1000 * 60 * 60 * 24 * 365.25);
 
       // Basic confidence calculation (will be refined during aggregation)
@@ -182,7 +182,7 @@ export async function findEnrichmentCandidates(
         missingRoute,
         ageYears,
         confidence,
-        enrichmentMode: getEnrichmentMode(flight.departureTime),
+        enrichmentMode: getEnrichmentMode(flight.departureTime ?? new Date()),
       });
     }
 
@@ -681,7 +681,7 @@ export async function createHistoricalEnrichment(
       return null;
     }
 
-    const mode = getEnrichmentMode(flight.departureTime);
+    const mode = getEnrichmentMode(flight.departureTime ?? new Date());
 
     // Get user settings
     const settings = await getUserEnrichmentSettings(flight.userId);
@@ -718,8 +718,8 @@ export async function createHistoricalEnrichment(
       depIcao: flight.depIcao,
       arrIata: flight.arrIata,
       arrIcao: flight.arrIcao,
-      departureTime: flight.departureTime.toISOString(),
-      arrivalTime: flight.arrivalTime.toISOString(),
+      departureTime: flight.departureTime?.toISOString() ?? null,
+      arrivalTime: flight.arrivalTime?.toISOString() ?? null,
       status: flight.status,
       actualRoute: flight.actualRoute,
       overflownCountries: flight.overflownCountries,

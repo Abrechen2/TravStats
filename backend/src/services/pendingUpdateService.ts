@@ -1,6 +1,6 @@
 /**
  * Pending Update Service
- * 
+ *
  * Manages pending flight updates, including applying, rejecting, and editing them.
  * Also calculates statistics impact of updates.
  */
@@ -214,8 +214,12 @@ export async function calculateStatisticsImpact(
   const proposedDepTime = proposedData.departureTime ? new Date(proposedData.departureTime) : flight.departureTime;
   const proposedArrTime = proposedData.arrivalTime ? new Date(proposedData.arrivalTime) : flight.arrivalTime;
 
-  const originalFlightTime = Math.round((originalArrTime.getTime() - originalDepTime.getTime()) / (1000 * 60));
-  const proposedFlightTime = Math.round((proposedArrTime.getTime() - proposedDepTime.getTime()) / (1000 * 60));
+  const originalFlightTime = (originalArrTime && originalDepTime)
+    ? Math.round((originalArrTime.getTime() - originalDepTime.getTime()) / (1000 * 60))
+    : 0;
+  const proposedFlightTime = (proposedArrTime && proposedDepTime)
+    ? Math.round((proposedArrTime.getTime() - proposedDepTime.getTime()) / (1000 * 60))
+    : 0;
 
   return {
     distance: {
@@ -301,9 +305,10 @@ async function calculateUserStats(
       totalDistance += dist;
     }
 
-    // Flight time (in minutes)
-    const flightTime =
-      (f.arrivalTime.getTime() - f.departureTime.getTime()) / (1000 * 60);
+    // Flight time (in minutes) — historical flights with null times contribute 0
+    const flightTime = (f.arrivalTime && f.departureTime)
+      ? (f.arrivalTime.getTime() - f.departureTime.getTime()) / (1000 * 60)
+      : 0;
     totalFlightTime += flightTime;
 
     // Airlines
@@ -809,4 +814,3 @@ export async function cleanupExpiredUpdates(): Promise<number> {
     return 0;
   }
 }
-

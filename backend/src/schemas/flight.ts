@@ -76,11 +76,11 @@ const baseFlightSchema = z.object({
     lat: z.number().min(-90).max(90),
     lon: z.number().min(-180).max(180),
   }),
-  departureTime: z.string().datetime(),
-  arrivalTime: z.string().datetime(),
+  departureTime: z.string().datetime().optional().nullable(),
+  arrivalTime: z.string().datetime().optional().nullable(),
   actualDeparture: z.string().datetime().optional().nullable(),
   actualArrival:   z.string().datetime().optional().nullable(),
-  status: z.enum(['scheduled', 'flown', 'cancelled']).default('scheduled'),
+  status: z.enum(['scheduled', 'flown', 'cancelled', 'historical']).default('scheduled'),
   notes: z.string().transform((v) => v.replace(/<[^>]*>/g, '')).optional(),
   price: z.number().min(0).optional(),
   currency: z.enum(['EUR', 'USD', 'GBP', 'CHF']).optional(),
@@ -106,17 +106,15 @@ const baseFlightSchema = z.object({
 
 export const createFlightSchema = baseFlightSchema.refine(
   data => {
+    if (data.status === 'historical') return true;
+    if (!data.departureTime || !data.arrivalTime) return false;
     const depTime = new Date(data.departureTime);
     const arrTime = new Date(data.arrivalTime);
     const diffHours = (arrTime.getTime() - depTime.getTime()) / (1000 * 60 * 60);
-
-    // Allow flights up to 24 hours duration (catches obvious errors)
-    // This handles timezone differences and overnight flights
-    // A negative difference up to -12 hours is acceptable (timezone crossing)
     return diffHours >= -12 && diffHours <= 24;
   },
   {
-    message: 'Flight duration must be between -12 and +24 hours (check your times and timezones)',
+    message: 'Non-historical flights require departure and arrival times with valid duration',
     path: ['arrivalTime'],
   }
 );
@@ -135,7 +133,7 @@ export const flightQuerySchema = z.object({
   arrivalAirport: z.string().optional(),
   fromDate: z.string().datetime().optional(),
   toDate: z.string().datetime().optional(),
-  status: z.union([z.enum(['scheduled', 'flown', 'cancelled']), z.array(z.enum(['scheduled', 'flown', 'cancelled']))]).optional(),
+  status: z.union([z.enum(['scheduled', 'flown', 'cancelled', 'historical']), z.array(z.enum(['scheduled', 'flown', 'cancelled', 'historical']))]).optional(),
   category: z.enum(['business', 'private', 'vacation']).optional(),
   tags: z.union([z.string(), z.array(z.string())]).optional(),
   minPrice: z.coerce.number().min(0).optional(),

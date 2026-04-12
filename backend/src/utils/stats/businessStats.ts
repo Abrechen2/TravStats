@@ -5,7 +5,11 @@ import type { FlightData, BusinessStats } from './types';
  * Calculate business/informative statistics
  */
 export function calculateBusinessStats(flights: FlightData[]): BusinessStats {
-  const flownFlights = flights.filter(f => f.status === 'flown');
+  // Narrow to flown flights with known times (historical flights have null times)
+  const flownFlights = flights.filter(
+    (f): f is typeof f & { departureTime: Date; arrivalTime: Date } =>
+      f.status === 'flown' && f.departureTime !== null && f.arrivalTime !== null
+  );
 
   // Cost per kilometer — only consider flights that have a cost entry so the denominator
   // (distance) is not inflated by cost-free flights.
