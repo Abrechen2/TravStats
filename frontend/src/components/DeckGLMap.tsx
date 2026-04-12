@@ -95,7 +95,8 @@ export function DeckGLMap({
   const deckClickedRef = useRef(false);
 
   // Store subscription
-  const { selectedIds, selectedFlights, highlightMode, clearSelection } = useFlightSelectionStore();
+  const { selectedIds, selectedFlights, highlightMode, clearSelection, showDetails } =
+    useFlightSelectionStore();
 
   // Auto-pitch: 3D layers need pitch > 0 to be visible
   useEffect(() => {
@@ -397,10 +398,18 @@ export function DeckGLMap({
           flights={selectedFlights}
           screenX={tooltipPos.x}
           screenY={tooltipPos.y}
+          mode={visMode === "trip-routes" ? "trip-routes" : "routes"}
           onClose={() => {
             clearSelection();
             setTooltipVisible(false);
             onResetTrip?.();
+          }}
+          onShowDetails={() => {
+            setTooltipVisible(false);
+            showDetails(
+              selectedFlights,
+              visMode === "trip-routes" ? "trip-details" : "route-details"
+            );
           }}
         />
       )}

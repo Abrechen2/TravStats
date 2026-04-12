@@ -45,6 +45,12 @@ export default function DashboardPage(): JSX.Element {
 
   const [leftOpen, setLeftOpen] = useState(false);
   const [rightOpen, setRightOpen] = useState(false);
+  const detailMode = useFlightSelectionStore((s) => s.detailMode);
+
+  // Auto-open sidebar when route/trip details are requested
+  useEffect(() => {
+    if (detailMode) setLeftOpen(true);
+  }, [detailMode]);
   const [onboarding, setOnboarding] = useState<OnboardingState>({
     flightAdded: false,
     usedFilter: false,
