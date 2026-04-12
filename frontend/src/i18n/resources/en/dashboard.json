@@ -77,6 +77,11 @@
     "totalFlights": "Total Flights:"
   },
   "allFlights": "All Flights",
+  "sort": "Sort",
+  "sortDate": "Date",
+  "sortRoute": "Route",
+  "sortAirline": "Airline",
+  "sortStatus": "Status",
   "flightsTitle": "Flights",
   "statsTitle": "Stats",
   "unknownDate": "Unknown date",
