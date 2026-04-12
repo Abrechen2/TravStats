@@ -164,10 +164,11 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
     });
 
     // Check achievements for any flown flights (outside transaction — non-critical)
+    let newAchievements: Awaited<ReturnType<typeof checkAndUpdateAchievements>> = [];
     const hasFlown = parsedFlights.some((f) => f.status === "flown");
     if (hasFlown) {
       try {
-        await checkAndUpdateAchievements(userId);
+        newAchievements = await checkAndUpdateAchievements(userId);
       } catch (err: unknown) {
         logger.error({
           type: "achievement_check_failed",
@@ -177,7 +178,11 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
       }
     }
 
-    res.status(201).json({ flights: createdFlights, count: createdFlights.length });
+    res.status(201).json({
+      flights: createdFlights,
+      count: createdFlights.length,
+      newAchievements: newAchievements.length > 0 ? newAchievements : undefined,
+    });
   } catch (error) {
     next(error);
   }

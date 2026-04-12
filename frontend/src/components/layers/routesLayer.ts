@@ -102,7 +102,7 @@ const DIM_ALPHA = 18;
 export function createRoutesLayers(
   flights: GeoJSONFeature[],
   minRouteCount: number,
-  onFlightClick?: (flightId: string) => void,
+  onFlightClick?: (flightId: string | string[]) => void,
   themeColors?: MapLayerColors,
   arcHeight: number = 1,
   selectedIds: string[] = [],
@@ -154,8 +154,8 @@ export function createRoutesLayers(
     pickable: !!onFlightClick,
     onClick: onFlightClick
       ? ({ object }) => {
-          const lastId = object?.flightIds.at(-1);
-          if (lastId) onFlightClick(lastId);
+          const ids = object?.flightIds;
+          if (ids && ids.length > 0) onFlightClick(ids);
         }
       : undefined,
     updateTriggers: {

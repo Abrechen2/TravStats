@@ -285,6 +285,25 @@ export default function DashboardPage(): JSX.Element {
     }
   };
 
+  const handleBatchComplete = async (
+    batchAchievements?: import("../types").UserAchievement[]
+  ): Promise<void> => {
+    setShowFlightForm(false);
+
+    // Refresh flight data after batch import
+    loadFlights();
+    const recentData = await flightsApi.getAll({ limit: API_LIMITS.RECENT_FLIGHTS, offset: 0 });
+    setRecentFlights(recentData.flights);
+    setTotalFlightsCount(recentData.total);
+
+    setOnboarding((prev) => ({ ...prev, flightAdded: true }));
+
+    // Show achievement popup if new achievements were unlocked
+    if (batchAchievements && batchAchievements.length > 0) {
+      setNewAchievements(batchAchievements);
+    }
+  };
+
   const handleUpdateFlight = async (id: string, updates: Partial<Flight>) => {
     try {
       const result = (await flightsApi.update(id, updates)) as Flight & {
@@ -718,6 +737,16 @@ export default function DashboardPage(): JSX.Element {
                   allFlights.find((f) => f.id === id) ?? recentFlights.find((f) => f.id === id);
                 if (flight) useFlightSelectionStore.getState().setSelection([flight]);
               }}
+              onRouteClick={(ids) => {
+                const routeFlights = ids
+                  .map(
+                    (id) =>
+                      allFlights.find((f) => f.id === id) ?? recentFlights.find((f) => f.id === id)
+                  )
+                  .filter((f): f is Flight => f !== undefined);
+                if (routeFlights.length > 0)
+                  useFlightSelectionStore.getState().setSelection(routeFlights);
+              }}
               onEdit={(flight) => setEditingFlight(flight)}
               activeTripId={activeTripId}
               onResetTrip={() => {
@@ -986,6 +1015,7 @@ export default function DashboardPage(): JSX.Element {
         <SimplifiedFlightFormV2
           onSubmit={handleAddFlight}
           onCancel={() => setShowFlightForm(false)}
+          onBatchComplete={handleBatchComplete}
         />
       )}
 
