@@ -18,8 +18,8 @@ interface FlightData {
   arrIata: string | null;
   airline: string | null;
   aircraft: string | null;
-  departureTime: Date;
-  arrivalTime: Date;
+  departureTime: Date | null;
+  arrivalTime: Date | null;
   status: string;
 }
 
@@ -42,10 +42,10 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       existingAchievements.map(ua => [ua.achievementId, ua])
     );
 
-    // Get user's flights (flown for main stats, all for planner/survivor)
+    // Get user's flights (flown+historical for geo/distance stats, all for planner/survivor)
     const [flights, allFlights] = await Promise.all([
       prisma.flight.findMany({
-        where: { userId, status: 'flown' },
+        where: { userId, status: { in: ['flown', 'historical'] } },
         orderBy: { departureTime: 'asc' },
       }),
       prisma.flight.findMany({
@@ -78,6 +78,7 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
     stats.cancelledCount = allFlights.filter(f => f.status === 'cancelled').length;
 
     for (const f of scheduled) {
+      if (!f.departureTime) continue;
       const advanceDays = Math.floor((f.departureTime.getTime() - now) / (1000 * 60 * 60 * 24));
       if (advanceDays > stats.scheduledMaxAdvanceDays) {
         stats.scheduledMaxAdvanceDays = advanceDays;
@@ -210,7 +211,7 @@ interface UserStats {
 
 async function calculateUserStats(flights: FlightData[]): Promise<UserStats> {
   const stats: UserStats = {
-    flightsCount: flights.length,
+    flightsCount: flights.filter(f => f.status === 'flown').length,
     totalDistance: 0,
     totalFlightHours: 0,
     countries: new Set(),
@@ -281,9 +282,10 @@ async function calculateUserStats(flights: FlightData[]): Promise<UserStats> {
     stats.totalDistance += distance;
     stats.longestSingleFlight = Math.max(stats.longestSingleFlight, distance);
 
-    // Flight time
-    const flightTime =
-      (flight.arrivalTime.getTime() - flight.departureTime.getTime()) / 1000 / 60 / 60; // hours
+    // Flight time (historical flights have null times — contribute 0 hours)
+    const flightTime = (flight.departureTime && flight.arrivalTime)
+      ? (flight.arrivalTime.getTime() - flight.departureTime.getTime()) / 1000 / 60 / 60
+      : 0;
     stats.totalFlightHours += flightTime;
 
     // Airports
@@ -320,31 +322,34 @@ async function calculateUserStats(flights: FlightData[]): Promise<UserStats> {
       stats.aircraftTypes.add(flight.aircraft);
     }
 
-    // Night flights (00:00 - 06:00)
-    const depHour = flight.departureTime.getHours();
-    if (depHour >= 0 && depHour < 6) {
-      stats.nightFlights++;
+    // Time-based stats — only applicable when departure time is known
+    if (flight.departureTime) {
+      // Night flights (00:00 - 06:00)
+      const depHour = flight.departureTime.getHours();
+      if (depHour >= 0 && depHour < 6) {
+        stats.nightFlights++;
+      }
+
+      // Weekend flights
+      const depDay = flight.departureTime.getDay();
+      if (depDay === 0 || depDay === 6) {
+        stats.weekendFlights++;
+      }
+
+      // Months with flights
+      const monthKey = `${flight.departureTime.getFullYear()}-${String(
+        flight.departureTime.getMonth() + 1
+      ).padStart(2, '0')}`;
+      stats.monthsWithFlights.add(monthKey);
+
+      const monthCount = stats.flightsByMonth.get(monthKey) || 0;
+      stats.flightsByMonth.set(monthKey, monthCount + 1);
+
+      // Years with flights
+      const yearKey = String(flight.departureTime.getFullYear());
+      const yearCount = stats.flightsByYear.get(yearKey) || 0;
+      stats.flightsByYear.set(yearKey, yearCount + 1);
     }
-
-    // Weekend flights
-    const depDay = flight.departureTime.getDay();
-    if (depDay === 0 || depDay === 6) {
-      stats.weekendFlights++;
-    }
-
-    // Months with flights
-    const monthKey = `${flight.departureTime.getFullYear()}-${String(
-      flight.departureTime.getMonth() + 1
-    ).padStart(2, '0')}`;
-    stats.monthsWithFlights.add(monthKey);
-
-    const monthCount = stats.flightsByMonth.get(monthKey) || 0;
-    stats.flightsByMonth.set(monthKey, monthCount + 1);
-
-    // Years with flights
-    const yearKey = String(flight.departureTime.getFullYear());
-    const yearCount = stats.flightsByYear.get(yearKey) || 0;
-    stats.flightsByYear.set(yearKey, yearCount + 1);
 
     // Route counts
     const routeKey = `${depCode}-${arrCode}`;
@@ -542,8 +547,8 @@ function checkOceanCrossing(flights: FlightData[]): boolean {
 
 function checkTimeTravel(flights: FlightData[]): boolean {
   for (const flight of flights) {
-    // Arrive before departure (in UTC)
-    if (flight.arrivalTime < flight.departureTime) {
+    // Arrive before departure (in UTC) — skip historical flights with null times
+    if (flight.arrivalTime && flight.departureTime && flight.arrivalTime < flight.departureTime) {
       return true;
     }
   }
@@ -577,6 +582,7 @@ function checkAllSeasons(flights: FlightData[]): number {
   // Northern hemisphere seasons
   const seasons = new Set<number>();
   for (const flight of flights) {
+    if (!flight.departureTime) continue;
     const month = flight.departureTime.getMonth(); // 0-11
     if (month >= 2 && month <= 4) seasons.add(0); // Spring (Mar-May)
     if (month >= 5 && month <= 7) seasons.add(1); // Summer (Jun-Aug)

@@ -7,7 +7,11 @@ import type { FlightData, FunStats } from './types';
  * Calculate fun/entertaining statistics
  */
 export async function calculateFunStats(flights: FlightData[]): Promise<FunStats> {
-  const flownFlights = flights.filter(f => f.status === 'flown');
+  // Narrow to flown flights with known times (historical flights have null times)
+  const flownFlights = flights.filter(
+    (f): f is typeof f & { departureTime: Date; arrivalTime: Date } =>
+      f.status === 'flown' && f.departureTime !== null && f.arrivalTime !== null
+  );
 
   // Timezone hopper - count unique timezones
   const timezones = new Set<string>();

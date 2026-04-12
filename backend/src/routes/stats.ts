@@ -68,13 +68,14 @@ function buildWhere(
 }
 
 async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummaryStats> {
-  // Distance and flight time only count flown flights; totalFlights, status/airline/category
+  // Distance and flight time only count flown+historical flights; totalFlights, status/airline/category
   // counts use the original where so that planned and cancelled flights are visible.
   const flownWhere: Prisma.FlightWhereInput = { ...where, status: 'flown' };
+  const geoWhere: Prisma.FlightWhereInput = { ...where, status: { in: ['flown', 'historical'] } };
 
   const [flownFlights, totalFlights, statusCounts, airlineCounts, categoryCounts, costAgg] = await Promise.all([
     prisma.flight.findMany({
-      where: flownWhere,
+      where: geoWhere,
       select: {
         depIata: true,
         depIcao: true,
@@ -150,9 +151,9 @@ async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummarySt
     const arrTz = (flight.arrIata && tzMap.get(flight.arrIata))
       || (flight.arrIcao && tzMap.get(flight.arrIcao))
       || null;
-    const flightTime = tzAwareDurationMinutes(
-      flight.departureTime, flight.arrivalTime, depTz, arrTz,
-    );
+    const flightTime = (flight.departureTime && flight.arrivalTime)
+      ? tzAwareDurationMinutes(flight.departureTime, flight.arrivalTime, depTz, arrTz)
+      : 0;
     totalFlightTime += flightTime;
   });
 

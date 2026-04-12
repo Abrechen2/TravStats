@@ -38,6 +38,8 @@ const FLIGHT_ACTIVE_BUFFER_HOURS = 2; // Consider flight active for 2 hours afte
  * Check if a flight is currently active (during flight time + buffer)
  */
 export function isFlightActive(flight: Flight): boolean {
+  // Historical flights have no times and are never "active"
+  if (!flight.departureTime || !flight.arrivalTime) return false;
   const now = new Date();
   const departureTime = new Date(flight.departureTime);
   const arrivalTime = new Date(flight.arrivalTime);
@@ -166,10 +168,10 @@ function convertApiDataToProposed(
     // Times are already in UTC from lookupFlightDetails, just ensure ISO format
     departureTime: apiData.departureTime
       ? new Date(apiData.departureTime).toISOString()
-      : originalFlight.departureTime.toISOString(),
+      : (originalFlight.departureTime?.toISOString() ?? null),
     arrivalTime: apiData.arrivalTime
       ? new Date(apiData.arrivalTime).toISOString()
-      : originalFlight.arrivalTime.toISOString(),
+      : (originalFlight.arrivalTime?.toISOString() ?? null),
     status: originalFlight.status, // Don't change status automatically
   };
 
@@ -220,13 +222,13 @@ export async function createPendingUpdate(
       depIcao: flight.depIcao,
       arrIata: flight.arrIata,
       arrIcao: flight.arrIcao,
-      departureTime: flight.departureTime.toISOString(),
-      arrivalTime: flight.arrivalTime.toISOString(),
+      departureTime: flight.departureTime?.toISOString() ?? null,
+      arrivalTime: flight.arrivalTime?.toISOString() ?? null,
       status: flight.status,
     };
 
     // Calculate expiry (24 hours from now or after flight ends, whichever is later)
-    const flightEnd = new Date(flight.arrivalTime);
+    const flightEnd = flight.arrivalTime ? new Date(flight.arrivalTime) : new Date();
     flightEnd.setHours(flightEnd.getHours() + FLIGHT_ACTIVE_BUFFER_HOURS);
     const expiresAt = new Date(Math.max(Date.now() + 24 * 60 * 60 * 1000, flightEnd.getTime()));
 
@@ -342,15 +344,16 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
 
       // Check if only during flight is enabled
       if (userSettings.autoUpdateOnlyDuringFlight) {
-        const flightEnd = new Date(flight.arrivalTime);
-        if (now > flightEnd) {
+        const flightEnd = flight.arrivalTime ? new Date(flight.arrivalTime) : null;
+        if (flightEnd && now > flightEnd) {
           continue; // Flight already ended
         }
       }
 
       try {
         // Lookup flight data from API
-        const dateStr = flight.departureTime.toISOString().split('T')[0];
+        const dateStr = flight.departureTime ? flight.departureTime.toISOString().split('T')[0] : null;
+        if (!dateStr) continue; // Cannot look up flights without a departure time
         const apiData = await lookupFlightDetails(flight.flightNumber!, dateStr, flight.userId);
 
         if (!apiData) {
@@ -370,8 +373,8 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
           depIcao: flight.depIcao,
           arrIata: flight.arrIata,
           arrIcao: flight.arrIcao,
-          departureTime: flight.departureTime.toISOString(),
-          arrivalTime: flight.arrivalTime.toISOString(),
+          departureTime: flight.departureTime?.toISOString() ?? null,
+          arrivalTime: flight.arrivalTime?.toISOString() ?? null,
           status: flight.status,
         };
 

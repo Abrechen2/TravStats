@@ -23,7 +23,7 @@ interface FlightReminderData {
   depIata: string | null;
   arrName: string | null;
   arrIata: string | null;
-  departureTime: Date;
+  departureTime: Date | null;
 }
 
 interface UserReminderData {
@@ -49,7 +49,9 @@ function buildReminderHtml(
   const flightNumber = flight.flightNumber ?? 'N/A';
   const depAirport = flight.depIata ?? flight.depName ?? 'Unknown';
   const arrAirport = flight.arrIata ?? flight.arrName ?? 'Unknown';
-  const departureTime = flight.departureTime.toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
+  const departureTime = flight.departureTime
+    ? flight.departureTime.toISOString().replace('T', ' ').slice(0, 16) + ' UTC'
+    : 'Unknown';
 
   return `
 <!DOCTYPE html>

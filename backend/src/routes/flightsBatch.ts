@@ -71,11 +71,11 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
             arrName: enriched.arrival.name,
             arrLat: enriched.arrival.lat,
             arrLon: enriched.arrival.lon,
-            departureTime: new Date(data.departureTime),
-            arrivalTime: new Date(data.arrivalTime),
+            departureTime: data.departureTime ? new Date(data.departureTime) : null,
+            arrivalTime: data.arrivalTime ? new Date(data.arrivalTime) : null,
             actualDeparture: data.actualDeparture ? new Date(data.actualDeparture) : null,
             actualArrival: data.actualArrival ? new Date(data.actualArrival) : null,
-            delayMinutes: data.actualDeparture
+            delayMinutes: (data.actualDeparture && data.departureTime)
               ? Math.round(
                   (new Date(data.actualDeparture).getTime() - new Date(data.departureTime).getTime()) /
                     60000
@@ -133,14 +133,14 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
         const color = TRIP_COLORS[count % TRIP_COLORS.length];
 
         const sorted = [...groupFlights].sort(
-          (a, b) => a.departureTime.getTime() - b.departureTime.getTime()
+          (a, b) => (a.departureTime?.getTime() ?? 0) - (b.departureTime?.getTime() ?? 0)
         );
         const origin = sorted[0]?.depIata ?? "?";
         const dest = sorted[Math.ceil(sorted.length / 2) - 1]?.arrIata ?? "?";
-        const month = sorted[0]?.departureTime.toLocaleDateString("en", {
+        const month = sorted[0]?.departureTime?.toLocaleDateString("en", {
           month: "short",
           year: "numeric",
-        });
+        }) ?? "";
         const name = `${origin} – ${dest} · ${month}`;
 
         const trip = await tx.trip.create({ data: { userId, name, color } });

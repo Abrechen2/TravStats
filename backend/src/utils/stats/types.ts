@@ -80,8 +80,8 @@ export interface FlightData {
   arrIcao?: string | null;
   airline?: string | null;
   aircraft?: string | null;
-  departureTime: Date;
-  arrivalTime: Date;
+  departureTime: Date | null;
+  arrivalTime: Date | null;
   status: string;
   price?: number | null;
   taxes?: number | null;
