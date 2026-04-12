@@ -379,10 +379,10 @@ export default function DashboardPage(): JSX.Element {
       try {
         const isReturn = mode === "return";
         const input: FlightInput = {
-          airline: flight.airline,
-          flightNumber: isReturn ? undefined : flight.flightNumber,
-          callsign: flight.callsign,
-          aircraft: flight.aircraft,
+          airline: flight.airline || undefined,
+          flightNumber: isReturn ? undefined : flight.flightNumber || undefined,
+          callsign: flight.callsign || undefined,
+          aircraft: flight.aircraft || undefined,
           departure: isReturn
             ? {
                 iata: flight.arrIata,
@@ -416,10 +416,10 @@ export default function DashboardPage(): JSX.Element {
           departureTime: flight.departureTime ?? undefined,
           arrivalTime: flight.arrivalTime ?? undefined,
           status: flight.departureTime ? "scheduled" : "historical",
-          seatClass: flight.seatClass,
-          category: flight.category,
-          tags: flight.tags,
-          companions: flight.companions,
+          seatClass: flight.seatClass || undefined,
+          category: flight.category || undefined,
+          tags: flight.tags?.length ? flight.tags : undefined,
+          companions: flight.companions?.length ? flight.companions : undefined,
         };
         await flightsApi.create(input);
         const recentData = await flightsApi.getAll({
