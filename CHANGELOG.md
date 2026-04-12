@@ -4,6 +4,17 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.18.1-beta] - 2026-04-12
+
+### Fixed
+- **Achievement seeding on every server start** — Achievement
+  definitions are now ensured on every backend startup (idempotent),
+  not only during the Docker entrypoint init script. Fixes empty
+  achievements after fresh deploys or database resets.
+- **Round-trip route popup** — Route popup now correctly shows
+  both airports (e.g. "Munich Airport → Helsinki Vantaa") instead
+  of showing the departure airport twice for round-trip routes.
+
 ## [0.18.0-beta] - 2026-04-12
 
 ### Added
