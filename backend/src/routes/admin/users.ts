@@ -17,7 +17,6 @@ router.get('/users', async (req: AuthRequest, res: Response, next: NextFunction)
         username: true,
         isAdmin: true,
         isActive: true,
-        canTrainLLM: true,
         invitedBy: true,
         createdAt: true,
         _count: {

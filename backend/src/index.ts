@@ -100,7 +100,7 @@ const corsOrigin =
 if (corsOrigin) {
   const allowedOrigins =
     corsOrigin === '*' ? [] : corsOrigin.split(',').map((o) => o.trim()).filter(Boolean);
-  const allowAllOrigins = corsOrigin === '*' || process.env.NODE_ENV === 'development';
+  const allowAllOrigins = corsOrigin === '*';
 
   app.use(
     cors({
@@ -126,12 +126,9 @@ import { RATE_LIMITS, FILE_LIMITS } from './config/constants';
 // Rate limiting
 const limiter = rateLimit({
   windowMs: RATE_LIMITS.GENERAL_WINDOW_MS,
-  // Disable in non-production to avoid noisy 429s during local use;
-  // otherwise allow a generous burst for dashboards/pagination.
   max: process.env.NODE_ENV === 'production' ? RATE_LIMITS.GENERAL_MAX_REQUESTS : RATE_LIMITS.GENERAL_MAX_REQUESTS_DEV,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: () => process.env.NODE_ENV !== 'production',
 });
 app.use('/api/', limiter);
 
@@ -146,19 +143,19 @@ app.use(cookieParser());
 app.use(requestLoggerMiddleware);
 
 // Read version from VERSION file (single source of truth)
-let appVersion = '0.0.0-dev';
+// Read version from VERSION file and expose as env var for admin endpoints
 try {
   const versionFile = path.join(__dirname, '../VERSION');
   if (fs.existsSync(versionFile)) {
-    appVersion = fs.readFileSync(versionFile, 'utf-8').trim();
+    process.env.APP_VERSION = fs.readFileSync(versionFile, 'utf-8').trim();
   }
 } catch {
-  // fallback to dev
+  // fallback — APP_VERSION stays unset
 }
 
 // Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', version: appVersion, timestamp: new Date().toISOString() });
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // API routes

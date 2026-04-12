@@ -129,7 +129,13 @@ router.post(
   passwordResetLimiter,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { changeToken, newPassword } = forceChangePasswordSchema.parse(req.body);
+      const { newPassword } = forceChangePasswordSchema.parse(req.body);
+      // Read changeToken from HttpOnly cookie (set during login) or fallback to body
+      const changeToken: string | undefined =
+        req.cookies?.change_token || req.body.changeToken;
+      if (!changeToken) {
+        throw new AppError('Change token is required', 400);
+      }
       const hashedToken = hashToken(changeToken);
 
       const user = await prisma.user.findFirst({
@@ -157,6 +163,8 @@ router.post(
 
       logger.info({ operation: 'force_password_change_completed', userId: user.id });
 
+      // Clear the change_token cookie
+      res.clearCookie('change_token', { path: '/' });
       res.json({ message: 'Password changed successfully.' });
     } catch (error) {
       next(error);

@@ -1,4 +1,4 @@
-import { Router, Response } from 'express';
+import { Router, Response, NextFunction } from 'express';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { z } from 'zod';
 import { collectCorrectionFeedback } from '../services/parserFeedback';
@@ -23,7 +23,7 @@ const correctionSchema = z.object({
  * POST /api/v1/parser-feedback/correction
  * Submit user correction for parser result
  */
-router.post('/correction', authenticate, async (req: AuthRequest, res: Response) => {
+router.post('/correction', authenticate, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
     const correction = correctionSchema.parse(req.body);
@@ -57,35 +57,8 @@ router.post('/correction', authenticate, async (req: AuthRequest, res: Response)
     }
 
     logger.error({ error }, '[Parser Feedback] Failed to submit correction');
-    res.status(500).json({
-      error: 'Failed to submit correction',
-      message: error instanceof Error ? error.message : 'Unknown error',
-    });
+    next(error);
   }
 });
 
 export default router;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

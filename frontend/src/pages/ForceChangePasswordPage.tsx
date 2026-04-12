@@ -5,7 +5,7 @@ import { authApi } from "../lib/api";
 import { useTranslation } from "../hooks/useTranslation";
 
 interface LocationState {
-  changeToken?: string;
+  requiresChange?: boolean;
 }
 
 export default function ForceChangePasswordPage(): JSX.Element {
@@ -13,7 +13,7 @@ export default function ForceChangePasswordPage(): JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as LocationState | null;
-  const changeToken = state?.changeToken;
+  const requiresChange = state?.requiresChange;
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -21,10 +21,10 @@ export default function ForceChangePasswordPage(): JSX.Element {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!changeToken) {
+    if (!requiresChange) {
       navigate("/login");
     }
-  }, [changeToken, navigate]);
+  }, [requiresChange, navigate]);
 
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
@@ -38,14 +38,11 @@ export default function ForceChangePasswordPage(): JSX.Element {
       setError(t("auth:forceChangePassword.passwordsNotMatch"));
       return;
     }
-    if (!changeToken) {
-      setError(t("auth:forceChangePassword.invalidToken"));
-      return;
-    }
 
     setLoading(true);
     try {
-      await authApi.forceChangePassword(changeToken, newPassword);
+      // changeToken is delivered via HttpOnly cookie — only send the new password
+      await authApi.forceChangePassword(newPassword);
       navigate("/login", { state: { message: t("auth:forceChangePassword.success") } });
     } catch {
       setError(t("auth:forceChangePassword.invalidToken"));
@@ -54,7 +51,7 @@ export default function ForceChangePasswordPage(): JSX.Element {
     }
   };
 
-  if (!changeToken) {
+  if (!requiresChange) {
     return <div />;
   }
 

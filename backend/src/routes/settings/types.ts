@@ -94,12 +94,6 @@ export interface DeveloperModeUpdateData {
   developerModeConfirmedAt?: Date | null;
 }
 
-export interface TrainingSettingsUpdateData {
-  useTrainedModels?: boolean;
-  preferredEmailModel?: string;
-  preferredVisionModel?: string;
-}
-
 export interface ApiKeysUpdateData {
   airlabsApiKey?: string | null;
   aviationstackApiKey?: string | null;

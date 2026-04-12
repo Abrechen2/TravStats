@@ -6,7 +6,7 @@ import FlightCalendar from "../components/FlightCalendar";
 import YearHeatmap from "../components/YearHeatmap";
 import ContextualHint from "../components/Onboarding/ContextualHint";
 import type { Flight, FunStats, BusinessStats, UniqueStats, SeatStats } from "../types";
-import { STORAGE_KEYS } from "../lib/constants";
+import { API_LIMITS, STORAGE_KEYS } from "../lib/constants";
 import { useTranslation } from "../hooks/useTranslation";
 import { useSettingsStore } from "../store/settingsStore";
 import { useAuthStore } from "../store/authStore";
@@ -100,7 +100,7 @@ export default function AdvancedStatsPage(): JSX.Element {
       setLoading(true);
       let allFlights: Flight[] = [];
       let offset = 0;
-      const limit = 100;
+      const limit = API_LIMITS.MAX_PAGE_SIZE;
 
       const MAX_PAGES = 200;
       let pages = 0;

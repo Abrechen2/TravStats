@@ -52,7 +52,7 @@ LABEL org.opencontainers.image.licenses="MIT"
 
 WORKDIR /app
 
-# Install nginx, supervisor, Python, and other dependencies
+# Install nginx, supervisor, and runtime dependencies
 RUN apt-get update && apt-get install -y \
     nginx \
     supervisor \
@@ -60,9 +60,6 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     wget \
     netcat-openbsd \
-    python3 \
-    python3-pip \
-    build-essential \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
@@ -76,31 +73,6 @@ RUN npm config set fetch-retries 5 \
     && npm ci --only=production
 COPY --from=backend-builder /app/backend/dist ./dist
 RUN npx prisma generate
-
-# Install Python dependencies for training (PyTorch, etc.)
-# Install PyTorch CPU version first (works everywhere, GPU version can be installed later if needed)
-RUN echo "[build] Installing PyTorch CPU version..." && \
-    pip3 install --no-cache-dir --break-system-packages torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu && \
-    echo "[build] Validating PyTorch installation..." && \
-    python3 -c "import torch; print(f'PyTorch {torch.__version__} installed successfully')" || \
-    (echo "[build] ❌ ERROR: PyTorch installation validation failed" && exit 1)
-
-# Install other training dependencies
-COPY backend/requirements-training.txt ./
-RUN echo "[build] Installing other training dependencies..." && \
-    pip3 install --no-cache-dir --break-system-packages transformers>=4.35.0 peft>=0.6.0 datasets>=2.14.0 accelerate>=0.24.0 bitsandbytes>=0.41.0 && \
-    echo "[build] Validating training dependencies..." && \
-    python3 -c "import transformers; import peft; import datasets; import accelerate; print('All training dependencies installed successfully')" || \
-    (echo "[build] ❌ ERROR: Training dependencies validation failed" && exit 1)
-
-# Copy Python scripts (checkHardware.py and trainLora.py)
-# Ensure scripts directory exists before copying
-RUN mkdir -p ./dist/scripts
-COPY --from=backend-builder /app/backend/src/scripts/checkHardware.py ./dist/scripts/checkHardware.py
-COPY --from=backend-builder /app/backend/src/scripts/trainLora.py ./dist/scripts/trainLora.py
-COPY --from=backend-builder /app/backend/src/scripts/checkTrainingData.py ./dist/scripts/checkTrainingData.py
-COPY --from=backend-builder /app/backend/src/scripts/evalModel.py ./dist/scripts/evalModel.py
-RUN chmod +x ./dist/scripts/*.py 2>/dev/null || true
 
 # Copy VERSION file for runtime version reporting
 COPY backend/VERSION ./VERSION

@@ -1,8 +1,8 @@
 import { Router, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { AuthRequest } from '../../middleware/auth';
-import { requireTrainingAccess } from '../../middleware/trainingAuth';
 import { prisma } from '../../db';
+import { AppError } from '../../middleware/errorHandler';
 import logger from '../../utils/logger';
 import { DeveloperModeUpdateData, defaultSettings } from './types';
 
@@ -13,8 +13,21 @@ const developerModeSchema = z.object({
   confirmed: z.boolean().optional(),
 });
 
-// All developer-mode routes require training access
-router.use(requireTrainingAccess);
+// Developer-mode requires admin privileges
+router.use(async (req: AuthRequest, _res: Response, next: NextFunction) => {
+  try {
+    if (!req.userId) throw new AppError('Unauthorized', 401);
+    const user = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { isAdmin: true, isActive: true },
+    });
+    if (!user || !user.isActive) throw new AppError('Forbidden', 403);
+    if (!user.isAdmin) throw new AppError('Admin access required', 403);
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 
 // GET /
 router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {

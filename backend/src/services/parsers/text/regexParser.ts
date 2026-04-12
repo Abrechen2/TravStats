@@ -4,88 +4,10 @@ import { ParsedBooking } from '../../bookingParser';
 import { normalizeParsedBooking, PATTERNS } from '../shared/utils';
 import logger from '../../../utils/logger';
 
-// City name to IATA code mapping (common German/European cities)
-const CITY_TO_IATA: Record<string, string> = {
-  münchen: 'MUC', munchen: 'MUC', muenchen: 'MUC', munich: 'MUC',
-  frankfurt: 'FRA',
-  berlin: 'BER', 'berlin-tegel': 'TXL',
-  hamburg: 'HAM',
-  düsseldorf: 'DUS', dusseldorf: 'DUS', duesseldorf: 'DUS',
-  köln: 'CGN', koln: 'CGN', koeln: 'CGN', cologne: 'CGN',
-  stuttgart: 'STR', hannover: 'HAJ',
-  nürnberg: 'NUE', nurnberg: 'NUE', nuernberg: 'NUE', nuremberg: 'NUE',
-  leipzig: 'LEJ', dresden: 'DRS', bremen: 'BRE',
-  luxemburg: 'LUX', luxembourg: 'LUX',
-  paris: 'CDG', london: 'LHR', amsterdam: 'AMS',
-  brüssel: 'BRU', brussel: 'BRU', bruessel: 'BRU', brussels: 'BRU',
-  wien: 'VIE', vienna: 'VIE',
-  salzburg: 'SZG',
-  graz: 'GRZ',
-  innsbruck: 'INN',
-  linz: 'LNZ',
-  basel: 'BSL',
-  bern: 'BRN',
-  zürich: 'ZRH', zurich: 'ZRH', genf: 'GVA', geneva: 'GVA',
-  rom: 'FCO', rome: 'FCO', mailand: 'MXP', milan: 'MXP',
-  barcelona: 'BCN', madrid: 'MAD', lissabon: 'LIS', lisbon: 'LIS',
-  kopenhagen: 'CPH', copenhagen: 'CPH', stockholm: 'ARN', oslo: 'OSL',
-  prag: 'PRG', prague: 'PRG', warschau: 'WAW', warsaw: 'WAW',
-  budapest: 'BUD', istanbul: 'IST', athen: 'ATH', athens: 'ATH',
-  helsinki: 'HEL',
-  osaka: 'KIX', 'osaka-kansai': 'KIX', kansai: 'KIX',
-  tokyo: 'NRT', tokio: 'NRT', narita: 'NRT',
-  'tokyo-haneda': 'HND', haneda: 'HND',
-  dubai: 'DXB', 'abu dhabi': 'AUH', abudhabi: 'AUH', doha: 'DOH',
-  singapur: 'SIN', singapore: 'SIN',
-  bangkok: 'BKK',
-  seoul: 'ICN', hongkong: 'HKG', 'hong kong': 'HKG',
-  peking: 'PEK', beijing: 'PEK', schanghai: 'PVG', shanghai: 'PVG',
-  delhi: 'DEL', mumbai: 'BOM', bombay: 'BOM',
-  'new york': 'JFK', 'new york jfk': 'JFK', 'new york newark': 'EWR',
-  'los angeles': 'LAX', chicago: 'ORD', miami: 'MIA',
-  toronto: 'YYZ', montreal: 'YUL', vancouver: 'YVR',
-  sydney: 'SYD', melbourne: 'MEL',
-};
-
-// PNR false positives (German words that match 6-char alphanumeric pattern)
-const PNR_FALSE_POSITIVES = new Set([
-  'VIELEN', 'DANKEN', 'SEHREN', 'WICHTIG', 'BESTEN', 'GRUSS', 'GRUESSE',
-  'HERZLI', 'FREUND', 'SCHONEN', 'GUTEN', 'GUTER', 'GUTES', 'NEUEN',
-  'NEUER', 'NEUES', 'ALTE', 'ALTEN', 'ALTES', 'GROSS', 'GROSSE',
-  'KLEIN', 'KLEINE', 'SCHON', 'SCHONE', 'SCHONER', 'SCHONES', 'NEUE',
-]);
-
-const MONTH_NAMES: Record<string, string> = {
-  'JAN': '01', 'FEB': '02', 'MAR': '03', 'APR': '04', 'MAI': '05', 'MAY': '05',
-  'JUN': '06', 'JUL': '07', 'AUG': '08', 'SEP': '09', 'OKT': '10', 'OCT': '10',
-  'NOV': '11', 'DEZ': '12', 'DEC': '12',
-  'JANUAR': '01', 'JANUARY': '01', 'FEBRUAR': '02', 'FEBRUARY': '02',
-  'MÄRZ': '03', 'MÄR': '03', 'MAERZ': '03', 'MARCH': '03',
-  'APRIL': '04', 'JUNI': '06', 'JUNE': '06', 'JULI': '07', 'JULY': '07', 'AUGUST': '08',
-  'SEPTEMBER': '09', 'OKTOBER': '10', 'OCTOBER': '10', 'NOVEMBER': '11',
-  'DEZEMBER': '12', 'DECEMBER': '12',
-};
-
-/** Add N calendar days to an ISO datetime string (YYYY-MM-DDTHH:MM) */
-function addDays(iso: string, days: number): string {
-  const tIdx = iso.indexOf('T');
-  const datePart = tIdx >= 0 ? iso.slice(0, tIdx) : iso;
-  const timePart = tIdx >= 0 ? iso.slice(tIdx + 1) : '00:00';
-  const [y, m, d] = datePart.split('-').map(Number);
-  const date = new Date(Date.UTC(y, m - 1, d + days));
-  const yy = date.getUTCFullYear();
-  const mm = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const dd = String(date.getUTCDate()).padStart(2, '0');
-  return `${yy}-${mm}-${dd}T${timePart}`;
-}
-
-// Context-aware IATA code extraction patterns
-const IATA_CONTEXT_PATTERNS = [
-  /(?:von|ab|from|dep(?:arture)?)\s+([A-Z]{3})/g,
-  /([A-Z]{3})\s+(?:nach|to|arr(?:ival)?)/g,
-  /(?:nach|to|arr(?:ival)?)\s+([A-Z]{3})/g,
-  /([A-Z]{3})\s*(?:->|-|\u2192|\u2194|\u2013|\u2014|\u27f6)\s*([A-Z]{3})/g,
-];
+import { FLIGHT_NUMBER_FALSE_PREFIXES, MONTH_NAMES } from './regexMappings';
+import { extractAirportCodes, extractAllAirportPairs, isValidIATACode } from './regexAirportExtractor';
+import { addDays, extractAllTimePairs, extractLabeledDates } from './regexDateExtractor';
+import { extractSharedPNR, findPNRInSource } from './regexPnrExtractor';
 
 /**
  * Regex-based Text Parser
@@ -161,114 +83,6 @@ export class RegexTextParser implements ITextParser {
   }
 
   /**
-   * Normalize city name for lookup
-   */
-  private normalizeCityName(city: string): string {
-    return city
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z\s-]/gi, '')
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, ' ');
-  }
-
-  /**
-   * Check if an IATA code is valid (common airports only)
-   * This helps filter out false positives like "OGO", "CRA", etc.
-   */
-  private isValidIATACode(code: string): boolean {
-    const commonValidCodes = new Set([
-      // Major European airports
-      'MUC', 'FRA', 'BER', 'HAM', 'DUS', 'CGN', 'STR', 'HAJ', 'NUE', 'LEJ', 'DRS', 'BRE',
-      'LUX', 'CDG', 'ORY', 'LHR', 'LGW', 'STN', 'AMS', 'BRU', 'VIE', 'ZRH', 'GVA',
-      'FCO', 'MXP', 'BCN', 'MAD', 'LIS', 'CPH', 'ARN', 'OSL', 'PRG', 'WAW', 'BUD', 'IST', 'ATH',
-      'HEL', 'DUB', 'EDI', 'MAN', 'BHX', 'BRS', 'NCL', 'LPL', 'EMA', 'SOU',
-      // DACH airports
-      'SZG', 'GRZ', 'INN', 'LNZ', 'BSL', 'BRN',
-      // Major US airports
-      'JFK', 'EWR', 'LGA', 'LAX', 'SFO', 'ORD', 'DFW', 'DEN', 'ATL', 'MIA', 'SEA', 'BOS', 'IAD', 'DCA',
-      'PHX', 'LAS', 'MCO', 'CLT', 'DTW', 'PHL', 'MSP', 'BWI', 'SLC', 'HNL',
-      // Major Asian airports
-      'NRT', 'HND', 'ICN', 'PEK', 'PVG', 'HKG', 'SIN', 'BKK', 'KUL', 'DXB', 'DOH', 'AUH',
-      'KIX', 'TPE', 'MNL', 'CGK', 'BOM', 'DEL', 'CCU', 'MAA', 'BLR', 'HYD',
-      // Major airports in other regions
-      'SYD', 'MEL', 'BNE', 'PER', 'ADL', 'AKL', 'WLG', 'YVR', 'YYZ', 'YUL', 'YOW', 'YEG', 'YYC',
-      'GRU', 'GIG', 'EZE', 'SCL', 'LIM', 'BOG', 'MEX', 'CUN', 'PTY', 'SJO',
-      'JNB', 'CPT', 'CAI', 'NBO', 'LOS', 'ACC', 'ADD', 'CMN', 'TUN', 'ALG',
-    ]);
-    return commonValidCodes.has(code.toUpperCase());
-  }
-
-  /**
-   * Extract airport codes from text
-   */
-  private extractAirportCodes(source: string): { departure?: string; arrival?: string } {
-    const sourceLower = source.toLowerCase();
-    const sourceUpper = source.toUpperCase();
-
-    // Highest priority: "Von: City (MUC)" / "In: City (LUX)" lines
-    const depM = source.match(/(?:^|\n)\s*(?:Von|Ab|From|Departure|Abflug(?:\s*-?\s*Ort)?)\s*:?\s*[^(\n]*\(([A-Z]{3})\)/im);
-    const arrM = source.match(/(?:^|\n)\s*(?:In|Nach|To|Arrival|Ankunft(?:\s*-?\s*Ort)?)\s*:?\s*[^(\n]*\(([A-Z]{3})\)/im);
-    if (depM && this.isValidIATACode(depM[1])) {
-      return { departure: depM[1], arrival: arrM && this.isValidIATACode(arrM[1]) ? arrM[1] : undefined };
-    }
-
-    // Try city name mapping
-    const cityPattern = /(?:von|ab|from)\s+([\p{L}\s-]+?)\s+(?:nach|to|bis)\s+([\p{L}\s-]+?)(?:\s+am|\s+on|\s+\d|$|\n)/iu;
-    const cityMatch = cityPattern.exec(sourceLower);
-
-    if (cityMatch) {
-      const depCity = this.normalizeCityName(cityMatch[1]);
-      const arrCity = this.normalizeCityName(cityMatch[2]);
-
-      const departure = CITY_TO_IATA[depCity];
-      const arrival = CITY_TO_IATA[arrCity];
-
-      if (departure && arrival) {
-        return { departure, arrival };
-      }
-    }
-
-    // Try context-aware IATA patterns
-    const codes: string[] = [];
-
-    for (const pattern of IATA_CONTEXT_PATTERNS) {
-      const matches = sourceUpper.matchAll(pattern);
-      for (const match of matches) {
-        if (match[1] && /^[A-Z]{3}$/.test(match[1])) {
-          codes.push(match[1]);
-        }
-        if (match[2] && /^[A-Z]{3}$/.test(match[2])) {
-          codes.push(match[2]);
-        }
-      }
-    }
-
-    // Filter out false positives (common German words and invalid codes)
-    const falsePositives = [
-      'UND', 'DER', 'DIE', 'DAS', 'VON', 'BIS', 'FUR', 'MIT', 'AUF', 'AUS',
-      'FUR', 'FÜR', 'EIN', 'EINE', 'EINER', 'EINEM', 'EINEN', 'EINES',
-      'OGO', 'CRA', 'DAN', 'VIEL', 'DANK', 'SEHR', 'WICHT', 'BEST',
-      'GRU', 'HER', 'FRE', 'SCH', 'GUT', 'NEU', 'ALT', 'GRO', 'KLE',
-      'THE', 'AND', 'FOR', 'ARE', 'BUT', 'NOT', 'YOU', 'ALL', 'CAN', 'HER',
-      'WAS', 'ONE', 'OUR', 'OUT', 'DAY', 'GET', 'HAS', 'HIM', 'HIS', 'HOW',
-      'ITS', 'MAY', 'NEW', 'NOW', 'OLD', 'SEE', 'TWO', 'WAY', 'WHO', 'BOY',
-      'DID', 'ITS', 'LET', 'PUT', 'SAY', 'SHE', 'TOO', 'USE', 'YET', 'ZUR',
-    ];
-    const filtered = [...new Set(codes)].filter((code) => !falsePositives.includes(code));
-
-    if (filtered.length >= 2) {
-      return { departure: filtered[0], arrival: filtered[1] };
-    }
-    if (filtered.length === 1) {
-      return { departure: filtered[0] };
-    }
-
-    return {};
-  }
-
-  /**
    * Parse multiple flights from email (round-trip, multi-leg)
    */
   private parseMultipleFlights(source: string): ParsedBooking[] {
@@ -286,8 +100,7 @@ export class RegexTextParser implements ITextParser {
       for (const match of matches) {
         const potential = (match[1] + (match[2] || '')).replace(/\s+/g, '');
         if (/^[A-Z]{2,3}\d{2,4}$/.test(potential)) {
-          const falsePositives = ['AB', 'AM', 'PM', 'VI', 'AN', 'IN', 'ON', 'AT', 'TO', 'OF', 'OR', 'IS', 'AS', 'BE', 'WE', 'HE', 'ME', 'MY', 'BY', 'GO', 'NO', 'SO', 'UP', 'US', 'IT', 'IF', 'DO', 'OK', 'HI', 'OH', 'AH', 'EH', 'UM', 'ER', 'OR', 'UR', 'YA', 'YE', 'YO', 'ZA', 'ZE', 'ZO'];
-          if (!falsePositives.includes(potential.slice(0, 2))) {
+          if (!FLIGHT_NUMBER_FALSE_PREFIXES.includes(potential.slice(0, 2))) {
             flightNumbers.push({ number: potential, index: match.index || 0 });
           }
         }
@@ -300,13 +113,13 @@ export class RegexTextParser implements ITextParser {
     ).sort((a, b) => a.index - b.index);
 
     // Extract all airport code pairs
-    const airportPairs = this.extractAllAirportPairs(source);
+    const airportPairs = extractAllAirportPairs(source);
 
     // Extract all date/time pairs
-    const timePairs = this.extractAllTimePairs(source);
+    const timePairs = extractAllTimePairs(source);
 
     // Extract shared PNR (should be same for all flights in one booking)
-    const sharedPnr = this.extractSharedPNR(source);
+    const sharedPnr = extractSharedPNR(source);
 
     // If we found multiple flight numbers, try to match them with routes
     if (uniqueFlights.length > 1) {
@@ -326,10 +139,10 @@ export class RegexTextParser implements ITextParser {
         if (airportPairs.length > i) {
           const departure = airportPairs[i].departure;
           const arrival = airportPairs[i].arrival;
-          flightData.departureCode = departure && this.isValidIATACode(departure)
+          flightData.departureCode = departure && isValidIATACode(departure)
             ? departure
             : undefined;
-          flightData.arrivalCode = arrival && this.isValidIATACode(arrival)
+          flightData.arrivalCode = arrival && isValidIATACode(arrival)
             ? arrival
             : undefined;
         }
@@ -354,8 +167,8 @@ export class RegexTextParser implements ITextParser {
       for (let i = 0; i < airportPairs.length; i++) {
         const pair = airportPairs[i];
         if (pair.departure && pair.arrival &&
-            this.isValidIATACode(pair.departure) &&
-            this.isValidIATACode(pair.arrival)) {
+            isValidIATACode(pair.departure) &&
+            isValidIATACode(pair.arrival)) {
           const flightData: Partial<ParsedBooking> = {
             departureCode: pair.departure,
             arrivalCode: pair.arrival,
@@ -389,302 +202,6 @@ export class RegexTextParser implements ITextParser {
   }
 
   /**
-   * Extract all airport code pairs from text
-   */
-  private extractAllAirportPairs(source: string): Array<{ departure?: string; arrival?: string }> {
-    const pairs: Array<{ departure?: string; arrival?: string }> = [];
-    const sourceLower = source.toLowerCase();
-    const sourceUpper = source.toUpperCase();
-
-    // Pattern 0 (highest priority): labelled IATA codes
-    // Variant A: "Von: City Name (MUC)" / "In: City Name (LUX)" — IATA in parens
-    const depIataMatches: Array<{ code: string; index: number }> = [];
-    const arrIataMatches: Array<{ code: string; index: number }> = [];
-    const depLinePattern = /(?:^|\n)\s*(?:von|ab|from|departure|abflug(?:\s*-?\s*ort)?)\s*:?\s*[^(\n]*\(([A-Z]{3})\)/gim;
-    const arrLinePattern = /(?:^|\n)\s*(?:in|nach|to|arrival|ankunft(?:\s*-?\s*ort)?)\s*:?\s*[^(\n]*\(([A-Z]{3})\)/gim;
-    for (const m of source.matchAll(depLinePattern)) {
-      if (this.isValidIATACode(m[1])) depIataMatches.push({ code: m[1], index: m.index! });
-    }
-    for (const m of source.matchAll(arrLinePattern)) {
-      if (this.isValidIATACode(m[1])) arrIataMatches.push({ code: m[1], index: m.index! });
-    }
-
-    // Variant B: "IATA-Code des Abflughafens MUC" / "IATA-Code des Ankunftsflughafens HEL"
-    // Used in new Lufthansa 2025 plain-text emails
-    for (const m of source.matchAll(/IATA-Code\s+des\s+Abflughafens\s+([A-Z]{3})\b/g)) {
-      if (this.isValidIATACode(m[1])) depIataMatches.push({ code: m[1], index: m.index! });
-    }
-    for (const m of source.matchAll(/IATA-Code\s+des\s+Ankunftsflughafens\s+([A-Z]{3})\b/g)) {
-      if (this.isValidIATACode(m[1])) arrIataMatches.push({ code: m[1], index: m.index! });
-    }
-
-    if (depIataMatches.length > 0 || arrIataMatches.length > 0) {
-      const count = Math.max(depIataMatches.length, arrIataMatches.length);
-      for (let i = 0; i < count; i++) {
-        pairs.push({ departure: depIataMatches[i]?.code, arrival: arrIataMatches[i]?.code });
-      }
-      return pairs; // high-confidence result — skip lower-priority patterns
-    }
-
-    // Pattern 1: City names (von X nach Y)
-    const cityPattern = /(?:von|ab|from)\s+([\p{L}\s-]+?)\s+(?:nach|to|bis)\s+([\p{L}\s-]+?)(?:\s+am|\s+on|\s+\d|$|\n)/giu;
-    let cityMatch;
-    while ((cityMatch = cityPattern.exec(sourceLower)) !== null) {
-      const depCity = this.normalizeCityName(cityMatch[1]);
-      const arrCity = this.normalizeCityName(cityMatch[2]);
-      const departure = CITY_TO_IATA[depCity];
-      const arrival = CITY_TO_IATA[arrCity];
-      if (departure && arrival) {
-        pairs.push({ departure, arrival });
-      }
-    }
-
-    // Pattern 2: IATA codes in context (MUC → LUX, MUC-LUX, etc.)
-    const iataPattern = /([A-Z]{3})\s*(?:->|-|\u2192|\u2194|\u2013|\u2014|\u27f6)\s*([A-Z]{3})/g;
-    let iataMatch;
-    while ((iataMatch = iataPattern.exec(sourceUpper)) !== null) {
-      const dep = iataMatch[1];
-      const arr = iataMatch[2];
-      if (this.isValidIATACode(dep) && this.isValidIATACode(arr)) {
-        pairs.push({ departure: dep, arrival: arr });
-      }
-    }
-
-    // Pattern 3: Sequential IATA codes on same line (MUC FRA LUX)
-    // Use whitespace boundaries (not \b) to avoid false positives from German umlauts
-    // creating word boundaries inside words like "ÜBER DEN" → "BER" "DEN"
-    const sequentialPattern = /(?:^|[ \t])([A-Z]{3})[ \t]+([A-Z]{3})(?=[ \t\r\n]|$)/gm;
-    const codes: string[] = [];
-    let seqMatch;
-    while ((seqMatch = sequentialPattern.exec(sourceUpper)) !== null) {
-      if (this.isValidIATACode(seqMatch[1]) && this.isValidIATACode(seqMatch[2])) {
-        codes.push(seqMatch[1], seqMatch[2]);
-      }
-    }
-
-    // Group sequential codes into pairs
-    for (let i = 0; i < codes.length - 1; i += 2) {
-      pairs.push({ departure: codes[i], arrival: codes[i + 1] });
-    }
-
-    return pairs;
-  }
-
-  /**
-   * Extract all date/time pairs from text
-   */
-  private extractAllTimePairs(source: string): Array<{ departure?: string; arrival?: string }> {
-    const pairs: Array<{ departure?: string; arrival?: string }> = [];
-
-    // ISO format dates — TZ offset/Z suffix is consumed but not captured (local time kept)
-    const isoPattern = /(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?)(?:[+-]\d{2}:?\d{2}|Z)?(?=[^\d]|$)/g;
-    const isoMatches = Array.from(source.matchAll(isoPattern));
-    const isoDates = isoMatches.map(m => m[1].replace(' ', 'T'));
-
-    // Group into pairs (departure, arrival)
-    for (let i = 0; i < isoDates.length; i += 2) {
-      pairs.push({
-        departure: isoDates[i],
-        arrival: isoDates[i + 1],
-      });
-    }
-
-    // High-priority: "Datum der Abreise DD.MM.YYYY Abflugzeit HH:MM"
-    // New Lufthansa format — date and time separated by a keyword on the same line.
-    // Each occurrence is a separate flight segment departure.
-    const datumAbflugPattern = /Datum\s+der\s+Abreise\s+(\d{1,2})\.(\d{1,2})\.(\d{4})\s+Abflugzeit\s+(\d{1,2}):(\d{2})/gi;
-    for (const m of source.matchAll(datumAbflugPattern)) {
-      const iso = `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}T${m[4].padStart(2, '0')}:${m[5]}`;
-      pairs.push({ departure: iso });
-    }
-
-    // If "Datum der Abreise" found all segments, return now — generic German date scanning
-    // would corrupt arrivals by matching dates that are actually departure repeats.
-    if (pairs.length > 0) return pairs;
-
-    // German/English date format — abbreviated and full month names, time optional
-    // Also handles dash-separated time: "18.09.2025 - 08:25"
-    const germanPattern = /(\d{1,2})[.\s]+(\d{1,2}|[A-Za-zÄÖÜäöü]{3,9})[.\s]+(\d{4})(?:[,\s]+(?:-\s*)?(\d{1,2}):(\d{2}))?/gi;
-    const germanMatches = Array.from(source.matchAll(germanPattern));
-
-    for (const match of germanMatches) {
-      const day = match[1].padStart(2, '0');
-      const raw = match[2].toUpperCase();
-      const month = MONTH_NAMES[raw] ?? (match[2].length <= 2 ? match[2].padStart(2, '0') : '01');
-      const year = match[3];
-      const hour = match[4] ? match[4].padStart(2, '0') : '00';
-      const minute = match[5] ?? '00';
-      let isoTime = `${year}-${month}-${day}T${hour}:${minute}`;
-
-      // Detect +N next-day marker (e.g. "+1", "(+1)") — exclude timezone offsets like +01:00
-      const after = source.slice(match.index! + match[0].length, match.index! + match[0].length + 8);
-      const nextDay = after.match(/^\s*\(?\+(\d)\)?(?!\d*:)/);
-      if (nextDay) isoTime = addDays(isoTime, Number(nextDay[1]));
-
-      // Add to pairs: first German date becomes departure, second becomes arrival of same pair
-      const existingPair = pairs.find(p => p.departure && !p.arrival);
-      if (existingPair) {
-        existingPair.arrival = isoTime;
-      } else {
-        pairs.push({ departure: isoTime });
-      }
-    }
-
-    return pairs;
-  }
-
-  /**
-   * Find the first PNR candidate in an already-uppercased source string.
-   * A PNR is a 6-char alphanumeric token that contains at least one digit
-   * and is not a known German false-positive word.
-   */
-  private findPNRInSource(sourceUpper: string): string | undefined {
-    for (const match of sourceUpper.matchAll(/\b([A-Z0-9]{6})\b/g)) {
-      const pnr = match[1];
-      if (!PNR_FALSE_POSITIVES.has(pnr) && /[0-9]/.test(pnr)) {
-        return pnr;
-      }
-    }
-    return undefined;
-  }
-
-  /**
-   * Extract shared PNR (should be same for all flights)
-   */
-  private extractSharedPNR(source: string): string | undefined {
-    // Label-based extraction first (more reliable) — covers both old and new Lufthansa formats
-    const labeledPnr = source.match(
-      /(?:Buchungsreferenz|Buchungscode|Booking\s*(?:Reference|Code)|PNR|Confirmation\s*(?:Number|Code))\s*:?\s*([A-Z0-9]{5,8})\b/i
-    );
-    if (labeledPnr) return labeledPnr[1].toUpperCase();
-    return this.findPNRInSource(source.toUpperCase());
-  }
-
-  /**
-   * Scan source for dep/arr label keywords immediately followed by a parseable date.
-   * Returns whichever of {departureTime, arrivalTime} it finds.
-   * Caller uses positional fallback for any field not found here.
-   */
-  private extractLabeledDates(source: string): { departureTime?: string; arrivalTime?: string } {
-    const result: { departureTime?: string; arrivalTime?: string } = {};
-
-    // Strategy A: new Lufthansa format — "Abflug - Datum: 06 Jun 2025\n  Zeit: 09:30"
-    // Match "Abflug[-]Datum:" and "Ankunft[-]Datum:" blocks, then look for Zeit: nearby.
-    const datumZeitPattern =
-      /(?:Abflug|Departure)\s*[-–]\s*(?:Datum|Date)\s*:?\s*([\w\s.]+?)\s*\n(?:[^\n]*\n)?\s*Zeit\s*:?\s*(\d{1,2}:\d{2})/gi;
-    const datumZeitArrPattern =
-      /(?:Ankunft|Arrival)\s*[-–]\s*(?:Datum|Date)\s*:?\s*([\w\s.]+?)\s*\n(?:[^\n]*\n)?\s*Zeit\s*:?\s*(\d{1,2}:\d{2})/gi;
-
-    const parseDateTimePair = (dateStr: string, timeStr: string): string | undefined => {
-      const m = dateStr.trim().match(/^(\d{1,2})[.\s]+([A-Za-zÄÖÜäöü]{3,9}|\d{1,2})[.\s]+(\d{4})$/);
-      if (!m) return undefined;
-      const d = m[1].padStart(2, '0');
-      const raw = m[2].toUpperCase();
-      const mo = MONTH_NAMES[raw] ?? (m[2].length <= 2 ? m[2].padStart(2, '0') : undefined);
-      if (!mo) return undefined;
-      const h = timeStr.split(':')[0].padStart(2, '0');
-      const min = timeStr.split(':')[1] ?? '00';
-      return `${m[3]}-${mo}-${d}T${h}:${min}`;
-    };
-
-    for (const m of source.matchAll(datumZeitPattern)) {
-      const iso = parseDateTimePair(m[1], m[2]);
-      if (iso) { result.departureTime = iso; break; }
-    }
-    for (const m of source.matchAll(datumZeitArrPattern)) {
-      const iso = parseDateTimePair(m[1], m[2]);
-      if (iso) { result.arrivalTime = iso; break; }
-    }
-
-    if (result.departureTime && result.arrivalTime) return result;
-
-    // Strategy B: label-based parsing for combined datetime or date-only labels.
-    // DEP_LABELS: The lookahead (?=\s*:|\s+\d|\s+[A-Za-zÄÖÜäöü]{3}) on "Dep"/"Arr" is zero-width
-    // (not consumed). The trailing \s*:?\s* then consumes the actual separator.
-    const DEP_LABELS =
-      /(?:Abflug(?!\s*[-–]\s*(?:Datum|Ort))|Abflugzeit|Abflugszeit|Datum\s+der\s+Abreise|Abreise|Departure(?:\s*Date)?|Departing|Departs|Dep(?=\s*:|\s+\d|\s+[A-Za-zÄÖÜäöü]{3}))\s*:?\s*/gi;
-    const ARR_LABELS =
-      /(?:Ankunft(?!\s*[-–]\s*(?:Datum|Ort))|Ankunftszeit|Arrival|Arriving|Arrives|Arr(?=\s*:|\s+\d|\s+[A-Za-zÄÖÜäöü]{3}))\s*:?\s*/gi;
-
-    const parseFromPos = (pos: number): string | undefined => {
-      const slice = source.slice(pos, pos + 60);
-      // ISO format (TZ suffix stripped)
-      const isoM = slice.match(/^(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?)(?:[+-]\d{2}:?\d{2}|Z)?/);
-      if (isoM) {
-        const iso = isoM[1].replace(' ', 'T');
-        const afterIso = slice.slice(isoM[0].length, isoM[0].length + 8);
-        const nextDay = afterIso.match(/^\s*\(?\+(\d)\)?(?!\d*:)/);
-        return nextDay ? addDays(iso, Number(nextDay[1])) : iso;
-      }
-      // German/English date format (time optional, dash or comma separator, "Uhr" suffix)
-      const deM = slice.match(
-        /^(\d{1,2})[.\s]+(\d{1,2}|[A-Za-zÄÖÜäöü]{3,9})[.\s]+(\d{4})(?:[,\s]+(?:-\s*)?(\d{1,2}):(\d{2})(?:\s*Uhr)?)?/
-      );
-      if (deM) {
-        const d = deM[1].padStart(2, '0');
-        const raw = deM[2].toUpperCase();
-        const mo = MONTH_NAMES[raw] ?? (deM[2].length <= 2 ? deM[2].padStart(2, '0') : '01');
-        const h = deM[4] ? deM[4].padStart(2, '0') : '00';
-        const min = deM[5] ?? '00';
-        let iso = `${deM[3]}-${mo}-${d}T${h}:${min}`;
-        const afterDate = slice.slice(deM[0].length, deM[0].length + 8);
-        const nextDay = afterDate.match(/^\s*\(?\+(\d)\)?(?!\d*:)/);
-        if (nextDay) iso = addDays(iso, Number(nextDay[1]));
-        return iso;
-      }
-      // Weekday prefix "So. 22. Oktober..." — skip weekday and retry
-      const weekdayPrefixM = slice.match(/^[A-Za-z]{2,3}\.\s+/);
-      if (weekdayPrefixM) {
-        return parseFromPos(pos + weekdayPrefixM[0].length);
-      }
-      return undefined;
-    };
-
-    if (!result.departureTime) {
-      for (const m of source.matchAll(DEP_LABELS)) {
-        const t = parseFromPos(m.index! + m[0].length);
-        if (t) { result.departureTime = t; break; }
-      }
-    }
-
-    if (!result.arrivalTime) {
-      for (const m of source.matchAll(ARR_LABELS)) {
-        const pos = m.index! + m[0].length;
-        const slice = source.slice(pos, pos + 20);
-        // Time-only arrival (e.g. "Ankunft: 19:05 Uhr") — combine with departure date
-        const timeOnly = slice.match(/^(\d{1,2}:\d{2})(?:\s*Uhr)?/);
-        if (timeOnly && result.departureTime) {
-          const depDate = result.departureTime.slice(0, 10); // YYYY-MM-DD
-          result.arrivalTime = `${depDate}T${timeOnly[1].padStart(5, '0')}`;
-          break;
-        }
-        const t = parseFromPos(pos);
-        if (t) { result.arrivalTime = t; break; }
-      }
-    }
-
-    // Strategy C: standalone "HH:MM Uhr" times (old Buchungsdetails format)
-    // When a date was found but T00:00, fill in the real time from "HH:MM Uhr" occurrences.
-    const uhrPattern = /(\d{1,2}):(\d{2})\s+Uhr/gi;
-    const uhrMatches = [...source.matchAll(uhrPattern)];
-    if (uhrMatches.length > 0 && result.departureTime?.endsWith('T00:00')) {
-      const h = uhrMatches[0][1].padStart(2, '0');
-      const min = uhrMatches[0][2];
-      result.departureTime = result.departureTime.slice(0, 11) + `${h}:${min}`;
-    }
-    if (uhrMatches.length > 1 && result.departureTime && !result.departureTime.endsWith('T00:00')) {
-      const h = uhrMatches[1][1].padStart(2, '0');
-      const min = uhrMatches[1][2];
-      const depDate = result.departureTime.slice(0, 10);
-      if (!result.arrivalTime || result.arrivalTime.endsWith('T00:00')) {
-        result.arrivalTime = `${depDate}T${h}:${min}`;
-      }
-    }
-
-    return result;
-  }
-
-  /**
    * Parse booking email using regex patterns (single flight)
    */
   private parseBookingEmailRegex(source: string): ParsedBooking {
@@ -708,9 +225,7 @@ export class RegexTextParser implements ITextParser {
       if (flightMatch) {
         // Validate it's not a false positive (e.g., "AM18" from "am 18")
         const potentialFlight = (flightMatch[1] + (flightMatch[2] || '')).replace(/\s+/g, '');
-        // Common false positives to exclude
-        const falsePositives = ['AB', 'AM', 'PM', 'VI', 'AN', 'IN', 'ON', 'AT', 'TO', 'OF', 'OR', 'IS', 'AS', 'BE', 'WE', 'HE', 'ME', 'MY', 'BY', 'GO', 'NO', 'SO', 'UP', 'US', 'IT', 'IF', 'DO', 'OK', 'HI', 'OH', 'AH', 'EH', 'UM', 'ER', 'OR', 'UR', 'YA', 'YE', 'YO', 'ZA', 'ZE', 'ZO'];
-        if (!falsePositives.includes(potentialFlight.slice(0, 2))) {
+        if (!FLIGHT_NUMBER_FALSE_PREFIXES.includes(potentialFlight.slice(0, 2))) {
           data.flightNumber = potentialFlight;
           data.airline = potentialFlight.slice(0, 2);
           break;
@@ -726,8 +241,7 @@ export class RegexTextParser implements ITextParser {
         // Only accept if it looks like a real flight number (airline code + 2-4 digits)
         if (/^[A-Z]{2,3}\d{2,4}$/.test(potential)) {
           const airlineCode = potential.slice(0, 2);
-          const falsePositives = ['AM', 'PM', 'VI', 'AN', 'IN', 'ON', 'AT', 'TO', 'OF', 'OR', 'IS', 'AS', 'BE', 'WE', 'HE', 'ME', 'MY', 'BY', 'GO', 'NO', 'SO', 'UP', 'US', 'IT', 'IF', 'DO', 'OK', 'HI', 'OH', 'AH', 'EH', 'UM', 'ER', 'OR', 'UR', 'YA', 'YE', 'YO', 'ZA', 'ZE', 'ZO'];
-          if (!falsePositives.includes(airlineCode)) {
+          if (!FLIGHT_NUMBER_FALSE_PREFIXES.includes(airlineCode)) {
             data.flightNumber = potential;
             data.airline = airlineCode;
           }
@@ -736,20 +250,20 @@ export class RegexTextParser implements ITextParser {
     }
 
     // PNR - delegate to shared extraction logic
-    const pnr = this.findPNRInSource(sourceUpper);
+    const pnr = findPNRInSource(sourceUpper);
     if (pnr) {
       data.pnr = pnr;
       data.bookingReference = pnr;
     }
 
     // Airports
-    const { departure, arrival } = this.extractAirportCodes(source);
+    const { departure, arrival } = extractAirportCodes(source);
     // Validate airport codes against whitelist to filter false positives
-    data.departureCode = departure && this.isValidIATACode(departure) ? departure : undefined;
-    data.arrivalCode = arrival && this.isValidIATACode(arrival) ? arrival : undefined;
+    data.departureCode = departure && isValidIATACode(departure) ? departure : undefined;
+    data.arrivalCode = arrival && isValidIATACode(arrival) ? arrival : undefined;
 
     // Times — label-based first (Option A), positional fallback
-    const labeled = this.extractLabeledDates(source);
+    const labeled = extractLabeledDates(source);
     if (labeled.departureTime) data.departureTime = labeled.departureTime;
     if (labeled.arrivalTime) data.arrivalTime = labeled.arrivalTime;
 

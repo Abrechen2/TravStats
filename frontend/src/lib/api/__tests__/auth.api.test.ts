@@ -48,12 +48,11 @@ describe("authApi.resetPassword", () => {
 describe("authApi.forceChangePassword", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("posts changeToken and newPassword", async () => {
+  it("posts newPassword (changeToken in HttpOnly cookie)", async () => {
     vi.mocked(api.post).mockResolvedValue({ data: { message: "changed" } });
-    const result = await authApi.forceChangePassword("ctok", "newpass1");
+    const result = await authApi.forceChangePassword("newpass1");
     expect(result.message).toBe("changed");
     expect(api.post).toHaveBeenCalledWith("/auth/force-change-password", {
-      changeToken: "ctok",
       newPassword: "newpass1",
     });
   });

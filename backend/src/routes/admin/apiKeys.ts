@@ -63,13 +63,21 @@ router.get('/api-keys', async (req: AuthRequest, res: Response, next: NextFuncti
       });
     }
 
+    // Return only existence flags — never send decrypted secrets in GET responses
+    const maskKey = (encrypted: string | null | undefined): string | undefined => {
+      const decrypted = decryptApiKey(encrypted);
+      if (!decrypted) return undefined;
+      if (decrypted.length <= 8) return "****";
+      return decrypted.slice(0, 4) + "****" + decrypted.slice(-4);
+    };
+
     res.json({
-      globalAirlabsApiKey: decryptApiKey(adminSettings.globalAirlabsApiKey) || undefined,
-      globalAviationstackApiKey: decryptApiKey(adminSettings.globalAviationstackApiKey) || undefined,
-      globalOpenskyClientId: decryptApiKey(adminSettings.globalOpenskyClientId) || undefined,
-      globalOpenskyClientSecret: decryptApiKey(adminSettings.globalOpenskyClientSecret) || undefined,
-      globalOpenskyUsername: decryptApiKey(adminSettings.globalOpenskyUsername) || undefined,
-      globalOpenskyPassword: decryptApiKey(adminSettings.globalOpenskyPassword) || undefined,
+      globalAirlabsApiKey: maskKey(adminSettings.globalAirlabsApiKey),
+      globalAviationstackApiKey: maskKey(adminSettings.globalAviationstackApiKey),
+      globalOpenskyClientId: maskKey(adminSettings.globalOpenskyClientId),
+      globalOpenskyClientSecret: maskKey(adminSettings.globalOpenskyClientSecret),
+      globalOpenskyUsername: maskKey(adminSettings.globalOpenskyUsername),
+      globalOpenskyPassword: maskKey(adminSettings.globalOpenskyPassword),
       allowUserFlightApiKeys: adminSettings.allowUserFlightApiKeys ?? true,
     });
   } catch (error) {

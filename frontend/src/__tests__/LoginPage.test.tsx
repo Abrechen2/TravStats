@@ -126,7 +126,6 @@ describe("LoginPage", () => {
   it("redirects to /change-password when login returns requiresPasswordChange", async () => {
     vi.mocked(authApi.login).mockResolvedValue({
       requiresPasswordChange: true as const,
-      changeToken: "test-token",
     });
     render(
       <BrowserRouter>
@@ -138,7 +137,7 @@ describe("LoginPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /login\.submit/i }));
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith("/change-password", {
-        state: { changeToken: "test-token" },
+        state: { requiresChange: true },
       });
     });
   });

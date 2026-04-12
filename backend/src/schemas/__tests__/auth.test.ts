@@ -33,6 +33,11 @@ describe('forceChangePasswordSchema', () => {
     const result = forceChangePasswordSchema.parse({ changeToken: 'tok', newPassword: 'newpass1' });
     expect(result.changeToken).toBe('tok');
   });
+
+  it('accepts without changeToken (delivered via cookie)', () => {
+    const result = forceChangePasswordSchema.parse({ newPassword: 'newpass1' });
+    expect(result.changeToken).toBeUndefined();
+  });
 });
 
 describe('adminResetPasswordSchema', () => {

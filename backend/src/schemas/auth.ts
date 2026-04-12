@@ -29,7 +29,7 @@ export const resetPasswordSchema = z.object({
 });
 
 export const forceChangePasswordSchema = z.object({
-  changeToken: z.string().min(1),
+  changeToken: z.string().min(1).optional(), // now delivered via HttpOnly cookie; body is fallback
   newPassword: z.string().min(8).max(100),
 });
 

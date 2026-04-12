@@ -23,10 +23,10 @@ import ForceChangePasswordPage from "../pages/ForceChangePasswordPage";
 describe("ForceChangePasswordPage", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("renders password change form when changeToken is in state", () => {
+  it("renders password change form when requiresChange is in state", () => {
     render(
       <MemoryRouter
-        initialEntries={[{ pathname: "/change-password", state: { changeToken: "test-token" } }]}
+        initialEntries={[{ pathname: "/change-password", state: { requiresChange: true } }]}
       >
         <ForceChangePasswordPage />
       </MemoryRouter>
@@ -35,7 +35,7 @@ describe("ForceChangePasswordPage", () => {
     expect(screen.getByLabelText(/auth:forceChangePassword\.confirmPassword/i)).toBeInTheDocument();
   });
 
-  it("redirects to login when no changeToken in state", () => {
+  it("redirects to login when no requiresChange in state", () => {
     render(
       <MemoryRouter initialEntries={[{ pathname: "/change-password", state: null }]}>
         <ForceChangePasswordPage />
@@ -47,7 +47,7 @@ describe("ForceChangePasswordPage", () => {
   it("shows error when passwords don't match", async () => {
     render(
       <MemoryRouter
-        initialEntries={[{ pathname: "/change-password", state: { changeToken: "test-token" } }]}
+        initialEntries={[{ pathname: "/change-password", state: { requiresChange: true } }]}
       >
         <ForceChangePasswordPage />
       </MemoryRouter>
@@ -68,9 +68,7 @@ describe("ForceChangePasswordPage", () => {
     vi.mocked(authApi.forceChangePassword).mockResolvedValue({ message: "ok" });
     render(
       <MemoryRouter
-        initialEntries={[
-          { pathname: "/change-password", state: { changeToken: "test-change-tok" } },
-        ]}
+        initialEntries={[{ pathname: "/change-password", state: { requiresChange: true } }]}
       >
         <ForceChangePasswordPage />
       </MemoryRouter>
@@ -82,9 +80,7 @@ describe("ForceChangePasswordPage", () => {
       target: { value: "newpassword1" },
     });
     fireEvent.click(screen.getByRole("button", { name: /auth:forceChangePassword\.submit/i }));
-    await waitFor(() =>
-      expect(authApi.forceChangePassword).toHaveBeenCalledWith("test-change-tok", "newpassword1")
-    );
+    await waitFor(() => expect(authApi.forceChangePassword).toHaveBeenCalledWith("newpassword1"));
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/login", expect.any(Object)));
   });
 });
