@@ -4,6 +4,29 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.19.0-beta] - 2026-04-12
+
+### Added
+- **Scheduled flight distinction** — Future flights are automatically
+  marked as "scheduled", shown with cyan arcs on the map and a
+  "GEPLANT" badge in the flight list. Scheduled flights are excluded
+  from all statistics.
+- **Flight list sort selector** — The sidebar flight list now has
+  sort buttons for date (asc/desc), route, airline, and status.
+- **Planner & Survivor achievements** — Five new achievements for
+  planned flights (Wanderlust, Globetrotter Planner, Year Ahead)
+  and cancelled flights (Survivor, Turbulence Veteran).
+- **Improved airport labels** — IATA labels on the map are slightly
+  larger with a more visible dark background for better readability.
+
+### Fixed
+- **Achievements page readability** — Locked achievements are no
+  longer blurred; they show at reduced opacity with a lock icon
+  centered-right in the card. All text and progress bars remain
+  clearly readable.
+- **Achievements page scroll** — The survivor/planner categories
+  at the bottom of the page are no longer cut off.
+
 ## [0.18.1-beta] - 2026-04-12
 
 ### Fixed
