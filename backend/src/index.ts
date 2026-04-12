@@ -249,8 +249,14 @@ if (process.env.NODE_ENV !== 'test') {
       nodeVersion: process.version,
     });
 
-    // Airport seeding is now started after first login (not on server start)
-    // This prevents CORS issues and ensures the server is fully ready
+    // Ensure achievement definitions are present (idempotent upsert)
+    try {
+      const { ensureAchievements } = await import('./data/achievements');
+      await ensureAchievements();
+      logger.info({ operation: 'server_start_achievements', message: 'Achievements ensured' });
+    } catch (error) {
+      logger.error({ operation: 'server_start_achievements_error', message: 'Failed to ensure achievements', error });
+    }
 
     // Initialize backup scheduler
     try {
