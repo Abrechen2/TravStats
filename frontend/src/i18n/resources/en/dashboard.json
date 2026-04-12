@@ -91,5 +91,8 @@
     "flightsTotal_other": "flights total",
     "topRoutes": "Top Routes",
     "flown": "flown"
-  }
+  },
+  "flight": "Flight",
+  "routeDetails": "Route Details",
+  "tripDetails": "Trip Details"
 }

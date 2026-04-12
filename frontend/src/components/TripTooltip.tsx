@@ -1,6 +1,7 @@
-import { calculateDistance, calculateFlightDuration } from "../lib/geo";
+import { calculateDistance } from "../lib/geo";
 import { useLocale } from "../hooks/useLocale";
 import { formatDuration } from "../lib/formatters";
+import { useTranslation } from "../hooks/useTranslation";
 import { TooltipContainer } from "./TooltipContainer";
 import type { Flight } from "../types";
 
@@ -9,17 +10,35 @@ interface TripTooltipProps {
   screenX: number;
   screenY: number;
   onClose: () => void;
+  onShowDetails?: () => void;
+  mode?: "routes" | "trip-routes";
 }
 
-function buildRouteChain(sorted: Flight[]): string {
-  const iatas: string[] = [];
+function getRouteEndpoints(sorted: Flight[]): {
+  depName: string;
+  depIata: string;
+  arrName: string;
+  arrIata: string;
+} {
+  const first = sorted[0];
+  const last = sorted[sorted.length - 1];
+  return {
+    depName: first?.depName ?? first?.depIata ?? "?",
+    depIata: first?.depIata ?? "?",
+    arrName: last?.arrName ?? last?.arrIata ?? "?",
+    arrIata: last?.arrIata ?? "?",
+  };
+}
+
+function buildTripChain(sorted: Flight[]): string {
+  const names: string[] = [];
   for (const f of sorted) {
-    const dep = f.depIata ?? "?";
-    const arr = f.arrIata ?? "?";
-    if (iatas.length === 0 || iatas[iatas.length - 1] !== dep) iatas.push(dep);
-    iatas.push(arr);
+    const dep = f.depName?.split(" ")[0] ?? f.depIata ?? "?";
+    const arr = f.arrName?.split(" ")[0] ?? f.arrIata ?? "?";
+    if (names.length === 0 || names[names.length - 1] !== dep) names.push(dep);
+    if (names[names.length - 1] !== arr) names.push(arr);
   }
-  return iatas.join(" → ");
+  return names.join(" → ");
 }
 
 function formatDateRange(sorted: Flight[], locale: string): string {
@@ -44,8 +63,16 @@ function formatDateRange(sorted: Flight[], locale: string): string {
   return `${d1.toLocaleDateString(locale, opts(true))} – ${d2.toLocaleDateString(locale, opts(true))}`;
 }
 
-export function TripTooltip({ flights, screenX, screenY, onClose }: TripTooltipProps): JSX.Element {
+export function TripTooltip({
+  flights,
+  screenX,
+  screenY,
+  onClose,
+  onShowDetails,
+  mode = "routes",
+}: TripTooltipProps): JSX.Element {
   const locale = useLocale();
+  const { t } = useTranslation(["dashboard"]);
 
   const sorted = [...flights].sort(
     (a, b) => new Date(a.departureTime).getTime() - new Date(b.departureTime).getTime()
@@ -53,13 +80,7 @@ export function TripTooltip({ flights, screenX, screenY, onClose }: TripTooltipP
 
   const tripName = sorted[0]?.trip?.name;
   const tripColor = sorted[0]?.trip?.color ?? "#f59e0b";
-  const route = buildRouteChain(sorted);
   const dateRange = formatDateRange(sorted, locale);
-
-  const totalDurationMin = sorted.reduce((sum, f) => {
-    if (!f.departureTime || !f.arrivalTime) return sum;
-    return sum + calculateFlightDuration(f.departureTime, f.arrivalTime);
-  }, 0);
 
   const totalDistanceKm = sorted.reduce((sum, f) => {
     if (f.routeDistance != null) return sum + f.routeDistance;
@@ -69,59 +90,84 @@ export function TripTooltip({ flights, screenX, screenY, onClose }: TripTooltipP
     return sum;
   }, 0);
 
-  const airlines = [...new Set(sorted.map((f) => f.airline).filter(Boolean))] as string[];
-  const aircraft = [...new Set(sorted.map((f) => f.aircraft).filter(Boolean))] as string[];
+  const avgDurationMin =
+    sorted.reduce((sum, f) => sum + (f.durationMinutes ?? 0), 0) / (sorted.length || 1);
 
-  const statsRow2: string[] = [];
-  if (totalDurationMin > 0) statsRow2.push(formatDuration(totalDurationMin));
-  if (totalDistanceKm > 0)
-    statsRow2.push(`${Math.round(totalDistanceKm).toLocaleString(locale)} km`);
+  const airlines = [...new Set(sorted.map((f) => f.airline).filter(Boolean))] as string[];
+  const seatClasses = [...new Set(sorted.map((f) => f.seatClass).filter(Boolean))] as string[];
+
+  const isTrip = mode === "trip-routes";
+  const { depName, depIata, arrName, arrIata } = getRouteEndpoints(sorted);
 
   return (
     <TooltipContainer
       screenX={screenX}
       screenY={screenY}
-      borderColor={tripColor}
-      minWidth="260px"
-      maxWidth="340px"
+      borderColor={isTrip ? tripColor : "var(--accent)"}
+      minWidth="280px"
+      maxWidth="380px"
     >
-      {/* Trip name */}
-      {tripName && (
+      {isTrip && tripName && (
         <div
-          className="font-bold text-sm mb-1"
-          style={{ color: tripColor, letterSpacing: "0.02em" }}
+          className="font-bold text-xs mb-1 uppercase tracking-wider"
+          style={{ color: tripColor }}
         >
           {tripName}
         </div>
       )}
 
-      {/* Route chain */}
-      <div className="font-mono font-bold text-sm" style={{ color: "var(--text-primary)" }}>
-        {route}
-      </div>
-
-      {/* Leg count + dates */}
-      <div className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>
-        {sorted.length} {sorted.length === 1 ? "Flug" : "Flüge"}
-        {dateRange ? ` · ${dateRange}` : ""}
-      </div>
-
-      {/* Duration + distance */}
-      {statsRow2.length > 0 && (
-        <div className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
-          {statsRow2.join(" · ")}
+      {isTrip ? (
+        <div className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>
+          {buildTripChain(sorted)}
+        </div>
+      ) : (
+        <div>
+          <div className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>
+            {depName} ({depIata})
+          </div>
+          <div className="text-xs my-0.5" style={{ color: "var(--text-muted)" }}>
+            →
+          </div>
+          <div className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>
+            {arrName} ({arrIata})
+          </div>
         </div>
       )}
 
-      {/* Airlines */}
-      {airlines.length > 0 && (
+      <div className="my-2" style={{ borderTop: "1px solid var(--color-border)" }} />
+
+      <div className="text-xs" style={{ color: "var(--text-muted)" }}>
+        {sorted.length} {sorted.length === 1 ? t("dashboard:flight") : t("dashboard:flights")}
+        {totalDistanceKm > 0 && ` · ${Math.round(totalDistanceKm).toLocaleString(locale)} km`}
+        {avgDurationMin > 0 && ` · Ø ${formatDuration(Math.round(avgDurationMin))}`}
+      </div>
+
+      {dateRange && (
         <div className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
-          {airlines.join(" · ")}
-          {aircraft.length > 0 && ` · ${aircraft.slice(0, 2).join(", ")}`}
+          {dateRange}
         </div>
       )}
 
-      <div className="flex justify-end mt-3">
+      {(airlines.length > 0 || seatClasses.length > 0) && (
+        <div className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
+          {airlines.join(", ")}
+          {seatClasses.length > 0 && ` · ${seatClasses.map((c) => c.replace("_", " ")).join(", ")}`}
+        </div>
+      )}
+
+      <div className="flex justify-between items-center mt-3">
+        {onShowDetails ? (
+          <button
+            type="button"
+            onClick={onShowDetails}
+            className="text-xs px-3 py-1.5 rounded font-medium transition-colors"
+            style={{ background: "var(--accent)", color: "white" }}
+          >
+            {isTrip ? t("dashboard:tripDetails") : t("dashboard:routeDetails")} →
+          </button>
+        ) : (
+          <div />
+        )}
         <button
           type="button"
           onClick={onClose}

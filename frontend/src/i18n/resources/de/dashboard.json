@@ -91,5 +91,8 @@
     "flightsTotal_other": "Flüge gesamt",
     "topRoutes": "Häufigste Routen",
     "flown": "geflogen"
-  }
+  },
+  "flight": "Flug",
+  "routeDetails": "Route-Details",
+  "tripDetails": "Trip-Details"
 }
