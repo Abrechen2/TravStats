@@ -27,6 +27,7 @@ CLAUDE.local.md
 !docs/*.md
 !docs/**/*.md
 !.planning/**/*.md
+!backend/OLLAMA_OPTIMIZATION.md
 
 
 # Build outputs

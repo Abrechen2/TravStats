@@ -96,7 +96,7 @@ services:
       CREATE_DEMO_USER: ${CREATE_DEMO_USER:-false}
       # LLM Parser Settings
       OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2:3b}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma3:12b}
       USE_LLM_PARSER: ${USE_LLM_PARSER:-true}
       # Training Settings
       PYTHON_CMD: python3
