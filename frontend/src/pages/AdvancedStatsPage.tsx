@@ -114,7 +114,8 @@ export default function AdvancedStatsPage(): JSX.Element {
         offset += limit;
       }
 
-      setFlights(allFlights);
+      // Only use flown flights for statistics; scheduled/cancelled are excluded
+      setFlights(allFlights.filter((f) => f.status === "flown"));
 
       const [fun, business, unique, seat] = await Promise.all([
         statsApi.getFunStats().catch((err) => {

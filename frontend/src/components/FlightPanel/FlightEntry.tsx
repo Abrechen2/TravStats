@@ -52,8 +52,27 @@ export function FlightEntry({
           }}
         >
           <div className="min-w-0">
-            <div className="font-mono text-sm font-semibold truncate">
-              {flight.depIata ?? flight.depIcao ?? "?"} → {flight.arrIata ?? flight.arrIcao ?? "?"}
+            <div className="font-mono text-sm font-semibold truncate flex items-center gap-1.5">
+              <span>
+                {flight.depIata ?? flight.depIcao ?? "?"} →{" "}
+                {flight.arrIata ?? flight.arrIcao ?? "?"}
+              </span>
+              {flight.status === "scheduled" && (
+                <span
+                  className="text-[9px] font-sans font-medium px-1.5 py-0.5 rounded-full uppercase tracking-wider"
+                  style={{ background: "rgba(100,200,220,0.2)", color: "rgb(100,200,220)" }}
+                >
+                  geplant
+                </span>
+              )}
+              {flight.status === "cancelled" && (
+                <span
+                  className="text-[9px] font-sans font-medium px-1.5 py-0.5 rounded-full uppercase tracking-wider"
+                  style={{ background: "rgba(239,68,68,0.2)", color: "rgb(239,68,68)" }}
+                >
+                  storniert
+                </span>
+              )}
             </div>
             <div className="text-xs" style={{ color: "var(--text-muted)" }}>
               {flight.departureTime
