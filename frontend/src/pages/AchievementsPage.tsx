@@ -237,7 +237,7 @@ export default function AchievementsPage(): JSX.Element {
         style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}
       >
         <NavigationBar />
-        <div className="p-6">
+        <div className="p-6 pb-32">
           <div className="max-w-7xl mx-auto">
             <div className="mb-6">
               <h1 className="text-4xl font-bold" style={{ color: "var(--text-primary)" }}>
