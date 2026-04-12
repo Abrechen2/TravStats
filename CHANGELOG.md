@@ -4,6 +4,33 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.16.1-beta] - 2026-04-12
+
+### Fixed
+- **Setup page simplified** — Removed privacy info box, tips section, and
+  instance name field. Only the essential username + password form remains.
+- **Profile shows account username** — The settings profile now displays the
+  actual account username instead of the default "Traveler".
+- **Language auto-detected from browser** — On first use, the UI language is
+  auto-detected from `navigator.language` (de/en) instead of defaulting to
+  English.
+- **Route click selects all flights** — Clicking a route arc on the map now
+  highlights all flights on that route instead of only the last one.
+- **Flight list refreshes after batch import** — The map and sidebar now
+  update automatically after importing multiple flights via email.
+- **Batch import errors shown as toast** — Import errors (e.g. rate limit)
+  are now displayed as a visible toast notification instead of silently
+  failing behind a closed modal.
+- **Batch rate limit increased** — Raised from 10 to 50 requests per hour
+  to support bulk email import workflows without hitting 429 errors.
+- **Achievement notifications on batch import** — The batch endpoint now
+  returns newly unlocked achievements, and the popup is shown after bulk
+  imports (previously only worked for single-flight additions).
+
+### Changed
+- **Cost tracking defaults to off** — Cost input fields are now opt-in via
+  Settings > Features instead of being visible by default.
+
 ## [0.16.0-beta] - 2026-04-12
 
 ### Security
