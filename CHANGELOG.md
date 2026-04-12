@@ -4,6 +4,16 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.18.0-beta] - 2026-04-12
+
+### Added
+- **Two-stage route/trip info popup** — Clicking a route arc on
+  the map now shows a redesigned popup with full airport names,
+  distance, average duration, airlines, and seat class. A
+  "Route Details" / "Trip Details" button opens a rich sidebar
+  view with route statistics and a chronological flight list
+  (or numbered trip legs for trip-routes mode).
+
 ## [0.17.0-beta] - 2026-04-12
 
 ### Added
