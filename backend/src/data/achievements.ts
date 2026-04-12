@@ -691,6 +691,65 @@ export const achievements: AchievementDefinition[] = [
     requirementType: 'flight_hours',
     points: 750,
   },
+
+  // PLANNER CATEGORY - Scheduled flights
+  {
+    code: 'WANDERLUST',
+    name: 'Wanderlust',
+    description: 'Have 5 planned flights in your calendar',
+    category: 'planner',
+    icon: '🗓️',
+    tier: 'bronze',
+    requirement: 5,
+    requirementType: 'scheduled_count',
+    points: 15,
+  },
+  {
+    code: 'GLOBETROTTER_PLANNER',
+    name: 'Globetrotter Planner',
+    description: 'Have planned flights to 3 different continents',
+    category: 'planner',
+    icon: '🌍',
+    tier: 'silver',
+    requirement: 3,
+    requirementType: 'scheduled_continents',
+    points: 50,
+  },
+  {
+    code: 'YEAR_AHEAD',
+    name: 'Year Ahead',
+    description: 'Plan a flight more than 12 months in advance',
+    category: 'planner',
+    icon: '📅',
+    tier: 'gold',
+    requirement: 365,
+    requirementType: 'scheduled_advance_days',
+    points: 40,
+  },
+
+  // SURVIVOR CATEGORY - Cancelled flights
+  {
+    code: 'SURVIVOR',
+    name: 'Survivor',
+    description: 'Have your first cancelled flight',
+    category: 'survivor',
+    icon: '🛑',
+    tier: 'bronze',
+    requirement: 1,
+    requirementType: 'cancelled_count',
+    points: 10,
+  },
+  {
+    code: 'TURBULENCE_VETERAN',
+    name: 'Turbulence Veteran',
+    description: 'Survive 5 cancelled flights',
+    category: 'survivor',
+    icon: '⛈️',
+    tier: 'silver',
+    requirement: 5,
+    requirementType: 'cancelled_count',
+    points: 30,
+  },
 ];
 
 /**
@@ -792,4 +851,3 @@ export async function ensureAchievements(): Promise<void> {
     throw error;
   }
 }
-
