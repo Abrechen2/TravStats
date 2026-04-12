@@ -32,21 +32,36 @@ router.get('/search', airportSearchLimiter, async (req: Request, res: Response, 
 
     const searchTerm = q.toLowerCase();
 
-    const airports = await prisma.airport.findMany({
+    // Exact IATA/ICAO match first, then partial matches
+    const exactMatch = await prisma.airport.findFirst({
       where: {
         OR: [
-          { iata: { contains: searchTerm, mode: 'insensitive' } },
-          { icao: { contains: searchTerm, mode: 'insensitive' } },
-          { name: { contains: searchTerm, mode: 'insensitive' } },
-          { city: { contains: searchTerm, mode: 'insensitive' } },
+          { iata: { equals: searchTerm, mode: 'insensitive' } },
+          { icao: { equals: searchTerm, mode: 'insensitive' } },
         ],
       },
-      take: 10,
-      orderBy: [
-        { iata: 'asc' },
-      ],
     });
 
+    const partialMatches = await prisma.airport.findMany({
+      where: {
+        AND: [
+          // Exclude the exact match to avoid duplicates
+          ...(exactMatch ? [{ id: { not: exactMatch.id } }] : []),
+          {
+            OR: [
+              { iata: { contains: searchTerm, mode: 'insensitive' } },
+              { icao: { contains: searchTerm, mode: 'insensitive' } },
+              { name: { contains: searchTerm, mode: 'insensitive' } },
+              { city: { contains: searchTerm, mode: 'insensitive' } },
+            ],
+          },
+        ],
+      },
+      take: exactMatch ? 9 : 10,
+      orderBy: [{ iata: 'asc' }],
+    });
+
+    const airports = exactMatch ? [exactMatch, ...partialMatches] : partialMatches;
     res.json(airports);
   } catch (error) {
     next(error);
