@@ -321,9 +321,9 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
       },
     });
 
-    // Check achievements after creating a flown flight and return newly unlocked ones
+    // Check achievements after creating a flight and return newly unlocked ones
     let newAchievements: Awaited<ReturnType<typeof checkAndUpdateAchievements>> = [];
-    if (data.status === 'flown') {
+    if (flight) {
       try {
         newAchievements = await checkAndUpdateAchievements(userId);
       } catch (err: unknown) {

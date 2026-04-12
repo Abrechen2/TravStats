@@ -312,6 +312,33 @@ export const adminApi = {
     return data;
   },
 
+  listOllamaModels: async (
+    ollamaUrl: string
+  ): Promise<{
+    success: boolean;
+    models?: Array<{ name: string; size: number; modified: string }>;
+    error?: string;
+  }> => {
+    const { data } = await api.post<{
+      success: boolean;
+      models?: Array<{ name: string; size: number; modified: string }>;
+      error?: string;
+    }>("/admin/ollama-models", { ollamaUrl });
+    return data;
+  },
+
+  pullOllamaModel: async (
+    ollamaUrl: string,
+    modelName: string
+  ): Promise<{ success: boolean; status?: string; error?: string }> => {
+    const { data } = await api.post<{
+      success: boolean;
+      status?: string;
+      error?: string;
+    }>("/admin/ollama-pull", { ollamaUrl, modelName });
+    return data;
+  },
+
   getTrainingConfig: async (): Promise<{
     trainingModelOutputDir: string | null;
     trainingEmailModelName: string | null;
