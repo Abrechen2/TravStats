@@ -414,8 +414,8 @@ export default function AchievementsPage(): JSX.Element {
                           boxShadow: achievement.isUnlocked
                             ? "0 0 12px var(--accent-glow)"
                             : "none",
-                          filter: achievement.isUnlocked ? "none" : "grayscale(0.8)",
-                          opacity: achievement.isUnlocked ? 1 : 0.55,
+                          filter: achievement.isUnlocked ? "none" : "grayscale(0.3)",
+                          opacity: achievement.isUnlocked ? 1 : 0.8,
                         }}
                       >
                         <div className="p-6">
@@ -491,16 +491,10 @@ export default function AchievementsPage(): JSX.Element {
                           )}
                         </div>
                         {!achievement.isUnlocked && (
-                          <div
-                            className="absolute inset-0 flex items-center justify-center rounded-xl"
-                            style={{
-                              background: "rgba(13,17,23,0.4)",
-                              backdropFilter: "blur(2px)",
-                            }}
-                          >
+                          <div className="absolute bottom-4 right-4 flex items-center justify-center">
                             <svg
-                              className="w-8 h-8"
-                              style={{ color: "var(--text-muted)" }}
+                              className="w-10 h-10"
+                              style={{ color: "var(--text-muted)", opacity: 0.5 }}
                               fill="none"
                               stroke="currentColor"
                               viewBox="0 0 24 24"
