@@ -385,7 +385,11 @@ export function useFlightForm(
       const errorObj = err as {
         response?: {
           status?: number;
-          data?: { error?: string; existingFlight?: DuplicateFlight };
+          data?: {
+            error?: string;
+            details?: { field: string; message: string }[];
+            existingFlight?: DuplicateFlight;
+          };
         };
       };
       if (errorObj.response?.status === 409 && errorObj.response.data?.existingFlight) {
@@ -393,7 +397,11 @@ export function useFlightForm(
         setLoading(false);
         return;
       }
-      setError(errorObj.response?.data?.error ?? t("errors:saveFailed"));
+      const details = errorObj.response?.data?.details;
+      const msg = details?.length
+        ? details.map((d) => d.message).join("; ")
+        : (errorObj.response?.data?.error ?? t("errors:saveFailed"));
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -412,8 +420,14 @@ export function useFlightForm(
       setTimeEstimationWarning(null);
       await onSubmit(buildFlightPayload(), true);
     } catch (err: unknown) {
-      const errorObj = err as { response?: { data?: { error?: string } } };
-      setError(errorObj.response?.data?.error ?? t("errors:saveFailed"));
+      const errorObj = err as {
+        response?: { data?: { error?: string; details?: { field: string; message: string }[] } };
+      };
+      const details = errorObj.response?.data?.details;
+      const msg = details?.length
+        ? details.map((d) => d.message).join("; ")
+        : (errorObj.response?.data?.error ?? t("errors:saveFailed"));
+      setError(msg);
     } finally {
       setLoading(false);
     }
