@@ -421,7 +421,7 @@ export default function DashboardPage(): JSX.Element {
           tags: flight.tags?.length ? flight.tags : undefined,
           companions: flight.companions?.length ? flight.companions : undefined,
         };
-        await flightsApi.create(input);
+        await flightsApi.create(input, true);
         const recentData = await flightsApi.getAll({
           limit: API_LIMITS.RECENT_FLIGHTS,
           offset: 0,
