@@ -83,12 +83,21 @@ export function buildRouteData(
     const allScheduled = flightIdsForRoute.every((fid) =>
       flights.some((fl) => fl.properties.id === fid && fl.properties.status === "scheduled")
     );
+    const allHistorical = flightIdsForRoute.every((fid) =>
+      flights.some((fl) => fl.properties.id === fid && fl.properties.status === "historical")
+    );
 
-    // Scheduled-only routes: dashed cyan/teal; mixed/flown: normal heatmap color
-    const alpha = allScheduled ? 180 : (Math.min(100 + count * 14, 230) as number);
+    // Scheduled-only routes: dashed cyan/teal; historical: grey; mixed/flown: normal heatmap color
+    const alpha = allScheduled
+      ? 180
+      : allHistorical
+        ? 140
+        : (Math.min(100 + count * 14, 230) as number);
     const color = allScheduled
       ? ([100, 200, 220] as [number, number, number]) // cyan/teal for scheduled
-      : getHeatmapColor(count, q25, q50, q75, themeColors);
+      : allHistorical
+        ? ([150, 150, 150] as [number, number, number]) // grey for historical
+        : getHeatmapColor(count, q25, q50, q75, themeColors);
     arcMap.set(key, {
       sourcePosition: coords.depCoord,
       targetPosition: coords.arrCoord,
@@ -97,6 +106,7 @@ export function buildRouteData(
       targetColor: [...color, alpha] as [number, number, number, number],
       flightIds: flightIdsForRoute,
       isScheduled: allScheduled,
+      isHistorical: allHistorical,
     });
   }
 
@@ -155,6 +165,7 @@ export function createRoutesLayers(
     },
     getWidth: (d) => {
       if (d.isScheduled) return 1.5; // thin dashed-look for planned routes
+      if (d.isHistorical) return 1.2; // slightly thin for historical routes
       const base = Math.min(Math.sqrt(d.count) * 1.3, 7);
       if (!hasSelection) return base;
       return d.flightIds.some((id) => selectedSet.has(id)) ? Math.max(base * 2, 5) : base;

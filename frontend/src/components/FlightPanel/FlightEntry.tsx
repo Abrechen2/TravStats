@@ -73,6 +73,14 @@ export function FlightEntry({
                   storniert
                 </span>
               )}
+              {flight.status === "historical" && (
+                <span
+                  className="text-[9px] font-sans font-medium px-1.5 py-0.5 rounded-full uppercase tracking-wider"
+                  style={{ background: "rgba(150,150,150,0.2)", color: "rgb(160,160,160)" }}
+                >
+                  historisch
+                </span>
+              )}
             </div>
             <div className="text-xs" style={{ color: "var(--text-muted)" }}>
               {flight.departureTime

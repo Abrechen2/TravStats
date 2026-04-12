@@ -38,7 +38,7 @@ export interface Flight {
   arrLon: number;
   departureTime: string;
   arrivalTime: string;
-  status: "scheduled" | "flown" | "cancelled";
+  status: "scheduled" | "flown" | "cancelled" | "historical";
   notes?: string;
   createdAt: string;
   // Costs & categorization
@@ -134,9 +134,9 @@ export interface FlightInput {
   aircraft?: string;
   departure: Airport;
   arrival: Airport;
-  departureTime: string;
-  arrivalTime: string;
-  status?: "scheduled" | "flown" | "cancelled";
+  departureTime?: string;
+  arrivalTime?: string;
+  status?: "scheduled" | "flown" | "cancelled" | "historical";
   notes?: string;
   // Extended fields
   seatNumber?: string;
@@ -225,7 +225,12 @@ export interface FlightFilters {
   arrivalAirport?: string;
   fromDate?: string;
   toDate?: string;
-  status?: "scheduled" | "flown" | "cancelled" | Array<"scheduled" | "flown" | "cancelled">;
+  status?:
+    | "scheduled"
+    | "flown"
+    | "cancelled"
+    | "historical"
+    | Array<"scheduled" | "flown" | "cancelled" | "historical">;
   category?: "business" | "private" | "vacation";
   tags?: string[];
   minPrice?: number;

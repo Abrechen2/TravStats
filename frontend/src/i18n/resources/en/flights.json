@@ -218,8 +218,11 @@
     "scheduled": "Scheduled",
     "flown": "Flown",
     "cancelled": "Cancelled",
-    "landed": "Landed"
+    "landed": "Landed",
+    "historical": "Historical"
   },
+  "historicalCheckbox": "Historical flight (route only)",
+  "historicalHint": "Only departure and arrival airports required. Date, time, and all other fields are optional.",
   "category": {
     "business": "Business",
     "private": "Private",

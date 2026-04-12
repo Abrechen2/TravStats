@@ -8,6 +8,7 @@ export interface ArcDatum {
   targetColor: [number, number, number, number];
   flightIds: string[];
   isScheduled?: boolean;
+  isHistorical?: boolean;
 }
 
 export interface PointDatum {
