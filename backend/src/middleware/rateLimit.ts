@@ -1,5 +1,16 @@
+import { Request } from 'express';
 import rateLimit from 'express-rate-limit';
 import { RATE_LIMITS } from '../config/constants';
+
+/**
+ * Key generator that uses userId (from JWT auth) when available,
+ * falling back to IP. This prevents bypass via multiple IPs for
+ * the same authenticated user.
+ */
+const userOrIpKey = (req: Request): string => {
+  const userId = (req as { userId?: string }).userId;
+  return userId ?? req.ip ?? 'unknown';
+};
 
 /**
  * Rate limiter for public airport search endpoints
@@ -50,7 +61,7 @@ export const authLimiter = rateLimit({
   message: 'Too many authentication attempts, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
-  skipSuccessfulRequests: true, // Don't count successful logins towards limit
+  // All attempts count — skipSuccessfulRequests was removed to prevent brute-force bypass
 });
 
 /**
@@ -90,6 +101,7 @@ export const backupRestoreLimiter = rateLimit({
   message: 'Too many restore operations, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: userOrIpKey,
 });
 
 /**
@@ -114,6 +126,7 @@ export const emailParseLimiter = rateLimit({
   message: { error: 'Too many parse requests, please try again later' },
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: userOrIpKey,
 });
 
 /**
@@ -126,6 +139,7 @@ export const statsLimiter = rateLimit({
   message: 'Too many stats requests, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: userOrIpKey,
 });
 
 /**
@@ -138,6 +152,7 @@ export const adminExportLimiter = rateLimit({
   message: 'Too many export requests, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: userOrIpKey,
 });
 
 /**
@@ -163,6 +178,7 @@ export const batchCreationLimiter = rateLimit({
   message: 'Too many batch requests, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: userOrIpKey,
 });
 
 /**
@@ -189,6 +205,7 @@ export const settingsLimiter = rateLimit({
   message: 'Too many settings requests, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: userOrIpKey,
 });
 
 /**

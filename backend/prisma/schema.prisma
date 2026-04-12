@@ -213,10 +213,6 @@ model UserSettings {
   developerModeEnabled     Boolean   @default(false) @map("developer_mode_enabled")
   developerModeConfirmedAt DateTime? @map("developer_mode_confirmed_at")
 
-  // Training model preferences
-  useTrainedModels       Boolean @default(true) @map("use_trained_models")
-  preferredEmailModel    String  @default("auto") @map("preferred_email_model") // "auto" | "trained" | "base"
-  preferredVisionModel   String  @default("auto") @map("preferred_vision_model") // "auto" | "trained" | "base"
   // Auto-update settings
   autoUpdateEnabled          Boolean @default(false) @map("auto_update_enabled")
   autoUpdateRequireApproval  Boolean @default(true) @map("auto_update_require_approval")
@@ -334,11 +330,6 @@ model AdminSettings {
 
   // Log retention in days (auto-delete older logs)
   logRetentionDays Int @default(7) @map("log_retention_days")
-
-  // Training configuration (overrides ENV variables)
-  trainingModelOutputDir String? @map("training_model_output_dir")
-  trainingEmailModelName String? @map("training_email_model_name")
-  trainingVisionModelName String? @map("training_vision_model_name")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

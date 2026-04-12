@@ -17,7 +17,10 @@ const settingsSchema = z.object({
   profile: z.object({
     username: z.string().optional(),
     email: z.string().email().optional(),
-    profilePicture: z.string().url().optional().nullable(),
+    profilePicture: z.string().url().refine(
+      (url) => url.startsWith('https://') || url.startsWith('http://'),
+      'Profile picture must be an HTTP(S) URL'
+    ).optional().nullable(),
   }).partial().optional(),
   display: z.object({
     theme: z.enum(['light', 'dark']).optional(),
@@ -40,7 +43,7 @@ const settingsSchema = z.object({
     mapStyle: z.enum(['osm', 'satellite']).optional(),
     zoomLevel: z.number().min(1).max(18).optional(),
     markerStyle: z.enum(['pin', 'circle', 'custom']).optional(),
-    routeColor: z.string().optional(),
+    routeColor: z.string().regex(/^#[0-9a-fA-F]{3,8}$/, 'Must be a hex color').optional(),
   }).partial().optional(),
   notifications: z.object({
     emailNotifications: z.boolean().optional(),
@@ -114,10 +117,6 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
         data: {
           userId,
           data: defaultSettings,
-          // Initialize training settings with defaults
-          useTrainedModels: true,
-          preferredEmailModel: 'auto',
-          preferredVisionModel: 'auto',
           // Initialize auto-update settings with defaults
           autoUpdateEnabled: false,
           autoUpdateRequireApproval: true,
@@ -242,10 +241,6 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
       create: {
         userId,
         data: merged as Prisma.InputJsonValue,
-        // Initialize training settings with defaults
-        useTrainedModels: true,
-        preferredEmailModel: 'auto',
-        preferredVisionModel: 'auto',
         // Initialize auto-update settings with defaults
         autoUpdateEnabled: payload.autoUpdate?.enabled ?? false,
         autoUpdateRequireApproval: payload.autoUpdate?.requireApproval ?? true,

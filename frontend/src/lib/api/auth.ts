@@ -2,7 +2,7 @@ import type { User } from "../../types";
 
 import { api } from "./client";
 
-export type LoginResult = { user: User } | { requiresPasswordChange: true; changeToken: string };
+export type LoginResult = { user: User } | { requiresPasswordChange: true };
 
 // Auth API
 export const authApi = {
@@ -60,12 +60,9 @@ export const authApi = {
     return data;
   },
 
-  forceChangePassword: async (
-    changeToken: string,
-    newPassword: string
-  ): Promise<{ message: string }> => {
+  forceChangePassword: async (newPassword: string): Promise<{ message: string }> => {
+    // changeToken is delivered via HttpOnly cookie — only send the new password
     const { data } = await api.post<{ message: string }>("/auth/force-change-password", {
-      changeToken,
       newPassword,
     });
     return data;

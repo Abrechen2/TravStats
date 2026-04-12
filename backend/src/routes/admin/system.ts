@@ -31,7 +31,7 @@ router.get('/system/info', async (req: AuthRequest, res: Response, next: NextFun
       registrationEnabled: allowRegistration,
       demoUserExists: !!demoUser,
       demoUserActive: demoUser?.isActive || false,
-    version: '1.0.0',
+    version: process.env.APP_VERSION || 'unknown',
   });
   } catch (error) {
     next(error);
@@ -52,7 +52,17 @@ router.get('/system/hardware', async (req: AuthRequest, res: Response, next: Nex
 router.get('/export/all-data', adminExportLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const users = await prisma.user.findMany({
-      include: {
+      select: {
+        id: true,
+        username: true,
+        isAdmin: true,
+        isActive: true,
+        invitedBy: true,
+        createdAt: true,
+        notificationEmail: true,
+        notifyBefore24h: true,
+        notifyBefore2h: true,
+        // Deliberately excluded: passwordHash, resetToken, changeToken, resetTokenExpiry, changeTokenExpiry, mustChangePassword
         flights: true,
         userAchievements: {
           include: {

@@ -40,7 +40,8 @@ export default function LoginPage(): JSX.Element {
     try {
       const result = await authApi.login(username, password);
       if ("requiresPasswordChange" in result && result.requiresPasswordChange) {
-        navigate("/change-password", { state: { changeToken: result.changeToken } });
+        // changeToken is now delivered via HttpOnly cookie, not response body
+        navigate("/change-password", { state: { requiresChange: true } });
       } else if ("user" in result) {
         setAuth(result.user);
         navigate("/");

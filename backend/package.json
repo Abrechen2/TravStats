@@ -36,7 +36,7 @@
   "author": "",
   "license": "AGPL-3.0-only",
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.80.0",
+    "@anthropic-ai/sdk": "^0.88.0",
     "@kenjiuno/msgreader": "^1.28.0",
     "@prisma/client": "^5.7.0",
     "archiver": "^7.0.1",

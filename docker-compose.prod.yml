@@ -8,7 +8,7 @@ services:
     environment:
       POSTGRES_DB: flights
       POSTGRES_USER: flights
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set}
     volumes:
       - travstats-db-data:/var/lib/postgresql/data
     healthcheck:
@@ -77,7 +77,7 @@ services:
       # Comma-separated list of allowed frontend origins (adjust to your LAN/hostnames)
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
       # Database connection
-      DATABASE_URL: postgresql://flights:${DB_PASSWORD:-changeme}@db:5432/flights
+      DATABASE_URL: postgresql://flights:${DB_PASSWORD:?DB_PASSWORD must be set}@db:5432/flights
       # JWT will be auto-generated and persisted to /app/secrets/jwt.secret (not in mounted volume)
       # Optional: Set custom JWT_SECRET here
       # JWT_SECRET: ${JWT_SECRET}

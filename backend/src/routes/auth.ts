@@ -12,6 +12,9 @@ import logger from '../utils/logger';
 const router = Router();
 const cookieMaxAgeMs = 7 * 24 * 60 * 60 * 1000; // 7 days
 
+// Dummy bcrypt hash used to prevent timing oracle on login (constant-time for unknown users)
+const DUMMY_BCRYPT_HASH = '$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012';
+
 // Determine if cookies should be secure
 // If COOKIE_SECURE is explicitly set, use that value
 // Otherwise, use secure cookies only if explicitly in production AND behind HTTPS
@@ -34,7 +37,7 @@ function getCookieSecure(req: Request): boolean {
 export const getAuthCookieOptions = (req: Request): CookieOptions => ({
   httpOnly: true, // Prevents JavaScript access (XSS protection)
   secure: getCookieSecure(req), // Auto-detect HTTPS or use COOKIE_SECURE env var
-  sameSite: 'lax',
+  sameSite: 'strict',
   maxAge: cookieMaxAgeMs,
   path: '/',
 });
@@ -44,8 +47,9 @@ router.post('/register', authLimiter, async (req: Request, res: Response, next: 
   try {
     // Validate required fields
     const { username, password } = registerSchema.parse(req.body);
+    const rawToken = req.body.invitationToken;
     const invitationToken =
-      typeof req.body.invitationToken === 'string' ? req.body.invitationToken : undefined;
+      typeof rawToken === 'string' && rawToken.length <= 128 ? rawToken : undefined;
 
     // Check if user exists
     const existingUser = await prisma.user.findUnique({
@@ -62,66 +66,72 @@ router.post('/register', authLimiter, async (req: Request, res: Response, next: 
     const allowRegistration = process.env.ALLOW_REGISTRATION !== 'false';
     const maxUsers = parseInt(process.env.MAX_USERS || '10');
 
+    // Enforce MAX_USERS hard limit regardless of registration mode
+    if (!isFirstUser && userCount >= maxUsers) {
+      throw new AppError('User limit reached', 409);
+    }
+
     // Validate registration is allowed
     if (!isFirstUser && !allowRegistration && !invitationToken) {
       throw new AppError('Registration is disabled. Please use an invitation link.', 403);
     }
 
-    // Validate invitation token if provided
-    let invitedBy: string | undefined;
-    let invitationEmail: string | undefined;
-    if (invitationToken) {
-      const invitation = await prisma.invitation.findUnique({
-        where: { token: invitationToken },
-      });
-
-      if (!invitation) {
-        throw new AppError('Invalid invitation token', 400);
-      }
-
-      if (invitation.usedAt) {
-        throw new AppError('Invitation token already used', 400);
-      }
-
-      if (invitation.expiresAt < new Date()) {
-        throw new AppError('Invitation token has expired', 400);
-      }
-
-      invitedBy = invitation.createdBy;
-      invitationEmail = invitation.email ?? undefined;
-    }
-
-    // Warning if approaching user limit
-    if (userCount >= maxUsers) {
-      logger.warn({
-        operation: 'auth_user_limit_warning',
-        message: `Instance has ${userCount} users (recommended max: ${maxUsers})`,
-        context: { userCount, maxUsers },
-      });
-    }
-
-    // Create user (first user becomes admin)
+    // Hash password before the transaction to keep the critical section short
     const passwordHash = await hashPassword(password);
-    const user = await prisma.user.create({
-      data: {
-        username,
-        passwordHash,
-        isAdmin: isFirstUser,
-        invitedBy,
-        notificationEmail: invitationEmail,
-      },
-    });
 
-    // Mark invitation as used
-    if (invitationToken) {
-      await prisma.invitation.update({
-        where: { token: invitationToken },
+    // Use a serializable transaction to prevent race conditions with
+    // invitation tokens (double-use) and user limit enforcement.
+    const user = await prisma.$transaction(async (tx) => {
+      // Validate invitation token if provided
+      let invitedBy: string | undefined;
+      let invitationEmail: string | undefined;
+      if (invitationToken) {
+        const invitation = await tx.invitation.findUnique({
+          where: { token: invitationToken },
+        });
+
+        if (!invitation) {
+          throw new AppError('Invalid invitation token', 400);
+        }
+
+        if (invitation.usedAt) {
+          throw new AppError('Invitation token already used', 400);
+        }
+
+        if (invitation.expiresAt < new Date()) {
+          throw new AppError('Invitation token has expired', 400);
+        }
+
+        invitedBy = invitation.createdBy;
+        invitationEmail = invitation.email ?? undefined;
+      }
+
+      // Create user (first user becomes admin)
+      const created = await tx.user.create({
         data: {
-          usedAt: new Date(),
-          usedBy: user.id,
+          username,
+          passwordHash,
+          isAdmin: isFirstUser,
+          invitedBy,
+          notificationEmail: invitationEmail,
         },
       });
-    }
+
+      // Mark invitation as used within the same transaction
+      if (invitationToken) {
+        await tx.invitation.update({
+          where: { token: invitationToken },
+          data: {
+            usedAt: new Date(),
+            usedBy: created.id,
+          },
+        });
+      }
+
+      return created;
+    }, {
+      isolationLevel: 'Serializable',
+    });
 
     // Generate token
     const token = generateToken(user.id);
@@ -147,18 +157,13 @@ router.post('/login', authLimiter, async (req: Request, res: Response, next: Nex
   try {
     const { username, password } = loginSchema.parse(req.body);
 
-    // Find user
+    // Find user — always run bcrypt to prevent timing-based username enumeration
     const user = await prisma.user.findUnique({
       where: { username },
     });
 
-    if (!user) {
-      throw new AppError('Invalid credentials', 401);
-    }
-
-    // Verify password
-    const isValid = await comparePassword(password, user.passwordHash);
-    if (!isValid) {
+    const isValid = await comparePassword(password, user?.passwordHash ?? DUMMY_BCRYPT_HASH);
+    if (!user || !isValid) {
       throw new AppError('Invalid credentials', 401);
     }
 
@@ -175,7 +180,15 @@ router.post('/login', authLimiter, async (req: Request, res: Response, next: Nex
         },
       });
 
-      return res.json({ requiresPasswordChange: true, changeToken: plainChangeToken });
+      // Deliver changeToken via HttpOnly cookie (not response body) to prevent XSS extraction
+      res.cookie('change_token', plainChangeToken, {
+        httpOnly: true,
+        secure: getCookieSecure(req),
+        sameSite: 'strict',
+        maxAge: 10 * 60 * 1000, // 10 minutes
+        path: '/',
+      });
+      return res.json({ requiresPasswordChange: true });
     }
 
     // Generate token

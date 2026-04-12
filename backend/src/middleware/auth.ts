@@ -17,13 +17,10 @@ export const authenticate = async (
   try {
     let token: string | undefined;
 
-    // Try to get token from cookie first (preferred method - more secure)
+    // JWT is only accepted from HttpOnly cookie — Bearer header fallback removed
+    // to prevent XSS from accessing the token via JavaScript
     if (req.cookies && req.cookies.auth_token) {
       token = req.cookies.auth_token;
-    }
-    // Fallback to Authorization header for backwards compatibility
-    else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
-      token = req.headers.authorization.substring(7);
     }
 
     if (!token) {

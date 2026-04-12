@@ -81,11 +81,6 @@ jest.mock("../services/parsers/config", () => ({
   getParserConfig: jest.fn(),
 }));
 
-// ── Model manager ─────────────────────────────────────────────────────────────
-jest.mock("../services/modelManager", () => ({
-  selectModelForParsing: jest.fn().mockResolvedValue(undefined),
-}));
-
 // ── BoardingPass quality ──────────────────────────────────────────────────────
 jest.mock("../services/parsers/boardingPass", () => ({
   calculateParserQuality: jest.fn(),

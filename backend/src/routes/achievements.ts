@@ -88,7 +88,8 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
 router.get('/recent', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
-    const limit = parseInt(req.query.limit as string) || 10;
+    const rawLimit = parseInt(req.query.limit as string);
+    const limit = Number.isFinite(rawLimit) ? Math.min(rawLimit, 100) : 10;
 
     const recentAchievements = await prisma.userAchievement.findMany({
       where: { userId },
@@ -123,7 +124,8 @@ router.post('/check', async (req: AuthRequest, res: Response, next: NextFunction
 // Get leaderboard (top users by points)
 router.get('/leaderboard', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const limit = parseInt(req.query.limit as string) || 10;
+    const rawLeaderboardLimit = parseInt(req.query.limit as string);
+    const limit = Number.isFinite(rawLeaderboardLimit) ? Math.min(rawLeaderboardLimit, 100) : 10;
 
     // Use database aggregation instead of loading all data into memory
     // Get user achievements with aggregated points
@@ -147,7 +149,7 @@ router.get('/leaderboard', async (req: AuthRequest, res: Response, next: NextFun
 
     // Aggregate points per user (more efficient than loading all into memory)
     const userPointsMap = new Map<string, { user: { id: string; username: string; createdAt: Date }; totalPoints: number; achievementCount: number }>();
-    
+
     for (const ua of userAchievements) {
       const userId = ua.userId;
       if (!userPointsMap.has(userId)) {
