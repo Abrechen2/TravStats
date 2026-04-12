@@ -414,8 +414,8 @@ export default function AchievementsPage(): JSX.Element {
                           boxShadow: achievement.isUnlocked
                             ? "0 0 12px var(--accent-glow)"
                             : "none",
-                          filter: achievement.isUnlocked ? "none" : "grayscale(0.3)",
-                          opacity: achievement.isUnlocked ? 1 : 0.8,
+                          filter: achievement.isUnlocked ? "none" : "grayscale(0.5)",
+                          opacity: achievement.isUnlocked ? 1 : 0.6,
                         }}
                       >
                         <div className="p-6">
