@@ -21,13 +21,18 @@ function getRouteEndpoints(sorted: Flight[]): {
   arrIata: string;
 } {
   const first = sorted[0];
-  const last = sorted[sorted.length - 1];
-  return {
-    depName: first?.depName ?? first?.depIata ?? "?",
-    depIata: first?.depIata ?? "?",
-    arrName: last?.arrName ?? last?.arrIata ?? "?",
-    arrIata: last?.arrIata ?? "?",
-  };
+  if (!first) return { depName: "?", depIata: "?", arrName: "?", arrIata: "?" };
+
+  const depIata = first.depIata ?? "?";
+  const depName = first.depName ?? depIata;
+
+  // Find the first flight whose arrival differs from the departure airport
+  // (handles round-trip routes like MUC↔HEL where last.arr === first.dep)
+  const otherLeg = sorted.find((f) => f.arrIata !== depIata) ?? first;
+  const arrIata = otherLeg.arrIata ?? "?";
+  const arrName = otherLeg.arrName ?? arrIata;
+
+  return { depName, depIata, arrName, arrIata };
 }
 
 function buildTripChain(sorted: Flight[]): string {
