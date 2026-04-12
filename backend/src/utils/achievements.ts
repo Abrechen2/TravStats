@@ -42,11 +42,17 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       existingAchievements.map(ua => [ua.achievementId, ua])
     );
 
-    // Get user's flights
-    const flights = await prisma.flight.findMany({
-      where: { userId, status: 'flown' },
-      orderBy: { departureTime: 'asc' },
-    });
+    // Get user's flights (flown for main stats, all for planner/survivor)
+    const [flights, allFlights] = await Promise.all([
+      prisma.flight.findMany({
+        where: { userId, status: 'flown' },
+        orderBy: { departureTime: 'asc' },
+      }),
+      prisma.flight.findMany({
+        where: { userId },
+        orderBy: { departureTime: 'asc' },
+      }),
+    ]);
 
     // Calculate user stats with error handling
     let stats;
@@ -63,6 +69,23 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
         },
       });
       throw error;
+    }
+
+    // Compute planner/survivor stats from all flights (not just flown)
+    const now = Date.now();
+    const scheduled = allFlights.filter(f => f.status === 'scheduled');
+    stats.scheduledCount = scheduled.length;
+    stats.cancelledCount = allFlights.filter(f => f.status === 'cancelled').length;
+
+    for (const f of scheduled) {
+      const advanceDays = Math.floor((f.departureTime.getTime() - now) / (1000 * 60 * 60 * 24));
+      if (advanceDays > stats.scheduledMaxAdvanceDays) {
+        stats.scheduledMaxAdvanceDays = advanceDays;
+      }
+      const continent = getContinent(f.depLat, f.depLon);
+      if (continent) stats.scheduledContinents.add(continent);
+      const arrContinent = getContinent(f.arrLat, f.arrLon);
+      if (arrContinent) stats.scheduledContinents.add(arrContinent);
     }
 
     // Prepare all updates/creates to execute in a single transaction
@@ -178,6 +201,11 @@ interface UserStats {
   airlineCounts: Map<string, number>;
   flightsByMonth: Map<string, number>;
   flightsByYear: Map<string, number>;
+  // Planner / Survivor stats (computed from all flights, not just flown)
+  scheduledCount: number;
+  scheduledContinents: Set<string>;
+  scheduledMaxAdvanceDays: number;
+  cancelledCount: number;
 }
 
 async function calculateUserStats(flights: FlightData[]): Promise<UserStats> {
@@ -198,6 +226,10 @@ async function calculateUserStats(flights: FlightData[]): Promise<UserStats> {
     airlineCounts: new Map(),
     flightsByMonth: new Map(),
     flightsByYear: new Map(),
+    scheduledCount: 0,
+    scheduledContinents: new Set(),
+    scheduledMaxAdvanceDays: 0,
+    cancelledCount: 0,
   };
 
   // Collect all unique airport codes from flights
@@ -434,6 +466,26 @@ function checkAchievement(
 
     case 'all_seasons':
       progress = checkAllSeasons(flights);
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'scheduled_count':
+      progress = stats.scheduledCount;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'scheduled_continents':
+      progress = stats.scheduledContinents.size;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'scheduled_advance_days':
+      progress = stats.scheduledMaxAdvanceDays;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'cancelled_count':
+      progress = stats.cancelledCount;
       isUnlocked = progress >= achievement.requirement;
       break;
 
