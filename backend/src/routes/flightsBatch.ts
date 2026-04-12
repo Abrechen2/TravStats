@@ -163,10 +163,9 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
       return flights;
     });
 
-    // Check achievements for any flown flights (outside transaction — non-critical)
+    // Check achievements after batch creation (outside transaction — non-critical)
     let newAchievements: Awaited<ReturnType<typeof checkAndUpdateAchievements>> = [];
-    const hasFlown = parsedFlights.some((f) => f.status === "flown");
-    if (hasFlown) {
+    if (createdFlights.length > 0) {
       try {
         newAchievements = await checkAndUpdateAchievements(userId);
       } catch (err: unknown) {

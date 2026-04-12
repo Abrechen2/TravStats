@@ -25,6 +25,9 @@ vi.mock("../../lib/api", () => ({
 vi.mock("../../store/authStore", () => ({
   useAuthStore: () => ({ user: { id: "u1" } }),
 }));
+vi.mock("../../store/settingsStore", () => ({
+  useSettingsStore: () => ({ features: { enableCostTracking: false } }),
+}));
 vi.mock("../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }));

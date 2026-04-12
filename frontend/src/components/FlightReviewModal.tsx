@@ -2,6 +2,7 @@
 import { Airport, FlightInput, ParsedBooking } from "../types";
 import { airportsApi, parseApi } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
+import { useSettingsStore } from "../store/settingsStore";
 import { logger } from "../lib/logger";
 import { useTranslation } from "../hooks/useTranslation";
 import { filterEmailText } from "../lib/filterEmailText";
@@ -55,6 +56,7 @@ export default function FlightReviewModal({
 }: FlightReviewModalProps): JSX.Element | null {
   const { t } = useTranslation(["flights", "common", "errors"]);
   const { user } = useAuthStore();
+  const { features } = useSettingsStore();
   // Form state
   const [flightNumber, setFlightNumber] = useState("");
   const [airline, setAirline] = useState("");
@@ -697,75 +699,79 @@ export default function FlightReviewModal({
             />
           </div>
 
-          {/* Cost Breakdown */}
-          <div className="border rounded-lg p-4">
-            <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">
-              {t("flights:review.costsTitle")}
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                  {t("common:labels.price")}
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={price || ""}
-                  onChange={(e) =>
-                    setPrice(e.target.value ? parseFloat(e.target.value) : undefined)
-                  }
-                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
-                  placeholder={t("flights:form.placeholders.price")}
-                />
-              </div>
+          {/* Cost Breakdown — only shown when cost tracking is enabled */}
+          {features.enableCostTracking && (
+            <div className="border rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">
+                {t("flights:review.costsTitle")}
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                    {t("common:labels.price")}
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={price || ""}
+                    onChange={(e) =>
+                      setPrice(e.target.value ? parseFloat(e.target.value) : undefined)
+                    }
+                    className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
+                    placeholder={t("flights:form.placeholders.price")}
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                  {t("flights:form.currency")}
-                </label>
-                <select
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value as "EUR" | "USD" | "GBP" | "CHF")}
-                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="EUR">{t("flights:currency.EUR")}</option>
-                  <option value="USD">{t("flights:currency.USD")}</option>
-                  <option value="GBP">{t("flights:currency.GBP")}</option>
-                  <option value="CHF">{t("flights:currency.CHF")}</option>
-                </select>
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                    {t("flights:form.currency")}
+                  </label>
+                  <select
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value as "EUR" | "USD" | "GBP" | "CHF")}
+                    className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="EUR">{t("flights:currency.EUR")}</option>
+                    <option value="USD">{t("flights:currency.USD")}</option>
+                    <option value="GBP">{t("flights:currency.GBP")}</option>
+                    <option value="CHF">{t("flights:currency.CHF")}</option>
+                  </select>
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                  {t("common:labels.taxes")}
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={taxes || ""}
-                  onChange={(e) =>
-                    setTaxes(e.target.value ? parseFloat(e.target.value) : undefined)
-                  }
-                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
-                  placeholder={t("flights:form.placeholders.taxes")}
-                />
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                    {t("common:labels.taxes")}
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={taxes || ""}
+                    onChange={(e) =>
+                      setTaxes(e.target.value ? parseFloat(e.target.value) : undefined)
+                    }
+                    className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
+                    placeholder={t("flights:form.placeholders.taxes")}
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                  {t("common:labels.fees")}
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={fees || ""}
-                  onChange={(e) => setFees(e.target.value ? parseFloat(e.target.value) : undefined)}
-                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
-                  placeholder={t("flights:form.placeholders.fees")}
-                />
+                <div>
+                  <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
+                    {t("common:labels.fees")}
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={fees || ""}
+                    onChange={(e) =>
+                      setFees(e.target.value ? parseFloat(e.target.value) : undefined)
+                    }
+                    className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
+                    placeholder={t("flights:form.placeholders.fees")}
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Buttons */}
           <div className="flex gap-3 pt-4 border-t">

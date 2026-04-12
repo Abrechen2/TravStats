@@ -185,4 +185,147 @@ router.post('/test-ollama', async (req: AuthRequest, res: Response, next: NextFu
   }
 });
 
+// List models on the Ollama server (no model name required)
+router.post('/ollama-models', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { ollamaUrl } = z.object({
+      ollamaUrl: z.string().url(),
+    }).parse(req.body);
+
+    const tagsUrl = `${ollamaUrl}/api/tags`;
+    const parsed = new URL(tagsUrl);
+
+    const BLOCKED_HOSTS = /^(localhost|127\.|::1|0\.0\.0\.0|169\.254\.)/i;
+    if (BLOCKED_HOSTS.test(parsed.hostname)) {
+      res.json({ success: false, error: 'Loopback and link-local addresses are not allowed' });
+      return;
+    }
+
+    const isHttps = parsed.protocol === 'https:';
+    const lib = isHttps ? https : http;
+
+    const result = await new Promise<{ ok: boolean; models?: Array<{ name: string; size: number; modified: string }>; error?: string }>((resolve) => {
+      const req2 = lib.request(
+        {
+          hostname: parsed.hostname,
+          port: parsed.port || (isHttps ? 443 : 80),
+          path: parsed.pathname,
+          method: 'GET',
+          timeout: 5000,
+        },
+        (response) => {
+          let data = '';
+          response.on('data', (chunk: string) => { data += chunk; });
+          response.on('end', () => {
+            try {
+              const json: unknown = JSON.parse(data);
+              if (typeof json === 'object' && json !== null && 'models' in json) {
+                const modelsArray = (json as Record<string, unknown>).models;
+                const models = Array.isArray(modelsArray)
+                  ? modelsArray.map((m: unknown) => {
+                      const model = m as Record<string, unknown>;
+                      return {
+                        name: String(model.name ?? ''),
+                        size: Number(model.size ?? 0),
+                        modified: String(model.modified_at ?? ''),
+                      };
+                    })
+                  : [];
+                resolve({ ok: true, models });
+              } else {
+                resolve({ ok: false, error: 'Unexpected response format' });
+              }
+            } catch {
+              resolve({ ok: false, error: 'Failed to parse Ollama response' });
+            }
+          });
+        }
+      );
+      req2.on('error', (err: Error) => resolve({ ok: false, error: err.message }));
+      req2.on('timeout', () => { req2.destroy(); resolve({ ok: false, error: 'Connection timed out (5s)' }); });
+      req2.end();
+    });
+
+    if (result.ok) {
+      res.json({ success: true, models: result.models });
+    } else {
+      res.json({ success: false, error: result.error });
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Pull (download) a model on the Ollama server
+router.post('/ollama-pull', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { ollamaUrl, modelName } = z.object({
+      ollamaUrl: z.string().url(),
+      modelName: z.string().min(1).max(100),
+    }).parse(req.body);
+
+    const pullUrl = `${ollamaUrl}/api/pull`;
+    const parsed = new URL(pullUrl);
+
+    const BLOCKED_HOSTS = /^(localhost|127\.|::1|0\.0\.0\.0|169\.254\.)/i;
+    if (BLOCKED_HOSTS.test(parsed.hostname)) {
+      res.json({ success: false, error: 'Loopback and link-local addresses are not allowed' });
+      return;
+    }
+
+    const isHttps = parsed.protocol === 'https:';
+    const lib = isHttps ? https : http;
+    const postBody = JSON.stringify({ name: modelName, stream: false });
+
+    const result = await new Promise<{ ok: boolean; status?: string; error?: string }>((resolve) => {
+      const req2 = lib.request(
+        {
+          hostname: parsed.hostname,
+          port: parsed.port || (isHttps ? 443 : 80),
+          path: parsed.pathname,
+          method: 'POST',
+          timeout: 600000, // 10 minutes for large model downloads
+          headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(postBody),
+          },
+        },
+        (response) => {
+          let data = '';
+          response.on('data', (chunk: string) => { data += chunk; });
+          response.on('end', () => {
+            try {
+              // Ollama returns multiple JSON objects for progress; take the last one
+              const lines = data.trim().split('\n');
+              const lastLine = lines[lines.length - 1];
+              const json = JSON.parse(lastLine) as Record<string, unknown>;
+              if (json.status === 'success' || String(json.status ?? '').includes('success')) {
+                resolve({ ok: true, status: 'success' });
+              } else if (json.error) {
+                resolve({ ok: false, error: String(json.error) });
+              } else {
+                resolve({ ok: true, status: String(json.status ?? 'pulling') });
+              }
+            } catch {
+              resolve({ ok: false, error: 'Failed to parse Ollama pull response' });
+            }
+          });
+        }
+      );
+      req2.on('error', (err: Error) => resolve({ ok: false, error: err.message }));
+      req2.on('timeout', () => { req2.destroy(); resolve({ ok: false, error: 'Pull timed out (10min)' }); });
+      req2.write(postBody);
+      req2.end();
+    });
+
+    if (result.ok) {
+      res.json({ success: true, status: result.status });
+    } else {
+      res.json({ success: false, error: result.error });
+    }
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;
