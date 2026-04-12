@@ -172,15 +172,16 @@ export default function FlightEditModal({
               <div>
                 <label className="label">{t("flights:historicalYear")}</label>
                 <input
-                  type="number"
-                  min={1950}
-                  max={new Date().getFullYear()}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={4}
                   placeholder={t("flights:historicalYearPlaceholder")}
                   value={
                     formData.departureTime ? new Date(formData.departureTime).getFullYear() : ""
                   }
                   onChange={(e) => {
-                    const y = e.target.value;
+                    const y = e.target.value.replace(/\D/g, "").slice(0, 4);
                     if (!y) {
                       update("departureTime", "");
                       return;

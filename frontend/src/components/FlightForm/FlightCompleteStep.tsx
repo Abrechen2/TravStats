@@ -287,13 +287,14 @@ export default function FlightCompleteStep({
           <div>
             <label className={`label ${textClass}`}>{t("flights:historicalYear")}</label>
             <input
-              type="number"
-              min={1950}
-              max={new Date().getFullYear()}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={4}
               placeholder={t("flights:historicalYearPlaceholder")}
               value={departureDate ? new Date(departureDate + "T00:00").getFullYear() : ""}
               onChange={(e) => {
-                const y = e.target.value;
+                const y = e.target.value.replace(/\D/g, "").slice(0, 4);
                 if (!y) {
                   setDepartureDate("");
                   setArrivalDate("");
@@ -347,7 +348,12 @@ export default function FlightCompleteStep({
               <input
                 type="date"
                 value={departureDate}
-                onChange={(e) => setDepartureDate(e.target.value)}
+                onChange={(e) => {
+                  setDepartureDate(e.target.value);
+                  if (!arrivalDate || arrivalDate < e.target.value) {
+                    setArrivalDate(e.target.value);
+                  }
+                }}
                 className={`input ${sizedInputClass}`}
                 required
               />

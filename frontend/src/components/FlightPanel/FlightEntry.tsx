@@ -81,6 +81,14 @@ export function FlightEntry({
                   historisch
                 </span>
               )}
+              {flight.status === "duplicated" && (
+                <span
+                  className="text-[9px] font-sans font-medium px-1.5 py-0.5 rounded-full uppercase tracking-wider"
+                  style={{ background: "rgba(251,191,36,0.2)", color: "rgb(251,191,36)" }}
+                >
+                  dupliziert
+                </span>
+              )}
             </div>
             <div className="text-xs" style={{ color: "var(--text-muted)" }}>
               {flight.departureTime

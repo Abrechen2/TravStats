@@ -80,7 +80,7 @@ const baseFlightSchema = z.object({
   arrivalTime: z.string().datetime().optional().nullable(),
   actualDeparture: z.string().datetime().optional().nullable(),
   actualArrival:   z.string().datetime().optional().nullable(),
-  status: z.enum(['scheduled', 'flown', 'cancelled', 'historical']).default('scheduled'),
+  status: z.enum(['scheduled', 'flown', 'cancelled', 'historical', 'duplicated']).default('scheduled'),
   notes: z.string().transform((v) => v.replace(/<[^>]*>/g, '')).optional(),
   price: z.number().min(0).optional(),
   currency: z.enum(['EUR', 'USD', 'GBP', 'CHF']).optional(),
@@ -106,7 +106,7 @@ const baseFlightSchema = z.object({
 
 export const createFlightSchema = baseFlightSchema.refine(
   data => {
-    if (data.status === 'historical') return true;
+    if (data.status === 'historical' || data.status === 'duplicated') return true;
     if (!data.departureTime || !data.arrivalTime) return false;
     const depTime = new Date(data.departureTime);
     const arrTime = new Date(data.arrivalTime);
@@ -133,7 +133,7 @@ export const flightQuerySchema = z.object({
   arrivalAirport: z.string().optional(),
   fromDate: z.string().datetime().optional(),
   toDate: z.string().datetime().optional(),
-  status: z.union([z.enum(['scheduled', 'flown', 'cancelled', 'historical']), z.array(z.enum(['scheduled', 'flown', 'cancelled', 'historical']))]).optional(),
+  status: z.union([z.enum(['scheduled', 'flown', 'cancelled', 'historical', 'duplicated']), z.array(z.enum(['scheduled', 'flown', 'cancelled', 'historical', 'duplicated']))]).optional(),
   category: z.enum(['business', 'private', 'vacation']).optional(),
   tags: z.union([z.string(), z.array(z.string())]).optional(),
   minPrice: z.coerce.number().min(0).optional(),
