@@ -78,16 +78,25 @@ export function buildRouteData(
     const count = routeCounts.get(key) ?? 0;
     if (count < minRouteCount || arcMap.has(key)) continue;
 
-    // Opacity scales with frequency: rare routes fade back, frequent ones glow
-    const alpha = Math.min(100 + count * 14, 230) as number;
-    const color = getHeatmapColor(count, q25, q50, q75, themeColors);
+    // Check if all flights on this route are scheduled (future/planned)
+    const flightIdsForRoute = routeFlightIds.get(key) ?? [];
+    const allScheduled = flightIdsForRoute.every((fid) =>
+      flights.some((fl) => fl.properties.id === fid && fl.properties.status === "scheduled")
+    );
+
+    // Scheduled-only routes: dashed cyan/teal; mixed/flown: normal heatmap color
+    const alpha = allScheduled ? 180 : (Math.min(100 + count * 14, 230) as number);
+    const color = allScheduled
+      ? ([100, 200, 220] as [number, number, number]) // cyan/teal for scheduled
+      : getHeatmapColor(count, q25, q50, q75, themeColors);
     arcMap.set(key, {
       sourcePosition: coords.depCoord,
       targetPosition: coords.arrCoord,
       count,
       sourceColor: [...color, alpha] as [number, number, number, number],
       targetColor: [...color, alpha] as [number, number, number, number],
-      flightIds: routeFlightIds.get(key) ?? [],
+      flightIds: flightIdsForRoute,
+      isScheduled: allScheduled,
     });
   }
 
@@ -145,6 +154,7 @@ export function createRoutesLayers(
       ];
     },
     getWidth: (d) => {
+      if (d.isScheduled) return 1.5; // thin dashed-look for planned routes
       const base = Math.min(Math.sqrt(d.count) * 1.3, 7);
       if (!hasSelection) return base;
       return d.flightIds.some((id) => selectedSet.has(id)) ? Math.max(base * 2, 5) : base;
