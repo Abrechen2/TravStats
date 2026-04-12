@@ -1,5 +1,5 @@
 import { useState, useEffect, lazy, Suspense } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "../hooks/useTranslation";
 import { Airport, airportsApi, flightsApi } from "../lib/api";
 import AirportAutocomplete from "./AirportAutocomplete";
 
@@ -38,7 +38,8 @@ export default function SimplifiedFlightForm({
   const [aircraft, setAircraft] = useState("");
   const [arrivalDate, setArrivalDate] = useState("");
   const [arrivalTime, setArrivalTime] = useState("14:00");
-  const [status, setStatus] = useState<"scheduled" | "flown" | "cancelled">("flown");
+  const [status, setStatus] = useState<"scheduled" | "flown" | "cancelled" | "historical">("flown");
+  const [historical, setHistorical] = useState(false);
   const [notes, setNotes] = useState("");
   const [price, setPrice] = useState<string>("");
   const [taxes, setTaxes] = useState<string>("");
@@ -78,8 +79,9 @@ export default function SimplifiedFlightForm({
     }
   }, [departureDate, departureTime, arrivalDate]);
 
-  // Auto-set status based on date
+  // Auto-set status based on date (skip when historical is active)
   useEffect(() => {
+    if (historical) return;
     if (departureDate) {
       const depDate = new Date(departureDate);
       const today = new Date();
@@ -91,7 +93,7 @@ export default function SimplifiedFlightForm({
         setStatus("scheduled");
       }
     }
-  }, [departureDate]);
+  }, [departureDate, historical]);
 
   const applyLookupData = (lookup: FlightLookupResult) => {
     if (!lookup) return;
@@ -246,7 +248,7 @@ export default function SimplifiedFlightForm({
       return;
     }
 
-    if (!departureDate) {
+    if (!historical && !departureDate) {
       setError(t("flights:form.validation.selectDate"));
       return;
     }
@@ -273,10 +275,13 @@ export default function SimplifiedFlightForm({
     try {
       // Convert local times to ISO strings (properly handles timezone conversion)
       // Note: This treats input times as local browser time and converts to UTC
-      const departureDateTime = new Date(`${departureDate}T${departureTime}:00`).toISOString();
-      const arrivalDateTime = new Date(
-        `${arrivalDate || departureDate}T${arrivalTime}:00`
-      ).toISOString();
+      const departureDateTime = departureDate
+        ? new Date(`${departureDate}T${departureTime || "00:00"}:00`).toISOString()
+        : undefined;
+      const arrivalDateTime =
+        arrivalDate || departureDate
+          ? new Date(`${arrivalDate || departureDate}T${arrivalTime || "00:00"}:00`).toISOString()
+          : undefined;
 
       await onSubmit({
         airline: airline || undefined,
@@ -298,7 +303,7 @@ export default function SimplifiedFlightForm({
         },
         departureTime: departureDateTime,
         arrivalTime: arrivalDateTime,
-        status,
+        status: historical ? "historical" : status,
         notes: notes || undefined,
         price: priceNum,
         taxes: taxesNum,
@@ -401,17 +406,47 @@ export default function SimplifiedFlightForm({
               </div>
             </div>
 
+            {/* Historical flight checkbox */}
+            <div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={historical}
+                  onChange={(e) => {
+                    setHistorical(e.target.checked);
+                    if (e.target.checked) setStatus("historical");
+                    else {
+                      if (departureDate && new Date(departureDate) < new Date()) setStatus("flown");
+                      else setStatus("scheduled");
+                    }
+                  }}
+                  className="rounded"
+                />
+                <span className="text-sm" style={{ color: "var(--text-primary)" }}>
+                  {t("flights:historicalCheckbox")}
+                </span>
+              </label>
+              {historical && (
+                <p className="text-xs mt-1 ml-6" style={{ color: "var(--text-muted)" }}>
+                  {t("flights:historicalHint")}
+                </p>
+              )}
+            </div>
+
             {/* Status */}
             <div>
               <label className="label">{t("flights:form.status")}</label>
               <select
                 value={status}
-                onChange={(e) => setStatus(e.target.value as "scheduled" | "flown" | "cancelled")}
+                onChange={(e) =>
+                  setStatus(e.target.value as "scheduled" | "flown" | "cancelled" | "historical")
+                }
                 className="input"
               >
                 <option value="flown">{t("flights:status.flown")} ✓</option>
                 <option value="scheduled">{t("flights:status.scheduled")}</option>
                 <option value="cancelled">{t("flights:status.cancelled")}</option>
+                <option value="historical">{t("flights:status.historical")}</option>
               </select>
             </div>
           </div>
@@ -626,7 +661,7 @@ export default function SimplifiedFlightForm({
             <button
               type="submit"
               className="btn-primary"
-              disabled={loading || !departure || !arrival || !departureDate}
+              disabled={loading || !departure || !arrival || (!historical && !departureDate)}
             >
               {loading ? t("flights:form.saving") : `✓ ${t("flights:form.submit")}`}
             </button>

@@ -217,8 +217,11 @@
     "scheduled": "Geplant",
     "flown": "Geflogen",
     "cancelled": "Storniert",
-    "landed": "Gelandet"
+    "landed": "Gelandet",
+    "historical": "Historisch"
   },
+  "historicalCheckbox": "Historischer Flug (nur Route bekannt)",
+  "historicalHint": "Nur Abflug- und Ankunftsflughafen erforderlich. Datum, Uhrzeit und alle weiteren Angaben sind optional.",
   "category": {
     "business": "Geschäftlich",
     "private": "Privat",
