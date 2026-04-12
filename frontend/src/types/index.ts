@@ -36,8 +36,8 @@ export interface Flight {
   arrName?: string;
   arrLat: number;
   arrLon: number;
-  departureTime: string;
-  arrivalTime: string;
+  departureTime: string | null;
+  arrivalTime: string | null;
   status: "scheduled" | "flown" | "cancelled" | "historical";
   notes?: string;
   createdAt: string;
@@ -282,8 +282,8 @@ export interface GeoJSONFeature {
       lat?: number;
       lon?: number;
     };
-    departureTime: string;
-    arrivalTime: string;
+    departureTime: string | null;
+    arrivalTime: string | null;
     status: string;
     category?: "business" | "private" | "vacation";
     tags?: string[];

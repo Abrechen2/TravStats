@@ -22,6 +22,7 @@ function connects(a: Flight, b: Flight): boolean {
   const aArr = a.arrIata ?? a.arrIcao;
   const bDep = b.depIata ?? b.depIcao;
   if (!aArr || !bDep || aArr !== bDep) return false;
+  if (!a.arrivalTime || !b.departureTime) return false;
   const gapMs = new Date(b.departureTime).getTime() - new Date(a.arrivalTime).getTime();
   return gapMs >= 0 && gapMs <= TWELVE_HOURS_MS;
 }
@@ -40,7 +41,9 @@ function connects(a: Flight, b: Flight): boolean {
  */
 export function groupFlights(flights: Flight[]): FlightGroup[] {
   const sorted = [...flights].sort(
-    (a, b) => new Date(a.departureTime).getTime() - new Date(b.departureTime).getTime()
+    (a, b) =>
+      (a.departureTime ? new Date(a.departureTime).getTime() : 0) -
+      (b.departureTime ? new Date(b.departureTime).getTime() : 0)
   );
 
   const groups: FlightGroup[] = [];

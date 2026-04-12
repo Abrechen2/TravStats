@@ -11,8 +11,12 @@ export function buildTripsData(flights: GeoJSONFeature[]): TripDatum[] {
       })
       .map((f) => {
         const coords = f.geometry.coordinates;
-        const t0 = new Date(f.properties.departureTime).getTime() / 1000;
-        const t1 = new Date(f.properties.arrivalTime).getTime() / 1000;
+        const t0 = f.properties.departureTime
+          ? new Date(f.properties.departureTime).getTime() / 1000
+          : 0;
+        const t1 = f.properties.arrivalTime
+          ? new Date(f.properties.arrivalTime).getTime() / 1000
+          : 0;
         return {
           path: [coords[0] as [number, number], coords[coords.length - 1] as [number, number]],
           timestamps: [t0, t1],

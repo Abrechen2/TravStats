@@ -69,6 +69,7 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
 
   const getFlightsForDate = (date: Date): Flight[] => {
     return flights.filter((flight) => {
+      if (!flight.departureTime) return false;
       const flightDate = new Date(flight.departureTime);
       return (
         flightDate.getDate() === date.getDate() &&
@@ -232,10 +233,12 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-[var(--text-muted)]">
-                      {new Date(flight.departureTime).toLocaleTimeString("de-DE", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {flight.departureTime
+                        ? new Date(flight.departureTime).toLocaleTimeString("de-DE", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "—"}
                     </p>
                     {flight.seatClass && (
                       <p className="text-xs text-[var(--text-muted)]">{flight.seatClass}</p>

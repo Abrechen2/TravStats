@@ -80,7 +80,9 @@ export function TripTooltip({
   const { t } = useTranslation(["dashboard"]);
 
   const sorted = [...flights].sort(
-    (a, b) => new Date(a.departureTime).getTime() - new Date(b.departureTime).getTime()
+    (a, b) =>
+      (a.departureTime ? new Date(a.departureTime).getTime() : 0) -
+      (b.departureTime ? new Date(b.departureTime).getTime() : 0)
   );
 
   const tripName = sorted[0]?.trip?.name;

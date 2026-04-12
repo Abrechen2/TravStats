@@ -22,7 +22,9 @@ export default function TripCard({
   // Sorted flights (shared by route chain + date range)
   const sorted = trip.flights
     ? [...trip.flights].sort(
-        (a, b) => new Date(a.departureTime).getTime() - new Date(b.departureTime).getTime()
+        (a, b) =>
+          (a.departureTime ? new Date(a.departureTime).getTime() : 0) -
+          (b.departureTime ? new Date(b.departureTime).getTime() : 0)
       )
     : [];
 
@@ -38,8 +40,8 @@ export default function TripCard({
   // Date range (uses sorted)
   const firstFlight = sorted[0];
   const lastFlight = sorted[sorted.length - 1];
-  const startDate = firstFlight ? new Date(firstFlight.departureTime) : null;
-  const endDate = lastFlight ? new Date(lastFlight.arrivalTime) : null;
+  const startDate = firstFlight?.departureTime ? new Date(firstFlight.departureTime) : null;
+  const endDate = lastFlight?.arrivalTime ? new Date(lastFlight.arrivalTime) : null;
   const nights = startDate && endDate ? differenceInDays(endDate, startDate) : null;
 
   const dateRangeStr =

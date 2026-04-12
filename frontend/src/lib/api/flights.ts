@@ -45,7 +45,7 @@ export const flightsApi = {
     return data;
   },
 
-  update: async (id: string, flight: Partial<FlightInput>): Promise<Flight> => {
+  update: async (id: string, flight: Partial<FlightInput> | Partial<Flight>): Promise<Flight> => {
     const { data } = await api.put<Flight>(`/flights/${id}`, flight);
     return data;
   },

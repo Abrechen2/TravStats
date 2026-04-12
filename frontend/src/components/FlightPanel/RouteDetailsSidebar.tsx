@@ -17,7 +17,9 @@ export function RouteDetailsSidebar({ flights, onBack }: RouteDetailsSidebarProp
   const sorted = useMemo(
     () =>
       [...flights].sort(
-        (a, b) => new Date(a.departureTime).getTime() - new Date(b.departureTime).getTime()
+        (a, b) =>
+          (a.departureTime ? new Date(a.departureTime).getTime() : 0) -
+          (b.departureTime ? new Date(b.departureTime).getTime() : 0)
       ),
     [flights]
   );
@@ -122,11 +124,13 @@ export function RouteDetailsSidebar({ flights, onBack }: RouteDetailsSidebarProp
             style={{ borderBottom: "1px solid var(--color-border)" }}
           >
             <span className="w-20 flex-shrink-0" style={{ color: "var(--text-muted)" }}>
-              {new Date(f.departureTime).toLocaleDateString(locale, {
-                day: "2-digit",
-                month: "short",
-                year: "2-digit",
-              })}
+              {f.departureTime
+                ? new Date(f.departureTime).toLocaleDateString(locale, {
+                    day: "2-digit",
+                    month: "short",
+                    year: "2-digit",
+                  })
+                : "—"}
             </span>
             <span
               className="w-16 flex-shrink-0 font-mono font-medium"

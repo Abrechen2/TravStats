@@ -20,7 +20,11 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
 
   // Get all years from flights
   const availableYears = Array.from(
-    new Set(flights.map((f) => new Date(f.departureTime).getFullYear()))
+    new Set(
+      flights
+        .filter((f) => f.departureTime != null)
+        .map((f) => new Date(f.departureTime!).getFullYear())
+    )
   ).sort((a, b) => b - a);
 
   // Generate all days for the year
@@ -43,6 +47,7 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
       }
 
       const dayFlights = flights.filter((flight) => {
+        if (!flight.departureTime) return false;
         const flightDate = new Date(flight.departureTime);
         return (
           flightDate.getFullYear() === currentDate.getFullYear() &&
@@ -244,7 +249,11 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
       <div className="mt-4 grid grid-cols-3 gap-4">
         <div className="text-center">
           <p className="text-2xl font-bold text-[var(--text-primary)]">
-            {flights.filter((f) => new Date(f.departureTime).getFullYear() === selectedYear).length}
+            {
+              flights.filter(
+                (f) => f.departureTime && new Date(f.departureTime).getFullYear() === selectedYear
+              ).length
+            }
           </p>
           <p className="text-xs text-[var(--text-muted)]">
             {t("stats:heatmap.flightsInYear", { year: selectedYear })}
@@ -255,8 +264,11 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
             {
               new Set(
                 flights
-                  .filter((f) => new Date(f.departureTime).getFullYear() === selectedYear)
-                  .map((f) => f.departureTime.split("T")[0])
+                  .filter(
+                    (f) =>
+                      f.departureTime && new Date(f.departureTime).getFullYear() === selectedYear
+                  )
+                  .map((f) => f.departureTime!.split("T")[0])
               ).size
             }
           </p>

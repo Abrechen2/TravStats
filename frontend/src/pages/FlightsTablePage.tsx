@@ -145,7 +145,9 @@ export default function FlightsTablePage(): JSX.Element {
   };
 
   const getDurationMinutes = (flight: Flight) =>
-    (new Date(flight.arrivalTime).getTime() - new Date(flight.departureTime).getTime()) / 60000;
+    flight.departureTime && flight.arrivalTime
+      ? (new Date(flight.arrivalTime).getTime() - new Date(flight.departureTime).getTime()) / 60000
+      : 0;
 
   const tripMap = useMemo(() => new Map(trips.map((t) => [t.id, t])), [trips]);
 
@@ -156,7 +158,9 @@ export default function FlightsTablePage(): JSX.Element {
 
         switch (sortBy) {
           case "departureTime":
-            comparison = new Date(a.departureTime).getTime() - new Date(b.departureTime).getTime();
+            comparison =
+              (a.departureTime ? new Date(a.departureTime).getTime() : 0) -
+              (b.departureTime ? new Date(b.departureTime).getTime() : 0);
             break;
           case "airline":
             comparison = (a.airline || "").localeCompare(b.airline || "");
@@ -194,9 +198,11 @@ export default function FlightsTablePage(): JSX.Element {
     [sortedFlights, tripFilter]
   );
 
-  const formatDate = (date: string): string => formatDateInTimezone(date, timezone);
+  const formatDate = (date: string | null): string =>
+    date ? formatDateInTimezone(date, timezone) : "—";
 
-  const formatDurationHours = (departure: string, arrival: string) => {
+  const formatDurationHours = (departure: string | null, arrival: string | null) => {
+    if (!departure || !arrival) return "—";
     const minutes = getDurationMinutes({
       departureTime: departure,
       arrivalTime: arrival,
