@@ -110,7 +110,7 @@ export default function AchievementsPage(): JSX.Element {
           style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}
         >
           <NavigationBar />
-          <div className="p-6">
+          <div className="p-6 pb-24">
             <div className="max-w-7xl mx-auto">
               <SkeletonAchievementGrid />
             </div>
@@ -491,7 +491,7 @@ export default function AchievementsPage(): JSX.Element {
                           )}
                         </div>
                         {!achievement.isUnlocked && (
-                          <div className="absolute bottom-4 right-4 flex items-center justify-center">
+                          <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center justify-center">
                             <svg
                               className="w-10 h-10"
                               style={{ color: "var(--text-muted)", opacity: 0.5 }}
