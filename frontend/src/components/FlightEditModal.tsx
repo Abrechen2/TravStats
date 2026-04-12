@@ -333,7 +333,19 @@ export default function FlightEditModal({
               <label className="label">{t("flights:form.status")}</label>
               <select
                 value={formData.status}
-                onChange={(e) => update("status", e.target.value as Flight["status"] & string)}
+                onChange={(e) => {
+                  const newStatus = e.target.value as Flight["status"];
+                  if (newStatus === "historical") {
+                    setFormData({
+                      ...formData,
+                      status: newStatus,
+                      departureTime: "",
+                      arrivalTime: "",
+                    });
+                  } else {
+                    update("status", newStatus);
+                  }
+                }}
                 className="input"
               >
                 <option value="flown">{t("flights:status.flown")}</option>
