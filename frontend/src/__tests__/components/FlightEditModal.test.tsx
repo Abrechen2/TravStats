@@ -61,7 +61,7 @@ describe("FlightEditModal", () => {
     // datetime-local inputs should not be present
     expect(document.querySelector("#editDepartureTime")).toBeFalsy();
     // year number input should be present
-    expect(document.querySelector('input[type="number"][min="1950"]')).toBeTruthy();
+    expect(document.querySelector('input[type="text"][inputmode="numeric"]')).toBeTruthy();
   });
 
   it("hides cost fields when enableCostTracking is false", () => {

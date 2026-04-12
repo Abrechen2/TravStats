@@ -38,7 +38,7 @@ export interface Flight {
   arrLon: number;
   departureTime: string | null;
   arrivalTime: string | null;
-  status: "scheduled" | "flown" | "cancelled" | "historical";
+  status: "scheduled" | "flown" | "cancelled" | "historical" | "duplicated";
   notes?: string;
   createdAt: string;
   // Costs & categorization
@@ -136,7 +136,7 @@ export interface FlightInput {
   arrival: Airport;
   departureTime?: string;
   arrivalTime?: string;
-  status?: "scheduled" | "flown" | "cancelled" | "historical";
+  status?: "scheduled" | "flown" | "cancelled" | "historical" | "duplicated";
   notes?: string;
   // Extended fields
   seatNumber?: string;

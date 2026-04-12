@@ -415,7 +415,7 @@ export default function DashboardPage(): JSX.Element {
               },
           departureTime: flight.departureTime || undefined,
           arrivalTime: flight.arrivalTime || undefined,
-          status: flight.departureTime ? "scheduled" : "historical",
+          status: "duplicated",
           seatClass: flight.seatClass || undefined,
           category: flight.category || undefined,
           tags: flight.tags?.length ? flight.tags : undefined,

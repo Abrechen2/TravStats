@@ -219,7 +219,8 @@
     "flown": "Geflogen",
     "cancelled": "Storniert",
     "landed": "Gelandet",
-    "historical": "Historisch"
+    "historical": "Historisch",
+    "duplicated": "Dupliziert"
   },
   "historicalCheckbox": "Historischer Flug (nur Route bekannt)",
   "historicalHint": "Nur Abflug- und Ankunftsflughafen erforderlich. Jahr, Monat und alle weiteren Angaben sind optional.",
