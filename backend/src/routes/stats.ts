@@ -70,7 +70,6 @@ function buildWhere(
 async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummaryStats> {
   // Distance and flight time only count flown+historical flights; totalFlights, status/airline/category
   // counts use the original where so that planned and cancelled flights are visible.
-  const flownWhere: Prisma.FlightWhereInput = { ...where, status: 'flown' };
   const geoWhere: Prisma.FlightWhereInput = { ...where, status: { in: ['flown', 'historical'] } };
 
   const [flownFlights, totalFlights, statusCounts, airlineCounts, categoryCounts, costAgg] = await Promise.all([
