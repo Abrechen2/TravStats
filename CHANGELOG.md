@@ -4,6 +4,21 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.20.0-beta] - 2026-04-12
+
+### Added
+- **Historical flights** — New flight status for route-only entries
+  without departure/arrival times. Historical flights count toward
+  distance, airport, and geographic achievements but are excluded
+  from flight-time statistics. Includes a form checkbox, grey map
+  arcs (thinner width), a "HISTORISCH" badge in the flight list,
+  and nullable times across the full Prisma schema.
+
+### Fixed
+- **Null-safe frontend types** — Made departureTime/arrivalTime
+  nullable across 17 frontend components to prevent runtime crashes
+  when displaying historical flights without timestamps.
+
 ## [0.19.0-beta] - 2026-04-12
 
 ### Added
