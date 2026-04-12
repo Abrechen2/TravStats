@@ -13,6 +13,7 @@ import { TripDetailsSidebar } from "./FlightPanel/TripDetailsSidebar";
 import { useFlightSelectionStore } from "../store/flightSelectionStore";
 
 type PanelTab = "flights" | "trips";
+type SortMode = "date-desc" | "date-asc" | "route" | "airline" | "status";
 
 interface FlightPanelProps {
   flights: Flight[];
@@ -41,10 +42,51 @@ export function FlightPanel({
 }: FlightPanelProps): JSX.Element {
   const { t } = useTranslation(["dashboard", "common"]);
   const locale = useLocale();
-  const groups = useMemo(() => groupFlights(flights), [flights]);
+  const [tab, setTab] = useState<PanelTab>("flights");
+  const [sortMode, setSortMode] = useState<SortMode>("date-desc");
+  // Group flights chronologically (for multi-leg detection), then sort groups
+  const groups = useMemo(() => {
+    const grouped = groupFlights(flights);
+
+    const firstFlight = (g: ReturnType<typeof groupFlights>[number]): Flight =>
+      g.type === "single" ? g.flight : g.flights[0];
+
+    switch (sortMode) {
+      case "date-desc":
+        // Default: chronological (groupFlights already sorts by departure)
+        break;
+      case "date-asc":
+        grouped.reverse();
+        break;
+      case "route":
+        grouped.sort((a, b) => {
+          const fa = firstFlight(a);
+          const fb = firstFlight(b);
+          const ra = `${fa.depIata ?? ""}${fa.arrIata ?? ""}`;
+          const rb = `${fb.depIata ?? ""}${fb.arrIata ?? ""}`;
+          return ra.localeCompare(rb);
+        });
+        break;
+      case "airline":
+        grouped.sort((a, b) =>
+          (firstFlight(a).airline ?? "").localeCompare(firstFlight(b).airline ?? "")
+        );
+        break;
+      case "status": {
+        const order: Record<string, number> = { scheduled: 0, flown: 1, cancelled: 2 };
+        grouped.sort(
+          (a, b) =>
+            (order[firstFlight(a).status] ?? 1) - (order[firstFlight(b).status] ?? 1) ||
+            new Date(firstFlight(a).departureTime).getTime() -
+              new Date(firstFlight(b).departureTime).getTime()
+        );
+        break;
+      }
+    }
+    return grouped;
+  }, [flights, sortMode]);
   const { detailMode, selectedFlights: detailFlights, clearSelection } = useFlightSelectionStore();
 
-  const [tab, setTab] = useState<PanelTab>("flights");
   const [trips, setTrips] = useState<Trip[]>([]);
 
   useEffect(() => {
@@ -159,6 +201,37 @@ export function FlightPanel({
                 </button>
               ))}
             </div>
+
+            {/* Sort selector (only for flights tab, not detail views) */}
+            {tab === "flights" && !detailMode && (
+              <div
+                className="flex items-center gap-1 px-3 py-1.5 flex-shrink-0"
+                style={{ borderBottom: "1px solid var(--color-border)" }}
+              >
+                {(
+                  [
+                    { value: "date-desc", label: "↑ " + t("dashboard:sortDate") },
+                    { value: "date-asc", label: "↓ " + t("dashboard:sortDate") },
+                    { value: "route", label: t("dashboard:sortRoute") },
+                    { value: "airline", label: t("dashboard:sortAirline") },
+                    { value: "status", label: t("dashboard:sortStatus") },
+                  ] as { value: SortMode; label: string }[]
+                ).map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setSortMode(opt.value)}
+                    className="text-[10px] px-1.5 py-0.5 rounded transition-colors"
+                    style={{
+                      background: sortMode === opt.value ? "var(--accent)" : "transparent",
+                      color: sortMode === opt.value ? "white" : "var(--text-muted)",
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* List */}
             <div className="flex-1 overflow-y-auto">
