@@ -430,7 +430,7 @@ export default function FlightCompleteStep({
             value={operatingAirline}
             onChange={(e) => setOperatingAirline(e.target.value)}
             className={`input ${sizedInputClass}`}
-            placeholder="z.B. Eurowings, Deutsche Bahn…"
+            placeholder={t("flights:form.placeholders.operatingAirline")}
             list="operating-airline-suggestions"
           />
           <datalist id="operating-airline-suggestions">

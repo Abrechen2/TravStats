@@ -9,6 +9,11 @@ vi.mock("../../hooks/useTranslation", () => ({
 vi.mock("../../components/ReceiptUpload", () => ({
   default: () => null,
 }));
+vi.mock("../../store/settingsStore", () => ({
+  useSettingsStore: () => ({
+    features: { enableCostTracking: false },
+  }),
+}));
 
 const mockFlight: Flight = {
   id: "1",
@@ -25,24 +30,44 @@ const mockFlight: Flight = {
   createdAt: "2026-01-01T00:00:00.000Z",
 };
 
-describe("FlightEditModal actual times", () => {
-  it("renders actual departure and arrival inputs when modal is open", () => {
+describe("FlightEditModal", () => {
+  it("renders departure and arrival time inputs when modal is open", () => {
     render(
       <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
     );
-    expect(document.querySelector("#actualDeparture")).toBeTruthy();
-    expect(document.querySelector("#actualArrival")).toBeTruthy();
+    expect(document.querySelector("#editDepartureTime")).toBeTruthy();
+    expect(document.querySelector("#editArrivalTime")).toBeTruthy();
   });
 
-  it("pre-fills actualDeparture when flight has existing value", () => {
-    const flightWithActual: Flight = {
+  it("pre-fills departure time from flight data", () => {
+    render(
+      <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
+    );
+    const input = document.querySelector("#editDepartureTime") as HTMLInputElement;
+    // Value is formatted in local timezone — just verify it's not empty
+    expect(input?.value).toBeTruthy();
+  });
+
+  it("hides date/time inputs for historical flights", () => {
+    const historicalFlight: Flight = {
       ...mockFlight,
-      actualDeparture: "2026-06-01T10:15:00.000Z",
+      status: "historical",
+      departureTime: null,
+      arrivalTime: null,
     };
     render(
-      <FlightEditModal flight={flightWithActual} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
+      <FlightEditModal flight={historicalFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
     );
-    const input = document.querySelector("#actualDeparture") as HTMLInputElement;
-    expect(input?.value).toBe("2026-06-01T10:15");
+    expect(document.querySelector("#editDepartureTime")).toBeFalsy();
+    expect(document.querySelector("#editArrivalTime")).toBeFalsy();
+  });
+
+  it("hides cost fields when enableCostTracking is false", () => {
+    const { container } = render(
+      <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
+    );
+    // Price input should not be present
+    const priceInputs = container.querySelectorAll('input[type="number"][step="0.01"]');
+    expect(priceInputs.length).toBe(0);
   });
 });
