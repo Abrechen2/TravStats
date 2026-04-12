@@ -8,6 +8,9 @@ import { useTranslation } from "../hooks/useTranslation";
 import { useLocale } from "../hooks/useLocale";
 import { tripsApi } from "../lib/api";
 import { calculateDistance } from "../lib/geo";
+import { RouteDetailsSidebar } from "./FlightPanel/RouteDetailsSidebar";
+import { TripDetailsSidebar } from "./FlightPanel/TripDetailsSidebar";
+import { useFlightSelectionStore } from "../store/flightSelectionStore";
 
 type PanelTab = "flights" | "trips";
 
@@ -39,6 +42,7 @@ export function FlightPanel({
   const { t } = useTranslation(["dashboard", "common"]);
   const locale = useLocale();
   const groups = useMemo(() => groupFlights(flights), [flights]);
+  const { detailMode, selectedFlights: detailFlights, clearSelection } = useFlightSelectionStore();
 
   const [tab, setTab] = useState<PanelTab>("flights");
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -158,7 +162,11 @@ export function FlightPanel({
 
             {/* List */}
             <div className="flex-1 overflow-y-auto">
-              {tab === "flights" ? (
+              {detailMode === "route-details" && detailFlights.length > 0 ? (
+                <RouteDetailsSidebar flights={detailFlights} onBack={clearSelection} />
+              ) : detailMode === "trip-details" && detailFlights.length > 0 ? (
+                <TripDetailsSidebar flights={detailFlights} onBack={clearSelection} />
+              ) : tab === "flights" ? (
                 groups.map((group) =>
                   group.type === "single" ? (
                     <FlightEntry
