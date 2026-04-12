@@ -13,6 +13,7 @@ interface MapContainer3DProps {
   flights: GeoJSONFeature[];
   flightList?: Flight[];
   onFlightClick?: (flightId: string) => void;
+  onRouteClick?: (flightIds: string[]) => void;
   onEdit?: (flight: Flight) => void;
   visMode: VisMode;
   onVisModeChange: (mode: VisMode) => void;
@@ -26,6 +27,7 @@ export default function MapContainer3D({
   flights,
   flightList,
   onFlightClick,
+  onRouteClick,
   onEdit,
   visMode,
   onVisModeChange,
@@ -92,6 +94,7 @@ export default function MapContainer3D({
             flightList={flightList}
             tripList={tripList.map((t) => ({ id: t.id, color: t.color }))}
             onFlightClick={onFlightClick}
+            onRouteClick={onRouteClick}
             onEdit={onEdit}
             visMode={visMode}
             minRouteCount={minRouteCount}

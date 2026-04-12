@@ -78,18 +78,10 @@ export default function SetupPage(): JSX.Element {
             <p className="text-gray-600 dark:text-gray-400">{t("setup:subtitle")}</p>
           </div>
 
-          {/* Info Box */}
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
-            <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
-              🔒 {t("setup:privacy.title")}
-            </h3>
-            <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-              <li>- {t("setup:privacy.items.dataStays")}</li>
-              <li>- {t("setup:privacy.items.firstUserAdmin")}</li>
-              <li>- {t("setup:privacy.items.inviteLater")}</li>
-              <li>- {t("setup:privacy.items.designedFor")}</li>
-            </ul>
-          </div>
+          {/* Privacy hint */}
+          <p className="text-sm text-center text-gray-500 dark:text-gray-400 mb-6">
+            🔒 {t("setup:privacy.items.dataStays")}
+          </p>
 
           {/* Form */}
           {success ? (
@@ -114,22 +106,6 @@ export default function SetupPage(): JSX.Element {
                   {error}
                 </div>
               )}
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t("setup:form.instanceName.label")}
-                </label>
-                <input
-                  type="text"
-                  value={formData.instanceName}
-                  onChange={(e) => setFormData({ ...formData, instanceName: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  placeholder={t("setup:form.instanceName.placeholder")}
-                />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {t("setup:form.instanceName.help")}
-                </p>
-              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -187,37 +163,6 @@ export default function SetupPage(): JSX.Element {
               </button>
             </form>
           )}
-
-          {/* Footer */}
-          <div className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
-            <p>{t("setup:footer.title")}</p>
-            <ul className="mt-2 space-y-1 text-xs">
-              <li>1. {t("setup:footer.steps.one")}</li>
-              <li>2. {t("setup:footer.steps.two")}</li>
-              <li>3. {t("setup:footer.steps.three")}</li>
-            </ul>
-          </div>
-        </div>
-
-        {/* Tips */}
-        <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
-            💡 {t("setup:tips.title")}
-          </h3>
-          <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-            <li>
-              - <strong>{t("setup:tips.items.localNetwork.label")}:</strong>{" "}
-              {t("setup:tips.items.localNetwork.value")}
-            </li>
-            <li>
-              - <strong>{t("setup:tips.items.vpn.label")}:</strong>{" "}
-              {t("setup:tips.items.vpn.value")}
-            </li>
-            <li>
-              - <strong>{t("setup:tips.items.backups.label")}:</strong>{" "}
-              {t("setup:tips.items.backups.value", { command: "./scripts/backup.sh" })}
-            </li>
-          </ul>
         </div>
       </div>
     </div>

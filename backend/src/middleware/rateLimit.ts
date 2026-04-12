@@ -169,12 +169,12 @@ export const pdfParseLimiter = rateLimit({
 
 /**
  * Rate limiter for batch flight creation
- * More restrictive than single-flight limiter: 1 batch = up to 20 flights.
- * Allows 10 batch requests per hour (max ~200 flights per hour).
+ * 1 batch = up to 20 flights. 50 batches/hour = max ~1000 flights/hour.
+ * Generous limit to support bulk email import workflows.
  */
 export const batchCreationLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10, // 10 batch requests per hour
+  max: 50, // 50 batch requests per hour
   message: 'Too many batch requests, please try again later',
   standardHeaders: true,
   legacyHeaders: false,

@@ -19,21 +19,23 @@ import FlightSelectStep from "./FlightForm/FlightSelectStep";
 import FlightCompleteStep from "./FlightForm/FlightCompleteStep";
 import { useFlightForm } from "./FlightForm/useFlightForm";
 
-import type { FlightInput } from "../types";
+import type { FlightInput, UserAchievement } from "../types";
 
 interface SimplifiedFlightFormProps {
   onSubmit: (flight: FlightInput, force?: boolean, hasMoreFlights?: boolean) => Promise<void>;
   onCancel: () => void;
+  onBatchComplete?: (newAchievements?: UserAchievement[]) => void;
 }
 
 export default function SimplifiedFlightFormV2({
   onSubmit,
   onCancel,
+  onBatchComplete,
 }: SimplifiedFlightFormProps): JSX.Element {
   const { t } = useTranslation(["flights", "errors", "common"]);
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
 
-  const form = useFlightForm(onSubmit, onCancel);
+  const form = useFlightForm(onSubmit, onCancel, onBatchComplete);
 
   // Theme classes
   const bgClass = "bg-[var(--bg-surface)]";

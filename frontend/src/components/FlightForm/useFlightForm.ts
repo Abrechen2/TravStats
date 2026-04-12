@@ -4,8 +4,9 @@ import { flightsApi } from "../../lib/api/flights";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { useSettingsStore } from "../../store/settingsStore";
+import { useToastStore } from "../../store/toastStore";
 import { storeHistoricalFlightTime, estimateFlightTimes } from "../../lib/timeEstimation";
-import type { FlightInput, ParsedBooking } from "../../types";
+import type { FlightInput, ParsedBooking, UserAchievement } from "../../types";
 import type { TimeEstimationWarning } from "./FlightCompleteStep";
 
 export interface FlightLookupResult {
@@ -40,7 +41,8 @@ export interface DuplicateFlight {
 
 export function useFlightForm(
   onSubmit: (flight: FlightInput, force?: boolean, hasMoreFlights?: boolean) => Promise<void>,
-  onCancel: () => void
+  onCancel: () => void,
+  onBatchComplete?: (newAchievements?: UserAchievement[]) => void
 ) {
   const { t } = useTranslation(["flights", "errors"]);
   const settings = useSettingsStore();
@@ -439,20 +441,22 @@ export function useFlightForm(
         setLoading(true);
         setError("");
         try {
-          await flightsApi.createBatch(confirmedFlightsRef.current);
+          const batchResult = await flightsApi.createBatch(confirmedFlightsRef.current);
+          confirmedFlightsRef.current = [];
+          setShowFlightReview(false);
+          setParsedFlights([]);
+          setCurrentFlightIndex(0);
+          onBatchComplete?.(batchResult.newAchievements);
+          onCancel();
         } catch (err: unknown) {
-          const errorObj = err as { response?: { data?: { error?: string } } };
-          setError(errorObj.response?.data?.error ?? t("errors:saveFailed"));
-          setLoading(false);
-          return;
+          const errorObj = err as { response?: { data?: { error?: string }; status?: number } };
+          const msg = errorObj.response?.data?.error ?? t("errors:saveFailed");
+          // Show as toast since the form may already be closing
+          useToastStore.getState().addToast("error", msg);
+          setError(msg);
         } finally {
           setLoading(false);
         }
-        confirmedFlightsRef.current = [];
-        setShowFlightReview(false);
-        setParsedFlights([]);
-        setCurrentFlightIndex(0);
-        onCancel();
       }
     } else {
       // Single flight — use the existing onSubmit callback

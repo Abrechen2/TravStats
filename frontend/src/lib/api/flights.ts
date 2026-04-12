@@ -4,6 +4,7 @@ import type {
   FlightInput,
   FlightLookupResult,
   GeoJSONFeatureCollection,
+  UserAchievement,
 } from "../../types";
 
 import { api } from "./client";
@@ -58,11 +59,14 @@ export const flightsApi = {
     return data;
   },
 
-  createBatch: async (flights: FlightInput[]): Promise<{ flights: Flight[]; count: number }> => {
-    const { data } = await api.post<{ flights: Flight[]; count: number }>(
-      "/flights/batch",
-      flights
-    );
+  createBatch: async (
+    flights: FlightInput[]
+  ): Promise<{ flights: Flight[]; count: number; newAchievements?: UserAchievement[] }> => {
+    const { data } = await api.post<{
+      flights: Flight[];
+      count: number;
+      newAchievements?: UserAchievement[];
+    }>("/flights/batch", flights);
     return data;
   },
 };

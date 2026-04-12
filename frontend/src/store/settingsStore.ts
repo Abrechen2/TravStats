@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { settingsApi } from "../lib/api";
 import { logger } from "../lib/logger";
+import { useAuthStore } from "./authStore";
 
 type ThemePreference = "light" | "dark";
 type LanguagePreference = "de" | "en";
@@ -145,7 +146,7 @@ const defaultSettings: Omit<
     flightReminder: "24h",
   },
   features: {
-    enableCostTracking: true,
+    enableCostTracking: false,
   },
   apiKeys: null,
 };
@@ -212,6 +213,14 @@ export const useSettingsStore = create<SettingsState>()(
                 ...state,
                 ...remoteWithoutDirectFields,
               };
+              // If profile username is still the default "Traveler", use the
+              // actual account username from the auth store instead.
+              if (newState.profile?.username === "Traveler") {
+                const authUser = useAuthStore.getState().user;
+                if (authUser?.username) {
+                  newState.profile = { ...newState.profile, username: authUser.username };
+                }
+              }
               // Sync language to i18n if it changed (will be handled by App.tsx useEffect, but we do it here too for immediate update)
               if (remote.display?.language && remote.display.language !== state.display.language) {
                 // The language sync will be handled by the useEffect in App.tsx

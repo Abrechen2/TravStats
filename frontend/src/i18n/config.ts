@@ -37,7 +37,7 @@ import dePendingUpdates from "./resources/de/pendingUpdates.json";
 import deParser from "./resources/de/parser.json";
 import deTrips from "./resources/de/trips.json";
 
-// Get initial language from settings store
+// Get initial language: stored preference → browser language → fallback "en"
 const getInitialLanguage = (): string => {
   try {
     const stored = localStorage.getItem("settings-storage");
@@ -50,7 +50,12 @@ const getInitialLanguage = (): string => {
   } catch (error) {
     console.warn("[i18n] Initialization failed, using defaults", error);
   }
-  return "en"; // Default to English
+  // Auto-detect from browser: "de", "de-DE", "de-AT" etc. → "de"
+  const browserLang = navigator.language?.split("-")[0];
+  if (browserLang === "de" || browserLang === "en") {
+    return browserLang;
+  }
+  return "en";
 };
 
 const resources = {

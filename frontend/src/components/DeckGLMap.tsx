@@ -65,6 +65,7 @@ interface DeckGLMapProps {
   visMode: VisMode;
   minRouteCount?: number;
   onFlightClick?: (flightId: string) => void;
+  onRouteClick?: (flightIds: string[]) => void;
   onEdit?: (flight: Flight) => void;
   tripList?: Array<{ id: string; color: string }>;
   flightList?: Flight[];
@@ -77,6 +78,7 @@ export function DeckGLMap({
   visMode,
   minRouteCount = 1,
   onFlightClick,
+  onRouteClick,
   onEdit,
   tripList,
   flightList,
@@ -251,13 +253,18 @@ export function DeckGLMap({
   // Wrap onFlightClick so that a deck.gl layer click sets the guard ref BEFORE the
   // Map onClick fires and would otherwise clear the selection immediately (Bug 1).
   const handleFlightClick = useCallback(
-    (flightId: string): void => {
+    (flightIdOrIds: string | string[]): void => {
       deckClickedRef.current = true;
       setAirportIata(null);
       airportGeoRef.current = null;
-      onFlightClick?.(flightId);
+      // Route clicks pass all flightIds for that route; single-flight clicks pass a string
+      if (Array.isArray(flightIdOrIds)) {
+        onRouteClick?.(flightIdOrIds);
+      } else {
+        onFlightClick?.(flightIdOrIds);
+      }
     },
-    [onFlightClick]
+    [onFlightClick, onRouteClick]
   );
 
   const handleAirportClick = useCallback(
