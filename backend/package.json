@@ -81,7 +81,7 @@
     "@types/nodemailer": "^7.0.11",
     "@types/pdf-parse": "^1.1.5",
     "@types/supertest": "^6.0.2",
-    "@types/uuid": "^10.0.0",
+    "@types/uuid": "^11.0.0",
     "@typescript-eslint/eslint-plugin": "^8.58.0",
     "@typescript-eslint/parser": "^8.58.0",
     "eslint": "^10.1.0",
