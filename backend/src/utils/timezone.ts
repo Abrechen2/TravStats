@@ -9,6 +9,36 @@ import { getCachedAirport } from '../services/airportCache';
 import logger from './logger';
 
 /**
+ * Calculate the real elapsed flight duration in minutes, accounting for
+ * timezones.
+ *
+ * Stored times are local wall-clock times serialised as fake-UTC
+ * (e.g. 17:30 LAX → …T17:30:00.000Z). To get actual elapsed time we
+ * re-interpret each side through the airport's IANA timezone.
+ */
+export function tzAwareDurationMinutes(
+  departureTime: Date,
+  arrivalTime: Date,
+  depTz: string | null | undefined,
+  arrTz: string | null | undefined,
+): number {
+  if (!depTz || !arrTz) {
+    // No timezone info — fall back to naïve diff
+    return (arrivalTime.getTime() - departureTime.getTime()) / 60_000;
+  }
+
+  try {
+    // fromZonedTime interprets the UTC components of the date as if they
+    // were local time in the given timezone, and returns the true UTC instant.
+    const depUtc = fromZonedTime(departureTime, depTz);
+    const arrUtc = fromZonedTime(arrivalTime, arrTz);
+    return (arrUtc.getTime() - depUtc.getTime()) / 60_000;
+  } catch {
+    return (arrivalTime.getTime() - departureTime.getTime()) / 60_000;
+  }
+}
+
+/**
  * Get timezone for an airport by IATA or ICAO code
  * @param airportCode IATA or ICAO code
  * @returns IANA timezone string (e.g., "Europe/Berlin") or null if not found

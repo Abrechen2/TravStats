@@ -8,6 +8,7 @@ import { Prisma } from '@prisma/client';
 import { calculateFunStats, calculateBusinessStats, calculateUniqueStats } from '../utils/statsCalculator';
 import logger from '../utils/logger';
 import { statsLimiter } from '../middleware/rateLimit';
+import { tzAwareDurationMinutes } from '../utils/timezone';
 
 const router = Router();
 
@@ -75,8 +76,12 @@ async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummarySt
     prisma.flight.findMany({
       where: flownWhere,
       select: {
+        depIata: true,
+        depIcao: true,
         depLat: true,
         depLon: true,
+        arrIata: true,
+        arrIcao: true,
         arrLat: true,
         arrLon: true,
         departureTime: true,
@@ -112,6 +117,24 @@ async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummarySt
   let totalDistance = 0;
   let totalFlightTime = 0;
 
+  // Build timezone map for all airports referenced in flown flights
+  const allCodes = new Set<string>();
+  for (const f of flownFlights) {
+    if (f.depIata) allCodes.add(f.depIata);
+    if (f.depIcao) allCodes.add(f.depIcao);
+    if (f.arrIata) allCodes.add(f.arrIata);
+    if (f.arrIcao) allCodes.add(f.arrIcao);
+  }
+  let tzMap = new Map<string, string>();
+  try {
+    const airports = await getCachedAirports(Array.from(allCodes));
+    for (const [code, data] of airports.entries()) {
+      if (data?.timezone) tzMap.set(code, data.timezone);
+    }
+  } catch {
+    // timezone lookup failed — durations will use naïve diff
+  }
+
   flownFlights.forEach(flight => {
     const distance = calculateDistance(
       flight.depLat,
@@ -121,8 +144,15 @@ async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummarySt
     );
     totalDistance += distance;
 
-    const flightTime =
-      (flight.arrivalTime.getTime() - flight.departureTime.getTime()) / 1000 / 60;
+    const depTz = (flight.depIata && tzMap.get(flight.depIata))
+      || (flight.depIcao && tzMap.get(flight.depIcao))
+      || null;
+    const arrTz = (flight.arrIata && tzMap.get(flight.arrIata))
+      || (flight.arrIcao && tzMap.get(flight.arrIcao))
+      || null;
+    const flightTime = tzAwareDurationMinutes(
+      flight.departureTime, flight.arrivalTime, depTz, arrTz,
+    );
     totalFlightTime += flightTime;
   });
 

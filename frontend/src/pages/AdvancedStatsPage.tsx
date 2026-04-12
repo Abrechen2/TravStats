@@ -152,7 +152,16 @@ export default function AdvancedStatsPage(): JSX.Element {
   };
 
   // Calculate flight duration in hours
-  const calculateDuration = (departure: string, arrival: string): number => {
+  const calculateDuration = (
+    departure: string,
+    arrival: string,
+    durationMinutes?: number
+  ): number => {
+    // Prefer backend-computed timezone-aware duration when available
+    if (durationMinutes != null && durationMinutes > 0) {
+      return durationMinutes / 60;
+    }
+    // Fallback to naïve calculation (same-timezone flights)
     const dep = new Date(departure).getTime();
     const arr = new Date(arrival).getTime();
     return (arr - dep) / (1000 * 60 * 60);
@@ -182,7 +191,8 @@ export default function AdvancedStatsPage(): JSX.Element {
       acc[flight.airline].count++;
       acc[flight.airline].totalDuration += calculateDuration(
         flight.departureTime,
-        flight.arrivalTime
+        flight.arrivalTime,
+        flight.durationMinutes
       );
       acc[flight.airline].flights.push(flight);
       return acc;
@@ -227,7 +237,7 @@ export default function AdvancedStatsPage(): JSX.Element {
 
   const totalFlightTime = flights.reduce((sum, flight) => {
     if (!flight.departureTime || !flight.arrivalTime) return sum;
-    const dur = calculateDuration(flight.departureTime, flight.arrivalTime);
+    const dur = calculateDuration(flight.departureTime, flight.arrivalTime, flight.durationMinutes);
     return isNaN(dur) || dur <= 0 ? sum : sum + dur;
   }, 0);
 
@@ -236,7 +246,7 @@ export default function AdvancedStatsPage(): JSX.Element {
   const flightDurations = flights
     .map((f) => ({
       flight: f,
-      duration: calculateDuration(f.departureTime, f.arrivalTime),
+      duration: calculateDuration(f.departureTime, f.arrivalTime, f.durationMinutes),
     }))
     .filter((fd) => !isNaN(fd.duration) && fd.duration > 0);
 
