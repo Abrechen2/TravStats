@@ -1,12 +1,13 @@
 ﻿import { useState, useEffect } from "react";
-import { Airport, FlightInput, ParsedBooking } from "../types";
-import { airportsApi, parseApi } from "../lib/api";
+import type { FlightInput, ParsedBooking } from "../types";
+import { type Airport, airportsApi, parseApi } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
 import { useSettingsStore } from "../store/settingsStore";
 import { logger } from "../lib/logger";
 import { useTranslation } from "../hooks/useTranslation";
 import { filterEmailText } from "../lib/filterEmailText";
 import { getAirlineFromFlightNumber } from "../lib/airlineUtils";
+import AirportAutocomplete from "./AirportAutocomplete";
 
 function getFieldBorderClass(
   fieldName: string,
@@ -492,57 +493,29 @@ export default function FlightReviewModal({
           {/* Route */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                {t("flights:form.departureAirportCode")} *
-              </label>
-              <input
-                type="text"
-                value={departureCode}
-                onChange={(e) => {
-                  const code = e.target.value.toUpperCase();
-                  setDepartureCode(code);
-                  setDepartureAirport(null);
+              <AirportAutocomplete
+                value={departureAirport}
+                onChange={(a) => {
+                  setDepartureAirport(a);
+                  setDepartureCode(a?.iata || a?.icao || "");
                 }}
-                className={`w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500 ${getFieldBorderClass("departureCode", initialData.fieldSources)}`}
-                placeholder={t("flights:form.placeholders.departureCode")}
-                maxLength={3}
+                label={`${t("flights:form.from")}`}
+                placeholder={t("flights:form.placeholders.departureAirport")}
                 required
               />
-              {departureAirport && (
-                <p className="text-xs text-[var(--text-muted)] mt-1">
-                  {t("flights:review.selectedAirport", {
-                    name: departureAirport.name,
-                    code: departureAirport.iata || departureAirport.icao || "",
-                  })}
-                </p>
-              )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
-                {t("flights:form.arrivalAirportCode")} *
-              </label>
-              <input
-                type="text"
-                value={arrivalCode}
-                onChange={(e) => {
-                  const code = e.target.value.toUpperCase();
-                  setArrivalCode(code);
-                  setArrivalAirport(null);
+              <AirportAutocomplete
+                value={arrivalAirport}
+                onChange={(a) => {
+                  setArrivalAirport(a);
+                  setArrivalCode(a?.iata || a?.icao || "");
                 }}
-                className={`w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500 ${getFieldBorderClass("arrivalCode", initialData.fieldSources)}`}
-                placeholder={t("flights:form.placeholders.arrivalCode")}
-                maxLength={3}
+                label={`${t("flights:form.to")}`}
+                placeholder={t("flights:form.placeholders.arrivalAirport")}
                 required
               />
-              {arrivalAirport && (
-                <p className="text-xs text-[var(--text-muted)] mt-1">
-                  {t("flights:review.selectedAirport", {
-                    name: arrivalAirport.name,
-                    code: arrivalAirport.iata || arrivalAirport.icao || "",
-                  })}
-                </p>
-              )}
             </div>
           </div>
 
