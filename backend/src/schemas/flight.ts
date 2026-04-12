@@ -60,8 +60,8 @@ const baseFlightSchema = z.object({
   airline: emptyStringToUndefined,
   operatingAirline: emptyStringToUndefined,
   flightNumber: emptyStringToUndefined,
-  callsign: z.string().optional(),
-  aircraft: z.string().optional(),
+  callsign: z.string().nullable().optional(),
+  aircraft: z.string().nullable().optional(),
   departure: z.object({
     icao: z.string().nullable().optional(),
     iata: z.string().nullable().optional(),
