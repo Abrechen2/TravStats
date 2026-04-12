@@ -61,7 +61,7 @@ export interface FlightCompleteStepProps {
   gate: string;
   seatNumber: string;
   seatClass: "economy" | "premium_economy" | "business" | "first";
-  status: "scheduled" | "flown" | "cancelled";
+  status: "scheduled" | "flown" | "cancelled" | "historical";
   category: "business" | "private" | "vacation";
   setAirline: (v: string) => void;
   setOperatingAirline: (v: string) => void;
@@ -71,7 +71,7 @@ export interface FlightCompleteStepProps {
   setGate: (v: string) => void;
   setSeatNumber: (v: string) => void;
   setSeatClass: (v: "economy" | "premium_economy" | "business" | "first") => void;
-  setStatus: (v: "scheduled" | "flown" | "cancelled") => void;
+  setStatus: (v: "scheduled" | "flown" | "cancelled" | "historical") => void;
   setCategory: (v: "business" | "private" | "vacation") => void;
   // Price
   price: number | undefined;
@@ -171,8 +171,8 @@ export default function FlightCompleteStep({
         </div>
       )}
 
-      {/* Time Estimation Warning */}
-      {timeEstimationWarning?.show && (
+      {/* Time Estimation Warning (hidden for historical flights) */}
+      {timeEstimationWarning?.show && status !== "historical" && (
         <div
           className={`p-4 rounded-lg ${isDarkMode ? "bg-yellow-900" : "bg-yellow-50"} border ${isDarkMode ? "border-yellow-700" : "border-yellow-200"}`}
         >
@@ -257,71 +257,99 @@ export default function FlightCompleteStep({
         </div>
       </div>
 
-      {/* Date & Time */}
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className={`label ${textClass} flex items-center gap-2`}>
-            {t("flights:form.departureDate")}
-            <HelpIcon content={t("flights:form.help.departureDate")} position="top" />
-          </label>
+      {/* Historical flight checkbox */}
+      <div>
+        <label className="flex items-center gap-2 cursor-pointer">
           <input
-            type="date"
-            value={departureDate}
-            onChange={(e) => setDepartureDate(e.target.value)}
-            className={`input ${sizedInputClass}`}
-            required
+            type="checkbox"
+            checked={status === "historical"}
+            onChange={(e) => {
+              if (e.target.checked) {
+                setStatus("historical");
+                setTimeEstimationWarning(null);
+              } else {
+                if (departureDate && new Date(departureDate) < new Date()) setStatus("flown");
+                else setStatus("scheduled");
+              }
+            }}
+            className="rounded"
           />
-        </div>
-        <div>
-          <label className={`label ${textClass} flex items-center gap-2`}>
-            {t("flights:form.departureTime")}
-            <HelpIcon
-              content={t("flights:form.help.departureTime")}
-              expandedContent={t("flights:form.help.departureTimeExpanded")}
-              position="top"
-            />
-          </label>
-          <input
-            type="time"
-            value={departureTime}
-            onChange={(e) => setDepartureTime(e.target.value)}
-            className={`input ${sizedInputClass}`}
-          />
-        </div>
+          <span className={`text-sm ${textClass}`}>{t("flights:historicalCheckbox")}</span>
+        </label>
+        {status === "historical" && (
+          <p className={`text-xs mt-1 ml-6 ${mutedTextClass}`}>{t("flights:historicalHint")}</p>
+        )}
       </div>
 
-      {/* Arrival Date & Time */}
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className={`label ${textClass} flex items-center gap-2`}>
-            {t("flights:form.arrivalDate")} *
-            <HelpIcon content={t("flights:form.help.arrivalDate")} position="top" />
-          </label>
-          <input
-            type="date"
-            value={arrivalDate}
-            onChange={(e) => setArrivalDate(e.target.value)}
-            className={`input ${sizedInputClass}`}
-            required
-          />
-        </div>
-        <div>
-          <label className={`label ${textClass} flex items-center gap-2`}>
-            {t("flights:form.arrivalTime")}
-            <HelpIcon
-              content={t("flights:form.help.arrivalTime")}
-              expandedContent={t("flights:form.help.arrivalTimeExpanded")}
-              position="top"
+      {/* Date & Time (hidden for historical flights) */}
+      {status !== "historical" && (
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className={`label ${textClass} flex items-center gap-2`}>
+              {t("flights:form.departureDate")}
+              <HelpIcon content={t("flights:form.help.departureDate")} position="top" />
+            </label>
+            <input
+              type="date"
+              value={departureDate}
+              onChange={(e) => setDepartureDate(e.target.value)}
+              className={`input ${sizedInputClass}`}
+              required
             />
-          </label>
-          <input
-            type="time"
-            value={arrivalTime}
-            onChange={(e) => setArrivalTime(e.target.value)}
-            className={`input ${sizedInputClass}`}
-          />
+          </div>
+          <div>
+            <label className={`label ${textClass} flex items-center gap-2`}>
+              {t("flights:form.departureTime")}
+              <HelpIcon
+                content={t("flights:form.help.departureTime")}
+                expandedContent={t("flights:form.help.departureTimeExpanded")}
+                position="top"
+              />
+            </label>
+            <input
+              type="time"
+              value={departureTime}
+              onChange={(e) => setDepartureTime(e.target.value)}
+              className={`input ${sizedInputClass}`}
+            />
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Arrival Date & Time (hidden for historical flights) */}
+      {status !== "historical" && (
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className={`label ${textClass} flex items-center gap-2`}>
+              {t("flights:form.arrivalDate")} *
+              <HelpIcon content={t("flights:form.help.arrivalDate")} position="top" />
+            </label>
+            <input
+              type="date"
+              value={arrivalDate}
+              onChange={(e) => setArrivalDate(e.target.value)}
+              className={`input ${sizedInputClass}`}
+              required
+            />
+          </div>
+          <div>
+            <label className={`label ${textClass} flex items-center gap-2`}>
+              {t("flights:form.arrivalTime")}
+              <HelpIcon
+                content={t("flights:form.help.arrivalTime")}
+                expandedContent={t("flights:form.help.arrivalTimeExpanded")}
+                position="top"
+              />
+            </label>
+            <input
+              type="time"
+              value={arrivalTime}
+              onChange={(e) => setArrivalTime(e.target.value)}
+              className={`input ${sizedInputClass}`}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Additional Fields */}
       <div className="grid grid-cols-4 gap-4">
@@ -372,12 +400,15 @@ export default function FlightCompleteStep({
           <label className={`label ${textClass}`}>{t("flights:form.status")}</label>
           <select
             value={status}
-            onChange={(e) => setStatus(e.target.value as "scheduled" | "flown" | "cancelled")}
+            onChange={(e) =>
+              setStatus(e.target.value as "scheduled" | "flown" | "cancelled" | "historical")
+            }
             className={`input ${sizedInputClass}`}
           >
             <option value="flown">{t("flights:status.flown")}</option>
             <option value="scheduled">{t("flights:status.scheduled")}</option>
             <option value="cancelled">{t("flights:status.cancelled")}</option>
+            <option value="historical">{t("flights:status.historical")}</option>
           </select>
         </div>
       </div>

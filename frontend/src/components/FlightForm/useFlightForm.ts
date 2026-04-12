@@ -89,7 +89,7 @@ export function useFlightForm(
   const [seatClass, setSeatClass] = useState<"economy" | "premium_economy" | "business" | "first">(
     "economy"
   );
-  const [status, setStatus] = useState<"scheduled" | "flown" | "cancelled">("flown");
+  const [status, setStatus] = useState<"scheduled" | "flown" | "cancelled" | "historical">("flown");
   const [notes, setNotes] = useState("");
   const [price, setPrice] = useState<number | undefined>(undefined);
   const [currency, setCurrency] = useState<"EUR" | "USD" | "GBP" | "CHF">("EUR");
@@ -114,8 +114,9 @@ export function useFlightForm(
     if (settings?.defaults?.seatClass) setSeatClass(settings.defaults.seatClass);
   }, [settings]);
 
-  // Auto-set status based on date
+  // Auto-set status based on date (skip when historical is active)
   useEffect(() => {
+    if (status === "historical") return;
     if (departureDate) {
       const depDate = new Date(departureDate);
       const today = new Date();
@@ -298,8 +299,11 @@ export function useFlightForm(
 
   // Live validation
   const canSubmit = useMemo(
-    () => !!(departure && arrival && departureDate && arrivalDate),
-    [departure, arrival, departureDate, arrivalDate]
+    () =>
+      status === "historical"
+        ? !!(departure && arrival)
+        : !!(departure && arrival && departureDate && arrivalDate),
+    [departure, arrival, departureDate, arrivalDate, status]
   );
 
   const buildFlightPayload = (): FlightInput => ({
@@ -325,8 +329,14 @@ export function useFlightForm(
     seatNumber: seatNumber || undefined,
     terminal: terminal || undefined,
     gate: gate || undefined,
-    departureTime: new Date(`${departureDate}T${departureTime}:00`).toISOString(),
-    arrivalTime: new Date(`${arrivalDate}T${arrivalTime}:00`).toISOString(),
+    departureTime:
+      status === "historical" || !departureDate
+        ? undefined
+        : new Date(`${departureDate}T${departureTime}:00`).toISOString(),
+    arrivalTime:
+      status === "historical" || !arrivalDate
+        ? undefined
+        : new Date(`${arrivalDate}T${arrivalTime}:00`).toISOString(),
     status,
     notes: notes || undefined,
     price,
