@@ -23,8 +23,14 @@ Rules:
 - Use IATA codes only (3-letter airport codes)
 - Dates must be ISO 8601 with time component
 - If operatingAirline is the same as airline, set it to null
-- Return ONLY the JSON array, no explanation, no markdown
+- Return ONLY the JSON array, no explanation, no markdown, no <think> tags
+/no_think
 `;
+
+// Ollama generation timeout. qwen3-class reasoning models on large emails can
+// take minutes; the previous 120s was too aggressive and caused fallback to
+// single-leg regex templates for multi-flight bookings.
+const OLLAMA_GENERATE_TIMEOUT_MS = 300_000;
 
 function fetchJson(url: string, body: string): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -43,7 +49,9 @@ function fetchJson(url: string, body: string): Promise<string> {
       res.on("data", (chunk: string) => { data += chunk; });
       res.on("end", () => resolve(data));
     });
-    req.setTimeout(120_000, () => req.destroy(new Error("Ollama request timeout")));
+    req.setTimeout(OLLAMA_GENERATE_TIMEOUT_MS, () =>
+      req.destroy(new Error(`Ollama request timeout after ${OLLAMA_GENERATE_TIMEOUT_MS}ms`))
+    );
     req.on("error", reject);
     req.write(body);
     req.end();
@@ -105,7 +113,7 @@ export class OllamaTextParser implements ITextParser {
 
   constructor(url?: string, model?: string) {
     this.url = url ?? process.env.OLLAMA_URL ?? "http://localhost:11434";
-    this.model = model ?? process.env.OLLAMA_MODEL ?? "qwen2.5:14b";
+    this.model = model ?? process.env.OLLAMA_MODEL ?? "gemma3:12b";
   }
 
   async checkAvailability(): Promise<ProviderAvailability> {
@@ -131,11 +139,17 @@ export class OllamaTextParser implements ITextParser {
     const emailSnippet = text.slice(0, 5000);
     const userPrompt = `Subject: ${subject}\n\n${emailSnippet}`;
 
+    // `think: false` disables chain-of-thought generation on reasoning models
+    // like qwen3. Older Ollama versions ignore the field, so it is safe to
+    // always send. Combined with `/no_think` in the system prompt this avoids
+    // `<think>…</think>` blocks that bloat the response and occasionally break
+    // JSON extraction.
     const body = JSON.stringify({
       model: this.model,
       system: SYSTEM_PROMPT,
       prompt: userPrompt,
       stream: false,
+      think: false,
       options: { temperature: 0.1 },
     });
 
@@ -153,13 +167,37 @@ export class OllamaTextParser implements ITextParser {
       throw new Error("Ollama response.response is not a string");
     }
 
-    // Extract JSON array from response (may be wrapped in ```json ... ```)
-    const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+    // Strip reasoning / thinking blocks that qwen3-class models sometimes
+    // emit even with `think: false` and `/no_think`. Without this, greedy
+    // JSON extraction can accidentally match text inside a think block that
+    // mentions `[brackets]` and fail to parse.
+    const cleaned = responseText
+      .replace(/<think>[\s\S]*?<\/think>/gi, "")
+      .replace(/```(?:json)?\s*([\s\S]*?)```/gi, "$1")
+      .trim();
+
+    // Extract JSON array from the cleaned response
+    const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
+      const preview = responseText.slice(0, 500).replace(/\s+/g, " ");
+      logger.warn(
+        { model: this.model, responsePreview: preview },
+        "[Ollama Text Parser] No JSON array found — response did not contain a top-level array"
+      );
       throw new Error("No JSON array found in Ollama response");
     }
 
-    const flights: unknown = JSON.parse(jsonMatch[0]);
+    let flights: unknown;
+    try {
+      flights = JSON.parse(jsonMatch[0]);
+    } catch (err) {
+      const preview = jsonMatch[0].slice(0, 500).replace(/\s+/g, " ");
+      logger.warn(
+        { model: this.model, matchPreview: preview, error: err instanceof Error ? err.message : String(err) },
+        "[Ollama Text Parser] JSON.parse failed on matched array"
+      );
+      throw new Error("Ollama response JSON parse failed");
+    }
     if (!Array.isArray(flights)) {
       throw new Error("Ollama response is not a JSON array");
     }

@@ -27,7 +27,7 @@ services:
       - .env.dev.local
     entrypoint: ["/bin/sh", "-c"]
     command:
-      - MODEL=$${OLLAMA_MODEL:-qwen2.5:7b}; ollama serve & sleep 5 && ollama pull "$${MODEL}" && wait
+      - MODEL=$${OLLAMA_MODEL:-gemma3:12b}; ollama serve & sleep 5 && ollama pull "$${MODEL}" && wait
     environment:
       OLLAMA_KEEP_ALIVE: 4h
     ports:
