@@ -27,7 +27,7 @@ export default function FlightEditModal({
   onClose,
   onSave,
 }: FlightEditModalProps): JSX.Element | null {
-  const { t } = useTranslation(["flights", "common", "errors"]);
+  const { t, i18n } = useTranslation(["flights", "common", "errors"]);
   const { features } = useSettingsStore();
 
   const buildFormData = (f: Flight) => ({
@@ -166,8 +166,79 @@ export default function FlightEditModal({
             </div>
           )}
 
-          {/* Date & Time */}
-          {formData.status !== "historical" && (
+          {/* Date & Time — year/month for historical, full datetime for others */}
+          {formData.status === "historical" ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label">{t("flights:historicalYear")}</label>
+                <input
+                  type="number"
+                  min={1950}
+                  max={new Date().getFullYear()}
+                  placeholder={t("flights:historicalYearPlaceholder")}
+                  value={
+                    formData.departureTime ? new Date(formData.departureTime).getFullYear() : ""
+                  }
+                  onChange={(e) => {
+                    const y = e.target.value;
+                    if (!y) {
+                      update("departureTime", "");
+                      return;
+                    }
+                    const currentMonth = formData.departureTime
+                      ? String(new Date(formData.departureTime).getMonth() + 1).padStart(2, "0")
+                      : "01";
+                    const iso = new Date(`${y}-${currentMonth}-01T00:00:00`).toISOString();
+                    setFormData({
+                      ...formData,
+                      departureTime: toLocalDatetime(iso),
+                      arrivalTime: toLocalDatetime(iso),
+                    });
+                  }}
+                  className="input"
+                />
+              </div>
+              <div>
+                <label className="label">{t("flights:historicalMonth")}</label>
+                <select
+                  value={
+                    formData.departureTime
+                      ? String(new Date(formData.departureTime).getMonth() + 1)
+                      : ""
+                  }
+                  onChange={(e) => {
+                    const m = e.target.value;
+                    const y = formData.departureTime
+                      ? new Date(formData.departureTime).getFullYear()
+                      : new Date().getFullYear();
+                    if (!m) {
+                      const iso = new Date(`${y}-01-01T00:00:00`).toISOString();
+                      setFormData({
+                        ...formData,
+                        departureTime: toLocalDatetime(iso),
+                        arrivalTime: toLocalDatetime(iso),
+                      });
+                    } else {
+                      const iso = new Date(`${y}-${m.padStart(2, "0")}-01T00:00:00`).toISOString();
+                      setFormData({
+                        ...formData,
+                        departureTime: toLocalDatetime(iso),
+                        arrivalTime: toLocalDatetime(iso),
+                      });
+                    }
+                  }}
+                  className="input"
+                >
+                  <option value="">{t("flights:historicalMonthNone")}</option>
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <option key={i + 1} value={String(i + 1)}>
+                      {new Date(2000, i).toLocaleDateString(i18n.language, { month: "long" })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          ) : (
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="label" htmlFor="editDepartureTime">

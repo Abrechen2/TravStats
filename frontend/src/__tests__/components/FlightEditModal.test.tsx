@@ -4,7 +4,7 @@ import FlightEditModal from "../../components/FlightEditModal";
 import type { Flight } from "../../types";
 
 vi.mock("../../hooks/useTranslation", () => ({
-  useTranslation: () => ({ t: (k: string) => k }),
+  useTranslation: () => ({ t: (k: string) => k, i18n: { language: "de" } }),
 }));
 vi.mock("../../components/ReceiptUpload", () => ({
   default: () => null,
@@ -48,7 +48,7 @@ describe("FlightEditModal", () => {
     expect(input?.value).toBeTruthy();
   });
 
-  it("hides date/time inputs for historical flights", () => {
+  it("shows year/month picker instead of datetime for historical flights", () => {
     const historicalFlight: Flight = {
       ...mockFlight,
       status: "historical",
@@ -58,8 +58,10 @@ describe("FlightEditModal", () => {
     render(
       <FlightEditModal flight={historicalFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
     );
+    // datetime-local inputs should not be present
     expect(document.querySelector("#editDepartureTime")).toBeFalsy();
-    expect(document.querySelector("#editArrivalTime")).toBeFalsy();
+    // year number input should be present
+    expect(document.querySelector('input[type="number"][min="1950"]')).toBeTruthy();
   });
 
   it("hides cost fields when enableCostTracking is false", () => {
