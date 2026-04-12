@@ -84,7 +84,8 @@
     "noTrips": "Keine Trips vorhanden",
     "label": "Trips",
     "flights_one": "Flug",
-    "flights_other": "Flüge"
+    "flights_other": "Flüge",
+    "unnamed": "Unbenannter Trip"
   },
   "airport": {
     "flightsTotal_one": "Flug gesamt",
@@ -94,5 +95,7 @@
   },
   "flight": "Flug",
   "routeDetails": "Route-Details",
-  "tripDetails": "Trip-Details"
+  "tripDetails": "Trip-Details",
+  "flown": "geflogen",
+  "flightsOnRoute": "Flüge auf dieser Route"
 }
