@@ -16,7 +16,9 @@ export function TripDetailsSidebar({ flights, onBack }: TripDetailsSidebarProps)
   const sorted = useMemo(
     () =>
       [...flights].sort(
-        (a, b) => new Date(a.departureTime).getTime() - new Date(b.departureTime).getTime()
+        (a, b) =>
+          (a.departureTime ? new Date(a.departureTime).getTime() : 0) -
+          (b.departureTime ? new Date(b.departureTime).getTime() : 0)
       ),
     [flights]
   );

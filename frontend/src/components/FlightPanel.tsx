@@ -77,8 +77,8 @@ export function FlightPanel({
         grouped.sort(
           (a, b) =>
             (order[firstFlight(a).status] ?? 1) - (order[firstFlight(b).status] ?? 1) ||
-            new Date(firstFlight(a).departureTime).getTime() -
-              new Date(firstFlight(b).departureTime).getTime()
+            (firstFlight(a).departureTime ? new Date(firstFlight(a).departureTime!).getTime() : 0) -
+              (firstFlight(b).departureTime ? new Date(firstFlight(b).departureTime!).getTime() : 0)
         );
         break;
       }

@@ -82,7 +82,9 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
 
     const totalFlightTime = flownFlights.reduce((sum, f) => {
       const duration =
-        (new Date(f.arrivalTime).getTime() - new Date(f.departureTime).getTime()) / 60000;
+        f.departureTime && f.arrivalTime
+          ? (new Date(f.arrivalTime).getTime() - new Date(f.departureTime).getTime()) / 60000
+          : 0;
       return sum + duration;
     }, 0);
 

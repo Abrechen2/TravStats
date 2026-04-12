@@ -80,6 +80,7 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
         const airlineMap = new Map<string, number>();
 
         allFlights.forEach((flight) => {
+          if (!flight.departureTime) return;
           const year = new Date(flight.departureTime).getFullYear();
           years.add(year);
 

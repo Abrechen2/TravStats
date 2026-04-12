@@ -154,14 +154,15 @@ export default function AdvancedStatsPage(): JSX.Element {
 
   // Calculate flight duration in hours
   const calculateDuration = (
-    departure: string,
-    arrival: string,
+    departure: string | null,
+    arrival: string | null,
     durationMinutes?: number
   ): number => {
     // Prefer backend-computed timezone-aware duration when available
     if (durationMinutes != null && durationMinutes > 0) {
       return durationMinutes / 60;
     }
+    if (!departure || !arrival) return 0;
     // Fallback to naïve calculation (same-timezone flights)
     const dep = new Date(departure).getTime();
     const arr = new Date(arrival).getTime();
@@ -314,6 +315,7 @@ export default function AdvancedStatsPage(): JSX.Element {
   // Time-based analytics
   const flightsPerMonth = flights.reduce(
     (acc, flight) => {
+      if (!flight.departureTime) return acc;
       const date = new Date(flight.departureTime);
       const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
       acc[key] = (acc[key] || 0) + 1;
@@ -328,6 +330,7 @@ export default function AdvancedStatsPage(): JSX.Element {
 
   const flightsPerYear = flights.reduce(
     (acc, flight) => {
+      if (!flight.departureTime) return acc;
       const year = new Date(flight.departureTime).getFullYear();
       acc[year] = (acc[year] || 0) + 1;
       return acc;
@@ -354,6 +357,7 @@ export default function AdvancedStatsPage(): JSX.Element {
   ];
   const flightsPerWeekday = flights.reduce(
     (acc, flight) => {
+      if (!flight.departureTime) return acc;
       const weekday = new Date(flight.departureTime).getDay();
       acc[weekday] = (acc[weekday] || 0) + 1;
       return acc;
@@ -382,6 +386,7 @@ export default function AdvancedStatsPage(): JSX.Element {
   ];
   const flightsPerMonthOfYear = flights.reduce(
     (acc, flight) => {
+      if (!flight.departureTime) return acc;
       const month = new Date(flight.departureTime).getMonth();
       acc[month] = (acc[month] || 0) + 1;
       return acc;
@@ -416,7 +421,10 @@ export default function AdvancedStatsPage(): JSX.Element {
 
   const yearsActive: number[] = [
     ...new Set(
-      flights.map((f) => new Date(f.departureTime).getFullYear()).filter((y) => !isNaN(y))
+      flights
+        .filter((f) => f.departureTime != null)
+        .map((f) => new Date(f.departureTime!).getFullYear())
+        .filter((y) => !isNaN(y))
     ),
   ];
 
@@ -428,7 +436,7 @@ export default function AdvancedStatsPage(): JSX.Element {
     setGeneratingPdf(true);
     try {
       const yearFlights = flights.filter(
-        (f) => new Date(f.departureTime).getFullYear() === selectedYear
+        (f) => f.departureTime && new Date(f.departureTime).getFullYear() === selectedYear
       );
       const pdfUnits = units.distanceUnit === "miles" ? "mi" : "km";
       await generateYearReportPdf({

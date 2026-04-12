@@ -152,7 +152,9 @@ export default function FlightList({
                       )}
                     </p>
                     <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                      {format(new Date(flight.departureTime), "MMM dd, yyyy HH:mm")}
+                      {flight.departureTime
+                        ? format(new Date(flight.departureTime), "MMM dd, yyyy HH:mm")
+                        : "—"}
                     </p>
                   </div>
 
@@ -169,7 +171,9 @@ export default function FlightList({
                       )}
                     </p>
                     <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                      {format(new Date(flight.arrivalTime), "MMM dd, yyyy HH:mm")}
+                      {flight.arrivalTime
+                        ? format(new Date(flight.arrivalTime), "MMM dd, yyyy HH:mm")
+                        : "—"}
                     </p>
                   </div>
                 </div>
