@@ -102,6 +102,7 @@
       "companions": "Max Mustermann",
       "flightNumber": "LH400",
       "airline": "Lufthansa",
+      "operatingAirline": "z.B. Eurowings, Deutsche Bahn",
       "departureAirport": "FRA, Frankfurt",
       "arrivalAirport": "LHR, London",
       "departureCode": "FRA",

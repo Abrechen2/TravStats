@@ -103,6 +103,7 @@
       "companions": "John Doe",
       "flightNumber": "LH400",
       "airline": "Lufthansa",
+      "operatingAirline": "e.g. Eurowings, Deutsche Bahn",
       "departureAirport": "FRA, Frankfurt",
       "arrivalAirport": "LHR, London",
       "departureCode": "FRA",
