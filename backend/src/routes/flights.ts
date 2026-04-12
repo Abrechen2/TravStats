@@ -19,6 +19,8 @@ import {
 } from '../services/flightEnrichmentService';
 import { estimateRoute } from '../services/routeEstimationService';
 import { calculateCo2Kg, toSeatClass } from '../services/co2Calculator';
+import { getCachedAirports } from '../services/airportCache';
+import { tzAwareDurationMinutes } from '../utils/timezone';
 import batchRouter from './flightsBatch';
 
 const router = Router();
@@ -376,8 +378,39 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
       prisma.flight.count({ where }),
     ]);
 
+    // Enrich flights with timezone-aware duration
+    const allCodes = new Set<string>();
+    for (const f of flights) {
+      if (f.depIata) allCodes.add(f.depIata);
+      if (f.depIcao) allCodes.add(f.depIcao);
+      if (f.arrIata) allCodes.add(f.arrIata);
+      if (f.arrIcao) allCodes.add(f.arrIcao);
+    }
+    let tzMap = new Map<string, string>();
+    try {
+      const airports = await getCachedAirports(Array.from(allCodes));
+      for (const [code, data] of airports.entries()) {
+        if (data?.timezone) tzMap.set(code, data.timezone);
+      }
+    } catch { /* timezone lookup failed — durations use naïve diff */ }
+
+    const enrichedFlights = flights.map(f => {
+      const depTz = (f.depIata && tzMap.get(f.depIata))
+        || (f.depIcao && tzMap.get(f.depIcao))
+        || null;
+      const arrTz = (f.arrIata && tzMap.get(f.arrIata))
+        || (f.arrIcao && tzMap.get(f.arrIcao))
+        || null;
+      return {
+        ...f,
+        durationMinutes: Math.round(tzAwareDurationMinutes(
+          f.departureTime, f.arrivalTime, depTz, arrTz,
+        )),
+      };
+    });
+
     res.json({
-      flights,
+      flights: enrichedFlights,
       total,
       limit: query.limit,
       offset: query.offset,

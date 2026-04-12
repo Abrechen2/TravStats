@@ -85,6 +85,8 @@ export interface Flight {
   actualArrival?: string;
   delayMinutes?: number;
   co2Kg?: number;
+  // Computed by backend (timezone-aware)
+  durationMinutes?: number;
   // Trips
   tripId?: string | null;
   bookingId?: string | null;
