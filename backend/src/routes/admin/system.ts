@@ -79,8 +79,9 @@ router.get('/export/all-data', adminExportLimiter, async (req: AuthRequest, res:
       users,
     };
 
+    const exportFilename = `travstats-backup-${Date.now()}.json`;
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="travstats-backup-${Date.now()}.json"`);
+    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(exportFilename)}`);
     res.json(exportData);
   } catch (error) {
     next(error);

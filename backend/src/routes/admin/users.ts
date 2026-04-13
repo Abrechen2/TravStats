@@ -1,4 +1,5 @@
 import { Router, Response, NextFunction } from 'express';
+import crypto from 'crypto';
 import { AuthRequest } from '../../middleware/auth';
 import { prisma } from '../../db';
 import { AppError } from '../../middleware/errorHandler';
@@ -90,9 +91,10 @@ router.post(
       if (mode === 'generate') {
         const chars =
           'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
+        const randomBytes = crypto.randomBytes(12);
         plainPassword = Array.from(
-          { length: 12 },
-          () => chars[Math.floor(Math.random() * chars.length)],
+          randomBytes,
+          (byte) => chars[byte % chars.length],
         ).join('');
         newPasswordHash = await hashPassword(plainPassword);
       } else {
@@ -123,6 +125,9 @@ router.post(
         mode,
       });
 
+      // Note: temporaryPassword is returned for admin to communicate out-of-band.
+      // This is a conscious tradeoff for small-user-count deployments without SMTP.
+      // The admin can also use mode="set" to choose any password directly.
       res.json({
         message: 'Password reset successfully',
         ...(plainPassword !== undefined && { temporaryPassword: plainPassword }),

@@ -213,17 +213,6 @@ export async function createDatabaseDump(outputPath: string, targetDatabaseUrl?:
     }
   }
 
-  let command: string;
-  const execOptions: { maxBuffer: number; env?: NodeJS.ProcessEnv; shell?: string } = {
-    maxBuffer: 100 * 1024 * 1024, // 100MB buffer
-  };
-
-  // Set PGPASSWORD in environment for cross-platform compatibility
-  execOptions.env = {
-    ...process.env,
-    PGPASSWORD: dbInfo.password,
-  };
-
   // On Windows (non-Docker), use spawn with file output instead of shell redirection
   // But only if Docker is not available or database is remote
   if (isWindows && !dockerAvailable) {
@@ -341,7 +330,7 @@ export async function createDatabaseDump(outputPath: string, targetDatabaseUrl?:
     });
   }
 
-  // Docker or Unix: use execAsync with shell redirection
+  // Docker: use spawn with file output (safe from command injection)
   if (dockerAvailable) {
     // Use docker exec - this works on both Windows and Unix when database is in Docker
     // On Windows, we need to handle the output redirection differently
@@ -427,27 +416,129 @@ export async function createDatabaseDump(outputPath: string, targetDatabaseUrl?:
         });
       });
     } else {
-      // Unix/Linux with Docker: use shell redirection
-      command = `docker exec ${actualContainerName} pg_dump -U ${dbInfo.user} -F p ${dbInfo.database} > ${outputPath}`;
+      // Unix/Linux with Docker: use spawn (no shell) to prevent command injection
+      return new Promise<void>((resolve, reject) => {
+        const outputDir = path.dirname(outputPath);
+        if (!fs.existsSync(outputDir)) {
+          fs.mkdirSync(outputDir, { recursive: true });
+        }
+
+        const outputFile = fs.createWriteStream(outputPath);
+        const dockerExec = spawn('docker', [
+          'exec', '-i', actualContainerName,
+          'pg_dump', '-U', dbInfo.user, '-F', 'p', dbInfo.database,
+        ], {
+          env: { ...process.env, PGPASSWORD: dbInfo.password },
+        });
+
+        dockerExec.stdout.pipe(outputFile);
+
+        let stderrData = '';
+        dockerExec.stderr.on('data', (data) => {
+          stderrData += data.toString();
+          logger.warn({
+            operation: 'backup_db_docker_stderr',
+            message: 'docker exec pg_dump stderr output',
+            data: data.toString(),
+          });
+        });
+
+        dockerExec.on('error', (error) => {
+          outputFile.close();
+          try { if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath); } catch { /* ignore */ }
+          reject(new Error(`Failed to start docker exec: ${error.message}`));
+        });
+
+        outputFile.on('error', (error) => {
+          dockerExec.kill();
+          reject(new Error(`Failed to write backup file: ${error.message}`));
+        });
+
+        dockerExec.on('close', (code) => {
+          outputFile.end(() => {
+            if (code === 0) {
+              if (fs.existsSync(outputPath)) {
+                const stats = fs.statSync(outputPath);
+                if (stats.size === 0) {
+                  reject(new Error('Backup file is empty'));
+                } else {
+                  resolve();
+                }
+              } else {
+                reject(new Error('Backup file was not created'));
+              }
+            } else {
+              try { if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath); } catch { /* ignore */ }
+              reject(new Error(`docker exec pg_dump exited with code ${code}${stderrData ? ': ' + stderrData : ''}`));
+            }
+          });
+        });
+      });
     }
   } else {
-    // Direct connection (no Docker) - use environment variable instead of inline PGPASSWORD
-    command = `pg_dump -h ${dbInfo.host} -p ${dbInfo.port} -U ${dbInfo.user} -F p ${dbInfo.database} > ${outputPath}`;
-  }
+    // Direct connection (no Docker), Unix: use spawn (no shell) to prevent command injection
+    return new Promise<void>((resolve, reject) => {
+      const outputDir = path.dirname(outputPath);
+      if (!fs.existsSync(outputDir)) {
+        fs.mkdirSync(outputDir, { recursive: true });
+      }
 
-  // Only execute command if it was defined (not if we already returned a Promise)
-  if (!command) {
-    throw new Error('No backup command defined - this should not happen');
-  }
+      const outputFile = fs.createWriteStream(outputPath);
+      const pgDump = spawn('pg_dump', [
+        '-h', dbInfo.host,
+        '-p', dbInfo.port.toString(),
+        '-U', dbInfo.user,
+        '-F', 'p',
+        dbInfo.database,
+      ], {
+        env: { ...process.env, PGPASSWORD: dbInfo.password },
+      });
 
-  try {
-    await execAsync(command, execOptions);
-  } catch (error) {
-    logger.error({
-      operation: 'backup_db_error',
-      message: 'Database backup failed',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      pgDump.stdout.pipe(outputFile);
+
+      let stderrData = '';
+      pgDump.stderr.on('data', (data) => {
+        stderrData += data.toString();
+        logger.warn({
+          operation: 'backup_db_stderr',
+          message: 'pg_dump stderr output',
+          data: data.toString(),
+        });
+      });
+
+      pgDump.on('error', (error) => {
+        outputFile.close();
+        try { if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath); } catch { /* ignore */ }
+        reject(new Error(
+          `Failed to start pg_dump: ${error.message}. ` +
+          `Make sure pg_dump is installed and in your PATH, or use Docker for backups.`
+        ));
+      });
+
+      outputFile.on('error', (error) => {
+        pgDump.kill();
+        reject(new Error(`Failed to write backup file: ${error.message}`));
+      });
+
+      pgDump.on('close', (code) => {
+        outputFile.end(() => {
+          if (code === 0) {
+            if (fs.existsSync(outputPath)) {
+              const stats = fs.statSync(outputPath);
+              if (stats.size === 0) {
+                reject(new Error('Backup file is empty'));
+              } else {
+                resolve();
+              }
+            } else {
+              reject(new Error('Backup file was not created'));
+            }
+          } else {
+            try { if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath); } catch { /* ignore */ }
+            reject(new Error(`pg_dump exited with code ${code}${stderrData ? ': ' + stderrData : ''}`));
+          }
+        });
+      });
     });
-    throw new Error(`Database backup failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }

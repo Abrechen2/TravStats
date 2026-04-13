@@ -88,7 +88,7 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
 router.get('/recent', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
-    const rawLimit = parseInt(req.query.limit as string);
+    const rawLimit = parseInt(req.query.limit as string, 10);
     const limit = Number.isFinite(rawLimit) ? Math.min(rawLimit, 100) : 10;
 
     const allRecent = await prisma.userAchievement.findMany({
@@ -128,7 +128,7 @@ router.post('/check', async (req: AuthRequest, res: Response, next: NextFunction
 // Get leaderboard (top users by points)
 router.get('/leaderboard', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const rawLeaderboardLimit = parseInt(req.query.limit as string);
+    const rawLeaderboardLimit = parseInt(req.query.limit as string, 10);
     const limit = Number.isFinite(rawLeaderboardLimit) ? Math.min(rawLeaderboardLimit, 100) : 10;
 
     // Get user achievements with points and requirement for unlock check

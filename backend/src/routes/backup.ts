@@ -38,7 +38,6 @@ const createBackupSchema = z.object({
 const restoreBackupSchema = z.object({
   scope: z.enum(['full', 'database', 'files']),
   createBackupBefore: z.boolean().optional().default(true),
-  targetDatabaseUrl: z.string().url().optional(),
 });
 
 // ─── Literal routes (must be defined before parametric /:id routes) ──────────
@@ -274,9 +273,21 @@ router.get('/:id/download', async (req: AuthRequest, res: Response, next: NextFu
       throw new AppError('Backup file not found', 404);
     }
 
+    // Path containment check: ensure backupPath is within the expected base directory
+    const BACKUP_BASE_DIR = process.env.BACKUP_PATH || (
+      process.platform === 'win32'
+        ? path.join(process.cwd(), 'data', 'backups')
+        : '/app/data/backups'
+    );
+    const resolvedPath = path.resolve(backup.backupPath);
+    const resolvedBase = path.resolve(BACKUP_BASE_DIR);
+    if (!resolvedPath.startsWith(resolvedBase + path.sep) && resolvedPath !== resolvedBase) {
+      throw new AppError('Invalid backup path', 400);
+    }
+
     const filename = path.basename(backup.backupPath);
     res.setHeader('Content-Type', 'application/gzip');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`);
     res.setHeader('Content-Length', fs.statSync(backup.backupPath).size);
 
     const fileStream = fs.createReadStream(backup.backupPath);
@@ -314,7 +325,6 @@ router.post('/:id/restore', backupRestoreLimiter, async (req: AuthRequest, res: 
     await restoreBackup(id, {
       scope: body.scope,
       createBackupBefore: body.createBackupBefore,
-      targetDatabaseUrl: body.targetDatabaseUrl,
     });
 
     res.json({

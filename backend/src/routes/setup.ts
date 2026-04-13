@@ -6,6 +6,7 @@ import { generateToken } from '../utils/jwt';
 import { getAuthCookieOptions } from './auth';
 import { AppError } from '../middleware/errorHandler';
 import { getSeedingStatus } from '../services/airportSeedingService';
+import { authLimiter } from '../middleware/rateLimit';
 
 const initializeSchema = z.object({
   username: z.string().min(1, 'Username is required').max(50),
@@ -22,7 +23,7 @@ router.get('/status', async (req: Request, res: Response, next: NextFunction) =>
     const adminCount = await prisma.user.count({
       where: { isAdmin: true },
     });
-    
+
     // Setup is complete if at least one admin user exists
     const setupComplete = adminCount > 0;
 
@@ -41,7 +42,7 @@ router.get('/status', async (req: Request, res: Response, next: NextFunction) =>
 });
 
 // Initialize instance (only works if no admin users exist)
-router.post('/initialize', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/initialize', authLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const validated = initializeSchema.parse(req.body);
     const { username, password } = validated;
@@ -86,7 +87,7 @@ router.post('/initialize', async (req: Request, res: Response, next: NextFunctio
 router.get('/airport-seeding-status', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const status = await getSeedingStatus();
-    
+
     if (!status) {
       // No seeding needed or no status record
       return res.json({

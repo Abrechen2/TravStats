@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { AuthRequest } from '../../middleware/auth';
 import { prisma } from '../../db';
 import { testSmtpConnection } from '../../services/emailService';
+import { encryptApiKey } from '../../utils/encryption';
 
 export const SMTP_CONFIG_ID = 1 as const;
 
@@ -49,6 +50,7 @@ smtpRouter.get('/', async (req: AuthRequest, res: Response, next: NextFunction):
 smtpRouter.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const data = smtpUpdateSchema.parse(req.body);
+    const encryptedPassword = data.password ? encryptApiKey(data.password) : undefined;
     const updateData = {
       host: data.host,
       port: data.port,
@@ -57,7 +59,7 @@ smtpRouter.put('/', async (req: AuthRequest, res: Response, next: NextFunction):
       fromEmail: data.fromEmail,
       fromName: data.fromName,
       enabled: data.enabled,
-      ...(data.password ? { password: data.password } : {}),
+      ...(encryptedPassword ? { password: encryptedPassword } : {}),
     };
     const config = await prisma.smtpConfig.upsert({
       where: { id: SMTP_CONFIG_ID },
@@ -67,7 +69,7 @@ smtpRouter.put('/', async (req: AuthRequest, res: Response, next: NextFunction):
         port: data.port,
         secure: data.secure,
         username: data.username,
-        password: data.password ?? '',
+        password: encryptApiKey(data.password ?? '') ?? '',
         fromEmail: data.fromEmail,
         fromName: data.fromName,
         enabled: data.enabled,
