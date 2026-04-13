@@ -22,6 +22,7 @@ import { calculateCo2Kg, toSeatClass } from '../services/co2Calculator';
 import { getCachedAirports } from '../services/airportCache';
 import { tzAwareDurationMinutes } from '../utils/timezone';
 import { normalizeAircraft } from '../utils/aircraftNormalize';
+import { calculateNextApiCheckAt } from '../utils/smartCheckSchedule';
 import batchRouter from './flightsBatch';
 
 const router = Router();
@@ -61,6 +62,7 @@ interface FlightUpdateData {
   delayMinutes?: number | null;
   co2Kg?: number | null;
   lastModifiedBy?: string;
+  nextApiCheckAt?: Date | null;
 }
 
 // All routes require authentication
@@ -321,6 +323,12 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
         // Data source tracking
         dataSource: 'manual',
         lastModifiedBy: 'user',
+        nextApiCheckAt: calculateNextApiCheckAt(
+          data.departureTime ? new Date(data.departureTime) : null,
+          data.arrivalTime ? new Date(data.arrivalTime) : null,
+          data.status ?? 'scheduled',
+          data.flightNumber,
+        ),
       },
     });
 
@@ -669,6 +677,24 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
 
     // Set lastModifiedBy when user updates
     updateData.lastModifiedBy = 'user';
+
+    // Recalculate smart API check schedule when departure time or status changes
+    if (data.departureTime || data.arrivalTime || data.status || data.flightNumber) {
+      const effectiveDep = data.departureTime
+        ? new Date(data.departureTime)
+        : existingFlight.departureTime;
+      const effectiveArr = data.arrivalTime
+        ? new Date(data.arrivalTime)
+        : existingFlight.arrivalTime;
+      const effectiveStatus = data.status ?? existingFlight.status;
+      const effectiveFn = data.flightNumber ?? existingFlight.flightNumber;
+      updateData.nextApiCheckAt = calculateNextApiCheckAt(
+        effectiveDep,
+        effectiveArr,
+        effectiveStatus,
+        effectiveFn,
+      );
+    }
 
     const flight = await prisma.flight.update({
       where: { id, userId },

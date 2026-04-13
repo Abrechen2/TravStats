@@ -8,6 +8,7 @@ import logger from "../utils/logger";
 import { enrichFlightAirports } from "../services/airportLookup";
 import { calculateCo2Kg, toSeatClass } from "../services/co2Calculator";
 import { checkAndUpdateAchievements } from "../utils/achievements";
+import { calculateNextApiCheckAt } from "../utils/smartCheckSchedule";
 
 const router = Router();
 
@@ -110,6 +111,12 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
             coPassengers: data.coPassengers ?? [],
             dataSource: "email_import",
             lastModifiedBy: "user",
+            nextApiCheckAt: calculateNextApiCheckAt(
+              data.departureTime ? new Date(data.departureTime) : null,
+              data.arrivalTime ? new Date(data.arrivalTime) : null,
+              data.status ?? "scheduled",
+              data.flightNumber,
+            ),
           },
         });
         flights.push(flight);

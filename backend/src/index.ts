@@ -283,6 +283,31 @@ if (process.env.NODE_ENV !== 'test') {
       logger.warn({ operation: 'server_start_aircraft_normalize_error', message: 'Failed to normalize aircraft names', error });
     }
 
+    // Backfill nextApiCheckAt for scheduled flights that don't have it set yet
+    try {
+      const { calculateNextApiCheckAt } = await import('./utils/smartCheckSchedule');
+      const scheduledFlights = await prisma.flight.findMany({
+        where: {
+          status: 'scheduled',
+          flightNumber: { not: null },
+          departureTime: { not: null },
+          nextApiCheckAt: null,
+        },
+        select: { id: true, departureTime: true, arrivalTime: true, status: true, flightNumber: true },
+      });
+      if (scheduledFlights.length > 0) {
+        for (const f of scheduledFlights) {
+          const checkAt = calculateNextApiCheckAt(f.departureTime, f.arrivalTime, f.status, f.flightNumber);
+          if (checkAt) {
+            await prisma.flight.update({ where: { id: f.id }, data: { nextApiCheckAt: checkAt } });
+          }
+        }
+        logger.info({ operation: 'server_start_backfill_api_check', message: `Backfilled nextApiCheckAt for ${scheduledFlights.length} flights` });
+      }
+    } catch (error) {
+      logger.warn({ operation: 'server_start_backfill_api_check_error', message: 'Failed to backfill nextApiCheckAt', error });
+    }
+
     // Backfill airport timezones from coordinates (idempotent, skips airports that already have timezone)
     try {
       const { backfillAirportTimezones } = await import('./services/airportLookup');
@@ -313,8 +338,8 @@ if (process.env.NODE_ENV !== 'test') {
     // Start flight update scheduler
     try {
       const { startFlightUpdateScheduler } = await import('./jobs/flightUpdateScheduler');
-      // Default interval: 15 minutes (can be configured per user)
-      startFlightUpdateScheduler(15);
+      // Sweep every 5 minutes — nextApiCheckAt on each flight controls actual timing
+      startFlightUpdateScheduler(5);
       logger.info({
         operation: 'server_start_flight_update_scheduler',
         message: 'Flight update scheduler started',

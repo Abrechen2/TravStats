@@ -10,6 +10,7 @@ import { lookupFlightDetails, FlightLookupResult } from './flightLookup';
 import { prisma } from '../db';
 import logger from '../utils/logger';
 import { getApiKey } from './apiKeyResolver';
+import { recalculateNextApiCheckAt } from '../utils/smartCheckSchedule';
 import type { FlightDataSnapshot } from './pendingUpdateService';
 
 const prismaClient = prisma as PrismaClient;
@@ -321,40 +322,45 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
       return 0; // Auto-update disabled for this user
     }
 
-    // Find active flights for this user
+    // Find flights whose next API check is due
     const now = new Date();
 
     const activeFlights = await prismaClient.flight.findMany({
       where: {
         userId,
         flightNumber: { not: null },
-        status: { in: ['scheduled', 'flown'] },
-        departureTime: { lte: now },
-        arrivalTime: { gte: new Date(now.getTime() - 24 * 60 * 60 * 1000) }, // Only check flights from last 24h
+        status: 'scheduled',
+        nextApiCheckAt: { lte: now },
       },
     });
 
     let updatesCreated = 0;
 
     for (const flight of activeFlights) {
-      // Check if flight is active
-      if (!isFlightActive(flight)) {
-        continue;
-      }
-
-      // Check if only during flight is enabled
-      if (userSettings.autoUpdateOnlyDuringFlight) {
-        const flightEnd = flight.arrivalTime ? new Date(flight.arrivalTime) : null;
-        if (flightEnd && now > flightEnd) {
-          continue; // Flight already ended
-        }
-      }
-
       try {
         // Lookup flight data from API
         const dateStr = flight.departureTime ? flight.departureTime.toISOString().split('T')[0] : null;
-        if (!dateStr) continue; // Cannot look up flights without a departure time
+        if (!dateStr) {
+          // No departure time — clear the check schedule
+          await prismaClient.flight.update({
+            where: { id: flight.id },
+            data: { nextApiCheckAt: null },
+          });
+          continue;
+        }
         const apiData = await lookupFlightDetails(flight.flightNumber!, dateStr, flight.userId);
+
+        // Always recalculate nextApiCheckAt after a check attempt
+        const nextCheck = recalculateNextApiCheckAt(
+          flight.departureTime,
+          flight.arrivalTime,
+          flight.status,
+          flight.flightNumber,
+        );
+        await prismaClient.flight.update({
+          where: { id: flight.id },
+          data: { nextApiCheckAt: nextCheck },
+        });
 
         if (!apiData) {
           continue; // No data from API

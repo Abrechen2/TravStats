@@ -132,6 +132,9 @@ model Flight {
   parserTemplate      String?  @map("parser_template")       // e.g. "LH" or null
   parserConfidence    Int?     @map("parser_confidence")     // 0–100
 
+  // Smart API check — scheduled time for next live-data lookup
+  nextApiCheckAt  DateTime? @map("next_api_check_at")
+
   tripId    String?  @map("trip_id")
   bookingId String?  @map("booking_id")
 
@@ -147,6 +150,7 @@ model Flight {
   @@index([flightNumber])
   @@index([tripId])
   @@index([bookingId])
+  @@index([nextApiCheckAt])
   @@map("flights")
 }
 
