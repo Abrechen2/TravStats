@@ -106,7 +106,7 @@ router.get('/files/:filename/download', async (req: AuthRequest, res: Response, 
     const filepath = getLogFilePathForDownload(filename);
 
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`);
     res.download(filepath);
   } catch (error) {
     next(error);

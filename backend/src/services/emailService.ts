@@ -4,6 +4,7 @@ import type { SmtpConfig } from '@prisma/client';
 import { prisma } from '../db';
 import logger from '../utils/logger';
 import { SMTP_CONFIG_ID } from '../routes/admin/smtp';
+import { decryptApiKey } from '../utils/encryption';
 
 export interface SmtpConfigInput {
   host: string;
@@ -37,7 +38,7 @@ function createTransporterFromConfig(config: SmtpConfig): Transporter {
     secure: config.secure,
     auth: {
       user: config.username,
-      pass: config.password,
+      pass: decryptApiKey(config.password) ?? config.password,
     },
   });
 }

@@ -9,7 +9,7 @@ import { AppError } from '../middleware/errorHandler';
 import { calculateDistance, generateArcPoints } from '../utils/geo';
 import { checkAndUpdateAchievements } from '../utils/achievements';
 import { enrichFlightAirports } from '../services/airportLookup';
-import { flightCreationLimiter } from '../middleware/rateLimit';
+import { flightCreationLimiter, flightLookupLimiter, statsLimiter } from '../middleware/rateLimit';
 import { lookupFlightDetails } from '../services/flightLookup';
 import {
   findEnrichmentCandidates,
@@ -179,7 +179,7 @@ const buildFlightWhere = (
 };
 
 // Lookup flight details from external providers
-router.get('/lookup', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get('/lookup', flightLookupLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { flightNumber, date } = req.query;
 
@@ -515,7 +515,7 @@ router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) =
 });
 
 // Get enrichment candidates
-router.get('/enrichment-candidates', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get('/enrichment-candidates', statsLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
     const rawLimit = req.query.limit;

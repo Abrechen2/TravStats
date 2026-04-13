@@ -130,9 +130,8 @@ router.post(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { newPassword } = forceChangePasswordSchema.parse(req.body);
-      // Read changeToken from HttpOnly cookie (set during login) or fallback to body
-      const changeToken: string | undefined =
-        req.cookies?.change_token || req.body.changeToken;
+      // Read changeToken exclusively from HttpOnly cookie (set during login)
+      const changeToken: string | undefined = req.cookies?.change_token;
       if (!changeToken) {
         throw new AppError('Change token is required', 400);
       }

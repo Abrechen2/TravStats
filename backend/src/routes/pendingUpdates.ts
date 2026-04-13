@@ -145,8 +145,8 @@ router.post('/:id/preview', async (req: AuthRequest, res: Response, next: NextFu
   try {
     const userId = req.userId!;
     const { id } = req.params;
-    const editedDataSchema = z.record(z.unknown());
-    const parsedEditedData = editedDataSchema.parse(req.body.editedData ?? {});
+    const parsedBody = updatePendingUpdateSchema.parse({ editedData: req.body.editedData });
+    const parsedEditedData = (parsedBody.editedData ?? {}) as Record<string, unknown>;
 
     const impact = await previewStatisticsImpact(id, userId, parsedEditedData);
 

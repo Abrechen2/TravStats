@@ -46,6 +46,14 @@ const testOpenSkySchema = z.object({
 
 const router = Router();
 
+/** Mask a decrypted key for safe display: "abcd****wxyz" */
+const maskKey = (encrypted: string | null | undefined): string | undefined => {
+  const decrypted = decryptApiKey(encrypted);
+  if (!decrypted) return undefined;
+  if (decrypted.length <= 8) return "****";
+  return decrypted.slice(0, 4) + "****" + decrypted.slice(-4);
+};
+
 // Get global API keys
 router.get('/api-keys', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -62,14 +70,6 @@ router.get('/api-keys', async (req: AuthRequest, res: Response, next: NextFuncti
         allowUserFlightApiKeys: true,
       });
     }
-
-    // Return only existence flags — never send decrypted secrets in GET responses
-    const maskKey = (encrypted: string | null | undefined): string | undefined => {
-      const decrypted = decryptApiKey(encrypted);
-      if (!decrypted) return undefined;
-      if (decrypted.length <= 8) return "****";
-      return decrypted.slice(0, 4) + "****" + decrypted.slice(-4);
-    };
 
     res.json({
       globalAirlabsApiKey: maskKey(adminSettings.globalAirlabsApiKey),
@@ -143,12 +143,12 @@ router.put('/api-keys', async (req: AuthRequest, res: Response, next: NextFuncti
     res.json({
       message: 'Global API keys updated successfully',
       settings: {
-        globalAirlabsApiKey: decryptApiKey(adminSettings.globalAirlabsApiKey) || undefined,
-        globalAviationstackApiKey: decryptApiKey(adminSettings.globalAviationstackApiKey) || undefined,
-        globalOpenskyClientId: decryptApiKey(adminSettings.globalOpenskyClientId) || undefined,
-        globalOpenskyClientSecret: decryptApiKey(adminSettings.globalOpenskyClientSecret) || undefined,
-        globalOpenskyUsername: decryptApiKey(adminSettings.globalOpenskyUsername) || undefined,
-        globalOpenskyPassword: decryptApiKey(adminSettings.globalOpenskyPassword) || undefined,
+        globalAirlabsApiKey: maskKey(adminSettings.globalAirlabsApiKey),
+        globalAviationstackApiKey: maskKey(adminSettings.globalAviationstackApiKey),
+        globalOpenskyClientId: maskKey(adminSettings.globalOpenskyClientId),
+        globalOpenskyClientSecret: maskKey(adminSettings.globalOpenskyClientSecret),
+        globalOpenskyUsername: maskKey(adminSettings.globalOpenskyUsername),
+        globalOpenskyPassword: maskKey(adminSettings.globalOpenskyPassword),
         allowUserFlightApiKeys: adminSettings.allowUserFlightApiKeys,
       },
     });
