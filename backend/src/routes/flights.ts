@@ -21,6 +21,7 @@ import { estimateRoute } from '../services/routeEstimationService';
 import { calculateCo2Kg, toSeatClass } from '../services/co2Calculator';
 import { getCachedAirports } from '../services/airportCache';
 import { tzAwareDurationMinutes } from '../utils/timezone';
+import { normalizeAircraft } from '../utils/aircraftNormalize';
 import batchRouter from './flightsBatch';
 
 const router = Router();
@@ -266,7 +267,7 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
         operatingAirline: data.operatingAirline,
         flightNumber: data.flightNumber,
         callsign: data.callsign,
-        aircraft: data.aircraft,
+        aircraft: data.aircraft ? normalizeAircraft(data.aircraft) : null,
         // Use enriched departure data (fills in missing IATA/ICAO/names)
         depIcao: enriched.departure.icao,
         depIata: enriched.departure.iata,
@@ -605,7 +606,7 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     if (data.operatingAirline !== undefined) updateData.operatingAirline = data.operatingAirline;
     if (data.flightNumber) updateData.flightNumber = data.flightNumber;
     if (data.callsign !== undefined) updateData.callsign = data.callsign;
-    if (data.aircraft !== undefined) updateData.aircraft = data.aircraft;
+    if (data.aircraft !== undefined) updateData.aircraft = data.aircraft ? normalizeAircraft(data.aircraft) : data.aircraft;
     if (data.status) updateData.status = data.status;
     if (data.notes !== undefined) updateData.notes = data.notes;
     if (data.price !== undefined) updateData.price = data.price;
