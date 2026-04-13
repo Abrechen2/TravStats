@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import Map, { useControl, type MapRef } from "react-map-gl/maplibre";
+import Map, { useControl, type MapRef, type MapLayerMouseEvent } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import { LightingEffect, AmbientLight, DirectionalLight } from "@deck.gl/core";
 import type { Layer, MapViewState } from "@deck.gl/core";
@@ -22,6 +22,11 @@ import { usePulseAnimation } from "../hooks/usePulseAnimation";
 import { MapTooltip } from "./MapTooltip";
 import { TripTooltip } from "./TripTooltip";
 import { AirportTooltip } from "./AirportTooltip";
+import {
+  NativeRoutesLayer,
+  NATIVE_ROUTE_LINE_ID,
+  NATIVE_AIRPORT_CIRCLE_ID,
+} from "./NativeRoutesLayer";
 
 // Delay before showing the flight tooltip — lets the flyTo animation settle first
 const TOOLTIP_DELAY_MS = 1800;
@@ -359,6 +364,49 @@ export function DeckGLMap({
     setCurrentTime((prev) => (typeof value === "function" ? value(prev) : value));
   }, []);
 
+  // Native layer click handler (WebGL1 fallback)
+  const handleNativeClick = useCallback(
+    (e: MapLayerMouseEvent) => {
+      // If deck.gl handled this click, ignore
+      if (deckClickedRef.current) {
+        deckClickedRef.current = false;
+        return;
+      }
+
+      const feature = e.features?.[0];
+      if (feature) {
+        if (feature.layer.id === NATIVE_ROUTE_LINE_ID && onRouteClick) {
+          try {
+            const ids = JSON.parse(feature.properties.flightIds as string) as string[];
+            deckClickedRef.current = true; // prevent background clear
+            onRouteClick(ids);
+          } catch {
+            // ignore
+          }
+          return;
+        }
+        if (feature.layer.id === NATIVE_AIRPORT_CIRCLE_ID) {
+          const coords = (feature.geometry as GeoJSON.Point).coordinates;
+          deckClickedRef.current = true;
+          handleAirportClick(feature.properties.iata as string, coords[0], coords[1]);
+          return;
+        }
+      }
+
+      // Background click — clear selection
+      clearSelection();
+      setAirportIata(null);
+      airportGeoRef.current = null;
+      onResetTrip?.();
+    },
+    [onRouteClick, handleAirportClick, clearSelection, onResetTrip]
+  );
+
+  // Interactive layer IDs for native fallback (enables cursor: pointer on hover)
+  const nativeInteractiveIds = !webgl2Available
+    ? [NATIVE_ROUTE_LINE_ID, NATIVE_AIRPORT_CIRCLE_ID]
+    : undefined;
+
   return (
     <div className="relative w-full h-full">
       <Map
@@ -368,20 +416,19 @@ export function DeckGLMap({
         style={{ position: "absolute", inset: "0" }}
         onLoad={() => setMapLoaded(true)}
         onMove={handleMapMove}
-        onClick={() => {
-          // If deck.gl handled this click (e.g. arc click), ignore the Map event (Bug 1)
-          if (deckClickedRef.current) {
-            deckClickedRef.current = false;
-            return;
-          }
-          clearSelection();
-          setAirportIata(null);
-          airportGeoRef.current = null;
-          onResetTrip?.();
-        }}
+        onClick={handleNativeClick}
+        interactiveLayerIds={nativeInteractiveIds}
+        cursor={nativeInteractiveIds ? "pointer" : undefined}
       >
         {webgl2Available && mapLoaded && (
           <DeckGLOverlay layers={[...layers, ...pulseLayers, ...planeLayers]} effects={effects} />
+        )}
+        {!webgl2Available && visMode === "routes" && (
+          <NativeRoutesLayer
+            flights={flights}
+            minRouteCount={minRouteCount}
+            selectedIds={selectedIds}
+          />
         )}
       </Map>
 
