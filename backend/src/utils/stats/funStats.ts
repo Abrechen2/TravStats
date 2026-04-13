@@ -1,5 +1,6 @@
 import { calculateDistance } from '../geo';
 import { getCachedAirports } from '../../services/airportCache';
+import { normalizeAirline } from '../airlineNormalize';
 import logger from '../logger';
 import type { FlightData, FunStats } from './types';
 
@@ -57,11 +58,12 @@ export async function calculateFunStats(flights: FlightData[]): Promise<FunStats
     return day === 0 || day === 6;
   }).length;
 
-  // Loyalty score - percentage with most used airline
+  // Loyalty score - percentage with most used airline (normalized names)
   const airlineCounts: Record<string, number> = {};
   flownFlights.forEach(f => {
     if (f.airline) {
-      airlineCounts[f.airline] = (airlineCounts[f.airline] || 0) + 1;
+      const canonical = normalizeAirline(f.airline);
+      airlineCounts[canonical] = (airlineCounts[canonical] || 0) + 1;
     }
   });
 

@@ -1,5 +1,6 @@
 import { calculateDistance } from '../geo';
 import { getCachedAirports } from '../../services/airportCache';
+import { tzAwareDurationMinutes } from '../timezone';
 import logger from '../logger';
 import type { AirportData } from '../../services/airportLookup';
 import type { FlightData, UniqueStats } from './types';
@@ -165,17 +166,28 @@ export async function calculateUniqueStats(flights: FlightData[]): Promise<Uniqu
     longestChain = Math.max(longestChain, currentChain);
   }
 
-  // Fastest route (highest average speed)
+  // Fastest route (highest average ground speed) — timezone-aware duration
   let fastestRoute: { route: string; speed: number } | null = null;
 
   flownFlights.forEach(f => {
     if (f.depLat != null && f.depLon != null && f.arrLat != null && f.arrLon != null) {
       const distance = calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon);
-      const duration = (new Date(f.arrivalTime).getTime() - new Date(f.departureTime).getTime()) / (1000 * 60 * 60); // hours
 
-      if (duration > 0) {
-        const speed = distance / duration; // km/h
-        if (!fastestRoute || speed > fastestRoute.speed) {
+      const depTz =
+        (f.depIata && timezoneMap.get(f.depIata)) ||
+        (f.depIcao && timezoneMap.get(f.depIcao)) ||
+        null;
+      const arrTz =
+        (f.arrIata && timezoneMap.get(f.arrIata)) ||
+        (f.arrIcao && timezoneMap.get(f.arrIcao)) ||
+        null;
+
+      const durationMinutes = tzAwareDurationMinutes(f.departureTime, f.arrivalTime, depTz, arrTz);
+      const durationHours = durationMinutes / 60;
+
+      if (durationHours > 0.5) { // Ignore flights with <30min duration (likely bad data)
+        const speed = distance / durationHours; // km/h
+        if (speed <= 1200 && (!fastestRoute || speed > fastestRoute.speed)) {
           fastestRoute = {
             route: `${f.depIata || f.depIcao || '?'}-${f.arrIata || f.arrIcao || '?'}`,
             speed: Math.round(speed),
@@ -307,18 +319,34 @@ export async function calculateUniqueStats(flights: FlightData[]): Promise<Uniqu
     }
   });
 
-  // Same-day return - flights that return on the same day
-  const sameDayReturns = flownFlights.filter(f => {
-    const depDate = new Date(f.departureTime).toDateString();
-    const arrDate = new Date(f.arrivalTime).toDateString();
+  // Same-day flights - flights that depart and arrive on the same local calendar day
+  const sameDayFlights = flownFlights.filter(f => {
+    const depTz =
+      (f.depIata && timezoneMap.get(f.depIata)) ||
+      (f.depIcao && timezoneMap.get(f.depIcao)) ||
+      null;
+    const arrTz =
+      (f.arrIata && timezoneMap.get(f.arrIata)) ||
+      (f.arrIcao && timezoneMap.get(f.arrIcao)) ||
+      null;
+    const depDate = toLocalDateString(f.departureTime, depTz);
+    const arrDate = toLocalDateString(f.arrivalTime, arrTz);
     return depDate === arrDate;
   }).length;
 
-  // Midnight flyer - flights that cross midnight
+  // Midnight flyer - flights that cross midnight (local time)
   const midnightFlights = flownFlights.filter(f => {
-    const depDate = new Date(f.departureTime);
-    const arrDate = new Date(f.arrivalTime);
-    return depDate.toDateString() !== arrDate.toDateString();
+    const depTz =
+      (f.depIata && timezoneMap.get(f.depIata)) ||
+      (f.depIcao && timezoneMap.get(f.depIcao)) ||
+      null;
+    const arrTz =
+      (f.arrIata && timezoneMap.get(f.arrIata)) ||
+      (f.arrIcao && timezoneMap.get(f.arrIcao)) ||
+      null;
+    const depDate = toLocalDateString(f.departureTime, depTz);
+    const arrDate = toLocalDateString(f.arrivalTime, arrTz);
+    return depDate !== arrDate;
   }).length;
 
   // Seasonal explorer - flights in all 4 seasons
@@ -434,7 +462,7 @@ export async function calculateUniqueStats(flights: FlightData[]): Promise<Uniqu
       westward: westwardFlights,
       ratio: westwardFlights > 0 ? Math.round((eastwardFlights / westwardFlights) * 100) / 100 : eastwardFlights,
     },
-    sameDayReturns,
+    sameDayFlights,
     midnightFlights,
     seasonalExplorer: seasons.size === 4,
     seasonsCount: seasons.size,
@@ -467,6 +495,29 @@ function toLocalMinutes(date: Date, timezone: string): number {
   } catch {
     // Fallback to UTC if the timezone string is invalid/unrecognised
     return date.getUTCHours() * 60 + date.getUTCMinutes();
+  }
+}
+
+/**
+ * Convert a Date to a local date string (YYYY-MM-DD) in the given timezone.
+ * Falls back to the Date's UTC date if timezone is null.
+ * Since stored times are local wall-clock as fake-UTC, the fallback is fine
+ * for same-timezone flights.
+ */
+function toLocalDateString(date: Date, timezone: string | null): string {
+  if (!timezone) {
+    return date.toISOString().split('T')[0];
+  }
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(date);
+    return parts; // en-CA gives YYYY-MM-DD format
+  } catch {
+    return date.toISOString().split('T')[0];
   }
 }
 

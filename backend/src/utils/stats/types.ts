@@ -55,7 +55,7 @@ export interface UniqueStats {
     westward: number;
     ratio: number;
   };
-  sameDayReturns: number;
+  sameDayFlights: number;
   midnightFlights: number;
   seasonalExplorer: boolean;
   seasonsCount: number;
