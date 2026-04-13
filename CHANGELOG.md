@@ -4,6 +4,11 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.23.1-beta] - 2026-04-13
+
+### Fixed
+- **Sidebar overflow on small screens** — The navigation menu, flight list, and stats sidebars used fixed pixel widths (w-80/w-72) that overflowed on narrow viewports. All three panels are now capped at calc(100vw - 3rem), leaving a 48px tap area to close the backdrop. Also fixed the mobile menu DOM nesting by moving it outside the header element into a fragment.
+
 ## [0.23.0-beta] - 2026-04-13
 
 ### Added
