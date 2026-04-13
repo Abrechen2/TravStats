@@ -4,6 +4,23 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.24.0-beta] - 2026-04-13
+
+### Security
+- **Shell injection in backup service fixed** — Replaced `execAsync` with `spawn` on Unix pg_dump paths to prevent command injection via crafted database URLs (C1).
+- **API credentials no longer leaked in PUT response** — Admin API key update endpoint now returns masked values instead of decrypted plaintext secrets (C2).
+- **Removed `targetDatabaseUrl` from restore API** — Eliminates SSRF and command injection amplification via admin-supplied database URLs (H3).
+- **Rate limiting added to flight lookup and enrichment endpoints** — Prevents external API quota exhaustion and database load abuse (H1, M5).
+- **Analytics event types whitelisted** — Only `parser_feedback` and `pattern_suggestion` are accepted, preventing pipeline poisoning (H2).
+- **13 additional fixes** — changeToken body fallback removed (M2), backup path containment check (M3), typed editedData preview (M4), SMTP password encrypted at rest (M6), nginx security headers on static assets (M1/M8), dotfile access blocked, `Math.random()` replaced with `crypto.randomBytes()` (L1), setup rate limited (L6), `parseInt` radix (L5), RFC 5987 Content-Disposition encoding (L7).
+
+### Added
+- **Parser system marked as beta** — Navigation and parser page show a beta badge and notice explaining that only LLM-based parsing is fully tested.
+- **SECURITY.md** — Comprehensive security architecture documentation with verification commands, audit history, and vulnerability reporting via GitHub Private Security Advisories.
+
+### Changed
+- **Multi-flight parser roadmap** — V1.8 roadmap updated with two-stage hybrid parser design (block splitting + per-block extraction) and multi-version template scoring.
+
 ## [0.23.1-beta] - 2026-04-13
 
 ### Fixed
