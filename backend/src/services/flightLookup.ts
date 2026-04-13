@@ -155,13 +155,13 @@ export async function lookupFlightByNumber(
   // Check cache
   const cached = flightCache.get<FlightData[]>(cacheKey);
   if (cached !== undefined) {
-    logger.debug({ flightNumber, date: dateStr, operation: 'airlabs_cache_hit' },
+    logger.info({ flightNumber, date: dateStr, operation: 'airlabs_cache_hit' },
       `AirLabs cache hit for ${flightNumber} on ${dateStr}`);
     return cached;
   }
 
   try {
-    logger.debug({ flightNumber, date: dateStr, api: 'airlabs', operation: 'api_call_start' },
+    logger.info({ flightNumber, date: dateStr, api: 'airlabs', operation: 'api_call_start' },
       `Calling AirLabs API for ${flightNumber} on ${dateStr}`);
     // AirLabs API endpoint for flight schedules
     const response = await axios.get('https://airlabs.co/api/v9/schedules', {
@@ -174,7 +174,7 @@ export async function lookupFlightByNumber(
     });
 
     if (!response.data || !response.data.response) {
-      logger.debug({ flightNumber, date: dateStr, api: 'airlabs', operation: 'api_empty_response' },
+      logger.info({ flightNumber, date: dateStr, api: 'airlabs', operation: 'api_empty_response' },
         `AirLabs returned no data for ${flightNumber} on ${dateStr}`);
       const isHistorical = date && date < new Date();
       flightCache.set(cacheKey, [], isHistorical ? CACHE_TTL_SECONDS : RECENT_CACHE_TTL_SECONDS);
@@ -311,7 +311,7 @@ export async function lookupFlightDetails(
 
   // Prefer Aviationstack if configured
   const aviationstackKey = await getApiKey('aviationstack', userId);
-  logger.debug({ flightNumber: trimmedNumber, date, hasAviationstack: !!aviationstackKey, hasOpenSky: !!openSkyCredentials,
+  logger.info({ flightNumber: trimmedNumber, date, hasAviationstack: !!aviationstackKey, hasOpenSky: !!openSkyCredentials,
     operation: 'lookup_start' },
     `Looking up ${trimmedNumber} (date=${date ?? 'none'}, apis: ${aviationstackKey ? 'aviationstack' : ''}${openSkyCredentials ? '+opensky' : ''} +airlabs)`);
   if (aviationstackKey) {
@@ -376,7 +376,7 @@ export async function lookupFlightDetails(
   }
 
   // Fallback to AirLabs
-  logger.debug({ flightNumber: trimmedNumber, date, api: 'airlabs', operation: 'fallback_airlabs' },
+  logger.info({ flightNumber: trimmedNumber, date, api: 'airlabs', operation: 'fallback_airlabs' },
     `Falling back to AirLabs for ${trimmedNumber}`);
   const fallbackDate = date ? new Date(date) : undefined;
   const flights = await lookupFlightByNumber(trimmedNumber, fallbackDate);
@@ -384,13 +384,13 @@ export async function lookupFlightDetails(
   if (!flights.length) {
     // Try OpenSky as last resort (requires credentials)
     if (openSkyCredentials) {
-      logger.debug({ flightNumber: trimmedNumber, date, api: 'opensky', operation: 'fallback_opensky' },
+      logger.info({ flightNumber: trimmedNumber, date, api: 'opensky', operation: 'fallback_opensky' },
         `Falling back to OpenSky for ${trimmedNumber}`);
       const openSkyAuth = await getOpenSkyAuthHeaders(openSkyCredentials);
       const openSky = await lookupOpenSkyFlight(trimmedNumber, date, openSkyAuth ?? undefined);
       if (openSky) return openSky;
     }
-    logger.debug({ flightNumber: trimmedNumber, date, operation: 'lookup_no_result' },
+    logger.info({ flightNumber: trimmedNumber, date, operation: 'lookup_no_result' },
       `No data found for ${trimmedNumber} from any API`);
     return null;
   }
