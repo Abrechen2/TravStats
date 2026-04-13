@@ -81,157 +81,159 @@ export default function NavigationBar(): JSX.Element {
   ].filter((item) => item.show);
 
   return (
-    <header
-      className="sticky top-0 z-50 backdrop-blur-md"
-      style={{
-        background: "var(--bg-surface)",
-        borderBottom: "1px solid var(--color-border)",
-      }}
-    >
-      <div className="px-4 sm:px-6">
-        <div className="flex items-center justify-between h-14">
-          {/* Left: Hamburger + Wordmark */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="xl:hidden p-2 rounded-lg transition-colors nav-icon-btn"
-              style={{ color: "var(--text-muted)" }}
-              aria-label={t("common:accessibility.toggleMenu")}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                {mobileMenuOpen ? (
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                ) : (
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
-                )}
-              </svg>
-            </button>
-
-            <Link to="/" className="flex items-center no-underline">
-              <span
-                className="text-lg font-display font-bold tracking-widest uppercase"
-                style={{ color: "var(--text-primary)" }}
+    <>
+      <header
+        className="sticky top-0 z-50 backdrop-blur-md"
+        style={{
+          background: "var(--bg-surface)",
+          borderBottom: "1px solid var(--color-border)",
+        }}
+      >
+        <div className="px-4 sm:px-6">
+          <div className="flex items-center justify-between h-14">
+            {/* Left: Hamburger + Wordmark */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="xl:hidden p-2 rounded-lg transition-colors nav-icon-btn"
+                style={{ color: "var(--text-muted)" }}
+                aria-label={t("common:accessibility.toggleMenu")}
               >
-                TRAV
-                <span style={{ color: "var(--accent)" }}>.</span>
-                STATS
-              </span>
-            </Link>
-          </div>
-
-          {/* Center: Desktop Navigation */}
-          <nav className="hidden xl:flex items-center gap-1">
-            {navItems.map((item) => {
-              const active = isActive(item.path);
-              const hasBadge = (item.badge ?? 0) > 0;
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className="relative px-3 py-1.5 text-sm font-medium transition-colors duration-200 rounded-md"
-                  style={{
-                    color: active
-                      ? "var(--accent)"
-                      : item.warn
-                        ? "var(--warning)"
-                        : "var(--text-muted)",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!active)
-                      (e.currentTarget as HTMLAnchorElement).style.color = "var(--text-primary)";
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!active)
-                      (e.currentTarget as HTMLAnchorElement).style.color = item.warn
-                        ? "var(--warning)"
-                        : "var(--text-muted)";
-                  }}
-                >
-                  {item.label}
-                  {active && (
-                    <span
-                      className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
-                      style={{ background: "var(--accent)" }}
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {mobileMenuOpen ? (
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  ) : (
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 6h16M4 12h16M4 18h16"
                     />
                   )}
-                  {hasBadge && (
-                    <span
-                      className="absolute -top-1 -right-1 text-xs font-bold rounded-full h-4 w-4 flex items-center justify-center"
-                      style={{ background: "var(--danger)", color: "#fff" }}
-                    >
-                      {(item.badge ?? 0) > 9 ? "9+" : item.badge}
-                    </span>
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
+                </svg>
+              </button>
 
-          {/* Right: Donate + Star + Username + Logout */}
-          <div className="flex items-center gap-2">
-            <div className="hidden xl:flex items-center gap-1.5">
-              <a
-                href="https://www.paypal.com/donate?hosted_button_id=HW9MPYVURCT42"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium transition-colors duration-150"
-                style={{ color: "var(--text-muted)", border: "1px solid var(--color-border)" }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = "#e85d8a";
-                  e.currentTarget.style.color = "#e85d8a";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = "var(--color-border)";
-                  e.currentTarget.style.color = "var(--text-muted)";
-                }}
-                aria-label="Donate via PayPal"
-              >
-                <svg width="11" height="11" viewBox="0 0 16 16" fill="#e85d8a" aria-hidden="true">
-                  <path d="M8 14s-6-3.9-6-8a4 4 0 0 1 6-3.44A4 4 0 0 1 14 6c0 4.1-6 8-6 8z" />
-                </svg>
-                Donate
-              </a>
-              <a
-                href="https://github.com/Abrechen2/TravStats"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium transition-colors duration-150"
-                style={{ color: "var(--text-muted)", border: "1px solid var(--color-border)" }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = "#f5a623";
-                  e.currentTarget.style.color = "#f5a623";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = "var(--color-border)";
-                  e.currentTarget.style.color = "var(--text-muted)";
-                }}
-                aria-label="Star on GitHub"
-              >
-                <svg width="11" height="11" viewBox="0 0 16 16" fill="#f5a623" aria-hidden="true">
-                  <path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.75.75 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25z" />
-                </svg>
-                Star
-              </a>
+              <Link to="/" className="flex items-center no-underline">
+                <span
+                  className="text-lg font-display font-bold tracking-widest uppercase"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  TRAV
+                  <span style={{ color: "var(--accent)" }}>.</span>
+                  STATS
+                </span>
+              </Link>
             </div>
-            <span className="hidden xl:inline text-sm" style={{ color: "var(--text-muted)" }}>
-              {user?.username}
-            </span>
-            <button onClick={handleLogout} className="btn-secondary px-3 py-1.5 text-sm">
-              {t("dashboard:logout")}
-            </button>
+
+            {/* Center: Desktop Navigation */}
+            <nav className="hidden xl:flex items-center gap-1">
+              {navItems.map((item) => {
+                const active = isActive(item.path);
+                const hasBadge = (item.badge ?? 0) > 0;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className="relative px-3 py-1.5 text-sm font-medium transition-colors duration-200 rounded-md"
+                    style={{
+                      color: active
+                        ? "var(--accent)"
+                        : item.warn
+                          ? "var(--warning)"
+                          : "var(--text-muted)",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!active)
+                        (e.currentTarget as HTMLAnchorElement).style.color = "var(--text-primary)";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!active)
+                        (e.currentTarget as HTMLAnchorElement).style.color = item.warn
+                          ? "var(--warning)"
+                          : "var(--text-muted)";
+                    }}
+                  >
+                    {item.label}
+                    {active && (
+                      <span
+                        className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
+                        style={{ background: "var(--accent)" }}
+                      />
+                    )}
+                    {hasBadge && (
+                      <span
+                        className="absolute -top-1 -right-1 text-xs font-bold rounded-full h-4 w-4 flex items-center justify-center"
+                        style={{ background: "var(--danger)", color: "#fff" }}
+                      >
+                        {(item.badge ?? 0) > 9 ? "9+" : item.badge}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            {/* Right: Donate + Star + Username + Logout */}
+            <div className="flex items-center gap-2">
+              <div className="hidden xl:flex items-center gap-1.5">
+                <a
+                  href="https://www.paypal.com/donate?hosted_button_id=HW9MPYVURCT42"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium transition-colors duration-150"
+                  style={{ color: "var(--text-muted)", border: "1px solid var(--color-border)" }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "#e85d8a";
+                    e.currentTarget.style.color = "#e85d8a";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "var(--color-border)";
+                    e.currentTarget.style.color = "var(--text-muted)";
+                  }}
+                  aria-label="Donate via PayPal"
+                >
+                  <svg width="11" height="11" viewBox="0 0 16 16" fill="#e85d8a" aria-hidden="true">
+                    <path d="M8 14s-6-3.9-6-8a4 4 0 0 1 6-3.44A4 4 0 0 1 14 6c0 4.1-6 8-6 8z" />
+                  </svg>
+                  Donate
+                </a>
+                <a
+                  href="https://github.com/Abrechen2/TravStats"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium transition-colors duration-150"
+                  style={{ color: "var(--text-muted)", border: "1px solid var(--color-border)" }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "#f5a623";
+                    e.currentTarget.style.color = "#f5a623";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "var(--color-border)";
+                    e.currentTarget.style.color = "var(--text-muted)";
+                  }}
+                  aria-label="Star on GitHub"
+                >
+                  <svg width="11" height="11" viewBox="0 0 16 16" fill="#f5a623" aria-hidden="true">
+                    <path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.75.75 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25z" />
+                  </svg>
+                  Star
+                </a>
+              </div>
+              <span className="hidden xl:inline text-sm" style={{ color: "var(--text-muted)" }}>
+                {user?.username}
+              </span>
+              <button onClick={handleLogout} className="btn-secondary px-3 py-1.5 text-sm">
+                {t("dashboard:logout")}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </header>
 
       {/* Mobile Menu Backdrop */}
       {mobileMenuOpen && (
@@ -245,7 +247,7 @@ export default function NavigationBar(): JSX.Element {
       {mobileMenuOpen && (
         <div
           ref={mobileMenuRef}
-          className="xl:hidden fixed inset-y-0 left-0 w-72 z-[60] flex flex-col"
+          className="xl:hidden fixed inset-y-0 left-0 w-72 max-w-[calc(100vw-3rem)] z-[60] flex flex-col"
           style={{
             background: "var(--bg-surface)",
             borderRight: "1px solid var(--color-border)",
@@ -369,6 +371,6 @@ export default function NavigationBar(): JSX.Element {
           </div>
         </div>
       )}
-    </header>
+    </>
   );
 }
