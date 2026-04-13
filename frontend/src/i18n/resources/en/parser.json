@@ -1,5 +1,7 @@
 {
   "title": "Parser",
+  "beta": "Beta",
+  "betaNotice": "The parser system is under active development. Only LLM-based parsing (Ollama) is fully tested. Template and regex parsers are experimental — results especially for multi-flight emails may be inaccurate.",
   "description": "Manage email and boarding pass templates",
   "tabs": {
     "annotate": "Annotate",
