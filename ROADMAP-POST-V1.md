@@ -274,6 +274,102 @@ Highlight {
 
 ## V1.8 — Advanced Import & Automation
 
+### Two-Stage Multi-Flight Parser (Hybrid)
+
+Current problem: emails with multiple flights (round-trip, multi-leg)
+cause the parser to mix up data between flights. Solution: a two-stage
+approach that splits first, then extracts per flight.
+
+**Stage 1 — Block Identification (Splitting)**
+- Parser scans the email and identifies text blocks per flight
+- Each block is color-coded in a review UI (Flug 1 blue, Flug 2 green, ...)
+- Natural delimiters: flight number lines, blank lines, "durchgeführt von:"
+- Shared data (PNR, passenger name) extracted once and inherited by all flights
+- User can: confirm auto-split, adjust boundaries, or manually mark blocks
+- Single-flight emails skip this stage entirely
+
+**Stage 2 — Per-Block Extraction (Parsing)**
+- Each confirmed block is parsed independently (1 block = 1 flight)
+- Existing parsers (LLM, templates, regex) work on isolated text
+- Review card per flight with extracted fields, confidence badge
+- No more positional matching across the entire email
+
+**UI: Annotation-style interaction**
+- Click on paragraphs to assign them to a flight (like the annotation tab)
+- Step-by-step: "Select text for Flight 1" → "Select text for Flight 2" → ...
+- Works on desktop (click) and mobile (tap on paragraph)
+- Auto-detect proposes blocks, user confirms or overrides
+
+**Template-based splitting patterns (per airline)**
+
+Each GitHub airline template gets a `splitting` section that describes how
+to identify block boundaries for that airline's email format:
+
+```json
+{
+  "iata": "LH",
+  "splitting": {
+    "blockStart": "([A-Z]{2}\\s?\\d{1,4})\\n",
+    "blockEnd": "durchgeführt von:",
+    "sharedFields": ["pnr", "passengerName"]
+  }
+}
+```
+
+Different airlines need different splitting rules:
+- **Lufthansa**: flight number line as block start, "durchgeführt von:" as end
+- **Ryanair**: typically 1 flight per email, no splitting needed
+- **easyJet**: HTML table rows, each row = one flight
+- **Eurowings**: similar to LH with different labels
+
+**Multi-version template scoring**
+
+Airlines change their email format over time (e.g. LH, LH-old, LH-v1).
+Instead of picking one upfront, all matching templates run in parallel
+and compete on extraction quality:
+
+```
+Email from @lufthansa.com → Airline: LH → 3 templates found
+
+  "LH":     4 blocks, 8/10 fields extracted → Score 80  ← winner
+  "LH-old": 0 blocks                        → Score 0
+  "LH-v1":  4 blocks, 5/10 fields extracted → Score 50
+```
+
+Scoring criteria:
+- Splitting found blocks? (+points)
+- Mandatory fields extracted? (flight number, airports, times)
+- Values plausible? (IATA 3 chars, time format valid)
+- Tie-breaker: higher template `version` wins
+
+The `index.json` on GitHub groups templates per airline:
+
+```json
+{
+  "airlines": [
+    {
+      "iata": "LH",
+      "templates": [
+        { "id": "LH",     "version": "2025-04", "label": "Buchungsdetails (current)" },
+        { "id": "LH-old", "version": "2025-04", "label": "Buchungsdetails (pre-2024)" },
+        { "id": "LH-v1",  "version": "2025-06", "label": "Reiseplan format" }
+      ]
+    }
+  ]
+}
+```
+
+User sees only the result — which template won is shown as info badge
+in the review card (e.g. `parserTemplate: "LH"`).
+
+**Why this works:**
+- Tested against real Lufthansa 4-leg booking (MUC→YVR→LAS→LAX→MUC):
+  clear block boundaries with flight number as anchor
+- With LLM: both stages run automatically, user just confirms
+- Without LLM: templates/regex work much better on isolated blocks
+- Worst case: user marks blocks manually, parser extracts per block
+- Template versioning handles airline format changes gracefully
+
 ### Batch Import v2
 - CSV/JSON drag-and-drop import with column mapping
 - Import from TripIt, MyFlightradar24, FlightAware

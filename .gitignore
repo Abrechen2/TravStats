@@ -25,6 +25,8 @@ CLAUDE.local.md
 !CLAUDE.md
 !CONTRIBUTING.md
 !ROADMAP*.md
+!SECURITY.md
+!PENTEST_FINDINGS.md
 !docs/*.md
 !docs/**/*.md
 !.planning/**/*.md
