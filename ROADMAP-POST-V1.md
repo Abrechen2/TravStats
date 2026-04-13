@@ -1,13 +1,135 @@
 # TravStats Post-V1 Roadmap
 
 > Features planned after the v1.0 stable release.
+> TravStats evolves from a flight tracker into a **travel tracker**.
 > Ordered by priority and user value.
 
 ---
 
-## V1.1 — Special Flights & Collections
+## V1.1 — Cruises Module
 
-### Core: "Flight Highlights" System
+A complete parallel to flights — own data model, forms, map, stats,
+and achievements. Accessible via a new **"Kreuzfahrten"** nav tab.
+This is the first step toward making TravStats a full travel platform.
+
+### Core Concepts
+
+| Flights | Cruises |
+|---------|---------|
+| Airport | Port (Hafen) |
+| Airline | Cruise Line (Reederei) |
+| Aircraft type | Ship (Schiff) |
+| Flight number | Voyage number |
+| Departure → Arrival | Embarkation → Disembarkation |
+| Route (A → B) | Itinerary (multi-stop, 5–20 ports) |
+| Seat class | Cabin category |
+| Flight duration (hours) | Cruise duration (days) + sea days |
+
+### Data Model
+```
+Cruise {
+  id                   String   @id
+  userId               String   → User
+  cruiseLine           String   // "AIDA", "TUI Cruises", "MSC", ...
+  shipName             String   // "AIDAcosma", "Mein Schiff 4"
+  voyageNumber         String?
+  embarkationPort      String   // port name
+  embarkationLat       Float
+  embarkationLon       Float
+  disembarkationPort   String
+  disembarkationLat    Float
+  disembarkationLon    Float
+  departureDate        DateTime
+  returnDate           DateTime
+  cabinNumber          String?
+  cabinCategory        String?  // inside/ocean_view/balcony/suite/penthouse
+  deckNumber           Int?
+  theme                String?  // "Transatlantic", "Nordland", "Caribbean"
+  status               String   // booked/completed/cancelled
+  price                Float?
+  currency             String?  @default("EUR")
+  notes                String?
+  tags                 String[]
+  photoUrl             String?  // ship or trip photo
+  createdAt            DateTime @default(now())
+}
+
+CruisePort {
+  id            String   @id
+  cruiseId      String   → Cruise
+  portName      String
+  portCode      String?  // UN/LOCODE (e.g. "ESMAJ" for Mallorca)
+  country       String?
+  lat           Float
+  lon           Float
+  arrivalDate   DateTime?
+  departureDate DateTime?
+  isSeaDay      Boolean  @default(false)
+  sortOrder     Int
+  notes         String?
+}
+```
+
+### Seed Data
+- **Cruise Lines** (~30): AIDA, TUI Cruises, MSC, Costa, Royal
+  Caribbean, Celebrity, Norwegian, Carnival, Princess, Holland
+  America, Cunard, Disney Cruise, Viking, Hapag-Lloyd, Hurtigruten,
+  Ponant, Seabourn, Silversea, Regent, Oceania, Windstar, etc.
+- **Ships** (~100): major ships per cruise line with capacity/year
+- **Ports** (~200): major cruise ports with coordinates
+  (use existing airports table pattern — separate `cruise_ports`
+  table seeded from public port databases)
+
+### Frontend: `/cruises` Page
+- **List view**: all cruises with ship, dates, route preview
+- **Map view**: polyline through all ports per cruise, colored by
+  cruise line
+- **Add cruise form**: multi-step like flights
+  1. Select cruise line + ship (autocomplete from seed + history)
+  2. Set dates, embarkation/disembarkation ports
+  3. Add itinerary ports (drag-and-drop reorder, add sea days)
+  4. Cabin details, price, tags, notes
+- **Cruise detail view**: itinerary timeline, port map, stats
+
+### Statistics (`/stats` integration)
+- Total sea days, total nautical miles
+- Ports visited (unique count + map)
+- Ships sailed (collection)
+- Cruise lines tried
+- Longest cruise, most ports in one trip
+- Cabin category distribution
+- Spending per cruise / per day
+
+### Achievements: "Seafarer" Category
+- **First Voyage** (1 cruise completed)
+- **Sea Dog** (5 cruises)
+- **Admiral** (25 cruises)
+- **Port Collector** (10 / 25 / 50 / 100 unique ports)
+- **Fleet Commander** (5 / 10 different ships)
+- **World Cruise** (cruise with 20+ ports)
+- **Transatlantic** (cruise crossing the Atlantic)
+- **Polar Explorer** (cruise above Arctic Circle)
+- **Sea Day Lover** (cruise with 5+ consecutive sea days)
+- **Loyalty Captain** (10 cruises with the same line)
+
+### Implementation Plan
+1. Prisma migration: `cruises`, `cruise_ports`
+2. Backend: seed data for cruise lines, ships, ports
+3. Backend: CRUD routes `/api/v1/cruises`, `/api/v1/cruises/:id/ports`
+4. Backend: cruise stats calculator (parallel to flight stats)
+5. Backend: cruise achievement types + seed achievements
+6. Frontend: `/cruises` page with list + map views
+7. Frontend: add/edit cruise form (multi-step)
+8. Frontend: cruise detail view with itinerary timeline
+9. Frontend: integrate cruise stats into `/stats` page
+10. Frontend: nav tab "Kreuzfahrten"
+
+---
+
+## V1.2 — Special Flights & Collections
+
+### Flight Highlights System
+
 Flights can be tagged with special attributes that go beyond normal tags.
 Two new dimensions: **Event Type** and **Livery / Special Aircraft**.
 
@@ -32,11 +154,11 @@ New optional field on flights:
 - Photo upload for the livery (stored alongside the flight)
 - Flag: "Rare aircraft" (e.g. A380, Concorde, AN-225)
 
-#### Collection & Gallery Page (`/collections`)
-- Grid/gallery view of all special flights with photos
-- Filter by event type, livery, aircraft
-- Statistics: how many liveries collected, how many event types
-- Timeline view: special moments in chronological order
+#### Cruise Highlights (same pattern)
+- Maiden voyage, repositioning cruise, theme cruise
+- Ship christening, farewell voyage
+- Hull art / special paint
+- Photo upload
 
 #### New Achievement Category: "Collector"
 - **Livery Hunter** (5 / 10 / 25 different liveries)
@@ -47,47 +169,55 @@ New optional field on flights:
 - **Eclipse Chaser** (solar eclipse flight)
 - **Full Livery Set** (all liveries of one airline)
 
+#### Collections Gallery (`/collections`)
+Unified gallery for flight AND cruise highlights:
+- Grid/gallery view with photos
+- Filter by type (flight event / livery / cruise event)
+- Statistics: liveries collected, event types, ships sailed
+- Timeline view: special moments in chronological order
+
 #### Data Model
 ```
-FlightHighlight {
-  id            String
-  flightId      String   → Flight
-  eventType     String?  // enum or custom
-  liveryName    String?
-  registration  String?
-  photoUrl      String?
-  isRareAircraft Boolean
-  notes         String?
+Highlight {
+  id             String
+  flightId       String?  → Flight  (one of these two)
+  cruiseId       String?  → Cruise  (must be set)
+  eventType      String?  // predefined enum or custom text
+  liveryName     String?
+  registration   String?
+  photoUrl       String?
+  isRareAircraft Boolean  @default(false)
+  notes          String?
 }
 ```
-One-to-many: a flight can have multiple highlights.
 
 #### Implementation Plan
-1. Prisma migration: add `flight_highlights` table
-2. Backend: CRUD routes `/api/v1/flights/:id/highlights`
+1. Prisma migration: add `highlights` table (polymorphic)
+2. Backend: CRUD routes `/api/v1/highlights`
 3. Backend: new achievement `requirementType` values
-4. Frontend: highlight section in FlightEditModal + FlightCompleteStep
+4. Frontend: highlight section in flight + cruise edit forms
 5. Frontend: `/collections` gallery page
 6. Frontend: photo upload component (reuse receipt upload pattern)
 7. Seed achievements for collector category
 
 ---
 
-## V1.2 — CO2 Footprint & Sustainability
+## V1.3 — CO2 Footprint & Sustainability
 
 - CO2 calculation per flight (based on aircraft type, distance, class)
+- CO2 calculation per cruise (based on ship type, duration, cabin)
 - Total CO2 dashboard with equivalents (car km, trees needed)
-- Class comparison (Economy vs Business vs First)
+- Class comparison (Economy vs Business vs First / Inside vs Suite)
 - Monthly/yearly CO2 trend chart
 - Offset suggestions with links to providers
 - CO2 badge achievements (carbon-conscious traveler)
 
 ---
 
-## V1.3 — Trip Planner & Itineraries
+## V1.4 — Trip Planner & Itineraries
 
-- Group flights into trips with drag-and-drop
-- Trip timeline with layovers and connection times
+- Group flights AND cruises into trips with drag-and-drop
+- Trip timeline with layovers, connections, and sea days
 - MCT (Minimum Connection Time) warnings
 - Trip cost summary
 - Trip sharing (public link with map + itinerary)
@@ -96,9 +226,9 @@ One-to-many: a flight can have multiple highlights.
 
 ---
 
-## V1.4 — Social & Sharing
+## V1.5 — Social & Sharing
 
-### Flight Map Generator
+### Travel Map Generator
 - Beautiful share graphics (year-in-review cards)
 - Animated route replay video (WebM/GIF export)
 - Social media templates (Instagram story, Twitter card)
@@ -107,14 +237,14 @@ One-to-many: a flight can have multiple highlights.
 
 ### Friends & Comparison
 - Friend invites via link
-- Compare flight stats side by side
-- Common airports and routes
+- Compare travel stats side by side
+- Common airports/ports and routes
 - Monthly/yearly challenges
 - Shared trip planning
 
 ---
 
-## V1.5 — Smart Analytics & Insights
+## V1.6 — Smart Analytics & Insights
 
 ### AI-Powered Insights
 - Pattern detection (your most active travel month is...)
@@ -131,18 +261,18 @@ One-to-many: a flight can have multiple highlights.
 
 ---
 
-## V1.6 — PWA & Mobile
+## V1.7 — PWA & Mobile
 
 - Service worker for offline access
 - Install as native app (manifest.json)
 - Push notifications (check-in reminders, gate changes)
-- Offline flight entry (sync when back online)
+- Offline flight/cruise entry (sync when back online)
 - Camera-first boarding pass scan on mobile
 - Responsive touch gestures for map navigation
 
 ---
 
-## V1.7 — Advanced Import & Automation
+## V1.8 — Advanced Import & Automation
 
 ### Batch Import v2
 - CSV/JSON drag-and-drop import with column mapping
@@ -165,7 +295,7 @@ One-to-many: a flight can have multiple highlights.
 ## V2.0 — Multi-User & Platform
 
 - Public profiles with privacy controls
-- Global flight statistics (anonymized)
+- Global travel statistics (anonymized)
 - API for third-party integrations
 - Plugin/extension system
 - White-label deployment support
