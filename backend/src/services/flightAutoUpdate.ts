@@ -319,7 +319,7 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
     });
 
     if (!userSettings?.autoUpdateEnabled) {
-      logger.debug({ userId, operation: 'check_flights_skipped', reason: 'auto_update_disabled' },
+      logger.info({ userId, operation: 'check_flights_skipped', reason: 'auto_update_disabled' },
         'Skipping flight checks — auto-update disabled for user');
       return 0;
     }
@@ -347,7 +347,7 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
         // Lookup flight data from API
         const dateStr = flight.departureTime ? flight.departureTime.toISOString().split('T')[0] : null;
         if (!dateStr) {
-          logger.debug({ flightId: flight.id, flightNumber: flight.flightNumber, operation: 'skip_no_departure_time' },
+          logger.info({ flightId: flight.id, flightNumber: flight.flightNumber, operation: 'skip_no_departure_time' },
             `Skipping ${flight.flightNumber} — no departure time`);
           await prismaClient.flight.update({
             where: { id: flight.id },
@@ -356,7 +356,7 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
           continue;
         }
 
-        logger.debug({ flightId: flight.id, flightNumber: flight.flightNumber, date: dateStr, operation: 'api_lookup_start' },
+        logger.info({ flightId: flight.id, flightNumber: flight.flightNumber, date: dateStr, operation: 'api_lookup_start' },
           `Looking up ${flight.flightNumber} on ${dateStr}`);
         const apiData = await lookupFlightDetails(flight.flightNumber!, dateStr, flight.userId);
 
@@ -371,11 +371,11 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
           where: { id: flight.id },
           data: { nextApiCheckAt: nextCheck },
         });
-        logger.debug({ flightId: flight.id, flightNumber: flight.flightNumber, nextCheck: nextCheck?.toISOString(), operation: 'next_check_scheduled' },
+        logger.info({ flightId: flight.id, flightNumber: flight.flightNumber, nextCheck: nextCheck?.toISOString(), operation: 'next_check_scheduled' },
           `Next check for ${flight.flightNumber}: ${nextCheck?.toISOString() ?? 'none'}`);
 
         if (!apiData) {
-          logger.debug({ flightId: flight.id, flightNumber: flight.flightNumber, date: dateStr, operation: 'api_no_data' },
+          logger.info({ flightId: flight.id, flightNumber: flight.flightNumber, date: dateStr, operation: 'api_no_data' },
             `No API data returned for ${flight.flightNumber} on ${dateStr}`);
           continue;
         }
@@ -402,7 +402,7 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
 
         // Only create update if there are significant changes
         if (!hasSignificantChanges(changes)) {
-          logger.debug({ flightId: flight.id, flightNumber: flight.flightNumber, operation: 'no_significant_changes' },
+          logger.info({ flightId: flight.id, flightNumber: flight.flightNumber, operation: 'no_significant_changes' },
             `No significant changes for ${flight.flightNumber}`);
           continue;
         }
