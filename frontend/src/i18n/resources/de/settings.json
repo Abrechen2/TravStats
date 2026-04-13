@@ -273,45 +273,45 @@
   },
   "developer": {
     "title": "Developer Options",
-    "description": "Experimentelle Funktionen für LLM-Training und erweiterte Features",
-    "modeTitle": "LLM Training Mode",
-    "modeDescription": "Aktiviert die Möglichkeit, lokale Ollama LLMs zu trainieren",
-    "confirmTitle": "⚠️ Developer Mode aktivieren?",
-    "confirmMessage": "Diese Funktion ist experimentell und sollte nur von erfahrenen Benutzern verwendet werden.",
-    "updateError": "Fehler beim Aktualisieren des Developer Mode",
+    "description": "Erweiterte Funktionen für Parser-Entwicklung und Debugging",
+    "modeTitle": "Parser-Entwicklermodus",
+    "modeDescription": "Aktiviert Zugriff auf die Parser-Seite mit Template-Verwaltung und Parse-Logs",
+    "confirmTitle": "Entwicklermodus aktivieren?",
+    "confirmMessage": "Dies schaltet erweiterte Parser-Funktionen frei, die technisches Verständnis erfordern.",
+    "updateError": "Fehler beim Aktualisieren des Entwicklermodus",
     "risks": {
-      "title": "Risiken und Hinweise:",
+      "title": "Hinweise:",
       "items": {
-        "resourceUsage": "Kann Systemressourcen stark belasten",
+        "resourceUsage": "LLM-Parsing (Ollama) benötigt einen konfigurierten Ollama-Server",
         "technicalKnowledge": "Erfordert technisches Verständnis",
-        "unexpectedResults": "Kann zu unerwarteten Ergebnissen führen",
-        "longTraining": "Training kann lange dauern"
+        "unexpectedResults": "Template- und Regex-Parser sind experimentell (Beta)",
+        "longTraining": "Eigene Templates erfordern Kenntnis des Email-Formats der Airline"
       }
     },
     "cancel": "Abbrechen",
     "activate": "Aktivieren",
     "help": {
-      "title": "Developer Mode",
-      "description": "Der Developer Mode aktiviert erweiterte Funktionen für das Training von LLM-Modellen.",
+      "title": "Entwicklermodus",
+      "description": "Der Entwicklermodus aktiviert erweiterte Funktionen für die Parser-Entwicklung.",
       "features": {
         "title": "Funktionen:",
         "items": {
-          "trainingPage": "Zugriff auf die Training-Page zum Trainieren von Ollama-Modellen",
-          "uploadAnnotation": "Upload und Annotation von Trainingsdaten (E-Mails, Boarding Passes)",
-          "loraTraining": "LoRA-Training mit eigenen Daten",
-          "parserAccuracy": "Verbesserung der Parser-Genauigkeit durch Training"
+          "trainingPage": "Zugriff auf die Parser-Seite mit Annotation, Templates und Parse-Logs",
+          "uploadAnnotation": "Upload und Annotation von E-Mails und Boarding Passes",
+          "loraTraining": "Eigene Regex-Templates aus annotierten Daten erstellen",
+          "parserAccuracy": "Parse-Logs zur Analyse und Verbesserung der Parsing-Ergebnisse"
         }
       },
       "requirements": {
         "title": "Voraussetzungen:",
         "items": {
-          "ollama": "Ollama muss installiert und erreichbar sein",
-          "hardware": "Ausreichend Hardware-Ressourcen (CPU/GPU, RAM)",
-          "trainingData": "Mindestens 5 annotierte Trainingsdaten"
+          "ollama": "Für LLM-Parsing: Ollama-Server muss erreichbar sein (optional)",
+          "hardware": "Für LLM-Parsing: ausreichend Hardware-Ressourcen (CPU/GPU, RAM)",
+          "trainingData": "Für eigene Templates: mindestens eine annotierte E-Mail"
         }
       },
       "noteLabel": "Hinweis",
-      "note": "Diese Funktion ist experimentell und kann Systemressourcen stark belasten."
+      "note": "Nur das LLM-basierte Parsen (Ollama) ist vollständig getestet. Template- und Regex-Parser sind experimentell."
     }
   },
   "admin": {

@@ -273,45 +273,45 @@
   },
   "developer": {
     "title": "Developer Options",
-    "description": "Experimental features for LLM training and advanced features",
-    "modeTitle": "LLM Training Mode",
-    "modeDescription": "Enables the ability to train local Ollama LLMs",
-    "confirmTitle": "⚠️ Activate Developer Mode?",
-    "confirmMessage": "This feature is experimental and should only be used by experienced users.",
+    "description": "Advanced features for parser development and debugging",
+    "modeTitle": "Parser Developer Mode",
+    "modeDescription": "Enables access to the parser page with template management and parse logs",
+    "confirmTitle": "Activate Developer Mode?",
+    "confirmMessage": "This unlocks advanced parser features that require technical understanding.",
     "updateError": "Error updating Developer Mode",
     "risks": {
-      "title": "Risks and Notes:",
+      "title": "Notes:",
       "items": {
-        "resourceUsage": "May heavily load system resources",
+        "resourceUsage": "LLM parsing (Ollama) requires a configured Ollama server",
         "technicalKnowledge": "Requires technical understanding",
-        "unexpectedResults": "May lead to unexpected results",
-        "longTraining": "Training may take a long time"
+        "unexpectedResults": "Template and regex parsers are experimental (beta)",
+        "longTraining": "Custom templates require knowledge of the airline's email format"
       }
     },
     "cancel": "Cancel",
     "activate": "Activate",
     "help": {
       "title": "Developer Mode",
-      "description": "Developer Mode enables advanced features for training LLM models.",
+      "description": "Developer Mode enables advanced features for parser development.",
       "features": {
         "title": "Features:",
         "items": {
-          "trainingPage": "Access to the training page for training Ollama models",
-          "uploadAnnotation": "Upload and annotation of training data (emails, boarding passes)",
-          "loraTraining": "LoRA training with own data",
-          "parserAccuracy": "Improve parser accuracy through training"
+          "trainingPage": "Access to the parser page with annotation, templates, and parse logs",
+          "uploadAnnotation": "Upload and annotate emails and boarding passes",
+          "loraTraining": "Create custom regex templates from annotated data",
+          "parserAccuracy": "Parse logs for analyzing and improving parsing results"
         }
       },
       "requirements": {
         "title": "Requirements:",
         "items": {
-          "ollama": "Ollama must be installed and accessible",
-          "hardware": "Sufficient hardware resources (CPU/GPU, RAM)",
-          "trainingData": "At least 5 annotated training data"
+          "ollama": "For LLM parsing: Ollama server must be reachable (optional)",
+          "hardware": "For LLM parsing: sufficient hardware resources (CPU/GPU, RAM)",
+          "trainingData": "For custom templates: at least one annotated email"
         }
       },
       "noteLabel": "Note",
-      "note": "This feature is experimental and may heavily load system resources."
+      "note": "Only LLM-based parsing (Ollama) is fully tested. Template and regex parsers are experimental."
     }
   },
   "admin": {
