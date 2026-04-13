@@ -4,6 +4,14 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.23.0-beta] - 2026-04-13
+
+### Added
+- **Smart API check scheduling** — Replaces fixed-interval polling with per-flight scheduling using a geometric midpoint approach. Checks become more frequent as departure nears (min 10 min), run every 15 min in-flight, and stop 2 hours after arrival. Existing scheduled flights are backfilled on startup.
+
+### Fixed
+- **Aircraft name normalization** — Aircraft type names are now normalized consistently across statistics, achievements, and the input form. Existing names in the database are cleaned up on startup.
+
 ## [0.22.0-beta] - 2026-04-13
 
 ### Fixed
