@@ -980,7 +980,7 @@ export default function DashboardPage(): JSX.Element {
                 animate={{ x: 0 }}
                 exit={{ x: 380 }}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className="fixed right-0 top-14 bottom-0 w-80 z-40 flex flex-col overflow-hidden"
+                className="fixed right-0 top-14 bottom-0 w-80 max-w-[calc(100vw-3rem)] z-40 flex flex-col overflow-hidden"
                 style={{
                   background: "rgba(22,27,34,0.95)",
                   backdropFilter: "blur(20px)",

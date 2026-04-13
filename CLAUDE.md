@@ -86,6 +86,8 @@ frontend/src/
 
 ## Critical Gotchas
 
+- **NEVER run `taskkill`** — do not kill processes (`node.exe` or
+  any other). If a port is busy, ask the user to handle it.
 - **`any` is FORBIDDEN** — always use `unknown` + type guards. The only
   exception is `.d.ts` files.
 - **Pino logger** — no `console.log`. Import:
