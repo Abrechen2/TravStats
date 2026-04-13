@@ -12,6 +12,7 @@ interface NavItem {
   show: boolean;
   badge?: number;
   warn?: boolean;
+  betaBadge?: boolean;
 }
 
 export default function NavigationBar(): JSX.Element {
@@ -77,6 +78,7 @@ export default function NavigationBar(): JSX.Element {
       path: "/parser",
       label: t("dashboard:parser"),
       show: hasTrainingAccess,
+      betaBadge: true,
     },
   ].filter((item) => item.show);
 
@@ -159,6 +161,11 @@ export default function NavigationBar(): JSX.Element {
                     }}
                   >
                     {item.label}
+                    {item.betaBadge && (
+                      <span className="ml-1.5 inline-flex items-center rounded px-1 py-0.5 text-[10px] font-medium leading-none text-amber-700 bg-amber-100 ring-1 ring-inset ring-amber-600/20 dark:text-amber-400 dark:bg-amber-500/10 dark:ring-amber-400/20">
+                        Beta
+                      </span>
+                    )}
                     {active && (
                       <span
                         className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
@@ -299,7 +306,14 @@ export default function NavigationBar(): JSX.Element {
                     borderLeft: active ? "2px solid var(--accent)" : "2px solid transparent",
                   }}
                 >
-                  <span>{item.label}</span>
+                  <span className="flex items-center gap-1.5">
+                    {item.label}
+                    {item.betaBadge && (
+                      <span className="inline-flex items-center rounded px-1 py-0.5 text-[10px] font-medium leading-none text-amber-700 bg-amber-100 ring-1 ring-inset ring-amber-600/20 dark:text-amber-400 dark:bg-amber-500/10 dark:ring-amber-400/20">
+                        Beta
+                      </span>
+                    )}
+                  </span>
                   {hasBadge && (
                     <span
                       className="text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center"
