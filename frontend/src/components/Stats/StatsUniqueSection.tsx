@@ -133,14 +133,14 @@ export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionPr
             </div>
           )}
 
-          {uniqueStats.sameDayReturns !== undefined && (
+          {uniqueStats.sameDayFlights !== undefined && (
             <div className="bg-gradient-to-br from-teal-500 to-cyan-500 rounded-lg p-6 text-white shadow-md">
               <h3 className="text-sm font-medium opacity-90 mb-2">
-                {t("stats:unique.sameDayReturns")}
+                {t("stats:unique.sameDayFlights")}
               </h3>
-              <p className="text-4xl font-bold mb-1">{uniqueStats.sameDayReturns}</p>
+              <p className="text-4xl font-bold mb-1">{uniqueStats.sameDayFlights}</p>
               <p className="text-sm opacity-75">
-                {t("stats:unique.sameDayReturnsDesc", { count: uniqueStats.sameDayReturns })}
+                {t("stats:unique.sameDayFlightsDesc", { count: uniqueStats.sameDayFlights })}
               </p>
             </div>
           )}

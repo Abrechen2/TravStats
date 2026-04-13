@@ -9,6 +9,7 @@ import { calculateFunStats, calculateBusinessStats, calculateUniqueStats } from 
 import logger from '../utils/logger';
 import { statsLimiter } from '../middleware/rateLimit';
 import { tzAwareDurationMinutes } from '../utils/timezone';
+import { normalizeAirline, mergeAirlineCounts } from '../utils/airlineNormalize';
 
 const router = Router();
 
@@ -163,11 +164,12 @@ async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummarySt
     return acc;
   }, {} as Record<string, number>);
 
-  const byAirline = airlineCounts.reduce((acc, item) => {
+  const rawByAirline = airlineCounts.reduce((acc, item) => {
     const airline = item.airline || 'Unknown';
     acc[airline] = item._count;
     return acc;
   }, {} as Record<string, number>);
+  const byAirline = mergeAirlineCounts(rawByAirline);
 
   const byCategory = categoryCounts.reduce((acc, item) => {
     const cat = item.category || 'unassigned';
@@ -753,11 +755,20 @@ router.get('/airlines', async (req: AuthRequest, res: Response, next: NextFuncti
       }),
     ]);
 
-    const airlines: AirlineRankingItem[] = airlineCounts.map((row) => ({
-      airline: row.airline ?? 'Unknown',
-      count: row._count,
-      percentage: total > 0 ? Math.round((row._count / total) * 1000) / 10 : 0,
-    }));
+    // Merge duplicates caused by different import-source spellings
+    const merged = new Map<string, number>();
+    for (const row of airlineCounts) {
+      const canonical = normalizeAirline(row.airline ?? 'Unknown');
+      merged.set(canonical, (merged.get(canonical) ?? 0) + row._count);
+    }
+
+    const airlines: AirlineRankingItem[] = Array.from(merged.entries())
+      .map(([airline, count]) => ({
+        airline,
+        count,
+        percentage: total > 0 ? Math.round((count / total) * 1000) / 10 : 0,
+      }))
+      .sort((a, b) => b.count - a.count);
 
     const response: AirlineRankingResponse = { airlines, total };
     res.json(response);

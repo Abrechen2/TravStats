@@ -82,6 +82,7 @@
       "import": "E-Mail importieren",
       "bestOption": "Beste Option",
       "bestOptionDescription": "Erfasst alle Daten am besten aus Bestätigungs-E-Mails",
+      "notImplemented": "E-Mail-Import ist noch nicht verfügbar. Bitte nutzen Sie die manuelle Eingabe oder den Boarding-Pass-Scan.",
       "textFallback": "Email-Text einfügen (Fallback)",
       "textPlaceholder": "Email-Inhalt hier einfügen..."
     },

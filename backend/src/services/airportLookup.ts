@@ -1,3 +1,4 @@
+import { find as findTimezone } from 'geo-tz';
 import { prisma } from '../db';
 import logger from '../utils/logger';
 import { getCachedAirport, invalidateAirportCache } from './airportCache';
@@ -133,10 +134,13 @@ export async function findOrCreateAirport(code: string): Promise<AirportData | n
   }
 
   // 3. In DB speichern
+  // Derive timezone from coordinates using geo-tz
+  const derivedTimezone = deriveTimezone(externalData.lat, externalData.lon);
+
   logger.info({
     operation: 'airport_lookup_store',
     message: `Storing new airport: ${externalData.name} (${code})`,
-    context: { code, airportName: externalData.name },
+    context: { code, airportName: externalData.name, timezone: derivedTimezone },
   });
 
   const newAirport = await prisma.airport.create({
@@ -149,6 +153,7 @@ export async function findOrCreateAirport(code: string): Promise<AirportData | n
       lat: externalData.lat,
       lon: externalData.lon,
       altitude: externalData.altitude || null,
+      timezone: derivedTimezone,
     },
   });
 
@@ -465,4 +470,67 @@ export async function enrichFlightAirports(flightData: {
     departure: enrichedDeparture as AirportData,
     arrival: enrichedArrival as AirportData,
   };
+}
+
+/**
+ * Derive IANA timezone string from coordinates using geo-tz.
+ * Returns null if no timezone can be determined.
+ */
+export function deriveTimezone(lat: number, lon: number): string | null {
+  try {
+    const zones = findTimezone(lat, lon);
+    return zones.length > 0 ? zones[0] : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Backfill timezone for all airports in the database that are missing it.
+ * Uses geo-tz to derive timezone from coordinates.
+ * Returns the number of airports updated.
+ */
+export async function backfillAirportTimezones(): Promise<number> {
+  const airports = await prisma.airport.findMany({
+    where: { timezone: null },
+    select: { id: true, iata: true, icao: true, lat: true, lon: true },
+  });
+
+  if (airports.length === 0) {
+    logger.info({
+      operation: 'airport_timezone_backfill',
+      message: 'All airports already have timezone data',
+    });
+    return 0;
+  }
+
+  logger.info({
+    operation: 'airport_timezone_backfill',
+    message: `Backfilling timezone for ${airports.length} airports`,
+  });
+
+  let updated = 0;
+  for (const airport of airports) {
+    const tz = deriveTimezone(airport.lat, airport.lon);
+    if (tz) {
+      await prisma.airport.update({
+        where: { id: airport.id },
+        data: { timezone: tz },
+      });
+      updated++;
+    } else {
+      logger.warn({
+        operation: 'airport_timezone_backfill',
+        message: `Could not derive timezone for airport ${airport.iata || airport.icao}`,
+        context: { lat: airport.lat, lon: airport.lon },
+      });
+    }
+  }
+
+  logger.info({
+    operation: 'airport_timezone_backfill',
+    message: `Backfill complete: ${updated}/${airports.length} airports updated`,
+  });
+
+  return updated;
 }

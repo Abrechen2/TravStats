@@ -260,6 +260,19 @@ if (process.env.NODE_ENV !== 'test') {
       logger.error({ operation: 'server_start_achievements_error', message: 'Failed to ensure achievements', error });
     }
 
+    // Backfill airport timezones from coordinates (idempotent, skips airports that already have timezone)
+    try {
+      const { backfillAirportTimezones } = await import('./services/airportLookup');
+      const updated = await backfillAirportTimezones();
+      if (updated > 0) {
+        const { clearAirportCache } = await import('./services/airportCache');
+        clearAirportCache();
+        logger.info({ operation: 'server_start_timezone_backfill', message: `Backfilled timezone for ${updated} airports` });
+      }
+    } catch (error) {
+      logger.warn({ operation: 'server_start_timezone_backfill_error', message: 'Failed to backfill airport timezones', error });
+    }
+
     // Initialize backup scheduler
     try {
       const { startScheduler } = await import('./services/backupScheduler');
