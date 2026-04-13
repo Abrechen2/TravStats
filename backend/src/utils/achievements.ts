@@ -3,6 +3,7 @@ import { Achievement, UserAchievement } from '@prisma/client';
 import { calculateDistance } from './geo';
 import logger from './logger';
 import { getCachedAirports } from '../services/airportCache';
+import { normalizeAircraft } from './aircraftNormalize';
 
 type UserAchievementWithRelation = UserAchievement & { achievement: Achievement };
 
@@ -317,9 +318,9 @@ async function calculateUserStats(flights: FlightData[]): Promise<UserStats> {
       stats.airlineCounts.set(flight.airline, count + 1);
     }
 
-    // Aircraft types
+    // Aircraft types (normalized to canonical names)
     if (flight.aircraft) {
-      stats.aircraftTypes.add(flight.aircraft);
+      stats.aircraftTypes.add(normalizeAircraft(flight.aircraft));
     }
 
     // Time-based stats — only applicable when departure time is known

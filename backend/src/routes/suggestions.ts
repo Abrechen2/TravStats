@@ -3,6 +3,7 @@ import { prisma } from '../db';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { AIRLINES } from '../data/airlines';
 import { AIRCRAFT_TYPES } from '../data/aircraftTypes';
+import { normalizeAircraft } from '../utils/aircraftNormalize';
 
 const router = Router();
 
@@ -54,10 +55,10 @@ router.get('/aircraft', async (req: AuthRequest, res: Response, next: NextFuncti
       distinct: ['aircraft'],
     });
 
-    // Merge: static names + user's custom entries
+    // Merge: static names + user's custom entries (normalized)
     const nameSet = new Set(AIRCRAFT_TYPES.map(a => a.name));
     for (const row of userAircraft) {
-      if (row.aircraft) nameSet.add(row.aircraft);
+      if (row.aircraft) nameSet.add(normalizeAircraft(row.aircraft));
     }
 
     const sorted = Array.from(nameSet).sort((a, b) => a.localeCompare(b));
