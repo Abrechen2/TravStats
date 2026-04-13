@@ -260,6 +260,29 @@ if (process.env.NODE_ENV !== 'test') {
       logger.error({ operation: 'server_start_achievements_error', message: 'Failed to ensure achievements', error });
     }
 
+    // Normalize aircraft type names in existing flights (idempotent)
+    try {
+      const { normalizeAircraft } = await import('./utils/aircraftNormalize');
+      const flightsWithAircraft = await prisma.flight.findMany({
+        where: { aircraft: { not: null } },
+        select: { id: true, aircraft: true },
+      });
+      let aircraftUpdated = 0;
+      for (const f of flightsWithAircraft) {
+        if (!f.aircraft) continue;
+        const normalized = normalizeAircraft(f.aircraft);
+        if (normalized !== f.aircraft) {
+          await prisma.flight.update({ where: { id: f.id }, data: { aircraft: normalized } });
+          aircraftUpdated++;
+        }
+      }
+      if (aircraftUpdated > 0) {
+        logger.info({ operation: 'server_start_aircraft_normalize', message: `Normalized ${aircraftUpdated} aircraft type names` });
+      }
+    } catch (error) {
+      logger.warn({ operation: 'server_start_aircraft_normalize_error', message: 'Failed to normalize aircraft names', error });
+    }
+
     // Backfill airport timezones from coordinates (idempotent, skips airports that already have timezone)
     try {
       const { backfillAirportTimezones } = await import('./services/airportLookup');
