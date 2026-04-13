@@ -26,6 +26,19 @@ import { AirportTooltip } from "./AirportTooltip";
 // Delay before showing the flight tooltip — lets the flyTo animation settle first
 const TOOLTIP_DELAY_MS = 1800;
 
+/** Check once whether WebGL2 is available (deck.gl requires it). */
+function hasWebGL2(): boolean {
+  try {
+    const canvas = document.createElement("canvas");
+    const gl = canvas.getContext("webgl2");
+    return gl !== null;
+  } catch {
+    return false;
+  }
+}
+
+const webgl2Available = hasWebGL2();
+
 const INITIAL_VIEW_STATE: MapViewState = {
   longitude: 10,
   latitude: 30,
@@ -367,7 +380,7 @@ export function DeckGLMap({
           onResetTrip?.();
         }}
       >
-        {mapLoaded && (
+        {webgl2Available && mapLoaded && (
           <DeckGLOverlay layers={[...layers, ...pulseLayers, ...planeLayers]} effects={effects} />
         )}
       </Map>
@@ -445,6 +458,18 @@ export function DeckGLMap({
             airportGeoRef.current = null;
           }}
         />
+      )}
+
+      {!webgl2Available && (
+        <div
+          className="absolute bottom-2 left-2 z-10 text-xs px-2 py-1 rounded"
+          style={{
+            background: "rgba(0,0,0,0.6)",
+            color: "rgba(255,200,50,0.9)",
+          }}
+        >
+          WebGL2 unavailable — flight routes disabled
+        </div>
       )}
     </div>
   );
