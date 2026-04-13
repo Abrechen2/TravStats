@@ -4,6 +4,20 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.22.0-beta] - 2026-04-13
+
+### Fixed
+- **Timezone-aware statistics** — All airport timezone data is now derived from coordinates via geo-tz and backfilled on startup. Fixes timezoneHopper (was always 0), fastestRoute showing impossible speeds (e.g. 5560 km/h), and incorrect flight durations for cross-timezone flights.
+- **Airline name normalization** — Duplicate airline entries caused by different import-source spellings (EgyptAir/Egyptair, AIR CANADA, Vietnam Airline) are now merged in statistics.
+- **WebGL2 graceful fallback** — Browsers without WebGL2 support no longer crash deck.gl; the map renders correctly.
+- **i18n encoding fixes** — Corrected garbled German umlauts in error messages and added missing translation key.
+
+### Changed
+- **Same-day flights stat renamed** — "Same-Day Returns" renamed to "Tagesflüge" / "Same-Day Flights" to accurately reflect the metric (flights landing on the same calendar day, not round trips).
+
+### Added
+- **Native MapLibre route fallback** — WebGL1-only browsers now get a native MapLibre GeoJSON route layer instead of no map at all.
+
 ## [0.21.0-beta] - 2026-04-13
 
 ### Added
