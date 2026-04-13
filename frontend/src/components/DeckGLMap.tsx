@@ -90,6 +90,7 @@ export function DeckGLMap({
   const themeColors = MAP_LAYER_COLORS[mapTheme];
   const mapRef = useRef<MapRef>(null);
 
+  const [mapLoaded, setMapLoaded] = useState(false);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [playing, setPlaying] = useState<boolean>(false);
   const deckClickedRef = useRef(false);
@@ -352,6 +353,7 @@ export function DeckGLMap({
         initialViewState={INITIAL_VIEW_STATE}
         mapStyle={isDarkMode ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
         style={{ position: "absolute", inset: "0" }}
+        onLoad={() => setMapLoaded(true)}
         onMove={handleMapMove}
         onClick={() => {
           // If deck.gl handled this click (e.g. arc click), ignore the Map event (Bug 1)
@@ -365,7 +367,9 @@ export function DeckGLMap({
           onResetTrip?.();
         }}
       >
-        <DeckGLOverlay layers={[...layers, ...pulseLayers, ...planeLayers]} effects={effects} />
+        {mapLoaded && (
+          <DeckGLOverlay layers={[...layers, ...pulseLayers, ...planeLayers]} effects={effects} />
+        )}
       </Map>
 
       {/* Subtle grid overlay — glassmorphism dark mode only */}

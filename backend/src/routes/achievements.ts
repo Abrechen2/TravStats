@@ -91,12 +91,16 @@ router.get('/recent', async (req: AuthRequest, res: Response, next: NextFunction
     const rawLimit = parseInt(req.query.limit as string);
     const limit = Number.isFinite(rawLimit) ? Math.min(rawLimit, 100) : 10;
 
-    const recentAchievements = await prisma.userAchievement.findMany({
+    const allRecent = await prisma.userAchievement.findMany({
       where: { userId },
       include: { achievement: true },
       orderBy: { unlockedAt: 'desc' },
-      take: limit,
     });
+
+    // Only return actually unlocked achievements (progress >= requirement)
+    const recentAchievements = allRecent
+      .filter(ua => ua.progress >= ua.achievement.requirement)
+      .slice(0, limit);
 
     res.json({ achievements: recentAchievements });
   } catch (error) {
@@ -127,14 +131,15 @@ router.get('/leaderboard', async (req: AuthRequest, res: Response, next: NextFun
     const rawLeaderboardLimit = parseInt(req.query.limit as string);
     const limit = Number.isFinite(rawLeaderboardLimit) ? Math.min(rawLeaderboardLimit, 100) : 10;
 
-    // Use database aggregation instead of loading all data into memory
-    // Get user achievements with aggregated points
+    // Get user achievements with points and requirement for unlock check
     const userAchievements = await prisma.userAchievement.findMany({
       select: {
         userId: true,
+        progress: true,
         achievement: {
           select: {
             points: true,
+            requirement: true,
           },
         },
         user: {
@@ -147,10 +152,12 @@ router.get('/leaderboard', async (req: AuthRequest, res: Response, next: NextFun
       },
     });
 
-    // Aggregate points per user (more efficient than loading all into memory)
+    // Only count actually unlocked achievements (progress >= requirement)
     const userPointsMap = new Map<string, { user: { id: string; username: string; createdAt: Date }; totalPoints: number; achievementCount: number }>();
 
     for (const ua of userAchievements) {
+      if (ua.progress < ua.achievement.requirement) continue;
+
       const userId = ua.userId;
       if (!userPointsMap.has(userId)) {
         userPointsMap.set(userId, {

@@ -3,7 +3,7 @@ import type { Flight } from "../types";
 import ReceiptUpload from "./ReceiptUpload";
 import { useTranslation } from "../hooks/useTranslation";
 import { useSettingsStore } from "../store/settingsStore";
-import { AIRLINES } from "../lib/constants";
+import { useSuggestions } from "../hooks/useSuggestions";
 
 interface FlightEditModalProps {
   flight: Flight;
@@ -29,6 +29,7 @@ export default function FlightEditModal({
 }: FlightEditModalProps): JSX.Element | null {
   const { t, i18n } = useTranslation(["flights", "common", "errors"]);
   const { features } = useSettingsStore();
+  const { airlines: airlineSuggestions, aircraft: aircraftSuggestions } = useSuggestions();
 
   const buildFormData = (f: Flight) => ({
     airline: f.airline || "",
@@ -281,8 +282,8 @@ export default function FlightEditModal({
                 list="airline-suggestions-edit"
               />
               <datalist id="airline-suggestions-edit">
-                {AIRLINES.map((a) => (
-                  <option key={a.iata} value={a.name} />
+                {airlineSuggestions.map((name) => (
+                  <option key={name} value={name} />
                 ))}
               </datalist>
             </div>
@@ -298,8 +299,8 @@ export default function FlightEditModal({
                 list="operating-airline-suggestions-edit"
               />
               <datalist id="operating-airline-suggestions-edit">
-                {AIRLINES.map((a) => (
-                  <option key={a.iata} value={a.name} />
+                {airlineSuggestions.map((name) => (
+                  <option key={name} value={name} />
                 ))}
               </datalist>
             </div>
@@ -325,7 +326,13 @@ export default function FlightEditModal({
               onChange={(e) => update("aircraft", e.target.value)}
               className="input"
               placeholder={t("flights:form.placeholders.aircraft")}
+              list="aircraft-suggestions-edit"
             />
+            <datalist id="aircraft-suggestions-edit">
+              {aircraftSuggestions.map((name) => (
+                <option key={name} value={name} />
+              ))}
+            </datalist>
           </div>
 
           {/* Status / Category / Seat Class */}
