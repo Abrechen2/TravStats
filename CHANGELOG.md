@@ -4,6 +4,52 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.21.0-beta] - 2026-04-13
+
+### Added
+- **Historical flights** — Flights can now be recorded as route-only
+  entries without departure/arrival times. Includes a form checkbox,
+  year/month partial date picker, grey map arcs, and a "HISTORISCH"
+  badge in the flight list.
+- **Duplicate flight dialog** — One-click duplication of any flight
+  as outbound or return, with correct status and time fields.
+- **Airport autocomplete in review modal** — The FlightReviewModal
+  (used for email/boarding pass imports) now has full airport
+  autocomplete with IATA/ICAO priority matching.
+- **Airline and aircraft autocomplete** — All flight forms now offer
+  suggestions from a merged list of ~150 airlines and ~90 aircraft
+  types (static seed data + user's flight history). Custom entries
+  are remembered for future sessions.
+- **Year/month picker in edit modal** — Historical flights can be
+  edited with a year/month-only date picker instead of requiring
+  a full date.
+- **Three UX improvements for flight forms** — Enhanced form usability
+  across add, edit, and review workflows.
+
+### Fixed
+- **Achievement leaderboard inflated** — The leaderboard was counting
+  all tracked achievements (55) instead of only unlocked ones (34),
+  showing 12,595 points instead of the correct 3,630.
+- **Recent achievements showed non-unlocked entries** — The /recent
+  endpoint now filters to only actually unlocked achievements.
+- **deck.gl map crash on load** — Fixed a luma.gl "r is null" race
+  condition by deferring the DeckGLOverlay until MapLibre's WebGL
+  context is ready (onLoad gate). Updated maplibre-gl 5.19→5.23.
+- **FlightEditModal date handling** — Overhauled date fields, feature
+  flags, and historical status switching in the edit modal.
+- **Duplicate flight payload errors** — Fixed null field coercion,
+  missing times, and incorrect status when duplicating flights.
+- **Validation errors hidden** — Detailed Zod validation errors are
+  now displayed in the flight form instead of a generic error message.
+- **Flight schema rejects null** — Callsign and aircraft fields now
+  correctly accept null values.
+- **Airport search ranking** — Exact IATA/ICAO matches are now
+  prioritized over partial name/city matches.
+
+### Docs
+- **Post-V1 roadmap** — Added ROADMAP-POST-V1.md with detailed specs
+  for V1.1 (Cruises module) through V2.0 (Multi-user platform).
+
 ## [0.20.0-beta] - 2026-04-12
 
 ### Added
