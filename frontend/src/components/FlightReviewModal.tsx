@@ -8,6 +8,7 @@ import { useTranslation } from "../hooks/useTranslation";
 import { filterEmailText } from "../lib/filterEmailText";
 import { getAirlineFromFlightNumber } from "../lib/airlineUtils";
 import AirportAutocomplete from "./AirportAutocomplete";
+import { useSuggestions } from "../hooks/useSuggestions";
 
 function getFieldBorderClass(
   fieldName: string,
@@ -58,6 +59,7 @@ export default function FlightReviewModal({
   const { t } = useTranslation(["flights", "common", "errors"]);
   const { user } = useAuthStore();
   const { features } = useSettingsStore();
+  const { airlines: airlineSuggestions, aircraft: aircraftSuggestions } = useSuggestions();
   // Form state
   const [flightNumber, setFlightNumber] = useState("");
   const [airline, setAirline] = useState("");
@@ -486,7 +488,13 @@ export default function FlightReviewModal({
                 onChange={(e) => setAirline(e.target.value)}
                 className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
                 placeholder={t("flights:form.placeholders.airline")}
+                list="airline-suggestions-review"
               />
+              <datalist id="airline-suggestions-review">
+                {airlineSuggestions.map((name) => (
+                  <option key={name} value={name} />
+                ))}
+              </datalist>
             </div>
           </div>
 
@@ -560,7 +568,13 @@ export default function FlightReviewModal({
                 onChange={(e) => setAircraft(e.target.value)}
                 className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
                 placeholder={t("flights:form.placeholders.aircraft")}
+                list="aircraft-suggestions-review"
               />
+              <datalist id="aircraft-suggestions-review">
+                {aircraftSuggestions.map((name) => (
+                  <option key={name} value={name} />
+                ))}
+              </datalist>
             </div>
 
             <div>

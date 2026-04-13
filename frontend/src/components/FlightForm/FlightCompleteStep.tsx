@@ -2,8 +2,8 @@ import HelpIcon from "../Help/HelpIcon";
 import AirportAutocomplete from "../AirportAutocomplete";
 import { useTranslation } from "../../hooks/useTranslation";
 import { calculateDistance } from "../../lib/geo";
-import { AIRLINES } from "../../lib/constants";
 import type { Airport } from "../../lib/api";
+import { useSuggestions } from "../../hooks/useSuggestions";
 import { useSettingsStore } from "../../store/settingsStore";
 
 interface FlightLookupResult {
@@ -152,6 +152,7 @@ export default function FlightCompleteStep({
 }: FlightCompleteStepProps): JSX.Element {
   const { t, i18n } = useTranslation(["flights"]);
   const { features } = useSettingsStore();
+  const { airlines: airlineSuggestions, aircraft: aircraftSuggestions } = useSuggestions();
 
   return (
     <div className="space-y-6">
@@ -424,8 +425,8 @@ export default function FlightCompleteStep({
             list="airline-suggestions"
           />
           <datalist id="airline-suggestions">
-            {AIRLINES.map((a) => (
-              <option key={a.iata} value={a.name} />
+            {airlineSuggestions.map((name) => (
+              <option key={name} value={name} />
             ))}
           </datalist>
         </div>
@@ -440,8 +441,8 @@ export default function FlightCompleteStep({
             list="operating-airline-suggestions"
           />
           <datalist id="operating-airline-suggestions">
-            {AIRLINES.map((a) => (
-              <option key={a.iata} value={a.name} />
+            {airlineSuggestions.map((name) => (
+              <option key={name} value={name} />
             ))}
           </datalist>
         </div>
@@ -483,7 +484,13 @@ export default function FlightCompleteStep({
             onChange={(e) => setAircraft(e.target.value)}
             className={`input ${sizedInputClass}`}
             placeholder={t("flights:form.placeholders.aircraft")}
+            list="aircraft-suggestions"
           />
+          <datalist id="aircraft-suggestions">
+            {aircraftSuggestions.map((name) => (
+              <option key={name} value={name} />
+            ))}
+          </datalist>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
