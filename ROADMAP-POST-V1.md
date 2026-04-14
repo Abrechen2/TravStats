@@ -412,5 +412,69 @@ in the review card (e.g. `parserTemplate: "LH"`).
 
 ---
 
+## Historical Enrichment — Design Improvements
+
+Captured from the v0.24.2 critical review. These are design/algorithm
+changes that require real-flight validation, not straight bug fixes.
+
+### Route Aggregation via Clustering (Replace Median)
+
+**Problem:** `aggregateRoutes()` currently resamples each reference flight's
+waypoints to a fixed length and takes the per-dimension median. For routes
+with multiple valid corridors (e.g. MUC→FRA via Alps-North vs Alps-South),
+this synthesises a route through their midpoint — a path no real flight
+takes.
+
+**Approach:**
+1. Haversine-distance clustering of reference-flight routes (k-means on
+   resampled waypoint vectors, small k: 1–3 corridors).
+2. Pick the **most populated cluster** and return the cluster centroid OR
+   the cluster-nearest real flight's route.
+3. Expose the cluster count in the PendingUpdate metadata as a
+   `routeVariants` hint so the user understands if there's ambiguity.
+
+**Effort:** Medium. Needs @turf/turf or a small k-means helper. Break-even
+with 10+ reference flights to make clustering meaningful.
+
+### Confidence Calibration via User Feedback Loop
+
+**Problem:** Confidence score (base 50 + heuristic offsets) is hand-tuned,
+`minConfidence=60` is arbitrary. No feedback loop exists — we don't know
+whether `confidence=75` predictions are accepted more often than
+`confidence=60` ones.
+
+**Approach:**
+1. Track `PendingFlightUpdate.status` outcomes (`applied` vs `rejected`
+   vs `edited`) grouped by confidence bucket.
+2. Every N applied/rejected updates, recompute calibration: if users
+   reject ≥50% of `confidence=60` proposals, bump the user's personal
+   minConfidence automatically (or suggest it).
+3. Surface acceptance-rate-per-confidence in the Admin UI so the tuning
+   isn't a black box.
+
+**Effort:** Medium. Needs aggregation query + UI + automatic threshold
+adjustment. Low risk — observational first, auto-adjust later.
+
+### Cross-User Consent Model for Multi-Tenant
+
+**Problem:** Current code sources route geometry cross-user with the
+rationale that *"waypoints are public flight-path data"*. For the solo
+family tracker this is fine, but a future multi-user / public deployment
+would pull one user's GPS tracks into another user's suggestions without
+explicit consent — borderline DSGVO-problematic.
+
+**Approach:**
+1. Add a per-user opt-in setting `shareRoutesWithOthers` (default off
+   for future multi-user deployments, on for invited family members).
+2. `findEnrichmentCandidates` and `aggregateFlightData` filter reference
+   flights by that flag.
+3. Document in `SECURITY.md` what data is cross-user and under which
+   opt-in.
+
+**Effort:** Small backend change, documentation effort. Only matters when
+we move beyond family-tracker deployments.
+
+---
+
 *Created: 2026-04-13*
 *Current version: 0.20.0-beta — targeting V1.0 by end of April 2026*
