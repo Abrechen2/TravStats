@@ -13,6 +13,14 @@
     "departureTime": "Abflugzeit",
     "arrivalDate": "Ankunftsdatum",
     "arrivalTime": "Ankunftszeit",
+    "copyDepartureDate": "Abflugdatum übernehmen",
+    "estimateArrivalTime": "Ankunftszeit schätzen",
+    "arrivalNextDay": "Ankunft am Folgetag (+1)",
+    "arrivalDayOffset": "Ankunft nach {{count}} Tagen",
+    "arrivalDayOffset_one": "Ankunft am Folgetag (+1)",
+    "estimateNoAirports": "Bitte beide Flughäfen auswählen",
+    "estimateNoDepartureTime": "Bitte Abflugzeit eingeben",
+    "estimateTzUnknown": "Zeitzone unbekannt — Schätzung ohne Zeitzonen-Korrektur",
     "airline": "Fluggesellschaft",
     "operatingAirline": "Durchgeführt von",
     "aircraft": "Flugzeug",
@@ -297,7 +305,9 @@
     "searching": "Suche...",
     "searchingWorldwide": "🔍 Suche weltweit...",
     "noResults": "Keine Flughäfen gefunden",
-    "notFound": "❌ Flughafen \"{{code}}\" nicht gefunden"
+    "notFound": "❌ Flughafen \"{{code}}\" nicht gefunden",
+    "closedBadge": "geschlossen",
+    "closedTooltip": "Dieser Flughafen ist dauerhaft geschlossen. Für historische Flüge weiterhin wählbar."
   },
   "dataSource": {
     "manual": "Manuell",

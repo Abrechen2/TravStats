@@ -13,6 +13,14 @@
     "departureTime": "Departure Time",
     "arrivalDate": "Arrival Date",
     "arrivalTime": "Arrival Time",
+    "copyDepartureDate": "Copy departure date",
+    "estimateArrivalTime": "Estimate arrival time",
+    "arrivalNextDay": "Arrives next day (+1)",
+    "arrivalDayOffset": "Arrives {{count}} days later",
+    "arrivalDayOffset_one": "Arrives next day (+1)",
+    "estimateNoAirports": "Select both airports first",
+    "estimateNoDepartureTime": "Enter a departure time first",
+    "estimateTzUnknown": "Timezone unknown — estimate without timezone correction",
     "airline": "Airline",
     "operatingAirline": "Operated by",
     "aircraft": "Aircraft",
@@ -297,7 +305,9 @@
     "searching": "Searching...",
     "searchingWorldwide": "🔍 Searching worldwide...",
     "noResults": "No airports found",
-    "notFound": "❌ Airport \"{{code}}\" not found"
+    "notFound": "❌ Airport \"{{code}}\" not found",
+    "closedBadge": "closed",
+    "closedTooltip": "This airport is permanently closed. Still selectable for historical flights."
   },
   "dataSource": {
     "manual": "Manual",
