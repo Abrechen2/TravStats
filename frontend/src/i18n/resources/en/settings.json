@@ -30,6 +30,36 @@
       "password": "Opens a separate modal that requires the current password for verification before a new one can be set."
     }
   },
+  "homeAirport": {
+    "title": "Home airport",
+    "description": "Your base airport. Used in statistics — for example to compute distance from home, or to exclude returns home from layover stats.",
+    "currentLabel": "Current home airport",
+    "notSet": "No home airport set yet.",
+    "setNow": "Set now",
+    "iMoved": "I moved",
+    "since": "Since {{date}}",
+    "historyLabel": "Previous home airports",
+    "stillActive": "today",
+    "newHomeHeading": "New home airport",
+    "initialHomeHeading": "Set home airport",
+    "airportField": "Airport",
+    "airportPlaceholder": "Type IATA or name (e.g. MUC)",
+    "fromDateField": "Effective from",
+    "fromDateHint": "Flights before this date keep counting the previous home airport — a move never rewrites history.",
+    "pickAirportFirst": "Pick an airport first.",
+    "savedToast": "Home airport saved.",
+    "saveError": "Save failed.",
+    "loadError": "Failed to load home airport history.",
+    "deleteError": "Could not delete entry.",
+    "confirmDelete": "Really delete this entry?",
+    "bannerTitle": "No home airport set",
+    "bannerDescription": "Set your home airport so stats like \"longest layover\" or \"farthest from home\" work correctly.",
+    "help": {
+      "title": "Home airport & relocations",
+      "description": "The home airport anchors travel statistics. Flights departing from or returning to home are not layovers by definition.",
+      "historyExplained": "When you move, the previous airport is preserved as a past entry — old flights still use the old home airport."
+    }
+  },
   "display": {
     "title": "Display & Language",
     "description": "Control mode, language and timezone centrally.",

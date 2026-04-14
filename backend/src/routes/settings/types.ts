@@ -48,6 +48,12 @@ export interface SettingsDataJson {
     featureUpdates?: boolean;
   };
   onboarding?: OnboardingState;
+  /** Chronological list of home airports. See backend/src/utils/homeAirport.ts. */
+  homeAirportHistory?: Array<{
+    iata: string;
+    fromDate: string; // YYYY-MM-DD
+    toDate: string | null; // YYYY-MM-DD, null = currently active
+  }>;
   [key: string]: unknown;
 }
 
