@@ -1,10 +1,13 @@
 import HelpIcon from "../Help/HelpIcon";
 import AirportAutocomplete from "../AirportAutocomplete";
+import CopyActionButton from "./CopyActionButton";
 import { useTranslation } from "../../hooks/useTranslation";
 import { calculateDistance } from "../../lib/geo";
 import type { Airport } from "../../lib/api";
 import { useSuggestions } from "../../hooks/useSuggestions";
 import { useSettingsStore } from "../../store/settingsStore";
+import { useToastStore } from "../../store/toastStore";
+import { estimateArrivalFromDeparture } from "../../lib/timeEstimation";
 
 interface FlightLookupResult {
   flightNumber: string;
@@ -153,6 +156,42 @@ export default function FlightCompleteStep({
   const { t, i18n } = useTranslation(["flights"]);
   const { features } = useSettingsStore();
   const { airlines: airlineSuggestions, aircraft: aircraftSuggestions } = useSuggestions();
+  const addToast = useToastStore((s) => s.addToast);
+
+  const canEstimateArrival = Boolean(
+    departure && arrival && departureDate && departureTime && status !== "historical"
+  );
+
+  const handleEstimateArrival = (): void => {
+    if (!departure || !arrival || !departureDate || !departureTime) return;
+    const result = estimateArrivalFromDeparture({
+      departureDate,
+      departureTime,
+      departureLat: departure.lat,
+      departureLon: departure.lon,
+      departureTimezone: departure.timezone,
+      arrivalLat: arrival.lat,
+      arrivalLon: arrival.lon,
+      arrivalTimezone: arrival.timezone,
+    });
+    setArrivalDate(result.arrivalDate);
+    setArrivalTime(result.arrivalTime);
+    if (!result.tzAware) {
+      addToast("warning", t("flights:form.estimateTzUnknown"));
+    }
+  };
+
+  // "+1 Tag" hint under the arrival date (non-historical only)
+  const arrivalDayOffset =
+    status !== "historical" && departureDate && arrivalDate && arrivalDate > departureDate
+      ? (() => {
+          const [dy, dm, dd] = departureDate.split("-").map(Number);
+          const [ay, am, ad] = arrivalDate.split("-").map(Number);
+          const from = Date.UTC(dy, dm - 1, dd);
+          const to = Date.UTC(ay, am - 1, ad);
+          return Math.max(0, Math.round((to - from) / (24 * 60 * 60 * 1000)));
+        })()
+      : 0;
 
   return (
     <div className="space-y-6">
@@ -284,60 +323,67 @@ export default function FlightCompleteStep({
 
       {/* Date & Time — full inputs for normal flights, year/month for historical */}
       {status === "historical" ? (
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className={`label ${textClass}`}>{t("flights:historicalYear")}</label>
-            <input
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              maxLength={4}
-              placeholder={t("flights:historicalYearPlaceholder")}
-              value={departureDate ? new Date(departureDate + "T00:00").getFullYear() : ""}
-              onChange={(e) => {
-                const y = e.target.value.replace(/\D/g, "").slice(0, 4);
-                if (!y) {
-                  setDepartureDate("");
-                  setArrivalDate("");
-                  return;
-                }
-                const currentMonth = departureDate
-                  ? String(new Date(departureDate + "T00:00").getMonth() + 1).padStart(2, "0")
-                  : "01";
-                setDepartureDate(`${y}-${currentMonth}-01`);
-                setArrivalDate(`${y}-${currentMonth}-01`);
-              }}
-              className={`input ${sizedInputClass}`}
-            />
-          </div>
-          <div>
-            <label className={`label ${textClass}`}>{t("flights:historicalMonth")}</label>
-            <select
-              value={departureDate ? String(new Date(departureDate + "T00:00").getMonth() + 1) : ""}
-              onChange={(e) => {
-                const m = e.target.value;
-                const y = departureDate
-                  ? new Date(departureDate + "T00:00").getFullYear()
-                  : new Date().getFullYear();
-                if (!m) {
-                  setDepartureDate(`${y}-01-01`);
-                  setArrivalDate(`${y}-01-01`);
-                } else {
-                  setDepartureDate(`${y}-${m.padStart(2, "0")}-01`);
-                  setArrivalDate(`${y}-${m.padStart(2, "0")}-01`);
-                }
-              }}
-              className={`input ${sizedInputClass}`}
-            >
-              <option value="">{t("flights:historicalMonthNone")}</option>
-              {Array.from({ length: 12 }, (_, i) => (
-                <option key={i + 1} value={String(i + 1)}>
-                  {new Date(2000, i).toLocaleDateString(i18n.language, { month: "long" })}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+        (() => {
+          // Parse YYYY-MM-DD directly from the stored string. Using new Date()
+          // produces NaN when the value is anything but a clean date string,
+          // which then gets re-written back as "NaN" and locks the field.
+          const parts = departureDate.match(/^(\d{4})-(\d{2})/);
+          const yearStr = parts?.[1] ?? "";
+          const monthPadded = parts?.[2] ?? "";
+          const monthValue = monthPadded ? String(parseInt(monthPadded, 10)) : "";
+          return (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={`label ${textClass}`}>{t("flights:historicalYear")}</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={4}
+                  placeholder={t("flights:historicalYearPlaceholder")}
+                  value={yearStr}
+                  onChange={(e) => {
+                    const y = e.target.value.replace(/\D/g, "").slice(0, 4);
+                    if (!y) {
+                      setDepartureDate("");
+                      setArrivalDate("");
+                      return;
+                    }
+                    const m = monthPadded || "01";
+                    setDepartureDate(`${y}-${m}-01`);
+                    setArrivalDate(`${y}-${m}-01`);
+                  }}
+                  className={`input ${sizedInputClass}`}
+                />
+              </div>
+              <div>
+                <label className={`label ${textClass}`}>{t("flights:historicalMonth")}</label>
+                <select
+                  value={monthValue}
+                  onChange={(e) => {
+                    const m = e.target.value;
+                    const y = yearStr || String(new Date().getFullYear());
+                    if (!m) {
+                      setDepartureDate(`${y}-01-01`);
+                      setArrivalDate(`${y}-01-01`);
+                    } else {
+                      setDepartureDate(`${y}-${m.padStart(2, "0")}-01`);
+                      setArrivalDate(`${y}-${m.padStart(2, "0")}-01`);
+                    }
+                  }}
+                  className={`input ${sizedInputClass}`}
+                >
+                  <option value="">{t("flights:historicalMonthNone")}</option>
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <option key={i + 1} value={String(i + 1)}>
+                      {new Date(2000, i).toLocaleDateString(i18n.language, { month: "long" })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          );
+        })()
       ) : (
         <>
           <div className="grid grid-cols-2 gap-4">
@@ -383,6 +429,12 @@ export default function FlightCompleteStep({
               <label className={`label ${textClass} flex items-center gap-2`}>
                 {t("flights:form.arrivalDate")} *
                 <HelpIcon content={t("flights:form.help.arrivalDate")} position="top" />
+                <CopyActionButton
+                  icon="arrow-down"
+                  title={t("flights:form.copyDepartureDate")}
+                  disabled={!departureDate}
+                  onClick={() => setArrivalDate(departureDate)}
+                />
               </label>
               <input
                 type="date"
@@ -391,6 +443,16 @@ export default function FlightCompleteStep({
                 className={`input ${sizedInputClass}`}
                 required
               />
+              {arrivalDayOffset > 0 && (
+                <p
+                  className={`text-xs mt-1 ${isDarkMode ? "text-blue-300" : "text-blue-700"}`}
+                  data-testid="arrival-day-offset"
+                >
+                  {arrivalDayOffset === 1
+                    ? t("flights:form.arrivalNextDay")
+                    : t("flights:form.arrivalDayOffset", { count: arrivalDayOffset })}
+                </p>
+              )}
             </div>
             <div>
               <label className={`label ${textClass} flex items-center gap-2`}>
@@ -399,6 +461,18 @@ export default function FlightCompleteStep({
                   content={t("flights:form.help.arrivalTime")}
                   expandedContent={t("flights:form.help.arrivalTimeExpanded")}
                   position="top"
+                />
+                <CopyActionButton
+                  icon="calculator"
+                  title={
+                    canEstimateArrival
+                      ? t("flights:form.estimateArrivalTime")
+                      : !departure || !arrival
+                        ? t("flights:form.estimateNoAirports")
+                        : t("flights:form.estimateNoDepartureTime")
+                  }
+                  disabled={!canEstimateArrival}
+                  onClick={handleEstimateArrival}
                 />
               </label>
               <input
