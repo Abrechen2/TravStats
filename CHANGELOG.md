@@ -4,6 +4,21 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.25.0-beta] - 2026-04-14
+
+### Added
+- **Home airport with relocation history** — Pick a home airport once during onboarding and change it later under Einstellungen › Heimatflughafen. A move never overwrites the past: every flight keeps the home airport that was active at its date, so old statistics stay truthful.
+- **Copy-down date and estimate arrival time buttons** — Two new icon buttons in the Add Flight and Edit Flight forms: a down-arrow that copies the departure date into the arrival date, and a calculator that estimates the arrival time from the great-circle distance using the arrival airport's local timezone. A "+1 Tag" hint appears below the arrival date for overnight flights.
+- **Flughäfen statistics section** — New stats card group with distinct airports, countries, continents (5/6), top 5 most-visited airports, top countries, rarest airports (visited only once), new airports this year, farthest airport from home, and a continent breakdown bar chart. Plus a new "Kürzester Layover" companion stat.
+- **Closed airports in autocomplete** — Permanently closed airports like Berlin Tegel (TXL) are now seeded too and remain selectable for historical flights, marked with a "geschlossen" badge.
+
+### Fixed
+- **Längster Layover no longer counts living at home as a layover** — Capped at 24 hours and arrivals at the home airport active on that date are excluded. Old: "47944.6h in MUC" (5.5 years). New: realistic transit times only.
+- **Historical flight year input no longer locks to NaN** — Parsing the stored date with `new Date()` could produce `Invalid Date`, then `getFullYear()` wrote "NaN" back into the input and froze it. Now parsed directly from YYYY-MM-DD with regex.
+
+### Changed
+- **Settings rate limit raised** — From 60 to 200 requests per 15 min. The previous limit was tripping on normal navigation now that the settings page has more sub-sections and a new home-airport banner.
+
 ## [0.24.4-beta] - 2026-04-14
 
 ### Fixed
