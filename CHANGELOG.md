@@ -4,6 +4,12 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.24.4-beta] - 2026-04-14
+
+### Fixed
+- **Aviationstack now respects Free-tier budget** — Blocks Aviationstack calls outside the flight's live window (±3h of departure, in-flight, or 2h post-arrival) and caps them at an admin-configurable daily budget (default 3/day, enough to stay inside the Free tier's 100/month). Outside the window — the bulk of daily polls, which are just schedule lookups from T-24h to T-6h — the lookup goes straight to AirLabs, which has a much larger Free quota. An 8-flight test account now consumes about 5–8 Aviationstack calls over a 24h window instead of 240+. Skip reasons (`outside_live_window`, `daily_budget_exceeded`, `cooldown`) are logged at every lookup for debuggability.
+- **New admin setting:** `aviationstackDailyBudget` (default 3). Migration adds the column; set to 0 to disable Aviationstack entirely and rely solely on AirLabs + OpenSky.
+
 ## [0.24.3-beta] - 2026-04-14
 
 ### Fixed
