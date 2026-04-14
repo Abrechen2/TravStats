@@ -30,6 +30,36 @@
       "password": "Öffnet ein separates Modal, in dem das aktuelle Passwort zur Verifizierung eingegeben werden muss, bevor ein neues gesetzt wird."
     }
   },
+  "homeAirport": {
+    "title": "Heimatflughafen",
+    "description": "Dein Ausgangsflughafen. Wird in Statistiken verwendet, z. B. um die Entfernung von zu Hause zu berechnen oder Heimkehr-Landungen bei Layover-Statistiken auszunehmen.",
+    "currentLabel": "Aktueller Heimatflughafen",
+    "notSet": "Noch kein Heimatflughafen hinterlegt.",
+    "setNow": "Jetzt festlegen",
+    "iMoved": "Ich bin umgezogen",
+    "since": "Seit {{date}}",
+    "historyLabel": "Vorherige Heimatflughäfen",
+    "stillActive": "heute",
+    "newHomeHeading": "Neuer Heimatflughafen",
+    "initialHomeHeading": "Heimatflughafen festlegen",
+    "airportField": "Flughafen",
+    "airportPlaceholder": "IATA oder Name eingeben (z. B. MUC)",
+    "fromDateField": "Ab wann gilt das?",
+    "fromDateHint": "Alte Flüge vor diesem Datum zählen weiterhin den vorherigen Heimatflughafen — ein Umzug verändert keine historischen Daten.",
+    "pickAirportFirst": "Bitte zuerst einen Flughafen auswählen.",
+    "savedToast": "Heimatflughafen gespeichert.",
+    "saveError": "Speichern fehlgeschlagen.",
+    "loadError": "Konnte Heimatflughafen-Historie nicht laden.",
+    "deleteError": "Eintrag konnte nicht gelöscht werden.",
+    "confirmDelete": "Diesen Eintrag wirklich löschen?",
+    "bannerTitle": "Kein Heimatflughafen hinterlegt",
+    "bannerDescription": "Setze deinen Heimatflughafen, damit Statistiken wie \"Längster Layover\" oder \"Am weitesten von zu Hause\" korrekt funktionieren.",
+    "help": {
+      "title": "Heimatflughafen & Umzüge",
+      "description": "Der Heimatflughafen dient als Anker für Reise-Statistiken. Nur der Start einer Reise vom Heimatflughafen oder die Rückkehr dorthin ist per Definition kein Zwischenstopp.",
+      "historyExplained": "Wenn du umziehst, wird der bisherige Flughafen nicht überschrieben, sondern als vergangener Eintrag gespeichert. Alte Flüge behalten den damaligen Heimatflughafen."
+    }
+  },
   "display": {
     "title": "Anzeige & Sprache",
     "description": "Modus, Sprache und Zeitzone zentral steuern.",

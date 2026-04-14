@@ -7,6 +7,7 @@ import apiKeysRouter from './apiKeys';
 import developerRouter from './developer';
 import onboardingRouter from './onboarding';
 import notificationsRouter from './notifications';
+import homeAirportsRouter from './homeAirports';
 
 const router = Router();
 
@@ -21,5 +22,6 @@ router.use('/api-keys', apiKeysRouter);
 router.use('/developer-mode', developerRouter);
 router.use('/onboarding-state', onboardingRouter);
 router.use('/notifications', notificationsRouter);
+router.use('/home-airports', homeAirportsRouter);
 
 export default router;

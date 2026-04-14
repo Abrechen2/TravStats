@@ -10,6 +10,12 @@ import type {
   UserSettings,
 } from "./types";
 
+export interface HomeAirportEntry {
+  iata: string;
+  fromDate: string; // YYYY-MM-DD
+  toDate: string | null; // YYYY-MM-DD, null = currently active
+}
+
 // Settings API
 export const settingsApi = {
   get: async (): Promise<UserSettings> => {
@@ -94,6 +100,36 @@ export const settingsApi = {
   },
   updateOnboardingState: async (state: OnboardingState): Promise<OnboardingState> => {
     const { data } = await api.put<OnboardingState>("/settings/onboarding-state", state);
+    return data;
+  },
+  getHomeAirports: async (): Promise<{ history: HomeAirportEntry[] }> => {
+    const { data } = await api.get<{ history: HomeAirportEntry[] }>("/settings/home-airports");
+    return data;
+  },
+  setHomeAirport: async (payload: {
+    iata: string;
+    fromDate?: string;
+  }): Promise<{ history: HomeAirportEntry[] }> => {
+    const { data } = await api.post<{ history: HomeAirportEntry[] }>(
+      "/settings/home-airports",
+      payload
+    );
+    return data;
+  },
+  updateHomeAirport: async (
+    index: number,
+    patch: Partial<HomeAirportEntry>
+  ): Promise<{ history: HomeAirportEntry[] }> => {
+    const { data } = await api.patch<{ history: HomeAirportEntry[] }>(
+      `/settings/home-airports/${index}`,
+      patch
+    );
+    return data;
+  },
+  deleteHomeAirport: async (index: number): Promise<{ history: HomeAirportEntry[] }> => {
+    const { data } = await api.delete<{ history: HomeAirportEntry[] }>(
+      `/settings/home-airports/${index}`
+    );
     return data;
   },
   getApiKeys: async (): Promise<{

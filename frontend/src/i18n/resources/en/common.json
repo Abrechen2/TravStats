@@ -24,7 +24,8 @@
     "saving": "Saving...",
     "deleting": "Deleting...",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "later": "Later"
   },
   "app": {
     "name": "TravStats",

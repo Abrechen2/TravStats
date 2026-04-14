@@ -5,6 +5,7 @@ import PageTransition from "../components/PageTransition";
 import { useSettingsPage } from "../components/Settings/useSettingsPage";
 // Section components
 import ProfileSection from "../components/Settings/ProfileSection";
+import HomeAirportSection from "../components/Settings/HomeAirportSection";
 import DisplaySection from "../components/Settings/DisplaySection";
 import UnitsSection from "../components/Settings/UnitsSection";
 import DefaultsSection from "../components/Settings/DefaultsSection";
@@ -77,6 +78,7 @@ export default function SettingsPage(): JSX.Element {
 
   const sections = [
     { id: "profile", label: t("settings:profile.title") || "Profile" },
+    { id: "homeAirport", label: t("settings:homeAirport.title") || "Home airport" },
     { id: "display", label: t("settings:display.title") || "Display" },
     { id: "units", label: t("settings:units.title") || "Units" },
     { id: "defaults", label: t("settings:defaults.title") || "Defaults" },
@@ -141,6 +143,7 @@ export default function SettingsPage(): JSX.Element {
                 onShowPasswordModal={() => setShowPasswordModal(true)}
               />
             )}
+            {activeSection === "homeAirport" && <HomeAirportSection />}
             {activeSection === "display" && (
               <DisplaySection
                 display={display}
