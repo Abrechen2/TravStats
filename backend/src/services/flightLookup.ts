@@ -13,6 +13,7 @@ import NodeCache from 'node-cache';
 import { findOrCreateAirport } from './airportLookup';
 import { getApiKey, getOpenSkyCredentials } from './apiKeyResolver';
 import { convertAviationstackTimeToUtc, convertAirlabsTimeToUtc } from '../utils/timezone';
+import { prisma } from '../db';
 import logger from '../utils/logger';
 
 /** AirLabs API response flight record */
@@ -119,6 +120,106 @@ function isAviationstackCooledDown(): boolean {
 
 function markAviationstack429(): void {
   aviationstack429Until = new Date(Date.now() + AVIATIONSTACK_COOLDOWN_MS);
+}
+
+// ─── API-sparing: tier gating + daily budget ────────────────────────────────
+//
+// Free tier constraints (as of 2026-04):
+//   Aviationstack Free:  100 req/month (~3.3/day) — tightest by far
+//   AirLabs Free:       ~1000 req/month
+//   OpenSky:            ~400 queries/day
+//
+// Strategy: reserve Aviationstack for the "live window" (±3h around departure
+// and during the flight) where its superior live-tracking data matters, and
+// use AirLabs for bulk pre-departure schedule lookups. Combined with a daily
+// Aviationstack budget this keeps us inside the Free tier indefinitely.
+
+/** Treat `now ± 3 hours` and "still en route" as the live window. */
+const LIVE_WINDOW_BEFORE_DEPARTURE_MS = 3 * 60 * 60 * 1000; // 3h
+const LIVE_WINDOW_AFTER_ARRIVAL_MS = 2 * 60 * 60 * 1000;    // 2h
+
+export function isInLiveWindow(
+  departureTime: Date | string | null | undefined,
+  arrivalTime: Date | string | null | undefined,
+  now: Date = new Date(),
+): boolean {
+  if (!departureTime) return false;
+  const dep = typeof departureTime === 'string' ? new Date(departureTime) : departureTime;
+  if (isNaN(dep.getTime())) return false;
+
+  const nowMs = now.getTime();
+  const depMs = dep.getTime();
+
+  // Within ±3h of departure — covers pre-departure gate changes and first
+  // hour of flight where live tracking is most useful.
+  if (Math.abs(nowMs - depMs) <= LIVE_WINDOW_BEFORE_DEPARTURE_MS) return true;
+
+  // In-flight and up to 2h past scheduled arrival — needed to capture actual
+  // arrival time and final delay. Fall through to false if no arrival given.
+  if (depMs < nowMs && arrivalTime) {
+    const arr = typeof arrivalTime === 'string' ? new Date(arrivalTime) : arrivalTime;
+    if (!isNaN(arr.getTime()) && nowMs <= arr.getTime() + LIVE_WINDOW_AFTER_ARRIVAL_MS) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// Per-UTC-day Aviationstack call counter. In-memory only — resets on process
+// restart. Small overshoot possible across restarts, but bounded by 429
+// cooldown so it's never catastrophic.
+let aviationstackDay: string | null = null;
+let aviationstackTodayCount = 0;
+
+function currentUtcDay(): string {
+  return new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+}
+
+function resetBudgetIfNewDay(): void {
+  const today = currentUtcDay();
+  if (aviationstackDay !== today) {
+    aviationstackDay = today;
+    aviationstackTodayCount = 0;
+  }
+}
+
+export function getAviationstackCallCountToday(): number {
+  resetBudgetIfNewDay();
+  return aviationstackTodayCount;
+}
+
+async function resolveAviationstackBudget(): Promise<number> {
+  // Read admin setting; defaults to 3 per Prisma schema when the row exists.
+  // If admin_settings is missing entirely (fresh DB before setup), fall back
+  // to 3 so we don't accidentally hammer the API.
+  try {
+    const settings = await prisma.adminSettings.findFirst({
+      select: { aviationstackDailyBudget: true },
+    });
+    return settings?.aviationstackDailyBudget ?? 3;
+  } catch {
+    return 3;
+  }
+}
+
+async function hasAviationstackBudget(): Promise<boolean> {
+  resetBudgetIfNewDay();
+  const budget = await resolveAviationstackBudget();
+  if (budget <= 0) return false;
+  return aviationstackTodayCount < budget;
+}
+
+function recordAviationstackCall(): void {
+  resetBudgetIfNewDay();
+  aviationstackTodayCount++;
+}
+
+/** Test-only helper to reset the counter between unit tests. */
+export function __resetAviationstackBudgetForTests(): void {
+  aviationstackDay = null;
+  aviationstackTodayCount = 0;
+  aviationstack429Until = null;
 }
 
 export interface FlightData {
@@ -320,7 +421,9 @@ async function getOpenSkyAuthHeaders(opts: {
 export async function lookupFlightDetails(
   flightNumber: string,
   date?: string,
-  userId?: string
+  userId?: string,
+  departureTime?: Date | string | null,
+  arrivalTime?: Date | string | null,
 ): Promise<FlightLookupResult | null> {
   const trimmedNumber = flightNumber.trim();
   if (!trimmedNumber) return null;
@@ -328,14 +431,43 @@ export async function lookupFlightDetails(
   // Get OpenSky credentials with priority resolution
   const openSkyCredentials = await getOpenSkyCredentials(userId);
 
-  // Prefer Aviationstack if configured and not in a 429 cooldown
+  // Aviationstack gating — multiple guards to protect the Free-tier budget:
+  //   (1) admin has a key configured
+  //   (2) not in 429 cooldown (set when quota actually exceeded)
+  //   (3) flight is in the live window (±3h of departure or in flight)
+  //   (4) we haven't yet used today's configured budget
+  // If the caller didn't pass a departureTime (manual ad-hoc lookup via UI),
+  // treat as "live" so on-demand user actions still reach Aviationstack.
   const aviationstackKey = await getApiKey('aviationstack', userId);
-  const aviationstackAvailable = !!aviationstackKey && !isAviationstackCooledDown();
-  logger.info({ flightNumber: trimmedNumber, date, hasAviationstack: !!aviationstackKey,
-    aviationstackAvailable, hasOpenSky: !!openSkyCredentials,
+  const inLiveWindow = departureTime
+    ? isInLiveWindow(departureTime, arrivalTime)
+    : true;
+  const budgetOk = aviationstackKey ? await hasAviationstackBudget() : false;
+  const aviationstackAvailable =
+    !!aviationstackKey &&
+    !isAviationstackCooledDown() &&
+    inLiveWindow &&
+    budgetOk;
+
+  let skipReason: string | undefined;
+  if (aviationstackKey && !aviationstackAvailable) {
+    if (isAviationstackCooledDown()) skipReason = 'cooldown';
+    else if (!inLiveWindow) skipReason = 'outside_live_window';
+    else if (!budgetOk) skipReason = 'daily_budget_exceeded';
+  }
+
+  logger.info({ flightNumber: trimmedNumber, date,
+    hasAviationstack: !!aviationstackKey,
+    aviationstackAvailable,
+    aviationstackSkipReason: skipReason,
+    aviationstackCallsToday: getAviationstackCallCountToday(),
+    hasOpenSky: !!openSkyCredentials,
     operation: 'lookup_start' },
     `Looking up ${trimmedNumber} (date=${date ?? 'none'}, apis: ${aviationstackAvailable ? 'aviationstack' : ''}${openSkyCredentials ? '+opensky' : ''} +airlabs)`);
   if (aviationstackAvailable) {
+    // Record the call up-front — even failures count against the daily budget,
+    // because Aviationstack bills 429s too in the Free tier.
+    recordAviationstackCall();
     // API docs: https://docs.apilayer.com/aviationstack/docs/endpoints#flights
     // Use HTTPS + params to avoid signature/order issues
     const params: Record<string, string> = {

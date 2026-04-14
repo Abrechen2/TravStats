@@ -302,6 +302,11 @@ model AdminSettings {
   defaultVisionParser String @default("auto") @map("default_vision_parser")
   defaultTextParser   String @default("auto") @map("default_text_parser")
 
+  // Aviationstack usage guard — max lookups per UTC day before falling
+  // through to AirLabs/OpenSky. Default 3 keeps Free tier (100/month) safe.
+  // Set to 0 to disable Aviationstack entirely.
+  aviationstackDailyBudget Int @default(3) @map("aviationstack_daily_budget")
+
   // Ollama configuration (overrides OLLAMA_URL / OLLAMA_MODEL env vars)
   ollamaUrl         String? @map("ollama_url")
   ollamaModel       String? @map("ollama_model")

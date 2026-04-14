@@ -371,7 +371,15 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
 
         logger.info({ flightId: flight.id, flightNumber: flight.flightNumber, date: dateStr, operation: 'api_lookup_start' },
           `Looking up ${flight.flightNumber} on ${dateStr}`);
-        const apiData = await lookupFlightDetails(flight.flightNumber!, dateStr, flight.userId);
+        // Pass full departure/arrival times so lookupFlightDetails can gate
+        // Aviationstack to the live window (±3h of departure / in-flight).
+        const apiData = await lookupFlightDetails(
+          flight.flightNumber!,
+          dateStr,
+          flight.userId,
+          flight.departureTime,
+          flight.arrivalTime,
+        );
 
         // Always recalculate nextApiCheckAt after a check attempt
         const nextCheck = recalculateNextApiCheckAt(
