@@ -4,6 +4,19 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.24.2-beta] - 2026-04-14
+
+### Fixed
+- **Enrichment bootstrap deadlock resolved** — The auto-update and historical enrichment pipelines never produced results on fresh accounts because of a chain of five interacting bugs: the significance filter dropped first-fill gate/terminal changes, `hasLiveTracking` never got seeded (gating all future enrichment), scheduled flights past their arrival time became permanent zombies, and Aviationstack times without seconds silently failed to parse. Each is now fixed — first-fill changes count as significant on their own, `hasLiveTracking` flips on any non-empty API response, a new zombie-transition job flips `status=scheduled` → `flown` after arrival + 48h (marked `lastModifiedBy='zombie_auto_flown'`), and the time parser now accepts the space-separator-without-seconds format observed from the live API.
+- **Aviationstack 429 retry storm prevented** — The free tier is 100 requests per month. A single 429 previously triggered aviationstack retries on every 5-minute scheduler tick. Now a 1h in-memory cooldown blocks Aviationstack after a 429, falling through to AirLabs.
+- **OpenSky credential validation** — If stored credentials decrypt to an unusable pair (neither full OAuth2 client credentials nor full basic auth), the resolver now returns `null` instead of an empty object so downstream logs no longer lie about configuration state.
+
+### Changed
+- **Historical-enrichment threshold lowered for slim mode** — Flights aged ≥ 1 year now require only 3 reference flights instead of 5 for aggregation. Full mode (< 1 year) keeps the 5-reference minimum. This unlocks enrichment for niche routes in small deployments where 5 same-flight-number references would be unreachable.
+
+### Docs
+- Added three post-V1 roadmap items surfaced by the v0.24.1 critical review: route clustering to replace per-dimension median aggregation, confidence calibration via user-feedback loop, and a cross-user consent model for future multi-tenant deployments.
+
 ## [0.24.1-beta] - 2026-04-14
 
 ### Security
