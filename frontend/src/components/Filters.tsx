@@ -7,13 +7,21 @@ import { useTranslation } from "../hooks/useTranslation";
 import { logger } from "../lib/logger";
 interface FiltersProps {
   onFilterChange: (filters: FlightFilters & { minRouteCount?: number }) => void;
+  /**
+   * Show map-only filters (route-frequency slider). Defaults to `true`.
+   * Set to `false` on pages without a map, where the slider has no effect.
+   */
+  showMapOnlyFilters?: boolean;
 }
 
 interface AirlineOption {
   name: string;
   count: number;
 }
-export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
+export default function Filters({
+  onFilterChange,
+  showMapOnlyFilters = true,
+}: FiltersProps): JSX.Element {
   const { t } = useTranslation(["map", "common", "flights"]);
 
   const MONTHS = [
@@ -144,8 +152,10 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
       filters.status = [];
     }
 
-    // Route count (frontend only, not sent to backend)
-    filters.minRouteCount = minRouteCount;
+    // Route count (frontend only, not sent to backend) — only emit on map-enabled pages
+    if (showMapOnlyFilters) {
+      filters.minRouteCount = minRouteCount;
+    }
 
     onFilterChange(filters);
   }, [
@@ -157,6 +167,7 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
     showScheduled,
     showCancelled,
     availableAirlines.length,
+    showMapOnlyFilters,
   ]);
 
   // Click outside to close
@@ -203,7 +214,7 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
     let count = 0;
     if (yearFilter) count++;
     if (monthFilter) count++;
-    if (minRouteCount > 1) count++;
+    if (showMapOnlyFilters && minRouteCount > 1) count++;
     if (selectedAirlines.length > 0 && selectedAirlines.length < availableAirlines.length) count++;
     if (!showFlown || !showScheduled || !showCancelled) count++;
     return count;
@@ -316,31 +327,33 @@ export default function Filters({ onFilterChange }: FiltersProps): JSX.Element {
               </select>
             </div>
 
-            {/* Routen-Frequenz Filter */}
-            <div className="mb-4">
-              <h4 className="text-sm font-semibold mb-2" style={{ color: "var(--text-muted)" }}>
-                🛫 {t("map:filters.routeFrequency")}
-              </h4>
-              <label className="text-xs block mb-1" style={{ color: "var(--text-muted)" }}>
-                {t("map:filters.minFlown", { count: minRouteCount })}
-              </label>
-              <input
-                type="range"
-                min="1"
-                max="20"
-                value={minRouteCount}
-                onChange={(e) => setMinRouteCount(Number(e.target.value))}
-                className="w-full h-2 rounded-lg appearance-none cursor-pointer"
-                style={{ background: "var(--bg-muted)" }}
-              />
-              <div
-                className="flex justify-between text-xs mt-1"
-                style={{ color: "var(--text-muted)" }}
-              >
-                <span>1x</span>
-                <span>20x+</span>
+            {/* Routen-Frequenz Filter — map-only (no effect on list/stats pages) */}
+            {showMapOnlyFilters && (
+              <div className="mb-4">
+                <h4 className="text-sm font-semibold mb-2" style={{ color: "var(--text-muted)" }}>
+                  🛫 {t("map:filters.routeFrequency")}
+                </h4>
+                <label className="text-xs block mb-1" style={{ color: "var(--text-muted)" }}>
+                  {t("map:filters.minFlown", { count: minRouteCount })}
+                </label>
+                <input
+                  type="range"
+                  min="1"
+                  max="20"
+                  value={minRouteCount}
+                  onChange={(e) => setMinRouteCount(Number(e.target.value))}
+                  className="w-full h-2 rounded-lg appearance-none cursor-pointer"
+                  style={{ background: "var(--bg-muted)" }}
+                />
+                <div
+                  className="flex justify-between text-xs mt-1"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  <span>1x</span>
+                  <span>20x+</span>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Airline-Filter */}
             {availableAirlines.length > 0 && (
