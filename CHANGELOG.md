@@ -4,6 +4,11 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.24.3-beta] - 2026-04-14
+
+### Fixed
+- **Historical flights with unknown date are enrichable again** — `findEnrichmentCandidates` queried `departureTime: { gte: maxAgeDate }`, which in Prisma/Postgres also excludes `NULL`. Historical flights (the primary use case: "I flew this but don't remember when") were therefore never candidates for enrichment, even when a full reference pool existed. Now the query accepts both dated and dateless flights, and `getEnrichmentMode` returns `slim` for null so dateless flights use the conservative ICAO + terminal-only aggregation.
+
 ## [0.24.2-beta] - 2026-04-14
 
 ### Fixed
