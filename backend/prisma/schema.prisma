@@ -57,6 +57,10 @@ model Airport {
   lon      Float
   altitude Int?
   timezone String?
+  /// True if the airport has been permanently closed (e.g. Berlin Tegel TXL
+  /// after 2020-11-08). Users can still pick closed airports for historical
+  /// flights — the UI just marks them visually.
+  isClosed Boolean @default(false) @map("is_closed")
 
   @@index([iata])
   @@index([icao])
