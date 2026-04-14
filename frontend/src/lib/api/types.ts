@@ -356,6 +356,8 @@ export interface Airport {
   lon: number;
   altitude?: number;
   timezone?: string;
+  /** True if the airport is permanently closed (e.g. Berlin Tegel TXL). */
+  isClosed?: boolean;
 }
 
 // ==================== Template Interfaces ====================
