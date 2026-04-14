@@ -105,7 +105,13 @@ export async function getUserEnrichmentSettings(userId: string): Promise<UserEnr
  * < 1 year  → full  (aircraft, ICAO, route, terminal, gate)
  * ≥ 1 year  → slim  (ICAO codes + terminal only)
  */
-export function getEnrichmentMode(departureTime: Date): EnrichmentMode {
+export function getEnrichmentMode(departureTime: Date | null | undefined): EnrichmentMode {
+  // A historical flight without a known departure date is, by user convention,
+  // an "I flew this but don't remember when" record. We can't tell if it's a
+  // year old or ten, so use the conservative slim mode (ICAO + terminal only)
+  // which aggregates only the fields that stay stable over long time spans.
+  if (!departureTime) return 'slim';
+
   const ageMs = Date.now() - departureTime.getTime();
   const ageYears = ageMs / (1000 * 60 * 60 * 24 * 365.25);
   return ageYears < 1 ? 'full' : 'slim';
@@ -131,14 +137,20 @@ export async function findEnrichmentCandidates(
     const maxAgeDate = new Date();
     maxAgeDate.setFullYear(maxAgeDate.getFullYear() - MAX_ENRICHMENT_AGE_YEARS);
 
-    // Find flights without accepted pending updates
+    // Find flights without accepted pending updates.
+    //
+    // Include historical flights without a known departure date — these are the
+    // PRIMARY enrichment use case: the user remembers flying LH2317 but not
+    // when, and wants the aggregator to fill in aircraft / route / ICAO. They
+    // are handled by getEnrichmentMode() which returns 'slim' for null dates.
     const flights = await prismaClient.flight.findMany({
       where: {
         userId,
         flightNumber: { not: null },
-        departureTime: {
-          gte: maxAgeDate,
-        },
+        OR: [
+          { departureTime: { gte: maxAgeDate } },
+          { departureTime: null },
+        ],
         NOT: {
           pendingUpdates: {
             some: {
