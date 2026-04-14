@@ -4,6 +4,11 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.25.2-beta] - 2026-04-14
+
+### Fixed
+- **Closed predecessor IATA assignment** — When a closed airport's keywords list a single 3-letter token, that's almost always its own historical IATA (Munich-Riem `EDDM, MUC, XMUC` → MUC). When multiple are present the first is usually the successor (Tempelhof `BER, EDDI, THF` → BER is Brandenburg, THF is the closed one), so prefer the candidate not used by an active airport. Both cases now resolve correctly.
+
 ## [0.25.1-beta] - 2026-04-14
 
 ### Fixed

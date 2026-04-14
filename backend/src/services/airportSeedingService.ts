@@ -243,12 +243,20 @@ async function seedAirportsFromCSVAsync(statusId: string): Promise<void> {
         if (airport.type === 'closed' && airport.keywords) {
           const tokens = airport.keywords.split(',').map((t) => t.trim().toUpperCase());
           if (!iata) {
-            // Skip 3-letter codes already used by an active airport — those
-            // are typically the successor's IATA, not the closed one's.
-            const iataCandidate = tokens.find(
-              (t) => /^[A-Z]{3}$/.test(t) && !activeIatas.has(t)
-            );
-            if (iataCandidate) iata = iataCandidate;
+            const threeLetter = tokens.filter((t) => /^[A-Z]{3}$/.test(t));
+            // If only one 3-letter code is present it's almost certainly
+            // the closed airport's own historical IATA (e.g. Munich-Riem
+            // keywords "EDDM, MUC, XMUC" → MUC is the reused code).
+            // If multiple are present the first is usually the successor
+            // (e.g. Tempelhof "BER, EDDI, THF" — BER is Brandenburg, THF
+            // is the closed one), so prefer the candidate not used by an
+            // active airport.
+            if (threeLetter.length === 1) {
+              iata = threeLetter[0];
+            } else if (threeLetter.length > 1) {
+              const nonActive = threeLetter.find((t) => !activeIatas.has(t));
+              if (nonActive) iata = nonActive;
+            }
           }
           if (!icao || (icao && !/^[A-Z]{4}$/.test(icao))) {
             const icaoCandidate = tokens.find((t) => /^[A-Z]{4}$/.test(t));
