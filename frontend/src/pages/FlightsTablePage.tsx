@@ -63,9 +63,6 @@ export default function FlightsTablePage(): JSX.Element {
   const loadFlights = async () => {
     try {
       setLoading(true);
-      // minRouteCount is a map-only filter — not applied to API queries
-      const { minRouteCount: _mapOnly, ...apiFilters } = filters;
-      void _mapOnly;
       let allFlights: Flight[] = [];
       let offset = 0;
       const limit = API_LIMITS.MAX_PAGE_SIZE;
@@ -74,7 +71,7 @@ export default function FlightsTablePage(): JSX.Element {
       let pages = 0;
       while (pages < MAX_PAGES) {
         pages++;
-        const data = await flightsApi.getAll({ ...apiFilters, limit, offset });
+        const data = await flightsApi.getAll({ ...filters, limit, offset });
         allFlights = [...allFlights, ...data.flights];
 
         if (data.flights.length < limit) {
@@ -240,7 +237,7 @@ export default function FlightsTablePage(): JSX.Element {
             borderBottom: "1px solid var(--color-border)",
           }}
         >
-          <Filters onFilterChange={setFilters} />
+          <Filters onFilterChange={setFilters} showMapOnlyFilters={false} />
         </div>
 
         {/* Main Content */}
