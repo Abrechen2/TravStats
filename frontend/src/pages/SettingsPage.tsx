@@ -38,7 +38,7 @@ export default function SettingsPage(): JSX.Element {
     setDefaults,
     setMap,
     isDarkMode,
-    hasTrainingAccess,
+    hasParserAccess,
     developerModeEnabled,
     showDeveloperConfirm,
     setShowDeveloperConfirm,
@@ -87,7 +87,7 @@ export default function SettingsPage(): JSX.Element {
     { id: "autoupdate", label: t("settings:autoUpdate.title") || "Auto-Update" },
     { id: "enrichment", label: t("settings:historicalEnrichment.title") || "Enrichment" },
     { id: "apikeys", label: t("settings:apiKeys.title") || "API Keys" },
-    ...(hasTrainingAccess
+    ...(hasParserAccess
       ? [{ id: "developer", label: t("settings:developer.title") || "Developer" }]
       : []),
     ...(user?.isAdmin ? [{ id: "admin", label: t("settings:admin.title") || "Admin" }] : []),
@@ -188,7 +188,7 @@ export default function SettingsPage(): JSX.Element {
                 onSave={saveApiKeys}
               />
             )}
-            {activeSection === "developer" && hasTrainingAccess && (
+            {activeSection === "developer" && hasParserAccess && (
               <DeveloperSection
                 developerModeEnabled={developerModeEnabled}
                 loadingDeveloperMode={loadingDeveloperMode}

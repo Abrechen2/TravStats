@@ -2,7 +2,6 @@ export interface User {
   id: string;
   username: string;
   isAdmin: boolean;
-  canTrainLLM?: boolean;
 }
 
 export interface Airport {
