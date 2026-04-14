@@ -12,6 +12,8 @@
  */
 
 export type { FlightData, FunStats, BusinessStats, UniqueStats } from './stats/types';
+export type { AirportStats } from './stats/airportStats';
 export { calculateFunStats } from './stats/funStats';
 export { calculateBusinessStats } from './stats/businessStats';
 export { calculateUniqueStats } from './stats/uniqueStats';
+export { calculateAirportStats } from './stats/airportStats';

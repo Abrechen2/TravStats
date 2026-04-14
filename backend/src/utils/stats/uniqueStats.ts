@@ -4,11 +4,18 @@ import { tzAwareDurationMinutes } from '../timezone';
 import logger from '../logger';
 import type { AirportData } from '../../services/airportLookup';
 import type { FlightData, UniqueStats } from './types';
+import { HomeAirportEntry, getHomeAirportAt } from '../homeAirport';
+
+/** Max duration counted as a "layover". Anything longer is a stopover / trip gap. */
+const LAYOVER_CAP_HOURS = 24;
 
 /**
  * Calculate unique/special statistics
  */
-export async function calculateUniqueStats(flights: FlightData[]): Promise<UniqueStats> {
+export async function calculateUniqueStats(
+  flights: FlightData[],
+  homeAirportHistory: HomeAirportEntry[] = []
+): Promise<UniqueStats> {
   // Narrow to flown flights with known times (historical flights have null times)
   const flownFlights = flights.filter(
     (f): f is typeof f & { departureTime: Date; arrivalTime: Date } =>
@@ -388,11 +395,17 @@ export async function calculateUniqueStats(flights: FlightData[]): Promise<Uniqu
     logger.error({ operation: 'calculate_unique_stats', message: 'Failed to fetch airports for international/domestic calculation', error });
   }
 
-  // Longest layover - longest time between consecutive flights
+  // Layovers — the waiting time between two consecutive flights at the same
+  // airport. Capped at LAYOVER_CAP_HOURS so that the user's life at home (or
+  // a 3-week vacation stopover) doesn't count as a "layover". The home
+  // airport at the time of each flight is also excluded — otherwise every
+  // return flight would produce a layover that spans whatever gap follows
+  // before the next trip.
   let longestLayover: { hours: number; from: string; to: string } | null = null;
+  let shortestLayover: { hours: number; from: string; to: string } | null = null;
   if (flownFlights.length > 1) {
-    const sortedFlights = [...flownFlights].sort((a, b) =>
-      new Date(a.departureTime).getTime() - new Date(b.departureTime).getTime()
+    const sortedFlights = [...flownFlights].sort(
+      (a, b) => new Date(a.departureTime).getTime() - new Date(b.departureTime).getTime()
     );
 
     for (let i = 0; i < sortedFlights.length - 1; i++) {
@@ -402,18 +415,25 @@ export async function calculateUniqueStats(flights: FlightData[]): Promise<Uniqu
       const currentArrCode = current.arrIata || current.arrIcao || '?';
       const nextDepCode = next.depIata || next.depIcao || '?';
 
-      // Check if next flight departs from where current arrived
-      if (currentArrCode === nextDepCode) {
-        const layoverHours = (new Date(next.departureTime).getTime() - new Date(current.arrivalTime).getTime()) / (1000 * 60 * 60);
+      // Same airport for end-of-current and start-of-next?
+      if (currentArrCode !== nextDepCode) continue;
 
-        if (layoverHours > 0 && (!longestLayover || layoverHours > longestLayover.hours)) {
-          longestLayover = {
-            hours: Math.round(layoverHours * 10) / 10,
-            from: currentArrCode,
-            to: nextDepCode,
-          };
-        }
-      }
+      // Exclude the home airport active at the time of arrival.
+      const arrivalDay = new Date(current.arrivalTime).toISOString().slice(0, 10);
+      const homeAtArrival = getHomeAirportAt(homeAirportHistory, arrivalDay);
+      if (homeAtArrival && homeAtArrival === currentArrCode) continue;
+
+      const layoverHours =
+        (new Date(next.departureTime).getTime() - new Date(current.arrivalTime).getTime()) /
+        (1000 * 60 * 60);
+
+      // Must be positive (chronological) and within the cap.
+      if (layoverHours <= 0 || layoverHours > LAYOVER_CAP_HOURS) continue;
+
+      const rounded = Math.round(layoverHours * 10) / 10;
+      const entry = { hours: rounded, from: currentArrCode, to: nextDepCode };
+      if (!longestLayover || rounded > longestLayover.hours) longestLayover = entry;
+      if (!shortestLayover || rounded < shortestLayover.hours) shortestLayover = entry;
     }
   }
 
@@ -472,6 +492,7 @@ export async function calculateUniqueStats(flights: FlightData[]): Promise<Uniqu
       ratio: domesticFlights > 0 ? Math.round((internationalFlights / domesticFlights) * 100) / 100 : internationalFlights,
     },
     longestLayover,
+    shortestLayover,
     roundTripMaster: roundTripCount,
   };
 }

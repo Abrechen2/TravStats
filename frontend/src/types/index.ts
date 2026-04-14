@@ -15,6 +15,7 @@ export interface Airport {
   lon: number;
   altitude?: number | null;
   timezone?: string | null;
+  isClosed?: boolean;
 }
 
 export interface Flight {
@@ -444,7 +445,44 @@ export interface UniqueStats {
     from: string;
     to: string;
   } | null;
+  shortestLayover: {
+    hours: number;
+    from: string;
+    to: string;
+  } | null;
   roundTripMaster: number;
+}
+
+export interface AirportStats {
+  airportCount: number;
+  countryCount: number;
+  continentCount: number;
+  topAirports: Array<{
+    code: string;
+    name: string | null;
+    country: string | null;
+    visits: number;
+  }>;
+  rarestAirports: Array<{
+    code: string;
+    name: string | null;
+    country: string | null;
+  }>;
+  newThisYear: Array<{
+    code: string;
+    name: string | null;
+    country: string | null;
+    firstVisitDate: string;
+  }>;
+  farthestFromHome: {
+    code: string;
+    name: string | null;
+    country: string | null;
+    distanceKm: number;
+    homeCode: string;
+  } | null;
+  topCountries: Array<{ country: string; count: number }>;
+  continentDistribution: Record<string, number>;
 }
 
 export interface SeatStats {

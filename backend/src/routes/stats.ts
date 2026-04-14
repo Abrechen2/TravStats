@@ -5,7 +5,14 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import { calculateDistance } from '../utils/geo';
 import { getCachedAirports } from '../services/airportCache';
 import { Prisma } from '@prisma/client';
-import { calculateFunStats, calculateBusinessStats, calculateUniqueStats } from '../utils/statsCalculator';
+import {
+  calculateFunStats,
+  calculateBusinessStats,
+  calculateUniqueStats,
+  calculateAirportStats,
+} from '../utils/statsCalculator';
+import { normalizeHistory } from '../utils/homeAirport';
+import type { SettingsDataJson } from './settings/types';
 import logger from '../utils/logger';
 import { statsLimiter } from '../middleware/rateLimit';
 import { tzAwareDurationMinutes } from '../utils/timezone';
@@ -537,10 +544,21 @@ router.get('/unique', async (req: AuthRequest, res: Response, next: NextFunction
       },
     });
 
+    // Load home airport history so layovers exclude returns to home-at-that-date.
+    const homeSettings = await prisma.userSettings.findUnique({
+      where: { userId },
+      select: { data: true },
+    });
+    const historyData =
+      homeSettings?.data && typeof homeSettings.data === 'object'
+        ? (homeSettings.data as SettingsDataJson).homeAirportHistory
+        : undefined;
+    const homeHistory = normalizeHistory(historyData);
+
     // Calculate unique stats with error handling - continue even if airport data fails
     let uniqueStats;
     try {
-      uniqueStats = await calculateUniqueStats(flights);
+      uniqueStats = await calculateUniqueStats(flights, homeHistory);
     } catch (statsError) {
       // If stats calculation fails (e.g., database issues), return partial stats
       logger.error({
@@ -573,6 +591,7 @@ router.get('/unique', async (req: AuthRequest, res: Response, next: NextFunction
         seasonsCount: 0,
         internationalVsDomestic: { international: 0, domestic: 0, ratio: 0 },
         longestLayover: null,
+        shortestLayover: null,
         roundTripMaster: 0,
       };
     }
@@ -582,6 +601,71 @@ router.get('/unique', async (req: AuthRequest, res: Response, next: NextFunction
     next(error);
   }
 });
+
+// Airport-focused statistics (top airports, rarest, farthest from home, etc.)
+router.get(
+  '/airports',
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+
+      const parsed = DateRangeQuerySchema.safeParse(req.query);
+      if (!parsed.success) {
+        res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.errors });
+        return;
+      }
+      const { fromDate, toDate } = parsed.data;
+
+      const where: Prisma.FlightWhereInput = { userId, status: 'flown' };
+      if (fromDate || toDate) {
+        where.departureTime = {};
+        if (fromDate) where.departureTime.gte = new Date(fromDate);
+        if (toDate) where.departureTime.lte = new Date(toDate);
+      }
+
+      const flights = await prisma.flight.findMany({
+        where,
+        select: {
+          id: true,
+          depLat: true,
+          depLon: true,
+          arrLat: true,
+          arrLon: true,
+          depIata: true,
+          depIcao: true,
+          arrIata: true,
+          arrIcao: true,
+          airline: true,
+          aircraft: true,
+          departureTime: true,
+          arrivalTime: true,
+          status: true,
+          price: true,
+          taxes: true,
+          fees: true,
+          category: true,
+          seatClass: true,
+          createdAt: true,
+        },
+      });
+
+      const homeSettings = await prisma.userSettings.findUnique({
+        where: { userId },
+        select: { data: true },
+      });
+      const historyData =
+        homeSettings?.data && typeof homeSettings.data === 'object'
+          ? (homeSettings.data as SettingsDataJson).homeAirportHistory
+          : undefined;
+      const homeHistory = normalizeHistory(historyData);
+
+      const stats = await calculateAirportStats(flights, homeHistory);
+      res.json(stats);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 // Seat position statistics
 interface SeatStats {

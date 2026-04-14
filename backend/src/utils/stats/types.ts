@@ -65,6 +65,7 @@ export interface UniqueStats {
     ratio: number;
   };
   longestLayover: { hours: number; from: string; to: string } | null;
+  shortestLayover: { hours: number; from: string; to: string } | null;
   roundTripMaster: number;
 }
 
