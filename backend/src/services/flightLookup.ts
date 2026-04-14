@@ -102,6 +102,25 @@ const flightCache = new NodeCache({ stdTTL: CACHE_TTL_SECONDS, maxKeys: MAX_CACH
 // OpenSky token cache
 let openSkyTokenCache: { token: string; expiresAt: number } | null = null;
 
+// In-memory cooldown for Aviationstack 429 (Free tier is 100 req/month —
+// a single 429 means we've hit the wall; retrying minutely would be wasteful).
+// Lives only in process memory, so it's rechecked after each restart.
+const AVIATIONSTACK_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour
+let aviationstack429Until: Date | null = null;
+
+function isAviationstackCooledDown(): boolean {
+  if (!aviationstack429Until) return false;
+  if (Date.now() >= aviationstack429Until.getTime()) {
+    aviationstack429Until = null;
+    return false;
+  }
+  return true;
+}
+
+function markAviationstack429(): void {
+  aviationstack429Until = new Date(Date.now() + AVIATIONSTACK_COOLDOWN_MS);
+}
+
 export interface FlightData {
   flightNumber: string;
   airline: string;
@@ -309,12 +328,14 @@ export async function lookupFlightDetails(
   // Get OpenSky credentials with priority resolution
   const openSkyCredentials = await getOpenSkyCredentials(userId);
 
-  // Prefer Aviationstack if configured
+  // Prefer Aviationstack if configured and not in a 429 cooldown
   const aviationstackKey = await getApiKey('aviationstack', userId);
-  logger.info({ flightNumber: trimmedNumber, date, hasAviationstack: !!aviationstackKey, hasOpenSky: !!openSkyCredentials,
+  const aviationstackAvailable = !!aviationstackKey && !isAviationstackCooledDown();
+  logger.info({ flightNumber: trimmedNumber, date, hasAviationstack: !!aviationstackKey,
+    aviationstackAvailable, hasOpenSky: !!openSkyCredentials,
     operation: 'lookup_start' },
-    `Looking up ${trimmedNumber} (date=${date ?? 'none'}, apis: ${aviationstackKey ? 'aviationstack' : ''}${openSkyCredentials ? '+opensky' : ''} +airlabs)`);
-  if (aviationstackKey) {
+    `Looking up ${trimmedNumber} (date=${date ?? 'none'}, apis: ${aviationstackAvailable ? 'aviationstack' : ''}${openSkyCredentials ? '+opensky' : ''} +airlabs)`);
+  if (aviationstackAvailable) {
     // API docs: https://docs.apilayer.com/aviationstack/docs/endpoints#flights
     // Use HTTPS + params to avoid signature/order issues
     const params: Record<string, string> = {
@@ -371,7 +392,19 @@ export async function lookupFlightDetails(
         };
       }
     } catch (err) {
-      logger.error({ operation: 'aviationstack_lookup', message: 'Aviationstack lookup failed', error: err instanceof Error ? err.message : String(err) });
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 429) {
+        // Quota exhausted — back off for an hour so we don't burn through the
+        // free tier's monthly budget on rapid-fire retries.
+        markAviationstack429();
+        logger.warn({
+          operation: 'aviationstack_rate_limited',
+          message: 'Aviationstack returned 429 — backing off for 1 hour',
+          context: { cooldownUntil: aviationstack429Until?.toISOString() },
+        });
+      } else {
+        logger.error({ operation: 'aviationstack_lookup', message: 'Aviationstack lookup failed', error: err instanceof Error ? err.message : String(err) });
+      }
     }
   }
 
