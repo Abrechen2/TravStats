@@ -5,6 +5,8 @@ import { prisma } from '../../db';
 import { AppError } from '../../middleware/errorHandler';
 import { hashPassword } from '../../utils/password';
 import { adminResetPasswordSchema } from '../../schemas/auth';
+import { sendAdminPasswordResetEmail } from '../../services/emailService';
+import { SMTP_CONFIG_ID } from './smtp';
 import logger from '../../utils/logger';
 
 const router = Router();
@@ -80,7 +82,10 @@ router.post(
       const { id } = req.params;
       const { mode, password, mustChangePassword } = adminResetPasswordSchema.parse(req.body);
 
-      const user = await prisma.user.findUnique({ where: { id }, select: { id: true } });
+      const user = await prisma.user.findUnique({
+        where: { id },
+        select: { id: true, username: true, notificationEmail: true },
+      });
       if (!user) {
         throw new AppError('User not found', 404);
       }
@@ -125,12 +130,44 @@ router.post(
         mode,
       });
 
-      // Note: temporaryPassword is returned for admin to communicate out-of-band.
-      // This is a conscious tradeoff for small-user-count deployments without SMTP.
-      // The admin can also use mode="set" to choose any password directly.
+      // Pentest H4: if the generated password can be delivered via email,
+      // do not return it in the response body. Fall back to returning it
+      // only when SMTP is unavailable or the user has no notification email.
+      let emailDelivered = false;
+      if (plainPassword !== undefined && user.notificationEmail) {
+        const smtpConfig = await prisma.smtpConfig.findUnique({
+          where: { id: SMTP_CONFIG_ID },
+          select: { enabled: true },
+        });
+        if (smtpConfig?.enabled) {
+          try {
+            await sendAdminPasswordResetEmail(
+              user.notificationEmail,
+              user.username,
+              plainPassword,
+            );
+            emailDelivered = true;
+          } catch (error) {
+            logger.warn({
+              operation: 'admin_password_reset_email_failed',
+              adminId: req.userId,
+              targetUserId: id,
+              error: {
+                message: error instanceof Error ? error.message : 'Unknown error',
+              },
+            });
+          }
+        }
+      }
+
       res.json({
-        message: 'Password reset successfully',
-        ...(plainPassword !== undefined && { temporaryPassword: plainPassword }),
+        message: emailDelivered
+          ? 'Password reset — temporary password emailed to user'
+          : 'Password reset successfully',
+        emailDelivered,
+        // Only surface the plaintext password if it could not be delivered by email
+        // (no notification email on file, or SMTP disabled / send failed).
+        ...(plainPassword !== undefined && !emailDelivered && { temporaryPassword: plainPassword }),
       });
     } catch (error) {
       next(error);
