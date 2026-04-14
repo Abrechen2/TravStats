@@ -104,7 +104,7 @@ async function seedAirports() {
 
   for (const airport of airports) {
     await prisma.airport.upsert({
-      where: { iata: airport.iata },
+      where: { airports_iata_is_closed_key: { iata: airport.iata, isClosed: false } },
       update: airport,
       create: airport,
     });

@@ -148,10 +148,11 @@ async function seedAirportsFromCSV() {
         ? Math.round(parseFloat(airport.elevation_ft) * 0.3048) // Feet zu Meter
         : null;
 
-      // Upsert: Update wenn vorhanden, sonst create
+      // Upsert: Update wenn vorhanden, sonst create. Legacy script — only
+      // ever seeded active airports, so target the (code, isClosed=false) row.
       const whereCondition = iata
-        ? { iata }
-        : { icao: icao! };
+        ? { airports_iata_is_closed_key: { iata, isClosed: false } }
+        : { airports_icao_is_closed_key: { icao: icao!, isClosed: false } };
 
       const result = await prisma.airport.upsert({
         where: whereCondition,

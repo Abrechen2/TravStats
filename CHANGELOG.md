@@ -4,6 +4,12 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.25.1-beta] - 2026-04-14
+
+### Fixed
+- **Closed predecessors no longer overwrite active airports** — Munich-Riem (closed) shares ICAO EDDM and IATA MUC with the active Munich Airport; the seeder was overwriting the active row with the closed predecessor's data, breaking searches for "MUC". The Airport schema now uses composite uniqueness on `(iata, isClosed)` and `(icao, isClosed)` so both rows can coexist, and the seeder upserts by the composite key. Closed airports are still listed alongside their successors in autocomplete with the "geschlossen" badge.
+- **Airport autocomplete prefers active over closed** — Search and lookup now order by `isClosed ASC` so a typed code like "MUC" returns the active airport first, with the closed predecessor below.
+
 ## [0.25.0-beta] - 2026-04-14
 
 ### Added

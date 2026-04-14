@@ -107,6 +107,8 @@ export async function findOrCreateAirport(code: string): Promise<AirportData | n
 
   // 2. If not in cache, check database (cache will be populated by getCachedAirport if found)
   // This handles the case where cache returned null but airport might exist
+  // Prefer the active airport when a closed predecessor shares the same
+  // IATA/ICAO (e.g. Munich Airport vs. Munich-Riem, both EDDM/MUC).
   const existingAirport = await prisma.airport.findFirst({
     where: {
       OR: [
@@ -114,6 +116,7 @@ export async function findOrCreateAirport(code: string): Promise<AirportData | n
         { icao: upperCode },
       ],
     },
+    orderBy: { isClosed: 'asc' },
   });
 
   if (existingAirport) {

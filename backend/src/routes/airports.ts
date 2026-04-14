@@ -32,7 +32,8 @@ router.get('/search', airportSearchLimiter, async (req: Request, res: Response, 
 
     const searchTerm = q.toLowerCase();
 
-    // Exact IATA/ICAO match first, then partial matches
+    // Exact IATA/ICAO match first (active airport before closed predecessor),
+    // then partial matches.
     const exactMatch = await prisma.airport.findFirst({
       where: {
         OR: [
@@ -40,6 +41,7 @@ router.get('/search', airportSearchLimiter, async (req: Request, res: Response, 
           { icao: { equals: searchTerm, mode: 'insensitive' } },
         ],
       },
+      orderBy: { isClosed: 'asc' },
     });
 
     const partialMatches = await prisma.airport.findMany({
@@ -58,7 +60,7 @@ router.get('/search', airportSearchLimiter, async (req: Request, res: Response, 
         ],
       },
       take: exactMatch ? 9 : 10,
-      orderBy: [{ iata: 'asc' }],
+      orderBy: [{ isClosed: 'asc' }, { iata: 'asc' }],
     });
 
     const airports = exactMatch ? [exactMatch, ...partialMatches] : partialMatches;

@@ -16,5 +16,10 @@
   "saveFailed": "Flug konnte nicht gespeichert werden. Bitte überprüfen Sie Ihre Eingaben.",
   "updateFailed": "Fehler beim Aktualisieren des Flugs",
   "apiKeyInfo": "Hinweis: Für die automatische Flugsuche wird ein API-Schlüssel benötigt.",
-  "failedToLoadAirport": "Fehler beim Laden der Flughafendaten"
+  "failedToLoadAirport": "Fehler beim Laden der Flughafendaten",
+  "backend": {
+    "nonHistoricalNeedsTimes": "Für Flüge mit Status \"Geflogen\", \"Geplant\" oder \"Storniert\" müssen Abflug- und Ankunftszeit gesetzt sein und die Differenz darf zwischen -12h und +24h liegen. Falls dein Datum versehentlich einen Tag zu weit ist, korrigiere es; oder markiere den Flug als \"Historisch\", wenn die Zeiten unbekannt sind.",
+    "noFieldToUpdate": "Mindestens ein Feld muss zum Aktualisieren angegeben sein.",
+    "fallbackPrefix": "Server-Antwort: "
+  }
 }

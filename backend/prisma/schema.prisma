@@ -48,8 +48,8 @@ model User {
 
 model Airport {
   id       Int     @id @default(autoincrement())
-  iata     String? @unique
-  icao     String? @unique
+  iata     String?
+  icao     String?
   name     String
   city     String?
   country  String?
@@ -62,6 +62,11 @@ model Airport {
   /// flights — the UI just marks them visually.
   isClosed Boolean @default(false) @map("is_closed")
 
+  // Composite uniqueness on (code, isClosed) lets the same IATA or ICAO
+  // exist twice — once for the active airport and once for its closed
+  // predecessor (e.g. Munich Airport EDDM/MUC + Munich-Riem EDDM/MUC).
+  @@unique([iata, isClosed], name: "airports_iata_is_closed_key")
+  @@unique([icao, isClosed], name: "airports_icao_is_closed_key")
   @@index([iata])
   @@index([icao])
   @@index([name])

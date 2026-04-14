@@ -103,12 +103,13 @@ async function importAirports() {
       }
 
       try {
-        // Upsert airport (update if exists, create if not)
+        // Upsert airport (update if exists, create if not). Legacy script —
+        // assumes only active airports, so targets (code, isClosed=false).
         await prisma.airport.upsert({
           where: airport.iata
-            ? { iata: airport.iata }
+            ? { airports_iata_is_closed_key: { iata: airport.iata, isClosed: false } }
             : airport.icao
-            ? { icao: airport.icao }
+            ? { airports_icao_is_closed_key: { icao: airport.icao, isClosed: false } }
             : { id: -1 }, // Fallback (will create new)
           update: {
             name: airport.name,

@@ -200,6 +200,16 @@ async function seedAirportsFromCSVAsync(statusId: string): Promise<void> {
 
     const totalAirports = filteredAirports.length;
 
+    // Pre-pass: collect IATA codes that belong to ACTIVE airports so we
+    // don't accidentally assign them to closed ones via the keywords
+    // fallback. The CSV often lists the successor airport's IATA in a
+    // closed airport's keywords (e.g. THF Tempelhof has keywords
+    // "BER, EDDI, THF" because BER Brandenburg replaced it).
+    const activeIatas = new Set<string>();
+    for (const a of filteredAirports) {
+      if (a.type !== 'closed' && a.iata_code) activeIatas.add(a.iata_code.toUpperCase());
+    }
+
     // Update total airports count
     await prisma.airportSeedingStatus.update({
       where: { id: statusId },
@@ -224,8 +234,27 @@ async function seedAirportsFromCSVAsync(statusId: string): Promise<void> {
     // Process airports
     for (const airport of filteredAirports) {
       try {
-        const iata = airport.iata_code || null;
-        const icao = airport.gps_code || airport.ident || null;
+        // OurAirports strips iata_code / gps_code from closed airports and
+        // only keeps the historical codes in the `keywords` column (e.g.
+        // "TXL, EDDT, Otto Lilienthal"). Recover them so closed airports
+        // remain searchable by their well-known codes.
+        let iata = airport.iata_code || null;
+        let icao = airport.gps_code || airport.ident || null;
+        if (airport.type === 'closed' && airport.keywords) {
+          const tokens = airport.keywords.split(',').map((t) => t.trim().toUpperCase());
+          if (!iata) {
+            // Skip 3-letter codes already used by an active airport — those
+            // are typically the successor's IATA, not the closed one's.
+            const iataCandidate = tokens.find(
+              (t) => /^[A-Z]{3}$/.test(t) && !activeIatas.has(t)
+            );
+            if (iataCandidate) iata = iataCandidate;
+          }
+          if (!icao || (icao && !/^[A-Z]{4}$/.test(icao))) {
+            const icaoCandidate = tokens.find((t) => /^[A-Z]{4}$/.test(t));
+            if (icaoCandidate) icao = icaoCandidate;
+          }
+        }
 
         if (!iata && !icao) {
           skipped++;
@@ -246,34 +275,31 @@ async function seedAirportsFromCSVAsync(statusId: string): Promise<void> {
           ? Math.round(parseFloat(airport.elevation_ft) * 0.3048)
           : null;
 
-        const whereCondition = iata ? { iata } : { icao: icao! };
         const isClosed = airport.type === 'closed';
 
-        const result = await prisma.airport.upsert({
-          where: whereCondition,
-          update: {
-            name: airport.name,
-            city: airport.municipality || null,
-            country: airport.iso_country || null,
-            lat,
-            lon,
-            altitude,
-            iata,
-            icao,
-            isClosed,
-          },
-          create: {
-            name: airport.name,
-            city: airport.municipality || null,
-            country: airport.iso_country || null,
-            lat,
-            lon,
-            altitude,
-            iata,
-            icao,
-            isClosed,
-          },
-        });
+        // Composite uniqueness on (iata, isClosed) and (icao, isClosed) lets
+        // a closed predecessor coexist with its active successor sharing the
+        // same code. Look up by the (code, isClosed) pair so we don't overwrite
+        // the wrong row.
+        const existing = iata
+          ? await prisma.airport.findFirst({ where: { iata, isClosed } })
+          : await prisma.airport.findFirst({ where: { icao, isClosed } });
+
+        const data = {
+          name: airport.name,
+          city: airport.municipality || null,
+          country: airport.iso_country || null,
+          lat,
+          lon,
+          altitude,
+          iata,
+          icao,
+          isClosed,
+        };
+
+        const result = existing
+          ? await prisma.airport.update({ where: { id: existing.id }, data })
+          : await prisma.airport.create({ data });
 
         if (result.id) {
           imported++;
