@@ -180,6 +180,11 @@ Airline-specific parsers (Ryanair, easyJet, etc.) have been **removed** because:
 
 ## Common Patterns by Airline
 
+> Reference documentation only. Airline-specific BCBP parsers were
+> intentionally removed — see the "Available Parsers" section above.
+> The Standard BCBP parser plus LLM fallback covers all of the
+> formats below.
+
 ### Ryanair
 
 - **Format:** Proprietary QR code
@@ -189,17 +194,17 @@ Airline-specific parsers (Ryanair, easyJet, etc.) have been **removed** because:
 - **Seat:** `SEAT: ##A`
 - **PNR:** 6-character alphanumeric
 
-### easyJet (TODO)
+### easyJet
 
 - **Format:** Usually IATA BCBP standard
 - **Airline Code:** `U2` or `EC`
-- **Fallback:** Often works with standard parser
+- **Handled by:** Standard BCBP parser
 
-### Lufthansa (TODO)
+### Lufthansa
 
 - **Format:** Aztec code (non-BCBP)
 - **Indicators:** "LUFTHANSA", "LH"
-- **Pattern:** Structured text with labeled fields
+- **Handled by:** LLM fallback (Ollama Vision / OpenAI / Claude)
 
 ### Low-Cost vs. Legacy Carriers
 
