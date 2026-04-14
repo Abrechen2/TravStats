@@ -87,9 +87,12 @@ export const RATE_LIMITS = {
   UPLOAD_RECEIPT_WINDOW_MS: 60 * 60 * 1000, // 1 hour
   UPLOAD_RECEIPT_MAX: 30, // 30 uploads per hour
 
-  // Settings change rate limits (prevent enumeration/abuse)
+  // Settings change rate limits (prevent enumeration/abuse).
+  // The settings page has many sub-sections that each fetch on mount; 60
+  // wasn't enough for normal navigation + hot reload + background polling
+  // (banner). 200/15min still blocks abuse but doesn't trip on real use.
   SETTINGS_WINDOW_MS: 15 * 60 * 1000, // 15 minutes
-  SETTINGS_MAX_REQUESTS: 60, // 60 changes per 15 minutes
+  SETTINGS_MAX_REQUESTS: 200, // 200 changes per 15 minutes
 
   // Password reset rate limits
   PASSWORD_RESET_WINDOW_MS: 15 * 60 * 1000, // 15 minutes
