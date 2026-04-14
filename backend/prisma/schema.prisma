@@ -17,7 +17,6 @@ model User {
   passwordHash          String                  @map("password_hash")
   isAdmin               Boolean                 @default(false) @map("is_admin")
   isActive              Boolean                 @default(true) @map("is_active")
-  canTrainLLM           Boolean                 @default(false) @map("can_train_llm")
   invitedBy             String?                 @map("invited_by")
   createdAt             DateTime                @default(now()) @map("created_at")
   // Email notification preferences

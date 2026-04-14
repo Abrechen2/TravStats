@@ -110,7 +110,7 @@ export function useSettingsPage() {
   });
   const [loadingApiKeys, setLoadingApiKeys] = useState(false);
 
-  const hasTrainingAccess = user?.isAdmin || user?.canTrainLLM || false;
+  const hasParserAccess = user?.isAdmin ?? false;
 
   // ---- Effects ---------------------------------------------------------------
 
@@ -185,7 +185,7 @@ export function useSettingsPage() {
   }, [user]);
 
   useEffect(() => {
-    if (hasTrainingAccess) {
+    if (hasParserAccess) {
       settingsApi
         .getDeveloperMode()
         .then((data) => {
@@ -203,7 +203,7 @@ export function useSettingsPage() {
     } else {
       setDeveloperModeEnabled(false);
     }
-  }, [hasTrainingAccess]);
+  }, [hasParserAccess]);
 
   // ---- Handlers --------------------------------------------------------------
 
@@ -392,7 +392,7 @@ export function useSettingsPage() {
     setMap,
     isDarkMode,
     // Derived
-    hasTrainingAccess,
+    hasParserAccess,
     // Developer mode
     developerModeEnabled,
     showDeveloperConfirm,

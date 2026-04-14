@@ -26,7 +26,7 @@ export default function NavigationBar(): JSX.Element {
   const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
   useClickOutside(mobileMenuRef, closeMobileMenu);
 
-  const hasTrainingAccess = user?.isAdmin || user?.canTrainLLM || false;
+  const hasParserAccess = user?.isAdmin ?? false;
 
   useEffect(() => {
     if (user) {
@@ -77,7 +77,7 @@ export default function NavigationBar(): JSX.Element {
     {
       path: "/parser",
       label: t("dashboard:parser"),
-      show: hasTrainingAccess,
+      show: hasParserAccess,
       betaBadge: true,
     },
   ].filter((item) => item.show);

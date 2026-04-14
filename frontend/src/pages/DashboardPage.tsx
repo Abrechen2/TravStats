@@ -195,10 +195,8 @@ export default function DashboardPage(): JSX.Element {
   }, [onboarding, loadingOnboarding]);
 
   useEffect(() => {
-    // Check if user has training access (admin or canTrainLLM)
-    const hasTrainingAccess = user?.isAdmin || user?.canTrainLLM || false;
-
-    if (hasTrainingAccess) {
+    // Developer mode is admin-only (parser access gate)
+    if (user?.isAdmin) {
       settingsApi
         .getDeveloperMode()
         .then((data) => {
