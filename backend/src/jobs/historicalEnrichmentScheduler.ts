@@ -58,12 +58,15 @@ export async function processUserHistoricalEnrichment(userId: string): Promise<{
           continue;
         }
 
-        // Aggregate data from similar flights — pass userId so gate/terminal come from own flights only
+        // Aggregate data from similar flights — use the candidate's computed
+        // enrichmentMode (slim for ≥1yr-old flights, full otherwise). minFlights
+        // is left undefined so aggregateFlightData picks the mode-appropriate
+        // threshold (3 for slim, 5 for full).
         const aggregatedData = await aggregateFlightData(
           flight.flightNumber,
           flight.id,
-          5,
-          'full',
+          undefined,
+          candidate.enrichmentMode,
           userId
         );
 
