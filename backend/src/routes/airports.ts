@@ -32,9 +32,10 @@ router.get('/search', airportSearchLimiter, async (req: Request, res: Response, 
 
     const searchTerm = q.toLowerCase();
 
-    // Exact IATA/ICAO match first (active airport before closed predecessor),
-    // then partial matches.
-    const exactMatch = await prisma.airport.findFirst({
+    // Exact IATA/ICAO matches first (active airport, then any closed
+    // predecessor that shares the code — e.g. Munich Airport + Munich-Riem
+    // both keyed MUC/EDDM), then partial matches below.
+    const exactMatches = await prisma.airport.findMany({
       where: {
         OR: [
           { iata: { equals: searchTerm, mode: 'insensitive' } },
@@ -43,12 +44,13 @@ router.get('/search', airportSearchLimiter, async (req: Request, res: Response, 
       },
       orderBy: { isClosed: 'asc' },
     });
+    const exactIds = exactMatches.map((a) => a.id);
 
     const partialMatches = await prisma.airport.findMany({
       where: {
         AND: [
-          // Exclude the exact match to avoid duplicates
-          ...(exactMatch ? [{ id: { not: exactMatch.id } }] : []),
+          // Exclude exact matches to avoid duplicates
+          ...(exactIds.length > 0 ? [{ id: { notIn: exactIds } }] : []),
           {
             OR: [
               { iata: { contains: searchTerm, mode: 'insensitive' } },
@@ -59,12 +61,11 @@ router.get('/search', airportSearchLimiter, async (req: Request, res: Response, 
           },
         ],
       },
-      take: exactMatch ? 9 : 10,
+      take: Math.max(0, 10 - exactMatches.length),
       orderBy: [{ isClosed: 'asc' }, { iata: 'asc' }],
     });
 
-    const airports = exactMatch ? [exactMatch, ...partialMatches] : partialMatches;
-    res.json(airports);
+    res.json([...exactMatches, ...partialMatches]);
   } catch (error) {
     next(error);
   }

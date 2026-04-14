@@ -4,6 +4,11 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.25.3-beta] - 2026-04-14
+
+### Fixed
+- **Autocomplete shows both active and closed airport for shared codes** — Searching "MUC" now returns Munich Airport (active) followed by Munich-Riem (closed) instead of only the active one. The exact-match step returns all rows with the same IATA/ICAO ordered by `isClosed ASC` so users can pick the historical predecessor for old flights.
+
 ## [0.25.2-beta] - 2026-04-14
 
 ### Fixed
