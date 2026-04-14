@@ -4,6 +4,20 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.24.1-beta] - 2026-04-14
+
+### Security
+- **Admin password reset via SMTP (Pentest H4)** — When the target user has a notification email on file and SMTP is enabled, the generated temporary password is now delivered via email instead of being returned in the HTTP response body. Falls back to response body for deployments without a mail server. Remaining deferred pentest items (H5 leaderboard enumeration, M7 TLS, L2/L3 SSH, L4 Dozzle) are now formally documented as accepted — by-design for the family tracker or infrastructure-level outside the repository.
+
+### Fixed
+- **Map-only filter hidden on list pages** — The "min times flown" route-frequency slider only affects the deck.gl route layer. It no longer appears on the flight list page, where it was a silent no-op that misled users into thinking their list was filtered.
+
+### Changed
+- **Dead canTrainLLM flag dropped** — Removed an unused permission relic of the deleted LLM training pipeline. The field was never set or read by the backend, so the frontend gate always evaluated to false. Parser access is now gated exclusively by `isAdmin`. Prisma migration drops the column; `hasTrainingAccess` renamed to `hasParserAccess`.
+
+### Tests
+- **+21 new service tests** — covers email service (password reset, invitation, admin reset), reminder scheduler (dedupe, per-window error isolation, user opt-out), and cloud sync service (WebDAV upload, download, list, with all failure paths).
+
 ## [0.24.0-beta] - 2026-04-13
 
 ### Security
