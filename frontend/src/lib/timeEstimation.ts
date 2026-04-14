@@ -6,6 +6,7 @@
  * 2. Heuristic calculations (85% accurate)
  */
 
+import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { calculateDistance } from "./geo";
 import { logger } from "./logger";
 
@@ -227,5 +228,127 @@ export function estimateFlightTimes(
     source: "heuristic",
     confidence: historical.length === 1 ? "medium" : "low",
     sampleCount: historical.length,
+  };
+}
+
+/**
+ * Estimate arrival date and time from a known departure date/time.
+ *
+ * Uses Haversine distance + 800 km/h + 15 min overhead for duration, then
+ * walks the clock forward. When both airport timezones are provided, the
+ * walk happens in UTC so the returned wall-clock time is in the arrival
+ * airport's local timezone. Without timezones the math is naive (same TZ
+ * assumed) and `tzAware` is false so the caller can flag it to the user.
+ */
+export interface EstimateArrivalParams {
+  departureDate: string; // YYYY-MM-DD
+  departureTime: string; // HH:MM
+  departureLat: number;
+  departureLon: number;
+  departureTimezone?: string | null;
+  arrivalLat: number;
+  arrivalLon: number;
+  arrivalTimezone?: string | null;
+}
+
+export interface EstimateArrivalResult {
+  arrivalDate: string; // YYYY-MM-DD
+  arrivalTime: string; // HH:MM
+  dayOffset: number; // 0 = same day, 1 = next day, etc. Always >= 0.
+  durationMinutes: number;
+  tzAware: boolean; // true only if both timezones were supplied and usable
+}
+
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+function formatDate(y: number, m: number, d: number): string {
+  return `${y}-${pad2(m)}-${pad2(d)}`;
+}
+
+function daysBetween(fromYmd: string, toYmd: string): number {
+  const [fy, fm, fd] = fromYmd.split("-").map(Number);
+  const [ty, tm, td] = toYmd.split("-").map(Number);
+  const from = Date.UTC(fy, fm - 1, fd);
+  const to = Date.UTC(ty, tm - 1, td);
+  return Math.round((to - from) / (24 * 60 * 60 * 1000));
+}
+
+export function estimateArrivalFromDeparture(params: EstimateArrivalParams): EstimateArrivalResult {
+  const {
+    departureDate,
+    departureTime,
+    departureLat,
+    departureLon,
+    departureTimezone,
+    arrivalLat,
+    arrivalLon,
+    arrivalTimezone,
+  } = params;
+
+  const durationMinutes = estimateDurationHeuristic(
+    departureLat,
+    departureLon,
+    arrivalLat,
+    arrivalLon
+  );
+
+  const canUseTz = Boolean(departureTimezone && arrivalTimezone);
+
+  if (canUseTz) {
+    try {
+      // Treat "YYYY-MM-DDTHH:mm" as local time in the departure timezone,
+      // convert to a real UTC instant, add the duration, then convert into
+      // the arrival timezone to read the wall-clock arrival time/date.
+      const depLocalString = `${departureDate}T${departureTime}:00`;
+      const depUtc = fromZonedTime(depLocalString, departureTimezone as string);
+      const arrUtc = new Date(depUtc.getTime() + durationMinutes * 60 * 1000);
+      const arrLocal = toZonedTime(arrUtc, arrivalTimezone as string);
+
+      const arrivalDate = formatDate(
+        arrLocal.getFullYear(),
+        arrLocal.getMonth() + 1,
+        arrLocal.getDate()
+      );
+      const arrivalTime = `${pad2(arrLocal.getHours())}:${pad2(arrLocal.getMinutes())}`;
+      const dayOffset = Math.max(0, daysBetween(departureDate, arrivalDate));
+
+      return {
+        arrivalDate,
+        arrivalTime,
+        dayOffset,
+        durationMinutes,
+        tzAware: true,
+      };
+    } catch (error) {
+      logger.warn("TZ-aware arrival estimate failed, falling back to naive:", error);
+      // Fall through to naive path
+    }
+  }
+
+  // Naive fallback: assume same timezone. Add duration to departure clock
+  // locally; compute day overflow via total minutes since midnight.
+  const [depH, depM] = departureTime.split(":").map(Number);
+  const totalMinutes = depH * 60 + depM + durationMinutes;
+  const dayOffset = Math.floor(totalMinutes / (24 * 60));
+  const minutesInDay = ((totalMinutes % (24 * 60)) + 24 * 60) % (24 * 60);
+  const arrivalTime = `${pad2(Math.floor(minutesInDay / 60))}:${pad2(minutesInDay % 60)}`;
+
+  const [dy, dm, dd] = departureDate.split("-").map(Number);
+  const arrDate = new Date(Date.UTC(dy, dm - 1, dd));
+  arrDate.setUTCDate(arrDate.getUTCDate() + dayOffset);
+  const arrivalDate = formatDate(
+    arrDate.getUTCFullYear(),
+    arrDate.getUTCMonth() + 1,
+    arrDate.getUTCDate()
+  );
+
+  return {
+    arrivalDate,
+    arrivalTime,
+    dayOffset,
+    durationMinutes,
+    tzAware: false,
   };
 }

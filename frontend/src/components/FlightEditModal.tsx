@@ -1,9 +1,14 @@
 import { useState, useEffect } from "react";
 import type { Flight } from "../types";
 import ReceiptUpload from "./ReceiptUpload";
+import CopyActionButton from "./FlightForm/CopyActionButton";
 import { useTranslation } from "../hooks/useTranslation";
 import { useSettingsStore } from "../store/settingsStore";
 import { useSuggestions } from "../hooks/useSuggestions";
+import { useToastStore } from "../store/toastStore";
+import { estimateArrivalFromDeparture } from "../lib/timeEstimation";
+import { airportsApi } from "../lib/api/airports";
+import { logger } from "../lib/logger";
 
 interface FlightEditModalProps {
   flight: Flight;
@@ -60,6 +65,75 @@ export default function FlightEditModal({
   const [formData, setFormData] = useState(buildFormData(flight));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const addToast = useToastStore((s) => s.addToast);
+
+  const update = <K extends keyof typeof formData>(key: K, value: (typeof formData)[K]) =>
+    setFormData((prev) => ({ ...prev, [key]: value }));
+
+  /** Copy the date part of departureTime into arrivalTime while preserving
+   *  arrivalTime's existing HH:MM. */
+  const handleCopyDepartureDate = (): void => {
+    if (!formData.departureTime) return;
+    const depDate = formData.departureTime.split("T")[0];
+    const arrTimePart = formData.arrivalTime.includes("T")
+      ? formData.arrivalTime.split("T")[1]
+      : "12:00";
+    update("arrivalTime", `${depDate}T${arrTimePart}`);
+  };
+
+  const canEstimateArrival = Boolean(formData.departureTime && formData.status !== "historical");
+
+  const handleEstimateArrival = async (): Promise<void> => {
+    if (!formData.departureTime) return;
+    const [depDate, depTime] = formData.departureTime.split("T");
+    if (!depDate || !depTime) return;
+
+    // Fetch timezones for both airports (lat/lon come from the flight record).
+    let depTz: string | null = null;
+    let arrTz: string | null = null;
+    try {
+      const depCode = flight.depIata || flight.depIcao;
+      const arrCode = flight.arrIata || flight.arrIcao;
+      const [depAirport, arrAirport] = await Promise.all([
+        depCode ? airportsApi.getByCode(depCode).catch(() => null) : Promise.resolve(null),
+        arrCode ? airportsApi.getByCode(arrCode).catch(() => null) : Promise.resolve(null),
+      ]);
+      depTz = depAirport?.timezone ?? null;
+      arrTz = arrAirport?.timezone ?? null;
+    } catch (err) {
+      logger.warn("Failed to fetch airport timezones for arrival estimate:", err);
+    }
+
+    const result = estimateArrivalFromDeparture({
+      departureDate: depDate,
+      departureTime: depTime.slice(0, 5),
+      departureLat: flight.depLat,
+      departureLon: flight.depLon,
+      departureTimezone: depTz,
+      arrivalLat: flight.arrLat,
+      arrivalLon: flight.arrLon,
+      arrivalTimezone: arrTz,
+    });
+
+    update("arrivalTime", `${result.arrivalDate}T${result.arrivalTime}`);
+    if (!result.tzAware) {
+      addToast("warning", t("flights:form.estimateTzUnknown"));
+    }
+  };
+
+  /** "+N day" hint below the arrival datetime-local field. */
+  const arrivalDayOffsetEdit = (() => {
+    if (formData.status === "historical") return 0;
+    if (!formData.departureTime || !formData.arrivalTime) return 0;
+    const depDate = formData.departureTime.split("T")[0];
+    const arrDate = formData.arrivalTime.split("T")[0];
+    if (!depDate || !arrDate || arrDate <= depDate) return 0;
+    const [dy, dm, dd] = depDate.split("-").map(Number);
+    const [ay, am, ad] = arrDate.split("-").map(Number);
+    const from = Date.UTC(dy, dm - 1, dd);
+    const to = Date.UTC(ay, am - 1, ad);
+    return Math.max(0, Math.round((to - from) / (24 * 60 * 60 * 1000)));
+  })();
 
   useEffect(() => {
     setFormData(buildFormData(flight));
@@ -120,9 +194,6 @@ export default function FlightEditModal({
   };
 
   if (!isOpen) return null;
-
-  const update = <K extends keyof typeof formData>(key: K, value: (typeof formData)[K]) =>
-    setFormData({ ...formData, [key]: value });
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
@@ -255,8 +326,24 @@ export default function FlightEditModal({
                 />
               </div>
               <div>
-                <label className="label" htmlFor="editArrivalTime">
+                <label className="label flex items-center gap-2" htmlFor="editArrivalTime">
                   {t("flights:form.arrival")}
+                  <CopyActionButton
+                    icon="arrow-down"
+                    title={t("flights:form.copyDepartureDate")}
+                    disabled={!formData.departureTime}
+                    onClick={handleCopyDepartureDate}
+                  />
+                  <CopyActionButton
+                    icon="calculator"
+                    title={
+                      canEstimateArrival
+                        ? t("flights:form.estimateArrivalTime")
+                        : t("flights:form.estimateNoDepartureTime")
+                    }
+                    disabled={!canEstimateArrival}
+                    onClick={() => void handleEstimateArrival()}
+                  />
                 </label>
                 <input
                   id="editArrivalTime"
@@ -265,6 +352,13 @@ export default function FlightEditModal({
                   value={formData.arrivalTime}
                   onChange={(e) => update("arrivalTime", e.target.value)}
                 />
+                {arrivalDayOffsetEdit > 0 && (
+                  <p className="text-xs mt-1 text-blue-700 dark:text-blue-300">
+                    {arrivalDayOffsetEdit === 1
+                      ? t("flights:form.arrivalNextDay")
+                      : t("flights:form.arrivalDayOffset", { count: arrivalDayOffsetEdit })}
+                  </p>
+                )}
               </div>
             </div>
           )}

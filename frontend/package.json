@@ -25,6 +25,7 @@
     "@zxing/library": "^0.21.0",
     "axios": "^1.13.5",
     "date-fns": "^3.0.6",
+    "date-fns-tz": "^3.2.0",
     "deck.gl": "^9.2.11",
     "framer-motion": "^12.34.3",
     "i18next": "^23.7.16",
