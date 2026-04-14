@@ -82,25 +82,30 @@ export function calculateChanges(
     'routeDistance',
   ];
 
+  // Treat null, undefined and empty string uniformly as "empty" so that a first-ever
+  // fill from Prisma's "" default is classified as `added`, not `changed`.
+  const isEmpty = (v: FlightFieldValue): boolean =>
+    v === null || v === undefined || v === '';
+
   for (const field of fieldsToCompare) {
     const oldValue = (original as Record<string, FlightFieldValue>)[field];
     const newValue = (proposed as Record<string, FlightFieldValue>)[field];
 
-    if (oldValue === undefined && newValue !== undefined) {
+    if (isEmpty(oldValue) && !isEmpty(newValue)) {
       changes.push({
         field,
         oldValue: null,
         newValue,
         type: 'added',
       });
-    } else if (oldValue !== undefined && newValue === undefined) {
+    } else if (!isEmpty(oldValue) && isEmpty(newValue)) {
       changes.push({
         field,
         oldValue,
         newValue: null,
         type: 'removed',
       });
-    } else if (oldValue !== newValue && newValue !== undefined) {
+    } else if (oldValue !== newValue && !isEmpty(newValue)) {
       // Special handling for time fields
       if (field === 'departureTime' || field === 'arrivalTime') {
         const oldTime = oldValue && (typeof oldValue === 'string' || typeof oldValue === 'number') ? new Date(oldValue).getTime() : 0;
@@ -131,19 +136,27 @@ export function calculateChanges(
 }
 
 /**
- * Check if changes are significant enough to create a pending update
+ * Check if changes are significant enough to create a pending update.
+ *
+ * Rules:
+ *  - Any change to a critical field (times, airports) is significant.
+ *  - Filling a previously-empty field (type `added`) is significant — even a single
+ *    one — because "first time we know the gate" is information the user should see.
+ *  - Pure modifications to already-populated non-critical fields (gate A12 → B07)
+ *    need ≥2 to avoid churn from API noise on a single field.
+ *
+ * Exported for unit testing.
  */
-function hasSignificantChanges(changes: FlightChange[]): boolean {
+export function hasSignificantChanges(changes: FlightChange[]): boolean {
   if (changes.length === 0) return false;
 
-  // Prioritize critical changes (times, airports)
   const criticalFields = ['departureTime', 'arrivalTime', 'depIata', 'depIcao', 'arrIata', 'arrIcao'];
-  const hasCriticalChanges = changes.some(c => criticalFields.includes(c.field));
+  if (changes.some(c => criticalFields.includes(c.field))) return true;
 
-  // If there are critical changes, always create update
-  if (hasCriticalChanges) return true;
+  // Initial fill — single change is enough to be worth showing the user
+  if (changes.some(c => c.type === 'added')) return true;
 
-  // For optional changes (gate, terminal), require at least 2 changes
+  // Pure modifications to existing values need multiple to count
   return changes.length >= 2;
 }
 
@@ -380,6 +393,20 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
           continue;
         }
 
+        // Mark this flight as live-tracked the moment an API actually returns data,
+        // regardless of whether the diff is "significant" enough for a PendingUpdate.
+        // This is the seed signal that lets Historical Enrichment later find
+        // reference flights — keeping it coupled to the significance filter was
+        // a bootstrap deadlock (fresh accounts could never seed live-tracking).
+        if (!flight.hasLiveTracking) {
+          await prismaClient.flight.update({
+            where: { id: flight.id },
+            data: { hasLiveTracking: true },
+          });
+          logger.info({ flightId: flight.id, flightNumber: flight.flightNumber, operation: 'has_live_tracking_set' },
+            `Marked ${flight.flightNumber} as live-tracked (first successful API response)`);
+        }
+
         // Convert API data to proposed format
         const proposedData = convertApiDataToProposed(apiData, flight);
 
@@ -463,10 +490,73 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
 }
 
 /**
+ * Hours past scheduled arrival after which a flight that still has status
+ * "scheduled" is assumed to have flown. Chosen as 48h because this is well past
+ * even the longest international delays and near-certainly means the APIs never
+ * provided confirmation. User can always edit the record by hand afterwards.
+ */
+const ZOMBIE_SCHEDULED_CUTOFF_HOURS = 48;
+
+/**
+ * Auto-transition "zombie" scheduled flights whose arrival time is far in the past
+ * but which were never updated by an API. Prevents the list view from showing
+ * flights as permanently "scheduled" after they've clearly already happened.
+ *
+ * The transition is conservative:
+ *   - Only touches flights where arrivalTime + 48h < now
+ *   - Only flips status scheduled -> flown
+ *   - Leaves a marker in lastModifiedBy = "zombie_auto_flown" so users can see
+ *     the change was a fallback guess (not an API confirmation) and edit if needed
+ */
+export async function transitionZombieFlights(): Promise<number> {
+  const cutoff = new Date(
+    Date.now() - ZOMBIE_SCHEDULED_CUTOFF_HOURS * 60 * 60 * 1000,
+  );
+
+  try {
+    const result = await prismaClient.flight.updateMany({
+      where: {
+        status: 'scheduled',
+        arrivalTime: { not: null, lt: cutoff },
+      },
+      data: {
+        status: 'flown',
+        lastModifiedBy: 'zombie_auto_flown',
+        nextApiCheckAt: null,
+      },
+    });
+
+    if (result.count > 0) {
+      logger.info({
+        operation: 'zombie_flights_transitioned',
+        message: `Auto-flipped ${result.count} stale scheduled flights to flown`,
+        context: { cutoffHours: ZOMBIE_SCHEDULED_CUTOFF_HOURS, count: result.count },
+      });
+    }
+
+    return result.count;
+  } catch (error) {
+    logger.error({
+      operation: 'zombie_flights_transition_error',
+      message: 'Failed to transition zombie flights',
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      },
+    });
+    return 0;
+  }
+}
+
+/**
  * Check and update flights for all users with auto-update enabled
  */
 export async function checkAndUpdateAllFlights(): Promise<number> {
   try {
+    // Clean up zombie flights before the API sweep — reduces wasted API calls
+    // on flights that already departed but are stuck in "scheduled".
+    await transitionZombieFlights();
+
     // Get all users with auto-update enabled
     const users = await prismaClient.userSettings.findMany({
       where: {

@@ -216,8 +216,13 @@ export async function convertAviationstackTimeToUtc(
     }
 
     // Parse the date components
-    // Format is typically "YYYY-MM-DDTHH:mm:ss" or "YYYY-MM-DD HH:mm:ss"
-    const dateMatch = cleanTimeString.match(/(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2}):(\d{2})/);
+    // Aviationstack observed formats:
+    //   "YYYY-MM-DDTHH:mm:ss"   (ISO-ish, with seconds)
+    //   "YYYY-MM-DD HH:mm:ss"   (space separator, with seconds)
+    //   "YYYY-MM-DD HH:mm"      (space separator, no seconds — observed 2026-04-14)
+    const dateMatch = cleanTimeString.match(
+      /(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2}))?/,
+    );
     if (!dateMatch) {
       logger.warn({
         operation: 'convert_aviationstack_time_parse_error',
@@ -227,8 +232,8 @@ export async function convertAviationstackTimeToUtc(
       return null;
     }
 
-    // Extract date components
-    const [, year, month, day, hour, minute, second] = dateMatch;
+    // Extract date components — seconds default to 0 when the format omits them
+    const [, year, month, day, hour, minute, second = '0'] = dateMatch;
 
     // Create a date object with the time components
     // zonedTimeToUtc will interpret this date as if it's in the airport's timezone

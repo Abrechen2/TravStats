@@ -1,6 +1,6 @@
 /**
  * API Key Resolver Service
- * 
+ *
  * Resolves API keys with priority: User Key > Global Key > ENV Variable
  */
 
@@ -40,7 +40,7 @@ export async function getApiKey(
 
       if (userSettings) {
         let userKey: string | null = null;
-        
+
         switch (provider) {
           case 'openai':
             userKey = userSettings.openaiApiKey;
@@ -69,7 +69,7 @@ export async function getApiKey(
     const adminSettings = await prisma.adminSettings.findFirst();
     if (adminSettings) {
       let globalKey: string | null = null;
-      
+
       switch (provider) {
         case 'openai':
           globalKey = adminSettings.globalOpenaiApiKey;
@@ -172,7 +172,7 @@ export async function getOpenSkyCredentials(
         adminSettings.globalOpenskyUsername;
 
       if (hasGlobalCredentials) {
-        return {
+        const creds: OpenSkyCredentials = {
           clientId: adminSettings.globalOpenskyClientId
             ? decryptApiKey(adminSettings.globalOpenskyClientId) || undefined
             : undefined,
@@ -186,6 +186,22 @@ export async function getOpenSkyCredentials(
             ? decryptApiKey(adminSettings.globalOpenskyPassword) || undefined
             : undefined,
         };
+
+        // OpenSky accepts either a full OAuth2 client-credentials pair OR a
+        // legacy username+password pair. If nothing survived decryption (e.g.
+        // encrypted with a lost key), treat as not configured so downstream
+        // logs don't lie about readiness.
+        const oauthUsable = !!creds.clientId && !!creds.clientSecret;
+        const basicUsable = !!creds.username && !!creds.password;
+        if (!oauthUsable && !basicUsable) {
+          logger.warn({
+            operation: 'opensky_credentials_undecryptable',
+            message:
+              'OpenSky credentials exist in admin_settings but no usable pair could be decrypted — treating as unconfigured',
+          });
+          return null;
+        }
+        return creds;
       }
     }
 
@@ -326,4 +342,3 @@ export async function hasApiKeyAccess(
     return { hasAccess: false, isShared: false };
   }
 }
-
