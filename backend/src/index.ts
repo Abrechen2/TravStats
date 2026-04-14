@@ -296,13 +296,24 @@ if (process.env.NODE_ENV !== 'test') {
         select: { id: true, departureTime: true, arrivalTime: true, status: true, flightNumber: true },
       });
       if (scheduledFlights.length > 0) {
+        let updated = 0;
+        let skipped = 0;
         for (const f of scheduledFlights) {
           const checkAt = calculateNextApiCheckAt(f.departureTime, f.arrivalTime, f.status, f.flightNumber);
           if (checkAt) {
             await prisma.flight.update({ where: { id: f.id }, data: { nextApiCheckAt: checkAt } });
+            updated++;
+          } else {
+            // Past arrival + buffer, or otherwise ineligible — count separately so
+            // the log doesn't claim we populated all candidates.
+            skipped++;
           }
         }
-        logger.info({ operation: 'server_start_backfill_api_check', message: `Backfilled nextApiCheckAt for ${scheduledFlights.length} flights` });
+        logger.info({
+          operation: 'server_start_backfill_api_check',
+          message: `Backfilled nextApiCheckAt for ${updated} of ${scheduledFlights.length} scheduled flights (${skipped} ineligible)`,
+          context: { candidates: scheduledFlights.length, updated, skipped },
+        });
       }
     } catch (error) {
       logger.warn({ operation: 'server_start_backfill_api_check_error', message: 'Failed to backfill nextApiCheckAt', error });

@@ -234,14 +234,28 @@ function calculateBasicConfidence(flight: Flight, missingFields: string[]): numb
  *   Route geometry (ICAO codes, waypoints) is intentionally cross-user: it represents
  *   shared public flight-path data, not personal information.
  */
+/**
+ * Minimum reference flights required for aggregation, per mode.
+ * - `full` (flights < 1yr old): 5 references give a solid statistical base for
+ *   aircraft/gate/route aggregation that changes over time.
+ * - `slim` (flights ≥ 1yr old): only ICAO codes + terminal are aggregated —
+ *   these are stable enough that 3 references suffice, and waiting for 5 on
+ *   niche routes would mean never enriching anything.
+ */
+const DEFAULT_MIN_FLIGHTS_FULL = 5;
+const DEFAULT_MIN_FLIGHTS_SLIM = 3;
+
 export async function aggregateFlightData(
   flightNumber: string,
   excludeFlightId: string,
-  minFlights: number = 5,
+  minFlights?: number,
   mode: EnrichmentMode = 'full',
   userId?: string
 ): Promise<AggregatedFlightData | null> {
   try {
+    const effectiveMinFlights =
+      minFlights ?? (mode === 'slim' ? DEFAULT_MIN_FLIGHTS_SLIM : DEFAULT_MIN_FLIGHTS_FULL);
+
     // Find flights with live tracking and same flight number
     const referenceFlights = await prismaClient.flight.findMany({
       where: {
@@ -259,14 +273,15 @@ export async function aggregateFlightData(
       take: 10, // Top 10 newest
     });
 
-    if (referenceFlights.length < minFlights) {
+    if (referenceFlights.length < effectiveMinFlights) {
       logger.info({
         operation: 'aggregate_flight_data_insufficient',
         message: 'Not enough reference flights for aggregation',
         context: {
           flightNumber,
           referenceFlightsCount: referenceFlights.length,
-          minFlights,
+          minFlights: effectiveMinFlights,
+          mode,
         },
       });
       return null;
