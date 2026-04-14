@@ -36,7 +36,13 @@ jest.mock("../utils/logger", () => ({
 jest.mock("../routes/admin/smtp", () => ({ SMTP_CONFIG_ID: 1 }));
 
 // Import service after mocks are registered
-import { sendFlightReminder, testSmtpConnection } from "../services/emailService";
+import {
+  sendFlightReminder,
+  testSmtpConnection,
+  sendPasswordResetEmail,
+  sendInvitationEmail,
+  sendAdminPasswordResetEmail,
+} from "../services/emailService";
 import { prisma } from "../db";
 
 const mockFindUnique = prisma.smtpConfig.findUnique as jest.Mock;
@@ -162,6 +168,127 @@ describe("emailService", () => {
           secure: true,
         })
       );
+    });
+  });
+
+  describe("sendPasswordResetEmail", () => {
+    it("skips send silently when SMTP is not configured", async () => {
+      mockFindUnique.mockResolvedValue(null);
+
+      await sendPasswordResetEmail("u@example.com", "https://app.test/reset?t=abc", "alice");
+
+      expect(mockTransporter.sendMail).not.toHaveBeenCalled();
+    });
+
+    it("skips send when SMTP is disabled", async () => {
+      mockFindUnique.mockResolvedValue({ ...MOCK_SMTP_CONFIG, enabled: false });
+
+      await sendPasswordResetEmail("u@example.com", "https://app.test/reset?t=abc", "alice");
+
+      expect(mockTransporter.sendMail).not.toHaveBeenCalled();
+    });
+
+    it("sends reset email with reset URL and username", async () => {
+      mockFindUnique.mockResolvedValue(MOCK_SMTP_CONFIG);
+      mockTransporter.sendMail.mockResolvedValue({ messageId: "reset-1" });
+
+      await sendPasswordResetEmail("u@example.com", "https://app.test/reset?t=abc", "alice");
+
+      expect(mockTransporter.sendMail).toHaveBeenCalledTimes(1);
+      const callArgs = mockTransporter.sendMail.mock.calls[0][0] as Record<string, unknown>;
+      expect(callArgs.to).toBe("u@example.com");
+      expect(callArgs.subject).toMatch(/Passwort/i);
+      expect(callArgs.html).toContain("alice");
+      expect(callArgs.html).toContain("https://app.test/reset?t=abc");
+    });
+
+    it("throws when sendMail fails", async () => {
+      mockFindUnique.mockResolvedValue(MOCK_SMTP_CONFIG);
+      mockTransporter.sendMail.mockRejectedValue(new Error("SMTP error"));
+
+      await expect(
+        sendPasswordResetEmail("u@example.com", "https://app.test/reset", "alice"),
+      ).rejects.toThrow("SMTP error");
+    });
+  });
+
+  describe("sendInvitationEmail", () => {
+    const EXPIRES_AT = new Date("2026-06-01T00:00:00Z");
+
+    it("throws when SMTP is not configured", async () => {
+      mockFindUnique.mockResolvedValue(null);
+
+      await expect(
+        sendInvitationEmail("u@example.com", "https://app.test/invite?t=xyz", "admin", EXPIRES_AT),
+      ).rejects.toThrow(/SMTP is not configured/i);
+    });
+
+    it("throws when SMTP is disabled", async () => {
+      mockFindUnique.mockResolvedValue({ ...MOCK_SMTP_CONFIG, enabled: false });
+
+      await expect(
+        sendInvitationEmail("u@example.com", "https://app.test/invite?t=xyz", "admin", EXPIRES_AT),
+      ).rejects.toThrow(/SMTP is not configured/i);
+    });
+
+    it("sends invitation email with inviter username and expiry", async () => {
+      mockFindUnique.mockResolvedValue(MOCK_SMTP_CONFIG);
+      mockTransporter.sendMail.mockResolvedValue({ messageId: "invite-1" });
+
+      await sendInvitationEmail(
+        "newuser@example.com",
+        "https://app.test/invite?t=xyz",
+        "admin",
+        EXPIRES_AT,
+      );
+
+      expect(mockTransporter.sendMail).toHaveBeenCalledTimes(1);
+      const callArgs = mockTransporter.sendMail.mock.calls[0][0] as Record<string, unknown>;
+      expect(callArgs.to).toBe("newuser@example.com");
+      expect(callArgs.subject).toMatch(/Einladung/i);
+      expect(callArgs.html).toContain("admin");
+      expect(callArgs.html).toContain("https://app.test/invite?t=xyz");
+    });
+  });
+
+  describe("sendAdminPasswordResetEmail", () => {
+    it("throws when SMTP is not configured", async () => {
+      mockFindUnique.mockResolvedValue(null);
+
+      await expect(
+        sendAdminPasswordResetEmail("u@example.com", "alice", "TempPass123!"),
+      ).rejects.toThrow(/SMTP is not configured/i);
+    });
+
+    it("throws when SMTP is disabled", async () => {
+      mockFindUnique.mockResolvedValue({ ...MOCK_SMTP_CONFIG, enabled: false });
+
+      await expect(
+        sendAdminPasswordResetEmail("u@example.com", "alice", "TempPass123!"),
+      ).rejects.toThrow(/SMTP is not configured/i);
+    });
+
+    it("sends email containing the temporary password to the target address", async () => {
+      mockFindUnique.mockResolvedValue(MOCK_SMTP_CONFIG);
+      mockTransporter.sendMail.mockResolvedValue({ messageId: "adm-reset-1" });
+
+      await sendAdminPasswordResetEmail("u@example.com", "alice", "TempPass123!");
+
+      expect(mockTransporter.sendMail).toHaveBeenCalledTimes(1);
+      const callArgs = mockTransporter.sendMail.mock.calls[0][0] as Record<string, unknown>;
+      expect(callArgs.to).toBe("u@example.com");
+      expect(callArgs.subject).toMatch(/zurückgesetzt/i);
+      expect(callArgs.html).toContain("alice");
+      expect(callArgs.html).toContain("TempPass123!");
+    });
+
+    it("throws when sendMail fails", async () => {
+      mockFindUnique.mockResolvedValue(MOCK_SMTP_CONFIG);
+      mockTransporter.sendMail.mockRejectedValue(new Error("Send failed"));
+
+      await expect(
+        sendAdminPasswordResetEmail("u@example.com", "alice", "TempPass123!"),
+      ).rejects.toThrow("Send failed");
     });
   });
 });

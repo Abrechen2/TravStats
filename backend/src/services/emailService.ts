@@ -197,6 +197,57 @@ export async function sendPasswordResetEmail(
   }
 }
 
+export async function sendAdminPasswordResetEmail(
+  to: string,
+  username: string,
+  temporaryPassword: string,
+): Promise<void> {
+  const config = await prisma.smtpConfig.findUnique({ where: { id: SMTP_CONFIG_ID } });
+  if (!config || !config.enabled) {
+    throw new Error('SMTP is not configured on this instance');
+  }
+
+  const transporter = createTransporterFromConfig(config);
+  const subject = 'TravStats — Passwort zurückgesetzt';
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <h2 style="color: #2563eb;">Passwort zurückgesetzt</h2>
+  <p>Hallo ${username},</p>
+  <p>ein Administrator hat dein Passwort zurückgesetzt. Dein vorläufiges Passwort lautet:</p>
+  <p style="font-family: monospace; font-size: 18px; background: #f3f4f6; padding: 12px 16px;
+     border-radius: 6px; display: inline-block; letter-spacing: 1px;">${temporaryPassword}</p>
+  <p>Bitte melde dich damit an — du wirst sofort aufgefordert, ein neues Passwort zu wählen.</p>
+  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+  <p style="color: #6b7280; font-size: 14px;">&mdash; TravStats</p>
+</body>
+</html>`.trim();
+
+  try {
+    await transporter.sendMail({
+      from: `"${config.fromName}" <${config.fromEmail}>`,
+      to,
+      subject,
+      html,
+    });
+    logger.info({
+      operation: 'admin_password_reset_email_sent',
+      to,
+      username,
+    });
+  } catch (error) {
+    logger.error({
+      operation: 'admin_password_reset_email_failed',
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+      },
+    });
+    throw error;
+  }
+}
+
 export async function sendInvitationEmail(
   to: string,
   inviteUrl: string,
