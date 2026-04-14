@@ -5,7 +5,14 @@ import NavigationBar from "../components/NavigationBar";
 import FlightCalendar from "../components/FlightCalendar";
 import YearHeatmap from "../components/YearHeatmap";
 import ContextualHint from "../components/Onboarding/ContextualHint";
-import type { Flight, FunStats, BusinessStats, UniqueStats, SeatStats } from "../types";
+import type {
+  AirportStats,
+  Flight,
+  FunStats,
+  BusinessStats,
+  UniqueStats,
+  SeatStats,
+} from "../types";
 import { API_LIMITS, STORAGE_KEYS } from "../lib/constants";
 import { useTranslation } from "../hooks/useTranslation";
 import { useSettingsStore } from "../store/settingsStore";
@@ -21,6 +28,7 @@ import StatsFlightBreakdown from "../components/Stats/StatsFlightBreakdown";
 import StatsFunSection from "../components/Stats/StatsFunSection";
 import StatsBusinessSection from "../components/Stats/StatsBusinessSection";
 import StatsUniqueSection from "../components/Stats/StatsUniqueSection";
+import StatsAirportsSection from "../components/Stats/StatsAirportsSection";
 import StatsSeatSection from "../components/Stats/StatsSeatSection";
 import { generateYearReportPdf } from "../lib/yearReportPdf";
 import { useToastStore } from "../store/toastStore";
@@ -38,6 +46,7 @@ export default function AdvancedStatsPage(): JSX.Element {
   const [funStats, setFunStats] = useState<FunStats | null>(null);
   const [businessStats, setBusinessStats] = useState<BusinessStats | null>(null);
   const [uniqueStats, setUniqueStats] = useState<UniqueStats | null>(null);
+  const [airportStats, setAirportStats] = useState<AirportStats | null>(null);
   const [seatStats, setSeatStats] = useState<SeatStats | null>(null);
   const [showCertificate, setShowCertificate] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
@@ -117,7 +126,7 @@ export default function AdvancedStatsPage(): JSX.Element {
       // Only use flown flights for statistics; scheduled/cancelled are excluded
       setFlights(allFlights.filter((f) => f.status === "flown"));
 
-      const [fun, business, unique, seat] = await Promise.all([
+      const [fun, business, unique, airports, seat] = await Promise.all([
         statsApi.getFunStats().catch((err) => {
           logger.error("Failed to load fun stats:", err);
           return null;
@@ -128,6 +137,10 @@ export default function AdvancedStatsPage(): JSX.Element {
         }),
         statsApi.getUniqueStats().catch((err) => {
           logger.error("Failed to load unique stats:", err);
+          return null;
+        }),
+        statsApi.getAirportStats().catch((err) => {
+          logger.error("Failed to load airport stats:", err);
           return null;
         }),
         statsApi.getSeatStats().catch((err) => {
@@ -144,6 +157,7 @@ export default function AdvancedStatsPage(): JSX.Element {
       } else {
         logger.warn("Unique stats are null or failed to load");
       }
+      if (airports) setAirportStats(airports);
       if (seat) setSeatStats(seat);
     } catch (error) {
       logger.error("Failed to load flights:", error);
@@ -594,6 +608,9 @@ export default function AdvancedStatsPage(): JSX.Element {
 
           {/* Unique Statistics */}
           <StatsUniqueSection uniqueStats={uniqueStats} />
+
+          {/* Airport Statistics */}
+          <StatsAirportsSection airportStats={airportStats} />
 
           {/* Seat Statistics */}
           <StatsSeatSection seatStats={seatStats} />

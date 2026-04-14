@@ -1,5 +1,6 @@
 import type {
   AirlineRankingResponse,
+  AirportStats,
   BusinessStats,
   CountryStatsResponse,
   FunStats,
@@ -45,6 +46,16 @@ export const statsApi = {
     toDate?: string;
   }): Promise<UniqueStats> => {
     const { data } = await api.get<UniqueStats>("/stats/unique", {
+      params: filters,
+    });
+    return data;
+  },
+
+  getAirportStats: async (filters?: {
+    fromDate?: string;
+    toDate?: string;
+  }): Promise<AirportStats> => {
+    const { data } = await api.get<AirportStats>("/stats/airports", {
       params: filters,
     });
     return data;

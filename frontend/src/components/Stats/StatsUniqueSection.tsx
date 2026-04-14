@@ -297,7 +297,10 @@ export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionPr
           )}
 
           {uniqueStats.longestLayover && (
-            <div className="bg-gradient-to-br from-amber-600 to-orange-600 rounded-lg p-6 text-white shadow-md">
+            <div
+              className="bg-gradient-to-br from-amber-600 to-orange-600 rounded-lg p-6 text-white shadow-md"
+              title={t("stats:unique.longestLayoverTooltip")}
+            >
               <h3 className="text-sm font-medium opacity-90 mb-2">
                 {t("stats:unique.longestLayover")}
               </h3>
@@ -306,6 +309,24 @@ export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionPr
                 {t("stats:unique.longestLayoverDesc", {
                   hours: uniqueStats.longestLayover.hours,
                   from: uniqueStats.longestLayover.from,
+                })}
+              </p>
+            </div>
+          )}
+
+          {uniqueStats.shortestLayover && (
+            <div
+              className="bg-gradient-to-br from-teal-600 to-emerald-600 rounded-lg p-6 text-white shadow-md"
+              title={t("stats:unique.shortestLayoverTooltip")}
+            >
+              <h3 className="text-sm font-medium opacity-90 mb-2">
+                {t("stats:unique.shortestLayover")}
+              </h3>
+              <p className="text-3xl font-bold mb-1">{uniqueStats.shortestLayover.hours}h</p>
+              <p className="text-sm opacity-75">
+                {t("stats:unique.shortestLayoverDesc", {
+                  hours: uniqueStats.shortestLayover.hours,
+                  from: uniqueStats.shortestLayover.from,
                 })}
               </p>
             </div>
