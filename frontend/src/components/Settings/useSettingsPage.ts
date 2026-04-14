@@ -159,7 +159,12 @@ export function useSettingsPage() {
     };
     const timeoutId = setTimeout(saveSettings, 500);
     return () => clearTimeout(timeoutId);
-  }, [units, saveRemoteSettings, addToast, t]);
+    // `t` and `addToast` are intentionally omitted: `t` is unstable across
+    // renders and would cause this effect to re-fire on every render, which
+    // before debounce was tripping the settings rate limit. We only want to
+    // save when `units` actually changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [units, saveRemoteSettings]);
 
   useEffect(() => {
     if (user?.isAdmin) {

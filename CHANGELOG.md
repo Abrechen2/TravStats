@@ -4,6 +4,11 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.25.4-beta] - 2026-04-14
+
+### Fixed
+- **Settings page no longer trips its own rate limit** — The auto-save effect listed `t` (from useTranslation) in its dependency array, which is unstable across renders, so the debounced save was firing on every keystroke instead of only when units actually changed. Combined with new banner/home-airport fetches this hit the `/settings` rate limit (60→200→1000) within a couple minutes of normal use. Removed the unstable dep and bumped the limit to 1000/15min so background polling has plenty of headroom while still blocking scripted abuse.
+
 ## [0.25.3-beta] - 2026-04-14
 
 ### Fixed
