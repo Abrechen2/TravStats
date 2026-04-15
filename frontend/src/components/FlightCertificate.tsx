@@ -233,7 +233,7 @@ export function FlightCertificate({
         style={{
           width: "800px",
           maxWidth: "100%",
-          minHeight: "1100px",
+          minHeight: "1180px",
           background: PARCHMENT,
           backgroundImage: PAPER_GRAIN_DATA_URI,
           color: INK,
@@ -241,6 +241,8 @@ export function FlightCertificate({
           fontFamily: "'Fraunces', 'Georgia', serif",
           boxShadow: "0 30px 80px rgba(0,0,0,0.5), inset 0 0 80px rgba(60,40,20,0.05)",
           overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
         }}
       >
         {/* Deckle ink border — outer */}
@@ -523,16 +525,17 @@ export function FlightCertificate({
         {/* ─── Compass rose, top right behind everything ─────────── */}
         <CompassRose />
 
+        {/* Spacer pushes the footer to the bottom in the flex column */}
+        <div style={{ flex: 1, minHeight: "60px" }} />
+
         {/* ─── Footer ─────────────────────────────────────────────── */}
         <div
           style={{
-            position: "absolute",
-            bottom: "44px",
-            left: "56px",
-            right: "56px",
+            padding: "0 56px 56px",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "flex-end",
+            position: "relative",
             zIndex: 2,
           }}
         >
@@ -732,17 +735,20 @@ function Postmark({ date, flights }: PostmarkProps): JSX.Element {
     <div
       style={{
         position: "absolute",
-        right: "70px",
-        bottom: "230px",
-        width: "180px",
-        height: "180px",
+        right: "44px",
+        bottom: "120px",
+        width: "150px",
+        height: "150px",
         transform: "rotate(-12deg)",
-        opacity: 0.8,
+        opacity: 0.78,
         zIndex: 3,
         pointerEvents: "none",
+        // Multiply blend keeps the parchment grain visible through the
+        // ink, so the stamp reads like a real ink mark on paper.
+        mixBlendMode: "multiply",
       }}
     >
-      <svg viewBox="0 0 200 200" width="180" height="180">
+      <svg viewBox="0 0 200 200" width="150" height="150">
         <defs>
           <path
             id="postmark-curve"
