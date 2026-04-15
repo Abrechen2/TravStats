@@ -4,6 +4,24 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.27.0-beta] - 2026-04-15
+
+### Added
+- **Anonymous diagnostic export for GitHub bug reports** — A new "Bug" button in the top navigation opens a modal that generates a sanitised JSON bundle of recent app and error log entries plus system info. IP addresses, email addresses, JWT tokens and UUIDs are scrubbed server-side; user IDs are replaced with short opaque markers. Three actions: copy to clipboard, download as file, or open the GitHub issue page.
+- **Save + add return flight** — A second submit button on the manual flight form saves the outbound and immediately prepares the form for the return leg. Departure and arrival airports are swapped, airline / category / tags / companions carry over, and leg-specific fields (flight number, aircraft, terminal, gate, seat, times) are cleared so the user fills them in.
+- **Redesigned flight certificate** — The shareable PNG certificate has been completely redesigned around a vintage aviation passport aesthetic: parchment paper with grain texture, deep ink-blue typography, burnished bronze accents and a faded vermillion postmark stamp. New typography (Fraunces, Big Shoulders Display, JetBrains Mono), the total kilometres rendered as a dominant hero number, equivalence captions ("X × around the Earth at the equator"), and a deterministic 6-character serial number per certificate.
+- **Admin panel: delete user** — Admins can now permanently delete users from the user-management table. Cascade clears the user's flights, trips, achievements, settings and pending updates. Self-deletion and last-admin deletion are blocked.
+
+### Fixed
+- **PDF year report button no longer permanently greyed out** — The advanced statistics page now auto-selects the most recent year as soon as flights have loaded, so the "PDF Jahresbericht" button is enabled out of the box instead of waiting for the user to discover the year dropdown.
+- **Historical flight year input accepted keystrokes** — Typing a digit into the year field for a historical flight no longer cleared itself. The form re-derived the visible year from a stored YYYY-MM-DD string with a strict 4-digit regex; relaxed to accept partial input so the field echoes each keystroke.
+- **Diagnostic export modal no longer trips its own rate limit** — The fetch effect re-ran on every parent re-render due to unstable `t` and `addToast` dependencies, exhausting the 10/hour rate limit within seconds. Now fires once per modal open.
+- **Duplicate flight succeeds again** — The "duplicate as same / return flight" action sent `null` for unset optional fields, which Prisma's optional-but-not-nullable Zod schema rejected. Nullable values are now coerced to undefined, and duplicates are created with the dedicated "duplicated" status (no time-fields requirement) so the user fills in dates in the edit modal that opens immediately.
+
+### Changed
+- **Admin panel cleanup** — Removed the dead Hardware-info section, dropped the unused TemplateCorrection table, and retired the orphan pattern-updater / pattern-analyzer infrastructure that never actually applied any patterns. Tabs and i18n strings simplified accordingly.
+- **Certificate layout** — Footer no longer overlaps the "of note" rows; postmark stamp was repositioned tighter into the corner with a multiply blend so it reads as ink on parchment.
+
 ## [0.26.0-beta] - 2026-04-15
 
 ### Added
