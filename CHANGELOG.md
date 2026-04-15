@@ -4,6 +4,17 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.26.0-beta] - 2026-04-15
+
+### Added
+- **Duplicate flight action** — Each row in the flights table now has a "Duplicate" dropdown with two options: "As same flight" (copy route) or "As return flight" (swap departure/arrival). Airline, flight number, aircraft, category, tags, companions and notes carry over; time, seat, gate, terminal, booking references and pricing are cleared so the user fills in the trip-specific details. The edit modal opens automatically on the new flight.
+
+### Fixed
+- **Auto-update endless loop** — When "require approval" was disabled the scheduler created a pending update on every check but never applied it, so the same changes were re-detected and re-written every 10-15 minutes. Updates with approval off are now applied immediately while the pending row is still kept for audit.
+- **API check cadence** — Each flight used to be polled every 15 minutes while in the air, burning 30-50+ API calls per long-haul. Scheduling now uses exactly three checkpoints: 30 minutes before departure, 60 minutes before scheduled arrival, and 30 minutes after arrival.
+- **Zombie-scheduled cutoff** — Flights stuck on "scheduled" past their arrival are now auto-flipped to "flown" after 6 hours (was 48h), so they stop showing up in the API-check queue.
+- **Scheduler log output** — The `significant_changes_found` log line now lists real field names (e.g. `gate`, `terminal`, `aircraft`) instead of array indices.
+
 ## [0.25.4-beta] - 2026-04-14
 
 ### Fixed
