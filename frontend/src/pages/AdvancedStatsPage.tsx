@@ -94,6 +94,21 @@ export default function AdvancedStatsPage(): JSX.Element {
     }
   }, [selectedYear, compareEnabled, compareYear, loadYearSummary]);
 
+  // Auto-select the most recent year once flight data has loaded so the
+  // year-scoped buttons (PDF report, comparisons) are enabled by default.
+  // Without this, "PDF Jahresbericht" appears permanently greyed out and
+  // looks broken until the user discovers the year dropdown above.
+  useEffect(() => {
+    if (selectedYear === null && flights.length > 0) {
+      const years = flights
+        .map((f) => (f.departureTime ? new Date(f.departureTime).getFullYear() : null))
+        .filter((y): y is number => y !== null);
+      if (years.length > 0) {
+        setSelectedYear(Math.max(...years));
+      }
+    }
+  }, [flights, selectedYear]);
+
   useEffect(() => {
     loadFlights();
     // Mark stats as viewed in onboarding
