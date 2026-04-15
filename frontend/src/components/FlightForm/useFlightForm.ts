@@ -369,6 +369,43 @@ export function useFlightForm(
     }
   };
 
+  /**
+   * After a successful save, prepare the form for entering the return leg:
+   * swaps departure/arrival airports, keeps trip-stable fields (airline,
+   * category, tags, companions, booking ref via notes) and clears
+   * leg-specific ones (flight number, seat, gate, terminal, aircraft,
+   * times). The user must pick new dates and times.
+   */
+  const prepareReturnFlightForm = (): void => {
+    const outboundDeparture = departure;
+    const outboundArrival = arrival;
+    setDeparture(outboundArrival);
+    setArrival(outboundDeparture);
+
+    setFlightNumber("");
+    setAircraft("");
+    setTerminal("");
+    setGate("");
+    setSeatNumber("");
+    setNotes("");
+    setOperatingAirline("");
+
+    // Default the new departure date to the original arrival date, time empty —
+    // user usually picks both. For a same-day return this is what they want;
+    // for a multi-day trip they bump the date forward.
+    if (arrivalDate) {
+      setDepartureDate(arrivalDate);
+      setArrivalDate(arrivalDate);
+    }
+    setDepartureTime("12:00");
+    setArrivalTime("14:00");
+    arrivalDateSetRef.current = false;
+
+    setStep("complete");
+    setError("");
+    setTimeEstimationWarning(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!departure || !arrival) {
@@ -395,6 +432,49 @@ export function useFlightForm(
       if (errorObj.response?.status === 409 && errorObj.response.data?.existingFlight) {
         setDuplicateFlight(errorObj.response.data.existingFlight);
         setLoading(false);
+        return;
+      }
+      const details = errorObj.response?.data?.details;
+      const msg = details?.length
+        ? details.map((d) => d.message).join("; ")
+        : (errorObj.response?.data?.error ?? t("errors:saveFailed"));
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Save the current flight, then immediately prepare the form for a return
+   * leg. Passes hasMoreFlights=true so the parent keeps the modal open.
+   */
+  const handleSubmitAndReturn = async (e: React.FormEvent): Promise<void> => {
+    e.preventDefault();
+    if (!departure || !arrival) {
+      setError(t("errors:missingAirports"));
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      storeHistoricalData();
+      setTimeEstimationWarning(null);
+      await onSubmit(buildFlightPayload(), false, true);
+      prepareReturnFlightForm();
+      useToastStore.getState().addToast("info", t("flights:form.returnFlightHint"));
+    } catch (err: unknown) {
+      const errorObj = err as {
+        response?: {
+          status?: number;
+          data?: {
+            error?: string;
+            details?: { field: string; message: string }[];
+            existingFlight?: DuplicateFlight;
+          };
+        };
+      };
+      if (errorObj.response?.status === 409 && errorObj.response.data?.existingFlight) {
+        setDuplicateFlight(errorObj.response.data.existingFlight);
         return;
       }
       const details = errorObj.response?.data?.details;
@@ -583,6 +663,7 @@ export function useFlightForm(
     handleSelectFlight,
     handleBoardingPassScan,
     handleSubmit,
+    handleSubmitAndReturn,
     handleForceSubmit,
     handleFlightReviewConfirm,
   };

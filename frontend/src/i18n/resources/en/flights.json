@@ -43,6 +43,8 @@
     "companions": "Travel companions",
     "companionsHint": "Add names, press Enter",
     "submit": "Save Flight",
+    "submitAndReturn": "Save + add return flight",
+    "returnFlightHint": "Outbound saved — please fill in date and times for the return flight",
     "saving": "Saving...",
     "cancel": "Cancel",
     "scanBoardingPass": "Scan Boarding Pass",

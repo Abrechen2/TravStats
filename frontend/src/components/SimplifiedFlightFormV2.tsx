@@ -179,18 +179,35 @@ export default function SimplifiedFlightFormV2({
               {t("flights:form.cancel")}
             </button>
             {form.step === "complete" && (
-              <button
-                type="submit"
-                className={`btn-primary ${!form.canSubmit ? "opacity-50 cursor-not-allowed" : ""}`}
-                disabled={form.loading || !form.canSubmit}
-                title={
-                  !form.canSubmit
-                    ? t("flights:form.validation.selectAirportsAndDates")
-                    : t("flights:form.submit")
-                }
-              >
-                {form.loading ? t("flights:form.saving") : t("flights:form.submit")}
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    void form.handleSubmitAndReturn(e);
+                  }}
+                  className={`btn-secondary ${!form.canSubmit ? "opacity-50 cursor-not-allowed" : ""}`}
+                  disabled={form.loading || !form.canSubmit}
+                  title={
+                    !form.canSubmit
+                      ? t("flights:form.validation.selectAirportsAndDates")
+                      : t("flights:form.submitAndReturn")
+                  }
+                >
+                  {t("flights:form.submitAndReturn")}
+                </button>
+                <button
+                  type="submit"
+                  className={`btn-primary ${!form.canSubmit ? "opacity-50 cursor-not-allowed" : ""}`}
+                  disabled={form.loading || !form.canSubmit}
+                  title={
+                    !form.canSubmit
+                      ? t("flights:form.validation.selectAirportsAndDates")
+                      : t("flights:form.submit")
+                  }
+                >
+                  {form.loading ? t("flights:form.saving") : t("flights:form.submit")}
+                </button>
+              </>
             )}
           </div>
         </form>

@@ -43,6 +43,8 @@
     "companions": "Reisebegleiter",
     "companionsHint": "Namen eingeben, Enter drücken",
     "submit": "Flug speichern",
+    "submitAndReturn": "Speichern + Rückflug anlegen",
+    "returnFlightHint": "Hinflug gespeichert — bitte Datum und Zeiten für den Rückflug ergänzen",
     "saving": "Speichert...",
     "cancel": "Abbrechen",
     "scanBoardingPass": "Boarding Pass scannen",
