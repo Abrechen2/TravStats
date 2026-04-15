@@ -35,6 +35,7 @@ export default function FlightsTablePage(): JSX.Element {
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [flightToDelete, setFlightToDelete] = useState<string | null>(null);
+  const [duplicateMenuFor, setDuplicateMenuFor] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<"departureTime" | "airline" | "status" | "duration">(
     "departureTime"
   );
@@ -107,6 +108,64 @@ export default function FlightsTablePage(): JSX.Element {
       addToast("error", t("dashboard:errors.deleteFlight"));
       setDeleteConfirmOpen(false);
       setFlightToDelete(null);
+    }
+  };
+
+  // Close duplicate menu when clicking outside
+  useEffect(() => {
+    if (!duplicateMenuFor) return;
+    const onClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest("[data-duplicate-menu]")) {
+        setDuplicateMenuFor(null);
+      }
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [duplicateMenuFor]);
+
+  const handleDuplicate = async (flight: Flight, mode: "return" | "same") => {
+    setDuplicateMenuFor(null);
+
+    const depAirport = {
+      iata: flight.depIata,
+      icao: flight.depIcao,
+      name: flight.depName,
+      lat: flight.depLat,
+      lon: flight.depLon,
+    };
+    const arrAirport = {
+      iata: flight.arrIata,
+      icao: flight.arrIcao,
+      name: flight.arrName,
+      lat: flight.arrLat,
+      lon: flight.arrLon,
+    };
+
+    const input: FlightInput = {
+      airline: flight.airline,
+      operatingAirline: flight.operatingAirline,
+      flightNumber: flight.flightNumber,
+      aircraft: flight.aircraft,
+      departure: mode === "return" ? arrAirport : depAirport,
+      arrival: mode === "return" ? depAirport : arrAirport,
+      status: "scheduled",
+      // Deliberately cleared: times, seat/gate/terminal, booking & pricing —
+      // these belong to a specific trip instance, not the route template.
+      category: flight.category,
+      tags: flight.tags,
+      companions: flight.companions,
+      notes: flight.notes,
+    };
+
+    try {
+      const created = await flightsApi.create(input, true);
+      addToast("success", t("flights:table.toast.duplicated"));
+      await loadFlights();
+      setEditingFlight(created);
+    } catch (error) {
+      logger.error("Failed to duplicate flight:", error);
+      addToast("error", t("flights:table.toast.duplicateFailed"));
     }
   };
 
@@ -586,6 +645,48 @@ export default function FlightsTablePage(): JSX.Element {
                                   >
                                     {t("common:buttons.edit")}
                                   </button>
+                                  <div className="relative" data-duplicate-menu>
+                                    <button
+                                      onClick={() =>
+                                        setDuplicateMenuFor(
+                                          duplicateMenuFor === flight.id ? null : flight.id
+                                        )
+                                      }
+                                      className="px-3 py-1 text-xs font-medium rounded"
+                                      style={{
+                                        background: "rgba(139,148,158,0.15)",
+                                        color: "var(--text-muted)",
+                                      }}
+                                      aria-label={t("flights:table.duplicate.label")}
+                                      title={t("flights:table.duplicate.label")}
+                                    >
+                                      {t("flights:table.duplicate.label")}
+                                    </button>
+                                    {duplicateMenuFor === flight.id && (
+                                      <div
+                                        className="absolute right-0 mt-1 rounded shadow-lg z-20 min-w-[180px]"
+                                        style={{
+                                          background: "var(--bg-surface)",
+                                          border: "1px solid var(--color-border)",
+                                        }}
+                                      >
+                                        <button
+                                          onClick={() => void handleDuplicate(flight, "same")}
+                                          className="block w-full text-left px-3 py-2 text-xs hover:bg-[var(--bg-elevated)]"
+                                          style={{ color: "var(--text-primary)" }}
+                                        >
+                                          {t("flights:table.duplicate.same")}
+                                        </button>
+                                        <button
+                                          onClick={() => void handleDuplicate(flight, "return")}
+                                          className="block w-full text-left px-3 py-2 text-xs hover:bg-[var(--bg-elevated)]"
+                                          style={{ color: "var(--text-primary)" }}
+                                        >
+                                          {t("flights:table.duplicate.return")}
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
                                   <button
                                     onClick={() => handleDeleteClick(flight.id)}
                                     className="px-3 py-1 text-xs font-medium rounded"

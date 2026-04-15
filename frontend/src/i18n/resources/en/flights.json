@@ -185,7 +185,14 @@
     },
     "toast": {
       "deleted": "Flight deleted",
-      "updated": "Flight updated"
+      "updated": "Flight updated",
+      "duplicated": "Flight duplicated — please fill in date and time",
+      "duplicateFailed": "Duplicate failed"
+    },
+    "duplicate": {
+      "label": "Duplicate",
+      "same": "As same flight",
+      "return": "As return flight"
     },
     "sort": {
       "departure": "Departure",

@@ -185,7 +185,14 @@
     },
     "toast": {
       "deleted": "Flug gelöscht",
-      "updated": "Flug aktualisiert"
+      "updated": "Flug aktualisiert",
+      "duplicated": "Flug dupliziert — bitte Datum und Zeit ergänzen",
+      "duplicateFailed": "Duplizieren fehlgeschlagen"
+    },
+    "duplicate": {
+      "label": "Duplizieren",
+      "same": "Als gleichen Flug",
+      "return": "Als Rückflug"
     },
     "sort": {
       "departure": "Abflug",
