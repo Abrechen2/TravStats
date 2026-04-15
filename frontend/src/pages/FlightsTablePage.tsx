@@ -142,20 +142,26 @@ export default function FlightsTablePage(): JSX.Element {
       lon: flight.arrLon,
     };
 
+    // Convert nulls to undefined — Zod .optional() rejects null on the
+    // backend, see project memory note about Zod nullable+optional.
+    const nullToUndef = <T,>(v: T | null | undefined): T | undefined => v ?? undefined;
+
     const input: FlightInput = {
       airline: flight.airline,
-      operatingAirline: flight.operatingAirline,
+      operatingAirline: nullToUndef(flight.operatingAirline),
       flightNumber: flight.flightNumber,
-      aircraft: flight.aircraft,
+      aircraft: nullToUndef(flight.aircraft),
       departure: mode === "return" ? arrAirport : depAirport,
       arrival: mode === "return" ? depAirport : arrAirport,
-      status: "scheduled",
-      // Deliberately cleared: times, seat/gate/terminal, booking & pricing —
-      // these belong to a specific trip instance, not the route template.
-      category: flight.category,
-      tags: flight.tags,
-      companions: flight.companions,
-      notes: flight.notes,
+      // "duplicated" is a status without time requirements (5-status set
+      // historical/scheduled/flown/cancelled/duplicated). User changes it to
+      // scheduled in the edit modal once they pick real dates. Times are
+      // deliberately not copied — they belong to a specific trip instance.
+      status: "duplicated",
+      category: nullToUndef(flight.category),
+      tags: flight.tags ?? undefined,
+      companions: flight.companions ?? undefined,
+      notes: nullToUndef(flight.notes),
     };
 
     try {

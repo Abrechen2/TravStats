@@ -20,6 +20,11 @@ export default function DiagnosticExportModal({
   const [bundle, setBundle] = useState<DiagnosticBundle | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Only re-fetch when the modal opens. addToast and t are intentionally
+  // omitted from deps — they are unstable across renders and would cause the
+  // bundle to be re-fetched on every parent re-render, instantly tripping the
+  // 10/hour rate limit. Same issue pattern as the settings-page auto-save.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
@@ -42,7 +47,7 @@ export default function DiagnosticExportModal({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, addToast, t]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
