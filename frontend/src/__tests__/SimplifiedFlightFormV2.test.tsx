@@ -64,7 +64,9 @@ describe("SimplifiedFlightFormV2", () => {
     fireEvent.click(skipButton);
 
     await waitFor(() => {
-      const submitButton = screen.getByRole("button", { name: /flights:form\.submit/i });
+      // Anchor on $ to match flights:form.submit and exclude submitAndReturn,
+      // which was added when "Save + add return flight" got its own button.
+      const submitButton = screen.getByRole("button", { name: /flights:form\.submit$/i });
       expect(submitButton).toBeDisabled();
     });
   });
@@ -76,7 +78,9 @@ describe("SimplifiedFlightFormV2", () => {
     fireEvent.click(skipButton);
 
     await waitFor(() => {
-      const submitButton = screen.getByRole("button", { name: /flights:form\.submit/i });
+      // Anchor on $ to match flights:form.submit and exclude submitAndReturn,
+      // which was added when "Save + add return flight" got its own button.
+      const submitButton = screen.getByRole("button", { name: /flights:form\.submit$/i });
       expect(submitButton).toBeInTheDocument();
       // Button should be disabled when airports are missing
       expect(submitButton).toBeDisabled();

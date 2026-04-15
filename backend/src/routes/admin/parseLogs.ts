@@ -4,7 +4,6 @@ import { AuthRequest } from '../../middleware/auth';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../../db';
 import { adminExportLimiter } from '../../middleware/rateLimit';
-import { getParserFeedbackStats } from '../../services/parserFeedback';
 
 interface AirlineStat {
   airline: string;
@@ -20,21 +19,6 @@ interface ParseLogStatsResponse {
   byAirline: AirlineStat[];
 }
 
-interface FeedbackPayload {
-  provider?: string;
-  sourceType?: string;
-  [key: string]: unknown;
-}
-
-const daysQuerySchema = z.object({
-  days: z.coerce.number().int().min(1).max(365).default(30),
-});
-
-const feedbackDetailsQuerySchema = z.object({
-  days: z.coerce.number().int().min(1).max(365).default(30),
-  limit: z.coerce.number().int().min(1).max(500).default(50),
-  offset: z.coerce.number().int().min(0).default(0),
-});
 
 const router = Router();
 
@@ -116,133 +100,6 @@ router.get('/parse-logs/export', adminExportLimiter, async (_req: AuthRequest, r
       res.write(JSON.stringify(log) + '\n');
     }
     res.end();
-  } catch (error) {
-    next(error);
-  }
-});
-
-// POST /api/v1/admin/parse-logs/promote
-// Promotes analytics_events parser_feedback corrections → TrainingData ground-truth labels
-router.post('/parse-logs/promote', async (_req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    interface FeedbackPayload {
-      sourceType?: string;
-      correctedResult?: unknown[];
-      originalData?: Record<string, unknown>;
-    }
-
-    function isFeedbackPayload(val: unknown): val is FeedbackPayload {
-      return typeof val === 'object' && val !== null && 'sourceType' in val;
-    }
-
-    const events = await prisma.analyticsEvent.findMany({
-      where: { type: 'parser_feedback' },
-      select: { id: true, userId: true, payload: true },
-      take: 500,
-      orderBy: { createdAt: 'asc' },
-    });
-
-    // Pre-load existing promoted originalFile keys to avoid duplicates
-    const existingOriginalFiles = new Set(
-      (await prisma.trainingData.findMany({
-        where: { originalFile: { startsWith: 'promoted:' } },
-        select: { originalFile: true },
-        take: 5000,
-      })).map(r => r.originalFile)
-    );
-
-    let promoted = 0;
-
-    for (const event of events) {
-      if (!isFeedbackPayload(event.payload)) continue;
-      if (!event.payload.correctedResult || event.payload.correctedResult.length === 0) continue;
-
-      const originalFile = `promoted:${event.id}`;
-      if (existingOriginalFiles.has(originalFile)) continue; // already promoted
-
-      const sourceType = event.payload.sourceType === 'email' ? 'email' : 'boarding_pass';
-      const annotations = event.payload.originalData ?? {};
-
-      await prisma.trainingData.create({
-        data: {
-          userId: event.userId,
-          type: sourceType,
-          originalFile,
-          annotations: annotations as unknown as Prisma.InputJsonValue,
-          extractedData: event.payload.correctedResult as unknown as Prisma.InputJsonValue,
-          status: 'pending',
-          tags: ['auto-promoted'],
-        },
-      });
-      promoted++;
-    }
-
-    res.json({ promoted, message: `${promoted} correction(s) promoted to TrainingData` });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Get parser feedback statistics
-router.get('/parser-feedback/stats', async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const provider = req.query.provider as string | undefined;
-    const sourceType = req.query.sourceType as 'email' | 'boardingpass' | undefined;
-    const { days } = daysQuerySchema.parse(req.query);
-
-    const stats = await getParserFeedbackStats(provider, sourceType, days);
-    res.json(stats);
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Get detailed feedback entries
-router.get('/parser-feedback/details', async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const provider = req.query.provider as string | undefined;
-    const sourceType = req.query.sourceType as 'email' | 'boardingpass' | undefined;
-    const { days, limit, offset } = feedbackDetailsQuerySchema.parse(req.query);
-
-    const since = new Date();
-    since.setDate(since.getDate() - days);
-
-    const where: Prisma.AnalyticsEventWhereInput = {
-      type: 'parser_feedback',
-      createdAt: {
-        gte: since,
-      },
-    };
-
-    const events = await prisma.analyticsEvent.findMany({
-      where,
-      orderBy: {
-        createdAt: 'desc',
-      },
-      take: limit,
-      skip: offset,
-      select: {
-        id: true,
-        userId: true,
-        createdAt: true,
-        payload: true,
-      },
-    });
-
-    // Filter by provider and sourceType if provided
-    const filtered = events.filter((event) => {
-      const payload = event.payload as FeedbackPayload;
-      if (provider && payload.provider !== provider) return false;
-      if (sourceType && payload.sourceType !== sourceType) return false;
-      return true;
-    });
-
-    const total = await prisma.analyticsEvent.count({ where });
-
-    res.json({
-      feedback: filtered,
-      total,
-    });
   } catch (error) {
     next(error);
   }

@@ -4,7 +4,6 @@ import logger, { parserFactoryLogger, parserTextLogger } from '../../utils/logge
 import { shouldLogParserOperations } from '../loggingConfig';
 import { extractFlightDataFromText, cleanEmailBody } from './shared/utils';
 import { getAirlineName } from '../flightLookup';
-import { collectLowQualityFeedback } from '../parserFeedback';
 import { checkProviderAvailability, deleteAvailabilityCacheEntry } from './config';
 import { getTextParserInstance } from './providers';
 import { calculateParserQuality } from './boardingPass';
@@ -245,17 +244,6 @@ export async function parseEmail(
           },
           `[Parser Factory] Email parse complete with: ${finalProvider}${finalFallbackUsed ? ' (fallback)' : ''}`
         );
-      }
-
-      // Collect feedback for low-quality results (async, don't await)
-      if (finalQuality < 50) {
-        collectLowQualityFeedback(
-          undefined,
-          'email',
-          finalProvider,
-          finalFlights,
-          { subject, text, html }
-        ).catch(err => logger.warn({ error: err }, '[Parser Factory] Failed to collect feedback'));
       }
 
       return {

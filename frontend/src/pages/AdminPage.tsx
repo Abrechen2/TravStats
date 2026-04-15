@@ -15,7 +15,6 @@ import GlobalApiKeysManager from "../components/Admin/GlobalApiKeysManager";
 import ParserSettingsTab from "../components/Admin/ParserSettings";
 import LoggingManager from "../components/Admin/LoggingManager";
 import SmtpManager from "../components/Admin/SmtpManager";
-import FeedbackAnalytics from "../components/Admin/FeedbackAnalytics";
 import { useTranslation } from "../hooks/useTranslation";
 import { copyToClipboard } from "../lib/clipboard";
 
@@ -24,7 +23,6 @@ import type { Invitation } from "../components/Admin/InvitationManagement";
 import type { GlobalApiKeys, ParserApiKeySettings } from "../components/Admin/GlobalApiKeysManager";
 import type { ParserSettingsData } from "../components/Admin/ParserSettings";
 import type { LoggingConfig, LogFile, LogStats } from "../components/Admin/LoggingManager";
-import type { FeedbackStats, FeedbackDetails } from "../components/Admin/FeedbackAnalytics";
 
 // ==================== Helpers ====================
 
@@ -46,7 +44,6 @@ type ActiveSection =
   | "system"
   | "parsers"
   | "logging"
-  | "feedback"
   | "backups"
   | "apiKeys"
   | "smtp";
@@ -65,8 +62,6 @@ export default function AdminPage(): JSX.Element {
   const [loggingConfig, setLoggingConfig] = useState<LoggingConfig | null>(null);
   const [logFiles, setLogFiles] = useState<LogFile[]>([]);
   const [logStats, setLogStats] = useState<LogStats | null>(null);
-  const [feedbackStats, setFeedbackStats] = useState<FeedbackStats | null>(null);
-  const [feedbackDetails, setFeedbackDetails] = useState<FeedbackDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState<ActiveSection>("system");
   const [inviteLinkModalOpen, setInviteLinkModalOpen] = useState(false);
@@ -83,8 +78,6 @@ export default function AdminPage(): JSX.Element {
   >("active");
   const [savingParsers, setSavingParsers] = useState(false);
   const [savingLogging, setSavingLogging] = useState(false);
-  const [feedbackDays, setFeedbackDays] = useState(30);
-  const [selectedFeedbackId, setSelectedFeedbackId] = useState<string | null>(null);
   const [globalApiKeys, setGlobalApiKeys] = useState<GlobalApiKeys | null>(null);
   const [savingGlobalApiKeys, setSavingGlobalApiKeys] = useState(false);
   const [ollamaTestState, setOllamaTestState] = useState<{
@@ -101,8 +94,6 @@ export default function AdminPage(): JSX.Element {
   useEffect(() => {
     if (activeSection === "logging") {
       loadLoggingData();
-    } else if (activeSection === "feedback") {
-      loadFeedbackData();
     } else if (activeSection === "apiKeys") {
       if (!globalApiKeys) {
         loadGlobalApiKeys();
@@ -111,7 +102,7 @@ export default function AdminPage(): JSX.Element {
         loadData();
       }
     }
-  }, [activeSection, feedbackDays]);
+  }, [activeSection]);
 
   const loadData = async (): Promise<void> => {
     setLoading(true);
@@ -154,19 +145,6 @@ export default function AdminPage(): JSX.Element {
       setLogStats(statsData);
     } catch (error) {
       logger.error("Failed to load logging data:", error);
-    }
-  };
-
-  const loadFeedbackData = async (): Promise<void> => {
-    try {
-      const [stats, details] = await Promise.all([
-        adminApi.getParserFeedbackStats({ days: feedbackDays }),
-        adminApi.getParserFeedbackDetails({ days: feedbackDays, limit: 100 }),
-      ]);
-      setFeedbackStats(stats);
-      setFeedbackDetails(details);
-    } catch (error) {
-      logger.error("Failed to load feedback data:", error);
     }
   };
 
@@ -467,11 +445,6 @@ export default function AdminPage(): JSX.Element {
     { id: "apiKeys", label: t("admin:tabs.apiKeys") },
     { id: "parsers", label: t("admin:tabs.parsers") },
     { id: "logging", label: t("admin:tabs.logging") },
-    {
-      id: "feedback",
-      label: t("admin:parserFeedback"),
-      badge: feedbackStats && feedbackStats.total > 0 ? feedbackStats.total : undefined,
-    },
     { id: "backups", label: t("admin:tabs.backups") },
     { id: "smtp", label: t("admin:tabs.smtp") },
   ];
@@ -638,17 +611,6 @@ export default function AdminPage(): JSX.Element {
               onDelete={handleDeleteLogFile}
               onCleanup={handleCleanupLogs}
               onLoggingConfigChange={setLoggingConfig}
-            />
-          )}
-
-          {activeSection === "feedback" && (
-            <FeedbackAnalytics
-              feedbackStats={feedbackStats}
-              feedbackDetails={feedbackDetails}
-              feedbackDays={feedbackDays}
-              selectedFeedbackId={selectedFeedbackId}
-              onSetDays={setFeedbackDays}
-              onSelectFeedback={setSelectedFeedbackId}
             />
           )}
 

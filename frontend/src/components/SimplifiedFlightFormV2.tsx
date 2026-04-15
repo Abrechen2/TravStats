@@ -227,7 +227,6 @@ export default function SimplifiedFlightFormV2({
           source="email"
           flightIndex={form.currentFlightIndex}
           totalFlights={form.parsedFlights.length}
-          parserProvider={form.parserProvider}
           originalData={form.originalEmailData}
         />
       )}

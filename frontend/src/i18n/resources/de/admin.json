@@ -10,20 +10,8 @@
     "parsers": "Parser",
     "training": "Training Config",
     "logging": "Logging",
-    "feedback": "Parser Feedback",
     "backups": "Backups",
     "smtp": "E-Mail / SMTP"
-  },
-  "parserFeedback": "Parser Feedback",
-  "parserFeedbackHelp": {
-    "helpTitle": "Parser Feedback",
-    "helpContent": {
-      "description": "Dieser Tab zeigt Statistiken über das Feedback, das Benutzer beim Korrigieren von Parser-Ergebnissen geben. Diese Daten helfen dabei, die Qualität der Parser zu verbessern.",
-      "statsTitle": "Statistiken:",
-      "stats": "Die Statistiken zeigen die Gesamtzahl der Feedback-Einträge, die durchschnittliche Qualitätsbewertung und die häufigsten Probleme.",
-      "usageTitle": "Verwendung:",
-      "usage": "Verwenden Sie den Zeitraum-Filter, um Feedback aus verschiedenen Zeiträumen anzuzeigen. Die Verteilung nach Provider zeigt, welche Parser am häufigsten korrigiert werden. Die häufigsten Probleme helfen dabei, Verbesserungspotenziale zu identifizieren."
-    }
   },
   "instance": "Instanz",
   "totalUsers": "Gesamt Benutzer",

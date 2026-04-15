@@ -87,13 +87,6 @@ jest.mock("../services/parsers/boardingPass", () => ({
   parseBoardingPass: jest.fn(),
 }));
 
-// ── Parser feedback ───────────────────────────────────────────────────────────
-jest.mock("../services/parserFeedback", () => ({
-  collectLowQualityFeedback: jest.fn().mockResolvedValue(undefined),
-  collectParserFeedback: jest.fn().mockResolvedValue(undefined),
-  collectCorrectionFeedback: jest.fn().mockResolvedValue(undefined),
-}));
-
 // ── Shared utils (extractFlightDataFromText used in post-processing) ──────────
 // Spread the real module so utilities not explicitly mocked (e.g. cleanEmailBody,
 // PATTERNS, getMissingFields) keep their production behaviour.

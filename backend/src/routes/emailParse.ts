@@ -9,7 +9,6 @@ import logger from '../utils/logger';
 import fs from 'fs';
 import path from 'path';
 import { validateEmailFile } from '../utils/fileValidation';
-import { collectLowQualityFeedback } from '../services/parserFeedback';
 
 const router = Router();
 
@@ -54,23 +53,6 @@ router.post('/parse-email', authenticate, emailParseLimiter, async (req: AuthReq
     );
 
     logger.info(`[Email Parse] Parsing complete: ${result.flights.length} flight(s) found using ${result.parserUsed}`);
-
-    // Collect feedback for low-quality results (async, don't await)
-    const qualityScore = result.flights.reduce((sum, f) => {
-      const criticalFields = ['flightNumber', 'departureCode', 'arrivalCode', 'departureTime'];
-      const missingCritical = criticalFields.filter(field => f.missing.includes(field)).length;
-      return sum + (100 - missingCritical * 25);
-    }, 0) / Math.max(1, result.flights.length);
-
-    if (qualityScore < 50 && userId) {
-      collectLowQualityFeedback(
-        userId,
-        'email',
-        result.parserUsed,
-        result.flights,
-        { subject, text: emailContent }
-      ).catch(err => logger.warn({ error: err }, '[Email Parse] Failed to collect feedback'));
-    }
 
     res.json({
       ...result,

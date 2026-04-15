@@ -34,9 +34,6 @@ jest.mock("../services/logManager", () => ({
   searchLogs: jest.fn(),
   getLogFilePathForDownload: jest.fn(),
 }));
-jest.mock("../services/parserFeedback", () => ({
-  getParserFeedbackStats: jest.fn(),
-}));
 jest.mock("../services/apiKeyTester", () => ({
   testOpenAIKey: jest.fn(),
   testClaudeKey: jest.fn(),

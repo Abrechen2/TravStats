@@ -1,13 +1,7 @@
 import type { ParsedBooking } from "../../types";
 
-import { api, parserApi } from "./client";
-import type {
-  BoardingPassParseResult,
-  EmailParseResult,
-  ParserCorrectionPayload,
-  ProviderAvailability,
-  SuccessResponse,
-} from "./types";
+import { parserApi } from "./client";
+import type { BoardingPassParseResult, EmailParseResult, ProviderAvailability } from "./types";
 
 interface ParserCheckResult {
   available: boolean;
@@ -120,11 +114,6 @@ export const parseApi = {
         claude?: ProviderAvailability;
       };
     }>("/parse-boardingpass/availability");
-    return data;
-  },
-
-  submitParserCorrection: async (correction: ParserCorrectionPayload): Promise<SuccessResponse> => {
-    const { data } = await api.post<SuccessResponse>("/parser-feedback/correction", correction);
     return data;
   },
 };

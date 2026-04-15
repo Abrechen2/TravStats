@@ -324,13 +324,16 @@ export default function FlightCompleteStep({
       {/* Date & Time — full inputs for normal flights, year/month for historical */}
       {status === "historical" ? (
         (() => {
-          // Parse the stored YYYY-MM-DD using a relaxed regex so the year input
-          // shows the user's keystrokes while they type. The strict /^(\d{4})/
-          // pattern used previously cleared the input as soon as the user typed
-          // the first digit (because departureDate became "2-01-01" which did
-          // not match), making the field appear unresponsive.
+          // Three valid storage shapes, in order of completeness:
+          //   ""           → nothing entered yet
+          //   "YYYY"       → year known, month unknown ("unbekannt")
+          //   "YYYY-MM-DD" → year + month known
+          // Storing year-only (no "-MM-DD") is what lets the month select
+          // sit at the empty "unbekannt" option; the previous code wrote
+          // "YYYY-01-01" for both "January" and "unknown", so the dropdown
+          // always snapped back to Januar.
           const yearMatch = departureDate.match(/^(\d{1,4})/);
-          const monthMatch = departureDate.match(/^\d{1,4}-(\d{2})/);
+          const monthMatch = departureDate.match(/^\d{4}-(\d{2})/);
           const yearStr = yearMatch?.[1] ?? "";
           const monthPadded = monthMatch?.[1] ?? "";
           const monthValue = monthPadded ? String(parseInt(monthPadded, 10)) : "";
@@ -352,9 +355,11 @@ export default function FlightCompleteStep({
                       setArrivalDate("");
                       return;
                     }
-                    const m = monthPadded || "01";
-                    setDepartureDate(`${y}-${m}-01`);
-                    setArrivalDate(`${y}-${m}-01`);
+                    // If a month was already chosen, preserve it; otherwise
+                    // store year-only so the month select stays "unbekannt".
+                    const next = monthPadded ? `${y}-${monthPadded}-01` : y;
+                    setDepartureDate(next);
+                    setArrivalDate(next);
                   }}
                   className={`input ${sizedInputClass}`}
                 />
@@ -366,13 +371,11 @@ export default function FlightCompleteStep({
                   onChange={(e) => {
                     const m = e.target.value;
                     const y = yearStr || String(new Date().getFullYear());
-                    if (!m) {
-                      setDepartureDate(`${y}-01-01`);
-                      setArrivalDate(`${y}-01-01`);
-                    } else {
-                      setDepartureDate(`${y}-${m.padStart(2, "0")}-01`);
-                      setArrivalDate(`${y}-${m.padStart(2, "0")}-01`);
-                    }
+                    // Picking "unbekannt" must not snap to January — store
+                    // year-only so the dropdown stays empty next render.
+                    const next = m ? `${y}-${m.padStart(2, "0")}-01` : y;
+                    setDepartureDate(next);
+                    setArrivalDate(next);
                   }}
                   className={`input ${sizedInputClass}`}
                 >

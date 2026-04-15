@@ -113,3 +113,4 @@ screenshots/
 # Production logs (never commit)
 ProdLogs/
 .cursor
+/.tmp/

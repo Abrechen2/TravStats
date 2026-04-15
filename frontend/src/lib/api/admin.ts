@@ -5,11 +5,8 @@ import type {
   LogEntry,
   LogSearchResult,
   MessageResponse,
-  ParserCorrectionPayload,
-  ParserFeedbackEntry,
   SmtpConfigInput,
   SmtpConfigResponse,
-  SuccessResponse,
 } from "./types";
 
 export const adminApi = {
@@ -367,62 +364,6 @@ export const adminApi = {
         modified: string;
       }>;
     }>("/admin/logging/files");
-    return data;
-  },
-
-  // Parser Feedback API
-  getParserFeedbackStats: async (params?: {
-    provider?: string;
-    sourceType?: "email" | "boardingpass";
-    days?: number;
-  }): Promise<{
-    total: number;
-    byProvider: Record<string, number>;
-    bySourceType: Record<string, number>;
-    avgQualityScore: number;
-    commonIssues: Array<{ issue: string; count: number }>;
-  }> => {
-    const queryParams = new URLSearchParams();
-    if (params?.provider) queryParams.append("provider", params.provider);
-    if (params?.sourceType) queryParams.append("sourceType", params.sourceType);
-    if (params?.days) queryParams.append("days", params.days.toString());
-
-    const { data } = await api.get<{
-      total: number;
-      byProvider: Record<string, number>;
-      bySourceType: Record<string, number>;
-      avgQualityScore: number;
-      commonIssues: Array<{ issue: string; count: number }>;
-    }>(`/admin/parser-feedback/stats?${queryParams.toString()}`);
-    return data;
-  },
-
-  submitParserCorrection: async (correction: ParserCorrectionPayload): Promise<SuccessResponse> => {
-    const { data } = await api.post<SuccessResponse>("/parser-feedback/correction", correction);
-    return data;
-  },
-
-  getParserFeedbackDetails: async (params?: {
-    provider?: string;
-    sourceType?: "email" | "boardingpass";
-    days?: number;
-    limit?: number;
-    offset?: number;
-  }): Promise<{
-    feedback: ParserFeedbackEntry[];
-    total: number;
-  }> => {
-    const queryParams = new URLSearchParams();
-    if (params?.provider) queryParams.append("provider", params.provider);
-    if (params?.sourceType) queryParams.append("sourceType", params.sourceType);
-    if (params?.days) queryParams.append("days", params.days.toString());
-    if (params?.limit) queryParams.append("limit", params.limit.toString());
-    if (params?.offset) queryParams.append("offset", params.offset.toString());
-
-    const { data } = await api.get<{
-      feedback: ParserFeedbackEntry[];
-      total: number;
-    }>(`/admin/parser-feedback/details?${queryParams.toString()}`);
     return data;
   },
 

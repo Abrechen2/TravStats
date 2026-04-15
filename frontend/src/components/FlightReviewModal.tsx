@@ -1,9 +1,7 @@
 ﻿import { useState, useEffect } from "react";
 import type { FlightInput, ParsedBooking } from "../types";
-import { type Airport, airportsApi, parseApi } from "../lib/api";
-import { useAuthStore } from "../store/authStore";
+import { type Airport, airportsApi } from "../lib/api";
 import { useSettingsStore } from "../store/settingsStore";
-import { logger } from "../lib/logger";
 import { useTranslation } from "../hooks/useTranslation";
 import { filterEmailText } from "../lib/filterEmailText";
 import { getAirlineFromFlightNumber } from "../lib/airlineUtils";
@@ -37,7 +35,6 @@ interface FlightReviewModalProps {
   source: "email" | "boardingpass";
   flightIndex?: number;
   totalFlights?: number;
-  parserProvider?: string;
   originalData?: {
     subject?: string;
     text?: string;
@@ -50,14 +47,12 @@ export default function FlightReviewModal({
   onClose,
   onConfirm,
   initialData,
-  source,
+  source: _source,
   flightIndex,
   totalFlights,
-  parserProvider = "unknown",
   originalData,
 }: FlightReviewModalProps): JSX.Element | null {
   const { t } = useTranslation(["flights", "common", "errors"]);
-  const { user } = useAuthStore();
   const { features } = useSettingsStore();
   const { airlines: airlineSuggestions, aircraft: aircraftSuggestions } = useSuggestions();
   // Form state
@@ -286,15 +281,6 @@ export default function FlightReviewModal({
         status: new Date(departureTime) < new Date() ? "flown" : "scheduled",
       };
 
-      // Check if data was corrected and collect feedback
-      const hasCorrections = checkForCorrections(initialData, flightInput);
-      if (hasCorrections && user) {
-        // Collect feedback asynchronously (don't await to avoid blocking)
-        collectFeedback(initialData, flightInput).catch((err: unknown) => {
-          logger.warn("Failed to collect feedback:", err);
-        });
-      }
-
       await onConfirm(flightInput);
       // onConfirm handles closing the modal or moving to next flight
     } catch (err: unknown) {
@@ -302,71 +288,6 @@ export default function FlightReviewModal({
       setError(error.response?.data?.error || error.message || t("errors:saveFailed"));
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Check if user made corrections to parsed data
-  const checkForCorrections = (original: ParsedBooking, corrected: FlightInput): boolean => {
-    // Check critical fields
-    if (original.flightNumber !== corrected.flightNumber) return true;
-    if (original.departureCode !== corrected.departure?.iata) return true;
-    if (original.arrivalCode !== corrected.arrival?.iata) return true;
-    if (original.departureTime && corrected.departureTime) {
-      const origTime = new Date(original.departureTime).getTime();
-      const corrTime = new Date(corrected.departureTime).getTime();
-      if (Math.abs(origTime - corrTime) > 60000) return true;
-    }
-    if (original.pnr !== corrected.bookingReference) return true;
-    if (original.seat !== corrected.seatNumber) return true;
-    return false;
-  };
-
-  // Collect feedback for corrections
-  const collectFeedback = async (
-    original: ParsedBooking,
-    corrected: FlightInput
-  ): Promise<void> => {
-    try {
-      const originalResult = [
-        {
-          flightNumber: original.flightNumber,
-          departureCode: original.departureCode,
-          arrivalCode: original.arrivalCode,
-          departureTime: original.departureTime,
-          arrivalTime: original.arrivalTime,
-          pnr: original.pnr,
-          seat: original.seat,
-          gate: original.gate,
-          terminal: original.terminal,
-          airline: original.airline,
-        },
-      ];
-
-      const correctedResult = [
-        {
-          flightNumber: corrected.flightNumber,
-          departureCode: corrected.departure?.iata,
-          arrivalCode: corrected.arrival?.iata,
-          departureTime: corrected.departureTime,
-          arrivalTime: corrected.arrivalTime,
-          pnr: corrected.bookingReference,
-          seat: corrected.seatNumber,
-          gate: corrected.gate,
-          terminal: corrected.terminal,
-          airline: corrected.airline,
-        },
-      ];
-
-      await parseApi.submitParserCorrection({
-        sourceType: source,
-        provider: parserProvider,
-        originalResult,
-        correctedResult,
-        originalData,
-      });
-    } catch (error: unknown) {
-      // Silently fail - feedback collection should not break the flow
-      logger.warn("Failed to submit parser correction feedback:", error);
     }
   };
 

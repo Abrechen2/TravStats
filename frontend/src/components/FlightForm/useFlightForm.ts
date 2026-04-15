@@ -329,15 +329,21 @@ export function useFlightForm(
     seatNumber: seatNumber || undefined,
     terminal: terminal || undefined,
     gate: gate || undefined,
+    // Historical entries can be year-only ("YYYY") for the
+    // month-unknown case — expand to YYYY-01-01 before serialising.
     departureTime: !departureDate
       ? undefined
       : status === "historical"
-        ? new Date(`${departureDate}T00:00:00`).toISOString()
+        ? new Date(
+            `${departureDate.length === 4 ? `${departureDate}-01-01` : departureDate}T00:00:00`
+          ).toISOString()
         : new Date(`${departureDate}T${departureTime}:00`).toISOString(),
     arrivalTime: !arrivalDate
       ? undefined
       : status === "historical"
-        ? new Date(`${arrivalDate}T00:00:00`).toISOString()
+        ? new Date(
+            `${arrivalDate.length === 4 ? `${arrivalDate}-01-01` : arrivalDate}T00:00:00`
+          ).toISOString()
         : new Date(`${arrivalDate}T${arrivalTime}:00`).toISOString(),
     status,
     notes: notes || undefined,
