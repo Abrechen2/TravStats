@@ -562,7 +562,24 @@ export default function AdvancedStatsPage(): JSX.Element {
             onCompareEnabledChange={setCompareEnabled}
           />
 
-          {/* Overview Stats (all-time) */}
+          {/* Overview Stats (all-time) — clearly separated from year-scoped */}
+          <div
+            className="flex items-baseline gap-3 mb-3 mt-2"
+            style={{
+              borderBottom: "1px solid var(--color-border)",
+              paddingBottom: "8px",
+            }}
+          >
+            <span
+              className="text-xs uppercase tracking-widest font-semibold"
+              style={{ color: "var(--text-muted)" }}
+            >
+              {t("stats:overview.scopeLabel")}
+            </span>
+            <span className="text-xs" style={{ color: "var(--text-muted)" }}>
+              {t("stats:overview.scopeHint")}
+            </span>
+          </div>
           <StatsOverviewCards
             totalFlights={flights.length}
             totalFlightTime={totalFlightTime}

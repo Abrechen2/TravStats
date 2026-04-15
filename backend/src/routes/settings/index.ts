@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import { authenticate } from '../../middleware/auth';
-import { settingsLimiter } from '../../middleware/rateLimit';
 import generalRouter from './general';
 import parserRouter from './parser';
 import apiKeysRouter from './apiKeys';
@@ -11,9 +10,13 @@ import homeAirportsRouter from './homeAirports';
 
 const router = Router();
 
-// All routes require authentication and are rate-limited
+// All routes require authentication. Intentionally no rate-limit middleware:
+// /settings is a per-user authenticated surface that the UI legitimately
+// hammers (multiple sub-section loads on mount, 30-second backup-info poll,
+// auto-save effects). Real rate-limiting belongs on auth endpoints (brute
+// force), external-API-backed routes (cost) and admin exports (DB-wide
+// reads), not on a user reading their own preferences.
 router.use(authenticate);
-router.use(settingsLimiter);
 
 // Mount sub-routers
 router.use('/', generalRouter);

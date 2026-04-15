@@ -17,14 +17,17 @@
     "avgFlightDuration": "Average Flight Duration",
     "hours": "hrs",
     "totalCost": "Total Cost",
-    "airlines": "Airlines"
+    "airlines": "Airlines",
+    "scopeLabel": "── All-time totals ──",
+    "scopeHint": "independent of the year filter above"
   },
   "noStatsAvailable": "No statistics available",
   "yearFilter": {
     "allTime": "All time",
     "selectYear": "Filter by year",
     "compareWith": "Compare with",
-    "vs": "vs {{year}}"
+    "vs": "vs {{year}}",
+    "scopeLabel": "── Year {{year}} ──"
   },
   "byStatus": {
     "title": "By Status"

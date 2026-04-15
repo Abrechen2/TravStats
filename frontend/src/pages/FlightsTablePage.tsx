@@ -147,9 +147,9 @@ export default function FlightsTablePage(): JSX.Element {
     const nullToUndef = <T,>(v: T | null | undefined): T | undefined => v ?? undefined;
 
     const input: FlightInput = {
-      airline: flight.airline,
+      airline: nullToUndef(flight.airline),
       operatingAirline: nullToUndef(flight.operatingAirline),
-      flightNumber: flight.flightNumber,
+      flightNumber: nullToUndef(flight.flightNumber),
       aircraft: nullToUndef(flight.aircraft),
       departure: mode === "return" ? arrAirport : depAirport,
       arrival: mode === "return" ? depAirport : arrAirport,

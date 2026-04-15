@@ -39,20 +39,13 @@ const FONT_HREF =
   "family=Big+Shoulders+Display:wght@600;800;900&" +
   "family=JetBrains+Mono:wght@400;500;700&display=swap";
 
-// Subtle grain overlay (SVG noise → data URI) — gives the parchment its
-// hand-feel without bringing in an image dependency.
-const PAPER_GRAIN_DATA_URI = `url("data:image/svg+xml;utf8,${encodeURIComponent(
-  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'>
-    <filter id='n'>
-      <feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='4'/>
-      <feColorMatrix values='0 0 0 0 0.11
-                              0 0 0 0 0.16
-                              0 0 0 0 0.24
-                              0 0 0 0.07 0'/>
-    </filter>
-    <rect width='100%' height='100%' filter='url(%23n)'/>
-  </svg>`
-)}")`;
+// Subtle paper warmth — radial gradients instead of an SVG noise filter.
+// html2canvas does not render SVG `feTurbulence` filters consistently and
+// produced solid black vertical bands in the exported PNG. Layered radial
+// gradients give the parchment depth without the rasteriser hazard.
+const PAPER_GRAIN_DATA_URI =
+  "radial-gradient(ellipse at 25% 15%, rgba(255,243,210,0.65) 0%, transparent 55%), " +
+  "radial-gradient(ellipse at 80% 90%, rgba(170,130,80,0.08) 0%, transparent 60%)";
 
 // ─── Component ─────────────────────────────────────────────────────────────
 export function FlightCertificate({
@@ -743,9 +736,6 @@ function Postmark({ date, flights }: PostmarkProps): JSX.Element {
         opacity: 0.78,
         zIndex: 3,
         pointerEvents: "none",
-        // Multiply blend keeps the parchment grain visible through the
-        // ink, so the stamp reads like a real ink mark on paper.
-        mixBlendMode: "multiply",
       }}
     >
       <svg viewBox="0 0 200 200" width="150" height="150">

@@ -189,28 +189,31 @@ export default function NavigationBar(): JSX.Element {
 
             {/* Right: Donate + Star + Username + Logout */}
             <div className="flex items-center gap-2">
+              {/* Bug-Report button — visible on all breakpoints so users can
+                  always reach the diagnostic export. Donate / Star stay
+                  desktop-only because they're brand vanity, not function. */}
+              <button
+                type="button"
+                onClick={() => setDiagnosticModalOpen(true)}
+                className="flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium transition-colors duration-150"
+                style={{ color: "var(--text-muted)", border: "1px solid var(--color-border)" }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = "#f85149";
+                  e.currentTarget.style.color = "#f85149";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = "var(--color-border)";
+                  e.currentTarget.style.color = "var(--text-muted)";
+                }}
+                aria-label={t("common:diagnostic.reportBug")}
+                title={t("common:diagnostic.reportBug")}
+              >
+                <svg width="11" height="11" viewBox="0 0 16 16" fill="#f85149" aria-hidden="true">
+                  <path d="M4 1a1 1 0 0 1 2 0 1 1 0 0 1 1 1H5a1 1 0 0 1-1-1zm8 1a1 1 0 0 0-2 0 1 1 0 0 0-1 1h2a1 1 0 0 0 1-1zM2.5 5a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1h-2v1h3a.5.5 0 0 1 0 1h-3v1.5a3 3 0 1 1-6 0V7.5h-3a.5.5 0 0 1 0-1h3v-1H3a.5.5 0 0 1-.5-.5zM6.5 9.5v.5a1.5 1.5 0 1 0 3 0v-.5h-3z" />
+                </svg>
+                Bug
+              </button>
               <div className="hidden xl:flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setDiagnosticModalOpen(true)}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium transition-colors duration-150"
-                  style={{ color: "var(--text-muted)", border: "1px solid var(--color-border)" }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = "#f85149";
-                    e.currentTarget.style.color = "#f85149";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = "var(--color-border)";
-                    e.currentTarget.style.color = "var(--text-muted)";
-                  }}
-                  aria-label={t("common:diagnostic.reportBug")}
-                  title={t("common:diagnostic.reportBug")}
-                >
-                  <svg width="11" height="11" viewBox="0 0 16 16" fill="#f85149" aria-hidden="true">
-                    <path d="M4 1a1 1 0 0 1 2 0 1 1 0 0 1 1 1H5a1 1 0 0 1-1-1zm8 1a1 1 0 0 0-2 0 1 1 0 0 0-1 1h2a1 1 0 0 0 1-1zM2.5 5a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1h-2v1h3a.5.5 0 0 1 0 1h-3v1.5a3 3 0 1 1-6 0V7.5h-3a.5.5 0 0 1 0-1h3v-1H3a.5.5 0 0 1-.5-.5zM6.5 9.5v.5a1.5 1.5 0 1 0 3 0v-.5h-3z" />
-                  </svg>
-                  Bug
-                </button>
                 <a
                   href="https://www.paypal.com/donate?hosted_button_id=HW9MPYVURCT42"
                   target="_blank"

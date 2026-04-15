@@ -54,8 +54,24 @@ export default function DiagnosticExportModal({
   const bundleText = bundle ? JSON.stringify(bundle, null, 2) : "";
 
   const handleCopy = async (): Promise<void> => {
+    // navigator.clipboard requires a secure context (HTTPS or localhost).
+    // The TravStats prod box currently serves over plain HTTP, so we fall
+    // back to the legacy execCommand approach when the API is missing.
     try {
-      await navigator.clipboard.writeText(bundleText);
+      if (window.isSecureContext && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(bundleText);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = bundleText;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.top = "-9999px";
+        document.body.appendChild(textarea);
+        textarea.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(textarea);
+        if (!ok) throw new Error("execCommand copy returned false");
+      }
       addToast("success", t("common:diagnostic.copied"));
     } catch (err: unknown) {
       logger.error("Clipboard write failed:", err);
