@@ -121,6 +121,86 @@ describe('Admin Routes', () => {
     });
   });
 
+  describe('DELETE /api/admin/users/:id', () => {
+    let victim: { id: string } | null;
+
+    beforeEach(async () => {
+      const ts = Date.now();
+      victim = await prisma.user.create({
+        data: {
+          username: `del-victim-${ts}`,
+          passwordHash: await hashPassword('password'),
+          isAdmin: false,
+          isActive: true,
+        },
+      });
+    });
+
+    afterEach(async () => {
+      if (victim) {
+        await prisma.user.delete({ where: { id: victim.id } }).catch(() => {});
+      }
+    });
+
+    it('allows admin to delete a regular user', async () => {
+      const res = await request(app)
+        .delete(`/api/v1/admin/users/${victim!.id}`)
+        .set('Cookie', [`auth_token=${adminToken}`]);
+
+      expect(res.status).toBe(200);
+      expect(res.body.userId).toBe(victim!.id);
+      const gone = await prisma.user.findUnique({ where: { id: victim!.id } });
+      expect(gone).toBeNull();
+      victim = null; // prevent afterEach double-delete
+    });
+
+    it('blocks admin from deleting own account', async () => {
+      const res = await request(app)
+        .delete(`/api/v1/admin/users/${adminUser.id}`)
+        .set('Cookie', [`auth_token=${adminToken}`]);
+
+      expect(res.status).toBe(400);
+      const stillThere = await prisma.user.findUnique({ where: { id: adminUser.id } });
+      expect(stillThere).not.toBeNull();
+    });
+
+    it('allows one admin to delete another admin as long as one admin remains', async () => {
+      const ts = Date.now();
+      const otherAdmin = await prisma.user.create({
+        data: {
+          username: `other-admin-${ts}`,
+          passwordHash: await hashPassword('password'),
+          isAdmin: true,
+          isActive: true,
+        },
+      });
+
+      const res = await request(app)
+        .delete(`/api/v1/admin/users/${otherAdmin.id}`)
+        .set('Cookie', [`auth_token=${adminToken}`]);
+
+      expect(res.status).toBe(200);
+      const gone = await prisma.user.findUnique({ where: { id: otherAdmin.id } });
+      expect(gone).toBeNull();
+    });
+
+    it('denies non-admin callers', async () => {
+      const res = await request(app)
+        .delete(`/api/v1/admin/users/${victim!.id}`)
+        .set('Cookie', [`auth_token=${userToken}`]);
+
+      expect([401, 403]).toContain(res.status);
+    });
+
+    it('returns 404 for unknown user id', async () => {
+      const res = await request(app)
+        .delete(`/api/v1/admin/users/nonexistent-id-${Date.now()}`)
+        .set('Cookie', [`auth_token=${adminToken}`]);
+
+      expect(res.status).toBe(404);
+    });
+  });
+
   describe('Admin Statistics', () => {
     it('should allow admin to view system stats', async () => {
       const response = await request(app)

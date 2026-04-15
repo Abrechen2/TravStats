@@ -2,7 +2,6 @@ import { Router, Response, NextFunction } from 'express';
 import { AuthRequest } from '../../middleware/auth';
 import { prisma } from '../../db';
 import { adminExportLimiter } from '../../middleware/rateLimit';
-import { getHardwareInfo } from '../../services/hardwareService';
 
 const router = Router();
 
@@ -33,16 +32,6 @@ router.get('/system/info', async (req: AuthRequest, res: Response, next: NextFun
       demoUserActive: demoUser?.isActive || false,
     version: process.env.APP_VERSION || 'unknown',
   });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Get hardware information
-router.get('/system/hardware', async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const hardwareInfo = await getHardwareInfo();
-    res.json(hardwareInfo);
   } catch (error) {
     next(error);
   }

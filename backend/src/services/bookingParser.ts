@@ -111,6 +111,3 @@ export async function parseBookingEmail(
 export async function parseBookingText(text: string, userId?: string): Promise<ParseResult> {
   return parseBookingEmail(undefined, text, undefined, userId ? { userId } : undefined);
 }
-
-// Legacy function kept for backward compatibility (deprecated - remove old code below)
-// All the old regex/LLM parsing code can be removed in a future cleanup

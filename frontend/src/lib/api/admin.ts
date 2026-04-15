@@ -1,4 +1,4 @@
-import { api, hardwareApi } from "./client";
+import { api } from "./client";
 import type {
   ApiKeyTestResponse,
   ExportAllDataResponse,
@@ -33,101 +33,6 @@ export const adminApi = {
       registrationEnabled: boolean;
       version: string;
     }>("/admin/system/info");
-    return data;
-  },
-
-  getHardwareInfo: async (): Promise<{
-    cpu: {
-      cores: number;
-      model: string;
-      architecture: string;
-      error?: string;
-    };
-    gpu: {
-      available: boolean;
-      count?: number;
-      name?: string;
-      memory?: number;
-      cudaVersion?: string;
-      deviceId?: number;
-      error?: string;
-      reason?: string;
-      diagnosis?: string[];
-      pytorchHasCuda?: boolean;
-      gpuDetected?: boolean;
-      gpuNameDetected?: string;
-      gpus?: Array<{
-        id: number;
-        name: string;
-        memory: number;
-      }>;
-    };
-    python: {
-      available: boolean;
-      version?: string;
-      pytorch?: {
-        available: boolean;
-        version?: string;
-      };
-      error?: string;
-    };
-    docker: boolean;
-    platform?: {
-      system: string;
-      release: string;
-      version: string;
-    };
-    trainingAccess: {
-      accessible: boolean;
-      error?: string;
-    };
-  }> => {
-    const { data } = await hardwareApi.get<{
-      cpu: {
-        cores: number;
-        model: string;
-        architecture: string;
-        error?: string;
-      };
-      gpu: {
-        available: boolean;
-        count?: number;
-        name?: string;
-        memory?: number;
-        cudaVersion?: string;
-        deviceId?: number;
-        error?: string;
-        reason?: string;
-        diagnosis?: string[];
-        pytorchHasCuda?: boolean;
-        gpuDetected?: boolean;
-        gpuNameDetected?: string;
-        gpus?: Array<{
-          id: number;
-          name: string;
-          memory: number;
-        }>;
-      };
-      python: {
-        available: boolean;
-        version?: string;
-        pytorch?: {
-          available: boolean;
-          version?: string;
-        };
-        error?: string;
-      };
-      docker: boolean;
-      platform?: {
-        system: string;
-        release: string;
-        version: string;
-      };
-      trainingAccess: {
-        accessible: boolean;
-        error?: string;
-      };
-    }>("/admin/system/hardware");
     return data;
   },
 
@@ -180,6 +85,13 @@ export const adminApi = {
         isActive: boolean;
       };
     }>(`/admin/users/${userId}/toggle-active`);
+    return data;
+  },
+
+  deleteUser: async (userId: string): Promise<{ message: string; userId: string }> => {
+    const { data } = await api.delete<{ message: string; userId: string }>(
+      `/admin/users/${userId}`
+    );
     return data;
   },
 
@@ -339,40 +251,6 @@ export const adminApi = {
     return data;
   },
 
-  getTrainingConfig: async (): Promise<{
-    trainingModelOutputDir: string | null;
-    trainingEmailModelName: string | null;
-    trainingVisionModelName: string | null;
-    currentTrainingModelOutputDir: string;
-    currentTrainingEmailModelName: string;
-    currentTrainingVisionModelName: string;
-    envTrainingModelOutputDir: string;
-    envTrainingEmailModelName: string;
-    envTrainingVisionModelName: string;
-  }> => {
-    const { data } = await api.get<{
-      trainingModelOutputDir: string | null;
-      trainingEmailModelName: string | null;
-      trainingVisionModelName: string | null;
-      currentTrainingModelOutputDir: string;
-      currentTrainingEmailModelName: string;
-      currentTrainingVisionModelName: string;
-      envTrainingModelOutputDir: string;
-      envTrainingEmailModelName: string;
-      envTrainingVisionModelName: string;
-    }>("/admin/training-config");
-    return data;
-  },
-
-  updateTrainingConfig: async (config: {
-    trainingModelOutputDir?: string | null;
-    trainingEmailModelName?: string | null;
-    trainingVisionModelName?: string | null;
-  }): Promise<MessageResponse> => {
-    const { data } = await api.put<MessageResponse>("/admin/training-config", config);
-    return data;
-  },
-
   getGlobalApiKeys: async (): Promise<{
     globalAirlabsApiKey?: string;
     globalAviationstackApiKey?: string;
@@ -521,99 +399,6 @@ export const adminApi = {
 
   submitParserCorrection: async (correction: ParserCorrectionPayload): Promise<SuccessResponse> => {
     const { data } = await api.post<SuccessResponse>("/parser-feedback/correction", correction);
-    return data;
-  },
-
-  getParserPatterns: async (params?: {
-    days?: number;
-  }): Promise<{
-    suggestions: Array<{
-      pattern: string;
-      field: string;
-      confidence: number;
-      examples: string[];
-      issue: string;
-    }>;
-    summary: {
-      totalIssues: number;
-      suggestions: number;
-      topIssues: Array<{ issue: string; count: number }>;
-    };
-    pendingSuggestions: Array<{
-      pattern: string;
-      field: string;
-      confidence: number;
-      examples: string[];
-      issue: string;
-    }>;
-    stats: {
-      total: number;
-      applied: number;
-      pending: number;
-      avgConfidence: number;
-      byField: Record<string, number>;
-    };
-  }> => {
-    const queryParams = new URLSearchParams();
-    if (params?.days) queryParams.append("days", params.days.toString());
-
-    const { data } = await api.get<{
-      suggestions: Array<{
-        pattern: string;
-        field: string;
-        confidence: number;
-        examples: string[];
-        issue: string;
-      }>;
-      summary: {
-        totalIssues: number;
-        suggestions: number;
-        topIssues: Array<{ issue: string; count: number }>;
-      };
-      pendingSuggestions: Array<{
-        pattern: string;
-        field: string;
-        confidence: number;
-        examples: string[];
-        issue: string;
-      }>;
-      stats: {
-        total: number;
-        applied: number;
-        pending: number;
-        avgConfidence: number;
-        byField: Record<string, number>;
-      };
-    }>(`/admin/parser-feedback/patterns?${queryParams.toString()}`);
-    return data;
-  },
-
-  applyPatternSuggestion: async (
-    patternId: string,
-    autoApply?: boolean
-  ): Promise<{
-    success: boolean;
-    message: string;
-  }> => {
-    const { data } = await api.post<{
-      success: boolean;
-      message: string;
-    }>(`/admin/parser-feedback/patterns/${patternId}/apply`, { autoApply });
-    return data;
-  },
-
-  autoApplyPatterns: async (
-    threshold?: number
-  ): Promise<{
-    success: boolean;
-    appliedCount: number;
-    message: string;
-  }> => {
-    const { data } = await api.post<{
-      success: boolean;
-      appliedCount: number;
-      message: string;
-    }>("/admin/parser-feedback/patterns/auto-apply", { threshold });
     return data;
   },
 

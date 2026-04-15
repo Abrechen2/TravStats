@@ -74,6 +74,51 @@ router.patch('/users/:id/toggle-active', async (req: AuthRequest, res: Response,
   }
 });
 
+// DELETE /users/:id — permanently remove a user and all related data
+// (admin only — protected by requireAdmin in admin/index.ts).
+// Guards: cannot delete yourself; cannot remove the last remaining admin.
+// Cascade: flights, trips, bookings, user_settings, achievements,
+// pending_flight_updates, parser_templates, etc. are all removed via
+// Prisma onDelete: Cascade on their User foreign key.
+router.delete('/users/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+
+    if (id === req.userId) {
+      throw new AppError('Cannot delete your own account', 400);
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, username: true, isAdmin: true },
+    });
+
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    if (user.isAdmin) {
+      const adminCount = await prisma.user.count({ where: { isAdmin: true } });
+      if (adminCount <= 1) {
+        throw new AppError('Cannot delete the last remaining admin', 400);
+      }
+    }
+
+    await prisma.user.delete({ where: { id } });
+
+    logger.info({
+      operation: 'admin_delete_user',
+      adminId: req.userId,
+      targetUserId: id,
+      targetUsername: user.username,
+    });
+
+    res.json({ message: 'User deleted', userId: id });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // POST /users/:id/reset-password (admin only — protected by requireAdmin in admin/index.ts)
 router.post(
   '/users/:id/reset-password',

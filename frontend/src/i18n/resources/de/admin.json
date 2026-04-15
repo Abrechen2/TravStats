@@ -11,12 +11,10 @@
     "training": "Training Config",
     "logging": "Logging",
     "feedback": "Parser Feedback",
-    "patterns": "Pattern Updates",
     "backups": "Backups",
     "smtp": "E-Mail / SMTP"
   },
   "parserFeedback": "Parser Feedback",
-  "patternUpdates": "Pattern Updates",
   "parserFeedbackHelp": {
     "helpTitle": "Parser Feedback",
     "helpContent": {
@@ -25,16 +23,6 @@
       "stats": "Die Statistiken zeigen die Gesamtzahl der Feedback-Einträge, die durchschnittliche Qualitätsbewertung und die häufigsten Probleme.",
       "usageTitle": "Verwendung:",
       "usage": "Verwenden Sie den Zeitraum-Filter, um Feedback aus verschiedenen Zeiträumen anzuzeigen. Die Verteilung nach Provider zeigt, welche Parser am häufigsten korrigiert werden. Die häufigsten Probleme helfen dabei, Verbesserungspotenziale zu identifizieren."
-    }
-  },
-  "patternUpdatesHelp": {
-    "helpTitle": "Pattern Updates & Vorschläge",
-    "helpContent": {
-      "description": "Dieser Tab analysiert das Parser-Feedback und schlägt Verbesserungen für die Regex-Patterns vor, die zum Parsen von E-Mails und Bordkarten verwendet werden.",
-      "suggestionsTitle": "Vorschläge:",
-      "suggestions": "Die Vorschläge basieren auf häufigen Fehlern, die Benutzer korrigieren. Jeder Vorschlag enthält eine Konfidenz-Bewertung, die angibt, wie sicher das System ist, dass diese Änderung hilfreich ist.",
-      "autoApplyTitle": "Auto-Apply:",
-      "autoApply": "Die Auto-Apply-Funktion wendet automatisch alle Vorschläge mit einer Konfidenz von ≥90% an. Sie können auch einzelne Vorschläge manuell überprüfen und anwenden."
     }
   },
   "instance": "Instanz",
@@ -76,7 +64,13 @@
     "actions": {
       "deactivate": "Deaktivieren",
       "activate": "Aktivieren",
-      "resetPassword": "Passwort zurücksetzen"
+      "resetPassword": "Passwort zurücksetzen",
+      "delete": "Löschen"
+    },
+    "deleteConfirm": {
+      "title": "Benutzer löschen?",
+      "message": "Benutzer \"{{username}}\" und alle zugehörigen Daten (Flüge, Reisen, Achievements, Einstellungen) unwiderruflich löschen?\n\nDiese Aktion kann nicht rückgängig gemacht werden.",
+      "confirm": "Ja, endgültig löschen"
     },
     "resetPasswordModal": {
       "title": "Passwort zurücksetzen",
@@ -200,46 +194,6 @@
     "message": "Das Demo-Benutzerkonto (Benutzername: \"demo\", Passwort: \"demo123\") ist derzeit aktiv. Dies ist ein Sicherheitsrisiko in Produktionsumgebungen. Deaktivieren Sie dieses Konto nach dem ersten Test.",
     "button": "Demo-Benutzer deaktivieren"
   },
-  "hardware": {
-    "title": "💻 Hardware-Informationen",
-    "loading": "Lade Hardware-Informationen...",
-    "clickToLoad": "Klicken Sie auf \"Aktualisieren\", um Hardware-Informationen zu laden.",
-    "cpu": "🖥️ CPU",
-    "cores": "Kerne",
-    "model": "Modell",
-    "architecture": "Architektur",
-    "gpu": "🎮 GPU",
-    "available": "Verfügbar",
-    "detected": "Erkannt (nicht verfügbar)",
-    "notAvailable": "Nicht verfügbar",
-    "count": "Anzahl",
-    "gpus": "GPUs",
-    "name": "Name",
-    "memory": "Speicher",
-    "cudaVersion": "CUDA Version",
-    "noGpuDetected": "Keine GPU erkannt",
-    "gpuDetected": "⚠️ GPU erkannt: {{gpuName}}",
-    "solution": "💡 Lösung:",
-    "possibleReasons": "Mögliche Ursachen:",
-    "gpuReasons": {
-      "noGpu": "Keine GPU im System installiert",
-      "noDrivers": "NVIDIA-Treiber nicht installiert",
-      "noCuda": "CUDA nicht installiert oder nicht konfiguriert"
-    },
-    "python": "🐍 Python",
-    "version": "Version",
-    "pytorch": "PyTorch",
-    "notAvailableShort": "❌ Nicht verfügbar",
-    "pythonNotFound": "Python nicht gefunden",
-    "docker": "🐳 Docker",
-    "yes": "✅ Ja",
-    "no": "❌ Nein (Lokal)",
-    "system": "System",
-    "environment": "Umgebung",
-    "trainingAccess": "Training Zugriff",
-    "trainingAvailable": "✅ Verfügbar",
-    "trainingNotAvailable": "❌ Nicht verfügbar"
-  },
   "systemInfo": {
     "title": "Systeminformationen",
     "configuration": "Konfiguration",
@@ -278,38 +232,11 @@
     "confirmTitle": "Alle Daten exportieren?",
     "confirmMessage": "Dies lädt eine JSON-Datei mit allen Benutzerdaten herunter."
   },
-  "trainingConfig": {
-    "title": "Training-Konfiguration",
-    "description": "Konfiguriere Modell-Namen und Speicherort für LLM-Training",
-    "saving": "Speichern...",
-    "helpTitle": "Training-Konfiguration",
-    "helpContent": {
-      "description": "Diese Einstellungen überschreiben ENV-Variablen und bestimmen, wo trainierte Modelle gespeichert werden und wie sie heißen.",
-      "priorityTitle": "Priorität:",
-      "priority1": "Admin-Settings (hier konfiguriert)",
-      "priority2": "ENV-Variablen (Fallback)",
-      "priority3": "Standard-Werte (wenn nichts gesetzt)",
-      "note": "<strong>Hinweis:</strong> Leere Felder verwenden ENV-Variablen oder Standard-Werte."
-    },
-    "modelStorage": {
-      "title": "Modell-Speicherort",
-      "label": "Speicherort für trainierte Modelle",
-      "currentlyUsed": "Aktuell verwendet:",
-      "envFallback": "ENV-Fallback:"
-    },
-    "modelNames": {
-      "title": "Modell-Namen",
-      "emailModel": "Email-Modell-Name",
-      "visionModel": "Vision-Modell-Name",
-      "currently": "Aktuell:",
-      "env": "ENV:"
-    }
-  },
   "toasts": {
-    "trainingConfigSaved": "Training-Konfiguration erfolgreich gespeichert!",
-    "trainingConfigFailed": "Fehler beim Speichern der Training-Konfiguration",
     "userUpdated": "Benutzer erfolgreich aktualisiert",
     "userUpdateFailed": "Fehler beim Aktualisieren des Benutzers",
+    "userDeleted": "Benutzer gelöscht",
+    "userDeleteFailed": "Fehler beim Löschen des Benutzers",
     "invitationCopied": "Einladungslink in die Zwischenablage kopiert!\n\n{{inviteUrl}}",
     "invitationFailed": "Fehler beim Erstellen der Einladung",
     "exportFailed": "Fehler beim Exportieren der Daten",
@@ -324,8 +251,6 @@
     "logFileDeletFailed": "Fehler beim Löschen der Log-Datei",
     "cleanupComplete": "Aufräumen abgeschlossen! {{filesDeleted}} Dateien gelöscht, {{spaceFreed}} MB freigegeben",
     "cleanupFailed": "Fehler beim Aufräumen der Logs",
-    "patternApplyError": "Fehler beim Anwenden des Patterns",
-    "autoApplyError": "Fehler beim automatischen Anwenden",
     "ollamaTestSuccess": "Ollama erreichbar – {{count}} Modell(e) gefunden",
     "ollamaTestFailed": "Verbindung zu Ollama fehlgeschlagen",
     "enabled": "aktiviert",
@@ -544,42 +469,6 @@
     "parsedResult": "Gepartes Ergebnis",
     "correctedResult": "Korrigiertes Ergebnis",
     "userCorrections": "Benutzerkorrekturen"
-  },
-  "patterns": {
-    "title": "Pattern Updates & Vorschläge",
-    "autoApply": "Hochkonfidente automatisch anwenden (≥90%)",
-    "timePeriod": "Zeitraum:",
-    "days7": "Letzte 7 Tage",
-    "days30": "Letzte 30 Tage",
-    "days90": "Letzte 90 Tage",
-    "year": "Letztes Jahr",
-    "totalPatterns": "Gesamt Patterns",
-    "applied": "Angewendet",
-    "pending": "Ausstehend",
-    "avgConfidence": "Ø Konfidenz",
-    "pendingSuggestions": "Ausstehende Pattern-Vorschläge ({{count}})",
-    "confidence": "{{pct}}% Konfidenz",
-    "pattern": "Pattern:",
-    "issue": "Problem:",
-    "examples": "Beispiele:",
-    "apply": "Anwenden",
-    "noPending": "Keine ausstehenden Pattern-Vorschläge",
-    "summary": "Analyse-Zusammenfassung",
-    "totalIssues": "Gesamt Probleme:",
-    "patternSuggestions": "Pattern-Vorschläge:",
-    "loading": "Lade Pattern-Daten...",
-    "confirmApply": {
-      "title": "Pattern anwenden?",
-      "message": "Möchten Sie dieses Pattern wirklich anwenden? Hinweis: Dies erfordert manuelle Code-Updates.",
-      "cancel": "Abbrechen",
-      "confirm": "Anwenden"
-    },
-    "confirmAutoApply": {
-      "title": "Alle Patterns automatisch anwenden?",
-      "message": "Möchten Sie alle hochwertigen Patterns automatisch anwenden? Dies kann mehrere Patterns gleichzeitig betreffen.",
-      "cancel": "Abbrechen",
-      "confirm": "Anwenden"
-    }
   },
   "globalApiKeys": {
     "title": "Globale API-Schlüssel",

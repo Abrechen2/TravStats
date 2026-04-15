@@ -16,17 +16,15 @@ import ParserSettingsTab from "../components/Admin/ParserSettings";
 import LoggingManager from "../components/Admin/LoggingManager";
 import SmtpManager from "../components/Admin/SmtpManager";
 import FeedbackAnalytics from "../components/Admin/FeedbackAnalytics";
-import PatternManagement from "../components/Admin/PatternManagement";
 import { useTranslation } from "../hooks/useTranslation";
 import { copyToClipboard } from "../lib/clipboard";
 
-import type { SystemInfoData, HardwareInfo, AdminUser } from "../components/Admin/SystemInfo";
+import type { SystemInfoData, AdminUser } from "../components/Admin/SystemInfo";
 import type { Invitation } from "../components/Admin/InvitationManagement";
 import type { GlobalApiKeys, ParserApiKeySettings } from "../components/Admin/GlobalApiKeysManager";
 import type { ParserSettingsData } from "../components/Admin/ParserSettings";
 import type { LoggingConfig, LogFile, LogStats } from "../components/Admin/LoggingManager";
 import type { FeedbackStats, FeedbackDetails } from "../components/Admin/FeedbackAnalytics";
-import type { PatternData } from "../components/Admin/PatternManagement";
 
 // ==================== Helpers ====================
 
@@ -49,7 +47,6 @@ type ActiveSection =
   | "parsers"
   | "logging"
   | "feedback"
-  | "patterns"
   | "backups"
   | "apiKeys"
   | "smtp";
@@ -62,7 +59,6 @@ export default function AdminPage(): JSX.Element {
 
   // State
   const [systemInfo, setSystemInfo] = useState<SystemInfoData | null>(null);
-  const [hardwareInfo, setHardwareInfo] = useState<HardwareInfo | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [parserSettings, setParserSettings] = useState<ParserSettingsData | null>(null);
@@ -70,10 +66,8 @@ export default function AdminPage(): JSX.Element {
   const [logFiles, setLogFiles] = useState<LogFile[]>([]);
   const [logStats, setLogStats] = useState<LogStats | null>(null);
   const [feedbackStats, setFeedbackStats] = useState<FeedbackStats | null>(null);
-  const [patternData, setPatternData] = useState<PatternData | null>(null);
   const [feedbackDetails, setFeedbackDetails] = useState<FeedbackDetails | null>(null);
   const [loading, setLoading] = useState(true);
-  const [loadingHardwareInfo, setLoadingHardwareInfo] = useState(false);
   const [activeSection, setActiveSection] = useState<ActiveSection>("system");
   const [inviteLinkModalOpen, setInviteLinkModalOpen] = useState(false);
   const [inviteEmailModalOpen, setInviteEmailModalOpen] = useState(false);
@@ -91,8 +85,6 @@ export default function AdminPage(): JSX.Element {
   const [savingLogging, setSavingLogging] = useState(false);
   const [feedbackDays, setFeedbackDays] = useState(30);
   const [selectedFeedbackId, setSelectedFeedbackId] = useState<string | null>(null);
-  const [showPatternConfirm, setShowPatternConfirm] = useState<string | null>(null);
-  const [showAutoApplyConfirm, setShowAutoApplyConfirm] = useState(false);
   const [globalApiKeys, setGlobalApiKeys] = useState<GlobalApiKeys | null>(null);
   const [savingGlobalApiKeys, setSavingGlobalApiKeys] = useState(false);
   const [ollamaTestState, setOllamaTestState] = useState<{
@@ -107,20 +99,10 @@ export default function AdminPage(): JSX.Element {
   }, [invitationStatusFilter]);
 
   useEffect(() => {
-    if (activeSection === "system") {
-      loadHardwareInfo();
-    }
-  }, [activeSection]);
-
-  useEffect(() => {
     if (activeSection === "logging") {
       loadLoggingData();
     } else if (activeSection === "feedback") {
       loadFeedbackData();
-    } else if (activeSection === "patterns") {
-      loadPatternData();
-    } else if (activeSection === "system") {
-      loadHardwareInfo();
     } else if (activeSection === "apiKeys") {
       if (!globalApiKeys) {
         loadGlobalApiKeys();
@@ -188,40 +170,6 @@ export default function AdminPage(): JSX.Element {
     }
   };
 
-  const loadPatternData = async (): Promise<void> => {
-    try {
-      const data = await adminApi.getParserPatterns({ days: feedbackDays });
-      setPatternData(data as PatternData);
-    } catch (error) {
-      logger.error("Failed to load pattern data:", error);
-    }
-  };
-
-  const loadHardwareInfo = async (): Promise<void> => {
-    if (loadingHardwareInfo) {
-      return;
-    }
-    setLoadingHardwareInfo(true);
-    try {
-      logger.debug("Loading hardware info...");
-      const data = await adminApi.getHardwareInfo();
-      logger.debug("Hardware info loaded:", data);
-      setHardwareInfo(data);
-    } catch (error) {
-      logger.error("Failed to load hardware info:", error);
-      setHardwareInfo({
-        error: error instanceof Error ? error.message : "Failed to load hardware information",
-        cpu: { cores: 0, model: "Unknown", architecture: "Unknown" },
-        gpu: { available: false, error: "Failed to load" },
-        python: { available: false, error: "Failed to load" },
-        docker: false,
-        trainingAccess: { accessible: false, error: "Failed to load" },
-      });
-    } finally {
-      setLoadingHardwareInfo(false);
-    }
-  };
-
   // ==================== Handlers ====================
 
   const handleToggleUserActive = async (userId: string): Promise<void> => {
@@ -231,6 +179,16 @@ export default function AdminPage(): JSX.Element {
       await loadData();
     } catch (error: unknown) {
       addToast("error", getErrorMessage(error, t("admin:toasts.userUpdateFailed")));
+    }
+  };
+
+  const handleDeleteUser = async (userId: string): Promise<void> => {
+    try {
+      await adminApi.deleteUser(userId);
+      addToast("success", t("admin:toasts.userDeleted"));
+      await loadData();
+    } catch (error: unknown) {
+      addToast("error", getErrorMessage(error, t("admin:toasts.userDeleteFailed")));
     }
   };
 
@@ -482,38 +440,6 @@ export default function AdminPage(): JSX.Element {
     }
   };
 
-  const handleApplyPattern = async (eventId: string): Promise<void> => {
-    setShowPatternConfirm(eventId);
-  };
-
-  const handleApplyPatternConfirm = async (): Promise<void> => {
-    if (!showPatternConfirm) return;
-    const eventId = showPatternConfirm;
-    setShowPatternConfirm(null);
-    try {
-      const result = await adminApi.applyPatternSuggestion(eventId, false);
-      addToast("success", result.message);
-      await loadPatternData();
-    } catch (error: unknown) {
-      addToast("error", getErrorMessage(error, t("admin:toasts.patternApplyError")));
-    }
-  };
-
-  const handleAutoApplyPatterns = async (): Promise<void> => {
-    setShowAutoApplyConfirm(true);
-  };
-
-  const handleAutoApplyPatternsConfirm = async (): Promise<void> => {
-    setShowAutoApplyConfirm(false);
-    try {
-      const result = await adminApi.autoApplyPatterns(0.9);
-      addToast("success", result.message);
-      await loadPatternData();
-    } catch (error: unknown) {
-      addToast("error", getErrorMessage(error, t("admin:toasts.autoApplyError")));
-    }
-  };
-
   // ==================== Render ====================
 
   if (loading) {
@@ -545,14 +471,6 @@ export default function AdminPage(): JSX.Element {
       id: "feedback",
       label: t("admin:parserFeedback"),
       badge: feedbackStats && feedbackStats.total > 0 ? feedbackStats.total : undefined,
-    },
-    {
-      id: "patterns",
-      label: t("admin:patternUpdates"),
-      badge:
-        patternData?.pendingSuggestions?.length && patternData.pendingSuggestions.length > 0
-          ? patternData.pendingSuggestions.length
-          : undefined,
     },
     { id: "backups", label: t("admin:tabs.backups") },
     { id: "smtp", label: t("admin:tabs.smtp") },
@@ -618,17 +536,18 @@ export default function AdminPage(): JSX.Element {
           {activeSection === "system" && systemInfo && (
             <SystemInfoTab
               systemInfo={systemInfo}
-              hardwareInfo={hardwareInfo}
-              loadingHardwareInfo={loadingHardwareInfo}
               users={users}
-              onLoadHardwareInfo={loadHardwareInfo}
               onExportData={handleExportData}
               onToggleDemoUser={handleToggleUserActive}
             />
           )}
 
           {activeSection === "users" && (
-            <UserManagement users={users} onToggleUserActive={handleToggleUserActive} />
+            <UserManagement
+              users={users}
+              onToggleUserActive={handleToggleUserActive}
+              onDeleteUser={handleDeleteUser}
+            />
           )}
 
           {activeSection === "invitations" && (
@@ -730,22 +649,6 @@ export default function AdminPage(): JSX.Element {
               selectedFeedbackId={selectedFeedbackId}
               onSetDays={setFeedbackDays}
               onSelectFeedback={setSelectedFeedbackId}
-            />
-          )}
-
-          {activeSection === "patterns" && (
-            <PatternManagement
-              patternData={patternData}
-              feedbackDays={feedbackDays}
-              showPatternConfirm={showPatternConfirm}
-              showAutoApplyConfirm={showAutoApplyConfirm}
-              onSetDays={setFeedbackDays}
-              onApply={handleApplyPattern}
-              onApplyConfirm={handleApplyPatternConfirm}
-              onAutoApply={handleAutoApplyPatterns}
-              onAutoApplyConfirm={handleAutoApplyPatternsConfirm}
-              onDismissConfirm={() => setShowPatternConfirm(null)}
-              onDismissAutoApply={() => setShowAutoApplyConfirm(false)}
             />
           )}
 

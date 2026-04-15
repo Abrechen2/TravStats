@@ -24,16 +24,6 @@ export const parserApi = axios.create({
   withCredentials: true,
 });
 
-// Hardware API instance with 35s timeout for hardware info operations
-export const hardwareApi = axios.create({
-  baseURL: API_URL ? `${API_URL}/api/v1` : "/api/v1",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  timeout: API_TIMEOUTS.HARDWARE,
-  withCredentials: true,
-});
-
 // Response interceptor for handling 401 errors (expired/invalid tokens)
 // Uses event-based approach to avoid circular dependencies
 const handle401Error = (error: AxiosError): Promise<never> => {
@@ -86,7 +76,5 @@ const handle401Error = (error: AxiosError): Promise<never> => {
 api.interceptors.response.use((response) => response, handle401Error);
 
 parserApi.interceptors.response.use((response) => response, handle401Error);
-
-hardwareApi.interceptors.response.use((response) => response, handle401Error);
 
 export default api;

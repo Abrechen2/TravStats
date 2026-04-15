@@ -11,12 +11,10 @@
     "training": "Training Config",
     "logging": "Logging",
     "feedback": "Parser Feedback",
-    "patterns": "Pattern Updates",
     "backups": "Backups",
     "smtp": "Email / SMTP"
   },
   "parserFeedback": "Parser Feedback",
-  "patternUpdates": "Pattern Updates",
   "parserFeedbackHelp": {
     "helpTitle": "Parser Feedback",
     "helpContent": {
@@ -25,16 +23,6 @@
       "stats": "The statistics show the total number of feedback entries, the average quality score, and the most common issues.",
       "usageTitle": "Usage:",
       "usage": "Use the time period filter to view feedback from different time periods. The distribution by provider shows which parsers are corrected most frequently. The most common issues help identify areas for improvement."
-    }
-  },
-  "patternUpdatesHelp": {
-    "helpTitle": "Pattern Updates & Suggestions",
-    "helpContent": {
-      "description": "This tab analyzes parser feedback and suggests improvements for the regex patterns used to parse emails and boarding passes.",
-      "suggestionsTitle": "Suggestions:",
-      "suggestions": "Suggestions are based on common errors that users correct. Each suggestion includes a confidence score indicating how certain the system is that this change will be helpful.",
-      "autoApplyTitle": "Auto-Apply:",
-      "autoApply": "The Auto-Apply function automatically applies all suggestions with a confidence of ≥90%. You can also manually review and apply individual suggestions."
     }
   },
   "instance": "Instance",
@@ -76,7 +64,13 @@
     "actions": {
       "deactivate": "Deactivate",
       "activate": "Activate",
-      "resetPassword": "Reset Password"
+      "resetPassword": "Reset Password",
+      "delete": "Delete"
+    },
+    "deleteConfirm": {
+      "title": "Delete user?",
+      "message": "Permanently delete user \"{{username}}\" and all their data (flights, trips, achievements, settings)?\n\nThis action cannot be undone.",
+      "confirm": "Yes, delete permanently"
     },
     "resetPasswordModal": {
       "title": "Reset Password",
@@ -200,46 +194,6 @@
     "message": "The demo user account (username: \"demo\", password: \"demo123\") is currently active. This is a security risk in production environments. Deactivate this account after initial testing.",
     "button": "Deactivate Demo User"
   },
-  "hardware": {
-    "title": "💻 Hardware Information",
-    "loading": "Loading hardware information...",
-    "clickToLoad": "Click \"Refresh\" to load hardware information.",
-    "cpu": "🖥️ CPU",
-    "cores": "Cores",
-    "model": "Model",
-    "architecture": "Architecture",
-    "gpu": "🎮 GPU",
-    "available": "Available",
-    "detected": "Detected (not available)",
-    "notAvailable": "Not available",
-    "count": "Count",
-    "gpus": "GPUs",
-    "name": "Name",
-    "memory": "Memory",
-    "cudaVersion": "CUDA Version",
-    "noGpuDetected": "No GPU detected",
-    "gpuDetected": "⚠️ GPU detected: {{gpuName}}",
-    "solution": "💡 Solution:",
-    "possibleReasons": "Possible reasons:",
-    "gpuReasons": {
-      "noGpu": "No GPU installed in the system",
-      "noDrivers": "NVIDIA drivers not installed",
-      "noCuda": "CUDA not installed or not configured"
-    },
-    "python": "🐍 Python",
-    "version": "Version",
-    "pytorch": "PyTorch",
-    "notAvailableShort": "❌ Not available",
-    "pythonNotFound": "Python not found",
-    "docker": "🐳 Docker",
-    "yes": "✅ Yes",
-    "no": "❌ No (Local)",
-    "system": "System",
-    "environment": "Environment",
-    "trainingAccess": "Training Access",
-    "trainingAvailable": "✅ Available",
-    "trainingNotAvailable": "❌ Not available"
-  },
   "systemInfo": {
     "title": "System Information",
     "configuration": "Configuration",
@@ -278,38 +232,11 @@
     "confirmTitle": "Export all data?",
     "confirmMessage": "This will download a JSON file with all user data."
   },
-  "trainingConfig": {
-    "title": "Training Configuration",
-    "description": "Configure model names and storage location for LLM training",
-    "saving": "Saving...",
-    "helpTitle": "Training Configuration",
-    "helpContent": {
-      "description": "These settings override environment variables and determine where trained models are stored and what they are named.",
-      "priorityTitle": "Priority:",
-      "priority1": "Admin Settings (configured here)",
-      "priority2": "ENV Variables (fallback)",
-      "priority3": "Default Values (if nothing is set)",
-      "note": "<strong>Note:</strong> Empty fields use ENV variables or default values."
-    },
-    "modelStorage": {
-      "title": "Model Storage Location",
-      "label": "Storage location for trained models",
-      "currentlyUsed": "Currently used:",
-      "envFallback": "ENV Fallback:"
-    },
-    "modelNames": {
-      "title": "Model Names",
-      "emailModel": "Email Model Name",
-      "visionModel": "Vision Model Name",
-      "currently": "Currently:",
-      "env": "ENV:"
-    }
-  },
   "toasts": {
-    "trainingConfigSaved": "Training configuration saved successfully!",
-    "trainingConfigFailed": "Failed to save training configuration",
     "userUpdated": "User updated successfully",
     "userUpdateFailed": "Failed to update user",
+    "userDeleted": "User deleted",
+    "userDeleteFailed": "Failed to delete user",
     "invitationCopied": "Invitation link copied to clipboard!\n\n{{inviteUrl}}",
     "invitationFailed": "Failed to create invitation",
     "exportFailed": "Failed to export data",
@@ -324,8 +251,6 @@
     "logFileDeletFailed": "Failed to delete log file",
     "cleanupComplete": "Cleanup complete! Deleted {{filesDeleted}} files, freed {{spaceFreed}} MB",
     "cleanupFailed": "Failed to cleanup logs",
-    "patternApplyError": "Error applying pattern",
-    "autoApplyError": "Error auto-applying patterns",
     "ollamaTestSuccess": "Ollama reachable – {{count}} model(s) found",
     "ollamaTestFailed": "Ollama connection failed",
     "enabled": "enabled",
@@ -544,42 +469,6 @@
     "parsedResult": "Parsed Result",
     "correctedResult": "Corrected Result",
     "userCorrections": "User Corrections"
-  },
-  "patterns": {
-    "title": "Pattern Updates & Suggestions",
-    "autoApply": "Auto-Apply High Confidence (≥90%)",
-    "timePeriod": "Time Period:",
-    "days7": "Last 7 days",
-    "days30": "Last 30 days",
-    "days90": "Last 90 days",
-    "year": "Last year",
-    "totalPatterns": "Total Patterns",
-    "applied": "Applied",
-    "pending": "Pending",
-    "avgConfidence": "Avg Confidence",
-    "pendingSuggestions": "Pending Pattern Suggestions ({{count}})",
-    "confidence": "{{pct}}% confidence",
-    "pattern": "Pattern:",
-    "issue": "Issue:",
-    "examples": "Examples:",
-    "apply": "Apply",
-    "noPending": "No pending pattern suggestions",
-    "summary": "Analysis Summary",
-    "totalIssues": "Total Issues:",
-    "patternSuggestions": "Pattern Suggestions:",
-    "loading": "Loading pattern data...",
-    "confirmApply": {
-      "title": "Apply Pattern?",
-      "message": "Apply this pattern? Note: This requires manual code updates.",
-      "cancel": "Cancel",
-      "confirm": "Apply"
-    },
-    "confirmAutoApply": {
-      "title": "Auto-apply all patterns?",
-      "message": "Auto-apply all high-confidence patterns? This may affect multiple patterns simultaneously.",
-      "cancel": "Cancel",
-      "confirm": "Apply"
-    }
   },
   "globalApiKeys": {
     "title": "Global API Keys",

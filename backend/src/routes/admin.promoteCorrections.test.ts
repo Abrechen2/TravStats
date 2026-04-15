@@ -46,19 +46,6 @@ jest.mock("../services/apiKeyTester", () => ({
   testAviationstackKey: jest.fn(),
   testOpenSkyCredentials: jest.fn(),
 }));
-jest.mock("../services/patternAnalyzer", () => ({
-  analyzeFeedbackForPatterns: jest.fn(),
-  getPatternAnalysisSummary: jest.fn(),
-}));
-jest.mock("../services/patternUpdater", () => ({
-  getPendingPatternSuggestions: jest.fn(),
-  applyPatternSuggestion: jest.fn(),
-  autoApplyHighConfidencePatterns: jest.fn(),
-  getPatternUpdateStats: jest.fn(),
-}));
-jest.mock("../services/hardwareService", () => ({
-  getHardwareInfo: jest.fn(),
-}));
 jest.mock("../utils/encryption", () => ({
   encryptApiKey: jest.fn(),
   decryptApiKey: jest.fn(),

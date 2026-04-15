@@ -3,22 +3,31 @@ import { format } from "date-fns";
 import { AnimatePresence } from "framer-motion";
 import InlineHelp from "../Help/InlineHelp";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useAuthStore } from "../../store/authStore";
 import type { AdminUser } from "./SystemInfo";
 import AdminPasswordResetModal from "./AdminPasswordResetModal";
+import ConfirmModal from "../Training/ConfirmModal";
 
 interface UserManagementProps {
   users: AdminUser[];
   onToggleUserActive: (userId: string) => void;
+  onDeleteUser: (userId: string) => void;
 }
 
 export default function UserManagement({
   users,
   onToggleUserActive,
+  onDeleteUser,
 }: UserManagementProps): JSX.Element {
   const { t } = useTranslation(["admin", "common"]);
+  const currentUserId = useAuthStore((s) => s.user?.id);
   const [resetModalUser, setResetModalUser] = useState<{ id: string; username: string } | null>(
     null
   );
+  const [deleteUserConfirm, setDeleteUserConfirm] = useState<{
+    id: string;
+    username: string;
+  } | null>(null);
 
   return (
     <div className="space-y-4">
@@ -122,6 +131,19 @@ export default function UserManagement({
                   >
                     {t("admin:users.actions.resetPassword")}
                   </button>
+                  {user.id !== currentUserId && (
+                    <>
+                      {" · "}
+                      <button
+                        onClick={() =>
+                          setDeleteUserConfirm({ id: user.id, username: user.username })
+                        }
+                        className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                      >
+                        {t("admin:users.actions.delete")}
+                      </button>
+                    </>
+                  )}
                 </td>
               </tr>
             ))}
@@ -137,6 +159,23 @@ export default function UserManagement({
           />
         )}
       </AnimatePresence>
+      <ConfirmModal
+        isOpen={!!deleteUserConfirm}
+        onClose={() => setDeleteUserConfirm(null)}
+        onConfirm={() => {
+          if (deleteUserConfirm) {
+            onDeleteUser(deleteUserConfirm.id);
+            setDeleteUserConfirm(null);
+          }
+        }}
+        title={t("admin:users.deleteConfirm.title")}
+        message={t("admin:users.deleteConfirm.message", {
+          username: deleteUserConfirm?.username ?? "",
+        })}
+        confirmText={t("admin:users.deleteConfirm.confirm")}
+        cancelText={t("common:buttons.cancel")}
+        confirmButtonClass="bg-red-600 hover:bg-red-700 focus:ring-red-500 text-white"
+      />
     </div>
   );
 }

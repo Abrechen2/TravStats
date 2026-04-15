@@ -6,7 +6,6 @@
 export const API_TIMEOUTS = {
   DEFAULT: 10000, // 10 seconds
   PARSER: 180000, // 3 minutes for parser operations (Ollama can be slow)
-  HARDWARE: 35000, // 35 seconds for hardware info (Python script can be slow)
 } as const;
 
 // ========== BOARDING PASS OCR ==========

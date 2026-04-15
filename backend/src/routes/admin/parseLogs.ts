@@ -5,13 +5,6 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../../db';
 import { adminExportLimiter } from '../../middleware/rateLimit';
 import { getParserFeedbackStats } from '../../services/parserFeedback';
-import { analyzeFeedbackForPatterns, getPatternAnalysisSummary } from '../../services/patternAnalyzer';
-import {
-  getPendingPatternSuggestions,
-  applyPatternSuggestion,
-  autoApplyHighConfidencePatterns,
-  getPatternUpdateStats,
-} from '../../services/patternUpdater';
 
 interface AirlineStat {
   airline: string;
@@ -32,14 +25,6 @@ interface FeedbackPayload {
   sourceType?: string;
   [key: string]: unknown;
 }
-
-const applyPatternSchema = z.object({
-  autoApply: z.boolean().optional(),
-});
-
-const autoApplySchema = z.object({
-  threshold: z.number().min(0).max(1).optional().default(0.9),
-});
 
 const daysQuerySchema = z.object({
   days: z.coerce.number().int().min(1).max(365).default(30),
@@ -207,54 +192,6 @@ router.get('/parser-feedback/stats', async (req: AuthRequest, res: Response, nex
 
     const stats = await getParserFeedbackStats(provider, sourceType, days);
     res.json(stats);
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Get pattern analysis and suggestions
-router.get('/parser-feedback/patterns', async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const { days } = daysQuerySchema.parse(req.query);
-    const [suggestions, summary, pendingSuggestions, stats] = await Promise.all([
-      analyzeFeedbackForPatterns(days),
-      getPatternAnalysisSummary(days),
-      getPendingPatternSuggestions(),
-      getPatternUpdateStats(),
-    ]);
-    res.json({
-      suggestions,
-      summary,
-      pendingSuggestions,
-      stats,
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Apply a pattern suggestion
-router.post('/parser-feedback/patterns/:id/apply', async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params;
-    const { autoApply } = applyPatternSchema.parse(req.body);
-    const result = await applyPatternSuggestion(id, autoApply === true);
-    res.json(result);
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Auto-apply high-confidence patterns
-router.post('/parser-feedback/patterns/auto-apply', async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const { threshold } = autoApplySchema.parse(req.body);
-    const appliedCount = await autoApplyHighConfidencePatterns(threshold);
-    res.json({
-      success: true,
-      appliedCount,
-      message: `Applied ${appliedCount} high-confidence pattern(s)`,
-    });
   } catch (error) {
     next(error);
   }
