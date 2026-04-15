@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import html2canvas from "html2canvas";
 import { useTranslation } from "../hooks/useTranslation";
 
@@ -18,46 +18,144 @@ interface FlightCertificateProps {
   onClose: () => void;
 }
 
-async function downloadCertificate(ref: React.RefObject<HTMLDivElement | null>): Promise<void> {
-  if (!ref.current) return;
-  const canvas = await html2canvas(ref.current, {
-    backgroundColor: null,
-    scale: 2,
-    useCORS: true,
-  });
-  const link = document.createElement("a");
-  link.download = "flight-certificate.png";
-  link.href = canvas.toDataURL("image/png");
-  link.click();
-}
+// ─── Design tokens ─────────────────────────────────────────────────────────
+const PARCHMENT = "#f1e7cd";
+const INK = "#1c2a3d";
+const INK_SOFT = "#3b4d66";
+const BRONZE = "#a17236";
+const STAMP_RED = "#bd3a3a";
+const PAPER_SHADOW = "rgba(28,42,61,0.08)";
 
+// Earth's equatorial circumference (km), used for the "around the Earth"
+// shareable comparison.
+const EARTH_CIRCUMFERENCE_KM = 40075;
+
+// Average Earth–Moon distance (km), used for the "to the Moon" comparison.
+const EARTH_MOON_DISTANCE_KM = 384400;
+
+const FONT_HREF =
+  "https://fonts.googleapis.com/css2?" +
+  "family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,800;1,9..144,500;1,9..144,800&" +
+  "family=Big+Shoulders+Display:wght@600;800;900&" +
+  "family=JetBrains+Mono:wght@400;500;700&display=swap";
+
+// Subtle grain overlay (SVG noise → data URI) — gives the parchment its
+// hand-feel without bringing in an image dependency.
+const PAPER_GRAIN_DATA_URI = `url("data:image/svg+xml;utf8,${encodeURIComponent(
+  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'>
+    <filter id='n'>
+      <feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='4'/>
+      <feColorMatrix values='0 0 0 0 0.11
+                              0 0 0 0 0.16
+                              0 0 0 0 0.24
+                              0 0 0 0.07 0'/>
+    </filter>
+    <rect width='100%' height='100%' filter='url(%23n)'/>
+  </svg>`
+)}")`;
+
+// ─── Component ─────────────────────────────────────────────────────────────
 export function FlightCertificate({
   stats,
   onDownload,
   onClose,
 }: FlightCertificateProps): JSX.Element {
-  const { t } = useTranslation(["stats"]);
+  const { t, i18n } = useTranslation(["stats"]);
   const cardRef = useRef<HTMLDivElement>(null);
+  const [downloading, setDownloading] = useState(false);
 
-  const generatedDate = new Date().toLocaleDateString(undefined, {
+  // Inject the Google Fonts stylesheet exactly once per modal mount.
+  useEffect(() => {
+    const existing = document.head.querySelector(`link[data-cert-fonts]`);
+    if (existing) return;
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = FONT_HREF;
+    link.dataset.certFonts = "true";
+    document.head.appendChild(link);
+    return () => {
+      if (link.parentNode) link.parentNode.removeChild(link);
+    };
+  }, []);
+
+  const generatedDate = new Date().toLocaleDateString(i18n.language, {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
 
-  const yearsLabel =
-    stats.yearsActive.length > 0 ? [...stats.yearsActive].sort((a, b) => a - b).join(", ") : "—";
+  const handleDownload = async (): Promise<void> => {
+    if (!cardRef.current || downloading) return;
+    setDownloading(true);
+    try {
+      // html2canvas misses webfonts unless they're loaded first.
+      if (document.fonts && document.fonts.ready) {
+        await document.fonts.ready;
+      }
+      const canvas = await html2canvas(cardRef.current, {
+        backgroundColor: PARCHMENT,
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
+      const link = document.createElement("a");
+      const safeName = stats.userName.replace(/[^A-Za-z0-9_-]+/g, "-").toLowerCase();
+      link.download = `travstats-${safeName || "aviator"}-certificate.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+      onDownload?.();
+    } finally {
+      setDownloading(false);
+    }
+  };
 
-  const totalFlightTimeRounded = Math.round(stats.totalFlightTime);
-  const totalDistanceRounded = Math.round(stats.totalDistance).toLocaleString();
+  // ─── Derived display values ──────────────────────────────────────────────
+  const totalDistanceKm = Math.round(stats.totalDistance);
+  const totalFlightHours = Math.round(stats.totalFlightTime);
+  const earthLaps = stats.totalDistance / EARTH_CIRCUMFERENCE_KM;
+  const moonPercent = (stats.totalDistance / EARTH_MOON_DISTANCE_KM) * 100;
+
+  const earthLapsLabel =
+    earthLaps >= 0.05
+      ? t("stats:certificate.earthLaps", { count: earthLaps.toFixed(earthLaps >= 10 ? 0 : 1) })
+      : null;
+  const moonProgressLabel =
+    moonPercent >= 0.5 && moonPercent < 100
+      ? t("stats:certificate.moonProgress", { percent: moonPercent.toFixed(1) })
+      : null;
+
+  const yearsLabel =
+    stats.yearsActive.length > 0
+      ? (() => {
+          const sorted = [...stats.yearsActive].sort((a, b) => a - b);
+          const first = sorted[0];
+          const last = sorted[sorted.length - 1];
+          return first === last ? String(first) : `${first}–${last}`;
+        })()
+      : "—";
+
+  const yearsCount = stats.yearsActive.length || 1;
+
+  // Big-number formatter — locale-aware with thin spaces between thousands.
+  const fmt = (n: number): string => n.toLocaleString(i18n.language).replace(/,/g, "\u202F");
+
+  // Issue serial — deterministic from the user's name + total km, so re-issuing
+  // the same cert produces the same number and can be quoted.
+  const issueSerial = (() => {
+    let h = 5381;
+    const seed = `${stats.userName}-${totalDistanceKm}`;
+    for (let i = 0; i < seed.length; i++) {
+      h = ((h << 5) + h + seed.charCodeAt(i)) & 0xffffffff;
+    }
+    return Math.abs(h).toString(36).toUpperCase().padStart(6, "0").slice(0, 6);
+  })();
 
   return (
-    /* Modal overlay */
     <div
       style={{
         position: "fixed",
         inset: 0,
-        backgroundColor: "rgba(0,0,0,0.75)",
+        backgroundColor: "rgba(8,15,26,0.86)",
         zIndex: 1000,
         display: "flex",
         flexDirection: "column",
@@ -65,217 +163,441 @@ export function FlightCertificate({
         justifyContent: "center",
         padding: "24px",
         overflowY: "auto",
+        backdropFilter: "blur(4px)",
       }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      {/* Action buttons above card */}
+      {/* Action toolbar */}
       <div
         style={{
           display: "flex",
-          gap: "12px",
-          marginBottom: "16px",
+          gap: "10px",
+          marginBottom: "20px",
           alignSelf: "center",
         }}
       >
         <button
           onClick={() => {
-            void downloadCertificate(cardRef);
-            onDownload?.();
+            void handleDownload();
           }}
+          disabled={downloading}
           style={{
-            backgroundColor: "#d4af37",
-            color: "#0a1628",
+            background: BRONZE,
+            color: PARCHMENT,
             border: "none",
-            borderRadius: "8px",
-            padding: "10px 24px",
-            fontSize: "15px",
+            borderRadius: "999px",
+            padding: "11px 28px",
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: "11px",
             fontWeight: 700,
-            cursor: "pointer",
-            letterSpacing: "0.04em",
+            cursor: downloading ? "wait" : "pointer",
+            letterSpacing: "0.18em",
+            textTransform: "uppercase",
+            opacity: downloading ? 0.6 : 1,
+            transition: "transform 0.15s ease, background 0.15s ease",
+          }}
+          onMouseEnter={(e) => {
+            if (!downloading) e.currentTarget.style.background = "#b97f3c";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = BRONZE;
           }}
         >
-          ⬇ {t("stats:certificate.download")}
+          ↓ {t("stats:certificate.download")}
         </button>
         <button
           onClick={onClose}
           style={{
-            backgroundColor: "transparent",
-            color: "#ffffff",
-            border: "2px solid rgba(255,255,255,0.4)",
-            borderRadius: "8px",
-            padding: "10px 24px",
-            fontSize: "15px",
-            fontWeight: 600,
+            background: "transparent",
+            color: PARCHMENT,
+            border: "1px solid rgba(241,231,205,0.4)",
+            borderRadius: "999px",
+            padding: "11px 28px",
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: "11px",
+            fontWeight: 500,
             cursor: "pointer",
+            letterSpacing: "0.18em",
+            textTransform: "uppercase",
           }}
         >
           {t("stats:certificate.close")}
         </button>
       </div>
 
-      {/* Certificate card — ref attached here for html2canvas */}
+      {/* Certificate card */}
       <div
         ref={cardRef}
         style={{
           width: "800px",
           maxWidth: "100%",
-          backgroundColor: "#0a1628",
-          borderRadius: "16px",
-          overflow: "hidden",
-          fontFamily: "'Georgia', 'Times New Roman', serif",
-          boxShadow: "0 25px 60px rgba(0,0,0,0.6)",
-          border: "2px solid #d4af37",
+          minHeight: "1100px",
+          background: PARCHMENT,
+          backgroundImage: PAPER_GRAIN_DATA_URI,
+          color: INK,
           position: "relative",
+          fontFamily: "'Fraunces', 'Georgia', serif",
+          boxShadow: "0 30px 80px rgba(0,0,0,0.5), inset 0 0 80px rgba(60,40,20,0.05)",
+          overflow: "hidden",
         }}
       >
-        {/* Top decorative bar */}
+        {/* Deckle ink border — outer */}
         <div
           style={{
-            height: "6px",
-            background: "linear-gradient(90deg, #d4af37, #f5e07a, #d4af37)",
+            position: "absolute",
+            inset: "20px",
+            border: `1px solid ${INK}`,
+            opacity: 0.65,
+            pointerEvents: "none",
+          }}
+        />
+        {/* Deckle ink border — inner hairline */}
+        <div
+          style={{
+            position: "absolute",
+            inset: "26px",
+            border: `1px solid ${BRONZE}`,
+            opacity: 0.45,
+            pointerEvents: "none",
           }}
         />
 
-        {/* Header section */}
+        {/* ─── Top brand bar ──────────────────────────────────────── */}
         <div
           style={{
-            padding: "40px 48px 28px",
-            textAlign: "center",
-            borderBottom: "1px solid rgba(212,175,55,0.3)",
+            padding: "44px 56px 0",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            position: "relative",
+            zIndex: 2,
           }}
         >
-          {/* Airplane icon */}
-          <div style={{ fontSize: "40px", marginBottom: "12px" }}>✈</div>
-
           <div
             style={{
-              fontSize: "11px",
-              letterSpacing: "0.3em",
-              color: "#d4af37",
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: "10px",
+              letterSpacing: "0.32em",
+              color: INK,
               textTransform: "uppercase",
-              marginBottom: "8px",
-              fontFamily: "'Arial', sans-serif",
+              fontWeight: 700,
             }}
           >
-            TravStats
+            ✦ TRAV·STATS · LOG &amp; LEGEND
           </div>
+          <div
+            style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: "10px",
+              letterSpacing: "0.18em",
+              color: INK_SOFT,
+              textAlign: "right",
+            }}
+          >
+            <div>N° {issueSerial}</div>
+            <div style={{ marginTop: "2px", color: BRONZE }}>{generatedDate}</div>
+          </div>
+        </div>
 
+        {/* ─── Editorial headline ─────────────────────────────────── */}
+        <div
+          style={{
+            padding: "48px 56px 0",
+            position: "relative",
+            zIndex: 2,
+          }}
+        >
+          <div
+            style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: "11px",
+              letterSpacing: "0.4em",
+              color: BRONZE,
+              textTransform: "uppercase",
+              fontWeight: 700,
+              marginBottom: "8px",
+            }}
+          >
+            {t("stats:certificate.eyebrow")}
+          </div>
           <h1
             style={{
-              fontSize: "32px",
-              fontWeight: 700,
-              color: "#ffffff",
-              margin: "0 0 4px",
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
+              fontFamily: "'Fraunces', 'Georgia', serif",
+              fontSize: "78px",
+              fontWeight: 800,
+              fontStyle: "italic",
+              lineHeight: 0.95,
+              margin: 0,
+              color: INK,
+              fontVariationSettings: "'opsz' 144",
             }}
           >
-            {t("stats:certificate.headline")}
+            {t("stats:certificate.headlineLineOne")}
+            <br />
+            <span style={{ color: BRONZE, fontStyle: "italic" }}>
+              {t("stats:certificate.headlineLineTwo")}
+            </span>
           </h1>
-
-          {/* Decorative line */}
           <div
             style={{
-              width: "80px",
-              height: "2px",
-              background: "linear-gradient(90deg, transparent, #d4af37, transparent)",
-              margin: "14px auto",
+              marginTop: "26px",
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: "11px",
+              letterSpacing: "0.28em",
+              textTransform: "uppercase",
+              color: INK_SOFT,
             }}
-          />
-
-          <p
+          >
+            {t("stats:certificate.awardedTo")}
+          </div>
+          <div
             style={{
-              fontSize: "18px",
-              color: "#c8d6e8",
-              margin: 0,
+              marginTop: "8px",
+              fontFamily: "'Fraunces', 'Georgia', serif",
+              fontSize: "44px",
+              fontWeight: 500,
               fontStyle: "italic",
+              color: INK,
+              lineHeight: 1.05,
+              borderBottom: `1px solid ${INK}`,
+              paddingBottom: "12px",
+              fontVariationSettings: "'opsz' 144",
             }}
           >
             {stats.userName}
-          </p>
+          </div>
         </div>
 
-        {/* Stats grid */}
+        {/* ─── Hero distance ──────────────────────────────────────── */}
         <div
           style={{
-            padding: "32px 48px",
+            padding: "44px 56px 0",
+            position: "relative",
+            zIndex: 2,
+          }}
+        >
+          <div
+            style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: "10px",
+              letterSpacing: "0.32em",
+              color: INK_SOFT,
+              textTransform: "uppercase",
+              marginBottom: "6px",
+            }}
+          >
+            {t("stats:certificate.distanceTraveled")}
+          </div>
+          <div
+            style={{
+              fontFamily: "'Big Shoulders Display', 'Arial Narrow', sans-serif",
+              fontSize: "180px",
+              fontWeight: 900,
+              lineHeight: 0.85,
+              color: INK,
+              letterSpacing: "-0.02em",
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            {fmt(totalDistanceKm)}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "baseline",
+              gap: "16px",
+              marginTop: "4px",
+            }}
+          >
+            <span
+              style={{
+                fontFamily: "'Big Shoulders Display', sans-serif",
+                fontSize: "32px",
+                fontWeight: 600,
+                color: BRONZE,
+                letterSpacing: "0.05em",
+              }}
+            >
+              KILOMETER
+            </span>
+            <span
+              style={{
+                flex: 1,
+                height: "1px",
+                background: INK,
+                opacity: 0.4,
+              }}
+            />
+            <span
+              style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: "10px",
+                color: INK_SOFT,
+                letterSpacing: "0.18em",
+              }}
+            >
+              {fmt(totalFlightHours)} H · AIR
+            </span>
+          </div>
+
+          {/* Equivalences — story-telling translations of raw km */}
+          {(earthLapsLabel || moonProgressLabel) && (
+            <div
+              style={{
+                marginTop: "24px",
+                padding: "18px 22px",
+                background: "rgba(28,42,61,0.045)",
+                border: `1px dashed ${INK}`,
+                fontFamily: "'Fraunces', serif",
+                fontStyle: "italic",
+                fontSize: "17px",
+                lineHeight: 1.5,
+                color: INK,
+              }}
+            >
+              <span style={{ color: BRONZE, marginRight: "8px" }}>◯</span>
+              {earthLapsLabel || moonProgressLabel}
+            </div>
+          )}
+        </div>
+
+        {/* ─── Stat triplet ───────────────────────────────────────── */}
+        <div
+          style={{
+            padding: "40px 56px 0",
             display: "grid",
             gridTemplateColumns: "1fr 1fr 1fr",
-            gap: "24px",
+            gap: "0",
+            position: "relative",
+            zIndex: 2,
           }}
         >
-          {/* Total Flights */}
-          <StatCell
-            value={String(stats.totalFlights)}
-            label={t("stats:certificate.totalFlights")}
-          />
-
-          {/* Total Distance */}
-          <StatCell
-            value={`${totalDistanceRounded} km`}
-            label={t("stats:certificate.totalDistance")}
-          />
-
-          {/* Total Flight Time */}
-          <StatCell
-            value={`${totalFlightTimeRounded} h`}
+          <BigStat value={fmt(stats.totalFlights)} label={t("stats:certificate.totalFlights")} />
+          <BigStat
+            value={fmt(totalFlightHours)}
             label={t("stats:certificate.totalFlightTime")}
+            suffix="h"
+            withDivider
           />
-
-          {/* Top Airline */}
-          <StatCell value={stats.topAirline ?? "—"} label={t("stats:certificate.topAirline")} />
-
-          {/* Favorite Route */}
-          <StatCell
-            value={stats.favoriteRoute ?? "—"}
-            label={t("stats:certificate.favoriteRoute")}
+          <BigStat
+            value={String(yearsCount)}
+            label={t("stats:certificate.yearsActive")}
+            withDivider
           />
-
-          {/* Years Active */}
-          <StatCell value={yearsLabel} label={t("stats:certificate.years")} />
         </div>
 
-        {/* Footer */}
+        {/* ─── Notable section ───────────────────────────────────── */}
         <div
           style={{
-            padding: "20px 48px 32px",
-            borderTop: "1px solid rgba(212,175,55,0.3)",
+            padding: "44px 56px 0",
+            position: "relative",
+            zIndex: 2,
+          }}
+        >
+          <div
+            style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: "10px",
+              letterSpacing: "0.32em",
+              color: BRONZE,
+              textTransform: "uppercase",
+              marginBottom: "14px",
+              fontWeight: 700,
+            }}
+          >
+            ── {t("stats:certificate.ofNote")} ──
+          </div>
+          <NotableLine label={t("stats:certificate.topAirline")} value={stats.topAirline ?? "—"} />
+          <NotableLine
+            label={t("stats:certificate.favoriteRoute")}
+            value={stats.favoriteRoute ?? "—"}
+          />
+          <NotableLine label={t("stats:certificate.years")} value={yearsLabel} />
+        </div>
+
+        {/* ─── Postmark stamp ─────────────────────────────────────── */}
+        <Postmark date={generatedDate} flights={stats.totalFlights} />
+
+        {/* ─── Compass rose, top right behind everything ─────────── */}
+        <CompassRose />
+
+        {/* ─── Footer ─────────────────────────────────────────────── */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: "44px",
+            left: "56px",
+            right: "56px",
             display: "flex",
             justifyContent: "space-between",
-            alignItems: "center",
+            alignItems: "flex-end",
+            zIndex: 2,
           }}
         >
-          <p
+          <div>
+            <div
+              style={{
+                fontFamily: "'Fraunces', serif",
+                fontSize: "20px",
+                fontWeight: 800,
+                fontStyle: "italic",
+                color: INK,
+                letterSpacing: "-0.01em",
+              }}
+            >
+              trav·stats
+            </div>
+            <div
+              style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: "9px",
+                color: INK_SOFT,
+                letterSpacing: "0.2em",
+                textTransform: "uppercase",
+                marginTop: "2px",
+              }}
+            >
+              {t("stats:certificate.tagline")}
+            </div>
+          </div>
+          <div
             style={{
-              fontSize: "12px",
-              color: "rgba(200,214,232,0.6)",
-              margin: 0,
-              fontFamily: "'Arial', sans-serif",
-              fontStyle: "italic",
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: "9px",
+              color: INK_SOFT,
+              letterSpacing: "0.2em",
+              textAlign: "right",
+              textTransform: "uppercase",
             }}
           >
-            {t("stats:certificate.generatedOn", { date: generatedDate })}
-          </p>
-          <p
-            style={{
-              fontSize: "12px",
-              color: "rgba(212,175,55,0.7)",
-              margin: 0,
-              fontFamily: "'Arial', sans-serif",
-              letterSpacing: "0.04em",
-            }}
-          >
-            {t("stats:certificate.poweredBy")}
-          </p>
+            <div>{t("stats:certificate.issuedBy")}</div>
+            <div style={{ marginTop: "2px", color: BRONZE }}>{generatedDate}</div>
+          </div>
         </div>
 
-        {/* Bottom decorative bar */}
+        {/* ─── Bottom bronze hairline ─────────────────────────────── */}
         <div
           style={{
-            height: "6px",
-            background: "linear-gradient(90deg, #d4af37, #f5e07a, #d4af37)",
+            position: "absolute",
+            bottom: "26px",
+            left: "26px",
+            right: "26px",
+            height: "3px",
+            background: `linear-gradient(90deg, transparent, ${BRONZE} 20%, ${BRONZE} 80%, transparent)`,
+            opacity: 0.55,
+            pointerEvents: "none",
+          }}
+        />
+
+        {/* Subtle vignette to deepen edges */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            pointerEvents: "none",
+            background: `radial-gradient(ellipse at 50% 40%, transparent 50%, ${PAPER_SHADOW} 100%)`,
           }}
         />
       </div>
@@ -283,47 +605,283 @@ export function FlightCertificate({
   );
 }
 
-interface StatCellProps {
+// ─── Helpers ───────────────────────────────────────────────────────────────
+
+interface BigStatProps {
   value: string;
   label: string;
+  suffix?: string;
+  withDivider?: boolean;
 }
 
-function StatCell({ value, label }: StatCellProps): JSX.Element {
+function BigStat({ value, label, suffix, withDivider }: BigStatProps): JSX.Element {
   return (
     <div
       style={{
-        backgroundColor: "rgba(255,255,255,0.04)",
-        borderRadius: "10px",
-        padding: "16px 20px",
-        border: "1px solid rgba(212,175,55,0.15)",
         textAlign: "center",
+        padding: "0 14px",
+        borderLeft: withDivider ? `1px solid ${INK}` : "none",
+        position: "relative",
       }}
     >
-      <p
+      <div
         style={{
-          fontSize: "22px",
-          fontWeight: 700,
-          color: "#d4af37",
-          margin: "0 0 6px",
-          fontFamily: "'Arial', sans-serif",
-          lineHeight: 1.2,
-          wordBreak: "break-word",
+          fontFamily: "'Big Shoulders Display', sans-serif",
+          fontSize: "72px",
+          fontWeight: 800,
+          color: INK,
+          lineHeight: 0.9,
+          letterSpacing: "-0.01em",
+          fontVariantNumeric: "tabular-nums",
         }}
       >
         {value}
-      </p>
-      <p
+        {suffix && (
+          <span
+            style={{
+              fontSize: "30px",
+              color: BRONZE,
+              marginLeft: "2px",
+              fontWeight: 600,
+            }}
+          >
+            {suffix}
+          </span>
+        )}
+      </div>
+      <div
         style={{
-          fontSize: "11px",
-          color: "rgba(200,214,232,0.7)",
-          margin: 0,
+          marginTop: "10px",
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: "9px",
+          color: INK_SOFT,
+          letterSpacing: "0.28em",
           textTransform: "uppercase",
-          letterSpacing: "0.1em",
-          fontFamily: "'Arial', sans-serif",
+          fontWeight: 500,
         }}
       >
         {label}
-      </p>
+      </div>
+    </div>
+  );
+}
+
+interface NotableLineProps {
+  label: string;
+  value: string;
+}
+
+function NotableLine({ label, value }: NotableLineProps): JSX.Element {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "baseline",
+        gap: "16px",
+        padding: "10px 0",
+        borderBottom: `1px dotted rgba(28,42,61,0.25)`,
+      }}
+    >
+      <div
+        style={{
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: "10px",
+          color: INK_SOFT,
+          letterSpacing: "0.22em",
+          textTransform: "uppercase",
+          flex: "0 0 200px",
+          fontWeight: 500,
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          flex: 1,
+          height: "1px",
+          borderTop: `1px dashed rgba(28,42,61,0.2)`,
+          alignSelf: "center",
+        }}
+      />
+      <div
+        style={{
+          fontFamily: "'Fraunces', serif",
+          fontSize: "22px",
+          fontWeight: 800,
+          fontStyle: "italic",
+          color: INK,
+          letterSpacing: "-0.01em",
+          textAlign: "right",
+        }}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+interface PostmarkProps {
+  date: string;
+  flights: number;
+}
+
+function Postmark({ date, flights }: PostmarkProps): JSX.Element {
+  // Diagonal stamp anchored to bottom-left so it doesn't compete with the
+  // headline. SVG text-on-path gives the round-stamp feel without a font dep.
+  return (
+    <div
+      style={{
+        position: "absolute",
+        right: "70px",
+        bottom: "230px",
+        width: "180px",
+        height: "180px",
+        transform: "rotate(-12deg)",
+        opacity: 0.8,
+        zIndex: 3,
+        pointerEvents: "none",
+      }}
+    >
+      <svg viewBox="0 0 200 200" width="180" height="180">
+        <defs>
+          <path
+            id="postmark-curve"
+            d="M 100,100 m -76,0 a 76,76 0 1,1 152,0 a 76,76 0 1,1 -152,0"
+          />
+        </defs>
+        {/* Outer ring */}
+        <circle
+          cx="100"
+          cy="100"
+          r="90"
+          fill="none"
+          stroke={STAMP_RED}
+          strokeWidth="1.5"
+          strokeDasharray="3 3"
+        />
+        {/* Inner ring */}
+        <circle cx="100" cy="100" r="60" fill="none" stroke={STAMP_RED} strokeWidth="2" />
+        {/* Wing-line through the centre to evoke an airmail postmark */}
+        <line x1="6" y1="100" x2="194" y2="100" stroke={STAMP_RED} strokeWidth="1.5" />
+        <line x1="20" y1="92" x2="180" y2="92" stroke={STAMP_RED} strokeWidth="0.8" opacity="0.6" />
+        <line
+          x1="20"
+          y1="108"
+          x2="180"
+          y2="108"
+          stroke={STAMP_RED}
+          strokeWidth="0.8"
+          opacity="0.6"
+        />
+        {/* Curved top text */}
+        <text
+          fill={STAMP_RED}
+          fontFamily="'JetBrains Mono', monospace"
+          fontSize="12"
+          fontWeight="700"
+          letterSpacing="3"
+        >
+          <textPath href="#postmark-curve" startOffset="14%">
+            ✦ VERIFIED FLIGHT LOG ✦
+          </textPath>
+        </text>
+        {/* Curved bottom text — same path, mirrored offset */}
+        <text
+          fill={STAMP_RED}
+          fontFamily="'JetBrains Mono', monospace"
+          fontSize="11"
+          fontWeight="500"
+          letterSpacing="2"
+        >
+          <textPath href="#postmark-curve" startOffset="64%">
+            {date.toUpperCase()}
+          </textPath>
+        </text>
+        {/* Centre — flight count */}
+        <text
+          x="100"
+          y="74"
+          fill={STAMP_RED}
+          fontFamily="'JetBrains Mono', monospace"
+          fontSize="10"
+          fontWeight="500"
+          textAnchor="middle"
+          letterSpacing="2"
+        >
+          FLIGHTS
+        </text>
+        <text
+          x="100"
+          y="138"
+          fill={STAMP_RED}
+          fontFamily="'Big Shoulders Display', sans-serif"
+          fontSize="56"
+          fontWeight="800"
+          textAnchor="middle"
+        >
+          {flights}
+        </text>
+      </svg>
+    </div>
+  );
+}
+
+function CompassRose(): JSX.Element {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        top: "150px",
+        right: "44px",
+        width: "120px",
+        height: "120px",
+        opacity: 0.18,
+        pointerEvents: "none",
+        zIndex: 1,
+      }}
+    >
+      <svg viewBox="0 0 120 120" width="120" height="120">
+        {/* Outer circle */}
+        <circle cx="60" cy="60" r="58" fill="none" stroke={INK} strokeWidth="0.8" />
+        {/* Tick marks */}
+        {Array.from({ length: 32 }).map((_, i) => {
+          const angle = (i / 32) * 2 * Math.PI;
+          const long = i % 4 === 0;
+          const r1 = 58;
+          const r2 = long ? 50 : 54;
+          const x1 = 60 + Math.cos(angle) * r1;
+          const y1 = 60 + Math.sin(angle) * r1;
+          const x2 = 60 + Math.cos(angle) * r2;
+          const y2 = 60 + Math.sin(angle) * r2;
+          return (
+            <line
+              key={i}
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              stroke={INK}
+              strokeWidth={long ? 1 : 0.5}
+            />
+          );
+        })}
+        {/* Star */}
+        <polygon points="60,8 66,60 60,52 54,60" fill={INK} />
+        <polygon points="60,112 54,60 60,68 66,60" fill={INK} opacity="0.7" />
+        <polygon points="8,60 60,54 52,60 60,66" fill={INK} opacity="0.7" />
+        <polygon points="112,60 60,66 68,60 60,54" fill={INK} opacity="0.7" />
+        <text
+          x="60"
+          y="22"
+          textAnchor="middle"
+          fill={INK}
+          fontFamily="'JetBrains Mono', monospace"
+          fontSize="9"
+          fontWeight="700"
+        >
+          N
+        </text>
+      </svg>
     </div>
   );
 }
