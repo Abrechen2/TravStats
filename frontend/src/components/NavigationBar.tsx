@@ -5,6 +5,7 @@ import { pendingUpdatesApi } from "../lib/api";
 import { useTranslation } from "../hooks/useTranslation";
 import { useClickOutside } from "../hooks/useClickOutside";
 import { logger } from "../lib/logger";
+import DiagnosticExportModal from "./DiagnosticExportModal";
 
 interface NavItem {
   path: string;
@@ -22,6 +23,7 @@ export default function NavigationBar(): JSX.Element {
   const { t } = useTranslation(["dashboard", "common"]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [pendingUpdatesCount, setPendingUpdatesCount] = useState(0);
+  const [diagnosticModalOpen, setDiagnosticModalOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
   useClickOutside(mobileMenuRef, closeMobileMenu);
@@ -188,6 +190,27 @@ export default function NavigationBar(): JSX.Element {
             {/* Right: Donate + Star + Username + Logout */}
             <div className="flex items-center gap-2">
               <div className="hidden xl:flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setDiagnosticModalOpen(true)}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium transition-colors duration-150"
+                  style={{ color: "var(--text-muted)", border: "1px solid var(--color-border)" }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = "#f85149";
+                    e.currentTarget.style.color = "#f85149";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = "var(--color-border)";
+                    e.currentTarget.style.color = "var(--text-muted)";
+                  }}
+                  aria-label={t("common:diagnostic.reportBug")}
+                  title={t("common:diagnostic.reportBug")}
+                >
+                  <svg width="11" height="11" viewBox="0 0 16 16" fill="#f85149" aria-hidden="true">
+                    <path d="M4 1a1 1 0 0 1 2 0 1 1 0 0 1 1 1H5a1 1 0 0 1-1-1zm8 1a1 1 0 0 0-2 0 1 1 0 0 0-1 1h2a1 1 0 0 0 1-1zM2.5 5a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1h-2v1h3a.5.5 0 0 1 0 1h-3v1.5a3 3 0 1 1-6 0V7.5h-3a.5.5 0 0 1 0-1h3v-1H3a.5.5 0 0 1-.5-.5zM6.5 9.5v.5a1.5 1.5 0 1 0 3 0v-.5h-3z" />
+                  </svg>
+                  Bug
+                </button>
                 <a
                   href="https://www.paypal.com/donate?hosted_button_id=HW9MPYVURCT42"
                   target="_blank"
@@ -385,6 +408,11 @@ export default function NavigationBar(): JSX.Element {
           </div>
         </div>
       )}
+
+      <DiagnosticExportModal
+        isOpen={diagnosticModalOpen}
+        onClose={() => setDiagnosticModalOpen(false)}
+      />
     </>
   );
 }

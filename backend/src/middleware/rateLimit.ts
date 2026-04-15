@@ -220,3 +220,17 @@ export const passwordResetLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+/**
+ * Rate limiter for diagnostic bundle export.
+ * Generous enough for a user iterating on a bug report, tight enough that
+ * the endpoint can't be used to scrape logs.
+ */
+export const diagnosticExportLimiter = rateLimit({
+  windowMs: RATE_LIMITS.DIAGNOSTIC_EXPORT_WINDOW_MS,
+  max: RATE_LIMITS.DIAGNOSTIC_EXPORT_MAX,
+  message: 'Too many diagnostic export requests, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+});

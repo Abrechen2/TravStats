@@ -31,6 +31,24 @@
     "name": "TravStats",
     "logoAlt": "TravStats Logo"
   },
+  "diagnostic": {
+    "reportBug": "Fehler melden",
+    "title": "Diagnose-Export für GitHub-Issue",
+    "description": "Lade ein bereinigtes Diagnose-Paket herunter, das du einem GitHub-Issue anhängen kannst. Das Paket enthält die letzten Log-Einträge sowie System- und Versionsinfos. Alle persönlichen Daten wurden entfernt:",
+    "scrubList": {
+      "ip": "IP-Adressen → <redacted:ip>",
+      "email": "E-Mail-Adressen → <redacted:email>",
+      "tokens": "JWT-Tokens → <redacted:jwt>",
+      "uuids": "UUIDs (User-IDs, Flug-IDs) → <redacted:uuid>"
+    },
+    "generating": "Erzeuge Diagnose-Paket...",
+    "copy": "In Zwischenablage kopieren",
+    "copied": "Diagnose-Paket kopiert – bitte ins GitHub-Issue einfügen",
+    "copyFailed": "Kopieren fehlgeschlagen",
+    "download": "Als Datei speichern",
+    "openIssue": "GitHub-Issue öffnen",
+    "error": "Diagnose-Export fehlgeschlagen"
+  },
   "accessibility": {
     "close": "Schlie\u00dfen",
     "showHelp": "Hilfe anzeigen",

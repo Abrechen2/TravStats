@@ -31,6 +31,24 @@
     "name": "TravStats",
     "logoAlt": "TravStats Logo"
   },
+  "diagnostic": {
+    "reportBug": "Report a bug",
+    "title": "Diagnostic export for a GitHub issue",
+    "description": "Download a scrubbed diagnostic bundle you can attach to a GitHub issue. The bundle contains the latest log entries plus system and version info. All personal data has been removed:",
+    "scrubList": {
+      "ip": "IP addresses → <redacted:ip>",
+      "email": "Email addresses → <redacted:email>",
+      "tokens": "JWT tokens → <redacted:jwt>",
+      "uuids": "UUIDs (user IDs, flight IDs) → <redacted:uuid>"
+    },
+    "generating": "Generating diagnostic bundle...",
+    "copy": "Copy to clipboard",
+    "copied": "Bundle copied – paste it into the GitHub issue",
+    "copyFailed": "Copy to clipboard failed",
+    "download": "Download as file",
+    "openIssue": "Open GitHub issue",
+    "error": "Diagnostic export failed"
+  },
   "accessibility": {
     "close": "Close",
     "showHelp": "Show help",

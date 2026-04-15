@@ -98,6 +98,11 @@ export const RATE_LIMITS = {
   // Password reset rate limits
   PASSWORD_RESET_WINDOW_MS: 15 * 60 * 1000, // 15 minutes
   PASSWORD_RESET_MAX: 5,
+
+  // Diagnostic export rate limits (reads log files from disk)
+  // Cheap to build but meant for human bug-report workflows, not scripts.
+  DIAGNOSTIC_EXPORT_WINDOW_MS: 60 * 60 * 1000, // 1 hour
+  DIAGNOSTIC_EXPORT_MAX: 10, // 10 per hour per user
 } as const;
 
 // ========== DATABASE & QUERY LIMITS ==========

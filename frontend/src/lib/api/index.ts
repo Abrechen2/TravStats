@@ -18,6 +18,7 @@ export * from "./pendingUpdates";
 export * from "./backup";
 export * from "./template";
 export * from "./suggestions";
+export * from "./diagnosticExport";
 // Named export (not `export *`) to avoid re-exporting Trip/Booking,
 // which are already exported from ../../types/index.ts
 export { tripsApi } from "./trips";
