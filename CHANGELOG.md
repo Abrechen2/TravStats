@@ -4,6 +4,20 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.27.1-beta] - 2026-04-15
+
+### Fixed
+- **Duplicate flight: airline + flight number nullToUndef** — Older imported flights have these columns NULL in the DB, but the frontend Flight type lies and types them as required strings, so they slipped past the previous nullToUndef fix. All four nullable-typed-as-required fields now go through the helper.
+- **Certificate: black vertical bands in exported PNG** — html2canvas does not render the SVG `feTurbulence` filter consistently and produced solid-black stripes from the noise data URI. Replaced with two layered radial gradients that give the parchment depth without the rasteriser hazard. Also removed `mixBlendMode: multiply` on the postmark for the same reason.
+- **Stats page: clear separation between year-filter and totals** — Both four-card rows looked identical. Added a labelled separator above each row ("── Jahr 2026 ──" / "── Gesamt (alle Jahre) ──") with a subtle bottom-border so the scope is unambiguous.
+- **Diagnostic export "Copy" worked on HTTPS only** — `navigator.clipboard` requires a secure context. Falls back to the legacy `execCommand('copy')` with a temporary off-screen textarea on plain HTTP.
+- **Bug-Report button hidden on narrower screens** — Was tucked into the `xl:` breakpoint group with Donate/Star. Lifted out so it shows on all desktop widths.
+- **/settings rate limiter removed** — The 1000/15min cap kept tripping during normal use. Real rate-limiting belongs on auth (brute-force), external-API-backed routes (cost) and admin exports (DB-wide reads), not on a user reading their own preferences.
+- **Historical-flight month "Unbekannt" snapped back to Januar** — Storing `YYYY-01-01` for both January and "unknown" meant the parser couldn't distinguish them. Now stores year-only (`YYYY`) for the unknown-month case and expands to `YYYY-01-01` only at submit.
+
+### Changed
+- **Removed parser-feedback collection** — Same anti-pattern as the already-removed pattern-updater: data was collected into `analytics_events` but no longer consumed automatically. With Ollama as primary parser, the feedback was unused. Removed the `parserFeedback` service + route, the `/admin/parser-feedback/stats` and `/details` endpoints, the `/admin/parse-logs/promote` endpoint, the `FeedbackAnalytics` admin tab and the parser-correction submission from the FlightReviewModal. The `ParseTrainingLog`-based parser hit-rate dashboard (a different system) is unchanged.
+
 ## [0.27.0-beta] - 2026-04-15
 
 ### Added
