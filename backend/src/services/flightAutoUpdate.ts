@@ -11,6 +11,7 @@ import { prisma } from '../db';
 import logger from '../utils/logger';
 import { getApiKey } from './apiKeyResolver';
 import { recalculateNextApiCheckAt } from '../utils/smartCheckSchedule';
+import { applyPendingUpdate } from './pendingUpdateService';
 import type { FlightDataSnapshot } from './pendingUpdateService';
 
 const prismaClient = prisma as PrismaClient;
@@ -442,9 +443,10 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
           continue;
         }
 
-        logger.info({ flightId: flight.id, flightNumber: flight.flightNumber, changeCount: Object.keys(changes).length,
-          changedFields: Object.keys(changes), operation: 'significant_changes_found' },
-          `Found ${Object.keys(changes).length} change(s) for ${flight.flightNumber}: ${Object.keys(changes).join(', ')}`);
+        const changedFieldNames = changes.map(c => c.field);
+        logger.info({ flightId: flight.id, flightNumber: flight.flightNumber, changeCount: changes.length,
+          changedFields: changedFieldNames, operation: 'significant_changes_found' },
+          `Found ${changes.length} change(s) for ${flight.flightNumber}: ${changedFieldNames.join(', ')}`);
 
         // Determine API source (check user key first, then global, then ENV)
         const aviationstackKey = await getApiKey('aviationstack', flight.userId);
@@ -465,6 +467,22 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
 
         if (updateId) {
           updatesCreated++;
+
+          // If user has disabled approval gating, apply the update immediately
+          // instead of leaving it to rot in pending_flight_updates forever.
+          // The pending row is still created for audit (status: applied).
+          if (userSettings.autoUpdateRequireApproval === false) {
+            const applied = await applyPendingUpdate(updateId, userId);
+            if (applied) {
+              logger.info({ flightId: flight.id, flightNumber: flight.flightNumber,
+                pendingUpdateId: updateId, operation: 'auto_applied' },
+                `Auto-applied update for ${flight.flightNumber} (requireApproval=false)`);
+            } else {
+              logger.warn({ flightId: flight.id, flightNumber: flight.flightNumber,
+                pendingUpdateId: updateId, operation: 'auto_apply_failed' },
+                `Auto-apply failed for ${flight.flightNumber} — pending update left in place`);
+            }
+          }
         }
 
         // Rate limiting: wait a bit between API calls
@@ -499,11 +517,12 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
 
 /**
  * Hours past scheduled arrival after which a flight that still has status
- * "scheduled" is assumed to have flown. Chosen as 48h because this is well past
- * even the longest international delays and near-certainly means the APIs never
- * provided confirmation. User can always edit the record by hand afterwards.
+ * "scheduled" is assumed to have flown. 6h comfortably covers realistic delays
+ * (even IRROPS rarely push a flight past +4h) while preventing stale entries
+ * from accumulating in the scheduler's API-check queue for days.
+ * User can always edit the record by hand afterwards.
  */
-const ZOMBIE_SCHEDULED_CUTOFF_HOURS = 48;
+const ZOMBIE_SCHEDULED_CUTOFF_HOURS = 6;
 
 /**
  * Auto-transition "zombie" scheduled flights whose arrival time is far in the past

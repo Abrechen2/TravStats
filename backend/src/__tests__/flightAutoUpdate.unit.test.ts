@@ -144,7 +144,7 @@ describe("transitionZombieFlights", () => {
     jest.clearAllMocks();
   });
 
-  it("flips status=scheduled flights past arrival+48h to flown", async () => {
+  it("flips status=scheduled flights past arrival+6h to flown", async () => {
     mockFlightUpdateMany.mockResolvedValue({ count: 3 });
 
     const result = await transitionZombieFlights();
@@ -160,8 +160,8 @@ describe("transitionZombieFlights", () => {
     expect(call.where.arrivalTime.not).toBeNull();
     expect(call.where.arrivalTime.lt).toBeInstanceOf(Date);
 
-    // 48h cutoff: lt should be ~48h ago (allow 1 min slack for clock drift during test)
-    const expectedCutoff = Date.now() - 48 * 60 * 60 * 1000;
+    // 6h cutoff: lt should be ~6h ago (allow 1 min slack for clock drift during test)
+    const expectedCutoff = Date.now() - 6 * 60 * 60 * 1000;
     const actualCutoff = (call.where.arrivalTime.lt as Date).getTime();
     expect(Math.abs(actualCutoff - expectedCutoff)).toBeLessThan(60 * 1000);
 
