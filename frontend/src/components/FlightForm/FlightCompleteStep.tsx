@@ -324,12 +324,15 @@ export default function FlightCompleteStep({
       {/* Date & Time — full inputs for normal flights, year/month for historical */}
       {status === "historical" ? (
         (() => {
-          // Parse YYYY-MM-DD directly from the stored string. Using new Date()
-          // produces NaN when the value is anything but a clean date string,
-          // which then gets re-written back as "NaN" and locks the field.
-          const parts = departureDate.match(/^(\d{4})-(\d{2})/);
-          const yearStr = parts?.[1] ?? "";
-          const monthPadded = parts?.[2] ?? "";
+          // Parse the stored YYYY-MM-DD using a relaxed regex so the year input
+          // shows the user's keystrokes while they type. The strict /^(\d{4})/
+          // pattern used previously cleared the input as soon as the user typed
+          // the first digit (because departureDate became "2-01-01" which did
+          // not match), making the field appear unresponsive.
+          const yearMatch = departureDate.match(/^(\d{1,4})/);
+          const monthMatch = departureDate.match(/^\d{1,4}-(\d{2})/);
+          const yearStr = yearMatch?.[1] ?? "";
+          const monthPadded = monthMatch?.[1] ?? "";
           const monthValue = monthPadded ? String(parseInt(monthPadded, 10)) : "";
           return (
             <div className="grid grid-cols-2 gap-4">
