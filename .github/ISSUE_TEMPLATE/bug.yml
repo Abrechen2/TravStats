@@ -1,0 +1,73 @@
+name: Bug Report
+description: Report a bug or unexpected behaviour in TravStats
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! The Diagnose-Export in
+        the TravStats admin area produces a scrubbed JSON bundle — please
+        paste it into the "Diagnostic bundle" field below. The "Report Bug"
+        button in the app opens this form with the version field
+        pre-filled and the bundle already on your clipboard.
+
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: One sentence — what is the problem?
+      placeholder: "Auto-update silently stops after the first flight"
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What actually happened?
+      description: Describe the observed behaviour.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should have happened?
+      description: Describe the behaviour you expected.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps so someone else can trigger the bug.
+      placeholder: |
+        1. Open the Diagnose-Export modal
+        2. Click "Report Bug"
+        3. Observe ...
+
+  - type: input
+    id: version
+    attributes:
+      label: TravStats version
+      description: The "Report Bug" button fills this automatically.
+      placeholder: "0.28.0-beta"
+    validations:
+      required: true
+
+  - type: textarea
+    id: diagnostic
+    attributes:
+      label: Diagnostic bundle
+      description: |
+        Paste the JSON bundle here (it was copied to your clipboard when
+        you clicked "Report Bug"), or drag the downloaded `.json` file
+        into the comment field below this form.
+      render: json
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Screenshots, links, anything else that helps.
