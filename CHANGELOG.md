@@ -4,6 +4,13 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.27.2-beta] - 2026-04-16
+
+### Fixed
+- **Historical enrichment stayed pending forever** — When users had turned off the approval gate (`autoUpdateRequireApproval=false`), newly created historical enrichments were nonetheless left as "pending" and never surfaced on the flight. The scheduler now mirrors the live auto-update path and auto-applies them.
+- **Zombie-flip missed flights with corrupted arrival time** — The stale-scheduled safety net only considered `arrivalTime + 6h` and was silent when a bad API lookup pushed `arrivalTime` into the future. Added a second `departureTime + 30h` trigger that flips the flight regardless of arrival-time state (30h comfortably covers ultra-long-haul like SIN→JFK).
+- **Gate, terminal and actual departure/arrival never persisted** — `lookupFlightDetails` silently dropped per-flight live fields (gate, terminal) by letting the static airport record shadow them, and `actualDeparture`/`actualArrival` were missing from the snapshot pipeline entirely. Both AirLabs and Aviationstack paths now forward these end-to-end, and `delayMinutes` is recomputed on apply.
+
 ## [0.27.1-beta] - 2026-04-15
 
 ### Fixed
