@@ -4,6 +4,12 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.29.0-beta] - 2026-04-16
+
+### Added
+- **One-click Report Bug flow** — The diagnostic-export modal's former "Issue öffnen" link is now a primary "Fehler melden" / "Report Bug" button. Clicking it copies the JSON bundle to the clipboard and opens a new tab at a GitHub Issue Form with the `version` field pre-filled and the `bug` label already applied. A toast confirms the clipboard step so the paste target is obvious. If the clipboard write is blocked (non-secure context, permissions, etc.), the issue URL still opens and the user is directed to the Download button as a fallback.
+- **Structured GitHub Issue templates** — New `.github/ISSUE_TEMPLATE/` entries for "Bug Report" (7 fields: summary, actual, expected, reproduction, version, diagnostic bundle, additional context) and "Feature Request" (4 fields). `blank_issues_enabled: false` steers non-maintainer contributors through one of the two templates so every incoming issue arrives pre-structured.
+
 ## [0.28.0-beta] - 2026-04-16
 
 ### Added
