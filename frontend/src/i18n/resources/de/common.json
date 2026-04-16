@@ -33,6 +33,8 @@
   },
   "diagnostic": {
     "reportBug": "Fehler melden",
+    "reportBugOpened": "Bundle kopiert – im neuen Tab einfügen",
+    "reportBugHint": "Öffnet GitHub mit einem vorausgefüllten Fehler-Template und kopiert das Diagnose-Bundle in die Zwischenablage",
     "title": "Diagnose-Export für GitHub-Issue",
     "description": "Lade ein bereinigtes Diagnose-Paket herunter, das du einem GitHub-Issue anhängen kannst. Das Paket enthält die letzten Log-Einträge sowie System- und Versionsinfos. Alle persönlichen Daten wurden entfernt:",
     "scrubList": {
@@ -46,7 +48,6 @@
     "copied": "Diagnose-Paket kopiert – bitte ins GitHub-Issue einfügen",
     "copyFailed": "Kopieren fehlgeschlagen",
     "download": "Als Datei speichern",
-    "openIssue": "GitHub-Issue öffnen",
     "error": "Diagnose-Export fehlgeschlagen"
   },
   "accessibility": {
