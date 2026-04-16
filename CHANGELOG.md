@@ -4,6 +4,15 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [0.28.0-beta] - 2026-04-16
+
+### Added
+- **Diagnostic Export v2 — self-sufficient bug-report bundle** — The JSON bundle produced by the "Diagnose-Export" admin action now includes two new sections so a GitHub issue rarely needs follow-up questions:
+  - `settings` — the reporter's auto-update and historical-enrichment preferences (booleans and integers only, credentials are never projected). Defends against future schema additions via a hand-written allowlist.
+  - `flightState` — per-user aggregates (`byStatus` counts + pipeline counters including `withNextApiCheck`, `withPendingUpdates`, `withLiveTracking`, `withActualTimes`, `zombieCandidates`) so the maintainer can see at a glance what the scheduler is looking at.
+
+  Log tails are now time-windowed instead of entry-capped: 24 h for `appTail`, 7 d for `errorTail`. Rotated `.log.gz` files are read transparently; a broken archive is skipped rather than breaking the whole bundle. Pino's duplicate `time`/`timestamp` pair is deduped on read, cutting bundle size by roughly 50 %. Caps (5 000 entries / ~2 MiB) prevent a flooded log from blowing up the download. Each section is collected in isolation — a DB hiccup on one section now returns `{ error: "failed to collect <section>" }` for that slice only, the rest of the bundle still succeeds with HTTP 200.
+
 ## [0.27.2-beta] - 2026-04-16
 
 ### Fixed
