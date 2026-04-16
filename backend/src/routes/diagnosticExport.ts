@@ -20,7 +20,7 @@ router.get(
   diagnosticExportLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-      const bundle = await buildDiagnosticBundle();
+      const bundle = await buildDiagnosticBundle(req.userId!);
       logger.info({
         operation: 'diagnostic_export',
         userId: req.userId,

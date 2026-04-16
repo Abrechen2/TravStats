@@ -30,7 +30,14 @@ jest.mock("../utils/logger", () => ({
   systemLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
 
-import { collectSettings, collectFlightState } from "../services/diagnosticExport";
+import {
+  collectSettings,
+  collectFlightState,
+  buildDiagnosticBundle,
+  SettingsSection,
+  FlightStateSection,
+} from "../services/diagnosticExport";
+import { readLogWindow } from "../services/logManager";
 
 describe("collectSettings — allowlist", () => {
   beforeEach(() => jest.clearAllMocks());
@@ -178,5 +185,55 @@ describe("collectFlightState — aggregates", () => {
     const depExpected = Date.now() - 30 * 3600 * 1000;
     expect(Math.abs(arrBranch!.arrivalTime.lt.getTime() - arrExpected)).toBeLessThan(60_000);
     expect(Math.abs(depBranch!.departureTime.lt.getTime() - depExpected)).toBeLessThan(60_000);
+  });
+});
+
+describe("buildDiagnosticBundle — bundle shape + error isolation", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (readLogWindow as jest.Mock).mockResolvedValue([]);
+    mockUserSettingsFindUnique.mockResolvedValue(null);
+    mockFlightGroupBy.mockResolvedValue([]);
+    mockFlightCount.mockResolvedValue(0);
+    mockPendingFindCount.mockResolvedValue(0);
+  });
+
+  it("includes settings and flightState sections in the bundle", async () => {
+    const bundle = await buildDiagnosticBundle("u1");
+
+    expect(bundle.settings).toBeDefined();
+    expect((bundle.settings as SettingsSection).autoUpdate.requireApproval).toBe(true); // default
+    expect(bundle.flightState).toBeDefined();
+    expect((bundle.flightState as FlightStateSection).byStatus.scheduled).toBe(0);
+  });
+
+  it("uses 24h window for appTail and 7d window for errorTail", async () => {
+    await buildDiagnosticBundle("u1");
+
+    const calls = (readLogWindow as jest.Mock).mock.calls;
+    const appCall = calls.find((c) => c[0] === "app");
+    const errCall = calls.find((c) => c[0] === "error");
+    expect(appCall?.[1]).toBe(24 * 60 * 60 * 1000);
+    expect(errCall?.[1]).toBe(7 * 24 * 60 * 60 * 1000);
+  });
+
+  it("returns a bundle with settings error marker when collectSettings fails", async () => {
+    mockUserSettingsFindUnique.mockRejectedValue(new Error("DB boom"));
+
+    const bundle = await buildDiagnosticBundle("u1");
+
+    expect(bundle.settings).toEqual({ error: "failed to collect settings" });
+    // Other sections still present
+    expect(bundle.flightState).toBeDefined();
+    expect(bundle.logs).toBeDefined();
+  });
+
+  it("returns a bundle with flightState error marker when collectFlightState fails", async () => {
+    mockFlightGroupBy.mockRejectedValue(new Error("DB boom"));
+
+    const bundle = await buildDiagnosticBundle("u1");
+
+    expect(bundle.flightState).toEqual({ error: "failed to collect flightState" });
+    expect(bundle.settings).toBeDefined();
   });
 });

@@ -9,14 +9,9 @@
  * tail — there is no persistence.
  */
 
-import fs from 'fs/promises';
-import path from 'path';
-import { getLogStats, listLogFiles, readLogFile, LogEntry } from './logManager';
+import { getLogStats, listLogFiles, readLogWindow, LogEntry } from './logManager';
 import logger from '../utils/logger';
 import { prisma } from '../db';
-
-const LOG_DIR = path.join(process.cwd(), '..', 'data', 'logs');
-const DEFAULT_TAIL = 200;
 
 /**
  * Fields that may contain PII or credentials. If a log entry has any of these
@@ -247,6 +242,8 @@ export async function collectFlightState(userId: string): Promise<FlightStateSec
   };
 }
 
+type SectionError = { error: string };
+
 export interface DiagnosticBundle {
   generatedAt: string;
   version: string;
@@ -255,6 +252,8 @@ export interface DiagnosticBundle {
     os: NodeJS.Platform;
     uptimeSeconds: number;
   };
+  settings: SettingsSection | SectionError;
+  flightState: FlightStateSection | SectionError;
   logs: {
     stats: Awaited<ReturnType<typeof getLogStats>>;
     files: Array<{ name: string; sizeBytes: number; lastModified: string }>;
@@ -264,65 +263,67 @@ export interface DiagnosticBundle {
   notes: string;
 }
 
-async function findCurrentLogFile(prefix: 'app' | 'error'): Promise<string | null> {
-  // rotating-file-stream writes to `<prefix>.log` as the active file and rotates
-  // to `<prefix>-YYYY-MM-DD.log.gz` at day boundary. Prefer the active file,
-  // fall back to the most recent rotated file if it doesn't exist yet.
-  const active = path.join(LOG_DIR, `${prefix}.log`);
+const APP_WINDOW_MS = 24 * 60 * 60 * 1000;        // 24h
+const ERROR_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;  // 7d
+
+async function safeCollect<T>(
+  section: string,
+  fn: () => Promise<T>,
+): Promise<T | SectionError> {
   try {
-    await fs.access(active);
-    return `${prefix}.log`;
-  } catch {
-    const all = await listLogFiles();
-    const match = all
-      .filter(f => f.filename.startsWith(`${prefix}`) && f.filename.endsWith('.log'))
-      .sort((a, b) => (a.modified < b.modified ? 1 : -1))[0];
-    return match ? match.filename : null;
+    return await fn();
+  } catch (error: unknown) {
+    logger.warn({
+      operation: 'diagnostic_export_section_failed',
+      context: { section },
+      error: {
+        message: error instanceof Error ? error.message : 'Unknown error',
+      },
+    });
+    return { error: `failed to collect ${section}` };
   }
 }
 
+function isSectionError(value: unknown): value is SectionError {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as { error?: unknown }).error === 'string'
+  );
+}
+
 /**
- * Build a diagnostic bundle. Tail defaults to 200 entries each for app.log
- * and error.log.
+ * Build a diagnostic bundle for one user. Each collect* step is isolated so
+ * a failure in one section (e.g. DB hiccup) doesn't tank the whole bundle.
  */
-export async function buildDiagnosticBundle(tail: number = DEFAULT_TAIL): Promise<DiagnosticBundle> {
-  const [stats, files] = await Promise.all([
-    getLogStats().catch(() => ({
-      totalSize: 0,
-      totalSizeFormatted: '0 B',
-      fileCount: 0,
-      categoryBreakdown: {},
-    })),
-    listLogFiles().catch(() => []),
+export async function buildDiagnosticBundle(userId: string): Promise<DiagnosticBundle> {
+  const [stats, files, settings, flightState, appTail, errorTail] = await Promise.all([
+    safeCollect('stats', () => getLogStats()),
+    safeCollect('files', () => listLogFiles()),
+    safeCollect('settings', () => collectSettings(userId)),
+    safeCollect('flightState', () => collectFlightState(userId)),
+    safeCollect('appTail', () => readLogWindow('app', APP_WINDOW_MS)),
+    safeCollect('errorTail', () => readLogWindow('error', ERROR_WINDOW_MS)),
   ]);
 
-  let appTail: LogEntry[] = [];
-  let errorTail: LogEntry[] = [];
-  try {
-    const appFile = await findCurrentLogFile('app');
-    if (appFile) {
-      const entries = await readLogFile(appFile, { limit: tail });
-      appTail = entries.map(e => scrub(e) as LogEntry);
-    }
-  } catch (error: unknown) {
-    logger.warn({
-      operation: 'diagnostic_export_app_read_failed',
-      error: { message: error instanceof Error ? error.message : 'Unknown error' },
-    });
-  }
+  const scrubbedAppTail = Array.isArray(appTail)
+    ? appTail.map(e => scrub(e) as LogEntry)
+    : [];
+  const scrubbedErrorTail = Array.isArray(errorTail)
+    ? errorTail.map(e => scrub(e) as LogEntry)
+    : [];
 
-  try {
-    const errorFile = await findCurrentLogFile('error');
-    if (errorFile) {
-      const entries = await readLogFile(errorFile, { limit: tail });
-      errorTail = entries.map(e => scrub(e) as LogEntry);
-    }
-  } catch (error: unknown) {
-    logger.warn({
-      operation: 'diagnostic_export_error_read_failed',
-      error: { message: error instanceof Error ? error.message : 'Unknown error' },
-    });
-  }
+  const filesList = Array.isArray(files)
+    ? files.map(f => ({
+        name: f.filename,
+        sizeBytes: f.size,
+        lastModified: f.modified.toISOString(),
+      }))
+    : [];
+
+  const statsObj = isSectionError(stats)
+    ? { totalSize: 0, totalSizeFormatted: '0 B', fileCount: 0, categoryBreakdown: {} }
+    : stats;
 
   return {
     generatedAt: new Date().toISOString(),
@@ -332,15 +333,15 @@ export async function buildDiagnosticBundle(tail: number = DEFAULT_TAIL): Promis
       os: process.platform,
       uptimeSeconds: Math.round(process.uptime()),
     },
+    settings: isSectionError(settings) ? settings : (scrub(settings) as SettingsSection),
+    flightState: isSectionError(flightState)
+      ? flightState
+      : (scrub(flightState) as FlightStateSection),
     logs: {
-      stats,
-      files: files.map(f => ({
-        name: f.filename,
-        sizeBytes: f.size,
-        lastModified: f.modified.toISOString(),
-      })),
-      appTail,
-      errorTail,
+      stats: statsObj as Awaited<ReturnType<typeof getLogStats>>,
+      files: filesList,
+      appTail: scrubbedAppTail,
+      errorTail: scrubbedErrorTail,
     },
     notes:
       'This bundle was scrubbed client-side by TravStats before export. IP addresses, ' +
