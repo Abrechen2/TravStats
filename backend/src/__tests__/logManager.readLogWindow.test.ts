@@ -186,3 +186,20 @@ describe("readLogWindow — Pino dedupe", () => {
     expect(entries[0].timestamp).toBe(other);
   });
 });
+
+describe("readLogWindow — corrupt gz", () => {
+  it("skips a broken .gz file and returns entries from the active log", async () => {
+    writeJsonl("app.log", [{ time: iso(-1000), level: "info", msg: "alive" }]);
+    // Not valid gzip content
+    fs.writeFileSync(
+      path.join(logDir, "20260416-0000-01-app.log.gz"),
+      Buffer.from("not really a gzip file"),
+    );
+
+    const { readLogWindow } = await import("../services/logManager");
+    const entries = await readLogWindow("app", 60 * 60 * 1000);
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0].msg).toBe("alive");
+  });
+});

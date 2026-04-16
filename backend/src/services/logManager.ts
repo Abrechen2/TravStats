@@ -281,38 +281,51 @@ export async function readLogWindow(
 
   outer: for (const file of ordered) {
     const filepath = path.join(LOG_DIR, file.filename);
-    const stream = file.filename.endsWith('.gz')
-      ? fs.createReadStream(filepath).pipe(zlib.createGunzip())
-      : fs.createReadStream(filepath);
-    const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
-
     let anyInsideWindow = false;
-    for await (const line of rl) {
-      if (!line.trim()) continue;
-      let parsed: LogEntry;
-      try {
-        parsed = JSON.parse(line) as LogEntry;
-      } catch {
-        continue;
-      }
-      if (
-        typeof parsed.timestamp === 'string' &&
-        typeof parsed.time === 'string' &&
-        parsed.timestamp === parsed.time
-      ) {
-        delete parsed.timestamp;
-      }
-      const entryTime = Date.parse(String(parsed.time ?? parsed.timestamp ?? ''));
-      if (!Number.isFinite(entryTime) || entryTime < cutoffMs) continue;
-      anyInsideWindow = true;
 
-      const encoded = line.length;
-      if (entries.length >= maxEntries || charBudget + encoded > maxBytes) {
-        rl.close();
-        break outer;
+    try {
+      const stream = file.filename.endsWith('.gz')
+        ? fs.createReadStream(filepath).pipe(zlib.createGunzip())
+        : fs.createReadStream(filepath);
+      const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
+
+      for await (const line of rl) {
+        if (!line.trim()) continue;
+        let parsed: LogEntry;
+        try {
+          parsed = JSON.parse(line) as LogEntry;
+        } catch {
+          continue;
+        }
+        if (
+          typeof parsed.timestamp === 'string' &&
+          typeof parsed.time === 'string' &&
+          parsed.timestamp === parsed.time
+        ) {
+          delete parsed.timestamp;
+        }
+        const entryTime = Date.parse(String(parsed.time ?? parsed.timestamp ?? ''));
+        if (!Number.isFinite(entryTime) || entryTime < cutoffMs) continue;
+        anyInsideWindow = true;
+
+        const encoded = line.length;
+        if (entries.length >= maxEntries || charBudget + encoded > maxBytes) {
+          rl.close();
+          break outer;
+        }
+        entries.push(parsed);
+        charBudget += encoded;
       }
-      entries.push(parsed);
-      charBudget += encoded;
+    } catch (error) {
+      systemLogger.warn({
+        operation: 'read_log_window_file_failed',
+        context: { filename: file.filename },
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+      // Continue with the next (older) file
+      continue;
     }
 
     // If this (older) file had no in-window entries, older files are safe to skip.
