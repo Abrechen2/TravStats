@@ -225,6 +225,65 @@ export async function readLogFile(filename: string, options: ReadOptions = {}): 
 }
 
 /**
+ * Options for readLogWindow — capped so a flooded log can't blow up the
+ * diagnostic bundle.
+ */
+export interface ReadWindowOptions {
+  maxEntries?: number;
+  maxBytes?: number;
+}
+
+const DEFAULT_MAX_ENTRIES = 5000;
+const DEFAULT_MAX_BYTES = 2 * 1024 * 1024; // 2 MiB of JSON
+
+/**
+ * Read a time-bounded window of log entries for a given prefix
+ * ('app' | 'error'). Scans the active file plus rotated .gz files
+ * newest-first and stops as soon as it encounters an entry older than the
+ * cutoff (logs are chronological). Respects caps on entry count and JSON
+ * byte size; the first cap to be hit wins.
+ */
+export async function readLogWindow(
+  prefix: 'app' | 'error',
+  windowMs: number,
+  opts: ReadWindowOptions = {}
+): Promise<LogEntry[]> {
+  const maxEntries = opts.maxEntries ?? DEFAULT_MAX_ENTRIES;
+  const maxBytes = opts.maxBytes ?? DEFAULT_MAX_BYTES;
+  const cutoffMs = Date.now() - windowMs;
+
+  const activePath = path.join(LOG_DIR, `${prefix}.log`);
+  if (!fs.existsSync(activePath)) return [];
+
+  const entries: LogEntry[] = [];
+  let byteBudget = 0;
+
+  const rl = readline.createInterface({
+    input: fs.createReadStream(activePath),
+    crlfDelay: Infinity,
+  });
+
+  for await (const line of rl) {
+    if (!line.trim()) continue;
+    let parsed: LogEntry;
+    try {
+      parsed = JSON.parse(line) as LogEntry;
+    } catch {
+      continue;
+    }
+    const entryTime = Date.parse(String(parsed.time ?? parsed.timestamp ?? ''));
+    if (!Number.isFinite(entryTime) || entryTime < cutoffMs) continue;
+
+    const encoded = line.length;
+    if (entries.length >= maxEntries || byteBudget + encoded > maxBytes) break;
+    entries.push(parsed);
+    byteBudget += encoded;
+  }
+
+  return entries;
+}
+
+/**
  * Delete a specific log file
  */
 export async function deleteLogFile(filename: string): Promise<void> {
