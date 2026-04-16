@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
 import readline from 'readline';
+import zlib from 'zlib';
 import { systemLogger } from '../utils/logger';
 import { getLoggingConfig } from './loggingConfig';
 
@@ -254,32 +255,57 @@ export async function readLogWindow(
   const maxBytes = opts.maxBytes ?? DEFAULT_MAX_BYTES;
   const cutoffMs = Date.now() - windowMs;
 
-  const activePath = path.join(LOG_DIR, `${prefix}.log`);
-  if (!fs.existsSync(activePath)) return [];
+  // Newest-first file ordering: active file, then rotated .gz by mtime desc.
+  const candidates = await listLogFiles();
+  const ordered = candidates
+    .filter(
+      (f) =>
+        f.filename === `${prefix}.log` ||
+        (f.filename.startsWith(`${prefix}`) && f.filename.endsWith('.log.gz')) ||
+        (f.filename.includes(`-${prefix}`) && f.filename.endsWith('.log.gz'))
+    )
+    .sort((a, b) => {
+      // Active file (no extension before .log) always wins
+      if (a.filename === `${prefix}.log`) return -1;
+      if (b.filename === `${prefix}.log`) return 1;
+      return b.modified.getTime() - a.modified.getTime();
+    });
 
   const entries: LogEntry[] = [];
   let charBudget = 0;
 
-  const rl = readline.createInterface({
-    input: fs.createReadStream(activePath),
-    crlfDelay: Infinity,
-  });
+  outer: for (const file of ordered) {
+    const filepath = path.join(LOG_DIR, file.filename);
+    const stream = file.filename.endsWith('.gz')
+      ? fs.createReadStream(filepath).pipe(zlib.createGunzip())
+      : fs.createReadStream(filepath);
+    const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
 
-  for await (const line of rl) {
-    if (!line.trim()) continue;
-    let parsed: LogEntry;
-    try {
-      parsed = JSON.parse(line) as LogEntry;
-    } catch {
-      continue;
+    let anyInsideWindow = false;
+    for await (const line of rl) {
+      if (!line.trim()) continue;
+      let parsed: LogEntry;
+      try {
+        parsed = JSON.parse(line) as LogEntry;
+      } catch {
+        continue;
+      }
+      const entryTime = Date.parse(String(parsed.time ?? parsed.timestamp ?? ''));
+      if (!Number.isFinite(entryTime) || entryTime < cutoffMs) continue;
+      anyInsideWindow = true;
+
+      const encoded = line.length;
+      if (entries.length >= maxEntries || charBudget + encoded > maxBytes) {
+        rl.close();
+        break outer;
+      }
+      entries.push(parsed);
+      charBudget += encoded;
     }
-    const entryTime = Date.parse(String(parsed.time ?? parsed.timestamp ?? ''));
-    if (!Number.isFinite(entryTime) || entryTime < cutoffMs) continue;
 
-    const encoded = line.length;
-    if (entries.length >= maxEntries || charBudget + encoded > maxBytes) break;
-    entries.push(parsed);
-    charBudget += encoded;
+    // If this (older) file had no in-window entries, older files are safe to skip.
+    // The active file is always read regardless.
+    if (!anyInsideWindow && file.filename !== `${prefix}.log`) break;
   }
 
   return entries;
