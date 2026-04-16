@@ -13,6 +13,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { getLogStats, listLogFiles, readLogFile, LogEntry } from './logManager';
 import logger from '../utils/logger';
+import { prisma } from '../db';
 
 const LOG_DIR = path.join(process.cwd(), '..', 'data', 'logs');
 const DEFAULT_TAIL = 200;
@@ -113,6 +114,45 @@ function hashPrefix(s: string): string {
     h = ((h << 5) + h + s.charCodeAt(i)) & 0xffffffff;
   }
   return Math.abs(h).toString(16).slice(0, 6);
+}
+
+export interface SettingsSection {
+  autoUpdate: {
+    enabled: boolean;
+    requireApproval: boolean;
+    checkInterval: number;
+    onlyDuringFlight: boolean;
+    expiryHours: number;
+  };
+  historicalEnrichment: {
+    enabled: boolean;
+    minConfidence: number;
+    maxPerDay: number;
+  };
+}
+
+/**
+ * Read the caller's settings row and project ONLY the allowlisted, non-PII
+ * fields. Returning a hand-written shape (not the raw Prisma object) is the
+ * defence against future schema additions accidentally leaking credentials.
+ */
+export async function collectSettings(userId: string): Promise<SettingsSection> {
+  const row = await prisma.userSettings.findUnique({ where: { userId } });
+
+  return {
+    autoUpdate: {
+      enabled: row?.autoUpdateEnabled ?? false,
+      requireApproval: row?.autoUpdateRequireApproval ?? true,
+      checkInterval: row?.autoUpdateCheckInterval ?? 15,
+      onlyDuringFlight: row?.autoUpdateOnlyDuringFlight ?? true,
+      expiryHours: row?.autoUpdateExpiryHours ?? 24,
+    },
+    historicalEnrichment: {
+      enabled: row?.historicalEnrichmentEnabled ?? false,
+      minConfidence: row?.historicalEnrichmentMinConfidence ?? 60,
+      maxPerDay: row?.historicalEnrichmentMaxPerDay ?? 50,
+    },
+  };
 }
 
 export interface DiagnosticBundle {
