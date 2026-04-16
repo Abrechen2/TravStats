@@ -15,11 +15,14 @@ export const setupApi = {
     return data;
   },
 
-  initialize: async (
-    username: string,
-    password: string,
-    instanceName?: string
-  ): Promise<{
+  initialize: async (payload: {
+    username: string;
+    password: string;
+    instanceName?: string;
+    frontendUrl?: string;
+    maxUsers?: number;
+    allowRegistration?: boolean;
+  }): Promise<{
     success: boolean;
     message: string;
     user: { id: string; username: string; isAdmin: boolean };
@@ -28,11 +31,7 @@ export const setupApi = {
       success: boolean;
       message: string;
       user: { id: string; username: string; isAdmin: boolean };
-    }>("/setup/initialize", {
-      username,
-      password,
-      instanceName,
-    });
+    }>("/setup/initialize", payload);
     return data;
   },
 

@@ -2,6 +2,7 @@ import { Router, Response, NextFunction } from 'express';
 import { AuthRequest } from '../../middleware/auth';
 import { prisma } from '../../db';
 import { adminExportLimiter } from '../../middleware/rateLimit';
+import { getInstanceSettings } from '../../services/instanceSettingsService';
 
 const router = Router();
 
@@ -11,8 +12,7 @@ router.get('/system/info', async (req: AuthRequest, res: Response, next: NextFun
     const userCount = await prisma.user.count();
     const activeUserCount = await prisma.user.count({ where: { isActive: true } });
     const flightCount = await prisma.flight.count();
-    const maxUsers = parseInt(process.env.MAX_USERS || '10');
-    const allowRegistration = process.env.ALLOW_REGISTRATION !== 'false';
+    const { instanceName, maxUsers, allowRegistration } = await getInstanceSettings();
 
     // Check for demo user
     const demoUser = await prisma.user.findUnique({
@@ -21,7 +21,7 @@ router.get('/system/info', async (req: AuthRequest, res: Response, next: NextFun
     });
 
   res.json({
-    instanceName: process.env.INSTANCE_NAME || 'TravStats',
+    instanceName,
     userCount,
     activeUserCount,
     flightCount,
@@ -62,9 +62,10 @@ router.get('/export/all-data', adminExportLimiter, async (req: AuthRequest, res:
       },
     });
 
+    const { instanceName } = await getInstanceSettings();
     const exportData = {
       exportedAt: new Date().toISOString(),
-      instanceName: process.env.INSTANCE_NAME || 'TravStats',
+      instanceName,
       users,
     };
 

@@ -7,6 +7,7 @@ import { registerSchema, loginSchema, changePasswordSchema } from '../schemas/au
 import { AppError } from '../middleware/errorHandler';
 import { authLimiter } from '../middleware/rateLimit';
 import { authenticate, AuthRequest } from '../middleware/auth';
+import { getInstanceSettings } from '../services/instanceSettingsService';
 import logger from '../utils/logger';
 
 const router = Router();
@@ -63,8 +64,8 @@ router.post('/register', authLimiter, async (req: Request, res: Response, next: 
     // Check registration permissions
     const userCount = await prisma.user.count();
     const isFirstUser = userCount === 0;
-    const allowRegistration = process.env.ALLOW_REGISTRATION !== 'false';
-    const maxUsers = parseInt(process.env.MAX_USERS || '10');
+    const instanceSettings = await getInstanceSettings();
+    const { allowRegistration, maxUsers } = instanceSettings;
 
     // Enforce MAX_USERS hard limit regardless of registration mode
     if (!isFirstUser && userCount >= maxUsers) {

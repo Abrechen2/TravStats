@@ -10,11 +10,28 @@
       "designedFor": "Entworfen für kleine Gruppen (1-10 Konten)"
     }
   },
+  "sections": {
+    "admin": "Admin-Konto",
+    "instance": "Instanz-Einstellungen",
+    "instanceHint": "Können später jederzeit im Admin-Bereich geändert werden."
+  },
   "form": {
     "instanceName": {
       "label": "Instanz-Name",
       "placeholder": "Meine TravStats Instanz",
       "help": "Dieser Name erscheint in E-Mails und Benachrichtigungen"
+    },
+    "frontendUrl": {
+      "label": "Öffentliche URL",
+      "help": "Basis-URL für Einladungslinks und Passwort-Reset-Mails. Mit der aktuellen Adresse vorausgefüllt."
+    },
+    "maxUsers": {
+      "label": "Maximale Benutzer",
+      "help": "Harter Deckel für die Anzahl Konten. Empfohlen 1–10 für kleine Gruppen."
+    },
+    "allowRegistration": {
+      "label": "Öffentliche Registrierung erlauben",
+      "help": "Wenn deaktiviert, können sich neue Benutzer nur über Admin-Einladung registrieren (empfohlen)."
     },
     "adminUsername": {
       "label": "Admin-Benutzername",

@@ -2,57 +2,44 @@ import { createClient } from 'webdav';
 import * as fs from 'fs';
 import * as path from 'path';
 import { prisma } from '../db';
+import { getWebDAVSettings } from './instanceSettingsService';
 import logger from '../utils/logger';
 
-const WEBDAV_URL = process.env.WEBDAV_URL || '';
-const WEBDAV_USERNAME = process.env.WEBDAV_USERNAME || '';
-const WEBDAV_PASSWORD = process.env.WEBDAV_PASSWORD || '';
-const WEBDAV_BACKUP_PATH = process.env.WEBDAV_BACKUP_PATH || '/TravStats/backups/';
-const WEBDAV_SYNC_ENABLED = process.env.WEBDAV_SYNC_ENABLED === 'true';
-
-let webdavClient: ReturnType<typeof createClient> | null = null;
+type WebDAVClient = ReturnType<typeof createClient>;
 
 /**
- * Initialize WebDAV client
+ * Build a WebDAV client from current DB settings (with ENV fallback).
+ * Throws if sync is disabled or any required field is missing.
  */
-function getWebDAVClient() {
-  if (!WEBDAV_SYNC_ENABLED || !WEBDAV_URL || !WEBDAV_USERNAME || !WEBDAV_PASSWORD) {
+async function getWebDAVClient(): Promise<{ client: WebDAVClient; backupPath: string }> {
+  const { enabled, url, username, password, backupPath } = await getWebDAVSettings();
+  if (!enabled || !url || !username || !password) {
     throw new Error('WebDAV is not configured');
   }
-
-  if (!webdavClient) {
-    webdavClient = createClient(WEBDAV_URL, {
-      username: WEBDAV_USERNAME,
-      password: WEBDAV_PASSWORD,
-    });
-  }
-
-  return webdavClient;
+  return {
+    client: createClient(url, { username, password }),
+    backupPath,
+  };
 }
 
-/**
- * Test WebDAV connection
- */
+/** Test WebDAV connection. */
 export async function testConnection(): Promise<{ success: boolean; message: string }> {
   try {
-    if (!WEBDAV_SYNC_ENABLED) {
+    const { enabled } = await getWebDAVSettings();
+    if (!enabled) {
       return { success: false, message: 'WebDAV sync is not enabled' };
     }
 
-    const client = getWebDAVClient();
+    const { client } = await getWebDAVClient();
     await client.getDirectoryContents('/');
 
-    return {
-      success: true,
-      message: 'WebDAV connection successful',
-    };
+    return { success: true, message: 'WebDAV connection successful' };
   } catch (error) {
     logger.error({
       operation: 'webdav_test_error',
       message: 'WebDAV connection test failed',
       error: error instanceof Error ? error.message : 'Unknown error',
     });
-
     return {
       success: false,
       message: error instanceof Error ? error.message : 'Unknown error',
@@ -60,17 +47,14 @@ export async function testConnection(): Promise<{ success: boolean; message: str
   }
 }
 
-/**
- * Sync backup to WebDAV
- */
+/** Sync a completed backup to WebDAV. */
 export async function syncToCloud(backupId: string): Promise<void> {
-  if (!WEBDAV_SYNC_ENABLED) {
+  const { enabled } = await getWebDAVSettings();
+  if (!enabled) {
     throw new Error('WebDAV sync is not enabled');
   }
 
-  const backup = await prisma.backup.findUnique({
-    where: { id: backupId },
-  });
+  const backup = await prisma.backup.findUnique({ where: { id: backupId } });
 
   if (!backup) {
     throw new Error('Backup not found');
@@ -85,17 +69,17 @@ export async function syncToCloud(backupId: string): Promise<void> {
   }
 
   try {
-    const client = getWebDAVClient();
+    const { client, backupPath } = await getWebDAVClient();
 
-    // Ensure backup directory exists on WebDAV
+    // Ensure backup directory exists on WebDAV (ignore if it already does)
     try {
-      await client.createDirectory(WEBDAV_BACKUP_PATH, { recursive: true });
-    } catch (_error) {
-      // Directory might already exist, ignore
+      await client.createDirectory(backupPath, { recursive: true });
+    } catch {
+      // Directory might already exist
     }
 
     const filename = path.basename(backup.backupPath);
-    const remotePath = path.join(WEBDAV_BACKUP_PATH, filename).replace(/\\/g, '/');
+    const remotePath = path.join(backupPath, filename).replace(/\\/g, '/');
 
     logger.info({
       operation: 'webdav_upload_start',
@@ -104,11 +88,9 @@ export async function syncToCloud(backupId: string): Promise<void> {
       remotePath,
     });
 
-    // Read file and upload
     const fileBuffer = fs.readFileSync(backup.backupPath);
     await client.putFileContents(remotePath, fileBuffer, { overwrite: true });
 
-    // Update backup record
     await prisma.backup.update({
       where: { id: backupId },
       data: {
@@ -134,27 +116,27 @@ export async function syncToCloud(backupId: string): Promise<void> {
   }
 }
 
-/**
- * List backups from WebDAV
- */
-export async function listCloudBackups(): Promise<Array<{ name: string; size: number; lastModified: Date }>> {
-  if (!WEBDAV_SYNC_ENABLED) {
+/** List backups available on the remote WebDAV share. */
+export async function listCloudBackups(): Promise<
+  Array<{ name: string; size: number; lastModified: Date }>
+> {
+  const { enabled } = await getWebDAVSettings();
+  if (!enabled) {
     throw new Error('WebDAV sync is not enabled');
   }
 
   try {
-    const client = getWebDAVClient();
+    const { client, backupPath } = await getWebDAVClient();
 
     // Ensure directory exists
     try {
-      await client.createDirectory(WEBDAV_BACKUP_PATH, { recursive: true });
-    } catch (_error) {
+      await client.createDirectory(backupPath, { recursive: true });
+    } catch {
       // Directory might already exist
     }
 
-    const items = await client.getDirectoryContents(WEBDAV_BACKUP_PATH);
+    const items = await client.getDirectoryContents(backupPath);
 
-    // WebDAV getDirectoryContents may return an array or an object with a data property
     interface WebDAVItem {
       type: string;
       basename?: string;
@@ -163,7 +145,7 @@ export async function listCloudBackups(): Promise<Array<{ name: string; size: nu
     }
 
     const itemsArray: WebDAVItem[] = Array.isArray(items)
-      ? items as WebDAVItem[]
+      ? (items as WebDAVItem[])
       : ((items as { data?: WebDAVItem[] }).data || []);
 
     return itemsArray
@@ -183,17 +165,16 @@ export async function listCloudBackups(): Promise<Array<{ name: string; size: nu
   }
 }
 
-/**
- * Download backup from WebDAV
- */
+/** Download a backup file from the remote WebDAV share to local disk. */
 export async function downloadFromCloud(backupName: string, localPath: string): Promise<void> {
-  if (!WEBDAV_SYNC_ENABLED) {
+  const { enabled } = await getWebDAVSettings();
+  if (!enabled) {
     throw new Error('WebDAV sync is not enabled');
   }
 
   try {
-    const client = getWebDAVClient();
-    const remotePath = path.join(WEBDAV_BACKUP_PATH, backupName).replace(/\\/g, '/');
+    const { client, backupPath } = await getWebDAVClient();
+    const remotePath = path.join(backupPath, backupName).replace(/\\/g, '/');
 
     logger.info({
       operation: 'webdav_download_start',
@@ -202,7 +183,7 @@ export async function downloadFromCloud(backupName: string, localPath: string): 
       localPath,
     });
 
-    const fileBuffer = await client.getFileContents(remotePath, { format: 'binary' }) as Buffer;
+    const fileBuffer = (await client.getFileContents(remotePath, { format: 'binary' })) as Buffer;
     fs.writeFileSync(localPath, fileBuffer);
 
     logger.info({

@@ -1,6 +1,6 @@
 {
   "name": "travstats",
-  "version": "0.9.0-beta",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "concurrently -n \"backend,frontend\" -c \"cyan,yellow\" \"npm run dev:backend\" \"npm run dev:frontend\"",

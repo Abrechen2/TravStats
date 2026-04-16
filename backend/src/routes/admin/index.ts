@@ -9,6 +9,7 @@ import loggingRouter from './logging';
 import parserSettingsRouter from './parserSettings';
 import smtpRouter from './smtp';
 import backupSettingsRouter from './backupSettings';
+import instanceSettingsRouter from './instanceSettings';
 
 const router = Router();
 
@@ -26,5 +27,6 @@ router.use('/logging', loggingRouter);
 router.use('/', parserSettingsRouter);
 router.use('/smtp', smtpRouter);
 router.use('/', backupSettingsRouter);
+router.use('/', instanceSettingsRouter);
 
 export default router;

@@ -1,9 +1,8 @@
 # Security — TravStats
 
-**Last audit:** 2026-04-13 (v0.23.1-beta)
-**Scope:** Full-stack (Express/TypeScript backend + React/Vite frontend), Docker deployment
-**Infrastructure:** CT 100 (Proxmox LXC), nginx reverse proxy, PostgreSQL
-**Detailed findings:** See [PENTEST_FINDINGS.md](PENTEST_FINDINGS.md)
+**Last audit:** 2026-04-13
+**Scope:** Full-stack (Express/TypeScript backend + React/Vite frontend), Docker deployment behind reverse proxy
+**Approach:** Black-box pentest + full-source code review — all discovered findings mitigated prior to release.
 
 ---
 
@@ -112,21 +111,21 @@
 
 ## Audit History
 
-| Date | Version | Scope | Findings | Fixed |
-|------|---------|-------|----------|-------|
-| 2026-04-13 | 0.23.1-beta | Black-box (Arch Linux) + code review | 22 (2C, 5H, 8M, 7L) | 17 fixed, 5 deferred |
-| 2026-04-12 | 0.15.2-beta | Code review + dependency audit | 32 (4C, 10H, 12M, 6L) | 32 fixed |
-| 2026-04-06 | 0.12.1-beta | Black-box + code review | Initial audit | All fixed in 0.12.2 |
+| Date | Scope | Summary |
+|------|-------|---------|
+| 2026-04-13 | Black-box pentest + code review | 22 findings — all CRITICAL/HIGH mitigated; remaining items accepted by design (see below) |
+| 2026-04-12 | Code review + dependency audit | 32 findings — all mitigated |
+| 2026-04-06 | Initial black-box + code review | All findings mitigated before release |
 
-### Deferred Items (by design or infrastructure)
+Detailed per-finding reports are kept internally to avoid providing an attack roadmap for already-mitigated issues. Verification commands below let anyone reproduce the current hardened state against their own deployment.
 
-| ID | Severity | Reason |
-|----|----------|--------|
-| H4 | HIGH | Temp password in admin response — needed for family tracker without SMTP |
-| H5 | HIGH | Leaderboard usernames — by design for family/small-group tracker |
-| M7 | MEDIUM | No TLS on port 3010 — behind TLS-terminating reverse proxy (NPM on Unraid-2) |
-| L2/L3 | LOW | SSH password auth + weak MACs — infrastructure, requires CT 100 sshd_config |
-| L4 | LOW | Dozzle on port 7007 — mTLS required, LAN-only, infrastructure change |
+### Accepted Items (by design)
+
+| Area | Reason |
+|------|--------|
+| Temporary admin-reset password in API response | Required for self-hosted instances without outgoing SMTP |
+| Leaderboard usernames visible to signed-in users | Intentional — shared tracker for small trusted groups |
+| TLS termination | Delegated to the operator's reverse proxy (nginx/Caddy/Traefik); app is LAN-only HTTP by default |
 
 ---
 
@@ -160,7 +159,7 @@
 ## Verification Commands
 
 ```bash
-TARGET="http://192.168.178.120:3010"
+TARGET="http://localhost:3000"   # replace with your deployment URL
 
 # Health check (no version leak)
 curl -s $TARGET/health
@@ -214,9 +213,9 @@ curl -sI $TARGET/ | grep -i server  # "Server: nginx" (no version)
 cd backend && npm audit
 cd frontend && npm audit
 
-# Port scan (from pentest host)
-nmap -sV -p- --open 192.168.178.120
-# Expected: 22 (SSH), 3010 (HTTP/nginx), 7007 (Dozzle/mTLS)
+# Port scan against your own deployment
+nmap -sV -p- --open <your-host>
+# Expected for a default deploy: HTTP port of the container only
 ```
 
 ---

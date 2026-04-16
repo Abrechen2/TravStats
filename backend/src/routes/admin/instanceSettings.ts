@@ -1,0 +1,130 @@
+import { Router, Response, NextFunction } from 'express';
+import { z } from 'zod';
+import { AuthRequest } from '../../middleware/auth';
+import { AppError } from '../../middleware/errorHandler';
+import {
+  getInstanceSettings,
+  updateInstanceSettings,
+  getWebDAVSettings,
+  updateWebDAVSettings,
+} from '../../services/instanceSettingsService';
+import { testConnection as testWebDAVConnection } from '../../services/cloudSyncService';
+
+const router = Router();
+
+// ---------- Instance (name / maxUsers / allowRegistration / frontendUrl) ----------
+
+const instancePatchSchema = z.object({
+  instanceName: z.string().trim().max(100).optional(),
+  maxUsers: z.number().int().min(1).max(1000).optional(),
+  allowRegistration: z.boolean().optional(),
+  frontendUrl: z
+    .string()
+    .trim()
+    .max(500)
+    .refine((v) => v === '' || /^https?:\/\//.test(v), 'Must be a valid http(s) URL')
+    .optional(),
+});
+
+router.get('/instance-settings', async (_req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const settings = await getInstanceSettings();
+    res.json({ settings });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.put('/instance-settings', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const patch = instancePatchSchema.parse(req.body);
+    const settings = await updateInstanceSettings({
+      ...(patch.instanceName !== undefined && { instanceName: patch.instanceName }),
+      ...(patch.maxUsers !== undefined && { maxUsers: patch.maxUsers }),
+      ...(patch.allowRegistration !== undefined && { allowRegistration: patch.allowRegistration }),
+      ...(patch.frontendUrl !== undefined && {
+        frontendUrl: patch.frontendUrl === '' ? null : patch.frontendUrl,
+      }),
+    });
+    res.json({ settings });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ---------- WebDAV sync ----------
+
+const webdavPatchSchema = z.object({
+  enabled: z.boolean().optional(),
+  url: z
+    .string()
+    .trim()
+    .max(500)
+    .refine((v) => v === '' || /^https?:\/\//.test(v), 'Must be a valid http(s) URL')
+    .optional(),
+  username: z.string().trim().max(200).optional(),
+  password: z.string().max(500).optional(),
+  backupPath: z.string().trim().max(200).optional(),
+});
+
+router.get('/webdav-settings', async (_req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const settings = await getWebDAVSettings();
+    // Never leak the password back — return a boolean marker instead.
+    res.json({
+      settings: {
+        enabled: settings.enabled,
+        url: settings.url,
+        username: settings.username,
+        passwordSet: Boolean(settings.password),
+        backupPath: settings.backupPath,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.put('/webdav-settings', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const patch = webdavPatchSchema.parse(req.body);
+    const settings = await updateWebDAVSettings({
+      ...(patch.enabled !== undefined && { enabled: patch.enabled }),
+      ...(patch.url !== undefined && { url: patch.url === '' ? null : patch.url }),
+      ...(patch.username !== undefined && {
+        username: patch.username === '' ? null : patch.username,
+      }),
+      ...(patch.password !== undefined && { password: patch.password }),
+      ...(patch.backupPath !== undefined && { backupPath: patch.backupPath }),
+    });
+    res.json({
+      settings: {
+        enabled: settings.enabled,
+        url: settings.url,
+        username: settings.username,
+        passwordSet: Boolean(settings.password),
+        backupPath: settings.backupPath,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post(
+  '/webdav-settings/test',
+  async (_req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { enabled } = await getWebDAVSettings();
+      if (!enabled) {
+        throw new AppError('WebDAV sync is disabled', 400);
+      }
+      const result = await testWebDAVConnection();
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+export default router;

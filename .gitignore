@@ -18,19 +18,19 @@ node_modules/
 Agent.md
 CLAUDE.local.md
 
-# All markdown files except root README.md, CHANGELOG.md, CLAUDE.md, CONTRIBUTING.md, docs/*.md
+# All markdown files except root README.md, CHANGELOG.md, CLAUDE.md, CONTRIBUTING.md, ROADMAP.md, SECURITY.md, docs/**/*.md
 *.md
 !README.md
 !CHANGELOG.md
 !CLAUDE.md
 !CONTRIBUTING.md
-!ROADMAP*.md
+!ROADMAP.md
 !SECURITY.md
-!PENTEST_FINDINGS.md
-!docs/*.md
 !docs/**/*.md
-!.planning/**/*.md
 !backend/OLLAMA_OPTIMIZATION.md
+
+# Private: audit findings, internal plans, personal notes — never commit
+.private/
 
 
 # Build outputs

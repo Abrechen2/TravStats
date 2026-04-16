@@ -33,10 +33,12 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().default('http://localhost:3000'),
   FRONTEND_URL: z.string().url().optional(),
 
-  // Instance settings
-  INSTANCE_NAME: z.string().default('TravStats'),
-  MAX_USERS: z.string().regex(/^\d+$/).transform(Number).default('10'),
-  ALLOW_REGISTRATION: z.string().transform((val) => val === 'true').default('false'),
+  // DEPRECATED: instance settings moved to AdminSettings DB (v1.0).
+  // Still read as a one-time fallback for beta deployments until they're
+  // saved via the admin UI. Remove in v2.
+  INSTANCE_NAME: z.string().optional(),
+  MAX_USERS: z.string().regex(/^\d+$/).transform(Number).optional(),
+  ALLOW_REGISTRATION: z.string().transform((val) => val === 'true').optional(),
 
   // Seeding
   SEED_AIRPORTS: z.string().transform((val) => val !== 'false').default('true'),
@@ -63,8 +65,9 @@ const envSchema = z.object({
   BACKUP_INTERVAL: z.enum(['daily', 'weekly', 'monthly']).default('weekly'),
   DOCKER_DB_CONTAINER: z.string().optional(),
 
-  // WebDAV Sync Settings (optional)
-  WEBDAV_SYNC_ENABLED: z.string().transform((val) => val === 'true').default('false'),
+  // DEPRECATED: WebDAV sync moved to AdminSettings DB (v1.0). Still read
+  // as a one-time fallback for beta deployments until admin saves from UI.
+  WEBDAV_SYNC_ENABLED: z.string().transform((val) => val === 'true').optional(),
   WEBDAV_URL: z.string().url().optional(),
   WEBDAV_USERNAME: z.string().optional(),
   WEBDAV_PASSWORD: z.string().optional(),

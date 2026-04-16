@@ -9,14 +9,13 @@ import {
   listInvitationsQuerySchema,
 } from '../../schemas/invitation';
 import { sendInvitationEmail } from '../../services/emailService';
+import { getInstanceSettings } from '../../services/instanceSettingsService';
 import { AppError } from '../../middleware/errorHandler';
 
 const router = Router();
 
-const MAX_USERS_DEFAULT = 10;
-
 async function ensureUserLimitNotReached(tx: Prisma.TransactionClient): Promise<void> {
-  const maxUsers = parseInt(process.env.MAX_USERS || String(MAX_USERS_DEFAULT), 10);
+  const { maxUsers } = await getInstanceSettings();
   const userCount = await tx.user.count();
   const activeInviteCount = await tx.invitation.count({
     where: {
@@ -29,10 +28,10 @@ async function ensureUserLimitNotReached(tx: Prisma.TransactionClient): Promise<
   }
 }
 
-function buildInviteUrl(token: string): string {
-  const frontendUrl =
-    process.env.FRONTEND_URL || process.env.CORS_ORIGIN?.split(',')[0] || 'http://localhost:3000';
-  return `${frontendUrl}/register?token=${token}`;
+async function buildInviteUrl(token: string): Promise<string> {
+  const { frontendUrl } = await getInstanceSettings();
+  const base = frontendUrl ?? 'http://localhost:3000';
+  return `${base}/register?token=${token}`;
 }
 
 /**
@@ -65,7 +64,7 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
         token: invitation.token,
         expiresAt: invitation.expiresAt,
       },
-      inviteUrl: buildInviteUrl(invitation.token),
+      inviteUrl: await buildInviteUrl(invitation.token),
     });
   } catch (error) {
     next(error);
@@ -96,7 +95,7 @@ router.post('/email', async (req: AuthRequest, res: Response, next: NextFunction
       { isolationLevel: 'Serializable' },
     );
 
-    const inviteUrl = buildInviteUrl(invitation.token);
+    const inviteUrl = await buildInviteUrl(invitation.token);
     const creator = await prisma.user.findUnique({
       where: { id: req.userId! },
       select: { username: true },
@@ -155,7 +154,7 @@ router.post('/:id/resend', async (req: AuthRequest, res: Response, next: NextFun
       throw new AppError('Invitation expired', 400);
     }
 
-    const inviteUrl = buildInviteUrl(invitation.token);
+    const inviteUrl = await buildInviteUrl(invitation.token);
     const creator = await prisma.user.findUnique({
       where: { id: invitation.createdBy },
       select: { username: true },

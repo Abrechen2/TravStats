@@ -483,4 +483,102 @@ export const adminApi = {
     );
     return data;
   },
+
+  getInstanceSettings: async (): Promise<{
+    settings: {
+      instanceName: string;
+      maxUsers: number;
+      allowRegistration: boolean;
+      frontendUrl: string | null;
+    };
+  }> => {
+    const { data } = await api.get<{
+      settings: {
+        instanceName: string;
+        maxUsers: number;
+        allowRegistration: boolean;
+        frontendUrl: string | null;
+      };
+    }>("/admin/instance-settings");
+    return data;
+  },
+
+  updateInstanceSettings: async (patch: {
+    instanceName?: string;
+    maxUsers?: number;
+    allowRegistration?: boolean;
+    frontendUrl?: string;
+  }): Promise<{
+    settings: {
+      instanceName: string;
+      maxUsers: number;
+      allowRegistration: boolean;
+      frontendUrl: string | null;
+    };
+  }> => {
+    const { data } = await api.put<{
+      settings: {
+        instanceName: string;
+        maxUsers: number;
+        allowRegistration: boolean;
+        frontendUrl: string | null;
+      };
+    }>("/admin/instance-settings", patch);
+    return data;
+  },
+
+  getWebDAVSettings: async (): Promise<{
+    settings: {
+      enabled: boolean;
+      url: string | null;
+      username: string | null;
+      passwordSet: boolean;
+      backupPath: string;
+    };
+  }> => {
+    const { data } = await api.get<{
+      settings: {
+        enabled: boolean;
+        url: string | null;
+        username: string | null;
+        passwordSet: boolean;
+        backupPath: string;
+      };
+    }>("/admin/webdav-settings");
+    return data;
+  },
+
+  updateWebDAVSettings: async (patch: {
+    enabled?: boolean;
+    url?: string;
+    username?: string;
+    password?: string;
+    backupPath?: string;
+  }): Promise<{
+    settings: {
+      enabled: boolean;
+      url: string | null;
+      username: string | null;
+      passwordSet: boolean;
+      backupPath: string;
+    };
+  }> => {
+    const { data } = await api.put<{
+      settings: {
+        enabled: boolean;
+        url: string | null;
+        username: string | null;
+        passwordSet: boolean;
+        backupPath: string;
+      };
+    }>("/admin/webdav-settings", patch);
+    return data;
+  },
+
+  testWebDAVConnection: async (): Promise<{ success: boolean; message: string }> => {
+    const { data } = await api.post<{ success: boolean; message: string }>(
+      "/admin/webdav-settings/test"
+    );
+    return data;
+  },
 };

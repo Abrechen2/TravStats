@@ -6,12 +6,16 @@ import { generateToken } from '../utils/jwt';
 import { getAuthCookieOptions } from './auth';
 import { AppError } from '../middleware/errorHandler';
 import { getSeedingStatus } from '../services/airportSeedingService';
+import { updateInstanceSettings } from '../services/instanceSettingsService';
 import { authLimiter } from '../middleware/rateLimit';
 
 const initializeSchema = z.object({
   username: z.string().min(1, 'Username is required').max(50),
   password: z.string().min(8, 'Password must be at least 8 characters').max(128),
   instanceName: z.string().max(100).optional(),
+  frontendUrl: z.string().url('Frontend URL must be a valid URL').max(500).optional(),
+  maxUsers: z.number().int().min(1).max(1000).optional(),
+  allowRegistration: z.boolean().optional(),
 });
 
 const router = Router();
@@ -45,7 +49,7 @@ router.get('/status', async (req: Request, res: Response, next: NextFunction) =>
 router.post('/initialize', authLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const validated = initializeSchema.parse(req.body);
-    const { username, password } = validated;
+    const { username, password, instanceName, frontendUrl, maxUsers, allowRegistration } = validated;
 
     // Check if setup already completed (admin exists)
     const adminCount = await prisma.user.count({
@@ -63,6 +67,15 @@ router.post('/initialize', authLimiter, async (req: Request, res: Response, next
         passwordHash,
         isAdmin: true,
       },
+    });
+
+    // Persist instance-level settings captured during setup so the operator
+    // never has to edit ENV variables after install.
+    await updateInstanceSettings({
+      ...(instanceName !== undefined && { instanceName }),
+      ...(frontendUrl !== undefined && { frontendUrl }),
+      ...(maxUsers !== undefined && { maxUsers }),
+      ...(allowRegistration !== undefined && { allowRegistration }),
     });
 
     // Generate token and set HttpOnly cookie for automatic login

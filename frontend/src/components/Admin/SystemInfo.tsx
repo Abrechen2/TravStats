@@ -49,7 +49,7 @@ export default function SystemInfo({
       {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-[var(--bg-surface)] rounded-lg shadow p-6">
-          <div className="text-[var(--text-muted)] text-sm mb-1">{t("admin:instance")}</div>
+          <div className="text-[var(--text-muted)] text-sm mb-1">{t("admin:instanceLabel")}</div>
           <div className="text-2xl font-bold text-[var(--text-primary)]">
             {systemInfo.instanceName}
           </div>

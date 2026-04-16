@@ -1,5 +1,19 @@
 version: "3.8"
 
+# =====================================================================
+#  TravStats — production stack
+# =====================================================================
+#
+#  The only variable you have to set is DB_PASSWORD (in `.env`).
+#  Everything else — instance name, user cap, API keys, Ollama model,
+#  backup schedule, WebDAV off-site sync — is configured from the
+#  admin UI after the first-run setup wizard.
+#
+#  Optional overrides (APP_PORT, COOKIE_SECURE, CORS_ORIGIN, TZ,
+#  DATABASE_URL for external Postgres) are documented in
+#  `.env.prod.example`.
+# =====================================================================
+
 services:
   db:
     image: postgis/postgis:15-3.4
@@ -33,7 +47,8 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # Ollama LLM Server (for AI-powered email parsing)
+  # Ollama LLM server — optional, powers AI-backed email/PDF parsing.
+  # Disable by setting OLLAMA_URL to an empty string in the admin UI.
   ollama:
     image: ollama/ollama:latest
     container_name: travstats-ollama
@@ -68,51 +83,32 @@ services:
     image: ghcr.io/abrechen2/travstats:${VERSION:-latest}
     container_name: travstats-app
     restart: unless-stopped
-    working_dir: /app/backend # default to backend so npm commands run in the right place
+    working_dir: /app/backend
     ports:
       - "${APP_PORT:-3000}:80"
     environment:
       NODE_ENV: production
-      COOKIE_SECURE: ${COOKIE_SECURE:-true} # Set to false when serving via plain HTTP
-      # Comma-separated list of allowed frontend origins (adjust to your LAN/hostnames)
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
-      # Database connection
-      DATABASE_URL: postgresql://flights:${DB_PASSWORD:?DB_PASSWORD must be set}@db:5432/flights
-      # JWT will be auto-generated and persisted to /app/secrets/jwt.secret (not in mounted volume)
-      # Optional: Set custom JWT_SECRET here
-      # JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRES_IN: 7d
-      # API Keys (optional)
-      AIRLABS_API_KEY: ${AIRLABS_API_KEY:-}
-      OPENSKY_CLIENT_ID: ${OPENSKY_CLIENT_ID:-}
-      OPENSKY_CLIENT_SECRET: ${OPENSKY_CLIENT_SECRET:-}
-      # Admin & Instance Settings
-      INSTANCE_NAME: ${INSTANCE_NAME:-TravStats}
-      MAX_USERS: ${MAX_USERS:-10}
-      ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-false}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
-      # Seeding
-      SEED_AIRPORTS: ${SEED_AIRPORTS:-true}
-      CREATE_DEMO_USER: ${CREATE_DEMO_USER:-false}
-      # LLM Parser Settings
+      TZ: ${TZ:-UTC}
+
+      # Database — DB_PASSWORD is the only required variable. Alternatively
+      # set DATABASE_URL directly to point at an external Postgres instance.
+      DATABASE_URL: ${DATABASE_URL:-postgresql://flights:${DB_PASSWORD}@db:5432/flights}
+
+      # Secure-cookie auto-detect via X-Forwarded-Proto works behind any
+      # standard reverse proxy. Override only if your proxy doesn't set it.
+      COOKIE_SECURE: ${COOKIE_SECURE:-}
+
+      # CORS stays disabled (same-origin) unless an override is provided.
+      CORS_ORIGIN: ${CORS_ORIGIN:-}
+
+      # Default Ollama endpoint inside the stack. Admin can change model
+      # (and disable entirely) via the UI.
       OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma3:12b}
-      USE_LLM_PARSER: ${USE_LLM_PARSER:-true}
-      # Training Settings
-      PYTHON_CMD: python3
-      DOCKER: 'true'
-      # Backup Settings
-      BACKUP_PATH: /app/data/backups
-      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
-      AUTO_BACKUP_ENABLED: ${AUTO_BACKUP_ENABLED:-false}
-      BACKUP_INTERVAL: ${BACKUP_INTERVAL:-weekly}
+
+      # Docker container name of the Postgres service — used by the backup
+      # scheduler to shell into the DB container for pg_dump.
       DOCKER_DB_CONTAINER: ${DOCKER_DB_CONTAINER:-travstats-db}
-      # WebDAV Sync Settings
-      WEBDAV_SYNC_ENABLED: ${WEBDAV_SYNC_ENABLED:-false}
-      WEBDAV_URL: ${WEBDAV_URL:-}
-      WEBDAV_USERNAME: ${WEBDAV_USERNAME:-}
-      WEBDAV_PASSWORD: ${WEBDAV_PASSWORD:-}
-      WEBDAV_BACKUP_PATH: ${WEBDAV_BACKUP_PATH:-/TravStats/backups/}
+      DOCKER: "true"
     volumes:
       - travstats-app-data:/app/data
       - travstats-secrets:/app/secrets

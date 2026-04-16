@@ -6,6 +6,7 @@
     "users": "Users",
     "invitations": "Invitations",
     "system": "System Info",
+    "instance": "Instance",
     "apiKeys": "API Keys",
     "parsers": "Parsers",
     "training": "Training Config",
@@ -13,7 +14,64 @@
     "backups": "Backups",
     "smtp": "Email / SMTP"
   },
-  "instance": "Instance",
+  "instanceLabel": "Instance",
+  "instance": {
+    "title": "Instance settings",
+    "subtitle": "Name, registration and base URL of this TravStats instance.",
+    "loadFailed": "Could not load instance settings",
+    "saved": "Instance settings saved",
+    "saveFailed": "Failed to save instance settings",
+    "fields": {
+      "name": {
+        "label": "Instance name",
+        "help": "Shown in the UI, in outgoing emails and backup metadata."
+      },
+      "frontendUrl": {
+        "label": "Public URL",
+        "help": "Base URL used for invitation links and password-reset emails. Leave empty to auto-detect from the request URL."
+      },
+      "maxUsers": {
+        "label": "Maximum users",
+        "help": "Hard cap on the number of accounts. Recommended 1–10 for small groups."
+      },
+      "allowRegistration": {
+        "label": "Allow public registration",
+        "help": "When enabled, new users can register without an invitation link (not recommended)."
+      }
+    }
+  },
+  "webdav": {
+    "title": "WebDAV sync",
+    "subtitle": "Mirror backups to a remote WebDAV share (Nextcloud, HiDrive, …).",
+    "loadFailed": "Could not load WebDAV settings",
+    "saved": "WebDAV settings saved",
+    "saveFailed": "Failed to save WebDAV settings",
+    "test": "Test connection",
+    "testing": "Testing…",
+    "testOk": "WebDAV connection successful",
+    "testFailed": "WebDAV connection failed",
+    "fields": {
+      "enabled": {
+        "label": "Enable WebDAV sync",
+        "help": "After each successful backup the archive is uploaded to the remote share."
+      },
+      "url": {
+        "label": "WebDAV URL",
+        "help": "Full URL up to your user root, e.g. https://cloud.example.com/remote.php/dav/files/abrechen2/"
+      },
+      "username": { "label": "Username" },
+      "password": {
+        "label": "Password",
+        "help": "Stored encrypted at rest (AES-GCM). For Nextcloud use an app password.",
+        "placeholderKeep": "Keep existing password",
+        "placeholderSet": "Enter password"
+      },
+      "backupPath": {
+        "label": "Remote backup path",
+        "help": "Subfolder on the WebDAV share where backups are stored."
+      }
+    }
+  },
   "totalUsers": "Total Users",
   "activeUsers": "Active Users",
   "totalFlights": "Total Flights",

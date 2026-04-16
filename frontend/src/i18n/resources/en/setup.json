@@ -10,11 +10,28 @@
       "designedFor": "Designed for small groups (1-10 accounts)"
     }
   },
+  "sections": {
+    "admin": "Admin account",
+    "instance": "Instance settings",
+    "instanceHint": "Can be changed any time from the admin area later."
+  },
   "form": {
     "instanceName": {
       "label": "Instance Name",
       "placeholder": "My TravStats Instance",
       "help": "This name will appear in emails and notifications"
+    },
+    "frontendUrl": {
+      "label": "Public URL",
+      "help": "Base URL used for invitation links and password-reset emails. Pre-filled with the URL you reached this page from."
+    },
+    "maxUsers": {
+      "label": "Maximum users",
+      "help": "Hard cap on the number of accounts. Recommended 1–10 for small groups."
+    },
+    "allowRegistration": {
+      "label": "Allow public registration",
+      "help": "When off, new users can only register via an admin-generated invite link (recommended)."
     },
     "adminUsername": {
       "label": "Admin Username",

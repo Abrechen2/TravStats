@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import archiver from 'archiver';
 import { prisma } from '../../db';
+import { getInstanceSettings } from '../instanceSettingsService';
 import logger from '../../utils/logger';
 
 /**
@@ -67,12 +68,14 @@ export async function getMetadata(): Promise<Record<string, string | number>> {
     prisma.achievement.count(),
   ]);
 
+  const { instanceName } = await getInstanceSettings();
+
   return {
     userCount,
     flightCount,
     airportCount,
     achievementCount,
     timestamp: new Date().toISOString(),
-    instanceName: process.env.INSTANCE_NAME || 'TravStats',
+    instanceName,
   };
 }

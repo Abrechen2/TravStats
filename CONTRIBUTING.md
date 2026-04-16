@@ -1,73 +1,112 @@
 # Contributing to TravStats
 
-## Branches
+Thanks for your interest in TravStats. This is a solo-maintained side project,
+so please set expectations accordingly: response times can vary, and the scope
+is intentionally focused on what small households and groups actually need.
+That said, contributions, bug reports and feature ideas are genuinely welcome.
 
-| Branch | Purpose |
-|--------|-------|
-| `Main` | Stable production base — only via PR |
-| `feature/...` | New features |
-| `fix/...` | Bug fixes |
-| `chore/...` | Infrastructure, deps, refactoring without feature impact |
+---
 
-## Workflow
+## Reporting bugs
 
-1. Create a branch from `Main`
-2. Commit changes (Conventional Commits, see below)
-3. Run build checks locally: `npm run typecheck && npm run lint`
-4. Open a PR against `Main` — CI must be green
-5. No merge without review and green CI
+Use the **Bug Report** template on the
+[issue tracker](https://github.com/Abrechen2/TravStats/issues/new/choose).
 
-## Commit Format (Conventional Commits)
+For functional bugs, the fastest way to a fix is to include the anonymised
+diagnostic bundle:
 
+1. In the app, click the **Bug** button in the top navigation
+2. Click **Report Bug** — this copies a sanitised JSON bundle and opens a
+   pre-filled issue form
+3. Paste the bundle into the *Diagnostic Bundle* section
+
+The bundle contains: recent log tails, settings (no credentials), per-status
+flight counts, and system info. IPs, emails, tokens and UUIDs are redacted
+server-side.
+
+## Suggesting features
+
+Use the **Feature Request** template. Please explain the use case first —
+"what are you trying to do?" — before the implementation detail. Many ideas
+turn out to already be on the [roadmap](ROADMAP.md).
+
+## Security vulnerabilities
+
+Please report privately via
+[GitHub Security Advisories](https://github.com/Abrechen2/TravStats/security/advisories/new)
+**before** opening a public issue.
+
+---
+
+## Pull requests
+
+Small, focused PRs land fastest. For anything larger than a bug fix or a
+trivial feature, open an issue first so we can align on approach.
+
+### Workflow
+
+1. Fork the repo, create a branch from `Main`
+   - `feature/<short-name>` for features
+   - `fix/<short-name>` for bug fixes
+   - `chore/<short-name>` for build/deps/refactor
+2. Make your change
+3. Run local checks (must pass):
+   ```bash
+   cd backend  && npx tsc --noEmit && npm run lint
+   cd frontend && npx tsc --noEmit && npm run lint && npx vitest --run
+   ```
+4. Commit using [Conventional Commits](https://www.conventionalcommits.org/):
+   ```
+   feat: add CSV bulk import for manual flights
+   fix: authStore 401 handler survives store hydration
+   chore(deps): bump prisma to 5.20
+   ```
+   Accepted types: `feat`, `fix`, `chore`, `docs`, `refactor`, `perf`, `test`, `ci`.
+5. Open a PR against `Main` with a short summary and screenshots for UI changes
+6. CI must be green — one review round, then merge
+
+### What makes a PR easy to merge
+
+- Scope kept tight — one logical change per PR
+- Tests for new logic (Vitest on the frontend, Jest on the backend)
+- No `any` in TypeScript — use `unknown` + type guards
+- User-facing strings added in both German and English (`frontend/src/i18n`)
+- New dependencies justified in the PR description
+
+---
+
+## Local development
+
+```bash
+# Install everything
+npm run install:all
+
+# Start backend (:8000) + frontend (:3000) together
+npm run dev
+
+# Backend only
+npm run dev:backend
+
+# Frontend only
+npm run dev:frontend
 ```
-<type>: <kurze Beschreibung>
 
-[optionaler Body]
-```
+Full developer reference: [CLAUDE.md](CLAUDE.md).
 
-| Type | When |
-|------|------|
-| `feat` | New feature |
-| `fix` | Bug fix |
-| `chore` | Build, CI, deps (no feature/fix) |
-| `docs` | Documentation only |
-| `refactor` | No feature, no fix — code structure |
-| `perf` | Performance improvement |
-| `test` | Add/correct tests |
-| `ci` | CI/CD changes |
+---
 
-Examples:
-```
-feat: Email-Import als primären Tab in Flug-hinzufügen-Modal
-fix: authStore 401-Handler nach Store-Hydration wiederherstellen
-chore: Abhängigkeiten auf aktuelle Versionen aktualisiert
-```
+## Code style (short version)
 
-## Versioning
+- TypeScript `strict: true`, ESLint + Prettier (printWidth 100, double quotes)
+- `unknown` instead of `any`; cast via type guards
+- `async / await`, never `.then()`
+- Pino structured logging, never `console.log`
+- Immutability: spread copies, never mutate
+- Zod schemas for all API input
 
-Semantic Versioning: `MAJOR.MINOR.PATCH[-prerelease]`
+---
 
-- **MAJOR** — Breaking changes (API, DB schema)
-- **MINOR** — New features, backwards compatible
-- **PATCH** — Bug fixes
+## License
 
-Compute a suggestion: `bash scripts/suggest-next-version.sh`
-
-## Release Process
-
-1. Set `backend/VERSION` to the new version
-2. Update `CHANGELOG.md` — Unreleased → `[VERSION] - YYYY-MM-DD`
-3. Update the version field in `package.json` (root + frontend + backend)
-4. Commit: `chore: bump version to X.Y.Z`
-5. Tag: `git tag vX.Y.Z && git push origin vX.Y.Z`
-6. The `release.yml` workflow starts automatically (CI → Docker → GitHub Release)
-
-## Code Standards
-
-See [CLAUDE.md](CLAUDE.md) for the full rules.
-Short version: no `any`, Pino instead of `console.log`, immutability, Zod for validation.
-
-## Security
-
-Please do **not** report security vulnerabilities as a public issue.
-Instead, contact the maintainer directly.
+By contributing you agree that your contributions are licensed under
+**AGPL-3.0-or-later**, the same licence as the project.

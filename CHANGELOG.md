@@ -4,6 +4,94 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [1.0.0] - 2026-04-16
+
+First stable release. TravStats exits its public beta period after roughly
+six months of daily use and a 22-finding black-box pentest (all findings
+mitigated). The surface below is what ships out of the box.
+
+### Core tracking
+- Manual flight entry with categories, tags, up to 50 travel companions, costs and currency
+- Five flight states — `flown`, `scheduled`, `cancelled`, `historical`, `duplicated` — each with dedicated forms and validation
+- Timezone-aware durations via `date-fns-tz`
+- Duplicate detection (same `flightNumber` × day) with a confirmed "save anyway" escape hatch and a dedicated `duplicated` status that skips time validation
+
+### Boarding-pass scanner
+- QR code, PDF417 barcode and OCR fallback (Tesseract) with automatic airport/airline resolution
+- Camera capture and image upload, desktop + mobile
+
+### Email and PDF import
+- Template-based parsing with annotation-driven template builder for new airlines
+- Optional local LLM parsing via Ollama (default model `gemma3:12b`, benchmarked 100% accuracy on the TravStats test corpus)
+- Support for plain text, HTML email, Outlook `.msg` and `.eml`
+- Parser rate metrics per template and per LLM model in the admin UI
+
+### Automatic flight-data lookup
+- AirLabs as primary source, OpenSky OAuth and Aviationstack as fallbacks
+- Live gate, terminal, actual-departure, actual-arrival tracking while a flight is in progress
+- Pending-update inbox with per-flight statistics-impact preview; approve, edit, reject
+- Historical enrichment scheduler backfills gate/terminal/aircraft data for past flights
+- Configurable per-user: approval gate on/off, check interval, only-during-flight window
+
+### Maps and visualisation
+- Six visualisation modes: Routes (ArcLayer), Heatmap, Hexagon (3D), 3D Columns, animated Trips, 3D Globe
+- Deck.gl 9.x + MapLibre GL 5.x using `MapboxOverlay` for a shared WebGL context
+- Two-stage route/trip popup → sidebar detail view
+- Scheduled flights rendered as cyan arcs and excluded from stats until flown
+
+### Statistics
+- Year-over-year comparison, year-filter and all-time totals clearly separated
+- Seat distribution (window/middle/aisle/zone/class), distance, flight time, costs, top routes, top airlines
+- PDF year report with year auto-selected to the most recent flown year
+- Downloadable vintage-passport PNG certificate: hero-km number, equivalences ("N × around the Earth"), deterministic serial, layered radial gradients compatible with `html2canvas`
+
+### Gamification
+- 58 Battlefield-style achievements across 5 categories (Sammler, Distanz, Elite, Entdecker, Survivor) + Planner and Special tiers
+- Automatic unlock on milestone reach, readable locked cards on the achievement page
+
+### Admin and operations
+- Invite-only user management with per-invitation tokens (can't be reused)
+- Admin-triggered user deletion with cascade (self-delete and last-admin delete blocked)
+- SMTP configuration with test-connection
+- Encrypted API-key storage (AirLabs, Aviationstack, OpenSky, SMTP password)
+- Automated database backups with retention (`daily`/`weekly`/`monthly`) + optional WebDAV sync (Nextcloud, HiDrive, …)
+- Backup restore via `pg_dump` with argument-array `spawn()` (no shell injection)
+- Parse-log statistics dashboard (template hit rate, LLM hit rate per model)
+
+### Bug reporting
+- "Bug" button in the top navigation generates an anonymised diagnostic JSON bundle in-browser
+- Bundle v2 ships: time-windowed log tails (24 h app / 7 d error) from live and rotated `.log.gz` files, per-user flight-state aggregates (byStatus counts + pipeline counters), allow-listed user settings (no credentials)
+- Server-side scrubbing of IPs, emails, JWTs and UUIDs; user IDs replaced with short opaque markers
+- One-click "Report Bug" copies the bundle to the clipboard and opens a pre-filled GitHub Issue Form
+
+### Export and import
+- CSV, GeoJSON, KML (Google Earth) export from the admin panel
+- Email notifications: configurable 24 h / 2 h pre-departure reminders (SMTP)
+
+### Internationalisation
+- Full German and English UI via react-i18next
+- German as primary locale, English as the mirror translation
+
+### Security
+- JWT stored in an `HttpOnly`, `SameSite=Strict`, `Secure`-aware cookie; no Bearer fallback
+- 15 distinct rate limiters across auth, external-API-backed routes and admin exports
+- Zod validation on every input endpoint; Prisma-parameterised queries; Helmet CSP; `server_tokens off`
+- 22 pentest findings (2 CRITICAL, 5 HIGH, 8 MEDIUM, 7 LOW) surfaced and mitigated across the beta; see [SECURITY.md](SECURITY.md)
+
+### Zero-config install
+- The Docker compose file now requires **one environment variable only** — `DB_PASSWORD`. Everything else (instance name, public URL, user cap, registration mode, API keys, Ollama, backup schedule, WebDAV) is captured by the first-run setup wizard or configured later from the admin UI.
+- `AdminSettings` gains nine new columns (`instance_name`, `max_users`, `allow_registration`, `frontend_url`, `webdav_*`). The WebDAV password is AES-GCM-encrypted at rest via the same helper used for the other API keys.
+- Setup wizard extended: instance name, public URL (pre-filled from the request origin), user cap and registration toggle are captured alongside the admin username/password.
+- New admin section "Instance" for the instance-level fields. WebDAV sync moved into the existing "Backups" admin section with a dedicated password field that is never echoed back to the client.
+- Legacy `INSTANCE_NAME` / `MAX_USERS` / `ALLOW_REGISTRATION` / `FRONTEND_URL` / `WEBDAV_*` environment variables are still read as a one-time fallback for pre-1.0 deployments, then superseded as soon as an admin saves from the UI.
+
+### Breaking changes from 0.x beta
+
+- Docker image is now published exclusively to **GHCR** (`ghcr.io/abrechen2/travstats`). The old Docker Hub image is no longer updated; update your compose file to reference GHCR.
+- The default LLM model changed from `qwen2.5:7b` to `gemma3:12b`. Pull the new model with `docker exec travstats-ollama ollama pull gemma3:12b` or set `OLLAMA_MODEL` explicitly.
+- Parser-feedback collection and the template-correction table were removed. If you had custom code consuming `analytics_events` parser rows, it no longer populates.
+- `.env.prod.example` has been shrunk to five variables (one required). Existing values continue to work, but the example no longer advertises them.
+
 ## [0.29.0-beta] - 2026-04-16
 
 ### Added
@@ -467,9 +555,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
   now accepts a third `invitationToken` argument, `RegisterPage` reads
   the `?token=` query parameter via `useSearchParams`, and a green
   "you are registering with an invitation" banner confirms that the
-  link was picked up. Companion prod-config change: `FRONTEND_URL=
-  http://192.168.178.120:3010` and `ALLOW_REGISTRATION=false` added to
-  the CT 100 docker-compose.yml so invite URLs no longer point to
+  link was picked up. Companion prod-config change: `FRONTEND_URL` and
+  `ALLOW_REGISTRATION=false` should be set in the production
+  docker-compose.yml so invite URLs no longer point to
   localhost and public registration is actually gated on a valid
   invite. Verified end-to-end against a local dev instance: registration
   without a token is blocked, an admin-created invite flows through

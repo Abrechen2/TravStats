@@ -22,7 +22,6 @@ export default function DiagnosticExportModal({
   // omitted from deps — they are unstable across renders and would cause the
   // bundle to be re-fetched on every parent re-render, instantly tripping the
   // 10/hour rate limit. Same issue pattern as the settings-page auto-save.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;

@@ -5,6 +5,8 @@ import axios from "axios";
 import { logger } from "../lib/logger";
 import NavigationBar from "../components/NavigationBar";
 import BackupManagement from "../components/Admin/BackupManagement";
+import InstanceSettings from "../components/Admin/InstanceSettings";
+import WebDAVSettings from "../components/Admin/WebDAVSettings";
 import SystemInfoTab from "../components/Admin/SystemInfo";
 import UserManagement from "../components/Admin/UserManagement";
 import InvitationManagement from "../components/Admin/InvitationManagement";
@@ -42,6 +44,7 @@ type ActiveSection =
   | "users"
   | "invitations"
   | "system"
+  | "instance"
   | "parsers"
   | "logging"
   | "backups"
@@ -440,6 +443,7 @@ export default function AdminPage(): JSX.Element {
 
   const sections: AdminSection[] = [
     { id: "system", label: t("admin:tabs.system") },
+    { id: "instance", label: t("admin:tabs.instance") },
     { id: "users", label: t("admin:tabs.users"), badge: users.length },
     { id: "invitations", label: t("admin:tabs.invitations") },
     { id: "apiKeys", label: t("admin:tabs.apiKeys") },
@@ -614,7 +618,32 @@ export default function AdminPage(): JSX.Element {
             />
           )}
 
-          {activeSection === "backups" && <BackupManagement />}
+          {activeSection === "instance" && (
+            <div
+              style={{
+                background: "var(--bg-card)",
+                border: "1px solid var(--border-color)",
+                borderRadius: 12,
+              }}
+            >
+              <InstanceSettings />
+            </div>
+          )}
+
+          {activeSection === "backups" && (
+            <div className="space-y-6">
+              <BackupManagement />
+              <div
+                style={{
+                  background: "var(--bg-card)",
+                  border: "1px solid var(--border-color)",
+                  borderRadius: 12,
+                }}
+              >
+                <WebDAVSettings />
+              </div>
+            </div>
+          )}
 
           {activeSection === "smtp" && (
             <div

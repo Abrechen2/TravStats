@@ -1,0 +1,55 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>TravStats</Name>
+  <Repository>ghcr.io/abrechen2/travstats:latest</Repository>
+  <Registry>https://github.com/Abrechen2/TravStats/pkgs/container/travstats</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/Abrechen2/TravStats/issues</Support>
+  <Project>https://github.com/Abrechen2/TravStats</Project>
+  <Overview>Self-hosted flight tracker for small households and groups (1–10 users). Record flights, visualise routes on interactive 2D/3D maps, collect 58 achievements, scan boarding passes (QR/barcode/OCR), import from email and PDF via an optional local Ollama LLM. Includes automated database backups with retention, optional WebDAV off-site sync, and encrypted API-key storage.
+
+**Requirements:**
+
+TravStats needs a PostgreSQL 15 database with the PostGIS extension. Install the [postgis/postgis Community App](https://unraid.net/community/apps?q=postgis) (or any PostGIS 15 container) **before** starting TravStats. Suggested settings:
+
+- Database name: `flights`
+- Username: `flights`
+- Password: *(strong — generate with `openssl rand -base64 32`)*
+- Container name: `travstats-db` (or adjust DATABASE_URL below)
+
+Optional: install the [Ollama Community App](https://unraid.net/community/apps?q=ollama) and pull `gemma3:12b` (~8 GB) for local AI parsing of flight confirmation emails. Set OLLAMA_URL below to `http://ollama:11434`.
+
+After first start, open http://[IP]:[PORT:3000]/setup — the first-run wizard captures instance name, public URL, user cap and registration mode. Everything else (API keys, backup schedule, WebDAV, Ollama model) is configurable from the admin UI later. No ENV editing needed.
+
+**Full documentation:** https://github.com/Abrechen2/TravStats</Overview>
+  <Category>Other: HomeAutomation: Productivity:</Category>
+  <WebUI>http://[IP]:[PORT:3000]/</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/Abrechen2/TravStats/main/docs/unraid/travstats.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/Abrechen2/TravStats/main/docs/images/logo-large.png</Icon>
+  <ExtraParams>--restart=unless-stopped</ExtraParams>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled/>
+  <DonateText>If TravStats is useful to you</DonateText>
+  <DonateLink>https://www.paypal.com/donate?hosted_button_id=HW9MPYVURCT42</DonateLink>
+  <Requires>PostgreSQL 15 with PostGIS extension (separate container)</Requires>
+
+  <Config Name="WebUI Port" Target="80" Default="3000" Mode="tcp" Description="Host port where TravStats will be accessible." Type="Port" Display="always" Required="true" Mask="false">3000</Config>
+
+  <Config Name="Application Data" Target="/app/data" Default="/mnt/user/appdata/travstats" Mode="rw" Description="Persistent app data: airport database, user uploads, backups, LLM training artefacts." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/travstats</Config>
+
+  <Config Name="Secrets" Target="/app/secrets" Default="/mnt/user/appdata/travstats-secrets" Mode="rw" Description="Persistent secrets: auto-generated JWT key. Must survive container recreation." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/travstats-secrets</Config>
+
+  <Config Name="DATABASE_URL" Target="DATABASE_URL" Default="postgresql://flights:CHANGEME@travstats-db:5432/flights" Mode="" Description="PostgreSQL connection string. Host is the container name of your PostGIS container; replace CHANGEME with your database password." Type="Variable" Display="always" Required="true" Mask="true">postgresql://flights:CHANGEME@travstats-db:5432/flights</Config>
+
+  <Config Name="TZ" Target="TZ" Default="UTC" Mode="" Description="Container timezone. Keep UTC (recommended)." Type="Variable" Display="advanced" Required="false" Mask="false">UTC</Config>
+
+  <Config Name="COOKIE_SECURE" Target="COOKIE_SECURE" Default="" Mode="" Description="Force secure cookies on/off. Leave empty to auto-detect from the reverse-proxy X-Forwarded-Proto header. Set to 'false' only if your proxy serves plain HTTP and doesn't send that header." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+
+  <Config Name="CORS_ORIGIN" Target="CORS_ORIGIN" Default="" Mode="" Description="Comma-separated list of allowed cross-origin hostnames. Leave empty for same-origin-only (behind a reverse proxy that serves frontend + API on the same host)." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+
+  <Config Name="OLLAMA_URL" Target="OLLAMA_URL" Default="" Mode="" Description="Optional Ollama endpoint for AI-powered email/PDF parsing. Example: http://ollama:11434. Can also be changed from the admin UI after install." Type="Variable" Display="advanced" Required="false" Mask="false"/>
+</Container>

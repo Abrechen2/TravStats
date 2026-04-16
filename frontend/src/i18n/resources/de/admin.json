@@ -6,6 +6,7 @@
     "users": "Benutzer",
     "invitations": "Einladungen",
     "system": "System-Info",
+    "instance": "Instanz",
     "apiKeys": "API-Schlüssel",
     "parsers": "Parser",
     "training": "Training Config",
@@ -13,7 +14,64 @@
     "backups": "Backups",
     "smtp": "E-Mail / SMTP"
   },
-  "instance": "Instanz",
+  "instanceLabel": "Instanz",
+  "instance": {
+    "title": "Instanz-Einstellungen",
+    "subtitle": "Name, Registrierung und Basis-URL dieser TravStats-Instanz.",
+    "loadFailed": "Instanz-Einstellungen konnten nicht geladen werden",
+    "saved": "Instanz-Einstellungen gespeichert",
+    "saveFailed": "Speichern der Instanz-Einstellungen fehlgeschlagen",
+    "fields": {
+      "name": {
+        "label": "Instanz-Name",
+        "help": "Wird in der UI, in E-Mails und Backup-Metadaten verwendet."
+      },
+      "frontendUrl": {
+        "label": "Öffentliche URL",
+        "help": "Basis-URL für Einladungslinks und Passwort-Reset-Mails. Leer lassen, um die Anfrage-URL automatisch zu verwenden."
+      },
+      "maxUsers": {
+        "label": "Maximale Benutzer",
+        "help": "Harter Deckel für die Anzahl Konten. Empfohlen 1–10 für kleine Gruppen."
+      },
+      "allowRegistration": {
+        "label": "Öffentliche Registrierung erlauben",
+        "help": "Wenn aktiviert, können sich neue Benutzer ohne Einladungslink registrieren (nicht empfohlen)."
+      }
+    }
+  },
+  "webdav": {
+    "title": "WebDAV-Sync",
+    "subtitle": "Spiegelt Backups auf eine WebDAV-Freigabe (Nextcloud, HiDrive, …).",
+    "loadFailed": "WebDAV-Einstellungen konnten nicht geladen werden",
+    "saved": "WebDAV-Einstellungen gespeichert",
+    "saveFailed": "Speichern der WebDAV-Einstellungen fehlgeschlagen",
+    "test": "Verbindung testen",
+    "testing": "Teste...",
+    "testOk": "WebDAV-Verbindung erfolgreich",
+    "testFailed": "WebDAV-Verbindung fehlgeschlagen",
+    "fields": {
+      "enabled": {
+        "label": "WebDAV-Sync aktivieren",
+        "help": "Nach jedem erfolgreichen Backup wird die Datei auf das Remote-Ziel hochgeladen."
+      },
+      "url": {
+        "label": "WebDAV-URL",
+        "help": "Vollständige URL bis zum Benutzer-Root, z.B. https://cloud.example.com/remote.php/dav/files/abrechen2/"
+      },
+      "username": { "label": "Benutzername" },
+      "password": {
+        "label": "Passwort",
+        "help": "Verschlüsselt gespeichert (AES-GCM). Bei Nextcloud ein App-Passwort verwenden.",
+        "placeholderKeep": "Bestehendes Passwort beibehalten",
+        "placeholderSet": "Passwort eingeben"
+      },
+      "backupPath": {
+        "label": "Remote-Backup-Pfad",
+        "help": "Unterordner auf der WebDAV-Freigabe, in dem Backups abgelegt werden."
+      }
+    }
+  },
   "totalUsers": "Gesamt Benutzer",
   "activeUsers": "Aktive Benutzer",
   "totalFlights": "Gesamt Flüge",

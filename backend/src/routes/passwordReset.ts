@@ -11,6 +11,7 @@ import { passwordResetLimiter } from '../middleware/rateLimit';
 import { AppError } from '../middleware/errorHandler';
 import { SMTP_CONFIG_ID } from './admin/smtp';
 import { sendPasswordResetEmail } from '../services/emailService';
+import { getInstanceSettings } from '../services/instanceSettingsService';
 import logger from '../utils/logger';
 
 const router = Router();
@@ -52,11 +53,9 @@ router.post(
             data: { resetToken: hashedToken, resetTokenExpiry: expiry },
           });
 
-          const frontendUrl =
-            process.env.FRONTEND_URL ||
-            process.env.CORS_ORIGIN ||
-            'http://localhost:3000';
-          const resetUrl = `${frontendUrl}/reset-password?token=${plainToken}`;
+          const { frontendUrl } = await getInstanceSettings();
+          const baseUrl = frontendUrl ?? 'http://localhost:3000';
+          const resetUrl = `${baseUrl}/reset-password?token=${plainToken}`;
 
           try {
             await sendPasswordResetEmail(user.notificationEmail, resetUrl, user.username);

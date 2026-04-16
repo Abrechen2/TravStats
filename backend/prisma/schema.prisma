@@ -325,6 +325,22 @@ model AdminSettings {
   backupInterval      String  @default("weekly") @map("backup_interval")
   backupRetentionDays Int     @default(30) @map("backup_retention_days")
 
+  // Instance configuration — supersedes INSTANCE_NAME / MAX_USERS /
+  // ALLOW_REGISTRATION / FRONTEND_URL ENV variables. ENV is read as fallback
+  // only when the column is null / unset (transitional for v1.x).
+  instanceName      String? @map("instance_name")
+  maxUsers          Int     @default(10)    @map("max_users")
+  allowRegistration Boolean @default(false) @map("allow_registration")
+  frontendUrl       String? @map("frontend_url")
+
+  // Off-site backup sync via WebDAV — supersedes WEBDAV_* ENV variables.
+  // webdavPasswordEncrypted is AES-GCM via encryptApiKey() — never stored plain.
+  webdavSyncEnabled       Boolean @default(false)                @map("webdav_sync_enabled")
+  webdavUrl               String?                                @map("webdav_url")
+  webdavUsername          String?                                @map("webdav_username")
+  webdavPasswordEncrypted String?                                @map("webdav_password_encrypted")
+  webdavBackupPath        String  @default("/TravStats/backups/") @map("webdav_backup_path")
+
   // === LOGGING CONFIGURATION ===
   // Log level for file output (error | warn | info | debug | trace)
   logLevel String @default("info") @map("log_level")

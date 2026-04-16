@@ -47,7 +47,6 @@ export default function FlightReviewModal({
   onClose,
   onConfirm,
   initialData,
-  source: _source,
   flightIndex,
   totalFlights,
   originalData,
