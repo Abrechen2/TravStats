@@ -101,4 +101,27 @@ describe("readLogWindow — rotated .gz files", () => {
     expect(entries).toHaveLength(1);
     expect(entries[0].msg).toBe("recent");
   });
+
+  it("ignores unrelated gz files whose name merely starts with the prefix", async () => {
+    writeJsonl("app.log", [{ time: iso(-1000), level: "info", msg: "recent" }]);
+
+    // These must NOT be treated as `app` log rotations:
+    //   - appx.log.gz  (startsWith 'app' but no dash)
+    //   - 20260416-application.log.gz (endsWith '-application.log.gz', not '-app.log.gz')
+    for (const bogus of ["appx.log.gz", "20260416-application.log.gz"]) {
+      fs.writeFileSync(
+        path.join(logDir, bogus),
+        zlib.gzipSync(
+          Buffer.from(
+            JSON.stringify({ time: iso(-30 * 60_000), level: "info", msg: `bogus-${bogus}` }) + "\n",
+          ),
+        ),
+      );
+    }
+
+    const { readLogWindow } = await import("../services/logManager");
+    const entries = await readLogWindow("app", 60 * 60 * 1000);
+
+    expect(entries.map(e => e.msg)).toEqual(["recent"]);
+  });
 });

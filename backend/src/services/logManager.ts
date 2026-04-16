@@ -258,12 +258,17 @@ export async function readLogWindow(
   // Newest-first file ordering: active file, then rotated .gz by mtime desc.
   const candidates = await listLogFiles();
   const ordered = candidates
-    .filter(
-      (f) =>
-        f.filename === `${prefix}.log` ||
-        (f.filename.startsWith(`${prefix}`) && f.filename.endsWith('.log.gz')) ||
-        (f.filename.includes(`-${prefix}`) && f.filename.endsWith('.log.gz'))
-    )
+    .filter((f) => {
+      if (f.filename === `${prefix}.log`) return true;
+      if (!f.filename.endsWith(`.log.gz`)) return false;
+      // Accept either `<prefix>-<date>.log.gz` or `<date...>-<prefix>.log.gz`.
+      // The dash separator prevents prefix collisions like `errorapp.log.gz`
+      // matching for prefix="error".
+      return (
+        f.filename.startsWith(`${prefix}-`) ||
+        f.filename.endsWith(`-${prefix}.log.gz`)
+      );
+    })
     .sort((a, b) => {
       // Active file (no extension before .log) always wins
       if (a.filename === `${prefix}.log`) return -1;
