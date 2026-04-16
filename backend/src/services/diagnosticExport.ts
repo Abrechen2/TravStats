@@ -155,6 +155,98 @@ export async function collectSettings(userId: string): Promise<SettingsSection> 
   };
 }
 
+export interface FlightStateSection {
+  byStatus: {
+    scheduled: number;
+    flown: number;
+    cancelled: number;
+    historical: number;
+    duplicated: number;
+  };
+  pipeline: {
+    withNextApiCheck: number;
+    withPendingUpdates: number;
+    withLiveTracking: number;
+    withActualTimes: number;
+    zombieCandidates: number;
+  };
+}
+
+/**
+ * Aggregate the caller's flight collection into the shape the diagnostic
+ * bundle needs. No IDs, no route data — only counts. Parallel queries keep
+ * this under a single DB round trip-worth of latency.
+ *
+ * zombieCandidates uses the same OR-logic as transitionZombieFlights in
+ * services/flightAutoUpdate.ts so the bundle surfaces exactly what the
+ * scheduler is about to flip.
+ */
+export async function collectFlightState(userId: string): Promise<FlightStateSection> {
+  const arrivalCutoff = new Date(Date.now() - 6 * 60 * 60 * 1000);
+  const departureCutoff = new Date(Date.now() - 30 * 60 * 60 * 1000);
+
+  const [
+    grouped,
+    withNextApiCheck,
+    withLiveTracking,
+    withActualTimes,
+    zombieCandidates,
+    withPendingUpdates,
+  ] = await Promise.all([
+    prisma.flight.groupBy({
+      by: ["status"],
+      where: { userId },
+      _count: { _all: true },
+    }),
+    prisma.flight.count({ where: { userId, nextApiCheckAt: { not: null } } }),
+    prisma.flight.count({ where: { userId, hasLiveTracking: true } }),
+    prisma.flight.count({
+      where: {
+        userId,
+        OR: [
+          { actualDeparture: { not: null } },
+          { actualArrival: { not: null } },
+        ],
+      },
+    }),
+    prisma.flight.count({
+      where: {
+        userId,
+        status: "scheduled",
+        OR: [
+          { arrivalTime: { not: null, lt: arrivalCutoff } },
+          { departureTime: { not: null, lt: departureCutoff } },
+        ],
+      },
+    }),
+    prisma.pendingFlightUpdate.count({ where: { userId, status: "pending" } }),
+  ]);
+
+  const byStatus: FlightStateSection["byStatus"] = {
+    scheduled: 0,
+    flown: 0,
+    cancelled: 0,
+    historical: 0,
+    duplicated: 0,
+  };
+  for (const row of grouped as Array<{ status: string; _count: { _all: number } }>) {
+    if (row.status in byStatus) {
+      (byStatus as Record<string, number>)[row.status] = row._count._all;
+    }
+  }
+
+  return {
+    byStatus,
+    pipeline: {
+      withNextApiCheck,
+      withPendingUpdates,
+      withLiveTracking,
+      withActualTimes,
+      zombieCandidates,
+    },
+  };
+}
+
 export interface DiagnosticBundle {
   generatedAt: string;
   version: string;

@@ -30,7 +30,7 @@ jest.mock("../utils/logger", () => ({
   systemLogger: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
 
-import { collectSettings } from "../services/diagnosticExport";
+import { collectSettings, collectFlightState } from "../services/diagnosticExport";
 
 describe("collectSettings — allowlist", () => {
   beforeEach(() => jest.clearAllMocks());
@@ -86,5 +86,97 @@ describe("collectSettings — allowlist", () => {
     expect(settings.autoUpdate.enabled).toBe(false);
     expect(settings.autoUpdate.requireApproval).toBe(true);
     expect(settings.historicalEnrichment.enabled).toBe(false);
+  });
+});
+
+describe("collectFlightState — aggregates", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it("reports byStatus counts per user", async () => {
+    mockFlightGroupBy.mockResolvedValue([
+      { status: "scheduled", _count: { _all: 7 } },
+      { status: "flown", _count: { _all: 40 } },
+      { status: "cancelled", _count: { _all: 2 } },
+      { status: "historical", _count: { _all: 3 } },
+    ]);
+    // 5 pipeline counts
+    mockFlightCount
+      .mockResolvedValueOnce(5)  // withNextApiCheck
+      .mockResolvedValueOnce(38) // withLiveTracking
+      .mockResolvedValueOnce(12) // withActualTimes
+      .mockResolvedValueOnce(1); // zombieCandidates
+    mockPendingFindCount.mockResolvedValueOnce(2); // withPendingUpdates
+
+    const state = await collectFlightState("u1");
+
+    expect(state.byStatus).toEqual({
+      scheduled: 7,
+      flown: 40,
+      cancelled: 2,
+      historical: 3,
+      duplicated: 0, // not returned by groupBy → defaults to 0
+    });
+    expect(state.pipeline).toEqual({
+      withNextApiCheck: 5,
+      withPendingUpdates: 2,
+      withLiveTracking: 38,
+      withActualTimes: 12,
+      zombieCandidates: 1,
+    });
+  });
+
+  it("scopes every query by userId", async () => {
+    mockFlightGroupBy.mockResolvedValue([]);
+    mockFlightCount.mockResolvedValue(0);
+    mockPendingFindCount.mockResolvedValue(0);
+
+    await collectFlightState("u1");
+
+    // Every call's `where` filters on userId = 'u1'
+    for (const call of mockFlightCount.mock.calls) {
+      expect((call[0] as { where: { userId: string } }).where.userId).toBe("u1");
+    }
+    expect(
+      (mockFlightGroupBy.mock.calls[0][0] as { where: { userId: string } }).where.userId,
+    ).toBe("u1");
+    expect(
+      (mockPendingFindCount.mock.calls[0][0] as { where: { userId: string } }).where.userId,
+    ).toBe("u1");
+  });
+
+  it("zombieCandidates query uses OR of arrivalTime+6h and departureTime+30h", async () => {
+    mockFlightGroupBy.mockResolvedValue([]);
+    mockFlightCount.mockResolvedValue(0);
+    mockPendingFindCount.mockResolvedValue(0);
+
+    await collectFlightState("u1");
+
+    // 4th count call is zombieCandidates
+    const zombieCall = mockFlightCount.mock.calls[3][0] as {
+      where: {
+        status: string;
+        OR: Array<
+          | { arrivalTime: { not: null; lt: Date } }
+          | { departureTime: { not: null; lt: Date } }
+        >;
+      };
+    };
+    expect(zombieCall.where.status).toBe("scheduled");
+    expect(zombieCall.where.OR).toHaveLength(2);
+
+    const arrBranch = zombieCall.where.OR.find(
+      (b): b is { arrivalTime: { not: null; lt: Date } } => "arrivalTime" in b,
+    );
+    const depBranch = zombieCall.where.OR.find(
+      (b): b is { departureTime: { not: null; lt: Date } } => "departureTime" in b,
+    );
+    expect(arrBranch).toBeDefined();
+    expect(depBranch).toBeDefined();
+
+    // 6h and 30h cutoffs, ±1 min tolerance for test-execution drift
+    const arrExpected = Date.now() - 6 * 3600 * 1000;
+    const depExpected = Date.now() - 30 * 3600 * 1000;
+    expect(Math.abs(arrBranch!.arrivalTime.lt.getTime() - arrExpected)).toBeLessThan(60_000);
+    expect(Math.abs(depBranch!.departureTime.lt.getTime() - depExpected)).toBeLessThan(60_000);
   });
 });
