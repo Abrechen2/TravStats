@@ -34,7 +34,7 @@ export interface LogFileMetadata {
 }
 
 export interface LogEntry {
-  timestamp: string;
+  timestamp?: string;
   level: string;
   category: string;
   message: string;
@@ -294,6 +294,13 @@ export async function readLogWindow(
         parsed = JSON.parse(line) as LogEntry;
       } catch {
         continue;
+      }
+      if (
+        typeof parsed.timestamp === 'string' &&
+        typeof parsed.time === 'string' &&
+        parsed.timestamp === parsed.time
+      ) {
+        delete parsed.timestamp;
       }
       const entryTime = Date.parse(String(parsed.time ?? parsed.timestamp ?? ''));
       if (!Number.isFinite(entryTime) || entryTime < cutoffMs) continue;

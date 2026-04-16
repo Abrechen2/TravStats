@@ -125,3 +125,64 @@ describe("readLogWindow — rotated .gz files", () => {
     expect(entries.map(e => e.msg)).toEqual(["recent"]);
   });
 });
+
+describe("readLogWindow — caps", () => {
+  it("respects maxEntries cap (first wins)", async () => {
+    const lines = Array.from({ length: 100 }, (_, i) => ({
+      time: iso(-i * 1000),
+      level: "info",
+      msg: `n${i}`,
+    }));
+    writeJsonl("app.log", lines);
+
+    const { readLogWindow } = await import("../services/logManager");
+    const entries = await readLogWindow("app", 60 * 60 * 1000, { maxEntries: 10 });
+
+    expect(entries).toHaveLength(10);
+  });
+
+  it("respects maxBytes cap", async () => {
+    const big = "x".repeat(500);
+    const lines = Array.from({ length: 100 }, (_, i) => ({
+      time: iso(-i * 1000),
+      level: "info",
+      msg: `${big}-${i}`,
+    }));
+    writeJsonl("app.log", lines);
+
+    const { readLogWindow } = await import("../services/logManager");
+    // Each line is ~550 bytes; 2000 byte cap should admit ~3-4 lines
+    const entries = await readLogWindow("app", 60 * 60 * 1000, { maxBytes: 2000 });
+
+    expect(entries.length).toBeGreaterThan(0);
+    expect(entries.length).toBeLessThan(10);
+  });
+});
+
+describe("readLogWindow — Pino dedupe", () => {
+  it("drops `timestamp` when it equals `time`", async () => {
+    const ts = iso(-5000);
+    writeJsonl("app.log", [
+      { time: ts, timestamp: ts, level: "info", msg: "dup" },
+    ]);
+
+    const { readLogWindow } = await import("../services/logManager");
+    const entries = await readLogWindow("app", 60 * 60 * 1000);
+
+    expect(entries[0].time).toBe(ts);
+    expect(entries[0].timestamp).toBeUndefined();
+  });
+
+  it("keeps `timestamp` when it differs from `time`", async () => {
+    const t = iso(-5000);
+    const other = iso(-4000);
+    writeJsonl("app.log", [
+      { time: t, timestamp: other, level: "info", msg: "distinct" },
+    ]);
+
+    const { readLogWindow } = await import("../services/logManager");
+    const entries = await readLogWindow("app", 60 * 60 * 1000);
+
+    expect(entries[0].timestamp).toBe(other);
+  });
+});
