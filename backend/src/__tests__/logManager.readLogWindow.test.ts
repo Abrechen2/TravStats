@@ -1,13 +1,12 @@
 /**
  * Unit tests for readLogWindow — the time-bounded log reader added for
- * diagnostic-export v2. These tests use a real temporary directory rather
- * than mocks so gzip / stream / readline behaviour is exercised end-to-end.
+ * diagnostic-export v2. Uses a real temporary directory so the readline
+ * stream is exercised end-to-end. Gzip coverage is added in Task 2.
  */
 import { describe, it, expect, beforeEach, afterEach, jest } from "@jest/globals";
 import fs from "fs";
 import path from "path";
 import os from "os";
-import zlib from "zlib";
 
 // Mock the LOG_DIR by setting cwd before import
 let tmpRoot: string;

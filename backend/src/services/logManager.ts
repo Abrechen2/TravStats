@@ -240,8 +240,10 @@ const DEFAULT_MAX_BYTES = 2 * 1024 * 1024; // 2 MiB of JSON
  * Read a time-bounded window of log entries for a given prefix
  * ('app' | 'error'). Scans the active file plus rotated .gz files
  * newest-first and stops as soon as it encounters an entry older than the
- * cutoff (logs are chronological). Respects caps on entry count and JSON
- * byte size; the first cap to be hit wins.
+ * cutoff (logs are chronological). Respects caps on entry count and
+ * approximate JSON size (measured in UTF-16 code units of the source line
+ * — cheap, and close enough to bytes for log-sized ASCII-majority
+ * payloads). The first cap to be hit wins.
  */
 export async function readLogWindow(
   prefix: 'app' | 'error',
@@ -256,7 +258,7 @@ export async function readLogWindow(
   if (!fs.existsSync(activePath)) return [];
 
   const entries: LogEntry[] = [];
-  let byteBudget = 0;
+  let charBudget = 0;
 
   const rl = readline.createInterface({
     input: fs.createReadStream(activePath),
@@ -275,9 +277,9 @@ export async function readLogWindow(
     if (!Number.isFinite(entryTime) || entryTime < cutoffMs) continue;
 
     const encoded = line.length;
-    if (entries.length >= maxEntries || byteBudget + encoded > maxBytes) break;
+    if (entries.length >= maxEntries || charBudget + encoded > maxBytes) break;
     entries.push(parsed);
-    byteBudget += encoded;
+    charBudget += encoded;
   }
 
   return entries;
