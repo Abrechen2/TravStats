@@ -9,8 +9,6 @@ interface DiagnosticExportModalProps {
   onClose: () => void;
 }
 
-const GITHUB_NEW_ISSUE_URL = "https://github.com/Abrechen2/TravStats/issues/new";
-
 export default function DiagnosticExportModal({
   isOpen,
   onClose,
@@ -53,28 +51,61 @@ export default function DiagnosticExportModal({
 
   const bundleText = bundle ? JSON.stringify(bundle, null, 2) : "";
 
+  // navigator.clipboard requires a secure context (HTTPS or localhost).
+  // The TravStats prod box currently serves over plain HTTP, so we fall
+  // back to the legacy execCommand approach when the API is missing.
+  // This helper THROWS on failure so callers can decide how to react.
+  const handleCopyInternal = async (): Promise<void> => {
+    if (window.isSecureContext && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(bundleText);
+      return;
+    }
+    const textarea = document.createElement("textarea");
+    textarea.value = bundleText;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.top = "-9999px";
+    document.body.appendChild(textarea);
+    textarea.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(textarea);
+    if (!ok) throw new Error("execCommand copy returned false");
+  };
+
   const handleCopy = async (): Promise<void> => {
-    // navigator.clipboard requires a secure context (HTTPS or localhost).
-    // The TravStats prod box currently serves over plain HTTP, so we fall
-    // back to the legacy execCommand approach when the API is missing.
     try {
-      if (window.isSecureContext && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(bundleText);
-      } else {
-        const textarea = document.createElement("textarea");
-        textarea.value = bundleText;
-        textarea.setAttribute("readonly", "");
-        textarea.style.position = "fixed";
-        textarea.style.top = "-9999px";
-        document.body.appendChild(textarea);
-        textarea.select();
-        const ok = document.execCommand("copy");
-        document.body.removeChild(textarea);
-        if (!ok) throw new Error("execCommand copy returned false");
-      }
+      await handleCopyInternal();
       addToast("success", t("common:diagnostic.copied"));
     } catch (err: unknown) {
       logger.error("Clipboard write failed:", err);
+      addToast("error", t("common:diagnostic.copyFailed"));
+    }
+  };
+
+  const handleReportBug = async (): Promise<void> => {
+    if (!bundle) return;
+
+    // Try to copy first. If it fails, still open the issue URL so the user
+    // at least gets a prefilled form — they can use the Download button as
+    // a fallback to attach the bundle manually.
+    let copied = true;
+    try {
+      await handleCopyInternal();
+    } catch (err: unknown) {
+      logger.error("Clipboard write failed:", err);
+      copied = false;
+    }
+
+    const url =
+      "https://github.com/Abrechen2/TravStats/issues/new" +
+      "?template=bug.yml" +
+      `&version=${encodeURIComponent(bundle.version)}` +
+      "&labels=bug";
+    window.open(url, "_blank", "noopener,noreferrer");
+
+    if (copied) {
+      addToast("info", t("common:diagnostic.reportBugOpened"));
+    } else {
       addToast("error", t("common:diagnostic.copyFailed"));
     }
   };
@@ -161,19 +192,6 @@ export default function DiagnosticExportModal({
           >
             {t("common:buttons.close")}
           </button>
-          <a
-            href={GITHUB_NEW_ISSUE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-3 py-1.5 text-sm rounded"
-            style={{
-              background: "var(--bg-elevated)",
-              color: "var(--text-primary)",
-              border: "1px solid var(--color-border)",
-            }}
-          >
-            {t("common:diagnostic.openIssue")}
-          </a>
           {bundle && (
             <>
               <button
@@ -187,11 +205,27 @@ export default function DiagnosticExportModal({
               >
                 {t("common:diagnostic.download")}
               </button>
-              <button onClick={handleCopy} className="btn-primary px-3 py-1.5 text-sm">
+              <button
+                onClick={handleCopy}
+                className="px-3 py-1.5 text-sm rounded"
+                style={{
+                  background: "var(--bg-elevated)",
+                  color: "var(--text-primary)",
+                  border: "1px solid var(--color-border)",
+                }}
+              >
                 {t("common:diagnostic.copy")}
               </button>
             </>
           )}
+          <button
+            onClick={handleReportBug}
+            disabled={!bundle}
+            title={t("common:diagnostic.reportBugHint")}
+            className="btn-primary px-3 py-1.5 text-sm"
+          >
+            {t("common:diagnostic.reportBug")}
+          </button>
         </div>
       </div>
     </div>
