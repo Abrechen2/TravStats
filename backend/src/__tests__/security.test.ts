@@ -211,17 +211,28 @@ describe('Security Tests', () => {
         expect(mockReq.userId).toBe(testUser.id);
       });
 
-      it('should authenticate user with valid Bearer token', async () => {
+      it('should reject Bearer-token-only requests (cookie-only auth policy)', async () => {
+        // XSS-hardening: the middleware intentionally ignores Authorization
+        // headers so a stolen JWT in localStorage / JS-accessible memory can't
+        // be replayed. Only the HttpOnly auth_token cookie is trusted.
         const token = generateToken(testUser.id);
         mockReq.headers = { authorization: `Bearer ${token}` };
 
         await authenticate(mockReq as AuthRequest, mockRes as Response, mockNext);
 
-        expect(mockNext).toHaveBeenCalledWith();
-        expect(mockReq.userId).toBe(testUser.id);
+        expect(mockNext).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: 'No token provided',
+            statusCode: 401,
+          })
+        );
+        expect(mockReq.userId).toBeUndefined();
       });
 
-      it('should prioritize cookie token over Bearer token', async () => {
+      it('should ignore Bearer header even when cookie is also present', async () => {
+        // Stronger guard than the above: even with a valid Bearer header,
+        // ONLY the cookie identity is used. Prevents confusion attacks where
+        // an attacker convinces the UI to send a header alongside a cookie.
         const cookieToken = generateToken(testUser.id);
         const bearerToken = generateToken('other-user-id');
 

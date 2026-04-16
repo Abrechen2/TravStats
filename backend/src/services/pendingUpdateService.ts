@@ -27,6 +27,10 @@ export interface FlightDataSnapshot {
   arrName?: string | null;
   departureTime?: string | null;
   arrivalTime?: string | null;
+  /** Actual off-block time (UTC ISO); populated when an API reports it */
+  actualDeparture?: string | null;
+  /** Actual on-block time (UTC ISO); populated when an API reports it */
+  actualArrival?: string | null;
   status?: string | null;
   actualRoute?: unknown;
   overflownCountries?: string[] | null;
@@ -531,6 +535,20 @@ export async function applyPendingUpdate(
     const isHistoricalEnrichment = metadata?.isHistoricalEnrichment === true;
 
     // Prepare update data
+    const nextActualDeparture = dataToApply.actualDeparture
+      ? new Date(String(dataToApply.actualDeparture))
+      : flight.actualDeparture;
+    const nextActualArrival = dataToApply.actualArrival
+      ? new Date(String(dataToApply.actualArrival))
+      : flight.actualArrival;
+
+    const nextDepartureTime = dataToApply.departureTime
+      ? new Date(String(dataToApply.departureTime))
+      : flight.departureTime;
+    const nextArrivalTime = dataToApply.arrivalTime
+      ? new Date(String(dataToApply.arrivalTime))
+      : flight.arrivalTime;
+
     const updateData: Prisma.FlightUpdateInput = {
       airline: dataToApply.airline ?? flight.airline,
       aircraft: dataToApply.aircraft ?? flight.aircraft,
@@ -546,12 +564,18 @@ export async function applyPendingUpdate(
       arrName: dataToApply.arrName ?? flight.arrName,
       arrLat,
       arrLon,
-      departureTime: dataToApply.departureTime
-        ? new Date(String(dataToApply.departureTime))
-        : flight.departureTime,
-      arrivalTime: dataToApply.arrivalTime
-        ? new Date(String(dataToApply.arrivalTime))
-        : flight.arrivalTime,
+      departureTime: nextDepartureTime,
+      arrivalTime: nextArrivalTime,
+      actualDeparture: nextActualDeparture,
+      actualArrival: nextActualArrival,
+      // Keep delayMinutes in sync with actual vs. scheduled departure so the
+      // UI shows the correct delay without a manual edit.
+      delayMinutes:
+        nextActualDeparture && nextDepartureTime
+          ? Math.round(
+              (nextActualDeparture.getTime() - nextDepartureTime.getTime()) / 60000
+            )
+          : flight.delayMinutes,
       // Don't change status automatically
     };
 

@@ -56,6 +56,7 @@ interface AviationstackFlightResult {
     icao?: string;
     estimated?: string;
     scheduled?: string;
+    actual?: string;
     terminal?: string;
     gate?: string;
   };
@@ -64,6 +65,7 @@ interface AviationstackFlightResult {
     icao?: string;
     estimated?: string;
     scheduled?: string;
+    actual?: string;
     terminal?: string;
     gate?: string;
   };
@@ -361,6 +363,10 @@ export interface FlightLookupResult {
   arrival?: AirportInfo;
   departureTime?: string;
   arrivalTime?: string;
+  /** Actual off-block time (UTC ISO); populated when the API reports it */
+  actualDeparture?: string;
+  /** Actual on-block time (UTC ISO); populated when the API reports it */
+  actualArrival?: string;
 }
 
 /**
@@ -503,24 +509,62 @@ export async function lookupFlightDetails(
         // Convert Aviationstack times from local airport time to UTC
         const departureTimeRaw = result.departure?.estimated || result.departure?.scheduled;
         const arrivalTimeRaw = result.arrival?.estimated || result.arrival?.scheduled;
+        const actualDepartureRaw = result.departure?.actual;
+        const actualArrivalRaw = result.arrival?.actual;
 
-        const [departureTimeUtc, arrivalTimeUtc] = await Promise.all([
-          departureTimeRaw && departureCode
-            ? convertAviationstackTimeToUtc(departureTimeRaw, departureCode)
-            : Promise.resolve(departureTimeRaw || null),
-          arrivalTimeRaw && arrivalCode
-            ? convertAviationstackTimeToUtc(arrivalTimeRaw, arrivalCode)
-            : Promise.resolve(arrivalTimeRaw || null),
-        ]);
+        const [departureTimeUtc, arrivalTimeUtc, actualDepartureUtc, actualArrivalUtc] =
+          await Promise.all([
+            departureTimeRaw && departureCode
+              ? convertAviationstackTimeToUtc(departureTimeRaw, departureCode)
+              : Promise.resolve(departureTimeRaw || null),
+            arrivalTimeRaw && arrivalCode
+              ? convertAviationstackTimeToUtc(arrivalTimeRaw, arrivalCode)
+              : Promise.resolve(arrivalTimeRaw || null),
+            actualDepartureRaw && departureCode
+              ? convertAviationstackTimeToUtc(actualDepartureRaw, departureCode)
+              : Promise.resolve(actualDepartureRaw || null),
+            actualArrivalRaw && arrivalCode
+              ? convertAviationstackTimeToUtc(actualArrivalRaw, arrivalCode)
+              : Promise.resolve(actualArrivalRaw || null),
+          ]);
+
+        // Merge per-flight fields (gate/terminal) onto the airport record.
+        // findOrCreateAirport only supplies static metadata (name/lat/lon); the
+        // API is the sole source of live gate/terminal. Before this merge, those
+        // fields were silently dropped when the airport object shadowed them.
+        const departureWithLive: AirportInfo | undefined = departureAirport
+          ? {
+              iata: departureAirport.iata ?? undefined,
+              icao: departureAirport.icao ?? undefined,
+              name: departureAirport.name,
+              lat: departureAirport.lat,
+              lon: departureAirport.lon,
+              terminal: result.departure?.terminal,
+              gate: result.departure?.gate,
+            }
+          : undefined;
+        const arrivalWithLive: AirportInfo | undefined = arrivalAirport
+          ? {
+              iata: arrivalAirport.iata ?? undefined,
+              icao: arrivalAirport.icao ?? undefined,
+              name: arrivalAirport.name,
+              lat: arrivalAirport.lat,
+              lon: arrivalAirport.lon,
+              terminal: result.arrival?.terminal,
+              gate: result.arrival?.gate,
+            }
+          : undefined;
 
         return {
           airline: result.airline?.name,
           flightNumber: result.flight?.iata || result.flight?.icao || trimmedNumber,
           aircraft: result.aircraft?.icao || result.aircraft?.iata,
-          departure: departureAirport || undefined,
-          arrival: arrivalAirport || undefined,
+          departure: departureWithLive,
+          arrival: arrivalWithLive,
           departureTime: departureTimeUtc || undefined,
           arrivalTime: arrivalTimeUtc || undefined,
+          actualDeparture: actualDepartureUtc || undefined,
+          actualArrival: actualArrivalUtc || undefined,
         };
       }
     } catch (err) {
@@ -572,24 +616,62 @@ export async function lookupFlightDetails(
   // Convert AirLabs times to UTC (AirLabs may return UTC or local times)
   const departureTimeRaw = first.departure.scheduledTime || first.departure.actualTime;
   const arrivalTimeRaw = first.arrival.scheduledTime || first.arrival.actualTime;
+  const actualDepartureRaw = first.departure.actualTime;
+  const actualArrivalRaw = first.arrival.actualTime;
 
-  const [departureTimeUtc, arrivalTimeUtc] = await Promise.all([
-    departureTimeRaw
-      ? convertAirlabsTimeToUtc(departureTimeRaw, departureCode)
-      : Promise.resolve(null),
-    arrivalTimeRaw
-      ? convertAirlabsTimeToUtc(arrivalTimeRaw, arrivalCode)
-      : Promise.resolve(null),
-  ]);
+  const [departureTimeUtc, arrivalTimeUtc, actualDepartureUtc, actualArrivalUtc] =
+    await Promise.all([
+      departureTimeRaw
+        ? convertAirlabsTimeToUtc(departureTimeRaw, departureCode)
+        : Promise.resolve(null),
+      arrivalTimeRaw
+        ? convertAirlabsTimeToUtc(arrivalTimeRaw, arrivalCode)
+        : Promise.resolve(null),
+      actualDepartureRaw
+        ? convertAirlabsTimeToUtc(actualDepartureRaw, departureCode)
+        : Promise.resolve(null),
+      actualArrivalRaw
+        ? convertAirlabsTimeToUtc(actualArrivalRaw, arrivalCode)
+        : Promise.resolve(null),
+    ]);
+
+  // Merge per-flight fields (gate/terminal) onto the airport record.
+  // findOrCreateAirport only supplies static metadata (name/lat/lon); the API
+  // is the sole source of live gate/terminal. Before this merge, those fields
+  // were silently dropped when the airport object shadowed them.
+  const departureWithLive: AirportInfo | undefined = departureAirport
+    ? {
+        iata: departureAirport.iata ?? undefined,
+        icao: departureAirport.icao ?? undefined,
+        name: departureAirport.name,
+        lat: departureAirport.lat,
+        lon: departureAirport.lon,
+        terminal: first.departure.terminal,
+        gate: first.departure.gate,
+      }
+    : undefined;
+  const arrivalWithLive: AirportInfo | undefined = arrivalAirport
+    ? {
+        iata: arrivalAirport.iata ?? undefined,
+        icao: arrivalAirport.icao ?? undefined,
+        name: arrivalAirport.name,
+        lat: arrivalAirport.lat,
+        lon: arrivalAirport.lon,
+        terminal: first.arrival.terminal,
+        gate: first.arrival.gate,
+      }
+    : undefined;
 
   return {
     airline: first.airline || (first.airlineIata ? getAirlineName(first.airlineIata) || undefined : undefined) || first.airlineIcao,
     flightNumber: first.flightNumber,
     aircraft: first.aircraft || first.aircraftIcao,
-    departure: departureAirport || undefined,
-    arrival: arrivalAirport || undefined,
+    departure: departureWithLive,
+    arrival: arrivalWithLive,
     departureTime: departureTimeUtc || undefined,
     arrivalTime: arrivalTimeUtc || undefined,
+    actualDeparture: actualDepartureUtc || undefined,
+    actualArrival: actualArrivalUtc || undefined,
   };
 }
 

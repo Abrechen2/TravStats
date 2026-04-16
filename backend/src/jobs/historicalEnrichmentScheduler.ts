@@ -14,6 +14,7 @@ import {
   aggregateFlightData,
   createHistoricalEnrichment,
 } from '../services/flightEnrichmentService';
+import { applyPendingUpdate } from '../services/pendingUpdateService';
 
 let schedulerRunning = false;
 let schedulerTask: cron.ScheduledTask | null = null;
@@ -42,6 +43,16 @@ export async function processUserHistoricalEnrichment(userId: string): Promise<{
 
     // Limit to maxPerDay
     const candidatesToProcess = candidates.slice(0, settings.maxPerDay);
+
+    // Mirror the live auto-update path: when the user has turned off the approval
+    // gate for live API updates, historical enrichment should also auto-apply —
+    // otherwise these rows sit as "pending" forever and the user never sees them
+    // reflected on their flights.
+    const userSettings = await prisma.userSettings.findUnique({
+      where: { userId },
+      select: { autoUpdateRequireApproval: true },
+    });
+    const autoApply = userSettings?.autoUpdateRequireApproval === false;
 
     let created = 0;
     let skipped = 0;
@@ -89,6 +100,32 @@ export async function processUserHistoricalEnrichment(userId: string): Promise<{
 
         if (pendingUpdateId) {
           created++;
+
+          if (autoApply) {
+            const applied = await applyPendingUpdate(pendingUpdateId, userId);
+            if (applied) {
+              logger.info({
+                operation: 'historical_enrichment_auto_applied',
+                message: 'Auto-applied historical enrichment (requireApproval=false)',
+                context: {
+                  pendingUpdateId,
+                  flightId: flight.id,
+                  flightNumber: flight.flightNumber,
+                  userId,
+                },
+              });
+            } else {
+              logger.warn({
+                operation: 'historical_enrichment_auto_apply_failed',
+                message: 'Auto-apply failed for historical enrichment',
+                context: {
+                  pendingUpdateId,
+                  flightId: flight.id,
+                  userId,
+                },
+              });
+            }
+          }
         } else {
           skipped++;
         }

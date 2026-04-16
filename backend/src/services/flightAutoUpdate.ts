@@ -77,6 +77,8 @@ export function calculateChanges(
     'arrIcao',
     'departureTime',
     'arrivalTime',
+    'actualDeparture',
+    'actualArrival',
     'status',
     'actualRoute',
     'overflownCountries',
@@ -107,8 +109,11 @@ export function calculateChanges(
         type: 'removed',
       });
     } else if (oldValue !== newValue && !isEmpty(newValue)) {
-      // Special handling for time fields
-      if (field === 'departureTime' || field === 'arrivalTime') {
+      // Special handling for time fields — includes actual off/on-block times
+      // so single-minute-level jitter doesn't churn a "changed" event on every
+      // API poll.
+      const timeFields = new Set(['departureTime', 'arrivalTime', 'actualDeparture', 'actualArrival']);
+      if (timeFields.has(field)) {
         const oldTime = oldValue && (typeof oldValue === 'string' || typeof oldValue === 'number') ? new Date(oldValue).getTime() : 0;
         const newTime = newValue && (typeof newValue === 'string' || typeof newValue === 'number') ? new Date(newValue).getTime() : 0;
         const diffMinutes = Math.abs(newTime - oldTime) / (1000 * 60);
@@ -151,7 +156,16 @@ export function calculateChanges(
 export function hasSignificantChanges(changes: FlightChange[]): boolean {
   if (changes.length === 0) return false;
 
-  const criticalFields = ['departureTime', 'arrivalTime', 'depIata', 'depIcao', 'arrIata', 'arrIcao'];
+  const criticalFields = [
+    'departureTime',
+    'arrivalTime',
+    'actualDeparture',
+    'actualArrival',
+    'depIata',
+    'depIcao',
+    'arrIata',
+    'arrIcao',
+  ];
   if (changes.some(c => criticalFields.includes(c.field))) return true;
 
   // Initial fill — single change is enough to be worth showing the user
@@ -187,6 +201,12 @@ function convertApiDataToProposed(
     arrivalTime: apiData.arrivalTime
       ? new Date(apiData.arrivalTime).toISOString()
       : (originalFlight.arrivalTime?.toISOString() ?? null),
+    actualDeparture: apiData.actualDeparture
+      ? new Date(apiData.actualDeparture).toISOString()
+      : (originalFlight.actualDeparture?.toISOString() ?? null),
+    actualArrival: apiData.actualArrival
+      ? new Date(apiData.actualArrival).toISOString()
+      : (originalFlight.actualArrival?.toISOString() ?? null),
     status: originalFlight.status, // Don't change status automatically
   };
 
@@ -239,6 +259,8 @@ export async function createPendingUpdate(
       arrIcao: flight.arrIcao,
       departureTime: flight.departureTime?.toISOString() ?? null,
       arrivalTime: flight.arrivalTime?.toISOString() ?? null,
+      actualDeparture: flight.actualDeparture?.toISOString() ?? null,
+      actualArrival: flight.actualArrival?.toISOString() ?? null,
       status: flight.status,
     };
 
@@ -431,6 +453,8 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
           arrIcao: flight.arrIcao,
           departureTime: flight.departureTime?.toISOString() ?? null,
           arrivalTime: flight.arrivalTime?.toISOString() ?? null,
+          actualDeparture: flight.actualDeparture?.toISOString() ?? null,
+          actualArrival: flight.actualArrival?.toISOString() ?? null,
           status: flight.status,
         };
 
@@ -525,6 +549,14 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
 const ZOMBIE_SCHEDULED_CUTOFF_HOURS = 6;
 
 /**
+ * Safety-net cutoff based on departureTime. Catches flights whose arrivalTime
+ * was never set, OR whose arrivalTime was corrupted into the future by a
+ * misbehaving API response. Longest current commercial flight is ~19h (SIN→JFK),
+ * so 30h gives ~11h of slack for delays and still flips within a day.
+ */
+const ZOMBIE_DEPARTURE_CUTOFF_HOURS = 30;
+
+/**
  * Auto-transition "zombie" scheduled flights whose arrival time is far in the past
  * but which were never updated by an API. Prevents the list view from showing
  * flights as permanently "scheduled" after they've clearly already happened.
@@ -536,15 +568,25 @@ const ZOMBIE_SCHEDULED_CUTOFF_HOURS = 6;
  *     the change was a fallback guess (not an API confirmation) and edit if needed
  */
 export async function transitionZombieFlights(): Promise<number> {
-  const cutoff = new Date(
+  const arrivalCutoff = new Date(
     Date.now() - ZOMBIE_SCHEDULED_CUTOFF_HOURS * 60 * 60 * 1000,
+  );
+  const departureCutoff = new Date(
+    Date.now() - ZOMBIE_DEPARTURE_CUTOFF_HOURS * 60 * 60 * 1000,
   );
 
   try {
+    // Two triggers, either flips the flight:
+    //  (1) arrivalTime + 6h < now  — the common happy path
+    //  (2) departureTime + 30h < now — safety net when arrivalTime is null
+    //      or was pushed into the future by a buggy API response
     const result = await prismaClient.flight.updateMany({
       where: {
         status: 'scheduled',
-        arrivalTime: { not: null, lt: cutoff },
+        OR: [
+          { arrivalTime: { not: null, lt: arrivalCutoff } },
+          { departureTime: { not: null, lt: departureCutoff } },
+        ],
       },
       data: {
         status: 'flown',
@@ -557,7 +599,11 @@ export async function transitionZombieFlights(): Promise<number> {
       logger.info({
         operation: 'zombie_flights_transitioned',
         message: `Auto-flipped ${result.count} stale scheduled flights to flown`,
-        context: { cutoffHours: ZOMBIE_SCHEDULED_CUTOFF_HOURS, count: result.count },
+        context: {
+          arrivalCutoffHours: ZOMBIE_SCHEDULED_CUTOFF_HOURS,
+          departureCutoffHours: ZOMBIE_DEPARTURE_CUTOFF_HOURS,
+          count: result.count,
+        },
       });
     }
 
