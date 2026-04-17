@@ -83,4 +83,4 @@ PNR, gate, terminal, and operating airline data.
 
 ---
 
-*Last benchmarked: 2026-04-12 on Mac Mini M4 (Ollama server 192.168.178.155)*
+*Last benchmarked: 2026-04-12 on Mac Mini M4 (Ollama server on LAN)*

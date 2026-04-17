@@ -385,7 +385,7 @@
       "title": "Ollama LLM Parser",
       "description": "Ollama runs locally or on your network and analyzes booking confirmations with an LLM. Ideal for multi-stop and complex emails.",
       "urlLabel": "Ollama URL",
-      "urlPlaceholder": "http://192.168.178.155:11434",
+      "urlPlaceholder": "http://localhost:11434",
       "modelLabel": "Model",
       "modelPlaceholder": "qwen2.5:14b",
       "testButton": "Test Connection",

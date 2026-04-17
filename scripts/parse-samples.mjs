@@ -23,7 +23,7 @@ const require = createRequire(
 const MsgReader = require("@kenjiuno/msgreader").default ?? require("@kenjiuno/msgreader");
 
 // ---------- Config ----------
-const OLLAMA_URL = process.env.OLLAMA_URL || "http://192.168.178.155:11434";
+const OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434";
 const SAMPLES_DIR = path.resolve("test-samples/emails");
 const SAMPLES_JSON = path.join(SAMPLES_DIR, "samples.json");
 const TIMEOUT_MS = 300_000;
