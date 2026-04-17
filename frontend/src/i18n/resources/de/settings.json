@@ -3,6 +3,10 @@
   "subtitle": "Profile, Präferenzen und Sicherheit an einem Ort.",
   "roadmap": "Roadmap · Punkt 9",
   "backToDashboard": "← Zurück zum Dashboard",
+  "about": {
+    "buildLabel": "Build",
+    "buildVersionHint": "Version, die beim Bauen des Container-Images eingebacken wurde. Weicht von der angezeigten Version nur ab, wenn ein promoteter RC läuft."
+  },
   "profile": {
     "title": "Benutzer-Profil",
     "description": "Passe Benutzername, Kontaktinformationen und dein Profilbild an.",

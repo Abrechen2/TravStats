@@ -90,6 +90,13 @@ services:
       NODE_ENV: production
       TZ: ${TZ:-UTC}
 
+      # Runtime display version for the About / Admin → System Info panels.
+      # Defaults to the image tag (e.g. `1.0.1`). Falls back to the VERSION
+      # file baked into the image when unset. Keeping this aligned with
+      # ${VERSION} means promoted RC images still show the clean final
+      # version instead of the `-rc.N` suffix carried by the build.
+      APP_VERSION: ${VERSION:-}
+
       # Database — DB_PASSWORD is the only required variable. Alternatively
       # set DATABASE_URL directly to point at an external Postgres instance.
       DATABASE_URL: ${DATABASE_URL:-postgresql://flights:${DB_PASSWORD}@db:5432/flights}

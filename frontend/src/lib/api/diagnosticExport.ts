@@ -37,6 +37,7 @@ type SectionError = { error: string };
 export interface DiagnosticBundle {
   generatedAt: string;
   version: string;
+  buildVersion: string;
   platform: {
     nodeVersion: string;
     os: string;

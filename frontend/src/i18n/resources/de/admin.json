@@ -248,6 +248,8 @@
     "enabled": "✅ Aktiviert",
     "disabled": "❌ Deaktiviert",
     "version": "Version",
+    "buildLabel": "Build",
+    "buildVersionHint": "Version, die beim Bauen des Container-Images eingebacken wurde. Weicht von der angezeigten Version nur ab, wenn ein promoteter RC ausgeliefert wird — das Image ist dann byte-identisch zur getesteten RC-Version, der Registry-Tag ist aber bereits die finale Version.",
     "exportButton": "Vollständiges Backup herunterladen (JSON)",
     "exportDescription": "Alle Benutzerdaten für Backup-Zwecke exportieren (DSGVO-konform)",
     "exportHelp": {
