@@ -4,6 +4,12 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [1.0.1] - 2026-04-17
+
+### Security
+- **Base images refreshed and patched** — Builders moved from `node:20-alpine` to `node:22-alpine`; production stage moved from `node:20-slim` to `node:22-bookworm-slim`. The production image now also runs `apt-get upgrade` at build time so every rebuild pulls the latest Debian security feed on top of the base layer. Closes the Critical CVE-2026-6100 and eleven High-severity npm CVEs (tar, minimatch, cross-spawn) that Docker Scout reported against `v1.0.0`. Drop-in replacement — no schema, config, or runtime behaviour changes.
+- **CI aligned with runtime** — GitHub Actions now runs backend and frontend checks on Node 22 to match the container image.
+
 ## [1.0.0] - 2026-04-16
 
 First stable release. TravStats exits its public beta period after roughly
