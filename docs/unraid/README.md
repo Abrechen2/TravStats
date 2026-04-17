@@ -9,6 +9,19 @@ TravStats is a single-container app but **requires** a separate PostGIS
 database. A local Ollama LLM container is optional but recommended for email
 import.
 
+### 0. Create the shared Docker network (one-time, ~5 seconds)
+
+Both containers talk to each other by name over a user-defined bridge.
+Docker's default `bridge` has no DNS between containers, so we create a
+custom one first. Open the Unraid header **⏻ Terminal** (or SSH) and run:
+
+```bash
+docker network create travstats-net
+```
+
+This command is idempotent — running it twice is fine; it just reports
+the existing network.
+
 ### 1. Install PostGIS
 
 Use our companion template [`travstats-db.xml`](travstats-db.xml) — it pre-fills

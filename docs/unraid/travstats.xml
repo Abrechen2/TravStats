@@ -13,7 +13,13 @@
 
 **Requirements:**
 
-TravStats needs a PostgreSQL 15 database with the PostGIS extension. Install the companion template **travstats-db** (same repo) first — it is pre-configured with the right network, database and user so only the password needs filling in. Both containers share a user-defined Docker network named `travstats-net` (created automatically on the first install) so they can reach each other by container name.
+**One-time setup before first install:** create the Docker network that both containers share. From the Unraid terminal (**⏻ Terminal** button in the header) or SSH, run:
+
+```
+docker network create travstats-net
+```
+
+TravStats needs a PostgreSQL 15 database with the PostGIS extension. Install the companion template **travstats-db** (same repo) first — it is pre-configured with the right network, database and user so only the password needs filling in. Both containers attach to the `travstats-net` user-defined bridge so they can reach each other by container name (the default Docker `bridge` has no DNS between containers).
 
 If you bring your own PostGIS container instead, make sure it joins the same `travstats-net` network and uses:
 

@@ -13,7 +13,13 @@
 
 This template is pre-filled with the container name `travstats-db` and the database/user pair `flights/flights` so the default `DATABASE_URL` in the TravStats template matches without further editing. **Change the password to a strong value** (e.g. `openssl rand -base64 32`) and reuse it in TravStats.
 
-**Install order:** this container **first**, then the TravStats template. Both containers share a user-defined Docker network called `travstats-net` (Unraid creates it automatically on the first install). That network provides container-name DNS resolution — the default Docker `bridge` does not — so TravStats can reach `travstats-db` by name without any host port mapping.
+**One-time setup before first install:** create the Docker network that both containers share. From the Unraid terminal or SSH:
+
+```
+docker network create travstats-net
+```
+
+**Install order:** this container **first**, then the TravStats template. Both containers attach to the `travstats-net` user-defined bridge, which provides container-name DNS resolution (the default Docker `bridge` does not) — TravStats reaches `travstats-db` by name without any host port mapping.
 
 **Storage:** the default Application Data path (`/mnt/user/appdata/travstats-db`) maps to PostgreSQL's data directory. The initial cluster is created on first start and then kept in place on updates; deleting that directory wipes the database, so point your backup tool at it.
 
