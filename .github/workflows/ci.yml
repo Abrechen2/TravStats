@@ -1,6 +1,13 @@
 name: CI
 
 on:
+  push:
+    branches: [Main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - 'unraid-template.xml'
   workflow_call:
 
 concurrency:
