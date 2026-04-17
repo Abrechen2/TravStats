@@ -4,6 +4,23 @@ import { calculateDistance } from './geo';
 import logger from './logger';
 import { getCachedAirports } from '../services/airportCache';
 import { normalizeAircraft } from './aircraftNormalize';
+import {
+  AIRLINE_ALLIANCES,
+  HIGH_ALTITUDE_AIRPORTS,
+  ISLAND_AIRPORTS,
+  JUMBO_SUBSTRINGS,
+  LONG_HAUL_MIN_KM,
+  MICRO_STATES,
+  PILGRIM_AIRPORTS,
+  SCANDINAVIA_AIRPORTS,
+  SHORT_HAUL_MAX_KM,
+  TURBO_PROP_SUBSTRINGS,
+  ULTRA_LONG_HAUL_MIN_KM,
+  WIDE_BODY_SUBSTRINGS,
+  airlineAllianceOf,
+  isLowCostCarrier,
+  matchesAircraftBucket,
+} from './achievementData';
 
 type UserAchievementWithRelation = UserAchievement & { achievement: Achievement };
 
@@ -19,6 +36,12 @@ interface FlightData {
   arrIata: string | null;
   airline: string | null;
   aircraft: string | null;
+  flightNumber: string | null;
+  seatNumber: string | null;
+  seatClass: string | null;
+  notes: string | null;
+  actualDeparture: Date | null;
+  delayMinutes: number | null;
   departureTime: Date | null;
   arrivalTime: Date | null;
   status: string;
@@ -33,6 +56,13 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
   try {
     // Get all achievements
     const allAchievements = await prisma.achievement.findMany();
+
+    // Fetch user-level context we need for a few of the new achievements
+    // (Birthday Flight needs month+day of birthdate).
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { birthdate: true },
+    });
 
     // Get user's existing achievements
     const existingAchievements = await prisma.userAchievement.findMany({
@@ -77,6 +107,7 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
     const scheduled = allFlights.filter(f => f.status === 'scheduled');
     stats.scheduledCount = scheduled.length;
     stats.cancelledCount = allFlights.filter(f => f.status === 'cancelled').length;
+    stats.duplicatedCount = allFlights.filter(f => f.status === 'duplicated').length;
 
     for (const f of scheduled) {
       if (!f.departureTime) continue;
@@ -88,6 +119,41 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       if (continent) stats.scheduledContinents.add(continent);
       const arrContinent = getContinent(f.arrLat, f.arrLon);
       if (arrContinent) stats.scheduledContinents.add(arrContinent);
+    }
+
+    // Birthday Flight — count flown flights whose departureTime month+day
+    // matches the user's stored birthdate (year irrelevant).
+    if (user?.birthdate) {
+      const bMonth = user.birthdate.getMonth();
+      const bDay = user.birthdate.getDate();
+      stats.birthdayFlights = flights.filter(
+        (f) =>
+          f.status === 'flown' &&
+          f.departureTime &&
+          f.departureTime.getMonth() === bMonth &&
+          f.departureTime.getDate() === bDay,
+      ).length;
+    }
+
+    // Schedule Keeper — max scheduled-flights count inside any rolling 30-day window.
+    const scheduledSorted = scheduled
+      .filter((f) => f.departureTime)
+      .sort((a, b) => a.departureTime!.getTime() - b.departureTime!.getTime());
+    if (scheduledSorted.length > 0) {
+      const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+      let left = 0;
+      let maxWindow = 0;
+      for (let right = 0; right < scheduledSorted.length; right++) {
+        while (
+          scheduledSorted[right].departureTime!.getTime() -
+            scheduledSorted[left].departureTime!.getTime() >
+          THIRTY_DAYS
+        ) {
+          left++;
+        }
+        maxWindow = Math.max(maxWindow, right - left + 1);
+      }
+      stats.scheduled30d = maxWindow;
     }
 
     // Prepare all updates/creates to execute in a single transaction
@@ -196,6 +262,7 @@ interface UserStats {
   continents: Set<string>;
   aircraftTypes: Set<string>;
   longestSingleFlight: number;
+  shortestSingleFlight: number;
   nightFlights: number;
   weekendFlights: number;
   monthsWithFlights: Set<string>;
@@ -208,6 +275,34 @@ interface UserStats {
   scheduledContinents: Set<string>;
   scheduledMaxAdvanceDays: number;
   cancelledCount: number;
+  // v1.1 expansion
+  duplicatedCount: number;
+  islandFlights: number;
+  microStatesVisited: Set<string>;
+  scandinaviaSet: Set<string>;
+  highAltitudeFlights: number;
+  pilgrimFlights: number;
+  wideBodyCount: number;
+  turboPropCount: number;
+  jumboCount: number;
+  airlineAlliances: Set<'star' | 'skyteam' | 'oneworld'>;
+  airportAlphabet: Set<string>;
+  lowcostCount: number;
+  firstClassFlights: number;
+  premiumTrifecta: Set<'short' | 'long' | 'ultra'>;
+  redEyeFlights: number;
+  earlyMorningFlights: number;
+  windowStreak: number;
+  middleStreak: number;
+  notesCount: number;
+  groundhogRoute: number;
+  scheduled30d: number;
+  delayedFlights: number;
+  tightConnection: number;
+  birthdayFlights: number;
+  nyeAirborne: number;
+  leapDayFlights: number;
+  hasMicroFlight: number;
 }
 
 async function calculateUserStats(flights: FlightData[]): Promise<UserStats> {
@@ -221,6 +316,7 @@ async function calculateUserStats(flights: FlightData[]): Promise<UserStats> {
     continents: new Set(),
     aircraftTypes: new Set(),
     longestSingleFlight: 0,
+    shortestSingleFlight: Number.POSITIVE_INFINITY,
     nightFlights: 0,
     weekendFlights: 0,
     monthsWithFlights: new Set(),
@@ -232,6 +328,34 @@ async function calculateUserStats(flights: FlightData[]): Promise<UserStats> {
     scheduledContinents: new Set(),
     scheduledMaxAdvanceDays: 0,
     cancelledCount: 0,
+    // v1.1
+    duplicatedCount: 0,
+    islandFlights: 0,
+    microStatesVisited: new Set(),
+    scandinaviaSet: new Set(),
+    highAltitudeFlights: 0,
+    pilgrimFlights: 0,
+    wideBodyCount: 0,
+    turboPropCount: 0,
+    jumboCount: 0,
+    airlineAlliances: new Set(),
+    airportAlphabet: new Set(),
+    lowcostCount: 0,
+    firstClassFlights: 0,
+    premiumTrifecta: new Set(),
+    redEyeFlights: 0,
+    earlyMorningFlights: 0,
+    windowStreak: 0,
+    middleStreak: 0,
+    notesCount: 0,
+    groundhogRoute: 0,
+    scheduled30d: 0,
+    delayedFlights: 0,
+    tightConnection: 0,
+    birthdayFlights: 0,
+    nyeAirborne: 0,
+    leapDayFlights: 0,
+    hasMicroFlight: 0,
   };
 
   // Collect all unique airport codes from flights
@@ -282,6 +406,10 @@ async function calculateUserStats(flights: FlightData[]): Promise<UserStats> {
     );
     stats.totalDistance += distance;
     stats.longestSingleFlight = Math.max(stats.longestSingleFlight, distance);
+    if (distance > 0) {
+      stats.shortestSingleFlight = Math.min(stats.shortestSingleFlight, distance);
+      if (distance < 250) stats.hasMicroFlight = 1;
+    }
 
     // Flight time (historical flights have null times — contribute 0 hours)
     const flightTime = (flight.departureTime && flight.arrivalTime)
@@ -356,6 +484,159 @@ async function calculateUserStats(flights: FlightData[]): Promise<UserStats> {
     const routeKey = `${depCode}-${arrCode}`;
     const routeCount = stats.routeCounts.get(routeKey) || 0;
     stats.routeCounts.set(routeKey, routeCount + 1);
+
+    // ── v1.1 expansion ──────────────────────────────────────────────
+
+    // Airport-based: islands, high altitude, pilgrim routes, alphabet
+    for (const code of [depCode, arrCode]) {
+      if (!code) continue;
+      if (ISLAND_AIRPORTS.has(code)) stats.islandFlights++;
+      if (HIGH_ALTITUDE_AIRPORTS.has(code)) stats.highAltitudeFlights++;
+      if (PILGRIM_AIRPORTS.has(code)) stats.pilgrimFlights++;
+      if (SCANDINAVIA_AIRPORTS.has(code)) stats.scandinaviaSet.add(code);
+      const firstLetter = code.charAt(0).toUpperCase();
+      if (/[A-Z]/.test(firstLetter)) stats.airportAlphabet.add(firstLetter);
+    }
+
+    // Micro-states (by airport country)
+    for (const airport of [depAirport, arrAirport]) {
+      if (airport?.country && MICRO_STATES.has(airport.country)) {
+        stats.microStatesVisited.add(airport.country);
+      }
+    }
+
+    // Aircraft buckets
+    if (matchesAircraftBucket(flight.aircraft, WIDE_BODY_SUBSTRINGS)) stats.wideBodyCount++;
+    if (matchesAircraftBucket(flight.aircraft, TURBO_PROP_SUBSTRINGS)) stats.turboPropCount++;
+    if (matchesAircraftBucket(flight.aircraft, JUMBO_SUBSTRINGS)) stats.jumboCount++;
+
+    // Airline alliance + low-cost
+    const alliance = airlineAllianceOf(flight.airline);
+    if (alliance) stats.airlineAlliances.add(alliance);
+    if (isLowCostCarrier(flight.airline)) stats.lowcostCount++;
+
+    // Cabin class + premium trifecta (requires distance bucket)
+    if (flight.seatClass === 'first') stats.firstClassFlights++;
+    const isPremium = flight.seatClass === 'first' || flight.seatClass === 'business';
+    if (isPremium && distance > 0) {
+      if (distance <= SHORT_HAUL_MAX_KM) {
+        stats.premiumTrifecta.add('short');
+      } else if (distance >= ULTRA_LONG_HAUL_MIN_KM) {
+        stats.premiumTrifecta.add('ultra');
+      } else if (distance >= LONG_HAUL_MIN_KM) {
+        stats.premiumTrifecta.add('long');
+      }
+    }
+
+    // Red-eye / not-a-morning-person (departure hour local)
+    if (flight.departureTime) {
+      const h = flight.departureTime.getHours();
+      if (h >= 23 || h < 5) stats.redEyeFlights++;
+      if (h >= 4 && h < 7) stats.earlyMorningFlights++;
+    }
+
+    // Notes
+    if (flight.notes && flight.notes.trim().length > 0) stats.notesCount++;
+
+    // Delays (actualDeparture - scheduled ≥ 60 min, or delayMinutes if populated)
+    if (flight.delayMinutes != null && flight.delayMinutes >= 60) {
+      stats.delayedFlights++;
+    } else if (flight.actualDeparture && flight.departureTime) {
+      const diffMin = (flight.actualDeparture.getTime() - flight.departureTime.getTime()) / 60000;
+      if (diffMin >= 60) stats.delayedFlights++;
+    }
+
+    // NYE airborne — a flight whose arrival is in a different calendar year than departure
+    if (flight.departureTime && flight.arrivalTime) {
+      const dep = flight.departureTime;
+      const arr = flight.arrivalTime;
+      if (dep.getMonth() === 11 && dep.getDate() === 31 && arr.getFullYear() > dep.getFullYear()) {
+        stats.nyeAirborne++;
+      }
+      if (dep.getMonth() === 1 && dep.getDate() === 29) stats.leapDayFlights++;
+    }
+  }
+
+  // Reset shortestSingleFlight if no flights
+  if (stats.shortestSingleFlight === Number.POSITIVE_INFINITY) stats.shortestSingleFlight = 0;
+
+  // Cross-flight computations
+  const sorted = [...flights]
+    .filter((f) => f.status === 'flown' && f.departureTime)
+    .sort((a, b) => (a.departureTime!.getTime() - b.departureTime!.getTime()));
+
+  // Window / Middle streaks (based on seatNumber last char: A/F typically window, B/E middle — rough)
+  let winRun = 0;
+  let maxWin = 0;
+  let midRun = 0;
+  let maxMid = 0;
+  for (const f of sorted) {
+    const seat = f.seatNumber?.toUpperCase().match(/[A-Z]$/)?.[0];
+    if (!seat) {
+      winRun = 0;
+      midRun = 0;
+      continue;
+    }
+    // Conventional narrow-body mapping: A / F / K = window, C / D = aisle, B / E = middle
+    if (seat === 'A' || seat === 'F' || seat === 'K') {
+      winRun++;
+      maxWin = Math.max(maxWin, winRun);
+      midRun = 0;
+    } else if (seat === 'B' || seat === 'E') {
+      midRun++;
+      maxMid = Math.max(maxMid, midRun);
+      winRun = 0;
+    } else {
+      winRun = 0;
+      midRun = 0;
+    }
+  }
+  stats.windowStreak = maxWin;
+  stats.middleStreak = maxMid;
+
+  // Groundhog Day — same route on three consecutive calendar days
+  const routesByDay = new Map<string, Set<string>>();
+  for (const f of sorted) {
+    const key = (f.departureTime!.toISOString().slice(0, 10));
+    const route = `${f.depIata || f.depIcao}-${f.arrIata || f.arrIcao}`;
+    if (!routesByDay.has(key)) routesByDay.set(key, new Set());
+    routesByDay.get(key)!.add(route);
+  }
+  const days = Array.from(routesByDay.keys()).sort();
+  let maxGroundhog = 0;
+  for (let i = 0; i < days.length; i++) {
+    for (const route of routesByDay.get(days[i])!) {
+      let streak = 1;
+      let prev = new Date(days[i]);
+      for (let j = i + 1; j < days.length; j++) {
+        const curr = new Date(days[j]);
+        const diff = Math.round((curr.getTime() - prev.getTime()) / 86400000);
+        if (diff === 1 && routesByDay.get(days[j])!.has(route)) {
+          streak++;
+          prev = curr;
+        } else if (diff > 1) {
+          break;
+        }
+      }
+      maxGroundhog = Math.max(maxGroundhog, streak);
+    }
+  }
+  stats.groundhogRoute = maxGroundhog;
+
+  // Tight connection — any consecutive flight pair where arrival airport == next departure airport,
+  // and the gap between arrivalTime and next departureTime is < 45 minutes (but > 0).
+  for (let i = 0; i < sorted.length - 1; i++) {
+    const a = sorted[i];
+    const b = sorted[i + 1];
+    if (!a.arrivalTime || !b.departureTime) continue;
+    const aArr = a.arrIata || a.arrIcao;
+    const bDep = b.depIata || b.depIcao;
+    if (aArr && bDep && aArr === bDep) {
+      const gapMin = (b.departureTime.getTime() - a.arrivalTime.getTime()) / 60000;
+      if (gapMin > 0 && gapMin < 45) {
+        stats.tightConnection++;
+      }
+    }
   }
 
   return stats;
@@ -492,6 +773,116 @@ function checkAchievement(
 
     case 'cancelled_count':
       progress = stats.cancelledCount;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    // v1.1 expansion
+    case 'duplicated_count':
+      progress = stats.duplicatedCount;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'island_flights':
+      progress = stats.islandFlights;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'micro_states_visited':
+      progress = stats.microStatesVisited.size;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'scandinavia_set':
+      progress = stats.scandinaviaSet.size;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'high_altitude_airports':
+      progress = stats.highAltitudeFlights;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'pilgrim_airports':
+      progress = stats.pilgrimFlights;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'micro_flight':
+      progress = stats.hasMicroFlight;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'wide_body_count':
+      progress = stats.wideBodyCount;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'turbo_prop_count':
+      progress = stats.turboPropCount;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'airline_alliances':
+      progress = stats.airlineAlliances.size;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'jumbo_count':
+      progress = stats.jumboCount;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'airport_alphabet':
+      progress = stats.airportAlphabet.size;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'lowcost_count':
+      progress = stats.lowcostCount;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'first_class_flights':
+      progress = stats.firstClassFlights;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'premium_trifecta':
+      progress = stats.premiumTrifecta.size;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'red_eye_flights':
+      progress = stats.redEyeFlights;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'early_morning_flights':
+      progress = stats.earlyMorningFlights;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'window_streak':
+      progress = stats.windowStreak;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'middle_streak':
+      progress = stats.middleStreak;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'notes_count':
+      progress = stats.notesCount;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'groundhog_route':
+      progress = stats.groundhogRoute;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'scheduled_30d':
+      progress = stats.scheduled30d;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'delayed_flights':
+      progress = stats.delayedFlights;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'tight_connection':
+      progress = stats.tightConnection;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'birthday_flights':
+      progress = stats.birthdayFlights;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'nye_airborne':
+      progress = stats.nyeAirborne;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'leap_day_flights':
+      progress = stats.leapDayFlights;
       isUnlocked = progress >= achievement.requirement;
       break;
 

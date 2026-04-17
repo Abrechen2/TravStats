@@ -9,8 +9,12 @@
     "elite": "Elite",
     "special": "Spezial",
     "planner": "Planer",
-    "survivor": "Überlebenskünstler"
+    "survivor": "Überlebenskünstler",
+    "kurios": "Kurios"
   },
+  "hiddenBadge": "Geheim",
+  "hiddenDescription": "Geheime Errungenschaft — erreiche sie, um die Details zu enthüllen.",
+  "hiddenHint": "{{count}} geheime Errungenschaft(en) wartet(n) in dieser Kategorie — ungewöhnliche Zeiten, seltene Routen oder bestimmte Sitzplatzwahlen könnten sie entsperren.",
   "tiers": {
     "bronze": "Bronze",
     "silver": "Silber",
@@ -236,6 +240,134 @@
     "FLIGHT_TIME_1000": {
       "name": "Tausend-Stunden-Club",
       "description": "Sammle 1.000 Stunden Flugzeit"
+    },
+    "ISLAND_HOPPER": {
+      "name": "Insel-Hopper",
+      "description": "10 Flüge zwischen Insel-Flughäfen"
+    },
+    "MICRO_STATES": {
+      "name": "Mikrostaaten-Club",
+      "description": "Besuche 5 Mikrostaaten (Luxemburg, Malta, Monaco, San Marino, Liechtenstein)"
+    },
+    "SCANDINAVIA_TOUR": {
+      "name": "Skandinavien Grand Tour",
+      "description": "Besuche OSL, CPH, ARN, HEL und KEF"
+    },
+    "ALTITUDE_ADDICT": {
+      "name": "Höhenluft-Junkie",
+      "description": "Flug zu einem Flughafen auf mindestens 2500 m Höhe"
+    },
+    "PILGRIM_ROUTE": {
+      "name": "Pilgerroute",
+      "description": "Flug zu einem der klassischen Pilgerzentren (Rom, Jerusalem, Mekka, Kathmandu, Bodhgaya)"
+    },
+    "PLANETARY_PERSPECTIVE": {
+      "name": "Planetarische Perspektive",
+      "description": "Fliege insgesamt 1.000.000 km"
+    },
+    "MICRO_FLIGHT": {
+      "name": "Mikro-Flug",
+      "description": "Absolviere einen Einzelflug unter 250 km"
+    },
+    "LONG_HAUL_MARATHON": {
+      "name": "Langstrecken-Marathon",
+      "description": "Einzelflug von mindestens 11.000 km"
+    },
+    "WIDE_BODY_CLUB": {
+      "name": "Wide-Body-Club",
+      "description": "Erster Flug auf A380, 777, 787 oder A350"
+    },
+    "TURBO_PROP": {
+      "name": "Turboprop-Reisender",
+      "description": "5 Flüge mit ATR, Dash-8 oder Saab"
+    },
+    "ALLIANCE_ALL_STAR": {
+      "name": "Allianz-Allrounder",
+      "description": "Je ein Flug mit Star Alliance, SkyTeam und oneworld"
+    },
+    "JUMBO_RIDE": {
+      "name": "Jumbo-Fahrt",
+      "description": "Flug auf einer Boeing 747"
+    },
+    "ALPHABET_SOUP": {
+      "name": "Alphabet-Suppe",
+      "description": "IATA-Codes mit allen 26 Anfangsbuchstaben besucht"
+    },
+    "LEGACY_LOYALIST": {
+      "name": "Flaggschiff-Loyalist",
+      "description": "15 Flüge mit derselben Flaggschiff-Airline"
+    },
+    "LOWCOST_CHAMPION": {
+      "name": "Low-Cost-Champion",
+      "description": "25 Flüge mit einer Billigfluggesellschaft"
+    },
+    "FIRST_CLASS_DEBUT": {
+      "name": "First-Class-Debüt",
+      "description": "Erster Flug in der First Class"
+    },
+    "PREMIUM_TRIFECTA": {
+      "name": "Premium-Trifecta",
+      "description": "Business oder First auf Kurz-, Lang- und Ultralangstrecke"
+    },
+    "RED_EYE_VETERAN": {
+      "name": "Red-Eye-Veteran",
+      "description": "5 Flüge mit Abflug zwischen 23:00 und 05:00 Lokalzeit"
+    },
+    "NOT_A_MORNING_PERSON": {
+      "name": "Kein Morgenmensch",
+      "description": "10 Flüge mit Abflug zwischen 04:00 und 07:00"
+    },
+    "WINDOW_PURIST": {
+      "name": "Fensterplatz-Purist",
+      "description": "20 Fensterplätze in Folge"
+    },
+    "THE_CONTRARIAN": {
+      "name": "Der Kontrarian",
+      "description": "10 Mittelplätze in Folge — mit Absicht?"
+    },
+    "FOUR_SEASONS_YEAR": {
+      "name": "Vier Jahreszeiten, ein Jahr",
+      "description": "Je ein Flug pro Jahreszeit innerhalb von 12 Monaten"
+    },
+    "THE_NOTETAKER": {
+      "name": "Der Notizenschreiber",
+      "description": "10 Flüge mit eigenen Notizen"
+    },
+    "GROUNDHOG_DAY": {
+      "name": "Murmeltier-Tag",
+      "description": "Gleiche Route an drei aufeinanderfolgenden Tagen"
+    },
+    "SCHEDULE_KEEPER": {
+      "name": "Plan-Bewahrer",
+      "description": "10 geplante (nicht stornierte) Flüge binnen 30 Tagen"
+    },
+    "DELAY_MAGNET": {
+      "name": "Verspätungs-Magnet",
+      "description": "5 Flüge mit mehr als 60 Min Verspätung"
+    },
+    "TIGHT_CONNECTOR": {
+      "name": "Tight Connector",
+      "description": "Umsteigen mit weniger als 45 Min zwischen zwei Flügen — und pünktlich dran"
+    },
+    "GHOSTFLIGHT": {
+      "name": "Geisterflug",
+      "description": "Du warst da. Dein Flugzeug nicht."
+    },
+    "RE_ROLL": {
+      "name": "Re-Roll",
+      "description": "Gleiche Flugnummer, gleicher Tag, absichtlich doppelt eingetragen"
+    },
+    "BIRTHDAY_FLIGHT": {
+      "name": "Geburtstagsflug",
+      "description": "Ein Flug am eigenen Geburtstag"
+    },
+    "NYE_AIRBORNE": {
+      "name": "Silvester in der Luft",
+      "description": "Mitternachtswechsel vom 31.12. auf 1.1. auf Reiseflughöhe"
+    },
+    "LEAP_DAY_RIDE": {
+      "name": "Schalttag-Fahrt",
+      "description": "Ein Flug am 29. Februar"
     }
   }
 }
