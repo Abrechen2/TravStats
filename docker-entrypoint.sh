@@ -30,39 +30,49 @@ else
 fi
 
 # Auto-generate JWT_SECRET if not set
-# Store in /app/secrets (not in /app/data) to prevent exposure via mounted volumes
+# Store in /app/data/secrets (single volume, see resolveSecretsDir in jwtSecret.ts).
+# Legacy paths (/app/secrets from pre-1.0 installs, root-of-data from pre-0.2)
+# are migrated once on boot so existing installs keep their secret.
 if [ -z "$JWT_SECRET" ]; then
-    SECRETS_DIR="/app/secrets"
+    SECRETS_DIR="/app/data/secrets"
     JWT_SECRET_FILE="$SECRETS_DIR/jwt.secret"
+    LEGACY_SECRETS_DIR="/app/secrets"
+    LEGACY_JWT_SECRET_FILE="$LEGACY_SECRETS_DIR/jwt.secret"
     OLD_JWT_SECRET_FILE="/app/data/jwt.secret"
     OLD_JWT_SECRET_FILE_ALT="/app/data/jwt_secret"
-    
+
     # Ensure secrets directory exists and is writable
     if ! mkdir -p "$SECRETS_DIR" 2>/dev/null; then
         echo "[entrypoint] ❌ Error: Could not create $SECRETS_DIR"
         echo "[entrypoint] This is required for JWT secret persistence. Please check volume permissions."
         exit 1
     fi
-    
+
     # Check if secrets directory is writable
     if [ ! -w "$SECRETS_DIR" ]; then
         echo "[entrypoint] ❌ Error: $SECRETS_DIR is not writable"
         echo "[entrypoint] JWT secret cannot be persisted. Please check volume permissions."
         exit 1
     fi
-    
+
     # Ensure secrets directory has correct permissions
     chown ${NODE_UID:-1000}:${NODE_GID:-1000} "$SECRETS_DIR" 2>/dev/null || true
     chmod 700 "$SECRETS_DIR" 2>/dev/null || true
-    
-    # Migrate from old location if it exists (for backward compatibility)
-    if [ -f "$OLD_JWT_SECRET_FILE" ] && [ ! -f "$JWT_SECRET_FILE" ]; then
-        echo "[entrypoint] Migrating JWT_SECRET from old location..."
+
+    # Migrate from legacy locations if they exist (backward compatibility)
+    # Order: check /app/secrets/jwt.secret first (most recent layout), then the pre-0.2 paths.
+    if [ -f "$LEGACY_JWT_SECRET_FILE" ] && [ ! -f "$JWT_SECRET_FILE" ]; then
+        echo "[entrypoint] Migrating JWT_SECRET from legacy /app/secrets/..."
+        cp -p "$LEGACY_JWT_SECRET_FILE" "$JWT_SECRET_FILE"
+        chmod 600 "$JWT_SECRET_FILE"
+        echo "[entrypoint] JWT_SECRET migrated successfully"
+    elif [ -f "$OLD_JWT_SECRET_FILE" ] && [ ! -f "$JWT_SECRET_FILE" ]; then
+        echo "[entrypoint] Migrating JWT_SECRET from /app/data/jwt.secret..."
         mv "$OLD_JWT_SECRET_FILE" "$JWT_SECRET_FILE"
         chmod 600 "$JWT_SECRET_FILE"
         echo "[entrypoint] JWT_SECRET migrated successfully"
     elif [ -f "$OLD_JWT_SECRET_FILE_ALT" ] && [ ! -f "$JWT_SECRET_FILE" ]; then
-        echo "[entrypoint] Migrating JWT_SECRET from old filename..."
+        echo "[entrypoint] Migrating JWT_SECRET from /app/data/jwt_secret..."
         mv "$OLD_JWT_SECRET_FILE_ALT" "$JWT_SECRET_FILE"
         chmod 600 "$JWT_SECRET_FILE"
         echo "[entrypoint] JWT_SECRET migrated successfully"
@@ -88,7 +98,7 @@ if [ -z "$JWT_SECRET" ]; then
     if [ -f "$JWT_SECRET_FILE" ]; then
         echo "[entrypoint] Loading existing JWT_SECRET from $JWT_SECRET_FILE..."
         JWT_SECRET=$(cat "$JWT_SECRET_FILE" | tr -d '[:space:]')
-        
+
         # Validate loaded secret
         if ! validate_jwt_secret "$JWT_SECRET"; then
             echo "[entrypoint] ❌ Error: Existing JWT_SECRET in $JWT_SECRET_FILE is invalid"
@@ -96,26 +106,26 @@ if [ -z "$JWT_SECRET" ]; then
             echo "[entrypoint] Please delete the file or set JWT_SECRET environment variable to fix this."
             exit 1
         fi
-        
+
         export JWT_SECRET
         echo "[entrypoint] ✅ JWT_SECRET loaded successfully (${#JWT_SECRET} characters)"
     else
         echo "[entrypoint] Generating new JWT_SECRET..."
         JWT_SECRET=$(openssl rand -hex 32)
-        
+
         # Validate generated secret
         if ! validate_jwt_secret "$JWT_SECRET"; then
             echo "[entrypoint] ❌ Error: Generated JWT_SECRET failed validation"
             exit 1
         fi
-        
+
         # Save to file
         if ! echo "$JWT_SECRET" > "$JWT_SECRET_FILE"; then
             echo "[entrypoint] ❌ Error: Could not write JWT_SECRET to $JWT_SECRET_FILE"
             echo "[entrypoint] Please check write permissions for $SECRETS_DIR"
             exit 1
         fi
-        
+
         chmod 600 "$JWT_SECRET_FILE"
         export JWT_SECRET
         echo "[entrypoint] ✅ JWT_SECRET generated and saved to $JWT_SECRET_FILE"
@@ -136,7 +146,7 @@ if [ -n "$DATABASE_URL" ]; then
     # Handle both IP addresses and hostnames
     DB_HOST=$(echo "$DATABASE_URL" | sed -e 's|.*@\([^:]*\):.*|\1|' | sed -e 's|/.*||')
     DB_PORT=$(echo "$DATABASE_URL" | sed -e 's|.*:\([0-9]*\)/.*|\1|' | sed -e 's|/.*||')
-    
+
     # Fallback to default port if extraction failed
     if [ -z "$DB_PORT" ] || [ "$DB_PORT" = "$DATABASE_URL" ]; then
         DB_PORT="5432"
@@ -211,7 +221,7 @@ if [ -z "$DATABASE_URL" ]; then
     MIGRATION_SUCCESS=false
 else
     echo "[entrypoint] DATABASE_URL is set, proceeding with migrations..."
-    
+
     # Test database connection before running migrations
     echo "[entrypoint] Testing database connection..."
     if node -e "const {PrismaClient}=require('@prisma/client');const p=new PrismaClient();p.\$connect().then(()=>{console.log('ok');p.\$disconnect()}).catch(e=>{console.log('fail');p.\$disconnect()})" 2>/dev/null | grep -q "ok"; then
@@ -220,7 +230,7 @@ else
         echo "[entrypoint] ⚠️  Database connection test failed"
         echo "[entrypoint] Migrations may fail, but will continue anyway"
     fi
-    
+
     # Check if migrations directory exists
     if [ ! -d "/app/backend/prisma/migrations" ]; then
         echo "[entrypoint] ⚠️  Warning: prisma/migrations directory not found"
@@ -229,24 +239,24 @@ else
         MIGRATION_COUNT=$(find /app/backend/prisma/migrations -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l)
         echo "[entrypoint] Found $MIGRATION_COUNT migration(s) to apply"
     fi
-    
+
     # Check for failed migrations and resolve them automatically
     # This MUST run before prisma migrate deploy, otherwise Prisma will block
     echo "[entrypoint] Checking for failed migrations..."
     set +e  # Temporarily disable exit on error
-    
+
     # Try to check migration status - this may fail if there are failed migrations
     MIGRATION_STATUS=$(npx prisma migrate status 2>&1)
     MIGRATION_STATUS_EXIT=$?
-    
+
     # Check if status output contains "failed" (even if exit code is non-zero)
     if echo "$MIGRATION_STATUS" | grep -qi "failed"; then
         echo "[entrypoint] ⚠️  Found failed migrations in status output, attempting to resolve automatically..."
-        
+
         # Extract failed migration names from status output
         # Format: "The `20250120000000_add_training_config` migration started at ... failed"
         FAILED_MIGRATIONS=$(echo "$MIGRATION_STATUS" | grep -i "failed" | sed -n "s/.*\`\([^']*\)\`.*/\1/p" || echo "")
-        
+
         if [ -n "$FAILED_MIGRATIONS" ]; then
             for MIGRATION in $FAILED_MIGRATIONS; do
                 echo "[entrypoint] Resolving failed migration: $MIGRATION"
@@ -269,14 +279,14 @@ else
         npx prisma migrate resolve --rolled-back 20251220000000_add_training_config 2>&1 || true
         echo "[entrypoint] Continuing with migrations..."
     fi
-    
+
     set -e  # Re-enable exit on error
-    
+
     # Run migrations with explicit output and timeout
     # Temporarily disable set -e for migration (non-critical)
     set +e
     echo "[entrypoint] Executing: npx prisma migrate deploy"
-    
+
     # Try to run with timeout command if available
     if command -v timeout >/dev/null 2>&1; then
         echo "[entrypoint] Running with 30 second timeout..."
@@ -303,7 +313,7 @@ else
             npx prisma migrate deploy 2>&1
             MIGRATION_EXIT_CODE=$?
         fi
-        
+
         if [ $MIGRATION_EXIT_CODE -eq 0 ]; then
             echo "[entrypoint] ✅ Migration completed"
         else
@@ -312,13 +322,13 @@ else
     fi
     # Re-enable set -e
     set -e
-    
+
     # Verify migrations were actually applied
     if [ $MIGRATION_EXIT_CODE -eq 0 ]; then
         echo "[entrypoint] Migration command completed, verifying database tables..."
         sleep 1  # Give database a moment to commit
         TABLE_CHECK=$(node -e "const {PrismaClient}=require('@prisma/client');const p=new PrismaClient();p.\$queryRaw\`SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name='_prisma_migrations'\`.then(r=>{console.log(r.length>0?'ok':'fail');p.\$disconnect()}).catch(e=>{console.log('fail');p.\$disconnect()})" 2>/dev/null || echo "fail")
-        
+
         if [ "$TABLE_CHECK" = "ok" ]; then
             echo "[entrypoint] ✅ Migrations applied successfully"
             MIGRATION_SUCCESS=true
@@ -345,10 +355,10 @@ fi
 if [ "$MIGRATION_SUCCESS" = "true" ]; then
     # Verify that at least one table exists (check for _prisma_migrations table which is always created)
     TABLE_CHECK=$(node -e "const {PrismaClient}=require('@prisma/client');const p=new PrismaClient();p.\$queryRaw\`SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name='_prisma_migrations'\`.then(r=>{console.log(r.length>0?'ok':'fail');p.\$disconnect()}).catch(e=>{console.log('fail');p.\$disconnect()})" 2>/dev/null || echo "fail")
-    
+
     if [ "$TABLE_CHECK" = "ok" ]; then
         echo "[entrypoint] ✅ Database tables verified, proceeding with seeds"
-        
+
         # Note: Achievements are core features defined in code, not seeded from database
         # They are automatically ensured when needed via ensureAchievements() function
     else
