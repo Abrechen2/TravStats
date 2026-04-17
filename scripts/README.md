@@ -100,9 +100,9 @@ http://100.64.0.X:3000
 
 ### For Public Domain:
 1. Run setup.sh
-2. Configure reverse proxy (Nginx) with SSL
-3. Update `CORS_ORIGIN` and `FRONTEND_URL` in backend/.env
-4. Set `COOKIE_SECURE=true`
+2. Configure reverse proxy (Nginx) with SSL and make sure it sends `X-Forwarded-Proto: https` (then `COOKIE_SECURE` auto-detects)
+3. Set `CORS_ORIGIN` in `.env` only if the frontend lives on a different hostname than the API (same-origin behind a proxy needs no setting)
+4. Enter the public URL once in the setup wizard — it's stored in the DB, not in `.env`
 
 See main README.md for detailed deployment options.
 

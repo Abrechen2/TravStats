@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <Container version="2">
   <Name>TravStats</Name>
-  <Repository>ghcr.io/abrechen2/travstats:latest</Repository>
-  <Registry>https://github.com/Abrechen2/TravStats/pkgs/container/travstats</Registry>
+  <Repository>abrechen2/travstats:latest</Repository>
+  <Registry>https://hub.docker.com/r/abrechen2/travstats</Registry>
   <Network>bridge</Network>
   <MyIP/>
   <Shell>sh</Shell>

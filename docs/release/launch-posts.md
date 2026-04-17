@@ -210,7 +210,7 @@ Post schedule (recommended, staggered):
 | Multi-user? | Invite-only, 1–10 users recommended, each user sees their own flights only |
 | Mobile app? | PWA planned for v1.7; responsive web works today |
 | CO₂ tracking? | v1.3 |
-| Can I self-host this behind my existing reverse proxy? | Yes — the container serves plain HTTP; CORS_ORIGIN + FRONTEND_URL configure trust |
+| Can I self-host this behind my existing reverse proxy? | Yes — the container serves plain HTTP; `COOKIE_SECURE` auto-detects from `X-Forwarded-Proto` and the public URL is captured once by the setup wizard |
 | Dozens of airlines I don't cover? | Template parser is extensible; Ollama handles the long tail. v1.8 ships community-shared templates via GitHub |
 | How do I back up? | Built-in scheduler + WebDAV mirror, or roll your own with `pg_dump` against the DB container |
 
