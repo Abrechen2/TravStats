@@ -9,8 +9,9 @@ Track every flight, visualise routes on interactive maps, collect achievements �
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Release](https://img.shields.io/github/v/release/Abrechen2/TravStats?include_prereleases&sort=semver)](https://github.com/Abrechen2/TravStats/releases)
-[![Container](https://img.shields.io/badge/container-ghcr.io-181717?logo=github)](https://github.com/Abrechen2/TravStats/pkgs/container/travstats)
-
+[![GHCR](https://img.shields.io/badge/container-ghcr.io-181717?logo=github)](https://github.com/Abrechen2/TravStats/pkgs/container/travstats)
+[![Docker Hub](https://img.shields.io/docker/pulls/abrechen2/travstats?logo=docker&label=Docker%20Hub)](https://hub.docker.com/r/abrechen2/travstats)
+[![CI](https://github.com/Abrechen2/TravStats/actions/workflows/ci.yml/badge.svg)](https://github.com/Abrechen2/TravStats/actions/workflows/ci.yml)
 
 </div>
 
@@ -33,7 +34,7 @@ but everything you record lives in your own PostgreSQL.
 - 🎫 **Boarding-pass scanner** — QR / barcode / OCR
 - 📧 **Email import** — plain text, HTML, Outlook `.msg`, `.eml`, with optional local LLM parsing via Ollama
 - 💾 **Automated backups** with retention + optional WebDAV sync
-- 🔐 **Invite-only** — no public registration, JWT in HttpOnly cookies, rate limiting on every sensitive endpoint
+- 🔐 **Invite-only by default** — toggle public registration anytime from the admin UI; JWT in HttpOnly cookies, 15 rate limiters on sensitive endpoints
 - 🌐 **German + English UI**, i18n-ready
 
 ---
@@ -91,16 +92,18 @@ DATABASE_URL=postgresql://user:pass@postgres.lan:5432/travstats
 
 ### Unraid
 
-A Community Apps template is shipped at
-[`docs/unraid/travstats.xml`](docs/unraid/travstats.xml).
-Install PostGIS from CA first, then TravStats from CA, set
-`DATABASE_URL`, open `/setup`. See
-[`docs/unraid/README.md`](docs/unraid/README.md) for the step-by-step.
+Community Apps templates live in a dedicated repo —
+[Abrechen2/docker-templates](https://github.com/Abrechen2/docker-templates).
+Install `travstats-db` from there first, then `TravStats`, set the
+`Database URL` password, open `/setup`. Walk-through with screenshots in
+[`docs/unraid/README.md`](docs/unraid/README.md).
 
-> **AI-powered email import (optional):** the bundled Ollama service pulls
-> `gemma3:12b` on first use (~8 GB) and parses flight confirmations locally —
-> nothing leaves your network. Enable or disable from the admin UI after
-> setup.
+> **Optional local LLM parsing:** install the
+> [Ollama Community App](https://unraid.net/community/apps?q=ollama)
+> (or run Ollama anywhere else on your network), pull `gemma3:12b` (~7.5 GB),
+> then point TravStats at it from **Admin → Parser**. Multi-flight
+> confirmation mails and unknown airline templates are then handled locally —
+> nothing leaves your network.
 
 ---
 
