@@ -1,5 +1,12 @@
 # r/selfhosted — v1.0.0 launch post
 
+> ⚠️ **Superseded 2026-04-16:** r/selfhosted moved all projects younger than
+> three months into a weekly **New Project Megathread**. Standalone posts
+> are removed. Use [`reddit-selfhosted-megathread.md`](./reddit-selfhosted-megathread.md)
+> for the megathread-compliant comment instead. This file is kept for
+> reference + future use once TravStats passes the 3-month mark.
+
+
 > **Subreddit:** [r/selfhosted](https://www.reddit.com/r/selfhosted/)
 > **Flair:** `Release`
 > **Best posting time (DE):** Dienstag oder Mittwoch 8–10 Uhr MESZ (= 2–4 Uhr US-East-Coast Morning Browse) — Wochenenden sind auch OK, r/selfhosted ist Homelab-lastig.
