@@ -220,10 +220,6 @@ model UserSettings {
   openskyUsername String? @map("opensky_username")
   openskyPassword String? @map("opensky_password")
 
-  // Developer mode settings
-  developerModeEnabled     Boolean   @default(false) @map("developer_mode_enabled")
-  developerModeConfirmedAt DateTime? @map("developer_mode_confirmed_at")
-
   // Auto-update settings
   autoUpdateEnabled          Boolean @default(false) @map("auto_update_enabled")
   autoUpdateRequireApproval  Boolean @default(true) @map("auto_update_require_approval")

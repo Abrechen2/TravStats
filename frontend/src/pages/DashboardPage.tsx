@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import type { VisMode } from "../types/visMode";
 
-import { useAuthStore } from "../store/authStore";
 import { flightsApi, settingsApi } from "../lib/api";
 import { useToastStore } from "../store/toastStore";
 import { logger } from "../lib/logger";
@@ -28,7 +27,6 @@ import { FlightPanel } from "../components/FlightPanel";
 
 export default function DashboardPage(): JSX.Element {
   const { t } = useTranslation(["dashboard", "common", "flights", "training"]);
-  const { user } = useAuthStore();
   const [allFlights, setFlights] = useState<Flight[]>([]); // Filtered flights for map (not directly rendered)
   const [recentFlights, setRecentFlights] = useState<Flight[]>([]); // Unfiltered recent flights for sidebar
   const [totalFlightsCount, setTotalFlightsCount] = useState(0); // Total number of all flights
@@ -122,7 +120,6 @@ export default function DashboardPage(): JSX.Element {
   const [loadingOnboarding, setLoadingOnboarding] = useState(true);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
-  const [, setDeveloperModeEnabled] = useState(false);
   const [, setImporting] = useState(false);
 
   // Close export menu when clicking outside
@@ -193,20 +190,6 @@ export default function DashboardPage(): JSX.Element {
       });
     }
   }, [onboarding, loadingOnboarding]);
-
-  useEffect(() => {
-    // Developer mode is admin-only (parser access gate)
-    if (user?.isAdmin) {
-      settingsApi
-        .getDeveloperMode()
-        .then((data) => {
-          setDeveloperModeEnabled(data.enabled);
-        })
-        .catch((error) => {
-          logger.error("Failed to load developer mode status:", error);
-        });
-    }
-  }, [user]);
 
   const loadFlights = useCallback(async () => {
     try {

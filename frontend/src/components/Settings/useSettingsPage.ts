@@ -49,11 +49,6 @@ export function useSettingsPage() {
   const { isDarkMode, setDarkMode } = useThemeStore();
   const addToast = useToastStore((state) => state.addToast);
 
-  // Developer mode
-  const [developerModeEnabled, setDeveloperModeEnabled] = useState(false);
-  const [showDeveloperConfirm, setShowDeveloperConfirm] = useState(false);
-  const [loadingDeveloperMode, setLoadingDeveloperMode] = useState(false);
-
   // Profile
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingProfilePicture, setUploadingProfilePicture] = useState(false);
@@ -188,27 +183,6 @@ export function useSettingsPage() {
     }
   }, [user]);
 
-  useEffect(() => {
-    if (hasParserAccess) {
-      settingsApi
-        .getDeveloperMode()
-        .then((data) => {
-          setDeveloperModeEnabled(data.enabled);
-        })
-        .catch((error: unknown) => {
-          const axiosError = error as { response?: { status?: number } };
-          if (axiosError.response?.status === 403 || axiosError.response?.status === 401) {
-            logger.warn("Training access denied or not available:", error);
-            setDeveloperModeEnabled(false);
-          } else {
-            logger.error("Failed to load developer mode status:", error);
-          }
-        });
-    } else {
-      setDeveloperModeEnabled(false);
-    }
-  }, [hasParserAccess]);
-
   // ---- Handlers --------------------------------------------------------------
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -243,28 +217,6 @@ export function useSettingsPage() {
     const nextIsDark = !isDarkMode;
     setDarkMode(nextIsDark);
     setDisplay({ theme: nextIsDark ? "dark" : "light" });
-  };
-
-  const handleDeveloperModeToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.checked) {
-      handleDeveloperModeConfirm(false);
-    } else {
-      setShowDeveloperConfirm(true);
-    }
-  };
-
-  const handleDeveloperModeConfirm = async (enabled: boolean) => {
-    setLoadingDeveloperMode(true);
-    setShowDeveloperConfirm(false);
-    try {
-      await settingsApi.updateDeveloperMode({ enabled, confirmed: enabled });
-      setDeveloperModeEnabled(enabled);
-    } catch (error) {
-      logger.error("Failed to update developer mode:", error);
-      alert(t("settings:developer.updateError"));
-    } finally {
-      setLoadingDeveloperMode(false);
-    }
   };
 
   const handlePasswordChange = async () => {
@@ -397,13 +349,6 @@ export function useSettingsPage() {
     isDarkMode,
     // Derived
     hasParserAccess,
-    // Developer mode
-    developerModeEnabled,
-    showDeveloperConfirm,
-    setShowDeveloperConfirm,
-    loadingDeveloperMode,
-    handleDeveloperModeToggle,
-    handleDeveloperModeConfirm,
     // Profile
     savingProfile,
     uploadingProfilePicture,

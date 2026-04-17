@@ -40,23 +40,6 @@ export const settingsApi = {
     const { data } = await api.put<MessageResponse>("/settings/parser", {});
     return data;
   },
-  getDeveloperMode: async (): Promise<{
-    enabled: boolean;
-    confirmedAt: string | null;
-  }> => {
-    const { data } = await api.get<{
-      enabled: boolean;
-      confirmedAt: string | null;
-    }>("/settings/developer-mode");
-    return data;
-  },
-  updateDeveloperMode: async (payload: {
-    enabled: boolean;
-    confirmed?: boolean;
-  }): Promise<MessageResponse> => {
-    const { data } = await api.put<MessageResponse>("/settings/developer-mode", payload);
-    return data;
-  },
   getTrainingSettings: async (): Promise<{
     useTrainedModels: boolean;
     preferredEmailModel: "auto" | "trained" | "base";

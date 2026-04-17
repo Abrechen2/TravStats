@@ -95,11 +95,6 @@ export interface ParserSettingsUpdateData {
   textProvider?: string;
 }
 
-export interface DeveloperModeUpdateData {
-  developerModeEnabled: boolean;
-  developerModeConfirmedAt?: Date | null;
-}
-
 export interface ApiKeysUpdateData {
   airlabsApiKey?: string | null;
   aviationstackApiKey?: string | null;

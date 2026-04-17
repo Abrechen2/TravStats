@@ -15,12 +15,10 @@ import BackupSection from "../components/Settings/BackupSection";
 import AutoUpdateSection from "../components/Settings/AutoUpdateSection";
 import EnrichmentSection from "../components/Settings/EnrichmentSection";
 import ApiKeysSection from "../components/Settings/ApiKeysSection";
-import DeveloperSection from "../components/Settings/DeveloperSection";
 import AdminSection from "../components/Settings/AdminSection";
 import AboutSection from "../components/Settings/AboutSection";
 import FeaturesSection from "../components/Settings/FeaturesSection";
 import PasswordModal from "../components/Settings/PasswordModal";
-import DeveloperConfirmDialog from "../components/Settings/DeveloperConfirmDialog";
 
 export default function SettingsPage(): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
@@ -39,13 +37,6 @@ export default function SettingsPage(): JSX.Element {
     setDefaults,
     setMap,
     isDarkMode,
-    hasParserAccess,
-    developerModeEnabled,
-    showDeveloperConfirm,
-    setShowDeveloperConfirm,
-    loadingDeveloperMode,
-    handleDeveloperModeToggle,
-    handleDeveloperModeConfirm,
     savingProfile,
     uploadingProfilePicture,
     saveProfileSettings,
@@ -89,9 +80,6 @@ export default function SettingsPage(): JSX.Element {
     { id: "autoupdate", label: t("settings:autoUpdate.title") || "Auto-Update" },
     { id: "enrichment", label: t("settings:historicalEnrichment.title") || "Enrichment" },
     { id: "apikeys", label: t("settings:apiKeys.title") || "API Keys" },
-    ...(hasParserAccess
-      ? [{ id: "developer", label: t("settings:developer.title") || "Developer" }]
-      : []),
     ...(user?.isAdmin ? [{ id: "admin", label: t("settings:admin.title") || "Admin" }] : []),
     { id: "about", label: "About" },
   ];
@@ -191,13 +179,6 @@ export default function SettingsPage(): JSX.Element {
                 onSave={saveApiKeys}
               />
             )}
-            {activeSection === "developer" && hasParserAccess && (
-              <DeveloperSection
-                developerModeEnabled={developerModeEnabled}
-                loadingDeveloperMode={loadingDeveloperMode}
-                onToggleDeveloperMode={handleDeveloperModeToggle}
-              />
-            )}
             {activeSection === "admin" && user?.isAdmin && <AdminSection />}
             {activeSection === "about" && <AboutSection />}
 
@@ -225,13 +206,6 @@ export default function SettingsPage(): JSX.Element {
           </main>
         </div>
       </div>
-
-      {showDeveloperConfirm && (
-        <DeveloperConfirmDialog
-          onCancel={() => setShowDeveloperConfirm(false)}
-          onConfirm={() => handleDeveloperModeConfirm(true)}
-        />
-      )}
 
       {showPasswordModal && (
         <PasswordModal
