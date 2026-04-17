@@ -43,7 +43,7 @@ The JWT secret and encryption key are auto-generated on first boot and persisted
 
   <Config Name="Application Data" Target="/app/data" Default="/mnt/user/appdata/travstats" Mode="rw" Description="Persistent app data — holds the airport database, user uploads, backups, LLM training artefacts, and the auto-generated JWT secret + encryption key. Single volume; nothing else needs to be mounted." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/travstats</Config>
 
-  <Config Name="DATABASE_URL" Target="DATABASE_URL" Default="postgresql://flights:CHANGEME@travstats-db:5432/flights" Mode="" Description="PostgreSQL connection string. Host is the container name of your PostGIS container; replace CHANGEME with the password you set on that container." Type="Variable" Display="always" Required="true" Mask="false">postgresql://flights:CHANGEME@travstats-db:5432/flights</Config>
+  <Config Name="Database URL" Target="DATABASE_URL" Default="postgresql://flights:CHANGEME@travstats-db:5432/flights" Mode="" Description="PostgreSQL connection string. Replace the CHANGEME part with the password you set on the travstats-db container — everything else stays as-is. Format: postgresql://USER:PASSWORD@CONTAINER-NAME:5432/DB-NAME. If you used our travstats-db template with defaults, only the password needs editing." Type="Variable" Display="always" Required="true" Mask="false">postgresql://flights:CHANGEME@travstats-db:5432/flights</Config>
 
   <Config Name="TZ" Target="TZ" Default="UTC" Mode="" Description="Container timezone. Keep UTC (recommended)." Type="Variable" Display="advanced" Required="false" Mask="false">UTC</Config>
 </Container>
