@@ -28,13 +28,16 @@ as a **Release Candidate**:
 
 1. `/deploy` builds `:X.Y.Z-rc.N` (or `:X.Y.Z-security-rc.N`, etc.),
    pushes to GHCR, deploys that RC tag to Underworld.
-2. The RC runs on prod and gets verified (health check + user UAT).
-3. **Only on the user's explicit promotion command** (e.g. "promote",
+2. Same RC also gets a **git tag** (`v<RC_TAG>`) and a **GitHub
+   Pre-release** (`--prerelease`, never `--latest`) — so every RC is
+   visible in all three places (GHCR tag, git tag, GH Releases list).
+3. The RC runs on prod and gets verified (health check + user UAT).
+4. **Only on the user's explicit promotion command** (e.g. "promote",
    "mach den echten Release", "final") are the final tags
    `:X.Y.Z` / `:latest` / `:stable` cut via `docker buildx imagetools
    create` — byte-identical retag, no rebuild.
-4. Docker Hub mirror and `/release` (GitHub Release + git tag) only
-   after promotion.
+5. Docker Hub mirror and `/release` (final GitHub Release with
+   `--latest`) only after promotion.
 
 No final tag ever comes from a fresh build. No release happens without
 an explicit manual command from the user.
