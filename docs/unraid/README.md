@@ -33,12 +33,18 @@ import.
 1. **Apps** tab → search **TravStats**, click **Install**
 2. Set `DATABASE_URL` to
    `postgresql://flights:<your-password>@travstats-db:5432/flights`
-3. *(Optional)* If you installed Ollama, set `OLLAMA_URL=http://ollama:11434`
-4. Apply. When the container is healthy, open
+3. Apply. When the container is healthy, open
    `http://<unraid-ip>:<port>/setup` — the first-run wizard captures
    instance name, public URL, user cap and registration mode. Everything
-   else (API keys, backup schedule, WebDAV, Ollama model) is configurable
-   from the admin UI later.
+   else (API keys, backup schedule, WebDAV, Ollama endpoint + model) is
+   configurable from **Admin → Settings** in the UI after login. On
+   Unraid, point Ollama at `http://ollama:11434` from the admin UI if
+   you installed the CA in step 2.
+
+The JWT secret and encryption key are auto-generated on first boot and
+persisted inside the `/mnt/user/appdata/travstats/secrets/` subdirectory
+of the main data volume — one mount, no separate secrets share to worry
+about.
 
 ## Template maintenance (for the maintainer)
 

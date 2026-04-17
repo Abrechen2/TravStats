@@ -132,8 +132,9 @@ Version bumps and changelog entries are managed by the `/deploy` skill
 - Validate all user input via **Zod schemas** (system boundaries).
 - Rate limiting on every auth and expensive endpoint
   (`express-rate-limit`).
-- No hardcoded secrets — `.env` file (gitignored), in the container
-  via a secrets volume.
+- No hardcoded secrets — `.env` file (gitignored) for the few required
+  env vars; JWT/encryption keys are auto-generated on first boot and
+  persisted to `/app/data/secrets/` (a subdir of the single data volume).
 - JWT in an HttpOnly cookie (never `localStorage`).
 - XSS: React escapes automatically; no `dangerouslySetInnerHTML`.
 - SQL injection: Prisma ORM (parameterised queries).

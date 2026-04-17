@@ -77,10 +77,10 @@
 
 - API keys (AirLabs, Aviationstack, OpenSky) encrypted at rest via `encryptApiKey()`
 - SMTP password encrypted at rest via `encryptApiKey()`
-- JWT secret from environment variable
-- No hardcoded secrets in source code
-- `.env` file gitignored
-- Docker deployment: secrets volume, not env vars in compose
+- JWT secret auto-generated on first boot, persisted to `/app/data/secrets/jwt.secret` (mode 0600, inside the data volume); explicit `JWT_SECRET` env overrides
+- Encryption key (for AES-GCM of API keys / SMTP / WebDAV credentials) generated the same way at `/app/data/secrets/encryption.key`
+- No hardcoded secrets in source code; `.env` file gitignored
+- Docker deployment: no secrets in the compose env — the data volume alone carries the key material
 
 ### Backup Security
 

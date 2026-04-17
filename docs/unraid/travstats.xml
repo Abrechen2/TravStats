@@ -20,9 +20,11 @@ TravStats needs a PostgreSQL 15 database with the PostGIS extension. Install the
 - Password: *(strong — generate with `openssl rand -base64 32`)*
 - Container name: `travstats-db` (or adjust DATABASE_URL below)
 
-Optional: install the [Ollama Community App](https://unraid.net/community/apps?q=ollama) and pull `gemma3:12b` (~8 GB) for local AI parsing of flight confirmation emails. Set OLLAMA_URL below to `http://ollama:11434`.
+Optional: install the [Ollama Community App](https://unraid.net/community/apps?q=ollama) and pull `gemma3:12b` (~8 GB) for local AI parsing of flight confirmation emails. Point TravStats at it via Admin → Settings → Parser after login (no ENV variable needed).
 
-After first start, open http://[IP]:[PORT:3000]/setup — the first-run wizard captures instance name, public URL, user cap and registration mode. Everything else (API keys, backup schedule, WebDAV, Ollama model) is configurable from the admin UI later. No ENV editing needed.
+After first start, open http://[IP]:[PORT:3000]/setup — the first-run wizard captures instance name, public URL, user cap and registration mode. Everything else (API keys, backup schedule, WebDAV, Ollama endpoint + model) is configurable from the admin UI later. No ENV editing needed.
+
+The JWT secret and encryption key are auto-generated on first boot and persisted inside the Application Data mount (`/mnt/user/appdata/travstats/secrets/`) — single volume, survives container updates.
 
 **Full documentation:** https://github.com/Abrechen2/TravStats</Overview>
   <Category>Other: HomeAutomation: Productivity:</Category>
