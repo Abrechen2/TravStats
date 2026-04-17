@@ -1,7 +1,17 @@
 # TravStats on Unraid
 
-`travstats.xml` is a Community Apps-compatible template. This page covers
-installation order, dependency containers, and submission to the CA feed.
+Community Apps templates for TravStats live in their own dedicated repo
+(Unraid CA submission rules require it):
+
+👉 **[github.com/Abrechen2/docker-templates](https://github.com/Abrechen2/docker-templates)**
+
+Two XMLs are published from there:
+
+- [`travstats.xml`](https://raw.githubusercontent.com/Abrechen2/docker-templates/main/travstats.xml)
+- [`travstats-db.xml`](https://raw.githubusercontent.com/Abrechen2/docker-templates/main/travstats-db.xml)
+
+This page covers install order, dependency containers, and submission to
+the CA feed.
 
 ## Install on an existing Unraid box
 
