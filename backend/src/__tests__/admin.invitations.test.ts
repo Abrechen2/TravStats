@@ -70,7 +70,16 @@ describe('admin/invitations — POST /', () => {
   });
 
   it('returns 409 when user + active invite count >= MAX_USERS', async () => {
-    process.env.MAX_USERS = '2';
+    // Instance config moved from ENV to DB in v1.0.0 — set the limit on
+    // the singleton AdminSettings row; the ENV var is only a fallback now.
+    const adminRow =
+      (await prisma.adminSettings.findFirst()) ??
+      (await prisma.adminSettings.create({ data: {} }));
+    await prisma.adminSettings.update({
+      where: { id: adminRow.id },
+      data: { maxUsers: 2 },
+    });
+
     await prisma.invitation.create({
       data: {
         token: 'placeholder-token-1',
@@ -83,6 +92,12 @@ describe('admin/invitations — POST /', () => {
       .post('/api/v1/admin/invitations')
       .set('Cookie', [`auth_token=${adminToken}`])
       .send({ expiresInDays: 7 });
+
+    // Restore a sensible default for other tests sharing the singleton row.
+    await prisma.adminSettings.update({
+      where: { id: adminRow.id },
+      data: { maxUsers: 10 },
+    });
 
     expect(res.status).toBe(409);
     expect(res.body.error).toMatch(/user limit reached/i);

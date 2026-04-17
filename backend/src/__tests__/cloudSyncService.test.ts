@@ -4,9 +4,25 @@ import { describe, it, expect, jest, beforeEach, afterEach } from "@jest/globals
 
 const mockBackupFindUnique = jest.fn();
 const mockBackupUpdate = jest.fn();
+// Empty AdminSettings row — getWebDAVSettings / getInstanceSettings fall
+// through to the ENV fallback that the beforeEach in each describe sets.
+const mockAdminFindFirst = jest.fn().mockResolvedValue({
+  id: "test",
+  webdavSyncEnabled: null,
+  webdavUrl: null,
+  webdavUsername: null,
+  webdavPasswordEncrypted: null,
+  webdavBackupPath: null,
+});
+const mockAdminCreate = jest.fn();
 jest.mock("../db", () => ({
   prisma: {
     backup: { findUnique: mockBackupFindUnique, update: mockBackupUpdate },
+    adminSettings: {
+      findFirst: mockAdminFindFirst,
+      create: mockAdminCreate,
+      update: jest.fn(),
+    },
   },
 }));
 
