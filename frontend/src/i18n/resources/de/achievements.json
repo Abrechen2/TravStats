@@ -7,7 +7,9 @@
     "distance": "Distanz",
     "collector": "Sammler",
     "elite": "Elite",
-    "special": "Spezial"
+    "special": "Spezial",
+    "planner": "Planer",
+    "survivor": "Überlebenskünstler"
   },
   "tiers": {
     "bronze": "Bronze",

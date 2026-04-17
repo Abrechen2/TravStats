@@ -7,7 +7,9 @@
     "distance": "Distance",
     "collector": "Collector",
     "elite": "Elite",
-    "special": "Special"
+    "special": "Special",
+    "planner": "Planner",
+    "survivor": "Survivor"
   },
   "tiers": {
     "bronze": "Bronze",
