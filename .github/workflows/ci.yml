@@ -8,6 +8,7 @@ on:
       - 'docs/**'
       - '.github/ISSUE_TEMPLATE/**'
       - 'unraid-template.xml'
+  workflow_dispatch:
   workflow_call:
 
 concurrency:
