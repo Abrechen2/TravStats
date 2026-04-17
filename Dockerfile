@@ -5,7 +5,7 @@
 ARG VERSION=0.0.0-dev
 
 # Stage 1: Build Frontend
-FROM node:20-alpine AS frontend-builder
+FROM node:22-alpine AS frontend-builder
 
 WORKDIR /app/frontend
 
@@ -21,7 +21,7 @@ ENV VITE_API_URL=
 RUN npm run build
 
 # Stage 2: Build Backend
-FROM node:20-alpine AS backend-builder
+FROM node:22-alpine AS backend-builder
 
 WORKDIR /app/backend
 
@@ -38,7 +38,8 @@ RUN npx prisma generate
 RUN npm run build
 
 # Stage 3: Production - Combined Container
-FROM node:20-slim AS production
+# Pinned to bookworm-slim so apt sources are deterministic.
+FROM node:22-bookworm-slim AS production
 
 # Re-declare ARG so it's available in this stage
 ARG VERSION=0.0.0-dev
@@ -52,8 +53,12 @@ LABEL org.opencontainers.image.licenses="MIT"
 
 WORKDIR /app
 
-# Install nginx, supervisor, and runtime dependencies
-RUN apt-get update && apt-get install -y \
+# Install nginx, supervisor, and runtime dependencies.
+# Security: apt-get upgrade pulls the latest Debian security patches on top
+# of the base image (closes CVEs that accumulate between base-image rebuilds).
+RUN apt-get update && \
+    apt-get upgrade -y --no-install-recommends && \
+    apt-get install -y --no-install-recommends \
     nginx \
     supervisor \
     openssl \
