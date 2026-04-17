@@ -24,13 +24,13 @@ If you bring your own PostGIS container instead, make sure it joins the same `tr
 
 Optional: install the [Ollama Community App](https://unraid.net/community/apps?q=ollama) and pull `gemma3:12b` (~8 GB) for local AI parsing of flight confirmation emails. Point TravStats at it via Admin → Settings → Parser after login (no ENV variable needed).
 
-After first start, open http://[IP]:[PORT:3000]/setup — the first-run wizard captures instance name, public URL, user cap and registration mode. Everything else (API keys, backup schedule, WebDAV, Ollama endpoint + model) is configurable from the admin UI later. No ENV editing needed.
+After first start, open http://[IP]:[PORT:80]/setup — the first-run wizard captures instance name, public URL, user cap and registration mode. Everything else (API keys, backup schedule, WebDAV, Ollama endpoint + model) is configurable from the admin UI later. No ENV editing needed.
 
 The JWT secret and encryption key are auto-generated on first boot and persisted inside the Application Data mount (`/mnt/user/appdata/travstats/secrets/`) — single volume, survives container updates.
 
 **Full documentation:** https://github.com/Abrechen2/TravStats</Overview>
   <Category>Other: HomeAutomation: Productivity:</Category>
-  <WebUI>http://[IP]:[PORT:3000]/</WebUI>
+  <WebUI>http://[IP]:[PORT:80]/</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/Abrechen2/TravStats/main/docs/unraid/travstats.xml</TemplateURL>
   <Icon>https://raw.githubusercontent.com/Abrechen2/TravStats/main/docs/images/logo-large.png</Icon>
   <ExtraParams>--restart=unless-stopped</ExtraParams>
