@@ -95,19 +95,19 @@ COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN sed -i 's/\r$//' /docker-entrypoint.sh && \
     chmod +x /docker-entrypoint.sh
 
-# Create data directory for persistent config (logs, etc.)
-# Note: When /app/data is mounted as a volume, these permissions may be overridden by host
-# Create separate secrets directory (NOT mounted) for JWT secret
-RUN mkdir -p /app/data/logs && \
-    mkdir -p /app/secrets && \
+# Create data directory for persistent config (logs, secrets, backups, …)
+# Secrets live at /app/data/secrets — one mounted volume covers everything.
+# The subdirectory gets 0700 so it's not world-readable even if someone
+# overrides the parent mode from the host.
+RUN mkdir -p /app/data/logs /app/data/secrets && \
     mkdir -p /var/log/supervisor /var/log/nginx /var/lib/nginx && \
     chown -R www-data:www-data /var/log/nginx /var/lib/nginx && \
     chown -R node:node /app && \
     chmod -R 755 /app/data && \
-    chmod 700 /app/secrets
+    chmod 700 /app/data/secrets
 
-# Volumes for persistent data and secrets
-VOLUME ["/app/data", "/app/secrets"]
+# Single volume — data, logs, backups, secrets all live underneath /app/data
+VOLUME ["/app/data"]
 
 EXPOSE 80
 

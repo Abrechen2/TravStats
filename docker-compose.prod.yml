@@ -111,7 +111,6 @@ services:
       DOCKER: "true"
     volumes:
       - travstats-app-data:/app/data
-      - travstats-secrets:/app/secrets
     depends_on:
       db:
         condition: service_healthy
@@ -150,8 +149,6 @@ volumes:
     name: travstats-app-data
   travstats-ollama-data:
     name: travstats-ollama-data
-  travstats-secrets:
-    name: travstats-secrets
 
 networks:
   travstats-network:

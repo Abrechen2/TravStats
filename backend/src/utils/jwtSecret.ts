@@ -5,9 +5,18 @@ import logger from './logger';
 
 const PROJECT_CWD = process.cwd();
 const DEV_DATA_DIR = join(PROJECT_CWD, '.travstats-data');
-// Store JWT secret in a separate, non-mounted directory for security
-// This prevents the secret from being accessible via mounted volumes
-const SECRETS_DIR = process.env.SECRETS_DIR || (process.env.NODE_ENV === 'production' ? '/app/secrets' : join(DEV_DATA_DIR, 'secrets'));
+
+function resolveSecretsDir(): string {
+  if (process.env.SECRETS_DIR) return process.env.SECRETS_DIR;
+  if (process.env.NODE_ENV !== 'production') return join(DEV_DATA_DIR, 'secrets');
+  const LEGACY = '/app/secrets';
+  const CURRENT = '/app/data/secrets';
+  if (existsSync(join(LEGACY, 'jwt.secret')) || existsSync(join(LEGACY, 'encryption.key'))) {
+    return LEGACY;
+  }
+  return CURRENT;
+}
+const SECRETS_DIR = resolveSecretsDir();
 const RESOLVED_SECRET_FILE =
   process.env.JWT_SECRET_FILE || join(SECRETS_DIR, 'jwt.secret');
 
@@ -218,7 +227,8 @@ if (!validation.isValid) {
 ║  1. Generate a strong secret: openssl rand -hex 32           ║
 ║  2. Set JWT_SECRET environment variable                       ║
 ║     OR                                                        ║
-║  3. Delete /app/secrets/jwt.secret and restart (will auto-gen) ║
+║  3. Delete ${RESOLVED_SECRET_FILE.padEnd(49)} ║
+║     and restart (will auto-gen)                               ║
 ║                                                               ║
 ║  Current secret source: ${(process.env.JWT_SECRET ? 'JWT_SECRET env var' : 'Auto-generated').padEnd(36)}║
 ╚═══════════════════════════════════════════════════════════════╝

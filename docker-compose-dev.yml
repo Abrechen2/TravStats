@@ -78,7 +78,6 @@ services:
       - "3004:80"  # Map to nginx internal port 80 (not 3000!)
     volumes:
       - travstats-app-dev-data:/app/data
-      - travstats-app-dev-secrets:/app/secrets
     networks:
       - travstats-dev-network
     healthcheck:
@@ -99,6 +98,4 @@ volumes:
   travstats-app-dev-data:
     driver: local
   travstats-ollama-dev-data:
-    driver: local
-  travstats-app-dev-secrets:
     driver: local

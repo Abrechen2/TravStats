@@ -8,7 +8,16 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import logger from './logger';
 
-const SECRETS_DIR = process.env.SECRETS_DIR || '/app/secrets';
+function resolveSecretsDir(): string {
+  if (process.env.SECRETS_DIR) return process.env.SECRETS_DIR;
+  const LEGACY = '/app/secrets';
+  const CURRENT = '/app/data/secrets';
+  if (existsSync(join(LEGACY, 'jwt.secret')) || existsSync(join(LEGACY, 'encryption.key'))) {
+    return LEGACY;
+  }
+  return CURRENT;
+}
+const SECRETS_DIR = resolveSecretsDir();
 const ENCRYPTION_KEY_FILE = join(SECRETS_DIR, 'encryption.key');
 const KEY_LENGTH = 32; // 32 bytes = 64 hex characters
 
@@ -137,7 +146,3 @@ export function initializeEncryptionKey(): string {
 
   return newKey;
 }
-
-
-
-

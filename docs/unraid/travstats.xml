@@ -39,17 +39,9 @@ After first start, open http://[IP]:[PORT:3000]/setup — the first-run wizard c
 
   <Config Name="WebUI Port" Target="80" Default="3000" Mode="tcp" Description="Host port where TravStats will be accessible." Type="Port" Display="always" Required="true" Mask="false">3000</Config>
 
-  <Config Name="Application Data" Target="/app/data" Default="/mnt/user/appdata/travstats" Mode="rw" Description="Persistent app data: airport database, user uploads, backups, LLM training artefacts." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/travstats</Config>
+  <Config Name="Application Data" Target="/app/data" Default="/mnt/user/appdata/travstats" Mode="rw" Description="Persistent app data — holds the airport database, user uploads, backups, LLM training artefacts, and the auto-generated JWT secret + encryption key. Single volume; nothing else needs to be mounted." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/travstats</Config>
 
-  <Config Name="Secrets" Target="/app/secrets" Default="/mnt/user/appdata/travstats-secrets" Mode="rw" Description="Persistent secrets: auto-generated JWT key. Must survive container recreation." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/travstats-secrets</Config>
-
-  <Config Name="DATABASE_URL" Target="DATABASE_URL" Default="postgresql://flights:CHANGEME@travstats-db:5432/flights" Mode="" Description="PostgreSQL connection string. Host is the container name of your PostGIS container; replace CHANGEME with your database password." Type="Variable" Display="always" Required="true" Mask="true">postgresql://flights:CHANGEME@travstats-db:5432/flights</Config>
+  <Config Name="DATABASE_URL" Target="DATABASE_URL" Default="postgresql://flights:CHANGEME@travstats-db:5432/flights" Mode="" Description="PostgreSQL connection string. Host is the container name of your PostGIS container; replace CHANGEME with the password you set on that container." Type="Variable" Display="always" Required="true" Mask="true">postgresql://flights:CHANGEME@travstats-db:5432/flights</Config>
 
   <Config Name="TZ" Target="TZ" Default="UTC" Mode="" Description="Container timezone. Keep UTC (recommended)." Type="Variable" Display="advanced" Required="false" Mask="false">UTC</Config>
-
-  <Config Name="COOKIE_SECURE" Target="COOKIE_SECURE" Default="" Mode="" Description="Force secure cookies on/off. Leave empty to auto-detect from the reverse-proxy X-Forwarded-Proto header. Set to 'false' only if your proxy serves plain HTTP and doesn't send that header." Type="Variable" Display="advanced" Required="false" Mask="false"/>
-
-  <Config Name="CORS_ORIGIN" Target="CORS_ORIGIN" Default="" Mode="" Description="Comma-separated list of allowed cross-origin hostnames. Leave empty for same-origin-only (behind a reverse proxy that serves frontend + API on the same host)." Type="Variable" Display="advanced" Required="false" Mask="false"/>
-
-  <Config Name="OLLAMA_URL" Target="OLLAMA_URL" Default="" Mode="" Description="Optional Ollama endpoint for AI-powered email/PDF parsing. Example: http://ollama:11434. Can also be changed from the admin UI after install." Type="Variable" Display="advanced" Required="false" Mask="false"/>
 </Container>
