@@ -17,7 +17,7 @@ Track every flight, visualise routes on interactive maps, collect achievements â
 ---
 
 <p align="center">
-  <img src="docs/images/stats.png" alt="Statistics dashboard with year-over-year comparison" width="85%" />
+  <img src="docs/images/map-2d.png" alt="2D route map centred on Munich with 120 flights radiating across Europe" width="85%" />
 </p>
 
 ## Why TravStats
