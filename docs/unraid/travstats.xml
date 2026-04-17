@@ -3,7 +3,7 @@
   <Name>TravStats</Name>
   <Repository>abrechen2/travstats:latest</Repository>
   <Registry>https://hub.docker.com/r/abrechen2/travstats</Registry>
-  <Network>travstats-net</Network>
+  <Network>bridge</Network>
   <MyIP/>
   <Shell>sh</Shell>
   <Privileged>false</Privileged>
@@ -13,13 +13,7 @@
 
 **Requirements:**
 
-**One-time setup before first install:** create the Docker network that both containers share. From the Unraid terminal (**⏻ Terminal** button in the header) or SSH, run:
-
-```
-docker network create travstats-net
-```
-
-TravStats needs a PostgreSQL 15 database with the PostGIS extension. Install the companion template **travstats-db** (same repo) first — it is pre-configured with the right network, database and user so only the password needs filling in. Both containers attach to the `travstats-net` user-defined bridge so they can reach each other by container name (the default Docker `bridge` has no DNS between containers).
+TravStats needs a PostgreSQL 15 database with the PostGIS extension. Install the companion template **travstats-db** (same repo) first — it is pre-configured with database, user and published port so only the password needs filling in. TravStats reaches the database through the Unraid host via `host.docker.internal:5432`, so no custom Docker network is required — both containers just sit on the default `bridge` and talk through the host.
 
 If you bring your own PostGIS container instead, make sure it joins the same `travstats-net` network and uses:
 
@@ -39,7 +33,7 @@ The JWT secret and encryption key are auto-generated on first boot and persisted
   <WebUI>http://[IP]:[PORT:80]/</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/Abrechen2/TravStats/main/docs/unraid/travstats.xml</TemplateURL>
   <Icon>https://raw.githubusercontent.com/Abrechen2/TravStats/main/docs/images/logo-large.png</Icon>
-  <ExtraParams>--restart=unless-stopped</ExtraParams>
+  <ExtraParams>--restart=unless-stopped --add-host=host.docker.internal:host-gateway</ExtraParams>
   <PostArgs/>
   <CPUset/>
   <DateInstalled/>
@@ -51,7 +45,7 @@ The JWT secret and encryption key are auto-generated on first boot and persisted
 
   <Config Name="Application Data" Target="/app/data" Default="/mnt/user/appdata/travstats" Mode="rw" Description="Persistent app data — holds the airport database, user uploads, backups, LLM training artefacts, and the auto-generated JWT secret + encryption key. Single volume; nothing else needs to be mounted." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/travstats</Config>
 
-  <Config Name="Database URL" Target="DATABASE_URL" Default="postgresql://flights:CHANGEME@travstats-db:5432/flights" Mode="" Description="PostgreSQL connection string. Replace the CHANGEME part with the password you set on the travstats-db container — everything else stays as-is. Format: postgresql://USER:PASSWORD@CONTAINER-NAME:5432/DB-NAME. If you used our travstats-db template with defaults, only the password needs editing." Type="Variable" Display="always" Required="true" Mask="false">postgresql://flights:CHANGEME@travstats-db:5432/flights</Config>
+  <Config Name="Database URL" Target="DATABASE_URL" Default="postgresql://flights:CHANGEME@host.docker.internal:5432/flights" Mode="" Description="PostgreSQL connection string. Replace the CHANGEME part with the password you set on the travstats-db container — everything else stays as-is. Uses host.docker.internal so TravStats reaches the DB through the Unraid host rather than needing a custom Docker network. If your PostgreSQL listens on a different host port, adjust the :5432 here to match. Format: postgresql://USER:PASSWORD@host.docker.internal:HOST-PORT/DB-NAME." Type="Variable" Display="always" Required="true" Mask="false">postgresql://flights:CHANGEME@host.docker.internal:5432/flights</Config>
 
   <Config Name="TZ" Target="TZ" Default="UTC" Mode="" Description="Container timezone. Keep UTC (recommended)." Type="Variable" Display="advanced" Required="false" Mask="false">UTC</Config>
 </Container>

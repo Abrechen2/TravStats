@@ -3,7 +3,7 @@
   <Name>travstats-db</Name>
   <Repository>postgis/postgis:15-3.4</Repository>
   <Registry>https://hub.docker.com/r/postgis/postgis</Registry>
-  <Network>travstats-net</Network>
+  <Network>bridge</Network>
   <MyIP/>
   <Shell>sh</Shell>
   <Privileged>false</Privileged>
@@ -13,13 +13,7 @@
 
 This template is pre-filled with the container name `travstats-db` and the database/user pair `flights/flights` so the default `DATABASE_URL` in the TravStats template matches without further editing. **Change the password to a strong value** (e.g. `openssl rand -base64 32`) and reuse it in TravStats.
 
-**One-time setup before first install:** create the Docker network that both containers share. From the Unraid terminal or SSH:
-
-```
-docker network create travstats-net
-```
-
-**Install order:** this container **first**, then the TravStats template. Both containers attach to the `travstats-net` user-defined bridge, which provides container-name DNS resolution (the default Docker `bridge` does not) — TravStats reaches `travstats-db` by name without any host port mapping.
+**Install order:** this container **first**, then the TravStats template. The database is published on the Unraid host at port 5432 (adjustable below) so TravStats can reach it via `host.docker.internal:5432` without needing a shared Docker network. Keep the port free of conflicts with other PostgreSQL containers you may already run.
 
 **Storage:** the default Application Data path (`/mnt/user/appdata/travstats-db`) maps to PostgreSQL's data directory. The initial cluster is created on first start and then kept in place on updates; deleting that directory wipes the database, so point your backup tool at it.
 
@@ -42,7 +36,7 @@ docker network create travstats-net
 
   <Config Name="POSTGRES_PASSWORD" Target="POSTGRES_PASSWORD" Default="CHANGEME" Mode="" Description="Database password. Generate a strong one with `openssl rand -base64 32`, then paste the same value into the TravStats DATABASE_URL field." Type="Variable" Display="always" Required="true" Mask="true">CHANGEME</Config>
 
-  <Config Name="Host Port (optional)" Target="5432" Default="" Mode="tcp" Description="Only set this if you want to connect from outside Unraid (psql / pgAdmin from another machine). TravStats itself does NOT need a host port — it reaches the DB via the Docker network using the container name." Type="Port" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="Host Port" Target="5432" Default="5432" Mode="tcp" Description="Port on the Unraid host that PostgreSQL listens on. TravStats connects through host.docker.internal:&lt;this port&gt;. Change only if 5432 is already in use by another Postgres." Type="Port" Display="always" Required="true" Mask="false">5432</Config>
 
   <Config Name="TZ" Target="TZ" Default="UTC" Mode="" Description="Container timezone. Keep UTC." Type="Variable" Display="advanced" Required="false" Mask="false">UTC</Config>
 </Container>
