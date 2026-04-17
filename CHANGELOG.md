@@ -79,6 +79,7 @@ mitigated). The surface below is what ships out of the box.
 - 22 pentest findings (2 CRITICAL, 5 HIGH, 8 MEDIUM, 7 LOW) surfaced and mitigated across the beta; see [SECURITY.md](SECURITY.md)
 - Patched four moderate-severity transitive CVEs via `npm audit fix` (GHSA-r4q5-vmmm-2653 `follow-redirects`, GHSA-39q2-94rc-95cp `dompurify`, GHSA-j452-xhg8-qg39 `protocol-buffers-schema`). Lockfile-only; no behaviour change.
 - Hardcoded LAN IP in the Ollama URL placeholder (admin UI, German + English) replaced with `http://localhost:11434`; the corresponding benchmark note in `backend/OLLAMA_OPTIMIZATION.md` and the default in `scripts/parse-samples.mjs` were scrubbed at the same time.
+- JWT secret and AES-GCM encryption key are auto-generated on first boot and persisted to `/app/data/secrets/` (mode 0700, key files 0600), inside the single data volume. Pre-1.0 installs on the dedicated `/app/secrets` mount are migrated once at entrypoint time.
 
 ### Zero-config install
 - The Docker compose file now requires **one environment variable only** — `DB_PASSWORD`. Everything else (instance name, public URL, user cap, registration mode, API keys, Ollama, backup schedule, WebDAV) is captured by the first-run setup wizard or configured later from the admin UI.
@@ -86,6 +87,8 @@ mitigated). The surface below is what ships out of the box.
 - Setup wizard extended: instance name, public URL (pre-filled from the request origin), user cap and registration toggle are captured alongside the admin username/password.
 - New admin section "Instance" for the instance-level fields. WebDAV sync moved into the existing "Backups" admin section with a dedicated password field that is never echoed back to the client.
 - Legacy `INSTANCE_NAME` / `MAX_USERS` / `ALLOW_REGISTRATION` / `FRONTEND_URL` / `WEBDAV_*` environment variables are still read as a one-time fallback for pre-1.0 deployments, then superseded as soon as an admin saves from the UI.
+- Secrets and data consolidated into a single `/app/data` volume. The `/app/secrets` mount is gone; JWT and encryption keys live at `/app/data/secrets/` inside the same persistent volume. Unraid, compose and Docker Desktop users now manage one mount point instead of two. Pre-1.0 installs with the old split layout are migrated automatically at boot.
+- Unraid Community Apps template slimmed down to two configurable knobs — `DATABASE_URL` (required) and `TZ` (advanced). `OLLAMA_URL`, `COOKIE_SECURE` and `CORS_ORIGIN` were dropped from the template: Ollama is wired up from the admin UI, cookie-secure is auto-detected from the reverse-proxy `X-Forwarded-Proto` header, and CORS defaults to same-origin behind a proxy. All three are still honoured as environment overrides for exotic setups.
 
 ### Breaking changes from 0.x beta
 
