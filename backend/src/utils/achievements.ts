@@ -303,6 +303,12 @@ interface UserStats {
   nyeAirborne: number;
   leapDayFlights: number;
   hasMicroFlight: number;
+  icaoDayFlights: number;
+  wrightDayFlights: number;
+  mayFourthFlights: number;
+  piDayFlights: number;
+  piPrecisionFlights: number;
+  halloweenFlights: number;
 }
 
 async function calculateUserStats(flights: FlightData[]): Promise<UserStats> {
@@ -356,6 +362,12 @@ async function calculateUserStats(flights: FlightData[]): Promise<UserStats> {
     nyeAirborne: 0,
     leapDayFlights: 0,
     hasMicroFlight: 0,
+    icaoDayFlights: 0,
+    wrightDayFlights: 0,
+    mayFourthFlights: 0,
+    piDayFlights: 0,
+    piPrecisionFlights: 0,
+    halloweenFlights: 0,
   };
 
   // Collect all unique airport codes from flights
@@ -554,6 +566,24 @@ async function calculateUserStats(flights: FlightData[]): Promise<UserStats> {
         stats.nyeAirborne++;
       }
       if (dep.getMonth() === 1 && dep.getDate() === 29) stats.leapDayFlights++;
+    }
+
+    // Calendar-observance easter eggs (month is 0-indexed)
+    if (flight.departureTime) {
+      const d = flight.departureTime;
+      const month = d.getMonth();
+      const day = d.getDate();
+      if (month === 11 && day === 7) stats.icaoDayFlights++;           // 7 Dec — ICAO Day
+      if (month === 7 && day === 19) stats.wrightDayFlights++;         // 19 Aug — National Aviation Day
+      if (month === 4 && day === 4) stats.mayFourthFlights++;          // 4 May — Star Wars Day
+      if (month === 2 && day === 14) {
+        stats.piDayFlights++;                                          // 14 Mar — Pi Day
+        // π Precision: great-circle distance within ±5 % of 3141 km
+        if (distance >= 3141 * 0.95 && distance <= 3141 * 1.05) {
+          stats.piPrecisionFlights++;
+        }
+      }
+      if (month === 9 && day === 31) stats.halloweenFlights++;         // 31 Oct — Halloween
     }
   }
 
@@ -883,6 +913,30 @@ function checkAchievement(
       break;
     case 'leap_day_flights':
       progress = stats.leapDayFlights;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'icao_day_flights':
+      progress = stats.icaoDayFlights;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'wright_day_flights':
+      progress = stats.wrightDayFlights;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'may_fourth_flights':
+      progress = stats.mayFourthFlights;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'pi_day_flights':
+      progress = stats.piDayFlights;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'pi_precision_flights':
+      progress = stats.piPrecisionFlights;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'halloween_flights':
+      progress = stats.halloweenFlights;
       isUnlocked = progress >= achievement.requirement;
       break;
 

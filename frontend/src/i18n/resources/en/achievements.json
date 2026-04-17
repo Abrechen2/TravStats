@@ -350,6 +350,30 @@
     "LEAP_DAY_RIDE": {
       "name": "Leap Day Ride",
       "description": "A flight on 29 February"
+    },
+    "ICAO_DAY": {
+      "name": "ICAO Day",
+      "description": "A flight on 7 December — International Civil Aviation Day"
+    },
+    "WRIGHT_STUFF": {
+      "name": "The Wright Stuff",
+      "description": "A flight on 19 August — National Aviation Day (Orville Wright's birthday)"
+    },
+    "MAY_THE_FOURTH": {
+      "name": "May the Fourth",
+      "description": "A flight on 4 May — may the thrust be with you"
+    },
+    "PI_DAY": {
+      "name": "Pi Day",
+      "description": "A flight on 14 March — 3/14"
+    },
+    "PI_PRECISION": {
+      "name": "π Precision",
+      "description": "A flight on 14 March whose great-circle distance is approximately 3,141 km (±5 %)"
+    },
+    "HALLOWEEN_FLYER": {
+      "name": "Halloween Flyer",
+      "description": "A flight on 31 October — ideally in the dark"
     }
   }
 }

@@ -368,6 +368,30 @@
     "LEAP_DAY_RIDE": {
       "name": "Schalttag-Fahrt",
       "description": "Ein Flug am 29. Februar"
+    },
+    "ICAO_DAY": {
+      "name": "ICAO-Tag",
+      "description": "Ein Flug am 7. Dezember — Internationaler Tag der Zivilluftfahrt"
+    },
+    "WRIGHT_STUFF": {
+      "name": "The Wright Stuff",
+      "description": "Ein Flug am 19. August — Nationaler Tag der Luftfahrt (Orville Wrights Geburtstag)"
+    },
+    "MAY_THE_FOURTH": {
+      "name": "May the Fourth",
+      "description": "Ein Flug am 4. Mai — möge der Schub mit dir sein"
+    },
+    "PI_DAY": {
+      "name": "Pi-Tag",
+      "description": "Ein Flug am 14. März — 3/14"
+    },
+    "PI_PRECISION": {
+      "name": "π Präzision",
+      "description": "Ein Flug am 14. März, dessen Großkreisdistanz ungefähr 3.141 km beträgt (±5 %)"
+    },
+    "HALLOWEEN_FLYER": {
+      "name": "Halloween-Flieger",
+      "description": "Ein Flug am 31. Oktober — idealerweise im Dunkeln"
     }
   }
 }
