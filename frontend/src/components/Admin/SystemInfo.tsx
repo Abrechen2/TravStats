@@ -12,6 +12,7 @@ export interface SystemInfoData {
   warningThreshold: boolean;
   registrationEnabled: boolean;
   version: string;
+  buildVersion?: string;
   demoUserExists?: boolean;
   demoUserActive?: boolean;
 }
@@ -133,7 +134,18 @@ export default function SystemInfo({
           </div>
           <div>
             <dt className="text-sm text-[var(--text-muted)]">{t("admin:systemInfo.version")}</dt>
-            <dd className="text-lg font-medium text-[var(--text-primary)]">{systemInfo.version}</dd>
+            <dd className="text-lg font-medium text-[var(--text-primary)]">
+              {systemInfo.version}
+              {systemInfo.buildVersion && systemInfo.buildVersion !== systemInfo.version && (
+                <span
+                  className="ml-2 text-sm font-normal"
+                  style={{ color: "var(--text-muted)" }}
+                  title={t("admin:systemInfo.buildVersionHint")}
+                >
+                  ({t("admin:systemInfo.buildLabel")}: {systemInfo.buildVersion})
+                </span>
+              )}
+            </dd>
           </div>
         </dl>
       </div>

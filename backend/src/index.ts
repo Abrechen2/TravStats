@@ -149,15 +149,27 @@ app.use(cookieParser());
 // Request logging middleware (with correlation IDs)
 app.use(requestLoggerMiddleware);
 
-// Read version from VERSION file (single source of truth)
-// Read version from VERSION file and expose as env var for admin endpoints
+// Version detection. Two layers:
+//   BUILD_VERSION — baked into the image at build time via the VERSION
+//     file (carries the build-arg value, including any `-rc.N` /
+//     `-security-rc.N` suffix).
+//   APP_VERSION   — runtime value the UI displays. Set from the
+//     environment by docker-compose (e.g. `APP_VERSION: ${VERSION}`)
+//     when a promoted RC is deployed against the final tag. Falls back
+//     to BUILD_VERSION when nothing is set at runtime.
+// The split lets us promote an RC image byte-identically (no rebuild)
+// while still surfacing the clean `1.0.1` tag in the About section,
+// with the `1.0.1-security-rc.1` build string kept for diagnostics.
 try {
   const versionFile = path.join(__dirname, '../VERSION');
   if (fs.existsSync(versionFile)) {
-    process.env.APP_VERSION = fs.readFileSync(versionFile, 'utf-8').trim();
+    process.env.BUILD_VERSION = fs.readFileSync(versionFile, 'utf-8').trim();
   }
 } catch {
-  // fallback — APP_VERSION stays unset
+  // fallback — BUILD_VERSION stays unset
+}
+if (!process.env.APP_VERSION && process.env.BUILD_VERSION) {
+  process.env.APP_VERSION = process.env.BUILD_VERSION;
 }
 
 // Health check
@@ -166,9 +178,13 @@ app.get('/health', (_req, res) => {
 });
 
 // Public version endpoint — unauthenticated so the About section can
-// show the right version (including rc/beta suffix) even before login.
+// show the right version even before login. Returns both the runtime
+// version (what the user sees) and the build version baked into the
+// image (kept for diagnostics, only shown when it differs).
 app.get('/api/v1/version', (_req, res) => {
-  res.json({ version: process.env.APP_VERSION ?? 'unknown' });
+  const version = process.env.APP_VERSION ?? 'unknown';
+  const buildVersion = process.env.BUILD_VERSION ?? version;
+  res.json({ version, buildVersion });
 });
 
 // Public parser-capabilities endpoint. Lets the email import UI show
