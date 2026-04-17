@@ -1,20 +1,15 @@
 # Unraid Forum — Support Thread
 
-> **Where to post:** Unraid Forum → [Docker Engine](https://forums.unraid.net/forum/36-docker-engine/)
-> (or Community Applications Support — a moderator will move it if needed).
+> **Where:** Unraid Forum → [Docker Engine](https://forums.unraid.net/forum/36-docker-engine/)
+> (a moderator may move it to Community Apps Support later).
 >
-> **Why:** Per the [Unraid CA submission FAQ](https://forums.unraid.net/topic/57181-docker-faq/),
-> every CA template must have a dedicated Support thread. The `<Support>`
-> field in the XML points at this thread's URL.
->
-> **Forum formatting:** Unraid runs Invision Community, which accepts a
-> mix of BBCode and a WYSIWYG editor. The body below uses BBCode so
-> copy-paste works in the raw-source view of the editor (click the `<>`
-> button in the toolbar to switch to source mode, paste, switch back).
+> **Editor:** Invision WYSIWYG — plain-text paste; use the toolbar to format
+> (Bold via `B`, Lists via the `+` menu → "List", Links via `🔗`). URLs pasted
+> on their own line get auto-linked. **Markdown / BBCode does NOT render.**
 
 ---
 
-## Thread title
+## Thread title (paste into the Title field)
 
 ```
 [Support] TravStats — self-hosted flight tracker
@@ -22,93 +17,140 @@
 
 ---
 
-## Thread body (paste in source-mode)
+## Body (paste into the editor, then format as described after)
 
-```bbcode
-[img]https://raw.githubusercontent.com/Abrechen2/TravStats/main/docs/images/logo-large.png[/img]
+```text
+TravStats is a self-hosted flight tracker for small households and groups (1–10 users). Track every flight, visualise routes on interactive 2D/3D maps, collect 58 achievements, import from boarding passes (QR / PDF417 / OCR) and confirmation emails — all on your own Unraid box.
 
-[b]TravStats — self-hosted flight tracker[/b]
 
-Track every flight, visualise routes on interactive 2D/3D maps, collect 58 achievements, import from boarding passes (QR / PDF417 / OCR) and confirmation emails — all on your own Unraid box. Built for 1–10 users.
+Links
 
-[b]Links:[/b]
-[list]
-[*][b]Project:[/b] [url]https://github.com/Abrechen2/TravStats[/url]
-[*][b]Container images:[/b] [url=https://hub.docker.com/r/abrechen2/travstats]Docker Hub[/url] · [url=https://github.com/Abrechen2/TravStats/pkgs/container/travstats]GHCR[/url]
-[*][b]Templates repo:[/b] [url]https://github.com/Abrechen2/docker-templates[/url]
-[*][b]Licence:[/b] AGPL-3.0-or-later
-[/list]
+Project: https://github.com/Abrechen2/TravStats
+Container images: https://hub.docker.com/r/abrechen2/travstats (Docker Hub) · https://github.com/Abrechen2/TravStats/pkgs/container/travstats (GHCR)
+Templates repo: https://github.com/Abrechen2/docker-templates
+Licence: AGPL-3.0-or-later
 
-[b]Highlights:[/b]
-[list]
-[*]Six map modes — Routes, Heatmap, Hexagon, 3D columns, animated Trips, 3D Globe (deck.gl 9 + MapLibre 5)
-[*]Year-over-year statistics across flights, distance, seats, classes, routes
-[*]Boarding-pass scanner — QR / PDF417 / OCR
-[*]Email & PDF import — plain text, HTML, Outlook .msg, .eml, with optional local LLM parsing via Ollama (gemma3:12b recommended, 100% accuracy on my test corpus)
-[*]Automated backups with retention + optional WebDAV off-site sync
-[*]58 achievements across five categories
-[*]22 pentest findings mitigated — JWT in HttpOnly cookies, 15 rate limiters, Zod validation everywhere, Helmet CSP
-[*]German + English UI
-[/list]
 
-[b]Installation (two templates, install in this order):[/b]
+Highlights
 
-1. [b]travstats-db[/b] — PostGIS 15-3.4, published on host port 5432
-[code]https://raw.githubusercontent.com/Abrechen2/docker-templates/main/travstats-db.xml[/code]
+Six map modes — Routes, Heatmap, Hexagon, 3D columns, animated Trips, 3D Globe (deck.gl 9 + MapLibre 5)
+Year-over-year statistics across flights, distance, seats, classes, routes
+Boarding-pass scanner — QR / PDF417 / OCR
+Email and PDF import — plain text, HTML, Outlook .msg, .eml, with optional local LLM parsing via Ollama (gemma3:12b recommended, 100% accuracy on my test corpus)
+Automated backups with retention + optional WebDAV off-site sync
+58 achievements across five categories
+22 pentest findings mitigated — JWT in HttpOnly cookies, 15 rate limiters, Zod validation everywhere, Helmet CSP
+German + English UI
+
+
+Installation
+
+Two templates, install in this order.
+
+1) travstats-db — PostGIS 15-3.4, published on host port 5432
+
+https://raw.githubusercontent.com/Abrechen2/docker-templates/main/travstats-db.xml
+
 Set a strong POSTGRES_PASSWORD (e.g. openssl rand -base64 32), Apply.
 
-2. [b]TravStats[/b] — the app itself
-[code]https://raw.githubusercontent.com/Abrechen2/docker-templates/main/travstats.xml[/code]
+2) TravStats — the app itself
+
+https://raw.githubusercontent.com/Abrechen2/docker-templates/main/travstats.xml
+
 Replace the CHANGEME in the Database URL field with the same password, Apply. Click the WebUI button → /setup → create admin account.
 
 The app reaches the DB via host.docker.internal:5432, so no custom Docker network is required.
 
-Full install guide with screenshots: [url]https://github.com/Abrechen2/TravStats/blob/main/docs/unraid/README.md[/url]
+Full install guide with screenshots: https://github.com/Abrechen2/TravStats/blob/main/docs/unraid/README.md
 
-[b]Optional local AI parsing:[/b] install the Ollama Community App, pull gemma3:12b (~7.5 GB), then in TravStats Admin → Parser set Ollama URL = http://<ollama-host>:11434. Handles multi-flight confirmation emails that the regex templates don't cover.
 
-[b]Bug reports and feature requests welcome[/b] — here or on the [url=https://github.com/Abrechen2/TravStats/issues/new/choose]GitHub issue tracker[/url]. The app has a one-click "Report Bug" button in the top nav that bundles anonymised diagnostics + log tail.
+Optional local AI parsing
+
+Install the Ollama Community App, pull gemma3:12b (~7.5 GB), then in TravStats Admin → Parser set Ollama URL to http://<ollama-host>:11434. Handles multi-flight confirmation emails that the regex templates don't cover.
+
+
+Bug reports and feature requests welcome — here or on the GitHub issue tracker: https://github.com/Abrechen2/TravStats/issues/new/choose
+
+The app has a one-click "Report Bug" button in the top nav that bundles anonymised diagnostics + log tail.
 
 Safe travels.
 ```
 
 ---
 
-## After posting
+## Formatting in the WYSIWYG after paste
 
-1. Copy the thread URL from the browser (format: `https://forums.unraid.net/topic/NNNNNN-support-travstats/`).
-2. Paste it into this README, then run a tiny helper to patch both XMLs in the `docker-templates` repo:
+1. Put the cursor on the section headings ("Links", "Highlights", "Installation", "Optional local AI parsing") and click `B` (bold) — that's the only formatting you need.
+2. The URLs that stand alone on a line auto-link on save.
+3. Optional: drag `docs/images/logo-large.png` (from the GitHub raw URL or your local copy) into the editor as the first element — it uploads inline.
+4. Optional: drag one of the screenshots (`map-2d.png` or `stats.png`) in after the Highlights section so the thread has a visual.
 
-```bash
-THREAD_URL="https://forums.unraid.net/topic/NNNNNN-support-travstats/"
-cd /c/Users/DENNIS~1/AppData/Local/Temp/dt   # temp clone from earlier, or re-clone:
-# git clone https://github.com/Abrechen2/docker-templates.git .
-sed -i "s|<Support>.*</Support>|<Support>${THREAD_URL}</Support>|g" travstats.xml travstats-db.xml
-git add travstats.xml travstats-db.xml
-git commit -m "templates: point Support URL at the Unraid forum thread"
-git push origin main
+If you prefer to paste HTML directly: click `…` in the toolbar to look for a "Source" or "</>" option. If it's there, paste this HTML instead of the plain text above:
+
+```html
+<p><strong>TravStats</strong> is a self-hosted flight tracker for small households and groups (1–10 users). Track every flight, visualise routes on interactive 2D/3D maps, collect 58 achievements, import from boarding passes (QR / PDF417 / OCR) and confirmation emails — all on your own Unraid box.</p>
+<h3>Links</h3>
+<ul>
+  <li><strong>Project:</strong> <a href="https://github.com/Abrechen2/TravStats">github.com/Abrechen2/TravStats</a></li>
+  <li><strong>Container images:</strong> <a href="https://hub.docker.com/r/abrechen2/travstats">Docker Hub</a> · <a href="https://github.com/Abrechen2/TravStats/pkgs/container/travstats">GHCR</a></li>
+  <li><strong>Templates repo:</strong> <a href="https://github.com/Abrechen2/docker-templates">github.com/Abrechen2/docker-templates</a></li>
+  <li><strong>Licence:</strong> AGPL-3.0-or-later</li>
+</ul>
+<h3>Highlights</h3>
+<ul>
+  <li>Six map modes — Routes, Heatmap, Hexagon, 3D columns, animated Trips, 3D Globe (deck.gl 9 + MapLibre 5)</li>
+  <li>Year-over-year statistics across flights, distance, seats, classes, routes</li>
+  <li>Boarding-pass scanner — QR / PDF417 / OCR</li>
+  <li>Email and PDF import — plain text, HTML, Outlook .msg, .eml, with optional local LLM parsing via Ollama (gemma3:12b recommended, 100% accuracy on my test corpus)</li>
+  <li>Automated backups with retention + optional WebDAV off-site sync</li>
+  <li>58 achievements across five categories</li>
+  <li>22 pentest findings mitigated — JWT in HttpOnly cookies, 15 rate limiters, Zod validation everywhere, Helmet CSP</li>
+  <li>German + English UI</li>
+</ul>
+<h3>Installation</h3>
+<p>Two templates, install in this order.</p>
+<p><strong>1) travstats-db</strong> — PostGIS 15-3.4, published on host port 5432</p>
+<pre>https://raw.githubusercontent.com/Abrechen2/docker-templates/main/travstats-db.xml</pre>
+<p>Set a strong <code>POSTGRES_PASSWORD</code> (e.g. <code>openssl rand -base64 32</code>), Apply.</p>
+<p><strong>2) TravStats</strong> — the app itself</p>
+<pre>https://raw.githubusercontent.com/Abrechen2/docker-templates/main/travstats.xml</pre>
+<p>Replace the <code>CHANGEME</code> in the Database URL field with the same password, Apply. Click the WebUI button → <code>/setup</code> → create admin account.</p>
+<p>The app reaches the DB via <code>host.docker.internal:5432</code>, so no custom Docker network is required.</p>
+<p>Full install guide with screenshots: <a href="https://github.com/Abrechen2/TravStats/blob/main/docs/unraid/README.md">docs/unraid/README.md</a></p>
+<h3>Optional local AI parsing</h3>
+<p>Install the Ollama Community App, pull <code>gemma3:12b</code> (~7.5 GB), then in TravStats <strong>Admin → Parser</strong> set <em>Ollama URL</em> to <code>http://&lt;ollama-host&gt;:11434</code>. Handles multi-flight confirmation emails that the regex templates don't cover.</p>
+<p>Bug reports and feature requests welcome — here or on the <a href="https://github.com/Abrechen2/TravStats/issues/new/choose">GitHub issue tracker</a>. The app has a one-click "Report Bug" button in the top nav that bundles anonymised diagnostics + log tail.</p>
+<p>Safe travels.</p>
 ```
 
-(Or send me the URL and I'll patch both XMLs in one go.)
+---
+
+## After posting
+
+Copy the thread URL (format: `https://forums.unraid.net/topic/NNNNNN-support-travstats/`) and send it to me. I'll patch both XMLs in `docker-templates` in one push:
+
+```xml
+<Support>https://forums.unraid.net/topic/NNNNNN-support-travstats/</Support>
+```
 
 ## Asana submission form
 
-Once the Support-URL is live in both XMLs:
-[https://form.asana.com/?k=qtIUrf5ydiXvXzPI57BiJw&d=714739274360802](https://form.asana.com/?k=qtIUrf5ydiXvXzPI57BiJw&d=714739274360802)
+Once Support URL is live in both XMLs:
+https://form.asana.com/?k=qtIUrf5ydiXvXzPI57BiJw&d=714739274360802
 
-Expected fields (confirm live on the form):
-- **GitHub repo containing the XMLs**: `https://github.com/Abrechen2/docker-templates`
-- **Template XML raw URLs**:
+Expected fields:
+- **GitHub repo with the XMLs:** `https://github.com/Abrechen2/docker-templates`
+- **XML raw URLs:**
   - `https://raw.githubusercontent.com/Abrechen2/docker-templates/main/travstats.xml`
   - `https://raw.githubusercontent.com/Abrechen2/docker-templates/main/travstats-db.xml`
-- **Developer handle (GitHub)**: `Abrechen2`
-- **App names**: `TravStats`, `travstats-db`
-- **Support URL**: forum thread URL from above
-- **License**: `AGPL-3.0-or-later`
-- **2FA on GitHub + Docker Hub**: confirm both are enabled — CA moderators flag this; if either is off, the submission is rejected.
+- **GitHub handle:** `Abrechen2`
+- **App names:** `TravStats`, `travstats-db`
+- **Support URL:** forum thread URL
+- **License:** `AGPL-3.0-or-later`
+- **2FA on GitHub + Docker Hub:** confirmed. **Check before submitting** — if either is off, moderators reject immediately.
 
 ## Timeline
 
-- Moderator review: ~2 h for the quick-check
-- Feed refresh: CA appfeed re-crawls every 2 h automatically after acceptance
-- **Both apps must be searchable via the Apps tab within ~4–6 h** of approval. If not, ping the thread.
+- Moderator review: ~2 h
+- CA appfeed refresh: every 2 h after approval
+- Both apps searchable via the **Apps** tab within 4–6 h of approval
