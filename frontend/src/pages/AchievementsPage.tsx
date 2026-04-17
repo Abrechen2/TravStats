@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { achievementsApi } from "../lib/api";
-import ContextualHint from "../components/Onboarding/ContextualHint";
 import NavigationBar from "../components/NavigationBar";
 import PageTransition from "../components/PageTransition";
 import { SkeletonAchievementGrid } from "../components/SkeletonLoader";
 import type { Achievement, AchievementSummary, LeaderboardEntry } from "../types";
-import { STORAGE_KEYS } from "../lib/constants";
 import { useTranslation } from "../hooks/useTranslation";
 import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
@@ -42,11 +40,6 @@ export default function AchievementsPage(): JSX.Element {
   useEffect(() => {
     loadAchievements();
     loadLeaderboard();
-    const onboarding = JSON.parse(localStorage.getItem(STORAGE_KEYS.ONBOARDING_CHECKLIST) || "{}");
-    if (!onboarding.achievementsViewed) {
-      onboarding.achievementsViewed = true;
-      localStorage.setItem(STORAGE_KEYS.ONBOARDING_CHECKLIST, JSON.stringify(onboarding));
-    }
   }, []);
 
   const loadAchievements = async () => {
@@ -130,13 +123,6 @@ export default function AchievementsPage(): JSX.Element {
           <NavigationBar />
           <div className="p-6">
             <div className="max-w-6xl mx-auto">
-              <ContextualHint
-                id="achievements-page-hint"
-                title={t("achievements:hint.title")}
-                message={t("achievements:hint.message")}
-                linkTo="/"
-                linkText={t("achievements:hint.linkText")}
-              />
               <div className="flex items-center gap-4 mb-6">
                 <button
                   onClick={() => setShowLeaderboard(false)}
@@ -244,13 +230,6 @@ export default function AchievementsPage(): JSX.Element {
                 🏆 {t("achievements:title")}
               </h1>
             </div>
-            <ContextualHint
-              id="achievements-page-hint"
-              title={t("achievements:hint.title")}
-              message={t("achievements:hint.message")}
-              linkTo="/"
-              linkText={t("achievements:hint.linkText")}
-            />
             {summary && (
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <div

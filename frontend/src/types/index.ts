@@ -351,16 +351,6 @@ export interface LeaderboardEntry {
   achievementCount: number;
 }
 
-export interface OnboardingState {
-  flightAdded: boolean;
-  usedFilter: boolean;
-  exported: boolean;
-  mapExplored: boolean;
-  statsViewed: boolean;
-  achievementsViewed: boolean;
-  dismissed: boolean;
-}
-
 export interface FunStats {
   timezoneHopper: number;
   earlyBird: number;

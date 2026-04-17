@@ -1,5 +1,3 @@
-import type { OnboardingState } from "../../types";
-
 import { api } from "./client";
 import type {
   ApiKeyTestResponse,
@@ -75,14 +73,6 @@ export const settingsApi = {
         },
       }
     );
-    return data;
-  },
-  getOnboardingState: async (): Promise<OnboardingState> => {
-    const { data } = await api.get<OnboardingState>("/settings/onboarding-state");
-    return data;
-  },
-  updateOnboardingState: async (state: OnboardingState): Promise<OnboardingState> => {
-    const { data } = await api.put<OnboardingState>("/settings/onboarding-state", state);
     return data;
   },
   getHomeAirports: async (): Promise<{ history: HomeAirportEntry[] }> => {

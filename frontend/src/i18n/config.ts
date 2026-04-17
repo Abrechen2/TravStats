@@ -14,7 +14,6 @@ import enErrors from "./resources/en/errors.json";
 import enAchievements from "./resources/en/achievements.json";
 import enStats from "./resources/en/stats.json";
 import enSetup from "./resources/en/setup.json";
-import enOnboarding from "./resources/en/onboarding.json";
 import enMap from "./resources/en/map.json";
 import enPendingUpdates from "./resources/en/pendingUpdates.json";
 import enParser from "./resources/en/parser.json";
@@ -31,7 +30,6 @@ import deErrors from "./resources/de/errors.json";
 import deAchievements from "./resources/de/achievements.json";
 import deStats from "./resources/de/stats.json";
 import deSetup from "./resources/de/setup.json";
-import deOnboarding from "./resources/de/onboarding.json";
 import deMap from "./resources/de/map.json";
 import dePendingUpdates from "./resources/de/pendingUpdates.json";
 import deParser from "./resources/de/parser.json";
@@ -71,7 +69,6 @@ const resources = {
     achievements: enAchievements,
     stats: enStats,
     setup: enSetup,
-    onboarding: enOnboarding,
     map: enMap,
     pendingUpdates: enPendingUpdates,
     parser: enParser,
@@ -89,7 +86,6 @@ const resources = {
     achievements: deAchievements,
     stats: deStats,
     setup: deSetup,
-    onboarding: deOnboarding,
     map: deMap,
     pendingUpdates: dePendingUpdates,
     parser: deParser,
@@ -116,7 +112,6 @@ i18n.use(initReactI18next).init({
     "achievements",
     "stats",
     "setup",
-    "onboarding",
     "map",
     "pendingUpdates",
     "parser",

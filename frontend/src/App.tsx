@@ -9,7 +9,6 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import Toast from "./components/Toast";
 import AirportSeedingBanner from "./components/AirportSeedingBanner";
 import AirportSeedingModal from "./components/AirportSeedingModal";
-import HomeAirportOnboardingBanner from "./components/HomeAirportOnboardingBanner";
 import { setupApi } from "./lib/api";
 import i18n from "./i18n/config";
 import { useTranslation } from "./hooks/useTranslation";
@@ -198,7 +197,6 @@ function AppContent() {
       >
         <Toast />
         <AirportSeedingBanner />
-        {isAuthenticated && <HomeAirportOnboardingBanner />}
         <AirportSeedingModal isOpen={showSeedingModal} onClose={handleCloseSeedingModal} />
         <Suspense fallback={<LoadingFallback />}>
           <AnimatePresence mode="wait">

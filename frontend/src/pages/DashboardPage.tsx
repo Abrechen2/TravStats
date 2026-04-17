@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import type { VisMode } from "../types/visMode";
 
-import { flightsApi, settingsApi } from "../lib/api";
+import { flightsApi } from "../lib/api";
 import { useToastStore } from "../store/toastStore";
 import { logger } from "../lib/logger";
 import { useTranslation } from "../hooks/useTranslation";
@@ -15,11 +15,10 @@ import Filters from "../components/Filters";
 import ErrorBoundary from "../components/ErrorBoundary";
 import NavigationBar from "../components/NavigationBar";
 import AchievementPopup from "../components/AchievementPopup";
-import OnboardingGuide from "../components/Onboarding/OnboardingGuide";
 import HelpIcon from "../components/Help/HelpIcon";
 import { useClickOutside } from "../hooks/useClickOutside";
-import type { Flight, FlightInput, FlightFilters, GeoJSONFeature, OnboardingState } from "../types";
-import { API_LIMITS, STORAGE_KEYS } from "../lib/constants";
+import type { Flight, FlightInput, FlightFilters, GeoJSONFeature } from "../types";
+import { API_LIMITS } from "../lib/constants";
 import { toCsv, escapeXml, downloadBlob } from "../lib/export";
 import { motion, AnimatePresence } from "framer-motion";
 import { FlightPanel } from "../components/FlightPanel";
@@ -50,16 +49,6 @@ export default function DashboardPage(): JSX.Element {
   useEffect(() => {
     if (detailMode) setLeftOpen(true);
   }, [detailMode]);
-  const [onboarding, setOnboarding] = useState<OnboardingState>({
-    flightAdded: false,
-    usedFilter: false,
-    exported: false,
-    mapExplored: false,
-    statsViewed: false,
-    achievementsViewed: false,
-    dismissed: false,
-  });
-
   // On mount: read location.state to set initial visMode and activeTripId (e.g. from "Show on Map")
   useEffect(() => {
     const state = location.state as { visMode?: string; tripId?: string } | null;
@@ -81,43 +70,8 @@ export default function DashboardPage(): JSX.Element {
     }
   }, [activeTripId, visMode, allFlights]);
 
-  // Load onboarding state from server (with localStorage fallback)
-  useEffect(() => {
-    const loadOnboardingState = async () => {
-      try {
-        const serverState = await settingsApi.getOnboardingState();
-        setOnboarding(serverState);
-        // Also sync to localStorage for offline access
-        localStorage.setItem(STORAGE_KEYS.ONBOARDING_CHECKLIST, JSON.stringify(serverState));
-      } catch (error) {
-        // Fallback to localStorage if server request fails
-        logger.warn("Failed to load onboarding state from server, using localStorage:", error);
-        const saved = localStorage.getItem(STORAGE_KEYS.ONBOARDING_CHECKLIST);
-        if (saved) {
-          try {
-            const parsed = JSON.parse(saved);
-            setOnboarding({
-              flightAdded: parsed.flightAdded || false,
-              usedFilter: parsed.usedFilter || false,
-              exported: parsed.exported || false,
-              mapExplored: parsed.mapExplored || false,
-              statsViewed: parsed.statsViewed || false,
-              achievementsViewed: parsed.achievementsViewed || false,
-              dismissed: parsed.dismissed || false,
-            });
-          } catch (e) {
-            logger.error("Failed to parse localStorage onboarding state:", e);
-          }
-        }
-      } finally {
-        setLoadingOnboarding(false);
-      }
-    };
-    loadOnboardingState();
-  }, []);
   const addToast = useToastStore((state) => state.addToast);
   const [newAchievements, setNewAchievements] = useState<import("../types").UserAchievement[]>([]);
-  const [loadingOnboarding, setLoadingOnboarding] = useState(true);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
   const [, setImporting] = useState(false);
@@ -146,50 +100,6 @@ export default function DashboardPage(): JSX.Element {
   useEffect(() => {
     loadRecentFlights();
   }, [loadRecentFlights]);
-
-  // Auto-detect onboarding steps
-  useEffect(() => {
-    // Check if flights have been added
-    if (totalFlightsCount > 0 && !onboarding.flightAdded) {
-      setOnboarding((prev) => ({ ...prev, flightAdded: true }));
-    }
-
-    // Check if filters are being used
-    const hasActiveFilters =
-      Object.keys(filters).length > 0 &&
-      ((Array.isArray(filters.airline) ? filters.airline.length > 0 : !!filters.airline) ||
-        !!filters.departureAirport ||
-        !!filters.arrivalAirport ||
-        (filters.tags && filters.tags.length > 0) ||
-        !!filters.fromDate ||
-        !!filters.toDate ||
-        !!filters.category);
-    if (hasActiveFilters && !onboarding.usedFilter) {
-      setOnboarding((prev) => ({ ...prev, usedFilter: true }));
-    }
-  }, [totalFlightsCount, filters, onboarding.flightAdded, onboarding.usedFilter]);
-
-  // Detect map exploration (vis mode change)
-  const handleVisModeChange = (mode: VisMode): void => {
-    setVisMode(mode);
-    if (!onboarding.mapExplored) {
-      setOnboarding((prev) => ({ ...prev, mapExplored: true }));
-    }
-  };
-
-  // Save onboarding state to server and localStorage whenever it changes
-  useEffect(() => {
-    if (!loadingOnboarding) {
-      // Save to localStorage immediately for fast access
-      localStorage.setItem(STORAGE_KEYS.ONBOARDING_CHECKLIST, JSON.stringify(onboarding));
-
-      // Save to server (async, don't block UI)
-      settingsApi.updateOnboardingState(onboarding).catch((error) => {
-        logger.warn("Failed to save onboarding state to server:", error);
-        // Continue with localStorage only if server fails
-      });
-    }
-  }, [onboarding, loadingOnboarding]);
 
   const loadFlights = useCallback(async () => {
     try {
@@ -260,8 +170,6 @@ export default function DashboardPage(): JSX.Element {
       setRecentFlights(recentData.flights);
       setTotalFlightsCount(recentData.total);
 
-      setOnboarding((prev) => ({ ...prev, flightAdded: true }));
-
       // Show achievement popup if new achievements were unlocked
       if (result.newAchievements && result.newAchievements.length > 0) {
         setNewAchievements(result.newAchievements);
@@ -283,8 +191,6 @@ export default function DashboardPage(): JSX.Element {
     const recentData = await flightsApi.getAll({ limit: API_LIMITS.RECENT_FLIGHTS, offset: 0 });
     setRecentFlights(recentData.flights);
     setTotalFlightsCount(recentData.total);
-
-    setOnboarding((prev) => ({ ...prev, flightAdded: true }));
 
     // Show achievement popup if new achievements were unlocked
     if (batchAchievements && batchAchievements.length > 0) {
@@ -421,12 +327,10 @@ export default function DashboardPage(): JSX.Element {
 
   const handleFilterChange = (newFilters: FlightFilters) => {
     setFilters(newFilters);
-    setOnboarding((prev) => ({ ...prev, usedFilter: true }));
   };
 
   const handleExport = async (format: "csv" | "geojson" | "pdf" | "kml") => {
     try {
-      setOnboarding((prev) => ({ ...prev, exported: true }));
       if (format === "geojson") {
         // minRouteCount is a map-only filter — not applied to API queries
         const { minRouteCount: _mapOnly, ...apiFilters } = filters;
@@ -694,20 +598,6 @@ export default function DashboardPage(): JSX.Element {
         <AchievementPopup achievements={newAchievements} onClose={() => setNewAchievements([])} />
       )}
 
-      {/* Onboarding */}
-      {!onboarding.dismissed && !loadingOnboarding && (
-        <OnboardingGuide
-          onboarding={onboarding}
-          onUpdate={(updates) => setOnboarding((prev) => ({ ...prev, ...updates }))}
-          onAddFlight={() => setShowFlightForm(true)}
-          onOpenFilter={() => {
-            setLeftOpen(true);
-            setRightOpen(false);
-            setOnboarding((prev) => ({ ...prev, usedFilter: true }));
-          }}
-        />
-      )}
-
       {/* Main area: map fills everything */}
       <div className="flex-1 relative overflow-hidden">
         {/* Map Layer */}
@@ -726,7 +616,7 @@ export default function DashboardPage(): JSX.Element {
               flights={geoFlights}
               flightList={allFlights}
               visMode={visMode}
-              onVisModeChange={handleVisModeChange}
+              onVisModeChange={setVisMode}
               minRouteCount={filters.minRouteCount ?? 1}
               onFlightClick={(id) => {
                 const flight =
@@ -757,7 +647,7 @@ export default function DashboardPage(): JSX.Element {
         </div>
 
         {/* Empty state — shown when user has no flights yet */}
-        {totalFlightsCount === 0 && !loadingOnboarding && (
+        {totalFlightsCount === 0 && (
           <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
             <div
               className="flex flex-col items-center gap-4 px-8 py-6 rounded-2xl text-center pointer-events-auto"

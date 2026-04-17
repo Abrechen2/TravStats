@@ -2,16 +2,6 @@ import { Prisma } from '@prisma/client';
 
 // ---- Interfaces for settings data stored as JSON ----
 
-export interface OnboardingState {
-  flightAdded: boolean;
-  usedFilter: boolean;
-  exported: boolean;
-  mapExplored: boolean;
-  statsViewed: boolean;
-  achievementsViewed: boolean;
-  dismissed: boolean;
-}
-
 export interface SettingsDataJson {
   profile?: {
     username?: string;
@@ -47,7 +37,6 @@ export interface SettingsDataJson {
     checkInReminder?: boolean;
     featureUpdates?: boolean;
   };
-  onboarding?: OnboardingState;
   /** Chronological list of home airports. See backend/src/utils/homeAirport.ts. */
   homeAirportHistory?: Array<{
     iata: string;

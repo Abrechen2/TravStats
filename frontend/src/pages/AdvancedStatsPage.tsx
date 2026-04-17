@@ -4,7 +4,6 @@ import type { SummaryStats } from "../lib/api";
 import NavigationBar from "../components/NavigationBar";
 import FlightCalendar from "../components/FlightCalendar";
 import YearHeatmap from "../components/YearHeatmap";
-import ContextualHint from "../components/Onboarding/ContextualHint";
 import type {
   AirportStats,
   Flight,
@@ -13,7 +12,7 @@ import type {
   UniqueStats,
   SeatStats,
 } from "../types";
-import { API_LIMITS, STORAGE_KEYS } from "../lib/constants";
+import { API_LIMITS } from "../lib/constants";
 import { useTranslation } from "../hooks/useTranslation";
 import { useSettingsStore } from "../store/settingsStore";
 import { useAuthStore } from "../store/authStore";
@@ -111,12 +110,6 @@ export default function AdvancedStatsPage(): JSX.Element {
 
   useEffect(() => {
     loadFlights();
-    // Mark stats as viewed in onboarding
-    const onboarding = JSON.parse(localStorage.getItem(STORAGE_KEYS.ONBOARDING_CHECKLIST) || "{}");
-    if (!onboarding.statsViewed) {
-      onboarding.statsViewed = true;
-      localStorage.setItem(STORAGE_KEYS.ONBOARDING_CHECKLIST, JSON.stringify(onboarding));
-    }
   }, []);
 
   const loadFlights = async (): Promise<void> => {
@@ -508,14 +501,6 @@ export default function AdvancedStatsPage(): JSX.Element {
         <NavigationBar />
 
         <div className="container mx-auto px-6 py-8">
-          <ContextualHint
-            id="stats-page-hint"
-            title={t("stats:hint.title")}
-            message={t("stats:hint.message")}
-            linkTo="/"
-            linkText={t("stats:hint.linkText")}
-          />
-
           {/* Generate Certificate + Year Report Buttons */}
           {flights.length > 0 && (
             <div className="flex justify-end mb-4">
