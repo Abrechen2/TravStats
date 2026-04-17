@@ -64,6 +64,7 @@
   "errors": {
     "failed": "Failed to create admin account. Please try again."
   },
+  "instanceSettingsLater": "Instance name, public URL, user cap, registration mode and all API keys are configured later from the admin area.",
   "loginPrompt": "Please log in with your new admin account",
   "footer": {
     "title": "What happens next?",

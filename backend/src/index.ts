@@ -124,12 +124,18 @@ if (corsOrigin) {
 
 import { RATE_LIMITS, FILE_LIMITS } from './config/constants';
 
-// Rate limiting
+// Rate limiting.
+// Skips requests originating from the loopback, Docker-bridge and RFC 1918
+// private ranges — self-hosted LAN deployments (Unraid, home-lab compose
+// stacks) behave the same as dev and don't get throttled. Public-facing
+// deployments still enforce the cap.
+const LAN_IP_RE = /^(?:::1|::ffff:)?(?:127\.|10\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.)/;
 const limiter = rateLimit({
   windowMs: RATE_LIMITS.GENERAL_WINDOW_MS,
   max: process.env.NODE_ENV === 'production' ? RATE_LIMITS.GENERAL_MAX_REQUESTS : RATE_LIMITS.GENERAL_MAX_REQUESTS_DEV,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => LAN_IP_RE.test(req.ip ?? ''),
 });
 app.use('/api/', limiter);
 

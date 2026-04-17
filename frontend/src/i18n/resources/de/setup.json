@@ -64,6 +64,7 @@
   "errors": {
     "failed": "Fehler beim Erstellen des Admin-Kontos. Bitte versuchen Sie es erneut."
   },
+  "instanceSettingsLater": "Instanz-Name, öffentliche URL, User-Cap, Registrierungs-Modus und alle API-Keys werden später im Admin-Bereich konfiguriert.",
   "loginPrompt": "Bitte melden Sie sich mit Ihrem neuen Admin-Konto an",
   "footer": {
     "title": "Was passiert als Nächstes?",
