@@ -77,6 +77,8 @@ mitigated). The surface below is what ships out of the box.
 - 15 distinct rate limiters across auth, external-API-backed routes and admin exports
 - Zod validation on every input endpoint; Prisma-parameterised queries; Helmet CSP; `server_tokens off`
 - 22 pentest findings (2 CRITICAL, 5 HIGH, 8 MEDIUM, 7 LOW) surfaced and mitigated across the beta; see [SECURITY.md](SECURITY.md)
+- Patched four moderate-severity transitive CVEs via `npm audit fix` (GHSA-r4q5-vmmm-2653 `follow-redirects`, GHSA-39q2-94rc-95cp `dompurify`, GHSA-j452-xhg8-qg39 `protocol-buffers-schema`). Lockfile-only; no behaviour change.
+- Hardcoded LAN IP in the Ollama URL placeholder (admin UI, German + English) replaced with `http://localhost:11434`; the corresponding benchmark note in `backend/OLLAMA_OPTIMIZATION.md` and the default in `scripts/parse-samples.mjs` were scrubbed at the same time.
 
 ### Zero-config install
 - The Docker compose file now requires **one environment variable only** — `DB_PASSWORD`. Everything else (instance name, public URL, user cap, registration mode, API keys, Ollama, backup schedule, WebDAV) is captured by the first-run setup wizard or configured later from the admin UI.
@@ -87,7 +89,7 @@ mitigated). The surface below is what ships out of the box.
 
 ### Breaking changes from 0.x beta
 
-- Docker image is now published exclusively to **GHCR** (`ghcr.io/abrechen2/travstats`). The old Docker Hub image is no longer updated; update your compose file to reference GHCR.
+- Docker image is published to **GHCR** (`ghcr.io/abrechen2/travstats`) as the primary build target. Starting with 1.0.0 final, `X.Y.0` releases are also mirrored bit-identically to **Docker Hub** (`docker.io/abrechen2/travstats`) for discovery. Pre-releases and patches live on GHCR only.
 - The default LLM model changed from `qwen2.5:7b` to `gemma3:12b`. Pull the new model with `docker exec travstats-ollama ollama pull gemma3:12b` or set `OLLAMA_MODEL` explicitly.
 - Parser-feedback collection and the template-correction table were removed. If you had custom code consuming `analytics_events` parser rows, it no longer populates.
 - `.env.prod.example` has been shrunk to five variables (one required). Existing values continue to work, but the example no longer advertises them.
