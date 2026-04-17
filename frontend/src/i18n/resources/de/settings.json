@@ -10,6 +10,8 @@
     "uploadAvatar": "Profilbild hochladen",
     "username": "Benutzername",
     "email": "E-Mail-Adresse",
+    "birthdate": "Geburtstag",
+    "birthdateHint": "Optional. Wird nur für die Errungenschaft „Geburtstagsflug\" verwendet — Tag und Monat werden gegen das Abflugdatum eines Fluges verglichen.",
     "deleteAccount": "Account löschen",
     "deletionRequested": "Löschanfrage vorgemerkt",
     "dangerZone": "Gefahrenbereich",
