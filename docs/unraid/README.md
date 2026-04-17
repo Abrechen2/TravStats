@@ -11,13 +11,21 @@ import.
 
 ### 1. Install PostGIS
 
-1. **Apps** tab → search **PostGIS** (or `postgis/postgis`)
-2. Install with:
-   - **Container name:** `travstats-db`
-   - `POSTGRES_DB` = `flights`
-   - `POSTGRES_USER` = `flights`
-   - `POSTGRES_PASSWORD` = *(strong — `openssl rand -base64 32`)*
-   - Persistent volume mapped to `/mnt/user/appdata/travstats-db`
+Use our companion template [`travstats-db.xml`](travstats-db.xml) — it pre-fills
+the container name, DB name and user so the default `DATABASE_URL` in the
+TravStats template matches without extra editing. Just pick a strong password
+(`openssl rand -base64 32`) and keep it for step 3.
+
+If you prefer to install PostGIS manually instead, use image
+`postgis/postgis:15-3.4` with:
+- **Container name:** `travstats-db`
+- `POSTGRES_DB` = `flights`
+- `POSTGRES_USER` = `flights`
+- `POSTGRES_PASSWORD` = *(strong — `openssl rand -base64 32`)*
+- Persistent volume mapped to `/mnt/user/appdata/travstats-db`
+
+Plain `postgres:15` does **not** work — TravStats migrations require the
+PostGIS spatial extension.
 
 ### 2. (Optional) Install Ollama
 

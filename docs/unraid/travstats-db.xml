@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>travstats-db</Name>
+  <Repository>postgis/postgis:15-3.4</Repository>
+  <Registry>https://hub.docker.com/r/postgis/postgis</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/Abrechen2/TravStats/issues</Support>
+  <Project>https://github.com/postgis/docker-postgis</Project>
+  <Overview>PostgreSQL 15 with the PostGIS 3.4 spatial extension — the database TravStats expects.
+
+This template is pre-filled with the container name `travstats-db` and the database/user pair `flights/flights` so the default `DATABASE_URL` in the TravStats template matches without further editing. **Change the password to a strong value** (e.g. `openssl rand -base64 32`) and reuse it in TravStats.
+
+**Install order:** this container **first**, then the TravStats template. The two share the default Docker `bridge` network — TravStats reaches the database via the container name, so no host port mapping is required.
+
+**Storage:** the default Application Data path (`/mnt/user/appdata/travstats-db`) maps to PostgreSQL's data directory. The initial cluster is created on first start and then kept in place on updates; deleting that directory wipes the database, so point your backup tool at it.
+
+**Why PostGIS, not plain Postgres?** TravStats uses PostGIS for airport and route geometry. Plain `postgres:15` fails the first TravStats migration.</Overview>
+  <Category>Productivity: Tools:</Category>
+  <WebUI/>
+  <TemplateURL>https://raw.githubusercontent.com/Abrechen2/TravStats/main/docs/unraid/travstats-db.xml</TemplateURL>
+  <Icon>https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Postgis_logo.png/320px-Postgis_logo.png</Icon>
+  <ExtraParams>--restart=unless-stopped</ExtraParams>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled/>
+  <Requires>Used together with the TravStats Community Apps template.</Requires>
+
+  <Config Name="Application Data" Target="/var/lib/postgresql/data" Default="/mnt/user/appdata/travstats-db" Mode="rw" Description="PostgreSQL data directory — one persistent mount, survives container updates. Back this path up with your regular appdata backup." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/travstats-db</Config>
+
+  <Config Name="POSTGRES_DB" Target="POSTGRES_DB" Default="flights" Mode="" Description="Database name. TravStats default expects 'flights'." Type="Variable" Display="always" Required="true" Mask="false">flights</Config>
+
+  <Config Name="POSTGRES_USER" Target="POSTGRES_USER" Default="flights" Mode="" Description="Database user. TravStats default expects 'flights'." Type="Variable" Display="always" Required="true" Mask="false">flights</Config>
+
+  <Config Name="POSTGRES_PASSWORD" Target="POSTGRES_PASSWORD" Default="CHANGEME" Mode="" Description="Database password. Generate a strong one with `openssl rand -base64 32`, then paste the same value into the TravStats DATABASE_URL field." Type="Variable" Display="always" Required="true" Mask="true">CHANGEME</Config>
+
+  <Config Name="Host Port (optional)" Target="5432" Default="" Mode="tcp" Description="Only set this if you want to connect from outside Unraid (psql / pgAdmin from another machine). TravStats itself does NOT need a host port — it reaches the DB via the Docker network using the container name." Type="Port" Display="advanced" Required="false" Mask="false"/>
+
+  <Config Name="TZ" Target="TZ" Default="UTC" Mode="" Description="Container timezone. Keep UTC." Type="Variable" Display="advanced" Required="false" Mask="false">UTC</Config>
+</Container>
