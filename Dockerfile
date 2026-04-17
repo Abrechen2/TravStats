@@ -74,8 +74,11 @@ RUN npm config set fetch-retries 5 \
 COPY --from=backend-builder /app/backend/dist ./dist
 RUN npx prisma generate
 
-# Copy VERSION file for runtime version reporting
-COPY backend/VERSION ./VERSION
+# Write VERSION file for runtime version reporting.
+# Uses the build-arg (1.0.0, 1.0.0-rc.6, …) so RC / prerelease images
+# surface their suffix in Admin → System-Info and the About page,
+# rather than the "base" version stored in backend/VERSION.
+RUN echo "${VERSION}" > ./VERSION
 
 # Setup Frontend (nginx will serve these files)
 WORKDIR /app/frontend

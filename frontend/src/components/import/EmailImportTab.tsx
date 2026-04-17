@@ -1,5 +1,6 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { parseApi } from "../../lib/api";
+import { api } from "../../lib/api/client";
 import type { ParsedBooking } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
@@ -22,7 +23,16 @@ export default function EmailImportTab({ onResult, onError }: EmailImportTabProp
   const [dropState, setDropState] = useState<DropState>("idle");
   const [airlineNotice, setAirlineNotice] = useState<string | null>(null);
   const [emailText, setEmailText] = useState("");
+  const [hasLlm, setHasLlm] = useState<boolean | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Instance-wide LLM status — drives the regex-parser accuracy warning.
+  useEffect(() => {
+    api
+      .get<{ hasLlm: boolean }>("/parser-capabilities")
+      .then(({ data }) => setHasLlm(Boolean(data?.hasLlm)))
+      .catch(() => setHasLlm(null));
+  }, []);
 
   const handleFile = useCallback(
     async (file: File): Promise<void> => {
@@ -111,6 +121,12 @@ export default function EmailImportTab({ onResult, onError }: EmailImportTabProp
 
   return (
     <div className="flex flex-col gap-4">
+      {hasLlm === false && (
+        <div className="text-sm text-amber-300 bg-amber-900/20 border border-amber-700 rounded-lg px-4 py-3">
+          <p className="font-medium mb-1">{t("flights:form.email.regexWarning.title")}</p>
+          <p>{t("flights:form.email.regexWarning.body")}</p>
+        </div>
+      )}
       {/* Drag & Drop Zone */}
       <div
         onDrop={onDrop}

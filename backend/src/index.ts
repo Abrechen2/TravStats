@@ -165,6 +165,28 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Public version endpoint — unauthenticated so the About section can
+// show the right version (including rc/beta suffix) even before login.
+app.get('/api/v1/version', (_req, res) => {
+  res.json({ version: process.env.APP_VERSION ?? 'unknown' });
+});
+
+// Public parser-capabilities endpoint. Lets the email import UI show
+// an accuracy warning when no LLM is wired up. Non-sensitive — just
+// a boolean reflecting the instance-wide admin setting.
+app.get('/api/v1/parser-capabilities', async (_req, res, next) => {
+  try {
+    const { prisma } = await import('./db');
+    const adminSettings = await prisma.adminSettings.findFirst({
+      select: { ollamaUrl: true, ollamaModel: true },
+    });
+    const hasLlm = Boolean(adminSettings?.ollamaUrl && adminSettings?.ollamaModel);
+    res.json({ hasLlm });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // API routes
 app.use('/api/v1/setup', setupRoutes);
 app.use('/api/v1/admin', adminRoutes);

@@ -387,7 +387,7 @@
       "urlLabel": "Ollama URL",
       "urlPlaceholder": "http://localhost:11434",
       "modelLabel": "Modell",
-      "modelPlaceholder": "qwen2.5:14b",
+      "modelPlaceholder": "gemma3:12b",
       "testButton": "Verbindung testen",
       "testing": "Wird getestet…",
       "statusConnected": "Verbunden",

@@ -94,7 +94,11 @@
       "bestOptionDescription": "Captures all data best from confirmation emails",
       "notImplemented": "Email import is not yet implemented. Please use manual entry or boarding pass scan.",
       "textFallback": "Paste email text (fallback)",
-      "textPlaceholder": "Paste email content here..."
+      "textPlaceholder": "Paste email content here...",
+      "regexWarning": {
+        "title": "No LLM configured — the regex parser is inaccurate",
+        "body": "The rule-based templates only cover a handful of airlines and can't split an email that contains more than one flight. Recommended: point Admin → Parser at a local Ollama endpoint (e.g. gemma3:12b), or enter flights manually."
+      }
     },
     "simplified": {
       "subtitle": "Just enter departure & arrival airports - we'll handle the rest!",

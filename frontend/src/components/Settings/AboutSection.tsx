@@ -1,7 +1,23 @@
-import { version as appVersion } from "../../../package.json";
+import { useEffect, useState } from "react";
+import { api } from "../../lib/api/client";
+import { version as pkgVersion } from "../../../package.json";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 
 export default function AboutSection(): JSX.Element {
+  // Backend reports the baked-in image version (incl. rc/beta suffix).
+  // Falls back to the bundled package.json during first render.
+  const [appVersion, setAppVersion] = useState<string>(pkgVersion);
+  useEffect(() => {
+    api
+      .get<{ version: string }>("/version")
+      .then(({ data }) => {
+        if (data?.version && data.version !== "unknown") setAppVersion(data.version);
+      })
+      .catch(() => {
+        // stick with package.json fallback
+      });
+  }, []);
+
   return (
     <SectionCard>
       <div className="flex items-baseline gap-3 mb-1">
