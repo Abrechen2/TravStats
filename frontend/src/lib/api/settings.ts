@@ -61,6 +61,20 @@ export const settingsApi = {
     const { data } = await api.put<MessageResponse>("/settings/training", payload);
     return data;
   },
+  // User-level profile fields that don't live inside the UserSettings JSON
+  // (birthdate etc.). Backed by /settings/profile — separate from the
+  // `profile` entry on UserSettings which only carries username / email /
+  // avatar URL.
+  getProfile: async (): Promise<{ birthdate: string | null }> => {
+    const { data } = await api.get<{ birthdate: string | null }>("/settings/profile");
+    return data;
+  },
+  updateProfile: async (payload: {
+    birthdate: string | null;
+  }): Promise<{ birthdate: string | null }> => {
+    const { data } = await api.put<{ birthdate: string | null }>("/settings/profile", payload);
+    return data;
+  },
   uploadProfilePicture: async (file: File): Promise<{ profilePictureUrl: string }> => {
     const formData = new FormData();
     formData.append("profilePicture", file);
