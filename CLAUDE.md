@@ -21,20 +21,40 @@ npm run dev:frontend  # port 3000
 **No PRs.** Solo project — commits land directly on `main`. No branches,
 no pull requests.
 
-### `/deploy` — development iteration (daily)
-Use the `deploy` skill. Runs fully automatically:
+### RC-first rule (every release, no exceptions)
+
+Every release — major, minor, patch, security fix, beta bump — starts
+as a **Release Candidate**:
+
+1. `/deploy` builds `:X.Y.Z-rc.N` (or `:X.Y.Z-security-rc.N`, etc.),
+   pushes to GHCR, deploys that RC tag to Underworld.
+2. The RC runs on prod and gets verified (health check + user UAT).
+3. **Only on the user's explicit promotion command** (e.g. "promote",
+   "mach den echten Release", "final") are the final tags
+   `:X.Y.Z` / `:latest` / `:stable` cut via `docker buildx imagetools
+   create` — byte-identical retag, no rebuild.
+4. Docker Hub mirror and `/release` (GitHub Release + git tag) only
+   after promotion.
+
+No final tag ever comes from a fresh build. No release happens without
+an explicit manual command from the user.
+
+### `/deploy` — builds an RC
+Use the `deploy` skill. Runs fully automatically up to the RC deploy:
 1. Analyses commits since the last version bump.
 2. Auto-determines the bump type (`feat:` → minor, `fix:/chore:/…` →
    patch).
 3. Drafts the changelog entry as prose.
 4. Shows version + changelog draft → **one confirmation**.
 5. Writes `backend/VERSION` + `CHANGELOG.md` and commits.
-6. Builds the Docker image, pushes to GHCR, deploys to prod, health
-   check and cleanup.
+6. Builds the RC Docker image, pushes to GHCR, deploys the RC tag to
+   prod, health check and cleanup. Stops and waits for promotion.
 
-### `/release` — GitHub release (deliberate milestones)
-Use the `release` skill. Aggregates every changelog entry since the
-last GitHub release, creates a git tag, publishes a GitHub release
+### `/release` — GitHub release (after promotion only)
+Use the `release` skill. Requires the final tags (`:X.Y.Z` / `:latest`
+/ `:stable`) to already exist on GHCR from a prior promotion — the
+skill refuses to run otherwise. Aggregates every changelog entry since
+the last GitHub release, creates a git tag, publishes a GitHub release
 with `--latest`. No new deploy — the code is already running.
 
 ## Build Checks (MANDATORY before `/deploy`)
