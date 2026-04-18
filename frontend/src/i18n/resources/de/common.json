@@ -70,7 +70,12 @@
   "loading": {
     "title": "L\u00e4dt...",
     "checkingSystem": "Systemstatus wird gepr\u00fcft",
-    "pleaseWait": "Bitte warten"
+    "pleaseWait": "Bitte warten",
+    "default": "Wird geladen\u2026",
+    "flights": "Flugdaten werden geladen\u2026",
+    "stats": "Statistiken werden berechnet\u2026",
+    "map": "Karte wird vorbereitet\u2026",
+    "globe": "Globus wird gerendert\u2026"
   },
   "errorBoundary": {
     "title": "Ups! Etwas ist schiefgelaufen",
