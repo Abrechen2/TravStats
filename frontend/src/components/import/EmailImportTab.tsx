@@ -3,6 +3,8 @@ import { parseApi } from "../../lib/api";
 import { api } from "../../lib/api/client";
 import type { ParsedBooking } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useMinLoadingState } from "../../hooks/useMinLoadingState";
+import { GlobeLoader } from "../GlobeLoader";
 import { logger } from "../../lib/logger";
 
 interface EmailImportTabProps {
@@ -25,6 +27,7 @@ export default function EmailImportTab({ onResult, onError }: EmailImportTabProp
   const [emailText, setEmailText] = useState("");
   const [hasLlm, setHasLlm] = useState<boolean | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const showLoader = useMinLoadingState(dropState === "loading", 2000);
 
   // Instance-wide LLM status — drives the regex-parser accuracy warning.
   useEffect(() => {
@@ -127,38 +130,41 @@ export default function EmailImportTab({ onResult, onError }: EmailImportTabProp
           <p>{t("flights:form.email.regexWarning.body")}</p>
         </div>
       )}
-      {/* Drag & Drop Zone */}
-      <div
-        onDrop={onDrop}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDropState("over");
-        }}
-        onDragLeave={() => setDropState("idle")}
-        onClick={() => fileInputRef.current?.click()}
-        className={[
-          "border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors",
-          dropState === "over"
-            ? "border-blue-400 bg-blue-950/20"
-            : "border-slate-600 hover:border-slate-400",
-          dropState === "loading" ? "opacity-50 pointer-events-none" : "",
-        ].join(" ")}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".eml,.msg,.txt,.pdf"
-          className="hidden"
-          onChange={(e) => {
-            if (e.target.files?.[0]) void handleFile(e.target.files[0]);
+      {/* Drag & Drop Zone — swaps entirely while scanning */}
+      {showLoader ? (
+        <div className="border-2 border-dashed border-slate-600 rounded-xl p-8 flex items-center justify-center min-h-[220px]">
+          <GlobeLoader size={140} label={t("common:loading.default")} />
+        </div>
+      ) : (
+        <div
+          onDrop={onDrop}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDropState("over");
           }}
-        />
-        <div className="text-3xl mb-2">📧</div>
-        <p className="font-medium text-slate-200">
-          {dropState === "loading" ? t("common:messages.loading") : t("flights:form.uploadEmail")}
-        </p>
-        <p className="text-sm text-slate-400 mt-1">.eml, .msg, .txt, .pdf</p>
-      </div>
+          onDragLeave={() => setDropState("idle")}
+          onClick={() => fileInputRef.current?.click()}
+          className={[
+            "border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors min-h-[220px] flex flex-col items-center justify-center",
+            dropState === "over"
+              ? "border-blue-400 bg-blue-950/20"
+              : "border-slate-600 hover:border-slate-400",
+          ].join(" ")}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".eml,.msg,.txt,.pdf"
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files?.[0]) void handleFile(e.target.files[0]);
+            }}
+          />
+          <div className="text-3xl mb-2">📧</div>
+          <p className="font-medium text-slate-200">{t("flights:form.uploadEmail")}</p>
+          <p className="text-sm text-slate-400 mt-1">.eml, .msg, .txt, .pdf</p>
+        </div>
+      )}
 
       {/* Airline Notice */}
       {airlineNotice && (
@@ -182,7 +188,7 @@ export default function EmailImportTab({ onResult, onError }: EmailImportTabProp
           <button
             type="button"
             onClick={() => void handleTextParse()}
-            disabled={!emailText.trim() || dropState === "loading"}
+            disabled={!emailText.trim() || showLoader}
             className="self-end px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-lg text-sm font-medium text-white"
           >
             {t("common:messages.parse")}

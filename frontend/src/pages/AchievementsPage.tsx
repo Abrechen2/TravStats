@@ -35,6 +35,9 @@ export default function AchievementsPage(): JSX.Element {
     collector: t("achievements:categories.collector"),
     elite: t("achievements:categories.elite"),
     special: t("achievements:categories.special"),
+    planner: t("achievements:categories.planner"),
+    survivor: t("achievements:categories.survivor"),
+    kurios: t("achievements:categories.kurios"),
   };
 
   useEffect(() => {
@@ -368,130 +371,177 @@ export default function AchievementsPage(): JSX.Element {
               </div>
             </div>{" "}
             <div className="space-y-8">
-              {Object.entries(groupedAchievements).map(([category, categoryAchievements]) => (
-                <div key={category}>
-                  <h2 className="text-2xl font-bold mb-4" style={{ color: "var(--text-primary)" }}>
-                    {categoryNames[category] || category}
-                  </h2>
-                  <motion.div
-                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-                    initial="hidden"
-                    animate="visible"
-                    variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.05 } } }}
-                  >
-                    {categoryAchievements.map((achievement, index) => (
-                      <motion.div
-                        key={achievement.id}
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: index * 0.04, duration: 0.2 }}
-                        whileHover={achievement.isUnlocked ? { scale: 1.04 } : {}}
-                        className="relative rounded-xl overflow-hidden cursor-pointer"
+              {Object.entries(groupedAchievements).map(([category, categoryAchievements]) => {
+                const hiddenInCategory = categoryAchievements.filter(
+                  (a) => a.isHidden && !a.isUnlocked
+                );
+                const visibleInCategory = categoryAchievements.filter((a) => !a.isHidden);
+                const visibleUnlocked = visibleInCategory.filter((a) => a.isUnlocked).length;
+                const showHiddenHint =
+                  hiddenInCategory.length > 0 &&
+                  visibleInCategory.length > 0 &&
+                  visibleUnlocked / visibleInCategory.length >= 0.5;
+                return (
+                  <div key={category}>
+                    <h2
+                      className="text-2xl font-bold mb-4"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {categoryNames[category] || category}
+                    </h2>
+                    {showHiddenHint && (
+                      <div
+                        className="rounded-lg px-4 py-3 mb-4 text-sm flex items-center gap-3"
                         style={{
-                          background: "var(--bg-surface)",
-                          border: "1px solid var(--color-border)",
-                          boxShadow: achievement.isUnlocked
-                            ? "0 0 12px var(--accent-glow)"
-                            : "none",
-                          filter: achievement.isUnlocked ? "none" : "grayscale(0.5)",
-                          opacity: achievement.isUnlocked ? 1 : 0.6,
+                          background: "rgba(207,141,32,0.08)",
+                          border: "1px solid rgba(207,141,32,0.25)",
+                          color: "var(--accent)",
                         }}
                       >
-                        <div className="p-6">
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="text-4xl">{achievement.icon}</div>
-                            <div
-                              className="text-xs font-bold uppercase px-2 py-1 rounded"
-                              style={{
-                                color: achievement.isUnlocked
-                                  ? tierTextColorValues[achievement.tier]
-                                  : "var(--text-muted)",
-                              }}
-                            >
-                              {t(`achievements:tiers.${achievement.tier}`)}
-                            </div>
-                          </div>
-                          <h3
-                            className="text-xl font-bold mb-2"
-                            style={{ color: "var(--text-primary)" }}
+                        <span className="text-lg">🕵️</span>
+                        <span>
+                          {t("achievements:hiddenHint", {
+                            count: hiddenInCategory.length,
+                            defaultValue:
+                              "{{count}} hidden achievement(s) waiting in this category — unusual timings, rare routes or specific seat choices could unlock them.",
+                          })}
+                        </span>
+                      </div>
+                    )}
+                    <motion.div
+                      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                      initial="hidden"
+                      animate="visible"
+                      variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.05 } } }}
+                    >
+                      {categoryAchievements.map((achievement, index) => {
+                        const isMystery = Boolean(achievement.isHidden) && !achievement.isUnlocked;
+                        return (
+                          <motion.div
+                            key={achievement.id}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: index * 0.04, duration: 0.2 }}
+                            whileHover={achievement.isUnlocked ? { scale: 1.04 } : {}}
+                            className="relative rounded-xl overflow-hidden cursor-pointer"
+                            style={{
+                              background: "var(--bg-surface)",
+                              border: "1px solid var(--color-border)",
+                              boxShadow: achievement.isUnlocked
+                                ? "0 0 12px var(--accent-glow)"
+                                : "none",
+                              filter: achievement.isUnlocked ? "none" : "grayscale(0.5)",
+                              opacity: achievement.isUnlocked ? 1 : 0.6,
+                            }}
                           >
-                            {t(`achievements:codes.${achievement.code}.name`, {
-                              defaultValue: achievement.name,
-                            })}
-                          </h3>
-                          <p className="text-sm mb-4" style={{ color: "var(--text-muted)" }}>
-                            {t(`achievements:codes.${achievement.code}.description`, {
-                              defaultValue: achievement.description,
-                            })}
-                          </p>
-                          {!achievement.isUnlocked && (
-                            <div className="space-y-2">
-                              <div className="flex justify-between text-sm">
-                                <span style={{ color: "var(--text-muted)" }}>
-                                  {t("achievements:progress.label")}
-                                </span>
-                                <span
-                                  className="font-semibold"
-                                  style={{ color: "var(--text-primary)" }}
-                                >
-                                  {achievement.progress} / {achievement.requirement}
-                                </span>
-                              </div>
-                              <div
-                                className="w-full rounded-full h-2"
-                                style={{ background: "var(--bg-muted)" }}
-                              >
+                            <div className="p-6">
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="text-4xl">
+                                  {isMystery ? "❔" : achievement.icon}
+                                </div>
                                 <div
-                                  className="h-2 rounded-full transition-all"
+                                  className="text-xs font-bold uppercase px-2 py-1 rounded"
                                   style={{
-                                    width: `${achievement.progressPercentage}%`,
-                                    background: "var(--accent)",
+                                    color: achievement.isUnlocked
+                                      ? tierTextColorValues[achievement.tier]
+                                      : "var(--text-muted)",
                                   }}
-                                />
+                                >
+                                  {isMystery
+                                    ? t("achievements:hiddenBadge", { defaultValue: "Hidden" })
+                                    : t(`achievements:tiers.${achievement.tier}`)}
+                                </div>
                               </div>
-                            </div>
-                          )}
-                          {achievement.isUnlocked && (
-                            <div className="flex items-center justify-between mt-4">
-                              <span className="text-sm" style={{ color: "var(--text-muted)" }}>
-                                {t("achievements:progress.unlocked", {
-                                  date:
-                                    achievement.unlockedAt &&
-                                    new Date(achievement.unlockedAt).toLocaleDateString(),
-                                })}
-                              </span>
-                              <span
-                                className="text-lg font-bold"
-                                style={{ color: "var(--accent)" }}
+                              <h3
+                                className="text-xl font-bold mb-2"
+                                style={{ color: "var(--text-primary)" }}
                               >
-                                +{achievement.points}
-                              </span>
+                                {isMystery
+                                  ? "???"
+                                  : t(`achievements:codes.${achievement.code}.name`, {
+                                      defaultValue: achievement.name,
+                                    })}
+                              </h3>
+                              <p className="text-sm mb-4" style={{ color: "var(--text-muted)" }}>
+                                {isMystery
+                                  ? t("achievements:hiddenDescription", {
+                                      defaultValue:
+                                        "Hidden achievement — complete it to reveal the details.",
+                                    })
+                                  : t(`achievements:codes.${achievement.code}.description`, {
+                                      defaultValue: achievement.description,
+                                    })}
+                              </p>
+                              {!achievement.isUnlocked && !isMystery && (
+                                <div className="space-y-2">
+                                  <div className="flex justify-between text-sm">
+                                    <span style={{ color: "var(--text-muted)" }}>
+                                      {t("achievements:progress.label")}
+                                    </span>
+                                    <span
+                                      className="font-semibold"
+                                      style={{ color: "var(--text-primary)" }}
+                                    >
+                                      {achievement.progress} / {achievement.requirement}
+                                    </span>
+                                  </div>
+                                  <div
+                                    className="w-full rounded-full h-2"
+                                    style={{ background: "var(--bg-muted)" }}
+                                  >
+                                    <div
+                                      className="h-2 rounded-full transition-all"
+                                      style={{
+                                        width: `${achievement.progressPercentage}%`,
+                                        background: "var(--accent)",
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                              {achievement.isUnlocked && (
+                                <div className="flex items-center justify-between mt-4">
+                                  <span className="text-sm" style={{ color: "var(--text-muted)" }}>
+                                    {t("achievements:progress.unlocked", {
+                                      date:
+                                        achievement.unlockedAt &&
+                                        new Date(achievement.unlockedAt).toLocaleDateString(),
+                                    })}
+                                  </span>
+                                  <span
+                                    className="text-lg font-bold"
+                                    style={{ color: "var(--accent)" }}
+                                  >
+                                    +{achievement.points}
+                                  </span>
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                        {!achievement.isUnlocked && (
-                          <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center justify-center">
-                            <svg
-                              className="w-10 h-10"
-                              style={{ color: "var(--text-muted)", opacity: 0.5 }}
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={1.5}
-                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                              />
-                            </svg>
-                          </div>
-                        )}
-                      </motion.div>
-                    ))}
-                  </motion.div>
-                </div>
-              ))}
+                            {!achievement.isUnlocked && (
+                              <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center justify-center">
+                                <svg
+                                  className="w-10 h-10"
+                                  style={{ color: "var(--text-muted)", opacity: 0.5 }}
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={1.5}
+                                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                                  />
+                                </svg>
+                              </div>
+                            )}
+                          </motion.div>
+                        );
+                      })}
+                    </motion.div>
+                  </div>
+                );
+              })}
             </div>
             {filteredAchievements.length === 0 && (
               <div className="text-center py-12">

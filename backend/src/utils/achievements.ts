@@ -1,28 +1,20 @@
 import { prisma } from '../db';
-import { Achievement, UserAchievement } from '@prisma/client';
-import { calculateDistance } from './geo';
+import type { Achievement, UserAchievement } from '@prisma/client';
 import logger from './logger';
-import { getCachedAirports } from '../services/airportCache';
-import { normalizeAircraft } from './aircraftNormalize';
+import {
+  calculateUserStats,
+  getContinent,
+  type FlightData,
+} from './achievementStats';
+import { checkAchievement } from './achievementChecks';
 
 type UserAchievementWithRelation = UserAchievement & { achievement: Achievement };
 
-interface FlightData {
-  id: string;
-  depLat: number;
-  depLon: number;
-  arrLat: number;
-  arrLon: number;
-  depIcao: string | null;
-  depIata: string | null;
-  arrIcao: string | null;
-  arrIata: string | null;
-  airline: string | null;
-  aircraft: string | null;
-  departureTime: Date | null;
-  arrivalTime: Date | null;
-  status: string;
-}
+// Re-export the shared types so existing callers that imported them from
+// `./achievements` keep compiling without touching every import site.
+export type { FlightData, UserStats } from './achievementStats';
+export { calculateUserStats, getContinent } from './achievementStats';
+export { checkAchievement } from './achievementChecks';
 
 /**
  * Check and update achievements for a user
@@ -33,6 +25,13 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
   try {
     // Get all achievements
     const allAchievements = await prisma.achievement.findMany();
+
+    // Fetch user-level context we need for a few of the new achievements
+    // (Birthday Flight needs month+day of birthdate).
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { birthdate: true },
+    });
 
     // Get user's existing achievements
     const existingAchievements = await prisma.userAchievement.findMany({
@@ -58,7 +57,7 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
     // Calculate user stats with error handling
     let stats;
     try {
-      stats = await calculateUserStats(flights);
+      stats = await calculateUserStats(flights as FlightData[]);
     } catch (error) {
       logger.error({
         operation: 'calculate_user_stats',
@@ -72,23 +71,75 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       throw error;
     }
 
-    // Compute planner/survivor stats from all flights (not just flown)
+    // Compute planner/survivor stats from all flights (not just flown).
+    // Build a fresh `augmentedStats` via spread so the `stats` object
+    // returned by `calculateUserStats()` is never mutated.
     const now = Date.now();
-    const scheduled = allFlights.filter(f => f.status === 'scheduled');
-    stats.scheduledCount = scheduled.length;
-    stats.cancelledCount = allFlights.filter(f => f.status === 'cancelled').length;
+    const scheduled = allFlights.filter((f) => f.status === 'scheduled');
+    const cancelledCount = allFlights.filter((f) => f.status === 'cancelled').length;
+    const duplicatedCount = allFlights.filter((f) => f.status === 'duplicated').length;
 
+    const scheduledContinents = new Set(stats.scheduledContinents);
+    let scheduledMaxAdvanceDays = stats.scheduledMaxAdvanceDays;
     for (const f of scheduled) {
       if (!f.departureTime) continue;
       const advanceDays = Math.floor((f.departureTime.getTime() - now) / (1000 * 60 * 60 * 24));
-      if (advanceDays > stats.scheduledMaxAdvanceDays) {
-        stats.scheduledMaxAdvanceDays = advanceDays;
+      if (advanceDays > scheduledMaxAdvanceDays) {
+        scheduledMaxAdvanceDays = advanceDays;
       }
       const continent = getContinent(f.depLat, f.depLon);
-      if (continent) stats.scheduledContinents.add(continent);
+      if (continent) scheduledContinents.add(continent);
       const arrContinent = getContinent(f.arrLat, f.arrLon);
-      if (arrContinent) stats.scheduledContinents.add(arrContinent);
+      if (arrContinent) scheduledContinents.add(arrContinent);
     }
+
+    // Birthday Flight — count flown flights whose departureTime month+day
+    // matches the user's stored birthdate (year irrelevant).
+    let birthdayFlights = stats.birthdayFlights;
+    if (user?.birthdate) {
+      const bMonth = user.birthdate.getMonth();
+      const bDay = user.birthdate.getDate();
+      birthdayFlights = flights.filter(
+        (f) =>
+          f.status === 'flown' &&
+          f.departureTime &&
+          f.departureTime.getMonth() === bMonth &&
+          f.departureTime.getDate() === bDay,
+      ).length;
+    }
+
+    // Schedule Keeper — max scheduled-flights count inside any rolling 30-day window.
+    const scheduledSorted = scheduled
+      .filter((f) => f.departureTime)
+      .sort((a, b) => a.departureTime!.getTime() - b.departureTime!.getTime());
+    let scheduled30d = stats.scheduled30d;
+    if (scheduledSorted.length > 0) {
+      const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+      let left = 0;
+      let maxWindow = 0;
+      for (let right = 0; right < scheduledSorted.length; right++) {
+        while (
+          scheduledSorted[right].departureTime!.getTime() -
+            scheduledSorted[left].departureTime!.getTime() >
+          THIRTY_DAYS
+        ) {
+          left++;
+        }
+        maxWindow = Math.max(maxWindow, right - left + 1);
+      }
+      scheduled30d = maxWindow;
+    }
+
+    const augmentedStats = {
+      ...stats,
+      scheduledCount: scheduled.length,
+      cancelledCount,
+      duplicatedCount,
+      scheduledContinents,
+      scheduledMaxAdvanceDays,
+      birthdayFlights,
+      scheduled30d,
+    };
 
     // Prepare all updates/creates to execute in a single transaction
     // Use callback-based transaction to prevent race conditions
@@ -105,7 +156,11 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
             continue;
           }
 
-          const { isUnlocked, progress } = checkAchievement(achievement, stats, flights);
+          const { isUnlocked, progress } = checkAchievement(
+            achievement,
+            augmentedStats,
+            flights as FlightData[],
+          );
 
           if (isUnlocked) {
             if (existing) {
@@ -184,429 +239,4 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
     // Re-throw to allow caller to handle
     throw error;
   }
-}
-
-interface UserStats {
-  flightsCount: number;
-  totalDistance: number;
-  totalFlightHours: number;
-  countries: Set<string>;
-  airlines: Set<string>;
-  airports: Set<string>;
-  continents: Set<string>;
-  aircraftTypes: Set<string>;
-  longestSingleFlight: number;
-  nightFlights: number;
-  weekendFlights: number;
-  monthsWithFlights: Set<string>;
-  routeCounts: Map<string, number>;
-  airlineCounts: Map<string, number>;
-  flightsByMonth: Map<string, number>;
-  flightsByYear: Map<string, number>;
-  // Planner / Survivor stats (computed from all flights, not just flown)
-  scheduledCount: number;
-  scheduledContinents: Set<string>;
-  scheduledMaxAdvanceDays: number;
-  cancelledCount: number;
-}
-
-async function calculateUserStats(flights: FlightData[]): Promise<UserStats> {
-  const stats: UserStats = {
-    flightsCount: flights.filter(f => f.status === 'flown').length,
-    totalDistance: 0,
-    totalFlightHours: 0,
-    countries: new Set(),
-    airlines: new Set(),
-    airports: new Set(),
-    continents: new Set(),
-    aircraftTypes: new Set(),
-    longestSingleFlight: 0,
-    nightFlights: 0,
-    weekendFlights: 0,
-    monthsWithFlights: new Set(),
-    routeCounts: new Map(),
-    airlineCounts: new Map(),
-    flightsByMonth: new Map(),
-    flightsByYear: new Map(),
-    scheduledCount: 0,
-    scheduledContinents: new Set(),
-    scheduledMaxAdvanceDays: 0,
-    cancelledCount: 0,
-  };
-
-  // Collect all unique airport codes from flights
-  const airportCodes = new Set<string>();
-  for (const flight of flights) {
-    const depCode = flight.depIata || flight.depIcao;
-    const arrCode = flight.arrIata || flight.arrIcao;
-    if (depCode) airportCodes.add(depCode);
-    if (arrCode) airportCodes.add(arrCode);
-  }
-
-  // Batch fetch airports using cache
-  let airportMap: Map<string, { country: string | null; lat: number; lon: number }>;
-  try {
-    const cachedAirports = await getCachedAirports(Array.from(airportCodes));
-    airportMap = new Map();
-
-    // Convert cached airports to the format we need
-    for (const [code, airport] of cachedAirports.entries()) {
-      if (airport) {
-        airportMap.set(code, {
-          country: airport.country || null,
-          lat: airport.lat,
-          lon: airport.lon,
-        });
-      }
-    }
-  } catch (error) {
-    logger.error({
-      operation: 'fetch_airports_for_stats',
-      message: 'Failed to fetch airports for user stats calculation',
-      context: { flightCount: flights.length, airportCodeCount: airportCodes.size },
-      error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-      },
-    });
-    throw error;
-  }
-
-  for (const flight of flights) {
-    // Distance
-    const distance = calculateDistance(
-      flight.depLat,
-      flight.depLon,
-      flight.arrLat,
-      flight.arrLon
-    );
-    stats.totalDistance += distance;
-    stats.longestSingleFlight = Math.max(stats.longestSingleFlight, distance);
-
-    // Flight time (historical flights have null times — contribute 0 hours)
-    const flightTime = (flight.departureTime && flight.arrivalTime)
-      ? (flight.arrivalTime.getTime() - flight.departureTime.getTime()) / 1000 / 60 / 60
-      : 0;
-    stats.totalFlightHours += flightTime;
-
-    // Airports
-    const depCode = flight.depIata || flight.depIcao;
-    const arrCode = flight.arrIata || flight.arrIcao;
-    if (depCode) stats.airports.add(depCode);
-    if (arrCode) stats.airports.add(arrCode);
-
-    // Countries
-    const depAirport = airportMap.get(depCode || '');
-    const arrAirport = airportMap.get(arrCode || '');
-    if (depAirport?.country) stats.countries.add(depAirport.country);
-    if (arrAirport?.country) stats.countries.add(arrAirport.country);
-
-    // Continents (simplified mapping based on coordinates)
-    if (depAirport) {
-      const continent = getContinent(depAirport.lat, depAirport.lon);
-      if (continent) stats.continents.add(continent);
-    }
-    if (arrAirport) {
-      const continent = getContinent(arrAirport.lat, arrAirport.lon);
-      if (continent) stats.continents.add(continent);
-    }
-
-    // Airlines
-    if (flight.airline) {
-      stats.airlines.add(flight.airline);
-      const count = stats.airlineCounts.get(flight.airline) || 0;
-      stats.airlineCounts.set(flight.airline, count + 1);
-    }
-
-    // Aircraft types (normalized to canonical names)
-    if (flight.aircraft) {
-      stats.aircraftTypes.add(normalizeAircraft(flight.aircraft));
-    }
-
-    // Time-based stats — only applicable when departure time is known
-    if (flight.departureTime) {
-      // Night flights (00:00 - 06:00)
-      const depHour = flight.departureTime.getHours();
-      if (depHour >= 0 && depHour < 6) {
-        stats.nightFlights++;
-      }
-
-      // Weekend flights
-      const depDay = flight.departureTime.getDay();
-      if (depDay === 0 || depDay === 6) {
-        stats.weekendFlights++;
-      }
-
-      // Months with flights
-      const monthKey = `${flight.departureTime.getFullYear()}-${String(
-        flight.departureTime.getMonth() + 1
-      ).padStart(2, '0')}`;
-      stats.monthsWithFlights.add(monthKey);
-
-      const monthCount = stats.flightsByMonth.get(monthKey) || 0;
-      stats.flightsByMonth.set(monthKey, monthCount + 1);
-
-      // Years with flights
-      const yearKey = String(flight.departureTime.getFullYear());
-      const yearCount = stats.flightsByYear.get(yearKey) || 0;
-      stats.flightsByYear.set(yearKey, yearCount + 1);
-    }
-
-    // Route counts
-    const routeKey = `${depCode}-${arrCode}`;
-    const routeCount = stats.routeCounts.get(routeKey) || 0;
-    stats.routeCounts.set(routeKey, routeCount + 1);
-  }
-
-  return stats;
-}
-
-function checkAchievement(
-  achievement: Achievement,
-  stats: UserStats,
-  flights: FlightData[]
-): { isUnlocked: boolean; progress: number } {
-  let progress = 0;
-  let isUnlocked = false;
-
-  switch (achievement.requirementType) {
-    case 'flights_count':
-      progress = stats.flightsCount;
-      isUnlocked = progress >= achievement.requirement;
-      break;
-
-    case 'distance_km':
-      progress = Math.round(stats.totalDistance);
-      isUnlocked = progress >= achievement.requirement;
-      break;
-
-    case 'countries':
-      progress = stats.countries.size;
-      isUnlocked = progress >= achievement.requirement;
-      break;
-
-    case 'airlines':
-      progress = stats.airlines.size;
-      isUnlocked = progress >= achievement.requirement;
-      break;
-
-    case 'airports':
-      progress = stats.airports.size;
-      isUnlocked = progress >= achievement.requirement;
-      break;
-
-    case 'continents':
-      progress = stats.continents.size;
-      isUnlocked = progress >= achievement.requirement;
-      break;
-
-    case 'aircraft_types':
-      progress = stats.aircraftTypes.size;
-      isUnlocked = progress >= achievement.requirement;
-      break;
-
-    case 'single_flight_distance':
-      progress = Math.round(stats.longestSingleFlight);
-      isUnlocked = progress >= achievement.requirement;
-      break;
-
-    case 'night_flights':
-      progress = stats.nightFlights;
-      isUnlocked = progress >= achievement.requirement;
-      break;
-
-    case 'weekend_flights':
-      progress = stats.weekendFlights;
-      isUnlocked = progress >= achievement.requirement;
-      break;
-
-    case 'consecutive_months':
-      progress = checkConsecutiveMonths(stats.monthsWithFlights);
-      isUnlocked = progress >= achievement.requirement;
-      break;
-
-    case 'same_route':
-      progress = Math.max(0, ...Array.from(stats.routeCounts.values()));
-      isUnlocked = progress >= achievement.requirement;
-      break;
-
-    case 'airline_loyalty':
-      progress = Math.max(0, ...Array.from(stats.airlineCounts.values()));
-      isUnlocked = progress >= achievement.requirement;
-      break;
-
-    case 'flights_per_month':
-      progress = Math.max(0, ...Array.from(stats.flightsByMonth.values()));
-      isUnlocked = progress >= achievement.requirement;
-      break;
-
-    case 'flights_per_year':
-      progress = Math.max(0, ...Array.from(stats.flightsByYear.values()));
-      isUnlocked = progress >= achievement.requirement;
-      break;
-
-    case 'flight_hours':
-      progress = Math.round(stats.totalFlightHours);
-      isUnlocked = progress >= achievement.requirement;
-      break;
-
-    case 'ocean_crossing':
-      progress = checkOceanCrossing(flights) ? 1 : 0;
-      isUnlocked = progress >= achievement.requirement;
-      break;
-
-    case 'time_travel':
-      progress = checkTimeTravel(flights) ? 1 : 0;
-      isUnlocked = progress >= achievement.requirement;
-      break;
-
-    case 'arctic_flight':
-      progress = checkArcticFlight(flights) ? 1 : 0;
-      isUnlocked = progress >= achievement.requirement;
-      break;
-
-    case 'equator_crossing':
-      progress = checkEquatorCrossing(flights) ? 1 : 0;
-      isUnlocked = progress >= achievement.requirement;
-      break;
-
-    case 'all_seasons':
-      progress = checkAllSeasons(flights);
-      isUnlocked = progress >= achievement.requirement;
-      break;
-
-    case 'scheduled_count':
-      progress = stats.scheduledCount;
-      isUnlocked = progress >= achievement.requirement;
-      break;
-
-    case 'scheduled_continents':
-      progress = stats.scheduledContinents.size;
-      isUnlocked = progress >= achievement.requirement;
-      break;
-
-    case 'scheduled_advance_days':
-      progress = stats.scheduledMaxAdvanceDays;
-      isUnlocked = progress >= achievement.requirement;
-      break;
-
-    case 'cancelled_count':
-      progress = stats.cancelledCount;
-      isUnlocked = progress >= achievement.requirement;
-      break;
-
-    default:
-      progress = 0;
-      isUnlocked = false;
-  }
-
-  return { isUnlocked, progress };
-}
-
-function checkConsecutiveMonths(monthsWithFlights: Set<string>): number {
-  if (monthsWithFlights.size === 0) return 0;
-
-  const sortedMonths = Array.from(monthsWithFlights).sort();
-  let maxConsecutive = 1;
-  let currentConsecutive = 1;
-
-  for (let i = 1; i < sortedMonths.length; i++) {
-    const prevDate = new Date(sortedMonths[i - 1] + '-01');
-    const currDate = new Date(sortedMonths[i] + '-01');
-
-    // Check if next month
-    const monthDiff =
-      (currDate.getFullYear() - prevDate.getFullYear()) * 12 +
-      (currDate.getMonth() - prevDate.getMonth());
-
-    if (monthDiff === 1) {
-      currentConsecutive++;
-      maxConsecutive = Math.max(maxConsecutive, currentConsecutive);
-    } else {
-      currentConsecutive = 1;
-    }
-  }
-
-  return maxConsecutive;
-}
-
-function checkOceanCrossing(flights: FlightData[]): boolean {
-  for (const flight of flights) {
-    const distance = calculateDistance(
-      flight.depLat,
-      flight.depLon,
-      flight.arrLat,
-      flight.arrLon
-    );
-    // Simple heuristic: flights over 5000km likely cross an ocean
-    if (distance > 5000) {
-      return true;
-    }
-  }
-  return false;
-}
-
-function checkTimeTravel(flights: FlightData[]): boolean {
-  for (const flight of flights) {
-    // Arrive before departure (in UTC) — skip historical flights with null times
-    if (flight.arrivalTime && flight.departureTime && flight.arrivalTime < flight.departureTime) {
-      return true;
-    }
-  }
-  return false;
-}
-
-function checkArcticFlight(flights: FlightData[]): boolean {
-  const arcticCircle = 66.5;
-  for (const flight of flights) {
-    if (flight.depLat >= arcticCircle || flight.arrLat >= arcticCircle) {
-      return true;
-    }
-  }
-  return false;
-}
-
-function checkEquatorCrossing(flights: FlightData[]): boolean {
-  for (const flight of flights) {
-    // Check if flight crosses equator (one hemisphere to another)
-    if (
-      (flight.depLat > 0 && flight.arrLat < 0) ||
-      (flight.depLat < 0 && flight.arrLat > 0)
-    ) {
-      return true;
-    }
-  }
-  return false;
-}
-
-function checkAllSeasons(flights: FlightData[]): number {
-  // Northern hemisphere seasons
-  const seasons = new Set<number>();
-  for (const flight of flights) {
-    if (!flight.departureTime) continue;
-    const month = flight.departureTime.getMonth(); // 0-11
-    if (month >= 2 && month <= 4) seasons.add(0); // Spring (Mar-May)
-    if (month >= 5 && month <= 7) seasons.add(1); // Summer (Jun-Aug)
-    if (month >= 8 && month <= 10) seasons.add(2); // Fall (Sep-Nov)
-    if (month === 11 || month === 0 || month === 1) seasons.add(3); // Winter (Dec-Feb)
-  }
-  return seasons.size;
-}
-
-function getContinent(lat: number, lon: number): string | null {
-  // Simplified continent detection based on coordinates — rough approximation.
-  if (lat > 70 || lat < -60) return 'Antarctica';
-  if (lon >= -170 && lon <= -30) {
-    return lat > 15 ? 'North America' : 'South America';
-  }
-  // Middle East: roughly Israel/Jordan east to Iran/UAE, lat 10°–42°N
-  // Lower lon bound at 30° keeps Turkey (Istanbul lon ~29) in Europe.
-  if (lon >= 30 && lon <= 63 && lat >= 10 && lat <= 42) return 'Middle East';
-  // Europe: lon -30° to 40°, lat > 35°N
-  if (lon >= -30 && lon <= 40 && lat > 35) return 'Europe';
-  // Africa: lon -20° to 55°, lat -35° to 35°
-  if (lon >= -20 && lon <= 55 && lat >= -35 && lat < 35) return 'Africa';
-  if (lon >= 60 && lon <= 150) return 'Asia';
-  if (lon >= 150 || lon <= -170) return 'Oceania';
-  return null;
 }

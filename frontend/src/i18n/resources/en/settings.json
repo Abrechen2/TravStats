@@ -3,6 +3,10 @@
   "subtitle": "Profile, preferences and security in one place.",
   "roadmap": "Roadmap · Point 9",
   "backToDashboard": "← Back to Dashboard",
+  "about": {
+    "buildLabel": "Build",
+    "buildVersionHint": "Version that was baked into the container image at build time. This only differs from the displayed version when a promoted RC is running."
+  },
   "profile": {
     "title": "User Profile",
     "description": "Adjust username, contact information and your profile picture.",
@@ -10,6 +14,8 @@
     "uploadAvatar": "Upload profile picture",
     "username": "Username",
     "email": "Email Address",
+    "birthdate": "Birthday",
+    "birthdateHint": "Optional. Only used for the \"Birthday Flight\" achievement — day and month are compared against a flight's departure date.",
     "deleteAccount": "Delete Account",
     "deletionRequested": "Deletion request pending",
     "dangerZone": "Danger Zone",

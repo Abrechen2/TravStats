@@ -16,6 +16,13 @@ interface LogoMarkProps {
   title?: string;
 }
 
+interface LogoMarkFilledProps extends LogoMarkProps {
+  // Inverse colour printed on top of the filled tag (TS, rule line, bottom
+  // wordmark, lace hole). Defaults to the app's base background so the mark
+  // stays legible whether the theme is dark or light.
+  bg?: string;
+}
+
 interface LogoWordmarkProps {
   size?: number;
   color?: string;
@@ -49,7 +56,6 @@ export function LogoMark({
       width={size}
       height={(size * 140) / 120}
       role="img"
-      aria-label={title}
       className={className}
       style={{ display: "block", ...style }}
     >
@@ -89,10 +95,11 @@ export function LogoMark({
 export function LogoMarkFilled({
   size = 48,
   color = "var(--accent)",
+  bg = "var(--bg-base)",
   className,
   style,
   title = "TravStats",
-}: LogoMarkProps & { text?: string }): JSX.Element {
+}: LogoMarkFilledProps): JSX.Element {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -100,13 +107,12 @@ export function LogoMarkFilled({
       width={size}
       height={(size * 140) / 120}
       role="img"
-      aria-label={title}
       className={className}
       style={{ display: "block", ...style }}
     >
       <title>{title}</title>
       <path d={TAG_PATH} fill={color} stroke={color} strokeWidth="3" strokeLinejoin="round" />
-      <circle cx="60" cy="28" r="5" fill="#0b0d10" />
+      <circle cx="60" cy="28" r="5" fill={bg} />
       <text
         x="60"
         y="92"
@@ -114,12 +120,12 @@ export function LogoMarkFilled({
         fontFamily="Inter, system-ui, sans-serif"
         fontSize="34"
         fontWeight="800"
-        fill="#0b0d10"
+        fill={bg}
         letterSpacing="-1.5"
       >
         TS
       </text>
-      <line x1="40" y1="104" x2="80" y2="104" stroke="#0b0d10" strokeWidth="1.5" opacity="0.5" />
+      <line x1="40" y1="104" x2="80" y2="104" stroke={bg} strokeWidth="1.5" opacity="0.5" />
       <text
         x="60"
         y="118"
@@ -127,7 +133,7 @@ export function LogoMarkFilled({
         fontFamily="ui-monospace, monospace"
         fontSize="7"
         fontWeight="600"
-        fill="#0b0d10"
+        fill={bg}
         letterSpacing="2"
       >
         TRAVSTATS

@@ -12,6 +12,8 @@ import { logger } from "../lib/logger";
 import NavigationBar from "../components/NavigationBar";
 import PendingUpdateCard from "../components/PendingUpdateCard";
 import StatisticsImpactPreview from "../components/StatisticsImpactPreview";
+import { GlobeLoader } from "../components/GlobeLoader";
+import { useMinLoadingState } from "../hooks/useMinLoadingState";
 
 interface FlightUpdateData {
   airline?: string;
@@ -77,6 +79,7 @@ export default function PendingUpdatesPage(): JSX.Element {
   const [updates, setUpdates] = useState<PendingUpdate[]>([]);
   const [statistics, setStatistics] = useState<Statistics | null>(null);
   const [loading, setLoading] = useState(true);
+  const showLoader = useMinLoadingState(loading, 2000);
   const [statusFilter, setStatusFilter] = useState<string>("pending");
   const [sortBy, setSortBy] = useState<"createdAt" | "expiresAt">("createdAt");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
@@ -286,15 +289,9 @@ export default function PendingUpdatesPage(): JSX.Element {
         </div>
 
         {/* Updates List */}
-        {loading ? (
-          <div className="text-center py-12">
-            <div
-              className="inline-block animate-spin rounded-full h-8 w-8 border-b-2"
-              style={{ borderColor: "var(--color-amber)" }}
-            ></div>
-            <p className="mt-4" style={{ color: "var(--text-muted)" }}>
-              {t("common:loading")}
-            </p>
+        {showLoader ? (
+          <div className="flex justify-center py-12">
+            <GlobeLoader size={160} label={t("common:loading.default")} />
           </div>
         ) : sortedUpdates.length === 0 ? (
           <div
