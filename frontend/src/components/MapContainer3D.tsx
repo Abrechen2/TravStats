@@ -1,5 +1,6 @@
 import React, { lazy, Suspense, useState, useMemo, useEffect } from "react";
 import { DeckGLMap } from "./DeckGLMap";
+import { GlobeLoader } from "./GlobeLoader";
 import { VisModeSelector } from "./VisModeSelector";
 import type { GeoJSONFeature, Flight, Trip } from "../types";
 import type { VisMode } from "../types/visMode";
@@ -75,10 +76,7 @@ export default function MapContainer3D({
           <Suspense
             fallback={
               <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[var(--map-accent)] mx-auto mb-2" />
-                  <p className="text-[var(--text-muted)] text-sm">{t("map:loading3DGlobe")}</p>
-                </div>
+                <GlobeLoader size={180} label={t("map:loading3DGlobe")} />
               </div>
             }
           >

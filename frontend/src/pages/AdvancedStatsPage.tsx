@@ -32,7 +32,7 @@ import StatsSeatSection from "../components/Stats/StatsSeatSection";
 import { generateYearReportPdf } from "../lib/yearReportPdf";
 import { useToastStore } from "../store/toastStore";
 import { logger } from "../lib/logger";
-import { SkeletonStatCards } from "../components/SkeletonLoader";
+import { GlobeLoader } from "../components/GlobeLoader";
 import PageTransition from "../components/PageTransition";
 
 export default function AdvancedStatsPage(): JSX.Element {
@@ -487,8 +487,8 @@ export default function AdvancedStatsPage(): JSX.Element {
       <PageTransition>
         <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
           <NavigationBar />
-          <div className="container mx-auto px-6 py-8">
-            <SkeletonStatCards />
+          <div className="container mx-auto px-6 py-8 flex items-center justify-center min-h-[60vh]">
+            <GlobeLoader size={180} label={t("common:loading.stats")} />
           </div>
         </div>
       </PageTransition>
