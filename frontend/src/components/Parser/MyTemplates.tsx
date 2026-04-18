@@ -3,11 +3,14 @@ import { parserTemplatesApi, type UserTemplateItem } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useToastStore } from "../../store/toastStore";
+import { GlobeLoader } from "../GlobeLoader";
+import { useMinLoadingState } from "../../hooks/useMinLoadingState";
 
 export default function MyTemplates(): JSX.Element {
   const { t } = useTranslation(["parser", "common"]);
   const [templates, setTemplates] = useState<UserTemplateItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const showLoader = useMinLoadingState(loading, 2000);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const addToast = useToastStore((state) => state.addToast);
@@ -67,10 +70,10 @@ export default function MyTemplates(): JSX.Element {
     );
   };
 
-  if (loading) {
+  if (showLoader) {
     return (
       <div className="flex justify-center py-12">
-        <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <GlobeLoader size={140} label={t("common:loading.default")} />
       </div>
     );
   }
