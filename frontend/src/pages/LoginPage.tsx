@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { authApi } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
 import { useTranslation } from "../hooks/useTranslation";
-import { LogoMark, LogoWordmark } from "../components/Brand/Logo";
+import { LogoLockup } from "../components/Brand/Logo";
 
 export default function LoginPage(): JSX.Element {
   const { t } = useTranslation(["auth", "common"]);
@@ -102,8 +102,7 @@ export default function LoginPage(): JSX.Element {
       >
         {/* Brand lockup */}
         <div className="flex flex-col items-center text-center mb-8 gap-3">
-          <LogoMark size={72} />
-          <LogoWordmark size={26} />
+          <LogoLockup size={26} markSize={72} layout="stacked" />
           <p className="mt-1 text-sm" style={{ color: "var(--text-muted)" }}>
             {t("login.title")}
           </p>
