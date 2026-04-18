@@ -1,26 +1,38 @@
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api/client";
 import { version as pkgVersion } from "../../../package.json";
+import { useTranslation } from "../../hooks/useTranslation";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 
 export default function AboutSection(): JSX.Element {
-  // Backend reports the baked-in image version (incl. rc/beta suffix).
+  const { t } = useTranslation(["settings"]);
+  // Backend reports two versions:
+  //   appVersion  — the clean display version (e.g. `1.0.1`)
+  //   buildVersion — the baked image version, carrying any RC/beta
+  //                  suffix. Only rendered when it differs, so users
+  //                  know when a promoted RC image is running.
   // Falls back to the bundled package.json during first render.
   const [appVersion, setAppVersion] = useState<string>(pkgVersion);
+  const [buildVersion, setBuildVersion] = useState<string>("");
   useEffect(() => {
     api
-      .get<{ version: string }>("/version")
+      .get<{ version: string; buildVersion?: string }>("/version")
       .then(({ data }) => {
         if (data?.version && data.version !== "unknown") setAppVersion(data.version);
+        if (data?.buildVersion && data.buildVersion !== "unknown") {
+          setBuildVersion(data.buildVersion);
+        }
       })
       .catch(() => {
         // stick with package.json fallback
       });
   }, []);
 
+  const showBuild = buildVersion && buildVersion !== appVersion;
+
   return (
     <SectionCard>
-      <div className="flex items-baseline gap-3 mb-1">
+      <div className="flex items-baseline gap-3 mb-1 flex-wrap">
         <SectionTitle title="About TravStats" />
         <span
           className="text-sm font-mono px-2 py-0.5 rounded"
@@ -28,6 +40,15 @@ export default function AboutSection(): JSX.Element {
         >
           v{appVersion}
         </span>
+        {showBuild && (
+          <span
+            className="text-xs font-mono px-2 py-0.5 rounded"
+            style={{ background: "var(--bg-elevated)", color: "var(--text-muted)" }}
+            title={t("settings:about.buildVersionHint")}
+          >
+            {t("settings:about.buildLabel")}: {buildVersion}
+          </span>
+        )}
       </div>
       <p className="text-sm" style={{ color: "var(--text-muted)" }}>
         TravStats - Flight Statistics Tracking Application

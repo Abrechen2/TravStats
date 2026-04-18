@@ -31,6 +31,7 @@ router.get('/system/info', async (req: AuthRequest, res: Response, next: NextFun
       demoUserExists: !!demoUser,
       demoUserActive: demoUser?.isActive || false,
     version: process.env.APP_VERSION || 'unknown',
+    buildVersion: process.env.BUILD_VERSION || process.env.APP_VERSION || 'unknown',
   });
   } catch (error) {
     next(error);
