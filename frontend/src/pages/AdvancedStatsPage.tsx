@@ -33,6 +33,7 @@ import { generateYearReportPdf } from "../lib/yearReportPdf";
 import { useToastStore } from "../store/toastStore";
 import { logger } from "../lib/logger";
 import { GlobeLoader } from "../components/GlobeLoader";
+import { useMinLoadingState } from "../hooks/useMinLoadingState";
 import PageTransition from "../components/PageTransition";
 
 export default function AdvancedStatsPage(): JSX.Element {
@@ -42,6 +43,7 @@ export default function AdvancedStatsPage(): JSX.Element {
   const addToast = useToastStore((state) => state.addToast);
   const [flights, setFlights] = useState<Flight[]>([]);
   const [loading, setLoading] = useState(true);
+  const showLoader = useMinLoadingState(loading, 2000);
   const [funStats, setFunStats] = useState<FunStats | null>(null);
   const [businessStats, setBusinessStats] = useState<BusinessStats | null>(null);
   const [uniqueStats, setUniqueStats] = useState<UniqueStats | null>(null);
@@ -482,7 +484,7 @@ export default function AdvancedStatsPage(): JSX.Element {
     userName: user?.username ?? "Traveler",
   };
 
-  if (loading) {
+  if (showLoader) {
     return (
       <PageTransition>
         <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
