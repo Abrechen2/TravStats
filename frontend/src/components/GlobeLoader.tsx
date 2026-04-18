@@ -4,7 +4,7 @@
 // JS bundle. Reads --text-primary / --bg-base / --accent live so it
 // reacts to dark-mode toggles without a remount.
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { geoOrthographic, geoPath, geoGraticule10 } from "d3-geo";
 import { feature } from "topojson-client";
 import type { Feature, FeatureCollection, Geometry } from "geojson";
@@ -58,7 +58,10 @@ export function GlobeLoader({
   className,
 }: GlobeLoaderProps): JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const buffer = size * 1.2;
+  // `buffer` is a pure function of `size`; memoising it keeps the effect
+  // dep array stable and prevents a teardown/re-init churn when a parent
+  // re-renders with the same size value.
+  const buffer = useMemo(() => size * 1.2, [size]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
