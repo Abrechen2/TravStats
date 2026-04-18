@@ -284,9 +284,3 @@ html.dark {
     transform: rotate(-360deg);
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  [role="status"] svg {
-    animation: none !important;
-  }
-}

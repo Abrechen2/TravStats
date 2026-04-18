@@ -108,7 +108,6 @@ export function GlobeLoader({
         // Fail soft — globe still spins as sphere + graticule.
       });
 
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const start = performance.now();
     const speed = 32; // deg/s
     let rafId = 0;
@@ -120,7 +119,7 @@ export function GlobeLoader({
 
     const draw = (now: number): void => {
       const t = (now - start) / 1000;
-      const lambda = reduceMotion ? 0 : (t * speed) % 360;
+      const lambda = (t * speed) % 360;
       projection.rotate([lambda, -18, 0]);
 
       ctx.clearRect(0, 0, buffer, buffer);
@@ -151,7 +150,7 @@ export function GlobeLoader({
         ctx.stroke();
       }
 
-      if (!reduceMotion) rafId = requestAnimationFrame(draw);
+      rafId = requestAnimationFrame(draw);
     };
     rafId = requestAnimationFrame(draw);
 
