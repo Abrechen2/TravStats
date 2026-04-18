@@ -130,8 +130,12 @@ export default function EmailImportTab({ onResult, onError }: EmailImportTabProp
           <p>{t("flights:form.email.regexWarning.body")}</p>
         </div>
       )}
-      {/* Drag & Drop Zone */}
-      <div className="relative">
+      {/* Drag & Drop Zone — swaps entirely while scanning */}
+      {showLoader ? (
+        <div className="border-2 border-dashed border-slate-600 rounded-xl p-8 flex items-center justify-center min-h-[220px]">
+          <GlobeLoader size={140} label={t("common:loading.default")} />
+        </div>
+      ) : (
         <div
           onDrop={onDrop}
           onDragOver={(e) => {
@@ -141,11 +145,10 @@ export default function EmailImportTab({ onResult, onError }: EmailImportTabProp
           onDragLeave={() => setDropState("idle")}
           onClick={() => fileInputRef.current?.click()}
           className={[
-            "border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors",
+            "border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors min-h-[220px] flex flex-col items-center justify-center",
             dropState === "over"
               ? "border-blue-400 bg-blue-950/20"
               : "border-slate-600 hover:border-slate-400",
-            showLoader ? "opacity-40 pointer-events-none" : "",
           ].join(" ")}
         >
           <input
@@ -161,12 +164,7 @@ export default function EmailImportTab({ onResult, onError }: EmailImportTabProp
           <p className="font-medium text-slate-200">{t("flights:form.uploadEmail")}</p>
           <p className="text-sm text-slate-400 mt-1">.eml, .msg, .txt, .pdf</p>
         </div>
-        {showLoader && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <GlobeLoader size={140} label={t("common:loading.default")} />
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Airline Notice */}
       {airlineNotice && (
