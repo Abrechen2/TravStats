@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import HelpIcon from "../Help/HelpIcon";
 import { useTranslation } from "../../hooks/useTranslation";
+import { GlobeLoader } from "../GlobeLoader";
 import type { ParsedBooking } from "../../types";
 
 const BoardingPassScanner = lazy(() => import("../BoardingPassScanner"));
@@ -202,10 +203,7 @@ export default function FlightLookupStep({
           fallback={
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-[var(--bg-surface)] rounded-lg p-8">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto mb-2"></div>
-                  <p className="text-[var(--text-muted)]">{t("flights:form.loadingScanner")}</p>
-                </div>
+                <GlobeLoader size={160} label={t("flights:form.loadingScanner")} />
               </div>
             </div>
           }
