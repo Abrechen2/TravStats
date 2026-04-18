@@ -82,7 +82,7 @@ Safe travels.
 
 1. Put the cursor on the section headings ("Links", "Highlights", "Installation", "Optional local AI parsing") and click `B` (bold) — that's the only formatting you need.
 2. The URLs that stand alone on a line auto-link on save.
-3. Optional: drag `docs/images/logo-large.png` (from the GitHub raw URL or your local copy) into the editor as the first element — it uploads inline.
+3. Optional: drag `docs/images/logo.svg` (from the GitHub raw URL or your local copy) into the editor as the first element — it uploads inline. If the forum rejects SVG, export a PNG from the same file first.
 4. Optional: drag one of the screenshots (`map-2d.png` or `stats.png`) in after the Highlights section so the thread has a visual.
 
 If you prefer to paste HTML directly: click `…` in the toolbar to look for a "Source" or "</>" option. If it's there, paste this HTML instead of the plain text above:

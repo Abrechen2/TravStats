@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/images/logo-large.png" alt="TravStats" width="140" />
+<img src="docs/images/logo.svg" alt="TravStats" width="140" />
 
 # TravStats
 

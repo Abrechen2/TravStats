@@ -86,6 +86,8 @@ https://raw.githubusercontent.com/Abrechen2/TravStats/main/docs/unraid/travstats
 
 ### Icon
 
-`docs/images/logo-large.png` is served via GitHub raw. If you need a smaller
-square icon for the CA card, generate one and commit it to
-`docs/unraid/icon.png`, then update the `<Icon>` URL in `travstats.xml`.
+The TravStats brand mark lives at `docs/images/logo.svg`. Community Apps
+requires a PNG on a non-transparent background, so render a square PNG
+export (e.g. 512 × 512 on the dark ink `#0b0d10` surface) and commit it
+to `docs/unraid/icon.png`, then point the `<Icon>` URL in `travstats.xml`
+at the GitHub raw URL of that PNG.

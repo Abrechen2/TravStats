@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 140" width="120" height="140">
+  <path d="M 28 36 L 60 10 L 92 36 L 92 126 Q 92 132 86 132 L 34 132 Q 28 132 28 126 Z" fill="none" stroke="#e8a045" stroke-width="4" stroke-linejoin="round"/>
+  <circle cx="60" cy="28" r="5" fill="none" stroke="#e8a045" stroke-width="3"/>
+  <path d="M 38 52 L 82 52 M 38 62 L 82 62" stroke="#e8a045" stroke-width="1.5" stroke-opacity="0.5"/>
+  <text x="60" y="96" text-anchor="middle" font-family="Inter, system-ui, sans-serif" font-size="32" font-weight="700" fill="#e8a045" letter-spacing="-1">TS</text>
+  <text x="60" y="118" text-anchor="middle" font-family="ui-monospace, monospace" font-size="7" fill="#e8a045" letter-spacing="2" opacity="0.6">V1.0</text>
+</svg>
