@@ -6,6 +6,7 @@ import { useTranslation } from "../hooks/useTranslation";
 import { useClickOutside } from "../hooks/useClickOutside";
 import { logger } from "../lib/logger";
 import DiagnosticExportModal from "./DiagnosticExportModal";
+import { LogoMark, LogoWordmark } from "./Brand/Logo";
 
 interface NavItem {
   path: string;
@@ -122,15 +123,9 @@ export default function NavigationBar(): JSX.Element {
                 </svg>
               </button>
 
-              <Link to="/" className="flex items-center no-underline">
-                <span
-                  className="text-lg font-display font-bold tracking-widest uppercase"
-                  style={{ color: "var(--text-primary)" }}
-                >
-                  TRAV
-                  <span style={{ color: "var(--accent)" }}>.</span>
-                  STATS
-                </span>
+              <Link to="/" className="flex items-center gap-2.5 no-underline">
+                <LogoMark size={26} />
+                <LogoWordmark size={16} />
               </Link>
             </div>
 
@@ -288,11 +283,9 @@ export default function NavigationBar(): JSX.Element {
         >
           <div className="p-4" style={{ borderBottom: "1px solid var(--color-border)" }}>
             <div className="flex items-center justify-between">
-              <span
-                className="text-base font-display font-bold tracking-widest uppercase"
-                style={{ color: "var(--text-primary)" }}
-              >
-                TRAV<span style={{ color: "var(--accent)" }}>.</span>STATS
+              <span className="flex items-center gap-2">
+                <LogoMark size={22} />
+                <LogoWordmark size={14} />
               </span>
               <button
                 onClick={() => setMobileMenuOpen(false)}

@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { authApi } from "../lib/api";
 import { useTranslation } from "../hooks/useTranslation";
+import { LogoMark, LogoWordmark } from "../components/Brand/Logo";
 
 export default function ResetPasswordPage(): JSX.Element {
   const { t } = useTranslation(["auth"]);
@@ -77,14 +78,10 @@ export default function ResetPasswordPage(): JSX.Element {
         }}
         className="relative z-10 w-full max-w-sm px-4"
       >
-        <div className="text-center mb-8">
-          <h1
-            className="text-4xl font-display font-bold tracking-widest uppercase"
-            style={{ color: "var(--text-primary)" }}
-          >
-            TRAV<span style={{ color: "var(--accent)" }}>.</span>STATS
-          </h1>
-          <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
+        <div className="flex flex-col items-center text-center mb-8 gap-3">
+          <LogoMark size={72} />
+          <LogoWordmark size={26} />
+          <p className="mt-1 text-sm" style={{ color: "var(--text-muted)" }}>
             {t("auth:resetPassword.title")}
           </p>
         </div>
