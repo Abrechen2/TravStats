@@ -1,5 +1,6 @@
 import React, { lazy, Suspense, useState, useMemo, useEffect } from "react";
 import { DeckGLMap } from "./DeckGLMap";
+import { GlobeLoader } from "./GlobeLoader";
 import { VisModeSelector } from "./VisModeSelector";
 import type { GeoJSONFeature, Flight, Trip } from "../types";
 import type { VisMode } from "../types/visMode";
@@ -7,7 +8,16 @@ import { useTranslation } from "../hooks/useTranslation";
 import { useThemeStore } from "../store/themeStore";
 import { tripsApi } from "../lib/api";
 
-const GlobeView = lazy(() => import("./GlobeView"));
+// Hold the branded Suspense fallback for at least 2 s on first mount so
+// the GlobeLoader doesn't just flash by. React.lazy caches the resolved
+// module, so this delay only fires the first time the 3D globe is
+// opened in a session.
+const GlobeView = lazy(() =>
+  Promise.all([
+    import("./GlobeView"),
+    new Promise<void>((resolve) => setTimeout(resolve, 2000)),
+  ]).then(([mod]) => mod)
+);
 
 interface MapContainer3DProps {
   flights: GeoJSONFeature[];
@@ -75,10 +85,7 @@ export default function MapContainer3D({
           <Suspense
             fallback={
               <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[var(--map-accent)] mx-auto mb-2" />
-                  <p className="text-[var(--text-muted)] text-sm">{t("map:loading3DGlobe")}</p>
-                </div>
+                <GlobeLoader size={180} label={t("map:loading3DGlobe")} />
               </div>
             }
           >

@@ -19,6 +19,7 @@ export const adminApi = {
     warningThreshold: boolean;
     registrationEnabled: boolean;
     version: string;
+    buildVersion: string;
   }> => {
     const { data } = await api.get<{
       instanceName: string;
@@ -29,6 +30,7 @@ export const adminApi = {
       warningThreshold: boolean;
       registrationEnabled: boolean;
       version: string;
+      buildVersion: string;
     }>("/admin/system/info");
     return data;
   },

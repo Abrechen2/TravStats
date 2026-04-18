@@ -4,10 +4,31 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
-## [Unreleased]
+## [1.1.0] - 2026-04-18
 
-### Brand
-- **New TravStats logo system (v1.0, locked)** — Luggage-tag mark (Tag A outline) with the `TS` monogram plus a cross-dot `TRAV✛STATS` wordmark, living in `frontend/src/components/Brand/Logo.tsx` as `LogoMark`, `LogoMarkFilled`, `LogoWordmark` and `LogoLockup`. The old `TRAV.STATS` text treatment has been replaced across the navigation bar (desktop + mobile), login, register, reset-password and force-change-password screens. The favicon now ships as an inline SVG (`/logo.svg`) with a PNG fallback for older browsers. The README and Unraid forum/release docs point at the new SVG at `docs/images/logo.svg`.
+### Added
+- **Birthday Flight achievement** — New `BIRTHDAY_FLIGHT` achievement counts flown flights that depart on the user's birthday (month + day, year irrelevant). Profile settings now include an optional birthdate field used by the check.
+- **Kurios calendar easter eggs** — Six hidden achievements tied to aviation and calendar observances: ICAO Day (7 Dec), Wright Day (19 Aug), May the Fourth (4 May), Pi Day (14 Mar), Pi Precision (3 141 km ± 5 % on Pi Day) and Halloween (31 Oct).
+- **Branded GlobeLoader** — Monochrome spinning-globe loader replaces the generic spinner at every large-area loading surface (maps, stats, flight pages, admin). Paints in < 16 ms so users see feedback before deck.gl / three.js finish booting, holds for ≥ 2 s to avoid flashing, and keeps spinning regardless of `prefers-reduced-motion`. Reads live CSS tokens so it reacts to dark-mode toggles without remount.
+- **New logo system (v1.0)** — Luggage-tag mark with `TS` monogram and a cross-dot `TRAV✛STATS` wordmark ship as `LogoMark`, `LogoMarkFilled`, `LogoWordmark` and `LogoLockup` components. Visible in the nav header (desktop + mobile), all four auth screens and the favicon (SVG with dark background + PNG fallback). The README and Unraid forum / release docs point at `docs/images/logo.svg`.
+- **App version vs build version split** — Runtime now exposes the deployed app version (from `backend/VERSION`) and the Docker image build version as distinct fields, so About can show `1.1.0 (built from 1.1.0-rc.3)` during the RC cycle.
+
+### Changed
+- **Achievements modules split** — `backend/src/utils/achievements.ts` (1 073 lines) reorganised into three files (orchestrator + stats + checks); `backend/src/data/achievements.ts` (1 306 lines) split into two seed parts plus a thin composition layer. Public API unchanged. Every file now respects the 800-line cap.
+- **Achievement stats are immutable** — `checkAndUpdateAchievements` builds a fresh `augmentedStats` via spread rather than mutating the object returned from `calculateUserStats`; `Set`s are cloned, never mutated in place.
+
+### Fixed
+- **GlobeLoader no longer freezes for reduced-motion users** — The loader is feedback, not decoration; it now always animates.
+- **Favicon visible on light browser chrome** — The new SVG favicon shipped transparent, which made the amber strokes disappear on Safari / iOS tab bars. A dark background is now baked into the SVG.
+- **`LogoMarkFilled` survives theme switches** — Inverse colour used to be hardcoded `#0b0d10`; now reads `var(--bg-base)` so the mark stays legible in light mode.
+- **Screen-reader announcements for the header logo and mobile drawer** — Home link now announces as "TravStats — Home" once, not the visible text three times. Mobile drawer Donate / Star links carry the `aria-label` attributes their desktop twins already had.
+- **`GlobeLoader` canvas no longer churns on parent rerenders** — Derived `buffer` dimension is memoised so the effect dep array is stable.
+
+### Database
+- **`users.birthdate`** — New nullable `TIMESTAMP` column backing the Birthday Flight achievement. Additive only; no data transform; safe to deploy with zero downtime.
+
+### Tests
+- **Brand/Logo component suite** — 9 new Vitest tests cover the four logo components (a11y attributes, theme-token defaults, layout modes). Total frontend coverage is now 257 tests across 54 files.
 
 ## [1.0.1] - 2026-04-17
 

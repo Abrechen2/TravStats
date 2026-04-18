@@ -23,6 +23,9 @@ model User {
   notificationEmail     String?                 @map("notification_email")
   notifyBefore24h       Boolean                 @default(false) @map("notify_before_24h")
   notifyBefore2h        Boolean                 @default(false) @map("notify_before_2h")
+  // Birthday for the BIRTHDAY_FLIGHT achievement. Only month+day are used;
+  // the full DateTime lets us round-trip a year if the user enters one.
+  birthdate             DateTime?               @map("birthdate")
   resetToken         String?   @unique @map("reset_token")
   resetTokenExpiry   DateTime? @map("reset_token_expiry")
   mustChangePassword Boolean   @default(false) @map("must_change_password")

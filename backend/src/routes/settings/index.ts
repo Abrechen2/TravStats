@@ -5,6 +5,7 @@ import parserRouter from './parser';
 import apiKeysRouter from './apiKeys';
 import notificationsRouter from './notifications';
 import homeAirportsRouter from './homeAirports';
+import profileRouter from './profile';
 
 const router = Router();
 
@@ -22,5 +23,6 @@ router.use('/parser', parserRouter);
 router.use('/api-keys', apiKeysRouter);
 router.use('/notifications', notificationsRouter);
 router.use('/home-airports', homeAirportsRouter);
+router.use('/profile', profileRouter);
 
 export default router;

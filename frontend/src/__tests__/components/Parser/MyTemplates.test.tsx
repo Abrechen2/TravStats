@@ -15,6 +15,10 @@ vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }));
 
+vi.mock("../../../hooks/useMinLoadingState", () => ({
+  useMinLoadingState: (v: boolean) => v,
+}));
+
 vi.mock("../../../store/toastStore", () => ({
   useToastStore: (selector: (s: { addToast: () => void }) => unknown) =>
     selector({ addToast: vi.fn() }),

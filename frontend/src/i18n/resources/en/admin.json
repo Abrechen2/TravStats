@@ -248,6 +248,8 @@
     "enabled": "✅ Enabled",
     "disabled": "❌ Disabled",
     "version": "Version",
+    "buildLabel": "Build",
+    "buildVersionHint": "Version that was baked into the container image at build time. This only differs from the displayed version when a promoted RC is running — the image is byte-identical to the tested RC, while the registry tag already points to the final version.",
     "exportButton": "Download Full Backup (JSON)",
     "exportDescription": "Export all user data for backup purposes (GDPR compliant)",
     "exportHelp": {

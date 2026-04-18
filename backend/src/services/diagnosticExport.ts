@@ -247,6 +247,7 @@ type SectionError = { error: string };
 export interface DiagnosticBundle {
   generatedAt: string;
   version: string;
+  buildVersion: string;
   platform: {
     nodeVersion: string;
     os: NodeJS.Platform;
@@ -328,6 +329,7 @@ export async function buildDiagnosticBundle(userId: string): Promise<DiagnosticB
   return {
     generatedAt: new Date().toISOString(),
     version: process.env.APP_VERSION || 'unknown',
+    buildVersion: process.env.BUILD_VERSION || process.env.APP_VERSION || 'unknown',
     platform: {
       nodeVersion: process.version,
       os: process.platform,

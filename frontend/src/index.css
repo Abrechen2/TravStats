@@ -272,3 +272,15 @@ html.dark {
   --map-badge-border: rgba(232, 160, 69, 0.25);
   --map-badge-color: #e8a045;
 }
+
+/* GlobeLoader keyframes */
+@keyframes ts-globe-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes ts-globe-spin-rev {
+  to {
+    transform: rotate(-360deg);
+  }
+}
