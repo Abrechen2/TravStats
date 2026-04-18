@@ -8,7 +8,16 @@ import { useTranslation } from "../hooks/useTranslation";
 import { useThemeStore } from "../store/themeStore";
 import { tripsApi } from "../lib/api";
 
-const GlobeView = lazy(() => import("./GlobeView"));
+// Hold the branded Suspense fallback for at least 2 s on first mount so
+// the GlobeLoader doesn't just flash by. React.lazy caches the resolved
+// module, so this delay only fires the first time the 3D globe is
+// opened in a session.
+const GlobeView = lazy(() =>
+  Promise.all([
+    import("./GlobeView"),
+    new Promise<void>((resolve) => setTimeout(resolve, 2000)),
+  ]).then(([mod]) => mod)
+);
 
 interface MapContainer3DProps {
   flights: GeoJSONFeature[];
