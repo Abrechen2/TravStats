@@ -8,12 +8,13 @@ interface ProfileSectionProps {
     username: string;
     email: string;
     profilePicture?: string;
+    birthdate?: string | null;
   };
   savingProfile: boolean;
   uploadingProfilePicture: boolean;
   onSaveProfile: () => void;
   onAvatarUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  onSetProfile: (partial: { username?: string; email?: string }) => void;
+  onSetProfile: (partial: { username?: string; email?: string; birthdate?: string | null }) => void;
   onShowPasswordModal: () => void;
 }
 
@@ -104,6 +105,18 @@ export default function ProfileSection({
             onChange={(e) => onSetProfile({ email: e.target.value })}
             className="input"
           />
+        </div>
+        <div>
+          <label className="label">{t("settings:profile.birthdate")}</label>
+          <input
+            type="date"
+            value={profile.birthdate ?? ""}
+            onChange={(e) => onSetProfile({ birthdate: e.target.value || null })}
+            className="input"
+          />
+          <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+            {t("settings:profile.birthdateHint")}
+          </p>
         </div>
       </div>
 

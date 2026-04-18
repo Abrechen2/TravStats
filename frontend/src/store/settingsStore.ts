@@ -27,6 +27,13 @@ export interface ProfileSettings {
   username: string;
   email: string;
   profilePicture?: string;
+  /**
+   * ISO date string (YYYY-MM-DD) or null when unset. User-level field
+   * stored on the User row, not in the settings JSON — loaded and saved
+   * via the dedicated /settings/profile endpoint. Powers the
+   * BIRTHDAY_FLIGHT achievement.
+   */
+  birthdate?: string | null;
 }
 
 export interface DisplaySettings {
@@ -194,6 +201,18 @@ export const useSettingsStore = create<SettingsState>()(
       },
       resetSettings: () => set(defaultSettings),
       loadRemoteSettings: async () => {
+        // birthdate lives on the User row, not in UserSettings JSON — so
+        // it rides on a parallel request. Failure here is non-fatal:
+        // the rest of the profile still loads.
+        try {
+          const { birthdate } = await settingsApi.getProfile();
+          set((state) => ({
+            ...state,
+            profile: { ...state.profile, birthdate },
+          }));
+        } catch (error) {
+          logger.warn("Failed to load user profile (birthdate)", error);
+        }
         try {
           const remote = await settingsApi.get();
           if (remote) {
@@ -245,6 +264,12 @@ export const useSettingsStore = create<SettingsState>()(
             notifications,
             features,
           });
+          // birthdate lives on a separate endpoint (/settings/profile on the
+          // User row). Only PUT when the field was explicitly loaded or set
+          // — undefined means "not touched this session, leave backend as-is".
+          if (profile.birthdate !== undefined) {
+            await settingsApi.updateProfile({ birthdate: profile.birthdate });
+          }
         } catch (error) {
           logger.warn("Failed to save settings remotely", error);
         }

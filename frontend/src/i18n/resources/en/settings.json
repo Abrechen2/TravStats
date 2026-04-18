@@ -10,6 +10,8 @@
     "uploadAvatar": "Upload profile picture",
     "username": "Username",
     "email": "Email Address",
+    "birthdate": "Birthday",
+    "birthdateHint": "Optional. Only used for the \"Birthday Flight\" achievement — day and month are compared against a flight's departure date.",
     "deleteAccount": "Delete Account",
     "deletionRequested": "Deletion request pending",
     "dangerZone": "Danger Zone",
