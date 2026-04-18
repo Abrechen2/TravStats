@@ -4,6 +4,11 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [Unreleased]
+
+### Brand
+- **New TravStats logo system (v1.0, locked)** — Luggage-tag mark (Tag A outline) with the `TS` monogram plus a cross-dot `TRAV✛STATS` wordmark, living in `frontend/src/components/Brand/Logo.tsx` as `LogoMark`, `LogoMarkFilled`, `LogoWordmark` and `LogoLockup`. The old `TRAV.STATS` text treatment has been replaced across the navigation bar (desktop + mobile), login, register, reset-password and force-change-password screens. The favicon now ships as an inline SVG (`/logo.svg`) with a PNG fallback for older browsers. The README and Unraid forum/release docs point at the new SVG at `docs/images/logo.svg`.
+
 ## [1.0.1] - 2026-04-17
 
 ### Security
