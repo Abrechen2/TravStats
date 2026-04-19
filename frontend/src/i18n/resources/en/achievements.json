@@ -32,8 +32,13 @@
   "filters": {
     "category": "Category",
     "tier": "Tier",
+    "domain": "Area",
     "allCategories": "All Categories",
     "allTiers": "All Tiers",
+    "allDomains": "All",
+    "domainFlight": "Flight",
+    "domainCruise": "Cruise",
+    "domainShared": "Shared",
     "showUnlockedOnly": "Show unlocked only"
   },
   "progress": {

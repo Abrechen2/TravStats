@@ -32,8 +32,13 @@
   "filters": {
     "category": "Kategorie",
     "tier": "Stufe",
+    "domain": "Bereich",
     "allCategories": "Alle Kategorien",
     "allTiers": "Alle Stufen",
+    "allDomains": "Alle",
+    "domainFlight": "Flug",
+    "domainCruise": "Kreuzfahrt",
+    "domainShared": "Übergreifend",
     "showUnlockedOnly": "Nur freigeschaltete anzeigen"
   },
   "progress": {

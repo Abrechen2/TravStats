@@ -47,6 +47,11 @@ export default function AchievementsPage(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedTier, setSelectedTier] = useState<string>("all");
+  // Domain filter chip row. `all` shows everything the user's enabled domains
+  // allow; `shared` narrows to cross-domain achievements; otherwise a specific
+  // domain. Works on top of `visibleAchievements` which already hides disabled
+  // domains, so this filter is purely a user-picked narrowing.
+  const [selectedDomain, setSelectedDomain] = useState<"all" | "shared" | DomainKey>("all");
   const [showUnlockedOnly, setShowUnlockedOnly] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
 
@@ -115,6 +120,7 @@ export default function AchievementsPage(): JSX.Element {
   const filteredAchievements = visibleAchievements.filter((ach) => {
     if (selectedCategory !== "all" && ach.category !== selectedCategory) return false;
     if (selectedTier !== "all" && ach.tier !== selectedTier) return false;
+    if (selectedDomain !== "all" && ach.domain !== selectedDomain) return false;
     if (showUnlockedOnly && !ach.isUnlocked) return false;
     return true;
   });
@@ -341,6 +347,55 @@ export default function AchievementsPage(): JSX.Element {
               className="rounded-xl p-6 mb-6"
               style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
             >
+              {/* Domain chip row — lives above the category / tier selects so
+                  the two-level hierarchy (domain → category → tier) reads
+                  top-down. "shared" is kept as its own chip because it's a
+                  useful cut ("what counts everywhere?"). */}
+              <div className="mb-4">
+                <label className="block text-sm mb-2" style={{ color: "var(--text-muted)" }}>
+                  {t("achievements:filters.domain")}
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {(
+                    [
+                      { id: "all", label: t("achievements:filters.allDomains") },
+                      ...(enabled.includes("flight" as DomainKey)
+                        ? [
+                            {
+                              id: "flight",
+                              label: `✈ ${t("achievements:filters.domainFlight")}`,
+                            },
+                          ]
+                        : []),
+                      ...(enabled.includes("cruise" as DomainKey)
+                        ? [
+                            {
+                              id: "cruise",
+                              label: `🚢 ${t("achievements:filters.domainCruise")}`,
+                            },
+                          ]
+                        : []),
+                      { id: "shared", label: t("achievements:filters.domainShared") },
+                    ] as Array<{ id: "all" | "shared" | DomainKey; label: string }>
+                  ).map((chip) => (
+                    <button
+                      key={chip.id}
+                      type="button"
+                      onClick={(): void => setSelectedDomain(chip.id)}
+                      className="px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
+                      style={{
+                        background:
+                          selectedDomain === chip.id ? "var(--accent)" : "var(--bg-elevated)",
+                        color: selectedDomain === chip.id ? "#fff" : "var(--text-muted)",
+                        borderColor:
+                          selectedDomain === chip.id ? "var(--accent)" : "var(--color-border)",
+                      }}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="flex flex-wrap gap-4">
                 <div>
                   <label className="block text-sm mb-2" style={{ color: "var(--text-muted)" }}>
