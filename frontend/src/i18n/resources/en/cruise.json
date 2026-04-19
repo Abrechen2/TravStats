@@ -30,7 +30,12 @@
     "price": "Price",
     "notes": "Notes",
     "tags": "Tags",
-    "companions": "Companions"
+    "companions": "Companions",
+    "port_name": "Port name",
+    "city": "City",
+    "country": "Country",
+    "lat": "Latitude",
+    "lon": "Longitude"
   },
   "cabinType": { "inside": "Inside", "oceanview": "Oceanview", "balcony": "Balcony", "suite": "Suite" },
   "status": { "scheduled": "Scheduled", "flown": "Completed", "cancelled": "Cancelled", "historical": "Historical" },

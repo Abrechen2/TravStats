@@ -35,7 +35,12 @@
     "price": "Preis",
     "notes": "Notizen",
     "tags": "Tags",
-    "companions": "Mitreisende"
+    "companions": "Mitreisende",
+    "port_name": "Hafenname",
+    "city": "Stadt",
+    "country": "Land",
+    "lat": "Breite",
+    "lon": "Länge"
   },
   "cabinType": {
     "inside": "Innen",
