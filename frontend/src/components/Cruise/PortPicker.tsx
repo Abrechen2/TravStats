@@ -1,0 +1,219 @@
+import { useEffect, useState } from "react";
+import { portsApi } from "../../lib/api";
+import type { Port } from "../../types";
+import { useTranslation } from "../../hooks/useTranslation";
+
+interface Props {
+  value: Port | null;
+  onChange: (port: Port) => void;
+}
+
+/**
+ * Combobox-style port picker.
+ *
+ * - Debounced (250ms) search against `portsApi.search`.
+ * - Shows a dropdown with "name — city, country" for each match.
+ * - Offers an "add custom" flow when no exact-name match is present, capturing
+ *   required lat/lon and optional city/country, then creating via `portsApi.create`.
+ */
+export function PortPicker({ value, onChange }: Props): JSX.Element {
+  const { t } = useTranslation("cruise");
+  const [query, setQuery] = useState<string>(value?.name ?? "");
+  const [results, setResults] = useState<Port[]>([]);
+  const [showAdd, setShowAdd] = useState<boolean>(false);
+  const [newName, setNewName] = useState<string>("");
+  const [newCity, setNewCity] = useState<string>("");
+  const [newCountry, setNewCountry] = useState<string>("");
+  const [newLat, setNewLat] = useState<string>("");
+  const [newLon, setNewLon] = useState<string>("");
+  const [saving, setSaving] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!query || query.length < 2) {
+      setResults([]);
+      return;
+    }
+    const handle = setTimeout(async () => {
+      try {
+        const r = await portsApi.search(query);
+        setResults(Array.isArray(r) ? r : []);
+      } catch {
+        setResults([]);
+      }
+    }, 250);
+    return (): void => clearTimeout(handle);
+  }, [query]);
+
+  const exactMatch = results.some((r) => r.name.toLowerCase() === query.toLowerCase());
+
+  const formatLocation = (p: Port): string => {
+    const parts: string[] = [];
+    if (p.city) parts.push(p.city);
+    if (p.country) parts.push(p.country);
+    return parts.join(", ");
+  };
+
+  const handleSelect = (port: Port): void => {
+    onChange(port);
+    setQuery(port.name);
+    setResults([]);
+  };
+
+  const save = async (): Promise<void> => {
+    if (!newName) return;
+    const lat = Number.parseFloat(newLat);
+    const lon = Number.parseFloat(newLon);
+    if (
+      Number.isNaN(lat) ||
+      Number.isNaN(lon) ||
+      lat < -90 ||
+      lat > 90 ||
+      lon < -180 ||
+      lon > 180
+    ) {
+      setError("Invalid lat/lon");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const port = await portsApi.create({
+        name: newName,
+        city: newCity || undefined,
+        country: newCountry || undefined,
+        lat,
+        lon,
+      });
+      onChange(port);
+      setQuery(port.name);
+      setResults([]);
+      setShowAdd(false);
+      setNewName("");
+      setNewCity("");
+      setNewCountry("");
+      setNewLat("");
+      setNewLon("");
+    } catch {
+      setError(t("picker.add_custom_port"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const canSave = Boolean(newName) && newLat !== "" && newLon !== "";
+
+  return (
+    <div className="relative">
+      <input
+        role="combobox"
+        aria-expanded={results.length > 0}
+        aria-autocomplete="list"
+        className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 focus:border-sky-500 focus:outline-none"
+        placeholder={t("picker.port_placeholder")}
+        value={query}
+        onChange={(e): void => setQuery(e.target.value)}
+      />
+      {results.length > 0 && (
+        <ul className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-neutral-700 bg-neutral-900 shadow-lg">
+          {results.map((r) => {
+            const location = formatLocation(r);
+            return (
+              <li key={r.id}>
+                <button
+                  type="button"
+                  className="w-full px-3 py-2 text-left text-sm text-neutral-100 hover:bg-neutral-800"
+                  onClick={(): void => handleSelect(r)}
+                >
+                  {r.name}
+                  {location && <span className="text-neutral-500"> — {location}</span>}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {query.length >= 2 && !exactMatch && !showAdd && (
+        <button
+          type="button"
+          className="mt-2 text-xs text-sky-400 hover:underline"
+          onClick={(): void => {
+            setNewName(query);
+            setShowAdd(true);
+          }}
+        >
+          {t("picker.add_custom_port")}
+        </button>
+      )}
+      {showAdd && (
+        <div className="mt-2 space-y-2 rounded-md border border-neutral-700 bg-neutral-900 p-3">
+          <input
+            className="w-full rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-500"
+            value={newName}
+            onChange={(e): void => setNewName(e.target.value)}
+            placeholder={t("field.ports")}
+          />
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              className="rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-500"
+              value={newCity}
+              onChange={(e): void => setNewCity(e.target.value)}
+              placeholder="City"
+            />
+            <input
+              className="rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-500"
+              value={newCountry}
+              onChange={(e): void => setNewCountry(e.target.value)}
+              placeholder="Country"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              type="number"
+              step="0.001"
+              min={-90}
+              max={90}
+              className="rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-500"
+              value={newLat}
+              onChange={(e): void => setNewLat(e.target.value)}
+              placeholder="Lat"
+            />
+            <input
+              type="number"
+              step="0.001"
+              min={-180}
+              max={180}
+              className="rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-500"
+              value={newLon}
+              onChange={(e): void => setNewLon(e.target.value)}
+              placeholder="Lon"
+            />
+          </div>
+          {error !== null && <p className="text-xs text-red-400">{error}</p>}
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={(): void => {
+                setShowAdd(false);
+                setError(null);
+              }}
+              className="text-xs text-neutral-400 hover:text-neutral-200"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={saving || !canSave}
+              onClick={(): void => {
+                void save();
+              }}
+              className="rounded-md bg-sky-600 px-2 py-1 text-xs text-white hover:bg-sky-500 disabled:opacity-50"
+            >
+              {t("picker.add_custom_port")}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
