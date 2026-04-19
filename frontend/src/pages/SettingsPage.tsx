@@ -7,6 +7,7 @@ import { useSettingsPage } from "../components/Settings/useSettingsPage";
 import ProfileSection from "../components/Settings/ProfileSection";
 import HomeAirportSection from "../components/Settings/HomeAirportSection";
 import DisplaySection from "../components/Settings/DisplaySection";
+import ModuleSection from "../components/Settings/ModuleSection";
 import UnitsSection from "../components/Settings/UnitsSection";
 import DefaultsSection from "../components/Settings/DefaultsSection";
 import MapSection from "../components/Settings/MapSection";
@@ -71,6 +72,7 @@ export default function SettingsPage(): JSX.Element {
     { id: "profile", label: t("settings:profile.title") || "Profile" },
     { id: "homeAirport", label: t("settings:homeAirport.title") || "Home airport" },
     { id: "display", label: t("settings:display.title") || "Display" },
+    { id: "modules", label: t("common:settings.modules.title") || "Modules" },
     { id: "units", label: t("settings:units.title") || "Units" },
     { id: "defaults", label: t("settings:defaults.title") || "Defaults" },
     { id: "map", label: t("settings:map.title") || "Map" },
@@ -140,6 +142,7 @@ export default function SettingsPage(): JSX.Element {
                 onThemeToggle={handleThemeToggle}
               />
             )}
+            {activeSection === "modules" && <ModuleSection />}
             {activeSection === "units" && <UnitsSection units={units} onSetUnits={setUnits} />}
             {activeSection === "defaults" && (
               <DefaultsSection defaults={defaults} onSetDefaults={setDefaults} />
