@@ -2,7 +2,27 @@
   "loading": "Loading statistics...",
   "back": "← Back",
   "filter": {
-    "all": "All domains"
+    "all": "Overview"
+  },
+  "cruiseSection": {
+    "loadError": "Failed to load cruise statistics.",
+    "emptyTitle": "No cruises yet",
+    "emptyHint": "Once you record cruises, their KPIs appear here.",
+    "count": "Cruises",
+    "ports": "Ports",
+    "ships": "Ships",
+    "lines": "Lines",
+    "seaDays": "Sea days",
+    "countries": "Countries",
+    "linesLabel": "Cruise lines",
+    "countriesLabel": "Countries visited",
+    "flags": {
+      "balcony": "Balcony cabin",
+      "suite": "Suite",
+      "polar": "Polar region",
+      "coldWater": "Cold-water voyage",
+      "canal": "Canal transit"
+    }
   },
   "title": "Advanced Statistics",
   "welcome": "Welcome, {{username}}!",
