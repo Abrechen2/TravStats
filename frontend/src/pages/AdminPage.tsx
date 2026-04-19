@@ -20,6 +20,7 @@ import GlobalApiKeysManager from "../components/Admin/GlobalApiKeysManager";
 import ParserSettingsTab from "../components/Admin/ParserSettings";
 import LoggingManager from "../components/Admin/LoggingManager";
 import SmtpManager from "../components/Admin/SmtpManager";
+import CruiseMasterData from "../components/Admin/CruiseMasterData";
 import { useTranslation } from "../hooks/useTranslation";
 import { copyToClipboard } from "../lib/clipboard";
 
@@ -52,14 +53,14 @@ type ActiveSection =
   | "logging"
   | "backups"
   | "apiKeys"
-  | "smtp";
+  | "smtp"
+  | "cruiseMasterData";
 
 type TabId = "general" | "flight" | "cruise";
 
 // Which tab each admin section belongs to. Everything falls in "general"
-// unless it's inherently domain-specific. Parser training is flight-only
-// today; cruise has no admin surface yet but keeps a scaffolded tab so
-// future ship-seeding / port-maintenance pages have a home.
+// unless it's inherently domain-specific. Parser training is flight-only;
+// cruiseMasterData (ship + port management) lives under the cruise tab.
 const TAB_FOR_SECTION: Record<ActiveSection, TabId> = {
   system: "general",
   instance: "general",
@@ -70,6 +71,7 @@ const TAB_FOR_SECTION: Record<ActiveSection, TabId> = {
   backups: "general",
   smtp: "general",
   parsers: "flight",
+  cruiseMasterData: "cruise",
 };
 
 // ==================== Admin Page Component ====================
@@ -487,6 +489,10 @@ export default function AdminPage(): JSX.Element {
     { id: "logging", label: t("admin:tabs.logging") },
     { id: "backups", label: t("admin:tabs.backups") },
     { id: "smtp", label: t("admin:tabs.smtp") },
+    {
+      id: "cruiseMasterData",
+      label: t("admin:cruiseMasterData.menuLabel") || "Schiffe & Häfen",
+    },
   ];
 
   const sections = allSections.filter((s) => TAB_FOR_SECTION[s.id] === activeTab);
@@ -619,28 +625,7 @@ export default function AdminPage(): JSX.Element {
 
         {/* Main content */}
         <main className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Cruise tab has no admin sections yet — show scaffold notice */}
-          {activeTab === "cruise" && sections.length === 0 && (
-            <div
-              className="rounded-lg px-6 py-10 text-center text-sm"
-              style={{
-                background: "var(--bg-surface)",
-                border: "1px dashed var(--color-border)",
-                color: "var(--text-muted)",
-              }}
-            >
-              <p className="mb-2 text-2xl" aria-hidden>
-                🚢
-              </p>
-              <p className="font-medium text-[var(--text-primary)]">
-                {t("admin:tabs2.cruiseEmptyTitle") || "Kreuzfahrt-Admin"}
-              </p>
-              <p className="mt-1">
-                {t("admin:tabs2.cruiseEmptyHint") ||
-                  "Cruise-spezifische Admin-Funktionen (Schiffs-Seeding, Hafen-Pflege, …) folgen mit den nächsten Updates."}
-              </p>
-            </div>
-          )}
+          {activeSection === "cruiseMasterData" && <CruiseMasterData />}
 
           {activeSection === "system" && systemInfo && (
             <SystemInfoTab

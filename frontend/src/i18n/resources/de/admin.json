@@ -17,9 +17,39 @@
   "tabs2": {
     "general": "Allgemein",
     "flight": "Flug",
-    "cruise": "Kreuzfahrt",
-    "cruiseEmptyTitle": "Kreuzfahrt-Admin",
-    "cruiseEmptyHint": "Cruise-spezifische Admin-Funktionen (Schiffs-Seeding, Hafen-Pflege, …) folgen mit den nächsten Updates."
+    "cruise": "Kreuzfahrt"
+  },
+  "cruiseMasterData": {
+    "menuLabel": "Schiffe & Häfen",
+    "userAdded": "Benutzerdefiniert",
+    "ship": {
+      "title": "Schiffe",
+      "description": "Katalog aus Seed-CSV plus benutzerdefinierte Einträge. Neu angelegte Schiffe werden mit „Benutzerdefiniert\" markiert und bleiben bei Re-Seeds erhalten.",
+      "name": "Name",
+      "cruiseLine": "Reederei",
+      "year": "Baujahr",
+      "add": "Hinzufügen",
+      "searchPlaceholder": "Schiff oder Reederei suchen …",
+      "empty": "Keine Treffer.",
+      "created": "Schiff angelegt.",
+      "createFailed": "Schiff konnte nicht angelegt werden.",
+      "missingFields": "Name und Reederei sind erforderlich."
+    },
+    "port": {
+      "title": "Häfen",
+      "description": "Katalog aus Seed-CSV plus benutzerdefinierte Einträge. Koordinaten in Dezimalgrad — für unbekannte Häfen über Google Maps ermitteln.",
+      "name": "Name",
+      "city": "Stadt",
+      "country": "Land",
+      "lat": "Breite",
+      "lon": "Länge",
+      "add": "Hinzufügen",
+      "searchPlaceholder": "Hafen oder Stadt suchen …",
+      "empty": "Keine Treffer.",
+      "created": "Hafen angelegt.",
+      "createFailed": "Hafen konnte nicht angelegt werden.",
+      "missingFields": "Name, Breite und Länge sind erforderlich."
+    }
   },
   "instanceLabel": "Instanz",
   "instance": {
