@@ -321,6 +321,10 @@ export interface Achievement {
   unlockedAt?: string | null;
   progress?: number;
   progressPercentage?: number;
+  // Domain the achievement belongs to. `shared` means "always show regardless of
+  // which domains the user enabled". `string` fallback keeps us forward-compatible
+  // with future domains the backend might introduce before the frontend learns them.
+  domain: "flight" | "cruise" | "shared" | string;
 }
 
 export interface AchievementSummary {

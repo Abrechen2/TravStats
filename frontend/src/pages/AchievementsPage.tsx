@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { achievementsApi } from "../lib/api";
 import NavigationBar from "../components/NavigationBar";
@@ -8,6 +8,26 @@ import type { Achievement, AchievementSummary, LeaderboardEntry } from "../types
 import { useTranslation } from "../hooks/useTranslation";
 import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
+import { useEnabledDomains } from "../hooks/useEnabledDomains";
+import type { DomainKey } from "../shared/domains";
+
+/**
+ * Filter achievements down to the ones the user should currently see based on
+ * their enabled domains. `shared` achievements are always visible; anything
+ * else must match one of the user's enabled domains.
+ *
+ * Exported so it can be unit-tested in isolation without spinning up the full
+ * page (which pulls in NavigationBar, framer-motion, auth store, and other
+ * heavy dependencies).
+ */
+export function filterAchievementsByDomain(
+  achievements: Achievement[],
+  enabled: DomainKey[]
+): Achievement[] {
+  return achievements.filter(
+    (a) => a.domain === "shared" || enabled.includes(a.domain as DomainKey)
+  );
+}
 
 const tierTextColorValues: Record<string, string> = {
   bronze: "#f59e0b",
@@ -20,6 +40,7 @@ const tierTextColorValues: Record<string, string> = {
 export default function AchievementsPage(): JSX.Element {
   const { t } = useTranslation(["achievements", "common"]);
   const { addToast } = useToastStore();
+  const { enabled } = useEnabledDomains();
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [summary, setSummary] = useState<AchievementSummary | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -28,6 +49,16 @@ export default function AchievementsPage(): JSX.Element {
   const [selectedTier, setSelectedTier] = useState<string>("all");
   const [showUnlockedOnly, setShowUnlockedOnly] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+
+  // Hide achievements that belong to domains the user hasn't enabled. `shared`
+  // achievements always stay visible. This is the baseline for category counts
+  // and the rendered grid — stats are derived from the backend summary, which
+  // already reflects what the user has unlocked across all domains, so we only
+  // filter the per-card rendering.
+  const visibleAchievements = useMemo(
+    () => filterAchievementsByDomain(achievements, enabled),
+    [achievements, enabled]
+  );
 
   const categoryNames: Record<string, string> = {
     explorer: t("achievements:categories.explorer"),
@@ -81,7 +112,7 @@ export default function AchievementsPage(): JSX.Element {
     }
   };
 
-  const filteredAchievements = achievements.filter((ach) => {
+  const filteredAchievements = visibleAchievements.filter((ach) => {
     if (selectedCategory !== "all" && ach.category !== selectedCategory) return false;
     if (selectedTier !== "all" && ach.tier !== selectedTier) return false;
     if (showUnlockedOnly && !ach.isUnlocked) return false;
