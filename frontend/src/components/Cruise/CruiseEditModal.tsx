@@ -152,15 +152,15 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
       role="dialog"
       aria-modal="true"
     >
-      <div className="relative max-h-[90vh] w-full max-w-2xl overflow-auto rounded-lg border border-neutral-700 bg-neutral-950 p-6 shadow-xl">
-        <h2 className="mb-4 text-lg font-semibold text-neutral-100">
+      <div className="relative max-h-[90vh] w-full max-w-2xl overflow-auto rounded-lg border border-[var(--color-border)] bg-[var(--bg-base)] p-6 shadow-xl">
+        <h2 className="mb-4 text-lg font-semibold text-[var(--text-primary)]">
           {mode === "create" ? t("list.new") : t("detail.route")}
         </h2>
 
         <Section title={`${t("field.ship")} & ${t("field.line")}`}>
           <ShipPicker value={ship} onChange={onShipPicked} />
           <input
-            className="mt-2 w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100"
+            className="mt-2 w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
             aria-label={t("field.line")}
             value={cruiseLine}
             onChange={(e): void => setCruiseLine(e.target.value)}
@@ -170,21 +170,21 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
             <input
               type="datetime-local"
               aria-label={t("field.depart")}
-              className="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-sm text-neutral-100"
+              className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-2 py-1 text-sm text-[var(--text-primary)]"
               value={startDate}
               onChange={(e): void => setStartDate(e.target.value)}
             />
             <input
               type="datetime-local"
               aria-label={t("field.arrive")}
-              className="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1 text-sm text-neutral-100"
+              className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-2 py-1 text-sm text-[var(--text-primary)]"
               value={endDate}
               onChange={(e): void => setEndDate(e.target.value)}
             />
           </div>
           <select
             aria-label="status"
-            className="mt-2 w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100"
+            className="mt-2 w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
             value={status}
             onChange={(e): void => setStatus(e.target.value as CruiseStatus)}
           >
@@ -210,14 +210,14 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
           <div className="grid grid-cols-3 gap-2">
             <input
               aria-label={t("field.cabin")}
-              className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100"
+              className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
               value={cabinNumber}
               onChange={(e): void => setCabinNumber(e.target.value)}
               placeholder={t("field.cabin")}
             />
             <select
               aria-label={t("field.cabinType")}
-              className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100"
+              className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
               value={cabinType}
               onChange={(e): void => setCabinType(e.target.value as CabinType | "")}
             >
@@ -233,7 +233,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
               min={1}
               max={30}
               aria-label={t("field.deck")}
-              className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100"
+              className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
               value={deck}
               onChange={(e): void => setDeck(e.target.value)}
               placeholder={t("field.deck")}
@@ -245,7 +245,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
           <div className="grid grid-cols-3 gap-2">
             <input
               aria-label={t("field.bookingReference")}
-              className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100"
+              className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
               value={bookingReference}
               onChange={(e): void => setBookingReference(e.target.value)}
               placeholder={t("field.bookingReference")}
@@ -255,14 +255,14 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
               min={0}
               step={0.01}
               aria-label={t("field.price")}
-              className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100"
+              className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
               value={price}
               onChange={(e): void => setPrice(e.target.value)}
               placeholder={t("field.price")}
             />
             <select
               aria-label="currency"
-              className="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100"
+              className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
               value={currency}
               onChange={(e): void => setCurrency(e.target.value)}
             >
@@ -278,14 +278,14 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
         <Section title={t("detail.meta")}>
           <input
             aria-label={t("field.tags")}
-            className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100"
+            className="w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
             value={tagsInput}
             onChange={(e): void => setTagsInput(e.target.value)}
             placeholder={t("field.tags")}
           />
           <input
             aria-label={t("field.companions")}
-            className="mt-2 w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100"
+            className="mt-2 w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
             value={companionsInput}
             onChange={(e): void => setCompanionsInput(e.target.value)}
             placeholder={t("field.companions")}
@@ -293,7 +293,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
           <textarea
             aria-label={t("field.notes")}
             rows={3}
-            className="mt-2 w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100"
+            className="mt-2 w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
             value={notes}
             onChange={(e): void => setNotes(e.target.value)}
             placeholder={t("field.notes")}
@@ -301,7 +301,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
         </Section>
 
         {error !== null && (
-          <div className="mb-3 rounded-md border border-red-800 bg-red-950/50 px-3 py-2 text-sm text-red-300">
+          <div className="mb-3 rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 px-3 py-2 text-sm text-[var(--danger)]">
             {error}
           </div>
         )}
@@ -311,7 +311,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
             type="button"
             onClick={onClose}
             disabled={saving}
-            className="rounded-md border border-neutral-700 px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-900 disabled:opacity-50"
+            className="rounded-md border border-[var(--color-border)] px-4 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--bg-surface)] disabled:opacity-50"
           >
             Cancel
           </button>
@@ -321,7 +321,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
               void submit();
             }}
             disabled={saving}
-            className="rounded-md bg-amber-500 px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-amber-400 disabled:opacity-50"
+            className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-[var(--accent-dim)] disabled:opacity-50"
           >
             {saving ? "Saving…" : "Save"}
           </button>
@@ -333,8 +333,13 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
 
 function Section({ title, children }: { title: string; children: React.ReactNode }): JSX.Element {
   return (
-    <details open className="mb-4 rounded-md border border-neutral-800 bg-neutral-900/50 p-3">
-      <summary className="cursor-pointer text-sm font-medium text-neutral-200">{title}</summary>
+    <details
+      open
+      className="mb-4 rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)]/50 p-3"
+    >
+      <summary className="cursor-pointer text-sm font-medium text-[var(--text-primary)]">
+        {title}
+      </summary>
       <div className="mt-3">{children}</div>
     </details>
   );

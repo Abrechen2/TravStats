@@ -20,21 +20,21 @@ export function CruiseRow({ cruise, onOpen }: Props): JSX.Element {
   return (
     <tr
       onClick={onOpen}
-      className="cursor-pointer border-t border-neutral-800 hover:bg-neutral-900/50"
+      className="cursor-pointer border-t border-[var(--color-border)] hover:bg-[var(--bg-surface)]/50"
     >
-      <td className="px-3 py-2 text-sm text-neutral-100">{displayShip}</td>
-      <td className="px-3 py-2 text-sm text-neutral-300">{displayLine}</td>
-      <td className="px-3 py-2 text-sm text-neutral-300">
+      <td className="px-3 py-2 text-sm text-[var(--text-primary)]">{displayShip}</td>
+      <td className="px-3 py-2 text-sm text-[var(--text-muted)]">{displayLine}</td>
+      <td className="px-3 py-2 text-sm text-[var(--text-muted)]">
         {fmtDate(cruise.startDate)} – {fmtDate(cruise.endDate)}
       </td>
-      <td className="px-3 py-2 text-sm text-neutral-300">{portsCount}</td>
+      <td className="px-3 py-2 text-sm text-[var(--text-muted)]">{portsCount}</td>
       <td className="px-3 py-2 text-sm">
-        <span className="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-0.5 text-xs text-neutral-300">
+        <span className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-2 py-0.5 text-xs text-[var(--text-muted)]">
           {t(`status.${cruise.status}`)}
         </span>
       </td>
-      <td className="px-3 py-2 text-sm text-neutral-300">{cruise.cabinNumber ?? "—"}</td>
-      <td className="px-3 py-2 text-right text-sm text-neutral-300">{price}</td>
+      <td className="px-3 py-2 text-sm text-[var(--text-muted)]">{cruise.cabinNumber ?? "—"}</td>
+      <td className="px-3 py-2 text-right text-sm text-[var(--text-muted)]">{price}</td>
     </tr>
   );
 }
