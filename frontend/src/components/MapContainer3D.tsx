@@ -49,7 +49,8 @@ export default function MapContainer3D({
 }: MapContainer3DProps): JSX.Element {
   const { t } = useTranslation(["common", "map"]);
   const mapTheme = useThemeStore((s) => s.mapTheme);
-  const { isEnabled } = useEnabledDomains();
+  const { enabled: enabledDomains } = useEnabledDomains();
+  const cruiseEnabled = enabledDomains.includes("cruise");
   const [fabOpen, setFabOpen] = useState(false);
   const [tripList, setTripList] = useState<Trip[]>([]);
   const [cruises, setCruises] = useState<Cruise[]>([]);
@@ -67,10 +68,12 @@ export default function MapContainer3D({
   }, []);
 
   // Fetch cruises as supplemental map overlay. User hides by disabling
-  // the cruise domain in settings — no per-layer toggle in V1.
+  // the cruise domain in settings — no per-layer toggle in V1. Depends
+  // on the stable boolean (not the `isEnabled` closure) to avoid an
+  // effect loop when Zustand returns a fresh selector object.
   useEffect(() => {
-    if (!isEnabled("cruise")) {
-      setCruises([]);
+    if (!cruiseEnabled) {
+      setCruises((prev) => (prev.length === 0 ? prev : []));
       return;
     }
     let cancelled = false;
@@ -79,13 +82,13 @@ export default function MapContainer3D({
         const data = await cruiseApi.list();
         if (!cancelled) setCruises(data);
       } catch {
-        if (!cancelled) setCruises([]);
+        if (!cancelled) setCruises((prev) => (prev.length === 0 ? prev : []));
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [isEnabled]);
+  }, [cruiseEnabled]);
 
   const routeCount = useMemo(() => {
     if (visMode !== "routes") return null;
