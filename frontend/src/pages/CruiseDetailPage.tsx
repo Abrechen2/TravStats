@@ -44,7 +44,7 @@ export default function CruiseDetailPage(): JSX.Element {
     return (
       <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
         <NavigationBar />
-        <div className="p-6 text-neutral-400">Loading …</div>
+        <div className="p-6 text-[var(--text-muted)]">Loading …</div>
       </div>
     );
   }
@@ -55,11 +55,11 @@ export default function CruiseDetailPage(): JSX.Element {
         <div className="mx-auto max-w-3xl p-6">
           <button
             onClick={() => navigate("/cruises")}
-            className="text-sm text-amber-400 hover:underline"
+            className="text-sm text-[var(--accent)] hover:underline"
           >
             ← {t("list.title")}
           </button>
-          <div className="mt-4 rounded-md border border-red-800 bg-red-950/50 p-4 text-sm text-red-300">
+          <div className="mt-4 rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 p-4 text-sm text-[var(--danger)]">
             {error ?? "Cruise not found"}
           </div>
         </div>
@@ -87,13 +87,13 @@ export default function CruiseDetailPage(): JSX.Element {
       <div className="mx-auto max-w-6xl px-4 py-6">
         <button
           onClick={() => navigate("/cruises")}
-          className="mb-3 text-sm text-amber-400 hover:underline"
+          className="mb-3 text-sm text-[var(--accent)] hover:underline"
         >
           ← {t("list.title")}
         </button>
 
         {/* Ship-header strip */}
-        <div className="mb-6 flex flex-col gap-3 rounded-lg border border-neutral-800 bg-neutral-900 p-4 md:flex-row md:items-center md:justify-between">
+        <div className="mb-6 flex flex-col gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--bg-surface)] p-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-3">
             <div
               aria-hidden
@@ -103,31 +103,31 @@ export default function CruiseDetailPage(): JSX.Element {
               🚢
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-neutral-100">
+              <h1 className="text-xl font-semibold text-[var(--text-primary)]">
                 {cruise.ship?.name ?? cruise.shipNameOverride ?? "—"}
               </h1>
-              <p className="text-sm text-neutral-400">
+              <p className="text-sm text-[var(--text-muted)]">
                 {cruise.cruiseLine ?? cruise.ship?.cruiseLine ?? "—"}
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-300">
-            <span className="rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
+            <span className="rounded-md border border-[var(--color-border)] bg-[var(--bg-base)] px-2 py-1">
               {fmtDate(cruise.startDate)} – {fmtDate(cruise.endDate)}
             </span>
-            <span className="rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1">
+            <span className="rounded-md border border-[var(--color-border)] bg-[var(--bg-base)] px-2 py-1">
               {portsCount} {t("field.ports")}
             </span>
-            <span className="rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1">
+            <span className="rounded-md border border-[var(--color-border)] bg-[var(--bg-base)] px-2 py-1">
               {seaDays} {t("field.sea_days")}
             </span>
-            <span className="rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1">
+            <span className="rounded-md border border-[var(--color-border)] bg-[var(--bg-base)] px-2 py-1">
               {t(`status.${cruise.status}`)}
             </span>
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="rounded-md bg-amber-500 px-3 py-1 text-sm font-medium text-neutral-900 hover:bg-amber-400"
+              className="rounded-md bg-[var(--accent)] px-3 py-1 text-sm font-medium text-neutral-900 hover:bg-[var(--accent-dim)]"
             >
               Edit
             </button>
@@ -137,25 +137,29 @@ export default function CruiseDetailPage(): JSX.Element {
         {/* Two-column body */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
           <div className="md:col-span-3">
-            <h2 className="mb-2 text-sm font-semibold text-neutral-300">{t("detail.route")}</h2>
+            <h2 className="mb-2 text-sm font-semibold text-[var(--text-muted)]">
+              {t("detail.route")}
+            </h2>
             {events.length > 0 ? (
               <TripTimeline events={events} />
             ) : (
-              <div className="rounded-md border border-neutral-800 bg-neutral-900 px-4 py-6 text-center text-sm text-neutral-400">
+              <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-4 py-6 text-center text-sm text-[var(--text-muted)]">
                 {t("stops.title")}
               </div>
             )}
           </div>
 
           <aside className="space-y-3 md:col-span-2">
-            <div className="rounded-md border border-neutral-800 bg-neutral-900 p-4">
-              <p className="text-xs uppercase text-neutral-500">{t("detail.route")}</p>
-              <p className="mt-1 text-sm text-neutral-400">Map coming soon</p>
+            <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] p-4">
+              <p className="text-xs uppercase text-[var(--text-muted)]">{t("detail.route")}</p>
+              <p className="mt-1 text-sm text-[var(--text-muted)]">Map coming soon</p>
             </div>
 
-            <div className="rounded-md border border-neutral-800 bg-neutral-900 p-4">
-              <h3 className="text-sm font-semibold text-neutral-200">{t("detail.cabin")}</h3>
-              <dl className="mt-2 space-y-1 text-xs text-neutral-300">
+            <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] p-4">
+              <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+                {t("detail.cabin")}
+              </h3>
+              <dl className="mt-2 space-y-1 text-xs text-[var(--text-muted)]">
                 <div className="flex justify-between">
                   <dt>{t("field.cabin")}</dt>
                   <dd>{cruise.cabinNumber ?? "—"}</dd>
@@ -171,9 +175,11 @@ export default function CruiseDetailPage(): JSX.Element {
               </dl>
             </div>
 
-            <div className="rounded-md border border-neutral-800 bg-neutral-900 p-4">
-              <h3 className="text-sm font-semibold text-neutral-200">{t("detail.costs")}</h3>
-              <dl className="mt-2 space-y-1 text-xs text-neutral-300">
+            <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] p-4">
+              <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+                {t("detail.costs")}
+              </h3>
+              <dl className="mt-2 space-y-1 text-xs text-[var(--text-muted)]">
                 <div className="flex justify-between">
                   <dt>{t("field.bookingReference")}</dt>
                   <dd>{cruise.bookingReference ?? "—"}</dd>
@@ -189,14 +195,16 @@ export default function CruiseDetailPage(): JSX.Element {
               </dl>
             </div>
 
-            <div className="rounded-md border border-neutral-800 bg-neutral-900 p-4">
-              <h3 className="text-sm font-semibold text-neutral-200">{t("detail.meta")}</h3>
+            <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] p-4">
+              <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+                {t("detail.meta")}
+              </h3>
               {cruise.tags.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1">
                   {cruise.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="rounded-md border border-neutral-700 px-2 py-0.5 text-xs text-neutral-300"
+                      className="rounded-md border border-[var(--color-border)] px-2 py-0.5 text-xs text-[var(--text-muted)]"
                     >
                       {tag}
                     </span>
@@ -204,13 +212,15 @@ export default function CruiseDetailPage(): JSX.Element {
                 </div>
               )}
               {cruise.companions.length > 0 && (
-                <p className="mt-2 text-xs text-neutral-400">
-                  <span className="text-neutral-500">{t("field.companions")}:</span>{" "}
+                <p className="mt-2 text-xs text-[var(--text-muted)]">
+                  <span className="text-[var(--text-muted)]">{t("field.companions")}:</span>{" "}
                   {cruise.companions.join(", ")}
                 </p>
               )}
               {cruise.notes !== null && cruise.notes.length > 0 && (
-                <p className="mt-2 whitespace-pre-wrap text-xs text-neutral-300">{cruise.notes}</p>
+                <p className="mt-2 whitespace-pre-wrap text-xs text-[var(--text-muted)]">
+                  {cruise.notes}
+                </p>
               )}
             </div>
           </aside>

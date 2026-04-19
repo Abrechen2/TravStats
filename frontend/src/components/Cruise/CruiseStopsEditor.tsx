@@ -54,8 +54,11 @@ export function CruiseStopsEditor({ stops, onChange }: Props): JSX.Element {
   return (
     <div className="space-y-3">
       {stops.map((stop, i) => (
-        <div key={i} className="rounded-md border border-neutral-700 bg-neutral-900 p-3">
-          <div className="mb-2 flex items-center justify-between text-xs text-neutral-400">
+        <div
+          key={i}
+          className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] p-3"
+        >
+          <div className="mb-2 flex items-center justify-between text-xs text-[var(--text-muted)]">
             <span>
               {t("stops.day")} {stop.dayNumber}
             </span>
@@ -81,14 +84,14 @@ export function CruiseStopsEditor({ stops, onChange }: Props): JSX.Element {
               <button
                 type="button"
                 onClick={(): void => remove(i)}
-                className="px-1 text-red-400 hover:text-red-300"
+                className="px-1 text-[var(--danger)] hover:text-[var(--danger)]"
                 aria-label="remove"
               >
                 ×
               </button>
             </div>
           </div>
-          <label className="mb-2 flex items-center gap-2 text-xs text-neutral-300">
+          <label className="mb-2 flex items-center gap-2 text-xs text-[var(--text-muted)]">
             <input
               type="checkbox"
               checked={stop.isAtSea}
@@ -113,7 +116,7 @@ export function CruiseStopsEditor({ stops, onChange }: Props): JSX.Element {
                       arrivalTime: e.target.value ? new Date(e.target.value).toISOString() : null,
                     })
                   }
-                  className="rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1 text-xs text-neutral-100"
+                  className="rounded-md border border-[var(--color-border)] bg-[var(--bg-elevated)] px-2 py-1 text-xs text-[var(--text-primary)]"
                   aria-label={t("field.arrive")}
                 />
                 <input
@@ -124,7 +127,7 @@ export function CruiseStopsEditor({ stops, onChange }: Props): JSX.Element {
                       departureTime: e.target.value ? new Date(e.target.value).toISOString() : null,
                     })
                   }
-                  className="rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1 text-xs text-neutral-100"
+                  className="rounded-md border border-[var(--color-border)] bg-[var(--bg-elevated)] px-2 py-1 text-xs text-[var(--text-primary)]"
                   aria-label={t("field.depart")}
                 />
               </div>
@@ -132,7 +135,7 @@ export function CruiseStopsEditor({ stops, onChange }: Props): JSX.Element {
                 value={stop.excursionNote ?? ""}
                 onChange={(e): void => update(i, { excursionNote: e.target.value })}
                 rows={2}
-                className="mt-2 w-full rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1 text-xs text-neutral-100"
+                className="mt-2 w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-elevated)] px-2 py-1 text-xs text-[var(--text-primary)]"
                 placeholder={t("stops.excursion")}
               />
             </>
@@ -142,7 +145,7 @@ export function CruiseStopsEditor({ stops, onChange }: Props): JSX.Element {
       <button
         type="button"
         onClick={add}
-        className="w-full rounded-md border border-dashed border-neutral-700 py-2 text-xs text-neutral-400 hover:border-amber-500 hover:text-amber-400"
+        className="w-full rounded-md border border-dashed border-[var(--color-border)] py-2 text-xs text-[var(--text-muted)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
       >
         + {t("stops.add")}
       </button>
