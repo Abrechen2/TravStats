@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { setupApi } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
 import { useTranslation } from "../hooks/useTranslation";
+import DomainPickerStep from "../components/Setup/DomainPickerStep";
+import type { DomainKey } from "../shared/domains";
 
 export default function SetupPage(): JSX.Element {
   const navigate = useNavigate();
@@ -13,6 +15,7 @@ export default function SetupPage(): JSX.Element {
     password: "",
     confirmPassword: "",
   });
+  const [selectedDomains, setSelectedDomains] = useState<DomainKey[]>(["flight"]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -47,6 +50,7 @@ export default function SetupPage(): JSX.Element {
         username: formData.username,
         password: formData.password,
         frontendUrl,
+        enabledDomains: selectedDomains,
       });
 
       setAuth(response.user);
@@ -148,6 +152,10 @@ export default function SetupPage(): JSX.Element {
                   required
                   minLength={8}
                 />
+              </div>
+
+              <div className="pt-2">
+                <DomainPickerStep value={selectedDomains} onChange={setSelectedDomains} />
               </div>
 
               <p className="text-xs text-center text-gray-500 dark:text-gray-400 pt-2">

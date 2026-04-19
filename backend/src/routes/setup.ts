@@ -8,6 +8,7 @@ import { AppError } from '../middleware/errorHandler';
 import { getSeedingStatus } from '../services/airportSeedingService';
 import { updateInstanceSettings } from '../services/instanceSettingsService';
 import { authLimiter } from '../middleware/rateLimit';
+import { DOMAIN_KEYS, type DomainKey } from '../shared/domains';
 
 const initializeSchema = z.object({
   username: z.string().min(1, 'Username is required').max(50),
@@ -16,6 +17,10 @@ const initializeSchema = z.object({
   frontendUrl: z.string().url('Frontend URL must be a valid URL').max(500).optional(),
   maxUsers: z.number().int().min(1).max(1000).optional(),
   allowRegistration: z.boolean().optional(),
+  enabledDomains: z
+    .array(z.enum(DOMAIN_KEYS as unknown as [DomainKey, ...DomainKey[]]))
+    .optional()
+    .default(['flight']),
 });
 
 const router = Router();
@@ -49,7 +54,15 @@ router.get('/status', async (req: Request, res: Response, next: NextFunction) =>
 router.post('/initialize', authLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const validated = initializeSchema.parse(req.body);
-    const { username, password, instanceName, frontendUrl, maxUsers, allowRegistration } = validated;
+    const {
+      username,
+      password,
+      instanceName,
+      frontendUrl,
+      maxUsers,
+      allowRegistration,
+      enabledDomains,
+    } = validated;
 
     // Check if setup already completed (admin exists)
     const adminCount = await prisma.user.count({
@@ -66,6 +79,20 @@ router.post('/initialize', authLimiter, async (req: Request, res: Response, next
         username,
         passwordHash,
         isAdmin: true,
+      },
+    });
+
+    // Persist the admin's domain selection so the UI filters modules
+    // from the very first session after setup.
+    await prisma.userSettings.upsert({
+      where: { userId: user.id },
+      create: {
+        userId: user.id,
+        data: {},
+        enabledDomains,
+      },
+      update: {
+        enabledDomains,
       },
     });
 
