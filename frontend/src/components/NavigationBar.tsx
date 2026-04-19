@@ -4,6 +4,7 @@ import { useAuthStore } from "../store/authStore";
 import { pendingUpdatesApi } from "../lib/api";
 import { useTranslation } from "../hooks/useTranslation";
 import { useClickOutside } from "../hooks/useClickOutside";
+import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { logger } from "../lib/logger";
 import DiagnosticExportModal from "./DiagnosticExportModal";
 import { LogoMark, LogoWordmark } from "./Brand/Logo";
@@ -28,6 +29,7 @@ export default function NavigationBar(): JSX.Element {
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const closeMobileMenu = useCallback(() => setMobileMenuOpen(false), []);
   useClickOutside(mobileMenuRef, closeMobileMenu);
+  const { isEnabled } = useEnabledDomains();
 
   const hasParserAccess = user?.isAdmin ?? false;
 
@@ -63,7 +65,7 @@ export default function NavigationBar(): JSX.Element {
     { path: "/", label: t("dashboard:title"), show: true },
     { path: "/achievements", label: t("dashboard:achievements"), show: true },
     { path: "/stats", label: t("dashboard:stats"), show: true },
-    { path: "/flights", label: t("dashboard:flights"), show: true },
+    { path: "/flights", label: t("dashboard:flights"), show: isEnabled("flight") },
     {
       path: "/pending-updates",
       label: t("dashboard:pendingUpdates"),
