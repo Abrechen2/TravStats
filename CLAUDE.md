@@ -18,8 +18,59 @@ npm run dev:frontend  # port 3000
 
 ## Deploy & Release Workflow
 
-**No PRs.** Solo project — commits land directly on `main`. No branches,
-no pull requests.
+**No PRs.** Solo project — no pull-request ceremony. Branching strategy
+is scoped to change size:
+
+| Change size | Branch | When |
+|---|---|---|
+| Trivial (≤3 files, 1-line / config, no DB) | Direct commit to `main` | Typo, lint fix, tweak |
+| Risky fix (multi-file, logic, migration, dep bump) | `fix/<slug>` off `main`, merge when green | Any bug fix with blast radius |
+| Small feature | `feat/<slug>` off `main`, merge when done | Isolated enhancement |
+| Large / long-running feature | `dev/<slug>` off `main`, NEVER commit to main until complete | Multi-phase work (e.g. `dev/multi-domain-v1` for cruise) |
+
+**Rule of thumb:** if you'd want to be able to revert the change as a unit
+or isolate it during review, branch it. Otherwise commit directly.
+
+**`main` is the deploy trunk** — every commit on `main` is a candidate
+for `/deploy`. Dev branches never deploy.
+
+### Long-running feature branches (e.g. `dev/multi-domain-v1`)
+
+When a `dev/<slug>` branch is active:
+
+1. **Pull `main` into the dev branch after every main release.** Keep merges
+   early + often so conflicts stay small:
+   ```bash
+   git checkout dev/multi-domain-v1
+   git merge main
+   ```
+2. **Do NOT touch `backend/VERSION` or `CHANGELOG.md` on a dev branch** —
+   both are owned by `/deploy` on main. Editing them on the branch creates
+   guaranteed merge conflicts. `main → dev` merges carry them automatically.
+3. **Do NOT `rebase main`** onto a long-running dev branch. Rebase rewrites
+   history and breaks GitNexus, pre-commit hook caches, and any commit
+   refs baked into memory / plan docs. Use `merge` every time.
+4. **Final merge when the feature is ready:**
+   ```bash
+   git checkout dev/<slug>
+   git merge main             # last sync
+   # run full tsc + tests + manual smoke
+   git checkout main
+   git merge --no-ff dev/<slug>   # explicit merge commit — no fast-forward
+   /deploy
+   ```
+
+### Short-lived fix/feat branch workflow
+
+```bash
+git checkout main
+git checkout -b fix/<slug>
+# … edit, commit …
+git checkout main
+git merge fix/<slug>         # fast-forward is fine
+git branch -d fix/<slug>
+/deploy
+```
 
 ### RC-first rule (every release, no exceptions)
 
