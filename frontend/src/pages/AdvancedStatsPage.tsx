@@ -522,7 +522,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                 border: "1px solid var(--color-border)",
               }}
             >
-              {t("stats.filter.all") || "All"}
+              {t("stats:filter.all")}
             </button>
             {enabled.map((k) => {
               const d = DOMAINS[k];
@@ -539,7 +539,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                   }}
                 >
                   <span aria-hidden>{d.icon}</span>
-                  {t(d.i18nKey) || d.key}
+                  {t(`common:${d.i18nKey}`)}
                 </button>
               );
             })}

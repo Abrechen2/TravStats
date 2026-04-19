@@ -321,7 +321,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
               void submit();
             }}
             disabled={saving}
-            className="rounded-md bg-sky-600 px-4 py-2 text-sm text-white hover:bg-sky-500 disabled:opacity-50"
+            className="rounded-md bg-amber-500 px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-amber-400 disabled:opacity-50"
           >
             {saving ? "Saving…" : "Save"}
           </button>

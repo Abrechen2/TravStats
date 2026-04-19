@@ -109,7 +109,7 @@ export function PortPicker({ value, onChange }: Props): JSX.Element {
         role="combobox"
         aria-expanded={results.length > 0}
         aria-autocomplete="list"
-        className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 focus:border-sky-500 focus:outline-none"
+        className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-500 focus:border-amber-500 focus:outline-none"
         placeholder={t("picker.port_placeholder")}
         value={query}
         onChange={(e): void => setQuery(e.target.value)}
@@ -136,7 +136,7 @@ export function PortPicker({ value, onChange }: Props): JSX.Element {
       {query.length >= 2 && !exactMatch && !showAdd && (
         <button
           type="button"
-          className="mt-2 text-xs text-sky-400 hover:underline"
+          className="mt-2 text-xs text-amber-400 hover:underline"
           onClick={(): void => {
             setNewName(query);
             setShowAdd(true);
@@ -207,7 +207,7 @@ export function PortPicker({ value, onChange }: Props): JSX.Element {
               onClick={(): void => {
                 void save();
               }}
-              className="rounded-md bg-sky-600 px-2 py-1 text-xs text-white hover:bg-sky-500 disabled:opacity-50"
+              className="rounded-md bg-amber-500 px-2 py-1 text-xs font-medium text-neutral-900 hover:bg-amber-400 disabled:opacity-50"
             >
               {t("picker.add_custom_port")}
             </button>
