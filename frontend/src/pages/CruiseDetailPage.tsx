@@ -4,6 +4,7 @@ import { cruiseApi } from "../lib/api";
 import type { Cruise } from "../types";
 import { CruiseEditModal } from "../components/Cruise/CruiseEditModal";
 import TripTimeline, { type TimelineEvent } from "../components/Trip/TripTimeline";
+import NavigationBar from "../components/NavigationBar";
 import { useTranslation } from "../hooks/useTranslation";
 
 const fmtDate = (iso: string | null): string => {
@@ -39,18 +40,28 @@ export default function CruiseDetailPage(): JSX.Element {
     };
   }, [id]);
 
-  if (loading) return <div className="p-6 text-neutral-400">Loading …</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
+        <NavigationBar />
+        <div className="p-6 text-neutral-400">Loading …</div>
+      </div>
+    );
+  }
   if (error !== null || !cruise) {
     return (
-      <div className="mx-auto max-w-3xl p-6">
-        <button
-          onClick={() => navigate("/cruises")}
-          className="text-sm text-amber-400 hover:underline"
-        >
-          ← {t("list.title")}
-        </button>
-        <div className="mt-4 rounded-md border border-red-800 bg-red-950/50 p-4 text-sm text-red-300">
-          {error ?? "Cruise not found"}
+      <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
+        <NavigationBar />
+        <div className="mx-auto max-w-3xl p-6">
+          <button
+            onClick={() => navigate("/cruises")}
+            className="text-sm text-amber-400 hover:underline"
+          >
+            ← {t("list.title")}
+          </button>
+          <div className="mt-4 rounded-md border border-red-800 bg-red-950/50 p-4 text-sm text-red-300">
+            {error ?? "Cruise not found"}
+          </div>
         </div>
       </div>
     );
@@ -71,149 +82,152 @@ export default function CruiseDetailPage(): JSX.Element {
   const seaDays = cruise.stops.filter((s) => s.isAtSea).length;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6">
-      <button
-        onClick={() => navigate("/cruises")}
-        className="mb-3 text-sm text-amber-400 hover:underline"
-      >
-        ← {t("list.title")}
-      </button>
+    <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
+      <NavigationBar />
+      <div className="mx-auto max-w-6xl px-4 py-6">
+        <button
+          onClick={() => navigate("/cruises")}
+          className="mb-3 text-sm text-amber-400 hover:underline"
+        >
+          ← {t("list.title")}
+        </button>
 
-      {/* Ship-header strip */}
-      <div className="mb-6 flex flex-col gap-3 rounded-lg border border-neutral-800 bg-neutral-900 p-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-3">
-          <div
-            aria-hidden
-            className="flex h-12 w-12 items-center justify-center rounded-lg text-2xl"
-            style={{ backgroundColor: "#38bdf822", color: "#38bdf8" }}
-          >
-            🚢
-          </div>
-          <div>
-            <h1 className="text-xl font-semibold text-neutral-100">
-              {cruise.ship?.name ?? cruise.shipNameOverride ?? "—"}
-            </h1>
-            <p className="text-sm text-neutral-400">
-              {cruise.cruiseLine ?? cruise.ship?.cruiseLine ?? "—"}
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-300">
-          <span className="rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1">
-            {fmtDate(cruise.startDate)} – {fmtDate(cruise.endDate)}
-          </span>
-          <span className="rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1">
-            {portsCount} {t("field.ports")}
-          </span>
-          <span className="rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1">
-            {seaDays} {t("field.sea_days")}
-          </span>
-          <span className="rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1">
-            {t(`status.${cruise.status}`)}
-          </span>
-          <button
-            type="button"
-            onClick={() => setEditing(true)}
-            className="rounded-md bg-amber-500 px-3 py-1 text-sm font-medium text-neutral-900 hover:bg-amber-400"
-          >
-            Edit
-          </button>
-        </div>
-      </div>
-
-      {/* Two-column body */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
-        <div className="md:col-span-3">
-          <h2 className="mb-2 text-sm font-semibold text-neutral-300">{t("detail.route")}</h2>
-          {events.length > 0 ? (
-            <TripTimeline events={events} />
-          ) : (
-            <div className="rounded-md border border-neutral-800 bg-neutral-900 px-4 py-6 text-center text-sm text-neutral-400">
-              {t("stops.title")}
+        {/* Ship-header strip */}
+        <div className="mb-6 flex flex-col gap-3 rounded-lg border border-neutral-800 bg-neutral-900 p-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-3">
+            <div
+              aria-hidden
+              className="flex h-12 w-12 items-center justify-center rounded-lg text-2xl"
+              style={{ backgroundColor: "#38bdf822", color: "#38bdf8" }}
+            >
+              🚢
             </div>
-          )}
+            <div>
+              <h1 className="text-xl font-semibold text-neutral-100">
+                {cruise.ship?.name ?? cruise.shipNameOverride ?? "—"}
+              </h1>
+              <p className="text-sm text-neutral-400">
+                {cruise.cruiseLine ?? cruise.ship?.cruiseLine ?? "—"}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-300">
+            <span className="rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1">
+              {fmtDate(cruise.startDate)} – {fmtDate(cruise.endDate)}
+            </span>
+            <span className="rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1">
+              {portsCount} {t("field.ports")}
+            </span>
+            <span className="rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1">
+              {seaDays} {t("field.sea_days")}
+            </span>
+            <span className="rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1">
+              {t(`status.${cruise.status}`)}
+            </span>
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="rounded-md bg-amber-500 px-3 py-1 text-sm font-medium text-neutral-900 hover:bg-amber-400"
+            >
+              Edit
+            </button>
+          </div>
         </div>
 
-        <aside className="space-y-3 md:col-span-2">
-          <div className="rounded-md border border-neutral-800 bg-neutral-900 p-4">
-            <p className="text-xs uppercase text-neutral-500">{t("detail.route")}</p>
-            <p className="mt-1 text-sm text-neutral-400">Map coming soon</p>
-          </div>
-
-          <div className="rounded-md border border-neutral-800 bg-neutral-900 p-4">
-            <h3 className="text-sm font-semibold text-neutral-200">{t("detail.cabin")}</h3>
-            <dl className="mt-2 space-y-1 text-xs text-neutral-300">
-              <div className="flex justify-between">
-                <dt>{t("field.cabin")}</dt>
-                <dd>{cruise.cabinNumber ?? "—"}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt>{t("field.cabinType")}</dt>
-                <dd>{cruise.cabinType ? t(`cabinType.${cruise.cabinType}`) : "—"}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt>{t("field.deck")}</dt>
-                <dd>{cruise.deck ?? "—"}</dd>
-              </div>
-            </dl>
-          </div>
-
-          <div className="rounded-md border border-neutral-800 bg-neutral-900 p-4">
-            <h3 className="text-sm font-semibold text-neutral-200">{t("detail.costs")}</h3>
-            <dl className="mt-2 space-y-1 text-xs text-neutral-300">
-              <div className="flex justify-between">
-                <dt>{t("field.bookingReference")}</dt>
-                <dd>{cruise.bookingReference ?? "—"}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt>{t("field.price")}</dt>
-                <dd>
-                  {cruise.price !== null
-                    ? `${cruise.price.toFixed(2)} ${cruise.currency ?? ""}`
-                    : "—"}
-                </dd>
-              </div>
-            </dl>
-          </div>
-
-          <div className="rounded-md border border-neutral-800 bg-neutral-900 p-4">
-            <h3 className="text-sm font-semibold text-neutral-200">{t("detail.meta")}</h3>
-            {cruise.tags.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1">
-                {cruise.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-md border border-neutral-700 px-2 py-0.5 text-xs text-neutral-300"
-                  >
-                    {tag}
-                  </span>
-                ))}
+        {/* Two-column body */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
+          <div className="md:col-span-3">
+            <h2 className="mb-2 text-sm font-semibold text-neutral-300">{t("detail.route")}</h2>
+            {events.length > 0 ? (
+              <TripTimeline events={events} />
+            ) : (
+              <div className="rounded-md border border-neutral-800 bg-neutral-900 px-4 py-6 text-center text-sm text-neutral-400">
+                {t("stops.title")}
               </div>
             )}
-            {cruise.companions.length > 0 && (
-              <p className="mt-2 text-xs text-neutral-400">
-                <span className="text-neutral-500">{t("field.companions")}:</span>{" "}
-                {cruise.companions.join(", ")}
-              </p>
-            )}
-            {cruise.notes !== null && cruise.notes.length > 0 && (
-              <p className="mt-2 whitespace-pre-wrap text-xs text-neutral-300">{cruise.notes}</p>
-            )}
           </div>
-        </aside>
+
+          <aside className="space-y-3 md:col-span-2">
+            <div className="rounded-md border border-neutral-800 bg-neutral-900 p-4">
+              <p className="text-xs uppercase text-neutral-500">{t("detail.route")}</p>
+              <p className="mt-1 text-sm text-neutral-400">Map coming soon</p>
+            </div>
+
+            <div className="rounded-md border border-neutral-800 bg-neutral-900 p-4">
+              <h3 className="text-sm font-semibold text-neutral-200">{t("detail.cabin")}</h3>
+              <dl className="mt-2 space-y-1 text-xs text-neutral-300">
+                <div className="flex justify-between">
+                  <dt>{t("field.cabin")}</dt>
+                  <dd>{cruise.cabinNumber ?? "—"}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt>{t("field.cabinType")}</dt>
+                  <dd>{cruise.cabinType ? t(`cabinType.${cruise.cabinType}`) : "—"}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt>{t("field.deck")}</dt>
+                  <dd>{cruise.deck ?? "—"}</dd>
+                </div>
+              </dl>
+            </div>
+
+            <div className="rounded-md border border-neutral-800 bg-neutral-900 p-4">
+              <h3 className="text-sm font-semibold text-neutral-200">{t("detail.costs")}</h3>
+              <dl className="mt-2 space-y-1 text-xs text-neutral-300">
+                <div className="flex justify-between">
+                  <dt>{t("field.bookingReference")}</dt>
+                  <dd>{cruise.bookingReference ?? "—"}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt>{t("field.price")}</dt>
+                  <dd>
+                    {cruise.price !== null
+                      ? `${cruise.price.toFixed(2)} ${cruise.currency ?? ""}`
+                      : "—"}
+                  </dd>
+                </div>
+              </dl>
+            </div>
+
+            <div className="rounded-md border border-neutral-800 bg-neutral-900 p-4">
+              <h3 className="text-sm font-semibold text-neutral-200">{t("detail.meta")}</h3>
+              {cruise.tags.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {cruise.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-md border border-neutral-700 px-2 py-0.5 text-xs text-neutral-300"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {cruise.companions.length > 0 && (
+                <p className="mt-2 text-xs text-neutral-400">
+                  <span className="text-neutral-500">{t("field.companions")}:</span>{" "}
+                  {cruise.companions.join(", ")}
+                </p>
+              )}
+              {cruise.notes !== null && cruise.notes.length > 0 && (
+                <p className="mt-2 whitespace-pre-wrap text-xs text-neutral-300">{cruise.notes}</p>
+              )}
+            </div>
+          </aside>
+        </div>
+
+        {editing && (
+          <CruiseEditModal
+            mode="edit"
+            cruise={cruise}
+            onClose={() => setEditing(false)}
+            onSaved={(updated) => {
+              setCruise(updated);
+              setEditing(false);
+            }}
+          />
+        )}
       </div>
-
-      {editing && (
-        <CruiseEditModal
-          mode="edit"
-          cruise={cruise}
-          onClose={() => setEditing(false)}
-          onSaved={(updated) => {
-            setCruise(updated);
-            setEditing(false);
-          }}
-        />
-      )}
     </div>
   );
 }
