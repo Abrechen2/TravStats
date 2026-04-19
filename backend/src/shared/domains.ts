@@ -26,7 +26,7 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
   },
   cruise: {
     key: 'cruise',
-    available: false,
+    available: true,
     i18nKey: 'domain.cruise',
     icon: '🚢',
     color: '#38bdf8',

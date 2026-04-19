@@ -35,8 +35,10 @@ describe("ModuleSection", () => {
 
   it("disables unavailable domains", () => {
     render(<ModuleSection />);
-    const cruiseToggle = screen.getByRole("switch", { name: /domain\.cruise/ });
-    expect(cruiseToggle).toBeDisabled();
+    const hotelToggle = screen.getByRole("switch", { name: /domain\.hotel/ });
+    expect(hotelToggle).toBeDisabled();
+    const poiToggle = screen.getByRole("switch", { name: /domain\.poi/ });
+    expect(poiToggle).toBeDisabled();
   });
 
   it("toggling an available domain updates the store", () => {

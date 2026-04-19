@@ -6,9 +6,11 @@ describe("frontend domain registry", () => {
     expect(DOMAIN_KEYS).toEqual(["flight", "cruise", "hotel", "poi"]);
   });
   it("exposes AVAILABLE_DOMAINS only with available=true", () => {
-    expect(AVAILABLE_DOMAINS).toEqual(["flight"]);
+    expect(AVAILABLE_DOMAINS).toEqual(["flight", "cruise"]);
     expect(DOMAINS.flight.available).toBe(true);
-    expect(DOMAINS.cruise.available).toBe(false);
+    expect(DOMAINS.cruise.available).toBe(true);
+    expect(DOMAINS.hotel.available).toBe(false);
+    expect(DOMAINS.poi.available).toBe(false);
   });
   it("isValidDomain", () => {
     expect(isValidDomain("flight")).toBe(true);
