@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 import type { VisMode } from "../types/visMode";
 
 import { flightsApi } from "../lib/api";
+import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { useToastStore } from "../store/toastStore";
 import { logger } from "../lib/logger";
 import { useTranslation } from "../hooks/useTranslation";
@@ -26,6 +27,7 @@ import { FlightPanel } from "../components/FlightPanel";
 
 export default function DashboardPage(): JSX.Element {
   const { t } = useTranslation(["dashboard", "common", "flights", "training"]);
+  const { isEnabled, enabled } = useEnabledDomains();
   const [allFlights, setFlights] = useState<Flight[]>([]); // Filtered flights for map (not directly rendered)
   const [recentFlights, setRecentFlights] = useState<Flight[]>([]); // Unfiltered recent flights for sidebar
   const [totalFlightsCount, setTotalFlightsCount] = useState(0); // Total number of all flights
@@ -598,303 +600,346 @@ export default function DashboardPage(): JSX.Element {
         <AchievementPopup achievements={newAchievements} onClose={() => setNewAchievements([])} />
       )}
 
-      {/* Main area: map fills everything */}
-      <div className="flex-1 relative overflow-hidden">
-        {/* Map Layer */}
-        <div className="absolute inset-0">
-          <ErrorBoundary
-            fallback={
-              <div
-                className="w-full h-full flex items-center justify-center"
-                style={{ color: "var(--text-muted)" }}
-              >
-                {t("dashboard:mapUnavailable")}
-              </div>
-            }
-          >
-            <MapContainer3D
-              flights={geoFlights}
-              flightList={allFlights}
-              visMode={visMode}
-              onVisModeChange={setVisMode}
-              minRouteCount={filters.minRouteCount ?? 1}
-              onFlightClick={(id) => {
-                const flight =
-                  allFlights.find((f) => f.id === id) ?? recentFlights.find((f) => f.id === id);
-                if (flight) useFlightSelectionStore.getState().setSelection([flight]);
-              }}
-              onRouteClick={(ids) => {
-                const routeFlights = ids
-                  .map(
-                    (id) =>
-                      allFlights.find((f) => f.id === id) ?? recentFlights.find((f) => f.id === id)
-                  )
-                  .filter((f): f is Flight => f !== undefined);
-                if (routeFlights.length > 0)
-                  useFlightSelectionStore.getState().setSelection(routeFlights);
-              }}
-              onEdit={(flight) => setEditingFlight(flight)}
-              activeTripId={activeTripId}
-              onResetTrip={() => {
-                setActiveTripId(null);
-                setVisMode("routes");
-              }}
-              filterSlot={
-                visMode !== "trips" ? <Filters onFilterChange={handleFilterChange} /> : undefined
-              }
-            />
-          </ErrorBoundary>
+      {!isEnabled("flight") && enabled.length === 0 && (
+        <div
+          className="flex flex-col items-center justify-center min-h-[60vh] gap-3"
+          style={{ color: "var(--text-muted)" }}
+        >
+          <p>{t("dashboard.empty.noDomains") || "No tracking modules enabled."}</p>
+          <Link to="/settings" className="text-sm underline" style={{ color: "var(--accent)" }}>
+            {t("dashboard.empty.openSettings") || "Open Settings → Modules"}
+          </Link>
         </div>
+      )}
 
-        {/* Empty state — shown when user has no flights yet */}
-        {totalFlightsCount === 0 && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
-            <div
-              className="flex flex-col items-center gap-4 px-8 py-6 rounded-2xl text-center pointer-events-auto"
-              style={{
-                background: "rgba(15,23,42,0.85)",
-                border: "1px solid var(--color-border)",
-                backdropFilter: "blur(12px)",
-                maxWidth: "340px",
-              }}
-            >
-              <span style={{ fontSize: "2.5rem" }}>✈️</span>
-              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                {t("dashboard:noFlights")}
-              </p>
-              <button
-                onClick={() => setShowFlightForm(true)}
-                className="btn-primary text-sm px-4 py-2"
-              >
-                {t("dashboard:addFlight")}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Floating Top-Left Controls: sidebar toggles */}
-        <div className="absolute top-3 left-3 z-20 flex gap-2">
-          <button
-            onClick={() => {
-              setLeftOpen(!leftOpen);
-              setRightOpen(false);
-            }}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium backdrop-blur-md transition-all"
-            style={{
-              background: leftOpen ? "var(--accent)" : "rgba(22,27,34,0.85)",
-              border: "1px solid var(--color-border)",
-              color: leftOpen ? "#0d1117" : "var(--text-primary)",
-            }}
-            title={t("dashboard:flightsTitle")}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 6h16M4 10h16M4 14h8"
-              />
-            </svg>
-            <span className="hidden sm:inline">{t("dashboard:flights") || "Flights"}</span>
-            {totalFlightsCount > 0 && (
-              <span className="text-xs font-mono opacity-75">{totalFlightsCount}</span>
-            )}
-          </button>
-          <button
-            onClick={() => {
-              setRightOpen(!rightOpen);
-              setLeftOpen(false);
-            }}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium backdrop-blur-md transition-all"
-            style={{
-              background: rightOpen ? "var(--accent)" : "rgba(22,27,34,0.85)",
-              border: "1px solid var(--color-border)",
-              color: rightOpen ? "#0d1117" : "var(--text-primary)",
-            }}
-            title={t("dashboard:statsTitle")}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-              />
-            </svg>
-            <span className="hidden sm:inline">{t("dashboard:stats")}</span>
-          </button>
+      {!isEnabled("flight") && enabled.length > 0 && (
+        <div
+          className="flex flex-col items-center justify-center min-h-[60vh] gap-3"
+          style={{ color: "var(--text-muted)" }}
+        >
+          <p>Flight dashboard hidden because Flights module is disabled.</p>
+          <Link to="/settings" className="text-sm underline" style={{ color: "var(--accent)" }}>
+            {t("dashboard.empty.openSettings") || "Open Settings → Modules"}
+          </Link>
         </div>
+      )}
 
-        {/* Floating Top-Right Controls: add, export */}
-        <div className="absolute top-3 right-3 z-20 flex gap-2">
-          <button
-            onClick={() => setShowFlightForm(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all"
-            style={{
-              background: "var(--accent)",
-              color: "#0d1117",
-              boxShadow: "0 0 16px var(--accent-glow)",
-            }}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2.5}
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-            <span className="hidden sm:inline">{t("dashboard:addFlight")}</span>
-          </button>
-
-          {/* Export dropdown */}
-          <div className="relative" ref={exportMenuRef}>
-            <button
-              onClick={() => setShowExportMenu(!showExportMenu)}
-              className="px-3 py-2 rounded-xl text-sm font-medium backdrop-blur-md transition-all"
-              style={{
-                background: "rgba(22,27,34,0.85)",
-                border: "1px solid var(--color-border)",
-                color: "var(--text-muted)",
-              }}
-              title={t("dashboard:export")}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                />
-              </svg>
-            </button>
-            {showExportMenu && (
-              <div
-                className="absolute right-0 top-full mt-1 rounded-xl overflow-hidden shadow-2xl z-50"
-                style={{
-                  background: "var(--bg-elevated)",
-                  border: "1px solid var(--color-border)",
-                  minWidth: "140px",
-                }}
-              >
-                {(["csv", "pdf", "geojson", "kml"] as const).map((fmt) => (
-                  <button
-                    key={fmt}
-                    onClick={() => {
-                      handleExport(fmt);
-                      setShowExportMenu(false);
-                    }}
-                    className="w-full text-left px-4 py-2.5 text-sm transition-colors"
-                    style={{ color: "var(--text-primary)" }}
-                    onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLButtonElement).style.background = "var(--bg-muted)";
-                    }}
-                    onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-                    }}
-                  >
-                    {fmt.toUpperCase()}
-                  </button>
-                ))}
-                <div style={{ borderTop: "1px solid var(--color-border)" }} />
-                <button
-                  onClick={() => {
-                    handleImport();
-                    setShowExportMenu(false);
-                  }}
-                  className="w-full text-left px-4 py-2.5 text-sm transition-colors"
-                  style={{ color: "var(--text-muted)" }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.background = "var(--bg-muted)";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-                  }}
-                >
-                  {t("dashboard:import")}
-                </button>
-                <div
-                  className="px-4 pb-2 text-xs"
-                  style={{ color: "var(--text-muted)", opacity: 0.7 }}
-                >
-                  {t("dashboard:importHint")}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Left Overlay Panel: Flight List */}
-        <FlightPanel
-          flights={recentFlights}
-          totalCount={totalFlightsCount}
-          isOpen={leftOpen}
-          onClose={() => setLeftOpen(false)}
-          onEdit={(flight) => setEditingFlight(flight)}
-          onDuplicate={handleDuplicateFlight}
-          onDelete={handleDeleteFlight}
-          onAddFlight={() => setShowFlightForm(true)}
-          allFlights={allFlights}
-          onTripSelect={(tripId) => {
-            setActiveTripId(tripId);
-            setVisMode("trip-routes");
-          }}
-        />
-
-        {/* Right Overlay Panel: Stats */}
-        <AnimatePresence>
-          {rightOpen && (
-            <>
-              <div className="fixed inset-0 bg-black/40 z-30" onClick={() => setRightOpen(false)} />
-              <motion.div
-                initial={{ x: 380 }}
-                animate={{ x: 0 }}
-                exit={{ x: 380 }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className="fixed right-0 top-14 bottom-0 w-80 max-w-[calc(100vw-3rem)] z-40 flex flex-col overflow-hidden"
-                style={{
-                  background: "rgba(22,27,34,0.95)",
-                  backdropFilter: "blur(20px)",
-                  borderLeft: "1px solid var(--color-border)",
-                }}
-              >
-                <div
-                  className="flex items-center justify-between px-4 py-3"
-                  style={{ borderBottom: "1px solid var(--color-border)" }}
-                >
-                  <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                    {t("dashboard:stats")}
-                  </span>
-                  <button
-                    onClick={() => setRightOpen(false)}
+      {isEnabled("flight") && (
+        <>
+          {/* Main area: map fills everything */}
+          <div className="flex-1 relative overflow-hidden">
+            {/* Map Layer */}
+            <div className="absolute inset-0">
+              <ErrorBoundary
+                fallback={
+                  <div
+                    className="w-full h-full flex items-center justify-center"
                     style={{ color: "var(--text-muted)" }}
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
+                    {t("dashboard:mapUnavailable")}
+                  </div>
+                }
+              >
+                <MapContainer3D
+                  flights={geoFlights}
+                  flightList={allFlights}
+                  visMode={visMode}
+                  onVisModeChange={setVisMode}
+                  minRouteCount={filters.minRouteCount ?? 1}
+                  onFlightClick={(id) => {
+                    const flight =
+                      allFlights.find((f) => f.id === id) ?? recentFlights.find((f) => f.id === id);
+                    if (flight) useFlightSelectionStore.getState().setSelection([flight]);
+                  }}
+                  onRouteClick={(ids) => {
+                    const routeFlights = ids
+                      .map(
+                        (id) =>
+                          allFlights.find((f) => f.id === id) ??
+                          recentFlights.find((f) => f.id === id)
+                      )
+                      .filter((f): f is Flight => f !== undefined);
+                    if (routeFlights.length > 0)
+                      useFlightSelectionStore.getState().setSelection(routeFlights);
+                  }}
+                  onEdit={(flight) => setEditingFlight(flight)}
+                  activeTripId={activeTripId}
+                  onResetTrip={() => {
+                    setActiveTripId(null);
+                    setVisMode("routes");
+                  }}
+                  filterSlot={
+                    visMode !== "trips" ? (
+                      <Filters onFilterChange={handleFilterChange} />
+                    ) : undefined
+                  }
+                />
+              </ErrorBoundary>
+            </div>
+
+            {/* Empty state — shown when user has no flights yet */}
+            {totalFlightsCount === 0 && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
+                <div
+                  className="flex flex-col items-center gap-4 px-8 py-6 rounded-2xl text-center pointer-events-auto"
+                  style={{
+                    background: "rgba(15,23,42,0.85)",
+                    border: "1px solid var(--color-border)",
+                    backdropFilter: "blur(12px)",
+                    maxWidth: "340px",
+                  }}
+                >
+                  <span style={{ fontSize: "2.5rem" }}>✈️</span>
+                  <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                    {t("dashboard:noFlights")}
+                  </p>
+                  <button
+                    onClick={() => setShowFlightForm(true)}
+                    className="btn-primary text-sm px-4 py-2"
+                  >
+                    {t("dashboard:addFlight")}
                   </button>
                 </div>
-                <div className="flex-1 overflow-y-auto p-4">
-                  <ErrorBoundary
-                    fallback={
-                      <div style={{ color: "var(--text-muted)" }}>
-                        {t("dashboard:statsUnavailable")}
-                      </div>
-                    }
+              </div>
+            )}
+
+            {/* Floating Top-Left Controls: sidebar toggles */}
+            <div className="absolute top-3 left-3 z-20 flex gap-2">
+              <button
+                onClick={() => {
+                  setLeftOpen(!leftOpen);
+                  setRightOpen(false);
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium backdrop-blur-md transition-all"
+                style={{
+                  background: leftOpen ? "var(--accent)" : "rgba(22,27,34,0.85)",
+                  border: "1px solid var(--color-border)",
+                  color: leftOpen ? "#0d1117" : "var(--text-primary)",
+                }}
+                title={t("dashboard:flightsTitle")}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 10h16M4 14h8"
+                  />
+                </svg>
+                <span className="hidden sm:inline">{t("dashboard:flights") || "Flights"}</span>
+                {totalFlightsCount > 0 && (
+                  <span className="text-xs font-mono opacity-75">{totalFlightsCount}</span>
+                )}
+              </button>
+              <button
+                onClick={() => {
+                  setRightOpen(!rightOpen);
+                  setLeftOpen(false);
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium backdrop-blur-md transition-all"
+                style={{
+                  background: rightOpen ? "var(--accent)" : "rgba(22,27,34,0.85)",
+                  border: "1px solid var(--color-border)",
+                  color: rightOpen ? "#0d1117" : "var(--text-primary)",
+                }}
+                title={t("dashboard:statsTitle")}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                  />
+                </svg>
+                <span className="hidden sm:inline">{t("dashboard:stats")}</span>
+              </button>
+            </div>
+
+            {/* Floating Top-Right Controls: add, export */}
+            <div className="absolute top-3 right-3 z-20 flex gap-2">
+              <button
+                onClick={() => setShowFlightForm(true)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all"
+                style={{
+                  background: "var(--accent)",
+                  color: "#0d1117",
+                  boxShadow: "0 0 16px var(--accent-glow)",
+                }}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2.5}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+                <span className="hidden sm:inline">{t("dashboard:addFlight")}</span>
+              </button>
+
+              {/* Export dropdown */}
+              <div className="relative" ref={exportMenuRef}>
+                <button
+                  onClick={() => setShowExportMenu(!showExportMenu)}
+                  className="px-3 py-2 rounded-xl text-sm font-medium backdrop-blur-md transition-all"
+                  style={{
+                    background: "rgba(22,27,34,0.85)",
+                    border: "1px solid var(--color-border)",
+                    color: "var(--text-muted)",
+                  }}
+                  title={t("dashboard:export")}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                    />
+                  </svg>
+                </button>
+                {showExportMenu && (
+                  <div
+                    className="absolute right-0 top-full mt-1 rounded-xl overflow-hidden shadow-2xl z-50"
+                    style={{
+                      background: "var(--bg-elevated)",
+                      border: "1px solid var(--color-border)",
+                      minWidth: "140px",
+                    }}
                   >
-                    <Stats filters={filters} />
-                  </ErrorBoundary>
-                </div>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
-      </div>
+                    {(["csv", "pdf", "geojson", "kml"] as const).map((fmt) => (
+                      <button
+                        key={fmt}
+                        onClick={() => {
+                          handleExport(fmt);
+                          setShowExportMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm transition-colors"
+                        style={{ color: "var(--text-primary)" }}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLButtonElement).style.background =
+                            "var(--bg-muted)";
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+                        }}
+                      >
+                        {fmt.toUpperCase()}
+                      </button>
+                    ))}
+                    <div style={{ borderTop: "1px solid var(--color-border)" }} />
+                    <button
+                      onClick={() => {
+                        handleImport();
+                        setShowExportMenu(false);
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-sm transition-colors"
+                      style={{ color: "var(--text-muted)" }}
+                      onMouseEnter={(e) => {
+                        (e.currentTarget as HTMLButtonElement).style.background = "var(--bg-muted)";
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+                      }}
+                    >
+                      {t("dashboard:import")}
+                    </button>
+                    <div
+                      className="px-4 pb-2 text-xs"
+                      style={{ color: "var(--text-muted)", opacity: 0.7 }}
+                    >
+                      {t("dashboard:importHint")}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Left Overlay Panel: Flight List */}
+            <FlightPanel
+              flights={recentFlights}
+              totalCount={totalFlightsCount}
+              isOpen={leftOpen}
+              onClose={() => setLeftOpen(false)}
+              onEdit={(flight) => setEditingFlight(flight)}
+              onDuplicate={handleDuplicateFlight}
+              onDelete={handleDeleteFlight}
+              onAddFlight={() => setShowFlightForm(true)}
+              allFlights={allFlights}
+              onTripSelect={(tripId) => {
+                setActiveTripId(tripId);
+                setVisMode("trip-routes");
+              }}
+            />
+
+            {/* Right Overlay Panel: Stats */}
+            <AnimatePresence>
+              {rightOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 bg-black/40 z-30"
+                    onClick={() => setRightOpen(false)}
+                  />
+                  <motion.div
+                    initial={{ x: 380 }}
+                    animate={{ x: 0 }}
+                    exit={{ x: 380 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    className="fixed right-0 top-14 bottom-0 w-80 max-w-[calc(100vw-3rem)] z-40 flex flex-col overflow-hidden"
+                    style={{
+                      background: "rgba(22,27,34,0.95)",
+                      backdropFilter: "blur(20px)",
+                      borderLeft: "1px solid var(--color-border)",
+                    }}
+                  >
+                    <div
+                      className="flex items-center justify-between px-4 py-3"
+                      style={{ borderBottom: "1px solid var(--color-border)" }}
+                    >
+                      <span
+                        className="text-sm font-semibold"
+                        style={{ color: "var(--text-primary)" }}
+                      >
+                        {t("dashboard:stats")}
+                      </span>
+                      <button
+                        onClick={() => setRightOpen(false)}
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-4">
+                      <ErrorBoundary
+                        fallback={
+                          <div style={{ color: "var(--text-muted)" }}>
+                            {t("dashboard:statsUnavailable")}
+                          </div>
+                        }
+                      >
+                        <Stats filters={filters} />
+                      </ErrorBoundary>
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
+        </>
+      )}
 
       {/* Modals */}
       {showFlightForm && (
