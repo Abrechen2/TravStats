@@ -151,20 +151,20 @@ export function PortPicker({ value, onChange }: Props): JSX.Element {
             className="w-full rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-500"
             value={newName}
             onChange={(e): void => setNewName(e.target.value)}
-            placeholder={t("field.ports")}
+            placeholder={t("field.port_name")}
           />
           <div className="grid grid-cols-2 gap-2">
             <input
               className="rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-500"
               value={newCity}
               onChange={(e): void => setNewCity(e.target.value)}
-              placeholder="City"
+              placeholder={t("field.city")}
             />
             <input
               className="rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-500"
               value={newCountry}
               onChange={(e): void => setNewCountry(e.target.value)}
-              placeholder="Country"
+              placeholder={t("field.country")}
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -176,7 +176,7 @@ export function PortPicker({ value, onChange }: Props): JSX.Element {
               className="rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-500"
               value={newLat}
               onChange={(e): void => setNewLat(e.target.value)}
-              placeholder="Lat"
+              placeholder={t("field.lat")}
             />
             <input
               type="number"
@@ -186,7 +186,7 @@ export function PortPicker({ value, onChange }: Props): JSX.Element {
               className="rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1 text-sm text-neutral-100 placeholder:text-neutral-500"
               value={newLon}
               onChange={(e): void => setNewLon(e.target.value)}
-              placeholder="Lon"
+              placeholder={t("field.lon")}
             />
           </div>
           {error !== null && <p className="text-xs text-red-400">{error}</p>}
