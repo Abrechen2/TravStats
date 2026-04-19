@@ -10,6 +10,7 @@ import {
   UserSettingsUpdateData,
   defaultSettings,
 } from './types';
+import { DOMAIN_KEYS, type DomainKey } from '../../shared/domains';
 
 const router = Router();
 
@@ -67,6 +68,7 @@ const settingsSchema = z.object({
     .partial()
     .optional(),
   boardingPassParserStrategy: z.enum(['parser-only', 'parser-with-api', 'api-only']).nullable().optional(),
+  enabledDomains: z.array(z.enum(DOMAIN_KEYS as unknown as [DomainKey, ...DomainKey[]])).optional(),
 }).partial();
 
 /** Build a SettingsResponse from a Prisma userSettings record */
@@ -81,6 +83,7 @@ function buildSettingsResponse(record: {
   historicalEnrichmentEnabled: boolean | null;
   historicalEnrichmentMinConfidence: number | null;
   historicalEnrichmentMaxPerDay: number | null;
+  enabledDomains: string[];
 }): SettingsResponse {
   const baseData = (typeof record.data === 'object' && record.data !== null
     ? record.data
@@ -101,6 +104,7 @@ function buildSettingsResponse(record: {
       minConfidence: record.historicalEnrichmentMinConfidence ?? 60,
       maxPerDay: record.historicalEnrichmentMaxPerDay ?? 50,
     },
+    enabledDomains: record.enabledDomains,
   };
 }
 
@@ -155,6 +159,7 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
   try {
     const userId = req.userId!;
     const payload = settingsSchema.parse(req.body);
+    const { enabledDomains, ...rest } = payload;
     logger.info({ operation: 'settings_update', userId });
 
     const existing = await prisma.userSettings.findUnique({
@@ -162,7 +167,7 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
     });
 
     // Extract direct fields from payload since they're not part of JSON data
-    const { boardingPassParserStrategy, autoUpdate: _autoUpdate, historicalEnrichment: _historicalEnrichment, ...payloadWithoutDirectFields } = payload;
+    const { boardingPassParserStrategy, autoUpdate: _autoUpdate, historicalEnrichment: _historicalEnrichment, ...payloadWithoutDirectFields } = rest;
 
     const merged: SettingsDataJson = {
       ...defaultSettings,
@@ -235,6 +240,11 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
       updateData.boardingPassParserStrategy = boardingPassParserStrategy;
     }
 
+    // Handle enabled domains (multi-domain foundation)
+    if (enabledDomains !== undefined) {
+      updateData.enabledDomains = enabledDomains;
+    }
+
     const saved = await prisma.userSettings.upsert({
       where: { userId },
       update: updateData,
@@ -252,6 +262,7 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
         autoUpdateExpiryHours: payload.autoUpdate?.expiryHours ?? 24,
         // Initialize boarding pass parser strategy (null = auto)
         boardingPassParserStrategy: boardingPassParserStrategy ?? null,
+        enabledDomains: enabledDomains ?? ['flight'],
       },
     });
 
