@@ -44,6 +44,7 @@ model User {
   parseLogs             ParseTrainingLog[]
   trips    Trip[]
   bookings Booking[]
+  cruises Cruise[]
 
   @@map("users")
 }
@@ -548,6 +549,7 @@ model Trip {
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   flights  Flight[]
   bookings Booking[]
+  cruises Cruise[]
 
   @@index([userId])
   @@map("trips")
@@ -567,9 +569,113 @@ model Booking {
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   trip    Trip?   @relation(fields: [tripId], references: [id], onDelete: SetNull)
   flights Flight[]
+  cruises Cruise[]
 
   @@index([userId])
   @@index([userId, createdAt])
   @@index([tripId])
   @@map("bookings")
+}
+
+model Cruise {
+  id               String    @id @default(uuid())
+  userId           String    @map("user_id")
+  shipId           Int?      @map("ship_id")
+  shipNameOverride String?   @map("ship_name_override")
+  cruiseLine       String?   @map("cruise_line")
+  departurePortId  Int?      @map("departure_port_id")
+  arrivalPortId    Int?      @map("arrival_port_id")
+  startDate        DateTime? @map("start_date")
+  endDate          DateTime? @map("end_date")
+  status           String    @default("scheduled")
+  cabinNumber      String?   @map("cabin_number")
+  cabinType        String?   @map("cabin_type")
+  deck             Int?
+  bookingReference String?   @map("booking_reference")
+  price            Float?
+  currency         String?   @default("EUR")
+  notes            String?
+  tags             String[]  @default([])
+  companions       String[]  @default([])
+  tripId           String?   @map("trip_id")
+  bookingId        String?   @map("booking_id")
+  parserTemplate   String?   @map("parser_template")
+  parserConfidence Int?      @map("parser_confidence")
+  dataSource       String?   @map("data_source")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ship          Ship?        @relation(fields: [shipId], references: [id], onDelete: SetNull)
+  departurePort Port?        @relation("CruiseDeparture", fields: [departurePortId], references: [id], onDelete: SetNull)
+  arrivalPort   Port?        @relation("CruiseArrival",   fields: [arrivalPortId],   references: [id], onDelete: SetNull)
+  trip          Trip?        @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  booking       Booking?     @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  stops         CruiseStop[]
+
+  @@index([userId])
+  @@index([startDate])
+  @@index([status])
+  @@index([cruiseLine])
+  @@index([tripId])
+  @@map("cruises")
+}
+
+model CruiseStop {
+  id            String    @id @default(uuid())
+  cruiseId      String    @map("cruise_id")
+  portId        Int?      @map("port_id")
+  dayNumber     Int       @map("day_number")
+  isAtSea       Boolean   @default(false) @map("is_at_sea")
+  arrivalTime   DateTime? @map("arrival_time")
+  departureTime DateTime? @map("departure_time")
+  excursionNote String?   @map("excursion_note")
+
+  cruise Cruise @relation(fields: [cruiseId], references: [id], onDelete: Cascade)
+  port   Port?  @relation(fields: [portId], references: [id], onDelete: SetNull)
+
+  @@index([cruiseId])
+  @@index([portId])
+  @@map("cruise_stops")
+}
+
+model Ship {
+  id           Int      @id @default(autoincrement())
+  name         String
+  imo          String?  @unique
+  cruiseLine   String   @map("cruise_line")
+  yearBuilt    Int?     @map("year_built")
+  grossTonnage Int?     @map("gross_tonnage")
+  capacity     Int?
+  status       String   @default("active")
+  isUserAdded  Boolean  @default(false) @map("is_user_added")
+
+  cruises Cruise[]
+
+  @@index([name])
+  @@index([cruiseLine])
+  @@index([imo])
+  @@map("ships")
+}
+
+model Port {
+  id          Int     @id @default(autoincrement())
+  name        String
+  city        String?
+  country     String?
+  unlocode    String? @unique
+  lat         Float
+  lon         Float
+  timezone    String?
+  region      String?
+  isUserAdded Boolean @default(false) @map("is_user_added")
+
+  cruisesDeparting Cruise[]     @relation("CruiseDeparture")
+  cruisesArriving  Cruise[]     @relation("CruiseArrival")
+  stops            CruiseStop[]
+
+  @@index([name])
+  @@index([city])
+  @@index([unlocode])
+  @@index([region])
+  @@map("ports")
 }
