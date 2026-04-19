@@ -22,7 +22,7 @@ router.get("/trips", authenticate, async (req: AuthRequest, res: Response, next:
       orderBy: { createdAt: "desc" },
       take: 500, // safety cap — users are unlikely to have more than 500 trips
       include: {
-        _count: { select: { flights: true } },
+        _count: { select: { flights: true, cruises: true } },
         bookings: { select: { id: true, pnr: true, price: true, currency: true } },
         flights: {
           select: {
@@ -38,6 +38,18 @@ router.get("/trips", authenticate, async (req: AuthRequest, res: Response, next:
           },
           orderBy: { departureTime: "asc" },
           take: 200, // cap nested flights per trip — use GET /trips/:id for full flight list
+        },
+        cruises: {
+          select: {
+            id: true,
+            cruiseLine: true,
+            startDate: true,
+            endDate: true,
+            status: true,
+            shipId: true,
+          },
+          orderBy: { startDate: "asc" },
+          take: 200,
         },
       },
     });
@@ -93,6 +105,15 @@ router.get("/trips/:id", authenticate, async (req: AuthRequest, res: Response, n
       include: {
         bookings: true,
         flights: { orderBy: { departureTime: "asc" } },
+        cruises: {
+          include: {
+            ship: true,
+            departurePort: true,
+            arrivalPort: true,
+            stops: { include: { port: true }, orderBy: { dayNumber: "asc" } },
+          },
+          orderBy: { startDate: "asc" },
+        },
       },
     });
     if (!trip) throw new AppError("Trip not found", 404);

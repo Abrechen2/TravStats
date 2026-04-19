@@ -110,7 +110,7 @@ export interface Trip {
   color: string;
   createdAt: string;
   updatedAt: string;
-  _count?: { flights: number };
+  _count?: { flights: number; cruises?: number };
   bookings?: Booking[];
   flights?: Pick<
     Flight,
@@ -124,6 +124,14 @@ export interface Trip {
     | "arrLat"
     | "arrLon"
   >[];
+  cruises?: Array<{
+    id: string;
+    cruiseLine: string | null;
+    startDate: string | null;
+    endDate: string | null;
+    status: string;
+    shipId: number | null;
+  }>;
 }
 
 export interface FlightInput {
