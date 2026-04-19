@@ -3,6 +3,13 @@
   "subtitle": "Profile, Präferenzen und Sicherheit an einem Ort.",
   "roadmap": "Roadmap · Punkt 9",
   "backToDashboard": "← Zurück zum Dashboard",
+  "tabs": {
+    "general": "Allgemein",
+    "flight": "Flug",
+    "cruise": "Kreuzfahrt",
+    "cruiseEmptyTitle": "Kreuzfahrt-Einstellungen",
+    "cruiseEmptyHint": "Kreuzfahrt-spezifische Einstellungen werden mit dem nächsten Update verfügbar."
+  },
   "about": {
     "buildLabel": "Build",
     "buildVersionHint": "Version, die beim Bauen des Container-Images eingebacken wurde. Weicht von der angezeigten Version nur ab, wenn ein promoteter RC läuft."

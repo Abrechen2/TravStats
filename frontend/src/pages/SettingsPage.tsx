@@ -1,8 +1,11 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import NavigationBar from "../components/NavigationBar";
 import { useTranslation } from "../hooks/useTranslation";
 import PageTransition from "../components/PageTransition";
 import { useSettingsPage } from "../components/Settings/useSettingsPage";
+import { useEnabledDomains } from "../hooks/useEnabledDomains";
+import { DOMAINS } from "../shared/domains";
 // Section components
 import ProfileSection from "../components/Settings/ProfileSection";
 import HomeAirportSection from "../components/Settings/HomeAirportSection";
@@ -21,9 +24,17 @@ import AboutSection from "../components/Settings/AboutSection";
 import FeaturesSection from "../components/Settings/FeaturesSection";
 import PasswordModal from "../components/Settings/PasswordModal";
 
+type TabId = "general" | "flight" | "cruise";
+
+interface SectionRef {
+  id: string;
+  label: string;
+}
+
 export default function SettingsPage(): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
-  const [activeSection, setActiveSection] = useState<string>("profile");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { enabled: enabledDomains } = useEnabledDomains();
 
   const {
     user,
@@ -68,30 +79,143 @@ export default function SettingsPage(): JSX.Element {
     setShowPasswordModal,
   } = useSettingsPage();
 
-  const sections = [
-    { id: "profile", label: t("settings:profile.title") || "Profile" },
-    { id: "homeAirport", label: t("settings:homeAirport.title") || "Home airport" },
-    { id: "display", label: t("settings:display.title") || "Display" },
-    { id: "modules", label: t("common:settings.modules.title") || "Modules" },
-    { id: "units", label: t("settings:units.title") || "Units" },
-    { id: "defaults", label: t("settings:defaults.title") || "Defaults" },
-    { id: "map", label: t("settings:map.title") || "Map" },
-    { id: "notifications", label: t("settings:notifications.title") || "Notifications" },
-    { id: "features", label: t("settings:features.title") || "Features" },
-    { id: "backup", label: t("settings:backup.title") || "Backup" },
-    { id: "autoupdate", label: t("settings:autoUpdate.title") || "Auto-Update" },
-    { id: "enrichment", label: t("settings:historicalEnrichment.title") || "Enrichment" },
-    { id: "apikeys", label: t("settings:apiKeys.title") || "API Keys" },
-    ...(user?.isAdmin ? [{ id: "admin", label: t("settings:admin.title") || "Admin" }] : []),
-    { id: "about", label: "About" },
-  ];
+  // Sections are grouped into one of three tabs. The cruise group is empty
+  // for now; a placeholder is shown so users see the scaffold exists.
+  const sectionsByTab = useMemo<Record<TabId, SectionRef[]>>(() => {
+    const general: SectionRef[] = [
+      { id: "profile", label: t("settings:profile.title") || "Profile" },
+      { id: "display", label: t("settings:display.title") || "Display" },
+      { id: "modules", label: t("common:settings.modules.title") || "Modules" },
+      { id: "units", label: t("settings:units.title") || "Units" },
+      { id: "notifications", label: t("settings:notifications.title") || "Notifications" },
+      { id: "features", label: t("settings:features.title") || "Features" },
+      { id: "backup", label: t("settings:backup.title") || "Backup" },
+      { id: "autoupdate", label: t("settings:autoUpdate.title") || "Auto-Update" },
+      { id: "apikeys", label: t("settings:apiKeys.title") || "API Keys" },
+      ...(user?.isAdmin ? [{ id: "admin", label: t("settings:admin.title") || "Admin" }] : []),
+      { id: "about", label: "About" },
+    ];
+    const flight: SectionRef[] = [
+      { id: "homeAirport", label: t("settings:homeAirport.title") || "Home airport" },
+      { id: "defaults", label: t("settings:defaults.title") || "Defaults" },
+      { id: "map", label: t("settings:map.title") || "Map" },
+      { id: "enrichment", label: t("settings:historicalEnrichment.title") || "Enrichment" },
+    ];
+    const cruise: SectionRef[] = [];
+    return { general, flight, cruise };
+  }, [t, user?.isAdmin]);
+
+  // Visible tabs: always general, plus any enabled domain that has a tab.
+  // Hotel / POI have no settings yet and no tab will appear until enabled.
+  const tabs = useMemo<Array<{ id: TabId; label: string; icon?: string }>>(() => {
+    const list: Array<{ id: TabId; label: string; icon?: string }> = [
+      { id: "general", label: t("settings:tabs.general") || "Allgemein" },
+    ];
+    if (enabledDomains.includes("flight")) {
+      list.push({
+        id: "flight",
+        label: t("settings:tabs.flight") || "Flug",
+        icon: DOMAINS.flight.icon,
+      });
+    }
+    if (enabledDomains.includes("cruise")) {
+      list.push({
+        id: "cruise",
+        label: t("settings:tabs.cruise") || "Kreuzfahrt",
+        icon: DOMAINS.cruise.icon,
+      });
+    }
+    return list;
+  }, [enabledDomains, t]);
+
+  const initialTab = (searchParams.get("tab") as TabId | null) ?? "general";
+  const initialSection = searchParams.get("section");
+
+  const [activeTab, setActiveTab] = useState<TabId>(
+    tabs.some((tab) => tab.id === initialTab) ? initialTab : "general"
+  );
+
+  const currentSections = sectionsByTab[activeTab];
+  const [activeSection, setActiveSection] = useState<string>(
+    initialSection && currentSections.some((s) => s.id === initialSection)
+      ? initialSection
+      : (currentSections[0]?.id ?? "")
+  );
+
+  // Keep activeSection valid when the user switches tabs (e.g. switching
+  // from flight → general while on "homeAirport" must not leave an empty
+  // main area). Falls back to the first section of the new tab.
+  useEffect(() => {
+    if (!currentSections.some((s) => s.id === activeSection)) {
+      setActiveSection(currentSections[0]?.id ?? "");
+    }
+  }, [activeTab, activeSection, currentSections]);
+
+  // Legacy deep-link support: someone bookmarked /settings#homeAirport
+  // before the tab refactor. Translate a matching hash to the correct tab
+  // + section once on mount.
+  useEffect(() => {
+    const hash = window.location.hash.slice(1);
+    if (!hash) return;
+    for (const tab of ["general", "flight", "cruise"] as TabId[]) {
+      if (sectionsByTab[tab].some((s) => s.id === hash)) {
+        setActiveTab(tab);
+        setActiveSection(hash);
+        // strip the hash so the URL reads cleanly afterwards
+        window.history.replaceState(null, "", window.location.pathname + window.location.search);
+        return;
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Sync URL params so reload + copy-link preserves state. Replace rather
+  // than push so the browser Back button steps through user history, not
+  // every internal section switch.
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", activeTab);
+    if (activeSection) next.set("section", activeSection);
+    else next.delete("section");
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, activeSection]);
 
   return (
     <PageTransition>
       <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
         <NavigationBar />
-        <div className="flex h-[calc(100vh-3.5rem)]">
-          {/* Sidebar */}
+
+        {/* Top tab bar — one row above the settings sidebar/main split */}
+        <div
+          className="px-4 pt-3"
+          style={{ background: "var(--bg-base)", borderBottom: "1px solid var(--color-border)" }}
+        >
+          <div className="mx-auto flex max-w-6xl gap-1">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={(): void => setActiveTab(tab.id)}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === tab.id
+                    ? "border-[var(--accent)] text-[var(--accent)]"
+                    : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                }`}
+              >
+                {tab.icon && (
+                  <span className="mr-1.5" aria-hidden>
+                    {tab.icon}
+                  </span>
+                )}
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex h-[calc(100vh-3.5rem-2.75rem)]">
+          {/* Sidebar — scoped to the current tab's sections */}
           <aside
             className="w-52 flex-shrink-0 flex-col py-4 overflow-y-auto hidden md:flex"
             style={{
@@ -100,7 +224,7 @@ export default function SettingsPage(): JSX.Element {
             }}
           >
             <nav className="space-y-0.5 px-2">
-              {sections.map((section) => (
+              {currentSections.map((section) => (
                 <button
                   key={section.id}
                   onClick={() => setActiveSection(section.id)}
@@ -122,6 +246,28 @@ export default function SettingsPage(): JSX.Element {
 
           {/* Right content area */}
           <main className="flex-1 overflow-y-auto p-6 space-y-6">
+            {activeTab === "cruise" && currentSections.length === 0 && (
+              <div
+                className="rounded-lg px-6 py-10 text-center text-sm"
+                style={{
+                  background: "var(--bg-surface)",
+                  border: "1px dashed var(--color-border)",
+                  color: "var(--text-muted)",
+                }}
+              >
+                <p className="mb-2 text-2xl" aria-hidden>
+                  🚢
+                </p>
+                <p className="font-medium text-[var(--text-primary)]">
+                  {t("settings:tabs.cruiseEmptyTitle") || "Kreuzfahrt-Einstellungen"}
+                </p>
+                <p className="mt-1">
+                  {t("settings:tabs.cruiseEmptyHint") ||
+                    "Kreuzfahrt-spezifische Einstellungen werden mit dem nächsten Update verfügbar."}
+                </p>
+              </div>
+            )}
+
             {activeSection === "profile" && (
               <ProfileSection
                 profile={profile}
