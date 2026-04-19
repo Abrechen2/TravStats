@@ -14,7 +14,11 @@ describe('domain registry', () => {
   });
 
   it('only lists available domains in AVAILABLE_DOMAINS', () => {
-    expect(AVAILABLE_DOMAINS).toEqual(['flight']);
+    expect(AVAILABLE_DOMAINS).toEqual(['flight', 'cruise']);
+    expect(DOMAINS.flight.available).toBe(true);
+    expect(DOMAINS.cruise.available).toBe(true);
+    expect(DOMAINS.hotel.available).toBe(false);
+    expect(DOMAINS.poi.available).toBe(false);
   });
 
   it('every descriptor has required fields', () => {
