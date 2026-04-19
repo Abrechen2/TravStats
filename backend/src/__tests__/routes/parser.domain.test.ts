@@ -28,11 +28,26 @@ describe('parser domain param', () => {
     await prisma.$disconnect();
   });
 
-  it('rejects unknown domain on /parse-email', async () => {
+  // -----------------------------------------------------------------------
+  // /parse-email
+  // -----------------------------------------------------------------------
+
+  it('returns 501 PARSER_DOMAIN_NOT_IMPLEMENTED for domain=cruise on /parse-email', async () => {
     const res = await request(app)
       .post('/api/v1/parse-email')
       .set('Cookie', [`auth_token=${token}`])
       .send({ emailContent: 'sample text', domain: 'cruise' });
+    expect(res.status).toBe(501);
+    expect(res.body.error).toBe('PARSER_DOMAIN_NOT_IMPLEMENTED');
+    expect(res.body.domain).toBe('cruise');
+  });
+
+  it('rejects unknown (non-enum) domain on /parse-email at schema layer', async () => {
+    const res = await request(app)
+      .post('/api/v1/parse-email')
+      .set('Cookie', [`auth_token=${token}`])
+      .send({ emailContent: 'sample text', domain: 'hotel' });
+    // Zod enum rejection → 400 Validation failed (NOT 501)
     expect(res.status).toBe(400);
   });
 
@@ -51,28 +66,71 @@ describe('parser domain param', () => {
     }
   }, 30000);
 
-  it('rejects unknown domain on /parse-pdf', async () => {
+  // -----------------------------------------------------------------------
+  // /parse-pdf
+  // -----------------------------------------------------------------------
+
+  it('returns 501 PARSER_DOMAIN_NOT_IMPLEMENTED for domain=cruise on /parse-pdf', async () => {
     const res = await request(app)
       .post('/api/v1/parse-pdf')
       .set('Cookie', [`auth_token=${token}`])
       .send({ pdfBase64: 'AAAA', domain: 'cruise' });
+    expect(res.status).toBe(501);
+    expect(res.body.error).toBe('PARSER_DOMAIN_NOT_IMPLEMENTED');
+    expect(res.body.domain).toBe('cruise');
+  });
+
+  it('rejects unknown (non-enum) domain on /parse-pdf at schema layer', async () => {
+    const res = await request(app)
+      .post('/api/v1/parse-pdf')
+      .set('Cookie', [`auth_token=${token}`])
+      .send({ pdfBase64: 'AAAA', domain: 'hotel' });
     expect(res.status).toBe(400);
   });
 
-  it('rejects unknown domain on /parse-boardingpass', async () => {
+  // -----------------------------------------------------------------------
+  // /parse-boardingpass
+  // -----------------------------------------------------------------------
+
+  it('returns 501 PARSER_DOMAIN_NOT_IMPLEMENTED for domain=cruise on /parse-boardingpass', async () => {
     const res = await request(app)
       .post('/api/v1/parse-boardingpass')
       .set('Cookie', [`auth_token=${token}`])
       .send({ imageBase64: 'AAAA', domain: 'cruise' });
+    expect(res.status).toBe(501);
+    expect(res.body.error).toBe('PARSER_DOMAIN_NOT_IMPLEMENTED');
+    expect(res.body.domain).toBe('cruise');
+  });
+
+  it('rejects unknown (non-enum) domain on /parse-boardingpass at schema layer', async () => {
+    const res = await request(app)
+      .post('/api/v1/parse-boardingpass')
+      .set('Cookie', [`auth_token=${token}`])
+      .send({ imageBase64: 'AAAA', domain: 'hotel' });
     expect(res.status).toBe(400);
   });
 
-  it('rejects unknown domain on /parse-email-file', async () => {
+  // -----------------------------------------------------------------------
+  // /parse-email-file (multipart)
+  // -----------------------------------------------------------------------
+
+  it('returns 501 PARSER_DOMAIN_NOT_IMPLEMENTED for domain=cruise on /parse-email-file', async () => {
     const res = await request(app)
       .post('/api/v1/parse-email-file')
       .set('Cookie', [`auth_token=${token}`])
       .attach('email', Buffer.from('dummy'), 'x.eml')
       .field('domain', 'cruise');
+    expect(res.status).toBe(501);
+    expect(res.body.error).toBe('PARSER_DOMAIN_NOT_IMPLEMENTED');
+    expect(res.body.domain).toBe('cruise');
+  });
+
+  it('rejects unknown (non-enum) domain on /parse-email-file at schema layer', async () => {
+    const res = await request(app)
+      .post('/api/v1/parse-email-file')
+      .set('Cookie', [`auth_token=${token}`])
+      .attach('email', Buffer.from('dummy'), 'x.eml')
+      .field('domain', 'hotel');
     expect(res.status).toBe(400);
   });
 });

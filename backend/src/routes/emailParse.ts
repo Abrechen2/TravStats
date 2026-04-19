@@ -21,7 +21,7 @@ const parseEmailSchema = z.object({
     (val) => !val || val.length <= 1000,
     { message: 'Subject too long (max 1000 characters)' }
   ),
-  domain: z.enum(['flight']).optional().default('flight'),
+  domain: z.enum(['flight', 'cruise']).optional().default('flight'),
 });
 
 /**
@@ -45,8 +45,10 @@ router.post('/parse-email', authenticate, emailParseLimiter, async (req: AuthReq
     // Zod already rejects unknown values; this catches the case where the
     // enum is later widened but handler logic hasn't been extended yet.
     if (parsed.domain !== 'flight') {
-      return res.status(400).json({
-        error: `Domain '${parsed.domain}' not yet implemented`,
+      return res.status(501).json({
+        error: 'PARSER_DOMAIN_NOT_IMPLEMENTED',
+        message: `Parsing for domain '${parsed.domain}' is not yet implemented. Add entries manually via the /cruises page.`,
+        domain: parsed.domain,
       });
     }
 
@@ -119,7 +121,7 @@ router.post(
       // Domain discriminator (optional, defaults to 'flight').
       // Multipart form-data: rawDomain comes as string from form field.
       const rawDomain = typeof req.body?.domain === 'string' ? req.body.domain : 'flight';
-      const domainSchema = z.enum(['flight']).optional().default('flight');
+      const domainSchema = z.enum(['flight', 'cruise']).optional().default('flight');
       const domainParse = domainSchema.safeParse(rawDomain);
       if (!domainParse.success) {
         if (filePath && fs.existsSync(filePath)) {
@@ -137,8 +139,10 @@ router.post(
         if (filePath && fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
         }
-        return res.status(400).json({
-          error: `Domain '${domainValue}' not yet implemented`,
+        return res.status(501).json({
+          error: 'PARSER_DOMAIN_NOT_IMPLEMENTED',
+          message: `Parsing for domain '${domainValue}' is not yet implemented. Add entries manually via the /cruises page.`,
+          domain: domainValue,
         });
       }
 
