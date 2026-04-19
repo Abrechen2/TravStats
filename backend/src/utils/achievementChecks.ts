@@ -273,6 +273,130 @@ export function checkAchievement(
       isUnlocked = progress >= achievement.requirement;
       break;
 
+    // --- Cruise cases ---
+    case 'cruises_count':
+      progress = stats.cruisesCount;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'cruise_ports_unique':
+      progress = stats.cruisePortsUnique;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'cruise_ports_single':
+      progress = stats.cruisePortsSingleMax;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'cruise_ships_unique':
+      progress = stats.cruiseShipsUnique;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'cruise_lines_unique':
+      progress = stats.cruiseLinesUnique;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'cruise_line_loyalty':
+      progress = stats.cruiseLineLoyaltyMax;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'sea_days':
+      progress = stats.seaDays;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'sea_days_streak':
+      progress = stats.seaDaysStreak;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'cruise_region_mediterranean':
+      progress = stats.cruiseRegions.has('mediterranean') ? 1 : 0;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'cruise_region_caribbean':
+      progress = stats.cruiseRegions.has('caribbean') ? 1 : 0;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'cruise_region_baltic_or_fjords':
+      progress =
+        stats.cruiseRegions.has('baltic') || stats.cruiseRegions.has('norwegian_fjords')
+          ? 1
+          : 0;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'cruise_canal_transit':
+      progress = stats.hasCanalTransit ? 1 : 0;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'cruise_polar':
+      progress = stats.hasPolar ? 1 : 0;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'cruise_cabin_balcony':
+      progress = stats.hasBalconyCabin ? 1 : 0;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'cruise_cabin_suite':
+      progress = stats.hasSuiteCabin ? 1 : 0;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'cruise_deck_min':
+      progress = stats.cruiseMaxDeck;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'cruise_birthday_at_sea':
+      progress = stats.hasCruiseBirthdayAtSea ? 1 : 0;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'cruise_new_years_at_sea':
+      progress = stats.hasNewYearsAtSea ? 1 : 0;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'cruise_cold_water':
+      progress = stats.hasColdWater ? 1 : 0;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'carnival_brands_all': {
+      const CARNIVAL_BRANDS = new Set([
+        'Carnival Cruise Line',
+        'Costa Cruises',
+        'AIDA Cruises',
+        'Princess Cruises',
+        'Holland America Line',
+        'Cunard',
+        'Seabourn',
+        'P&O Cruises',
+      ]);
+      let covered = 0;
+      for (const brand of CARNIVAL_BRANDS) {
+        if (stats.cruiseLines.has(brand)) covered += 1;
+      }
+      progress = covered;
+      isUnlocked = covered === CARNIVAL_BRANDS.size;
+      break;
+    }
+
+    case 'fly_and_sail_trip':
+      progress = stats.hasFlyAndSailTrip ? 1 : 0;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
     default:
       progress = 0;
       isUnlocked = false;

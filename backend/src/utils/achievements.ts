@@ -7,6 +7,7 @@ import {
   type FlightData,
 } from './achievementStats';
 import { checkAchievement } from './achievementChecks';
+import { calculateCruiseStats, type CruiseData as CruiseStatsInput } from './cruiseStats';
 
 type UserAchievementWithRelation = UserAchievement & { achievement: Achievement };
 
@@ -43,7 +44,8 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
     );
 
     // Get user's flights (flown+historical for geo/distance stats, all for planner/survivor)
-    const [flights, allFlights] = await Promise.all([
+    // + cruises (all statuses except cancelled; include stops+ports and trip for Fly & Sail)
+    const [flights, allFlights, cruises] = await Promise.all([
       prisma.flight.findMany({
         where: { userId, status: { in: ['flown', 'historical'] } },
         orderBy: { departureTime: 'asc' },
@@ -51,6 +53,13 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       prisma.flight.findMany({
         where: { userId },
         orderBy: { departureTime: 'asc' },
+      }),
+      prisma.cruise.findMany({
+        where: { userId, status: { not: 'cancelled' } },
+        include: {
+          stops: { include: { port: true } },
+          trip: { include: { flights: true, cruises: true } },
+        },
       }),
     ]);
 
@@ -130,6 +139,63 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       scheduled30d = maxWindow;
     }
 
+    // Cruise stats (multi-domain V1) — computed separately from flight stats.
+    const userBirthday = user?.birthdate
+      ? { month: user.birthdate.getMonth() + 1, day: user.birthdate.getDate() }
+      : undefined;
+
+    const cruiseStatsInput: CruiseStatsInput[] = cruises.map((c) => ({
+      id: c.id,
+      shipId: c.shipId,
+      cruiseLine: c.cruiseLine,
+      cabinType: c.cabinType,
+      deck: c.deck,
+      startDate: c.startDate,
+      endDate: c.endDate,
+      stops: c.stops.map((s) => ({
+        portId: s.portId,
+        port: s.port
+          ? {
+              id: s.port.id,
+              name: s.port.name,
+              city: s.port.city,
+              country: s.port.country,
+              region: s.port.region,
+              unlocode: s.port.unlocode,
+              lat: s.port.lat,
+              lon: s.port.lon,
+              timezone: s.port.timezone,
+              isUserAdded: s.port.isUserAdded,
+            }
+          : null,
+        dayNumber: s.dayNumber,
+        isAtSea: s.isAtSea,
+        arrivalTime: s.arrivalTime,
+        departureTime: s.departureTime,
+      })),
+    }));
+
+    const cruiseStats = calculateCruiseStats(cruiseStatsInput, userBirthday);
+
+    // Fly & Sail — at least one trip contains BOTH a flight and a cruise
+    const flyAndSail = cruises.some(
+      (c) => c.trip && c.trip.flights.length > 0 && c.trip.cruises.length > 0,
+    );
+
+    // Union flight + cruise countries into the shared countries Set.
+    // Same for continents — map each cruise port to its continent via getContinent().
+    const combinedCountries = new Set<string>(stats.countries);
+    const combinedContinents = new Set<string>(stats.continents);
+    for (const c of cruiseStatsInput) {
+      for (const stop of c.stops) {
+        if (stop.port?.country) combinedCountries.add(stop.port.country);
+        if (stop.port) {
+          const continent = getContinent(stop.port.lat, stop.port.lon);
+          if (continent) combinedContinents.add(continent);
+        }
+      }
+    }
+
     const augmentedStats = {
       ...stats,
       scheduledCount: scheduled.length,
@@ -139,6 +205,30 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       scheduledMaxAdvanceDays,
       birthdayFlights,
       scheduled30d,
+      // Countries + continents now include cruise ports for shared achievements
+      countries: combinedCountries,
+      continents: combinedContinents,
+      // Cruise stats
+      cruisesCount: cruiseStats.cruisesCount,
+      cruisePortsUnique: cruiseStats.cruisePortsUnique,
+      cruisePortsSingleMax: cruiseStats.cruisePortsSingleMax,
+      cruiseShipsUnique: cruiseStats.cruiseShipsUnique,
+      cruiseLines: cruiseStats.cruiseLines,
+      cruiseLinesUnique: cruiseStats.cruiseLinesUnique,
+      cruiseLineLoyaltyMax: cruiseStats.cruiseLineLoyaltyMax,
+      seaDays: cruiseStats.seaDays,
+      seaDaysStreak: cruiseStats.seaDaysStreak,
+      cruiseRegions: cruiseStats.regions,
+      hasBalconyCabin: cruiseStats.hasBalconyCabin,
+      hasSuiteCabin: cruiseStats.hasSuiteCabin,
+      cruiseMaxDeck: cruiseStats.maxDeck,
+      hasCanalTransit: cruiseStats.hasCanalTransit,
+      hasPolar: cruiseStats.hasPolar,
+      hasColdWater: cruiseStats.hasColdWater,
+      hasCruiseBirthdayAtSea: cruiseStats.hasBirthdayAtSea,
+      hasNewYearsAtSea: cruiseStats.hasNewYearsAtSea,
+      hasFlyAndSailTrip: flyAndSail,
+      cruiseCarnivalBrandsCovered: 0, // computed inside the checker
     };
 
     // Prepare all updates/creates to execute in a single transaction
