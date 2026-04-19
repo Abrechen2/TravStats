@@ -133,6 +133,11 @@ frontend/src/
   `react-i18next`.
 - **Zod** — mandatory for all user input and API requests. Schemas live
   in `backend/src/schemas/`.
+- **Domain gating** — every new page/feature must check
+  `useEnabledDomains()` on the frontend; every new parser-target must register
+  in `backend/src/shared/domains.ts` and its frontend mirror at
+  `frontend/src/shared/domains.ts`. Shared code paths iterate
+  `AVAILABLE_DOMAINS`, never `enabledDomains.includes('flight')`.
 
 ## Code Style
 
