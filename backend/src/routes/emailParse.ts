@@ -21,6 +21,7 @@ const parseEmailSchema = z.object({
     (val) => !val || val.length <= 1000,
     { message: 'Subject too long (max 1000 characters)' }
   ),
+  domain: z.enum(['flight']).optional().default('flight'),
 });
 
 /**
@@ -39,6 +40,16 @@ const parseEmailSchema = z.object({
 router.post('/parse-email', authenticate, emailParseLimiter, async (req: AuthRequest, res: Response) => {
   try {
     const parsed = parseEmailSchema.parse(req.body);
+
+    // Defensive guard for future domain expansion (Cruise etc.).
+    // Zod already rejects unknown values; this catches the case where the
+    // enum is later widened but handler logic hasn't been extended yet.
+    if (parsed.domain !== 'flight') {
+      return res.status(400).json({
+        error: `Domain '${parsed.domain}' not yet implemented`,
+      });
+    }
+
     const emailContent = parsed.emailContent;
     const subject = parsed.subject;
     const userId = req.userId;
@@ -102,6 +113,32 @@ router.post(
         return res.status(400).json({
           error: 'Validation failed',
           message: 'Email file is required',
+        });
+      }
+
+      // Domain discriminator (optional, defaults to 'flight').
+      // Multipart form-data: rawDomain comes as string from form field.
+      const rawDomain = typeof req.body?.domain === 'string' ? req.body.domain : 'flight';
+      const domainSchema = z.enum(['flight']).optional().default('flight');
+      const domainParse = domainSchema.safeParse(rawDomain);
+      if (!domainParse.success) {
+        if (filePath && fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+        return res.status(400).json({
+          error: 'Validation failed',
+          details: domainParse.error.errors,
+        });
+      }
+      // Defensive guard: unreachable while enum is single-value, but
+      // future-proofs the handler for when the enum is widened.
+      const domainValue = domainParse.data as string;
+      if (domainValue !== 'flight') {
+        if (filePath && fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+        return res.status(400).json({
+          error: `Domain '${domainValue}' not yet implemented`,
         });
       }
 
