@@ -1,4 +1,5 @@
 import { api } from "./client";
+import type { DomainKey } from "../../shared/domains";
 
 // Setup API
 export const setupApi = {
@@ -22,6 +23,7 @@ export const setupApi = {
     frontendUrl?: string;
     maxUsers?: number;
     allowRegistration?: boolean;
+    enabledDomains?: DomainKey[];
   }): Promise<{
     success: boolean;
     message: string;
