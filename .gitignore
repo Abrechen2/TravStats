@@ -110,7 +110,15 @@ backend/data/logs/training/
 .superpowers/
 screenshots/
 
+# Ad-hoc screenshots at repo root (Playwright / manual test captures).
+# docs/**/*.png and design asset folders stay tracked by not matching this
+# root-only pattern.
+/*.png
+/*.jpg
+/*.jpeg
+
 # Production logs (never commit)
 ProdLogs/
 .cursor
 /.tmp/
+.gitnexus
