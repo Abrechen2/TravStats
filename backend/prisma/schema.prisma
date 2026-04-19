@@ -603,6 +603,7 @@ model Cruise {
   parserConfidence Int?      @map("parser_confidence")
   dataSource       String?   @map("data_source")
   createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
   user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   ship          Ship?        @relation(fields: [shipId], references: [id], onDelete: SetNull)
@@ -617,6 +618,7 @@ model Cruise {
   @@index([status])
   @@index([cruiseLine])
   @@index([tripId])
+  @@index([bookingId])
   @@map("cruises")
 }
 
@@ -653,7 +655,6 @@ model Ship {
 
   @@index([name])
   @@index([cruiseLine])
-  @@index([imo])
   @@map("ships")
 }
 
@@ -675,7 +676,6 @@ model Port {
 
   @@index([name])
   @@index([city])
-  @@index([unlocode])
   @@index([region])
   @@map("ports")
 }
