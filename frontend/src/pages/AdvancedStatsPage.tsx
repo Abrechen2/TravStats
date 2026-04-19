@@ -35,6 +35,8 @@ import { logger } from "../lib/logger";
 import { GlobeLoader } from "../components/GlobeLoader";
 import { useMinLoadingState } from "../hooks/useMinLoadingState";
 import PageTransition from "../components/PageTransition";
+import { useEnabledDomains } from "../hooks/useEnabledDomains";
+import { DOMAINS, type DomainKey } from "../shared/domains";
 
 export default function AdvancedStatsPage(): JSX.Element {
   const { t } = useTranslation(["stats", "common"]);
@@ -51,6 +53,11 @@ export default function AdvancedStatsPage(): JSX.Element {
   const [seatStats, setSeatStats] = useState<SeatStats | null>(null);
   const [showCertificate, setShowCertificate] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
+
+  // Domain filter scaffolding (Foundation) — display-only for now; downstream
+  // logic is wired up in the Cruise plan.
+  const { enabled } = useEnabledDomains();
+  const [filter, setFilter] = useState<DomainKey | "all">("all");
 
   // Year filter + comparison state
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
@@ -503,6 +510,41 @@ export default function AdvancedStatsPage(): JSX.Element {
         <NavigationBar />
 
         <div className="container mx-auto px-6 py-8">
+          {/* Domain filter chips (Foundation scaffolding — display-only) */}
+          <div className="flex gap-2 mb-4 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setFilter("all")}
+              className="px-3 py-1 rounded-full text-sm transition-colors"
+              style={{
+                background: filter === "all" ? "var(--accent)" : "var(--bg-elevated)",
+                color: filter === "all" ? "#fff" : "var(--text-primary)",
+                border: "1px solid var(--color-border)",
+              }}
+            >
+              {t("stats.filter.all") || "All"}
+            </button>
+            {enabled.map((k) => {
+              const d = DOMAINS[k];
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setFilter(k)}
+                  className="px-3 py-1 rounded-full text-sm transition-colors flex items-center gap-1"
+                  style={{
+                    background: filter === k ? "var(--accent)" : "var(--bg-elevated)",
+                    color: filter === k ? "#fff" : "var(--text-primary)",
+                    border: "1px solid var(--color-border)",
+                  }}
+                >
+                  <span aria-hidden>{d.icon}</span>
+                  {t(d.i18nKey) || d.key}
+                </button>
+              );
+            })}
+          </div>
+
           {/* Generate Certificate + Year Report Buttons */}
           {flights.length > 0 && (
             <div className="flex justify-end mb-4">
