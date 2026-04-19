@@ -1,9 +1,12 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useToastStore } from "../store/toastStore";
 import { adminApi } from "../lib/api";
 import axios from "axios";
 import { logger } from "../lib/logger";
 import NavigationBar from "../components/NavigationBar";
+import { useEnabledDomains } from "../hooks/useEnabledDomains";
+import { DOMAINS } from "../shared/domains";
 import BackupManagement from "../components/Admin/BackupManagement";
 import InstanceSettings from "../components/Admin/InstanceSettings";
 import WebDAVSettings from "../components/Admin/WebDAVSettings";
@@ -51,11 +54,31 @@ type ActiveSection =
   | "apiKeys"
   | "smtp";
 
+type TabId = "general" | "flight" | "cruise";
+
+// Which tab each admin section belongs to. Everything falls in "general"
+// unless it's inherently domain-specific. Parser training is flight-only
+// today; cruise has no admin surface yet but keeps a scaffolded tab so
+// future ship-seeding / port-maintenance pages have a home.
+const TAB_FOR_SECTION: Record<ActiveSection, TabId> = {
+  system: "general",
+  instance: "general",
+  users: "general",
+  invitations: "general",
+  apiKeys: "general",
+  logging: "general",
+  backups: "general",
+  smtp: "general",
+  parsers: "flight",
+};
+
 // ==================== Admin Page Component ====================
 
 export default function AdminPage(): JSX.Element {
   const { t } = useTranslation(["admin", "common"]);
   const addToast = useToastStore((state) => state.addToast);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { enabled: enabledDomains } = useEnabledDomains();
 
   // State
   const [systemInfo, setSystemInfo] = useState<SystemInfoData | null>(null);
@@ -66,7 +89,20 @@ export default function AdminPage(): JSX.Element {
   const [logFiles, setLogFiles] = useState<LogFile[]>([]);
   const [logStats, setLogStats] = useState<LogStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeSection, setActiveSection] = useState<ActiveSection>("system");
+  // Initial tab + section come from URL (?tab=&section=) with sensible
+  // fallbacks. See mirror implementation in SettingsPage (fbbcd13).
+  const initialTabParam = searchParams.get("tab") as TabId | null;
+  const initialSectionParam = searchParams.get("section") as ActiveSection | null;
+  const [activeTab, setActiveTab] = useState<TabId>(
+    initialTabParam === "flight" || initialTabParam === "cruise" || initialTabParam === "general"
+      ? initialTabParam
+      : "general"
+  );
+  const [activeSection, setActiveSection] = useState<ActiveSection>(
+    initialSectionParam && TAB_FOR_SECTION[initialSectionParam] === activeTab
+      ? initialSectionParam
+      : "system"
+  );
   const [inviteLinkModalOpen, setInviteLinkModalOpen] = useState(false);
   const [inviteEmailModalOpen, setInviteEmailModalOpen] = useState(false);
   const [inviteCreating, setInviteCreating] = useState(false);
@@ -441,7 +477,7 @@ export default function AdminPage(): JSX.Element {
     badge?: number;
   }
 
-  const sections: AdminSection[] = [
+  const allSections: AdminSection[] = [
     { id: "system", label: t("admin:tabs.system") },
     { id: "instance", label: t("admin:tabs.instance") },
     { id: "users", label: t("admin:tabs.users"), badge: users.length },
@@ -453,13 +489,86 @@ export default function AdminPage(): JSX.Element {
     { id: "smtp", label: t("admin:tabs.smtp") },
   ];
 
+  const sections = allSections.filter((s) => TAB_FOR_SECTION[s.id] === activeTab);
+
+  // Keep activeSection valid when switching tabs: fall back to first section
+  // of the new tab if the current one belongs to a different tab.
+  useEffect(() => {
+    if (TAB_FOR_SECTION[activeSection] !== activeTab) {
+      const first = sections[0]?.id;
+      if (first) setActiveSection(first);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  // Sync tab + section to URL params so reload + link-copy preserves state.
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", activeTab);
+    next.set("section", activeSection);
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, activeSection]);
+
+  // Visible tabs: always general, plus any enabled domain.
+  const tabs: Array<{ id: TabId; label: string; icon?: string }> = [
+    { id: "general", label: t("admin:tabs2.general") || "Allgemein" },
+    ...(enabledDomains.includes("flight")
+      ? [
+          {
+            id: "flight" as const,
+            label: t("admin:tabs2.flight") || "Flug",
+            icon: DOMAINS.flight.icon,
+          },
+        ]
+      : []),
+    ...(enabledDomains.includes("cruise")
+      ? [
+          {
+            id: "cruise" as const,
+            label: t("admin:tabs2.cruise") || "Kreuzfahrt",
+            icon: DOMAINS.cruise.icon,
+          },
+        ]
+      : []),
+  ];
+
   return (
     <div
       className="min-h-screen"
       style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}
     >
       <NavigationBar />
-      <div className="flex h-[calc(100vh-3.5rem)]">
+
+      {/* Top tab bar — same pattern as SettingsPage (commit fbbcd13) */}
+      <div
+        className="px-4 pt-3"
+        style={{ background: "var(--bg-base)", borderBottom: "1px solid var(--color-border)" }}
+      >
+        <div className="mx-auto flex max-w-6xl gap-1">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={(): void => setActiveTab(tab.id)}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === tab.id
+                  ? "border-[var(--accent)] text-[var(--accent)]"
+                  : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+              }`}
+            >
+              {tab.icon && (
+                <span className="mr-1.5" aria-hidden>
+                  {tab.icon}
+                </span>
+              )}
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex h-[calc(100vh-3.5rem-2.75rem)]">
         {/* Sidebar */}
         <aside
           className="w-52 flex-shrink-0 flex-col py-4 overflow-y-auto hidden md:flex"
@@ -510,6 +619,29 @@ export default function AdminPage(): JSX.Element {
 
         {/* Main content */}
         <main className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Cruise tab has no admin sections yet — show scaffold notice */}
+          {activeTab === "cruise" && sections.length === 0 && (
+            <div
+              className="rounded-lg px-6 py-10 text-center text-sm"
+              style={{
+                background: "var(--bg-surface)",
+                border: "1px dashed var(--color-border)",
+                color: "var(--text-muted)",
+              }}
+            >
+              <p className="mb-2 text-2xl" aria-hidden>
+                🚢
+              </p>
+              <p className="font-medium text-[var(--text-primary)]">
+                {t("admin:tabs2.cruiseEmptyTitle") || "Kreuzfahrt-Admin"}
+              </p>
+              <p className="mt-1">
+                {t("admin:tabs2.cruiseEmptyHint") ||
+                  "Cruise-spezifische Admin-Funktionen (Schiffs-Seeding, Hafen-Pflege, …) folgen mit den nächsten Updates."}
+              </p>
+            </div>
+          )}
+
           {activeSection === "system" && systemInfo && (
             <SystemInfoTab
               systemInfo={systemInfo}
