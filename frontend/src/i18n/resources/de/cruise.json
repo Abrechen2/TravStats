@@ -68,6 +68,19 @@
     "add_custom_port": "Neuen Hafen anlegen"
   },
   "map": { "layer": "Kreuzfahrten" },
+  "chooser": {
+    "title": "Wie möchtest du die Kreuzfahrt erfassen?",
+    "email": {
+      "label": "E-Mail-Parser",
+      "description": "Buchungsbestätigung hochladen und automatisch auslesen",
+      "badge": "Bald verfügbar"
+    },
+    "manual": {
+      "label": "Manuelle Eingabe",
+      "description": "Schiff, Häfen und Details selbst eintragen"
+    },
+    "back": "← Zurück zur Auswahl"
+  },
   "tabs": {
     "emailParser": "E-Mail-Parser",
     "manual": "Manuell",

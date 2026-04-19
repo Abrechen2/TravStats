@@ -15,7 +15,7 @@ import { PortPicker } from "./PortPicker";
 import { CruiseStopsEditor } from "./CruiseStopsEditor";
 
 type Mode = "create" | "edit";
-type EntryTab = "email" | "manual";
+type Step = "chooser" | "manual" | "email";
 
 interface Props {
   mode: Mode;
@@ -28,19 +28,11 @@ const STATUSES: CruiseStatus[] = ["scheduled", "flown", "cancelled", "historical
 const CABIN_TYPES: CabinType[] = ["inside", "oceanview", "balcony", "suite"];
 const CURRENCIES = ["EUR", "USD", "GBP", "CHF"] as const;
 
-/**
- * Convert an ISO string (or null) to the value expected by
- * a `<input type="datetime-local">` control (YYYY-MM-DDTHH:mm).
- */
 const toLocalInput = (iso: string | null | undefined): string => {
   if (!iso) return "";
   return iso.slice(0, 16);
 };
 
-/**
- * Convert a `datetime-local` string back to an ISO UTC string.
- * Returns null for empty input so it can be omitted from the payload.
- */
 const fromLocalInput = (local: string): string | null => {
   if (!local) return null;
   return new Date(local).toISOString();
@@ -52,30 +44,24 @@ const splitCsv = (v: string): string[] =>
     .map((x) => x.trim())
     .filter((x) => x.length > 0);
 
-// Shared input styling that matches the flight entry form (text-base, py-3)
 const INPUT_CLASS =
   "w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-3 text-base text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none";
 
+// color-scheme: dark tells the browser to render native picker widgets
+// (calendar icon, spinners) in dark mode colors. Without it, datetime-local
+// inputs render the TT.MM.JJJJ placeholder mask in a nearly-black color
+// that is unreadable on our dark surface.
+const DARK_PICKER_STYLE: React.CSSProperties = { colorScheme: "dark" };
+
 /**
- * Modal form for creating or editing a cruise.
- *
- * Offers two entry modes at the top: an email-parser tab (currently a
- * coming-soon placeholder because the cruise parser is a 501 stub on the
- * backend) and a manual tab with the full form. The manual tab composes
- * the ShipPicker / PortPicker / CruiseStopsEditor leaf components into
- * five collapsible sections: ship & basics, ports & stops, cabin, costs,
- * and meta. On submit it dispatches to cruiseApi.create or
- * cruiseApi.update depending on `mode` and surfaces server-side
- * validation errors in a red banner without closing the modal.
+ * Modal for creating or editing a cruise. On create, it opens on a chooser
+ * step with two large buttons (email parser / manual entry) mirroring the
+ * flight form. Edit mode skips the chooser and opens on the manual form.
  */
 export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.Element {
   const { t } = useTranslation("cruise");
 
-  // In edit mode the email parser makes no sense (the cruise already exists),
-  // so open directly on the manual tab. For create mode we still default to
-  // manual because the parser is a stub — the tab is shown so that users
-  // discover the upcoming feature.
-  const [tab, setTab] = useState<EntryTab>("manual");
+  const [step, setStep] = useState<Step>(mode === "edit" ? "manual" : "chooser");
 
   const [ship, setShip] = useState<Ship | null>(cruise?.ship ?? null);
   const [cruiseLine, setCruiseLine] = useState<string>(cruise?.cruiseLine ?? "");
@@ -113,8 +99,6 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // When a ship is picked, prefill the cruise-line field if the user hasn't
-  // already typed one. Picking a ship should never overwrite a manual edit.
   const onShipPicked = (s: Ship): void => {
     setShip(s);
     if (!cruiseLine) setCruiseLine(s.cruiseLine);
@@ -146,9 +130,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
       const saved =
         mode === "create"
           ? await cruiseApi.create(input)
-          : // In edit mode a cruise prop is required by contract; the caller
-            // guarantees it.
-            await cruiseApi.update((cruise as Cruise).id, input);
+          : await cruiseApi.update((cruise as Cruise).id, input);
       await onSaved(saved);
     } catch (err: unknown) {
       const msg =
@@ -160,6 +142,13 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
     }
   };
 
+  const headerTitle =
+    step === "chooser"
+      ? t("chooser.title")
+      : mode === "create"
+        ? t("form.createTitle")
+        : t("form.editTitle");
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
@@ -169,46 +158,29 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
       <div className="relative max-h-[90vh] w-full max-w-2xl overflow-auto rounded-lg border border-[var(--color-border)] bg-[var(--bg-base)] shadow-xl">
         {/* Header */}
         <div className="sticky top-0 z-10 border-b border-[var(--color-border)] bg-[var(--bg-base)] px-6 py-4">
-          <h2 className="text-xl font-semibold text-[var(--text-primary)]">
-            {mode === "create" ? t("form.createTitle") : t("form.editTitle")}
-          </h2>
+          <h2 className="text-xl font-semibold text-[var(--text-primary)]">{headerTitle}</h2>
+          {step !== "chooser" && mode === "create" && (
+            <button
+              type="button"
+              onClick={(): void => setStep("chooser")}
+              className="mt-1 text-xs text-[var(--text-muted)] hover:text-[var(--accent)]"
+            >
+              {t("chooser.back")}
+            </button>
+          )}
         </div>
 
-        {/* Tab bar — E-Mail-Parser | Manuell, mirrors FlightsTablePage */}
-        <div
-          className="flex border-b"
-          style={{
-            background: "var(--bg-surface)",
-            borderColor: "var(--color-border)",
-          }}
-        >
-          <button
-            type="button"
-            onClick={(): void => setTab("email")}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-              tab === "email"
-                ? "border-[var(--accent)] text-[var(--accent)]"
-                : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-            }`}
-          >
-            ✉ {t("tabs.emailParser")}
-          </button>
-          <button
-            type="button"
-            onClick={(): void => setTab("manual")}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-              tab === "manual"
-                ? "border-[var(--accent)] text-[var(--accent)]"
-                : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-            }`}
-          >
-            ✏ {t("tabs.manual")}
-          </button>
-        </div>
+        {step === "chooser" && (
+          <ChooserStep
+            onPickEmail={(): void => setStep("email")}
+            onPickManual={(): void => setStep("manual")}
+            t={t}
+          />
+        )}
 
-        <div className="p-6">
-          {tab === "email" ? (
-            <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-[var(--color-border)] bg-[var(--bg-surface)]/50 px-6 py-10 text-center">
+        {step === "email" && (
+          <div className="p-6">
+            <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-[var(--color-border)] bg-[var(--bg-surface)]/50 px-6 py-12 text-center">
               <div
                 aria-hidden
                 className="mb-3 flex h-14 w-14 items-center justify-center rounded-full text-2xl"
@@ -224,14 +196,18 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
               </p>
               <button
                 type="button"
-                onClick={(): void => setTab("manual")}
-                className="mt-5 rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-[var(--accent-dim)]"
+                onClick={(): void => setStep("manual")}
+                className="mt-5 rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--accent-dim)]"
               >
-                {t("tabs.manual")}
+                {t("chooser.manual.label")}
               </button>
             </div>
-          ) : (
-            <>
+          </div>
+        )}
+
+        {step === "manual" && (
+          <>
+            <div className="p-6">
               <Section title={`${t("field.ship")} & ${t("field.line")}`}>
                 <ShipPicker value={ship} onChange={onShipPicked} />
                 <input
@@ -246,6 +222,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
                     type="datetime-local"
                     aria-label={t("field.depart")}
                     className={INPUT_CLASS}
+                    style={DARK_PICKER_STYLE}
                     value={startDate}
                     onChange={(e): void => setStartDate(e.target.value)}
                   />
@@ -253,6 +230,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
                     type="datetime-local"
                     aria-label={t("field.arrive")}
                     className={INPUT_CLASS}
+                    style={DARK_PICKER_STYLE}
                     value={endDate}
                     onChange={(e): void => setEndDate(e.target.value)}
                   />
@@ -380,34 +358,106 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
                   {error}
                 </div>
               )}
-            </>
-          )}
-        </div>
+            </div>
 
-        {/* Footer — always visible, buttons fire only the active tab's action */}
-        <div className="sticky bottom-0 flex justify-end gap-2 border-t border-[var(--color-border)] bg-[var(--bg-base)] px-6 py-4">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={saving}
-            className="rounded-md border border-[var(--color-border)] px-4 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--bg-surface)] disabled:opacity-50"
-          >
-            {t("form.cancel")}
-          </button>
-          {tab === "manual" && (
+            {/* Footer with action buttons — only on manual step */}
+            <div className="sticky bottom-0 flex justify-end gap-2 border-t border-[var(--color-border)] bg-[var(--bg-base)] px-6 py-4">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={saving}
+                className="rounded-md border border-[var(--color-border)] px-4 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--bg-surface)] disabled:opacity-50"
+              >
+                {t("form.cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={(): void => {
+                  void submit();
+                }}
+                disabled={saving}
+                className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--accent-dim)] disabled:opacity-50"
+              >
+                {saving ? t("form.saving") : t("form.save")}
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Footer for non-manual steps — just Cancel */}
+        {step !== "manual" && (
+          <div className="sticky bottom-0 flex justify-end gap-2 border-t border-[var(--color-border)] bg-[var(--bg-base)] px-6 py-4">
             <button
               type="button"
-              onClick={(): void => {
-                void submit();
-              }}
-              disabled={saving}
-              className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-[var(--accent-dim)] disabled:opacity-50"
+              onClick={onClose}
+              className="rounded-md border border-[var(--color-border)] px-4 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--bg-surface)]"
             >
-              {saving ? t("form.saving") : t("form.save")}
+              {t("form.cancel")}
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+interface ChooserProps {
+  onPickEmail: () => void;
+  onPickManual: () => void;
+  t: (key: string) => string;
+}
+
+/**
+ * First step of create flow: two large buttons let the user pick how they
+ * want to enter the cruise. The email card carries a "coming soon" badge
+ * because the cruise parser is a 501 stub on the backend; clicking it
+ * still leads to a placeholder explaining the limitation, rather than
+ * silently failing.
+ */
+function ChooserStep({ onPickEmail, onPickManual, t }: ChooserProps): JSX.Element {
+  return (
+    <div className="grid gap-3 p-6 md:grid-cols-2">
+      <button
+        type="button"
+        onClick={onPickEmail}
+        className="group relative flex flex-col items-start rounded-lg border border-[var(--color-border)] bg-[var(--bg-surface)] p-6 text-left transition-colors hover:border-[var(--accent)] hover:bg-[var(--bg-elevated)]"
+      >
+        <span
+          className="absolute right-3 top-3 rounded-full border border-[var(--color-border)] bg-[var(--bg-elevated)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]"
+          aria-hidden="true"
+        >
+          {t("chooser.email.badge")}
+        </span>
+        <div
+          aria-hidden
+          className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg text-2xl"
+          style={{ backgroundColor: "var(--bg-elevated)", color: "var(--accent)" }}
+        >
+          ✉
+        </div>
+        <div className="text-base font-semibold text-[var(--text-primary)]">
+          {t("chooser.email.label")}
+        </div>
+        <p className="mt-1 text-sm text-[var(--text-muted)]">{t("chooser.email.description")}</p>
+      </button>
+
+      <button
+        type="button"
+        onClick={onPickManual}
+        className="group flex flex-col items-start rounded-lg border border-[var(--color-border)] bg-[var(--bg-surface)] p-6 text-left transition-colors hover:border-[var(--accent)] hover:bg-[var(--bg-elevated)]"
+      >
+        <div
+          aria-hidden
+          className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg text-2xl"
+          style={{ backgroundColor: "var(--bg-elevated)", color: "var(--accent)" }}
+        >
+          ✏
+        </div>
+        <div className="text-base font-semibold text-[var(--text-primary)]">
+          {t("chooser.manual.label")}
+        </div>
+        <p className="mt-1 text-sm text-[var(--text-muted)]">{t("chooser.manual.description")}</p>
+      </button>
     </div>
   );
 }

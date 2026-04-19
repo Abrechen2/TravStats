@@ -47,6 +47,19 @@
     "add_custom_port": "Add custom port"
   },
   "map": { "layer": "Cruises" },
+  "chooser": {
+    "title": "How do you want to add the cruise?",
+    "email": {
+      "label": "Email parser",
+      "description": "Upload a booking confirmation and extract details automatically",
+      "badge": "Coming soon"
+    },
+    "manual": {
+      "label": "Manual entry",
+      "description": "Enter ship, ports and details yourself"
+    },
+    "back": "← Back to choices"
+  },
   "tabs": {
     "emailParser": "Email parser",
     "manual": "Manual",
