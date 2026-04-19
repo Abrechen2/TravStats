@@ -77,4 +77,28 @@ export const statsApi = {
     const { data } = await api.get<CountryStatsResponse>("/stats/countries");
     return data;
   },
+
+  getCruiseStats: async (): Promise<CruiseStatsResponse> => {
+    const { data } = await api.get<CruiseStatsResponse>("/stats/cruise");
+    return data;
+  },
 };
+
+/** Shape returned by GET /api/v1/stats/cruise. */
+export interface CruiseStatsResponse {
+  cruisesCount: number;
+  cruisePortsUnique: number;
+  cruiseShipsUnique: number;
+  cruiseLinesUnique: number;
+  cruiseLines: string[];
+  seaDays: number;
+  seaDaysStreak: number;
+  regions: string[];
+  countries: string[];
+  hasBalconyCabin: boolean;
+  hasSuiteCabin: boolean;
+  maxDeck: number;
+  hasCanalTransit: boolean;
+  hasPolar: boolean;
+  hasColdWater: boolean;
+}

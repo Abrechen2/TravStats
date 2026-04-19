@@ -2,7 +2,27 @@
   "loading": "Lade Statistiken...",
   "back": "← Zurück",
   "filter": {
-    "all": "Alle Bereiche"
+    "all": "Gesamt"
+  },
+  "cruiseSection": {
+    "loadError": "Kreuzfahrt-Statistiken konnten nicht geladen werden.",
+    "emptyTitle": "Noch keine Kreuzfahrten",
+    "emptyHint": "Sobald du Kreuzfahrten erfasst, erscheinen hier deine KPIs.",
+    "count": "Kreuzfahrten",
+    "ports": "Häfen",
+    "ships": "Schiffe",
+    "lines": "Reedereien",
+    "seaDays": "Seetage",
+    "countries": "Länder",
+    "linesLabel": "Reedereien",
+    "countriesLabel": "Besuchte Länder",
+    "flags": {
+      "balcony": "Balkon-Kabine",
+      "suite": "Suite",
+      "polar": "Polar-Region",
+      "coldWater": "Kaltwasser-Fahrt",
+      "canal": "Kanal-Durchquerung"
+    }
   },
   "title": "Erweiterte Statistiken",
   "welcome": "Willkommen, {{username}}!",
