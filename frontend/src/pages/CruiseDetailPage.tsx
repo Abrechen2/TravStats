@@ -45,7 +45,7 @@ export default function CruiseDetailPage(): JSX.Element {
       <div className="mx-auto max-w-3xl p-6">
         <button
           onClick={() => navigate("/cruises")}
-          className="text-sm text-sky-400 hover:underline"
+          className="text-sm text-amber-400 hover:underline"
         >
           ← {t("list.title")}
         </button>
@@ -74,7 +74,7 @@ export default function CruiseDetailPage(): JSX.Element {
     <div className="mx-auto max-w-6xl px-4 py-6">
       <button
         onClick={() => navigate("/cruises")}
-        className="mb-3 text-sm text-sky-400 hover:underline"
+        className="mb-3 text-sm text-amber-400 hover:underline"
       >
         ← {t("list.title")}
       </button>
@@ -114,7 +114,7 @@ export default function CruiseDetailPage(): JSX.Element {
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="rounded-md bg-sky-600 px-3 py-1 text-white hover:bg-sky-500"
+            className="rounded-md bg-amber-500 px-3 py-1 text-sm font-medium text-neutral-900 hover:bg-amber-400"
           >
             Edit
           </button>

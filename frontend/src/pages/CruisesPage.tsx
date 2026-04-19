@@ -34,7 +34,7 @@ export default function CruisesPage(): JSX.Element {
         <button
           type="button"
           onClick={() => setShowCreate(true)}
-          className="rounded-md bg-sky-600 px-3 py-1.5 text-sm text-white hover:bg-sky-500"
+          className="rounded-md bg-amber-500 px-3 py-1.5 text-sm font-medium text-neutral-900 hover:bg-amber-400"
         >
           {t("list.new")}
         </button>

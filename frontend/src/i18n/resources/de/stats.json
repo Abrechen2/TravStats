@@ -1,6 +1,9 @@
 {
   "loading": "Lade Statistiken...",
   "back": "← Zurück",
+  "filter": {
+    "all": "Alle Bereiche"
+  },
   "title": "Erweiterte Statistiken",
   "welcome": "Willkommen, {{username}}!",
   "logout": "Abmelden",

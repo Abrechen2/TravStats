@@ -1,6 +1,9 @@
 {
   "loading": "Loading statistics...",
   "back": "← Back",
+  "filter": {
+    "all": "All domains"
+  },
   "title": "Advanced Statistics",
   "welcome": "Welcome, {{username}}!",
   "logout": "Logout",

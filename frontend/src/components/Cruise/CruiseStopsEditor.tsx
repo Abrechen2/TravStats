@@ -142,7 +142,7 @@ export function CruiseStopsEditor({ stops, onChange }: Props): JSX.Element {
       <button
         type="button"
         onClick={add}
-        className="w-full rounded-md border border-dashed border-neutral-700 py-2 text-xs text-neutral-400 hover:border-sky-500 hover:text-sky-400"
+        className="w-full rounded-md border border-dashed border-neutral-700 py-2 text-xs text-neutral-400 hover:border-amber-500 hover:text-amber-400"
       >
         + {t("stops.add")}
       </button>
