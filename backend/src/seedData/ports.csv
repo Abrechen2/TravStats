@@ -1,0 +1,52 @@
+name,city,country,unlocode,lat,lon,timezone,region
+Hamburg,Hamburg,Germany,DEHAM,53.5400,9.9700,Europe/Berlin,atlantic
+Kiel,Kiel,Germany,DEKEL,54.3200,10.1333,Europe/Berlin,baltic
+Rostock-Warnemünde,Rostock,Germany,DERSK,54.1833,12.0833,Europe/Berlin,baltic
+Bremerhaven,Bremerhaven,Germany,DEBRV,53.5500,8.5833,Europe/Berlin,atlantic
+Amsterdam,Amsterdam,Netherlands,NLAMS,52.3833,4.9000,Europe/Amsterdam,atlantic
+Rotterdam,Rotterdam,Netherlands,NLRTM,51.9000,4.4833,Europe/Amsterdam,atlantic
+Southampton,Southampton,United Kingdom,GBSOU,50.9000,-1.4000,Europe/London,atlantic
+Copenhagen,Copenhagen,Denmark,DKCPH,55.6867,12.5700,Europe/Copenhagen,baltic
+Stockholm,Stockholm,Sweden,SESTO,59.3300,18.0600,Europe/Stockholm,baltic
+Helsinki,Helsinki,Finland,FIHEL,60.1700,24.9400,Europe/Helsinki,baltic
+Tallinn,Tallinn,Estonia,EETLL,59.4400,24.7500,Europe/Tallinn,baltic
+Gdańsk,Gdańsk,Poland,PLGDN,54.3500,18.6500,Europe/Warsaw,baltic
+Oslo,Oslo,Norway,NOOSL,59.9100,10.7500,Europe/Oslo,norwegian_fjords
+Bergen,Bergen,Norway,NOBGO,60.3900,5.3200,Europe/Oslo,norwegian_fjords
+Geiranger,Geiranger,Norway,NOGEI,62.1000,7.2000,Europe/Oslo,norwegian_fjords
+Flåm,Flåm,Norway,NOFLM,60.8600,7.1100,Europe/Oslo,norwegian_fjords
+Ålesund,Ålesund,Norway,NOAES,62.4700,6.1500,Europe/Oslo,norwegian_fjords
+Tromsø,Tromsø,Norway,NOTOS,69.6500,18.9600,Europe/Oslo,norwegian_fjords
+Barcelona,Barcelona,Spain,ESBCN,41.3500,2.1700,Europe/Madrid,mediterranean
+Palma de Mallorca,Palma,Spain,ESPMI,39.5700,2.6500,Europe/Madrid,mediterranean
+Málaga,Málaga,Spain,ESAGP,36.7200,-4.4200,Europe/Madrid,mediterranean
+Valencia,Valencia,Spain,ESVLC,39.4700,-0.3800,Europe/Madrid,mediterranean
+Marseille,Marseille,France,FRMRS,43.3000,5.3700,Europe/Paris,mediterranean
+Nice,Nice,France,FRNCE,43.7000,7.2700,Europe/Paris,mediterranean
+Genoa,Genoa,Italy,ITGOA,44.4100,8.9300,Europe/Rome,mediterranean
+Civitavecchia,Civitavecchia,Italy,ITCVV,42.0900,11.8000,Europe/Rome,mediterranean
+Naples,Naples,Italy,ITNAP,40.8400,14.2500,Europe/Rome,mediterranean
+Venice,Venice,Italy,ITVCE,45.4300,12.3300,Europe/Rome,mediterranean
+Dubrovnik,Dubrovnik,Croatia,HRDBV,42.6500,18.0900,Europe/Zagreb,mediterranean
+Athens (Piraeus),Athens,Greece,GRPIR,37.9400,23.6400,Europe/Athens,mediterranean
+Santorini,Santorini,Greece,GRJTR,36.4200,25.4300,Europe/Athens,mediterranean
+Mykonos,Mykonos,Greece,GRJMK,37.4500,25.3300,Europe/Athens,mediterranean
+Istanbul,Istanbul,Türkiye,TRIST,41.0100,28.9800,Europe/Istanbul,mediterranean
+Kuşadası,Kuşadası,Türkiye,TRKUS,37.8600,27.2600,Europe/Istanbul,mediterranean
+Funchal,Funchal,Portugal,PTFNC,32.6500,-16.9100,Atlantic/Madeira,atlantic
+Lisbon,Lisbon,Portugal,PTLIS,38.7200,-9.1300,Europe/Lisbon,atlantic
+Las Palmas,Las Palmas,Spain,ESLPA,28.1200,-15.4300,Atlantic/Canary,atlantic
+Miami,Miami,United States,USMIA,25.7700,-80.1800,America/New_York,caribbean
+Fort Lauderdale,Fort Lauderdale,United States,USFLL,26.1200,-80.1400,America/New_York,caribbean
+Port Canaveral,Cape Canaveral,United States,USPCV,28.4100,-80.6100,America/New_York,caribbean
+Nassau,Nassau,Bahamas,BSNAS,25.0800,-77.3400,America/Nassau,caribbean
+San Juan,San Juan,Puerto Rico,PRSJU,18.4700,-66.1200,America/Puerto_Rico,caribbean
+Cozumel,Cozumel,Mexico,MXCZM,20.5100,-86.9500,America/Cancun,caribbean
+Bridgetown,Bridgetown,Barbados,BBBGI,13.1000,-59.6200,America/Barbados,caribbean
+St. Thomas,Charlotte Amalie,US Virgin Islands,VISTT,18.3400,-64.9300,America/St_Thomas,caribbean
+Seward,Seward,United States,USSWD,60.1200,-149.4400,America/Anchorage,alaska
+Juneau,Juneau,United States,USJNU,58.3000,-134.4000,America/Juneau,alaska
+Ketchikan,Ketchikan,United States,USKTN,55.3400,-131.6500,America/Juneau,alaska
+Skagway,Skagway,United States,USSKW,59.4500,-135.3200,America/Juneau,alaska
+Vancouver,Vancouver,Canada,CAVAN,49.2800,-123.1200,America/Vancouver,alaska
+Panama Canal (Colón),Colón,Panama,PACTB,9.3600,-79.8700,America/Panama,atlantic
