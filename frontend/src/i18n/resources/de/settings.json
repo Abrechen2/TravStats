@@ -6,9 +6,18 @@
   "tabs": {
     "general": "Allgemein",
     "flight": "Flug",
-    "cruise": "Kreuzfahrt",
-    "cruiseEmptyTitle": "Kreuzfahrt-Einstellungen",
-    "cruiseEmptyHint": "Kreuzfahrt-spezifische Einstellungen werden mit dem nächsten Update verfügbar."
+    "cruise": "Kreuzfahrt"
+  },
+  "cruisePreferences": {
+    "title": "Kreuzfahrt-Präferenzen",
+    "description": "Standardwerte für neu angelegte Kreuzfahrten und Darstellung auf der Karte.",
+    "defaultLine": "Standard-Reederei",
+    "defaultLinePlaceholder": "z. B. AIDA Cruises",
+    "defaultLineHint": "Wird in „Neue Kreuzfahrt → Manuell“ vorausgefüllt, wenn kein Schiff gewählt wurde.",
+    "defaultCabin": "Standard-Kabinenkategorie",
+    "defaultCabinNone": "– keine Vorauswahl –",
+    "showArcs": "Kreuzfahrt-Routen auf der Karte anzeigen",
+    "showArcsHint": "Bezier-Linien zwischen Start- und Zielhafen im Dashboard-Map."
   },
   "about": {
     "buildLabel": "Build",

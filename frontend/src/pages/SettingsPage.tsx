@@ -22,6 +22,7 @@ import ApiKeysSection from "../components/Settings/ApiKeysSection";
 import AdminSection from "../components/Settings/AdminSection";
 import AboutSection from "../components/Settings/AboutSection";
 import FeaturesSection from "../components/Settings/FeaturesSection";
+import CruisePreferencesSection from "../components/Settings/CruisePreferencesSection";
 import PasswordModal from "../components/Settings/PasswordModal";
 
 type TabId = "general" | "flight" | "cruise";
@@ -43,11 +44,13 @@ export default function SettingsPage(): JSX.Element {
     units,
     defaults,
     map,
+    cruise,
     setProfile,
     setDisplay,
     setUnits,
     setDefaults,
     setMap,
+    setCruise,
     isDarkMode,
     savingProfile,
     uploadingProfilePicture,
@@ -101,8 +104,13 @@ export default function SettingsPage(): JSX.Element {
       { id: "map", label: t("settings:map.title") || "Map" },
       { id: "enrichment", label: t("settings:historicalEnrichment.title") || "Enrichment" },
     ];
-    const cruise: SectionRef[] = [];
-    return { general, flight, cruise };
+    const cruiseTab: SectionRef[] = [
+      {
+        id: "cruisePreferences",
+        label: t("settings:cruisePreferences.title") || "Präferenzen",
+      },
+    ];
+    return { general, flight, cruise: cruiseTab };
   }, [t, user?.isAdmin]);
 
   // Visible tabs: always general, plus any enabled domain that has a tab.
@@ -246,26 +254,8 @@ export default function SettingsPage(): JSX.Element {
 
           {/* Right content area */}
           <main className="flex-1 overflow-y-auto p-6 space-y-6">
-            {activeTab === "cruise" && currentSections.length === 0 && (
-              <div
-                className="rounded-lg px-6 py-10 text-center text-sm"
-                style={{
-                  background: "var(--bg-surface)",
-                  border: "1px dashed var(--color-border)",
-                  color: "var(--text-muted)",
-                }}
-              >
-                <p className="mb-2 text-2xl" aria-hidden>
-                  🚢
-                </p>
-                <p className="font-medium text-[var(--text-primary)]">
-                  {t("settings:tabs.cruiseEmptyTitle") || "Kreuzfahrt-Einstellungen"}
-                </p>
-                <p className="mt-1">
-                  {t("settings:tabs.cruiseEmptyHint") ||
-                    "Kreuzfahrt-spezifische Einstellungen werden mit dem nächsten Update verfügbar."}
-                </p>
-              </div>
+            {activeSection === "cruisePreferences" && (
+              <CruisePreferencesSection cruise={cruise} onSetCruise={setCruise} />
             )}
 
             {activeSection === "profile" && (

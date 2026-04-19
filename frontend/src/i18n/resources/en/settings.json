@@ -6,9 +6,18 @@
   "tabs": {
     "general": "General",
     "flight": "Flight",
-    "cruise": "Cruise",
-    "cruiseEmptyTitle": "Cruise settings",
-    "cruiseEmptyHint": "Cruise-specific settings will be available in the next update."
+    "cruise": "Cruise"
+  },
+  "cruisePreferences": {
+    "title": "Cruise preferences",
+    "description": "Defaults for newly created cruises and how they render on the map.",
+    "defaultLine": "Default cruise line",
+    "defaultLinePlaceholder": "e.g. AIDA Cruises",
+    "defaultLineHint": "Prefilled in \"New cruise → Manual\" when no ship is picked.",
+    "defaultCabin": "Default cabin category",
+    "defaultCabinNone": "– no preset –",
+    "showArcs": "Show cruise routes on the map",
+    "showArcsHint": "Bezier lines between departure and arrival ports in the dashboard map."
   },
   "about": {
     "buildLabel": "Build",
