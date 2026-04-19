@@ -4,6 +4,16 @@
   "filter": {
     "all": "Overview"
   },
+  "overview2": {
+    "sectionLabel": "Overall summary",
+    "sectionHint": "All domains combined",
+    "experiences": "Total experiences",
+    "experiencesHint": "{{flights}} flights, {{cruises}} cruises",
+    "countries": "Total countries",
+    "points": "Points",
+    "pointsHint": "{{count}} achievements unlocked",
+    "cruiseSeaDays": "Sea days"
+  },
   "cruiseSection": {
     "loadError": "Failed to load cruise statistics.",
     "emptyTitle": "No cruises yet",
