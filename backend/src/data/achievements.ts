@@ -12,6 +12,7 @@ import { prisma } from '../db';
 import logger from '../utils/logger';
 import { seedsPartA } from './achievementSeeds/partA';
 import { seedsPartB } from './achievementSeeds/partB';
+import { seedsPartC } from './achievementSeeds/partC';
 
 export interface AchievementDefinition {
   code: string;
@@ -27,7 +28,7 @@ export interface AchievementDefinition {
   isHidden?: boolean;
 }
 
-export const achievements: AchievementDefinition[] = [...seedsPartA, ...seedsPartB];
+export const achievements: AchievementDefinition[] = [...seedsPartA, ...seedsPartB, ...seedsPartC];
 
 /**
  * Ensure all achievements are present in the database
