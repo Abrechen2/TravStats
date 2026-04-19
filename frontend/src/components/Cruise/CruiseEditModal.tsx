@@ -408,56 +408,81 @@ interface ChooserProps {
 }
 
 /**
- * First step of create flow: two large buttons let the user pick how they
- * want to enter the cruise. The email card carries a "coming soon" badge
- * because the cruise parser is a 501 stub on the backend; clicking it
- * still leads to a placeholder explaining the limitation, rather than
- * silently failing.
+ * First step of the create flow. Mirrors the visual hierarchy of the flight
+ * entry form (FlightLookupStep): a large green hero card for the primary
+ * import path, then a smaller secondary card for the fallback action. The
+ * email card carries a yellow "coming soon" badge (parser is a 501 stub);
+ * clicking it surfaces a placeholder step rather than silently failing.
+ * Manual entry is rendered as the secondary card — smaller, subtler, but
+ * still fully actionable because it's the only working path today.
  */
 function ChooserStep({ onPickEmail, onPickManual, t }: ChooserProps): JSX.Element {
   return (
-    <div className="grid gap-3 p-6 md:grid-cols-2">
-      <button
-        type="button"
-        onClick={onPickEmail}
-        className="group relative flex flex-col items-start rounded-lg border border-[var(--color-border)] bg-[var(--bg-surface)] p-6 text-left transition-colors hover:border-[var(--accent)] hover:bg-[var(--bg-elevated)]"
-      >
-        <span
-          className="absolute right-3 top-3 rounded-full border border-[var(--color-border)] bg-[var(--bg-elevated)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--text-muted)]"
-          aria-hidden="true"
-        >
-          {t("chooser.email.badge")}
-        </span>
-        <div
-          aria-hidden
-          className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg text-2xl"
-          style={{ backgroundColor: "var(--bg-elevated)", color: "var(--accent)" }}
-        >
-          ✉
-        </div>
-        <div className="text-base font-semibold text-[var(--text-primary)]">
-          {t("chooser.email.label")}
-        </div>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">{t("chooser.email.description")}</p>
-      </button>
+    <div className="space-y-4 p-6">
+      {/* Email hero card — matches FlightLookupStep green-900→teal-900 gradient */}
+      <div className="rounded-xl border-2 border-green-600 bg-gradient-to-r from-green-900 to-teal-900 p-6 shadow-lg shadow-green-900/50 ring-2 ring-green-500/30 transition-all duration-300 hover:scale-[1.01] hover:shadow-xl hover:shadow-green-900/70">
+        <div className="flex items-start gap-4">
+          <div className="flex flex-shrink-0 flex-col items-start gap-2">
+            <span className="inline-flex items-center rounded-full bg-yellow-500 px-3 py-1 text-xs font-bold text-[var(--text-primary)] shadow-md">
+              ⏳ {t("chooser.email.badge")}
+            </span>
+            <div className="text-4xl text-green-300" aria-hidden>
+              📧
+            </div>
+          </div>
 
-      <button
-        type="button"
-        onClick={onPickManual}
-        className="group flex flex-col items-start rounded-lg border border-[var(--color-border)] bg-[var(--bg-surface)] p-6 text-left transition-colors hover:border-[var(--accent)] hover:bg-[var(--bg-elevated)]"
-      >
-        <div
-          aria-hidden
-          className="mb-3 flex h-12 w-12 items-center justify-center rounded-lg text-2xl"
-          style={{ backgroundColor: "var(--bg-elevated)", color: "var(--accent)" }}
-        >
-          ✏
+          <div className="min-w-0 flex-1">
+            <h3 className="mb-2 text-2xl font-bold text-[var(--text-primary)]">
+              {t("chooser.email.label")}
+            </h3>
+            <p className="mb-4 text-base font-medium text-[var(--text-muted)]">
+              {t("chooser.email.description")}
+            </p>
+            <p className="flex items-center gap-2 text-sm font-semibold text-green-300">
+              <span className="text-lg text-green-400">✓</span>
+              {t("chooser.email.infoLine")}
+            </p>
+          </div>
+
+          <div className="flex-shrink-0">
+            <button
+              type="button"
+              onClick={onPickEmail}
+              className="btn-primary flex items-center gap-2 whitespace-nowrap px-6 py-3 text-base font-semibold shadow-md transition-transform duration-200 hover:scale-105 hover:shadow-lg"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                />
+              </svg>
+              {t("chooser.email.cta")}
+            </button>
+          </div>
         </div>
-        <div className="text-base font-semibold text-[var(--text-primary)]">
-          {t("chooser.manual.label")}
+      </div>
+
+      {/* Manual entry secondary card — matches FlightLookupStep boarding-pass style */}
+      <div className="rounded-lg border border-blue-700 bg-gradient-to-r from-[var(--bg-elevated)] to-[var(--bg-muted)] p-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="text-3xl" aria-hidden>
+              ✏️
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+                {t("chooser.manual.label")}
+              </h3>
+              <p className="text-sm text-[var(--text-muted)]">{t("chooser.manual.description")}</p>
+            </div>
+          </div>
+          <button type="button" onClick={onPickManual} className="btn-primary">
+            {t("chooser.manual.cta")}
+          </button>
         </div>
-        <p className="mt-1 text-sm text-[var(--text-muted)]">{t("chooser.manual.description")}</p>
-      </button>
+      </div>
     </div>
   );
 }

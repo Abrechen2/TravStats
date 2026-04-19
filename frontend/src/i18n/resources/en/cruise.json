@@ -50,13 +50,16 @@
   "chooser": {
     "title": "How do you want to add the cruise?",
     "email": {
-      "label": "Email parser",
-      "description": "Upload a booking confirmation and extract details automatically",
-      "badge": "Coming soon"
+      "label": "Import booking email",
+      "description": "Upload your booking confirmation from AIDA, TUI Cruises or Costa — the cruise will be extracted automatically.",
+      "infoLine": "Line, ship, ports and dates will be filled in for you",
+      "badge": "Coming soon",
+      "cta": "Upload email"
     },
     "manual": {
       "label": "Manual entry",
-      "description": "Enter ship, ports and details yourself"
+      "description": "Enter ship, ports and details yourself",
+      "cta": "Enter manually"
     },
     "back": "← Back to choices"
   },

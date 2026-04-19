@@ -71,13 +71,16 @@
   "chooser": {
     "title": "Wie möchtest du die Kreuzfahrt erfassen?",
     "email": {
-      "label": "E-Mail-Parser",
-      "description": "Buchungsbestätigung hochladen und automatisch auslesen",
-      "badge": "Bald verfügbar"
+      "label": "Buchungs-E-Mail importieren",
+      "description": "Lade deine Buchungsbestätigung von AIDA, TUI Cruises oder Costa hoch — die Kreuzfahrt wird automatisch erfasst.",
+      "infoLine": "Reederei, Schiff, Häfen und Termine werden übernommen",
+      "badge": "Bald verfügbar",
+      "cta": "E-Mail hochladen"
     },
     "manual": {
       "label": "Manuelle Eingabe",
-      "description": "Schiff, Häfen und Details selbst eintragen"
+      "description": "Schiff, Häfen und Details selbst eintragen",
+      "cta": "Manuell erfassen"
     },
     "back": "← Zurück zur Auswahl"
   },
