@@ -29,6 +29,7 @@ import trainingRoutes from './routes/training';
 import tripsRoutes from './routes/trips';
 import passwordResetRoutes from './routes/passwordReset';
 import suggestionsRoutes from './routes/suggestions';
+import portsRoutes from './routes/ports';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { requestLoggerMiddleware } from './middleware/requestLogger';
 import { prisma } from './db';
@@ -229,6 +230,7 @@ app.use('/api/v1/template-status', templateStatusRoutes);
 app.use('/api/v1/training', trainingRoutes);
 app.use('/api/v1', tripsRoutes);
 app.use('/api/v1/suggestions', suggestionsRoutes);
+app.use('/api/v1/ports', portsRoutes);
 
 // 404 handler for unmatched routes (must be before errorHandler)
 app.use(notFoundHandler);
