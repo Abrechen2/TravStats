@@ -17,9 +17,39 @@
   "tabs2": {
     "general": "General",
     "flight": "Flight",
-    "cruise": "Cruise",
-    "cruiseEmptyTitle": "Cruise admin",
-    "cruiseEmptyHint": "Cruise-specific admin tools (ship seeding, port maintenance, …) will arrive with future updates."
+    "cruise": "Cruise"
+  },
+  "cruiseMasterData": {
+    "menuLabel": "Ships & Ports",
+    "userAdded": "User-added",
+    "ship": {
+      "title": "Ships",
+      "description": "Catalog from the seed CSV plus user-added entries. User-added ships are marked and kept across re-seeds.",
+      "name": "Name",
+      "cruiseLine": "Cruise line",
+      "year": "Year built",
+      "add": "Add",
+      "searchPlaceholder": "Search ship or cruise line …",
+      "empty": "No results.",
+      "created": "Ship added.",
+      "createFailed": "Failed to add ship.",
+      "missingFields": "Name and cruise line are required."
+    },
+    "port": {
+      "title": "Ports",
+      "description": "Catalog from the seed CSV plus user-added entries. Coordinates in decimal degrees — look unknown ports up on Google Maps.",
+      "name": "Name",
+      "city": "City",
+      "country": "Country",
+      "lat": "Latitude",
+      "lon": "Longitude",
+      "add": "Add",
+      "searchPlaceholder": "Search port or city …",
+      "empty": "No results.",
+      "created": "Port added.",
+      "createFailed": "Failed to add port.",
+      "missingFields": "Name, latitude and longitude are required."
+    }
   },
   "instanceLabel": "Instance",
   "instance": {
