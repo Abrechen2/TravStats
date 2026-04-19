@@ -1,6 +1,19 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 
+// Mock the settings API so the real store's setEnabledDomains does not
+// fire a real HTTP call via settingsApi.update(...).
+vi.mock("../../lib/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/api")>();
+  return {
+    ...actual,
+    settingsApi: {
+      ...actual.settingsApi,
+      update: vi.fn().mockResolvedValue(undefined),
+    },
+  };
+});
+
 // Real store, not the global mock
 vi.unmock("../../store/settingsStore");
 
