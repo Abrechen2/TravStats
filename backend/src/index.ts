@@ -35,6 +35,8 @@ import { prisma } from './db';
 import logger from './utils/logger';
 import { DATABASE_URL } from './utils/database';
 import { templateRegistry } from './services/parsers/templates/registry';
+import { seedPortsFromCSV } from './seedPortsFromCSV';
+import { seedShipsFromCSV } from './seedShipsFromCSV';
 
 // Load environment variables
 dotenv.config();
@@ -302,6 +304,34 @@ if (process.env.NODE_ENV !== 'test') {
       logger.info({ operation: 'server_start_achievements', message: 'Achievements ensured' });
     } catch (error) {
       logger.error({ operation: 'server_start_achievements_error', message: 'Failed to ensure achievements', error });
+    }
+
+    // Seed cruise catalog tables (ports + ships) — idempotent, skips on
+    // already-seeded UNLOCODE/IMO matches and preserves isUserAdded rows.
+    try {
+      await seedPortsFromCSV();
+      logger.info({ operation: 'server_start_seed_ports', message: 'Ports seeded' });
+    } catch (error) {
+      logger.warn({
+        operation: 'server_start_seed_ports_error',
+        message: 'Failed to seed ports from CSV',
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
+    }
+
+    try {
+      await seedShipsFromCSV();
+      logger.info({ operation: 'server_start_seed_ships', message: 'Ships seeded' });
+    } catch (error) {
+      logger.warn({
+        operation: 'server_start_seed_ships_error',
+        message: 'Failed to seed ships from CSV',
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
+      });
     }
 
     // Normalize aircraft type names in existing flights (idempotent)
