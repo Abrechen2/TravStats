@@ -72,6 +72,22 @@ export interface FeaturesSettings {
   enableCostTracking: boolean;
 }
 
+/**
+ * Cruise-domain preferences that pre-fill the cruise entry form and
+ * shape the cruise map layer. Lives in its own slice so future
+ * cruise-specific fields don't mix with flight-specific ones. The
+ * same pattern will apply when hotel / POI domains ship — each gets
+ * its own nested slice, never flat keys like `cruiseDefaultLine`.
+ */
+export interface CruiseSettings {
+  /** Prefilled in "Neue Kreuzfahrt → Manuell" when the ship field is empty. */
+  defaultLine: string;
+  /** Prefilled cabin category on new cruises. `null` = no default. */
+  defaultCabinType: "inside" | "oceanview" | "balcony" | "suite" | null;
+  /** Toggles the cruise arc layer in the dashboard map. */
+  showCruiseArcs: boolean;
+}
+
 export interface ApiKeyStatus {
   hasKey: boolean;
   isShared: boolean;
@@ -92,6 +108,7 @@ export interface SettingsState {
   map: MapSettings;
   notifications: NotificationSettings;
   features: FeaturesSettings;
+  cruise: CruiseSettings;
   apiKeys: ApiKeysStatus | null;
   enabledDomains: DomainKey[];
   setProfile: SettingsUpdater<ProfileSettings>;
@@ -101,6 +118,7 @@ export interface SettingsState {
   setMap: SettingsUpdater<MapSettings>;
   setNotifications: SettingsUpdater<NotificationSettings>;
   setFeatures: SettingsUpdater<FeaturesSettings>;
+  setCruise: SettingsUpdater<CruiseSettings>;
   setApiKeys: (status: ApiKeysStatus) => void;
   setEnabledDomains: (keys: DomainKey[]) => void;
   loadApiKeysStatus: () => Promise<void>;
@@ -118,6 +136,7 @@ const defaultSettings: Omit<
   | "setMap"
   | "setNotifications"
   | "setFeatures"
+  | "setCruise"
   | "setApiKeys"
   | "setEnabledDomains"
   | "loadApiKeysStatus"
@@ -159,6 +178,11 @@ const defaultSettings: Omit<
   features: {
     enableCostTracking: false,
   },
+  cruise: {
+    defaultLine: "",
+    defaultCabinType: null,
+    showCruiseArcs: true,
+  },
   apiKeys: null,
   enabledDomains: ["flight"],
 };
@@ -192,6 +216,7 @@ export const useSettingsStore = create<SettingsState>()(
           notifications: { ...state.notifications, ...updates },
         })),
       setFeatures: (updates) => set((state) => ({ features: { ...state.features, ...updates } })),
+      setCruise: (updates) => set((state) => ({ cruise: { ...state.cruise, ...updates } })),
       setApiKeys: (status) =>
         set(() => ({
           apiKeys: status,
@@ -280,6 +305,7 @@ export const useSettingsStore = create<SettingsState>()(
             map,
             notifications,
             features,
+            cruise,
             enabledDomains,
           } = get();
           await settingsApi.update({
@@ -290,6 +316,7 @@ export const useSettingsStore = create<SettingsState>()(
             map,
             notifications,
             features,
+            cruise,
             enabledDomains,
           });
           // birthdate lives on a separate endpoint (/settings/profile on the

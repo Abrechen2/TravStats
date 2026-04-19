@@ -67,6 +67,19 @@ const settingsSchema = z.object({
     })
     .partial()
     .optional(),
+  // Cruise-domain preferences. Own slice so the pattern stays clean when
+  // hotel / POI domains add their own slices later.
+  cruise: z
+    .object({
+      defaultLine: z.string().max(200).optional(),
+      defaultCabinType: z
+        .enum(['inside', 'oceanview', 'balcony', 'suite'])
+        .nullable()
+        .optional(),
+      showCruiseArcs: z.boolean().optional(),
+    })
+    .partial()
+    .optional(),
   boardingPassParserStrategy: z.enum(['parser-only', 'parser-with-api', 'api-only']).nullable().optional(),
   enabledDomains: z.array(z.enum(DOMAIN_KEYS as unknown as [DomainKey, ...DomainKey[]])).optional(),
 }).partial();
