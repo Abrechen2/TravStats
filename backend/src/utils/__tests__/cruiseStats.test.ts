@@ -1,0 +1,195 @@
+import { describe, it, expect } from '@jest/globals';
+import { calculateCruiseStats, type CruiseData, type CruisePortData } from '../cruiseStats';
+
+const port = (id: number, region: string, country: string, unlocode: string | null = null): CruisePortData => ({
+  id,
+  name: `P${id}`,
+  city: null,
+  country,
+  region,
+  unlocode,
+  lat: 0,
+  lon: 0,
+  timezone: null,
+  isUserAdded: false,
+});
+
+describe('calculateCruiseStats', () => {
+  const sampleCruises: CruiseData[] = [
+    {
+      id: 'c1',
+      shipId: 1,
+      cruiseLine: 'AIDA Cruises',
+      cabinType: 'balcony',
+      deck: 7,
+      startDate: new Date('2026-06-01'),
+      endDate: new Date('2026-06-08'),
+      stops: [
+        { portId: 1, port: port(1, 'mediterranean', 'Spain'), dayNumber: 1, isAtSea: false },
+        { portId: null, port: null, dayNumber: 2, isAtSea: true },
+        { portId: null, port: null, dayNumber: 3, isAtSea: true },
+        { portId: 2, port: port(2, 'mediterranean', 'France'), dayNumber: 4, isAtSea: false },
+      ],
+    },
+    {
+      id: 'c2',
+      shipId: 2,
+      cruiseLine: 'TUI Cruises',
+      cabinType: 'suite',
+      deck: 14,
+      startDate: new Date('2026-08-01'),
+      endDate: new Date('2026-08-08'),
+      stops: [
+        { portId: 3, port: port(3, 'caribbean', 'Bahamas'), dayNumber: 1, isAtSea: false },
+        { portId: 4, port: port(4, 'caribbean', 'Puerto Rico'), dayNumber: 2, isAtSea: false },
+      ],
+    },
+  ];
+
+  it('counts cruises', () => {
+    const s = calculateCruiseStats(sampleCruises);
+    expect(s.cruisesCount).toBe(2);
+  });
+
+  it('counts unique ports and ships', () => {
+    const s = calculateCruiseStats(sampleCruises);
+    expect(s.cruisePortsUnique).toBe(4);
+    expect(s.cruiseShipsUnique).toBe(2);
+  });
+
+  it('counts sea days total and max streak', () => {
+    const s = calculateCruiseStats(sampleCruises);
+    expect(s.seaDays).toBe(2);
+    expect(s.seaDaysStreak).toBe(2);
+  });
+
+  it('tracks max ports in a single cruise', () => {
+    const s = calculateCruiseStats(sampleCruises);
+    expect(s.cruisePortsSingleMax).toBe(2);
+  });
+
+  it('tracks unique lines and loyalty count', () => {
+    const s = calculateCruiseStats(sampleCruises);
+    expect(s.cruiseLinesUnique).toBe(2);
+    expect(s.cruiseLineLoyaltyMax).toBe(1);
+  });
+
+  it('tracks cruise line loyalty correctly for repeated line', () => {
+    const cruises: CruiseData[] = [
+      { ...sampleCruises[0], id: 'c1', cruiseLine: 'AIDA Cruises' },
+      { ...sampleCruises[0], id: 'c2', cruiseLine: 'AIDA Cruises' },
+      { ...sampleCruises[0], id: 'c3', cruiseLine: 'AIDA Cruises' },
+    ];
+    const s = calculateCruiseStats(cruises);
+    expect(s.cruiseLineLoyaltyMax).toBe(3);
+    expect(s.cruiseLinesUnique).toBe(1);
+  });
+
+  it('exposes region flags via Set', () => {
+    const s = calculateCruiseStats(sampleCruises);
+    expect(s.regions.has('mediterranean')).toBe(true);
+    expect(s.regions.has('caribbean')).toBe(true);
+    expect(s.regions.has('baltic')).toBe(false);
+  });
+
+  it('picks cabin tier flags + max deck', () => {
+    const s = calculateCruiseStats(sampleCruises);
+    expect(s.hasBalconyCabin).toBe(true);
+    expect(s.hasSuiteCabin).toBe(true);
+    expect(s.maxDeck).toBe(14);
+  });
+
+  it('countries Set includes ports countries', () => {
+    const s = calculateCruiseStats(sampleCruises);
+    expect(s.countries.has('Spain')).toBe(true);
+    expect(s.countries.has('Bahamas')).toBe(true);
+  });
+
+  it('detects canal transit by UNLOCODE', () => {
+    const cruises: CruiseData[] = [{
+      id: 'cc',
+      shipId: 1,
+      cruiseLine: null,
+      cabinType: null,
+      deck: null,
+      startDate: null,
+      endDate: null,
+      stops: [
+        { portId: 1, port: port(1, 'atlantic', 'Panama', 'PACTB'), dayNumber: 1, isAtSea: false },
+      ],
+    }];
+    const s = calculateCruiseStats(cruises);
+    expect(s.hasCanalTransit).toBe(true);
+  });
+
+  it('detects polar via region', () => {
+    const cruises: CruiseData[] = [{
+      id: 'cc',
+      shipId: 1,
+      cruiseLine: null,
+      cabinType: null,
+      deck: null,
+      startDate: null,
+      endDate: null,
+      stops: [{ portId: 1, port: port(1, 'polar', 'Antarctica'), dayNumber: 1, isAtSea: false }],
+    }];
+    const s = calculateCruiseStats(cruises);
+    expect(s.hasPolar).toBe(true);
+  });
+
+  it('detects cold water via region=alaska', () => {
+    const cruises: CruiseData[] = [{
+      id: 'cc',
+      shipId: 1,
+      cruiseLine: null,
+      cabinType: null,
+      deck: null,
+      startDate: null,
+      endDate: null,
+      stops: [{ portId: 1, port: port(1, 'alaska', 'United States'), dayNumber: 1, isAtSea: false }],
+    }];
+    const s = calculateCruiseStats(cruises);
+    expect(s.hasColdWater).toBe(true);
+  });
+
+  it('detects new years at sea', () => {
+    const cruises: CruiseData[] = [{
+      id: 'ny',
+      shipId: 1,
+      cruiseLine: null,
+      cabinType: null,
+      deck: null,
+      startDate: new Date('2026-12-28T00:00:00Z'),
+      endDate: new Date('2027-01-04T00:00:00Z'),
+      stops: [
+        { portId: null, port: null, dayNumber: 1, isAtSea: true },
+      ],
+    }];
+    const s = calculateCruiseStats(cruises);
+    expect(s.hasNewYearsAtSea).toBe(true);
+  });
+
+  it('detects birthday at sea when user birthday falls within cruise range', () => {
+    const cruises: CruiseData[] = [{
+      id: 'bd',
+      shipId: 1,
+      cruiseLine: null,
+      cabinType: null,
+      deck: null,
+      startDate: new Date('2026-06-05T00:00:00Z'),
+      endDate: new Date('2026-06-12T00:00:00Z'),
+      stops: [],
+    }];
+    const s = calculateCruiseStats(cruises, { month: 6, day: 8 });
+    expect(s.hasBirthdayAtSea).toBe(true);
+  });
+
+  it('returns zero stats for empty input', () => {
+    const s = calculateCruiseStats([]);
+    expect(s.cruisesCount).toBe(0);
+    expect(s.cruisePortsUnique).toBe(0);
+    expect(s.seaDays).toBe(0);
+    expect(s.hasBalconyCabin).toBe(false);
+    expect(s.regions.size).toBe(0);
+  });
+});
