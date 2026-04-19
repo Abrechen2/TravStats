@@ -66,4 +66,13 @@ describe('parser domain param', () => {
       .send({ imageBase64: 'AAAA', domain: 'cruise' });
     expect(res.status).toBe(400);
   });
+
+  it('rejects unknown domain on /parse-email-file', async () => {
+    const res = await request(app)
+      .post('/api/v1/parse-email-file')
+      .set('Cookie', [`auth_token=${token}`])
+      .attach('email', Buffer.from('dummy'), 'x.eml')
+      .field('domain', 'cruise');
+    expect(res.status).toBe(400);
+  });
 });
