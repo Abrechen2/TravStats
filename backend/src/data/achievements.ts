@@ -18,6 +18,7 @@ export interface AchievementDefinition {
   name: string;
   description: string;
   category: string;
+  domain: 'flight' | 'cruise' | 'shared';
   icon: string;
   tier: string;
   requirement: number;
@@ -73,6 +74,7 @@ export async function ensureAchievements(): Promise<void> {
           name: achievement.name,
           description: achievement.description,
           category: achievement.category,
+          domain: achievement.domain,
           icon: achievement.icon,
           tier: achievement.tier,
           requirement: achievement.requirement,
