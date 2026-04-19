@@ -103,6 +103,28 @@ export interface UserStats {
   piDayFlights: number;
   piPrecisionFlights: number;
   halloweenFlights: number;
+  // Cruise stats (V1 multi-domain)
+  cruisesCount: number;
+  cruisePortsUnique: number;
+  cruisePortsSingleMax: number;
+  cruiseShipsUnique: number;
+  cruiseLines: Set<string>;
+  cruiseLinesUnique: number;
+  cruiseLineLoyaltyMax: number;
+  seaDays: number;
+  seaDaysStreak: number;
+  cruiseRegions: Set<string>;
+  hasBalconyCabin: boolean;
+  hasSuiteCabin: boolean;
+  cruiseMaxDeck: number;
+  hasCanalTransit: boolean;
+  hasPolar: boolean;
+  hasColdWater: boolean;
+  hasCruiseBirthdayAtSea: boolean;
+  hasNewYearsAtSea: boolean;
+  // Cross-domain
+  hasFlyAndSailTrip: boolean;
+  cruiseCarnivalBrandsCovered: number; // how many Carnival brands out of the set
 }
 
 export function getContinent(lat: number, lon: number): string | null {
@@ -180,6 +202,27 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
     piDayFlights: 0,
     piPrecisionFlights: 0,
     halloweenFlights: 0,
+    // Cruise stats — filled in by caller via spread after calculateCruiseStats
+    cruisesCount: 0,
+    cruisePortsUnique: 0,
+    cruisePortsSingleMax: 0,
+    cruiseShipsUnique: 0,
+    cruiseLines: new Set(),
+    cruiseLinesUnique: 0,
+    cruiseLineLoyaltyMax: 0,
+    seaDays: 0,
+    seaDaysStreak: 0,
+    cruiseRegions: new Set(),
+    hasBalconyCabin: false,
+    hasSuiteCabin: false,
+    cruiseMaxDeck: 0,
+    hasCanalTransit: false,
+    hasPolar: false,
+    hasColdWater: false,
+    hasCruiseBirthdayAtSea: false,
+    hasNewYearsAtSea: false,
+    hasFlyAndSailTrip: false,
+    cruiseCarnivalBrandsCovered: 0,
   };
 
   // Collect all unique airport codes from flights
