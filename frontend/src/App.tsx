@@ -12,6 +12,7 @@ import AirportSeedingModal from "./components/AirportSeedingModal";
 import { setupApi } from "./lib/api";
 import i18n from "./i18n/config";
 import { useTranslation } from "./hooks/useTranslation";
+import { useEnabledDomains } from "./hooks/useEnabledDomains";
 
 // Lazy load pages for code splitting
 const LoginPage = lazy(() => import("./pages/LoginPage"));
@@ -55,6 +56,7 @@ function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation("common");
+  const { isEnabled } = useEnabledDomains();
   const [setupChecked, setSetupChecked] = useState(false);
   const [showSeedingModal, setShowSeedingModal] = useState(false);
 
@@ -221,7 +223,13 @@ function AppContent() {
               />
               <Route
                 path="/flights"
-                element={isAuthenticated ? <FlightsTablePage /> : <Navigate to="/login" />}
+                element={
+                  isAuthenticated && isEnabled("flight") ? (
+                    <FlightsTablePage />
+                  ) : (
+                    <Navigate to={isAuthenticated ? "/" : "/login"} />
+                  )
+                }
               />
               <Route
                 path="/achievements"
