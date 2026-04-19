@@ -30,6 +30,7 @@ import StatsUniqueSection from "../components/Stats/StatsUniqueSection";
 import StatsAirportsSection from "../components/Stats/StatsAirportsSection";
 import StatsSeatSection from "../components/Stats/StatsSeatSection";
 import CruiseStatsSection from "../components/Stats/CruiseStatsSection";
+import OverviewSummarySection from "../components/Stats/OverviewSummarySection";
 import { generateYearReportPdf } from "../lib/yearReportPdf";
 import { useToastStore } from "../store/toastStore";
 import { logger } from "../lib/logger";
@@ -590,6 +591,11 @@ export default function AdvancedStatsPage(): JSX.Element {
           {showCertificate && (
             <FlightCertificate stats={certificateStats} onClose={() => setShowCertificate(false)} />
           )}
+
+          {/* Cross-domain summary cards — only on the Gesamt tab. Gives
+              cruise-focused users a sense that their data is present even
+              though the rest of this tab is still flight-centric. */}
+          {filter === "all" && <OverviewSummarySection flightCount={flights.length} />}
 
           {/* Flight-specific stats block — hidden when the Cruise tab is
               active so the cruise section above stands on its own. */}
