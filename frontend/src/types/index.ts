@@ -532,3 +532,5 @@ export interface CountryStatsResponse {
   countries: CountryStat[];
   total: number;
 }
+
+export * from "./cruise";
