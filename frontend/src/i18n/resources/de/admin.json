@@ -14,6 +14,13 @@
     "backups": "Backups",
     "smtp": "E-Mail / SMTP"
   },
+  "tabs2": {
+    "general": "Allgemein",
+    "flight": "Flug",
+    "cruise": "Kreuzfahrt",
+    "cruiseEmptyTitle": "Kreuzfahrt-Admin",
+    "cruiseEmptyHint": "Cruise-spezifische Admin-Funktionen (Schiffs-Seeding, Hafen-Pflege, …) folgen mit den nächsten Updates."
+  },
   "instanceLabel": "Instanz",
   "instance": {
     "title": "Instanz-Einstellungen",

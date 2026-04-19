@@ -14,6 +14,13 @@
     "backups": "Backups",
     "smtp": "Email / SMTP"
   },
+  "tabs2": {
+    "general": "General",
+    "flight": "Flight",
+    "cruise": "Cruise",
+    "cruiseEmptyTitle": "Cruise admin",
+    "cruiseEmptyHint": "Cruise-specific admin tools (ship seeding, port maintenance, …) will arrive with future updates."
+  },
   "instanceLabel": "Instance",
   "instance": {
     "title": "Instance settings",
