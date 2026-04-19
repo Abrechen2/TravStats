@@ -2,11 +2,12 @@ import React, { lazy, Suspense, useState, useMemo, useEffect } from "react";
 import { DeckGLMap } from "./DeckGLMap";
 import { GlobeLoader } from "./GlobeLoader";
 import { VisModeSelector } from "./VisModeSelector";
-import type { GeoJSONFeature, Flight, Trip } from "../types";
+import type { Cruise, GeoJSONFeature, Flight, Trip } from "../types";
 import type { VisMode } from "../types/visMode";
 import { useTranslation } from "../hooks/useTranslation";
 import { useThemeStore } from "../store/themeStore";
-import { tripsApi } from "../lib/api";
+import { useEnabledDomains } from "../hooks/useEnabledDomains";
+import { cruiseApi, tripsApi } from "../lib/api";
 
 // Hold the branded Suspense fallback for at least 2 s on first mount so
 // the GlobeLoader doesn't just flash by. React.lazy caches the resolved
@@ -48,8 +49,10 @@ export default function MapContainer3D({
 }: MapContainer3DProps): JSX.Element {
   const { t } = useTranslation(["common", "map"]);
   const mapTheme = useThemeStore((s) => s.mapTheme);
+  const { isEnabled } = useEnabledDomains();
   const [fabOpen, setFabOpen] = useState(false);
   const [tripList, setTripList] = useState<Trip[]>([]);
+  const [cruises, setCruises] = useState<Cruise[]>([]);
 
   useEffect(() => {
     const loadTrips = async (): Promise<void> => {
@@ -62,6 +65,27 @@ export default function MapContainer3D({
     };
     void loadTrips();
   }, []);
+
+  // Fetch cruises as supplemental map overlay. User hides by disabling
+  // the cruise domain in settings — no per-layer toggle in V1.
+  useEffect(() => {
+    if (!isEnabled("cruise")) {
+      setCruises([]);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const data = await cruiseApi.list();
+        if (!cancelled) setCruises(data);
+      } catch {
+        if (!cancelled) setCruises([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isEnabled]);
 
   const routeCount = useMemo(() => {
     if (visMode !== "routes") return null;
@@ -100,6 +124,7 @@ export default function MapContainer3D({
             flights={flights}
             flightList={flightList}
             tripList={tripList.map((t) => ({ id: t.id, color: t.color }))}
+            cruises={cruises}
             onFlightClick={onFlightClick}
             onRouteClick={onRouteClick}
             onEdit={onEdit}

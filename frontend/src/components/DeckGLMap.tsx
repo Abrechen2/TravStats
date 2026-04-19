@@ -3,7 +3,7 @@ import Map, { useControl, type MapRef, type MapLayerMouseEvent } from "react-map
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import { LightingEffect, AmbientLight, DirectionalLight } from "@deck.gl/core";
 import type { Layer, MapViewState } from "@deck.gl/core";
-import type { GeoJSONFeature, Flight } from "../types";
+import type { Cruise, GeoJSONFeature, Flight } from "../types";
 import type { VisMode } from "../types/visMode";
 import { createRoutesLayers } from "./layers/routesLayer";
 import { createHeatmapLayer } from "./layers/heatmapLayer";
@@ -12,6 +12,8 @@ import { createColumnsLayer } from "./layers/columnsLayer";
 import { createTripsLayer, buildTripsData, getTimeRange } from "./layers/tripsLayer";
 import { createContourLayer } from "./layers/contourLayer";
 import { createTripRoutesLayer } from "./layers/tripRoutesLayer";
+import { createCruiseArcsLayer } from "./layers/cruiseArcsLayer";
+import { createCruisePortsLayer } from "./layers/cruisePortsLayer";
 import { TimeSlider } from "./TimeSlider";
 import { useThemeStore } from "../store/themeStore";
 import { MAP_LAYER_COLORS } from "../types/mapTheme";
@@ -89,6 +91,7 @@ interface DeckGLMapProps {
   flightList?: Flight[];
   activeTripId?: string | null;
   onResetTrip?: () => void;
+  cruises?: Cruise[];
 }
 
 export function DeckGLMap({
@@ -102,6 +105,7 @@ export function DeckGLMap({
   flightList,
   activeTripId,
   onResetTrip,
+  cruises = [],
 }: DeckGLMapProps): JSX.Element {
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
   const mapTheme = useThemeStore((state) => state.mapTheme);
@@ -306,9 +310,10 @@ export function DeckGLMap({
   );
 
   const layers = useMemo((): Layer[] => {
+    let base: Layer[];
     switch (visMode) {
       case "routes":
-        return createRoutesLayers(
+        base = createRoutesLayers(
           flights,
           minRouteCount,
           handleFlightClick,
@@ -317,18 +322,24 @@ export function DeckGLMap({
           selectedIds,
           handleAirportClick
         );
+        break;
       case "heatmap":
-        return [createHeatmapLayer(flights)];
+        base = [createHeatmapLayer(flights)];
+        break;
       case "hexagon":
-        return [createHexagonLayer(flights, themeColors)];
+        base = [createHexagonLayer(flights, themeColors)];
+        break;
       case "columns":
-        return [createColumnsLayer(flights, themeColors)];
+        base = [createColumnsLayer(flights, themeColors)];
+        break;
       case "trips":
-        return [createTripsLayer(trips, currentTime)];
+        base = [createTripsLayer(trips, currentTime)];
+        break;
       case "contour":
-        return [createContourLayer(flights)];
+        base = [createContourLayer(flights)];
+        break;
       case "trip-routes":
-        return createTripRoutesLayer(
+        base = createTripRoutesLayer(
           flightList ?? [],
           tripList ?? [],
           activeTripId,
@@ -336,9 +347,18 @@ export function DeckGLMap({
           selectedIds,
           handleAirportClick
         );
+        break;
       default:
-        return [];
+        base = [];
     }
+
+    // Cruise arcs + ports are supplemental overlays — always on when cruise
+    // data is present. Gated upstream by the cruise domain being enabled.
+    const arcs = createCruiseArcsLayer(cruises);
+    const ports = createCruisePortsLayer(cruises);
+    const cruiseLayers = [arcs, ports].filter((l): l is Layer => l !== null);
+
+    return [...base, ...cruiseLayers];
   }, [
     visMode,
     flights,
@@ -352,6 +372,7 @@ export function DeckGLMap({
     handleAirportClick,
     themeColors,
     selectedIds,
+    cruises,
   ]);
 
   // Only enable lighting for 3D modes where it makes a visual difference
