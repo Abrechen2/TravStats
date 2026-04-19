@@ -1,0 +1,45 @@
+{
+  "nav": { "link": "Cruises" },
+  "list": {
+    "title": "Cruises",
+    "new": "New cruise",
+    "empty": "No cruises yet",
+    "columns": {
+      "ship": "Ship",
+      "line": "Line",
+      "dates": "Dates",
+      "ports": "Ports",
+      "status": "Status",
+      "cabin": "Cabin",
+      "price": "Price"
+    }
+  },
+  "detail": { "route": "Route", "cabin": "Cabin", "costs": "Costs", "meta": "Notes & tags" },
+  "field": {
+    "ship": "Ship",
+    "line": "Line",
+    "depart": "Depart",
+    "arrive": "Arrive",
+    "cabin": "Cabin",
+    "cabinType": "Category",
+    "deck": "Deck",
+    "sea_days": "Sea days",
+    "ports": "Ports",
+    "distance_nm": "Nautical miles",
+    "bookingReference": "Booking reference",
+    "price": "Price",
+    "notes": "Notes",
+    "tags": "Tags",
+    "companions": "Companions"
+  },
+  "cabinType": { "inside": "Inside", "oceanview": "Oceanview", "balcony": "Balcony", "suite": "Suite" },
+  "status": { "scheduled": "Scheduled", "flown": "Completed", "cancelled": "Cancelled", "historical": "Historical" },
+  "stops": { "title": "Itinerary", "at_sea": "At sea", "add": "Add stop", "day": "Day", "excursion": "Excursion" },
+  "picker": {
+    "ship_placeholder": "Search ship …",
+    "port_placeholder": "Search port …",
+    "add_custom_ship": "Add custom ship",
+    "add_custom_port": "Add custom port"
+  },
+  "map": { "layer": "Cruises" }
+}
