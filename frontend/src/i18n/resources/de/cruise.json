@@ -67,5 +67,30 @@
     "add_custom_ship": "Neues Schiff anlegen",
     "add_custom_port": "Neuen Hafen anlegen"
   },
-  "map": { "layer": "Kreuzfahrten" }
+  "map": { "layer": "Kreuzfahrten" },
+  "tabs": {
+    "emailParser": "E-Mail-Parser",
+    "manual": "Manuell",
+    "emailParserTitle": "Buchungs-E-Mail importieren",
+    "emailParserHint": "Das automatische Einlesen von Kreuzfahrt-Bestätigungen (AIDA, TUI Cruises, Costa …) kommt in einer der nächsten Versionen. Bitte Daten vorerst im Reiter „Manuell\" eintragen.",
+    "emailParserStub": "Kreuzfahrt-Parser – bald verfügbar"
+  },
+  "filter": {
+    "title": "Filter",
+    "searchPlaceholder": "Suche nach Schiff oder Reederei …",
+    "status": "Status",
+    "year": "Jahr",
+    "allStatuses": "Alle Status",
+    "allYears": "Alle Jahre",
+    "reset": "Zurücksetzen",
+    "showing": "{{count}} angezeigt"
+  },
+  "form": {
+    "title": "Kreuzfahrt",
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "saving": "Speichere …",
+    "createTitle": "Neue Kreuzfahrt",
+    "editTitle": "Kreuzfahrt bearbeiten"
+  }
 }

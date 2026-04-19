@@ -46,5 +46,30 @@
     "add_custom_ship": "Add custom ship",
     "add_custom_port": "Add custom port"
   },
-  "map": { "layer": "Cruises" }
+  "map": { "layer": "Cruises" },
+  "tabs": {
+    "emailParser": "Email parser",
+    "manual": "Manual",
+    "emailParserTitle": "Import booking email",
+    "emailParserHint": "Automatic parsing of cruise confirmations (AIDA, TUI Cruises, Costa …) is coming in a future release. For now, please enter data under the \"Manual\" tab.",
+    "emailParserStub": "Cruise parser – coming soon"
+  },
+  "filter": {
+    "title": "Filter",
+    "searchPlaceholder": "Search ship or line …",
+    "status": "Status",
+    "year": "Year",
+    "allStatuses": "All statuses",
+    "allYears": "All years",
+    "reset": "Reset",
+    "showing": "{{count}} shown"
+  },
+  "form": {
+    "title": "Cruise",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving …",
+    "createTitle": "New cruise",
+    "editTitle": "Edit cruise"
+  }
 }
