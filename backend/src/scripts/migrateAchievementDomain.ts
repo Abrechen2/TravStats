@@ -34,12 +34,10 @@ export async function migrateAchievementDomain(): Promise<{ updated: number }> {
 if (require.main === module) {
   migrateAchievementDomain()
     .then((r) => {
-      // eslint-disable-next-line no-console
       console.log(`Updated ${r.updated} achievements to domain='shared'.`);
       process.exit(0);
     })
     .catch((err) => {
-      // eslint-disable-next-line no-console
       console.error(err);
       process.exit(1);
     });
