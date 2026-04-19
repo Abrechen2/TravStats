@@ -4,10 +4,16 @@ import { seedPortsFromCSV } from '../seedPortsFromCSV';
 
 describe('seedPortsFromCSV', () => {
   beforeEach(async () => {
-    await prisma.port.deleteMany({ where: { isUserAdded: false } });
+    // Wipe ALL rows (incl. isUserAdded) so each test starts clean. The
+    // isUserAdded test below relies on Hamburg not pre-existing.
+    await prisma.port.deleteMany({});
   });
 
   afterAll(async () => {
+    // Leave the dev DB populated with the real seed data so other
+    // workflows (dev server, manual smoke tests) see the expected catalog.
+    await prisma.port.deleteMany({});
+    await seedPortsFromCSV();
     await prisma.$disconnect();
   });
 

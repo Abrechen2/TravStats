@@ -4,10 +4,15 @@ import { seedShipsFromCSV } from '../seedShipsFromCSV';
 
 describe('seedShipsFromCSV', () => {
   beforeEach(async () => {
-    await prisma.ship.deleteMany({ where: { isUserAdded: false } });
+    // Wipe ALL rows (incl. isUserAdded) so each test starts clean. The
+    // isUserAdded test below relies on AIDAnova not pre-existing.
+    await prisma.ship.deleteMany({});
   });
 
   afterAll(async () => {
+    // Leave the dev DB populated with the real seed data.
+    await prisma.ship.deleteMany({});
+    await seedShipsFromCSV();
     await prisma.$disconnect();
   });
 
