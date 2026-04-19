@@ -11,7 +11,7 @@ const router = Router();
 const parseBoardingpassSchema = z.object({
   imageBase64: z.string().min(1, 'Image data is required').max(20 * 1024 * 1024, 'Image too large (max 20MB)'),
   enrichWithApi: z.boolean().optional().default(true),
-  domain: z.enum(['flight']).optional().default('flight'),
+  domain: z.enum(['flight', 'cruise']).optional().default('flight'),
 });
 
 /**
@@ -36,8 +36,10 @@ router.post('/parse-boardingpass', authenticate, boardingPassParseLimiter, async
     // Zod already rejects unknown values; this catches the case where the
     // enum is later widened but handler logic hasn't been extended yet.
     if (parsed.domain !== 'flight') {
-      return res.status(400).json({
-        error: `Domain '${parsed.domain}' not yet implemented`,
+      return res.status(501).json({
+        error: 'PARSER_DOMAIN_NOT_IMPLEMENTED',
+        message: `Parsing for domain '${parsed.domain}' is not yet implemented. Add entries manually via the /cruises page.`,
+        domain: parsed.domain,
       });
     }
 

@@ -14,7 +14,7 @@ const parsePdfSchema = z.object({
     .string()
     .min(1, 'PDF data is required')
     .max(FILE_LIMITS.PDF_MAX_SIZE * 2, 'PDF too large'), // base64 overhead ~1.37x, use 2x for safety
-  domain: z.enum(['flight']).optional().default('flight'),
+  domain: z.enum(['flight', 'cruise']).optional().default('flight'),
 });
 
 /**
@@ -38,8 +38,10 @@ router.post('/parse-pdf', authenticate, pdfParseLimiter, async (req: AuthRequest
     // Zod already rejects unknown values; this catches the case where the
     // enum is later widened but handler logic hasn't been extended yet.
     if (parsed.domain !== 'flight') {
-      return res.status(400).json({
-        error: `Domain '${parsed.domain}' not yet implemented`,
+      return res.status(501).json({
+        error: 'PARSER_DOMAIN_NOT_IMPLEMENTED',
+        message: `Parsing for domain '${parsed.domain}' is not yet implemented. Add entries manually via the /cruises page.`,
+        domain: parsed.domain,
       });
     }
 
