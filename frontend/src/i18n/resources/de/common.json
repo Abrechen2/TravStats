@@ -131,5 +131,35 @@
   "sort": {
     "ascending": "aufsteigend",
     "descending": "absteigend"
+  },
+  "domain": {
+    "flight": "Flüge",
+    "flight_desc": "Buchungen importieren, Routen auf der Karte, Airline/Airport-Achievements.",
+    "cruise": "Kreuzfahrten",
+    "cruise_desc": "Schiffe, Häfen, Seetage, Reederei-Achievements.",
+    "hotel": "Hotels",
+    "hotel_desc": "Übernachtungen, Ketten-Loyalty, Länder/Städte.",
+    "poi": "POI / Besuche",
+    "poi_desc": "Sehenswürdigkeiten, Restaurants, Konzerte, beliebige Orte."
+  },
+  "settings": {
+    "modules": {
+      "title": "Bereiche",
+      "desc": "Aktivierte Bereiche erscheinen in Navigation, Dashboard, Karte, Achievements und Statistiken. Deaktivierte Bereiche verstecken sich komplett — deine Daten bleiben erhalten.",
+      "comingSoon": "bald"
+    }
+  },
+  "setup": {
+    "domains": {
+      "title": "Was möchtest du tracken?",
+      "desc": "Du kannst Bereiche jederzeit in den Einstellungen aktivieren oder deaktivieren.",
+      "soon": "bald"
+    }
+  },
+  "dashboard": {
+    "empty": {
+      "noDomains": "Kein Tracking-Bereich aktiviert.",
+      "openSettings": "Einstellungen → Bereiche öffnen"
+    }
   }
 }
