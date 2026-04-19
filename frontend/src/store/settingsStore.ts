@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { settingsApi } from "../lib/api";
 import { logger } from "../lib/logger";
+import { DOMAIN_KEYS, type DomainKey } from "../shared/domains";
 import { useAuthStore } from "./authStore";
 
 type ThemePreference = "light" | "dark";
@@ -92,6 +93,7 @@ export interface SettingsState {
   notifications: NotificationSettings;
   features: FeaturesSettings;
   apiKeys: ApiKeysStatus | null;
+  enabledDomains: DomainKey[];
   setProfile: SettingsUpdater<ProfileSettings>;
   setDisplay: SettingsUpdater<DisplaySettings>;
   setUnits: SettingsUpdater<UnitsSettings>;
@@ -100,6 +102,7 @@ export interface SettingsState {
   setNotifications: SettingsUpdater<NotificationSettings>;
   setFeatures: SettingsUpdater<FeaturesSettings>;
   setApiKeys: (status: ApiKeysStatus) => void;
+  setEnabledDomains: (keys: DomainKey[]) => void;
   loadApiKeysStatus: () => Promise<void>;
   resetSettings: () => void;
   loadRemoteSettings: () => Promise<void>;
@@ -116,6 +119,7 @@ const defaultSettings: Omit<
   | "setNotifications"
   | "setFeatures"
   | "setApiKeys"
+  | "setEnabledDomains"
   | "loadApiKeysStatus"
   | "resetSettings"
   | "loadRemoteSettings"
@@ -156,6 +160,7 @@ const defaultSettings: Omit<
     enableCostTracking: false,
   },
   apiKeys: null,
+  enabledDomains: ["flight"],
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -191,6 +196,10 @@ export const useSettingsStore = create<SettingsState>()(
         set(() => ({
           apiKeys: status,
         })),
+      setEnabledDomains: (keys) => {
+        set({ enabledDomains: keys });
+        void settingsApi.update({ enabledDomains: keys });
+      },
       loadApiKeysStatus: async () => {
         try {
           const status = await settingsApi.getApiKeys();
@@ -245,6 +254,15 @@ export const useSettingsStore = create<SettingsState>()(
                 // The language sync will be handled by the useEffect in App.tsx
                 // No need to import i18n here to avoid circular dependencies
               }
+              // Validate enabledDomains against the known domain keys —
+              // drop anything the frontend doesn't understand (e.g. a
+              // future domain the backend knows about but we don't yet).
+              if (Array.isArray(remote.enabledDomains)) {
+                const filtered = remote.enabledDomains.filter((k): k is DomainKey =>
+                  (DOMAIN_KEYS as readonly string[]).includes(k as string)
+                );
+                newState.enabledDomains = filtered;
+              }
               return newState;
             });
           }
@@ -254,7 +272,16 @@ export const useSettingsStore = create<SettingsState>()(
       },
       saveRemoteSettings: async () => {
         try {
-          const { profile, display, units, defaults, map, notifications, features } = get();
+          const {
+            profile,
+            display,
+            units,
+            defaults,
+            map,
+            notifications,
+            features,
+            enabledDomains,
+          } = get();
           await settingsApi.update({
             profile,
             display,
@@ -263,6 +290,7 @@ export const useSettingsStore = create<SettingsState>()(
             map,
             notifications,
             features,
+            enabledDomains,
           });
           // birthdate lives on a separate endpoint (/settings/profile on the
           // User row). Only PUT when the field was explicitly loaded or set
