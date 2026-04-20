@@ -3,6 +3,11 @@ import type { Layer } from "@deck.gl/core";
 import type { Cruise } from "../../types";
 import type { CruiseRouteFeatureCollection } from "../../lib/api/cruise";
 import { buildCruiseArc } from "./cruiseArc";
+import {
+  simplifyLineString,
+  toleranceKmForZoom,
+  type LonLat,
+} from "../../shared/geo/simplifyLineString";
 
 interface ArcDatum {
   path: [number, number][];
@@ -36,8 +41,16 @@ export type CruiseGeometryMap = ReadonlyMap<string, CruiseRouteFeatureCollection
  */
 export function createCruiseArcsLayer(
   cruises: Cruise[],
-  geometryByCruise: CruiseGeometryMap = new Map()
+  geometryByCruise: CruiseGeometryMap = new Map(),
+  /**
+   * Current deck.gl zoom level. Controls Douglas-Peucker simplification
+   * of A*-computed legs: world-scale (≤3) compresses a 500-vertex route
+   * to <20 without visible distortion. Bezier-fallback paths are
+   * unaffected — they're already low-vertex by construction.
+   */
+  zoom = 3
 ): Layer | null {
+  const tolerance = toleranceKmForZoom(zoom);
   const arcs: ArcDatum[] = [];
   for (const cruise of cruises) {
     const stops = cruise.stops
@@ -55,7 +68,7 @@ export function createCruiseArcsLayer(
       const computed = computedByPair.get(key);
       if (computed) {
         arcs.push({
-          path: computed,
+          path: tolerance > 0 ? simplifyLineString(computed as LonLat[], tolerance) : computed,
           cruiseId: cruise.id,
           cruiseLine: cruise.cruiseLine,
           computed: true,

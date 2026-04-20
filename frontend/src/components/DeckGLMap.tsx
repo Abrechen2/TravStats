@@ -273,13 +273,39 @@ export function DeckGLMap({
 
   const moveRafRef = useRef<number | null>(null);
 
-  const handleMapMove = useCallback(() => {
-    if (moveRafRef.current !== null) return; // already scheduled
-    moveRafRef.current = requestAnimationFrame(() => {
-      moveRafRef.current = null;
-      recomputeAllPositions();
-    });
-  }, [recomputeAllPositions]);
+  // Bucketed current zoom, used by createCruiseArcsLayer to pick a
+  // Douglas-Peucker tolerance. We snap the live (fractional) zoom to
+  // a coarse bucket so we only re-simplify when the user crosses a
+  // display-scale boundary — not on every pixel of pan / zoom drift.
+  const [zoomBucket, setZoomBucket] = useState<number>(3);
+
+  /**
+   * Convert a live zoom value to the representative bucket centre used
+   * by `toleranceKmForZoom`. Keep this in sync with the tolerance
+   * table in shared/geo/simplifyLineString.ts.
+   */
+  const bucketForZoom = useCallback((zoom: number): number => {
+    if (zoom <= 3) return 3;
+    if (zoom <= 6) return 6;
+    if (zoom <= 9) return 9;
+    return 10;
+  }, []);
+
+  const handleMapMove = useCallback(
+    (evt: { viewState?: { zoom?: number } } | undefined) => {
+      const currentZoom = evt?.viewState?.zoom;
+      if (typeof currentZoom === "number") {
+        const next = bucketForZoom(currentZoom);
+        setZoomBucket((prev) => (prev === next ? prev : next));
+      }
+      if (moveRafRef.current !== null) return; // already scheduled
+      moveRafRef.current = requestAnimationFrame(() => {
+        moveRafRef.current = null;
+        recomputeAllPositions();
+      });
+    },
+    [recomputeAllPositions, bucketForZoom]
+  );
 
   useEffect(() => {
     return () => {
@@ -406,7 +432,7 @@ export function DeckGLMap({
     // fetch for that cruise resolves; Bezier is used until then and as
     // the fallback for any leg the server couldn't route.
     const geometryMap: CruiseGeometryMap = cruiseGeometry;
-    const arcs = createCruiseArcsLayer(cruises, geometryMap);
+    const arcs = createCruiseArcsLayer(cruises, geometryMap, zoomBucket);
     const ports = createCruisePortsLayer(cruises);
     const cruiseLayers = [arcs, ports].filter((l): l is Layer => l !== null);
 
@@ -426,6 +452,7 @@ export function DeckGLMap({
     selectedIds,
     cruises,
     cruiseGeometry,
+    zoomBucket,
   ]);
 
   // Only enable lighting for 3D modes where it makes a visual difference
