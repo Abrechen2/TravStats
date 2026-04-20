@@ -1,0 +1,20 @@
+# Binary files — prevent Git from applying autocrlf line-ending
+# normalisation on Windows checkouts. The Phase-1 commit of the land
+# mask shipped 810001 bytes instead of 810000 because this file was
+# missing; bytes 0x0a were silently rewritten to 0x0d0a on check-in.
+*.bin binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.tar binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.eot binary

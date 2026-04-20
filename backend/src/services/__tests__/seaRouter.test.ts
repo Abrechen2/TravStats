@@ -103,6 +103,23 @@ describe('seaRouter — with real Natural Earth mask', () => {
     // reach the sea. Either way, we never want a valid route.
     expect(route).toBeNull();
   }, 30000);
+
+  it('routes Istanbul → Odesa through the Bosporus (canal override)', async () => {
+    if (!maskExists) return;
+    // Without the Bosporus canal override, the Sea of Marmara is cut off
+    // from the Black Sea at 0.1° resolution — this test would fail.
+    const istanbul = { lat: 41.0082, lon: 28.9784 };
+    const odesa = { lat: 46.4825, lon: 30.7233 };
+    const route = await computeSeaRoute(istanbul, odesa);
+    expect(route).not.toBeNull();
+    if (!route) return;
+
+    // The path must pass close to the Bosporus axis (41.12°, 29.07°).
+    const passesBosporus = route.coordinates.some(
+      ([lon, lat]) => Math.abs(lat - 41.12) < 0.3 && Math.abs(lon - 29.07) < 0.3,
+    );
+    expect(passesBosporus).toBe(true);
+  }, 30000);
 });
 
 describe('seaRouter — on a synthetic 10×10 mask', () => {

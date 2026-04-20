@@ -37,10 +37,12 @@ import {
   cellIndex,
   colFromIndex,
   getBit,
+  setBit,
   latToRow,
   lonToCol,
   rowFromIndex,
 } from '../shared/geo/landMaskGrid';
+import { CANAL_OVERRIDES, type CanalOverride } from './seaCanals';
 
 /** Default on-disk location of the packed land mask. */
 const DEFAULT_MASK_PATH = path.resolve(__dirname, '..', '..', 'data', 'land-mask-0.1deg.bin');
@@ -80,8 +82,16 @@ let loadPromise: Promise<MaskState> | null = null;
 /**
  * Swap in a prebuilt mask (tests only). Passing `null` reverts to the
  * default lazy disk load on the next `loadLandMask()` call.
+ *
+ * The bytes are written through `applyCanalOverrides` on the way in so
+ * tests get the same canal-patched view production uses. Pass the
+ * second argument `{ skipCanals: true }` when testing the raster
+ * itself without canal modifications.
  */
-export function setLandMaskForTesting(bytes: Uint8Array | null): void {
+export function setLandMaskForTesting(
+  bytes: Uint8Array | null,
+  options: { skipCanals?: boolean } = {},
+): void {
   if (bytes === null) {
     maskState = null;
     loadPromise = null;
@@ -92,7 +102,8 @@ export function setLandMaskForTesting(bytes: Uint8Array | null): void {
       `Test mask has ${bytes.byteLength} bytes, expected ${MASK_BYTES}`,
     );
   }
-  maskState = { bytes, sourcePath: '<in-memory>' };
+  const patched = options.skipCanals ? bytes : applyCanalOverrides(bytes);
+  maskState = { bytes: patched, sourcePath: '<in-memory>' };
   loadPromise = null;
 }
 
@@ -113,12 +124,16 @@ export async function loadLandMask(): Promise<Uint8Array> {
           `Land-mask at ${targetPath} has ${buf.byteLength} bytes, expected ${MASK_BYTES}`,
         );
       }
-      const bytes = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
-      maskState = { bytes, sourcePath: targetPath };
+      const rawBytes = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
+      // applyCanalOverrides copies the buffer so the on-disk file stays
+      // untouched and multiple test-driven mask swaps never stack.
+      const patchedBytes = applyCanalOverrides(rawBytes);
+      maskState = { bytes: patchedBytes, sourcePath: targetPath };
       logger.info({
         operation: 'sea_router_mask_loaded',
         path: targetPath,
         bytes: buf.byteLength,
+        canalOverrides: CANAL_OVERRIDES.length,
       });
       return maskState;
     })();
@@ -132,6 +147,81 @@ function requireMask(): Uint8Array {
     throw new Error('Land mask not loaded — call loadLandMask() first');
   }
   return maskState.bytes;
+}
+
+// ---------------------------------------------------------------------------
+// Canal / strait overrides
+// ---------------------------------------------------------------------------
+
+/**
+ * Return a copy of `rawBytes` with every canal + strait in
+ * `CANAL_OVERRIDES` painted as water. Called once at mask-load time so
+ * every subsequent `isWater` / A* lookup is O(1) — no per-request cost.
+ *
+ * The copy is mandatory: the input `rawBytes` may be a view on a
+ * read-only disk buffer (Node shares the underlying ArrayBuffer for
+ * `fs.readFile` results) and we also swap masks across tests.
+ */
+export function applyCanalOverrides(rawBytes: Uint8Array): Uint8Array {
+  const patched = new Uint8Array(rawBytes.byteLength);
+  patched.set(rawBytes);
+  for (const canal of CANAL_OVERRIDES) {
+    paintCanalAxis(patched, canal);
+  }
+  return patched;
+}
+
+/**
+ * Walk the polyline of a canal override and force every grid cell the
+ * line passes through to water. Each segment is walked cell-by-cell
+ * using `max(|dRow|, |dCol|)` steps — i.e. a grid-aligned DDA that
+ * guarantees the resulting water chain is 8-connected (so A* can
+ * actually traverse it).
+ */
+function paintCanalAxis(bytes: Uint8Array, canal: CanalOverride): void {
+  const axis = canal.axis;
+  if (axis.length < 2) return;
+  for (let i = 0; i < axis.length - 1; i++) {
+    paintCanalSegment(bytes, axis[i], axis[i + 1]);
+  }
+}
+
+function paintCanalSegment(
+  bytes: Uint8Array,
+  a: { lat: number; lon: number },
+  b: { lat: number; lon: number },
+): void {
+  const rowA = latToRow(a.lat);
+  const colA = lonToCol(a.lon);
+  const rowB = latToRow(b.lat);
+  const colB = lonToCol(b.lon);
+  const dRow = rowB - rowA;
+  const dCol = colB - colA;
+  const steps = Math.max(Math.abs(dRow), Math.abs(dCol));
+  if (steps === 0) {
+    setBit(bytes, cellIndex(rowA, colA), 0);
+    return;
+  }
+  // Paint the line AND its 4-neighbourhood so the resulting water
+  // corridor is wider than a single cell — A* 8-neighbour moves diagonal
+  // across single-cell gaps correctly, but real canal ships need a bit
+  // more tolerance around sharp bends in the axis polyline.
+  for (let step = 0; step <= steps; step++) {
+    const row = Math.round(rowA + (dRow * step) / steps);
+    const col = Math.round(colA + (dCol * step) / steps);
+    paintCellAndBrush(bytes, row, col);
+  }
+}
+
+function paintCellAndBrush(bytes: Uint8Array, row: number, col: number): void {
+  for (let dr = -1; dr <= 1; dr++) {
+    const r = row + dr;
+    if (r < 0 || r >= MASK_ROWS) continue;
+    for (let dc = -1; dc <= 1; dc++) {
+      const c = ((col + dc) % MASK_COLS + MASK_COLS) % MASK_COLS;
+      setBit(bytes, cellIndex(r, c), 0);
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
