@@ -106,6 +106,32 @@ describe('Cruises API', () => {
     });
   });
 
+  describe('GET /api/v1/cruises/:id/geometry', () => {
+    it('returns a FeatureCollection for an owned cruise', async () => {
+      const res = await request(app)
+        .get(`/api/v1/cruises/${seedCruiseId}/geometry`)
+        .set('Cookie', authCookie);
+      expect(res.status).toBe(200);
+      expect(res.body.data.type).toBe('FeatureCollection');
+      expect(Array.isArray(res.body.data.features)).toBe(true);
+      // Seeded cruise has no stops → zero legs to route; still 200.
+      expect(res.body.data.features.length).toBe(0);
+    });
+
+    it('requires authentication', async () => {
+      const res = await request(app).get(`/api/v1/cruises/${seedCruiseId}/geometry`);
+      expect(res.status).toBe(401);
+    });
+
+    it("returns 404 for another user's cruise (no data leak)", async () => {
+      const foreign = await prisma.cruise.create({ data: { userId: otherUserId, status: 'scheduled' } });
+      const res = await request(app)
+        .get(`/api/v1/cruises/${foreign.id}/geometry`)
+        .set('Cookie', authCookie);
+      expect(res.status).toBe(404);
+    });
+  });
+
   describe('POST /api/v1/cruises', () => {
     it('creates a cruise with stops', async () => {
       const res = await request(app)
