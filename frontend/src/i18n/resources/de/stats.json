@@ -7,6 +7,7 @@
   "overview2": {
     "sectionLabel": "Gesamt-Übersicht",
     "sectionHint": "Alle Domains zusammengefasst",
+    "loadError": "Gesamt-Übersicht konnte nicht geladen werden — bitte erneut einloggen oder Seite neu laden.",
     "experiences": "Erlebnisse gesamt",
     "experiencesHint": "{{flights}} Flüge, {{cruises}} Kreuzfahrten",
     "countries": "Länder gesamt",
