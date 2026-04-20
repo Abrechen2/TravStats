@@ -161,6 +161,13 @@ function requireMask(): Uint8Array {
  * The copy is mandatory: the input `rawBytes` may be a view on a
  * read-only disk buffer (Node shares the underlying ArrayBuffer for
  * `fs.readFile` results) and we also swap masks across tests.
+ *
+ * (A previous revision tried a 1-cell land dilation here to push
+ * routes further offshore, but at 0.1° resolution that closed off
+ * too many narrow passages — notably Øresund, the Danish Straits,
+ * and the Kiel Fjord approach — and every leg fell back to Bezier.
+ * The raster would need to be at least 0.05° before dilation becomes
+ * viable.)
  */
 export function applyCanalOverrides(rawBytes: Uint8Array): Uint8Array {
   const patched = new Uint8Array(rawBytes.byteLength);
@@ -452,7 +459,8 @@ export async function computeSeaRoute(
 ): Promise<SeaRouteLineString | null> {
   const bytes = await loadLandMask();
 
-  const depSnap = cellIsWater(bytes, latToRow(dep.lat), lonToCol(dep.lon))
+  const depOnWater = cellIsWater(bytes, latToRow(dep.lat), lonToCol(dep.lon));
+  const depSnap = depOnWater
     ? { lat: dep.lat, lon: dep.lon }
     : findNearestWater(dep.lat, dep.lon);
   if (!depSnap) {
@@ -465,7 +473,8 @@ export async function computeSeaRoute(
     return null;
   }
 
-  const arrSnap = cellIsWater(bytes, latToRow(arr.lat), lonToCol(arr.lon))
+  const arrOnWater = cellIsWater(bytes, latToRow(arr.lat), lonToCol(arr.lon));
+  const arrSnap = arrOnWater
     ? { lat: arr.lat, lon: arr.lon }
     : findNearestWater(arr.lat, arr.lon);
   if (!arrSnap) {
@@ -484,16 +493,27 @@ export async function computeSeaRoute(
   const cells = computeSeaRouteCells(bytes, startIdx, goalIdx);
   if (!cells) return null;
 
-  // Build the lon/lat polyline. Prepend / append the original port
-  // coordinates so the line starts and ends exactly at the ports
-  // rather than at the snapped grid-cell centres — the short land
-  // segment at each end is visually indistinguishable at normal zooms.
-  const coords: [number, number][] = [[dep.lon, dep.lat]];
+  // Build the lon/lat polyline. Only prepend/append the raw port
+  // coordinate when the port itself is on a water cell — otherwise the
+  // port is inland (Hamburg on the Elbe, Antwerp on the Scheldt, …)
+  // and the nearest-water snap can be 50-100 km away through land. A
+  // straight segment from the raw port to the snapped cell then draws
+  // a visible cyan line crashing across the coastline, which users
+  // rightly flag as "the route goes through land". The port marker
+  // still renders separately (cruisePortsLayer), so a small gap
+  // between the marker and the line's first water vertex is fine —
+  // and much less misleading than a fake over-land segment.
+  const coords: [number, number][] = [];
+  if (depOnWater) {
+    coords.push([dep.lon, dep.lat]);
+  }
   for (const idx of cells) {
     const c = cellCenter(rowFromIndex(idx), colFromIndex(idx));
     coords.push([c.lon, c.lat]);
   }
-  coords.push([arr.lon, arr.lat]);
+  if (arrOnWater) {
+    coords.push([arr.lon, arr.lat]);
+  }
 
   return { type: 'LineString', coordinates: coords };
 }

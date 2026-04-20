@@ -36,8 +36,18 @@ import { computeSeaRoute } from './seaRouter';
  *   3 = Kiel Canal dropped (cruise ships don't fit); findNearestWater
  *       default bumped 50 → 5000 so Hamburg-class inland ports snap
  *       to the open sea instead of falling back to Bezier
+ *   4 = computeSeaRoute no longer prepends/appends the raw port coord
+ *       for inland ports — the straight segment from a river port like
+ *       Hamburg to the snapped-water cell drew a cyan line across
+ *       Schleswig-Holstein, which users reported as "the route goes
+ *       through land"
+ *   5 = Brief dilation experiment — DO NOT use, rows are broken.
+ *   6 = Dilation reverted (0.1° raster too coarse — dilating land by
+ *       1 cell closed Øresund / Danish Straits and killed every
+ *       Baltic leg). Behaves like v4. Version bumped so v5 rows
+ *       written during the experiment get discarded and recomputed.
  */
-export const CACHE_VERSION = 3;
+export const CACHE_VERSION = 6;
 
 export interface RouteLineString {
   type: 'LineString';
