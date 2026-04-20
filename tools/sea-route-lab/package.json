@@ -1,0 +1,22 @@
+{
+  "name": "sea-route-lab",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Standalone visual test-bench for comparing sea- and river-route rendering methods. Not part of the TravStats app.",
+  "scripts": {
+    "dev": "vite --port 8010 --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --port 8010"
+  },
+  "dependencies": {
+    "@deck.gl/core": "^9.0.0",
+    "@deck.gl/layers": "^9.0.0",
+    "@deck.gl/mapbox": "^9.0.0",
+    "maplibre-gl": "^5.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "vite": "^6.0.0"
+  }
+}

@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sea-route lab</title>
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.0.0/dist/maplibre-gl.css" />
+    <style>
+      :root {
+        --bg: #0a0f14;
+        --panel: #13181f;
+        --border: #2a323d;
+        --text: #e6edf3;
+        --muted: #8b98a5;
+        --accent: #38bdf8;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+      }
+      #app {
+        display: grid;
+        grid-template-columns: 340px 1fr;
+        height: 100vh;
+      }
+      #panel {
+        background: var(--panel);
+        border-right: 1px solid var(--border);
+        padding: 16px;
+        overflow-y: auto;
+      }
+      #map {
+        position: relative;
+      }
+      h1 {
+        font-size: 16px;
+        margin: 0 0 16px;
+      }
+      h2 {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin: 16px 0 8px;
+        letter-spacing: 0.05em;
+      }
+      select,
+      button {
+        width: 100%;
+        padding: 8px 10px;
+        background: var(--bg);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        font: inherit;
+      }
+      button {
+        background: var(--accent);
+        color: #0b1018;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:hover {
+        filter: brightness(1.1);
+      }
+      label.method {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 10px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        margin-bottom: 6px;
+        cursor: pointer;
+      }
+      label.method input {
+        margin: 0;
+      }
+      label.method .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+      }
+      label.method .name {
+        flex: 1;
+        font-size: 13px;
+      }
+      .metrics {
+        margin-top: 12px;
+        font-size: 12px;
+      }
+      .metrics table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .metrics th,
+      .metrics td {
+        text-align: left;
+        padding: 4px 6px;
+        border-bottom: 1px solid var(--border);
+      }
+      .metrics th {
+        color: var(--muted);
+        font-weight: 400;
+      }
+      .metrics td.num {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+      .tag {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 6px;
+      }
+      .note {
+        font-size: 11px;
+        color: var(--muted);
+        line-height: 1.4;
+        margin-top: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <aside id="panel">
+        <h1>🌊 Sea-route lab</h1>
+        <h2>Port pair</h2>
+        <select id="port-pair"></select>
+        <h2>Methods</h2>
+        <div id="methods"></div>
+        <button id="run">Compute all</button>
+        <h2>Metrics</h2>
+        <div class="metrics">
+          <table>
+            <thead>
+              <tr>
+                <th></th>
+                <th>Method</th>
+                <th class="num">Vertices</th>
+                <th class="num">km</th>
+                <th class="num">ms</th>
+              </tr>
+            </thead>
+            <tbody id="metrics-body"></tbody>
+          </table>
+        </div>
+        <p class="note">
+          All computation runs in the browser. Raster data is fetched once from
+          <code>/land-mask-*.bin</code> and cached in memory.
+        </p>
+      </aside>
+      <div id="map"></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
