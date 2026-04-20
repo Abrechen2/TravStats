@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useTranslation } from "./useTranslation";
+import { useToastStore } from "../store/toastStore";
 import type { DomainKey } from "../shared/domains";
 import { useEnabledDomains } from "./useEnabledDomains";
 
@@ -25,6 +27,13 @@ export interface UseDomainTabsOptions<T extends string> {
   defaultTab: T;
   /** URL param name holding the tab id. Defaults to `"tab"`. */
   paramName?: string;
+  /**
+   * Override for the drift-handling side effect. The hook normally shows
+   * a toast ("Cruise-Tab nicht mehr verfügbar …") when the user's active
+   * tab disappears because the domain was disabled. Tests pass a spy
+   * here to assert drift without rendering the toast store.
+   */
+  onDrift?: (disabledTabId: T, fallbackTabId: T) => void;
 }
 
 export interface UseDomainTabsReturn<T extends string> {
@@ -54,9 +63,12 @@ export function useDomainTabs<T extends string>({
   tabConfig,
   defaultTab,
   paramName = "tab",
+  onDrift,
 }: UseDomainTabsOptions<T>): UseDomainTabsReturn<T> {
   const [searchParams, setSearchParams] = useSearchParams();
   const { enabled } = useEnabledDomains();
+  const { t } = useTranslation(["common"]);
+  const addToast = useToastStore((state) => state.addToast);
 
   const tabs = useMemo<Array<{ id: T; label: string; icon?: string }>>(
     () =>
@@ -73,16 +85,41 @@ export function useDomainTabs<T extends string>({
       : defaultTab
   );
 
+  const lastTabsRef = useRef(tabs);
+
   // Drift guard: if the user disables the domain whose tab is active
   // (e.g. they toggle cruise off in the Modules section while sitting
   // on the cruise tab), fall back to defaultTab. Without this the tab
   // bar would drop the cruise button but activeTab state would still
   // point at "cruise", producing split-brain renders until reload.
+  //
+  // A silent redirect confuses users — they clicked a toggle five sections
+  // away and suddenly landed on Allgemein. The toast explains the cause.
+  // The callback override lets tests observe drift without mounting the
+  // toast store.
   useEffect(() => {
-    if (!tabs.some((tab) => tab.id === activeTab)) {
-      setActiveTabState(defaultTab);
+    const previousTabs = lastTabsRef.current;
+    lastTabsRef.current = tabs;
+    if (tabs.some((tab) => tab.id === activeTab)) return;
+    // Was this tab ever visible in the previous render? If not, the user
+    // hand-typed a bogus ?tab=nonsense — no toast for that, just silently
+    // normalise. Toast fires only for real mid-session drift.
+    const wasVisibleBefore = previousTabs.some((tab) => tab.id === activeTab);
+    setActiveTabState(defaultTab);
+    if (!wasVisibleBefore) return;
+    if (onDrift) {
+      onDrift(activeTab, defaultTab);
+      return;
     }
-  }, [tabs, activeTab, defaultTab]);
+    const disabledLabel = tabConfig.find((tab) => tab.id === activeTab)?.label ?? String(activeTab);
+    addToast(
+      "info",
+      t("common:domainTabs.driftFallback", {
+        tab: disabledLabel,
+        defaultValue: 'Der Tab „{{tab}}" ist deaktiviert — zurück zu Allgemein.',
+      })
+    );
+  }, [tabs, activeTab, defaultTab, addToast, t, tabConfig, onDrift]);
 
   // Sync tab to URL param so reload + link-copy preserves state.
   // Replace rather than push so the browser Back button steps through

@@ -6,6 +6,7 @@ import axios from "axios";
 import { logger } from "../lib/logger";
 import NavigationBar from "../components/NavigationBar";
 import { useDomainTabs } from "../hooks/useDomainTabs";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { DOMAINS } from "../shared/domains";
 import BackupManagement from "../components/Admin/BackupManagement";
 import InstanceSettings from "../components/Admin/InstanceSettings";
@@ -111,6 +112,15 @@ export default function AdminPage(): JSX.Element {
     ],
     defaultTab: "general",
   });
+
+  // Reflect the current tab in the browser tab / history entry so users
+  // navigating via Ctrl+Tab or browser history can tell admin tabs apart.
+  const activeTabLabel = tabs.find((tab) => tab.id === activeTab)?.label ?? "";
+  useDocumentTitle(
+    activeTabLabel
+      ? `TravStats – ${t("admin:title", { defaultValue: "Admin" })} – ${activeTabLabel}`
+      : null
+  );
 
   const initialSectionParam = searchParams.get("section") as ActiveSection | null;
   const [activeSection, setActiveSection] = useState<ActiveSection>(
@@ -472,19 +482,7 @@ export default function AdminPage(): JSX.Element {
     }
   };
 
-  // ==================== Render ====================
-
-  if (loading) {
-    return (
-      <div
-        className="min-h-screen"
-        style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}
-      >
-        <NavigationBar />
-        <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">Admin Panel</div>
-      </div>
-    );
-  }
+  // ==================== Sections + Tab/Section Sync ====================
 
   interface AdminSection {
     id: ActiveSection;
@@ -509,27 +507,42 @@ export default function AdminPage(): JSX.Element {
   ];
 
   const sections = allSections.filter((s) => TAB_FOR_SECTION[s.id] === activeTab);
+  const firstSectionId = sections[0]?.id;
 
   // Keep activeSection valid when switching tabs: fall back to first
   // section of the new tab if the current one belongs to a different
   // tab, or if toggling a domain off drops the section entirely. The
   // useDomainTabs hook already guards activeTab; this effect is
   // purely about the section half.
+  //
+  // Kept above the `if (loading)` early-return so React sees the same
+  // hook order on every render (rules-of-hooks).
   useEffect(() => {
     if (TAB_FOR_SECTION[activeSection] !== activeTab) {
-      const first = sections[0]?.id;
-      if (first) setActiveSection(first);
+      if (firstSectionId) setActiveSection(firstSectionId);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, sections[0]?.id]);
+  }, [activeTab, activeSection, firstSectionId]);
 
   // Sync section to URL param; tab sync is handled inside useDomainTabs.
   useEffect(() => {
     const next = new URLSearchParams(searchParams);
     next.set("section", activeSection);
     setSearchParams(next, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSection]);
+  }, [activeSection, searchParams, setSearchParams]);
+
+  // ==================== Render ====================
+
+  if (loading) {
+    return (
+      <div
+        className="min-h-screen"
+        style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}
+      >
+        <NavigationBar />
+        <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">Admin Panel</div>
+      </div>
+    );
+  }
 
   return (
     <div
