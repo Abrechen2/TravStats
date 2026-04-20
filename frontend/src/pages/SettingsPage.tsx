@@ -159,6 +159,17 @@ export default function SettingsPage(): JSX.Element {
     }
   }, [activeTab, activeSection, currentSections]);
 
+  // Reset activeTab if the user disables the domain whose tab they're on
+  // (e.g. cruise tab active, then user toggles cruise off via the Modules
+  // section). Without this, the tab bar no longer shows the tab but the
+  // main area still renders sections belonging to it — a split-brain UI
+  // state only cleared by a page reload.
+  useEffect(() => {
+    if (!tabs.some((tab) => tab.id === activeTab)) {
+      setActiveTab("general");
+    }
+  }, [tabs, activeTab]);
+
   // Legacy deep-link support: someone bookmarked /settings#homeAirport
   // before the tab refactor. Translate a matching hash to the correct tab
   // + section once on mount.
