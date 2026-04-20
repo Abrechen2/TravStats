@@ -12,6 +12,7 @@ import { aStar01ChaikinMethod } from "./methods/aStar01Chaikin";
 import { aStar01CatmullRomMethod } from "./methods/aStar01CatmullRom";
 import { aStar005Method } from "./methods/aStar005";
 import { waypointGraphMethod } from "./methods/waypointGraph";
+import { searouteTsMethod } from "./methods/searouteTs";
 
 const METHODS: readonly RouteMethod[] = [
   greatCircleMethod,
@@ -21,6 +22,7 @@ const METHODS: readonly RouteMethod[] = [
   aStar01CatmullRomMethod,
   aStar005Method,
   waypointGraphMethod,
+  searouteTsMethod,
 ];
 
 const INITIAL_VIEW: MapViewState = {
