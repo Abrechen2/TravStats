@@ -1,38 +1,73 @@
 import { PathLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
 import type { Cruise } from "../../types";
+import type { CruiseRouteFeatureCollection } from "../../lib/api/cruise";
 import { buildCruiseArc } from "./cruiseArc";
 
 interface ArcDatum {
   path: [number, number][];
   cruiseId: string;
   cruiseLine: string | null;
+  /** True when the geometry came from the A* sea-router; false when we
+   * fell back to the Bezier placeholder. Kept in the datum so future
+   * tooltips can surface it, and so tests can assert the right source. */
+  computed: boolean;
 }
 
 /**
- * Build a PathLayer of curved cruise legs — one arc per consecutive stop
- * pair within each cruise. At-sea days and stops without a resolved port
- * are skipped; cruises with fewer than two qualifying stops contribute
+ * Per-cruise sea-route geometry coming from
+ * `GET /api/v1/cruises/:id/geometry`. The map provides one of these
+ * per cruise it wants on the map; missing entries (still fetching,
+ * fetch failed) just fall through to the Bezier placeholder.
+ */
+export type CruiseGeometryMap = ReadonlyMap<string, CruiseRouteFeatureCollection>;
+
+/**
+ * Build a PathLayer of cruise legs — one path per consecutive stop
+ * pair within each cruise. Prefers the real A* sea-route from the
+ * backend when `geometryByCruise` has an entry for that cruise and
+ * the current leg's port pair, and falls back to the Bezier arc
+ * otherwise. At-sea days and stops without a resolved port are
+ * skipped; cruises with fewer than two qualifying stops contribute
  * no arcs.
  *
- * Returns `null` when the data would produce an empty layer so callers
- * can omit it entirely rather than mounting a no-op.
+ * Returns `null` when the data would produce an empty layer so
+ * callers can omit it entirely rather than mounting a no-op.
  */
-export function createCruiseArcsLayer(cruises: Cruise[]): Layer | null {
+export function createCruiseArcsLayer(
+  cruises: Cruise[],
+  geometryByCruise: CruiseGeometryMap = new Map()
+): Layer | null {
   const arcs: ArcDatum[] = [];
   for (const cruise of cruises) {
     const stops = cruise.stops
       .filter((s) => !s.isAtSea && s.port !== null)
       .sort((a, b) => a.dayNumber - b.dayNumber);
+
+    const geometry = geometryByCruise.get(cruise.id);
+    const computedByPair = buildComputedIndex(geometry);
+
     for (let i = 0; i < stops.length - 1; i++) {
       const a = stops[i].port;
       const b = stops[i + 1].port;
       if (!a || !b) continue;
-      arcs.push({
-        path: buildCruiseArc({ lat: a.lat, lon: a.lon }, { lat: b.lat, lon: b.lon }),
-        cruiseId: cruise.id,
-        cruiseLine: cruise.cruiseLine,
-      });
+      const key = pairKey(a.id, b.id);
+      const computed = computedByPair.get(key);
+      if (computed) {
+        arcs.push({
+          path: computed,
+          cruiseId: cruise.id,
+          cruiseLine: cruise.cruiseLine,
+          computed: true,
+        });
+      } else {
+        arcs.push({
+          path: buildCruiseArc({ lat: a.lat, lon: a.lon }, { lat: b.lat, lon: b.lon }),
+          cruiseId: cruise.id,
+          cruiseLine: cruise.cruiseLine,
+          computed: false,
+        });
+      }
     }
   }
   if (arcs.length === 0) return null;
@@ -46,4 +81,26 @@ export function createCruiseArcsLayer(cruises: Cruise[]): Layer | null {
     widthUnits: "pixels",
     pickable: true,
   });
+}
+
+function pairKey(fromPortId: number, toPortId: number): string {
+  return `${fromPortId}→${toPortId}`;
+}
+
+/**
+ * Flatten a cruise's FeatureCollection into a lookup keyed by
+ * "fromPortId→toPortId" so the per-leg loop can look up in O(1).
+ * Returns an empty map when there's no geometry yet — the caller
+ * then renders Bezier for every leg in that cruise.
+ */
+function buildComputedIndex(
+  geometry: CruiseRouteFeatureCollection | undefined
+): Map<string, [number, number][]> {
+  const index = new Map<string, [number, number][]>();
+  if (!geometry) return index;
+  for (const feature of geometry.features) {
+    const { fromPortId, toPortId } = feature.properties;
+    index.set(pairKey(fromPortId, toPortId), feature.geometry.coordinates);
+  }
+  return index;
 }
