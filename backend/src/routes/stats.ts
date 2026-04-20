@@ -15,15 +15,16 @@ import { calculateCruiseStats, type CruiseData as CruiseStatsInput } from '../ut
 import { normalizeHistory } from '../utils/homeAirport';
 import type { SettingsDataJson } from './settings/types';
 import logger from '../utils/logger';
-import { statsLimiter } from '../middleware/rateLimit';
 import { tzAwareDurationMinutes } from '../utils/timezone';
 import { normalizeAirline, mergeAirlineCounts } from '../utils/airlineNormalize';
 
 const router = Router();
 
-// All routes require authentication and are rate-limited
+// Authenticated per-user DB aggregations — a single stats page load fans
+// out to 5–10 endpoints (overview, airlines, countries, cruise, etc.), so a
+// per-user rate limit punishes the legitimate user more than it prevents
+// abuse. Same reasoning we applied to /settings. Auth alone is enough here.
 router.use(authenticate);
-router.use(statsLimiter);
 
 // Shared schema for date-range query parameters
 const DateRangeQuerySchema = z.object({

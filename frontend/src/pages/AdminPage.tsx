@@ -523,12 +523,21 @@ export default function AdminPage(): JSX.Element {
     }
   }, [activeTab, activeSection, firstSectionId]);
 
-  // Sync section to URL param; tab sync is handled inside useDomainTabs.
+  // Bundle tab + section writes into one setSearchParams call. React
+  // Router doesn't sequence functional updates across effects, so two
+  // separate writes would race and one would drop the other's key. See
+  // useDomainTabs for the detailed rationale.
   useEffect(() => {
-    const next = new URLSearchParams(searchParams);
-    next.set("section", activeSection);
-    setSearchParams(next, { replace: true });
-  }, [activeSection, searchParams, setSearchParams]);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("tab", activeTab);
+        next.set("section", activeSection);
+        return next;
+      },
+      { replace: true }
+    );
+  }, [activeTab, activeSection, setSearchParams]);
 
   // ==================== Render ====================
 
