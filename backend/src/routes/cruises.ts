@@ -5,7 +5,7 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { createCruiseSchema, updateCruiseSchema, cruiseQuerySchema } from '../schemas/cruise';
 import { checkAndUpdateAchievements } from '../utils/achievements';
-import { computeSeaRoute } from '../services/seaRouter';
+import { getOrComputeSeaRoute } from '../services/cruiseRouteCache';
 import logger from '../utils/logger';
 
 const router = Router();
@@ -118,7 +118,9 @@ router.get('/:id/geometry', async (req: AuthRequest, res: Response, next: NextFu
       const b = ordered[i + 1].port;
       if (!a || !b) continue;
 
-      const route = await computeSeaRoute(
+      const route = await getOrComputeSeaRoute(
+        a.id,
+        b.id,
         { lat: a.lat, lon: a.lon },
         { lat: b.lat, lon: b.lon },
       );
