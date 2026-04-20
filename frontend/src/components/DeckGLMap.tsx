@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import Map, { useControl, type MapRef, type MapLayerMouseEvent } from "react-map-gl/maplibre";
+import MapGL, { useControl, type MapRef, type MapLayerMouseEvent } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import { LightingEffect, AmbientLight, DirectionalLight } from "@deck.gl/core";
 import type { Layer, MapViewState } from "@deck.gl/core";
@@ -12,8 +12,9 @@ import { createColumnsLayer } from "./layers/columnsLayer";
 import { createTripsLayer, buildTripsData, getTimeRange } from "./layers/tripsLayer";
 import { createContourLayer } from "./layers/contourLayer";
 import { createTripRoutesLayer } from "./layers/tripRoutesLayer";
-import { createCruiseArcsLayer } from "./layers/cruiseArcsLayer";
+import { createCruiseArcsLayer, type CruiseGeometryMap } from "./layers/cruiseArcsLayer";
 import { createCruisePortsLayer } from "./layers/cruisePortsLayer";
+import { cruiseApi, type CruiseRouteFeatureCollection } from "../lib/api/cruise";
 import { TimeSlider } from "./TimeSlider";
 import { useThemeStore } from "../store/themeStore";
 import { MAP_LAYER_COLORS } from "../types/mapTheme";
@@ -116,6 +117,53 @@ export function DeckGLMap({
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [playing, setPlaying] = useState<boolean>(false);
   const deckClickedRef = useRef(false);
+
+  // Real A* sea-route geometry for each cruise, indexed by cruise id.
+  // Fetched lazily after mount; the arcs layer renders Bezier until an
+  // entry lands here, then swaps to the computed route. Any fetch
+  // failure is logged via the api client's interceptor and left as
+  // a missing entry — the Bezier fallback keeps the UI working.
+  const [cruiseGeometry, setCruiseGeometry] = useState<Map<string, CruiseRouteFeatureCollection>>(
+    () => new Map()
+  );
+
+  // Ref mirror of `cruiseGeometry` so the fetch loop can read the
+  // latest state without re-triggering the effect on every successful
+  // fetch. We only want to re-run when the cruise list itself changes.
+  const cruiseGeometryRef = useRef<Map<string, CruiseRouteFeatureCollection>>(cruiseGeometry);
+  useEffect(() => {
+    cruiseGeometryRef.current = cruiseGeometry;
+  }, [cruiseGeometry]);
+
+  useEffect(() => {
+    if (cruises.length === 0) return;
+    let cancelled = false;
+    // Serial fetch to keep the backend A* runs from spiking when a user
+    // lands on a page with many cruises. Each row lands in state as it
+    // resolves so the map paints the first routes immediately.
+    const run = async (): Promise<void> => {
+      for (const cruise of cruises) {
+        if (cancelled) return;
+        if (cruiseGeometryRef.current.has(cruise.id)) continue;
+        try {
+          const fc = await cruiseApi.getGeometry(cruise.id);
+          if (cancelled) return;
+          setCruiseGeometry((prev) => {
+            if (prev.has(cruise.id)) return prev;
+            const next = new Map(prev);
+            next.set(cruise.id, fc);
+            return next;
+          });
+        } catch {
+          // Swallow — interceptor handles logging. Bezier fallback remains.
+        }
+      }
+    };
+    void run();
+    return (): void => {
+      cancelled = true;
+    };
+  }, [cruises]);
 
   // Store subscription
   const { selectedIds, selectedFlights, highlightMode, clearSelection, showDetails } =
@@ -354,7 +402,11 @@ export function DeckGLMap({
 
     // Cruise arcs + ports are supplemental overlays — always on when cruise
     // data is present. Gated upstream by the cruise domain being enabled.
-    const arcs = createCruiseArcsLayer(cruises);
+    // The arcs layer swaps in the A* sea-route per-leg as soon as the
+    // fetch for that cruise resolves; Bezier is used until then and as
+    // the fallback for any leg the server couldn't route.
+    const geometryMap: CruiseGeometryMap = cruiseGeometry;
+    const arcs = createCruiseArcsLayer(cruises, geometryMap);
     const ports = createCruisePortsLayer(cruises);
     const cruiseLayers = [arcs, ports].filter((l): l is Layer => l !== null);
 
@@ -373,6 +425,7 @@ export function DeckGLMap({
     themeColors,
     selectedIds,
     cruises,
+    cruiseGeometry,
   ]);
 
   // Only enable lighting for 3D modes where it makes a visual difference
@@ -430,7 +483,7 @@ export function DeckGLMap({
 
   return (
     <div className="relative w-full h-full">
-      <Map
+      <MapGL
         ref={mapRef}
         initialViewState={INITIAL_VIEW_STATE}
         mapStyle={isDarkMode ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
@@ -451,7 +504,7 @@ export function DeckGLMap({
             selectedIds={selectedIds}
           />
         )}
-      </Map>
+      </MapGL>
 
       {/* Subtle grid overlay — glassmorphism dark mode only */}
       {isDarkMode && mapTheme === "glassmorphism" && (

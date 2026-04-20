@@ -46,6 +46,23 @@ describe("cruiseApi", () => {
     await cruiseApi.remove("c1");
     expect(api.delete).toHaveBeenCalledWith("/cruises/c1");
   });
+
+  it("getGeometry() fetches /cruises/:id/geometry and unwraps envelope", async () => {
+    const fc = {
+      type: "FeatureCollection" as const,
+      features: [
+        {
+          type: "Feature" as const,
+          geometry: { type: "LineString" as const, coordinates: [[1, 2] as [number, number]] },
+          properties: { fromPortId: 1, toPortId: 2, computed: true },
+        },
+      ],
+    };
+    vi.mocked(api.get).mockResolvedValue({ data: { success: true, data: fc } });
+    const result = await cruiseApi.getGeometry("c1");
+    expect(api.get).toHaveBeenCalledWith("/cruises/c1/geometry");
+    expect(result).toEqual(fc);
+  });
 });
 
 describe("portsApi", () => {

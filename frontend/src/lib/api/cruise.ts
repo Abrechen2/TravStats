@@ -17,6 +17,23 @@ export interface CruiseListQuery {
   offset?: number;
 }
 
+/**
+ * GeoJSON feature returned by `GET /api/v1/cruises/:id/geometry`.
+ * Each feature is one A*-computed sea-route between consecutive
+ * port-stops. Legs that fail to route (landlocked ports, disconnected
+ * seas) are omitted and the map layer falls back to a Bezier arc.
+ */
+export interface CruiseRouteFeature {
+  type: "Feature";
+  geometry: { type: "LineString"; coordinates: [number, number][] };
+  properties: { fromPortId: number; toPortId: number; computed: boolean };
+}
+
+export interface CruiseRouteFeatureCollection {
+  type: "FeatureCollection";
+  features: CruiseRouteFeature[];
+}
+
 export const cruiseApi = {
   list: async (q: CruiseListQuery = {}): Promise<Cruise[]> => {
     const { data } = await api.get<Envelope<Cruise[]>>("/cruises", { params: q });
@@ -24,6 +41,12 @@ export const cruiseApi = {
   },
   get: async (id: string): Promise<Cruise> => {
     const { data } = await api.get<Envelope<Cruise>>(`/cruises/${id}`);
+    return data.data;
+  },
+  getGeometry: async (id: string): Promise<CruiseRouteFeatureCollection> => {
+    const { data } = await api.get<Envelope<CruiseRouteFeatureCollection>>(
+      `/cruises/${id}/geometry`
+    );
     return data.data;
   },
   create: async (input: CruiseInput): Promise<Cruise> => {
