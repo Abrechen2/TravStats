@@ -5,6 +5,7 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { createCruiseSchema, updateCruiseSchema, cruiseQuerySchema } from '../schemas/cruise';
 import { checkAndUpdateAchievements } from '../utils/achievements';
+import { computeSeaRoute } from '../services/seaRouter';
 import logger from '../utils/logger';
 
 const router = Router();
@@ -71,6 +72,92 @@ router.get('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     });
     if (!cruise) throw new AppError('Cruise not found', 404);
     res.json({ success: true, data: cruise });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * GET /api/v1/cruises/:id/geometry
+ *
+ * Returns a GeoJSON FeatureCollection with one LineString per
+ * consecutive port pair in the cruise itinerary. Used by the map
+ * layer to draw real sea-routes instead of the Bezier placeholder.
+ *
+ * Stops without a resolved port (sea-days, unplaced stops) are
+ * skipped. Legs whose A* run fails (landlocked port, ports on
+ * disconnected seas) are silently omitted — the frontend falls back
+ * to Bezier for those legs.
+ *
+ * Phase 1 computes every request; Phase 3 adds the
+ * `cruise_route_cache` lookup before A*.
+ */
+router.get('/:id/geometry', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = requireUser(req);
+    const cruise = await prisma.cruise.findFirst({
+      where: { id: req.params.id, userId },
+      include: { stops: { include: { port: true }, orderBy: { dayNumber: 'asc' as const } } },
+    });
+    if (!cruise) throw new AppError('Cruise not found', 404);
+
+    const ordered = cruise.stops.filter((s) => !s.isAtSea && s.port !== null);
+
+    const features: Array<{
+      type: 'Feature';
+      geometry: { type: 'LineString'; coordinates: [number, number][] };
+      properties: { fromPortId: number; toPortId: number; computed: true };
+    }> = [];
+
+    const computedAt = Date.now();
+    let computedLegs = 0;
+    let skippedLegs = 0;
+
+    for (let i = 0; i < ordered.length - 1; i++) {
+      const a = ordered[i].port;
+      const b = ordered[i + 1].port;
+      if (!a || !b) continue;
+
+      const route = await computeSeaRoute(
+        { lat: a.lat, lon: a.lon },
+        { lat: b.lat, lon: b.lon },
+      );
+      if (!route) {
+        skippedLegs++;
+        logger.warn({
+          operation: 'cruise_geometry_leg_skip',
+          cruiseId: cruise.id,
+          fromPortId: a.id,
+          toPortId: b.id,
+          reason: 'sea_router_returned_null',
+        });
+        continue;
+      }
+      features.push({
+        type: 'Feature',
+        geometry: route,
+        properties: { fromPortId: a.id, toPortId: b.id, computed: true },
+      });
+      computedLegs++;
+    }
+
+    logger.info({
+      operation: 'cruise_geometry_computed',
+      cruiseId: cruise.id,
+      userId,
+      stops: ordered.length,
+      computedLegs,
+      skippedLegs,
+      durationMs: Date.now() - computedAt,
+    });
+
+    res.json({
+      success: true,
+      data: {
+        type: 'FeatureCollection' as const,
+        features,
+      },
+    });
   } catch (err) {
     next(err);
   }

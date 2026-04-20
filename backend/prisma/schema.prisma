@@ -679,3 +679,23 @@ model Port {
   @@index([region])
   @@map("ports")
 }
+
+// Cache of computed A* sea-routes between port pairs. Keyed by
+// (depPortId, arrPortId) — callers normalise the pair with
+// Math.min/Math.max so a round-trip hits the same cached entry in both
+// directions. `geometry` stores the raw A* GeoJSON LineString
+// (pre-simplification); the frontend decides the zoom-level
+// Douglas-Peucker tolerance. `version` lets us invalidate the cache
+// when we re-rasterize the land mask or update canal overrides without
+// a DB wipe — a row whose `version` is below the current router
+// version is recomputed on the next request and overwritten.
+model CruiseRouteCache {
+  depPortId  Int      @map("dep_port_id")
+  arrPortId  Int      @map("arr_port_id")
+  geometry   Json
+  computedAt DateTime @default(now()) @map("computed_at")
+  version    Int      @default(1)
+
+  @@id([depPortId, arrPortId])
+  @@map("cruise_route_cache")
+}
