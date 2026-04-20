@@ -5,6 +5,7 @@ import { useTranslation } from "../hooks/useTranslation";
 import PageTransition from "../components/PageTransition";
 import { useSettingsPage } from "../components/Settings/useSettingsPage";
 import { useDomainTabs } from "../hooks/useDomainTabs";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { DOMAINS } from "../shared/domains";
 // Section components
 import ProfileSection from "../components/Settings/ProfileSection";
@@ -133,6 +134,17 @@ export default function SettingsPage(): JSX.Element {
     ],
     defaultTab: "general",
   });
+
+  // Reflect the current tab in the browser tab / history entry so back
+  // navigation and Ctrl+Tab are readable. Restores previous title on
+  // unmount so we don't leak "TravStats – Settings – Flug" into other
+  // pages.
+  const activeTabLabel = tabs.find((tab) => tab.id === activeTab)?.label ?? "";
+  useDocumentTitle(
+    activeTabLabel
+      ? `TravStats – ${t("settings:title", { defaultValue: "Einstellungen" })} – ${activeTabLabel}`
+      : null
+  );
 
   const initialSection = searchParams.get("section");
 

@@ -161,5 +161,8 @@
       "noDomains": "No tracking modules enabled.",
       "openSettings": "Open Settings → Modules"
     }
+  },
+  "domainTabs": {
+    "driftFallback": "The \"{{tab}}\" tab was disabled — back to General."
   }
 }

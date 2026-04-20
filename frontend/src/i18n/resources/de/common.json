@@ -161,5 +161,8 @@
       "noDomains": "Kein Tracking-Bereich aktiviert.",
       "openSettings": "Einstellungen → Bereiche öffnen"
     }
+  },
+  "domainTabs": {
+    "driftFallback": "Der Tab „{{tab}}\" ist deaktiviert — zurück zu Allgemein."
   }
 }
