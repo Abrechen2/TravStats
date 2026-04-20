@@ -46,4 +46,23 @@ export const PORT_PAIRS: readonly PortPair[] = [
     from: { name: "Rotterdam", lat: 51.9225, lon: 4.4792 },
     to: { name: "Singapore", lat: 1.265, lon: 103.82 },
   },
+  // Codex-suggested edge cases to stress-test the Hybrid method:
+  {
+    id: "colon-balboa",
+    label: "Colón ↔ Balboa (Panama Canal)",
+    from: { name: "Colón", lat: 9.355, lon: -79.9 },
+    to: { name: "Balboa", lat: 8.955, lon: -79.565 },
+  },
+  {
+    id: "vancouver-juneau",
+    label: "Vancouver ↔ Juneau (Inside Passage)",
+    from: { name: "Vancouver", lat: 49.29, lon: -123.11 },
+    to: { name: "Juneau", lat: 58.3019, lon: -134.4197 },
+  },
+  {
+    id: "stockholm-helsinki",
+    label: "Stockholm ↔ Helsinki (Schären)",
+    from: { name: "Stockholm", lat: 59.3293, lon: 18.0686 },
+    to: { name: "Helsinki", lat: 60.1699, lon: 24.9384 },
+  },
 ];
