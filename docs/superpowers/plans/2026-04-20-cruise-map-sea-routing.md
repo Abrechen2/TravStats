@@ -244,18 +244,51 @@ Total: **~5 working days** for all 7 phases.
 - **Weather / currents / fuel-optimal routing** — out of scope for
   hobby travel-tracker.
 
-## Decisions that need user confirmation before Phase 1 starts
+## Decisions confirmed (2026-04-20)
 
-1. **Raster resolution**: accept 0.5° default, or go straight to 0.25°?
-   (Impacts build size + A* latency 4×.)
-2. **Canal list**: are the 6 listed overrides enough for V1, or should
-   we add Panama's exit both sides separately, Cape-Cod-Canal, etc.?
-3. **Cache invalidation**: version-bump on raster update → regenerate
-   all cached routes, or lazy (only re-compute on next request)?
-   Lazy is simpler. Prefer lazy.
-4. **UI during cache-miss**: show Bezier-arc placeholder immediately,
-   swap to real route when backend responds? Or spinner? Placeholder
-   is better UX.
+1. **Raster resolution: 0.1°** (≈11 km per cell at equator). 3600×1800 =
+   6.48 M cells, 810 KB committed binary. A* ≈1 s uncached, ≈0 ms on cache
+   hit. Picked over 0.5° because Norwegian fjords, small Greek islands,
+   and Chilean fjords are visibly wrong at 0.5°. 810 KB in the repo is
+   fine in 2026.
+2. **Canal list expanded to 15** overrides. Beyond the original 6:
+   Panama Atlantic + Pacific as separate overrides, Kiel east + west
+   entrances, Dardanelles (separate from Bosporus), Strait of Hormuz,
+   Strait of Malacca, Sunda Strait, Great Belt, Öresund (Malmö–Copen-
+   hagen), Cape Cod Canal. Covers all mainstream cruise regions.
+3. **Cache: lazy invalidation** via version field. Next request after a
+   raster/canal update recomputes and overwrites. No stampede risk
+   because cruise-route demand is bounded (few cruises per user, one
+   request per unique port-pair).
+4. **UI during cache-miss**: render Bezier arc immediately as
+   placeholder, swap to real route when `/cruises/:id/geometry`
+   resolves. No spinner. Users with slow connections see an
+   approximation instantly; the correct route paints in within ~1 s on
+   first load, instantly thereafter.
+
+## Code-quality requirements (explicit, no shortcuts)
+
+User ask: "Keine Code-Abkürzungen, immer ordentlich." Concrete rules
+for this plan:
+
+- **Proper A***: binary heap for the open set (not a linear array),
+  closed set as `Uint8Array` indexed by cell, haversine heuristic is
+  pre-computed per row for speed.
+- **Port-snap uses BFS** outward from the port cell, not naive radius
+  scan (BFS guarantees nearest water cell).
+- **Douglas-Peucker** as a reusable util in `shared/geo/` with its own
+  unit tests, not inline.
+- **Prisma migration via `npx prisma migrate dev`**, never hand-written
+  (except the existing drift-fix migration, unrelated).
+- **Canal overrides live in a dedicated `seaCanals.ts` module** with
+  sourced comments (Wikipedia coords), not inline constants.
+- **Pino structured logs** at INFO for cache-miss-compute, DEBUG for
+  cache hits, WARN for port-snap-failure.
+- **Unit tests per pure function** (`isWater`, `haversine`,
+  `findNearestWater`, `computeSeaRoute` on 10×10 hand-crafted raster),
+  integration test against a known Mediterranean cruise.
+- **Backfill script** with progress reporter, resumable (skip cached
+  pairs), dry-run flag.
 
 ## How this relates to other planned work
 
