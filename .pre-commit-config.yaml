@@ -3,13 +3,23 @@ repos:
     rev: v5.0.0
     hooks:
       - id: trailing-whitespace
+        # These hooks don't read .gitattributes — they munge binaries
+        # byte-for-byte. Exclude every format we actually ship as
+        # binary so a commit with a PNG / .bin / font doesn't silently
+        # corrupt it. Keeps text-hygiene checks on everything else.
+        exclude: '\.(bin|png|jpe?g|gif|webp|ico|pdf|zip|gz|tar|woff2?|ttf|otf|eot)$'
       - id: end-of-file-fixer
+        exclude: '\.(bin|png|jpe?g|gif|webp|ico|pdf|zip|gz|tar|woff2?|ttf|otf|eot)$'
       - id: check-yaml
       - id: check-json
       - id: check-merge-conflict
       - id: detect-private-key
       - id: check-added-large-files
-        args: ['--maxkb=1000']
+        # Raised from 1000 KB so the 0.05° land mask (3.2 MB) and any
+        # future larger raster ship without fuss. Natural Earth 10 m
+        # is the upper end of what we bake into the repo; anything
+        # bigger belongs on a CDN.
+        args: ['--maxkb=4000']
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.9.0
