@@ -33,8 +33,11 @@ import { computeSeaRoute } from './seaRouter';
  *
  *   1 = Phase-1 walking skeleton
  *   2 = Phase-2 canal overrides wired in
+ *   3 = Kiel Canal dropped (cruise ships don't fit); findNearestWater
+ *       default bumped 50 → 5000 so Hamburg-class inland ports snap
+ *       to the open sea instead of falling back to Bezier
  */
-export const CACHE_VERSION = 2;
+export const CACHE_VERSION = 3;
 
 export interface RouteLineString {
   type: 'LineString';

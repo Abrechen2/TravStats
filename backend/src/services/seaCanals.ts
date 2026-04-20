@@ -91,27 +91,16 @@ export const CANAL_OVERRIDES: readonly CanalOverride[] = [
       { lat: 8.88, lon: -79.52 }, // Pacific mouth
     ],
   },
-  // --- Kiel Canal (North Sea ↔ Baltic) -----------------------------------
-  {
-    id: 'kiel_west',
-    name: 'Kiel Canal — Brunsbüttel (west entrance)',
-    anchor: { lat: 53.8905, lon: 9.1403 },
-    axis: [
-      { lat: 53.89, lon: 9.14 }, // Brunsbüttel
-      { lat: 54.0, lon: 9.35 },
-      { lat: 54.15, lon: 9.6 },
-    ],
-  },
-  {
-    id: 'kiel_east',
-    name: 'Kiel Canal — Holtenau (east entrance)',
-    anchor: { lat: 54.3661, lon: 10.1478 },
-    axis: [
-      { lat: 54.15, lon: 9.6 },
-      { lat: 54.25, lon: 9.85 },
-      { lat: 54.37, lon: 10.15 }, // Holtenau / Kiel Fjord
-    ],
-  },
+  // --- Kiel Canal intentionally omitted -----------------------------------
+  // The Nord-Ostsee-Kanal is open to commercial shipping but most modern
+  // cruise ships (AIDAnova 337 m, Mein Schiff 300 m, MSC Preziosa 333 m)
+  // exceed the canal's 235 m length limit and cannot transit. Forcing A*
+  // to route cruises through the canal produces a cyan line slicing
+  // straight across Schleswig-Holstein land, which looks like an error
+  // to users even though it's geometrically correct for the canal itself.
+  // Routing big ships around Skagerrak/Kattegat matches reality and
+  // looks right on the map. Revisit if we later track small/river
+  // cruise vessels that CAN use the canal (AIDAmira-class, river fleet).
   // --- Corinth Canal (Aegean ↔ Ionian) -----------------------------------
   {
     id: 'corinth',

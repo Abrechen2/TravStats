@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { cruiseApi } from "../lib/api";
 import type { Cruise } from "../types";
 import { CruiseEditModal } from "../components/Cruise/CruiseEditModal";
+import { CruiseRouteMap } from "../components/Cruise/CruiseRouteMap";
 import TripTimeline, { type TimelineEvent } from "../components/Trip/TripTimeline";
 import NavigationBar from "../components/NavigationBar";
 import { useTranslation } from "../hooks/useTranslation";
@@ -150,9 +151,9 @@ export default function CruiseDetailPage(): JSX.Element {
           </div>
 
           <aside className="space-y-3 md:col-span-2">
-            <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] p-4">
-              <p className="text-xs uppercase text-[var(--text-muted)]">{t("detail.route")}</p>
-              <p className="mt-1 text-sm text-[var(--text-muted)]">Map coming soon</p>
+            <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] p-3">
+              <p className="mb-2 text-xs uppercase text-[var(--text-muted)]">{t("detail.route")}</p>
+              <CruiseRouteMap cruise={cruise} />
             </div>
 
             <div className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] p-4">

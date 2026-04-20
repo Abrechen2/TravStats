@@ -1,8 +1,10 @@
 import { CANAL_OVERRIDES } from '../seaCanals';
 
 describe('CANAL_OVERRIDES', () => {
-  it('ships 15 canal/strait overrides — the Phase-2 baseline list', () => {
-    expect(CANAL_OVERRIDES.length).toBe(15);
+  it('ships 13 canal/strait overrides — Phase-2 baseline minus Kiel Canal', () => {
+    // 15 original Phase-2 entries minus kiel_west + kiel_east (dropped
+    // because big cruise ships can't use the Nord-Ostsee-Kanal).
+    expect(CANAL_OVERRIDES.length).toBe(13);
   });
 
   it('has unique ids', () => {
@@ -28,12 +30,13 @@ describe('CANAL_OVERRIDES', () => {
   it('covers the mainstream cruise canals by name', () => {
     const ids = CANAL_OVERRIDES.map((c) => c.id);
     // Spot-check the must-haves; full list lives in the module.
+    // Kiel Canal is intentionally NOT on this list — big cruise ships
+    // exceed its 235 m length limit and cannot transit, so we route
+    // around Jütland instead (see seaCanals.ts comment).
     for (const must of [
       'suez',
       'panama_atlantic',
       'panama_pacific',
-      'kiel_west',
-      'kiel_east',
       'corinth',
       'bosporus',
       'dardanelles',
@@ -47,5 +50,8 @@ describe('CANAL_OVERRIDES', () => {
     ]) {
       expect(ids).toContain(must);
     }
+    // Keep Kiel out explicitly so future additions don't sneak it back in.
+    expect(ids).not.toContain('kiel_west');
+    expect(ids).not.toContain('kiel_east');
   });
 });
