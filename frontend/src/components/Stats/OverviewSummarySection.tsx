@@ -29,6 +29,11 @@ export default function OverviewSummarySection({
   const [summary, setSummary] = useState<AchievementSummary | null>(null);
   const [flightCountries, setFlightCountries] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  // True when ALL three fetches failed — partial failure still renders
+  // the cards with whatever loaded, total failure swaps in a banner so
+  // users don't mistake "auth expired" or "backend down" for "user has
+  // zero travel data".
+  const [totalFailure, setTotalFailure] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -52,6 +57,7 @@ export default function OverviewSummarySection({
           setCruise(c);
           setSummary(a?.summary ?? null);
           setFlightCountries(fc?.countries.map((x) => x.country) ?? []);
+          setTotalFailure(c === null && a === null && fc === null);
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -63,6 +69,21 @@ export default function OverviewSummarySection({
   }, []);
 
   if (loading) return null;
+
+  if (totalFailure) {
+    return (
+      <div
+        className="rounded-lg p-4 mb-8 text-sm"
+        style={{
+          background: "var(--bg-surface)",
+          border: "1px solid var(--danger)",
+          color: "var(--danger)",
+        }}
+      >
+        {t("stats:overview2.loadError")}
+      </div>
+    );
+  }
 
   const cruiseCount = cruise?.cruisesCount ?? 0;
   const totalExperiences = flightCount + cruiseCount;

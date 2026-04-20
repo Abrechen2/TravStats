@@ -7,6 +7,7 @@
   "overview2": {
     "sectionLabel": "Overall summary",
     "sectionHint": "All domains combined",
+    "loadError": "Overall summary failed to load — please sign in again or reload the page.",
     "experiences": "Total experiences",
     "experiencesHint": "{{flights}} flights, {{cruises}} cruises",
     "countries": "Total countries",
