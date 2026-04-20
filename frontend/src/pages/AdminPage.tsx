@@ -497,26 +497,8 @@ export default function AdminPage(): JSX.Element {
 
   const sections = allSections.filter((s) => TAB_FOR_SECTION[s.id] === activeTab);
 
-  // Keep activeSection valid when switching tabs: fall back to first section
-  // of the new tab if the current one belongs to a different tab.
-  useEffect(() => {
-    if (TAB_FOR_SECTION[activeSection] !== activeTab) {
-      const first = sections[0]?.id;
-      if (first) setActiveSection(first);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
-
-  // Sync tab + section to URL params so reload + link-copy preserves state.
-  useEffect(() => {
-    const next = new URLSearchParams(searchParams);
-    next.set("tab", activeTab);
-    next.set("section", activeSection);
-    setSearchParams(next, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, activeSection]);
-
-  // Visible tabs: always general, plus any enabled domain.
+  // Visible tabs: always general, plus any enabled domain. Declared before
+  // the tab-drift effects below because those depend on it.
   const tabs: Array<{ id: TabId; label: string; icon?: string }> = [
     { id: "general", label: t("admin:tabs2.general") || "Allgemein" },
     ...(enabledDomains.includes("flight")
@@ -538,6 +520,38 @@ export default function AdminPage(): JSX.Element {
         ]
       : []),
   ];
+
+  // Keep activeSection valid when switching tabs: fall back to first section
+  // of the new tab if the current one belongs to a different tab. Depends
+  // on activeTab + sections[0]?.id so toggling a domain off while on that
+  // domain's section also triggers the fallback, not just explicit tab
+  // clicks (addressed in the activeTab reset effect below too).
+  useEffect(() => {
+    if (TAB_FOR_SECTION[activeSection] !== activeTab) {
+      const first = sections[0]?.id;
+      if (first) setActiveSection(first);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, sections[0]?.id]);
+
+  // Reset activeTab when the domain whose tab is active gets disabled in
+  // the Modules section. Without this, the tab bar shows only enabled
+  // tabs but the sidebar still lists the disabled-tab's sections, leaving
+  // a split-brain render until the user navigates away.
+  useEffect(() => {
+    if (!tabs.some((tab) => tab.id === activeTab)) {
+      setActiveTab("general");
+    }
+  }, [tabs, activeTab]);
+
+  // Sync tab + section to URL params so reload + link-copy preserves state.
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", activeTab);
+    next.set("section", activeSection);
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, activeSection]);
 
   return (
     <div
@@ -738,8 +752,8 @@ export default function AdminPage(): JSX.Element {
           {activeSection === "instance" && (
             <div
               style={{
-                background: "var(--bg-card)",
-                border: "1px solid var(--border-color)",
+                background: "var(--bg-surface)",
+                border: "1px solid var(--color-border)",
                 borderRadius: 12,
               }}
             >
@@ -752,8 +766,8 @@ export default function AdminPage(): JSX.Element {
               <BackupManagement />
               <div
                 style={{
-                  background: "var(--bg-card)",
-                  border: "1px solid var(--border-color)",
+                  background: "var(--bg-surface)",
+                  border: "1px solid var(--color-border)",
                   borderRadius: 12,
                 }}
               >
@@ -765,8 +779,8 @@ export default function AdminPage(): JSX.Element {
           {activeSection === "smtp" && (
             <div
               style={{
-                background: "var(--bg-card)",
-                border: "1px solid var(--border-color)",
+                background: "var(--bg-surface)",
+                border: "1px solid var(--color-border)",
                 borderRadius: 12,
                 padding: 24,
               }}
