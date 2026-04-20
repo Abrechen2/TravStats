@@ -13,6 +13,8 @@ import { aStar01CatmullRomMethod } from "./methods/aStar01CatmullRom";
 import { aStar005Method } from "./methods/aStar005";
 import { waypointGraphMethod } from "./methods/waypointGraph";
 import { searouteTsMethod } from "./methods/searouteTs";
+import { hybridMethod } from "./methods/hybrid";
+import { hybridV2Method } from "./methods/hybridV2";
 
 const METHODS: readonly RouteMethod[] = [
   greatCircleMethod,
@@ -23,6 +25,8 @@ const METHODS: readonly RouteMethod[] = [
   aStar005Method,
   waypointGraphMethod,
   searouteTsMethod,
+  hybridMethod,
+  hybridV2Method,
 ];
 
 const INITIAL_VIEW: MapViewState = {
