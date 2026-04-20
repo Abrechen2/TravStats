@@ -5,7 +5,7 @@ import { adminApi } from "../lib/api";
 import axios from "axios";
 import { logger } from "../lib/logger";
 import NavigationBar from "../components/NavigationBar";
-import { useEnabledDomains } from "../hooks/useEnabledDomains";
+import { useDomainTabs } from "../hooks/useDomainTabs";
 import { DOMAINS } from "../shared/domains";
 import BackupManagement from "../components/Admin/BackupManagement";
 import InstanceSettings from "../components/Admin/InstanceSettings";
@@ -80,7 +80,6 @@ export default function AdminPage(): JSX.Element {
   const { t } = useTranslation(["admin", "common"]);
   const addToast = useToastStore((state) => state.addToast);
   const [searchParams, setSearchParams] = useSearchParams();
-  const { enabled: enabledDomains } = useEnabledDomains();
 
   // State
   const [systemInfo, setSystemInfo] = useState<SystemInfoData | null>(null);
@@ -91,15 +90,29 @@ export default function AdminPage(): JSX.Element {
   const [logFiles, setLogFiles] = useState<LogFile[]>([]);
   const [logStats, setLogStats] = useState<LogStats | null>(null);
   const [loading, setLoading] = useState(true);
-  // Initial tab + section come from URL (?tab=&section=) with sensible
-  // fallbacks. See mirror implementation in SettingsPage (fbbcd13).
-  const initialTabParam = searchParams.get("tab") as TabId | null;
+  // Tab state + URL sync + drift guard live in the shared useDomainTabs
+  // hook. Filtered by enabledDomains, URL param "tab", activeTab resets
+  // to "general" if its domain gets disabled mid-session.
+  const { tabs, activeTab, setActiveTab } = useDomainTabs<TabId>({
+    tabConfig: [
+      { id: "general", label: t("admin:tabs2.general") || "Allgemein" },
+      {
+        id: "flight",
+        label: t("admin:tabs2.flight") || "Flug",
+        icon: DOMAINS.flight.icon,
+        requiresDomain: "flight",
+      },
+      {
+        id: "cruise",
+        label: t("admin:tabs2.cruise") || "Kreuzfahrt",
+        icon: DOMAINS.cruise.icon,
+        requiresDomain: "cruise",
+      },
+    ],
+    defaultTab: "general",
+  });
+
   const initialSectionParam = searchParams.get("section") as ActiveSection | null;
-  const [activeTab, setActiveTab] = useState<TabId>(
-    initialTabParam === "flight" || initialTabParam === "cruise" || initialTabParam === "general"
-      ? initialTabParam
-      : "general"
-  );
   const [activeSection, setActiveSection] = useState<ActiveSection>(
     initialSectionParam && TAB_FOR_SECTION[initialSectionParam] === activeTab
       ? initialSectionParam
@@ -497,35 +510,11 @@ export default function AdminPage(): JSX.Element {
 
   const sections = allSections.filter((s) => TAB_FOR_SECTION[s.id] === activeTab);
 
-  // Visible tabs: always general, plus any enabled domain. Declared before
-  // the tab-drift effects below because those depend on it.
-  const tabs: Array<{ id: TabId; label: string; icon?: string }> = [
-    { id: "general", label: t("admin:tabs2.general") || "Allgemein" },
-    ...(enabledDomains.includes("flight")
-      ? [
-          {
-            id: "flight" as const,
-            label: t("admin:tabs2.flight") || "Flug",
-            icon: DOMAINS.flight.icon,
-          },
-        ]
-      : []),
-    ...(enabledDomains.includes("cruise")
-      ? [
-          {
-            id: "cruise" as const,
-            label: t("admin:tabs2.cruise") || "Kreuzfahrt",
-            icon: DOMAINS.cruise.icon,
-          },
-        ]
-      : []),
-  ];
-
-  // Keep activeSection valid when switching tabs: fall back to first section
-  // of the new tab if the current one belongs to a different tab. Depends
-  // on activeTab + sections[0]?.id so toggling a domain off while on that
-  // domain's section also triggers the fallback, not just explicit tab
-  // clicks (addressed in the activeTab reset effect below too).
+  // Keep activeSection valid when switching tabs: fall back to first
+  // section of the new tab if the current one belongs to a different
+  // tab, or if toggling a domain off drops the section entirely. The
+  // useDomainTabs hook already guards activeTab; this effect is
+  // purely about the section half.
   useEffect(() => {
     if (TAB_FOR_SECTION[activeSection] !== activeTab) {
       const first = sections[0]?.id;
@@ -534,24 +523,13 @@ export default function AdminPage(): JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, sections[0]?.id]);
 
-  // Reset activeTab when the domain whose tab is active gets disabled in
-  // the Modules section. Without this, the tab bar shows only enabled
-  // tabs but the sidebar still lists the disabled-tab's sections, leaving
-  // a split-brain render until the user navigates away.
-  useEffect(() => {
-    if (!tabs.some((tab) => tab.id === activeTab)) {
-      setActiveTab("general");
-    }
-  }, [tabs, activeTab]);
-
-  // Sync tab + section to URL params so reload + link-copy preserves state.
+  // Sync section to URL param; tab sync is handled inside useDomainTabs.
   useEffect(() => {
     const next = new URLSearchParams(searchParams);
-    next.set("tab", activeTab);
     next.set("section", activeSection);
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, activeSection]);
+  }, [activeSection]);
 
   return (
     <div

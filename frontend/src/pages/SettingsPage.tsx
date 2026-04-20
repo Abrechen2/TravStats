@@ -4,7 +4,7 @@ import NavigationBar from "../components/NavigationBar";
 import { useTranslation } from "../hooks/useTranslation";
 import PageTransition from "../components/PageTransition";
 import { useSettingsPage } from "../components/Settings/useSettingsPage";
-import { useEnabledDomains } from "../hooks/useEnabledDomains";
+import { useDomainTabs } from "../hooks/useDomainTabs";
 import { DOMAINS } from "../shared/domains";
 // Section components
 import ProfileSection from "../components/Settings/ProfileSection";
@@ -35,7 +35,6 @@ interface SectionRef {
 export default function SettingsPage(): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
   const [searchParams, setSearchParams] = useSearchParams();
-  const { enabled: enabledDomains } = useEnabledDomains();
 
   const {
     user,
@@ -113,35 +112,29 @@ export default function SettingsPage(): JSX.Element {
     return { general, flight, cruise: cruiseTab };
   }, [t, user?.isAdmin]);
 
-  // Visible tabs: always general, plus any enabled domain that has a tab.
-  // Hotel / POI have no settings yet and no tab will appear until enabled.
-  const tabs = useMemo<Array<{ id: TabId; label: string; icon?: string }>>(() => {
-    const list: Array<{ id: TabId; label: string; icon?: string }> = [
+  // Visible tabs + active-tab state + URL sync + drift guard now live
+  // in the shared useDomainTabs hook. Hotel / POI tabs plug in via the
+  // same requiresDomain pattern when those domains add settings.
+  const { tabs, activeTab, setActiveTab } = useDomainTabs<TabId>({
+    tabConfig: [
       { id: "general", label: t("settings:tabs.general") || "Allgemein" },
-    ];
-    if (enabledDomains.includes("flight")) {
-      list.push({
+      {
         id: "flight",
         label: t("settings:tabs.flight") || "Flug",
         icon: DOMAINS.flight.icon,
-      });
-    }
-    if (enabledDomains.includes("cruise")) {
-      list.push({
+        requiresDomain: "flight",
+      },
+      {
         id: "cruise",
         label: t("settings:tabs.cruise") || "Kreuzfahrt",
         icon: DOMAINS.cruise.icon,
-      });
-    }
-    return list;
-  }, [enabledDomains, t]);
+        requiresDomain: "cruise",
+      },
+    ],
+    defaultTab: "general",
+  });
 
-  const initialTab = (searchParams.get("tab") as TabId | null) ?? "general";
   const initialSection = searchParams.get("section");
-
-  const [activeTab, setActiveTab] = useState<TabId>(
-    tabs.some((tab) => tab.id === initialTab) ? initialTab : "general"
-  );
 
   const currentSections = sectionsByTab[activeTab];
   const [activeSection, setActiveSection] = useState<string>(
@@ -152,23 +145,14 @@ export default function SettingsPage(): JSX.Element {
 
   // Keep activeSection valid when the user switches tabs (e.g. switching
   // from flight → general while on "homeAirport" must not leave an empty
-  // main area). Falls back to the first section of the new tab.
+  // main area). Falls back to the first section of the new tab. The
+  // useDomainTabs hook takes care of activeTab drift when a domain is
+  // disabled mid-session — this effect only handles the section half.
   useEffect(() => {
     if (!currentSections.some((s) => s.id === activeSection)) {
       setActiveSection(currentSections[0]?.id ?? "");
     }
   }, [activeTab, activeSection, currentSections]);
-
-  // Reset activeTab if the user disables the domain whose tab they're on
-  // (e.g. cruise tab active, then user toggles cruise off via the Modules
-  // section). Without this, the tab bar no longer shows the tab but the
-  // main area still renders sections belonging to it — a split-brain UI
-  // state only cleared by a page reload.
-  useEffect(() => {
-    if (!tabs.some((tab) => tab.id === activeTab)) {
-      setActiveTab("general");
-    }
-  }, [tabs, activeTab]);
 
   // Legacy deep-link support: someone bookmarked /settings#homeAirport
   // before the tab refactor. Translate a matching hash to the correct tab
@@ -188,17 +172,16 @@ export default function SettingsPage(): JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Sync URL params so reload + copy-link preserves state. Replace rather
-  // than push so the browser Back button steps through user history, not
-  // every internal section switch.
+  // Sync section to URL so reload + copy-link preserves state. Tab sync
+  // is handled inside useDomainTabs. Replace rather than push so the
+  // Back button steps through real navigations, not internal clicks.
   useEffect(() => {
     const next = new URLSearchParams(searchParams);
-    next.set("tab", activeTab);
     if (activeSection) next.set("section", activeSection);
     else next.delete("section");
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, activeSection]);
+  }, [activeSection]);
 
   return (
     <PageTransition>
