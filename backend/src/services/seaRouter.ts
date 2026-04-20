@@ -257,9 +257,14 @@ export function isWater(lat: number, lon: number): boolean {
 /**
  * BFS outward from the port's cell until we find a water cell.
  * Guarantees we return the *nearest* water cell (ties broken by BFS
- * insertion order). Visit budget is `maxCells` neighbours — 50 by
- * default ≈ 550 km which is enough to snap terminal coords onto the
- * harbour but stops us from finding an ocean when the port is inland.
+ * insertion order). `maxCells` is a budget on how many cells BFS is
+ * allowed to VISIT, not a radius in km — a disc of r cells contains
+ * ≈ π·r² cells, so `maxCells = 5000` maps to roughly a 40-cell radius
+ * (≈ 4° ≈ 440 km at the equator). That's enough to find the sea for
+ * inland river ports like Hamburg (Elbe, ~80 km from the North Sea)
+ * or Antwerp (Scheldt, ~90 km) but keeps truly landlocked coords
+ * (Moscow, Warsaw) falling back to Bezier instead of synthesising a
+ * 1000 km ocean detour.
  *
  * Returns the water cell's *centre* coordinate, which is always
  * on-grid and therefore safe to pass into A*.
@@ -267,7 +272,7 @@ export function isWater(lat: number, lon: number): boolean {
 export function findNearestWater(
   lat: number,
   lon: number,
-  maxCells = 50,
+  maxCells = 5000,
 ): { lat: number; lon: number } | null {
   const bytes = requireMask();
   const startRow = latToRow(lat);

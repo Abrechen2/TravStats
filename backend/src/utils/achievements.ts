@@ -252,45 +252,53 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
             flights as FlightData[],
           );
 
+          // existingAchievementMap is a snapshot from BEFORE the transaction
+          // started. Another concurrent invocation (e.g. a cruise POST +
+          // flight POST racing together) can insert a row for the same
+          // (user, achievement) pair between snapshot and create, tripping
+          // the unique constraint. Use upsert instead of create — it
+          // handles both cases atomically inside the transaction.
           if (isUnlocked) {
-            if (existing) {
-              const updated = await tx.userAchievement.update({
-                where: { id: existing.id },
-                data: {
-                  progress: achievement.requirement,
-                  unlockedAt: new Date(),
-                },
-                include: { achievement: true },
-              });
+            const updated = await tx.userAchievement.upsert({
+              where: {
+                userId_achievementId: { userId, achievementId: achievement.id },
+              },
+              update: {
+                progress: achievement.requirement,
+                unlockedAt: new Date(),
+              },
+              create: {
+                userId,
+                achievementId: achievement.id,
+                progress: achievement.requirement,
+              },
+              include: { achievement: true },
+            });
+            // Only count as newly-unlocked when the pre-transaction snapshot
+            // had no unlock yet. Re-upserting an already-unlocked row
+            // shouldn't emit another "unlocked" event.
+            if (!existing || existing.progress < achievement.requirement) {
               newlyUnlocked.push(updated);
-            } else {
-              const userAchievement = await tx.userAchievement.create({
-                data: {
-                  userId,
-                  achievementId: achievement.id,
-                  progress: achievement.requirement,
-                },
-                include: { achievement: true },
-              });
-              newlyUnlocked.push(userAchievement);
             }
-          } else {
-            // Update or create progress for non-unlocked achievements
-            if (existing) {
-              await tx.userAchievement.update({
-                where: { id: existing.id },
-                data: { progress },
-              });
-            } else if (progress > 0) {
-              // Create new entry only if there's some progress (avoid cluttering DB with 0 progress)
-              await tx.userAchievement.create({
-                data: {
-                  userId,
-                  achievementId: achievement.id,
-                  progress,
-                },
-              });
-            }
+          } else if (existing) {
+            await tx.userAchievement.update({
+              where: { id: existing.id },
+              data: { progress },
+            });
+          } else if (progress > 0) {
+            // Only create a progress row when there's something to track —
+            // upsert guards against the same race as the unlocked branch.
+            await tx.userAchievement.upsert({
+              where: {
+                userId_achievementId: { userId, achievementId: achievement.id },
+              },
+              update: { progress },
+              create: {
+                userId,
+                achievementId: achievement.id,
+                progress,
+              },
+            });
           }
         }
       });

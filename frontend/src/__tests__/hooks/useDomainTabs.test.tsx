@@ -164,23 +164,20 @@ describe("useDomainTabs", () => {
     expect(useToastStore.getState().toasts).toHaveLength(0);
   });
 
-  it("setActiveTab writes to the URL param (replaceState, not push)", () => {
-    const locationSnapshots: string[] = [];
+  // URL writes moved out of the hook — consumers bundle `?tab=` with
+  // their own params in a single setSearchParams call to dodge the
+  // react-router race where parallel functional setters clobber each
+  // other. So we only verify the hook's state transitions here.
+  it("setActiveTab updates activeTab synchronously", () => {
     const { result } = renderHook(
       () => useDomainTabs<TabId>({ tabConfig: TABS, defaultTab: "general" }),
-      {
-        wrapper: ({ children }) => (
-          <RouterWrapper onLocation={({ search }) => locationSnapshots.push(search)}>
-            {children}
-          </RouterWrapper>
-        ),
-      }
+      { wrapper: ({ children }) => <RouterWrapper>{children}</RouterWrapper> }
     );
+    expect(result.current.activeTab).toBe("general");
     act(() => {
       result.current.setActiveTab("cruise");
     });
-    // Last search string reflects the tab param.
-    expect(locationSnapshots[locationSnapshots.length - 1]).toContain("tab=cruise");
+    expect(result.current.activeTab).toBe("cruise");
   });
 
   it("honours a custom paramName", () => {

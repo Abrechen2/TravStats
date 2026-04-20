@@ -65,7 +65,7 @@ export function useDomainTabs<T extends string>({
   paramName = "tab",
   onDrift,
 }: UseDomainTabsOptions<T>): UseDomainTabsReturn<T> {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const { enabled } = useEnabledDomains();
   const { t } = useTranslation(["common"]);
   const addToast = useToastStore((state) => state.addToast);
@@ -121,15 +121,19 @@ export function useDomainTabs<T extends string>({
     );
   }, [tabs, activeTab, defaultTab, addToast, t, tabConfig, onDrift]);
 
-  // Sync tab to URL param so reload + link-copy preserves state.
-  // Replace rather than push so the browser Back button steps through
-  // user history, not every internal tab switch.
-  useEffect(() => {
-    const next = new URLSearchParams(searchParams);
-    next.set(paramName, activeTab);
-    setSearchParams(next, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
+  // URL sync happens at the CONSUMER layer, not inside this hook.
+  //
+  // Reason: pages like SettingsPage also write `?section=…` to the URL.
+  // react-router's `setSearchParams` does NOT sequence functional
+  // updates the way React's `setState` does — the second call in a
+  // render cycle sees the ORIGINAL URL, not the patched one. Two
+  // independent effects therefore clobber each other, and whichever
+  // runs last wins.
+  //
+  // The consumer must bundle `?tab=` together with its own params into
+  // a SINGLE `setSearchParams` call. See SettingsPage for the canonical
+  // pattern: one `useEffect` keyed on `[activeTab, activeSection]` that
+  // writes both keys at once.
 
   return { tabs, activeTab, setActiveTab: setActiveTabState };
 }

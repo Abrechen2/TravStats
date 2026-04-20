@@ -184,16 +184,44 @@ export default function SettingsPage(): JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Sync section to URL so reload + copy-link preserves state. Tab sync
-  // is handled inside useDomainTabs. Replace rather than push so the
-  // Back button steps through real navigations, not internal clicks.
+  // Cross-tab section deep-link: a user opens /settings?section=cruisePreferences
+  // without ?tab=cruise (common when copy-pasting a link from a chat or
+  // when an old bookmark only had the section). Without this, useDomainTabs
+  // defaults activeTab to "general" and the section-drift effect snaps
+  // activeSection back to "profile", silently dropping the user on the
+  // wrong page. Run once on mount: if the initial `?section=` lives in a
+  // non-default tab, switch to that tab before the drift effect fires.
   useEffect(() => {
-    const next = new URLSearchParams(searchParams);
-    if (activeSection) next.set("section", activeSection);
-    else next.delete("section");
-    setSearchParams(next, { replace: true });
+    if (!initialSection) return;
+    if (sectionsByTab[activeTab].some((s) => s.id === initialSection)) return;
+    for (const tab of ["general", "flight", "cruise"] as TabId[]) {
+      if (sectionsByTab[tab].some((s) => s.id === initialSection)) {
+        setActiveTab(tab);
+        setActiveSection(initialSection);
+        return;
+      }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSection]);
+  }, []);
+
+  // Bundle tab + section URL writes into a single setSearchParams call.
+  // Two independent effects used to race because React Router does NOT
+  // sequence functional setSearchParams updates (see useDomainTabs for
+  // the full rationale). One effect here is the canonical pattern —
+  // other multi-domain pages should mirror it.
+  useEffect(() => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("tab", activeTab);
+        if (activeSection) next.set("section", activeSection);
+        else next.delete("section");
+        return next;
+      },
+      { replace: true }
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, activeSection]);
 
   return (
     <PageTransition>
