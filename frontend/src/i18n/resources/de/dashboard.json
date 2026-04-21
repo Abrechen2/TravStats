@@ -134,6 +134,14 @@
       "poi": "POI hinzufügen"
     }
   },
+  "filter": {
+    "title": "Filter",
+    "timeFrom": "Von",
+    "timeTo": "Bis",
+    "airline": "Airline",
+    "cruiseLine": "Reederei",
+    "category": "Kategorie"
+  },
   "modes": {
     "overview": "Übersicht",
     "heatmap": "Heatmap",

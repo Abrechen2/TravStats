@@ -134,6 +134,14 @@
       "poi": "Add POI"
     }
   },
+  "filter": {
+    "title": "Filter",
+    "timeFrom": "From",
+    "timeTo": "To",
+    "airline": "Airline",
+    "cruiseLine": "Cruise line",
+    "category": "Category"
+  },
   "modes": {
     "overview": "Overview",
     "heatmap": "Heatmap",
