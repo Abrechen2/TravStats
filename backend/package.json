@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "npm run prisma:generate && npm run init && tsx watch src/index.ts",
-    "postinstall": "prisma generate",
+    "postinstall": "prisma generate && node scripts/patch-searoute-ts.mjs",
     "build": "tsc",
     "start": "node dist/index.js",
     "lint": "eslint src",
@@ -63,6 +63,7 @@
     "pdf-parse": "^2.4.5",
     "pino": "^9.6.0",
     "rotating-file-stream": "^3.2.9",
+    "searoute-ts": "^1.2.1",
     "tesseract.js": "^6.0.1",
     "uuid": "^13.0.0",
     "webdav": "^5.9.0",

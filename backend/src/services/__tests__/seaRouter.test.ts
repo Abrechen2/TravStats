@@ -18,6 +18,7 @@ import {
   isWater,
   loadLandMask,
   setLandMaskForTesting,
+  setSearouteForTesting,
 } from '../seaRouter';
 
 /**
@@ -102,6 +103,122 @@ describe('seaRouter — with real Natural Earth mask', () => {
     // it accidentally snapped to a small Volga pixel — A* would fail to
     // reach the sea. Either way, we never want a valid route.
     expect(route).toBeNull();
+  }, 30000);
+
+  it('takes the great-circle short-circuit on an open-ocean pair (no land samples)', async () => {
+    if (!maskExists) return;
+    // Middle of the Atlantic → middle of the Atlantic: no land in between,
+    // the fine-mask GC-safety test should return 0 hits and the pipeline
+    // emits a 65-vertex slerp polyline.
+    const a = { lat: 40, lon: -30 };
+    const b = { lat: 45, lon: -20 };
+    setSearouteForTesting(() => {
+      throw new Error('searoute should not be called on a GC-safe pair');
+    });
+    try {
+      const route = await computeSeaRoute(a, b);
+      expect(route).not.toBeNull();
+      if (!route) return;
+      // Adaptive GC samples at 64 steps → 65 vertices.
+      expect(route.coordinates.length).toBe(65);
+      // Endpoints are the raw ports (no cell-centre snap on the GC branch).
+      expect(route.coordinates[0][0]).toBeCloseTo(a.lon, 5);
+      expect(route.coordinates[0][1]).toBeCloseTo(a.lat, 5);
+      expect(route.coordinates[route.coordinates.length - 1][0]).toBeCloseTo(b.lon, 5);
+      expect(route.coordinates[route.coordinates.length - 1][1]).toBeCloseTo(b.lat, 5);
+    } finally {
+      setSearouteForTesting(null);
+    }
+  }, 30000);
+
+  it('honours a searoute stub polyline whose segments stay clear of land', async () => {
+    if (!maskExists) return;
+    // Hamburg ↔ NYC is the canonical transatlantic case: fine-GC reports
+    // land hits (Iceland / Greenland on the direct path), pipeline
+    // proceeds to searoute-ts. Stub returns a densely-sampled North
+    // Atlantic polyline (~50 km spacing) — short enough that segment-
+    // level land-run analysis stays below the 40 km repair threshold
+    // so the stub is returned verbatim.
+    const hamburg = { lat: 53.551, lon: 9.993 };
+    const nyc = { lat: 40.713, lon: -74.006 };
+    const waypoints: Array<[number, number]> = [
+      [9.993, 53.551],
+      [3.5, 53.6],
+      [-3.0, 51.0], // English Channel exit
+      [-10.0, 48.5],
+      [-20.0, 46.0],
+      [-30.0, 44.0],
+      [-40.0, 43.0],
+      [-50.0, 42.5],
+      [-60.0, 41.8],
+      [-70.0, 41.0],
+      [-74.006, 40.713],
+    ];
+    // Densify every leg to ~50 km spacing so the per-segment land-run
+    // analysis never spans more than a few 0.05° cells of coastline.
+    const stubCoords: [number, number][] = [];
+    for (let i = 0; i < waypoints.length - 1; i++) {
+      const [lonA, latA] = waypoints[i];
+      const [lonB, latB] = waypoints[i + 1];
+      const N = 20;
+      for (let s = 0; s < N; s++) {
+        const t = s / N;
+        stubCoords.push([lonA + (lonB - lonA) * t, latA + (latB - latA) * t]);
+      }
+    }
+    stubCoords.push([nyc.lon, nyc.lat]);
+    setSearouteForTesting(() => ({
+      geometry: { coordinates: stubCoords },
+      properties: { length: 6500 },
+    }));
+    try {
+      const route = await computeSeaRoute(hamburg, nyc);
+      expect(route).not.toBeNull();
+      if (!route) return;
+      // First + last vertices must match the stub (no endpoint-snap
+      // replacement happened — the guard passed).
+      expect(route.coordinates[0]).toEqual(stubCoords[0]);
+      expect(route.coordinates[route.coordinates.length - 1]).toEqual(
+        stubCoords[stubCoords.length - 1],
+      );
+      // Polyline length stays near the stub's length (repairs may have
+      // stitched minor detours but we didn't fall into whole-route A*,
+      // which would produce a materially different shape).
+      expect(route.coordinates.length).toBeGreaterThan(50);
+    } finally {
+      setSearouteForTesting(null);
+    }
+  }, 30000);
+
+  it('rejects a searoute stub whose endpoint snaps far from the port and falls back to 0.1° A*', async () => {
+    if (!maskExists) return;
+    // Classic Miami ↔ Nassau smell: stub returns a polyline that starts
+    // ~400 km away from Miami (graph sparseness). Endpoint-snap guard
+    // must reject and fall through to whole-route A*.
+    const miami = { lat: 25.77, lon: -80.19 };
+    const nassau = { lat: 25.05, lon: -77.35 };
+    const stubCoords: [number, number][] = [
+      [-76.0, 23.0], // ~430 km SE of Miami — obvious snap failure
+      [-76.5, 24.5],
+      [nassau.lon, nassau.lat],
+    ];
+    setSearouteForTesting(() => ({
+      geometry: { coordinates: stubCoords },
+      properties: { length: 400 },
+    }));
+    try {
+      const route = await computeSeaRoute(miami, nassau);
+      expect(route).not.toBeNull();
+      if (!route) return;
+      // A* output must start at or very close to Miami, not at -76/23.
+      const firstDelta = Math.hypot(
+        route.coordinates[0][0] - miami.lon,
+        route.coordinates[0][1] - miami.lat,
+      );
+      expect(firstDelta).toBeLessThan(1.5); // well within 150 km
+    } finally {
+      setSearouteForTesting(null);
+    }
   }, 30000);
 
   it('routes Istanbul → Odesa through the Bosporus (canal override)', async () => {
