@@ -194,9 +194,24 @@ frontend/src/
   Zod rejects the union where both are unset. The stops editor on the
   frontend must renumber `dayNumber` as `index + 1` after add/remove/reorder
   so numbering stays consecutive.
-- **Cruise arcs are cosmetic** — `buildCruiseArc` uses a Bezier perpendicular
-  offset, not real sea-route pathfinding. Curves may cross continents;
-  documented, deferred to V2.
+- **Cruise sea-routes** — `backend/src/services/seaRouter.ts` runs the
+  Hybrid v2 pipeline (fine 0.05° great-circle safety → `searoute-ts`
+  with endpoint-snap guard + known-pass whitelist → local 0.05° A*
+  repair of segment land-runs → whole-route 0.1° A* fallback). Frontend
+  fetches the resulting GeoJSON LineString per leg via
+  `GET /api/v1/cruises/:id/geometry` (cached in `CruiseRouteCache`,
+  `CACHE_VERSION` bumps when behaviour changes). `buildCruiseArc` on
+  the frontend is a Bezier-offset **fallback only**, used when the
+  backend returns no geometry for a leg (landlocked port, disconnected
+  seas). Prototype iteration for routing algorithms lives in
+  `tools/sea-route-lab/` — not wired into the app, browser-only.
+- **searoute-ts packaging** — the npm package is shipped as ESM with
+  an extensionless internal import (`./lib/utils`) that Node's ESM
+  loader rejects, plus a stray `console.log(nearestLineIndex)` in the
+  request hot path. Both are patched by `backend/scripts/patch-searoute-ts.mjs`
+  which runs via the `postinstall` hook. If tests fail with
+  `ERR_MODULE_NOT_FOUND` on searoute-ts after an `npm install`, the
+  patch didn't run — check the postinstall output.
 - **Ship + Port seeds are idempotent** — `seedShipsFromCSV` /
   `seedPortsFromCSV` skip rows whose `imo` / `unlocode` already exists.
   User-added rows (`isUserAdded=true`) are never overwritten by
@@ -280,7 +295,7 @@ Docker Compose paths, local port mappings.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **TravStats** (3061 symbols, 7569 relationships, 226 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **TravStats** (3202 symbols, 8153 relationships, 235 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
