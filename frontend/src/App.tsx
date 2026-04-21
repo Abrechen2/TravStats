@@ -219,8 +219,13 @@ function AppContent() {
               <Route path="/change-password" element={<ForceChangePasswordPage />} />
 
               {/* Protected routes */}
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route
-                path="/"
+                path="/dashboard"
+                element={isAuthenticated ? <DashboardPage /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/dashboard/:tab"
                 element={isAuthenticated ? <DashboardPage /> : <Navigate to="/login" />}
               />
               <Route
