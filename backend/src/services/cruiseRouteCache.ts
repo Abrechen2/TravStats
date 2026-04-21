@@ -46,8 +46,12 @@ import { computeSeaRoute } from './seaRouter';
  *       1 cell closed Øresund / Danish Straits and killed every
  *       Baltic leg). Behaves like v4. Version bumped so v5 rows
  *       written during the experiment get discarded and recomputed.
+ *   7 = Hybrid v2 pipeline (sea-route lab winner): fine 0.05° GC
+ *       safety check → searoute-ts (Eurostat marnet) + endpoint-snap
+ *       guard + local 0.05° A* repair → whole-route 0.1° A* as last
+ *       resort. Replaces the pure 0.1° A*-only approach of v6.
  */
-export const CACHE_VERSION = 6;
+export const CACHE_VERSION = 7;
 
 export interface RouteLineString {
   type: 'LineString';
