@@ -128,5 +128,27 @@
     "flight": "Flug",
     "cruise": "Kreuzfahrt",
     "poi": "POI"
+  },
+  "controls": {
+    "mode": "Modus",
+    "filter": "Filter",
+    "addPerTab": {
+      "flight": "Flug hinzufügen",
+      "cruise": "Kreuzfahrt hinzufügen",
+      "poi": "POI hinzufügen"
+    }
+  },
+  "modes": {
+    "overview": "Übersicht",
+    "heatmap": "Heatmap",
+    "journey": "Reise",
+    "globe": "Globus",
+    "routes": "Routen",
+    "stats-map": "Flughafen-Frequenz",
+    "trips": "Trips",
+    "sea-routes": "Seerouten",
+    "itinerary": "Itinerar",
+    "port-frequency": "Hafen-Frequenz",
+    "markers": "Marker"
   }
 }

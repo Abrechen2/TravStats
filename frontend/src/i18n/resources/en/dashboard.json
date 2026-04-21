@@ -128,5 +128,27 @@
     "flight": "Flight",
     "cruise": "Cruise",
     "poi": "POI"
+  },
+  "controls": {
+    "mode": "Mode",
+    "filter": "Filter",
+    "addPerTab": {
+      "flight": "Add flight",
+      "cruise": "Add cruise",
+      "poi": "Add POI"
+    }
+  },
+  "modes": {
+    "overview": "Overview",
+    "heatmap": "Heatmap",
+    "journey": "Journey",
+    "globe": "Globe",
+    "routes": "Routes",
+    "stats-map": "Airport frequency",
+    "trips": "Trips",
+    "sea-routes": "Sea routes",
+    "itinerary": "Itinerary",
+    "port-frequency": "Port frequency",
+    "markers": "Markers"
   }
 }
