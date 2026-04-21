@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useDashboardRoute } from "../../../hooks/useDashboardRoute";
+import { useTranslation } from "../../../hooks/useTranslation";
 import { cruiseApi } from "../../../lib/api/cruise";
 import { flightsApi } from "../../../lib/api/flights";
 import { logger } from "../../../lib/logger";
@@ -11,6 +12,7 @@ import { ALL_MODES } from "../../../types/dashboard";
 import type { VisMode } from "../../../types/visMode";
 import MapContainer3D from "../../MapContainer3D";
 import { buildJourneyLayers } from "../modes/buildJourneyLayers";
+import { UnifiedActivityPanel } from "../sidebars/UnifiedActivityPanel";
 import type { Layer } from "@deck.gl/core";
 
 // Maps the dashboard-level AllMode to what MapContainer3D's visMode prop expects.
@@ -38,8 +40,10 @@ function isAllMode(mode: unknown): mode is AllMode {
 
 export function AllTab(): JSX.Element {
   const { mode, setMode } = useDashboardRoute();
+  const { t } = useTranslation(["dashboard"]);
   const [flights, setFlights] = useState<GeoJSONFeature[]>([]);
   const [cruises, setCruises] = useState<Cruise[]>([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -97,6 +101,36 @@ export function AllTab(): JSX.Element {
     [setMode]
   );
 
+  const sidebarToggleButton = (
+    <button
+      type="button"
+      onClick={() => setSidebarOpen((prev) => !prev)}
+      style={{
+        position: "absolute",
+        top: 12,
+        left: 12,
+        zIndex: 30,
+        padding: "6px 12px",
+        borderRadius: 10,
+        background: "rgba(22,27,34,0.85)",
+        color: "var(--text-primary)",
+        border: "1px solid var(--color-border)",
+        cursor: "pointer",
+      }}
+    >
+      ☰ {t("dashboard:sidebar.activity")}
+    </button>
+  );
+
+  const activityPanel = (
+    <UnifiedActivityPanel
+      flights={flights}
+      cruises={cruises}
+      isOpen={sidebarOpen}
+      onClose={() => setSidebarOpen(false)}
+    />
+  );
+
   // Journey mode takes over the map entirely: it injects its own cross-domain
   // layers and suppresses the internal cruise arcs that MapContainer3D would
   // otherwise render, so only the selected trip is shown.
@@ -110,6 +144,8 @@ export function AllTab(): JSX.Element {
           extraLayers={journeyLayers}
           showInternalCruises={false}
         />
+        {sidebarToggleButton}
+        {activityPanel}
       </div>
     );
   }
@@ -117,6 +153,8 @@ export function AllTab(): JSX.Element {
   return (
     <div style={{ position: "absolute", inset: 0 }}>
       <MapContainer3D flights={flights} visMode={visMode} onVisModeChange={handleVisModeChange} />
+      {sidebarToggleButton}
+      {activityPanel}
     </div>
   );
 }

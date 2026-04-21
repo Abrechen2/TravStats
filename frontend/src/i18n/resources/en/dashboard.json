@@ -160,5 +160,12 @@
     "disabled": "The POI domain is not yet enabled. Activate it under Settings → Domains.",
     "enabledEmpty": "No POIs yet.",
     "goToSettings": "Open settings"
+  },
+  "sidebar": {
+    "cruises": "Cruises",
+    "activity": "Activity",
+    "ports": "ports",
+    "emptyCruises": "No cruises yet.",
+    "emptyActivity": "No activity yet."
   }
 }

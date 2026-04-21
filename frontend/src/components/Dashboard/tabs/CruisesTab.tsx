@@ -3,11 +3,13 @@ import type { JSX } from "react";
 import { ScatterplotLayer, TextLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
 import { useDashboardRoute } from "../../../hooks/useDashboardRoute";
+import { useTranslation } from "../../../hooks/useTranslation";
 import { cruiseApi } from "../../../lib/api/cruise";
 import { logger } from "../../../lib/logger";
 import type { Cruise } from "../../../types/cruise";
 import MapContainer3D from "../../MapContainer3D";
 import { buildPortFrequencyLayer } from "../modes/buildPortFrequencyLayer";
+import { CruiseListPanel } from "../sidebars/CruiseListPanel";
 
 interface ItineraryDot {
   lat: number;
@@ -18,7 +20,9 @@ interface ItineraryDot {
 
 export function CruisesTab(): JSX.Element {
   const { mode } = useDashboardRoute();
+  const { t } = useTranslation(["dashboard"]);
   const [cruises, setCruises] = useState<Cruise[]>([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -97,6 +101,29 @@ export function CruisesTab(): JSX.Element {
         }}
         extraLayers={extraLayers}
         showInternalCruises={showInternalCruises}
+      />
+      <button
+        type="button"
+        onClick={() => setSidebarOpen((prev) => !prev)}
+        style={{
+          position: "absolute",
+          top: 12,
+          left: 12,
+          zIndex: 30,
+          padding: "6px 12px",
+          borderRadius: 10,
+          background: "rgba(22,27,34,0.85)",
+          color: "var(--text-primary)",
+          border: "1px solid var(--color-border)",
+          cursor: "pointer",
+        }}
+      >
+        ☰ {t("dashboard:sidebar.cruises")}
+      </button>
+      <CruiseListPanel
+        cruises={cruises}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
     </div>
   );
