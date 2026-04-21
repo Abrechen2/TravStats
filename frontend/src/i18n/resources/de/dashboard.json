@@ -122,5 +122,11 @@
       "cruise": "Kreuzfahrten",
       "poi": "POIs"
     }
+  },
+  "addPicker": {
+    "button": "Hinzufügen",
+    "flight": "Flug",
+    "cruise": "Kreuzfahrt",
+    "poi": "POI"
   }
 }

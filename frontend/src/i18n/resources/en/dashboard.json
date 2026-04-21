@@ -122,5 +122,11 @@
       "cruise": "Cruises",
       "poi": "POIs"
     }
+  },
+  "addPicker": {
+    "button": "Add",
+    "flight": "Flight",
+    "cruise": "Cruise",
+    "poi": "POI"
   }
 }
