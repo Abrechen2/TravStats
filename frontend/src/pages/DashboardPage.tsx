@@ -3,6 +3,7 @@ import { useLocation, Link } from "react-router-dom";
 import type { VisMode } from "../types/visMode";
 
 import { flightsApi } from "../lib/api";
+import { cruiseApi } from "../lib/api/cruise";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { useToastStore } from "../store/toastStore";
 import { logger } from "../lib/logger";
@@ -19,6 +20,7 @@ import AchievementPopup from "../components/AchievementPopup";
 import HelpIcon from "../components/Help/HelpIcon";
 import { useClickOutside } from "../hooks/useClickOutside";
 import type { Flight, FlightInput, FlightFilters, GeoJSONFeature } from "../types";
+import type { Cruise } from "../types/cruise";
 import { API_LIMITS } from "../lib/constants";
 import { toCsv, escapeXml, downloadBlob } from "../lib/export";
 import { motion, AnimatePresence } from "framer-motion";
@@ -31,6 +33,7 @@ export default function DashboardPage(): JSX.Element {
   const [allFlights, setFlights] = useState<Flight[]>([]); // Filtered flights for map (not directly rendered)
   const [recentFlights, setRecentFlights] = useState<Flight[]>([]); // Unfiltered recent flights for sidebar
   const [totalFlightsCount, setTotalFlightsCount] = useState(0); // Total number of all flights
+  const [cruises, setCruises] = useState<Cruise[]>([]); // Cruise list for the dashboard pill (only loaded when the cruise domain is enabled)
   const [geoFlights, setGeoFlights] = useState<GeoJSONFeature[]>([]);
   const [showFlightForm, setShowFlightForm] = useState(false);
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
@@ -102,6 +105,42 @@ export default function DashboardPage(): JSX.Element {
   useEffect(() => {
     loadRecentFlights();
   }, [loadRecentFlights]);
+
+  // Cruise list for the top-left pill. Skipped entirely when the domain
+  // is off so we never spend a request on it.
+  useEffect(() => {
+    if (!isEnabled("cruise")) {
+      setCruises([]);
+      return;
+    }
+    let cancelled = false;
+    cruiseApi
+      .list({ sort: "date" })
+      .then((list) => {
+        if (!cancelled) setCruises(list);
+      })
+      .catch((error) => {
+        logger.error("Failed to load cruises for dashboard pill:", error);
+      });
+    return (): void => {
+      cancelled = true;
+    };
+  }, [isEnabled]);
+
+  // Derive the "next upcoming cruise" label once per cruises change.
+  const nextUpcomingCruise = ((): Cruise | null => {
+    const nowMs = Date.now();
+    let best: { cruise: Cruise; startMs: number } | null = null;
+    for (const c of cruises) {
+      if (c.status !== "scheduled") continue;
+      if (!c.startDate) continue;
+      const startMs = Date.parse(c.startDate);
+      if (Number.isNaN(startMs)) continue;
+      if (startMs < nowMs) continue;
+      if (best === null || startMs < best.startMs) best = { cruise: c, startMs };
+    }
+    return best?.cruise ?? null;
+  })();
 
   const loadFlights = useCallback(async () => {
     try {
@@ -754,6 +793,44 @@ export default function DashboardPage(): JSX.Element {
                 </svg>
                 <span className="hidden sm:inline">{t("dashboard:stats")}</span>
               </button>
+              {isEnabled("cruise") && (
+                <Link
+                  to="/cruises"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium backdrop-blur-md transition-all no-underline"
+                  style={{
+                    background: "rgba(22,27,34,0.85)",
+                    border: "1px solid var(--color-border)",
+                    color: "var(--text-primary)",
+                  }}
+                  title={
+                    nextUpcomingCruise
+                      ? t("dashboard:cruiseNext", {
+                          name:
+                            nextUpcomingCruise.ship?.name ||
+                            nextUpcomingCruise.shipNameOverride ||
+                            nextUpcomingCruise.cruiseLine ||
+                            t("dashboard:cruises"),
+                          date: nextUpcomingCruise.startDate
+                            ? new Date(nextUpcomingCruise.startDate).toLocaleDateString()
+                            : "",
+                        })
+                      : t("dashboard:cruisesTitle")
+                  }
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 17l4-8h10l4 8M5 17h14M10 9V5h4v4M12 17v3"
+                    />
+                  </svg>
+                  <span className="hidden sm:inline">{t("dashboard:cruises")}</span>
+                  {cruises.length > 0 && (
+                    <span className="text-xs font-mono opacity-75">{cruises.length}</span>
+                  )}
+                </Link>
+              )}
             </div>
 
             {/* Floating Top-Right Controls: add, export */}
