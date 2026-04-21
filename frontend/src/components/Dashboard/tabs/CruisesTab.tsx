@@ -7,6 +7,7 @@ import { cruiseApi } from "../../../lib/api/cruise";
 import { logger } from "../../../lib/logger";
 import type { Cruise } from "../../../types/cruise";
 import MapContainer3D from "../../MapContainer3D";
+import { buildPortFrequencyLayer } from "../modes/buildPortFrequencyLayer";
 
 interface ItineraryDot {
   lat: number;
@@ -74,17 +75,18 @@ export function CruisesTab(): JSX.Element {
     ];
   }, [cruises, mode]);
 
-  // For sea-routes / port-frequency: MapContainer3D renders the cruise arcs
-  // internally via showInternalCruises=true (default). The CruisesTab owns
-  // the cruise fetch here, so we suppress the internal cruise fetch in
-  // MapContainer3D (showInternalCruises=false) and instead pass the
-  // already-fetched cruise list via the extraLayers pathway for itinerary
-  // mode. For sea-routes and port-frequency (stub until Task 15),
-  // MapContainer3D's internal cruise rendering is re-enabled by passing
-  // the cruises prop is not needed — the internal fetch does it.
-  // HOWEVER: since we manage the fetch here to avoid double-fetching,
-  // we still pass showInternalCruises=true so the arcs layer renders the
-  // A* geometry. The CruisesTab's own fetch is purely for itinerary dots.
+  const portFrequencyLayers = useMemo<Layer[]>(() => {
+    if (mode !== "port-frequency") return [];
+    return [buildPortFrequencyLayer(cruises)];
+  }, [cruises, mode]);
+
+  const extraLayers =
+    mode === "itinerary" ? itineraryLayers : mode === "port-frequency" ? portFrequencyLayers : [];
+
+  // In port-frequency mode, suppress the internal cruise arcs so the
+  // frequency markers are not obscured by route overlays.
+  const showInternalCruises = mode !== "port-frequency";
+
   return (
     <div style={{ position: "absolute", inset: 0 }}>
       <MapContainer3D
@@ -93,7 +95,8 @@ export function CruisesTab(): JSX.Element {
         onVisModeChange={() => {
           /* cruise tab manages its own mode via useDashboardRoute */
         }}
-        extraLayers={itineraryLayers}
+        extraLayers={extraLayers}
+        showInternalCruises={showInternalCruises}
       />
     </div>
   );
