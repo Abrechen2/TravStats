@@ -160,5 +160,12 @@
     "disabled": "Die POI-Domain ist noch nicht aktiviert. Schalte sie unter Einstellungen → Domains frei.",
     "enabledEmpty": "Noch keine POIs erfasst.",
     "goToSettings": "Zu den Einstellungen"
+  },
+  "sidebar": {
+    "cruises": "Kreuzfahrten",
+    "activity": "Aktivität",
+    "ports": "Häfen",
+    "emptyCruises": "Noch keine Kreuzfahrten.",
+    "emptyActivity": "Noch keine Aktivität."
   }
 }
