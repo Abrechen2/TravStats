@@ -194,14 +194,16 @@ frontend/src/
   Zod rejects the union where both are unset. The stops editor on the
   frontend must renumber `dayNumber` as `index + 1` after add/remove/reorder
   so numbering stays consecutive.
+- **Dashboard is multi-domain** — `frontend/src/pages/DashboardPage.tsx` is a thin shell delegating to per-tab components under `frontend/src/components/Dashboard/tabs/`. Tab modes are domain-scoped via `frontend/src/types/dashboard.ts` (no more global `VisMode` union). URL carries tab + mode (`/dashboard/<tab>?mode=<mode>`); `localStorage` remembers the last mode per domain. `MapContainer3D` uses a private `MapMode = "routes" | "heatmap" | "trips" | "globe"` internally; retired modes `hexagon`, `contour`, `columns`, `trip-routes` are gone. Flight-only modes are opt-in via `showInternalCruises={false}` on FlightsTab.
 - **Cruise sea-routes** — `backend/src/services/seaRouter.ts` runs the
   Hybrid v2 pipeline (fine 0.05° great-circle safety → `searoute-ts`
   with endpoint-snap guard + known-pass whitelist → local 0.05° A*
   repair of segment land-runs → whole-route 0.1° A* fallback). Frontend
   fetches the resulting GeoJSON LineString per leg via
   `GET /api/v1/cruises/:id/geometry` (cached in `CruiseRouteCache`,
-  `CACHE_VERSION` bumps when behaviour changes). `buildCruiseArc` on
-  the frontend is a Bezier-offset **fallback only**, used when the
+  `CACHE_VERSION` bumps when behaviour changes). The dashboard Cruises
+  tab consumes the Hybrid v2 geometry via `MapContainer3D`. `buildCruiseArc`
+  on the frontend is a Bezier-offset **fallback only**, used when the
   backend returns no geometry for a leg (landlocked port, disconnected
   seas). Prototype iteration for routing algorithms lives in
   `tools/sea-route-lab/` — not wired into the app, browser-only.
@@ -295,7 +297,7 @@ Docker Compose paths, local port mappings.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **TravStats** (3202 symbols, 8153 relationships, 235 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **TravStats** (3407 symbols, 8612 relationships, 252 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
