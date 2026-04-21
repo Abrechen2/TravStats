@@ -82,6 +82,25 @@ describe("useDashboardRoute", () => {
     });
     const stored = JSON.parse(window.localStorage.getItem(LAST_MODE_KEY) ?? "{}");
     expect(stored.flight).toBe("heatmap");
+    expect(result.current.mode).toBe("heatmap");
+  });
+
+  it("setTab navigates to tab-specific URL, or /dashboard for 'all'", async () => {
+    const { result, rerender } = renderHook(() => useDashboardRoute(), {
+      wrapper: wrapper(["/dashboard/flight"]),
+    });
+    expect(result.current.tab).toBe("flight");
+    act(() => {
+      result.current.setTab("cruise");
+    });
+    rerender();
+    expect(result.current.tab).toBe("cruise");
+
+    act(() => {
+      result.current.setTab("all");
+    });
+    rerender();
+    expect(result.current.tab).toBe("all");
   });
 
   it("obsolete localStorage mode name ignored in favour of tab default", () => {
