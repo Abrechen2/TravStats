@@ -54,6 +54,8 @@ export function useDashboardRoute(): DashboardRouteState {
     }
   }, [rawTab, navigate]);
 
+  // Single-tab semantics: changes from another tab/window propagate only on the
+  // next URL change in this tab — we do not listen for `storage` events.
   const mode: DashboardMode = useMemo(() => {
     const urlMode = search.get("mode");
     if (urlMode && isModeForTab(tab, urlMode)) return urlMode;
