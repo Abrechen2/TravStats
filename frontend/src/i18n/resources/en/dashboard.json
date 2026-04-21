@@ -146,5 +146,11 @@
     "itinerary": "Itinerary",
     "port-frequency": "Port frequency",
     "markers": "Markers"
+  },
+  "poi": {
+    "title": "POIs coming soon",
+    "disabled": "The POI domain is not yet enabled. Activate it under Settings → Domains.",
+    "enabledEmpty": "No POIs yet.",
+    "goToSettings": "Open settings"
   }
 }
