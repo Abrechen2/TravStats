@@ -68,4 +68,13 @@ describe("intervalOverlapsRange", () => {
     expect(intervalOverlapsRange("2020-01-01", "2020-01-31", null, "2024-12-31")).toBe(true);
     expect(intervalOverlapsRange("2030-01-01", "2030-01-31", "2024-01-01", null)).toBe(true);
   });
+  it("treats NaN-producing date strings as unbounded (cruise stays visible)", () => {
+    expect(intervalOverlapsRange("not-a-date", "2024-06-14", "2024-01-01", "2024-12-31")).toBe(
+      true
+    );
+    expect(
+      intervalOverlapsRange("2024-06-01", "still-not-a-date", "2024-01-01", "2024-12-31")
+    ).toBe(true);
+    expect(intervalOverlapsRange("2024-06-01", "2024-06-14", "", "")).toBe(true);
+  });
 });
