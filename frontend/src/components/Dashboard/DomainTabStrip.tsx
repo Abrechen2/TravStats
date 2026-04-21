@@ -49,6 +49,7 @@ export function DomainTabStrip({
             key={tab}
             role="tab"
             aria-selected={isActive}
+            aria-disabled={isDisabled}
             data-disabled={isDisabled ? "true" : "false"}
             onClick={() => onSelect(tab)}
             style={{
