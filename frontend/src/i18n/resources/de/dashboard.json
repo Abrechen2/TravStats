@@ -91,10 +91,6 @@
   "sortStatus": "Status",
   "flightsTitle": "Flüge",
   "statsTitle": "Statistiken",
-  "cruises": "Kreuzfahrten",
-  "cruisesTitle": "Kreuzfahrten öffnen",
-  "cruiseNext": "Nächste: {{name}} · {{date}}",
-  "cruiseNoneUpcoming": "Keine anstehenden Kreuzfahrten",
   "unknownDate": "Unbekanntes Datum",
   "trips": {
     "noTrips": "Keine Trips vorhanden",
