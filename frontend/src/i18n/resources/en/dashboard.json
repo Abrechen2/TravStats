@@ -91,10 +91,6 @@
   "sortStatus": "Status",
   "flightsTitle": "Flights",
   "statsTitle": "Stats",
-  "cruises": "Cruises",
-  "cruisesTitle": "Open cruises",
-  "cruiseNext": "Next: {{name}} · {{date}}",
-  "cruiseNoneUpcoming": "No upcoming cruises",
   "unknownDate": "Unknown date",
   "trips": {
     "noTrips": "No trips yet",
