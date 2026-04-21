@@ -113,5 +113,14 @@
   "routeDetails": "Route-Details",
   "tripDetails": "Trip-Details",
   "flown": "geflogen",
-  "flightsOnRoute": "Flüge auf dieser Route"
+  "flightsOnRoute": "Flüge auf dieser Route",
+  "tabStrip": {
+    "label": "Bereichswahl",
+    "tabs": {
+      "all": "Alle",
+      "flight": "Flüge",
+      "cruise": "Kreuzfahrten",
+      "poi": "POIs"
+    }
+  }
 }
