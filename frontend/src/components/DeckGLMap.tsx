@@ -1,17 +1,13 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import MapGL, { useControl, type MapRef, type MapLayerMouseEvent } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
-import { LightingEffect, AmbientLight, DirectionalLight } from "@deck.gl/core";
+import { LightingEffect } from "@deck.gl/core";
 import type { Layer, MapViewState } from "@deck.gl/core";
 import type { Cruise, GeoJSONFeature, Flight } from "../types";
-import type { VisMode } from "../types/visMode";
+import type { MapMode } from "./MapContainer3D";
 import { createRoutesLayers } from "./layers/routesLayer";
 import { createHeatmapLayer } from "./layers/heatmapLayer";
-import { createHexagonLayer } from "./layers/hexagonLayer";
-import { createColumnsLayer } from "./layers/columnsLayer";
 import { createTripsLayer, buildTripsData, getTimeRange } from "./layers/tripsLayer";
-import { createContourLayer } from "./layers/contourLayer";
-import { createTripRoutesLayer } from "./layers/tripRoutesLayer";
 import { createCruiseArcsLayer, type CruiseGeometryMap } from "./layers/cruiseArcsLayer";
 import { createCruisePortsLayer } from "./layers/cruisePortsLayer";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../lib/api/cruise";
@@ -58,15 +54,6 @@ const INITIAL_VIEW_STATE: MapViewState = {
 const LIGHT_MAP_STYLE = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
-// Lighting effect for 3D modes — creates shadows/highlights on hexagons and columns
-const ambientLight = new AmbientLight({ color: [255, 255, 255], intensity: 0.6 });
-const directionalLight = new DirectionalLight({
-  color: [255, 255, 255],
-  intensity: 1.8,
-  direction: [-2, -3, -1],
-});
-const lightingEffect = new LightingEffect({ ambientLight, directionalLight });
-
 interface DeckOverlayProps {
   layers: Layer[];
   effects: LightingEffect[];
@@ -83,7 +70,7 @@ function DeckGLOverlay({ layers, effects }: DeckOverlayProps): null {
 
 interface DeckGLMapProps {
   flights: GeoJSONFeature[];
-  visMode: VisMode;
+  visMode: MapMode;
   minRouteCount?: number;
   onFlightClick?: (flightId: string) => void;
   onRouteClick?: (flightIds: string[]) => void;
@@ -171,14 +158,6 @@ export function DeckGLMap({
   // Store subscription
   const { selectedIds, selectedFlights, highlightMode, clearSelection, showDetails } =
     useFlightSelectionStore();
-
-  // Auto-pitch: 3D layers need pitch > 0 to be visible
-  useEffect(() => {
-    const map = mapRef.current?.getMap();
-    if (!map) return;
-    const is3D = visMode === "hexagon" || visMode === "columns";
-    map.easeTo({ pitch: is3D ? 45 : 0, duration: 600 });
-  }, [visMode]);
 
   // Reset playing state when leaving trips mode (Bug 3)
   useEffect(() => {
@@ -403,29 +382,12 @@ export function DeckGLMap({
       case "heatmap":
         base = [createHeatmapLayer(flights)];
         break;
-      case "hexagon":
-        base = [createHexagonLayer(flights, themeColors)];
-        break;
-      case "columns":
-        base = [createColumnsLayer(flights, themeColors)];
-        break;
       case "trips":
         base = [createTripsLayer(trips, currentTime)];
         break;
-      case "contour":
-        base = [createContourLayer(flights)];
-        break;
-      case "trip-routes":
-        base = createTripRoutesLayer(
-          flightList ?? [],
-          tripList ?? [],
-          activeTripId,
-          handleFlightClick,
-          selectedIds,
-          handleAirportClick
-        );
-        break;
       default:
+        // "globe" is handled by MapContainer3D (GlobeView); DeckGLMap is not
+        // rendered in that mode. All other values are exhaustively covered above.
         base = [];
     }
 
@@ -459,11 +421,9 @@ export function DeckGLMap({
     extraLayers,
   ]);
 
-  // Only enable lighting for 3D modes where it makes a visual difference
-  const effects = useMemo(
-    () => (visMode === "hexagon" || visMode === "columns" ? [lightingEffect] : []),
-    [visMode]
-  );
+  // No 3D modes remain — lighting effect is unused but kept as empty array for
+  // the DeckGLOverlay API.
+  const effects: LightingEffect[] = [];
 
   const handleTimeChange = useCallback((value: number | ((prev: number) => number)): void => {
     setCurrentTime((prev) => (typeof value === "function" ? value(prev) : value));
@@ -567,7 +527,7 @@ export function DeckGLMap({
           flights={selectedFlights}
           screenX={tooltipPos.x}
           screenY={tooltipPos.y}
-          mode={visMode === "trip-routes" ? "trip-routes" : "routes"}
+          mode="routes"
           onClose={() => {
             clearSelection();
             setTooltipVisible(false);
@@ -575,10 +535,7 @@ export function DeckGLMap({
           }}
           onShowDetails={() => {
             setTooltipVisible(false);
-            showDetails(
-              selectedFlights,
-              visMode === "trip-routes" ? "trip-details" : "route-details"
-            );
+            showDetails(selectedFlights, "route-details");
           }}
         />
       )}

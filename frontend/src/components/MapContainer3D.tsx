@@ -3,8 +3,13 @@ import { DeckGLMap } from "./DeckGLMap";
 import { GlobeLoader } from "./GlobeLoader";
 import { VisModeSelector } from "./VisModeSelector";
 import type { Cruise, GeoJSONFeature, Flight, Trip } from "../types";
-import type { VisMode } from "../types/visMode";
 import type { Layer } from "@deck.gl/core";
+
+/**
+ * The narrow set of map-rendering modes that MapContainer3D actually implements.
+ * Replaces the retired global VisMode union — callers import this type instead.
+ */
+export type MapMode = "routes" | "heatmap" | "trips" | "globe";
 import { useTranslation } from "../hooks/useTranslation";
 import { useThemeStore } from "../store/themeStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
@@ -27,8 +32,8 @@ interface MapContainer3DProps {
   onFlightClick?: (flightId: string) => void;
   onRouteClick?: (flightIds: string[]) => void;
   onEdit?: (flight: Flight) => void;
-  visMode: VisMode;
-  onVisModeChange: (mode: VisMode) => void;
+  visMode: MapMode;
+  onVisModeChange: (mode: MapMode) => void;
   minRouteCount?: number;
   filterSlot?: React.ReactNode;
   activeTripId?: string | null;

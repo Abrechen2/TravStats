@@ -9,8 +9,7 @@ import type { GeoJSONFeature } from "../../../types";
 import type { Cruise } from "../../../types/cruise";
 import type { AllMode } from "../../../types/dashboard";
 import { ALL_MODES } from "../../../types/dashboard";
-import type { VisMode } from "../../../types/visMode";
-import MapContainer3D from "../../MapContainer3D";
+import MapContainer3D, { type MapMode } from "../../MapContainer3D";
 import { buildJourneyLayers } from "../modes/buildJourneyLayers";
 import { UnifiedActivityPanel } from "../sidebars/UnifiedActivityPanel";
 import type { Layer } from "@deck.gl/core";
@@ -18,17 +17,17 @@ import type { Layer } from "@deck.gl/core";
 // Maps the dashboard-level AllMode to what MapContainer3D's visMode prop expects.
 // "journey" uses extraLayers with showInternalCruises=false so it has full
 // control over which trip is rendered.
-const ALL_MODE_TO_VIS_MODE: Record<AllMode, VisMode> = {
+const ALL_MODE_TO_MAP_MODE: Record<AllMode, MapMode> = {
   overview: "routes",
   heatmap: "heatmap",
   journey: "routes",
   globe: "globe",
 };
 
-// Reverse-maps VisMode back to the closest AllMode so the VisModeSelector
+// Reverse-maps MapMode back to the closest AllMode so the VisModeSelector
 // inside MapContainer3D can keep the URL in sync when the user changes mode
 // from within the map controls.
-const VIS_MODE_TO_ALL_MODE: Partial<Record<VisMode, AllMode>> = {
+const MAP_MODE_TO_ALL_MODE: Partial<Record<MapMode, AllMode>> = {
   routes: "overview",
   heatmap: "heatmap",
   globe: "globe",
@@ -80,7 +79,7 @@ export function AllTab(): JSX.Element {
   // active mode is from a different tab (shouldn't happen in practice but keeps
   // types sound).
   const allMode: AllMode = isAllMode(mode) ? mode : "overview";
-  const visMode = ALL_MODE_TO_VIS_MODE[allMode];
+  const visMode = ALL_MODE_TO_MAP_MODE[allMode];
 
   // Journey layers: built only when journey mode is active. Renders the first
   // trip that has both flights and/or cruises sharing a tripId.  When the
@@ -92,8 +91,8 @@ export function AllTab(): JSX.Element {
   }, [allMode, flights, cruises]);
 
   const handleVisModeChange = useCallback(
-    (next: VisMode): void => {
-      const mapped = VIS_MODE_TO_ALL_MODE[next];
+    (next: MapMode): void => {
+      const mapped = MAP_MODE_TO_ALL_MODE[next];
       if (mapped !== undefined) {
         setMode(mapped);
       }

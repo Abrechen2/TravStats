@@ -6,23 +6,22 @@ import { flightsApi } from "../../../lib/api/flights";
 import { logger } from "../../../lib/logger";
 import type { GeoJSONFeature } from "../../../types";
 import type { FlightMode } from "../../../types/dashboard";
-import type { VisMode } from "../../../types/visMode";
-import MapContainer3D from "../../MapContainer3D";
+import MapContainer3D, { type MapMode } from "../../MapContainer3D";
 import { buildStatsMapLayer } from "../modes/buildStatsMapLayer";
 
 // Maps the dashboard-level FlightMode to what MapContainer3D's visMode prop expects.
-// "stats-map" is delivered in Task 14 via extraLayers — falls back to "routes" for now.
-const FLIGHT_MODE_TO_VIS_MODE: Record<FlightMode, VisMode> = {
+// "stats-map" is delivered via extraLayers — the map itself renders in "routes" mode.
+const FLIGHT_MODE_TO_MAP_MODE: Record<FlightMode, MapMode> = {
   routes: "routes",
   heatmap: "heatmap",
   "stats-map": "routes",
   trips: "trips",
 };
 
-// Reverse-maps VisMode back to the closest FlightMode so the VisModeSelector
+// Reverse-maps MapMode back to the closest FlightMode so the VisModeSelector
 // inside MapContainer3D can keep the URL in sync when the user changes mode
 // from within the map controls.
-const VIS_MODE_TO_FLIGHT_MODE: Partial<Record<VisMode, FlightMode>> = {
+const MAP_MODE_TO_FLIGHT_MODE: Partial<Record<MapMode, FlightMode>> = {
   routes: "routes",
   heatmap: "heatmap",
   trips: "trips",
@@ -50,12 +49,12 @@ export function FlightsTab(): JSX.Element {
   // Current dashboard mode narrowed to FlightMode; fall back to "routes" if the
   // active mode is from a different tab (shouldn't happen in practice but keeps
   // types sound).
-  const flightMode = (mode in FLIGHT_MODE_TO_VIS_MODE ? mode : "routes") as FlightMode;
-  const visMode = FLIGHT_MODE_TO_VIS_MODE[flightMode];
+  const flightMode = (mode in FLIGHT_MODE_TO_MAP_MODE ? mode : "routes") as FlightMode;
+  const visMode = FLIGHT_MODE_TO_MAP_MODE[flightMode];
 
   const handleVisModeChange = useCallback(
-    (next: VisMode): void => {
-      const mapped = VIS_MODE_TO_FLIGHT_MODE[next];
+    (next: MapMode): void => {
+      const mapped = MAP_MODE_TO_FLIGHT_MODE[next];
       if (mapped !== undefined) {
         setMode(mapped);
       }
@@ -78,6 +77,7 @@ export function FlightsTab(): JSX.Element {
         visMode={visMode}
         onVisModeChange={handleVisModeChange}
         extraLayers={statsMapLayers}
+        showInternalCruises={false}
       />
     </div>
   );
