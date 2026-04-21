@@ -113,5 +113,14 @@
   "routeDetails": "Route Details",
   "tripDetails": "Trip Details",
   "flown": "flown",
-  "flightsOnRoute": "Flights on this route"
+  "flightsOnRoute": "Flights on this route",
+  "tabStrip": {
+    "label": "Domain switcher",
+    "tabs": {
+      "all": "All",
+      "flight": "Flights",
+      "cruise": "Cruises",
+      "poi": "POIs"
+    }
+  }
 }
