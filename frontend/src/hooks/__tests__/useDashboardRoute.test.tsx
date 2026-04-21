@@ -7,14 +7,17 @@ import type { ReactNode } from "react";
 const LAST_MODE_KEY = "travstats:dashboard:lastMode";
 
 function wrapper(initialEntries: string[]): (props: { children: ReactNode }) => JSX.Element {
-  return ({ children }) => (
-    <MemoryRouter initialEntries={initialEntries}>
-      <Routes>
-        <Route path="/dashboard" element={children} />
-        <Route path="/dashboard/:tab" element={children} />
-      </Routes>
-    </MemoryRouter>
-  );
+  function Wrapper({ children }: { children: ReactNode }): JSX.Element {
+    return (
+      <MemoryRouter initialEntries={initialEntries}>
+        <Routes>
+          <Route path="/dashboard" element={children} />
+          <Route path="/dashboard/:tab" element={children} />
+        </Routes>
+      </MemoryRouter>
+    );
+  }
+  return Wrapper;
 }
 
 describe("useDashboardRoute", () => {
