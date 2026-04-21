@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import type { JSX } from "react";
+import type { Layer } from "@deck.gl/core";
 import { useDashboardRoute } from "../../../hooks/useDashboardRoute";
 import { flightsApi } from "../../../lib/api/flights";
 import { logger } from "../../../lib/logger";
@@ -7,6 +8,7 @@ import type { GeoJSONFeature } from "../../../types";
 import type { FlightMode } from "../../../types/dashboard";
 import type { VisMode } from "../../../types/visMode";
 import MapContainer3D from "../../MapContainer3D";
+import { buildStatsMapLayer } from "../modes/buildStatsMapLayer";
 
 // Maps the dashboard-level FlightMode to what MapContainer3D's visMode prop expects.
 // "stats-map" is delivered in Task 14 via extraLayers — falls back to "routes" for now.
@@ -61,9 +63,22 @@ export function FlightsTab(): JSX.Element {
     [setMode]
   );
 
+  // Build airport-frequency markers when stats-map mode is active.
+  // Memoised so the ScatterplotLayer instance is stable across re-renders
+  // that don't change mode or flight data.
+  const statsMapLayers = useMemo<Layer[]>(() => {
+    if (flightMode !== "stats-map") return [];
+    return [buildStatsMapLayer(flights)];
+  }, [flightMode, flights]);
+
   return (
     <div style={{ position: "absolute", inset: 0 }}>
-      <MapContainer3D flights={flights} visMode={visMode} onVisModeChange={handleVisModeChange} />
+      <MapContainer3D
+        flights={flightMode === "stats-map" ? [] : flights}
+        visMode={visMode}
+        onVisModeChange={handleVisModeChange}
+        extraLayers={statsMapLayers}
+      />
     </div>
   );
 }
