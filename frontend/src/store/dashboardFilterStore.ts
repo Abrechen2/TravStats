@@ -1,22 +1,22 @@
 import { create } from "zustand";
 
 export interface TimeRange {
-  from: string | null; // ISO yyyy-mm-dd
-  to: string | null;
+  readonly from: string | null; // ISO yyyy-mm-dd
+  readonly to: string | null;
 }
 
 export interface FlightFilter {
-  airline?: string;
-  status?: string;
+  readonly airline?: string;
+  readonly status?: string;
 }
 
 export interface CruiseFilter {
-  cruiseLine?: string;
-  status?: string;
+  readonly cruiseLine?: string;
+  readonly status?: string;
 }
 
 export interface PoiFilter {
-  category?: string;
+  readonly category?: string;
 }
 
 interface DashboardFilterState {
@@ -24,6 +24,11 @@ interface DashboardFilterState {
   flight: FlightFilter;
   cruise: CruiseFilter;
   poi: PoiFilter;
+  /**
+   * Fully replaces the global time filter. Callers must guarantee
+   * `from <= to` — inverted ranges are not normalised here. The
+   * filter dropdown (Task 17) enforces ordering at input time.
+   */
   setTimeRange(from: string | null, to: string | null): void;
   setFlightFilter(patch: Partial<FlightFilter>): void;
   setCruiseFilter(patch: Partial<CruiseFilter>): void;
@@ -58,9 +63,14 @@ export function intervalOverlapsRange(
   from: string | null,
   to: string | null
 ): boolean {
-  const start = Date.parse(startDate);
-  const end = endDate === null ? Number.POSITIVE_INFINITY : Date.parse(endDate);
-  const rangeFrom = from === null ? Number.NEGATIVE_INFINITY : Date.parse(from);
-  const rangeTo = to === null ? Number.POSITIVE_INFINITY : Date.parse(to);
+  const toNumber = (v: string | null, fallback: number): number => {
+    if (v === null) return fallback;
+    const n = Date.parse(v);
+    return Number.isNaN(n) ? fallback : n;
+  };
+  const start = toNumber(startDate, Number.NEGATIVE_INFINITY);
+  const end = toNumber(endDate, Number.POSITIVE_INFINITY);
+  const rangeFrom = toNumber(from, Number.NEGATIVE_INFINITY);
+  const rangeTo = toNumber(to, Number.POSITIVE_INFINITY);
   return start <= rangeTo && end >= rangeFrom;
 }
