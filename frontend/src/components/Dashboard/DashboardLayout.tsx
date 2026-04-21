@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { JSX, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -6,6 +7,7 @@ import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import NavigationBar from "../NavigationBar";
 import { DomainTabStrip } from "./DomainTabStrip";
 import { DashboardControlsBar } from "./DashboardControlsBar";
+import { DashboardFilterDropdown } from "./DashboardFilterDropdown";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -16,6 +18,7 @@ export function DashboardLayout({ children, counts }: DashboardLayoutProps): JSX
   // Ensures the dashboard namespace is loaded for children that use t("dashboard:...")
   useTranslation(["dashboard"]);
   const { tab, mode, setTab, setMode } = useDashboardRoute();
+  const [filterOpen, setFilterOpen] = useState(false);
   const { isEnabled } = useEnabledDomains();
   const navigate = useNavigate();
 
@@ -42,12 +45,13 @@ export function DashboardLayout({ children, counts }: DashboardLayoutProps): JSX
         mode={mode}
         enabledDomains={enabledDomains}
         onModeChange={setMode}
-        onFilterOpen={() => {
-          /* Filter modal wiring in Task 17 */
-        }}
+        onFilterOpen={() => setFilterOpen((p) => !p)}
         onAdd={handleAdd}
       />
-      <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>{children}</div>
+      <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+        {children}
+        <DashboardFilterDropdown tab={tab} open={filterOpen} onClose={() => setFilterOpen(false)} />
+      </div>
     </div>
   );
 }
