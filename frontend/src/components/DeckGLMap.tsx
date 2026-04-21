@@ -93,6 +93,8 @@ interface DeckGLMapProps {
   activeTripId?: string | null;
   onResetTrip?: () => void;
   cruises?: Cruise[];
+  /** Extra deck.gl layers appended after all internally-built layers. */
+  extraLayers?: Layer[];
 }
 
 export function DeckGLMap({
@@ -107,6 +109,7 @@ export function DeckGLMap({
   activeTripId,
   onResetTrip,
   cruises = [],
+  extraLayers,
 }: DeckGLMapProps): JSX.Element {
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
   const mapTheme = useThemeStore((state) => state.mapTheme);
@@ -436,7 +439,7 @@ export function DeckGLMap({
     const ports = createCruisePortsLayer(cruises);
     const cruiseLayers = [arcs, ports].filter((l): l is Layer => l !== null);
 
-    return [...base, ...cruiseLayers];
+    return [...base, ...cruiseLayers, ...(extraLayers ?? [])];
   }, [
     visMode,
     flights,
@@ -453,6 +456,7 @@ export function DeckGLMap({
     cruises,
     cruiseGeometry,
     zoomBucket,
+    extraLayers,
   ]);
 
   // Only enable lighting for 3D modes where it makes a visual difference

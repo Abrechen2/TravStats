@@ -4,6 +4,7 @@ import { GlobeLoader } from "./GlobeLoader";
 import { VisModeSelector } from "./VisModeSelector";
 import type { Cruise, GeoJSONFeature, Flight, Trip } from "../types";
 import type { VisMode } from "../types/visMode";
+import type { Layer } from "@deck.gl/core";
 import { useTranslation } from "../hooks/useTranslation";
 import { useThemeStore } from "../store/themeStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
@@ -32,6 +33,15 @@ interface MapContainer3DProps {
   filterSlot?: React.ReactNode;
   activeTripId?: string | null;
   onResetTrip?: () => void;
+  /** Extra deck.gl layers appended after all internally-built layers. */
+  extraLayers?: Layer[];
+  /**
+   * When false, the internal cruise fetch + cruise arc/port layers are
+   * suppressed. Defaults to true (no behaviour change for existing callers).
+   * Set to false on tabs that manage their own cruise rendering to avoid
+   * cross-tab layer bleed.
+   */
+  showInternalCruises?: boolean;
 }
 
 export default function MapContainer3D({
@@ -46,6 +56,8 @@ export default function MapContainer3D({
   filterSlot,
   activeTripId,
   onResetTrip,
+  extraLayers,
+  showInternalCruises = true,
 }: MapContainer3DProps): JSX.Element {
   const { t } = useTranslation(["common", "map"]);
   const mapTheme = useThemeStore((s) => s.mapTheme);
@@ -71,8 +83,10 @@ export default function MapContainer3D({
   // the cruise domain in settings — no per-layer toggle in V1. Depends
   // on the stable boolean (not the `isEnabled` closure) to avoid an
   // effect loop when Zustand returns a fresh selector object.
+  // Suppressed when showInternalCruises=false so that tabs owning their
+  // own cruise rendering (e.g. CruisesTab) don't double-fetch.
   useEffect(() => {
-    if (!cruiseEnabled) {
+    if (!showInternalCruises || !cruiseEnabled) {
       setCruises((prev) => (prev.length === 0 ? prev : []));
       return;
     }
@@ -88,7 +102,7 @@ export default function MapContainer3D({
     return () => {
       cancelled = true;
     };
-  }, [cruiseEnabled]);
+  }, [cruiseEnabled, showInternalCruises]);
 
   const routeCount = useMemo(() => {
     if (visMode !== "routes") return null;
@@ -135,6 +149,7 @@ export default function MapContainer3D({
             minRouteCount={minRouteCount}
             activeTripId={activeTripId}
             onResetTrip={onResetTrip}
+            extraLayers={extraLayers}
           />
         )}
       </div>
