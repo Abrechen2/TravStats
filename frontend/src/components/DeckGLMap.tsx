@@ -15,6 +15,8 @@ import { TimeSlider } from "./TimeSlider";
 import { useThemeStore } from "../store/themeStore";
 import { MAP_LAYER_COLORS } from "../types/mapTheme";
 import { useFlightSelectionStore } from "../store/flightSelectionStore";
+import { useCruiseSelectionStore } from "../store/cruiseSelectionStore";
+import { CruiseTooltip } from "./CruiseTooltip";
 import { computeBbox } from "../utils/mapAnimationHelpers";
 import { usePlaneAnimation } from "../hooks/usePlaneAnimation";
 import { usePulseAnimation } from "../hooks/usePulseAnimation";
@@ -82,6 +84,9 @@ interface DeckGLMapProps {
   cruises?: Cruise[];
   /** Extra deck.gl layers appended after all internally-built layers. */
   extraLayers?: Layer[];
+  /** Override count-based heatmap palette for flight routes — see
+   *  MapContainer3D.flightRouteColor for the motivation. */
+  flightRouteColor?: [number, number, number];
 }
 
 export function DeckGLMap({
@@ -97,10 +102,16 @@ export function DeckGLMap({
   onResetTrip,
   cruises = [],
   extraLayers,
+  flightRouteColor,
 }: DeckGLMapProps): JSX.Element {
   const isDarkMode = useThemeStore((state) => state.isDarkMode);
   const mapTheme = useThemeStore((state) => state.mapTheme);
-  const themeColors = MAP_LAYER_COLORS[mapTheme];
+  // Heatmap palette is unchanged by flightRouteColor — the override
+  // is threaded explicitly into createRoutesLayers/buildRouteData so
+  // scheduled-cyan + historical-grey branches get overridden too.
+  // Other layers that read themeColors (airport dots, hex grid) keep
+  // the theme palette regardless of the flight monochrome mode.
+  const themeColors = useMemo(() => MAP_LAYER_COLORS[mapTheme], [mapTheme]);
   const mapRef = useRef<MapRef>(null);
 
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -158,6 +169,10 @@ export function DeckGLMap({
   // Store subscription
   const { selectedIds, selectedFlights, highlightMode, clearSelection, showDetails } =
     useFlightSelectionStore();
+  const selectedCruiseId = useCruiseSelectionStore((s) => s.selectedCruiseId);
+  const selectedCruise = useCruiseSelectionStore((s) => s.selectedCruise);
+  const setCruiseSelection = useCruiseSelectionStore((s) => s.setSelection);
+  const clearCruiseSelection = useCruiseSelectionStore((s) => s.clearSelection);
 
   // Reset playing state when leaving trips mode (Bug 3)
   useEffect(() => {
@@ -376,7 +391,8 @@ export function DeckGLMap({
           themeColors,
           0.3,
           selectedIds,
-          handleAirportClick
+          handleAirportClick,
+          flightRouteColor
         );
         break;
       case "heatmap":
@@ -397,7 +413,16 @@ export function DeckGLMap({
     // fetch for that cruise resolves; Bezier is used until then and as
     // the fallback for any leg the server couldn't route.
     const geometryMap: CruiseGeometryMap = cruiseGeometry;
-    const arcs = createCruiseArcsLayer(cruises, geometryMap, zoomBucket);
+    const arcs = createCruiseArcsLayer(
+      cruises,
+      geometryMap,
+      zoomBucket,
+      selectedCruiseId,
+      (cruiseId) => {
+        const cruise = cruises.find((c) => c.id === cruiseId);
+        if (cruise) setCruiseSelection(cruise);
+      }
+    );
     const ports = createCruisePortsLayer(cruises);
     const cruiseLayers = [arcs, ports].filter((l): l is Layer => l !== null);
 
@@ -414,7 +439,10 @@ export function DeckGLMap({
     handleFlightClick,
     handleAirportClick,
     themeColors,
+    flightRouteColor,
     selectedIds,
+    selectedCruiseId,
+    setCruiseSelection,
     cruises,
     cruiseGeometry,
     zoomBucket,
@@ -460,11 +488,12 @@ export function DeckGLMap({
 
       // Background click — clear selection
       clearSelection();
+      clearCruiseSelection();
       setAirportIata(null);
       airportGeoRef.current = null;
       onResetTrip?.();
     },
-    [onRouteClick, handleAirportClick, clearSelection, onResetTrip]
+    [onRouteClick, handleAirportClick, clearSelection, clearCruiseSelection, onResetTrip]
   );
 
   // Interactive layer IDs for native fallback (enables cursor: pointer on hover)
@@ -567,6 +596,10 @@ export function DeckGLMap({
             airportGeoRef.current = null;
           }}
         />
+      )}
+
+      {selectedCruise !== null && (
+        <CruiseTooltip cruise={selectedCruise} onClose={clearCruiseSelection} />
       )}
 
       {!webgl2Available && (

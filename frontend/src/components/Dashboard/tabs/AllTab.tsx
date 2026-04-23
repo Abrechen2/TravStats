@@ -1,18 +1,37 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
+import { useNavigate } from "react-router-dom";
 import { useDashboardRoute } from "../../../hooks/useDashboardRoute";
+import { useFlightLookup } from "../../../hooks/useFlightLookup";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { cruiseApi } from "../../../lib/api/cruise";
 import { flightsApi } from "../../../lib/api/flights";
 import { logger } from "../../../lib/logger";
-import type { GeoJSONFeature } from "../../../types";
+import { DOMAINS } from "../../../shared/domains";
+import { useCruiseSelectionStore } from "../../../store/cruiseSelectionStore";
+import { useFlightSelectionStore } from "../../../store/flightSelectionStore";
+import type { Flight, GeoJSONFeature } from "../../../types";
 import type { Cruise } from "../../../types/cruise";
 import type { AllMode } from "../../../types/dashboard";
 import { ALL_MODES } from "../../../types/dashboard";
+import FlightEditModal from "../../FlightEditModal";
 import MapContainer3D, { type MapMode } from "../../MapContainer3D";
 import { buildJourneyLayers } from "../modes/buildJourneyLayers";
 import { UnifiedActivityPanel } from "../sidebars/UnifiedActivityPanel";
 import type { Layer } from "@deck.gl/core";
+
+// Hex → rgb helper kept local. Small + typed to the DOMAINS registry so
+// a bad hex string gets caught at compile time through the [R, G, B] return.
+function hexToRgb(hex: string): [number, number, number] {
+  const clean = hex.replace("#", "");
+  return [
+    parseInt(clean.slice(0, 2), 16),
+    parseInt(clean.slice(2, 4), 16),
+    parseInt(clean.slice(4, 6), 16),
+  ];
+}
+const FLIGHT_PINK = hexToRgb(DOMAINS.flight.color);
+const CRUISE_BLUE = DOMAINS.cruise.color;
 
 // Maps the dashboard-level AllMode to what MapContainer3D's visMode prop expects.
 // "journey" uses extraLayers with showInternalCruises=false so it has full
@@ -43,6 +62,67 @@ export function AllTab(): JSX.Element {
   const [flights, setFlights] = useState<GeoJSONFeature[]>([]);
   const [cruises, setCruises] = useState<Cruise[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { lookup, lookupMany } = useFlightLookup();
+  const setSelection = useFlightSelectionStore((s) => s.setSelection);
+  const setCruiseSelection = useCruiseSelectionStore((s) => s.setSelection);
+  const navigate = useNavigate();
+  const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
+
+  // Map click → selection store. DeckGLMap handles dim/highlight + tooltip.
+  const handleFlightClick = useCallback(
+    (flightId: string): void => {
+      const f = lookup(flightId);
+      if (f) setSelection([f]);
+    },
+    [lookup, setSelection]
+  );
+  const handleRouteClick = useCallback(
+    (flightIds: string[]): void => {
+      const fs = lookupMany(flightIds);
+      if (fs.length > 0) setSelection(fs);
+    },
+    [lookupMany, setSelection]
+  );
+
+  // Aktivität-sidebar row wiring.
+  const handlePanelFlightSelect = useCallback(
+    (flightId: string): void => {
+      const f = lookup(flightId);
+      if (f) setSelection([f]);
+    },
+    [lookup, setSelection]
+  );
+  const handlePanelFlightDetails = useCallback(
+    (flightId: string): void => {
+      const f = lookup(flightId);
+      if (f) setEditingFlight(f);
+    },
+    [lookup]
+  );
+  const handlePanelCruiseSelect = useCallback(
+    (cruise: Cruise): void => {
+      setCruiseSelection(cruise);
+    },
+    [setCruiseSelection]
+  );
+  const handlePanelCruiseDetails = useCallback(
+    (cruise: Cruise): void => {
+      navigate(`/cruises/${cruise.id}`);
+    },
+    [navigate]
+  );
+
+  const handleFlightSave = useCallback(
+    async (id: string, updates: Partial<Flight>): Promise<void> => {
+      await flightsApi.update(id, updates);
+      // Refresh GeoJSON so the map reflects the edit; full-flight lookup
+      // will catch up on the next mount.
+      const collection = await flightsApi.getGeoJSON();
+      setFlights(collection.features);
+      setEditingFlight(null);
+    },
+    []
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -121,12 +201,77 @@ export function AllTab(): JSX.Element {
     </button>
   );
 
+  // Legend pill — sits next to the sidebar toggle, explains the
+  // flight/cruise color split. Only visible on the Alle tab because
+  // that's the only view where both domains share the map.
+  const legend = (
+    <div
+      style={{
+        position: "absolute",
+        top: 12,
+        left: sidebarOpen ? 340 : 128,
+        zIndex: 30,
+        display: "flex",
+        gap: 12,
+        padding: "6px 12px",
+        borderRadius: 10,
+        background: "rgba(22,27,34,0.85)",
+        color: "var(--text-muted)",
+        border: "1px solid var(--color-border)",
+        fontSize: 12,
+        transition: "left 0.2s ease",
+      }}
+    >
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+        <span
+          aria-hidden
+          style={{
+            width: 14,
+            height: 2,
+            background: DOMAINS.flight.color,
+            borderRadius: 2,
+          }}
+        />
+        <span style={{ color: "var(--text-primary)" }}>
+          {t("dashboard:sidebar.filters.flight")}
+        </span>
+      </span>
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+        <span
+          aria-hidden
+          style={{
+            width: 14,
+            height: 2,
+            background: CRUISE_BLUE,
+            borderRadius: 2,
+          }}
+        />
+        <span style={{ color: "var(--text-primary)" }}>
+          {t("dashboard:sidebar.filters.cruise")}
+        </span>
+      </span>
+    </div>
+  );
+
   const activityPanel = (
     <UnifiedActivityPanel
       flights={flights}
       cruises={cruises}
       isOpen={sidebarOpen}
       onClose={() => setSidebarOpen(false)}
+      onFlightSelect={handlePanelFlightSelect}
+      onFlightDetails={handlePanelFlightDetails}
+      onCruiseSelect={handlePanelCruiseSelect}
+      onCruiseDetails={handlePanelCruiseDetails}
+    />
+  );
+
+  const editModal = editingFlight !== null && (
+    <FlightEditModal
+      flight={editingFlight}
+      isOpen={true}
+      onClose={() => setEditingFlight(null)}
+      onSave={handleFlightSave}
     />
   );
 
@@ -142,18 +287,32 @@ export function AllTab(): JSX.Element {
           onVisModeChange={handleVisModeChange}
           extraLayers={journeyLayers}
           showInternalCruises={false}
+          onFlightClick={handleFlightClick}
+          onRouteClick={handleRouteClick}
+          flightRouteColor={FLIGHT_PINK}
         />
         {sidebarToggleButton}
+        {legend}
         {activityPanel}
+        {editModal}
       </div>
     );
   }
 
   return (
     <div style={{ position: "absolute", inset: 0 }}>
-      <MapContainer3D flights={flights} visMode={visMode} onVisModeChange={handleVisModeChange} />
+      <MapContainer3D
+        flights={flights}
+        visMode={visMode}
+        onVisModeChange={handleVisModeChange}
+        flightRouteColor={FLIGHT_PINK}
+        onFlightClick={handleFlightClick}
+        onRouteClick={handleRouteClick}
+      />
       {sidebarToggleButton}
+      {legend}
       {activityPanel}
+      {editModal}
     </div>
   );
 }

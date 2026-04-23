@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
+import { useNavigate } from "react-router-dom";
 import { ScatterplotLayer, TextLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
 import { useDashboardRoute } from "../../../hooks/useDashboardRoute";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { cruiseApi } from "../../../lib/api/cruise";
 import { logger } from "../../../lib/logger";
+import { useCruiseSelectionStore } from "../../../store/cruiseSelectionStore";
 import type { Cruise } from "../../../types/cruise";
 import MapContainer3D from "../../MapContainer3D";
 import { buildPortFrequencyLayer } from "../modes/buildPortFrequencyLayer";
@@ -23,6 +25,21 @@ export function CruisesTab(): JSX.Element {
   const { t } = useTranslation(["dashboard"]);
   const [cruises, setCruises] = useState<Cruise[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const setCruiseSelection = useCruiseSelectionStore((s) => s.setSelection);
+  const navigate = useNavigate();
+
+  const handleSelectCruise = useCallback(
+    (cruise: Cruise): void => {
+      setCruiseSelection(cruise);
+    },
+    [setCruiseSelection]
+  );
+  const handleCruiseDetails = useCallback(
+    (cruise: Cruise): void => {
+      navigate(`/cruises/${cruise.id}`);
+    },
+    [navigate]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -124,6 +141,8 @@ export function CruisesTab(): JSX.Element {
         cruises={cruises}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        onSelect={handleSelectCruise}
+        onDetails={handleCruiseDetails}
       />
     </div>
   );

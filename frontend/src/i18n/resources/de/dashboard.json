@@ -166,6 +166,11 @@
     "activity": "Aktivität",
     "ports": "Häfen",
     "emptyCruises": "Noch keine Kreuzfahrten.",
-    "emptyActivity": "Noch keine Aktivität."
+    "emptyActivity": "Noch keine Aktivität.",
+    "filters": {
+      "all": "Alle",
+      "flight": "Flüge",
+      "cruise": "Kreuzfahrten"
+    }
   }
 }

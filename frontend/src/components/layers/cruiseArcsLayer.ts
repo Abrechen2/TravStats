@@ -48,7 +48,20 @@ export function createCruiseArcsLayer(
    * to <20 without visible distortion. Bezier-fallback paths are
    * unaffected — they're already low-vertex by construction.
    */
-  zoom = 3
+  zoom = 3,
+  /**
+   * Currently selected cruise id. When non-null, non-selected arcs are
+   * rendered at reduced alpha and selected arcs gain a thicker stroke —
+   * the same highlight affordance the flight routes layer uses.
+   */
+  selectedCruiseId: string | null = null,
+  /**
+   * Click handler. The layer receives a cruise id; resolving it to a
+   * Cruise object is the caller's job (they already have the list in
+   * scope). Making this optional keeps render-only callers — the
+   * editing detail page — from needing a stub.
+   */
+  onCruiseClick?: (cruiseId: string) => void
 ): Layer | null {
   const tolerance = toleranceKmForZoom(zoom);
   const arcs: ArcDatum[] = [];
@@ -85,14 +98,33 @@ export function createCruiseArcsLayer(
   }
   if (arcs.length === 0) return null;
 
+  const hasSelection = selectedCruiseId !== null;
+  const BASE_COLOR: [number, number, number] = [56, 189, 248];
+  const HIGHLIGHT_COLOR: [number, number, number] = [253, 224, 71]; // accent yellow — matches flight highlight tone
+  const DIM_ALPHA = 60;
+  const FULL_ALPHA = 220;
+
   return new PathLayer<ArcDatum>({
     id: "cruise-arcs",
     data: arcs,
     getPath: (d) => d.path,
-    getColor: [56, 189, 248, 220],
-    getWidth: 2,
+    getColor: (d) => {
+      if (!hasSelection) return [...BASE_COLOR, FULL_ALPHA];
+      if (d.cruiseId === selectedCruiseId) return [...HIGHLIGHT_COLOR, FULL_ALPHA];
+      return [...BASE_COLOR, DIM_ALPHA];
+    },
+    getWidth: (d) => (d.cruiseId === selectedCruiseId ? 4 : 2),
     widthUnits: "pixels",
     pickable: true,
+    onClick: onCruiseClick
+      ? ({ object }: { object?: ArcDatum }) => {
+          if (object?.cruiseId) onCruiseClick(object.cruiseId);
+        }
+      : undefined,
+    updateTriggers: {
+      getColor: selectedCruiseId,
+      getWidth: selectedCruiseId,
+    },
   });
 }
 

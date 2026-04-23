@@ -1,5 +1,6 @@
 import { JSX } from "react";
 import { DOMAINS, type DomainKey } from "../../shared/domains";
+import { formatDateInTimezone } from "../../lib/dateUtils";
 
 export interface TimelineEvent {
   id: string;
@@ -63,8 +64,12 @@ export default function TripTimeline({ events }: TripTimelineProps): JSX.Element
                 </div>
               )}
             </div>
-            <time className="text-xs shrink-0" style={{ color: "var(--text-muted)" }}>
-              {ev.date}
+            <time
+              className="text-xs shrink-0"
+              style={{ color: "var(--text-muted)" }}
+              dateTime={ev.date}
+            >
+              {formatDateInTimezone(ev.date, "UTC")}
             </time>
           </li>
         );

@@ -145,8 +145,8 @@ const defaultSettings: Omit<
   | "saveRemoteSettings"
 > = {
   profile: {
-    username: "Traveler",
-    email: "traveler@example.com",
+    username: "",
+    email: "",
     profilePicture: undefined,
   },
   display: {
@@ -266,13 +266,27 @@ export const useSettingsStore = create<SettingsState>()(
                 ...state,
                 ...remoteWithoutDirectFields,
               };
-              // If profile username is still the default "Traveler", use the
-              // actual account username from the auth store instead.
-              if (newState.profile?.username === "Traveler") {
-                const authUser = useAuthStore.getState().user;
-                if (authUser?.username) {
-                  newState.profile = { ...newState.profile, username: authUser.username };
-                }
+              // Always mirror the auth-store username into profile.username.
+              // If the persisted username belongs to a different account
+              // (previous login still in localStorage), also drop the
+              // email + profile picture so we don't leak them across users.
+              // Also scrub the legacy "traveler@example.com" placeholder
+              // that shipped as a default in earlier builds and got
+              // autosaved into real UserSettings rows.
+              const authUser = useAuthStore.getState().user;
+              if (authUser?.username) {
+                const previousUsername = state.profile?.username ?? "";
+                const userChanged =
+                  previousUsername !== "" && previousUsername !== authUser.username;
+                const incomingEmail = newState.profile?.email ?? "";
+                const email =
+                  userChanged || incomingEmail === "traveler@example.com" ? "" : incomingEmail;
+                newState.profile = {
+                  ...newState.profile,
+                  username: authUser.username,
+                  email,
+                  ...(userChanged ? { profilePicture: undefined } : {}),
+                };
               }
               // Sync language to i18n if it changed (will be handled by App.tsx useEffect, but we do it here too for immediate update)
               if (remote.display?.language && remote.display.language !== state.display.language) {

@@ -1,5 +1,6 @@
 import type { Cruise } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
+import { cruiseStatusPillStyle } from "./cruiseStatusStyle";
 
 interface Props {
   cruise: Cruise;
@@ -29,7 +30,10 @@ export function CruiseRow({ cruise, onOpen }: Props): JSX.Element {
       </td>
       <td className="px-3 py-2 text-sm text-[var(--text-muted)]">{portsCount}</td>
       <td className="px-3 py-2 text-sm">
-        <span className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-2 py-0.5 text-xs text-[var(--text-muted)]">
+        <span
+          className="rounded-full px-2 py-1 text-xs font-semibold"
+          style={cruiseStatusPillStyle(cruise.status)}
+        >
           {t(`status.${cruise.status}`)}
         </span>
       </td>

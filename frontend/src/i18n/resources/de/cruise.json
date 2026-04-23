@@ -2,7 +2,7 @@
   "nav": { "link": "Kreuzfahrten" },
   "list": {
     "title": "Kreuzfahrten",
-    "new": "Neue Kreuzfahrt",
+    "new": "Kreuzfahrt hinzufügen",
     "empty": "Noch keine Kreuzfahrten erfasst",
     "columns": {
       "ship": "Schiff",
