@@ -148,9 +148,10 @@ export default function CruisesPage(): JSX.Element {
           <button
             type="button"
             onClick={() => setShowCreate(true)}
-            className="rounded-md bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--accent-dim)]"
+            className="btn-primary flex items-center gap-2 whitespace-nowrap"
           >
-            {t("list.new")}
+            <span>+</span>
+            <span>{t("list.new")}</span>
           </button>
         </div>
 

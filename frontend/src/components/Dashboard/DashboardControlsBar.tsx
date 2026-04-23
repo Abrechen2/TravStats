@@ -46,7 +46,7 @@ export function DashboardControlsBar({
         gap: "8px",
         alignItems: "center",
         padding: "8px 16px",
-        background: "var(--color-surface-muted)",
+        background: "var(--bg-muted)",
         borderBottom: "1px solid var(--color-border)",
       }}
     >
@@ -58,7 +58,7 @@ export function DashboardControlsBar({
           aria-expanded={modeMenuOpen}
           onClick={() => setModeMenuOpen((prev) => !prev)}
           style={{
-            background: "var(--color-surface)",
+            background: "var(--bg-surface)",
             border: "1px solid var(--color-border)",
             padding: "6px 12px",
             borderRadius: "10px",
@@ -76,14 +76,14 @@ export function DashboardControlsBar({
               position: "absolute",
               top: "calc(100% + 4px)",
               left: 0,
-              background: "var(--color-surface)",
+              background: "var(--bg-surface)",
               border: "1px solid var(--color-border)",
               borderRadius: "10px",
               listStyle: "none",
               margin: 0,
               padding: "4px 0",
               minWidth: "200px",
-              zIndex: 30,
+              zIndex: 40,
             }}
           >
             {modes.map((m) => (
@@ -99,7 +99,7 @@ export function DashboardControlsBar({
                     width: "100%",
                     textAlign: "left",
                     padding: "8px 14px",
-                    background: m === mode ? "var(--color-surface-muted)" : "transparent",
+                    background: m === mode ? "var(--bg-muted)" : "transparent",
                     color: "var(--text-primary)",
                     border: "none",
                     cursor: "pointer",
@@ -119,7 +119,7 @@ export function DashboardControlsBar({
         type="button"
         onClick={onFilterOpen}
         style={{
-          background: "var(--color-surface)",
+          background: "var(--bg-surface)",
           border: "1px solid var(--color-border)",
           padding: "6px 12px",
           borderRadius: "10px",

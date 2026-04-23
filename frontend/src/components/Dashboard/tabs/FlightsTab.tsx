@@ -2,8 +2,10 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import type { JSX } from "react";
 import type { Layer } from "@deck.gl/core";
 import { useDashboardRoute } from "../../../hooks/useDashboardRoute";
+import { useFlightLookup } from "../../../hooks/useFlightLookup";
 import { flightsApi } from "../../../lib/api/flights";
 import { logger } from "../../../lib/logger";
+import { useFlightSelectionStore } from "../../../store/flightSelectionStore";
 import type { GeoJSONFeature } from "../../../types";
 import type { FlightMode } from "../../../types/dashboard";
 import MapContainer3D, { type MapMode } from "../../MapContainer3D";
@@ -30,6 +32,8 @@ const MAP_MODE_TO_FLIGHT_MODE: Partial<Record<MapMode, FlightMode>> = {
 export function FlightsTab(): JSX.Element {
   const { mode, setMode } = useDashboardRoute();
   const [flights, setFlights] = useState<GeoJSONFeature[]>([]);
+  const { lookup, lookupMany } = useFlightLookup();
+  const setSelection = useFlightSelectionStore((s) => s.setSelection);
 
   useEffect(() => {
     let cancelled = false;
@@ -45,6 +49,23 @@ export function FlightsTab(): JSX.Element {
       cancelled = true;
     };
   }, []);
+
+  // Map click → selection store. DeckGLMap renders the dim/highlight and
+  // the tooltip off the store, so this is the only wiring needed.
+  const handleFlightClick = useCallback(
+    (flightId: string): void => {
+      const f = lookup(flightId);
+      if (f) setSelection([f]);
+    },
+    [lookup, setSelection]
+  );
+  const handleRouteClick = useCallback(
+    (flightIds: string[]): void => {
+      const fs = lookupMany(flightIds);
+      if (fs.length > 0) setSelection(fs);
+    },
+    [lookupMany, setSelection]
+  );
 
   // Current dashboard mode narrowed to FlightMode; fall back to "routes" if the
   // active mode is from a different tab (shouldn't happen in practice but keeps
@@ -78,6 +99,8 @@ export function FlightsTab(): JSX.Element {
         onVisModeChange={handleVisModeChange}
         extraLayers={statsMapLayers}
         showInternalCruises={false}
+        onFlightClick={handleFlightClick}
+        onRouteClick={handleRouteClick}
       />
     </div>
   );

@@ -10,6 +10,17 @@ interface DashboardFilterDropdownProps {
   onClose(): void;
 }
 
+const inputStyle = {
+  width: "100%",
+  background: "var(--bg-base)",
+  border: "1px solid var(--color-border)",
+  borderRadius: 6,
+  padding: "6px 8px",
+  color: "var(--text-primary)",
+  fontSize: 13,
+  colorScheme: "dark" as const,
+};
+
 export function DashboardFilterDropdown({
   tab,
   open,
@@ -53,7 +64,7 @@ export function DashboardFilterDropdown({
         top: 48,
         left: 120,
         zIndex: 40,
-        background: "var(--color-surface)",
+        background: "var(--bg-surface)",
         border: "1px solid var(--color-border)",
         borderRadius: 12,
         padding: 16,
@@ -69,7 +80,7 @@ export function DashboardFilterDropdown({
           type="date"
           value={time.from ?? ""}
           onChange={(e) => setTimeRange(e.target.value || null, time.to)}
-          style={{ width: "100%", marginBottom: 8 }}
+          style={{ ...inputStyle, marginBottom: 8 }}
         />
         <label style={{ display: "block", fontSize: 12, color: "var(--text-muted)" }}>
           {t("dashboard:filter.timeTo")}
@@ -78,7 +89,7 @@ export function DashboardFilterDropdown({
           type="date"
           value={time.to ?? ""}
           onChange={(e) => setTimeRange(time.from, e.target.value || null)}
-          style={{ width: "100%" }}
+          style={inputStyle}
         />
       </div>
 
@@ -91,7 +102,7 @@ export function DashboardFilterDropdown({
             type="text"
             value={flight.airline ?? ""}
             onChange={(e) => setFlightFilter({ airline: e.target.value || undefined })}
-            style={{ width: "100%" }}
+            style={inputStyle}
           />
         </div>
       )}
@@ -105,7 +116,7 @@ export function DashboardFilterDropdown({
             type="text"
             value={cruise.cruiseLine ?? ""}
             onChange={(e) => setCruiseFilter({ cruiseLine: e.target.value || undefined })}
-            style={{ width: "100%" }}
+            style={inputStyle}
           />
         </div>
       )}

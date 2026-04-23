@@ -47,6 +47,13 @@ interface MapContainer3DProps {
    * cross-tab layer bleed.
    */
   showInternalCruises?: boolean;
+  /**
+   * Override the count-based heatmap palette for flight route arcs with
+   * a single monochrome color. Set on the Alle-tab so flights read as
+   * "pink / domain-flight" against sky-blue cruises; other tabs leave
+   * it undefined to keep the count-encoded heatmap behaviour.
+   */
+  flightRouteColor?: [number, number, number];
 }
 
 export default function MapContainer3D({
@@ -63,6 +70,7 @@ export default function MapContainer3D({
   onResetTrip,
   extraLayers,
   showInternalCruises = true,
+  flightRouteColor,
 }: MapContainer3DProps): JSX.Element {
   const { t } = useTranslation(["common", "map"]);
   const mapTheme = useThemeStore((s) => s.mapTheme);
@@ -155,6 +163,7 @@ export default function MapContainer3D({
             activeTripId={activeTripId}
             onResetTrip={onResetTrip}
             extraLayers={extraLayers}
+            flightRouteColor={flightRouteColor}
           />
         )}
       </div>
@@ -168,8 +177,11 @@ export default function MapContainer3D({
         />
       )}
 
-      {/* Info pill — flights + routes count, routes mode only */}
-      {visMode === "routes" && routeCount !== null && (
+      {/* Info pill — flights + routes count, routes mode only.
+          Skipped when the tab owns no flights (e.g. the Cruises tab
+          renders this component with flights={[]} to reuse the
+          base-map — a flight counter there would always read "0"). */}
+      {visMode === "routes" && routeCount !== null && flights.length > 0 && (
         <div
           className="absolute top-3 left-3 z-10"
           style={{

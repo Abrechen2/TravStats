@@ -4,13 +4,15 @@ import { cruiseApi } from "../lib/api";
 import type { Cruise } from "../types";
 import { CruiseEditModal } from "../components/Cruise/CruiseEditModal";
 import { CruiseRouteMap } from "../components/Cruise/CruiseRouteMap";
+import { cruiseStatusPillStyle } from "../components/Cruise/cruiseStatusStyle";
 import TripTimeline, { type TimelineEvent } from "../components/Trip/TripTimeline";
 import NavigationBar from "../components/NavigationBar";
 import { useTranslation } from "../hooks/useTranslation";
+import { formatDateInTimezone } from "../lib/dateUtils";
 
 const fmtDate = (iso: string | null): string => {
   if (!iso) return "—";
-  return new Date(iso).toISOString().slice(0, 10);
+  return formatDateInTimezone(iso, "UTC");
 };
 
 export default function CruiseDetailPage(): JSX.Element {
@@ -122,7 +124,10 @@ export default function CruiseDetailPage(): JSX.Element {
             <span className="rounded-md border border-[var(--color-border)] bg-[var(--bg-base)] px-2 py-1">
               {seaDays} {t("field.sea_days")}
             </span>
-            <span className="rounded-md border border-[var(--color-border)] bg-[var(--bg-base)] px-2 py-1">
+            <span
+              className="rounded-full px-2 py-1 font-semibold"
+              style={cruiseStatusPillStyle(cruise.status)}
+            >
               {t(`status.${cruise.status}`)}
             </span>
             <button
@@ -167,7 +172,11 @@ export default function CruiseDetailPage(): JSX.Element {
                 </div>
                 <div className="flex justify-between">
                   <dt>{t("field.cabinType")}</dt>
-                  <dd>{cruise.cabinType ? t(`cabinType.${cruise.cabinType}`) : "—"}</dd>
+                  <dd>
+                    {cruise.cabinType
+                      ? t(`cabinType.${cruise.cabinType}`, { defaultValue: cruise.cabinType })
+                      : "—"}
+                  </dd>
                 </div>
                 <div className="flex justify-between">
                   <dt>{t("field.deck")}</dt>

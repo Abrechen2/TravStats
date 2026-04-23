@@ -2,7 +2,7 @@
   "nav": { "link": "Cruises" },
   "list": {
     "title": "Cruises",
-    "new": "New cruise",
+    "new": "Add cruise",
     "empty": "No cruises yet",
     "columns": {
       "ship": "Ship",

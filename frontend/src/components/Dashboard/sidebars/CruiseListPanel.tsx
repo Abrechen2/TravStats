@@ -1,20 +1,26 @@
 import type { JSX } from "react";
-import { Link } from "react-router-dom";
 import { useTranslation } from "../../../hooks/useTranslation";
+import { formatDateInTimezone } from "../../../lib/dateUtils";
 import type { Cruise } from "../../../types/cruise";
 
 interface CruiseListPanelProps {
   cruises: Cruise[];
   isOpen: boolean;
   onClose(): void;
+  /** Single click on a row — selects the cruise on the map (highlight). */
+  onSelect?(cruise: Cruise): void;
+  /** Details button — navigates to the cruise detail page. */
+  onDetails?(cruise: Cruise): void;
 }
 
 export function CruiseListPanel({
   cruises,
   isOpen,
   onClose,
+  onSelect,
+  onDetails,
 }: CruiseListPanelProps): JSX.Element | null {
-  const { t } = useTranslation(["dashboard"]);
+  const { t } = useTranslation(["dashboard", "common"]);
   if (!isOpen) return null;
 
   return (
@@ -61,26 +67,64 @@ export function CruiseListPanel({
           {t("dashboard:sidebar.emptyCruises")}
         </p>
       ) : (
-        cruises.map((c) => (
-          <Link
-            key={c.id}
-            to={`/cruises/${c.id}`}
-            style={{
-              display: "block",
-              padding: "12px 16px",
-              borderBottom: "1px solid var(--color-border)",
-              color: "var(--text-primary)",
-              textDecoration: "none",
-            }}
-          >
-            <div style={{ fontWeight: 600 }}>
-              {c.ship?.name ?? c.shipNameOverride ?? c.cruiseLine ?? "Cruise"}
+        cruises.map((c) => {
+          const ports = c.stops.filter((s) => !s.isAtSea).length;
+          const startLabel = c.startDate ? formatDateInTimezone(c.startDate, "UTC") : "—";
+          const title = c.ship?.name ?? c.shipNameOverride ?? c.cruiseLine ?? "Cruise";
+          return (
+            <div
+              key={c.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => onSelect?.(c)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onSelect?.(c);
+                }
+              }}
+              style={{
+                padding: "12px 16px",
+                borderBottom: "1px solid var(--color-border)",
+                color: "var(--text-primary)",
+                cursor: "pointer",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.04)")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span aria-hidden>⚓</span>
+                <strong style={{ flex: 1, fontSize: 13 }}>{title}</strong>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDetails?.(c);
+                  }}
+                  aria-label={t("common:buttons.details", { defaultValue: "Details" })}
+                  title={t("common:buttons.details", { defaultValue: "Details" })}
+                  style={{
+                    background: "none",
+                    border: "1px solid var(--color-border)",
+                    borderRadius: 4,
+                    padding: "2px 6px",
+                    color: "var(--text-muted)",
+                    cursor: "pointer",
+                    fontSize: 11,
+                    lineHeight: 1,
+                  }}
+                >
+                  →
+                </button>
+              </div>
+              <div
+                style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2, marginLeft: 20 }}
+              >
+                {startLabel} · {ports} {t("dashboard:sidebar.ports")}
+              </div>
             </div>
-            <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-              {c.startDate?.slice(0, 10) ?? "—"} · {c.stops.length} {t("dashboard:sidebar.ports")}
-            </div>
-          </Link>
-        ))
+          );
+        })
       )}
     </div>
   );

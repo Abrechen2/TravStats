@@ -23,7 +23,15 @@ function getCoordsFromFeature(
 export function buildRouteData(
   flights: GeoJSONFeature[],
   minRouteCount: number,
-  themeColors?: MapLayerColors
+  themeColors?: MapLayerColors,
+  /**
+   * Monochrome color override applied to every route — supersedes the
+   * hardcoded scheduled-cyan / historical-grey branches so callers can
+   * project all flights in a single domain hue (Alle-tab needs this to
+   * separate pink flights from sky-blue cruises cleanly). Alpha still
+   * varies per status: scheduled=180, historical=140, flown=count-scaled.
+   */
+  paletteOverride?: [number, number, number]
 ): { arcs: ArcDatum[]; points: PointDatum[] } {
   const routeCounts = new Map<string, number>();
   const routeFlightIds = new Map<string, string[]>();
@@ -87,17 +95,22 @@ export function buildRouteData(
       flights.some((fl) => fl.properties.id === fid && fl.properties.status === "historical")
     );
 
-    // Scheduled-only routes: dashed cyan/teal; historical: grey; mixed/flown: normal heatmap color
+    // Scheduled-only routes: dashed cyan/teal; historical: grey; mixed/flown: normal heatmap color.
+    // When a paletteOverride is active, collapse all three branches
+    // into that single hue — alpha still encodes status to keep
+    // scheduled/historical visually distinguishable.
     const alpha = allScheduled
       ? 180
       : allHistorical
         ? 140
         : (Math.min(100 + count * 14, 230) as number);
-    const color = allScheduled
-      ? ([100, 200, 220] as [number, number, number]) // cyan/teal for scheduled
-      : allHistorical
-        ? ([150, 150, 150] as [number, number, number]) // grey for historical
-        : getHeatmapColor(count, q25, q50, q75, themeColors);
+    const color = paletteOverride
+      ? paletteOverride
+      : allScheduled
+        ? ([100, 200, 220] as [number, number, number]) // cyan/teal for scheduled
+        : allHistorical
+          ? ([150, 150, 150] as [number, number, number]) // grey for historical
+          : getHeatmapColor(count, q25, q50, q75, themeColors);
     arcMap.set(key, {
       sourcePosition: coords.depCoord,
       targetPosition: coords.arrCoord,
@@ -125,9 +138,10 @@ export function createRoutesLayers(
   themeColors?: MapLayerColors,
   arcHeight: number = 1,
   selectedIds: string[] = [],
-  onAirportClick?: (iata: string, lon: number, lat: number) => void
+  onAirportClick?: (iata: string, lon: number, lat: number) => void,
+  paletteOverride?: [number, number, number]
 ): Layer[] {
-  const { arcs, points } = buildRouteData(flights, minRouteCount, themeColors);
+  const { arcs, points } = buildRouteData(flights, minRouteCount, themeColors, paletteOverride);
   const dotRgb = themeColors?.airportDot ?? ([232, 160, 69] as [number, number, number]);
 
   const selectedSet = new Set(selectedIds);
