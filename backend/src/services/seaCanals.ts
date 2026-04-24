@@ -216,4 +216,20 @@ export const CANAL_OVERRIDES: readonly CanalOverride[] = [
       { lat: 41.77, lon: -70.47 }, // Cape Cod Bay mouth
     ],
   },
+  // --- Oslofjord (Oslo ↔ Skagerrak via Drøbak Sound) ---------------------
+  // At 1 km wide the Drøbak Sound is below a 0.05° cell; without this
+  // override the inner Oslofjord is a detached water pocket and every
+  // Oslo → coast route ends as null on both 0.1° and 0.05° masks.
+  {
+    id: 'oslofjord',
+    name: 'Oslofjord + Drøbak Sound',
+    anchor: { lat: 59.67, lon: 10.62 },
+    axis: [
+      { lat: 59.91, lon: 10.75 }, // Oslo harbour
+      { lat: 59.67, lon: 10.62 }, // Drøbak (narrowest point)
+      { lat: 59.4, lon: 10.55 }, // Horten / Moss latitude
+      { lat: 59.1, lon: 10.4 }, // outer fjord
+      { lat: 58.8, lon: 10.3 }, // Skagerrak entry
+    ],
+  },
 ];

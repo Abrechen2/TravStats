@@ -70,6 +70,7 @@ import {
   latToRow05,
   lonToCol05,
   rowFromIndex05,
+  setBit05,
 } from '../shared/geo/landMaskGrid05';
 import { CANAL_OVERRIDES, type CanalOverride } from './seaCanals';
 
@@ -233,6 +234,70 @@ function paintCellAndBrush(bytes: Uint8Array, row: number, col: number): void {
     for (let dc = -1; dc <= 1; dc++) {
       const c = (((col + dc) % MASK_COLS) + MASK_COLS) % MASK_COLS;
       setBit(bytes, cellIndex(r, c), 0);
+    }
+  }
+}
+
+/**
+ * 0.05° twin of `applyCanalOverrides`. Paints each canal axis onto
+ * the fine raster, widening with a 2-cell brush in every direction so
+ * passages like Øresund (~4 km) are guaranteed a connected water
+ * corridor even when the underlying Natural Earth 0.05° mask happens
+ * to show a discontinuous strait. Without this, whole-route A* on
+ * 0.05° can snap to water at both ends and still fail to connect —
+ * exactly the Oslo → Copenhagen + Bergen → Flåm bug pattern.
+ */
+export function applyCanalOverrides05(rawBytes: Uint8Array): Uint8Array {
+  const patched = new Uint8Array(rawBytes.byteLength);
+  patched.set(rawBytes);
+  for (const canal of CANAL_OVERRIDES) {
+    paintCanalAxis05(patched, canal);
+  }
+  return patched;
+}
+
+function paintCanalAxis05(bytes: Uint8Array, canal: CanalOverride): void {
+  const axis = canal.axis;
+  if (axis.length < 2) return;
+  for (let i = 0; i < axis.length - 1; i++) {
+    paintCanalSegment05(bytes, axis[i], axis[i + 1]);
+  }
+}
+
+function paintCanalSegment05(
+  bytes: Uint8Array,
+  a: { lat: number; lon: number },
+  b: { lat: number; lon: number },
+): void {
+  const rowA = latToRow05(a.lat);
+  const colA = lonToCol05(a.lon);
+  const rowB = latToRow05(b.lat);
+  const colB = lonToCol05(b.lon);
+  const dRow = rowB - rowA;
+  const dCol = colB - colA;
+  // Densify the step count so the line stays connected across the
+  // 2× finer grid (0.05° has twice the cells per degree as 0.1°).
+  const steps = 2 * Math.max(Math.abs(dRow), Math.abs(dCol));
+  if (steps === 0) {
+    paintCellAndBrush05(bytes, rowA, colA);
+    return;
+  }
+  for (let step = 0; step <= steps; step++) {
+    const row = Math.round(rowA + (dRow * step) / steps);
+    const col = Math.round(colA + (dCol * step) / steps);
+    paintCellAndBrush05(bytes, row, col);
+  }
+}
+
+/** 5×5 brush on 0.05° grid ≈ 2×2 cells on 0.1° equivalent — enough
+ * to guarantee connected water along a straight-and-narrow strait. */
+function paintCellAndBrush05(bytes: Uint8Array, row: number, col: number): void {
+  for (let dr = -2; dr <= 2; dr++) {
+    const r = row + dr;
+    if (r < 0 || r >= MASK05_ROWS) continue;
+    for (let dc = -2; dc <= 2; dc++) {
+      const c = (((col + dc) % MASK05_COLS) + MASK05_COLS) % MASK05_COLS;
+      setBit05(bytes, cellIndex05(r, c), 0);
     }
   }
 }
@@ -426,12 +491,20 @@ async function loadFineLandMask(): Promise<Uint8Array> {
           `Fine land-mask at ${DEFAULT_FINE_MASK_PATH} has ${buf.byteLength} bytes, expected ${MASK05_BYTES}`,
         );
       }
-      const bytes = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
+      const rawBytes = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
+      // Apply the canal overrides to the 0.05° raster too. Without
+      // this, narrow straits (Øresund, Bosporus, Panama entrance) are
+      // discontinuous on the fine mask even though the 0.1° variant
+      // has them patched — the 0.05° cells are small enough that
+      // Natural Earth classifies individual cells of a 4-km strait as
+      // land. See `applyCanalOverrides05` for details.
+      const bytes = applyCanalOverrides05(rawBytes);
       fineMaskBytes = bytes;
       logger.info({
         operation: 'sea_router_fine_mask_loaded',
         path: DEFAULT_FINE_MASK_PATH,
         bytes: buf.byteLength,
+        canalOverrides: CANAL_OVERRIDES.length,
       });
       return bytes;
     })().catch((err) => {
@@ -497,16 +570,20 @@ function fineCellDistanceKm(aIdx: number, bIdx: number): number {
 }
 
 /**
- * A* over the 0.05° mask for a SHORT segment. Unlike `computeSeaRouteCells`,
- * this one snaps the endpoints internally, operates on Maps instead of
- * whole-globe TypedArrays (N = 25.9 M is too much to allocate per request),
- * and returns the {lat, lon} path directly.
+ * A* over the 0.05° mask. Originally sized for SHORT segment repairs
+ * (`maxVisited` default 400k ≈ short detour budget), now also used as
+ * a whole-route fallback with a larger budget — see
+ * `wholeRouteFineAStarFallback`. Snaps endpoints internally, operates
+ * on Maps instead of whole-globe TypedArrays (N = 25.9 M is too much
+ * to allocate per request), and returns the {lat, lon} path directly.
  */
 function fineAStarBetween(
   bytes: Uint8Array,
   from: { lat: number; lon: number },
   to: { lat: number; lon: number },
+  opts: { maxVisited?: number } = {},
 ): { lat: number; lon: number }[] | null {
+  const maxVisited = opts.maxVisited ?? MAX_FINE_A_STAR_VISITED;
   const startSnap = findNearestFineWater(bytes, from.lat, from.lon);
   const goalSnap = findNearestFineWater(bytes, to.lat, to.lon);
   if (!startSnap || !goalSnap) return null;
@@ -523,7 +600,7 @@ function fineAStarBetween(
   open.push({ index: startIdx, f: fineCellDistanceKm(startIdx, goalIdx) });
 
   let visited = 0;
-  while (open.size > 0 && visited < MAX_FINE_A_STAR_VISITED) {
+  while (open.size > 0 && visited < maxVisited) {
     const current = open.pop() as AStarNode;
     const curIdx = current.index;
     if (closed.has(curIdx)) continue;
@@ -956,6 +1033,38 @@ function postBranchQuality(coords: ReadonlyArray<{ lat: number; lon: number }>):
   return classifyRouteQuality(tuples);
 }
 
+/** Visit cap for whole-route A* on the 0.05° mask. Enough for ~1500 km
+ * chords in typical connected seas; higher values are feasible but
+ * the Map-based open/closed sets make each visit more expensive than
+ * on the TypedArray-backed 0.1° A*. */
+const WHOLE_ROUTE_FINE_A_STAR_BUDGET = 800_000;
+
+/**
+ * Last-resort whole-route A* on the 0.05° mask. The 0.1° fallback
+ * can't traverse passages narrower than one cell (Øresund, Alaska
+ * Inside Passage, Sognefjord mouth) because the coarse mask closes
+ * those cells entirely. At 0.05° they become passable. Reuses
+ * `fineAStarBetween` with a bumped visit budget suitable for
+ * whole-route distances, not just the short-segment repair case.
+ */
+async function wholeRouteFineAStarFallback(
+  dep: { lat: number; lon: number },
+  arr: { lat: number; lon: number },
+): Promise<{ lat: number; lon: number }[] | null> {
+  const t0 = Date.now();
+  const bytes = await loadFineLandMask();
+  const result = fineAStarBetween(bytes, dep, arr, {
+    maxVisited: WHOLE_ROUTE_FINE_A_STAR_BUDGET,
+  });
+  logger.debug({
+    operation: 'sea_router_whole_route_fine',
+    chordKm: Math.round(haversineKm(dep, arr)),
+    result: result === null ? 'null' : `${result.length} pts`,
+    durationMs: Date.now() - t0,
+  });
+  return result;
+}
+
 /**
  * Hybrid v2 entry point — see file header for the full pipeline
  * description. Returns a GeoJSON LineString in `[lon, lat]` vertex
@@ -1063,6 +1172,26 @@ export async function computeSeaRoute(
       durationMs: Date.now() - t0,
     });
     return coordsToLineString(fallback);
+  }
+
+  // 4. Last-resort whole-route A* on the 0.05° mask. Handles narrow
+  //    passages the 0.1° mask can't represent (Øresund, Alaska
+  //    Inside Passage, Norwegian fjord mouths). Slower because the
+  //    fine A* uses Map-backed open/closed sets; only runs when the
+  //    0.1° branch gave up.
+  const fineFallback = await wholeRouteFineAStarFallback(dep, arr);
+  if (fineFallback !== null) {
+    const q = postBranchQuality(fineFallback);
+    logger.info({
+      operation: 'sea_router_hybrid_fallback_astar_fine',
+      chordKm: Math.round(chordKm),
+      rejectReason,
+      km: Math.round(polylineLengthKm(fineFallback)),
+      landRatio: Math.round(q.landRatio * 100) / 100,
+      quality: q.quality,
+      durationMs: Date.now() - t0,
+    });
+    return coordsToLineString(fineFallback);
   }
 
   logger.warn({
