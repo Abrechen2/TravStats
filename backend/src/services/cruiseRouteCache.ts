@@ -50,8 +50,13 @@ import { computeSeaRoute } from './seaRouter';
  *       safety check → searoute-ts (Eurostat marnet) + endpoint-snap
  *       guard + local 0.05° A* repair → whole-route 0.1° A* as last
  *       resort. Replaces the pure 0.1° A*-only approach of v6.
+ *   8 = Local repair now distinguishes resolved vs. unresolved
+ *       bad segments. Any unresolved segment forces a fall-through to
+ *       the whole-route A* fallback, preventing land-crossings from
+ *       slipping through (Aegean / Dardanelles / Bosporus cases where
+ *       fine-A* hits its budget on narrow straits).
  */
-export const CACHE_VERSION = 7;
+export const CACHE_VERSION = 8;
 
 export interface RouteLineString {
   type: 'LineString';

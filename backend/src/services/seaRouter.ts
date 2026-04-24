@@ -670,31 +670,42 @@ const REPAIR_BUDGET = 10;
  */
 async function localRepairAcrossLand(
   coords: ReadonlyArray<{ lat: number; lon: number }>,
-): Promise<{ coords: { lat: number; lon: number }[]; repaired: number }> {
+): Promise<{
+  coords: { lat: number; lon: number }[];
+  repaired: number;
+  unresolved: number;
+}> {
   const runs = await segmentLandRuns(coords);
   const bad: number[] = [];
   for (let i = 0; i < runs.length; i++) {
     if (runs[i].maxRun >= REPAIR_RUN_THRESHOLD) bad.push(i);
   }
-  if (bad.length === 0) return { coords: [...coords], repaired: 0 };
-  if (bad.length > REPAIR_BUDGET) return { coords: [...coords], repaired: -1 };
+  if (bad.length === 0) return { coords: [...coords], repaired: 0, unresolved: 0 };
+  if (bad.length > REPAIR_BUDGET) {
+    return { coords: [...coords], repaired: -1, unresolved: bad.length };
+  }
 
   const bytes = await loadFineLandMask();
   const repairIdx = new Set(bad);
   const out: { lat: number; lon: number }[] = [coords[0]];
+  let resolved = 0;
+  let unresolved = 0;
   for (let i = 1; i < coords.length; i++) {
     if (repairIdx.has(i - 1)) {
       const detour = fineAStarBetween(bytes, coords[i - 1], coords[i]);
       if (detour && detour.length > 2) {
         // Detour starts near coords[i-1] (already in out) — skip to avoid dupe.
         for (let k = 1; k < detour.length; k++) out.push(detour[k]);
+        resolved++;
         continue;
       }
-      // A* couldn't repair; fall back to straight searoute segment for this hop.
+      // A* couldn't repair; the original bad segment stays in the output.
+      // Report it so the caller can fall through to whole-route A*.
+      unresolved++;
     }
     out.push(coords[i]);
   }
-  return { coords: out, repaired: bad.length };
+  return { coords: out, repaired: resolved, unresolved };
 }
 
 interface EndpointSnapResult {
@@ -927,7 +938,7 @@ export async function computeSeaRoute(
       rejectReason = snap.reason ?? 'endpoint snap';
     } else {
       const repair = await localRepairAcrossLand(sr.coords);
-      if (repair.repaired === 0) {
+      if (repair.repaired === 0 && repair.unresolved === 0) {
         logger.info({
           operation: 'sea_router_hybrid_searoute',
           chordKm: Math.round(chordKm),
@@ -936,7 +947,7 @@ export async function computeSeaRoute(
         });
         return coordsToLineString(sr.coords);
       }
-      if (repair.repaired > 0) {
+      if (repair.repaired > 0 && repair.unresolved === 0) {
         logger.info({
           operation: 'sea_router_hybrid_searoute_repaired',
           chordKm: Math.round(chordKm),
@@ -946,7 +957,9 @@ export async function computeSeaRoute(
         });
         return coordsToLineString(repair.coords);
       }
-      rejectReason = `searoute too broken (${bad(repair.repaired)} gap-segments)`;
+      rejectReason =
+        `searoute too broken (${bad(repair.repaired)} repaired, ` +
+        `${repair.unresolved} unresolved gap-segments)`;
     }
   } else {
     rejectReason = 'searoute returned null';
