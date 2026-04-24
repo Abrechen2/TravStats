@@ -656,7 +656,9 @@ async function segmentLandRuns(
 }
 
 /** 20 samples at ~2 km spacing → ~40 km unbroken land = graph gap, not
- * port-cell noise. Shorter runs are tolerated. */
+ * port-cell noise. Shorter runs are tolerated here but caught by the
+ * post-branch quality gate, which rejects polylines with > 25 %
+ * interior land regardless of per-segment run length. */
 const REPAIR_RUN_THRESHOLD = 20;
 const REPAIR_BUDGET = 10;
 
@@ -940,9 +942,34 @@ async function wholeRouteAStarFallback(
 }
 
 /**
+ * Validate a candidate polyline against the 0.1° land mask. Used
+ * between pipeline branches: if the searoute/repair output still has
+ * ≥ 25 % interior land vertices, the branch's result is rejected and
+ * we fall through to the next branch rather than return a known-bad
+ * route. Cheap — the mask is in RAM.
+ */
+function postBranchQuality(coords: ReadonlyArray<{ lat: number; lon: number }>): {
+  quality: RouteQuality;
+  landRatio: number;
+} {
+  const tuples: [number, number][] = coords.map((p) => [p.lon, p.lat]);
+  return classifyRouteQuality(tuples);
+}
+
+/**
  * Hybrid v2 entry point — see file header for the full pipeline
  * description. Returns a GeoJSON LineString in `[lon, lat]` vertex
  * order, or null when every branch fails.
+ *
+ * Pipeline order of preference:
+ *   1. Great-circle if the fine mask says the chord never touches land.
+ *   2. searoute-ts (+ endpoint-snap check, + local 0.05° repair).
+ *   3. Whole-route 0.1° A* (water-safe by construction).
+ *
+ * Each branch's output is run through `classifyRouteQuality` before
+ * being returned. If a branch claims success but the result is
+ * schematic (≥ 25 % interior land), we fall through to the next
+ * branch instead of returning a lying polyline.
  */
 export async function computeSeaRoute(
   dep: SeaRoutePoint,
@@ -951,7 +978,9 @@ export async function computeSeaRoute(
   const t0 = Date.now();
   const chordKm = haversineKm(dep, arr);
 
-  // 1. Fine GC-safety test on the 0.05° mask.
+  // 1. Fine GC-safety test on the 0.05° mask. A hit of 0 means the
+  //    chord is clean — no reason to round-trip through the marnet
+  //    graph or the coarse A*.
   try {
     const gc = await fineGCLandHits(dep, arr);
     if (gc.hits === 0) {
@@ -969,12 +998,13 @@ export async function computeSeaRoute(
       operation: 'sea_router_fine_mask_unavailable',
       error: err instanceof Error ? err.message : err,
     });
-    // Skip the fine-mask branches entirely; fall straight to 0.1° A*.
     const fallback = await wholeRouteAStarFallback(dep, arr);
     return fallback === null ? null : coordsToLineString(fallback);
   }
 
-  // 2. searoute-ts + endpoint-snap guard + local repair.
+  // 2. searoute-ts + endpoint-snap guard + local repair + post-branch
+  //    quality gate. `rejectReason` is accumulated so the final
+  //    whole-route A* log line explains which branch bailed.
   const sr = runSearoute(dep, arr);
   let rejectReason: string | null = null;
   if (sr) {
@@ -983,41 +1013,53 @@ export async function computeSeaRoute(
       rejectReason = snap.reason ?? 'endpoint snap';
     } else {
       const repair = await localRepairAcrossLand(sr.coords);
-      if (repair.repaired === 0 && repair.unresolved === 0) {
-        logger.info({
-          operation: 'sea_router_hybrid_searoute',
-          chordKm: Math.round(chordKm),
-          km: Math.round(sr.km),
-          durationMs: Date.now() - t0,
-        });
-        return coordsToLineString(sr.coords);
+      if (repair.unresolved === 0) {
+        // Repair succeeded (or wasn't needed). Gate on final quality —
+        // the repair only targets long runs, but many short runs can
+        // still sum to a schematic total. In that case, fall through.
+        const candidate = repair.coords;
+        const q = postBranchQuality(candidate);
+        if (q.quality === 'good') {
+          logger.info({
+            operation:
+              repair.repaired === 0
+                ? 'sea_router_hybrid_searoute'
+                : 'sea_router_hybrid_searoute_repaired',
+            chordKm: Math.round(chordKm),
+            repaired: repair.repaired,
+            km: Math.round(polylineLengthKm(candidate)),
+            landRatio: Math.round(q.landRatio * 100) / 100,
+            durationMs: Date.now() - t0,
+          });
+          return coordsToLineString(candidate);
+        }
+        rejectReason =
+          `searoute+repair still schematic (landRatio ${q.landRatio.toFixed(2)}, ` +
+          `${repair.repaired} repaired)`;
+      } else {
+        rejectReason =
+          `searoute too broken (${bad(repair.repaired)} repaired, ` +
+          `${repair.unresolved} unresolved gap-segments)`;
       }
-      if (repair.repaired > 0 && repair.unresolved === 0) {
-        logger.info({
-          operation: 'sea_router_hybrid_searoute_repaired',
-          chordKm: Math.round(chordKm),
-          repaired: repair.repaired,
-          km: Math.round(polylineLengthKm(repair.coords)),
-          durationMs: Date.now() - t0,
-        });
-        return coordsToLineString(repair.coords);
-      }
-      rejectReason =
-        `searoute too broken (${bad(repair.repaired)} repaired, ` +
-        `${repair.unresolved} unresolved gap-segments)`;
     }
   } else {
     rejectReason = 'searoute returned null';
   }
 
-  // 3. Whole-route 0.1° A* fallback. Water-safe by construction.
+  // 3. Whole-route 0.1° A* fallback. Water-safe by construction — A*
+  //    only steps through water cells on the 0.1° mask — so this
+  //    branch's output never has interior land by definition. The
+  //    quality gate here is a defensive double-check, not a gate.
   const fallback = await wholeRouteAStarFallback(dep, arr);
   if (fallback !== null) {
+    const q = postBranchQuality(fallback);
     logger.info({
       operation: 'sea_router_hybrid_fallback_astar',
       chordKm: Math.round(chordKm),
       rejectReason,
       km: Math.round(polylineLengthKm(fallback)),
+      landRatio: Math.round(q.landRatio * 100) / 100,
+      quality: q.quality,
       durationMs: Date.now() - t0,
     });
     return coordsToLineString(fallback);
