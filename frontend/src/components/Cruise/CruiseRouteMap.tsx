@@ -4,11 +4,10 @@ import { MapboxOverlay } from "@deck.gl/mapbox";
 import type { Layer, MapViewState } from "@deck.gl/core";
 import type { Cruise } from "../../types";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../../lib/api/cruise";
-import { countSchematicLegs, createCruiseArcsLayer } from "../layers/cruiseArcsLayer";
+import { createCruiseArcsLayer } from "../layers/cruiseArcsLayer";
 import { createCruisePortsLayer } from "../layers/cruisePortsLayer";
 import { computeBbox } from "../../utils/mapAnimationHelpers";
 import { useThemeStore } from "../../store/themeStore";
-import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 
 const LIGHT_MAP_STYLE = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
@@ -40,16 +39,12 @@ interface Props {
 
 /**
  * Mini-map for the cruise detail page — shows this one cruise's sea
- * route with port markers. Fetches the A*-computed geometry from
- * `/cruises/:id/geometry`; legs that either fail to route (landlocked,
- * disconnected seas) or come back with a schematic classification
- * render as a dashed chord via the shared cruiseArcsLayer. Auto-fits
- * bounds on first geometry + port load, then lets the user pan/zoom
- * freely. Shows a small corner badge summarising how many legs are
- * schematic so the reader knows the dashed lines aren't a rendering bug.
+ * route with port markers. Fetches the schematic waypoint FeatureCollection
+ * from `/cruises/:id/geometry`; the shared cruiseArcsLayer splines the
+ * waypoints into smooth continental-detour curves. Auto-fits bounds on
+ * first geometry + port load, then lets the user pan/zoom freely.
  */
 export function CruiseRouteMap({ cruise }: Props): JSX.Element {
-  const { t } = useTranslation(["cruise"]);
   const mapRef = useRef<MapRef | null>(null);
   const isDark = useThemeStore((s) => s.isDarkMode);
   const [geometry, setGeometry] = useState<CruiseRouteFeatureCollection | null>(null);
@@ -77,15 +72,7 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
   );
 
   const layers: Layer[] = useMemo(() => {
-    // zoom=10 ⇒ toleranceKmForZoom returns 0, i.e. NO Douglas-Peucker
-    // simplification. We want the full A* polyline here because the
-    // detail-page map is small but local (UK + Scandinavia fits the
-    // viewport), and simplification at 20 km tolerance was collapsing
-    // the Kiel-Canal traversal (multiple 0.1° cells along a narrow
-    // water corridor) into a single long hop across Schleswig-Holstein
-    // land. At world-zoom stats pages the simplification still helps —
-    // this is a per-mini-map override, not a global setting.
-    const arcsLayer = createCruiseArcsLayer([cruise], geometryMap, 10);
+    const arcsLayer = createCruiseArcsLayer([cruise], geometryMap);
     const portsLayer = createCruisePortsLayer([cruise]);
     return [arcsLayer, portsLayer].filter((l): l is Layer => l !== null);
   }, [cruise, geometryMap]);
@@ -120,11 +107,6 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
     didFit.current = true;
   }, [mapLoaded, bboxPoints]);
 
-  const schematicCount = useMemo(
-    () => countSchematicLegs(cruise, geometry ?? undefined),
-    [cruise, geometry]
-  );
-
   return (
     <div className="relative h-64 w-full overflow-hidden rounded-md border border-[var(--color-border)]">
       <MapGL
@@ -136,30 +118,6 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
       >
         {mapLoaded && <DeckGLOverlay layers={layers} />}
       </MapGL>
-      {schematicCount > 0 && (
-        <div
-          className="absolute left-2 top-2 z-10 rounded-md px-2 py-1 text-xs font-medium"
-          style={{
-            background: "rgba(15,23,42,0.85)",
-            color: "#fde68a",
-            border: "1px solid rgba(253,224,71,0.4)",
-            backdropFilter: "blur(4px)",
-          }}
-          title={t("cruise:map.schematic_tooltip", {
-            defaultValue:
-              "Gestrichelte Linien markieren Abschnitte, für die keine verlässliche Seeroute berechnet werden konnte.",
-          })}
-        >
-          ⚠️{" "}
-          {t("cruise:map.schematic_badge", {
-            count: schematicCount,
-            defaultValue:
-              schematicCount === 1
-                ? "1 Abschnitt schematisch"
-                : `${schematicCount} Abschnitte schematisch`,
-          })}
-        </div>
-      )}
     </div>
   );
 }

@@ -46,12 +46,7 @@
     "add_custom_ship": "Add custom ship",
     "add_custom_port": "Add custom port"
   },
-  "map": {
-    "layer": "Cruises",
-    "schematic_badge_one": "1 segment schematic",
-    "schematic_badge_other": "{{count}} segments schematic",
-    "schematic_tooltip": "Dashed lines mark segments where no reliable sea route could be computed — those legs are drawn as a direct schematic connection."
-  },
+  "map": { "layer": "Cruises" },
   "chooser": {
     "title": "How do you want to add the cruise?",
     "email": {
