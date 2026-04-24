@@ -237,6 +237,69 @@ describe('seaRouter — with real Natural Earth mask', () => {
     );
     expect(passesBosporus).toBe(true);
   }, 30000);
+
+  it('falls through to whole-route A* when local repair leaves unresolved land-crossings', async () => {
+    if (!maskExists) return;
+    // Reproduces the Aegean / Kuşadası→Istanbul production bug. Stub
+    // searoute-ts with a polyline that skirts south of Crete then cuts
+    // straight across mainland Greece (Thessalia) before arriving at
+    // Istanbul. Each inter-waypoint chord spans multiple 0.1° land cells
+    // in the Greek interior — far beyond what the fine-A* repair budget
+    // can stitch back together.
+    //
+    // Pre-fix: `localRepairAcrossLand` reports `repaired > 0` on the
+    // detected bad runs even when the A* sub-call gives up on every one
+    // of them, so the caller accepts the still-broken polyline. The
+    // returned route contains a vertex deep in continental Greece.
+    //
+    // Post-fix: unresolved > 0 forces the whole-route A* fallback, which
+    // routes water-only around the Peloponnese (or returns null) — never
+    // the original mainland waypoints.
+    const kusadasi = { lat: 37.86, lon: 27.26 };
+    const istanbul = { lat: 41.01, lon: 28.98 };
+    const stubCoords: [number, number][] = [
+      [27.26, 37.86], // Kuşadası
+      [23.6, 36.5], // south of Crete
+      [24.5, 38.5], // over western Greek mainland
+      [25.5, 39.5], // Thessalia — deep mainland (~200 km inland)
+      [27.0, 40.8], // Sea of Marmara
+      [28.98, 41.01], // Istanbul
+    ];
+    setSearouteForTesting(() => ({
+      geometry: { coordinates: stubCoords },
+      properties: { length: 1500 },
+    }));
+    try {
+      const route = await computeSeaRoute(kusadasi, istanbul);
+      // Null is acceptable (whole-route A* could fail too if the strait
+      // can't be crossed). What we refuse is the stub's mainland-Greece
+      // waypoints passing through untouched.
+      if (route === null) return;
+
+      // The stub's [24.5, 38.5] and [25.5, 39.5] are deep in continental
+      // Europe — [24.5, 38.5] is in the Pindus mountains of central
+      // Greece. If the buggy `repaired > 0` branch were still active the
+      // fine-A* repair would give up on the 5°-wide land chord between
+      // stub waypoints, leave the stub polyline untouched and those
+      // mainland points would survive to the output. Whole-route A* on
+      // the 0.1° water mask physically can't produce them.
+      const preservesStubLandWaypoint = route.coordinates.some(
+        ([lon, lat]) =>
+          Math.abs(lon - 24.5) < 0.15 && Math.abs(lat - 38.5) < 0.15,
+      );
+      expect(preservesStubLandWaypoint).toBe(false);
+
+      // And every vertex must be water per the 0.1° mask (endpoints are
+      // port cells — the land-mask may still classify them as land if
+      // they sit in a harbour; skip the first and last).
+      for (let i = 1; i < route.coordinates.length - 1; i++) {
+        const [lon, lat] = route.coordinates[i];
+        expect(isWater(lat, lon)).toBe(true);
+      }
+    } finally {
+      setSearouteForTesting(null);
+    }
+  }, 60000);
 });
 
 describe('seaRouter — on a synthetic 10×10 mask', () => {
