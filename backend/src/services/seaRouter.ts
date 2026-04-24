@@ -837,6 +837,51 @@ export interface SeaRouteLineString {
   readonly coordinates: [number, number][];
 }
 
+export type RouteQuality = 'good' | 'schematic';
+
+export interface RouteQualityResult {
+  readonly quality: RouteQuality;
+  readonly landRatio: number;
+}
+
+/**
+ * Flag a computed sea-route as `schematic` when ≥ 25 % of its interior
+ * vertices land on non-water cells of the 0.1° mask. The frontend uses
+ * this flag to fall back to a dashed straight-line (chord) render —
+ * a dishonest zig-zag over Bavaria looks like a bug, a dashed chord
+ * reads as "route unknown, schematic only".
+ *
+ * Interior-only because river ports (Hamburg on the Elbe, Antwerp on
+ * the Scheldt, Bremerhaven at the mouth of the Weser) sit ON land in
+ * the 0.1° raster by default — scoring their endpoints would push
+ * every short Hamburg-class leg into `schematic` even when the
+ * routed polyline is fine.
+ *
+ * Requires the 0.1° land mask to be loaded. `computeSeaRoute` always
+ * loads it on the happy path, and `cruiseRouteCache` only calls this
+ * after a compute succeeds, so the throw-on-unloaded path here is
+ * only reachable from a direct caller that skipped the pipeline.
+ */
+export const SCHEMATIC_LAND_RATIO_THRESHOLD = 0.25;
+
+export function classifyRouteQuality(
+  coords: ReadonlyArray<[number, number]>,
+): RouteQualityResult {
+  const interior = coords.length - 2;
+  if (interior <= 0) return { quality: 'good', landRatio: 0 };
+
+  let land = 0;
+  for (let k = 1; k < coords.length - 1; k++) {
+    const [lon, lat] = coords[k];
+    if (!isWater(lat, lon)) land++;
+  }
+  const landRatio = land / interior;
+  return {
+    quality: landRatio >= SCHEMATIC_LAND_RATIO_THRESHOLD ? 'schematic' : 'good',
+    landRatio,
+  };
+}
+
 function coordsToLineString(coords: ReadonlyArray<{ lat: number; lon: number }>): SeaRouteLineString {
   const out: [number, number][] = [];
   for (const p of coords) out.push([p.lon, p.lat]);

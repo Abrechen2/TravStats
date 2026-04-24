@@ -23,7 +23,11 @@
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../db';
 import logger from '../utils/logger';
-import { computeSeaRoute } from './seaRouter';
+import {
+  classifyRouteQuality,
+  computeSeaRoute,
+  type RouteQuality,
+} from './seaRouter';
 
 /**
  * Bump whenever the behaviour of `computeSeaRoute` changes materially
@@ -55,12 +59,23 @@ import { computeSeaRoute } from './seaRouter';
  *       the whole-route A* fallback, preventing land-crossings from
  *       slipping through (Aegean / Dardanelles / Bosporus cases where
  *       fine-A* hits its budget on narrow straits).
+ *   9 = Cached rows now include a `quality` classification ("good" |
+ *       "schematic") and `landRatio` alongside the LineString, so the
+ *       frontend can render bad routes as dashed chords instead of
+ *       lying zig-zag polylines over Bavaria. Old v8 rows have no
+ *       quality and are recomputed on demand.
  */
-export const CACHE_VERSION = 8;
+export const CACHE_VERSION = 9;
 
 export interface RouteLineString {
   type: 'LineString';
   coordinates: [number, number][];
+}
+
+export interface CachedRoute {
+  line: RouteLineString;
+  quality: RouteQuality;
+  landRatio: number;
 }
 
 /**
@@ -77,25 +92,43 @@ function reverseLineString(line: RouteLineString): RouteLineString {
   return { type: 'LineString', coordinates: [...line.coordinates].reverse() };
 }
 
+function reverseCached(route: CachedRoute): CachedRoute {
+  return { ...route, line: reverseLineString(route.line) };
+}
+
 /**
- * Validate that a Prisma JSON value matches the LineString shape we
+ * Validate that a Prisma JSON value matches the `CachedRoute` shape we
  * wrote. Defensive because Prisma's Json type is `unknown` at the type
  * level — a corrupted row must not crash the endpoint.
+ *
+ * Accepts the v9 wrapper `{ line: {type, coordinates}, quality,
+ * landRatio }`. Bare LineStrings (v8 leftovers that somehow survived
+ * the version check) are rejected so we recompute with a classification.
  */
-function parseStoredGeometry(raw: Prisma.JsonValue): RouteLineString | null {
+function parseStoredGeometry(raw: Prisma.JsonValue): CachedRoute | null {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
   const obj = raw as Record<string, unknown>;
-  if (obj.type !== 'LineString') return null;
-  if (!Array.isArray(obj.coordinates)) return null;
-  const coords = obj.coordinates;
-  // Cheap shape-check: every element should be [lon, lat] number pairs.
-  // Return null on any malformed entry so the caller treats the row as
-  // a miss and recomputes.
-  for (const pair of coords) {
+  const line = obj.line;
+  if (!line || typeof line !== 'object' || Array.isArray(line)) return null;
+  const lineObj = line as Record<string, unknown>;
+  if (lineObj.type !== 'LineString') return null;
+  if (!Array.isArray(lineObj.coordinates)) return null;
+  for (const pair of lineObj.coordinates) {
     if (!Array.isArray(pair) || pair.length !== 2) return null;
     if (typeof pair[0] !== 'number' || typeof pair[1] !== 'number') return null;
   }
-  return { type: 'LineString', coordinates: coords as [number, number][] };
+  const quality = obj.quality === 'good' || obj.quality === 'schematic' ? obj.quality : null;
+  if (quality === null) return null;
+  const landRatio = typeof obj.landRatio === 'number' ? obj.landRatio : null;
+  if (landRatio === null) return null;
+  return {
+    line: {
+      type: 'LineString',
+      coordinates: lineObj.coordinates as [number, number][],
+    },
+    quality,
+    landRatio,
+  };
 }
 
 /**
@@ -109,7 +142,7 @@ export async function getOrComputeSeaRoute(
   bPortId: number,
   aCoords: { lat: number; lon: number },
   bCoords: { lat: number; lon: number },
-): Promise<RouteLineString | null> {
+): Promise<CachedRoute | null> {
   const { dep, arr, reversed } = canonicalPair(aPortId, bPortId);
 
   const cached = await prisma.cruiseRouteCache.findUnique({
@@ -117,17 +150,17 @@ export async function getOrComputeSeaRoute(
   });
 
   if (cached !== null && cached.version === CACHE_VERSION) {
-    const geometry = parseStoredGeometry(cached.geometry);
-    if (geometry !== null) {
+    const parsed = parseStoredGeometry(cached.geometry);
+    if (parsed !== null) {
       logger.debug({
         operation: 'cruise_route_cache_hit',
         depPortId: dep,
         arrPortId: arr,
-        coordinates: geometry.coordinates.length,
+        coordinates: parsed.line.coordinates.length,
+        quality: parsed.quality,
       });
-      return reversed ? reverseLineString(geometry) : geometry;
+      return reversed ? reverseCached(parsed) : parsed;
     }
-    // Fall through to recompute when parse fails — the row is corrupted.
     logger.warn({
       operation: 'cruise_route_cache_parse_failed',
       depPortId: dep,
@@ -139,13 +172,13 @@ export async function getOrComputeSeaRoute(
   // direction so we store one orientation per port pair.
   const aIsDep = !reversed;
   const computeStart = Date.now();
-  const route = await computeSeaRoute(
+  const line = await computeSeaRoute(
     aIsDep ? aCoords : bCoords,
     aIsDep ? bCoords : aCoords,
   );
   const durationMs = Date.now() - computeStart;
 
-  if (route === null) {
+  if (line === null) {
     logger.warn({
       operation: 'cruise_route_cache_compute_null',
       depPortId: dep,
@@ -154,6 +187,9 @@ export async function getOrComputeSeaRoute(
     });
     return null;
   }
+
+  const { quality, landRatio } = classifyRouteQuality(line.coordinates);
+  const route: CachedRoute = { line, quality, landRatio };
 
   await prisma.cruiseRouteCache.upsert({
     where: { depPortId_arrPortId: { depPortId: dep, arrPortId: arr } },
@@ -174,9 +210,11 @@ export async function getOrComputeSeaRoute(
     operation: 'cruise_route_cache_miss',
     depPortId: dep,
     arrPortId: arr,
-    coordinates: route.coordinates.length,
+    coordinates: line.coordinates.length,
+    quality,
+    landRatio: Math.round(landRatio * 100) / 100,
     durationMs,
   });
 
-  return reversed ? reverseLineString(route) : route;
+  return reversed ? reverseCached(route) : route;
 }

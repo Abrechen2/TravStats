@@ -9,6 +9,13 @@ type LonLat = [number, number];
  * hops subtly curved and long hops more pronounced.
  *
  * Returns `resolution + 1` points — path includes both endpoints.
+ *
+ * @deprecated The cruise arcs layer no longer uses this for the
+ *   missing-geometry fallback — a Bezier can curve OVER land (short
+ *   Elbe legs loop through Niedersachsen) and still reads as an
+ *   intentional trajectory. The layer now falls back to a dashed
+ *   chord instead, see `cruiseArcsLayer.ts`. Kept for opt-in callers
+ *   that explicitly want a curved placeholder (none in-tree).
  */
 export function buildCruiseArc(
   from: { lat: number; lon: number },
