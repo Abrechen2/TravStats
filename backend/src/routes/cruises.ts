@@ -121,8 +121,24 @@ router.get('/:id/geometry', async (req: AuthRequest, res: Response, next: NextFu
       if (!a || !b) continue;
 
       const route = await computeSchematicRoute(
-        { lat: a.lat, lon: a.lon },
-        { lat: b.lat, lon: b.lon },
+        {
+          id: a.id,
+          name: a.name,
+          city: a.city,
+          country: a.country,
+          unlocode: a.unlocode,
+          lat: a.lat,
+          lon: a.lon,
+        },
+        {
+          id: b.id,
+          name: b.name,
+          city: b.city,
+          country: b.country,
+          unlocode: b.unlocode,
+          lat: b.lat,
+          lon: b.lon,
+        },
       );
       features.push({
         type: 'Feature',

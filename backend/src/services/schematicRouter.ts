@@ -99,6 +99,98 @@ let maskBytes: Uint8Array | null = null;
 let fineMaskBytes: Uint8Array | null = null;
 let loadPromise: Promise<Uint8Array> | null = null;
 
+export interface SchematicRoutePort {
+  readonly id?: number;
+  readonly name?: string | null;
+  readonly city?: string | null;
+  readonly country?: string | null;
+  readonly unlocode?: string | null;
+  readonly lat: number;
+  readonly lon: number;
+}
+
+interface PortApproach {
+  readonly match: (port: SchematicRoutePort) => boolean;
+  /** [lon, lat] waypoints from the port toward open water, excluding the port itself. */
+  readonly outbound: ReadonlyArray<readonly [number, number]>;
+}
+
+const PORT_APPROACHES: ReadonlyArray<PortApproach> = [
+  {
+    match: (port) => portMatches(port, {
+      names: ['hamburg'],
+      cities: ['hamburg'],
+      countries: ['germany', 'deutschland'],
+      unlocodes: ['DEHAM'],
+    }),
+    outbound: [
+      [9.52, 53.86], // Elbe fairway near Brunsbuettel/Cuxhaven approach
+      [8.72, 53.9],  // Cuxhaven roads
+      [8.18, 54.05], // German Bight, safely outside the Elbe estuary
+    ],
+  },
+];
+
+function normalizePortText(value: string | null | undefined): string {
+  return (value ?? '').trim().toLowerCase();
+}
+
+function portMatches(
+  port: SchematicRoutePort,
+  criteria: {
+    readonly names?: readonly string[];
+    readonly cities?: readonly string[];
+    readonly countries?: readonly string[];
+    readonly unlocodes?: readonly string[];
+  },
+): boolean {
+  const name = normalizePortText(port.name);
+  const city = normalizePortText(port.city);
+  const country = normalizePortText(port.country);
+  const unlocode = normalizePortText(port.unlocode).toUpperCase();
+
+  if (criteria.unlocodes?.some((code) => unlocode === code.toUpperCase())) return true;
+
+  const countryMatches =
+    criteria.countries === undefined ||
+    criteria.countries.some((candidate) => country === candidate);
+  if (!countryMatches) return false;
+
+  return Boolean(
+    criteria.names?.some((candidate) => name === candidate || name.includes(candidate)) ||
+      criteria.cities?.some((candidate) => city === candidate),
+  );
+}
+
+function getPortApproach(port: SchematicRoutePort): [number, number][] {
+  const approach = PORT_APPROACHES.find((entry) => entry.match(port));
+  return approach ? approach.outbound.map(([lon, lat]) => [lon, lat]) : [];
+}
+
+function sameWaypoint(a: readonly [number, number], b: readonly [number, number]): boolean {
+  return Math.abs(a[0] - b[0]) < 1e-9 && Math.abs(a[1] - b[1]) < 1e-9;
+}
+
+function appendUnique(out: [number, number][], point: [number, number]): void {
+  if (out.length === 0 || !sameWaypoint(out[out.length - 1], point)) out.push(point);
+}
+
+function composeRouteWaypoints(
+  dep: SchematicRoutePort,
+  depApproach: ReadonlyArray<[number, number]>,
+  coreWaypoints: ReadonlyArray<[number, number]>,
+  arrApproach: ReadonlyArray<[number, number]>,
+  arr: SchematicRoutePort,
+): [number, number][] {
+  const out: [number, number][] = [];
+  appendUnique(out, [dep.lon, dep.lat]);
+  for (const point of depApproach) appendUnique(out, point);
+  for (const point of coreWaypoints) appendUnique(out, point);
+  for (const point of [...arrApproach].reverse()) appendUnique(out, point);
+  appendUnique(out, [arr.lon, arr.lat]);
+  return out;
+}
+
 /** Downsample the 0.1° raster to 1°. A 1° cell is water when
  * COARSE_WATER_THRESHOLD of its 100 sub-cells are water. */
 function downsampleMask(finBytes: Uint8Array): Uint8Array {
@@ -447,14 +539,20 @@ export interface SchematicRoute {
  * which the frontend can still render as a straight link.
  */
 export async function computeSchematicRoute(
-  dep: { lat: number; lon: number },
-  arr: { lat: number; lon: number },
+  dep: SchematicRoutePort,
+  arr: SchematicRoutePort,
 ): Promise<SchematicRoute> {
   const t0 = Date.now();
   const bytes = await loadCoarseMask();
+  const depApproach = getPortApproach(dep);
+  const arrApproach = getPortApproach(arr);
+  const depRoutePoint = depApproach[depApproach.length - 1] ?? [dep.lon, dep.lat];
+  const arrRoutePoint = arrApproach[arrApproach.length - 1] ?? [arr.lon, arr.lat];
+  const routeDep = { lat: depRoutePoint[1], lon: depRoutePoint[0] };
+  const routeArr = { lat: arrRoutePoint[1], lon: arrRoutePoint[0] };
 
-  const depCell = findNearestWaterCell(bytes, dep.lat, dep.lon);
-  const arrCell = findNearestWaterCell(bytes, arr.lat, arr.lon);
+  const depCell = findNearestWaterCell(bytes, routeDep.lat, routeDep.lon);
+  const arrCell = findNearestWaterCell(bytes, routeArr.lat, routeArr.lon);
 
   if (depCell === null || arrCell === null) {
     logger.debug({
@@ -462,7 +560,16 @@ export async function computeSchematicRoute(
       chordKm: Math.round(haversineKm(dep, arr)),
       durationMs: Date.now() - t0,
     });
-    return { waypoints: [[dep.lon, dep.lat], [arr.lon, arr.lat]], routed: false };
+    return {
+      waypoints: composeRouteWaypoints(
+        dep,
+        depApproach,
+        [[routeDep.lon, routeDep.lat], [routeArr.lon, routeArr.lat]],
+        arrApproach,
+        arr,
+      ),
+      routed: false,
+    };
   }
 
   const startIdx = cellIndex1(depCell.row, depCell.col);
@@ -475,18 +582,28 @@ export async function computeSchematicRoute(
       chordKm: Math.round(haversineKm(dep, arr)),
       durationMs: Date.now() - t0,
     });
-    return { waypoints: [[dep.lon, dep.lat], [arr.lon, arr.lat]], routed: false };
+    return {
+      waypoints: composeRouteWaypoints(
+        dep,
+        depApproach,
+        [[routeDep.lon, routeDep.lat], [routeArr.lon, routeArr.lat]],
+        arrApproach,
+        arr,
+      ),
+      routed: false,
+    };
   }
 
-  const rawPath: [number, number][] = [[dep.lon, dep.lat]];
+  const rawPath: [number, number][] = [[routeDep.lon, routeDep.lat]];
   for (const idx of pathCells) {
     const c = cellCenter1(rowFromIndex1(idx), colFromIndex1(idx));
     rawPath.push([c.lon, c.lat]);
   }
-  rawPath.push([arr.lon, arr.lat]);
+  rawPath.push([routeArr.lon, routeArr.lat]);
 
   const simplified = simplifyDegrees(rawPath, SIMPLIFY_TOLERANCE_DEG);
   const buffered = insertCoastBuffers(simplified, fineMaskBytes);
+  const waypoints = composeRouteWaypoints(dep, depApproach, buffered, arrApproach, arr);
 
   logger.debug({
     operation: 'schematic_router_routed',
@@ -494,7 +611,10 @@ export async function computeSchematicRoute(
     rawWaypoints: rawPath.length,
     simplifiedWaypoints: simplified.length,
     bufferedWaypoints: buffered.length,
+    outputWaypoints: waypoints.length,
+    departureApproachWaypoints: depApproach.length,
+    arrivalApproachWaypoints: arrApproach.length,
     durationMs: Date.now() - t0,
   });
-  return { waypoints: buffered, routed: true };
+  return { waypoints, routed: true };
 }
