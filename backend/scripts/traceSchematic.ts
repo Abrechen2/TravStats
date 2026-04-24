@@ -14,6 +14,9 @@ const cases: Array<{ label: string; dep: { lat: number; lon: number }; arr: { la
   { label: "Skagway → Ketchikan", dep: { lat: 59.46, lon: -135.31 }, arr: { lat: 55.34, lon: -131.65 } },
   { label: "Hong Kong → Halong Bay", dep: { lat: 22.3, lon: 114.17 }, arr: { lat: 20.91, lon: 107.18 } },
   { label: "Miami → Nassau", dep: { lat: 25.77, lon: -80.19 }, arr: { lat: 25.05, lon: -77.35 } },
+  { label: "Amsterdam → Rotterdam", dep: { lat: 52.37, lon: 4.89 }, arr: { lat: 51.92, lon: 4.48 } },
+  { label: "Rotterdam → Middelburg", dep: { lat: 51.92, lon: 4.48 }, arr: { lat: 51.5, lon: 3.6 } },
+  { label: "Amsterdam → Vlissingen", dep: { lat: 52.37, lon: 4.89 }, arr: { lat: 51.44, lon: 3.58 } },
 ];
 
 async function main(): Promise<void> {
