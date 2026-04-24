@@ -64,8 +64,15 @@ import {
  *       frontend can render bad routes as dashed chords instead of
  *       lying zig-zag polylines over Bavaria. Old v8 rows have no
  *       quality and are recomputed on demand.
+ *  10 = Pipeline hardening: searoute+repair branch now gates on the
+ *       final quality (≥ 25 % interior-land vertices → fall through to
+ *       whole-route A*) instead of returning whatever the repair
+ *       produced. Legs with accumulated short land-crossings
+ *       (Bremerhaven → Hamburg, Hamburg → Bergen, Rotterdam
+ *       → Bremerhaven, …) now route via the coarse A* and are
+ *       good-quality.
  */
-export const CACHE_VERSION = 9;
+export const CACHE_VERSION = 10;
 
 export interface RouteLineString {
   type: 'LineString';

@@ -222,6 +222,45 @@ describe('seaRouter — with real Natural Earth mask', () => {
     }
   }, 30000);
 
+  it('post-branch quality gate falls through when searoute+repair still has > 25 % interior land', async () => {
+    if (!maskExists) return;
+    // Stub a Bremerhaven → Hamburg-style leg: polyline whose interior
+    // vertices are overwhelmingly on land (Weser estuary through inland
+    // Niedersachsen to the Elbe). Individual segments are short enough
+    // that the per-segment land-run threshold doesn't fire — only the
+    // post-branch quality gate catches it and forces whole-route A*.
+    const bremerhaven = { lat: 53.55, lon: 8.57 };
+    const hamburg = { lat: 53.55, lon: 9.97 };
+    const stubCoords: [number, number][] = [
+      [bremerhaven.lon, bremerhaven.lat],
+      [8.7, 53.3],
+      [8.9, 53.1], // inland Niedersachsen
+      [9.1, 52.9],
+      [9.3, 53.0],
+      [9.5, 53.2],
+      [9.7, 53.4],
+      [hamburg.lon, hamburg.lat],
+    ];
+    setSearouteForTesting(() => ({
+      geometry: { coordinates: stubCoords },
+      properties: { length: 120 },
+    }));
+    try {
+      const route = await computeSeaRoute(bremerhaven, hamburg);
+      expect(route).not.toBeNull();
+      if (!route) return;
+      // The stub's interior waypoints (8.9°, 53.1°) etc. must NOT appear
+      // verbatim — the gate rejected them and whole-route A* produced a
+      // water-only polyline instead.
+      const preservedStubInterior = route.coordinates.some(
+        ([lon, lat]) => Math.abs(lon - 8.9) < 0.05 && Math.abs(lat - 53.1) < 0.05,
+      );
+      expect(preservedStubInterior).toBe(false);
+    } finally {
+      setSearouteForTesting(null);
+    }
+  }, 30000);
+
   it('routes Istanbul → Odesa through the Bosporus (canal override)', async () => {
     if (!maskExists) return;
     // Without the Bosporus canal override, the Sea of Marmara is cut off
