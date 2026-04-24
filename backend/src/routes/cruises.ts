@@ -106,11 +106,17 @@ router.get('/:id/geometry', async (req: AuthRequest, res: Response, next: NextFu
     const features: Array<{
       type: 'Feature';
       geometry: { type: 'LineString'; coordinates: [number, number][] };
-      properties: { fromPortId: number; toPortId: number; computed: true };
+      properties: {
+        fromPortId: number;
+        toPortId: number;
+        quality: 'good' | 'schematic';
+        landRatio: number;
+      };
     }> = [];
 
     const computedAt = Date.now();
-    let computedLegs = 0;
+    let goodLegs = 0;
+    let schematicLegs = 0;
     let skippedLegs = 0;
 
     for (let i = 0; i < ordered.length - 1; i++) {
@@ -137,10 +143,16 @@ router.get('/:id/geometry', async (req: AuthRequest, res: Response, next: NextFu
       }
       features.push({
         type: 'Feature',
-        geometry: route,
-        properties: { fromPortId: a.id, toPortId: b.id, computed: true },
+        geometry: route.line,
+        properties: {
+          fromPortId: a.id,
+          toPortId: b.id,
+          quality: route.quality,
+          landRatio: Math.round(route.landRatio * 1000) / 1000,
+        },
       });
-      computedLegs++;
+      if (route.quality === 'good') goodLegs++;
+      else schematicLegs++;
     }
 
     logger.info({
@@ -148,7 +160,8 @@ router.get('/:id/geometry', async (req: AuthRequest, res: Response, next: NextFu
       cruiseId: cruise.id,
       userId,
       stops: ordered.length,
-      computedLegs,
+      goodLegs,
+      schematicLegs,
       skippedLegs,
       durationMs: Date.now() - computedAt,
     });

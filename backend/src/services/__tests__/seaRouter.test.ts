@@ -12,6 +12,7 @@ import {
   setBit,
 } from '../../shared/geo/landMaskGrid';
 import {
+  classifyRouteQuality,
   computeSeaRoute,
   computeSeaRouteCells,
   findNearestWater,
@@ -409,5 +410,92 @@ describe('seaRouter — on a synthetic 10×10 mask', () => {
     const center = cellCenter(row, col);
     expect(Math.abs(center.lat - lat)).toBeLessThan(0.1);
     expect(Math.abs(center.lon - lon)).toBeLessThan(0.1);
+  });
+});
+
+describe('classifyRouteQuality', () => {
+  // Use a synthetic 10×10 water patch so every interior vertex we pick
+  // classifies one way or the other predictably. Coordinates outside
+  // the patch are "land" by construction.
+  beforeAll(() => {
+    const bytes = buildAllLandMask();
+    const row = 900;
+    for (let col = 1790; col <= 1810; col++) openWater(bytes, row, col);
+    setLandMaskForTesting(bytes);
+  });
+
+  afterAll(() => {
+    setLandMaskForTesting(null);
+  });
+
+  it('returns good for a fully water-interior route', () => {
+    // Endpoints anywhere; the three interior vertices sit on the open
+    // water corridor (row=900 cells 1800, 1801, 1802 → roughly 0°E).
+    const c1 = cellCenter(900, 1800);
+    const c2 = cellCenter(900, 1801);
+    const c3 = cellCenter(900, 1802);
+    const res = classifyRouteQuality([
+      [0, 0],
+      [c1.lon, c1.lat],
+      [c2.lon, c2.lat],
+      [c3.lon, c3.lat],
+      [10, 10],
+    ]);
+    expect(res.quality).toBe('good');
+    expect(res.landRatio).toBe(0);
+  });
+
+  it('returns schematic when ≥ 25 % of interior vertices are land', () => {
+    // 4 interior vertices, 2 land (50 %) — well above the 25 % threshold.
+    const c1 = cellCenter(900, 1800);
+    const c2 = cellCenter(900, 1801);
+    const res = classifyRouteQuality([
+      [0, 0],
+      [c1.lon, c1.lat],
+      [c2.lon, c2.lat],
+      [50, 20], // Sahara-ish — land
+      [45, 10], // land
+      [10, 10],
+    ]);
+    expect(res.quality).toBe('schematic');
+    expect(res.landRatio).toBe(0.5);
+  });
+
+  it('ignores endpoints when classifying (river-port safety)', () => {
+    // Both endpoints are land (Hamburg-style). Single interior vertex
+    // is water. Should read as good despite land endpoints.
+    const c1 = cellCenter(900, 1800);
+    const res = classifyRouteQuality([
+      [10, 53], // land
+      [c1.lon, c1.lat],
+      [10, 54], // land
+    ]);
+    expect(res.quality).toBe('good');
+  });
+
+  it('returns good for a 2-point chord (no interior to score)', () => {
+    const res = classifyRouteQuality([
+      [0, 0],
+      [1, 1],
+    ]);
+    expect(res.quality).toBe('good');
+    expect(res.landRatio).toBe(0);
+  });
+
+  it('classifies the 25 % threshold case as schematic (boundary)', () => {
+    // 4 interior vertices, 1 land (25 % exactly) — threshold is inclusive.
+    const c1 = cellCenter(900, 1800);
+    const c2 = cellCenter(900, 1801);
+    const c3 = cellCenter(900, 1802);
+    const res = classifyRouteQuality([
+      [0, 0],
+      [c1.lon, c1.lat],
+      [c2.lon, c2.lat],
+      [c3.lon, c3.lat],
+      [50, 20], // land — 1/4 = 25 %
+      [10, 10],
+    ]);
+    expect(res.quality).toBe('schematic');
+    expect(res.landRatio).toBe(0.25);
   });
 });

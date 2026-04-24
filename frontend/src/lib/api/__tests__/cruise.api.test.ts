@@ -54,7 +54,12 @@ describe("cruiseApi", () => {
         {
           type: "Feature" as const,
           geometry: { type: "LineString" as const, coordinates: [[1, 2] as [number, number]] },
-          properties: { fromPortId: 1, toPortId: 2, computed: true },
+          properties: {
+            fromPortId: 1,
+            toPortId: 2,
+            quality: "good" as const,
+            landRatio: 0,
+          },
         },
       ],
     };

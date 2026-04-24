@@ -67,7 +67,12 @@
     "add_custom_ship": "Neues Schiff anlegen",
     "add_custom_port": "Neuen Hafen anlegen"
   },
-  "map": { "layer": "Kreuzfahrten" },
+  "map": {
+    "layer": "Kreuzfahrten",
+    "schematic_badge_one": "1 Abschnitt schematisch",
+    "schematic_badge_other": "{{count}} Abschnitte schematisch",
+    "schematic_tooltip": "Gestrichelte Linien markieren Abschnitte, für die keine verlässliche Seeroute berechnet werden konnte — die Strecke ist dann schematisch als direkte Verbindung dargestellt."
+  },
   "chooser": {
     "title": "Wie möchtest du die Kreuzfahrt erfassen?",
     "email": {
