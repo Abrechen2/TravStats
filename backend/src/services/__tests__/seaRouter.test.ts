@@ -476,8 +476,8 @@ describe('classifyRouteQuality', () => {
     expect(res.landRatio).toBe(0);
   });
 
-  it('returns schematic when ≥ 25 % of interior vertices are land', () => {
-    // 4 interior vertices, 2 land (50 %) — well above the 25 % threshold.
+  it('returns schematic when ≥ 15 % of interior vertices are land', () => {
+    // 4 interior vertices, 2 land (50 %) — well above the 15 % threshold.
     const c1 = cellCenter(900, 1800);
     const c2 = cellCenter(900, 1801);
     const res = classifyRouteQuality([
@@ -513,20 +513,28 @@ describe('classifyRouteQuality', () => {
     expect(res.landRatio).toBe(0);
   });
 
-  it('classifies the 25 % threshold case as schematic (boundary)', () => {
-    // 4 interior vertices, 1 land (25 % exactly) — threshold is inclusive.
-    const c1 = cellCenter(900, 1800);
-    const c2 = cellCenter(900, 1801);
-    const c3 = cellCenter(900, 1802);
-    const res = classifyRouteQuality([
+  it('classifies landRatio at the 15 % threshold as schematic (boundary)', () => {
+    // 7 interior vertices, 1 land (≈ 14.3 %) — just below threshold.
+    const c = Array.from({ length: 7 }, (_, i) => cellCenter(900, 1800 + i));
+    const justBelow = classifyRouteQuality([
       [0, 0],
-      [c1.lon, c1.lat],
-      [c2.lon, c2.lat],
-      [c3.lon, c3.lat],
-      [50, 20], // land — 1/4 = 25 %
+      ...c.slice(0, 6).map((p) => [p.lon, p.lat] as [number, number]),
       [10, 10],
     ]);
-    expect(res.quality).toBe('schematic');
-    expect(res.landRatio).toBe(0.25);
+    expect(justBelow.quality).toBe('good');
+
+    // 7 interior vertices, 2 land (≈ 28.6 %) — clearly above.
+    const aboveThreshold = classifyRouteQuality([
+      [0, 0],
+      [c[0].lon, c[0].lat],
+      [c[1].lon, c[1].lat],
+      [c[2].lon, c[2].lat],
+      [c[3].lon, c[3].lat],
+      [c[4].lon, c[4].lat],
+      [50, 20],
+      [45, 10],
+      [10, 10],
+    ]);
+    expect(aboveThreshold.quality).toBe('schematic');
   });
 });
