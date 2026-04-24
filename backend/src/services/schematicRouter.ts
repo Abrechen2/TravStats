@@ -44,6 +44,19 @@ import {
   latToRow,
   lonToCol,
 } from '../shared/geo/landMaskGrid';
+
+/** Look up whether a lat/lon is water on the FINE 0.1° mask. Used
+ * only by the coast-buffer post-pass — A* itself runs on the coarse
+ * grid. Returns `false` if the mask isn't loaded (caller invokes
+ * `loadCoarseMask()` first anyway). */
+function isFineWater(fineBytes: Uint8Array, lat: number, lon: number): boolean {
+  if (lat < -90 || lat > 90) return false;
+  const row = latToRow(lat);
+  const col = lonToCol(lon);
+  const c = ((col % MASK_COLS) + MASK_COLS) % MASK_COLS;
+  if (row < 0 || row >= MASK_ROWS) return false;
+  return getBit(fineBytes, cellIndex(row, c)) === 0;
+}
 import {
   MASK1_BYTES,
   MASK1_COLS,
@@ -62,27 +75,28 @@ import {
 const DEFAULT_FINE_MASK_PATH = path.resolve(__dirname, '..', '..', 'data', 'land-mask-0.1deg.bin');
 
 /** A 1° cell is water if at least this fraction of its 100 sub-cells
- * on the 0.1° mask is water. Liberal on purpose — coastal 1° cells
- * should be passable by a schematic route even when they're mostly
- * land, because the spline will bend the rendered curve away from the
- * cell centre anyway. Value tuned empirically: higher (say 0.5) makes
- * Mediterranean / Baltic legs route via impossible paths; lower
- * (say 0.1) lets routes cut across continental shelves. */
-const COARSE_WATER_THRESHOLD = 0.3;
+ * on the 0.1° mask is water. 0.4 is a compromise — too low (0.3) lets
+ * the Dutch coast pass as water and routes cut through NL via lakes;
+ * too high (0.5) forces A* to skip intermediate coastal cells and
+ * the spline ends up clipping land on long offshore jumps. */
+const COARSE_WATER_THRESHOLD = 0.4;
 
 /** Maximum A* cells visited before giving up. 1° grid is 64 800 cells
  * total; even worst-case transoceanic routes visit <10k cells with a
  * haversine heuristic. */
 const COARSE_A_STAR_BUDGET = 50_000;
 
-/** Douglas-Peucker simplification tolerance, in degrees. Rough rule of
- * thumb: a vertex deviates from the chord it replaces by at most this
- * much before it's kept. 0.8° ≈ 90 km at the equator — enough to
- * preserve continental-scale detours (around Italy, around Spain) and
- * drop cell-grid zig-zag. */
-const SIMPLIFY_TOLERANCE_DEG = 0.8;
+/** Douglas-Peucker simplification tolerance, in degrees. 0.3° ≈ 33 km
+ * at the equator. The spline needs to see the coastal-detour
+ * waypoints that keep the rendered curve offshore — 0.8° was dropping
+ * them on medium-length coastal legs (Rotterdam → Bremerhaven), so
+ * the chord between the surviving points ended up crossing the
+ * Netherlands. Lower values here = more waypoints per leg = more
+ * faithful-looking curve, at the cost of payload size (still tiny). */
+const SIMPLIFY_TOLERANCE_DEG = 0.3;
 
 let maskBytes: Uint8Array | null = null;
+let fineMaskBytes: Uint8Array | null = null;
 let loadPromise: Promise<Uint8Array> | null = null;
 
 /** Downsample the 0.1° raster to 1°. A 1° cell is water when
@@ -115,6 +129,7 @@ export async function loadCoarseMask(): Promise<Uint8Array> {
     loadPromise = (async (): Promise<Uint8Array> => {
       const buf = await fs.readFile(DEFAULT_FINE_MASK_PATH);
       const fine = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
+      fineMaskBytes = fine;
       const coarse = downsampleMask(fine);
       maskBytes = coarse;
       let waterCells = 0;
@@ -134,8 +149,12 @@ export async function loadCoarseMask(): Promise<Uint8Array> {
   return loadPromise;
 }
 
-export function setCoarseMaskForTesting(bytes: Uint8Array | null): void {
+export function setCoarseMaskForTesting(
+  bytes: Uint8Array | null,
+  fine?: Uint8Array | null,
+): void {
   maskBytes = bytes;
+  fineMaskBytes = fine ?? null;
   loadPromise = bytes === null ? null : Promise.resolve(bytes);
 }
 
@@ -308,6 +327,106 @@ export function simplifyDegrees(
   return out;
 }
 
+/**
+ * Walk each simplified segment at ~0.2° step granularity on the fine
+ * 0.1° mask; if the midpoint (or any sampled point) clips land,
+ * insert an offshore "buffer" waypoint that pulls the segment out to
+ * sea. Runs AFTER Douglas-Peucker so we only buffer segments that
+ * actually survived simplification — avoids re-densifying long
+ * already-dense continental curves.
+ *
+ * The buffer direction is chosen by searching a small cloud of
+ * offshore candidates perpendicular to the segment and picking the
+ * one that gets the whole segment back over water. Cheap because the
+ * candidate set is small and the 0.1° mask lookup is O(1).
+ */
+function insertCoastBuffers(
+  waypoints: ReadonlyArray<[number, number]>,
+  fineBytes: Uint8Array | null,
+): [number, number][] {
+  if (fineBytes === null || waypoints.length < 2) {
+    return waypoints.slice() as [number, number][];
+  }
+  const out: [number, number][] = [waypoints[0]];
+  for (let i = 1; i < waypoints.length; i++) {
+    const [lon0, lat0] = waypoints[i - 1];
+    const [lon1, lat1] = waypoints[i];
+    const dx = lon1 - lon0;
+    const dy = lat1 - lat0;
+    const segLen = Math.hypot(dx, dy);
+    // Short segments (< 0.5° ≈ 55 km) are too coastal-noisy to buffer
+    // usefully, and the spline's natural curvature handles them.
+    if (segLen < 0.5) {
+      out.push([lon1, lat1]);
+      continue;
+    }
+    // Sample the segment at 0.15° intervals. If any interior sample
+    // lands on land, we need a buffer.
+    const samples = Math.max(3, Math.ceil(segLen / 0.15));
+    let anyLand = false;
+    for (let s = 1; s < samples; s++) {
+      const t = s / samples;
+      const lon = lon0 + dx * t;
+      const lat = lat0 + dy * t;
+      if (!isFineWater(fineBytes, lat, lon)) {
+        anyLand = true;
+        break;
+      }
+    }
+    if (!anyLand) {
+      out.push([lon1, lat1]);
+      continue;
+    }
+    // Find an offshore buffer point near the midpoint. Perpendicular
+    // vector to the chord, tested in both directions at increasing
+    // offset. Cell-size bumps (0.5° steps up to 2°) are enough for
+    // continental-scale routing; larger offsets would bend the curve
+    // too far.
+    const midLon = (lon0 + lon1) / 2;
+    const midLat = (lat0 + lat1) / 2;
+    const perpNorm = Math.hypot(dx, dy) || 1;
+    const perpLon = -dy / perpNorm;
+    const perpLat = dx / perpNorm;
+    let bestBuffer: [number, number] | null = null;
+    for (const magnitude of [0.5, 1.0, 1.5, 2.0]) {
+      for (const sign of [1, -1] as const) {
+        const bufLon = midLon + sign * perpLon * magnitude;
+        const bufLat = midLat + sign * perpLat * magnitude;
+        // Accept the buffer only if: (a) it is itself on water, and
+        // (b) the two sub-segments (start→buf, buf→end) both stay in
+        // water when re-sampled. Otherwise it's still a bad route.
+        if (!isFineWater(fineBytes, bufLat, bufLon)) continue;
+        if (!segmentAllWater(fineBytes, lon0, lat0, bufLon, bufLat)) continue;
+        if (!segmentAllWater(fineBytes, bufLon, bufLat, lon1, lat1)) continue;
+        bestBuffer = [bufLon, bufLat];
+        break;
+      }
+      if (bestBuffer !== null) break;
+    }
+    if (bestBuffer !== null) out.push(bestBuffer);
+    out.push([lon1, lat1]);
+  }
+  return out;
+}
+
+function segmentAllWater(
+  fineBytes: Uint8Array,
+  lon0: number,
+  lat0: number,
+  lon1: number,
+  lat1: number,
+): boolean {
+  const dx = lon1 - lon0;
+  const dy = lat1 - lat0;
+  const segLen = Math.hypot(dx, dy);
+  const samples = Math.max(3, Math.ceil(segLen / 0.15));
+  for (let s = 1; s < samples; s++) {
+    const t = s / samples;
+    if (!isFineWater(fineBytes, lat0 + dy * t, lon0 + dx * t)) return false;
+  }
+  return true;
+}
+
 export interface SchematicRoute {
   /** [lon, lat] waypoints. First is always `dep`, last is always
    * `arr`. Intermediates are continental-scale detours around
@@ -367,13 +486,15 @@ export async function computeSchematicRoute(
   rawPath.push([arr.lon, arr.lat]);
 
   const simplified = simplifyDegrees(rawPath, SIMPLIFY_TOLERANCE_DEG);
+  const buffered = insertCoastBuffers(simplified, fineMaskBytes);
 
   logger.debug({
     operation: 'schematic_router_routed',
     chordKm: Math.round(haversineKm(dep, arr)),
     rawWaypoints: rawPath.length,
     simplifiedWaypoints: simplified.length,
+    bufferedWaypoints: buffered.length,
     durationMs: Date.now() - t0,
   });
-  return { waypoints: simplified, routed: true };
+  return { waypoints: buffered, routed: true };
 }
