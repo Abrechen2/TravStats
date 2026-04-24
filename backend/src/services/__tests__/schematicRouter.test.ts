@@ -89,6 +89,30 @@ describe('schematicRouter — computeSchematicRoute', () => {
     );
     expect(r.waypoints.length).toBeGreaterThanOrEqual(2);
   });
+
+  it('uses the fixed Hamburg approach before routing to open water', async () => {
+    setCoarseMaskForTesting(allWaterMask());
+    const r = await computeSchematicRoute(
+      {
+        name: 'Hamburg',
+        city: 'Hamburg',
+        country: 'Germany',
+        unlocode: 'DEHAM',
+        lat: 53.55,
+        lon: 9.97,
+      },
+      { name: 'Bergen', city: 'Bergen', country: 'Norway', lat: 60.39, lon: 5.32 },
+    );
+
+    expect(r.routed).toBe(true);
+    expect(r.waypoints.slice(0, 4)).toEqual([
+      [9.97, 53.55],
+      [9.52, 53.86],
+      [8.72, 53.9],
+      [8.18, 54.05],
+    ]);
+    expect(r.waypoints[r.waypoints.length - 1]).toEqual([5.32, 60.39]);
+  });
 });
 
 describe('simplifyDegrees (Douglas-Peucker in degree space)', () => {
