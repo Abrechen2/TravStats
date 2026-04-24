@@ -941,7 +941,7 @@ export interface RouteQualityResult {
  * after a compute succeeds, so the throw-on-unloaded path here is
  * only reachable from a direct caller that skipped the pipeline.
  */
-export const SCHEMATIC_LAND_RATIO_THRESHOLD = 0.25;
+export const SCHEMATIC_LAND_RATIO_THRESHOLD = 0.15;
 
 export function classifyRouteQuality(
   coords: ReadonlyArray<[number, number]>,
@@ -965,6 +965,50 @@ function coordsToLineString(coords: ReadonlyArray<{ lat: number; lon: number }>)
   const out: [number, number][] = [];
   for (const p of coords) out.push([p.lon, p.lat]);
   return { type: 'LineString', coordinates: out };
+}
+
+/** Approximate degree-distance threshold: two coords are "the same
+ * vertex" if they agree within half a 0.05° cell. Used by
+ * `ensurePortEndpoints` to skip redundant prepend/append when a branch
+ * already starts/ends at the raw port coord. */
+const PORT_ENDPOINT_MERGE_DEG = 0.03;
+
+/**
+ * Guarantee the returned polyline's first vertex is the raw dep coord
+ * and the last vertex is the raw arr coord. searoute-ts snaps to its
+ * graph (can be 30+ km from port), whole-route A* starts at the first
+ * WATER cell (can be 10-40 km from river-ports like Hamburg), so
+ * without this the rendered arc floats visibly away from the port
+ * marker. Users read that as a rendering bug ("no connection to the
+ * port"); they'd rather see a short approach segment that crosses
+ * some land cells than a disconnected route.
+ *
+ * The approach segment is typically harmless (up to ~50 km for the
+ * worst inland rivers) and the 25 %-interior-land quality gate
+ * excludes endpoints so it doesn't flip a good route to schematic.
+ */
+function ensurePortEndpoints(
+  coords: ReadonlyArray<{ lat: number; lon: number }>,
+  dep: { lat: number; lon: number },
+  arr: { lat: number; lon: number },
+): { lat: number; lon: number }[] {
+  const out = coords.slice();
+  if (out.length === 0) return [dep, arr];
+  const first = out[0];
+  if (
+    Math.abs(first.lat - dep.lat) > PORT_ENDPOINT_MERGE_DEG ||
+    Math.abs(first.lon - dep.lon) > PORT_ENDPOINT_MERGE_DEG
+  ) {
+    out.unshift(dep);
+  }
+  const last = out[out.length - 1];
+  if (
+    Math.abs(last.lat - arr.lat) > PORT_ENDPOINT_MERGE_DEG ||
+    Math.abs(last.lon - arr.lon) > PORT_ENDPOINT_MERGE_DEG
+  ) {
+    out.push(arr);
+  }
+  return out;
 }
 
 function greatCirclePolyline(
@@ -1093,7 +1137,7 @@ export async function computeSeaRoute(
   try {
     const gc = await fineGCLandHits(dep, arr);
     if (gc.hits === 0) {
-      const coords = greatCirclePolyline(dep, arr, 64);
+      const coords = ensurePortEndpoints(greatCirclePolyline(dep, arr, 64), dep, arr);
       logger.debug({
         operation: 'sea_router_hybrid_gc',
         chordKm: Math.round(chordKm),
@@ -1108,7 +1152,9 @@ export async function computeSeaRoute(
       error: err instanceof Error ? err.message : err,
     });
     const fallback = await wholeRouteAStarFallback(dep, arr);
-    return fallback === null ? null : coordsToLineString(fallback);
+    return fallback === null
+      ? null
+      : coordsToLineString(ensurePortEndpoints(fallback, dep, arr));
   }
 
   // 2. searoute-ts + endpoint-snap guard + local repair + post-branch
@@ -1126,7 +1172,7 @@ export async function computeSeaRoute(
         // Repair succeeded (or wasn't needed). Gate on final quality —
         // the repair only targets long runs, but many short runs can
         // still sum to a schematic total. In that case, fall through.
-        const candidate = repair.coords;
+        const candidate = ensurePortEndpoints(repair.coords, dep, arr);
         const q = postBranchQuality(candidate);
         if (q.quality === 'good') {
           logger.info({
@@ -1161,17 +1207,18 @@ export async function computeSeaRoute(
   //    quality gate here is a defensive double-check, not a gate.
   const fallback = await wholeRouteAStarFallback(dep, arr);
   if (fallback !== null) {
-    const q = postBranchQuality(fallback);
+    const bridged = ensurePortEndpoints(fallback, dep, arr);
+    const q = postBranchQuality(bridged);
     logger.info({
       operation: 'sea_router_hybrid_fallback_astar',
       chordKm: Math.round(chordKm),
       rejectReason,
-      km: Math.round(polylineLengthKm(fallback)),
+      km: Math.round(polylineLengthKm(bridged)),
       landRatio: Math.round(q.landRatio * 100) / 100,
       quality: q.quality,
       durationMs: Date.now() - t0,
     });
-    return coordsToLineString(fallback);
+    return coordsToLineString(bridged);
   }
 
   // 4. Last-resort whole-route A* on the 0.05° mask. Handles narrow
@@ -1181,17 +1228,18 @@ export async function computeSeaRoute(
   //    0.1° branch gave up.
   const fineFallback = await wholeRouteFineAStarFallback(dep, arr);
   if (fineFallback !== null) {
-    const q = postBranchQuality(fineFallback);
+    const bridged = ensurePortEndpoints(fineFallback, dep, arr);
+    const q = postBranchQuality(bridged);
     logger.info({
       operation: 'sea_router_hybrid_fallback_astar_fine',
       chordKm: Math.round(chordKm),
       rejectReason,
-      km: Math.round(polylineLengthKm(fineFallback)),
+      km: Math.round(polylineLengthKm(bridged)),
       landRatio: Math.round(q.landRatio * 100) / 100,
       quality: q.quality,
       durationMs: Date.now() - t0,
     });
-    return coordsToLineString(fineFallback);
+    return coordsToLineString(bridged);
   }
 
   logger.warn({

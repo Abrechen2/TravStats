@@ -76,8 +76,15 @@ import {
  *       Inside Passage, Sognefjord mouth) now resolve on the fine
  *       mask — Oslo → Copenhagen, Skagway → Ketchikan, Bergen → Flåm
  *       stop returning null.
+ *  12 = Port endpoints always prepended/appended to the returned
+ *       LineString (`ensurePortEndpoints`). User report: river-port
+ *       routes floated 20-40 km away from the port marker because
+ *       the A* branches started at the snapped water cell. Schematic
+ *       threshold tightened 25 % → 15 % so coast-hugging searoute
+ *       outputs (Oslo → Kiel 22 %, Juneau → Seward 17 %) fall
+ *       through to whole-route A* instead of passing as good.
  */
-export const CACHE_VERSION = 11;
+export const CACHE_VERSION = 12;
 
 export interface RouteLineString {
   type: 'LineString';
