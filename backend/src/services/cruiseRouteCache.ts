@@ -71,8 +71,13 @@ import {
  *       (Bremerhaven → Hamburg, Hamburg → Bergen, Rotterdam
  *       → Bremerhaven, …) now route via the coarse A* and are
  *       good-quality.
+ *  11 = Last-resort 0.05° whole-route A* added to the pipeline. Narrow
+ *       passages the 0.1° mask closes entirely (Øresund, Alaska
+ *       Inside Passage, Sognefjord mouth) now resolve on the fine
+ *       mask — Oslo → Copenhagen, Skagway → Ketchikan, Bergen → Flåm
+ *       stop returning null.
  */
-export const CACHE_VERSION = 10;
+export const CACHE_VERSION = 11;
 
 export interface RouteLineString {
   type: 'LineString';

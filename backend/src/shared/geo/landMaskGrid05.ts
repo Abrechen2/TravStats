@@ -65,3 +65,13 @@ export function getBit05(bytes: Uint8Array, index: number): 0 | 1 {
   const bit = (byte >> (7 - (index & 7))) & 1;
   return bit === 1 ? 1 : 0;
 }
+
+export function setBit05(bytes: Uint8Array, index: number, value: 0 | 1): void {
+  const byteIndex = index >> 3;
+  const bitMask = 1 << (7 - (index & 7));
+  if (value === 1) {
+    bytes[byteIndex] |= bitMask;
+  } else {
+    bytes[byteIndex] &= ~bitMask & 0xff;
+  }
+}

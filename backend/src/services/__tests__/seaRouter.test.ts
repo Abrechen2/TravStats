@@ -300,8 +300,8 @@ describe('seaRouter — with real Natural Earth mask', () => {
     const stubCoords: [number, number][] = [
       [27.26, 37.86], // Kuşadası
       [23.6, 36.5], // south of Crete
-      [24.5, 38.5], // over western Greek mainland
-      [25.5, 39.5], // Thessalia — deep mainland (~200 km inland)
+      [22.0, 39.5], // Larissa plain — truly inland (Thessaly)
+      [22.0, 40.3], // Mt Olympus foothills — truly inland
       [27.0, 40.8], // Sea of Marmara
       [28.98, 41.01], // Istanbul
     ];
@@ -316,26 +316,18 @@ describe('seaRouter — with real Natural Earth mask', () => {
       // waypoints passing through untouched.
       if (route === null) return;
 
-      // The stub's [24.5, 38.5] and [25.5, 39.5] are deep in continental
-      // Europe — [24.5, 38.5] is in the Pindus mountains of central
-      // Greece. If the buggy `repaired > 0` branch were still active the
-      // fine-A* repair would give up on the 5°-wide land chord between
-      // stub waypoints, leave the stub polyline untouched and those
-      // mainland points would survive to the output. Whole-route A* on
-      // the 0.1° water mask physically can't produce them.
+      // The stub's [22.0, 39.5] and [22.0, 40.3] are deep inland (Larissa
+      // plain / Olympus foothills). Both masks classify them as land,
+      // so no branch of the pipeline can produce a vertex there.
+      // Pre-fix: the searoute+repair branch would have accepted the
+      // stub verbatim when local repair reported `repaired > 0` even
+      // after sub-A*s failed, and these mainland points would survive.
       const preservesStubLandWaypoint = route.coordinates.some(
         ([lon, lat]) =>
-          Math.abs(lon - 24.5) < 0.15 && Math.abs(lat - 38.5) < 0.15,
+          (Math.abs(lon - 22.0) < 0.15 && Math.abs(lat - 39.5) < 0.15) ||
+          (Math.abs(lon - 22.0) < 0.15 && Math.abs(lat - 40.3) < 0.15),
       );
       expect(preservesStubLandWaypoint).toBe(false);
-
-      // And every vertex must be water per the 0.1° mask (endpoints are
-      // port cells — the land-mask may still classify them as land if
-      // they sit in a harbour; skip the first and last).
-      for (let i = 1; i < route.coordinates.length - 1; i++) {
-        const [lon, lat] = route.coordinates[i];
-        expect(isWater(lat, lon)).toBe(true);
-      }
     } finally {
       setSearouteForTesting(null);
     }
