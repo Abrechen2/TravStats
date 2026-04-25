@@ -34,6 +34,12 @@ export const seedsPartC: AchievementDefinition[] = [
   // in the UI ("1/1") and in any future ladder expansion.
   { code: 'CARNIVAL_COLLECTOR', name: 'Carnival Collector', description: 'Alle 8 Carnival-Marken befahren (AIDA, Carnival, Costa, Cunard, Holland America, P&O, Princess, Seabourn)', category: 'collector', domain: 'cruise', icon: '🎠', tier: 'gold', requirement: 8, requirementType: 'carnival_brands_all', points: 90, isHidden: true },
 
+  // Distance ladder — great-circle sum across all cruises
+  { code: 'CRUISE_DISTANCE_5000', name: 'Coastal Runner', description: '5.000 km Kreuzfahrtdistanz', category: 'distance', domain: 'cruise', icon: '🌊', tier: 'silver', requirement: 5000, requirementType: 'cruise_distance_km', points: 60 },
+  { code: 'CRUISE_DISTANCE_20000', name: 'Open Water', description: '20.000 km Kreuzfahrtdistanz', category: 'distance', domain: 'cruise', icon: '🌊', tier: 'gold', requirement: 20000, requirementType: 'cruise_distance_km', points: 150 },
+  { code: 'CRUISE_DISTANCE_50000', name: 'Bluewater Captain', description: '50.000 km Kreuzfahrtdistanz', category: 'distance', domain: 'cruise', icon: '🌊', tier: 'platinum', requirement: 50000, requirementType: 'cruise_distance_km', points: 300 },
+  { code: 'CRUISE_DISTANCE_100000', name: 'Circumnavigator', description: '100.000 km Kreuzfahrtdistanz (≈ 2,5× Erdumrundung)', category: 'distance', domain: 'cruise', icon: '🌍', tier: 'diamond', requirement: 100000, requirementType: 'cruise_distance_km', points: 600 },
+
   // Sea days
   { code: 'SEA_LEGS_1', name: 'Sea Legs', description: 'Erster Seetag', category: 'special', domain: 'cruise', icon: '🌊', tier: 'bronze', requirement: 1, requirementType: 'sea_days', points: 10 },
   { code: 'SALT_DOG_30', name: 'Salt Dog', description: '30 Seetage gesamt', category: 'special', domain: 'cruise', icon: '🌊', tier: 'silver', requirement: 30, requirementType: 'sea_days', points: 40 },

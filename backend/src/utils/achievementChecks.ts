@@ -342,6 +342,14 @@ export function checkAchievement(
       isUnlocked = progress >= achievement.requirement;
       break;
 
+    case 'cruise_distance_km':
+      // Sum of great-circle distances between consecutive port calls
+      // across all cruises (km). Approximation that ignores at-sea
+      // routing detours but is close enough for milestone unlocks.
+      progress = Math.floor(stats.cruiseTotalDistanceKm);
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
     case 'cruise_cabin_balcony':
       progress = stats.hasBalconyCabin ? 1 : 0;
       isUnlocked = progress >= achievement.requirement;

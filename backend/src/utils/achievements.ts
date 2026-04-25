@@ -227,6 +227,7 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       hasColdWater: cruiseStats.hasColdWater,
       hasCruiseBirthdayAtSea: cruiseStats.hasBirthdayAtSea,
       hasNewYearsAtSea: cruiseStats.hasNewYearsAtSea,
+      cruiseTotalDistanceKm: cruiseStats.totalDistanceKm,
       hasFlyAndSailTrip: flyAndSail,
       cruiseCarnivalBrandsCovered: 0, // computed inside the checker
     };

@@ -1,3 +1,5 @@
+import { haversineKm } from '../shared/geo/haversine';
+
 export interface CruisePortData {
   id: number;
   name: string;
@@ -51,6 +53,11 @@ export interface CruiseStats {
   hasColdWater: boolean;
   hasBirthdayAtSea: boolean;
   hasNewYearsAtSea: boolean;
+  /** Sum of great-circle distances (km) between consecutive port stops
+   * across all cruises. Approximation — ignores at-sea-day routing
+   * and assumes ships travel roughly along a great circle between
+   * port pairs. Good enough as an achievement signal. */
+  totalDistanceKm: number;
 }
 
 const CANAL_UNLOCODES = new Set(['PACTB', 'EGPSD']); // Panama Colón, Port Said
@@ -80,6 +87,7 @@ export function calculateCruiseStats(
   let hasColdWater = false;
   let hasBirthdayAtSea = false;
   let hasNewYearsAtSea = false;
+  let totalDistanceKm = 0;
 
   for (const cruise of cruises) {
     if (cruise.shipId !== null) shipIds.add(cruise.shipId);
@@ -94,6 +102,7 @@ export function calculateCruiseStats(
     const sortedStops = [...cruise.stops].sort((a, b) => a.dayNumber - b.dayNumber);
     let cruisePortCount = 0;
     let currentSeaStreak = 0;
+    let prevPortPoint: { lat: number; lon: number } | null = null;
 
     for (const stop of sortedStops) {
       if (stop.isAtSea) {
@@ -115,6 +124,13 @@ export function calculateCruiseStats(
           ) {
             hasColdWater = true;
           }
+          // Approximate cruise distance: sum great-circle hops between
+          // consecutive port calls. Sea days don't add distance directly
+          // (ships in the sea-day window are en route between two ports
+          // — the haversine between those ports already covers it).
+          const here = { lat: stop.port.lat, lon: stop.port.lon };
+          if (prevPortPoint !== null) totalDistanceKm += haversineKm(prevPortPoint, here);
+          prevPortPoint = here;
         }
       }
     }
@@ -157,6 +173,7 @@ export function calculateCruiseStats(
     hasColdWater,
     hasBirthdayAtSea,
     hasNewYearsAtSea,
+    totalDistanceKm,
   };
 }
 
