@@ -3,7 +3,12 @@
  * feature. Idempotent: deletes all existing data for user "demo" and
  * re-creates everything.
  *
- *   DATABASE_URL=... npx tsx backend/scripts/seedDemoAccount.ts
+ * Invoked automatically by `init.ts` on first install (when no users
+ * exist yet) and exposed as the `seed:demo` npm script for manual
+ * re-seeding in dev:
+ *
+ *   DATABASE_URL=... npx tsx src/seedDemoAccount.ts
+ *   npm run seed:demo               # uses dist/seedDemoAccount.js
  *
  * Covers:
  *   - 160 flights across every status / category / seat class / year (2015–2027)
@@ -17,9 +22,9 @@
  */
 
 import { Prisma } from "@prisma/client";
-import { prisma } from "../src/db";
-import { hashPassword } from "../src/utils/password";
-import { checkAndUpdateAchievements } from "../src/utils/achievements";
+import { prisma } from "./db";
+import { hashPassword } from "./utils/password";
+import { checkAndUpdateAchievements } from "./utils/achievements";
 
 type AirportRow = {
   id: number;

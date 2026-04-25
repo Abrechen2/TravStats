@@ -34,14 +34,17 @@ interface SystemInfoProps {
   systemInfo: SystemInfoData;
   users: AdminUser[];
   onExportData: () => void;
-  onToggleDemoUser: (userId: string) => void;
+  /** Hard-deletes the demo user via the admin DELETE /users/:id route.
+   * Cascades through Prisma so all demo flights/cruises/trips/bookings/
+   * achievements get removed too. */
+  onDeleteDemoUser: (userId: string) => void;
 }
 
 export default function SystemInfo({
   systemInfo,
   users,
   onExportData,
-  onToggleDemoUser,
+  onDeleteDemoUser,
 }: SystemInfoProps): JSX.Element {
   const { t } = useTranslation(["admin", "common"]);
 
@@ -105,8 +108,8 @@ export default function SystemInfo({
           <button
             onClick={() => {
               const demoUser = users.find((u) => u.username === "demo");
-              if (demoUser && confirm(t("admin:prompts.confirmDeactivateDemo"))) {
-                onToggleDemoUser(demoUser.id);
+              if (demoUser && confirm(t("admin:prompts.confirmDeleteDemo"))) {
+                onDeleteDemoUser(demoUser.id);
               }
             }}
             className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition text-sm font-medium"

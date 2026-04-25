@@ -646,7 +646,7 @@ export default function AdminPage(): JSX.Element {
               systemInfo={systemInfo}
               users={users}
               onExportData={handleExportData}
-              onToggleDemoUser={handleToggleUserActive}
+              onDeleteDemoUser={handleDeleteUser}
             />
           )}
 
