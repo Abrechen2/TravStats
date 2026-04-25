@@ -13,7 +13,6 @@ import logger from '../utils/logger';
 import { seedsPartA } from './achievementSeeds/partA';
 import { seedsPartB } from './achievementSeeds/partB';
 import { seedsPartC } from './achievementSeeds/partC';
-import { seedsPartD } from './achievementSeeds/partD';
 
 export interface AchievementDefinition {
   code: string;
@@ -29,7 +28,11 @@ export interface AchievementDefinition {
   isHidden?: boolean;
 }
 
-export const achievements: AchievementDefinition[] = [...seedsPartA, ...seedsPartB, ...seedsPartC, ...seedsPartD];
+export const achievements: AchievementDefinition[] = [
+  ...seedsPartA,
+  ...seedsPartB,
+  ...seedsPartC,
+];
 
 /**
  * Ensure all achievements are present in the database
