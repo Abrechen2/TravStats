@@ -8,6 +8,13 @@ import {
   setBit1,
 } from '../../shared/geo/landMaskGridCoarse';
 import {
+  MASK_BYTES,
+  MASK_COLS,
+  cellIndex,
+  latToRow,
+  lonToCol,
+} from '../../shared/geo/landMaskGrid';
+import {
   computeSchematicRoute,
   setCoarseMaskForTesting,
   simplifyDegrees,
@@ -22,6 +29,13 @@ function allLandMask(): Uint8Array {
   const bytes = new Uint8Array(MASK1_BYTES);
   bytes.fill(0xff);
   return bytes;
+}
+
+/** Companion fine 0.1° all-water mask. The short-hop bypass guards
+ * itself against fjord-crossing chords by sampling the fine mask, so
+ * tests that exercise the bypass need a non-null fine mask. */
+function allWaterFineMask(): Uint8Array {
+  return new Uint8Array(MASK_BYTES);
 }
 
 describe('schematicRouter — computeSchematicRoute', () => {
@@ -90,18 +104,44 @@ describe('schematicRouter — computeSchematicRoute', () => {
     expect(r.waypoints.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('bypasses A* for short hops (< 150 km) and emits a 2-point chord', async () => {
-    // Port pair ~80 km apart on an all-water mask. The route should
-    // short-circuit out of A* — easy to verify because rawPath A* would
-    // always insert at least one intermediate cell, but the bypass
-    // path doesn't.
-    setCoarseMaskForTesting(allWaterMask());
+  it('bypasses A* for short hops (< 150 km) when the chord is all-water', async () => {
+    // Port pair ~80 km apart on an all-water coarse + fine mask. With
+    // a clear fine-mask chord the bypass keeps the route to 2 points.
+    setCoarseMaskForTesting(allWaterMask(), allWaterFineMask());
     const r = await computeSchematicRoute(
       { lat: 51.95, lon: 4.07 }, // ~Rotterdam Europoort
       { lat: 51.5, lon: 3.6 },   // ~Vlissingen / Middelburg approach
     );
     expect(r.routed).toBe(true);
     expect(r.waypoints).toEqual([[4.07, 51.95], [3.6, 51.5]]);
+  });
+
+  it('falls through to A* for short hops (< 150 km) when the chord clips land', async () => {
+    // Two ports <150 km apart, but the fine-mask chord midpoint is
+    // marked as land — simulates Bergen → Flåm crossing Norwegian
+    // mountains. The bypass guard must reject the chord and let A*
+    // route around the obstacle. Coarse mask is otherwise all water
+    // so A* finds an unobstructed cell path between them.
+    const fine = allWaterFineMask();
+    // Mark a land block on the fine mask covering the chord midpoint
+    // (~lat 60.6, lon 6.2).
+    for (let lat = 60.4; lat <= 60.85; lat += 0.05) {
+      for (let lon = 5.5; lon <= 7.0; lon += 0.05) {
+        const r = latToRow(lat);
+        const c = ((lonToCol(lon) % MASK_COLS) + MASK_COLS) % MASK_COLS;
+        const idx = cellIndex(r, c);
+        fine[idx >> 3] |= 1 << (idx & 7);
+      }
+    }
+    setCoarseMaskForTesting(allWaterMask(), fine);
+    const r = await computeSchematicRoute(
+      { lat: 60.39, lon: 5.32 }, // Bergen
+      { lat: 60.86, lon: 7.11 }, // Flåm
+    );
+    expect(r.routed).toBe(true);
+    // A* on the all-water coarse grid still snaps to cell centres; the
+    // critical assertion is "more than the bypass would have produced".
+    expect(r.waypoints.length).toBeGreaterThan(2);
   });
 
   it('inserts a midpoint approach waypoint when a port snaps far from land (fjord case)', async () => {
