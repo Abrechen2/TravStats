@@ -18,20 +18,12 @@ export interface CruiseListQuery {
 }
 
 /**
- * Quality classification for a computed sea-route leg. `good` means
- * interior vertices stay in water (< 25 % land overlap); `schematic`
- * means the A* pipeline produced a route that crosses enough land to
- * look like a bug, and the frontend should render it as a dashed
- * chord instead of a lying zig-zag polyline.
- */
-export type CruiseRouteQuality = "good" | "schematic";
-
-/**
  * GeoJSON feature returned by `GET /api/v1/cruises/:id/geometry`.
- * Each feature is one A*-computed sea-route between consecutive
- * port-stops. Legs that fail to route entirely (landlocked ports,
- * disconnected seas) are omitted and the map layer falls back to a
- * dashed chord.
+ * Each feature's coordinates are the 3-8 schematic waypoints the
+ * coarse router produced — the frontend runs a Catmull-Rom spline
+ * through them to render a smooth curve. `routed: false` means the
+ * ports were on disconnected seas; those get a 2-point direct chord
+ * which the spline renders as a straight line.
  */
 export interface CruiseRouteFeature {
   type: "Feature";
@@ -39,8 +31,7 @@ export interface CruiseRouteFeature {
   properties: {
     fromPortId: number;
     toPortId: number;
-    quality: CruiseRouteQuality;
-    landRatio: number;
+    routed: boolean;
   };
 }
 

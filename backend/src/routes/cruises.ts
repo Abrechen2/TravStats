@@ -5,7 +5,7 @@ import { authenticate, AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { createCruiseSchema, updateCruiseSchema, cruiseQuerySchema } from '../schemas/cruise';
 import { checkAndUpdateAchievements } from '../utils/achievements';
-import { getOrComputeSeaRoute } from '../services/cruiseRouteCache';
+import { computeSchematicRoute } from '../services/schematicRouter';
 import logger from '../utils/logger';
 
 const router = Router();
@@ -81,16 +81,14 @@ router.get('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
  * GET /api/v1/cruises/:id/geometry
  *
  * Returns a GeoJSON FeatureCollection with one LineString per
- * consecutive port pair in the cruise itinerary. Used by the map
- * layer to draw real sea-routes instead of the Bezier placeholder.
+ * consecutive port pair in the cruise itinerary. Each LineString is
+ * the 3-8 waypoint output of the schematic coarse router, which the
+ * frontend splines into a smooth continental-detour curve.
  *
  * Stops without a resolved port (sea-days, unplaced stops) are
- * skipped. Legs whose A* run fails (landlocked port, ports on
- * disconnected seas) are silently omitted — the frontend falls back
- * to Bezier for those legs.
- *
- * Phase 1 computes every request; Phase 3 adds the
- * `cruise_route_cache` lookup before A*.
+ * skipped. `routed: false` (ports on disconnected seas) legs still
+ * produce a 2-vertex direct-chord feature — the frontend renders it
+ * identically to a routed one so the map is never visually broken.
  */
 router.get('/:id/geometry', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -109,50 +107,50 @@ router.get('/:id/geometry', async (req: AuthRequest, res: Response, next: NextFu
       properties: {
         fromPortId: number;
         toPortId: number;
-        quality: 'good' | 'schematic';
-        landRatio: number;
+        routed: boolean;
       };
     }> = [];
 
     const computedAt = Date.now();
-    let goodLegs = 0;
-    let schematicLegs = 0;
-    let skippedLegs = 0;
+    let routedLegs = 0;
+    let directLegs = 0;
 
     for (let i = 0; i < ordered.length - 1; i++) {
       const a = ordered[i].port;
       const b = ordered[i + 1].port;
       if (!a || !b) continue;
 
-      const route = await getOrComputeSeaRoute(
-        a.id,
-        b.id,
-        { lat: a.lat, lon: a.lon },
-        { lat: b.lat, lon: b.lon },
+      const route = await computeSchematicRoute(
+        {
+          id: a.id,
+          name: a.name,
+          city: a.city,
+          country: a.country,
+          unlocode: a.unlocode,
+          lat: a.lat,
+          lon: a.lon,
+        },
+        {
+          id: b.id,
+          name: b.name,
+          city: b.city,
+          country: b.country,
+          unlocode: b.unlocode,
+          lat: b.lat,
+          lon: b.lon,
+        },
       );
-      if (!route) {
-        skippedLegs++;
-        logger.warn({
-          operation: 'cruise_geometry_leg_skip',
-          cruiseId: cruise.id,
-          fromPortId: a.id,
-          toPortId: b.id,
-          reason: 'sea_router_returned_null',
-        });
-        continue;
-      }
       features.push({
         type: 'Feature',
-        geometry: route.line,
+        geometry: { type: 'LineString', coordinates: route.waypoints },
         properties: {
           fromPortId: a.id,
           toPortId: b.id,
-          quality: route.quality,
-          landRatio: Math.round(route.landRatio * 1000) / 1000,
+          routed: route.routed,
         },
       });
-      if (route.quality === 'good') goodLegs++;
-      else schematicLegs++;
+      if (route.routed) routedLegs++;
+      else directLegs++;
     }
 
     logger.info({
@@ -160,9 +158,8 @@ router.get('/:id/geometry', async (req: AuthRequest, res: Response, next: NextFu
       cruiseId: cruise.id,
       userId,
       stops: ordered.length,
-      goodLegs,
-      schematicLegs,
-      skippedLegs,
+      routedLegs,
+      directLegs,
       durationMs: Date.now() - computedAt,
     });
 

@@ -8,7 +8,11 @@ import type { MapMode } from "./MapContainer3D";
 import { createRoutesLayers } from "./layers/routesLayer";
 import { createHeatmapLayer } from "./layers/heatmapLayer";
 import { createTripsLayer, buildTripsData, getTimeRange } from "./layers/tripsLayer";
-import { createCruiseArcsLayer, type CruiseGeometryMap } from "./layers/cruiseArcsLayer";
+import {
+  createCruiseArcsLayer,
+  createCruiseArrowsLayer,
+  type CruiseGeometryMap,
+} from "./layers/cruiseArcsLayer";
 import { createCruisePortsLayer } from "./layers/cruisePortsLayer";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../lib/api/cruise";
 import { TimeSlider } from "./TimeSlider";
@@ -409,22 +413,22 @@ export function DeckGLMap({
 
     // Cruise arcs + ports are supplemental overlays — always on when cruise
     // data is present. Gated upstream by the cruise domain being enabled.
-    // The arcs layer swaps in the A* sea-route per-leg as soon as the
-    // fetch for that cruise resolves; Bezier is used until then and as
-    // the fallback for any leg the server couldn't route.
+    // The arcs layer splines the coarse waypoints from
+    // /cruises/:id/geometry into smooth curves; until the fetch resolves
+    // for a given cruise, each leg falls back to a 2-vertex direct chord.
     const geometryMap: CruiseGeometryMap = cruiseGeometry;
     const arcs = createCruiseArcsLayer(
       cruises,
       geometryMap,
-      zoomBucket,
       selectedCruiseId,
-      (cruiseId) => {
+      (cruiseId: string) => {
         const cruise = cruises.find((c) => c.id === cruiseId);
         if (cruise) setCruiseSelection(cruise);
       }
     );
+    const arrows = createCruiseArrowsLayer(cruises, geometryMap, selectedCruiseId);
     const ports = createCruisePortsLayer(cruises);
-    const cruiseLayers = [arcs, ports].filter((l): l is Layer => l !== null);
+    const cruiseLayers = [arcs, arrows, ports].filter((l): l is Layer => l !== null);
 
     return [...base, ...cruiseLayers, ...(extraLayers ?? [])];
   }, [
