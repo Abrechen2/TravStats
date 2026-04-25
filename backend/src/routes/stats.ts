@@ -972,27 +972,48 @@ router.get(
 
       // calculateCruiseStats expects the birthday as {month, day} for the
       // birthday-at-sea flag; pass undefined when the user has none set.
+      // Date#getMonth() returns 0-11; rangeContainsMonthDay expects 1-12.
+      // Without the +1, January birthdays would match nothing and every
+      // other birthday would be off by one month — found by Codex audit.
       const userBirthday = user?.birthdate
-        ? { month: user.birthdate.getMonth(), day: user.birthdate.getDate() }
+        ? { month: user.birthdate.getMonth() + 1, day: user.birthdate.getDate() }
         : undefined;
       const stats = calculateCruiseStats(cruiseStatsInput, userBirthday);
 
       res.json({
+        // Counts + ladders
         cruisesCount: stats.cruisesCount,
         cruisePortsUnique: stats.cruisePortsUnique,
+        cruisePortsSingleMax: stats.cruisePortsSingleMax,
         cruiseShipsUnique: stats.cruiseShipsUnique,
         cruiseLinesUnique: stats.cruiseLinesUnique,
+        cruiseLineLoyaltyMax: stats.cruiseLineLoyaltyMax,
         cruiseLines: Array.from(stats.cruiseLines).sort(),
         seaDays: stats.seaDays,
         seaDaysStreak: stats.seaDaysStreak,
+        // Regions + countries (lists already in API; counts derived
+        // client-side)
         regions: Array.from(stats.regions).sort(),
+        regionVisitCounts: stats.regionVisitCounts,
         countries: Array.from(stats.countries).sort(),
+        // Distance metrics (added 2026-04-25 with the schematic-routes
+        // pipeline; long-overdue exposure to the stats UI)
+        totalDistanceKm: Math.round(stats.totalDistanceKm),
+        longestLegKm: Math.round(stats.longestLegKm),
+        // Trip-shape derivations
+        totalPortCalls: stats.totalPortCalls,
+        totalCruiseDays: stats.totalCruiseDays,
+        // Cabin / deck signals
         hasBalconyCabin: stats.hasBalconyCabin,
         hasSuiteCabin: stats.hasSuiteCabin,
         maxDeck: stats.maxDeck,
+        // Achievement-style flags
         hasCanalTransit: stats.hasCanalTransit,
         hasPolar: stats.hasPolar,
         hasColdWater: stats.hasColdWater,
+        hasDatelineCrossing: stats.hasDatelineCrossing,
+        hasBirthdayAtSea: stats.hasBirthdayAtSea,
+        hasNewYearsAtSea: stats.hasNewYearsAtSea,
       });
     } catch (error) {
       next(error);
