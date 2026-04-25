@@ -15,6 +15,10 @@ export default function DashboardPage(): JSX.Element {
   const { tab } = useDashboardRoute();
   const { isEnabled } = useEnabledDomains();
   const [counts, setCounts] = useState({ flight: 0, cruise: 0, poi: 0 });
+  // Bumping this token re-runs the counts effect AND remounts the
+  // active tab (via key prop) so per-tab data picks up the new entry
+  // without needing a separate refetch wiring per tab.
+  const [refreshToken, setRefreshToken] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -37,14 +41,14 @@ export default function DashboardPage(): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [isEnabled]);
+  }, [isEnabled, refreshToken]);
 
   return (
-    <DashboardLayout counts={counts}>
-      {tab === "all" && <AllTab />}
-      {tab === "flight" && <FlightsTab />}
-      {tab === "cruise" && <CruisesTab />}
-      {tab === "poi" && <PoiTab />}
+    <DashboardLayout counts={counts} onDataChanged={() => setRefreshToken((n) => n + 1)}>
+      {tab === "all" && <AllTab key={refreshToken} />}
+      {tab === "flight" && <FlightsTab key={refreshToken} />}
+      {tab === "cruise" && <CruisesTab key={refreshToken} />}
+      {tab === "poi" && <PoiTab key={refreshToken} />}
     </DashboardLayout>
   );
 }
