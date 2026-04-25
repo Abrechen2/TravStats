@@ -150,7 +150,7 @@ export const seedsPartB: AchievementDefinition[] = [
   {
     code: 'ISLAND_HOPPER',
     name: 'Island Hopper',
-    description: '10 flights between island airports',
+    description: '10 Flüge mit mindestens einem Insel-Flughafen als Start oder Ziel',
     category: 'explorer',
     domain: 'flight',
     icon: '🏝️',
@@ -245,7 +245,13 @@ export const seedsPartB: AchievementDefinition[] = [
     tier: 'gold',
     requirement: 11000,
     requirementType: 'single_flight_distance',
-    points: 75,
+    // 11000 km is a meaningful step beyond LONG_HAUL_10000 (FRA-SYD
+    // class non-stops). 75 pts was a typo-grade undervaluation — a
+    // gold-tier between LONG_HAUL_10000 (150 pts) and LONG_HAUL_15000
+    // (300 pts) belongs in that band. Bumped to 200; existing unlocks
+    // see the higher value automatically because ensureAchievements
+    // upserts `points` on every boot.
+    points: 200,
   },
 
   // ── v1.1 expansion — Collector additions ────────────────────────────
@@ -315,7 +321,11 @@ export const seedsPartB: AchievementDefinition[] = [
   {
     code: 'LEGACY_LOYALIST',
     name: 'Legacy Loyalist',
-    description: '15 flights with the same flagship airline',
+    // The checker uses `airline_loyalty` (max-flights-with-one-airline),
+    // not a legacy-carrier filter. The old description ("flagship
+    // airline") implied a brand restriction that doesn't exist —
+    // tightening to "favourite airline" matches the actual check.
+    description: '15 Flüge mit derselben Lieblings-Airline',
     category: 'elite',
     domain: 'flight',
     icon: '🎖️',
