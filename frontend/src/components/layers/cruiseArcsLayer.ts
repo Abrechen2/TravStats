@@ -1,4 +1,4 @@
-import { PathLayer } from "@deck.gl/layers";
+import { PathLayer, TextLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
 import type { Cruise } from "../../types";
 import type { CruiseRouteFeatureCollection } from "../../lib/api/cruise";
@@ -8,6 +8,12 @@ interface ArcDatum {
   path: [number, number][];
   cruiseId: string;
   cruiseLine: string | null;
+}
+
+interface ArrowDatum {
+  position: [number, number];
+  angleDeg: number;
+  cruiseId: string;
 }
 
 /**
@@ -31,17 +37,15 @@ export type CruiseGeometryMap = ReadonlyMap<string, CruiseRouteFeatureCollection
  * Returns `null` when no leg can be drawn so callers can omit the
  * layer entirely rather than mounting a no-op.
  */
-export function createCruiseArcsLayer(
+/**
+ * Compute the per-leg spline paths used by both the arc PathLayer and
+ * the directional arrow TextLayer. Exported so the arrow layer can
+ * share the exact same paths without recomputing the spline.
+ */
+export function buildCruiseArcs(
   cruises: Cruise[],
-  geometryByCruise: CruiseGeometryMap = new Map(),
-  /**
-   * Currently selected cruise id. Non-selected arcs render at reduced
-   * alpha; selected arcs gain a thicker, fully-opaque stroke.
-   */
-  selectedCruiseId: string | null = null,
-  /** Click handler — receives the cruise id. */
-  onCruiseClick?: (cruiseId: string) => void
-): Layer | null {
+  geometryByCruise: CruiseGeometryMap = new Map()
+): ArcDatum[] {
   const arcs: ArcDatum[] = [];
   for (const cruise of cruises) {
     const stops = cruise.stops
@@ -66,6 +70,21 @@ export function createCruiseArcsLayer(
       });
     }
   }
+  return arcs;
+}
+
+export function createCruiseArcsLayer(
+  cruises: Cruise[],
+  geometryByCruise: CruiseGeometryMap = new Map(),
+  /**
+   * Currently selected cruise id. Non-selected arcs render at reduced
+   * alpha; selected arcs gain a thicker, fully-opaque stroke.
+   */
+  selectedCruiseId: string | null = null,
+  /** Click handler — receives the cruise id. */
+  onCruiseClick?: (cruiseId: string) => void
+): Layer | null {
+  const arcs = buildCruiseArcs(cruises, geometryByCruise);
   if (arcs.length === 0) return null;
 
   const hasSelection = selectedCruiseId !== null;
@@ -98,6 +117,84 @@ export function createCruiseArcsLayer(
       getWidth: selectedCruiseId,
     },
   });
+}
+
+/**
+ * Build a directional arrow TextLayer per cruise leg. Arrows are
+ * placed near (but not on top of) the destination port and rotated
+ * to align with the local segment direction so the user can read
+ * the cruise's flow at a glance.
+ *
+ * Returns `null` when no arrows can be drawn (no qualifying legs)
+ * so callers can omit the layer rather than mounting a no-op.
+ */
+export function createCruiseArrowsLayer(
+  cruises: Cruise[],
+  geometryByCruise: CruiseGeometryMap = new Map(),
+  selectedCruiseId: string | null = null
+): Layer | null {
+  const arcs = buildCruiseArcs(cruises, geometryByCruise);
+  const arrows: ArrowDatum[] = [];
+  for (const arc of arcs) {
+    const anchor = pickArrowAnchor(arc.path);
+    if (anchor === null) continue;
+    arrows.push({ ...anchor, cruiseId: arc.cruiseId });
+  }
+  if (arrows.length === 0) return null;
+
+  const hasSelection = selectedCruiseId !== null;
+  const BASE_COLOR: [number, number, number] = [56, 189, 248];
+  const HIGHLIGHT_COLOR: [number, number, number] = [253, 224, 71];
+  const DIM_ALPHA = 90;
+  const FULL_ALPHA = 230;
+
+  return new TextLayer<ArrowDatum>({
+    id: "cruise-arc-arrows",
+    data: arrows,
+    getPosition: (d) => d.position,
+    getText: () => "▶",
+    getAngle: (d) => d.angleDeg,
+    getColor: (d) => {
+      if (!hasSelection) return [...BASE_COLOR, FULL_ALPHA];
+      if (d.cruiseId === selectedCruiseId) return [...HIGHLIGHT_COLOR, FULL_ALPHA];
+      return [...BASE_COLOR, DIM_ALPHA];
+    },
+    getSize: 14,
+    sizeUnits: "pixels",
+    fontFamily: "sans-serif",
+    fontWeight: "bold",
+    background: false,
+    pickable: false,
+    updateTriggers: {
+      getColor: selectedCruiseId,
+    },
+  });
+}
+
+/**
+ * Pick a position + screen-space angle for the directional arrow on
+ * a splined leg path. The anchor sits at ~88 % along the spline so
+ * the arrow visibly leads into the destination port without overlapping
+ * the port marker. Returns `null` when the path is degenerate (less
+ * than two distinct points) — the caller skips that leg's arrow.
+ */
+function pickArrowAnchor(
+  path: ReadonlyArray<[number, number]>
+): { position: [number, number]; angleDeg: number } | null {
+  if (path.length < 2) return null;
+  const headIdx = Math.max(1, Math.floor(path.length * 0.88));
+  const tailIdx = Math.max(0, headIdx - 1);
+  if (headIdx === tailIdx) return null;
+  const [x0, y0] = path[tailIdx];
+  const [x1, y1] = path[headIdx];
+  const dx = x1 - x0;
+  // TextLayer rotates clockwise in screen space; geographic latitude
+  // increases northward (screen y is inverted), so we negate dy to
+  // get a screen-space heading that matches the visible segment.
+  const dy = y1 - y0;
+  if (dx === 0 && dy === 0) return null;
+  const angleDeg = (Math.atan2(-dy, dx) * 180) / Math.PI;
+  return { position: [x1, y1], angleDeg };
 }
 
 function pairKey(fromPortId: number, toPortId: number): string {

@@ -4,7 +4,7 @@ import { MapboxOverlay } from "@deck.gl/mapbox";
 import type { Layer, MapViewState } from "@deck.gl/core";
 import type { Cruise } from "../../types";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../../lib/api/cruise";
-import { createCruiseArcsLayer } from "../layers/cruiseArcsLayer";
+import { createCruiseArcsLayer, createCruiseArrowsLayer } from "../layers/cruiseArcsLayer";
 import { createCruisePortsLayer } from "../layers/cruisePortsLayer";
 import { computeBbox } from "../../utils/mapAnimationHelpers";
 import { useThemeStore } from "../../store/themeStore";
@@ -73,8 +73,9 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
 
   const layers: Layer[] = useMemo(() => {
     const arcsLayer = createCruiseArcsLayer([cruise], geometryMap);
+    const arrowsLayer = createCruiseArrowsLayer([cruise], geometryMap);
     const portsLayer = createCruisePortsLayer([cruise]);
-    return [arcsLayer, portsLayer].filter((l): l is Layer => l !== null);
+    return [arcsLayer, arrowsLayer, portsLayer].filter((l): l is Layer => l !== null);
   }, [cruise, geometryMap]);
 
   const bboxPoints: Array<[number, number]> = useMemo(() => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createCruiseArcsLayer } from "./cruiseArcsLayer";
+import { createCruiseArcsLayer, createCruiseArrowsLayer } from "./cruiseArcsLayer";
 import type { Cruise } from "../../types";
 import type { CruiseRouteFeatureCollection } from "../../lib/api/cruise";
 
@@ -126,6 +126,33 @@ describe("createCruiseArcsLayer", () => {
     expect(data[0].path[data[0].path.length - 1]).toEqual([25.46, 36.39]);
     // Far more vertices than the 4 waypoints — curve densified.
     expect(data[0].path.length).toBeGreaterThan(20);
+  });
+
+  it("renders no arrow layer when there are no qualifying legs", () => {
+    const cruise = makeCruise([makeStop(1, 1, { id: 1, lat: 0, lon: 0 })]);
+    expect(createCruiseArrowsLayer([cruise])).toBeNull();
+  });
+
+  it("emits one arrow per cruise leg, oriented along the leg", () => {
+    const cruise = makeCruise([
+      makeStop(1, 1, { id: 1, lat: 41.38, lon: 2.17 }),
+      makeStop(2, 2, { id: 2, lat: 42.1, lon: 11.8 }),
+    ]);
+    const arrows = createCruiseArrowsLayer([cruise]);
+    expect(arrows).not.toBeNull();
+    const data = (arrows as { props: { data: unknown } }).props.data as Array<{
+      position: [number, number];
+      angleDeg: number;
+      cruiseId: string;
+    }>;
+    expect(data).toHaveLength(1);
+    // Anchor sits past the source longitude on the destination side.
+    expect(data[0].position[0]).toBeGreaterThan(2.17);
+    expect(data[0].cruiseId).toBe(cruise.id);
+    // East-and-slightly-north heading → angle within (-90°, 90°) under
+    // the screen-space rotation we apply.
+    expect(data[0].angleDeg).toBeGreaterThan(-90);
+    expect(data[0].angleDeg).toBeLessThan(90);
   });
 
   it("skips at-sea stops + stops without a resolved port when pairing", () => {
