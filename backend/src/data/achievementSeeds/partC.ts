@@ -27,7 +27,12 @@ export const seedsPartC: AchievementDefinition[] = [
   // Cruise line
   { code: 'LOYAL_SAILOR_3', name: 'Loyal Sailor', description: '3 Kreuzfahrten mit derselben Reederei', category: 'collector', domain: 'cruise', icon: '🎖️', tier: 'bronze', requirement: 3, requirementType: 'cruise_line_loyalty', points: 15 },
   { code: 'LINE_HOPPER_5', name: 'Line Hopper', description: '5 verschiedene Reedereien', category: 'collector', domain: 'cruise', icon: '🎖️', tier: 'silver', requirement: 5, requirementType: 'cruise_lines_unique', points: 40 },
-  { code: 'CARNIVAL_COLLECTOR', name: 'Carnival Collector', description: 'Alle Carnival-Marken befahren', category: 'collector', domain: 'cruise', icon: '🎠', tier: 'gold', requirement: 1, requirementType: 'carnival_brands_all', points: 90, isHidden: true },
+  // Carnival Corp owns 8 distinct cruise brands (AIDA, Carnival, Costa,
+  // Cunard, Holland America, P&O, Princess, Seabourn). Requirement is
+  // 8 because the checker hardcodes the brand list and expects all of
+  // them — `requirement: 1` from the original seed was misleading both
+  // in the UI ("1/1") and in any future ladder expansion.
+  { code: 'CARNIVAL_COLLECTOR', name: 'Carnival Collector', description: 'Alle 8 Carnival-Marken befahren (AIDA, Carnival, Costa, Cunard, Holland America, P&O, Princess, Seabourn)', category: 'collector', domain: 'cruise', icon: '🎠', tier: 'gold', requirement: 8, requirementType: 'carnival_brands_all', points: 90, isHidden: true },
 
   // Sea days
   { code: 'SEA_LEGS_1', name: 'Sea Legs', description: 'Erster Seetag', category: 'special', domain: 'cruise', icon: '🌊', tier: 'bronze', requirement: 1, requirementType: 'sea_days', points: 10 },
@@ -51,10 +56,16 @@ export const seedsPartC: AchievementDefinition[] = [
   { code: 'NEW_YEARS_AT_SEA', name: "New Year's at Sea", description: 'Silvester auf See', category: 'special', domain: 'cruise', icon: '🎇', tier: 'gold', requirement: 1, requirementType: 'cruise_new_years_at_sea', points: 60 },
   { code: 'COLD_WATER_CRUISER', name: 'Cold Water Cruiser', description: 'Island, Alaska oder Antarktis', category: 'special', domain: 'cruise', icon: '🥶', tier: 'silver', requirement: 1, requirementType: 'cruise_cold_water', points: 30 },
 
-  // Shared (domain: 'shared') — cross-domain achievements
-  { code: 'WORLD_TRAVELER', name: 'World Traveler', description: '25 Länder (alle Bereiche)', category: 'explorer', domain: 'shared', icon: '🌍', tier: 'silver', requirement: 25, requirementType: 'countries', points: 50 },
-  { code: 'GLOBE_TREKKER', name: 'Globe Trekker', description: '50 Länder (alle Bereiche)', category: 'explorer', domain: 'shared', icon: '🌍', tier: 'gold', requirement: 50, requirementType: 'countries', points: 100 },
-  { code: 'CENTURION', name: 'Centurion', description: '100 Länder (alle Bereiche)', category: 'explorer', domain: 'shared', icon: '🌍', tier: 'diamond', requirement: 100, requirementType: 'countries', points: 300 },
-  { code: 'SEVEN_CONTINENTS_CLUB', name: 'Seven Continents Club', description: 'Alle 7 Kontinente', category: 'explorer', domain: 'shared', icon: '🌐', tier: 'platinum', requirement: 7, requirementType: 'continents', points: 200 },
+  // Shared (domain: 'shared') — cross-domain achievements.
+  //
+  // The countries-25/50/100 and 7-continents triplets were intentionally
+  // dropped here: partA already ships a full 5-step countries ladder
+  // (`COUNTRIES_5/10/25/50/100`) and a 3-step continents ladder
+  // (`CONTINENTS_3/5/7`) on the same `countries` / `continents`
+  // requirementTypes. With both seeds active, every milestone fired
+  // twice and inflated point totals (e.g. at 50 countries the user
+  // unlocked both `COUNTRIES_50` 300 pts AND `GLOBE_TREKKER` 100 pts).
+  // PartA's ladders already cover the full progression with sensible
+  // tiers; the partC duplicates added no new signal.
   { code: 'FLY_AND_SAIL', name: 'Fly & Sail', description: 'Trip mit Flug UND Kreuzfahrt', category: 'special', domain: 'shared', icon: '✈️🚢', tier: 'gold', requirement: 1, requirementType: 'fly_and_sail_trip', points: 60 },
 ];
