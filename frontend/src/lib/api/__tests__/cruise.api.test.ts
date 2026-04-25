@@ -57,8 +57,7 @@ describe("cruiseApi", () => {
           properties: {
             fromPortId: 1,
             toPortId: 2,
-            quality: "good" as const,
-            landRatio: 0,
+            routed: true,
           },
         },
       ],

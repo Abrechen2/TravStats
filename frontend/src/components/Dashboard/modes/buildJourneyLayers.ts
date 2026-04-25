@@ -1,6 +1,6 @@
 import { ArcLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
-import { createCruiseArcsLayer } from "../../layers/cruiseArcsLayer";
+import { createCruiseArcsLayer, createCruiseArrowsLayer } from "../../layers/cruiseArcsLayer";
 import type { GeoJSONFeature } from "../../../types";
 import type { Cruise } from "../../../types/cruise";
 
@@ -130,10 +130,12 @@ export function buildJourneyLayers(
 
   const layers: Layer[] = [];
 
-  // Cruise legs (PathLayer via shared helper)
+  // Cruise legs (PathLayer via shared helper) + directional arrow heads.
   if (trip.cruises.length > 0) {
     const cruiseLayer = createCruiseArcsLayer(trip.cruises);
     if (cruiseLayer !== null) layers.push(cruiseLayer);
+    const arrowsLayer = createCruiseArrowsLayer(trip.cruises);
+    if (arrowsLayer !== null) layers.push(arrowsLayer);
   }
 
   // Flight legs (ArcLayer, amber to distinguish from cruise sky-blue)
