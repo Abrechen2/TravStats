@@ -350,6 +350,23 @@ export function checkAchievement(
       isUnlocked = progress >= achievement.requirement;
       break;
 
+    case 'cruise_longest_leg_km':
+      // Longest single leg across any cruise. Off-chart navigator hits
+      // when the user has at least one true open-water crossing.
+      progress = Math.floor(stats.cruiseLongestLegKm);
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'cruise_dateline_crossing':
+      progress = stats.hasCruiseDatelineCrossing ? 1 : 0;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
+    case 'fly_and_sail_7d':
+      progress = stats.hasFlyAndSail7d ? 1 : 0;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
     case 'cruise_cabin_balcony':
       progress = stats.hasBalconyCabin ? 1 : 0;
       isUnlocked = progress >= achievement.requirement;
