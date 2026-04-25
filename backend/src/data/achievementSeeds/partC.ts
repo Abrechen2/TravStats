@@ -62,6 +62,12 @@ export const seedsPartC: AchievementDefinition[] = [
   { code: 'NEW_YEARS_AT_SEA', name: "New Year's at Sea", description: 'Silvester auf See', category: 'special', domain: 'cruise', icon: '🎇', tier: 'gold', requirement: 1, requirementType: 'cruise_new_years_at_sea', points: 60 },
   { code: 'COLD_WATER_CRUISER', name: 'Cold Water Cruiser', description: 'Island, Alaska oder Antarktis', category: 'special', domain: 'cruise', icon: '🥶', tier: 'silver', requirement: 1, requirementType: 'cruise_cold_water', points: 30 },
 
+  // Hidden eggs — cruise + cross-domain. None of these are advertised;
+  // users discover them by accident and the badge appears.
+  { code: 'CRUISE_OFFROAD', name: 'Off-Chart Navigator', description: 'Eine Kreuzfahrt mit einem Leg über 3.000 km — echte Blue-Water-Crossing', category: 'special', domain: 'cruise', icon: '🧭', tier: 'gold', requirement: 3000, requirementType: 'cruise_longest_leg_km', points: 90, isHidden: true },
+  { code: 'DATE_LINE_SAILOR', name: 'Date Line Sailor', description: 'Cruise-Leg über die internationale Datumsgrenze', category: 'special', domain: 'cruise', icon: '🌐', tier: 'platinum', requirement: 1, requirementType: 'cruise_dateline_crossing', points: 110, isHidden: true },
+  { code: 'FLY_SAIL_WEEK', name: 'Amphibious Week', description: 'Flug und Kreuzfahrt innerhalb von 7 Tagen', category: 'special', domain: 'shared', icon: '✈️🚢', tier: 'gold', requirement: 1, requirementType: 'fly_and_sail_7d', points: 80, isHidden: true },
+
   // Shared (domain: 'shared') — cross-domain achievements.
   //
   // The countries-25/50/100 and 7-continents triplets were intentionally

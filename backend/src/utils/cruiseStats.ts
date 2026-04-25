@@ -58,6 +58,12 @@ export interface CruiseStats {
    * and assumes ships travel roughly along a great circle between
    * port pairs. Good enough as an achievement signal. */
   totalDistanceKm: number;
+  /** Single longest leg between consecutive port calls across any
+   * cruise (km). Used to detect true open-water crossings. */
+  longestLegKm: number;
+  /** True when any cruise has a leg where the longitude jumps across
+   * the antimeridian (lon ±180°), e.g. an Auckland → Tahiti hop. */
+  hasDatelineCrossing: boolean;
 }
 
 const CANAL_UNLOCODES = new Set(['PACTB', 'EGPSD']); // Panama Colón, Port Said
@@ -88,6 +94,8 @@ export function calculateCruiseStats(
   let hasBirthdayAtSea = false;
   let hasNewYearsAtSea = false;
   let totalDistanceKm = 0;
+  let longestLegKm = 0;
+  let hasDatelineCrossing = false;
 
   for (const cruise of cruises) {
     if (cruise.shipId !== null) shipIds.add(cruise.shipId);
@@ -129,7 +137,16 @@ export function calculateCruiseStats(
           // (ships in the sea-day window are en route between two ports
           // — the haversine between those ports already covers it).
           const here = { lat: stop.port.lat, lon: stop.port.lon };
-          if (prevPortPoint !== null) totalDistanceKm += haversineKm(prevPortPoint, here);
+          if (prevPortPoint !== null) {
+            const legKm = haversineKm(prevPortPoint, here);
+            totalDistanceKm += legKm;
+            if (legKm > longestLegKm) longestLegKm = legKm;
+            // Antimeridian crossing: large absolute longitude span
+            // (>180°) collapses to a shorter great-circle path that
+            // skips the dateline. Detect via raw longitude jump.
+            const lonSpan = Math.abs(here.lon - prevPortPoint.lon);
+            if (lonSpan > 180) hasDatelineCrossing = true;
+          }
           prevPortPoint = here;
         }
       }
@@ -174,6 +191,8 @@ export function calculateCruiseStats(
     hasBirthdayAtSea,
     hasNewYearsAtSea,
     totalDistanceKm,
+    longestLegKm,
+    hasDatelineCrossing,
   };
 }
 

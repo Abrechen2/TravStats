@@ -182,6 +182,20 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       (c) => c.trip && c.trip.flights.length > 0 && c.trip.cruises.length > 0,
     );
 
+    // Amphibious Week — fires when any flight sits within ±7 days of a
+    // cruise's start or end. Checks ALL flights against ALL cruises;
+    // O(F × C) but both lists are small enough that no index is needed.
+    const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+    const cruiseDates = cruises
+      .flatMap((c) => [c.startDate, c.endDate])
+      .filter((d): d is Date => d instanceof Date);
+    const flightDates = flights
+      .map((f) => f.departureTime)
+      .filter((d): d is Date => d instanceof Date);
+    const flyAndSail7d = cruiseDates.some((cd) =>
+      flightDates.some((fd) => Math.abs(fd.getTime() - cd.getTime()) <= SEVEN_DAYS_MS),
+    );
+
     // Union flight + cruise countries into the shared countries Set.
     // Same for continents — map each cruise port to its continent via getContinent().
     const combinedCountries = new Set<string>(stats.countries);
@@ -228,7 +242,10 @@ export async function checkAndUpdateAchievements(userId: string): Promise<UserAc
       hasCruiseBirthdayAtSea: cruiseStats.hasBirthdayAtSea,
       hasNewYearsAtSea: cruiseStats.hasNewYearsAtSea,
       cruiseTotalDistanceKm: cruiseStats.totalDistanceKm,
+      cruiseLongestLegKm: cruiseStats.longestLegKm,
+      hasCruiseDatelineCrossing: cruiseStats.hasDatelineCrossing,
       hasFlyAndSailTrip: flyAndSail,
+      hasFlyAndSail7d: flyAndSail7d,
       cruiseCarnivalBrandsCovered: 0, // computed inside the checker
     };
 

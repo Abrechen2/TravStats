@@ -126,8 +126,17 @@ export interface UserStats {
    * all cruises (km). Approximates total cruise distance for the
    * cruise distance ladder. */
   cruiseTotalDistanceKm: number;
+  /** Single longest leg (km) across all cruises. Used by the
+   * Off-Chart Navigator hidden egg to detect open-water crossings. */
+  cruiseLongestLegKm: number;
+  /** True when any cruise leg crosses the antimeridian. Hidden egg. */
+  hasCruiseDatelineCrossing: boolean;
   // Cross-domain
   hasFlyAndSailTrip: boolean;
+  /** True when any flight is within ±7 days of any cruise start/end.
+   * Tighter than the trip-bundle Fly & Sail and works even when the
+   * user didn't link the entries via the same trip id. */
+  hasFlyAndSail7d: boolean;
   cruiseCarnivalBrandsCovered: number; // how many Carnival brands out of the set
 }
 
@@ -226,7 +235,10 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
     hasCruiseBirthdayAtSea: false,
     hasNewYearsAtSea: false,
     cruiseTotalDistanceKm: 0,
+    cruiseLongestLegKm: 0,
+    hasCruiseDatelineCrossing: false,
     hasFlyAndSailTrip: false,
+    hasFlyAndSail7d: false,
     cruiseCarnivalBrandsCovered: 0,
   };
 
