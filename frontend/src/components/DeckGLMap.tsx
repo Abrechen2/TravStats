@@ -8,7 +8,11 @@ import type { MapMode } from "./MapContainer3D";
 import { createRoutesLayers } from "./layers/routesLayer";
 import { createHeatmapLayer } from "./layers/heatmapLayer";
 import { createTripsLayer, buildTripsData, getTimeRange } from "./layers/tripsLayer";
-import { createCruiseArcsLayer, type CruiseGeometryMap } from "./layers/cruiseArcsLayer";
+import {
+  createCruiseArcsLayer,
+  createCruiseArrowsLayer,
+  type CruiseGeometryMap,
+} from "./layers/cruiseArcsLayer";
 import { createCruisePortsLayer } from "./layers/cruisePortsLayer";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../lib/api/cruise";
 import { TimeSlider } from "./TimeSlider";
@@ -422,8 +426,9 @@ export function DeckGLMap({
         if (cruise) setCruiseSelection(cruise);
       }
     );
+    const arrows = createCruiseArrowsLayer(cruises, geometryMap, selectedCruiseId);
     const ports = createCruisePortsLayer(cruises);
-    const cruiseLayers = [arcs, ports].filter((l): l is Layer => l !== null);
+    const cruiseLayers = [arcs, arrows, ports].filter((l): l is Layer => l !== null);
 
     return [...base, ...cruiseLayers, ...(extraLayers ?? [])];
   }, [
