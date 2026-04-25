@@ -151,6 +151,11 @@ export function createCruiseArrowsLayer(
   return new TextLayer<ArrowDatum>({
     id: "cruise-arc-arrows",
     data: arrows,
+    // The default deck.gl font atlas only covers ASCII; the arrow
+    // glyph (U+25B6) must be opted in via characterSet, otherwise
+    // every label silently fails to render with "Missing character"
+    // warnings.
+    characterSet: ["▶"],
     getPosition: (d) => d.position,
     getText: () => "▶",
     getAngle: (d) => d.angleDeg,
@@ -159,7 +164,7 @@ export function createCruiseArrowsLayer(
       if (d.cruiseId === selectedCruiseId) return [...HIGHLIGHT_COLOR, FULL_ALPHA];
       return [...BASE_COLOR, DIM_ALPHA];
     },
-    getSize: 14,
+    getSize: 16,
     sizeUnits: "pixels",
     fontFamily: "sans-serif",
     fontWeight: "bold",
