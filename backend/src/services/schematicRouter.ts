@@ -95,6 +95,23 @@ const COARSE_A_STAR_BUDGET = 50_000;
  * faithful-looking curve, at the cost of payload size (still tiny). */
 const SIMPLIFY_TOLERANCE_DEG = 0.3;
 
+/** Below this great-circle distance (km), bypass A* and emit a direct
+ * port→port chord. Reason: 1° A* + Catmull-Rom spline produces a
+ * visibly bow-shaped curve for short coastal hops (e.g.
+ * Rotterdam→Middelburg, ~80 km) because the spline's "natural" curvature
+ * dominates over the few cell-centre waypoints between them. The
+ * coast-buffer post-pass still runs on the chord, so if the direct
+ * line clips a peninsula it still picks up one offshore waypoint. */
+const SHORT_HOP_KM = 150;
+
+/** When the BFS-snapped water cell sits more than this many km from the
+ * actual port (typical for fjord ports like Flåm, where the 1° cell
+ * containing the port is dominated by mountains and the snap lands far
+ * out at sea), insert a single intermediate "approach" waypoint at the
+ * midpoint between port and snapped cell. Smooths the elbow that would
+ * otherwise form right next to the port marker. */
+const FJORD_SNAP_THRESHOLD_KM = 80;
+
 let maskBytes: Uint8Array | null = null;
 let fineMaskBytes: Uint8Array | null = null;
 let loadPromise: Promise<Uint8Array> | null = null;
@@ -551,6 +568,27 @@ export async function computeSchematicRoute(
   const routeDep = { lat: depRoutePoint[1], lon: depRoutePoint[0] };
   const routeArr = { lat: arrRoutePoint[1], lon: arrRoutePoint[0] };
 
+  // Short-hop bypass: skip the 1° A* entirely. The grid is too coarse
+  // to add useful intermediate waypoints over <150 km, and the spline
+  // produced from [port, port] alone curves nicely. The coast buffer
+  // still kicks in if the chord clips land.
+  const chordKm = haversineKm(routeDep, routeArr);
+  if (chordKm < SHORT_HOP_KM) {
+    const buffered = insertCoastBuffers(
+      [[routeDep.lon, routeDep.lat], [routeArr.lon, routeArr.lat]],
+      fineMaskBytes,
+    );
+    const waypoints = composeRouteWaypoints(dep, depApproach, buffered, arrApproach, arr);
+    logger.debug({
+      operation: 'schematic_router_short_hop',
+      chordKm: Math.round(chordKm),
+      bufferedWaypoints: buffered.length,
+      outputWaypoints: waypoints.length,
+      durationMs: Date.now() - t0,
+    });
+    return { waypoints, routed: true };
+  }
+
   const depCell = findNearestWaterCell(bytes, routeDep.lat, routeDep.lon);
   const arrCell = findNearestWaterCell(bytes, routeArr.lat, routeArr.lon);
 
@@ -594,10 +632,32 @@ export async function computeSchematicRoute(
     };
   }
 
+  const depCellCenter = cellCenter1(depCell.row, depCell.col);
+  const arrCellCenter = cellCenter1(arrCell.row, arrCell.col);
+  const depSnapKm = haversineKm(routeDep, depCellCenter);
+  const arrSnapKm = haversineKm(routeArr, arrCellCenter);
+
   const rawPath: [number, number][] = [[routeDep.lon, routeDep.lat]];
+  // Fjord-snap smoothing: when the snapped water cell is far from the
+  // port (typical for fjord ports), insert a midpoint along the
+  // port→snapped-cell line. Without this, the spline draws a sharp
+  // elbow right at the port marker because the next waypoint is the
+  // distant cell center.
+  if (depSnapKm > FJORD_SNAP_THRESHOLD_KM) {
+    rawPath.push([
+      (routeDep.lon + depCellCenter.lon) / 2,
+      (routeDep.lat + depCellCenter.lat) / 2,
+    ]);
+  }
   for (const idx of pathCells) {
     const c = cellCenter1(rowFromIndex1(idx), colFromIndex1(idx));
     rawPath.push([c.lon, c.lat]);
+  }
+  if (arrSnapKm > FJORD_SNAP_THRESHOLD_KM) {
+    rawPath.push([
+      (routeArr.lon + arrCellCenter.lon) / 2,
+      (routeArr.lat + arrCellCenter.lat) / 2,
+    ]);
   }
   rawPath.push([routeArr.lon, routeArr.lat]);
 
@@ -608,6 +668,8 @@ export async function computeSchematicRoute(
   logger.debug({
     operation: 'schematic_router_routed',
     chordKm: Math.round(haversineKm(dep, arr)),
+    depSnapKm: Math.round(depSnapKm),
+    arrSnapKm: Math.round(arrSnapKm),
     rawWaypoints: rawPath.length,
     simplifiedWaypoints: simplified.length,
     bufferedWaypoints: buffered.length,

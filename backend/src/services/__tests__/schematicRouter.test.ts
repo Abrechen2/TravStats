@@ -90,6 +90,54 @@ describe('schematicRouter — computeSchematicRoute', () => {
     expect(r.waypoints.length).toBeGreaterThanOrEqual(2);
   });
 
+  it('bypasses A* for short hops (< 150 km) and emits a 2-point chord', async () => {
+    // Port pair ~80 km apart on an all-water mask. The route should
+    // short-circuit out of A* — easy to verify because rawPath A* would
+    // always insert at least one intermediate cell, but the bypass
+    // path doesn't.
+    setCoarseMaskForTesting(allWaterMask());
+    const r = await computeSchematicRoute(
+      { lat: 51.95, lon: 4.07 }, // ~Rotterdam Europoort
+      { lat: 51.5, lon: 3.6 },   // ~Vlissingen / Middelburg approach
+    );
+    expect(r.routed).toBe(true);
+    expect(r.waypoints).toEqual([[4.07, 51.95], [3.6, 51.5]]);
+  });
+
+  it('inserts a midpoint approach waypoint when a port snaps far from land (fjord case)', async () => {
+    // Build a mask where the dep port's 1° cell and a wide neighbourhood
+    // are land, with water only several cells away — simulates a fjord
+    // head where BFS snap lands far offshore. Arr is on a normal water
+    // cell. Verify that the dep-side smoothing waypoint shows up in the
+    // route between the port and the snapped cell.
+    const bytes = allLandMask();
+    // Open water: a 3-row strip near lat 50N (rows ~40), and the arr
+    // cell. BFS from dep port at (60, 5) snaps north to the strip.
+    for (let lat = 49; lat <= 51; lat += 1) {
+      for (let lon = -10; lon <= 20; lon += 1) {
+        const r = latToRow1(lat);
+        const c = lonToCol1(lon);
+        setBit1(bytes, cellIndex1(r, c), 0);
+      }
+    }
+    // Make sure the immediate ring around dep stays land — force snap distance.
+    setCoarseMaskForTesting(bytes);
+    const r = await computeSchematicRoute(
+      { lat: 60, lon: 5 }, // dep "fjord" port, 1° cell is land
+      { lat: 50, lon: 10 }, // arr in the open-water strip
+    );
+    expect(r.routed).toBe(true);
+    // The first waypoint must still be the raw port.
+    expect(r.waypoints[0]).toEqual([5, 60]);
+    // The second waypoint is the smoothing midpoint, somewhere between
+    // the port and the snapped water cell — i.e. north-ish of the port,
+    // not at the snapped cell itself. Exact coordinates depend on which
+    // cell BFS picks, but lat must lie strictly between 50 and 60.
+    expect(r.waypoints.length).toBeGreaterThanOrEqual(3);
+    expect(r.waypoints[1][1]).toBeGreaterThan(50);
+    expect(r.waypoints[1][1]).toBeLessThan(60);
+  });
+
   it('uses the fixed Hamburg approach before routing to open water', async () => {
     setCoarseMaskForTesting(allWaterMask());
     const r = await computeSchematicRoute(
