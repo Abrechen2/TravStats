@@ -122,6 +122,10 @@ export interface UserStats {
   hasColdWater: boolean;
   hasCruiseBirthdayAtSea: boolean;
   hasNewYearsAtSea: boolean;
+  /** Sum of great-circle hops between consecutive port calls across
+   * all cruises (km). Approximates total cruise distance for the
+   * cruise distance ladder. */
+  cruiseTotalDistanceKm: number;
   // Cross-domain
   hasFlyAndSailTrip: boolean;
   cruiseCarnivalBrandsCovered: number; // how many Carnival brands out of the set
@@ -221,6 +225,7 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
     hasColdWater: false,
     hasCruiseBirthdayAtSea: false,
     hasNewYearsAtSea: false,
+    cruiseTotalDistanceKm: 0,
     hasFlyAndSailTrip: false,
     cruiseCarnivalBrandsCovered: 0,
   };
