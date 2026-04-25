@@ -64,6 +64,16 @@ export interface CruiseStats {
   /** True when any cruise has a leg where the longitude jumps across
    * the antimeridian (lon ±180°), e.g. an Auckland → Tahiti hop. */
   hasDatelineCrossing: boolean;
+  /** Total number of port calls across all cruises (counts revisits).
+   * `cruisePortsUnique` is the de-duplicated set; this is the gross
+   * tally — needed for revisit-rate and average-ports-per-cruise. */
+  totalPortCalls: number;
+  /** Sum of (endDate − startDate + 1) days across cruises that have
+   * both timestamps. Cruises missing dates contribute zero. */
+  totalCruiseDays: number;
+  /** Per-region port-call count (e.g. {"mediterranean": 12,
+   * "caribbean": 5}). Sorted bar-chart input on the frontend. */
+  regionVisitCounts: Record<string, number>;
 }
 
 const CANAL_UNLOCODES = new Set(['PACTB', 'EGPSD']); // Panama Colón, Port Said
@@ -96,6 +106,9 @@ export function calculateCruiseStats(
   let totalDistanceKm = 0;
   let longestLegKm = 0;
   let hasDatelineCrossing = false;
+  let totalPortCalls = 0;
+  let totalCruiseDays = 0;
+  const regionVisitCounts: Record<string, number> = {};
 
   for (const cruise of cruises) {
     if (cruise.shipId !== null) shipIds.add(cruise.shipId);
@@ -122,8 +135,13 @@ export function calculateCruiseStats(
         if (stop.port) {
           portIds.add(stop.port.id);
           cruisePortCount += 1;
+          totalPortCalls += 1;
           if (stop.port.country) countries.add(stop.port.country);
-          if (stop.port.region) regions.add(stop.port.region);
+          if (stop.port.region) {
+            regions.add(stop.port.region);
+            regionVisitCounts[stop.port.region] =
+              (regionVisitCounts[stop.port.region] ?? 0) + 1;
+          }
           if (stop.port.unlocode && CANAL_UNLOCODES.has(stop.port.unlocode)) hasCanalTransit = true;
           if (stop.port.region && POLAR_REGIONS.has(stop.port.region)) hasPolar = true;
           if (
@@ -162,6 +180,12 @@ export function calculateCruiseStats(
       if (rangeContainsMonthDay(cruise.startDate, cruise.endDate, { month: 12, day: 31 })) {
         hasNewYearsAtSea = true;
       }
+      // Inclusive day count: a Sat–Sun trip counts as 2 days. Cruises
+      // missing either timestamp simply don't contribute.
+      const dayMs = 24 * 60 * 60 * 1000;
+      const days =
+        Math.floor((cruise.endDate.getTime() - cruise.startDate.getTime()) / dayMs) + 1;
+      if (days > 0) totalCruiseDays += days;
     }
   }
 
@@ -193,6 +217,9 @@ export function calculateCruiseStats(
     totalDistanceKm,
     longestLegKm,
     hasDatelineCrossing,
+    totalPortCalls,
+    totalCruiseDays,
+    regionVisitCounts,
   };
 }
 

@@ -86,19 +86,35 @@ export const statsApi = {
 
 /** Shape returned by GET /api/v1/stats/cruise. */
 export interface CruiseStatsResponse {
+  // Counts + ladders
   cruisesCount: number;
   cruisePortsUnique: number;
+  cruisePortsSingleMax: number;
   cruiseShipsUnique: number;
   cruiseLinesUnique: number;
+  cruiseLineLoyaltyMax: number;
   cruiseLines: string[];
   seaDays: number;
   seaDaysStreak: number;
+  // Regions + countries
   regions: string[];
+  regionVisitCounts: Record<string, number>;
   countries: string[];
+  // Distance metrics
+  totalDistanceKm: number;
+  longestLegKm: number;
+  // Trip-shape derivations
+  totalPortCalls: number;
+  totalCruiseDays: number;
+  // Cabin / deck
   hasBalconyCabin: boolean;
   hasSuiteCabin: boolean;
   maxDeck: number;
+  // Achievement-style flags
   hasCanalTransit: boolean;
   hasPolar: boolean;
   hasColdWater: boolean;
+  hasDatelineCrossing: boolean;
+  hasBirthdayAtSea: boolean;
+  hasNewYearsAtSea: boolean;
 }
