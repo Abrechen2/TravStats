@@ -568,21 +568,32 @@ export async function computeSchematicRoute(
   const routeDep = { lat: depRoutePoint[1], lon: depRoutePoint[0] };
   const routeArr = { lat: arrRoutePoint[1], lon: arrRoutePoint[0] };
 
-  // Short-hop bypass: skip the 1° A* entirely. The grid is too coarse
-  // to add useful intermediate waypoints over <150 km, and the spline
-  // produced from [port, port] alone curves nicely. The coast buffer
-  // still kicks in if the chord clips land.
+  // Short-hop bypass: skip the 1° A* entirely WHEN the direct chord
+  // doesn't clip land. The grid is too coarse to add useful
+  // intermediate waypoints over <150 km open-water hops, and the
+  // spline produced from [port, port] alone curves nicely.
+  //
+  // CRITICAL: only bypass when the chord is all-water on the fine
+  // mask. Without this guard, fjord-to-fjord hops (Bergen → Flåm,
+  // Flåm → Geiranger) — both <150 km, both crossing Norwegian
+  // mountains — would short-circuit to a straight line that visibly
+  // cuts across land. When the chord clips land, fall through to A*.
   const chordKm = haversineKm(routeDep, routeArr);
-  if (chordKm < SHORT_HOP_KM) {
-    const buffered = insertCoastBuffers(
+  if (
+    chordKm < SHORT_HOP_KM &&
+    fineMaskBytes !== null &&
+    segmentAllWater(fineMaskBytes, routeDep.lon, routeDep.lat, routeArr.lon, routeArr.lat)
+  ) {
+    const waypoints = composeRouteWaypoints(
+      dep,
+      depApproach,
       [[routeDep.lon, routeDep.lat], [routeArr.lon, routeArr.lat]],
-      fineMaskBytes,
+      arrApproach,
+      arr,
     );
-    const waypoints = composeRouteWaypoints(dep, depApproach, buffered, arrApproach, arr);
     logger.debug({
       operation: 'schematic_router_short_hop',
       chordKm: Math.round(chordKm),
-      bufferedWaypoints: buffered.length,
       outputWaypoints: waypoints.length,
       durationMs: Date.now() - t0,
     });
