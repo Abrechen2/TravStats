@@ -422,18 +422,13 @@ export const seedsPartB: AchievementDefinition[] = [
     points: 40,
     isHidden: true,
   },
-  {
-    code: 'FOUR_SEASONS_YEAR',
-    name: 'Four Seasons, One Year',
-    description: 'A flight in every season within a 12-month window',
-    category: 'special',
-    domain: 'flight',
-    icon: '🍂',
-    tier: 'silver',
-    requirement: 4,
-    requirementType: 'all_seasons',
-    points: 35,
-  },
+  // FOUR_SEASONS_YEAR was removed — partA already ships YEAR_ROUND with
+  // the same `all_seasons` requirementType + threshold 4 but a fairer
+  // gold tier and 150 points. Keeping both fired together and double-
+  // counted. Existing user unlocks for FOUR_SEASONS_YEAR remain in the
+  // DB as orphans (ensureAchievements doesn't delete) so badges/points
+  // already in user inventories are preserved; new users only see
+  // YEAR_ROUND.
 
   // ── v1.1 expansion — Planner additions ──────────────────────────────
   {
