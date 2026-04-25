@@ -166,18 +166,31 @@ async function init() {
     console.log('5️⃣  Airport seeding will start after first login\n');
     logger.debug({ operation: 'init_airport_seeding_info', message: 'Airport seeding will start after first login' });
 
-    // Step 6: Optional demo user
-    const createDemoUser = process.env.CREATE_DEMO_USER === 'true';
+    // Step 6: Demo user — seeded automatically on first install (empty
+    // user table) so a fresh box has something to look at right away.
+    // Admins can later delete the demo user via the admin UI; that
+    // cascades through Prisma and removes all seed data with it. The
+    // CREATE_DEMO_USER=true env var stays as a force-override for dev
+    // re-seeding on a non-empty DB.
+    const userCount = await prisma.user.count();
+    const isFirstInstall = userCount === 0;
+    const forceDemo = process.env.CREATE_DEMO_USER === 'true';
+    const shouldSeedDemo = isFirstInstall || forceDemo;
 
-    if (createDemoUser) {
-      console.log('6️⃣  Creating demo user...');
-      logger.info({ operation: 'init_demo_user', message: 'Creating demo user' });
+    if (shouldSeedDemo) {
+      const reason = isFirstInstall ? 'first install' : 'CREATE_DEMO_USER=true';
+      console.log(`6️⃣  Seeding demo user (${reason})...`);
+      logger.info({
+        operation: 'init_demo_user',
+        message: 'Seeding demo user',
+        context: { isFirstInstall, forceDemo },
+      });
       try {
         execSync('npm run seed:demo', {
           stdio: 'inherit',
           cwd: path.join(__dirname, '..')
         });
-        console.log('   ✅ Demo user ready\n');
+        console.log('   ✅ Demo user ready (login: demo / demo123)\n');
         logger.info({ operation: 'init_demo_user_success', message: 'Demo user created successfully' });
       } catch (error) {
         console.error('   ⚠️  Demo user creation failed (may already exist)\n');
@@ -190,8 +203,12 @@ async function init() {
         });
       }
     } else {
-      console.log('6️⃣  Skipping demo user creation (set CREATE_DEMO_USER=true to enable)\n');
-      logger.debug({ operation: 'init_demo_user_skip', message: 'Demo user creation skipped' });
+      console.log(`6️⃣  Skipping demo user (DB already has ${userCount} user(s); set CREATE_DEMO_USER=true to force re-seed)\n`);
+      logger.debug({
+        operation: 'init_demo_user_skip',
+        message: 'Demo user creation skipped',
+        context: { userCount },
+      });
     }
 
     // Step 7: Initialize category-based log streams

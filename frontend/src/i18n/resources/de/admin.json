@@ -274,8 +274,8 @@
   },
   "demoWarning": {
     "title": "🔓 Demo-Konto aktiv",
-    "message": "Das Demo-Benutzerkonto (Benutzername: \"demo\", Passwort: \"demo123\") ist derzeit aktiv. Dies ist ein Sicherheitsrisiko in Produktionsumgebungen. Deaktivieren Sie dieses Konto nach dem ersten Test.",
-    "button": "Demo-Benutzer deaktivieren"
+    "message": "Das Demo-Benutzerkonto (Benutzername: \"demo\", Passwort: \"demo123\") ist derzeit aktiv. Es wird beim ersten Start automatisch mit Beispieldaten angelegt. Wenn du es nicht mehr brauchst, kannst du es hier löschen — alle Demo-Daten (Flüge, Kreuzfahrten, Trips) werden mitgelöscht.",
+    "button": "Demo-Benutzer löschen"
   },
   "systemInfo": {
     "title": "Systeminformationen",
@@ -346,7 +346,7 @@
     "confirmExport": "Alle Daten exportieren? Dies lädt eine JSON-Datei mit allen Benutzerdaten herunter.",
     "confirmDeleteLog": "Log-Datei \"{{filename}}\" löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
     "confirmCleanupLogs": "Alte Log-Dateien basierend auf der Aufbewahrungsrichtlinie löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
-    "confirmDeactivateDemo": "Demo-Benutzerkonto deaktivieren? Dies verhindert die Anmeldung mit Demo-Anmeldedaten."
+    "confirmDeleteDemo": "Demo-Benutzerkonto löschen? Alle Demo-Daten (Flüge, Kreuzfahrten, Trips, Errungenschaften) werden mitgelöscht. Kann nicht rückgängig gemacht werden."
   },
   "logging": {
     "title": "Debug-Logging & Diagnostik",
