@@ -83,6 +83,11 @@ COPY --from=backend-builder /app/backend/dist ./dist
 # `csv_missing` on first boot, leaving the cruise/ferry domain unable
 # to resolve port + ship references.
 COPY --from=backend-builder /app/backend/src/seedData ./dist/seedData
+# schematicRouter resolves the fine land-mask via __dirname relative to
+# its compiled location (dist/services/...), landing at /app/backend/data/.
+# Without this copy, /api/v1/cruises/geometry(/batch) returns 500 with
+# ENOENT on every request, so cruise paths never render on the globe.
+COPY backend/data/land-mask-0.1deg.bin ./data/land-mask-0.1deg.bin
 RUN npx prisma generate
 
 # Write VERSION file for runtime version reporting.
