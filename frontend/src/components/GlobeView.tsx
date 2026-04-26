@@ -3,6 +3,7 @@ import Globe from "react-globe.gl";
 import type { GeoJSONFeature } from "../types";
 import type { Cruise } from "../types/cruise";
 import { useThemeStore } from "../store/themeStore";
+import { useTimeSliderStore } from "../store/timeSliderStore";
 import { escapeHtml } from "../lib/escapeHtml";
 import { useTranslation } from "../hooks/useTranslation";
 import { DOMAINS } from "../shared/domains";
@@ -13,6 +14,17 @@ import {
   createDayNightGlobeMaterial,
   type DayNightMaterial,
 } from "./Globe/dayNightGlobeMaterial";
+import { GlobeTimeSlider } from "./Globe/GlobeTimeSlider";
+import {
+  computeCruiseLegDates,
+  computeTimeRange,
+  flightVisibleFilter,
+  flightVisibleLive,
+  legProgress,
+  legVisibleFilter,
+  truncatePolyline,
+  type CruiseLegDates,
+} from "./Globe/timeSliderUtils";
 
 interface GlobeViewProps {
   flights: GeoJSONFeature[];
@@ -192,7 +204,22 @@ export default function GlobeView({
   useEffect(() => {
     let raf = 0;
     const tick = (): void => {
-      dayNightMaterial.setSunDirection(computeSunDirection(new Date(), 60));
+      // Sun direction tracks the slider when it's driving the scene:
+      //   live   → cursor date (terminator scrubs with the timeline)
+      //   filter → end of range (consistent with the visible window)
+      //   off    → real now @ 60x so the user still sees motion
+      const s = useTimeSliderStore.getState();
+      let date: Date;
+      let speed = 1;
+      if (s.mode === "live" && s.currentDate) {
+        date = s.currentDate;
+      } else if (s.mode === "filter" && s.filterEnd) {
+        date = s.filterEnd;
+      } else {
+        date = new Date();
+        speed = 60;
+      }
+      dayNightMaterial.setSunDirection(computeSunDirection(date, speed));
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -233,6 +260,46 @@ export default function GlobeView({
   // geometry work for the route layer when there are many arcs.
   const arcResolution = useMemo<number>(() => (cameraAltitude > 3 ? 32 : 64), [cameraAltitude]);
 
+  // Time-slider state. Sliced per-field so unrelated store changes don't
+  // re-render the whole component. The store mode drives whether
+  // flights/cruises get filtered before they reach Globe's data props.
+  const sliderMode = useTimeSliderStore((s) => s.mode);
+  const sliderCurrent = useTimeSliderStore((s) => s.currentDate);
+  const sliderFilterStart = useTimeSliderStore((s) => s.filterStart);
+  const sliderFilterEnd = useTimeSliderStore((s) => s.filterEnd);
+  const setSliderRange = useTimeSliderStore((s) => s.setRange);
+
+  // Push the data-driven [min, max] into the store every time the
+  // flights or cruises arrays change identity. The store dedupes if
+  // the bounds didn't actually move so this stays O(1) on the hot
+  // selection-change path.
+  useEffect(() => {
+    const range = computeTimeRange(flights, cruises);
+    if (range) setSliderRange(range.min, range.max);
+  }, [flights, cruises, setSliderRange]);
+
+  // Per-leg date metadata for every cruise. Computed once per cruises
+  // identity. Keyed by cruiseId so the live-mode partial-draw can pair
+  // a leg's geometry with its (start, end) dates in O(1).
+  const cruiseLegDatesByCruise = useMemo<Map<string, CruiseLegDates[]>>(() => {
+    const out = new Map<string, CruiseLegDates[]>();
+    for (const c of cruises) out.set(c.id, computeCruiseLegDates(c));
+    return out;
+  }, [cruises]);
+
+  // The pre-aggregation flight set, filtered by slider state. The arc
+  // builder downstream still groups same-route flights together so a
+  // city pair only renders one arc however many flights are visible.
+  const filteredFlights = useMemo<GeoJSONFeature[]>(() => {
+    if (sliderMode === "off") return flights;
+    if (sliderMode === "live") {
+      if (!sliderCurrent) return flights;
+      return flights.filter((f) => flightVisibleLive(f, sliderCurrent));
+    }
+    if (!sliderFilterStart || !sliderFilterEnd) return flights;
+    return flights.filter((f) => flightVisibleFilter(f, sliderFilterStart, sliderFilterEnd));
+  }, [flights, sliderMode, sliderCurrent, sliderFilterStart, sliderFilterEnd]);
+
   const { arcsData, heatmapThresholds } = useMemo(() => {
     interface RouteData {
       count: number;
@@ -247,7 +314,7 @@ export default function GlobeView({
 
     const routeMap = new Map<string, RouteData>();
 
-    for (const flight of flights) {
+    for (const flight of filteredFlights) {
       if (!flight?.properties || !flight?.geometry) continue;
       const coords = flight.geometry.coordinates;
       if (coords.length < 2) continue;
@@ -310,7 +377,7 @@ export default function GlobeView({
       }));
 
     return { arcsData: arcs, heatmapThresholds: thresholds };
-  }, [flights, minRouteCount]);
+  }, [filteredFlights, minRouteCount]);
 
   // Cruise route geometry from the backend schematic router. One
   // FeatureCollection per cruise, each Feature is one port-pair leg with
@@ -351,31 +418,100 @@ export default function GlobeView({
 
   // One curved path per cruise leg, drawn along the globe surface.
   // react-globe.gl wants [lat, lng] pairs (not [lng, lat] like GeoJSON).
+  // In live mode, legs whose end date hasn't been reached are either
+  // hidden (before start) or partially drawn (in progress) — the
+  // ship-walking effect across the itinerary.
   const cruisePathsData = useMemo<CruisePathDatum[]>(() => {
     const out: CruisePathDatum[] = [];
     for (const cruise of cruises) {
       const fc = cruiseGeometry.get(cruise.id);
       if (!fc) continue;
       const label = cruise.ship?.name ?? cruise.shipNameOverride ?? cruise.cruiseLine ?? "Cruise";
+      const legDates = cruiseLegDatesByCruise.get(cruise.id) ?? [];
+      // Index legDates by "from:to" so we can look up the date for the
+      // feature whose properties say { fromPortId, toPortId }.
+      const dateByPair = new Map<string, CruiseLegDates>();
+      for (const ld of legDates) {
+        dateByPair.set(`${ld.fromPortId}:${ld.toPortId}`, ld);
+      }
       for (const feature of fc.features) {
         const coords = feature.geometry.coordinates.map(
           ([lon, lat]) => [lat, lon] as [number, number]
         );
-        if (coords.length >= 2) {
-          out.push({ coords, cruiseId: cruise.id, cruiseLabel: label });
+        if (coords.length < 2) continue;
+
+        if (sliderMode === "live" && sliderCurrent) {
+          const ld = dateByPair.get(
+            `${feature.properties.fromPortId}:${feature.properties.toPortId}`
+          );
+          if (ld) {
+            const p = legProgress(ld, sliderCurrent);
+            if (p === 0) continue; // not yet sailed — hide this leg
+            const partial = p < 1 ? truncatePolyline(coords, p) : coords;
+            if (partial.length < 2) continue;
+            out.push({ coords: partial, cruiseId: cruise.id, cruiseLabel: label });
+            continue;
+          }
         }
+
+        if (sliderMode === "filter" && sliderFilterStart && sliderFilterEnd) {
+          const ld = dateByPair.get(
+            `${feature.properties.fromPortId}:${feature.properties.toPortId}`
+          );
+          if (ld && !legVisibleFilter(ld, sliderFilterStart, sliderFilterEnd)) {
+            continue;
+          }
+        }
+
+        out.push({ coords, cruiseId: cruise.id, cruiseLabel: label });
       }
     }
     return out;
-  }, [cruises, cruiseGeometry]);
+  }, [
+    cruises,
+    cruiseGeometry,
+    cruiseLegDatesByCruise,
+    sliderMode,
+    sliderCurrent,
+    sliderFilterStart,
+    sliderFilterEnd,
+  ]);
 
   // Distinct port markers across all cruises so popular embarkation ports
   // (Hamburg, Civitavecchia, …) get a single dot rather than one per cruise.
+  // Live mode only counts ports the ship has actually reached by the
+  // current cursor; filter mode only counts visits inside the window.
   const cruisePointsData = useMemo<PointData[]>(() => {
     const portMap = new Map<number, PointData>();
     for (const c of cruises) {
+      const legs = cruiseLegDatesByCruise.get(c.id) ?? [];
+      // Build per-port "visited" predicate: a port is visited at the
+      // ARRIVAL date of the leg ending there (or at startDate for the
+      // first port). Sea-day stops don't show as ports anyway.
+      const portVisitDate = new Map<number, Date>();
+      const startDate = c.startDate ? new Date(c.startDate) : null;
+      const firstPortStop = c.stops.find((s) => !s.isAtSea && s.port);
+      if (firstPortStop?.port && startDate) {
+        portVisitDate.set(firstPortStop.port.id, startDate);
+      }
+      for (const ld of legs) {
+        portVisitDate.set(ld.toPortId, ld.endDate);
+      }
+
       for (const s of c.stops) {
         if (s.isAtSea || !s.port) continue;
+        const visit = portVisitDate.get(s.port.id);
+        if (sliderMode === "live" && sliderCurrent) {
+          if (!visit || visit.getTime() > sliderCurrent.getTime()) continue;
+        } else if (sliderMode === "filter" && sliderFilterStart && sliderFilterEnd) {
+          if (
+            !visit ||
+            visit.getTime() < sliderFilterStart.getTime() ||
+            visit.getTime() > sliderFilterEnd.getTime()
+          ) {
+            continue;
+          }
+        }
         const port = s.port;
         const existing = portMap.get(port.id);
         if (existing) {
@@ -392,12 +528,19 @@ export default function GlobeView({
       }
     }
     return Array.from(portMap.values());
-  }, [cruises]);
+  }, [
+    cruises,
+    cruiseLegDatesByCruise,
+    sliderMode,
+    sliderCurrent,
+    sliderFilterStart,
+    sliderFilterEnd,
+  ]);
 
   const pointsData = useMemo(() => {
     const airportMap = new Map<string, PointData>();
 
-    for (const flight of flights) {
+    for (const flight of filteredFlights) {
       if (!flight?.properties || !flight?.geometry) continue;
       const coords = flight.geometry.coordinates;
       if (coords.length < 2) continue;
@@ -444,7 +587,7 @@ export default function GlobeView({
     }
 
     return Array.from(airportMap.values());
-  }, [flights]);
+  }, [filteredFlights]);
 
   const arcLabel = useCallback(
     (arc: ArcData): string => `
@@ -567,6 +710,21 @@ export default function GlobeView({
             </div>
           </div>
         )}
+      </div>
+
+      {/* Bottom-center time-slider. Visible-counter values use the
+          post-filter arrays so the user sees the immediate effect of
+          a scrub, not stale aggregate counts. Cruises are counted as
+          distinct cruise IDs (not legs) so the number reads as "trips
+          you can see right now". */}
+      <div
+        className="absolute bottom-4 left-1/2 -translate-x-1/2 z-[9999]"
+        style={{ touchAction: "auto", pointerEvents: "auto" }}
+      >
+        <GlobeTimeSlider
+          visibleFlights={filteredFlights.length}
+          visibleCruises={new Set(cruisePathsData.map((p) => p.cruiseId)).size}
+        />
       </div>
 
       <Globe

@@ -49,7 +49,23 @@
     "autoRotation": "Auto-Rotation",
     "timesFlown": "Flown {{count}}x",
     "flight_one": "flight",
-    "flight_other": "flights"
+    "flight_other": "flights",
+    "timeSlider": {
+      "title": "Timeline",
+      "modeOff": "Off",
+      "modeLive": "Play",
+      "modeFilter": "Filter",
+      "play": "Play",
+      "pause": "Pause",
+      "speed": "Speed",
+      "daysPerSec": "{{n}} d/s",
+      "rangeStart": "From",
+      "rangeEnd": "To",
+      "visible": "Visible",
+      "flights": "Flights",
+      "cruises": "Cruises",
+      "noData": "No dated trips"
+    }
   },
   "infoPill": {
     "flights": "Flights",
