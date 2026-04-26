@@ -87,5 +87,24 @@
     "saving": "Saving …",
     "createTitle": "New cruise",
     "editTitle": "Edit cruise"
+  },
+  "import": {
+    "button": "Import PDF",
+    "parsing": "Parsing PDF …",
+    "previewTitle": "{{count}} cruise(s) found",
+    "previewHint": "Review the extracted data and save. Ports without a match in the database can be corrected later in the editor.",
+    "save": "Save",
+    "saved": "{{count}} cruise(s) saved",
+    "saveError": "Failed to save cruise",
+    "parseError": "Could not parse PDF",
+    "noCruises": "No cruise found in PDF",
+    "notPdf": "Only PDF files are supported",
+    "shipFromDb": "Ship from database",
+    "shipUnmatched": "Ship not in DB",
+    "shipUnmatchedHint": "Stored as free text. You can link the ship in the editor.",
+    "stopsLabel": "Stops",
+    "stopsValue": "{{ports}} ports, {{seaDays}} sea days",
+    "unmatchedTitle": "Unmatched ports",
+    "unmatchedHint": "These ports are not in the database and were marked as sea days for now. You can correct them in the editor."
   }
 }
