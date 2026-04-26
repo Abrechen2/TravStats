@@ -49,7 +49,23 @@
     "autoRotation": "Auto-Rotation",
     "timesFlown": "{{count}}x geflogen",
     "flight_one": "Flug",
-    "flight_other": "Flüge"
+    "flight_other": "Flüge",
+    "timeSlider": {
+      "title": "Zeitachse",
+      "modeOff": "Aus",
+      "modeLive": "Abspielen",
+      "modeFilter": "Filter",
+      "play": "Abspielen",
+      "pause": "Pause",
+      "speed": "Geschw.",
+      "daysPerSec": "{{n}} T/s",
+      "rangeStart": "Von",
+      "rangeEnd": "Bis",
+      "visible": "Sichtbar",
+      "flights": "Flüge",
+      "cruises": "Kreuzfahrten",
+      "noData": "Keine datierten Reisen"
+    }
   },
   "infoPill": {
     "flights": "Flüge",
