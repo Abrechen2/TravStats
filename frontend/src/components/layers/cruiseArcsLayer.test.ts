@@ -128,6 +128,83 @@ describe("createCruiseArcsLayer", () => {
     expect(data[0].path.length).toBeGreaterThan(20);
   });
 
+  it("keeps protected harbor approaches exact before smoothing the open-sea section", () => {
+    const cruise = makeCruise([
+      makeStop(1, 1, { id: 1, lat: 53.55, lon: 9.97 }),
+      makeStop(2, 2, { id: 2, lat: 60.39, lon: 5.32 }),
+    ]);
+    const coordinates: [number, number][] = [
+      [9.97, 53.55],
+      [9.7, 53.56],
+      [9.12, 53.88],
+      [8.18, 54.05],
+      [5.32, 60.39],
+    ];
+    const geometry: CruiseRouteFeatureCollection = {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          geometry: { type: "LineString", coordinates },
+          properties: {
+            fromPortId: 1,
+            toPortId: 2,
+            routed: true,
+            protectedPrefixCount: 3,
+            protectedSuffixCount: 0,
+            method: "maritime_graph",
+          },
+        },
+      ],
+    };
+    const map = new Map([[cruise.id, geometry]]);
+    const layer = createCruiseArcsLayer([cruise], map);
+    const data = (layer as { props: { data: unknown } }).props.data as Array<{
+      path: [number, number][];
+    }>;
+
+    expect(data[0].path.slice(0, 3)).toEqual(coordinates.slice(0, 3));
+    expect(data[0].path.length).toBeGreaterThan(coordinates.length);
+  });
+
+  it("renders backend geometry directly at close zoom levels", () => {
+    const cruise = makeCruise([
+      makeStop(1, 1, { id: 1, lat: 53.55, lon: 9.97 }),
+      makeStop(2, 2, { id: 2, lat: 60.39, lon: 5.32 }),
+    ]);
+    const coordinates: [number, number][] = [
+      [9.97, 53.55],
+      [9.7, 53.56],
+      [9.12, 53.88],
+      [8.18, 54.05],
+      [5.32, 60.39],
+    ];
+    const geometry: CruiseRouteFeatureCollection = {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          geometry: { type: "LineString", coordinates },
+          properties: {
+            fromPortId: 1,
+            toPortId: 2,
+            routed: true,
+            protectedPrefixCount: 3,
+            protectedSuffixCount: 0,
+            method: "maritime_graph",
+          },
+        },
+      ],
+    };
+    const map = new Map([[cruise.id, geometry]]);
+    const layer = createCruiseArcsLayer([cruise], map, null, undefined, { zoom: 8 });
+    const data = (layer as { props: { data: unknown } }).props.data as Array<{
+      path: [number, number][];
+    }>;
+
+    expect(data[0].path).toEqual(coordinates);
+  });
+
   it("renders no arrow layer when there are no qualifying legs", () => {
     const cruise = makeCruise([makeStop(1, 1, { id: 1, lat: 0, lon: 0 })]);
     expect(createCruiseArrowsLayer([cruise])).toBeNull();

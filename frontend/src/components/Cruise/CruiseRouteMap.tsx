@@ -49,6 +49,7 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
   const isDark = useThemeStore((s) => s.isDarkMode);
   const [geometry, setGeometry] = useState<CruiseRouteFeatureCollection | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [zoom, setZoom] = useState<number>(INITIAL_VIEW.zoom ?? 3);
   const didFit = useRef(false);
 
   useEffect(() => {
@@ -72,11 +73,11 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
   );
 
   const layers: Layer[] = useMemo(() => {
-    const arcsLayer = createCruiseArcsLayer([cruise], geometryMap);
-    const arrowsLayer = createCruiseArrowsLayer([cruise], geometryMap);
+    const arcsLayer = createCruiseArcsLayer([cruise], geometryMap, null, undefined, { zoom });
+    const arrowsLayer = createCruiseArrowsLayer([cruise], geometryMap, null, { zoom });
     const portsLayer = createCruisePortsLayer([cruise]);
     return [arcsLayer, arrowsLayer, portsLayer].filter((l): l is Layer => l !== null);
-  }, [cruise, geometryMap]);
+  }, [cruise, geometryMap, zoom]);
 
   const bboxPoints: Array<[number, number]> = useMemo(() => {
     const pts: Array<[number, number]> = [];
@@ -116,6 +117,10 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
         mapStyle={isDark ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
         style={{ position: "absolute", inset: "0" }}
         onLoad={(): void => setMapLoaded(true)}
+        onMove={(evt): void => {
+          const nextZoom = Math.round(evt.viewState.zoom);
+          setZoom((prev) => (prev === nextZoom ? prev : nextZoom));
+        }}
       >
         {mapLoaded && <DeckGLOverlay layers={layers} />}
       </MapGL>

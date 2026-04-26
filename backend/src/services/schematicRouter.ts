@@ -116,6 +116,37 @@ let maskBytes: Uint8Array | null = null;
 let fineMaskBytes: Uint8Array | null = null;
 let loadPromise: Promise<Uint8Array> | null = null;
 
+type SeaRouteFeature = { geometry: { coordinates: number[][] } };
+type SeaRouteFn = (origin: unknown, destination: unknown, units?: 'kilometers') => SeaRouteFeature;
+
+let seaRoutePromise: Promise<SeaRouteFn | null> | null = null;
+
+async function loadSeaRoute(): Promise<SeaRouteFn | null> {
+  if (process.env.NODE_ENV === 'test') return null;
+  if (seaRoutePromise === null) {
+    seaRoutePromise = (async (): Promise<SeaRouteFn | null> => {
+      try {
+        const dynamicImport = new Function('specifier', 'return import(specifier)') as (
+          specifier: string,
+        ) => Promise<{
+          seaRoute?: SeaRouteFn;
+          default?: { seaRoute?: SeaRouteFn };
+          'module.exports'?: { seaRoute?: SeaRouteFn };
+        }>;
+        const mod = await dynamicImport('searoute-ts');
+        return mod.seaRoute ?? mod.default?.seaRoute ?? mod['module.exports']?.seaRoute ?? null;
+      } catch (err) {
+        logger.warn({
+          operation: 'schematic_router_searoute_load_failed',
+          error: err instanceof Error ? err.message : err,
+        });
+        return null;
+      }
+    })();
+  }
+  return seaRoutePromise;
+}
+
 export interface SchematicRoutePort {
   readonly id?: number;
   readonly name?: string | null;
@@ -141,9 +172,13 @@ const PORT_APPROACHES: ReadonlyArray<PortApproach> = [
       unlocodes: ['DEHAM'],
     }),
     outbound: [
-      [9.52, 53.86], // Elbe fairway near Brunsbuettel/Cuxhaven approach
-      [8.72, 53.9],  // Cuxhaven roads
-      [8.18, 54.05], // German Bight, safely outside the Elbe estuary
+      [9.87, 53.54],
+      [9.7, 53.56],
+      [9.5, 53.64],
+      [9.3, 53.74],
+      [9.12, 53.88],
+      [8.72, 53.9],
+      [8.18, 54.05], // German Bight, safely outside the Elbe estuary.
     ],
   },
 ];
@@ -192,20 +227,30 @@ function appendUnique(out: [number, number][], point: [number, number]): void {
   if (out.length === 0 || !sameWaypoint(out[out.length - 1], point)) out.push(point);
 }
 
+interface ComposedRoute {
+  readonly waypoints: [number, number][];
+  readonly protectedPrefixCount: number;
+  readonly protectedSuffixCount: number;
+}
+
 function composeRouteWaypoints(
   dep: SchematicRoutePort,
   depApproach: ReadonlyArray<[number, number]>,
   coreWaypoints: ReadonlyArray<[number, number]>,
   arrApproach: ReadonlyArray<[number, number]>,
   arr: SchematicRoutePort,
-): [number, number][] {
+): ComposedRoute {
   const out: [number, number][] = [];
   appendUnique(out, [dep.lon, dep.lat]);
   for (const point of depApproach) appendUnique(out, point);
   for (const point of coreWaypoints) appendUnique(out, point);
   for (const point of [...arrApproach].reverse()) appendUnique(out, point);
   appendUnique(out, [arr.lon, arr.lat]);
-  return out;
+  return {
+    waypoints: out,
+    protectedPrefixCount: depApproach.length > 0 ? depApproach.length + 1 : 0,
+    protectedSuffixCount: arrApproach.length > 0 ? arrApproach.length + 1 : 0,
+  };
 }
 
 /** Downsample the 0.1° raster to 1°. A 1° cell is water when
@@ -536,17 +581,101 @@ function segmentAllWater(
   return true;
 }
 
+function segmentMaxLandRun(
+  fineBytes: Uint8Array,
+  lon0: number,
+  lat0: number,
+  lon1: number,
+  lat1: number,
+): number {
+  const dx = lon1 - lon0;
+  const dy = lat1 - lat0;
+  const segLen = Math.hypot(dx, dy);
+  const samples = Math.max(3, Math.ceil(segLen / 0.15));
+  let currentRun = 0;
+  let maxRun = 0;
+  for (let s = 1; s < samples; s++) {
+    const t = s / samples;
+    if (!isFineWater(fineBytes, lat0 + dy * t, lon0 + dx * t)) {
+      currentRun++;
+      maxRun = Math.max(maxRun, currentRun);
+    } else {
+      currentRun = 0;
+    }
+  }
+  return maxRun;
+}
+
+async function computeMaritimeGraphRoute(
+  dep: { lat: number; lon: number },
+  arr: { lat: number; lon: number },
+  fineBytes: Uint8Array | null,
+): Promise<[number, number][] | null> {
+  const origin = {
+    type: 'Feature',
+    properties: {},
+    geometry: { type: 'Point', coordinates: [dep.lon, dep.lat] },
+  };
+  const destination = {
+    type: 'Feature',
+    properties: {},
+    geometry: { type: 'Point', coordinates: [arr.lon, arr.lat] },
+  };
+
+  try {
+    const seaRoute = await loadSeaRoute();
+    if (seaRoute === null) return null;
+    const feature = seaRoute(origin, destination, 'kilometers');
+    const coords = (feature.geometry.coordinates as number[][]).map(
+      ([lon, lat]) => [lon, lat] as [number, number],
+    );
+    if (coords.length < 2) return null;
+
+    const chordKm = haversineKm(dep, arr);
+    const snapBudgetKm = Math.min(250, Math.max(60, chordKm * 0.2));
+    const startSnapKm = haversineKm(dep, { lon: coords[0][0], lat: coords[0][1] });
+    const endSnapKm = haversineKm(arr, {
+      lon: coords[coords.length - 1][0],
+      lat: coords[coords.length - 1][1],
+    });
+    if (startSnapKm > snapBudgetKm || endSnapKm > snapBudgetKm) return null;
+
+    if (fineBytes === null) return coords;
+
+    const repaired = insertCoastBuffers(coords, fineBytes);
+    for (let i = 1; i < repaired.length; i++) {
+      const [lon0, lat0] = repaired[i - 1];
+      const [lon1, lat1] = repaired[i];
+      // Maritime graph nodes are intentionally close to real coastlines.
+      // Reject only sustained land cuts; isolated raster hits near a
+      // harbour or island edge would otherwise discard good graph routes.
+      if (segmentMaxLandRun(fineBytes, lon0, lat0, lon1, lat1) >= 5) return null;
+    }
+    return repaired;
+  } catch {
+    return null;
+  }
+}
+
 export interface SchematicRoute {
   /** [lon, lat] waypoints. First is always `dep`, last is always
    * `arr`. Intermediates are continental-scale detours around
    * landmasses (usually 0-5 of them). Frontend splines through
    * these to get the final curve. */
   readonly waypoints: [number, number][];
+  /** Number of leading waypoints that must be rendered as an exact
+   * polyline. Used for river/harbour exits such as Hamburg -> German
+   * Bight, where a spline would otherwise cut across land. */
+  readonly protectedPrefixCount: number;
+  /** Number of trailing waypoints that must be rendered as an exact
+   * polyline for fixed harbour approaches into the arrival port. */
+  readonly protectedSuffixCount: number;
   /** True when A* found a coarse water path; false when ports were on
    * disconnected components and we fell back to a direct chord. The
    * frontend renders both identically — the flag is informational,
    * letting callers surface a "direct line" badge if desired. */
   readonly routed: boolean;
+  readonly method: 'short_hop' | 'maritime_graph' | 'coarse_a_star' | 'direct';
 }
 
 /**
@@ -667,7 +796,7 @@ async function computeSchematicRouteUncached(
     fineMaskBytes !== null &&
     segmentAllWater(fineMaskBytes, routeDep.lon, routeDep.lat, routeArr.lon, routeArr.lat)
   ) {
-    const waypoints = composeRouteWaypoints(
+    const composed = composeRouteWaypoints(
       dep,
       depApproach,
       [[routeDep.lon, routeDep.lat], [routeArr.lon, routeArr.lat]],
@@ -677,10 +806,27 @@ async function computeSchematicRouteUncached(
     logger.debug({
       operation: 'schematic_router_short_hop',
       chordKm: Math.round(chordKm),
-      outputWaypoints: waypoints.length,
+      outputWaypoints: composed.waypoints.length,
       durationMs: Date.now() - t0,
     });
-    return { waypoints, routed: true };
+    return { ...composed, routed: true, method: 'short_hop' };
+  }
+
+  if (fineMaskBytes !== null) {
+    const maritimeGraphRoute = await computeMaritimeGraphRoute(routeDep, routeArr, fineMaskBytes);
+    if (maritimeGraphRoute !== null) {
+      const composed = composeRouteWaypoints(dep, depApproach, maritimeGraphRoute, arrApproach, arr);
+      logger.debug({
+        operation: 'schematic_router_maritime_graph',
+        chordKm: Math.round(chordKm),
+        graphWaypoints: maritimeGraphRoute.length,
+        outputWaypoints: composed.waypoints.length,
+        departureApproachWaypoints: depApproach.length,
+        arrivalApproachWaypoints: arrApproach.length,
+        durationMs: Date.now() - t0,
+      });
+      return { ...composed, routed: true, method: 'maritime_graph' };
+    }
   }
 
   const depCell = findNearestWaterCell(bytes, routeDep.lat, routeDep.lon);
@@ -692,16 +838,14 @@ async function computeSchematicRouteUncached(
       chordKm: Math.round(haversineKm(dep, arr)),
       durationMs: Date.now() - t0,
     });
-    return {
-      waypoints: composeRouteWaypoints(
-        dep,
-        depApproach,
-        [[routeDep.lon, routeDep.lat], [routeArr.lon, routeArr.lat]],
-        arrApproach,
-        arr,
-      ),
-      routed: false,
-    };
+    const composed = composeRouteWaypoints(
+      dep,
+      depApproach,
+      [[routeDep.lon, routeDep.lat], [routeArr.lon, routeArr.lat]],
+      arrApproach,
+      arr,
+    );
+    return { ...composed, routed: false, method: 'direct' };
   }
 
   const startIdx = cellIndex1(depCell.row, depCell.col);
@@ -714,16 +858,14 @@ async function computeSchematicRouteUncached(
       chordKm: Math.round(haversineKm(dep, arr)),
       durationMs: Date.now() - t0,
     });
-    return {
-      waypoints: composeRouteWaypoints(
-        dep,
-        depApproach,
-        [[routeDep.lon, routeDep.lat], [routeArr.lon, routeArr.lat]],
-        arrApproach,
-        arr,
-      ),
-      routed: false,
-    };
+    const composed = composeRouteWaypoints(
+      dep,
+      depApproach,
+      [[routeDep.lon, routeDep.lat], [routeArr.lon, routeArr.lat]],
+      arrApproach,
+      arr,
+    );
+    return { ...composed, routed: false, method: 'direct' };
   }
 
   const depCellCenter = cellCenter1(depCell.row, depCell.col);
@@ -757,7 +899,7 @@ async function computeSchematicRouteUncached(
 
   const simplified = simplifyDegrees(rawPath, SIMPLIFY_TOLERANCE_DEG);
   const buffered = insertCoastBuffers(simplified, fineMaskBytes);
-  const waypoints = composeRouteWaypoints(dep, depApproach, buffered, arrApproach, arr);
+  const composed = composeRouteWaypoints(dep, depApproach, buffered, arrApproach, arr);
 
   logger.debug({
     operation: 'schematic_router_routed',
@@ -767,10 +909,10 @@ async function computeSchematicRouteUncached(
     rawWaypoints: rawPath.length,
     simplifiedWaypoints: simplified.length,
     bufferedWaypoints: buffered.length,
-    outputWaypoints: waypoints.length,
+    outputWaypoints: composed.waypoints.length,
     departureApproachWaypoints: depApproach.length,
     arrivalApproachWaypoints: arrApproach.length,
     durationMs: Date.now() - t0,
   });
-  return { waypoints, routed: true };
+  return { ...composed, routed: true, method: 'coarse_a_star' };
 }
