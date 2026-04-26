@@ -6,6 +6,11 @@ import { useThemeStore } from "../store/themeStore";
 import { escapeHtml } from "../lib/escapeHtml";
 import { useTranslation } from "../hooks/useTranslation";
 import { DOMAINS } from "../shared/domains";
+import {
+  computeSunDirection,
+  createDayNightGlobeMaterial,
+  type DayNightMaterial,
+} from "./Globe/dayNightGlobeMaterial";
 
 interface GlobeViewProps {
   flights: GeoJSONFeature[];
@@ -171,6 +176,31 @@ export default function GlobeView({
       globeRef.current.controls().autoRotateSpeed = 0.3;
     }
   }, [autoRotate]);
+
+  // Day/Night terminator material. Created once per mount so React doesn't
+  // re-instantiate textures on every render. Sun direction is updated on a
+  // requestAnimationFrame tick so the terminator drifts visibly (60x real
+  // time so a full rotation takes ~24 minutes — long enough to feel
+  // natural, short enough that staying on the page shows motion).
+  const dayNightMaterial = useMemo<DayNightMaterial>(
+    () =>
+      createDayNightGlobeMaterial({
+        dayTextureUrl: "/earth-day.jpg",
+        nightTextureUrl: "/earth-night.jpg",
+        bumpTextureUrl: "/earth-topology.png",
+      }),
+    []
+  );
+
+  useEffect(() => {
+    let raf = 0;
+    const tick = (): void => {
+      dayNightMaterial.setSunDirection(computeSunDirection(new Date(), 60));
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [dayNightMaterial]);
 
   // Camera-altitude tracking. Previously polled pointOfView() every 500ms
   // even when the camera was idle; now subscribes to the OrbitControls
@@ -533,8 +563,7 @@ export default function GlobeView({
       <Globe
         ref={globeRef}
         style={{ width: "100%", height: "100%" }}
-        globeImageUrl="/earth-night.jpg"
-        bumpImageUrl="/earth-topology.png"
+        globeMaterial={dayNightMaterial}
         backgroundImageUrl="/night-sky.png"
         arcsData={allArcsData}
         arcColor={(arc: CombinedArcDatum) =>
@@ -585,8 +614,12 @@ export default function GlobeView({
           return Math.min(Math.sqrt(p.size) * 0.08, 0.3);
         }}
         pointLabel={pointLabel}
-        atmosphereColor={isDarkMode ? "#e8a045" : "#3b82f6"}
-        atmosphereAltitude={0.25}
+        // Fresnel rim glow: slightly fatter halo + warmer dark-mode color
+        // for a richer photo-from-orbit look. The default react-globe.gl
+        // atmosphere already does Fresnel via a back-side sphere; we just
+        // tune the parameters.
+        atmosphereColor={isDarkMode ? "#5fa3ff" : "#3b82f6"}
+        atmosphereAltitude={0.32}
         enablePointerInteraction={true}
         animateIn={true}
       />
