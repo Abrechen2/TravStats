@@ -110,12 +110,19 @@ const getStaticArcAltitude = (
   endLng: number
 ): number => getBaseArcAltitude(calculateDistance(startLat, startLng, endLat, endLng));
 
+type GlobeControls = {
+  autoRotate: boolean;
+  autoRotateSpeed: number;
+  addEventListener: (event: string, fn: () => void) => void;
+  removeEventListener: (event: string, fn: () => void) => void;
+};
+
 type GlobeInstance = {
   pointOfView: (
     point?: { lat: number; lng: number; altitude: number },
     transitionDuration?: number
   ) => { lat: number; lng: number; altitude: number } | void;
-  controls: () => { autoRotate: boolean; autoRotateSpeed: number };
+  controls: () => GlobeControls;
 };
 
 interface ArcData {
@@ -165,26 +172,39 @@ export default function GlobeView({
     }
   }, [autoRotate]);
 
-  const cameraAltitudeRef = useRef(cameraAltitude);
-  cameraAltitudeRef.current = cameraAltitude;
-
+  // Camera-altitude tracking. Previously polled pointOfView() every 500ms
+  // even when the camera was idle; now subscribes to the OrbitControls
+  // 'change' event which fires only on user input (drag / wheel / pinch).
+  // Updates state only when altitude actually crossed a noticeable
+  // threshold so dynamicStroke + arcCurveResolution memos don't churn on
+  // sub-pixel changes during a slow drag.
   useEffect(() => {
-    if (!globeRef.current) return;
-    const interval = setInterval(() => {
-      if (globeRef.current) {
-        const pov = globeRef.current.pointOfView();
-        if (pov && pov.altitude !== cameraAltitudeRef.current) {
-          setCameraAltitude(pov.altitude);
-        }
-      }
-    }, 500);
-    return () => clearInterval(interval);
+    const globe = globeRef.current;
+    if (!globe) return;
+    const controls = globe.controls();
+    if (!controls?.addEventListener) return;
+    const onChange = (): void => {
+      const pov = globe.pointOfView();
+      if (!pov) return;
+      // Only re-render when altitude moves more than ~5% — keeps dependent
+      // memos cheap during slow camera moves.
+      setCameraAltitude((prev) => (Math.abs(pov.altitude - prev) > 0.05 ? pov.altitude : prev));
+    };
+    controls.addEventListener("change", onChange);
+    return () => controls.removeEventListener("change", onChange);
   }, []);
 
   const dynamicStroke = useMemo(() => {
     const zoomFactor = cameraAltitude / 2.5;
     return Math.min(Math.max(0.3 * zoomFactor, 0.08), 0.7);
   }, [cameraAltitude]);
+
+  // Arc tesselation LOD. The default resolution of 64 segments per arc
+  // is overkill when the user is zoomed all the way out (altitude > 3 ≈
+  // a full hemisphere visible) — at that scale 32 segments still curves
+  // smoothly. Halving vertex count for the wide view ~halves Three.js
+  // geometry work for the route layer when there are many arcs.
+  const arcResolution = useMemo<number>(() => (cameraAltitude > 3 ? 32 : 64), [cameraAltitude]);
 
   const { arcsData, heatmapThresholds } = useMemo(() => {
     interface RouteData {
@@ -523,7 +543,7 @@ export default function GlobeView({
         arcStroke={dynamicStroke}
         arcStrokeOpacity={0.6}
         arcAltitude={(arc: CombinedArcDatum) => (arc as ArcData | CruiseArcDatum).altitude}
-        arcCurveResolution={64}
+        arcCurveResolution={arcResolution}
         // Animated dash flow: short bright dash sliding along each arc gives
         // a "plane trail / current" feel. Cruises run slower (longer cycle)
         // to read as ship traffic vs. air traffic.
