@@ -111,9 +111,15 @@ export function createDayNightGlobeMaterial(options: DayNightMaterialOptions): D
  * so the terminator runs roughly north-south. Good enough for the
  * "where is it day right now" visual effect; not for navigation.
  *
- * The X-Z plane is the equator; Y is the rotation axis. The angle ramps
- * from 0 at noon UTC (sun overhead at lon 0) and rotates through the
- * day so the dark side of the planet is always opposite the sun.
+ * react-globe.gl orientation (verified against the beta deploy):
+ *   pointOfView({lat:0, lng:0}) places the camera looking at the
+ *   Greenwich-meridian face of the globe, which sits at +Z in world
+ *   space. As longitude increases East the surface point rotates
+ *   towards +X, with lon=180 at -Z and lon=-90 at -X.
+ *
+ * At noon UTC the subsolar point is over lon 0, so we want sun = +Z.
+ * 6 h later (18 UTC) the sun has shifted 90° West to lon=-90, so
+ * sun = -X. The mapping is x = sin(sunLon), z = cos(sunLon).
  */
 export function computeSunDirection(
   date: Date = new Date(),
@@ -128,8 +134,8 @@ export function computeSunDirection(
     date.getUTCSeconds() +
     date.getUTCMilliseconds() / 1000;
   const dayFraction = ((utcSeconds * speedMultiplier) / 86400) % 1;
-  // At noon UTC (12:00) sun is overhead at longitude 0. Three.js convention
-  // for an equirectangular Earth texture has lon=0 facing -Z by default.
-  const angle = (dayFraction - 0.5) * Math.PI * 2;
-  return new THREE.Vector3(Math.sin(angle), 0, -Math.cos(angle));
+  // sunLon = (0.5 - dayFraction) * 2π — at noon UTC (df=0.5) sunLon=0
+  // (Greenwich); at midnight UTC (df=0) sunLon=π (over the dateline).
+  const sunLon = (0.5 - dayFraction) * Math.PI * 2;
+  return new THREE.Vector3(Math.sin(sunLon), 0, Math.cos(sunLon));
 }

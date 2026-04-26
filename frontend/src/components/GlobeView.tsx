@@ -6,6 +6,8 @@ import { useThemeStore } from "../store/themeStore";
 import { escapeHtml } from "../lib/escapeHtml";
 import { useTranslation } from "../hooks/useTranslation";
 import { DOMAINS } from "../shared/domains";
+import { cruiseApi, type CruiseRouteFeatureCollection } from "../lib/api/cruise";
+import { logger } from "../lib/logger";
 import {
   computeSunDirection,
   createDayNightGlobeMaterial,
@@ -31,21 +33,17 @@ const CRUISE_HEX_RGB = ((): { r: number; g: number; b: number } => {
 const CRUISE_ARC_COLOR = `rgba(${CRUISE_HEX_RGB.r}, ${CRUISE_HEX_RGB.g}, ${CRUISE_HEX_RGB.b}, 0.85)`;
 const CRUISE_PORT_COLOR = `rgba(${CRUISE_HEX_RGB.r}, ${CRUISE_HEX_RGB.g}, ${CRUISE_HEX_RGB.b}, 0.95)`;
 
-interface CruiseArcDatum {
-  type: "cruise";
-  startLat: number;
-  startLng: number;
-  endLat: number;
-  endLng: number;
-  altitude: number;
+/**
+ * One curved path on the globe per cruise leg. `coords` are the
+ * schematic-router waypoints (3-8 [lat, lng] pairs after deck-style
+ * spline densification on the backend) and react-globe.gl renders them
+ * as a polyline along the surface, exactly mirroring how the deck.gl
+ * map shows cruise routes.
+ */
+interface CruisePathDatum {
+  coords: Array<[number, number]>; // [lat, lng] per react-globe.gl convention
   cruiseId: string;
   cruiseLabel: string;
-  fromPort: string;
-  toPort: string;
-}
-
-interface CombinedArcDatum {
-  type: "flight" | "cruise";
 }
 
 const createRouteKey = (airportA: string, airportB: string): string =>
@@ -131,7 +129,6 @@ type GlobeInstance = {
 };
 
 interface ArcData {
-  type: "flight";
   startLat: number;
   startLng: number;
   endLat: number;
@@ -300,7 +297,6 @@ export default function GlobeView({
     const arcs: ArcData[] = Array.from(routeMap.values())
       .filter((route) => route.count >= minRouteCount)
       .map((route) => ({
-        type: "flight" as const,
         count: route.count,
         startLat: route.startLat,
         startLng: route.startLng,
@@ -316,37 +312,62 @@ export default function GlobeView({
     return { arcsData: arcs, heatmapThresholds: thresholds };
   }, [flights, minRouteCount]);
 
-  // Cruise arcs: one per consecutive port-pair across all cruises. Sea-day
-  // and unmatched stops are skipped. Distinct from flight arcs both visually
-  // (sky-blue, dashed) and structurally (no heatmap bucketing — they all
-  // get the same treatment, count would be misleading because most cruises
-  // are unique routings rather than repeats of the same route).
-  const cruiseArcsData = useMemo<CruiseArcDatum[]>(() => {
-    const out: CruiseArcDatum[] = [];
-    for (const c of cruises) {
-      const orderedStops = c.stops
-        .filter((s) => !s.isAtSea && s.port !== null)
-        .map((s) => s.port!) as Array<{ id: number; name: string; lat: number; lon: number }>;
-      const label = c.ship?.name ?? c.shipNameOverride ?? c.cruiseLine ?? "Cruise";
-      for (let i = 0; i < orderedStops.length - 1; i++) {
-        const a = orderedStops[i];
-        const b = orderedStops[i + 1];
-        out.push({
-          type: "cruise",
-          startLat: a.lat,
-          startLng: a.lon,
-          endLat: b.lat,
-          endLng: b.lon,
-          altitude: getStaticArcAltitude(a.lat, a.lon, b.lat, b.lon) * 0.6, // flatter than flight arcs
-          cruiseId: c.id,
-          cruiseLabel: label,
-          fromPort: a.name,
-          toPort: b.name,
+  // Cruise route geometry from the backend schematic router. One
+  // FeatureCollection per cruise, each Feature is one port-pair leg with
+  // 3-8 [lon, lat] waypoints. Loaded once per cruise list change; the
+  // server-side LRU cache makes repeat fetches cheap.
+  const [cruiseGeometry, setCruiseGeometry] = useState<Map<string, CruiseRouteFeatureCollection>>(
+    () => new Map()
+  );
+  const cruiseGeometryRef = useRef(cruiseGeometry);
+  useEffect(() => {
+    cruiseGeometryRef.current = cruiseGeometry;
+  }, [cruiseGeometry]);
+
+  useEffect(() => {
+    if (cruises.length === 0) return;
+    let cancelled = false;
+    const missingIds = cruises.map((c) => c.id).filter((id) => !cruiseGeometryRef.current.has(id));
+    if (missingIds.length === 0) return;
+    void (async (): Promise<void> => {
+      try {
+        const batch = await cruiseApi.getGeometryBatch(missingIds);
+        if (cancelled) return;
+        setCruiseGeometry((prev) => {
+          const next = new Map(prev);
+          for (const [id, fc] of batch.entries()) {
+            if (!next.has(id)) next.set(id, fc);
+          }
+          return next;
         });
+      } catch (err: unknown) {
+        logger.error("GlobeView: cruise geometry batch fetch failed", err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [cruises]);
+
+  // One curved path per cruise leg, drawn along the globe surface.
+  // react-globe.gl wants [lat, lng] pairs (not [lng, lat] like GeoJSON).
+  const cruisePathsData = useMemo<CruisePathDatum[]>(() => {
+    const out: CruisePathDatum[] = [];
+    for (const cruise of cruises) {
+      const fc = cruiseGeometry.get(cruise.id);
+      if (!fc) continue;
+      const label = cruise.ship?.name ?? cruise.shipNameOverride ?? cruise.cruiseLine ?? "Cruise";
+      for (const feature of fc.features) {
+        const coords = feature.geometry.coordinates.map(
+          ([lon, lat]) => [lat, lon] as [number, number]
+        );
+        if (coords.length >= 2) {
+          out.push({ coords, cruiseId: cruise.id, cruiseLabel: label });
+        }
       }
     }
     return out;
-  }, [cruises]);
+  }, [cruises, cruiseGeometry]);
 
   // Distinct port markers across all cruises so popular embarkation ports
   // (Hamburg, Civitavecchia, …) get a single dot rather than one per cruise.
@@ -372,11 +393,6 @@ export default function GlobeView({
     }
     return Array.from(portMap.values());
   }, [cruises]);
-
-  // Merge flight + cruise arcs into a single arrays for the Globe component
-  // (it only accepts one arcsData prop). Type discriminator drives per-arc
-  // styling functions below.
-  const allArcsData = useMemo(() => [...arcsData, ...cruiseArcsData], [arcsData, cruiseArcsData]);
 
   const pointsData = useMemo(() => {
     const airportMap = new Map<string, PointData>();
@@ -431,36 +447,29 @@ export default function GlobeView({
   }, [flights]);
 
   const arcLabel = useCallback(
-    (arc: CombinedArcDatum): string => {
-      if (arc.type === "cruise") {
-        const c = arc as CruiseArcDatum;
-        return `
-          <div style="background:rgba(0,0,0,0.8);color:white;padding:8px 12px;border-radius:6px;font-family:system-ui;font-size:12px;">
-            <div style="font-weight:bold;margin-bottom:4px;">
-              🚢 ${escapeHtml(c.cruiseLabel)}
-            </div>
-            <div style="font-size:11px;opacity:0.9;">
-              ${escapeHtml(c.fromPort)} → ${escapeHtml(c.toPort)}
-            </div>
-          </div>
-        `;
-      }
-      const f = arc as ArcData;
-      return `
-        <div style="background:rgba(0,0,0,0.8);color:white;padding:8px 12px;border-radius:6px;font-family:system-ui;font-size:12px;">
-          <div style="font-weight:bold;margin-bottom:4px;">
-            ${escapeHtml(f.departure?.iata ?? "UNK")} ↔ ${escapeHtml(f.arrival?.iata ?? "UNK")}
-          </div>
-          <div style="font-size:11px;opacity:0.9;margin-bottom:6px;">
-            ${escapeHtml(f.departure?.name ?? "Unknown")} ↔ ${escapeHtml(f.arrival?.name ?? "Unknown")}
-          </div>
-          <div style="color:${f.color};">
-            ${t("map:globe.timesFlown", { count: f.count })}
-          </div>
+    (arc: ArcData): string => `
+      <div style="background:rgba(0,0,0,0.8);color:white;padding:8px 12px;border-radius:6px;font-family:system-ui;font-size:12px;">
+        <div style="font-weight:bold;margin-bottom:4px;">
+          ${escapeHtml(arc.departure?.iata ?? "UNK")} ↔ ${escapeHtml(arc.arrival?.iata ?? "UNK")}
         </div>
-      `;
-    },
+        <div style="font-size:11px;opacity:0.9;margin-bottom:6px;">
+          ${escapeHtml(arc.departure?.name ?? "Unknown")} ↔ ${escapeHtml(arc.arrival?.name ?? "Unknown")}
+        </div>
+        <div style="color:${arc.color};">
+          ${t("map:globe.timesFlown", { count: arc.count })}
+        </div>
+      </div>
+    `,
     [t]
+  );
+
+  const cruisePathLabel = useCallback(
+    (path: CruisePathDatum): string => `
+      <div style="background:rgba(0,0,0,0.8);color:white;padding:6px 10px;border-radius:6px;font-family:system-ui;font-size:12px;">
+        🚢 <strong>${escapeHtml(path.cruiseLabel)}</strong>
+      </div>
+    `,
+    []
   );
 
   // Smooth fly-to on arc click. Compute the geographic mid-point of the arc
@@ -565,38 +574,40 @@ export default function GlobeView({
         style={{ width: "100%", height: "100%" }}
         globeMaterial={dayNightMaterial}
         backgroundImageUrl="/night-sky.png"
-        arcsData={allArcsData}
-        arcColor={(arc: CombinedArcDatum) =>
-          arc.type === "cruise" ? CRUISE_ARC_COLOR : (arc as ArcData).color
-        }
+        arcsData={arcsData}
+        arcColor={(arc: ArcData) => arc.color}
         arcStroke={dynamicStroke}
         arcStrokeOpacity={0.6}
-        arcAltitude={(arc: CombinedArcDatum) => (arc as ArcData | CruiseArcDatum).altitude}
+        arcAltitude={(arc: ArcData) => arc.altitude}
         arcCurveResolution={arcResolution}
-        // Animated dash flow: short bright dash sliding along each arc gives
-        // a "plane trail / current" feel. Cruises run slower (longer cycle)
-        // to read as ship traffic vs. air traffic.
-        arcDashLength={0.4}
-        arcDashGap={0.2}
-        arcDashInitialGap={(arc: CombinedArcDatum) =>
-          // Stagger initial offset by latitude so multiple arcs don't pulse
-          // in lockstep — produces a much livelier idle map.
-          ((arc as ArcData | CruiseArcDatum).startLat + 90) / 180
-        }
-        arcDashAnimateTime={(arc: CombinedArcDatum) => (arc.type === "cruise" ? 7000 : 4000)}
+        // Static arcs — dash animation removed (felt too busy with 70+
+        // routes). Full-length stroke, no gap, no animation.
+        arcDashLength={1}
+        arcDashGap={0}
+        arcDashInitialGap={() => 0}
         arcLabel={arcLabel}
-        onArcClick={(arc: CombinedArcDatum) => {
-          const a = arc as ArcData | CruiseArcDatum;
+        onArcClick={(arc: ArcData) => {
           // Smooth POV transition first — feels like a polished travel app.
-          flyToArc(a.startLat, a.startLng, a.endLat, a.endLng);
-          if (arc.type === "flight") {
-            const f = arc as ArcData;
-            if (onFlightClick && f.flights.length > 0) {
-              const mostRecentFlight = f.flights[f.flights.length - 1];
-              onFlightClick(mostRecentFlight.properties.id);
-            }
+          flyToArc(arc.startLat, arc.startLng, arc.endLat, arc.endLng);
+          if (onFlightClick && arc.flights.length > 0) {
+            const mostRecentFlight = arc.flights[arc.flights.length - 1];
+            onFlightClick(mostRecentFlight.properties.id);
           }
         }}
+        // Cruise routes as curved paths along the surface (one per leg).
+        // The schematic-router waypoints from /cruises/geometry/batch
+        // produce the same continental-detour curves the deck.gl map shows
+        // — sky-blue, slightly thinner stroke, no animation, no arrows.
+        pathsData={cruisePathsData}
+        pathPoints={(p: CruisePathDatum) => p.coords}
+        pathPointLat={(coord: [number, number]) => coord[0]}
+        pathPointLng={(coord: [number, number]) => coord[1]}
+        pathColor={() => CRUISE_ARC_COLOR}
+        pathStroke={Math.max(dynamicStroke * 0.85, 0.18)}
+        pathDashLength={1}
+        pathDashGap={0}
+        pathDashAnimateTime={0}
+        pathLabel={cruisePathLabel}
         pointsData={[
           ...pointsData.map((p) => ({ ...p, _kind: "airport" as const })),
           ...cruisePointsData.map((p) => ({ ...p, _kind: "port" as const })),
