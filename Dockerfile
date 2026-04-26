@@ -77,6 +77,12 @@ RUN npm config set fetch-retries 5 \
     && npm config set fetch-retry-maxtimeout 300000 \
     && npm ci --only=production
 COPY --from=backend-builder /app/backend/dist ./dist
+# tsc compiles .ts files only — non-TS assets (CSV seed data) need an
+# explicit copy so seedPortsFromCSV / seedShipsFromCSV find them at
+# dist/seedData/*.csv. Without this, both seeders silently skip with
+# `csv_missing` on first boot, leaving the cruise/ferry domain unable
+# to resolve port + ship references.
+COPY --from=backend-builder /app/backend/src/seedData ./dist/seedData
 RUN npx prisma generate
 
 # Write VERSION file for runtime version reporting.
