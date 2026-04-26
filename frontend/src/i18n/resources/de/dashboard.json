@@ -164,6 +164,7 @@
   "sidebar": {
     "cruises": "Kreuzfahrten",
     "activity": "Aktivität",
+    "flights": "Flüge",
     "ports": "Häfen",
     "emptyCruises": "Noch keine Kreuzfahrten.",
     "emptyActivity": "Noch keine Aktivität.",
