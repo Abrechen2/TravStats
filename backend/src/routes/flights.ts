@@ -467,6 +467,7 @@ router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) =
         type: 'Feature',
         properties: {
           id: flight.id,
+          tripId: flight.tripId,
           airline: flight.airline,
           operatingAirline: flight.operatingAirline,
           flightNumber: flight.flightNumber,

@@ -33,8 +33,15 @@ export function DashboardControlsBar({
     const onClickOutside = (e: MouseEvent): void => {
       if (!modeRef.current?.contains(e.target as Node)) setModeMenuOpen(false);
     };
+    const onKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === "Escape") setModeMenuOpen(false);
+    };
     document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onClickOutside);
+      document.removeEventListener("keydown", onKeyDown);
+    };
   }, [modeMenuOpen]);
 
   const modes = TAB_MODE_REGISTRY[tab].modes;
