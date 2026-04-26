@@ -167,22 +167,25 @@ export default function MapContainer3D({
           base-map — a flight counter there would always read "0"). */}
       {visMode === "routes" && routeCount !== null && flights.length > 0 && (
         <div
-          className="absolute top-3 left-3 z-10"
+          className="absolute top-3 left-3 z-10 select-none"
           style={{
-            background: "rgba(255,255,255,0.07)",
+            background: "rgba(13, 17, 23, 0.78)",
             backdropFilter: "blur(12px)",
-            border: "1px solid rgba(255,255,255,0.1)",
+            border: "1px solid rgba(255,255,255,0.18)",
             borderRadius: "8px",
-            padding: "5px 10px",
-            fontSize: "9px",
-            color: "rgba(148,163,184,0.8)",
+            padding: "6px 12px",
+            fontSize: "11px",
+            fontWeight: 500,
+            letterSpacing: "0.01em",
+            color: "rgba(241,245,249,0.95)",
             fontFamily: "'Inter', sans-serif",
+            boxShadow: "0 2px 6px rgba(0,0,0,0.25)",
           }}
         >
-          <span style={{ color: "var(--map-accent)", fontWeight: 600 }}>{flights.length}</span>{" "}
+          <span style={{ color: "var(--map-accent)", fontWeight: 700 }}>{flights.length}</span>{" "}
           {t("map:infoPill.flights")}
           {" · "}
-          <span style={{ color: "var(--map-accent)", fontWeight: 600 }}>{routeCount}</span>{" "}
+          <span style={{ color: "var(--map-accent)", fontWeight: 700 }}>{routeCount}</span>{" "}
           {t("map:infoPill.routes")}
         </div>
       )}

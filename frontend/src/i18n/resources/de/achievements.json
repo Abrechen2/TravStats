@@ -77,26 +77,74 @@
     "awesome": "Großartig!"
   },
   "codes": {
-    "FIRST_FLIGHT": { "name": "Abgehoben", "description": "Absolviere deinen ersten Flug" },
-    "FREQUENT_FLYER_10": { "name": "Vielfliegender", "description": "Absolviere 10 Flüge" },
-    "FREQUENT_FLYER_25": { "name": "Himmelsprofi", "description": "Absolviere 25 Flüge" },
-    "FREQUENT_FLYER_50": { "name": "Luftfahrt-Enthusiast", "description": "Absolviere 50 Flüge" },
-    "FREQUENT_FLYER_100": { "name": "Centurion", "description": "Absolviere 100 Flüge" },
-    "FREQUENT_FLYER_250": { "name": "Himmelsmeister", "description": "Absolviere 250 Flüge" },
-    "FREQUENT_FLYER_500": { "name": "Legende der Lüfte", "description": "Absolviere 500 Flüge" },
-    "DISTANCE_1000": { "name": "Erstes Tausend", "description": "Fliege 1.000 km" },
-    "DISTANCE_10000": { "name": "Zehntausend-Club", "description": "Fliege 10.000 km" },
-    "DISTANCE_50000": { "name": "Weltumrundung", "description": "Fliege 50.000 km (Erdumfang)" },
-    "DISTANCE_100000": { "name": "Globetrotter", "description": "Fliege 100.000 km" },
-    "DISTANCE_250000": { "name": "Distanz-Krieger", "description": "Fliege 250.000 km" },
-    "DISTANCE_500000": { "name": "Orbital-Errungenschaft", "description": "Fliege 500.000 km" },
-    "COUNTRIES_5": { "name": "Reisepass-Starter", "description": "Besuche 5 verschiedene Länder" },
+    "FIRST_FLIGHT": {
+      "name": "Abgehoben",
+      "description": "Absolviere deinen ersten Flug"
+    },
+    "FREQUENT_FLYER_10": {
+      "name": "Vielfliegender",
+      "description": "Absolviere 10 Flüge"
+    },
+    "FREQUENT_FLYER_25": {
+      "name": "Himmelsprofi",
+      "description": "Absolviere 25 Flüge"
+    },
+    "FREQUENT_FLYER_50": {
+      "name": "Luftfahrt-Enthusiast",
+      "description": "Absolviere 50 Flüge"
+    },
+    "FREQUENT_FLYER_100": {
+      "name": "Centurion",
+      "description": "Absolviere 100 Flüge"
+    },
+    "FREQUENT_FLYER_250": {
+      "name": "Himmelsmeister",
+      "description": "Absolviere 250 Flüge"
+    },
+    "FREQUENT_FLYER_500": {
+      "name": "Legende der Lüfte",
+      "description": "Absolviere 500 Flüge"
+    },
+    "DISTANCE_1000": {
+      "name": "Erstes Tausend",
+      "description": "Fliege 1.000 km"
+    },
+    "DISTANCE_10000": {
+      "name": "Zehntausend-Club",
+      "description": "Fliege 10.000 km"
+    },
+    "DISTANCE_50000": {
+      "name": "Weltumrundung",
+      "description": "Fliege 50.000 km (Erdumfang)"
+    },
+    "DISTANCE_100000": {
+      "name": "Globetrotter",
+      "description": "Fliege 100.000 km"
+    },
+    "DISTANCE_250000": {
+      "name": "Distanz-Krieger",
+      "description": "Fliege 250.000 km"
+    },
+    "DISTANCE_500000": {
+      "name": "Orbital-Errungenschaft",
+      "description": "Fliege 500.000 km"
+    },
+    "COUNTRIES_5": {
+      "name": "Reisepass-Starter",
+      "description": "Besuche 5 verschiedene Länder"
+    },
     "COUNTRIES_10": {
       "name": "Internationaler Reisender",
       "description": "Besuche 10 verschiedene Länder"
     },
-    "COUNTRIES_25": { "name": "Weltentdecker", "description": "Besuche 25 verschiedene Länder" },
-    "COUNTRIES_50": { "name": "Weltbürger", "description": "Besuche 50 verschiedene Länder" },
+    "COUNTRIES_25": {
+      "name": "Weltentdecker",
+      "description": "Besuche 25 verschiedene Länder"
+    },
+    "COUNTRIES_50": {
+      "name": "Weltbürger",
+      "description": "Besuche 50 verschiedene Länder"
+    },
     "COUNTRIES_100": {
       "name": "Meister der Nationen",
       "description": "Besuche 100 verschiedene Länder"
@@ -125,7 +173,10 @@
       "name": "Terminal-Hopper",
       "description": "Besuche 25 verschiedene Flughäfen"
     },
-    "AIRPORTS_50": { "name": "Hub-Meister", "description": "Besuche 50 verschiedene Flughäfen" },
+    "AIRPORTS_50": {
+      "name": "Hub-Meister",
+      "description": "Besuche 50 verschiedene Flughäfen"
+    },
     "AIRPORTS_100": {
       "name": "Flughafen-Kenner",
       "description": "Besuche 100 verschiedene Flughäfen"
@@ -194,9 +245,18 @@
       "name": "Jahres-Engagement",
       "description": "Fliege mindestens einmal pro Monat für 12 Monate"
     },
-    "FAVORITE_ROUTE": { "name": "Lieblingsroute", "description": "Fliege dieselbe Route 5 Mal" },
-    "ROUTE_MASTER": { "name": "Routen-Meister", "description": "Fliege dieselbe Route 10 Mal" },
-    "COMMUTER": { "name": "Pendler", "description": "Fliege dieselbe Route 25 Mal" },
+    "FAVORITE_ROUTE": {
+      "name": "Lieblingsroute",
+      "description": "Fliege dieselbe Route 5 Mal"
+    },
+    "ROUTE_MASTER": {
+      "name": "Routen-Meister",
+      "description": "Fliege dieselbe Route 10 Mal"
+    },
+    "COMMUTER": {
+      "name": "Pendler",
+      "description": "Fliege dieselbe Route 25 Mal"
+    },
     "BUSY_MONTH": {
       "name": "Stressiger Monat",
       "description": "Absolviere 10 Flüge in einem einzigen Monat"
@@ -237,7 +297,10 @@
       "name": "Elite-Mitglied",
       "description": "Absolviere 50 Flüge mit derselben Airline"
     },
-    "FLIGHT_TIME_100": { "name": "Hundert Stunden", "description": "Sammle 100 Stunden Flugzeit" },
+    "FLIGHT_TIME_100": {
+      "name": "Hundert Stunden",
+      "description": "Sammle 100 Stunden Flugzeit"
+    },
     "FLIGHT_TIME_500": {
       "name": "Himmels-Veteran (Stunden)",
       "description": "Sammle 500 Stunden Flugzeit"
@@ -330,10 +393,6 @@
       "name": "Der Kontrarian",
       "description": "10 Mittelplätze in Folge — mit Absicht?"
     },
-    "FOUR_SEASONS_YEAR": {
-      "name": "Vier Jahreszeiten, ein Jahr",
-      "description": "Je ein Flug pro Jahreszeit innerhalb von 12 Monaten"
-    },
     "THE_NOTETAKER": {
       "name": "Der Notizenschreiber",
       "description": "10 Flüge mit eigenen Notizen"
@@ -397,6 +456,174 @@
     "HALLOWEEN_FLYER": {
       "name": "Halloween-Flieger",
       "description": "Ein Flug am 31. Oktober — idealerweise im Dunkeln"
+    },
+    "WANDERLUST": {
+      "name": "Fernweh",
+      "description": "5 geplante Flüge im Kalender"
+    },
+    "GLOBETROTTER_PLANNER": {
+      "name": "Weltreise-Planer",
+      "description": "Geplante Flüge zu 3 verschiedenen Kontinenten"
+    },
+    "YEAR_AHEAD": {
+      "name": "Ein Jahr voraus",
+      "description": "Einen Flug mehr als 12 Monate im Voraus geplant"
+    },
+    "SURVIVOR": {
+      "name": "Überlebender",
+      "description": "Erster annullierter Flug"
+    },
+    "TURBULENCE_VETERAN": {
+      "name": "Turbulenz-Veteran",
+      "description": "5 annullierte Flüge überstanden"
+    },
+    "FIRST_CRUISE": {
+      "name": "Leinen los",
+      "description": "Erste Kreuzfahrt erledigt"
+    },
+    "SEA_EXPLORER_5": {
+      "name": "Meeresforscher",
+      "description": "5 Kreuzfahrten abgeschlossen"
+    },
+    "CRUISE_ENTHUSIAST_10": {
+      "name": "Kreuzfahrt-Enthusiast",
+      "description": "10 Kreuzfahrten abgeschlossen"
+    },
+    "SEVEN_SEAS_25": {
+      "name": "Sieben Weltmeere",
+      "description": "25 Kreuzfahrten abgeschlossen"
+    },
+    "PORT_HOPPER_5": {
+      "name": "Hafen-Hopper",
+      "description": "5 verschiedene Häfen besucht"
+    },
+    "HARBOR_TOUR_25": {
+      "name": "Hafentour",
+      "description": "25 verschiedene Häfen besucht"
+    },
+    "HARBOR_MASTER_50": {
+      "name": "Hafenmeister",
+      "description": "50 verschiedene Häfen besucht"
+    },
+    "MEGA_CRUISE_10": {
+      "name": "Mega-Kreuzfahrt",
+      "description": "10+ Häfen in einer Kreuzfahrt"
+    },
+    "FLEET_SAMPLER_5": {
+      "name": "Flotten-Tester",
+      "description": "5 verschiedene Schiffe befahren"
+    },
+    "NAVAL_CURATOR_15": {
+      "name": "Flotten-Kurator",
+      "description": "15 verschiedene Schiffe"
+    },
+    "LOYAL_SAILOR_3": {
+      "name": "Treuer Seemann",
+      "description": "3 Kreuzfahrten mit derselben Reederei"
+    },
+    "LINE_HOPPER_5": {
+      "name": "Reederei-Wechsler",
+      "description": "5 verschiedene Reedereien"
+    },
+    "CARNIVAL_COLLECTOR": {
+      "name": "Carnival-Sammler",
+      "description": "Alle 8 Carnival-Marken befahren (AIDA, Carnival, Costa, Cunard, Holland America, P&O, Princess, Seabourn)"
+    },
+    "CRUISE_DISTANCE_5000": {
+      "name": "Küstenfahrer",
+      "description": "5.000 km Kreuzfahrtdistanz"
+    },
+    "CRUISE_DISTANCE_20000": {
+      "name": "Offene See",
+      "description": "20.000 km Kreuzfahrtdistanz"
+    },
+    "CRUISE_DISTANCE_50000": {
+      "name": "Hochseekapitän",
+      "description": "50.000 km Kreuzfahrtdistanz"
+    },
+    "CRUISE_DISTANCE_100000": {
+      "name": "Weltumsegler",
+      "description": "100.000 km Kreuzfahrtdistanz (~2,5x Erdumrundung)"
+    },
+    "SEA_LEGS_1": {
+      "name": "Seebeine",
+      "description": "Erster Seetag"
+    },
+    "SALT_DOG_30": {
+      "name": "Salzhund",
+      "description": "30 Seetage gesamt"
+    },
+    "TRANSATLANTIC_7": {
+      "name": "Transatlantik",
+      "description": "7+ aufeinanderfolgende Seetage"
+    },
+    "CRUISE_MEDITERRANEAN": {
+      "name": "Mittelmeer-Urlauber",
+      "description": "Mittelmeer besucht"
+    },
+    "CRUISE_CARIBBEAN": {
+      "name": "Karibikfahrer",
+      "description": "Karibik besucht"
+    },
+    "CRUISE_BALTIC_OR_FJORDS": {
+      "name": "Nordische Route",
+      "description": "Ostsee oder Fjorde befahren"
+    },
+    "CRUISE_CANAL_TRANSIT": {
+      "name": "Kanal-Transit",
+      "description": "Panama- oder Suezkanal durchquert"
+    },
+    "CRUISE_POLAR_EXPLORER": {
+      "name": "Polarforscher",
+      "description": "Antarktis oder Nordwestpassage besucht"
+    },
+    "BALCONY_FIRST": {
+      "name": "Erster Balkon",
+      "description": "Erste Balkonkabine gebucht"
+    },
+    "SUITE_FIRST": {
+      "name": "Erste Suite",
+      "description": "Erste Suite gebucht"
+    },
+    "TOP_DECK": {
+      "name": "Oberdeck",
+      "description": "Deck 12 oder höher"
+    },
+    "BIRTHDAY_AT_SEA": {
+      "name": "Geburtstag auf See",
+      "description": "Verbringe deinen Geburtstag auf einer Kreuzfahrt"
+    },
+    "COLD_WATER_CRUISER": {
+      "name": "Kaltwasser-Kreuzfahrer",
+      "description": "Island, Alaska oder Antarktis besucht"
+    },
+    "CRUISE_OFFROAD": {
+      "name": "Off-Chart-Navigator",
+      "description": "Eine Kreuzfahrt mit einem Leg über 3.000 km — echte Blue-Water-Crossing"
+    },
+    "DATE_LINE_SAILOR": {
+      "name": "Datumsgrenzen-Segler",
+      "description": "Kreuzfahrt-Leg über die internationale Datumsgrenze"
+    },
+    "FLY_SAIL_WEEK": {
+      "name": "Amphibische Woche",
+      "description": "Flug und Kreuzfahrt innerhalb von 7 Tagen"
+    },
+    "FLY_AND_SAIL": {
+      "name": "Flug & Schiff",
+      "description": "Trip mit Flug UND Kreuzfahrt"
+    },
+    "CAPTAINS_LOG_1": {
+      "name": "Logbuch des Kapitäns",
+      "description": "Erstes Schiff befahren"
+    },
+    "NEPTUNES_FAVORITE_50": {
+      "name": "Neptuns Liebling",
+      "description": "50 Kreuzfahrten abgeschlossen"
+    },
+    "NEW_YEARS_AT_SEA": {
+      "name": "Silvester auf See",
+      "description": "Silvester auf einer Kreuzfahrt verbracht"
     }
   }
 }

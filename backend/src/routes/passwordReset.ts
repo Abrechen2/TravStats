@@ -24,7 +24,40 @@ function hashToken(token: string): string {
 router.get('/smtp-status', async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const config = await prisma.smtpConfig.findUnique({ where: { id: SMTP_CONFIG_ID } });
-    res.json({ smtpEnabled: !!(config?.enabled) });
+    // Best-effort admin contact for the "no SMTP" fallback message.
+    // Returns the notificationEmail of any active admin if one is set,
+    // otherwise null. Used by the forgot-password modal to render a
+    // real mailto: link instead of plain text.
+    const adminUser = await prisma.user.findFirst({
+      where: { isAdmin: true, isActive: true, notificationEmail: { not: null } },
+      select: { notificationEmail: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    res.json({
+      smtpEnabled: !!(config?.enabled),
+      adminContactEmail: adminUser?.notificationEmail ?? null,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /registration-status — public, no auth
+// Lets the frontend hide / disable the register form before submit when the
+// instance has registration disabled and no user limit slot is open. The
+// first user is always allowed (bootstrap).
+router.get('/registration-status', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userCount = await prisma.user.count();
+    const { allowRegistration, maxUsers } = await getInstanceSettings();
+    const isFirstUser = userCount === 0;
+    const limitReached = !isFirstUser && userCount >= maxUsers;
+    const enabled = isFirstUser || (allowRegistration && !limitReached);
+    res.json({
+      registrationEnabled: enabled,
+      requiresInvitation: !isFirstUser && !allowRegistration,
+      limitReached,
+    });
   } catch (error) {
     next(error);
   }

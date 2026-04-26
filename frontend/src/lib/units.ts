@@ -18,12 +18,33 @@ export function convertDistance(km: number, unit: DistanceUnit): number {
 }
 
 /**
- * Format distance with unit label
+ * Map a UI language code to the BCP-47 locale used for number formatting.
+ * Keeps the active i18n language as the source of truth so a user who
+ * switched to English sees thousands separators with commas, not dots.
  */
-export function formatDistance(km: number, unit: DistanceUnit, t: (key: string) => string): string {
+function localeForLanguage(language: string | undefined): string {
+  if (!language) return "en-US";
+  const lower = language.toLowerCase();
+  if (lower.startsWith("de")) return "de-DE";
+  if (lower.startsWith("en")) return "en-US";
+  return language;
+}
+
+/**
+ * Format distance with unit label. Pass the active i18n language so the
+ * thousands separator follows the user's selection rather than the
+ * browser/OS locale (which is what `toLocaleString(undefined, …)` does).
+ */
+export function formatDistance(
+  km: number,
+  unit: DistanceUnit,
+  t: (key: string) => string,
+  language?: string
+): string {
   const converted = convertDistance(km, unit);
   const label = getDistanceLabel(unit, t);
-  return `${converted.toLocaleString(undefined, { maximumFractionDigits: 0 })} ${label}`;
+  const locale = localeForLanguage(language);
+  return `${converted.toLocaleString(locale, { maximumFractionDigits: 0 })} ${label}`;
 }
 
 /**

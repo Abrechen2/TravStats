@@ -228,36 +228,82 @@ export default function SettingsPage(): JSX.Element {
       <div className="min-h-screen" style={{ background: "var(--bg-base)" }}>
         <NavigationBar />
 
-        {/* Top tab bar — one row above the settings sidebar/main split */}
+        {/* Top tab bar — domain switch (Allgemein / Flug / Kreuzfahrt).
+            The sidebar below picks a section *within* the active tab,
+            so this row is the higher-level axis. Pill-style with the
+            page title on the left clarifies the hierarchy: domain group
+            up here, section navigation down there. */}
         <div
-          className="px-4 pt-3"
+          className="px-4 py-3"
           style={{ background: "var(--bg-base)", borderBottom: "1px solid var(--color-border)" }}
         >
-          <div className="mx-auto flex max-w-6xl gap-1">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={(): void => setActiveTab(tab.id)}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === tab.id
-                    ? "border-[var(--accent)] text-[var(--accent)]"
-                    : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-                }`}
-              >
-                {tab.icon && (
-                  <span className="mr-1.5" aria-hidden>
-                    {tab.icon}
-                  </span>
-                )}
-                {tab.label}
-              </button>
-            ))}
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
+            <h1 className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
+              {t("settings:title", { defaultValue: "Einstellungen" })}
+            </h1>
+            <div
+              role="tablist"
+              aria-label={t("settings:title", { defaultValue: "Einstellungen" })}
+              className="flex gap-1 p-1 rounded-lg"
+              style={{
+                background: "var(--bg-surface)",
+                border: "1px solid var(--color-border)",
+              }}
+            >
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === tab.id}
+                  onClick={(): void => setActiveTab(tab.id)}
+                  className="px-3 py-1.5 text-sm font-medium rounded-md transition-colors"
+                  style={{
+                    background: activeTab === tab.id ? "var(--bg-elevated)" : "transparent",
+                    color: activeTab === tab.id ? "var(--accent)" : "var(--text-muted)",
+                  }}
+                >
+                  {tab.icon && (
+                    <span className="mr-1.5" aria-hidden>
+                      {tab.icon}
+                    </span>
+                  )}
+                  {tab.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        <div className="flex h-[calc(100vh-3.5rem-2.75rem)]">
-          {/* Sidebar — scoped to the current tab's sections */}
+        {/* Mobile section picker — visible below md, replaces the sidebar
+            so users on phones can still switch sections. The desktop
+            sidebar takes over from md upward. */}
+        <div
+          className="md:hidden px-4 py-2 sticky top-0 z-10"
+          style={{
+            background: "var(--bg-base)",
+            borderBottom: "1px solid var(--color-border)",
+          }}
+        >
+          <label htmlFor="settings-section-picker" className="sr-only">
+            {t("settings:sectionPicker", { defaultValue: "Section" })}
+          </label>
+          <select
+            id="settings-section-picker"
+            value={activeSection}
+            onChange={(e): void => setActiveSection(e.target.value)}
+            className="input w-full"
+          >
+            {currentSections.map((section) => (
+              <option key={section.id} value={section.id}>
+                {section.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex md:h-[calc(100vh-3.5rem-3.75rem)]">
+          {/* Desktop sidebar — scoped to the current tab's sections */}
           <aside
             className="w-52 flex-shrink-0 flex-col py-4 overflow-y-auto hidden md:flex"
             style={{
@@ -287,7 +333,7 @@ export default function SettingsPage(): JSX.Element {
           </aside>
 
           {/* Right content area */}
-          <main className="flex-1 overflow-y-auto p-6 space-y-6">
+          <main className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
             {activeSection === "cruisePreferences" && (
               <CruisePreferencesSection cruise={cruise} onSetCruise={setCruise} />
             )}
@@ -355,25 +401,70 @@ export default function SettingsPage(): JSX.Element {
             {activeSection === "admin" && user?.isAdmin && <AdminSection />}
             {activeSection === "about" && <AboutSection />}
 
-            {/* Auto-saved notice */}
+            {/* Auto-saved notice — compact strip; the verbose two-line
+                version was visually heavy on small viewports where the
+                whole settings page already scrolls. Single row with the
+                scroll-to-top action collapsed to an icon button. */}
             <div
-              className="rounded-lg p-4 text-sm flex items-center justify-between"
+              className="rounded-md px-3 py-1.5 text-xs flex items-center justify-between gap-3"
               style={{
                 background: "rgba(63,185,80,0.08)",
                 border: "1px solid rgba(63,185,80,0.2)",
               }}
+              role="status"
             >
-              <div>
-                <p className="font-semibold" style={{ color: "var(--success)" }}>
+              <div className="flex items-center gap-2 min-w-0">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ color: "var(--success)" }}
+                  aria-hidden="true"
+                >
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span className="font-medium" style={{ color: "var(--success)" }}>
                   {t("settings:autoSaved.title")}
-                </p>
-                <p style={{ color: "var(--text-muted)" }}>{t("settings:autoSaved.description")}</p>
+                </span>
+                <span className="truncate" style={{ color: "var(--text-muted)" }}>
+                  {t("settings:autoSaved.description")}
+                </span>
               </div>
               <button
-                className="btn-secondary"
+                type="button"
                 onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                aria-label={t("settings:scrollToTop")}
+                title={t("settings:scrollToTop")}
+                className="flex items-center justify-center w-7 h-7 rounded transition-colors"
+                style={{ color: "var(--text-muted)" }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = "var(--text-primary)";
+                  e.currentTarget.style.background = "var(--bg-elevated)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = "var(--text-muted)";
+                  e.currentTarget.style.background = "transparent";
+                }}
               >
-                {t("settings:scrollToTop")}
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <line x1="12" y1="19" x2="12" y2="5" />
+                  <polyline points="5 12 12 5 19 12" />
+                </svg>
               </button>
             </div>
           </main>

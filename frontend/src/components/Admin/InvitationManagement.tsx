@@ -122,8 +122,8 @@ export default function InvitationManagement({
         ))}
       </div>
 
-      <div className="bg-[var(--bg-surface)] rounded-lg shadow overflow-hidden">
-        <table className="w-full">
+      <div className="bg-[var(--bg-surface)] rounded-lg shadow overflow-x-auto">
+        <table className="w-full min-w-[720px]">
           <thead className="bg-[var(--bg-base)]">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">

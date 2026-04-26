@@ -1,5 +1,6 @@
 {
   "title": "Admin",
+  "sectionPicker": "Section",
   "description": "Manage your self-hosted TravStats instance",
   "loading": "Loading...",
   "tabs": {

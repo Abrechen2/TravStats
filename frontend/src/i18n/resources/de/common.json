@@ -22,11 +22,15 @@
     "refresh": "Aktualisieren",
     "loading": "Lädt...",
     "saving": "Speichert...",
+    "uploading": "Lädt hoch...",
     "deleting": "Löscht...",
     "yes": "Ja",
     "no": "Nein",
-    "later": "Später"
+    "later": "Später",
+    "details": "Details",
+    "dismiss": "Verwerfen"
   },
+  "dismiss": "Verwerfen",
   "app": {
     "name": "TravStats",
     "logoAlt": "TravStats Logo"

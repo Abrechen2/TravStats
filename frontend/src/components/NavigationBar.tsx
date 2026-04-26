@@ -147,13 +147,16 @@ export default function NavigationBar(): JSX.Element {
                   <Link
                     key={item.path}
                     to={item.path}
-                    className="relative px-3 py-1.5 text-sm font-medium transition-colors duration-200 rounded-md"
+                    aria-current={active ? "page" : undefined}
+                    className="relative px-3 py-1.5 text-sm transition-colors duration-200 rounded-md"
                     style={{
+                      fontWeight: active ? 600 : 500,
                       color: active
                         ? "var(--accent)"
                         : item.warn
                           ? "var(--warning)"
                           : "var(--text-muted)",
+                      background: active ? "var(--bg-elevated)" : "transparent",
                     }}
                     onMouseEnter={(e) => {
                       if (!active)
@@ -174,7 +177,7 @@ export default function NavigationBar(): JSX.Element {
                     )}
                     {active && (
                       <span
-                        className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
+                        className="absolute -bottom-px left-2 right-2 h-[3px] rounded-full"
                         style={{ background: "var(--accent)" }}
                       />
                     )}
@@ -323,15 +326,17 @@ export default function NavigationBar(): JSX.Element {
                   key={item.path}
                   to={item.path}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                  aria-current={active ? "page" : undefined}
+                  className="flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-colors"
                   style={{
+                    fontWeight: active ? 600 : 500,
                     background: active ? "var(--bg-elevated)" : "transparent",
                     color: active
                       ? "var(--accent)"
                       : item.warn
                         ? "var(--warning)"
                         : "var(--text-muted)",
-                    borderLeft: active ? "2px solid var(--accent)" : "2px solid transparent",
+                    borderLeft: active ? "3px solid var(--accent)" : "3px solid transparent",
                   }}
                 >
                   <span className="flex items-center gap-1.5">

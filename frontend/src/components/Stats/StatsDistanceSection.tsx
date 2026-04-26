@@ -21,8 +21,9 @@ export default function StatsDistanceSection({
   longestDistance,
   shortestDistance,
 }: StatsDistanceSectionProps): JSX.Element {
-  const { t } = useTranslation(["stats"]);
+  const { t, i18n } = useTranslation(["stats"]);
   const { units } = useSettingsStore();
+  const lang = i18n.language;
 
   const earthCircumference = 40075; // km
   const earthCircumnavigations = totalDistance / earthCircumference;
@@ -48,7 +49,7 @@ export default function StatsDistanceSection({
             {t("stats:distance.totalDistance")}
           </h3>
           <p className="text-4xl font-bold">
-            {convertDistance(totalDistance, units.distanceUnit).toLocaleString(undefined, {
+            {convertDistance(totalDistance, units.distanceUnit).toLocaleString(lang, {
               maximumFractionDigits: 0,
             })}
           </p>
@@ -94,7 +95,7 @@ export default function StatsDistanceSection({
             />
           </div>
           <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>
-            {formatDistance(earthCircumference, units.distanceUnit, t)}{" "}
+            {formatDistance(earthCircumference, units.distanceUnit, t, lang)}{" "}
             {t("stats:distance.circumference")}
           </p>
         </div>
@@ -118,7 +119,8 @@ export default function StatsDistanceSection({
             />
           </div>
           <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>
-            {formatDistance(moonDistance, units.distanceUnit, t)} {t("stats:distance.distance")}
+            {formatDistance(moonDistance, units.distanceUnit, t, lang)}{" "}
+            {t("stats:distance.distance")}
           </p>
         </div>
 
@@ -141,8 +143,8 @@ export default function StatsDistanceSection({
             />
           </div>
           <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>
-            {formatDistance(marsDistance, units.distanceUnit, t)} {t("stats:distance.distance")} (
-            {t("stats:distance.average")})
+            {formatDistance(marsDistance, units.distanceUnit, t, lang)}{" "}
+            {t("stats:distance.distance")} ({t("stats:distance.average")})
           </p>
         </div>
 
@@ -165,7 +167,8 @@ export default function StatsDistanceSection({
             />
           </div>
           <p className="text-xs mt-2" style={{ color: "var(--text-muted)" }}>
-            {formatDistance(voyagerDistance, units.distanceUnit, t)} {t("stats:distance.fromEarth")}
+            {formatDistance(voyagerDistance, units.distanceUnit, t, lang)}{" "}
+            {t("stats:distance.fromEarth")}
           </p>
         </div>
       </div>
@@ -178,7 +181,7 @@ export default function StatsDistanceSection({
               {t("stats:distance.longestDistance")}
             </h3>
             <p className="text-2xl font-bold mb-1">
-              {formatDistance(longestDistance.distance, units.distanceUnit, t)}
+              {formatDistance(longestDistance.distance, units.distanceUnit, t, lang)}
             </p>
             <p className="text-sm opacity-75">
               {longestDistance.flight.depIata || longestDistance.flight.depIcao} →{" "}
@@ -191,7 +194,7 @@ export default function StatsDistanceSection({
               {t("stats:distance.shortestDistance")}
             </h3>
             <p className="text-2xl font-bold mb-1">
-              {formatDistance(shortestDistance.distance, units.distanceUnit, t)}
+              {formatDistance(shortestDistance.distance, units.distanceUnit, t, lang)}
             </p>
             <p className="text-sm opacity-75">
               {shortestDistance.flight.depIata || shortestDistance.flight.depIcao} →{" "}

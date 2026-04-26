@@ -55,6 +55,7 @@ export function DashboardControlsBar({
         padding: "8px 16px",
         background: "var(--bg-muted)",
         borderBottom: "1px solid var(--color-border)",
+        flexWrap: "wrap",
       }}
     >
       {/* Mode dropdown */}

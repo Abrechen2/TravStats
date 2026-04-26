@@ -7,7 +7,7 @@ import { useAuthStore } from "../store/authStore";
 vi.mock("../lib/api", () => ({
   authApi: {
     login: vi.fn(),
-    getSmtpStatus: vi.fn().mockResolvedValue({ smtpEnabled: false }),
+    getSmtpStatus: vi.fn().mockResolvedValue({ smtpEnabled: false, adminContactEmail: null }),
     forgotPassword: vi.fn(),
   },
 }));
@@ -49,7 +49,10 @@ describe("LoginPage", () => {
       hash: "",
       state: null,
     });
-    vi.mocked(authApi.getSmtpStatus).mockResolvedValue({ smtpEnabled: false });
+    vi.mocked(authApi.getSmtpStatus).mockResolvedValue({
+      smtpEnabled: false,
+      adminContactEmail: null,
+    });
   });
 
   it("should render login form", () => {

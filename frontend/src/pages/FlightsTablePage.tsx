@@ -399,7 +399,7 @@ export default function FlightsTablePage(): JSX.Element {
                       <p className="text-sm">{t("flights:table.noFlightsHint")}</p>
                     </div>
                   ) : (
-                    <table className="w-full">
+                    <table className="w-full min-w-[960px]">
                       <thead
                         style={{
                           background: "var(--bg-elevated)",
@@ -532,7 +532,10 @@ export default function FlightsTablePage(): JSX.Element {
                               <td className="px-4 py-3" style={{ color: "var(--text-muted)" }}>
                                 {flight.flightNumber || t("common:labels.notAvailable")}
                               </td>
-                              <td className="px-4 py-3" style={{ color: "var(--text-primary)" }}>
+                              <td
+                                className="px-4 py-3 max-w-[16rem]"
+                                style={{ color: "var(--text-primary)" }}
+                              >
                                 <div className="flex items-center gap-2">
                                   <span
                                     className="font-mono font-semibold"
@@ -550,10 +553,17 @@ export default function FlightsTablePage(): JSX.Element {
                                     {flight.arrIata || flight.arrIcao}
                                   </span>
                                 </div>
-                                <div className="text-xs" style={{ color: "var(--text-muted)" }}>
-                                  {flight.depName?.substring(0, 20)}{" "}
-                                  {t("common:labels.routeSeparator")}{" "}
-                                  {flight.arrName?.substring(0, 20)}
+                                <div
+                                  className="text-xs truncate"
+                                  style={{ color: "var(--text-muted)" }}
+                                  title={
+                                    flight.depName && flight.arrName
+                                      ? `${flight.depName} ${t("common:labels.routeSeparator")} ${flight.arrName}`
+                                      : (flight.depName ?? flight.arrName ?? undefined)
+                                  }
+                                >
+                                  {flight.depName} {t("common:labels.routeSeparator")}{" "}
+                                  {flight.arrName}
                                 </div>
                               </td>
                               <td

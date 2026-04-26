@@ -137,7 +137,7 @@ function ShipsSection(): JSX.Element {
           disabled={creating}
           className="rounded-md bg-[var(--accent)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--accent-dim)] disabled:opacity-50"
         >
-          {creating ? t("common:saving") : t("admin:cruiseMasterData.ship.add")}
+          {creating ? t("common:buttons.saving") : t("admin:cruiseMasterData.ship.add")}
         </button>
       </div>
 
@@ -325,7 +325,7 @@ function PortsSection(): JSX.Element {
           disabled={creating}
           className="rounded-md bg-[var(--accent)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--accent-dim)] disabled:opacity-50"
         >
-          {creating ? t("common:saving") : t("admin:cruiseMasterData.port.add")}
+          {creating ? t("common:buttons.saving") : t("admin:cruiseMasterData.port.add")}
         </button>
       </div>
 
