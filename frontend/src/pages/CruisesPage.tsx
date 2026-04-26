@@ -144,9 +144,9 @@ export default function CruisesPage(): JSX.Element {
       </div>
 
       <div className="mx-auto max-w-6xl px-4 py-6">
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold text-[var(--text-primary)]">{t("list.title")}</h1>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <CruisePdfImport onCreated={reload} />
             <button
               type="button"
@@ -166,8 +166,8 @@ export default function CruisesPage(): JSX.Element {
             {t("list.empty")}
           </div>
         ) : (
-          <div className="overflow-hidden rounded-md border border-[var(--color-border)]">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto rounded-md border border-[var(--color-border)]">
+            <table className="w-full text-sm min-w-[640px]">
               <thead className="bg-[var(--bg-surface)] text-[var(--text-muted)]">
                 <tr>
                   <th className="px-3 py-2 text-left">{t("list.columns.ship")}</th>

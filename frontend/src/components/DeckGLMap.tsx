@@ -115,6 +115,10 @@ export function DeckGLMap({
   const mapRef = useRef<MapRef>(null);
 
   const [mapLoaded, setMapLoaded] = useState(false);
+  // Zoom is read from MapGL viewState on every move so layers can hide
+  // labels / decimate symbols at low zoom. Updated via the move handler
+  // to avoid an extra render path.
+  const [zoom, setZoom] = useState<number>(INITIAL_VIEW_STATE.zoom ?? 2);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [playing, setPlaying] = useState<boolean>(false);
   const deckClickedRef = useRef(false);
@@ -282,6 +286,14 @@ export function DeckGLMap({
     moveRafRef.current = requestAnimationFrame(() => {
       moveRafRef.current = null;
       recomputeAllPositions();
+      const map = mapRef.current?.getMap();
+      if (map) {
+        const z = map.getZoom();
+        // Snap to integer to avoid re-rendering layers on every fractional
+        // zoom tick — only the threshold crossing matters for label visibility.
+        const snapped = Math.round(z);
+        setZoom((prev) => (prev === snapped ? prev : snapped));
+      }
     });
   }, [recomputeAllPositions]);
 
@@ -380,7 +392,8 @@ export function DeckGLMap({
           themeColors,
           0.3,
           selectedIds,
-          handleAirportClick
+          handleAirportClick,
+          zoom
         );
         break;
       case "heatmap":
@@ -430,6 +443,7 @@ export function DeckGLMap({
     cruises,
     cruiseGeometry,
     extraLayers,
+    zoom,
   ]);
 
   // No 3D modes remain — lighting effect is unused but kept as empty array for

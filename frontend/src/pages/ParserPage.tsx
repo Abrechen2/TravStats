@@ -52,9 +52,9 @@ export default function ParserPage(): JSX.Element {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <NavigationBar />
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
               {t("parser:title")}
             </h1>
             <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-400/20">
@@ -65,7 +65,7 @@ export default function ParserPage(): JSX.Element {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
         {/* Beta notice */}
         <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-500/30 dark:bg-amber-500/10">
           <p className="text-sm text-amber-800 dark:text-amber-300">{t("parser:betaNotice")}</p>
@@ -73,7 +73,7 @@ export default function ParserPage(): JSX.Element {
 
         {/* Tabs */}
         <div className="mb-6 border-b border-gray-200 dark:border-gray-700">
-          <nav className="flex space-x-8">
+          <nav className="flex gap-6 sm:gap-8 overflow-x-auto whitespace-nowrap">
             {tabs.map((tab) => (
               <button
                 key={tab.id}

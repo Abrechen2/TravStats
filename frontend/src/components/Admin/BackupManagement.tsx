@@ -514,7 +514,7 @@ export default function BackupManagement(): JSX.Element {
         </div>
       )}
 
-      <div className="bg-[var(--bg-surface)] rounded-lg shadow overflow-hidden">
+      <div className="bg-[var(--bg-surface)] rounded-lg shadow overflow-x-auto">
         <table className="min-w-full divide-y" style={{ borderColor: "var(--color-border)" }}>
           <thead className="bg-[var(--bg-base)]">
             <tr>

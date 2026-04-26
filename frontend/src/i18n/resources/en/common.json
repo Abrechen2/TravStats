@@ -22,11 +22,15 @@
     "refresh": "Refresh",
     "loading": "Loading...",
     "saving": "Saving...",
+    "uploading": "Uploading...",
     "deleting": "Deleting...",
     "yes": "Yes",
     "no": "No",
-    "later": "Later"
+    "later": "Later",
+    "details": "Details",
+    "dismiss": "Dismiss"
   },
+  "dismiss": "Dismiss",
   "app": {
     "name": "TravStats",
     "logoAlt": "TravStats Logo"

@@ -6,6 +6,7 @@ import PageTransition from "../components/PageTransition";
 import { SkeletonAchievementGrid } from "../components/SkeletonLoader";
 import type { Achievement, AchievementSummary, LeaderboardEntry } from "../types";
 import { useTranslation } from "../hooks/useTranslation";
+import { useLocale } from "../hooks/useLocale";
 import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
@@ -39,6 +40,7 @@ const tierTextColorValues: Record<string, string> = {
 
 export default function AchievementsPage(): JSX.Element {
   const { t } = useTranslation(["achievements", "common"]);
+  const locale = useLocale();
   const { addToast } = useToastStore();
   const { enabled } = useEnabledDomains();
   const [achievements, setAchievements] = useState<Achievement[]>([]);
@@ -143,7 +145,7 @@ export default function AchievementsPage(): JSX.Element {
           style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}
         >
           <NavigationBar />
-          <div className="p-6 pb-24">
+          <div className="p-4 sm:p-6 pb-24">
             <div className="max-w-7xl mx-auto">
               <SkeletonAchievementGrid />
             </div>
@@ -161,7 +163,7 @@ export default function AchievementsPage(): JSX.Element {
           style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}
         >
           <NavigationBar />
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <div className="max-w-6xl mx-auto">
               <div className="flex items-center gap-4 mb-6">
                 <button
@@ -171,7 +173,10 @@ export default function AchievementsPage(): JSX.Element {
                 >
                   {t("achievements:leaderboard.backToAchievements")}
                 </button>
-                <h1 className="text-4xl font-bold" style={{ color: "var(--text-primary)" }}>
+                <h1
+                  className="text-3xl sm:text-4xl font-bold"
+                  style={{ color: "var(--text-primary)" }}
+                >
                   🏆 {t("achievements:leaderboard.title")}
                 </h1>
               </div>
@@ -239,7 +244,7 @@ export default function AchievementsPage(): JSX.Element {
                         </div>
                         <div className="text-right">
                           <div className="text-2xl font-bold" style={{ color: "var(--accent)" }}>
-                            {entry.totalPoints.toLocaleString()}
+                            {entry.totalPoints.toLocaleString(locale)}
                           </div>
                           <div className="text-sm" style={{ color: "var(--text-muted)" }}>
                             {t("achievements:leaderboard.points")}
@@ -263,15 +268,18 @@ export default function AchievementsPage(): JSX.Element {
         style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}
       >
         <NavigationBar />
-        <div className="p-6 pb-32">
+        <div className="p-4 sm:p-6 pb-32">
           <div className="max-w-7xl mx-auto">
             <div className="mb-6">
-              <h1 className="text-4xl font-bold" style={{ color: "var(--text-primary)" }}>
+              <h1
+                className="text-3xl sm:text-4xl font-bold"
+                style={{ color: "var(--text-primary)" }}
+              >
                 🏆 {t("achievements:title")}
               </h1>
             </div>
             {summary && (
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div
                   className="rounded-xl p-6"
                   style={{
@@ -283,7 +291,7 @@ export default function AchievementsPage(): JSX.Element {
                     {t("achievements:summary.totalPoints")}
                   </div>
                   <div className="text-3xl font-bold" style={{ color: "var(--accent)" }}>
-                    {summary.totalPoints.toLocaleString()}
+                    {summary.totalPoints.toLocaleString(locale)}
                   </div>
                 </div>
                 <div

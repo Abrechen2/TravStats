@@ -10,8 +10,9 @@ interface StatsBusinessSectionProps {
 export default function StatsBusinessSection({
   businessStats,
 }: StatsBusinessSectionProps): JSX.Element {
-  const { t } = useTranslation(["stats"]);
+  const { t, i18n } = useTranslation(["stats"]);
   const { units } = useSettingsStore();
+  const lang = i18n.language;
 
   return (
     <div className="mt-8">
@@ -75,7 +76,7 @@ export default function StatsBusinessSection({
           <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
             {t("stats:business.totalCostDesc", {
               cost: businessStats.totalCost.toLocaleString(),
-              distance: formatDistance(businessStats.totalDistance, units.distanceUnit, t),
+              distance: formatDistance(businessStats.totalDistance, units.distanceUnit, t, lang),
             })}
           </p>
         </div>

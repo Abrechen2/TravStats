@@ -8,6 +8,9 @@
     "flight": "Flight",
     "cruise": "Cruise"
   },
+  "errors": {
+    "saveFailed": "Failed to save settings"
+  },
   "cruisePreferences": {
     "title": "Cruise preferences",
     "description": "Defaults for newly created cruises and how they render on the map.",
@@ -28,6 +31,7 @@
     "description": "Adjust username, contact information and your profile picture.",
     "changePassword": "Change Password",
     "uploadAvatar": "Upload profile picture",
+    "chooseFile": "Choose file",
     "username": "Username",
     "email": "Email Address",
     "birthdate": "Birthday",
@@ -387,6 +391,7 @@
     "description": "All settings are saved locally and are immediately active."
   },
   "scrollToTop": "Scroll to top",
+  "sectionPicker": "Section",
   "parser": {
     "title": "Parser Configuration",
     "description": "Configure how boarding passes and emails are parsed. Auto mode automatically selects the best available parser.",

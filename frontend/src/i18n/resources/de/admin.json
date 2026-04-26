@@ -1,5 +1,6 @@
 {
   "title": "Admin",
+  "sectionPicker": "Bereich",
   "description": "Verwalte deine selbst gehostete TravStats-Instanz",
   "loading": "Lade...",
   "tabs": {

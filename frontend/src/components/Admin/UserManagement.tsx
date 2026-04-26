@@ -52,8 +52,8 @@ export default function UserManagement({
           </div>
         }
       />
-      <div className="bg-[var(--bg-surface)] rounded-lg shadow overflow-hidden">
-        <table className="w-full">
+      <div className="bg-[var(--bg-surface)] rounded-lg shadow overflow-x-auto">
+        <table className="w-full min-w-[720px]">
           <thead className="bg-[var(--bg-base)]">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">

@@ -36,6 +36,8 @@ export function DomainTabStrip({
         display: "flex",
         gap: "4px",
         fontSize: "13px",
+        overflowX: "auto",
+        whiteSpace: "nowrap",
       }}
     >
       {DASHBOARD_TABS.map((tab) => {

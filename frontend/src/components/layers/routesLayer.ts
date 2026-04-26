@@ -142,13 +142,22 @@ const DIM_ALPHA = 18;
  * paletteOverride) so selection changes don't re-trigger the expensive
  * data build — only the layer construction below, which is cheap.
  */
+/**
+ * Below this zoom, IATA labels are hidden — at low zoom levels (world view)
+ * dozens of three-letter codes overlap into illegible noise. The marker
+ * dots stay visible, so users still see where airports are. Above this
+ * threshold there's enough screen space for the labels to read cleanly.
+ */
+const LABEL_VISIBILITY_MIN_ZOOM = 4;
+
 export function createRoutesLayers(
   routeData: { arcs: ArcDatum[]; points: PointDatum[] },
   onFlightClick?: (flightId: string | string[]) => void,
   themeColors?: MapLayerColors,
   arcHeight: number = 1,
   selectedIds: string[] = [],
-  onAirportClick?: (iata: string, lon: number, lat: number) => void
+  onAirportClick?: (iata: string, lon: number, lat: number) => void,
+  zoom: number = 5
 ): Layer[] {
   const { arcs, points } = routeData;
   const dotRgb = themeColors?.airportDot ?? ([232, 160, 69] as [number, number, number]);
@@ -256,10 +265,15 @@ export function createRoutesLayers(
       : undefined,
   });
 
-  // IATA code labels — appear above each marker
+  // IATA code labels — appear above each marker. Hidden at low zoom
+  // levels where they'd overlap into illegible clutter, and during a
+  // selection so highlighted arcs remain visually dominant.
+  const labelsVisible = zoom >= LABEL_VISIBILITY_MIN_ZOOM && !hasSelection;
+
   const labelLayer = new TextLayer<PointDatum>({
     id: "routes-labels",
     data: points,
+    visible: labelsVisible,
     getPosition: (d) => d.position,
     getText: (d) => d.iata,
     getSize: 12,

@@ -1,6 +1,8 @@
 {
   "title": "Pending Updates",
   "description": "Review and manage automatic flight data updates",
+  "appliedAt": "Applied at:",
+  "rejectedAt": "Rejected at:",
   "empty": {
     "title": "No Pending Updates",
     "description": "There are currently no pending flight updates. Updates will appear here when automatic updates are enabled and new data is available."

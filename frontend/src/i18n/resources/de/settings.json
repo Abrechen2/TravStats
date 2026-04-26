@@ -8,6 +8,9 @@
     "flight": "Flug",
     "cruise": "Kreuzfahrt"
   },
+  "errors": {
+    "saveFailed": "Einstellungen konnten nicht gespeichert werden"
+  },
   "cruisePreferences": {
     "title": "Kreuzfahrt-Präferenzen",
     "description": "Standardwerte für neu angelegte Kreuzfahrten und Darstellung auf der Karte.",
@@ -28,6 +31,7 @@
     "description": "Passe Benutzername, Kontaktinformationen und dein Profilbild an.",
     "changePassword": "Passwort ändern",
     "uploadAvatar": "Profilbild hochladen",
+    "chooseFile": "Datei auswählen",
     "username": "Benutzername",
     "email": "E-Mail-Adresse",
     "birthdate": "Geburtstag",
@@ -387,6 +391,7 @@
     "description": "Alle Einstellungen werden lokal gespeichert und sind sofort aktiv."
   },
   "scrollToTop": "Nach oben",
+  "sectionPicker": "Bereich",
   "parser": {
     "title": "Parser-Konfiguration",
     "description": "Konfigurieren Sie, wie Bordkarten und E-Mails geparst werden. Der Auto-Modus wählt automatisch den besten verfügbaren Parser aus.",

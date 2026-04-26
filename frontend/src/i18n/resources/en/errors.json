@@ -16,5 +16,10 @@
   "saveFailed": "Flight could not be saved. Please check your inputs.",
   "updateFailed": "Failed to update flight",
   "apiKeyInfo": "Note: An API key is required for automatic flight search.",
-  "failedToLoadAirport": "Failed to load airport data"
+  "failedToLoadAirport": "Failed to load airport data",
+  "backend": {
+    "nonHistoricalNeedsTimes": "For flights with status \"Flown\", \"Scheduled\" or \"Cancelled\", departure and arrival times must be set and the difference must be between -12h and +24h. If your date is one day off by mistake, correct it; or mark the flight as \"Historical\" if the times are unknown.",
+    "noFieldToUpdate": "At least one field must be provided to update.",
+    "fallbackPrefix": "Server response: "
+  }
 }

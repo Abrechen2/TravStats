@@ -565,7 +565,7 @@ export default function AdminPage(): JSX.Element {
         className="px-4 pt-3"
         style={{ background: "var(--bg-base)", borderBottom: "1px solid var(--color-border)" }}
       >
-        <div className="mx-auto flex max-w-6xl gap-1">
+        <div className="mx-auto flex max-w-6xl gap-1 overflow-x-auto whitespace-nowrap">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -588,7 +588,33 @@ export default function AdminPage(): JSX.Element {
         </div>
       </div>
 
-      <div className="flex h-[calc(100vh-3.5rem-2.75rem)]">
+      {/* Mobile section picker — mirrors SettingsPage; the desktop
+          sidebar takes over from md upward. */}
+      <div
+        className="md:hidden px-4 py-2 sticky top-0 z-10"
+        style={{
+          background: "var(--bg-base)",
+          borderBottom: "1px solid var(--color-border)",
+        }}
+      >
+        <label htmlFor="admin-section-picker" className="sr-only">
+          {t("admin:sectionPicker", { defaultValue: "Bereich" })}
+        </label>
+        <select
+          id="admin-section-picker"
+          value={activeSection}
+          onChange={(e): void => setActiveSection(e.target.value as ActiveSection)}
+          className="input w-full"
+        >
+          {sections.map((section) => (
+            <option key={section.id} value={section.id}>
+              {section.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex md:h-[calc(100vh-3.5rem-2.75rem)]">
         {/* Sidebar */}
         <aside
           className="w-52 flex-shrink-0 flex-col py-4 overflow-y-auto hidden md:flex"
@@ -638,7 +664,7 @@ export default function AdminPage(): JSX.Element {
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 overflow-y-auto p-6 space-y-6">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
           {activeSection === "cruiseMasterData" && <CruiseMasterData />}
 
           {activeSection === "system" && systemInfo && (
