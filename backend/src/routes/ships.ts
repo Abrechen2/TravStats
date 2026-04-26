@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "../db";
 import { authenticate, AuthRequest } from "../middleware/auth";
 import { AppError } from "../middleware/errorHandler";
+import { invalidateCruiseEntityCache } from "../services/cruiseEntityResolver";
 import logger from "../utils/logger";
 
 const router = Router();
@@ -68,6 +69,7 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
     const ship = await prisma.ship.create({
       data: { ...parsed.data, isUserAdded: true },
     });
+    invalidateCruiseEntityCache();
     logger.info({ operation: "ship_create", shipId: ship.id, userId: req.userId });
     res.status(201).json({ success: true, data: ship });
   } catch (err) {

@@ -5,7 +5,7 @@ jest.mock("../../db", () => ({
   },
 }));
 
-import { resolveCruiseEntities } from "../cruiseEntityResolver";
+import { resolveCruiseEntities, invalidateCruiseEntityCache } from "../cruiseEntityResolver";
 import type { ParsedCruise } from "../cruiseBookingParser";
 import { prisma } from "../../db";
 
@@ -44,6 +44,9 @@ function baseParsedCruise(overrides: Partial<ParsedCruise> = {}): ParsedCruise {
 }
 
 beforeEach(() => {
+  // Module-level candidate cache survives between tests; clear it so each
+  // case sees a fresh prisma.findMany call.
+  invalidateCruiseEntityCache();
   shipFindMany.mockReset();
   portFindMany.mockReset();
   shipFindMany.mockResolvedValue(SHIPS);
@@ -120,5 +123,23 @@ describe("resolveCruiseEntities", () => {
     expect(result.input.price).toBe(2499);
     expect(result.input.currency).toBe("EUR");
     expect(result.input.status).toBe("scheduled");
+  });
+
+  describe("cache behaviour", () => {
+    it("loads ships + ports once across consecutive resolves (warm cache)", async () => {
+      await resolveCruiseEntities(baseParsedCruise());
+      await resolveCruiseEntities(baseParsedCruise());
+      await resolveCruiseEntities(baseParsedCruise());
+      expect(shipFindMany).toHaveBeenCalledTimes(1);
+      expect(portFindMany).toHaveBeenCalledTimes(1);
+    });
+
+    it("re-loads after invalidateCruiseEntityCache()", async () => {
+      await resolveCruiseEntities(baseParsedCruise());
+      invalidateCruiseEntityCache();
+      await resolveCruiseEntities(baseParsedCruise());
+      expect(shipFindMany).toHaveBeenCalledTimes(2);
+      expect(portFindMany).toHaveBeenCalledTimes(2);
+    });
   });
 });
