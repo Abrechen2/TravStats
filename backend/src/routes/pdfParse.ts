@@ -5,6 +5,8 @@ import { z } from 'zod';
 import logger from '../utils/logger';
 import { extractTextFromPdf, isBcbpText } from '../services/pdfParser';
 import { parseBookingText } from '../services/bookingParser';
+import { parseCruiseBookingText } from '../services/cruiseBookingParser';
+import { resolveCruiseEntities } from '../services/cruiseEntityResolver';
 import { FILE_LIMITS } from '../config/constants';
 
 const router = Router();
@@ -33,18 +35,6 @@ const parsePdfSchema = z.object({
 router.post('/parse-pdf', authenticate, pdfParseLimiter, async (req: AuthRequest, res: Response) => {
   try {
     const parsed = parsePdfSchema.parse(req.body);
-
-    // Defensive guard for future domain expansion (Cruise etc.).
-    // Zod already rejects unknown values; this catches the case where the
-    // enum is later widened but handler logic hasn't been extended yet.
-    if (parsed.domain !== 'flight') {
-      return res.status(501).json({
-        error: 'PARSER_DOMAIN_NOT_IMPLEMENTED',
-        message: `Parsing for domain '${parsed.domain}' is not yet implemented. Add entries manually via the /cruises page.`,
-        domain: parsed.domain,
-      });
-    }
-
     const { pdfBase64 } = parsed;
     const userId = req.userId;
 
@@ -69,10 +59,28 @@ router.post('/parse-pdf', authenticate, pdfParseLimiter, async (req: AuthRequest
       });
     }
 
-    logger.info({ userId, chars: pdfText.length }, '[PDF Parse] Text extracted, parsing...');
+    logger.info(
+      { userId, chars: pdfText.length, domain: parsed.domain },
+      '[PDF Parse] Text extracted, parsing...',
+    );
+
+    if (parsed.domain === 'cruise') {
+      const cruiseResult = await parseCruiseBookingText(pdfText);
+      const resolved = await Promise.all(cruiseResult.cruises.map(resolveCruiseEntities));
+      return res.json({
+        cruises: resolved.map((r) => ({
+          input: r.input,
+          shipMatched: r.shipMatched,
+          unmatchedPorts: r.unmatchedPorts,
+        })),
+        parserUsed: cruiseResult.parserUsed,
+        ollamaAvailable: cruiseResult.ollamaAvailable,
+        pdfTextLength: pdfText.length,
+        domain: 'cruise',
+      });
+    }
 
     const bcbpDetected = isBcbpText(pdfText);
-
     const result = await parseBookingText(pdfText, userId);
 
     res.json({

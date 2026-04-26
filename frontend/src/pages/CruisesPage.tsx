@@ -4,6 +4,7 @@ import { cruiseApi } from "../lib/api";
 import type { Cruise, CruiseStatus } from "../types";
 import { CruiseRow } from "../components/Cruise/CruiseRow";
 import { CruiseEditModal } from "../components/Cruise/CruiseEditModal";
+import { CruisePdfImport } from "../components/Cruise/CruisePdfImport";
 import NavigationBar from "../components/NavigationBar";
 import { useTranslation } from "../hooks/useTranslation";
 
@@ -145,14 +146,17 @@ export default function CruisesPage(): JSX.Element {
       <div className="mx-auto max-w-6xl px-4 py-6">
         <div className="mb-4 flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-[var(--text-primary)]">{t("list.title")}</h1>
-          <button
-            type="button"
-            onClick={() => setShowCreate(true)}
-            className="btn-primary flex items-center gap-2 whitespace-nowrap"
-          >
-            <span>+</span>
-            <span>{t("list.new")}</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <CruisePdfImport onCreated={reload} />
+            <button
+              type="button"
+              onClick={() => setShowCreate(true)}
+              className="btn-primary flex items-center gap-2 whitespace-nowrap"
+            >
+              <span>+</span>
+              <span>{t("list.new")}</span>
+            </button>
+          </div>
         </div>
 
         {loading ? (

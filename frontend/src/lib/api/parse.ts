@@ -1,7 +1,38 @@
 import type { ParsedBooking } from "../../types";
+import type { CruiseInput } from "../../types/cruise";
 
 import { parserApi } from "./client";
 import type { BoardingPassParseResult, EmailParseResult, ProviderAvailability } from "./types";
+
+export interface ParsedCruiseEntry {
+  input: CruiseInput;
+  shipMatched: boolean;
+  unmatchedPorts: { dayNumber: number; portName: string }[];
+}
+
+export interface ParsePdfFlightResult {
+  domain?: "flight";
+  flights: ParsedBooking[];
+  parserUsed: string;
+  ollamaAvailable: boolean;
+  fallbackUsed?: boolean;
+  pdfTextLength: number;
+  bcbpDetected: boolean;
+}
+
+export interface ParsePdfCruiseResult {
+  domain: "cruise";
+  cruises: ParsedCruiseEntry[];
+  parserUsed: string;
+  ollamaAvailable: boolean;
+  pdfTextLength: number;
+}
+
+export type ParsePdfResult = ParsePdfFlightResult | ParsePdfCruiseResult;
+
+export function isCruisePdfResult(r: ParsePdfResult): r is ParsePdfCruiseResult {
+  return r.domain === "cruise";
+}
 
 interface ParserCheckResult {
   available: boolean;
@@ -43,25 +74,14 @@ export const parseApi = {
     return data;
   },
 
-  parsePdf: async (
-    pdfBase64: string
-  ): Promise<{
-    flights: ParsedBooking[];
-    parserUsed: string;
-    ollamaAvailable: boolean;
-    fallbackUsed?: boolean;
-    pdfTextLength: number;
-    bcbpDetected: boolean;
-  }> => {
-    const { data } = await parserApi.post<{
-      flights: ParsedBooking[];
-      parserUsed: string;
-      ollamaAvailable: boolean;
-      fallbackUsed?: boolean;
-      pdfTextLength: number;
-      bcbpDetected: boolean;
-    }>("/parse-pdf", { pdfBase64 });
+  parsePdf: (async (pdfBase64: string, domain: "flight" | "cruise" = "flight") => {
+    const { data } = await parserApi.post<ParsePdfResult>("/parse-pdf", { pdfBase64, domain });
     return data;
+  }) as {
+    (pdfBase64: string): Promise<ParsePdfFlightResult>;
+    (pdfBase64: string, domain: "flight"): Promise<ParsePdfFlightResult>;
+    (pdfBase64: string, domain: "cruise"): Promise<ParsePdfCruiseResult>;
+    (pdfBase64: string, domain: "flight" | "cruise"): Promise<ParsePdfResult>;
   },
 
   checkOllamaVision: async (): Promise<ParserCheckResult> => {

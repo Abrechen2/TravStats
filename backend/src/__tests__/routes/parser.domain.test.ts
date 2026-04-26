@@ -70,14 +70,18 @@ describe('parser domain param', () => {
   // /parse-pdf
   // -----------------------------------------------------------------------
 
-  it('returns 501 PARSER_DOMAIN_NOT_IMPLEMENTED for domain=cruise on /parse-pdf', async () => {
+  it('accepts domain=cruise on /parse-pdf (no longer a 501 stub)', async () => {
+    // The cruise pipeline is wired through. 'AAAA' is not a valid PDF so the
+    // route bottoms out at the PDF-extraction stage with a 400. The point is
+    // that the schema/domain check no longer short-circuits with a 501.
     const res = await request(app)
       .post('/api/v1/parse-pdf')
       .set('Cookie', [`auth_token=${token}`])
       .send({ pdfBase64: 'AAAA', domain: 'cruise' });
-    expect(res.status).toBe(501);
-    expect(res.body.error).toBe('PARSER_DOMAIN_NOT_IMPLEMENTED');
-    expect(res.body.domain).toBe('cruise');
+    expect(res.status).not.toBe(501);
+    if (res.status === 400 && typeof res.body?.error === 'string') {
+      expect(res.body.error.toLowerCase()).not.toContain('domain');
+    }
   });
 
   it('rejects unknown (non-enum) domain on /parse-pdf at schema layer', async () => {

@@ -108,5 +108,24 @@
     "saving": "Speichere …",
     "createTitle": "Neue Kreuzfahrt",
     "editTitle": "Kreuzfahrt bearbeiten"
+  },
+  "import": {
+    "button": "PDF importieren",
+    "parsing": "PDF wird analysiert …",
+    "previewTitle": "{{count}} Kreuzfahrt(en) gefunden",
+    "previewHint": "Prüfe die extrahierten Daten und speichere sie. Häfen ohne Treffer in der Datenbank kannst du später im Editor zuordnen.",
+    "save": "Speichern",
+    "saved": "{{count}} Kreuzfahrt(en) gespeichert",
+    "saveError": "Speichern fehlgeschlagen",
+    "parseError": "PDF konnte nicht verarbeitet werden",
+    "noCruises": "Keine Kreuzfahrt im PDF gefunden",
+    "notPdf": "Nur PDF-Dateien werden unterstützt",
+    "shipFromDb": "Schiff aus Datenbank",
+    "shipUnmatched": "Schiff nicht in DB",
+    "shipUnmatchedHint": "Wird als freier Text gespeichert. Du kannst das Schiff im Editor verknüpfen.",
+    "stopsLabel": "Stopps",
+    "stopsValue": "{{ports}} Häfen, {{seaDays}} Seetage",
+    "unmatchedTitle": "Häfen ohne Treffer",
+    "unmatchedHint": "Diese Häfen sind in der Datenbank nicht verfügbar und wurden vorerst als Seetage markiert. Im Editor kannst du sie korrigieren."
   }
 }
