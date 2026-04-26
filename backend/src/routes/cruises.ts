@@ -1,5 +1,6 @@
 import { Router, Response, NextFunction } from 'express';
 import { Prisma } from '@prisma/client';
+import { z } from 'zod';
 import { prisma } from '../db';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
@@ -7,6 +8,60 @@ import { createCruiseSchema, updateCruiseSchema, cruiseQuerySchema } from '../sc
 import { checkAndUpdateAchievements } from '../utils/achievements';
 import { computeSchematicRoute } from '../services/schematicRouter';
 import logger from '../utils/logger';
+
+interface GeometryFeature {
+  type: 'Feature';
+  geometry: { type: 'LineString'; coordinates: [number, number][] };
+  properties: {
+    fromPortId: number;
+    toPortId: number;
+    routed: boolean;
+  };
+}
+
+interface GeometryFeatureCollection {
+  type: 'FeatureCollection';
+  features: GeometryFeature[];
+}
+
+type CruiseStopWithPort = Prisma.CruiseStopGetPayload<{ include: { port: true } }>;
+
+/**
+ * Compute the GeoJSON FeatureCollection for one cruise's itinerary.
+ * Each consecutive port-pair becomes one LineString. Sea-day and
+ * unmatched stops are skipped — they don't contribute legs. The
+ * underlying `computeSchematicRoute` is cached, so calling this in a
+ * batch over the same set of port-pairs is essentially free after the
+ * first miss.
+ */
+async function buildCruiseGeometry(
+  stops: CruiseStopWithPort[],
+): Promise<{ collection: GeometryFeatureCollection; routedLegs: number; directLegs: number }> {
+  const ordered = stops.filter((s) => !s.isAtSea && s.port !== null);
+  const features: GeometryFeature[] = [];
+  let routedLegs = 0;
+  let directLegs = 0;
+
+  for (let i = 0; i < ordered.length - 1; i++) {
+    const a = ordered[i].port;
+    const b = ordered[i + 1].port;
+    if (!a || !b) continue;
+
+    const route = await computeSchematicRoute(
+      { id: a.id, name: a.name, city: a.city, country: a.country, unlocode: a.unlocode, lat: a.lat, lon: a.lon },
+      { id: b.id, name: b.name, city: b.city, country: b.country, unlocode: b.unlocode, lat: b.lat, lon: b.lon },
+    );
+    features.push({
+      type: 'Feature',
+      geometry: { type: 'LineString', coordinates: route.waypoints },
+      properties: { fromPortId: a.id, toPortId: b.id, routed: route.routed },
+    });
+    if (route.routed) routedLegs++;
+    else directLegs++;
+  }
+
+  return { collection: { type: 'FeatureCollection', features }, routedLegs, directLegs };
+}
 
 const router = Router();
 router.use(authenticate);
@@ -90,6 +145,69 @@ router.get('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
  * produce a 2-vertex direct-chord feature — the frontend renders it
  * identically to a routed one so the map is never visually broken.
  */
+/**
+ * POST /api/v1/cruises/geometry/batch
+ *
+ * Body: { ids: string[] } (max 100 cruise UUIDs)
+ * Returns: { success: true, data: { [cruiseId]: FeatureCollection } }
+ *
+ * Eliminates the dashboard's previous N sequential GETs for N cruises.
+ * Cruises not owned by the requesting user are silently skipped (the
+ * key is omitted from the response). Inside, each cruise's leg loop
+ * benefits from `computeSchematicRoute`'s in-memory cache so the second
+ * cruise that crosses the same port-pair is a Map.get.
+ *
+ * Defined BEFORE the `/:id/geometry` route so Express doesn't try to
+ * match `geometry` as the `:id` parameter.
+ */
+const geometryBatchSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(100),
+});
+
+router.post('/geometry/batch', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = requireUser(req);
+    const parsed = geometryBatchSchema.safeParse(req.body);
+    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+
+    const cruises = await prisma.cruise.findMany({
+      where: { id: { in: parsed.data.ids }, userId },
+      include: { stops: { include: { port: true }, orderBy: { dayNumber: 'asc' as const } } },
+    });
+
+    const computedAt = Date.now();
+    const data: Record<string, GeometryFeatureCollection> = {};
+    let totalRouted = 0;
+    let totalDirect = 0;
+
+    // Parallel — each leg lookup is sub-millisecond after the first
+    // miss, so concurrency just amortises the cache misses across
+    // cruises without overloading anything.
+    const results = await Promise.all(
+      cruises.map(async (cruise) => ({ id: cruise.id, ...(await buildCruiseGeometry(cruise.stops)) })),
+    );
+    for (const r of results) {
+      data[r.id] = r.collection;
+      totalRouted += r.routedLegs;
+      totalDirect += r.directLegs;
+    }
+
+    logger.info({
+      operation: 'cruise_geometry_batch',
+      userId,
+      requested: parsed.data.ids.length,
+      returned: cruises.length,
+      routedLegs: totalRouted,
+      directLegs: totalDirect,
+      durationMs: Date.now() - computedAt,
+    });
+
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get('/:id/geometry', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
@@ -99,77 +217,20 @@ router.get('/:id/geometry', async (req: AuthRequest, res: Response, next: NextFu
     });
     if (!cruise) throw new AppError('Cruise not found', 404);
 
-    const ordered = cruise.stops.filter((s) => !s.isAtSea && s.port !== null);
-
-    const features: Array<{
-      type: 'Feature';
-      geometry: { type: 'LineString'; coordinates: [number, number][] };
-      properties: {
-        fromPortId: number;
-        toPortId: number;
-        routed: boolean;
-      };
-    }> = [];
-
     const computedAt = Date.now();
-    let routedLegs = 0;
-    let directLegs = 0;
-
-    for (let i = 0; i < ordered.length - 1; i++) {
-      const a = ordered[i].port;
-      const b = ordered[i + 1].port;
-      if (!a || !b) continue;
-
-      const route = await computeSchematicRoute(
-        {
-          id: a.id,
-          name: a.name,
-          city: a.city,
-          country: a.country,
-          unlocode: a.unlocode,
-          lat: a.lat,
-          lon: a.lon,
-        },
-        {
-          id: b.id,
-          name: b.name,
-          city: b.city,
-          country: b.country,
-          unlocode: b.unlocode,
-          lat: b.lat,
-          lon: b.lon,
-        },
-      );
-      features.push({
-        type: 'Feature',
-        geometry: { type: 'LineString', coordinates: route.waypoints },
-        properties: {
-          fromPortId: a.id,
-          toPortId: b.id,
-          routed: route.routed,
-        },
-      });
-      if (route.routed) routedLegs++;
-      else directLegs++;
-    }
+    const { collection, routedLegs, directLegs } = await buildCruiseGeometry(cruise.stops);
 
     logger.info({
       operation: 'cruise_geometry_computed',
       cruiseId: cruise.id,
       userId,
-      stops: ordered.length,
+      stops: cruise.stops.filter((s) => !s.isAtSea && s.port !== null).length,
       routedLegs,
       directLegs,
       durationMs: Date.now() - computedAt,
     });
 
-    res.json({
-      success: true,
-      data: {
-        type: 'FeatureCollection' as const,
-        features,
-      },
-    });
+    res.json({ success: true, data: collection });
   } catch (err) {
     next(err);
   }

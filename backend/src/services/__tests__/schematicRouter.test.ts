@@ -15,7 +15,9 @@ import {
   lonToCol,
 } from '../../shared/geo/landMaskGrid';
 import {
+  clearSchematicRouteCache,
   computeSchematicRoute,
+  getSchematicRouteCacheStats,
   setCoarseMaskForTesting,
   simplifyDegrees,
 } from '../schematicRouter';
@@ -269,5 +271,64 @@ describe('simplifyDegrees (Douglas-Peucker in degree space)', () => {
       [0, 0],
       [1, 1],
     ]);
+  });
+});
+
+describe('schematicRouter — route cache', () => {
+  beforeEach(() => {
+    clearSchematicRouteCache();
+    setCoarseMaskForTesting(allWaterMask());
+  });
+
+  afterEach(() => {
+    clearSchematicRouteCache();
+    setCoarseMaskForTesting(null);
+  });
+
+  it('caches identical (depId, arrId) pairs and serves from memory on second call', async () => {
+    const dep = { id: 1, lat: 40, lon: 0 };
+    const arr = { id: 2, lat: 42, lon: 3 };
+
+    const first = await computeSchematicRoute(dep, arr);
+    const stats1 = getSchematicRouteCacheStats();
+    expect(stats1.misses).toBe(1);
+    expect(stats1.hits).toBe(0);
+    expect(stats1.size).toBe(1);
+
+    const second = await computeSchematicRoute(dep, arr);
+    const stats2 = getSchematicRouteCacheStats();
+    expect(stats2.misses).toBe(1);
+    expect(stats2.hits).toBe(1);
+    expect(second).toBe(first); // identity — same cached object
+  });
+
+  it('treats reversed direction as a separate cache entry', async () => {
+    const a = { id: 1, lat: 40, lon: 0 };
+    const b = { id: 2, lat: 42, lon: 3 };
+
+    await computeSchematicRoute(a, b);
+    await computeSchematicRoute(b, a);
+    const stats = getSchematicRouteCacheStats();
+    expect(stats.misses).toBe(2);
+    expect(stats.size).toBe(2);
+  });
+
+  it('does not cache when either port lacks an id', async () => {
+    await computeSchematicRoute({ lat: 40, lon: 0 }, { lat: 42, lon: 3 });
+    await computeSchematicRoute({ id: 1, lat: 40, lon: 0 }, { lat: 42, lon: 3 });
+    await computeSchematicRoute({ lat: 40, lon: 0 }, { id: 2, lat: 42, lon: 3 });
+    const stats = getSchematicRouteCacheStats();
+    expect(stats.size).toBe(0);
+    expect(stats.hits).toBe(0);
+    // misses are not bumped for uncacheable lookups either — they're skipped entirely.
+    expect(stats.misses).toBe(0);
+  });
+
+  it('clearSchematicRouteCache resets state', async () => {
+    await computeSchematicRoute({ id: 1, lat: 40, lon: 0 }, { id: 2, lat: 42, lon: 3 });
+    expect(getSchematicRouteCacheStats().size).toBe(1);
+    clearSchematicRouteCache();
+    const stats = getSchematicRouteCacheStats();
+    expect(stats).toEqual({ size: 0, hits: 0, misses: 0, hitRate: 0 });
   });
 });

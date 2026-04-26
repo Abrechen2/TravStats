@@ -550,12 +550,95 @@ export interface SchematicRoute {
 }
 
 /**
+ * In-memory LRU cache for computed routes. The schematic algorithm is
+ * fast on its own (~1-5ms per leg on the 1° grid), but the dashboard
+ * loads geometry for every cruise on mount — for a user with 50 cruises
+ * × ~10 legs each that's still ~500 cell-lookups + simplify + buffer
+ * passes per page-view, plus the per-request DB roundtrip. Caching the
+ * computed `SchematicRoute` by directional (depId, arrId) key drops
+ * subsequent loads to a Map.get.
+ *
+ * Cache key is null when either port lacks an `id` (pure ad-hoc lookup,
+ * not worth caching). LRU eviction at ROUTE_CACHE_MAX entries; on
+ * overflow the oldest insertion is dropped. No TTL — routes are
+ * deterministic given (port coordinates, algorithm version), and a
+ * server restart clears the cache anyway.
+ */
+const ROUTE_CACHE_MAX = 5000;
+const routeCache = new Map<string, SchematicRoute>();
+let routeCacheHits = 0;
+let routeCacheMisses = 0;
+
+function routeCacheKey(
+  dep: SchematicRoutePort,
+  arr: SchematicRoutePort,
+): string | null {
+  if (dep.id === undefined || arr.id === undefined) return null;
+  return `${dep.id}->${arr.id}`;
+}
+
+export function getSchematicRouteCacheStats(): {
+  size: number;
+  hits: number;
+  misses: number;
+  hitRate: number;
+} {
+  const total = routeCacheHits + routeCacheMisses;
+  return {
+    size: routeCache.size,
+    hits: routeCacheHits,
+    misses: routeCacheMisses,
+    hitRate: total === 0 ? 0 : routeCacheHits / total,
+  };
+}
+
+export function clearSchematicRouteCache(): void {
+  routeCache.clear();
+  routeCacheHits = 0;
+  routeCacheMisses = 0;
+}
+
+/**
  * Compute a schematic waypoint list between two ports. Always
  * returns — even in pathological cases (landlocked ports, mask
  * inconsistencies) you get `{waypoints: [dep, arr], routed: false}`,
  * which the frontend can still render as a straight link.
+ *
+ * Cached: identical (dep.id, arr.id) pairs return the prior result
+ * without re-running A*. See ROUTE_CACHE_MAX above.
  */
 export async function computeSchematicRoute(
+  dep: SchematicRoutePort,
+  arr: SchematicRoutePort,
+): Promise<SchematicRoute> {
+  const key = routeCacheKey(dep, arr);
+  if (key !== null) {
+    const cached = routeCache.get(key);
+    if (cached) {
+      // LRU bump: re-insert to mark as most-recently-used.
+      routeCache.delete(key);
+      routeCache.set(key, cached);
+      routeCacheHits++;
+      return cached;
+    }
+    routeCacheMisses++;
+  }
+
+  const result = await computeSchematicRouteUncached(dep, arr);
+
+  if (key !== null) {
+    if (routeCache.size >= ROUTE_CACHE_MAX) {
+      // Evict the oldest entry. Map preserves insertion order, so the
+      // first key in the iterator is the least-recently inserted/bumped.
+      const oldest = routeCache.keys().next().value;
+      if (oldest !== undefined) routeCache.delete(oldest);
+    }
+    routeCache.set(key, result);
+  }
+  return result;
+}
+
+async function computeSchematicRouteUncached(
   dep: SchematicRoutePort,
   arr: SchematicRoutePort,
 ): Promise<SchematicRoute> {
