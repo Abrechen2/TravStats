@@ -16,6 +16,9 @@ interface GeometryFeature {
     fromPortId: number;
     toPortId: number;
     routed: boolean;
+    protectedPrefixCount: number;
+    protectedSuffixCount: number;
+    method: 'short_hop' | 'maritime_graph' | 'coarse_a_star' | 'direct';
   };
 }
 
@@ -54,7 +57,14 @@ async function buildCruiseGeometry(
     features.push({
       type: 'Feature',
       geometry: { type: 'LineString', coordinates: route.waypoints },
-      properties: { fromPortId: a.id, toPortId: b.id, routed: route.routed },
+      properties: {
+        fromPortId: a.id,
+        toPortId: b.id,
+        routed: route.routed,
+        protectedPrefixCount: route.protectedPrefixCount,
+        protectedSuffixCount: route.protectedSuffixCount,
+        method: route.method,
+      },
     });
     if (route.routed) routedLegs++;
     else directLegs++;

@@ -32,6 +32,9 @@ export interface CruiseRouteFeature {
     fromPortId: number;
     toPortId: number;
     routed: boolean;
+    protectedPrefixCount?: number;
+    protectedSuffixCount?: number;
+    method?: "short_hop" | "maritime_graph" | "coarse_a_star" | "direct";
   };
 }
 

@@ -421,9 +421,10 @@ export function DeckGLMap({
       (cruiseId: string) => {
         const cruise = cruises.find((c) => c.id === cruiseId);
         if (cruise) setCruiseSelection(cruise);
-      }
+      },
+      { zoom }
     );
-    const arrows = createCruiseArrowsLayer(cruises, geometryMap, selectedCruiseId);
+    const arrows = createCruiseArrowsLayer(cruises, geometryMap, selectedCruiseId, { zoom });
     const ports = createCruisePortsLayer(cruises);
     const cruiseLayers = [arcs, arrows, ports].filter((l): l is Layer => l !== null);
 

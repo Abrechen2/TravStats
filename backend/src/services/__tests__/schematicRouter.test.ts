@@ -195,13 +195,48 @@ describe('schematicRouter — computeSchematicRoute', () => {
     );
 
     expect(r.routed).toBe(true);
-    expect(r.waypoints.slice(0, 4)).toEqual([
+    expect(r.protectedPrefixCount).toBe(8);
+    expect(r.protectedSuffixCount).toBe(0);
+    expect(r.waypoints.slice(0, 8)).toEqual([
       [9.97, 53.55],
-      [9.52, 53.86],
+      [9.87, 53.54],
+      [9.7, 53.56],
+      [9.5, 53.64],
+      [9.3, 53.74],
+      [9.12, 53.88],
       [8.72, 53.9],
       [8.18, 54.05],
     ]);
     expect(r.waypoints[r.waypoints.length - 1]).toEqual([5.32, 60.39]);
+  });
+
+  it('uses the fixed Hamburg approach in reverse when Hamburg is the arrival port', async () => {
+    setCoarseMaskForTesting(allWaterMask());
+    const r = await computeSchematicRoute(
+      { name: 'Bergen', city: 'Bergen', country: 'Norway', lat: 60.39, lon: 5.32 },
+      {
+        name: 'Hamburg',
+        city: 'Hamburg',
+        country: 'Germany',
+        unlocode: 'DEHAM',
+        lat: 53.55,
+        lon: 9.97,
+      },
+    );
+
+    expect(r.routed).toBe(true);
+    expect(r.protectedPrefixCount).toBe(0);
+    expect(r.protectedSuffixCount).toBe(8);
+    expect(r.waypoints.slice(-8)).toEqual([
+      [8.18, 54.05],
+      [8.72, 53.9],
+      [9.12, 53.88],
+      [9.3, 53.74],
+      [9.5, 53.64],
+      [9.7, 53.56],
+      [9.87, 53.54],
+      [9.97, 53.55],
+    ]);
   });
 });
 

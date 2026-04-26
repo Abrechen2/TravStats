@@ -16,6 +16,23 @@ interface ArrowDatum {
   cruiseId: string;
 }
 
+interface CruiseArcBuildOptions {
+  /**
+   * Rounded map zoom. At close range the layer renders backend
+   * coordinates directly so fixed harbour and river approaches become
+   * more exact as the user zooms in.
+   */
+  zoom?: number;
+}
+
+interface LegGeometry {
+  coordinates: [number, number][];
+  protectedPrefixCount: number;
+  protectedSuffixCount: number;
+}
+
+const EXACT_ROUTE_ZOOM = 8;
+
 /**
  * Per-cruise sea-route waypoints from `GET /api/v1/cruises/:id/geometry`.
  * Map provides one FeatureCollection per visible cruise; missing
@@ -44,7 +61,8 @@ export type CruiseGeometryMap = ReadonlyMap<string, CruiseRouteFeatureCollection
  */
 export function buildCruiseArcs(
   cruises: Cruise[],
-  geometryByCruise: CruiseGeometryMap = new Map()
+  geometryByCruise: CruiseGeometryMap = new Map(),
+  options: CruiseArcBuildOptions = {}
 ): ArcDatum[] {
   const arcs: ArcDatum[] = [];
   for (const cruise of cruises) {
@@ -59,12 +77,16 @@ export function buildCruiseArcs(
       const a = stops[i].port;
       const b = stops[i + 1].port;
       if (!a || !b) continue;
-      const waypoints = waypointsByPair.get(pairKey(a.id, b.id)) ?? [
-        [a.lon, a.lat],
-        [b.lon, b.lat],
-      ];
+      const routeGeometry = waypointsByPair.get(pairKey(a.id, b.id)) ?? {
+        coordinates: [
+          [a.lon, a.lat],
+          [b.lon, b.lat],
+        ] as [number, number][],
+        protectedPrefixCount: 0,
+        protectedSuffixCount: 0,
+      };
       arcs.push({
-        path: catmullRomSpline(waypoints),
+        path: buildRenderableRoutePath(routeGeometry, options),
         cruiseId: cruise.id,
         cruiseLine: cruise.cruiseLine,
       });
@@ -82,9 +104,10 @@ export function createCruiseArcsLayer(
    */
   selectedCruiseId: string | null = null,
   /** Click handler — receives the cruise id. */
-  onCruiseClick?: (cruiseId: string) => void
+  onCruiseClick?: (cruiseId: string) => void,
+  options: CruiseArcBuildOptions = {}
 ): Layer | null {
-  const arcs = buildCruiseArcs(cruises, geometryByCruise);
+  const arcs = buildCruiseArcs(cruises, geometryByCruise, options);
   if (arcs.length === 0) return null;
 
   const hasSelection = selectedCruiseId !== null;
@@ -131,9 +154,10 @@ export function createCruiseArcsLayer(
 export function createCruiseArrowsLayer(
   cruises: Cruise[],
   geometryByCruise: CruiseGeometryMap = new Map(),
-  selectedCruiseId: string | null = null
+  selectedCruiseId: string | null = null,
+  options: CruiseArcBuildOptions = {}
 ): Layer | null {
-  const arcs = buildCruiseArcs(cruises, geometryByCruise);
+  const arcs = buildCruiseArcs(cruises, geometryByCruise, options);
   const arrows: ArrowDatum[] = [];
   for (const arc of arcs) {
     const anchor = pickArrowAnchor(arc.path);
@@ -208,12 +232,59 @@ function pairKey(fromPortId: number, toPortId: number): string {
 
 function buildWaypointIndex(
   geometry: CruiseRouteFeatureCollection | undefined
-): Map<string, [number, number][]> {
-  const index = new Map<string, [number, number][]>();
+): Map<string, LegGeometry> {
+  const index = new Map<string, LegGeometry>();
   if (!geometry) return index;
   for (const feature of geometry.features) {
     const { fromPortId, toPortId } = feature.properties;
-    index.set(pairKey(fromPortId, toPortId), feature.geometry.coordinates);
+    index.set(pairKey(fromPortId, toPortId), {
+      coordinates: feature.geometry.coordinates,
+      protectedPrefixCount: feature.properties.protectedPrefixCount ?? 0,
+      protectedSuffixCount: feature.properties.protectedSuffixCount ?? 0,
+    });
   }
   return index;
+}
+
+function buildRenderableRoutePath(
+  geometry: LegGeometry,
+  options: CruiseArcBuildOptions
+): [number, number][] {
+  const { coordinates } = geometry;
+  if (coordinates.length <= 2) return coordinates.slice();
+  if (typeof options.zoom === "number" && options.zoom >= EXACT_ROUTE_ZOOM) {
+    return coordinates.slice();
+  }
+
+  const prefixCount = clampProtectedCount(geometry.protectedPrefixCount, coordinates.length);
+  const suffixCount = clampProtectedCount(
+    geometry.protectedSuffixCount,
+    coordinates.length - prefixCount
+  );
+  if (prefixCount + suffixCount >= coordinates.length) return coordinates.slice();
+  if (prefixCount === 0 && suffixCount === 0) return catmullRomSpline(coordinates);
+
+  const splineStart = prefixCount > 0 ? prefixCount - 1 : 0;
+  const splineEndExclusive =
+    suffixCount > 0 ? coordinates.length - suffixCount + 1 : coordinates.length;
+  const splineInput = coordinates.slice(splineStart, splineEndExclusive);
+  const smoothedMiddle = catmullRomSpline(splineInput);
+  const out: [number, number][] = [];
+
+  for (let i = 0; i < prefixCount; i++) appendPathPoint(out, coordinates[i]);
+  for (const point of smoothedMiddle) appendPathPoint(out, point);
+  for (let i = coordinates.length - suffixCount; i < coordinates.length; i++) {
+    appendPathPoint(out, coordinates[i]);
+  }
+  return out;
+}
+
+function clampProtectedCount(count: number, max: number): number {
+  if (!Number.isFinite(count)) return 0;
+  return Math.max(0, Math.min(max, Math.floor(count)));
+}
+
+function appendPathPoint(out: [number, number][], point: [number, number]): void {
+  const prev = out[out.length - 1];
+  if (!prev || prev[0] !== point[0] || prev[1] !== point[1]) out.push(point);
 }
