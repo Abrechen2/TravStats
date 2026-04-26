@@ -142,8 +142,26 @@ describe("CruiseBookingParser", () => {
     expect(cruise.shipName).toBe("Test Ship");
   });
 
-  it("throws when Ollama returns a non-array payload", async () => {
+  it("throws when Ollama returns a payload that doesn't unwrap to a cruise array", async () => {
     mock.setResponse({ response: "{\"oops\":true}" });
-    await expect(parser.parseText("…")).rejects.toThrow(/No JSON array found/);
+    await expect(parser.parseText("…")).rejects.toThrow(/cruise array/);
+  });
+
+  it("unwraps a top-level object with a 'cruises' wrapper key (format:json mode)", async () => {
+    mock.setResponse({
+      response: JSON.stringify({
+        cruises: [{ shipName: "Mein Schiff 5", startDate: "2026-05-01", endDate: "2026-05-08", stops: [] }],
+      }),
+    });
+    const [cruise] = await parser.parseText("…");
+    expect(cruise.shipName).toBe("Mein Schiff 5");
+  });
+
+  it("treats a single-cruise object as a length-1 array", async () => {
+    mock.setResponse({
+      response: JSON.stringify({ shipName: "Solo Ship", startDate: "2026-07-01", endDate: "2026-07-08", stops: [] }),
+    });
+    const [cruise] = await parser.parseText("…");
+    expect(cruise.shipName).toBe("Solo Ship");
   });
 });

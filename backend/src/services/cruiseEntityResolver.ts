@@ -25,6 +25,18 @@ function normalize(value: string): string {
 }
 
 /**
+ * TUI itineraries spell ports like "Bayonne (New York)" or "Sydney
+ * (Neuschottland)" — parens hold the region/country. Try the bare leading
+ * portion first; the suffix becomes a country/region hint via the second
+ * pass. Returns [bare, hint] (hint may be undefined).
+ */
+function splitParenSuffix(name: string): [string, string | undefined] {
+  const m = name.match(/^([^(]+?)\s*\(([^)]+)\)\s*$/);
+  if (!m) return [name.trim(), undefined];
+  return [m[1].trim(), m[2].trim()];
+}
+
+/**
  * Score how well a candidate string matches a needle. Higher = better.
  * 100 = exact, 80 = startsWith, 60 = contains, 0 = no match.
  */
@@ -92,18 +104,23 @@ function findBestPort(
 ): PortCandidate | null {
   if (!needle.name && !needle.city) return null;
 
+  // Pre-strip "X (Y)" → use X as primary needle, Y as country/region hint.
+  const [bareName, parenHint] = needle.name ? splitParenSuffix(needle.name) : [undefined, undefined];
+  const country = needle.country ?? parenHint;
+
   let best: { score: number; port: PortCandidate | null } = { score: 0, port: null };
   for (const port of candidates) {
     let score = 0;
-    if (needle.name) {
-      score = Math.max(score, similarity(needle.name, port.name));
-      if (port.city) score = Math.max(score, similarity(needle.name, port.city));
+    if (bareName) {
+      score = Math.max(score, similarity(bareName, port.name));
+      if (port.city) score = Math.max(score, similarity(bareName, port.city));
     }
     if (needle.city && port.city) {
       score = Math.max(score, similarity(needle.city, port.city));
     }
-    // Country acts as a tiebreaker.
-    if (needle.country && port.country && similarity(needle.country, port.country) >= 80) {
+    // Country / region acts as a tiebreaker. Use either the explicit country
+    // field or the paren-hint pulled from "Sydney (Neuschottland)".
+    if (country && port.country && similarity(country, port.country) >= 60) {
       score += 5;
     }
     if (score > best.score) best = { score, port };
