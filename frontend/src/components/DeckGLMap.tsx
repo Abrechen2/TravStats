@@ -143,25 +143,27 @@ export function DeckGLMap({
   useEffect(() => {
     if (cruises.length === 0) return;
     let cancelled = false;
-    // Serial fetch to keep the backend A* runs from spiking when a user
-    // lands on a page with many cruises. Each row lands in state as it
-    // resolves so the map paints the first routes immediately.
+    // Single batch round-trip for all cruise geometries. Server returns
+    // a {[id]: FeatureCollection} map; we merge into local state. The
+    // server cache makes repeat calls (mode switches, refilters) cheap.
+    // Anything already in state is filtered out so we never re-fetch.
     const run = async (): Promise<void> => {
-      for (const cruise of cruises) {
+      const missingIds = cruises
+        .map((c) => c.id)
+        .filter((id) => !cruiseGeometryRef.current.has(id));
+      if (missingIds.length === 0) return;
+      try {
+        const batch = await cruiseApi.getGeometryBatch(missingIds);
         if (cancelled) return;
-        if (cruiseGeometryRef.current.has(cruise.id)) continue;
-        try {
-          const fc = await cruiseApi.getGeometry(cruise.id);
-          if (cancelled) return;
-          setCruiseGeometry((prev) => {
-            if (prev.has(cruise.id)) return prev;
-            const next = new Map(prev);
-            next.set(cruise.id, fc);
-            return next;
-          });
-        } catch {
-          // Swallow — interceptor handles logging. Bezier fallback remains.
-        }
+        setCruiseGeometry((prev) => {
+          const next = new Map(prev);
+          for (const [id, fc] of batch.entries()) {
+            if (!next.has(id)) next.set(id, fc);
+          }
+          return next;
+        });
+      } catch {
+        // Swallow — interceptor handles logging. Bezier fallback remains.
       }
     };
     void run();

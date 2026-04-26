@@ -55,6 +55,20 @@ export const cruiseApi = {
     );
     return data.data;
   },
+  /**
+   * Batch geometry fetch for the dashboard. Replaces N sequential GETs with
+   * a single POST. Cruises the user does not own are silently omitted from
+   * the result. Server caches per-port-pair routes in memory, so repeated
+   * calls (and overlapping legs across cruises) are essentially free.
+   */
+  getGeometryBatch: async (ids: string[]): Promise<Map<string, CruiseRouteFeatureCollection>> => {
+    if (ids.length === 0) return new Map();
+    const { data } = await api.post<Envelope<Record<string, CruiseRouteFeatureCollection>>>(
+      "/cruises/geometry/batch",
+      { ids }
+    );
+    return new Map(Object.entries(data.data));
+  },
   create: async (input: CruiseInput): Promise<Cruise> => {
     const { data } = await api.post<Envelope<Cruise>>("/cruises", input);
     return data.data;
