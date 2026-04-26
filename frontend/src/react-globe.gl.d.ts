@@ -4,6 +4,7 @@ declare module "react-globe.gl" {
   interface GlobeProps {
     ref?: any;
     globeImageUrl?: string;
+    globeMaterial?: unknown;
     backgroundImageUrl?: string | null;
     bumpImageUrl?: string;
     arcsData?: any[];
