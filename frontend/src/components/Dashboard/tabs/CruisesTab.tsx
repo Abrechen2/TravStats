@@ -101,8 +101,13 @@ export function CruisesTab(): JSX.Element {
     return [buildPortFrequencyLayer(cruises)];
   }, [cruises, mode]);
 
-  const extraLayers =
-    mode === "itinerary" ? itineraryLayers : mode === "port-frequency" ? portFrequencyLayers : [];
+  // Stable empty-array fallback so DeckGLMap's layer useMemo doesn't see a
+  // fresh reference on every render and re-build all layers downstream.
+  const extraLayers = useMemo<Layer[]>(
+    () =>
+      mode === "itinerary" ? itineraryLayers : mode === "port-frequency" ? portFrequencyLayers : [],
+    [mode, itineraryLayers, portFrequencyLayers]
+  );
 
   // In port-frequency mode, suppress the internal cruise arcs so the
   // frequency markers are not obscured by route overlays.

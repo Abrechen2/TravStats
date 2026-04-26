@@ -22,7 +22,8 @@ export function FlightEntry({
 }: FlightEntryProps): JSX.Element {
   const [hovered, setHovered] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
-  const { selectedIds, setSelection } = useFlightSelectionStore();
+  const selectedIds = useFlightSelectionStore((s) => s.selectedIds);
+  const setSelection = useFlightSelectionStore((s) => s.setSelection);
   const { i18n } = useTranslation(["common"]);
   const isSelected = selectedIds.includes(flight.id);
 
