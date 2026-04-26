@@ -130,6 +130,7 @@ export default function MapContainer3D({
           >
             <GlobeView
               flights={flights}
+              cruises={cruises}
               onFlightClick={onFlightClick}
               minRouteCount={minRouteCount}
             />

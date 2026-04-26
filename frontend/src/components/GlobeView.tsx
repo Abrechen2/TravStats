@@ -1,15 +1,46 @@
 import { useEffect, useRef, useMemo, useState, useCallback } from "react";
 import Globe from "react-globe.gl";
 import type { GeoJSONFeature } from "../types";
+import type { Cruise } from "../types/cruise";
 import { useThemeStore } from "../store/themeStore";
 import { escapeHtml } from "../lib/escapeHtml";
 import { useTranslation } from "../hooks/useTranslation";
+import { DOMAINS } from "../shared/domains";
 
 interface GlobeViewProps {
   flights: GeoJSONFeature[];
+  cruises?: Cruise[];
   selectedFlightId?: string;
   onFlightClick?: (flightId: string) => void;
   minRouteCount?: number;
+}
+
+const CRUISE_HEX_RGB = ((): { r: number; g: number; b: number } => {
+  const hex = DOMAINS.cruise.color.replace("#", "");
+  return {
+    r: parseInt(hex.slice(0, 2), 16),
+    g: parseInt(hex.slice(2, 4), 16),
+    b: parseInt(hex.slice(4, 6), 16),
+  };
+})();
+const CRUISE_ARC_COLOR = `rgba(${CRUISE_HEX_RGB.r}, ${CRUISE_HEX_RGB.g}, ${CRUISE_HEX_RGB.b}, 0.85)`;
+const CRUISE_PORT_COLOR = `rgba(${CRUISE_HEX_RGB.r}, ${CRUISE_HEX_RGB.g}, ${CRUISE_HEX_RGB.b}, 0.95)`;
+
+interface CruiseArcDatum {
+  type: "cruise";
+  startLat: number;
+  startLng: number;
+  endLat: number;
+  endLng: number;
+  altitude: number;
+  cruiseId: string;
+  cruiseLabel: string;
+  fromPort: string;
+  toPort: string;
+}
+
+interface CombinedArcDatum {
+  type: "flight" | "cruise";
 }
 
 const createRouteKey = (airportA: string, airportB: string): string =>
@@ -88,6 +119,7 @@ type GlobeInstance = {
 };
 
 interface ArcData {
+  type: "flight";
   startLat: number;
   startLng: number;
   endLat: number;
@@ -110,6 +142,7 @@ interface PointData {
 
 export default function GlobeView({
   flights = [],
+  cruises = [],
   onFlightClick,
   minRouteCount = 1,
 }: GlobeViewProps): JSX.Element {
@@ -214,9 +247,10 @@ export default function GlobeView({
     const counts = Array.from(routeMap.values()).map((r) => r.count);
     const thresholds = calculateHeatmapThresholds(counts);
 
-    const arcs = Array.from(routeMap.values())
+    const arcs: ArcData[] = Array.from(routeMap.values())
       .filter((route) => route.count >= minRouteCount)
       .map((route) => ({
+        type: "flight" as const,
         count: route.count,
         startLat: route.startLat,
         startLng: route.startLng,
@@ -231,6 +265,68 @@ export default function GlobeView({
 
     return { arcsData: arcs, heatmapThresholds: thresholds };
   }, [flights, minRouteCount]);
+
+  // Cruise arcs: one per consecutive port-pair across all cruises. Sea-day
+  // and unmatched stops are skipped. Distinct from flight arcs both visually
+  // (sky-blue, dashed) and structurally (no heatmap bucketing — they all
+  // get the same treatment, count would be misleading because most cruises
+  // are unique routings rather than repeats of the same route).
+  const cruiseArcsData = useMemo<CruiseArcDatum[]>(() => {
+    const out: CruiseArcDatum[] = [];
+    for (const c of cruises) {
+      const orderedStops = c.stops
+        .filter((s) => !s.isAtSea && s.port !== null)
+        .map((s) => s.port!) as Array<{ id: number; name: string; lat: number; lon: number }>;
+      const label = c.ship?.name ?? c.shipNameOverride ?? c.cruiseLine ?? "Cruise";
+      for (let i = 0; i < orderedStops.length - 1; i++) {
+        const a = orderedStops[i];
+        const b = orderedStops[i + 1];
+        out.push({
+          type: "cruise",
+          startLat: a.lat,
+          startLng: a.lon,
+          endLat: b.lat,
+          endLng: b.lon,
+          altitude: getStaticArcAltitude(a.lat, a.lon, b.lat, b.lon) * 0.6, // flatter than flight arcs
+          cruiseId: c.id,
+          cruiseLabel: label,
+          fromPort: a.name,
+          toPort: b.name,
+        });
+      }
+    }
+    return out;
+  }, [cruises]);
+
+  // Distinct port markers across all cruises so popular embarkation ports
+  // (Hamburg, Civitavecchia, …) get a single dot rather than one per cruise.
+  const cruisePointsData = useMemo<PointData[]>(() => {
+    const portMap = new Map<number, PointData>();
+    for (const c of cruises) {
+      for (const s of c.stops) {
+        if (s.isAtSea || !s.port) continue;
+        const port = s.port;
+        const existing = portMap.get(port.id);
+        if (existing) {
+          existing.size++;
+        } else {
+          portMap.set(port.id, {
+            lat: port.lat,
+            lng: port.lon,
+            name: port.name,
+            code: port.unlocode ?? port.name,
+            size: 1,
+          });
+        }
+      }
+    }
+    return Array.from(portMap.values());
+  }, [cruises]);
+
+  // Merge flight + cruise arcs into a single arrays for the Globe component
+  // (it only accepts one arcsData prop). Type discriminator drives per-arc
+  // styling functions below.
+  const allArcsData = useMemo(() => [...arcsData, ...cruiseArcsData], [arcsData, cruiseArcsData]);
 
   const pointsData = useMemo(() => {
     const airportMap = new Map<string, PointData>();
@@ -285,20 +381,55 @@ export default function GlobeView({
   }, [flights]);
 
   const arcLabel = useCallback(
-    (arc: ArcData): string => `
-      <div style="background:rgba(0,0,0,0.8);color:white;padding:8px 12px;border-radius:6px;font-family:system-ui;font-size:12px;">
-        <div style="font-weight:bold;margin-bottom:4px;">
-          ${escapeHtml(arc.departure?.iata ?? "UNK")} ↔ ${escapeHtml(arc.arrival?.iata ?? "UNK")}
+    (arc: CombinedArcDatum): string => {
+      if (arc.type === "cruise") {
+        const c = arc as CruiseArcDatum;
+        return `
+          <div style="background:rgba(0,0,0,0.8);color:white;padding:8px 12px;border-radius:6px;font-family:system-ui;font-size:12px;">
+            <div style="font-weight:bold;margin-bottom:4px;">
+              🚢 ${escapeHtml(c.cruiseLabel)}
+            </div>
+            <div style="font-size:11px;opacity:0.9;">
+              ${escapeHtml(c.fromPort)} → ${escapeHtml(c.toPort)}
+            </div>
+          </div>
+        `;
+      }
+      const f = arc as ArcData;
+      return `
+        <div style="background:rgba(0,0,0,0.8);color:white;padding:8px 12px;border-radius:6px;font-family:system-ui;font-size:12px;">
+          <div style="font-weight:bold;margin-bottom:4px;">
+            ${escapeHtml(f.departure?.iata ?? "UNK")} ↔ ${escapeHtml(f.arrival?.iata ?? "UNK")}
+          </div>
+          <div style="font-size:11px;opacity:0.9;margin-bottom:6px;">
+            ${escapeHtml(f.departure?.name ?? "Unknown")} ↔ ${escapeHtml(f.arrival?.name ?? "Unknown")}
+          </div>
+          <div style="color:${f.color};">
+            ${t("map:globe.timesFlown", { count: f.count })}
+          </div>
         </div>
-        <div style="font-size:11px;opacity:0.9;margin-bottom:6px;">
-          ${escapeHtml(arc.departure?.name ?? "Unknown")} ↔ ${escapeHtml(arc.arrival?.name ?? "Unknown")}
-        </div>
-        <div style="color:${arc.color};">
-          ${t("map:globe.timesFlown", { count: arc.count })}
-        </div>
-      </div>
-    `,
+      `;
+    },
     [t]
+  );
+
+  // Smooth fly-to on arc click. Compute the geographic mid-point of the arc
+  // and zoom in so the user sees the full route without jarring teleport.
+  const flyToArc = useCallback(
+    (startLat: number, startLng: number, endLat: number, endLng: number): void => {
+      if (!globeRef.current) return;
+      const midLat = (startLat + endLat) / 2;
+      // Wrap-around handling: pick the shorter longitude path so a Pacific
+      // route doesn't camera-pan the long way around.
+      const lngDiff = endLng - startLng;
+      const adjustedEnd = lngDiff > 180 ? endLng - 360 : lngDiff < -180 ? endLng + 360 : endLng;
+      const midLng = (startLng + adjustedEnd) / 2;
+      const distance = calculateDistance(startLat, startLng, endLat, endLng);
+      // Bigger arcs zoom out further so both endpoints stay framed.
+      const altitude = Math.max(0.8, Math.min(2.5, distance / 5000));
+      globeRef.current.pointOfView({ lat: midLat, lng: midLng, altitude }, 1500);
+    },
+    []
   );
 
   const pointLabel = useCallback(
@@ -385,26 +516,49 @@ export default function GlobeView({
         globeImageUrl="/earth-night.jpg"
         bumpImageUrl="/earth-topology.png"
         backgroundImageUrl="/night-sky.png"
-        arcsData={arcsData}
-        arcColor={(arc: ArcData) => arc.color}
+        arcsData={allArcsData}
+        arcColor={(arc: CombinedArcDatum) =>
+          arc.type === "cruise" ? CRUISE_ARC_COLOR : (arc as ArcData).color
+        }
         arcStroke={dynamicStroke}
         arcStrokeOpacity={0.6}
-        arcAltitude={(arc: ArcData) => arc.altitude}
+        arcAltitude={(arc: CombinedArcDatum) => (arc as ArcData | CruiseArcDatum).altitude}
         arcCurveResolution={64}
-        arcDashLength={1}
-        arcDashGap={0}
-        arcDashInitialGap={() => 0}
+        // Animated dash flow: short bright dash sliding along each arc gives
+        // a "plane trail / current" feel. Cruises run slower (longer cycle)
+        // to read as ship traffic vs. air traffic.
+        arcDashLength={0.4}
+        arcDashGap={0.2}
+        arcDashInitialGap={(arc: CombinedArcDatum) =>
+          // Stagger initial offset by latitude so multiple arcs don't pulse
+          // in lockstep — produces a much livelier idle map.
+          ((arc as ArcData | CruiseArcDatum).startLat + 90) / 180
+        }
+        arcDashAnimateTime={(arc: CombinedArcDatum) => (arc.type === "cruise" ? 7000 : 4000)}
         arcLabel={arcLabel}
-        onArcClick={(arc: ArcData) => {
-          if (onFlightClick && arc.flights.length > 0) {
-            const mostRecentFlight = arc.flights[arc.flights.length - 1];
-            onFlightClick(mostRecentFlight.properties.id);
+        onArcClick={(arc: CombinedArcDatum) => {
+          const a = arc as ArcData | CruiseArcDatum;
+          // Smooth POV transition first — feels like a polished travel app.
+          flyToArc(a.startLat, a.startLng, a.endLat, a.endLng);
+          if (arc.type === "flight") {
+            const f = arc as ArcData;
+            if (onFlightClick && f.flights.length > 0) {
+              const mostRecentFlight = f.flights[f.flights.length - 1];
+              onFlightClick(mostRecentFlight.properties.id);
+            }
           }
         }}
-        pointsData={pointsData}
+        pointsData={[
+          ...pointsData.map((p) => ({ ...p, _kind: "airport" as const })),
+          ...cruisePointsData.map((p) => ({ ...p, _kind: "port" as const })),
+        ]}
         pointLat="lat"
         pointLng="lng"
-        pointColor={() => (isDarkMode ? "#fbbf24" : "#f59e0b")}
+        pointColor={(point: object) => {
+          const p = point as PointData & { _kind: "airport" | "port" };
+          if (p._kind === "port") return CRUISE_PORT_COLOR;
+          return isDarkMode ? "#fbbf24" : "#f59e0b";
+        }}
         pointAltitude={0.01}
         pointRadius={(point: object) => {
           const p = point as PointData;

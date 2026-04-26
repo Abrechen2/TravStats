@@ -8,10 +8,11 @@ declare module "react-globe.gl" {
     bumpImageUrl?: string;
     arcsData?: any[];
     arcColor?: string | ((arc: any) => string);
-    arcDashLength?: number;
-    arcDashGap?: number;
-    arcDashInitialGap?: number | (() => number);
-    arcDashAnimateTime?: number;
+    arcDashLength?: number | ((arc: any) => number);
+    arcDashGap?: number | ((arc: any) => number);
+    arcDashInitialGap?: number | ((arc: any) => number);
+    arcDashAnimateTime?: number | ((arc: any) => number);
+    arcStrokeOpacity?: number | ((arc: any) => number);
     arcStroke?: number;
     arcAltitude?: number | ((arc: any) => number);
     arcCurveResolution?: number;
