@@ -2,7 +2,7 @@ import React, { lazy, Suspense, useState, useMemo, useEffect } from "react";
 import { DeckGLMap } from "./DeckGLMap";
 import { GlobeLoader } from "./GlobeLoader";
 import { VisModeSelector } from "./VisModeSelector";
-import type { Cruise, GeoJSONFeature, Flight, Trip } from "../types";
+import type { Cruise, GeoJSONFeature, Flight } from "../types";
 import type { Layer } from "@deck.gl/core";
 
 /**
@@ -13,7 +13,7 @@ export type MapMode = "routes" | "heatmap" | "trips" | "globe";
 import { useTranslation } from "../hooks/useTranslation";
 import { useThemeStore } from "../store/themeStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
-import { cruiseApi, tripsApi } from "../lib/api";
+import { cruiseApi } from "../lib/api";
 
 // Hold the branded Suspense fallback for at least 2 s on first mount so
 // the GlobeLoader doesn't just flash by. React.lazy caches the resolved
@@ -36,7 +36,6 @@ interface MapContainer3DProps {
   onVisModeChange: (mode: MapMode) => void;
   minRouteCount?: number;
   filterSlot?: React.ReactNode;
-  activeTripId?: string | null;
   onResetTrip?: () => void;
   /** Extra deck.gl layers appended after all internally-built layers. */
   extraLayers?: Layer[];
@@ -66,7 +65,6 @@ export default function MapContainer3D({
   onVisModeChange,
   minRouteCount = 1,
   filterSlot,
-  activeTripId,
   onResetTrip,
   extraLayers,
   showInternalCruises = true,
@@ -77,20 +75,7 @@ export default function MapContainer3D({
   const { enabled: enabledDomains } = useEnabledDomains();
   const cruiseEnabled = enabledDomains.includes("cruise");
   const [fabOpen, setFabOpen] = useState(false);
-  const [tripList, setTripList] = useState<Trip[]>([]);
   const [cruises, setCruises] = useState<Cruise[]>([]);
-
-  useEffect(() => {
-    const loadTrips = async (): Promise<void> => {
-      try {
-        const data = await tripsApi.getAll();
-        setTripList(data);
-      } catch {
-        // Non-critical — map still works without trips
-      }
-    };
-    void loadTrips();
-  }, []);
 
   // Fetch cruises as supplemental map overlay. User hides by disabling
   // the cruise domain in settings — no per-layer toggle in V1. Depends
@@ -153,14 +138,12 @@ export default function MapContainer3D({
           <DeckGLMap
             flights={flights}
             flightList={flightList}
-            tripList={tripList.map((t) => ({ id: t.id, color: t.color }))}
             cruises={cruises}
             onFlightClick={onFlightClick}
             onRouteClick={onRouteClick}
             onEdit={onEdit}
             visMode={visMode}
             minRouteCount={minRouteCount}
-            activeTripId={activeTripId}
             onResetTrip={onResetTrip}
             extraLayers={extraLayers}
             flightRouteColor={flightRouteColor}

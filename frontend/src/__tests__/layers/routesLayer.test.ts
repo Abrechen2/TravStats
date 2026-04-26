@@ -70,13 +70,15 @@ describe("buildRouteData", () => {
 });
 
 describe("createRoutesLayers", () => {
+  const routeData = buildRouteData([mockFlight], 1);
+
   it("returns 5 layers: arc, ring-inner, ring-outer, dot, labels", () => {
-    const layers = createRoutesLayers([mockFlight], 1);
+    const layers = createRoutesLayers(routeData);
     expect(layers).toHaveLength(5);
   });
 
   it("layer ids include routes-ring-inner and routes-ring-outer", () => {
-    const layers = createRoutesLayers([mockFlight], 1);
+    const layers = createRoutesLayers(routeData);
     const ids = layers.map((l) => l.id);
     expect(ids).toContain("routes-ring-inner");
     expect(ids).toContain("routes-ring-outer");

@@ -7,14 +7,23 @@ import type { Flight } from "../../types";
 vi.mock("../../store/flightSelectionStore", () => {
   const setSelection = vi.fn();
   const clearSelection = vi.fn();
+  const showDetails = vi.fn();
+  const state = {
+    selectedIds: [] as string[],
+    selectedFlights: [],
+    highlightMode: null,
+    detailMode: null,
+    setSelection,
+    clearSelection,
+    showDetails,
+  };
+  // Components migrated from `useStore()` to `useStore(selector)` for perf.
+  // The mock applies the selector when one is passed (new call sites) and
+  // returns the whole state otherwise (back-compat for any older usage).
   return {
-    useFlightSelectionStore: vi.fn(() => ({
-      selectedIds: [],
-      selectedFlights: [],
-      highlightMode: null,
-      setSelection,
-      clearSelection,
-    })),
+    useFlightSelectionStore: vi.fn(<T,>(selector?: (s: typeof state) => T) =>
+      selector ? selector(state) : state
+    ),
   };
 });
 

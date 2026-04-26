@@ -76,6 +76,14 @@ export function buildRouteData(
   const { q25, q50, q75 } = calcQuantiles(counts.length > 0 ? counts : [0]);
   const arcMap = new Map<string, ArcDatum>();
 
+  // Pre-build flightId -> status lookup so the per-route status check below
+  // is O(1) per flight instead of O(F) per lookup. The previous .every()
+  // over route flights × .some() over the full flights array was O(F²)
+  // — measurable on the demo account (~160 flights = ~128k comparisons
+  // per render). With a Map this collapses to a single linear pass.
+  const statusById = new Map<string, string | undefined>();
+  for (const f of flights) statusById.set(f.properties.id, f.properties.status);
+
   for (const f of flights) {
     const dep = f.properties.departureAirport;
     const arr = f.properties.arrivalAirport;
@@ -88,12 +96,8 @@ export function buildRouteData(
 
     // Check if all flights on this route are scheduled (future/planned)
     const flightIdsForRoute = routeFlightIds.get(key) ?? [];
-    const allScheduled = flightIdsForRoute.every((fid) =>
-      flights.some((fl) => fl.properties.id === fid && fl.properties.status === "scheduled")
-    );
-    const allHistorical = flightIdsForRoute.every((fid) =>
-      flights.some((fl) => fl.properties.id === fid && fl.properties.status === "historical")
-    );
+    const allScheduled = flightIdsForRoute.every((fid) => statusById.get(fid) === "scheduled");
+    const allHistorical = flightIdsForRoute.every((fid) => statusById.get(fid) === "historical");
 
     // Scheduled-only routes: dashed cyan/teal; historical: grey; mixed/flown: normal heatmap color.
     // When a paletteOverride is active, collapse all three branches
@@ -131,17 +135,22 @@ const HIGHLIGHT_COLOR: [number, number, number, number] = [245, 158, 11, 255];
 // How many alpha units to keep for dimmed routes (out of 255)
 const DIM_ALPHA = 18;
 
+/**
+ * Build the deck.gl layer instances for routes mode from already-computed
+ * arc + point data. Caller is expected to memoize buildRouteData()'s output
+ * separately with stable deps (flights / minRouteCount / themeColors /
+ * paletteOverride) so selection changes don't re-trigger the expensive
+ * data build — only the layer construction below, which is cheap.
+ */
 export function createRoutesLayers(
-  flights: GeoJSONFeature[],
-  minRouteCount: number,
+  routeData: { arcs: ArcDatum[]; points: PointDatum[] },
   onFlightClick?: (flightId: string | string[]) => void,
   themeColors?: MapLayerColors,
   arcHeight: number = 1,
   selectedIds: string[] = [],
-  onAirportClick?: (iata: string, lon: number, lat: number) => void,
-  paletteOverride?: [number, number, number]
+  onAirportClick?: (iata: string, lon: number, lat: number) => void
 ): Layer[] {
-  const { arcs, points } = buildRouteData(flights, minRouteCount, themeColors, paletteOverride);
+  const { arcs, points } = routeData;
   const dotRgb = themeColors?.airportDot ?? ([232, 160, 69] as [number, number, number]);
 
   const selectedSet = new Set(selectedIds);

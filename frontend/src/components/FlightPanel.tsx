@@ -85,7 +85,9 @@ export function FlightPanel({
     }
     return grouped;
   }, [flights, sortMode]);
-  const { detailMode, selectedFlights: detailFlights, clearSelection } = useFlightSelectionStore();
+  const detailMode = useFlightSelectionStore((s) => s.detailMode);
+  const detailFlights = useFlightSelectionStore((s) => s.selectedFlights);
+  const clearSelection = useFlightSelectionStore((s) => s.clearSelection);
 
   const [trips, setTrips] = useState<Trip[]>([]);
 

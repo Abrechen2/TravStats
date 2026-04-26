@@ -5,7 +5,7 @@ import { LightingEffect } from "@deck.gl/core";
 import type { Layer, MapViewState } from "@deck.gl/core";
 import type { Cruise, GeoJSONFeature, Flight } from "../types";
 import type { MapMode } from "./MapContainer3D";
-import { createRoutesLayers } from "./layers/routesLayer";
+import { buildRouteData, createRoutesLayers } from "./layers/routesLayer";
 import { createHeatmapLayer } from "./layers/heatmapLayer";
 import { createTripsLayer, buildTripsData, getTimeRange } from "./layers/tripsLayer";
 import {
@@ -81,9 +81,7 @@ interface DeckGLMapProps {
   onFlightClick?: (flightId: string) => void;
   onRouteClick?: (flightIds: string[]) => void;
   onEdit?: (flight: Flight) => void;
-  tripList?: Array<{ id: string; color: string }>;
   flightList?: Flight[];
-  activeTripId?: string | null;
   onResetTrip?: () => void;
   cruises?: Cruise[];
   /** Extra deck.gl layers appended after all internally-built layers. */
@@ -100,9 +98,7 @@ export function DeckGLMap({
   onFlightClick,
   onRouteClick,
   onEdit,
-  tripList,
   flightList,
-  activeTripId,
   onResetTrip,
   cruises = [],
   extraLayers,
@@ -172,9 +168,14 @@ export function DeckGLMap({
     };
   }, [cruises]);
 
-  // Store subscription
-  const { selectedIds, selectedFlights, highlightMode, clearSelection, showDetails } =
-    useFlightSelectionStore();
+  // Per-field selectors. Bare `useFlightSelectionStore()` would re-render
+  // the map on every field change in the store; with selectors we only
+  // re-render when the specific field this component reads changes.
+  const selectedIds = useFlightSelectionStore((s) => s.selectedIds);
+  const selectedFlights = useFlightSelectionStore((s) => s.selectedFlights);
+  const highlightMode = useFlightSelectionStore((s) => s.highlightMode);
+  const clearSelection = useFlightSelectionStore((s) => s.clearSelection);
+  const showDetails = useFlightSelectionStore((s) => s.showDetails);
   const selectedCruiseId = useCruiseSelectionStore((s) => s.selectedCruiseId);
   const selectedCruise = useCruiseSelectionStore((s) => s.selectedCruise);
   const setCruiseSelection = useCruiseSelectionStore((s) => s.setSelection);
@@ -276,39 +277,13 @@ export function DeckGLMap({
 
   const moveRafRef = useRef<number | null>(null);
 
-  // Bucketed current zoom, used by createCruiseArcsLayer to pick a
-  // Douglas-Peucker tolerance. We snap the live (fractional) zoom to
-  // a coarse bucket so we only re-simplify when the user crosses a
-  // display-scale boundary — not on every pixel of pan / zoom drift.
-  const [zoomBucket, setZoomBucket] = useState<number>(3);
-
-  /**
-   * Convert a live zoom value to the representative bucket centre used
-   * by `toleranceKmForZoom`. Keep this in sync with the tolerance
-   * table in shared/geo/simplifyLineString.ts.
-   */
-  const bucketForZoom = useCallback((zoom: number): number => {
-    if (zoom <= 3) return 3;
-    if (zoom <= 6) return 6;
-    if (zoom <= 9) return 9;
-    return 10;
-  }, []);
-
-  const handleMapMove = useCallback(
-    (evt: { viewState?: { zoom?: number } } | undefined) => {
-      const currentZoom = evt?.viewState?.zoom;
-      if (typeof currentZoom === "number") {
-        const next = bucketForZoom(currentZoom);
-        setZoomBucket((prev) => (prev === next ? prev : next));
-      }
-      if (moveRafRef.current !== null) return; // already scheduled
-      moveRafRef.current = requestAnimationFrame(() => {
-        moveRafRef.current = null;
-        recomputeAllPositions();
-      });
-    },
-    [recomputeAllPositions, bucketForZoom]
-  );
+  const handleMapMove = useCallback(() => {
+    if (moveRafRef.current !== null) return; // already scheduled
+    moveRafRef.current = requestAnimationFrame(() => {
+      moveRafRef.current = null;
+      recomputeAllPositions();
+    });
+  }, [recomputeAllPositions]);
 
   useEffect(() => {
     return () => {
@@ -386,19 +361,26 @@ export function DeckGLMap({
     [clearSelection]
   );
 
+  // Heavy data build extracted from the layer useMemo so selection changes
+  // (which only need to re-style the existing arcs) don't re-aggregate
+  // flights into routes. Deps are deliberately limited to fields that
+  // actually affect arc/point geometry + base color.
+  const routeData = useMemo(
+    () => buildRouteData(flights, minRouteCount, themeColors, flightRouteColor),
+    [flights, minRouteCount, themeColors, flightRouteColor]
+  );
+
   const layers = useMemo((): Layer[] => {
     let base: Layer[];
     switch (visMode) {
       case "routes":
         base = createRoutesLayers(
-          flights,
-          minRouteCount,
+          routeData,
           handleFlightClick,
           themeColors,
           0.3,
           selectedIds,
-          handleAirportClick,
-          flightRouteColor
+          handleAirportClick
         );
         break;
       case "heatmap":
@@ -436,22 +418,17 @@ export function DeckGLMap({
   }, [
     visMode,
     flights,
-    minRouteCount,
+    routeData,
     trips,
-    tripList,
-    flightList,
-    activeTripId,
     currentTime,
     handleFlightClick,
     handleAirportClick,
     themeColors,
-    flightRouteColor,
     selectedIds,
     selectedCruiseId,
     setCruiseSelection,
     cruises,
     cruiseGeometry,
-    zoomBucket,
     extraLayers,
   ]);
 
