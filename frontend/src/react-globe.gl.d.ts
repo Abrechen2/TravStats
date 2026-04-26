@@ -14,6 +14,21 @@ declare module "react-globe.gl" {
     arcDashInitialGap?: number | ((arc: any) => number);
     arcDashAnimateTime?: number | ((arc: any) => number);
     arcStrokeOpacity?: number | ((arc: any) => number);
+    pathsData?: any[];
+    pathPoints?:
+      | string
+      | ((path: any) => Array<[number, number]> | Array<{ lat: number; lng: number }>);
+    pathPointLat?: string | ((point: any) => number);
+    pathPointLng?: string | ((point: any) => number);
+    pathPointAlt?: number | string | ((point: any) => number);
+    pathColor?: string | ((path: any) => string | string[]);
+    pathStroke?: number | ((path: any) => number);
+    pathDashLength?: number | ((path: any) => number);
+    pathDashGap?: number | ((path: any) => number);
+    pathDashAnimateTime?: number | ((path: any) => number);
+    pathLabel?: string | ((path: any) => string);
+    onPathClick?: (path: any) => void;
+    pathTransitionDuration?: number;
     arcStroke?: number;
     arcAltitude?: number | ((arc: any) => number);
     arcCurveResolution?: number;
