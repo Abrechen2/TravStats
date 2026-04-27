@@ -14,6 +14,13 @@ jest.mock("../services/emailService", () => ({
   sendFlightReminder: mockSendFlightReminder,
 }));
 
+// Scheduler short-circuits airportCache for canonical-UTC rows, but we still
+// mock it so any incidental lookup resolves cleanly during the test.
+const mockGetCachedAirport = jest.fn();
+jest.mock("../services/airportCache", () => ({
+  getCachedAirport: mockGetCachedAirport,
+}));
+
 const mockScheduleTask = { start: jest.fn(), stop: jest.fn() };
 const mockCronSchedule = jest.fn(() => mockScheduleTask);
 jest.mock("node-cron", () => ({
@@ -33,9 +40,11 @@ interface FlightFixture {
   flightNumber: string | null;
   depName: string | null;
   depIata: string | null;
+  depIcao: string | null;
   arrName: string | null;
   arrIata: string | null;
   departureTime: Date | null;
+  depTimeSemantics: string;
   userId: string;
   user: {
     notificationEmail: string | null;
@@ -44,15 +53,24 @@ interface FlightFixture {
   };
 }
 
-function makeFlight(overrides: Partial<FlightFixture> = {}): FlightFixture {
+// Build a fixture whose departureTime falls inside the precise reminder
+// window (now + hoursAhead ± 15 min) so the scheduler's in-process check
+// accepts it. depTimeSemantics='UTC' lets the scheduler skip airport lookup.
+function makeFlight(
+  overrides: Partial<FlightFixture> = {},
+  hoursAhead = 24,
+): FlightFixture {
+  const departureTime = new Date(Date.now() + hoursAhead * 60 * 60 * 1000);
   return {
     id: "flight-a",
     flightNumber: "LH100",
     depName: "Munich",
     depIata: "MUC",
+    depIcao: "EDDM",
     arrName: "Frankfurt",
     arrIata: "FRA",
-    departureTime: new Date("2026-05-01T10:00:00Z"),
+    departureTime,
+    depTimeSemantics: "UTC",
     userId: "user-1",
     user: {
       notificationEmail: "user@example.com",
@@ -189,7 +207,7 @@ describe("reminderScheduler", () => {
 
     it("continues processing other windows when one Prisma query throws", async () => {
       mockFindMany.mockRejectedValueOnce(new Error("DB hiccup")); // 24h
-      mockFindMany.mockResolvedValueOnce([makeFlight({ id: "flight-2h" })]); // 2h
+      mockFindMany.mockResolvedValueOnce([makeFlight({ id: "flight-2h" }, 2)]); // 2h
 
       await runOneTick();
 
@@ -197,6 +215,29 @@ describe("reminderScheduler", () => {
       expect(mockSendFlightReminder).toHaveBeenCalledTimes(1);
       const [, , hoursAhead] = mockSendFlightReminder.mock.calls[0];
       expect(hoursAhead).toBe(2);
+    });
+
+    it("normalises a LEGACY_FAKE_UTC departure via airport tz before window check", async () => {
+      // Wall-clock 14:00 in 'Europe/Berlin' (UTC+1 in January) → real UTC 13:00.
+      // Anchor "now" so real UTC 13:00 is exactly 24h away.
+      const fakeUtcWallClock = new Date("2026-01-15T14:00:00.000Z");
+      const realDeparture = new Date("2026-01-15T13:00:00.000Z");
+      jest.useFakeTimers({ now: realDeparture.getTime() - 24 * 60 * 60 * 1000 });
+
+      mockGetCachedAirport.mockResolvedValueOnce({ iata: "MUC", timezone: "Europe/Berlin" });
+      mockFindMany.mockResolvedValueOnce([
+        makeFlight({
+          id: "legacy",
+          departureTime: fakeUtcWallClock,
+          depTimeSemantics: "LEGACY_FAKE_UTC",
+        }),
+      ]);
+      mockFindMany.mockResolvedValueOnce([]); // 2h
+
+      await runOneTick();
+
+      expect(mockSendFlightReminder).toHaveBeenCalledTimes(1);
+      jest.useRealTimers();
     });
   });
 });
