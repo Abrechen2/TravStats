@@ -113,6 +113,7 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
     <div className="relative h-64 w-full overflow-hidden rounded-md border border-[var(--color-border)]">
       <MapGL
         ref={mapRef}
+        reuseMaps
         initialViewState={INITIAL_VIEW}
         mapStyle={isDark ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
         style={{ position: "absolute", inset: "0" }}

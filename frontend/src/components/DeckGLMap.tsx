@@ -503,6 +503,7 @@ export function DeckGLMap({
     <div className="relative w-full h-full">
       <MapGL
         ref={mapRef}
+        reuseMaps
         initialViewState={INITIAL_VIEW_STATE}
         mapStyle={isDarkMode ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
         style={{ position: "absolute", inset: "0" }}
