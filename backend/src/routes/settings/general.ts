@@ -14,10 +14,14 @@ import { DOMAIN_KEYS, type DomainKey } from '../../shared/domains';
 
 const router = Router();
 
+// Coerce empty string to undefined before email validation so the frontend
+// can send back the cleared field without triggering a 400.
+const emptyToUndef = (v: unknown): unknown => (v === '' ? undefined : v);
+
 const settingsSchema = z.object({
   profile: z.object({
     username: z.string().optional(),
-    email: z.string().email().optional(),
+    email: z.preprocess(emptyToUndef, z.string().email().optional()),
     profilePicture: z.string().url().refine(
       (url) => url.startsWith('https://') || url.startsWith('http://'),
       'Profile picture must be an HTTP(S) URL'
