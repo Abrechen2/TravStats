@@ -284,6 +284,7 @@ export function createRoutesLayers(
     fontFamily: '"Inter", system-ui, monospace',
     fontWeight: "bold",
     getPixelOffset: [0, -20],
+    fontSettings: { sdf: true },
     outlineWidth: 2,
     outlineColor: [0, 0, 0, 120],
     billboard: true,
