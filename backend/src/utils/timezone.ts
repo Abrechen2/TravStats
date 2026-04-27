@@ -4,9 +4,50 @@
  * Functions for converting flight times between local airport time and UTC
  */
 
-import { toZonedTime, fromZonedTime } from 'date-fns-tz';
+import { toZonedTime, fromZonedTime, formatInTimeZone } from 'date-fns-tz';
 import { getCachedAirport } from '../services/airportCache';
 import logger from './logger';
+
+export type FlightTimeSemantics = 'UTC' | 'LEGACY_FAKE_UTC' | 'UNKNOWN';
+
+/**
+ * Convert a legacy "fake-UTC" timestamp (wall-clock encoded as UTC) into a
+ * real UTC instant by re-interpreting the stored components as the airport's
+ * local time and applying the airport timezone offset.
+ *
+ * Example: stored=2026-05-01T10:30:00Z, tz=Europe/Berlin (CEST, UTC+2)
+ *          → returns 2026-05-01T08:30:00Z (the real UTC instant of "10:30 Berlin").
+ */
+export function legacyFakeUtcToRealUtc(stored: Date, tz: string): Date {
+  const wall = formatInTimeZone(stored, 'UTC', "yyyy-MM-dd'T'HH:mm:ss");
+  return fromZonedTime(wall, tz);
+}
+
+/**
+ * Resolve a stored departureTime/arrivalTime to a real UTC instant based on
+ * the row's semantics tag. Used by the reminder scheduler and any other
+ * consumer that needs absolute time during the legacy-cutover period.
+ *
+ * - 'UTC':             stored value is already real UTC, return as-is.
+ * - 'LEGACY_FAKE_UTC': re-interpret via airport tz; null if tz missing.
+ * - 'UNKNOWN':         best-effort fallback — interpret as legacy if tz known,
+ *                      otherwise return as-is so reads don't break entirely.
+ */
+export function normalizeFlightTimeUtc(
+  stored: Date | null,
+  semantics: FlightTimeSemantics,
+  airportTz: string | null,
+): Date | null {
+  if (!stored) return null;
+  switch (semantics) {
+    case 'UTC':
+      return stored;
+    case 'LEGACY_FAKE_UTC':
+      return airportTz ? legacyFakeUtcToRealUtc(stored, airportTz) : null;
+    case 'UNKNOWN':
+      return airportTz ? legacyFakeUtcToRealUtc(stored, airportTz) : stored;
+  }
+}
 
 /**
  * Calculate the real elapsed flight duration in minutes, accounting for
