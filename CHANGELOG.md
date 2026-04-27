@@ -4,6 +4,34 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [1.2.0] - 2026-04-27
+
+### Fixed
+- **Reminder emails for manually-entered flights fired 1–2 h off** — Manual entries, parser results, and CSV imports stored departure/arrival times as wall-clock-as-fake-UTC, while API-imported flights stored real UTC. The reminder scheduler compared `now` (real UTC) to a mixed-convention `departureTime` column, so the 24-hour-before email triggered an hour early in CET, two hours early in CEST, etc. All flight create/update paths now write canonical real UTC built from a `(local datetime, IANA timezone)` pair, and the scheduler normalises legacy rows on the fly via the airport timezone before the ±15-minute window check.
+- **Schema drift between `prisma/schema.prisma` and prod migrations reconciled** — The drift file now uses idempotent `IF EXISTS` drops, backfills NULLs before flipping NOT NULL, and guards every foreign-key add. Previously a fresh deploy could fail mid-migration on rows with NULL `has_live_tracking` or `historical_enrichment_*` flags.
+
+### Changed
+- **Flight write contract is now `(local, timezone)` pairs** — `POST /flights`, `PUT /flights/:id`, and `POST /flights/batch` no longer accept ISO datetime strings. Clients send `departureLocal` (`YYYY-MM-DDTHH:mm`) plus `depTimezone` (IANA, e.g. `Europe/Berlin`); the server runs `fromZonedTime` to derive the canonical real-UTC `Date` it stores. The update endpoint also rejects raw `departureTime` / `arrivalTime` fields. Frontend submit, edit, review, duplicate, and CSV import flows were updated end-to-end.
+- **Time-semantics tagging during the cutover** — Every new write is tagged `dep_time_semantics = 'UTC'`. Existing rows default to `'UNKNOWN'` and are left unchanged by the normaliser until the backfill script reclassifies them as `'UTC'` (API-sourced) or `'LEGACY_FAKE_UTC'` (manual/parser-sourced, converted in place). `tzAwareDurationMinutes` short-circuits when both sides are UTC and only re-interprets when both are explicitly LEGACY.
+
+### Added
+- **In-app update banner** — A pulsing yellow `Update` badge appears next to the wordmark in the header whenever a newer stable GitHub release exists. Click it to open a popover with the version number, release date, a 600-character preview of the release notes, a link to the full notes on GitHub, and an `Ignore this version` action that hides the badge until an even newer release ships. Backend caches the GitHub query in process memory for 6 hours, filters out RC and pre-releases, and degrades to "no banner" when the GitHub call fails — so air-gapped or firewalled instances stay quiet rather than throwing errors.
+
+### Removed
+- **Floating `?` help icon on the dashboard** — Removed the corner help button and its three orphaned i18n keys (`dashboard:map.help2d/help3d/helpExpanded`). It only said "Switch between 2D and 3D" — information that's already visible from the mode selector.
+
+### Database
+- **`flights.dep_time_semantics` / `arr_time_semantics`** — Two new `TEXT NOT NULL DEFAULT 'UNKNOWN'` columns tag the storage convention of each row during the cutover. Migration is additive and idempotent (`IF NOT EXISTS`); zero-downtime safe.
+
+### Migration
+- **Backfill runs automatically at container boot** — `docker-entrypoint.sh` invokes `dist/scripts/backfillTimeSemantics.js --apply` once migrations succeed, so existing self-hosted instances pick up the fix on the first start of `1.2.0` without any manual SSH step. The script is idempotent (`WHERE dep_time_semantics='UNKNOWN' OR arr_time_semantics='UNKNOWN'`), so subsequent boots return zero rows and finish in milliseconds. Disable with `TIMESEMANTICS_AUTO_BACKFILL=false` if you prefer to run it by hand. Manual invocation remains available: `node /app/backend/dist/scripts/backfillTimeSemantics.js [--apply]` (defaults to dry-run). On the dev DB the backfill classified 160 flights (37 UTC, 123 LEGACY converted, 0 errors); production numbers will differ per install.
+
+### Tests
+- **+37 tests covering the new contract** — 11 covering `legacyFakeUtcToRealUtc`, `normalizeFlightTimeUtc`, and semantics-aware `tzAwareDurationMinutes` (CEST / CET / JST / LAX→JFK transcontinental). 9 covering the new Zod schema (paired contract, half-pair rejection, IANA validation, malformed local, legacy-field rejection, historical exemption, partial updates). 8 reminder-scheduler and flights-route integration updates. 9 covering the update-banner semver comparator (rc/beta stripping, edge cases, malformed inputs).
+
+### Docs
+- **Workflow revised** — Branching strategy in `CLAUDE.md` is now scoped to change size (direct `main` / `fix/*` / `feat/*` / `dev/*`); long-running dev branches must merge `main → dev` early and often, never the reverse, and never touch `VERSION` or `CHANGELOG.md` (both owned by `/deploy` on `main`).
+
 ## [1.1.0] - 2026-04-18
 
 ### Added

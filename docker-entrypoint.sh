@@ -369,6 +369,31 @@ else
     echo "[entrypoint] ⚠️  Skipping seeds - migrations were not successful"
 fi
 
+# Backfill flight time semantics (canonical-UTC migration, 1.2.0)
+# Idempotent: only touches rows where dep_time_semantics or arr_time_semantics
+# is still 'UNKNOWN'. After every row is classified once, subsequent boots
+# return 0 rows from the WHERE clause and finish in milliseconds.
+# Disable with TIMESEMANTICS_AUTO_BACKFILL=false (manual SSH still works).
+if [ "$MIGRATION_SUCCESS" = "true" ] && [ "$TIMESEMANTICS_AUTO_BACKFILL" != "false" ]; then
+    BACKFILL_SCRIPT="/app/backend/dist/scripts/backfillTimeSemantics.js"
+    if [ -f "$BACKFILL_SCRIPT" ]; then
+        echo "[entrypoint] Running flight time-semantics backfill..."
+        set +e
+        node "$BACKFILL_SCRIPT" --apply 2>&1
+        BACKFILL_EXIT=$?
+        set -e
+        if [ $BACKFILL_EXIT -eq 0 ]; then
+            echo "[entrypoint] ✅ Time-semantics backfill complete"
+        else
+            echo "[entrypoint] ⚠️  Time-semantics backfill exited with $BACKFILL_EXIT — continuing (rows stay UNKNOWN; safe no-op for the scheduler)"
+        fi
+    else
+        echo "[entrypoint] ⚠️  $BACKFILL_SCRIPT not found — skipping time-semantics backfill"
+    fi
+elif [ "$TIMESEMANTICS_AUTO_BACKFILL" = "false" ]; then
+    echo "[entrypoint] Time-semantics auto-backfill disabled (TIMESEMANTICS_AUTO_BACKFILL=false)"
+fi
+
 # Seed airports on first install only (if database is empty)
 # Only run if migrations were successful
 if [ "$MIGRATION_SUCCESS" = "true" ] && [ "$SEED_AIRPORTS" != "false" ]; then
