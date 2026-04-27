@@ -7,3 +7,4 @@ dist
 coverage
 .vscode
 .idea
+data/.cache/
