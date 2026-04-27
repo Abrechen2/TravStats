@@ -258,14 +258,22 @@ export default function FlightReviewModal({
     setLoading(true);
 
     try {
+      // Pick IANA tz from the airport record; fall back to user display tz if
+      // the airport entry is incomplete. Server converts local + tz → real UTC.
+      const userTz = useSettingsStore.getState().display?.timezone || "UTC";
+      const depTz = departureAirport.timezone || userTz;
+      const arrTz = arrivalAirport.timezone || userTz;
+
       const flightInput: FlightInput = {
         airline,
         flightNumber,
         aircraft,
         departure: departureAirport,
         arrival: arrivalAirport,
-        departureTime: new Date(departureTime).toISOString(),
-        arrivalTime: new Date(arrivalTime).toISOString(),
+        departureLocal: departureTime,
+        depTimezone: depTz,
+        arrivalLocal: arrivalTime,
+        arrTimezone: arrTz,
         seatNumber: seat || undefined,
         seatClass: seatClass || undefined,
         boardingGroup: boardingGroup || undefined,

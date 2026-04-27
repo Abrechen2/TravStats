@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "react-router-dom";
+import { formatInTimeZone } from "date-fns-tz";
 import type { VisMode } from "../types/visMode";
+import { useSettingsStore } from "../store/settingsStore";
 
 import { flightsApi } from "../lib/api";
 import { useToastStore } from "../store/toastStore";
@@ -265,6 +267,9 @@ export default function DashboardPage(): JSX.Element {
       setDuplicatingFlight(null);
       try {
         const isReturn = mode === "return";
+        // Project the source flight's UTC instants back into a wall-clock
+        // representation in the user's display timezone for resubmission.
+        const dupTz = useSettingsStore.getState().display?.timezone || "UTC";
         const input: FlightInput = {
           airline: flight.airline || undefined,
           flightNumber: isReturn ? undefined : flight.flightNumber || undefined,
@@ -300,8 +305,17 @@ export default function DashboardPage(): JSX.Element {
                 lat: flight.arrLat,
                 lon: flight.arrLon,
               },
-          departureTime: flight.departureTime || undefined,
-          arrivalTime: flight.arrivalTime || undefined,
+          // Duplicating an existing flight: the source departureTime is already
+          // canonical UTC. Project it back to a wall-clock string in the user's
+          // display timezone so the new flight is interpreted consistently.
+          departureLocal: flight.departureTime
+            ? formatInTimeZone(flight.departureTime, dupTz, "yyyy-MM-dd'T'HH:mm")
+            : undefined,
+          depTimezone: flight.departureTime ? dupTz : undefined,
+          arrivalLocal: flight.arrivalTime
+            ? formatInTimeZone(flight.arrivalTime, dupTz, "yyyy-MM-dd'T'HH:mm")
+            : undefined,
+          arrTimezone: flight.arrivalTime ? dupTz : undefined,
           status: "duplicated",
           seatClass: flight.seatClass || undefined,
           category: flight.category || undefined,
@@ -500,6 +514,11 @@ export default function DashboardPage(): JSX.Element {
           });
         }
 
+        // CSV/JSON imports rarely carry an IANA tz column, so we interpret
+        // the local datetime strings in the user's display timezone. Power
+        // users importing cross-timezone data can fix individual entries later.
+        const importTz = useSettingsStore.getState().display?.timezone || "UTC";
+
         if (parsed.length === 0) {
           addToast("warning", t("common:messages.noData"));
           return;
@@ -529,9 +548,12 @@ export default function DashboardPage(): JSX.Element {
                 lat: Number(item.arrLat || item.arrival_lat || 0),
                 lon: Number(item.arrLon || item.arrival_lon || 0),
               },
-              departureTime:
-                item.departureTime || item["Departure Time"] || item.departure_time || "",
-              arrivalTime: item.arrivalTime || item["Arrival Time"] || item.arrival_time || "",
+              departureLocal:
+                item.departureTime || item["Departure Time"] || item.departure_time || undefined,
+              depTimezone: importTz,
+              arrivalLocal:
+                item.arrivalTime || item["Arrival Time"] || item.arrival_time || undefined,
+              arrTimezone: importTz,
               status: (item.status || item.Status || "flown") as
                 | "scheduled"
                 | "flown"
