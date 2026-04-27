@@ -17,7 +17,6 @@ import Filters from "../components/Filters";
 import ErrorBoundary from "../components/ErrorBoundary";
 import NavigationBar from "../components/NavigationBar";
 import AchievementPopup from "../components/AchievementPopup";
-import HelpIcon from "../components/Help/HelpIcon";
 import { useClickOutside } from "../hooks/useClickOutside";
 import type { Flight, FlightInput, FlightFilters, GeoJSONFeature } from "../types";
 import { API_LIMITS } from "../lib/constants";
@@ -980,12 +979,6 @@ export default function DashboardPage(): JSX.Element {
           </div>
         </div>
       )}
-
-      <HelpIcon
-        content={visMode === "globe" ? t("dashboard:map.help3d") : t("dashboard:map.help2d")}
-        expandedContent={t("dashboard:map.helpExpanded")}
-        position="bottom"
-      />
     </div>
   );
 }

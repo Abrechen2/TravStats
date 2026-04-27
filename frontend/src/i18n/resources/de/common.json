@@ -131,5 +131,15 @@
   "sort": {
     "ascending": "aufsteigend",
     "descending": "absteigend"
+  },
+  "update": {
+    "available": "Update",
+    "headline": "Version {{version}} verfügbar",
+    "currentVersion": "Du nutzt {{version}}",
+    "publishedAt": "Veröffentlicht am {{date}}",
+    "viewFullNotes": "Vollständige Release Notes auf GitHub",
+    "noNotes": "Keine Release Notes vorhanden.",
+    "dismiss": "Diese Version ignorieren",
+    "close": "Schließen"
   }
 }
