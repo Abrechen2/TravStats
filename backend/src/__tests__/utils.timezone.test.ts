@@ -125,13 +125,13 @@ describe("normalizeFlightTimeUtc — semantics-aware UTC resolution", () => {
     expect(normalizeFlightTimeUtc(stored, "LEGACY_FAKE_UTC", null)).toBeNull();
   });
 
-  it("falls back to legacy interpretation for UNKNOWN with tz", () => {
+  it("leaves UNKNOWN rows alone (no automated tz shift, even with tz known)", () => {
+    // UNKNOWN must not act as a synonym for LEGACY: real-UTC rows imported
+    // by the API would be wrongly shifted in the post-deploy / pre-backfill
+    // window. The backfill script is responsible for tagging rows correctly.
     expect(normalizeFlightTimeUtc(stored, "UNKNOWN", "Europe/Berlin")?.toISOString()).toBe(
-      "2026-05-01T08:30:00.000Z",
+      stored.toISOString(),
     );
-  });
-
-  it("returns the stored value for UNKNOWN without tz so reads do not break", () => {
     expect(normalizeFlightTimeUtc(stored, "UNKNOWN", null)?.toISOString()).toBe(
       stored.toISOString(),
     );
