@@ -53,24 +53,30 @@ export function normalizeFlightTimeUtc(
  * Calculate the real elapsed flight duration in minutes, accounting for
  * timezones.
  *
- * Stored times are local wall-clock times serialised as fake-UTC
- * (e.g. 17:30 LAX → …T17:30:00.000Z). To get actual elapsed time we
- * re-interpret each side through the airport's IANA timezone.
+ * Behaviour depends on the row's storage semantics:
+ *   - 'UTC' (canonical): both endpoints are real UTC instants — naïve diff
+ *     is exact, no re-interpretation needed.
+ *   - 'LEGACY_FAKE_UTC' / 'UNKNOWN': stored components are wall-clock; we
+ *     re-interpret each side through its airport's IANA timezone via
+ *     fromZonedTime to recover the real elapsed time across DST/zone hops.
  */
 export function tzAwareDurationMinutes(
   departureTime: Date,
   arrivalTime: Date,
   depTz: string | null | undefined,
   arrTz: string | null | undefined,
+  depSemantics: FlightTimeSemantics = 'UNKNOWN',
+  arrSemantics: FlightTimeSemantics = 'UNKNOWN',
 ): number {
+  if (depSemantics === 'UTC' && arrSemantics === 'UTC') {
+    return (arrivalTime.getTime() - departureTime.getTime()) / 60_000;
+  }
+
   if (!depTz || !arrTz) {
-    // No timezone info — fall back to naïve diff
     return (arrivalTime.getTime() - departureTime.getTime()) / 60_000;
   }
 
   try {
-    // fromZonedTime interprets the UTC components of the date as if they
-    // were local time in the given timezone, and returns the true UTC instant.
     const depUtc = fromZonedTime(departureTime, depTz);
     const arrUtc = fromZonedTime(arrivalTime, arrTz);
     return (arrUtc.getTime() - depUtc.getTime()) / 60_000;
