@@ -30,8 +30,10 @@ export function legacyFakeUtcToRealUtc(stored: Date, tz: string): Date {
  *
  * - 'UTC':             stored value is already real UTC, return as-is.
  * - 'LEGACY_FAKE_UTC': re-interpret via airport tz; null if tz missing.
- * - 'UNKNOWN':         best-effort fallback — interpret as legacy if tz known,
- *                      otherwise return as-is so reads don't break entirely.
+ * - 'UNKNOWN':         leave the stored value alone. Treating UNKNOWN as
+ *                      LEGACY would wrongly shift API-imported real-UTC
+ *                      rows during the post-deploy / pre-backfill window.
+ *                      The backfill script is responsible for retagging.
  */
 export function normalizeFlightTimeUtc(
   stored: Date | null,
@@ -45,7 +47,7 @@ export function normalizeFlightTimeUtc(
     case 'LEGACY_FAKE_UTC':
       return airportTz ? legacyFakeUtcToRealUtc(stored, airportTz) : null;
     case 'UNKNOWN':
-      return airportTz ? legacyFakeUtcToRealUtc(stored, airportTz) : stored;
+      return stored;
   }
 }
 
@@ -68,11 +70,14 @@ export function tzAwareDurationMinutes(
   depSemantics: FlightTimeSemantics = 'UNKNOWN',
   arrSemantics: FlightTimeSemantics = 'UNKNOWN',
 ): number {
-  if (depSemantics === 'UTC' && arrSemantics === 'UTC') {
-    return (arrivalTime.getTime() - departureTime.getTime()) / 60_000;
-  }
+  // Only re-interpret when both sides are explicitly tagged LEGACY. UTC and
+  // UNKNOWN both yield naive diff: UTC because the values are already
+  // canonical instants; UNKNOWN because treating it as legacy would wrongly
+  // shift API-imported real-UTC rows in the pre-backfill window.
+  const bothLegacy =
+    depSemantics === 'LEGACY_FAKE_UTC' && arrSemantics === 'LEGACY_FAKE_UTC';
 
-  if (!depTz || !arrTz) {
+  if (!bothLegacy || !depTz || !arrTz) {
     return (arrivalTime.getTime() - departureTime.getTime()) / 60_000;
   }
 
