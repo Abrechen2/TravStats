@@ -10,11 +10,13 @@ import { estimateArrivalFromDeparture } from "../lib/timeEstimation";
 import { airportsApi } from "../lib/api/airports";
 import { logger } from "../lib/logger";
 
+import type { FlightInput } from "../types";
+
 interface FlightEditModalProps {
   flight: Flight;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (id: string, updates: Partial<Flight>) => Promise<void>;
+  onSave: (id: string, updates: Partial<FlightInput>) => Promise<void>;
 }
 
 function toLocalDatetime(iso: string | null): string {
@@ -146,14 +148,27 @@ export default function FlightEditModal({
     setLoading(true);
 
     try {
-      const updates: Partial<Flight> = {
+      // Resolve the airport timezones for the canonical-UTC submit contract.
+      // Falls back to the user's display timezone if the airport record has no
+      // IANA name.
+      const userTz = useSettingsStore.getState().display?.timezone || "UTC";
+      const depCode = flight.depIata || flight.depIcao;
+      const arrCode = flight.arrIata || flight.arrIcao;
+      const [depAirport, arrAirport] = await Promise.all([
+        depCode ? airportsApi.getByCode(depCode).catch(() => null) : Promise.resolve(null),
+        arrCode ? airportsApi.getByCode(arrCode).catch(() => null) : Promise.resolve(null),
+      ]);
+      const depTz = depAirport?.timezone || userTz;
+      const arrTz = arrAirport?.timezone || userTz;
+
+      const updates: Partial<FlightInput> = {
         airline: formData.airline || undefined,
         operatingAirline: formData.operatingAirline || undefined,
         flightNumber: formData.flightNumber || undefined,
         aircraft: formData.aircraft || undefined,
-        status: formData.status as Flight["status"],
-        category: (formData.category || undefined) as Flight["category"],
-        seatClass: (formData.seatClass || undefined) as Flight["seatClass"],
+        status: formData.status as FlightInput["status"],
+        category: (formData.category || undefined) as FlightInput["category"],
+        seatClass: (formData.seatClass || undefined) as FlightInput["seatClass"],
         seatNumber: formData.seatNumber || undefined,
         gate: formData.gate || undefined,
         terminal: formData.terminal || undefined,
@@ -167,7 +182,7 @@ export default function FlightEditModal({
               .filter(Boolean)
           : [],
         price: formData.price > 0 ? formData.price : undefined,
-        currency: formData.currency as Flight["currency"],
+        currency: formData.currency as FlightInput["currency"],
         taxes: formData.taxes > 0 ? formData.taxes : undefined,
         fees: formData.fees > 0 ? formData.fees : undefined,
         notes: formData.notes || undefined,
@@ -178,10 +193,10 @@ export default function FlightEditModal({
               .filter(Boolean)
           : [],
         receiptUrl: formData.receiptUrl || undefined,
-        departureTime: formData.departureTime
-          ? new Date(formData.departureTime).toISOString()
-          : null,
-        arrivalTime: formData.arrivalTime ? new Date(formData.arrivalTime).toISOString() : null,
+        departureLocal: formData.departureTime || undefined,
+        depTimezone: formData.departureTime ? depTz : undefined,
+        arrivalLocal: formData.arrivalTime || undefined,
+        arrTimezone: formData.arrivalTime ? arrTz : undefined,
       };
 
       await onSave(flight.id, updates);

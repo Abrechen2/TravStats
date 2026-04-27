@@ -168,5 +168,15 @@
   },
   "domainTabs": {
     "driftFallback": "The \"{{tab}}\" tab was disabled — back to General."
+  },
+  "update": {
+    "available": "Update",
+    "headline": "Version {{version}} available",
+    "currentVersion": "You are running {{version}}",
+    "publishedAt": "Released on {{date}}",
+    "viewFullNotes": "View full release notes on GitHub",
+    "noNotes": "No release notes available.",
+    "dismiss": "Ignore this version",
+    "close": "Close"
   }
 }

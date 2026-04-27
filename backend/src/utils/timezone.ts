@@ -4,32 +4,84 @@
  * Functions for converting flight times between local airport time and UTC
  */
 
-import { toZonedTime, fromZonedTime } from 'date-fns-tz';
+import { toZonedTime, fromZonedTime, formatInTimeZone } from 'date-fns-tz';
 import { getCachedAirport } from '../services/airportCache';
 import logger from './logger';
+
+export type FlightTimeSemantics = 'UTC' | 'LEGACY_FAKE_UTC' | 'UNKNOWN';
+
+/**
+ * Convert a legacy "fake-UTC" timestamp (wall-clock encoded as UTC) into a
+ * real UTC instant by re-interpreting the stored components as the airport's
+ * local time and applying the airport timezone offset.
+ *
+ * Example: stored=2026-05-01T10:30:00Z, tz=Europe/Berlin (CEST, UTC+2)
+ *          → returns 2026-05-01T08:30:00Z (the real UTC instant of "10:30 Berlin").
+ */
+export function legacyFakeUtcToRealUtc(stored: Date, tz: string): Date {
+  const wall = formatInTimeZone(stored, 'UTC', "yyyy-MM-dd'T'HH:mm:ss");
+  return fromZonedTime(wall, tz);
+}
+
+/**
+ * Resolve a stored departureTime/arrivalTime to a real UTC instant based on
+ * the row's semantics tag. Used by the reminder scheduler and any other
+ * consumer that needs absolute time during the legacy-cutover period.
+ *
+ * - 'UTC':             stored value is already real UTC, return as-is.
+ * - 'LEGACY_FAKE_UTC': re-interpret via airport tz; null if tz missing.
+ * - 'UNKNOWN':         leave the stored value alone. Treating UNKNOWN as
+ *                      LEGACY would wrongly shift API-imported real-UTC
+ *                      rows during the post-deploy / pre-backfill window.
+ *                      The backfill script is responsible for retagging.
+ */
+export function normalizeFlightTimeUtc(
+  stored: Date | null,
+  semantics: FlightTimeSemantics,
+  airportTz: string | null,
+): Date | null {
+  if (!stored) return null;
+  switch (semantics) {
+    case 'UTC':
+      return stored;
+    case 'LEGACY_FAKE_UTC':
+      return airportTz ? legacyFakeUtcToRealUtc(stored, airportTz) : null;
+    case 'UNKNOWN':
+      return stored;
+  }
+}
 
 /**
  * Calculate the real elapsed flight duration in minutes, accounting for
  * timezones.
  *
- * Stored times are local wall-clock times serialised as fake-UTC
- * (e.g. 17:30 LAX → …T17:30:00.000Z). To get actual elapsed time we
- * re-interpret each side through the airport's IANA timezone.
+ * Behaviour depends on the row's storage semantics:
+ *   - 'UTC' (canonical): both endpoints are real UTC instants — naïve diff
+ *     is exact, no re-interpretation needed.
+ *   - 'LEGACY_FAKE_UTC' / 'UNKNOWN': stored components are wall-clock; we
+ *     re-interpret each side through its airport's IANA timezone via
+ *     fromZonedTime to recover the real elapsed time across DST/zone hops.
  */
 export function tzAwareDurationMinutes(
   departureTime: Date,
   arrivalTime: Date,
   depTz: string | null | undefined,
   arrTz: string | null | undefined,
+  depSemantics: FlightTimeSemantics = 'UNKNOWN',
+  arrSemantics: FlightTimeSemantics = 'UNKNOWN',
 ): number {
-  if (!depTz || !arrTz) {
-    // No timezone info — fall back to naïve diff
+  // Only re-interpret when both sides are explicitly tagged LEGACY. UTC and
+  // UNKNOWN both yield naive diff: UTC because the values are already
+  // canonical instants; UNKNOWN because treating it as legacy would wrongly
+  // shift API-imported real-UTC rows in the pre-backfill window.
+  const bothLegacy =
+    depSemantics === 'LEGACY_FAKE_UTC' && arrSemantics === 'LEGACY_FAKE_UTC';
+
+  if (!bothLegacy || !depTz || !arrTz) {
     return (arrivalTime.getTime() - departureTime.getTime()) / 60_000;
   }
 
   try {
-    // fromZonedTime interprets the UTC components of the date as if they
-    // were local time in the given timezone, and returns the true UTC instant.
     const depUtc = fromZonedTime(departureTime, depTz);
     const arrUtc = fromZonedTime(arrivalTime, arrTz);
     return (arrUtc.getTime() - depUtc.getTime()) / 60_000;

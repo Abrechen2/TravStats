@@ -126,6 +126,15 @@ model Flight {
   hasLiveTracking  Boolean  @default(false) @map("has_live_tracking")
   // Data source tracking
   dataSource       String?  @map("data_source") // 'manual', 'email_import', 'boarding_pass_scan', 'historical_enrichment', 'live_update', 'api_lookup'
+  // Time-storage semantics for departureTime / arrivalTime.
+  // 'UTC' = canonical real UTC instant (current writes always use this).
+  // 'LEGACY_FAKE_UTC' = wall-clock encoded as fake-UTC; needs depTz/arrTz to
+  // be interpreted as a real instant. Relic of the pre-canonical write path.
+  // 'UNKNOWN' = not yet classified by the backfill script (DB-side default
+  // for rows existing at the time of the ADD COLUMN migration). New writes
+  // from Prisma default to 'UTC'.
+  depTimeSemantics  String  @default("UTC") @map("dep_time_semantics")
+  arrTimeSemantics  String  @default("UTC") @map("arr_time_semantics")
   lastModifiedBy   String?  @map("last_modified_by") // 'user', 'auto_update', 'historical_enrichment', 'api'
   enrichmentHistory Json?   @map("enrichment_history") // Array of enrichment events [{type, timestamp, confidence?, source?}]
 

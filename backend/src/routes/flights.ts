@@ -21,6 +21,7 @@ import { estimateRoute } from '../services/routeEstimationService';
 import { calculateCo2Kg, toSeatClass } from '../services/co2Calculator';
 import { getCachedAirports } from '../services/airportCache';
 import { tzAwareDurationMinutes } from '../utils/timezone';
+import { fromZonedTime } from 'date-fns-tz';
 import { normalizeAircraft } from '../utils/aircraftNormalize';
 import { calculateNextApiCheckAt } from '../utils/smartCheckSchedule';
 import batchRouter from './flightsBatch';
@@ -63,6 +64,16 @@ interface FlightUpdateData {
   co2Kg?: number | null;
   lastModifiedBy?: string;
   nextApiCheckAt?: Date | null;
+  depTimeSemantics?: string;
+  arrTimeSemantics?: string;
+}
+
+// Resolve a paired (local wall-clock + IANA timezone) input into a real UTC
+// instant. Returns null when either side is missing — schema validation has
+// already enforced that a present local string requires a timezone.
+function toUtcDate(local: string | null | undefined, tz: string | null | undefined): Date | null {
+  if (!local || !tz) return null;
+  return fromZonedTime(local, tz);
 }
 
 // All routes require authentication
@@ -209,13 +220,19 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
     const userId = req.userId!;
     const data = createFlightSchema.parse(req.body);
 
+    // Resolve local + tz pairs into canonical real UTC instants up front so
+    // the rest of the handler can work with proper Date objects.
+    const departureUtc = toUtcDate(data.departureLocal, data.depTimezone);
+    const arrivalUtc = toUtcDate(data.arrivalLocal, data.arrTimezone);
+    const actualDepartureUtc = toUtcDate(data.actualDepartureLocal, data.actualDepartureTz);
+    const actualArrivalUtc = toUtcDate(data.actualArrivalLocal, data.actualArrivalTz);
+
     // Duplicate check: same userId + flightNumber + same calendar day
     const forceCreate = req.query['force'] === 'true';
-    if (data.flightNumber && !forceCreate && data.departureTime) {
-      const depDate = new Date(data.departureTime);
-      const dayStart = new Date(depDate);
+    if (data.flightNumber && !forceCreate && departureUtc) {
+      const dayStart = new Date(departureUtc);
       dayStart.setUTCHours(0, 0, 0, 0);
-      const dayEnd = new Date(depDate);
+      const dayEnd = new Date(departureUtc);
       dayEnd.setUTCHours(23, 59, 59, 999);
 
       const existing = await prisma.flight.findFirst({
@@ -282,15 +299,15 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
         arrName: enriched.arrival.name,
         arrLat: enriched.arrival.lat,
         arrLon: enriched.arrival.lon,
-        departureTime: data.departureTime ? new Date(data.departureTime) : null,
-        arrivalTime: data.arrivalTime ? new Date(data.arrivalTime) : null,
-        actualDeparture: data.actualDeparture ? new Date(data.actualDeparture) : null,
-        actualArrival:   data.actualArrival   ? new Date(data.actualArrival)   : null,
+        departureTime: departureUtc,
+        arrivalTime: arrivalUtc,
+        actualDeparture: actualDepartureUtc,
+        actualArrival: actualArrivalUtc,
+        depTimeSemantics: 'UTC',
+        arrTimeSemantics: 'UTC',
         delayMinutes:
-          data.actualDeparture && data.departureTime
-            ? Math.round(
-                (new Date(data.actualDeparture).getTime() - new Date(data.departureTime).getTime()) / 60000
-              )
+          actualDepartureUtc && departureUtc
+            ? Math.round((actualDepartureUtc.getTime() - departureUtc.getTime()) / 60000)
             : null,
         co2Kg: calculateCo2Kg({
           depLat: enriched.departure.lat,
@@ -324,8 +341,8 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
         dataSource: 'manual',
         lastModifiedBy: 'user',
         nextApiCheckAt: calculateNextApiCheckAt(
-          data.departureTime ? new Date(data.departureTime) : null,
-          data.arrivalTime ? new Date(data.arrivalTime) : null,
+          departureUtc,
+          arrivalUtc,
           data.status ?? 'scheduled',
           data.flightNumber,
         ),
@@ -413,7 +430,16 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
       return {
         ...f,
         durationMinutes: (f.departureTime && f.arrivalTime)
-          ? Math.round(tzAwareDurationMinutes(f.departureTime, f.arrivalTime, depTz, arrTz))
+          ? Math.round(
+              tzAwareDurationMinutes(
+                f.departureTime,
+                f.arrivalTime,
+                depTz,
+                arrTz,
+                f.depTimeSemantics as 'UTC' | 'LEGACY_FAKE_UTC' | 'UNKNOWN',
+                f.arrTimeSemantics as 'UTC' | 'LEGACY_FAKE_UTC' | 'UNKNOWN',
+              )
+            )
           : null,
       };
     });
@@ -644,23 +670,33 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
       updateData.arrLon = enrichedArrival.lon;
     }
 
-    if (data.departureTime) updateData.departureTime = new Date(data.departureTime);
-    if (data.arrivalTime) updateData.arrivalTime = new Date(data.arrivalTime);
+    // Resolve any incoming local+tz pairs to canonical real UTC. A null pair
+    // means the field was not in this update; an empty string is treated the
+    // same — clients should clear actualDeparture by passing null explicitly.
+    const incomingDepUtc = toUtcDate(data.departureLocal, data.depTimezone);
+    const incomingArrUtc = toUtcDate(data.arrivalLocal, data.arrTimezone);
+    const incomingActualDepUtc = toUtcDate(data.actualDepartureLocal, data.actualDepartureTz);
+    const incomingActualArrUtc = toUtcDate(data.actualArrivalLocal, data.actualArrivalTz);
+
+    if (data.departureLocal !== undefined) {
+      updateData.departureTime = incomingDepUtc ?? undefined;
+      updateData.depTimeSemantics = 'UTC';
+    }
+    if (data.arrivalLocal !== undefined) {
+      updateData.arrivalTime = incomingArrUtc ?? undefined;
+      updateData.arrTimeSemantics = 'UTC';
+    }
 
     // Actual times and delay
-    if (data.actualDeparture !== undefined) {
-      updateData.actualDeparture = data.actualDeparture ? new Date(data.actualDeparture) : null;
-      const scheduledDep: Date | null = data.departureTime
-        ? new Date(data.departureTime)
-        : existingFlight.departureTime;
-      updateData.delayMinutes = (data.actualDeparture && scheduledDep)
-        ? Math.round(
-            (new Date(data.actualDeparture).getTime() - scheduledDep.getTime()) / 60000
-          )
+    if (data.actualDepartureLocal !== undefined) {
+      updateData.actualDeparture = incomingActualDepUtc;
+      const scheduledDep: Date | null = incomingDepUtc ?? existingFlight.departureTime;
+      updateData.delayMinutes = incomingActualDepUtc && scheduledDep
+        ? Math.round((incomingActualDepUtc.getTime() - scheduledDep.getTime()) / 60000)
         : null;
     }
-    if (data.actualArrival !== undefined) {
-      updateData.actualArrival = data.actualArrival ? new Date(data.actualArrival) : null;
+    if (data.actualArrivalLocal !== undefined) {
+      updateData.actualArrival = incomingActualArrUtc;
     }
 
     // Recalculate CO₂ when coordinates change or on any update (always keep in sync)
@@ -680,12 +716,17 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     updateData.lastModifiedBy = 'user';
 
     // Recalculate smart API check schedule when departure time or status changes
-    if (data.departureTime || data.arrivalTime || data.status || data.flightNumber) {
-      const effectiveDep = data.departureTime
-        ? new Date(data.departureTime)
+    if (
+      data.departureLocal !== undefined ||
+      data.arrivalLocal !== undefined ||
+      data.status ||
+      data.flightNumber
+    ) {
+      const effectiveDep = data.departureLocal !== undefined
+        ? incomingDepUtc
         : existingFlight.departureTime;
-      const effectiveArr = data.arrivalTime
-        ? new Date(data.arrivalTime)
+      const effectiveArr = data.arrivalLocal !== undefined
+        ? incomingArrUtc
         : existingFlight.arrivalTime;
       const effectiveStatus = data.status ?? existingFlight.status;
       const effectiveFn = data.flightNumber ?? existingFlight.flightNumber;

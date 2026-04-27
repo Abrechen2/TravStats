@@ -45,7 +45,10 @@ export const flightsApi = {
     return data;
   },
 
-  update: async (id: string, flight: Partial<FlightInput> | Partial<Flight>): Promise<Flight> => {
+  // Updates accept the canonical-UTC submit contract — partial FlightInput
+  // (with departureLocal + depTimezone pairs). Partial<Flight> is rejected
+  // server-side because departureTime/arrivalTime are no longer recognized.
+  update: async (id: string, flight: Partial<FlightInput>): Promise<Flight> => {
     const { data } = await api.put<Flight>(`/flights/${id}`, flight);
     return data;
   },
