@@ -306,6 +306,22 @@ export function useFlightForm(
     [departure, arrival, departureDate, arrivalDate, status]
   );
 
+  // Resolve a local YYYY-MM-DD + HH:mm pair (or year-only date for historical
+  // flights) into the canonical-UTC submit shape: a local-wall-clock string
+  // without TZ suffix. Year-only ("YYYY") expands to YYYY-01-01T00:00.
+  const buildLocalString = (date: string, time: string): string => {
+    if (date.length === 4) return `${date}-01-01T00:00`;
+    return `${date}T${time}`;
+  };
+
+  // Pick the IANA timezone for a side. Airports cached in the DB carry an
+  // IANA timezone; fall back to the user's display timezone if the airport
+  // record happens to be incomplete. Settings always has a string default
+  // ("Europe/Berlin"), so the result is non-null in practice.
+  const userTz = settings?.display?.timezone || "UTC";
+  const depTz = departure?.timezone || userTz;
+  const arrTz = arrival?.timezone || userTz;
+
   const buildFlightPayload = (): FlightInput => ({
     departure: {
       iata: departure!.iata,
@@ -329,22 +345,13 @@ export function useFlightForm(
     seatNumber: seatNumber || undefined,
     terminal: terminal || undefined,
     gate: gate || undefined,
-    // Historical entries can be year-only ("YYYY") for the
-    // month-unknown case — expand to YYYY-01-01 before serialising.
-    departureTime: !departureDate
-      ? undefined
-      : status === "historical"
-        ? new Date(
-            `${departureDate.length === 4 ? `${departureDate}-01-01` : departureDate}T00:00:00`
-          ).toISOString()
-        : new Date(`${departureDate}T${departureTime}:00`).toISOString(),
-    arrivalTime: !arrivalDate
-      ? undefined
-      : status === "historical"
-        ? new Date(
-            `${arrivalDate.length === 4 ? `${arrivalDate}-01-01` : arrivalDate}T00:00:00`
-          ).toISOString()
-        : new Date(`${arrivalDate}T${arrivalTime}:00`).toISOString(),
+    // Server converts {departureLocal, depTimezone} → real UTC via fromZonedTime.
+    // No browser-side `new Date(...).toISOString()` — that would leak the
+    // browser's local TZ into the payload.
+    departureLocal: departureDate ? buildLocalString(departureDate, departureTime) : undefined,
+    depTimezone: departureDate ? depTz : undefined,
+    arrivalLocal: arrivalDate ? buildLocalString(arrivalDate, arrivalTime) : undefined,
+    arrTimezone: arrivalDate ? arrTz : undefined,
     status,
     notes: notes || undefined,
     price,

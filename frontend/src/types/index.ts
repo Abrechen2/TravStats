@@ -134,8 +134,17 @@ export interface FlightInput {
   aircraft?: string;
   departure: Airport;
   arrival: Airport;
-  departureTime?: string;
-  arrivalTime?: string;
+  // Canonical-UTC submission contract: send local wall-clock + IANA timezone
+  // and let the server build the real UTC instant via fromZonedTime().
+  // Format: "YYYY-MM-DDTHH:mm" (no TZ suffix, no seconds required).
+  departureLocal?: string;
+  depTimezone?: string;
+  arrivalLocal?: string;
+  arrTimezone?: string;
+  actualDepartureLocal?: string;
+  actualDepartureTz?: string;
+  actualArrivalLocal?: string;
+  actualArrivalTz?: string;
   status?: "scheduled" | "flown" | "cancelled" | "historical" | "duplicated";
   notes?: string;
   // Extended fields
@@ -158,8 +167,6 @@ export interface FlightInput {
   frequentFlyerNumber?: string;
   bookingClassLetter?: string;
   coPassengers?: string[];
-  actualDeparture?: string;
-  actualArrival?: string;
 }
 
 export interface ParsedBooking {
