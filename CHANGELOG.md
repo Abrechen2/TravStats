@@ -4,6 +4,39 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-beta.1] - 2026-04-28 (Beta)
+
+First public beta of the multi-domain TravStats. Ships every change accumulated on `dev/multi-domain-v1` since `1.2.x` so external testers can exercise the new dashboard, cruise pipeline, and globe in a real environment. **Beta channel only — runs on a separate container with its own database, never on the production CT.** Schema migrations create new tables (`cruises`, `cruise_legs`, `ports`, `domain` rows on existing tables) — fresh databases recommended.
+
+### Added
+- **Cruise as a first-class tracking domain** — TravStats is no longer flight-only. Cruises live alongside flights with their own list, map layers, stats, achievements, parser, and import flow. Domains are architectural peers — flight is just the one that shipped first.
+- **Cruise PDF parser pipeline** — Drop a Berge & Meer / TUI / AIDA itinerary PDF into `/cruises`, the backend extracts text, sends it to the local Ollama LLM (`gemma3:12b` by default), and resolves ships, ports, dates, and per-leg distances into a draft cruise the user can review and save.
+- **Cruise distance hybrid pipeline** — Per-leg distances are computed via a chain of specialised calculators: Eurostat marnet sea-routing for ocean legs (with chord-ratio safeguards against sparse-graph zigzag), river-km calculators for inland cruises (Rhine / Danube / Mississippi / Mekong with authoritative km, plus Tier-2 rivers via meander factor), and haversine fallback. Smoke-set average error against cruise-industry references dropped from 20.2 % to 3.1 %. Provenance and confidence are persisted in the new `cruise_legs` table.
+- **Schematic cruise-routes paradigm** — Coarse 1° A* through a sea graph, Douglas-Peucker simplification, coast-buffer guard, and Catmull-Rom spline smoothing produce clean schematic routes with directional arrows. Replaces the previous hybrid-A* router and the per-cruise route cache.
+- **Globe time slider** — Three modes (Off / Live / Filter) on the globe view. Filter mode replays a date range; Live mode walks the ship leg-by-leg along its current cruise; the sun terminator stays in sync with the slider date so day / night shading is always correct.
+- **Render-loop + globe performance pass** — Render-loop, layer batching, and globe-mode rendering reworked across four phases (R, G1, G2, G3); steady-state cost on a typical dataset cut substantially. Verified on the beta CT before merge.
+- **Multi-domain dashboard** — The dashboard now has an `Alle` overview tab (pink for flights, cyan for cruises), domain-specific tabs (`Flüge`, `Kreuzfahrten`), interactive layer click / highlight / tooltip, status pills, port-frequency layer, and a per-trip tooltip / sidebar.
+- **Demo seed script** — `npm run seed:demo` populates a beta DB with realistic sample flights and cruises so testers see something on first login.
+
+### Changed
+- **Map and stats are domain-aware** — All visualisations, filters, and aggregations route through a `domain` discriminator. The `Alle` tab renders both layers; per-domain tabs render only their layer; achievements split by domain.
+- **Dashboard click / highlight / tooltip restored after the multi-domain refactor** — Click selects a trip across domains, sidebar opens with full detail (`FlightPanel` for flights, the cruise detail card for cruises), Escape closes the sidebar.
+- **GeoJSON responses carry a `tripId`** — All map layers can resolve the underlying trip without a second fetch.
+- **Cruise leg backfill at boot** — On container start, any cruise whose `cruise_legs` rows are out of date or missing is recomputed via the active calculator pipeline. Same pattern as the v1.2.0 time-semantics backfill, gated by `CRUISE_LEGS_AUTO_BACKFILL` (default on).
+
+### Fixed
+- **Cruise route rendering** — Short-hop guard, fjord-snap smoothing, and overshoot caps prevent the rare zigzag through southern-hemisphere sparse marnet nodes that the previous router produced on Cape-of-Good-Hope and Drake-Passage transits.
+- **Playwright install on the beta CT** — Bundled with the multi-domain branch so e2e specs run cleanly out of the box.
+
+### Removed
+- **`cruise_route_cache` table** — Schematic routes are deterministic and cheap enough to compute on demand; the cache table only added invalidation complexity.
+
+### Known limits (will be tracked through the beta cycle)
+- **Prod-DB drift audit not yet reconciled** — A snapshot test is still pending; production should not be promoted to `2.0.0` until the schema-prisma drift is closed. Beta runs against a fresh DB so this is not a beta blocker.
+- **MIA → CZM cruise leg overshoots by 7.8 %** — Eurostat marnet routes through the wrong side of Cuba; manual Yucatan-Channel polyline override deferred.
+- **Cruise leg `notes` are stored but not surfaced in the UI** — Per-leg method / confidence badges planned for a follow-up beta.
+- **Tier-2 river meander factors are hand-tuned guesses** — Will be validated against published cruise-line itineraries during the beta.
+
 ## [1.2.1] - 2026-04-28
 
 ### Fixed
