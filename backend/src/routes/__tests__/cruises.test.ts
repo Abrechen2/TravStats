@@ -163,6 +163,43 @@ describe('Cruises API', () => {
       const res = await request(app).post('/api/v1/cruises').send({ cruiseLine: 'X' });
       expect(res.status).toBe(401);
     });
+
+    it('persists cruise_legs for multi-port itineraries', async () => {
+      // Need two distinct ports for the leg to be non-zero. Pick the
+      // first two non-river seeded ports so the orchestrator hits the
+      // marnet+haversine chain rather than the river calculator.
+      const oceanPorts = await prisma.port.findMany({
+        where: { isUserAdded: false, region: { not: { startsWith: 'river_' } } },
+        take: 2,
+      });
+      if (oceanPorts.length < 2) return; // dev DB not seeded — skip silently
+      const [p1, p2] = oceanPorts;
+      const res = await request(app)
+        .post('/api/v1/cruises')
+        .set('Cookie', authCookie)
+        .send({
+          cruiseLine: 'Distance Test Line',
+          departurePortId: p1.id,
+          arrivalPortId: p2.id,
+          startDate: '2026-09-01T12:00:00Z',
+          endDate: '2026-09-05T10:00:00Z',
+          status: 'scheduled',
+          stops: [
+            { portId: p1.id, dayNumber: 1, isAtSea: false },
+            { dayNumber: 2, isAtSea: true, portId: null },
+            { portId: p2.id, dayNumber: 3, isAtSea: false },
+          ],
+        });
+      expect(res.status).toBe(201);
+      const cruiseId = res.body.data.id as string;
+      const legs = await prisma.cruiseLeg.findMany({ where: { cruiseId } });
+      expect(legs).toHaveLength(1);
+      expect(legs[0].fromPortId).toBe(p1.id);
+      expect(legs[0].toPortId).toBe(p2.id);
+      expect(legs[0].distanceKm).toBeGreaterThan(0);
+      expect(['haversine', 'eurostat', 'river-osm']).toContain(legs[0].method);
+      expect(legs[0].routerVersion).toBe('1.0.0');
+    });
   });
 
   describe('PATCH /api/v1/cruises/:id', () => {

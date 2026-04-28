@@ -1,0 +1,9 @@
+{
+  "region": "river_garonne",
+  "name": "Garonne (Gironde estuary)",
+  "meanderFactor": 1.2,
+  "anchors": [
+    { "name": "Bordeaux", "lat": 44.84, "lon": -0.58 },
+    { "name": "Pauillac", "lat": 45.2, "lon": -0.75 }
+  ]
+}

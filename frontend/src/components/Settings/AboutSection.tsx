@@ -116,6 +116,46 @@ export default function AboutSection(): JSX.Element {
           </a>
         </div>
       </div>
+      <div className="mt-4 rounded-lg p-4" style={{ background: "var(--bg-elevated)" }}>
+        <p className="text-sm font-medium mb-2" style={{ color: "var(--text-primary)" }}>
+          {t("settings:about.dataSources.title")}
+        </p>
+        <ul className="text-xs space-y-1" style={{ color: "var(--text-muted)" }}>
+          <li>
+            <a
+              href="https://www.openstreetmap.org/copyright"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+            >
+              © OpenStreetMap contributors
+            </a>{" "}
+            — map tiles (ODbL 1.0)
+          </li>
+          <li>
+            <a
+              href="https://github.com/eurostat/searoute"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+            >
+              Eurostat SeaRoute
+            </a>{" "}
+            — cruise ocean-leg distances (EUPL-1.2 / ORNL Global Shipping Lane Network, public
+            domain)
+          </li>
+          <li>
+            <a
+              href="https://github.com/Abrechen2/TravStats/blob/main/LICENSES.md"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+            >
+              {t("settings:about.dataSources.fullList")}
+            </a>
+          </li>
+        </ul>
+      </div>
     </SectionCard>
   );
 }

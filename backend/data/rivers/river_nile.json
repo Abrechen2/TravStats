@@ -1,0 +1,16 @@
+{
+  "region": "river_nile",
+  "name": "Nile",
+  "meanderFactor": 1.05,
+  "anchors": [
+    { "name": "Abu Simbel", "lat": 22.3372, "lon": 31.6258 },
+    { "name": "Aswan", "lat": 24.0889, "lon": 32.8997 },
+    { "name": "Kom Ombo", "lat": 24.4667, "lon": 32.9333 },
+    { "name": "Edfu", "lat": 24.9781, "lon": 32.8731 },
+    { "name": "Esna", "lat": 25.2933, "lon": 32.5536 },
+    { "name": "Luxor", "lat": 25.6872, "lon": 32.6396 },
+    { "name": "Dendera", "lat": 26.1414, "lon": 32.67 },
+    { "name": "Giza", "lat": 30.0131, "lon": 31.2089 },
+    { "name": "Cairo", "lat": 30.0444, "lon": 31.2358 }
+  ]
+}

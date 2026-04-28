@@ -31,6 +31,15 @@ export interface CruiseData {
   startDate: Date | null;
   endDate: Date | null;
   stops: CruiseStopData[];
+  /**
+   * Per-leg distances (km) in port-call order, as persisted in
+   * `cruise_legs` and routed by the cruiseDistance pipeline. When
+   * present, distance stats use these instead of the inline haversine
+   * fallback. Length must equal `numberOfPortCalls - 1`; mismatched
+   * length means the legs are stale and the calculator falls back to
+   * haversine for the affected cruise.
+   */
+  legDistancesKm?: number[];
 }
 
 export interface CruiseStats {
@@ -121,7 +130,13 @@ export function calculateCruiseStats(
     if (cruise.deck !== null && cruise.deck > maxDeck) maxDeck = cruise.deck;
 
     const sortedStops = [...cruise.stops].sort((a, b) => a.dayNumber - b.dayNumber);
+    const portCallCount = sortedStops.filter((s) => !s.isAtSea && s.port).length;
+    const persistedLegs = cruise.legDistancesKm;
+    const usePersistedLegs =
+      Array.isArray(persistedLegs) &&
+      persistedLegs.length === Math.max(0, portCallCount - 1);
     let cruisePortCount = 0;
+    let portCallIndex = 0;
     let currentSeaStreak = 0;
     let prevPortPoint: { lat: number; lon: number } | null = null;
 
@@ -150,13 +165,18 @@ export function calculateCruiseStats(
           ) {
             hasColdWater = true;
           }
-          // Approximate cruise distance: sum great-circle hops between
-          // consecutive port calls. Sea days don't add distance directly
-          // (ships in the sea-day window are en route between two ports
-          // — the haversine between those ports already covers it).
+          // Distance per leg: prefer persisted cruise_legs values
+          // (routed by the cruiseDistance pipeline), fall back to
+          // inline haversine when none are available. Sea days don't
+          // add distance — they're inside the leg between surrounding
+          // port calls.
           const here = { lat: stop.port.lat, lon: stop.port.lon };
           if (prevPortPoint !== null) {
-            const legKm = haversineKm(prevPortPoint, here);
+            const legIdx = portCallIndex - 1;
+            const legKm =
+              usePersistedLegs && persistedLegs
+                ? persistedLegs[legIdx]
+                : haversineKm(prevPortPoint, here);
             totalDistanceKm += legKm;
             if (legKm > longestLegKm) longestLegKm = legKm;
             // Antimeridian crossing: large absolute longitude span
@@ -166,6 +186,7 @@ export function calculateCruiseStats(
             if (lonSpan > 180) hasDatelineCrossing = true;
           }
           prevPortPoint = here;
+          portCallIndex += 1;
         }
       }
     }

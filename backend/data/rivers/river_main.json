@@ -1,0 +1,15 @@
+{
+  "region": "river_main",
+  "name": "Main",
+  "meanderFactor": 1.15,
+  "anchors": [
+    { "name": "Bamberg", "lat": 49.8917, "lon": 10.8917 },
+    { "name": "Schweinfurt", "lat": 50.0494, "lon": 10.2228 },
+    { "name": "Würzburg", "lat": 49.7917, "lon": 9.9536 },
+    { "name": "Karlstadt", "lat": 49.9606, "lon": 9.7689 },
+    { "name": "Wertheim", "lat": 49.7611, "lon": 9.5142 },
+    { "name": "Miltenberg", "lat": 49.7044, "lon": 9.2647 },
+    { "name": "Aschaffenburg", "lat": 49.9744, "lon": 9.1539 },
+    { "name": "Frankfurt am Main", "lat": 50.11, "lon": 8.6822 }
+  ]
+}
