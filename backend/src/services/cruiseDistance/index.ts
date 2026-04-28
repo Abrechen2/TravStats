@@ -13,7 +13,9 @@
  *   4 — + canal-heuristic (Panama, Suez, ...)
  */
 
+import logger from "../../utils/logger";
 import { haversineCalculator } from "./haversineCalculator";
+import { marnetCalculator } from "./marnetCalculator";
 import type {
   ComputedLeg,
   DistanceCalculator,
@@ -21,7 +23,10 @@ import type {
 } from "./types";
 
 const calculators: DistanceCalculator[] = [
-  // Phase 2-4 calculators slot in above haversine.
+  // Order matters: highest-priority calculator first. Each is tried
+  // until one accepts AND its compute() succeeds. Haversine is always
+  // last and always accepts.
+  marnetCalculator,
   haversineCalculator,
 ];
 
@@ -30,13 +35,28 @@ export async function computeLegDistance(
   to: PortPoint,
 ): Promise<ComputedLeg> {
   for (const calc of calculators) {
-    if (calc.accepts(from, to)) {
-      return calc.compute(from, to);
+    if (!calc.accepts(from, to)) continue;
+    try {
+      const result = await calc.compute(from, to);
+      if (result !== null) return result;
+      // Calculator accepted but post-inspection declined (e.g. marnet
+      // ratio < detour threshold). Continue down the chain.
+    } catch (err) {
+      // A calculator accepted but failed at runtime (e.g. marnet
+      // route-not-found, missing data file). Log and continue to the
+      // next calculator in the chain so the leg still gets a value.
+      logger.warn({
+        operation: "cruise_distance_calculator_failed",
+        method: calc.method,
+        fromPort: from.id,
+        toPort: to.id,
+        error: err instanceof Error ? err.message : err,
+      });
     }
   }
-  // Unreachable — haversine always accepts. Kept defensively so a
-  // future refactor can't silently strip the fallback without TS
-  // catching it.
+  // Unreachable — haversine always accepts and never throws. Kept
+  // defensively so a future refactor can't silently strip the fallback
+  // without TS catching it.
   throw new Error("No DistanceCalculator accepted the port pair");
 }
 
