@@ -2,7 +2,6 @@ import type {
   Flight,
   FlightFilters,
   FlightInput,
-  FlightLookupResult,
   GeoJSONFeatureCollection,
   UserAchievement,
 } from "../../types";
@@ -55,11 +54,6 @@ export const flightsApi = {
 
   delete: async (id: string): Promise<void> => {
     await api.delete(`/flights/${id}`);
-  },
-
-  lookup: async (params: { flightNumber: string; date?: string }): Promise<FlightLookupResult> => {
-    const { data } = await api.get<FlightLookupResult>("/flights/lookup", { params });
-    return data;
   },
 
   createBatch: async (

@@ -193,8 +193,19 @@ export function useFlightForm(
       const response = await fetch(`/api/v1/flight-lookup/${flightNumber}?date=${searchDate}`);
       const data = await response.json();
       if (!data.success || !data.flights || data.flights.length === 0) {
-        setError(t("errors:noFlightsFound"));
-        setStep("complete");
+        // Stay on the input step so the error stays visible — the `step`
+        // useEffect clears errors on every transition, so jumping to
+        // "complete" here would drop the user into manual entry with no
+        // indication of what went wrong (issue #82 follow-up).
+        if (data?.error === "LOOKUP_UNAVAILABLE") {
+          setError(t("errors:lookupOutsideLiveWindow"));
+        } else if (data?.error === "NO_FLIGHT_DATA_API_GAP") {
+          setError(t("errors:noFlightDataApiGap"));
+        } else if (data?.error === "NO_FLIGHT_DATA_FOR_DATE") {
+          setError(t("errors:noFlightDataForDate"));
+        } else {
+          setError(t("errors:noFlightsFound"));
+        }
         return;
       }
       setLookupResults(data.flights);
@@ -202,7 +213,6 @@ export function useFlightForm(
     } catch (err) {
       logger.error("Flight lookup error:", err);
       setError(`${t("errors:lookupUnavailable")} ${t("errors:apiKeyInfo")}`);
-      setStep("complete");
     } finally {
       setLoading(false);
     }
