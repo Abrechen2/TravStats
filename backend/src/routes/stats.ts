@@ -935,6 +935,7 @@ router.get(
           where: { userId, status: { not: 'cancelled' } },
           include: {
             stops: { include: { port: true } },
+            legs: { orderBy: { ordinal: 'asc' }, select: { distanceKm: true } },
           },
         }),
       ]);
@@ -968,6 +969,7 @@ router.get(
           arrivalTime: s.arrivalTime,
           departureTime: s.departureTime,
         })),
+        legDistancesKm: c.legs.map((l) => l.distanceKm),
       }));
 
       // calculateCruiseStats expects the birthday as {month, day} for the
