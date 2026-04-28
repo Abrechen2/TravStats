@@ -584,7 +584,22 @@ export async function lookupFlightDetails(
     }
   }
 
-  // Fallback to AirLabs
+  // For deliberate out-of-live-window lookups (caller passed a
+  // departureTime that's not within the live window) skip AirLabs
+  // entirely. AirLabs's free tier silently ignores `dep_date` and
+  // returns today's schedule, which poisons the wrapper's date-mismatch
+  // safety net (issue #82). No working free provider exists for past or
+  // future date lookups — Aviationstack (above) is the only one, and
+  // it's already been tried with the correct date filter at this point.
+  // Ad-hoc UI lookups (no departureTime) still treat AirLabs as the
+  // live-window fallback.
+  if (departureTime && !inLiveWindow) {
+    logger.info({ flightNumber: trimmedNumber, date, operation: 'lookup_no_result' },
+      `No data found for ${trimmedNumber} from any API (outside live window, AirLabs skipped)`);
+    return null;
+  }
+
+  // Fallback to AirLabs (live window, or ad-hoc lookup with no departureTime)
   logger.info({ flightNumber: trimmedNumber, date, api: 'airlabs', operation: 'fallback_airlabs' },
     `Falling back to AirLabs for ${trimmedNumber}`);
   const fallbackDate = date ? new Date(date) : undefined;
@@ -714,6 +729,180 @@ async function lookupOpenSkyFlight(
     logger.warn({ operation: 'opensky_fallback', message: 'OpenSky fallback failed', error: err instanceof Error ? err.message : String(err) });
     return null;
   }
+}
+
+export interface LookupWithHistoricalResult {
+  flights: FlightData[];
+  /**
+   * Set when the lookup cannot be served. Three distinct reasons:
+   * - `'no_provider'`: the requested date is anything other than today AND
+   *   no Aviationstack key is configured. The free providers (AirLabs,
+   *   OpenSky) only cover live flights, so without a paid provider the
+   *   request cannot be served. Surface a "manual entry / paid plan"
+   *   message.
+   * - `'no_match'`: a live-window lookup was queried but returned no
+   *   usable data. Most likely a typo in flight number or date — worth
+   *   pointing the user at their inputs.
+   * - `'no_match_api_gap'`: an out-of-live-window lookup was attempted
+   *   with an Aviationstack key configured, but the provider returned
+   *   nothing (or returned today's schedule for a non-today request —
+   *   the issue-#82 symptom). The flight just isn't covered by the API
+   *   for that date; do not blame the user for a typo.
+   */
+  unavailableReason?: 'no_provider' | 'no_match' | 'no_match_api_gap';
+}
+
+/** Coerce `string | null | undefined` -> `string | undefined` (FlightData fields don't accept null). */
+const toUndef = (value: string | null | undefined): string | undefined =>
+  value === null ? undefined : value;
+
+/** Map a `lookupFlightDetails` result onto the legacy `FlightData` shape. */
+function flightLookupResultToFlightData(
+  result: FlightLookupResult,
+  fallbackFlightNumber: string,
+): FlightData {
+  return {
+    flightNumber: result.flightNumber || fallbackFlightNumber,
+    airline: result.airline || 'Unknown',
+    departure: {
+      iata: toUndef(result.departure?.iata),
+      icao: toUndef(result.departure?.icao),
+      name: result.departure?.name,
+      scheduledTime: result.departureTime,
+      actualTime: result.actualDeparture,
+      terminal: result.departure?.terminal,
+      gate: result.departure?.gate,
+    },
+    arrival: {
+      iata: toUndef(result.arrival?.iata),
+      icao: toUndef(result.arrival?.icao),
+      name: result.arrival?.name,
+      scheduledTime: result.arrivalTime,
+      actualTime: result.actualArrival,
+      terminal: result.arrival?.terminal,
+      gate: result.arrival?.gate,
+    },
+    aircraft: result.aircraft,
+  };
+}
+
+/**
+ * UI-facing lookup that consumes the full provider cascade
+ * (Aviationstack -> AirLabs) instead of going AirLabs-only.
+ *
+ * - For live requests (today) it behaves like `lookupFlightDetails`,
+ *   wrapped in a single-element array to preserve the legacy
+ *   `FlightData[]` contract that the UI depends on.
+ * - For any non-today request without an Aviationstack key the free
+ *   providers cannot deliver: AirLabs's free tier silently ignores the
+ *   date filter and returns today's schedule (issue #82), and OpenSky's
+ *   REST API has no working callsign-by-date endpoint. Report
+ *   `unavailableReason: 'no_provider'` so the caller can show a
+ *   "manual entry / paid plan" message instead of misleading data.
+ * - For non-today requests with an Aviationstack key, run the cascade
+ *   and use a date-mismatch safety net: if a provider returns today's
+ *   schedule for a non-today request, surface `'no_match_api_gap'`
+ *   rather than the misleading data. In-live-window empty responses
+ *   stay `'no_match'` because a typo is a plausible cause there.
+ */
+export async function lookupFlightWithHistorical(
+  flightNumber: string,
+  date: Date | undefined,
+  userId?: string,
+): Promise<LookupWithHistoricalResult> {
+  const trimmed = flightNumber.trim();
+  if (!trimmed) return { flights: [] };
+
+  // Direction is decided on UTC-day boundaries, not on hours: "tomorrow" /
+  // "yesterday" should always count as future / past regardless of how many
+  // hours away they are at the moment of the call. The hour-based threshold
+  // earlier let "tomorrow at 00:00 UTC" slip through when called late in the
+  // day, which is exactly the issue-#82 symptom we're guarding against.
+  const now = Date.now();
+  const todayStr = new Date(now).toISOString().slice(0, 10);
+  const requestedStr = date ? date.toISOString().slice(0, 10) : undefined;
+  const dayDelta = requestedStr ? dayDiff(requestedStr, todayStr) : 0;
+
+  const isOutsideLiveWindow = dayDelta !== 0;
+
+  // Capability gate: any non-today request needs Aviationstack. Free
+  // providers only deliver live (today) data — AirLabs lies about other
+  // dates, OpenSky has no working callsign-by-date endpoint.
+  if (isOutsideLiveWindow) {
+    const aviationstackKey = await getApiKey('aviationstack', userId);
+    if (!aviationstackKey) {
+      logger.info(
+        {
+          flightNumber: trimmed,
+          date: requestedStr,
+          direction: dayDelta > 0 ? 'future' : 'past',
+          operation: 'lookup_unavailable_no_provider',
+        },
+        `Lookup outside live window requested for ${trimmed} (date=${requestedStr}, direction=${dayDelta > 0 ? 'future' : 'past'}) but no Aviationstack key is configured`,
+      );
+      return { flights: [], unavailableReason: 'no_provider' };
+    }
+  }
+
+  const dateStr = date ? date.toISOString().split('T')[0] : undefined;
+  const result = await lookupFlightDetails(trimmed, dateStr, userId);
+
+  if (!result) {
+    if (isOutsideLiveWindow) {
+      return { flights: [], unavailableReason: 'no_match_api_gap' };
+    }
+    return { flights: [] };
+  }
+
+  // Safety net: if a provider ignored the date filter and returned today's
+  // schedule for an out-of-live-window request, surface that as
+  // no_match_api_gap instead of showing the user misleading "today" data
+  // (issue #82). It's an API gap, not a user typo, so we don't blame the
+  // input.
+  //
+  // Two heuristics:
+  //  1. Strict mismatch — returned date is more than 1 day off from the
+  //     requested date (covers far-off-historical and far-future bug
+  //     responses).
+  //  2. Smoking gun — returned date is today (we already know the user did
+  //     not ask for today because we're inside isOutsideLiveWindow). Covers
+  //     the off-by-one case like "yesterday" / "tomorrow" -> today.
+  if (isOutsideLiveWindow && dateStr && result.departureTime) {
+    const returnedDate = result.departureTime.slice(0, 10);
+    const strictMismatch = Math.abs(dayDiff(dateStr, returnedDate)) > 1;
+    const smokingGun = returnedDate === todayStr;
+
+    if (strictMismatch || smokingGun) {
+      logger.info(
+        {
+          flightNumber: trimmed,
+          requestedDate: dateStr,
+          returnedDate,
+          today: todayStr,
+          operation: 'lookup_date_mismatch',
+        },
+        `Provider ignored requested date ${dateStr} for ${trimmed} (returned ${returnedDate}); treating as no_match_api_gap`,
+      );
+      return { flights: [], unavailableReason: 'no_match_api_gap' };
+    }
+  }
+
+  return { flights: [flightLookupResultToFlightData(result, trimmed)] };
+}
+
+/** Absolute day difference between two YYYY-MM-DD strings (positive when a > b). */
+function dayDiff(a: string, b: string): number {
+  const aMs = Date.UTC(
+    Number(a.slice(0, 4)),
+    Number(a.slice(5, 7)) - 1,
+    Number(a.slice(8, 10)),
+  );
+  const bMs = Date.UTC(
+    Number(b.slice(0, 4)),
+    Number(b.slice(5, 7)) - 1,
+    Number(b.slice(8, 10)),
+  );
+  return Math.round((aMs - bMs) / (24 * 60 * 60 * 1000));
 }
 
 /**

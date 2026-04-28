@@ -182,7 +182,8 @@
   },
   "heatmap": {
     "title": "Jahresübersicht - Reiseintensität",
-    "dayTooltip": "{{date}}: {{count}} {{count, plural, one {Flug} other {Flüge}}}",
+    "dayTooltip_one": "{{date}}: {{count}} Flug",
+    "dayTooltip_other": "{{date}}: {{count}} Flüge",
     "flightsInYear": "Flüge in {{year}}",
     "daysWithFlights": "Tage mit Flügen",
     "maxFlightsPerDay": "Max. Flüge/Tag",
