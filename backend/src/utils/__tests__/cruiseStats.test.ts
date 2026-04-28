@@ -192,4 +192,55 @@ describe('calculateCruiseStats', () => {
     expect(s.hasBalconyCabin).toBe(false);
     expect(s.regions.size).toBe(0);
   });
+
+  it('uses persisted legDistancesKm when length matches port-call count - 1', () => {
+    const cruises: CruiseData[] = [
+      {
+        id: 'c-legs',
+        shipId: null,
+        cruiseLine: null,
+        cabinType: null,
+        deck: null,
+        startDate: null,
+        endDate: null,
+        stops: [
+          { portId: 1, port: port(1, 'baltic', 'DE'), dayNumber: 1, isAtSea: false },
+          { portId: null, port: null, dayNumber: 2, isAtSea: true },
+          { portId: 2, port: port(2, 'baltic', 'DK'), dayNumber: 3, isAtSea: false },
+          { portId: 3, port: port(3, 'baltic', 'SE'), dayNumber: 4, isAtSea: false },
+        ],
+        // 3 port calls → 2 legs. Numbers chosen unrealistically large
+        // so a haversine fallback (~0 km, since all ports share lat/lon)
+        // would clearly not produce them.
+        legDistancesKm: [1234.5, 678.9],
+      },
+    ];
+    const s = calculateCruiseStats(cruises);
+    expect(s.totalDistanceKm).toBeCloseTo(1234.5 + 678.9, 1);
+    expect(s.longestLegKm).toBeCloseTo(1234.5, 1);
+  });
+
+  it('falls back to haversine when persisted legs are stale (length mismatch)', () => {
+    const cruises: CruiseData[] = [
+      {
+        id: 'c-stale',
+        shipId: null,
+        cruiseLine: null,
+        cabinType: null,
+        deck: null,
+        startDate: null,
+        endDate: null,
+        stops: [
+          { portId: 1, port: port(1, 'baltic', 'DE'), dayNumber: 1, isAtSea: false },
+          { portId: 2, port: port(2, 'baltic', 'DK'), dayNumber: 2, isAtSea: false },
+        ],
+        // 2 port calls → expects 1 leg, but we provide 5 stale ones.
+        legDistancesKm: [9999, 9999, 9999, 9999, 9999],
+      },
+    ];
+    const s = calculateCruiseStats(cruises);
+    // Both ports have lat/lon = 0 (test fixture default), so haversine = 0.
+    // If the stale legs were used, distance would be > 0.
+    expect(s.totalDistanceKm).toBe(0);
+  });
 });
