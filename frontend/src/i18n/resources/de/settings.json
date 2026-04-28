@@ -24,7 +24,11 @@
   },
   "about": {
     "buildLabel": "Build",
-    "buildVersionHint": "Version, die beim Bauen des Container-Images eingebacken wurde. Weicht von der angezeigten Version nur ab, wenn ein promoteter RC läuft."
+    "buildVersionHint": "Version, die beim Bauen des Container-Images eingebacken wurde. Weicht von der angezeigten Version nur ab, wenn ein promoteter RC läuft.",
+    "dataSources": {
+      "title": "Datenquellen & Attribution",
+      "fullList": "Vollständige Liste mit Lizenzen"
+    }
   },
   "profile": {
     "title": "Benutzer-Profil",

@@ -24,7 +24,11 @@
   },
   "about": {
     "buildLabel": "Build",
-    "buildVersionHint": "Version that was baked into the container image at build time. This only differs from the displayed version when a promoted RC is running."
+    "buildVersionHint": "Version that was baked into the container image at build time. This only differs from the displayed version when a promoted RC is running.",
+    "dataSources": {
+      "title": "Data sources & attribution",
+      "fullList": "Full list with licenses"
+    }
   },
   "profile": {
     "title": "User Profile",

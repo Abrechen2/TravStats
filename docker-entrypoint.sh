@@ -394,6 +394,30 @@ elif [ "$TIMESEMANTICS_AUTO_BACKFILL" = "false" ]; then
     echo "[entrypoint] Time-semantics auto-backfill disabled (TIMESEMANTICS_AUTO_BACKFILL=false)"
 fi
 
+# Backfill cruise leg distances (Hybrid distance pipeline, 1.3.x)
+# Recomputes cruise_legs for cruises with no rows or stale router_version.
+# Idempotent — up-to-date cruises are skipped without DB writes.
+# Disable with CRUISE_LEGS_AUTO_BACKFILL=false.
+if [ "$MIGRATION_SUCCESS" = "true" ] && [ "$CRUISE_LEGS_AUTO_BACKFILL" != "false" ]; then
+    CRUISE_BACKFILL_SCRIPT="/app/backend/dist/scripts/backfillCruiseLegs.js"
+    if [ -f "$CRUISE_BACKFILL_SCRIPT" ]; then
+        echo "[entrypoint] Running cruise leg distance backfill..."
+        set +e
+        node "$CRUISE_BACKFILL_SCRIPT" --apply 2>&1
+        CRUISE_EXIT=$?
+        set -e
+        if [ $CRUISE_EXIT -eq 0 ]; then
+            echo "[entrypoint] ✅ Cruise leg backfill complete"
+        else
+            echo "[entrypoint] ⚠️  Cruise leg backfill exited with $CRUISE_EXIT — continuing (stats fall back to inline haversine)"
+        fi
+    else
+        echo "[entrypoint] ⚠️  $CRUISE_BACKFILL_SCRIPT not found — skipping cruise leg backfill"
+    fi
+elif [ "$CRUISE_LEGS_AUTO_BACKFILL" = "false" ]; then
+    echo "[entrypoint] Cruise leg auto-backfill disabled (CRUISE_LEGS_AUTO_BACKFILL=false)"
+fi
+
 # Seed airports on first install only (if database is empty)
 # Only run if migrations were successful
 if [ "$MIGRATION_SUCCESS" = "true" ] && [ "$SEED_AIRPORTS" != "false" ]; then
