@@ -10,19 +10,19 @@
  *     stops were edited and the recompute trigger somehow missed)
  *
  * Run modes:
- *   `npx tsx scripts/backfillCruiseLegs.ts --apply`  → write changes
- *   `npx tsx scripts/backfillCruiseLegs.ts`          → dry-run summary
+ *   `npx tsx src/scripts/backfillCruiseLegs.ts --apply`  → write changes
+ *   `npx tsx src/scripts/backfillCruiseLegs.ts`          → dry-run summary
  *
  * Auto-runs at container boot via docker-entrypoint.sh when the env
  * flag `CRUISE_LEGS_AUTO_BACKFILL` is unset or "true". Set to "false"
  * to skip — same pattern as TIMESEMANTICS_AUTO_BACKFILL.
  */
 
-import { prisma } from "../src/db";
+import { prisma } from "../db";
 import {
   recomputeLegsForCruise,
   ORCHESTRATOR_VERSION,
-} from "../src/services/cruiseDistance/cruiseLegService";
+} from "../services/cruiseDistance/cruiseLegService";
 
 interface BackfillStats {
   scanned: number;
