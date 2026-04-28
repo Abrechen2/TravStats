@@ -1,0 +1,11 @@
+{
+  "region": "river_seine",
+  "name": "Seine",
+  "meanderFactor": 1.3,
+  "anchors": [
+    { "name": "Paris", "lat": 48.8566, "lon": 2.3522 },
+    { "name": "Vernon", "lat": 49.0908, "lon": 1.4858 },
+    { "name": "Rouen", "lat": 49.4431, "lon": 1.0993 },
+    { "name": "Caudebec-en-Caux", "lat": 49.5267, "lon": 0.7331 }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "region": "river_elbe",
+  "name": "Elbe",
+  "meanderFactor": 1.15,
+  "anchors": [
+    { "name": "Prague", "lat": 50.0833, "lon": 14.4167 },
+    { "name": "Mělník", "lat": 50.3506, "lon": 14.4742 },
+    { "name": "Litoměřice", "lat": 50.5394, "lon": 14.1314 },
+    { "name": "Děčín", "lat": 50.7811, "lon": 14.2147 },
+    { "name": "Bad Schandau", "lat": 50.9192, "lon": 14.1567 },
+    { "name": "Pirna", "lat": 50.9583, "lon": 13.9389 },
+    { "name": "Dresden", "lat": 51.05, "lon": 13.7333 },
+    { "name": "Meissen", "lat": 51.1644, "lon": 13.4717 },
+    { "name": "Wittenberg", "lat": 51.8675, "lon": 12.6469 },
+    { "name": "Magdeburg", "lat": 52.1333, "lon": 11.6167 }
+  ]
+}
