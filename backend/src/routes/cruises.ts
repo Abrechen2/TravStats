@@ -7,6 +7,7 @@ import { AppError } from '../middleware/errorHandler';
 import { createCruiseSchema, updateCruiseSchema, cruiseQuerySchema } from '../schemas/cruise';
 import { checkAndUpdateAchievements } from '../utils/achievements';
 import { computeSchematicRoute } from '../services/schematicRouter';
+import { recomputeLegsForCruise } from '../services/cruiseDistance/cruiseLegService';
 import logger from '../utils/logger';
 
 interface GeometryFeature {
@@ -81,6 +82,7 @@ const CRUISE_INCLUDE = {
   departurePort: true,
   arrivalPort: true,
   stops: { include: { port: true }, orderBy: { dayNumber: 'asc' as const } },
+  legs: { orderBy: { ordinal: 'asc' as const } },
 } satisfies Prisma.CruiseInclude;
 
 const requireUser = (req: AuthRequest): string => {
@@ -280,6 +282,7 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
         });
       }
 
+      await recomputeLegsForCruise(created.id, tx);
       return tx.cruise.findUniqueOrThrow({ where: { id: created.id }, include: CRUISE_INCLUDE });
     });
 
@@ -334,6 +337,7 @@ router.patch('/:id', async (req: AuthRequest, res: Response, next: NextFunction)
             })),
           });
         }
+        await recomputeLegsForCruise(existing.id, tx);
       }
 
       return tx.cruise.findUniqueOrThrow({ where: { id: existing.id }, include: CRUISE_INCLUDE });
