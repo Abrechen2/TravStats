@@ -1,0 +1,12 @@
+{
+  "region": "river_douro",
+  "name": "Douro",
+  "meanderFactor": 1.25,
+  "anchors": [
+    { "name": "Porto", "lat": 41.15, "lon": -8.6167 },
+    { "name": "Régua", "lat": 41.1592, "lon": -7.7892 },
+    { "name": "Pinhão", "lat": 41.1894, "lon": -7.5469 },
+    { "name": "Barca d'Alva", "lat": 41.0331, "lon": -6.9389 },
+    { "name": "Vega de Terrón", "lat": 40.9844, "lon": -6.8 }
+  ]
+}

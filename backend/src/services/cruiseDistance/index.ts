@@ -16,6 +16,7 @@
 import logger from "../../utils/logger";
 import { haversineCalculator } from "./haversineCalculator";
 import { marnetCalculator } from "./marnetCalculator";
+import { riverCalculator } from "./riverCalculator";
 import type {
   ComputedLeg,
   DistanceCalculator,
@@ -26,6 +27,7 @@ const calculators: DistanceCalculator[] = [
   // Order matters: highest-priority calculator first. Each is tried
   // until one accepts AND its compute() succeeds. Haversine is always
   // last and always accepts.
+  riverCalculator,
   marnetCalculator,
   haversineCalculator,
 ];

@@ -1,0 +1,11 @@
+{
+  "region": "river_amazon",
+  "name": "Amazon",
+  "meanderFactor": 1.3,
+  "note": "Anchors only at major ports — Amazon has very few cruise stops over a huge length. High meander factor approximates the true sailing distance.",
+  "anchors": [
+    { "name": "Iquitos", "lat": -3.7437, "lon": -73.2516 },
+    { "name": "Manaus", "lat": -3.119, "lon": -60.0217 },
+    { "name": "Belém", "lat": -1.4558, "lon": -48.5039 }
+  ]
+}

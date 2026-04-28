@@ -124,9 +124,10 @@ function classifyConfidence(
 }
 
 function isInlandPort(port: PortPoint): boolean {
-  // The Port.region taxonomy is enum-ish; rivers are tagged 'river'
-  // by the seed. River ports get routed by Phase 3 instead.
-  return port.region === "river";
+  // The Port.region taxonomy tags rivers as `river_<name>` (e.g.
+  // `river_rhine`, `river_danube`). River ports get routed by the
+  // riverCalculator instead.
+  return port.region?.startsWith("river_") === true;
 }
 
 async function computeMarnetDistance(

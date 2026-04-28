@@ -23,7 +23,7 @@ const VIENNA: PortPoint = {
   lat: 48.21,
   lon: 16.37,
   unlocode: null,
-  region: "river",
+  region: "river_danube",
 };
 
 describe("marnetCalculator", () => {
