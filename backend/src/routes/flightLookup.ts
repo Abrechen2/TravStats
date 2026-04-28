@@ -4,10 +4,14 @@
  * Endpoints for looking up flight data by flight number
  */
 
-import { Router, Request, Response, NextFunction } from 'express';
-import { lookupFlightByNumber, parseFlightNumber } from '../services/flightLookup';
+import { Router, Response, NextFunction } from 'express';
+import {
+  lookupFlightByNumber,
+  lookupFlightWithHistorical,
+  parseFlightNumber,
+} from '../services/flightLookup';
 import { flightLookupLimiter } from '../middleware/rateLimit';
-import { authenticate } from '../middleware/auth';
+import { authenticate, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
@@ -15,7 +19,7 @@ const router = Router();
  * GET /api/v1/flight-lookup/:flightNumber?date=2024-01-15
  * Lookup flight by number and optional date
  */
-router.get('/:flightNumber', authenticate, flightLookupLimiter, async (req: Request, res: Response, next: NextFunction) => {
+router.get('/:flightNumber', authenticate, flightLookupLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { flightNumber } = req.params;
     const { date } = req.query;
@@ -39,18 +43,48 @@ router.get('/:flightNumber', authenticate, flightLookupLimiter, async (req: Requ
       }
     }
 
-    // Lookup flight
-    const flights = await lookupFlightByNumber(flightNumber, searchDate);
+    // Lookup via the full provider cascade so dates within the OpenSky
+    // 30-day window also resolve. The previous AirLabs-only path silently
+    // ignored `dep_date` and returned today's schedule (issue #82). The
+    // wrapper also runs a date-mismatch safety net for both past and future
+    // requests so providers returning "today" for non-today queries don't
+    // mislead the user.
+    const { flights, unavailableReason } = await lookupFlightWithHistorical(
+      flightNumber,
+      searchDate,
+      req.userId,
+    );
 
-    if (flights.length === 0) {
-      // Provide helpful response but do not fail the request (status 200 to avoid proxy errors)
-      const parsed = parseFlightNumber(flightNumber);
+    if (unavailableReason === 'no_provider') {
       return res.status(200).json({
         success: false,
         count: 0,
-        error: 'No flights found',
+        error: 'LOOKUP_UNAVAILABLE',
+        message:
+          'This flight search is not available on the free providers. The free tier only covers live flights (today). For past or future flights, configure an Aviationstack Basic+ key in Settings, or enter the flight manually.',
+      });
+    }
+
+    if (flights.length === 0) {
+      // Provide helpful response but do not fail the request (status 200 to avoid proxy errors).
+      const parsed = parseFlightNumber(flightNumber);
+      let errorCode = 'No flights found';
+      let hint = 'Try adding a date parameter or check if the flight number is correct';
+      if (unavailableReason === 'no_match') {
+        errorCode = 'NO_FLIGHT_DATA_FOR_DATE';
+        hint =
+          'Provider returned no usable data for this flight on this date. Please double-check the flight number and date, or enter the flight manually.';
+      } else if (unavailableReason === 'no_match_api_gap') {
+        errorCode = 'NO_FLIGHT_DATA_API_GAP';
+        hint =
+          'No data available from the configured providers for this flight on this date. The flight may simply not be in the API for that date — please enter it manually.';
+      }
+      return res.status(200).json({
+        success: false,
+        count: 0,
+        error: errorCode,
         parsed,
-        hint: 'Try adding a date parameter or check if the flight number is correct',
+        hint,
       });
     }
 
@@ -69,7 +103,7 @@ router.get('/:flightNumber', authenticate, flightLookupLimiter, async (req: Requ
  * POST /api/v1/flight-lookup/bulk
  * Lookup multiple flights at once
  */
-router.post('/bulk', authenticate, flightLookupLimiter, async (req: Request, res: Response, next: NextFunction) => {
+router.post('/bulk', authenticate, flightLookupLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { flightNumbers, date } = req.body;
 
