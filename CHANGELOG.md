@@ -4,6 +4,14 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [1.2.1] - 2026-04-28
+
+### Fixed
+- **Flight number lookup returned today's schedule for past or future dates (issue #82)** — `/api/v1/flight-lookup/:flightNumber` previously went straight to AirLabs `/schedules`, whose free tier silently ignores `dep_date` and returned today's data for any requested date. The route now consumes the full provider cascade and reports three distinct unavailable reasons: `no_provider` (free tier can't serve non-today and no Aviationstack key is configured), `no_match` (live lookup empty — likely a typo), and `no_match_api_gap` (provider returned today's schedule for a non-today request — the issue-#82 symptom). The frontend keeps the user on the input step with a reason-specific error message instead of jumping silently into manual entry. The OpenSky-30-day-historical claim was dropped from the user message and from the in-form tooltip — the underlying `/api/flights/callsign` endpoint does not exist (404), so OpenSky now stays in the live cascade only.
+
+### Tests
+- **+9 regression tests for `lookupFlightWithHistorical`** — Cover the three unavailable reasons, the smoking-gun heuristic for "today's schedule for non-today" responses (yesterday / tomorrow / far past), and the live-window happy path.
+
 ## [1.2.0] - 2026-04-27
 
 ### Fixed
