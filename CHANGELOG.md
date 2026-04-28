@@ -4,6 +4,11 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-beta.2] - 2026-04-28 (Beta)
+
+### Fixed
+- **Cruise leg auto-backfill at boot was silently skipped** — `backfillCruiseLegs.ts` lived under `backend/scripts/`, outside the `tsconfig.rootDir = ./src` boundary, so `tsc` never compiled it into `dist/`. The container started cleanly but the entrypoint logged `⚠️ /app/backend/dist/scripts/backfillCruiseLegs.js not found — skipping cruise leg backfill`, leaving stale or missing `cruise_legs` rows for the stats path to fall back to inline haversine. The script now lives at `backend/src/scripts/backfillCruiseLegs.ts` (matching `backfillTimeSemantics.ts`) so the build picks it up; relative imports adjusted accordingly. Verified on the beta CT after redeploy.
+
 ## [2.0.0-beta.1] - 2026-04-28 (Beta)
 
 First public beta of the multi-domain TravStats. Ships every change accumulated on `dev/multi-domain-v1` since `1.2.x` so external testers can exercise the new dashboard, cruise pipeline, and globe in a real environment. **Beta channel only — runs on a separate container with its own database, never on the production CT.** Schema migrations create new tables (`cruises`, `cruise_legs`, `ports`, `domain` rows on existing tables) — fresh databases recommended.
