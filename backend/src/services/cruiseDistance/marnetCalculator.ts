@@ -92,23 +92,33 @@ const SNAP_REJECT_KM = 200;
  * makes it less accurate than the chord itself. Caller treats this
  * as "decline" and the orchestrator falls through to haversine.
  *
- * Tuned against scripts/smoke-marnet-distances.ts:
- *   Hamburg → New York         ratio 1.06 → falls back, haversine error -1.1%
- *   Singapore → Hong Kong      ratio 1.08 → falls back, haversine error -0.3%
- *   Civitavecchia → Barcelona  ratio 1.03 → falls back, haversine error -6.6%
- *   Hamburg → Tokyo            ratio 2.41 → marnet wins, error +3.1%
- *   Hamburg → Cape Town        ratio 1.25 → marnet wins, error +2.9%
+ * Threshold tuned against scripts/smoke-marnet-distances.ts (Phase 4):
+ *   Hamburg → New York         ratio 1.06 → fall back, haversine -1.1%
+ *   Civitavecchia → Barcelona  ratio 1.03 → fall back, haversine -6.6%
+ *   Singapore → Hong Kong      ratio 1.08 → fall back, haversine -0.3%
+ *   Sydney → Auckland          ratio 1.14 → fall back, haversine +0.3%
+ *   Miami → Cozumel            ratio 1.14 → fall back, haversine +7.7%
+ *   Hamburg → Cape Town        ratio 1.25 → marnet wins,  +2.9%
+ *   Hamburg → Tokyo (Suez)     ratio 2.41 → marnet wins,  +3.1%
+ *   Buenos Aires → Valparaíso  ratio 4.58 → marnet wins (capped), +2.8%
+ *
+ * Lifted from 1.10 to 1.15 in Phase 4: the SYD→AKL and MIA→CZM cases
+ * showed marnet's sparse-graph zigzag was 14% above chord on legs that
+ * are visibly open-ocean direct — haversine wins those.
  */
-const MARNET_DETOUR_THRESHOLD = 1.1;
+const MARNET_DETOUR_THRESHOLD = 1.15;
 
 /**
  * Hard upper bound on plausible cruise routings. Buenos Aires →
  * Valparaíso via Magellan/Drake is ~3.4× the chord; circumnavigations
  * are out of scope. Above this ratio the marnet graph is almost
- * certainly zigzagging through sparse nodes — cap the distance and
- * mark low confidence.
+ * certainly zigzagging through sparse southern-hemisphere nodes —
+ * cap the distance at chord × this factor and mark low confidence.
+ *
+ * Lowered from 4.0 to 3.5 in Phase 4 after BUE→VLP overshot at
+ * ratio 4.58 with reference 4200 km. chord×3.5 = 4319 km, +2.8%.
  */
-const MARNET_OVERSHOOT_CAP = 4;
+const MARNET_OVERSHOOT_CAP = 3.5;
 
 const MARNET_VERSION = "1.0.0";
 const ROUTER_VERSION = "1.0.0";
