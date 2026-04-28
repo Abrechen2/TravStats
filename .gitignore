@@ -114,9 +114,9 @@ backend/data/.cache/
 .superpowers/
 screenshots/
 
-# Ad-hoc screenshots at repo root (Playwright / manual test captures).
-# docs/**/*.png and design asset folders stay tracked by not matching this
-# root-only pattern.
+# Loose screenshots / lab renders / demo PNGs that accumulate at the
+# repo root during sessions. Tracked PNGs (docs/images/, frontend/public/,
+# test-samples/) are unaffected.
 /*.png
 /*.jpg
 /*.jpeg

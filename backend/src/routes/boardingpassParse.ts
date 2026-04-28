@@ -97,9 +97,9 @@ router.post('/parse-boardingpass', authenticate, boardingPassParseLimiter, async
       flight.arrivalCode
     ) {
       try {
-        const { lookupFlightByNumber } = await import('../services/flightLookup');
+        const { lookupFlightWithHistorical } = await import('../services/flightLookup');
         const date = new Date(flight.departureTime);
-        const apiFlights = await lookupFlightByNumber(flight.flightNumber, date);
+        const { flights: apiFlights } = await lookupFlightWithHistorical(flight.flightNumber, date);
 
         if (apiFlights.length > 0) {
           const apiData = apiFlights[0];

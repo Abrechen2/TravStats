@@ -182,7 +182,8 @@
     "tags": "Tags",
     "annotations": "Annotations",
     "extractedData": "Extracted Data",
-    "extractedDataCount": "Extracted Data ({{count}} {{count, plural, one {flight} other {flights}}})",
+    "extractedDataCount_one": "Extracted Data ({{count}} flight)",
+    "extractedDataCount_other": "Extracted Data ({{count}} flights)",
     "noDataAvailable": "No data available"
   },
   "guide": {
