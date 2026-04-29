@@ -3,6 +3,7 @@ import HelpIcon from "../Help/HelpIcon";
 import { useTranslation } from "../../hooks/useTranslation";
 import { GlobeLoader } from "../GlobeLoader";
 import type { ParsedBooking } from "../../types";
+import { isCruiseEmailResult, isCruisePdfResult } from "../../lib/api/parse";
 
 const BoardingPassScanner = lazy(() => import("../BoardingPassScanner"));
 const EmailImportTab = lazy(() => import("../import/EmailImportTab"));
@@ -224,12 +225,39 @@ export default function FlightLookupStep({
             </h3>
             <Suspense fallback={<div className="p-6 text-center text-slate-400">Lädt...</div>}>
               <EmailImportTab
-                onResult={(flights, subject, provider, text, html) => {
+                domain="flight"
+                acceptedExtensions={[".eml", ".msg", ".txt", ".pdf"]}
+                onEmailResult={(result) => {
+                  if (isCruiseEmailResult(result)) {
+                    setError(t("flights:form.noFlightsInEmail"));
+                    return;
+                  }
+                  const flights: ParsedBooking[] = result.flights ?? [];
                   if (flights.length > 0) {
                     setParsedFlights(flights);
                     setCurrentFlightIndex(0);
-                    setParserProvider(provider ?? "template");
-                    setOriginalEmailData({ subject, text, html });
+                    setParserProvider(result.provider ?? "template");
+                    setOriginalEmailData({
+                      subject: result.subject,
+                      text: result.text,
+                      html: result.html,
+                    });
+                    setShowEmailUploader(false);
+                    setShowFlightReview(true);
+                  } else {
+                    setError(t("flights:form.noFlightsInEmail"));
+                  }
+                }}
+                onPdfResult={(result) => {
+                  if (isCruisePdfResult(result)) {
+                    setError(t("flights:form.noFlightsInEmail"));
+                    return;
+                  }
+                  if (result.flights.length > 0) {
+                    setParsedFlights(result.flights);
+                    setCurrentFlightIndex(0);
+                    setParserProvider(result.parserUsed ?? "template");
+                    setOriginalEmailData(undefined);
                     setShowEmailUploader(false);
                     setShowFlightReview(true);
                   } else {

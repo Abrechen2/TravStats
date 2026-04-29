@@ -4,7 +4,8 @@ import { cruiseApi } from "../lib/api";
 import type { Cruise, CruiseStatus } from "../types";
 import { CruiseRow } from "../components/Cruise/CruiseRow";
 import { CruiseEditModal } from "../components/Cruise/CruiseEditModal";
-import { CruisePdfImport } from "../components/Cruise/CruisePdfImport";
+import DomainImportButton from "../components/import/DomainImportButton";
+import { useCruiseImportAdapter } from "../components/import/adapters/cruiseAdapter";
 import NavigationBar from "../components/NavigationBar";
 import { useTranslation } from "../hooks/useTranslation";
 
@@ -16,6 +17,7 @@ const STATUSES: CruiseStatus[] = ["scheduled", "flown", "cancelled", "historical
 export default function CruisesPage(): JSX.Element {
   const { t } = useTranslation("cruise");
   const navigate = useNavigate();
+  const cruiseImportAdapter = useCruiseImportAdapter();
   const [cruises, setCruises] = useState<Cruise[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [showCreate, setShowCreate] = useState<boolean>(false);
@@ -147,7 +149,7 @@ export default function CruisesPage(): JSX.Element {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold text-[var(--text-primary)]">{t("list.title")}</h1>
           <div className="flex flex-wrap items-center gap-2">
-            <CruisePdfImport onCreated={reload} />
+            <DomainImportButton adapter={cruiseImportAdapter} onItemsCreated={reload} />
             <button
               type="button"
               onClick={() => setShowCreate(true)}

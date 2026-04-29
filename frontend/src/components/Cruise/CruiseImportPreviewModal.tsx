@@ -1,141 +1,44 @@
-import { useCallback, useRef, useState } from "react";
+import { useState } from "react";
 import type { JSX } from "react";
-import { parseApi } from "../../lib/api";
 import type { ParsedCruiseEntry } from "../../lib/api/parse";
 import { cruiseApi } from "../../lib/api/cruise";
-import { logger } from "../../lib/logger";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
-import { GlobeLoader } from "../GlobeLoader";
+import { logger } from "../../lib/logger";
 
-interface CruisePdfImportProps {
-  /** Called once a parsed cruise has been saved successfully. */
-  onCreated: () => void | Promise<void>;
+interface CruiseImportPreviewModalProps {
+  entries: ParsedCruiseEntry[];
+  onCancel: () => void;
+  onSaved: () => void | Promise<void>;
 }
 
-/** Read a File as a base64 string suitable for the parse-pdf endpoint. */
-async function fileToBase64(file: File): Promise<string> {
-  const arrayBuffer = await file.arrayBuffer();
-  const bytes = new Uint8Array(arrayBuffer);
-  let binary = "";
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-}
-
-export function CruisePdfImport({ onCreated }: CruisePdfImportProps): JSX.Element {
+export function CruiseImportPreviewModal({
+  entries,
+  onCancel,
+  onSaved,
+}: CruiseImportPreviewModalProps): JSX.Element {
   const { t } = useTranslation(["cruise", "common"]);
   const addToast = useToastStore((s) => s.addToast);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
-  const [previewEntries, setPreviewEntries] = useState<ParsedCruiseEntry[] | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const handleFile = useCallback(
-    async (file: File): Promise<void> => {
-      if (!file.name.toLowerCase().endsWith(".pdf")) {
-        addToast("error", t("cruise:import.notPdf"));
-        return;
-      }
-      setBusy(true);
-      try {
-        const pdfBase64 = await fileToBase64(file);
-        const result = await parseApi.parsePdf(pdfBase64, "cruise");
-        if (result.cruises.length === 0) {
-          addToast("error", t("cruise:import.noCruises"));
-          return;
-        }
-        setPreviewEntries(result.cruises);
-      } catch (err: unknown) {
-        logger.error("CruisePdfImport: parse failed", err);
-        addToast("error", t("cruise:import.parseError"));
-      } finally {
-        setBusy(false);
-      }
-    },
-    [addToast, t]
-  );
-
-  const handleSave = useCallback(async (): Promise<void> => {
-    if (!previewEntries) return;
+  const handleSave = async (): Promise<void> => {
     setSaving(true);
     try {
-      for (const entry of previewEntries) {
+      for (const entry of entries) {
         await cruiseApi.create(entry.input);
       }
-      addToast("success", t("cruise:import.saved", { count: previewEntries.length }));
-      setPreviewEntries(null);
-      await onCreated();
+      addToast("success", t("cruise:import.saved", { count: entries.length }));
+      await onSaved();
     } catch (err: unknown) {
-      logger.error("CruisePdfImport: save failed", err);
+      logger.error("CruiseImportPreviewModal: save failed", err);
       addToast("error", t("cruise:import.saveError"));
     } finally {
       setSaving(false);
     }
-  }, [previewEntries, onCreated, addToast, t]);
+  };
 
   return (
-    <>
-      <button
-        type="button"
-        onClick={() => fileInputRef.current?.click()}
-        disabled={busy}
-        className="flex items-center gap-2 whitespace-nowrap rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)] hover:border-[var(--accent)] disabled:opacity-50"
-      >
-        {busy ? "…" : "📄"}
-        <span>{t("cruise:import.button")}</span>
-      </button>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".pdf"
-        className="hidden"
-        onChange={(e) => {
-          if (e.target.files?.[0]) {
-            void handleFile(e.target.files[0]);
-            // Reset so re-uploading the same file fires onChange again.
-            e.target.value = "";
-          }
-        }}
-      />
-
-      {busy && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className="flex flex-col items-center gap-3 rounded-xl bg-[var(--bg-surface)] p-6">
-            <GlobeLoader size={120} label={t("cruise:import.parsing")} />
-          </div>
-        </div>
-      )}
-
-      {previewEntries && (
-        <CruiseImportPreviewModal
-          entries={previewEntries}
-          saving={saving}
-          onCancel={() => setPreviewEntries(null)}
-          onSave={() => void handleSave()}
-        />
-      )}
-    </>
-  );
-}
-
-interface PreviewModalProps {
-  entries: ParsedCruiseEntry[];
-  saving: boolean;
-  onCancel: () => void;
-  onSave: () => void;
-}
-
-function CruiseImportPreviewModal({
-  entries,
-  saving,
-  onCancel,
-  onSave,
-}: PreviewModalProps): JSX.Element {
-  const { t } = useTranslation(["cruise", "common"]);
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4">
       <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-[var(--bg-surface)] p-6">
         <h2 className="mb-4 text-xl font-semibold text-[var(--text-primary)]">
           {t("cruise:import.previewTitle", { count: entries.length })}
@@ -159,7 +62,7 @@ function CruiseImportPreviewModal({
           </button>
           <button
             type="button"
-            onClick={onSave}
+            onClick={() => void handleSave()}
             disabled={saving}
             className="btn-primary px-4 py-2 text-sm"
           >

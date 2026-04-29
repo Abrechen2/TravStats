@@ -1,0 +1,34 @@
+{
+  "tabs": {
+    "email": "E-Mail",
+    "pdf": "PDF",
+    "manual": "Manuell",
+    "manualHint": "Eingabeformular wird geöffnet …"
+  },
+  "email": {
+    "dropZone": "E-Mail hier ablegen oder klicken",
+    "textFallback": "Stattdessen Text einfügen",
+    "textPlaceholder": "Vollständigen E-Mail-Text einfügen …",
+    "parse": "Parsen",
+    "parseError": "Beim Parsen der E-Mail ist ein Fehler aufgetreten",
+    "unsupportedFormat": "Unterstützte Formate: {{formats}}",
+    "regexWarning": {
+      "title": "Kein LLM-Parser verfügbar",
+      "body": "Es ist kein LLM (Ollama, OpenAI, Claude) konfiguriert. Der Regex-Fallback erkennt nur die häufigsten Buchungsformate; manuelle Korrekturen sind häufiger nötig."
+    }
+  },
+  "pdf": {
+    "dropZone": "PDF hier ablegen oder klicken",
+    "notPdf": "Bitte eine .pdf-Datei wählen",
+    "emptyPdf": "Aus diesem PDF konnte kein Text extrahiert werden — möglicherweise ein Scan",
+    "parseError": "Beim Parsen des PDFs ist ein Fehler aufgetreten"
+  },
+  "cruise": {
+    "panelTitle": "Kreuzfahrt importieren",
+    "panelHint": "Buchungs-E-Mail oder PDF einlesen, manuell hinzufügen — alles an einer Stelle."
+  },
+  "flight": {
+    "panelTitle": "Flug importieren",
+    "panelHint": "Buchungs-E-Mail oder PDF einlesen, manuell hinzufügen — alles an einer Stelle."
+  }
+}
