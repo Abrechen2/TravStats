@@ -32,15 +32,20 @@ describe('parser domain param', () => {
   // /parse-email
   // -----------------------------------------------------------------------
 
-  it('returns 501 PARSER_DOMAIN_NOT_IMPLEMENTED for domain=cruise on /parse-email', async () => {
+  it('accepts domain=cruise on /parse-email (no longer a 501 stub)', async () => {
+    // The cruise email pipeline is now wired through. The text is non-bookable
+    // so the LLM/regex parser typically returns zero cruises, but the route
+    // must not 501 at the schema/domain check anymore.
     const res = await request(app)
       .post('/api/v1/parse-email')
       .set('Cookie', [`auth_token=${token}`])
       .send({ emailContent: 'sample text', domain: 'cruise' });
-    expect(res.status).toBe(501);
-    expect(res.body.error).toBe('PARSER_DOMAIN_NOT_IMPLEMENTED');
-    expect(res.body.domain).toBe('cruise');
-  });
+    expect(res.status).not.toBe(501);
+    if (res.status === 200) {
+      expect(res.body.domain).toBe('cruise');
+      expect(Array.isArray(res.body.cruises)).toBe(true);
+    }
+  }, 30000);
 
   it('rejects unknown (non-enum) domain on /parse-email at schema layer', async () => {
     const res = await request(app)
@@ -118,16 +123,16 @@ describe('parser domain param', () => {
   // /parse-email-file (multipart)
   // -----------------------------------------------------------------------
 
-  it('returns 501 PARSER_DOMAIN_NOT_IMPLEMENTED for domain=cruise on /parse-email-file', async () => {
+  it('accepts domain=cruise on /parse-email-file (no longer a 501 stub)', async () => {
+    // 'dummy' is not a real .eml — extractor + LLM both bottom out. The point
+    // is that the route must not 501 at the schema/domain check anymore.
     const res = await request(app)
       .post('/api/v1/parse-email-file')
       .set('Cookie', [`auth_token=${token}`])
       .attach('email', Buffer.from('dummy'), 'x.eml')
       .field('domain', 'cruise');
-    expect(res.status).toBe(501);
-    expect(res.body.error).toBe('PARSER_DOMAIN_NOT_IMPLEMENTED');
-    expect(res.body.domain).toBe('cruise');
-  });
+    expect(res.status).not.toBe(501);
+  }, 30000);
 
   it('rejects unknown (non-enum) domain on /parse-email-file at schema layer', async () => {
     const res = await request(app)

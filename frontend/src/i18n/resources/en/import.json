@@ -1,0 +1,34 @@
+{
+  "tabs": {
+    "email": "Email",
+    "pdf": "PDF",
+    "manual": "Manual",
+    "manualHint": "Opening entry form …"
+  },
+  "email": {
+    "dropZone": "Drop email here or click",
+    "textFallback": "Or paste raw text",
+    "textPlaceholder": "Paste the full email body …",
+    "parse": "Parse",
+    "parseError": "Parsing the email failed",
+    "unsupportedFormat": "Supported formats: {{formats}}",
+    "regexWarning": {
+      "title": "No LLM parser available",
+      "body": "No LLM (Ollama, OpenAI, Claude) is configured. The regex fallback only recognises the most common booking formats; manual corrections will be needed more often."
+    }
+  },
+  "pdf": {
+    "dropZone": "Drop PDF here or click",
+    "notPdf": "Please choose a .pdf file",
+    "emptyPdf": "No text could be extracted from this PDF — it may be a scan",
+    "parseError": "Parsing the PDF failed"
+  },
+  "cruise": {
+    "panelTitle": "Import cruise",
+    "panelHint": "Read in a booking email or PDF, or add manually — all in one place."
+  },
+  "flight": {
+    "panelTitle": "Import flight",
+    "panelHint": "Read in a booking email or PDF, or add manually — all in one place."
+  }
+}

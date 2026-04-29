@@ -2,6 +2,8 @@ import { Router, Response } from 'express';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { emailParseLimiter } from '../middleware/rateLimit';
 import { parseBookingEmail } from '../services/bookingParser';
+import { parseCruiseBookingText } from '../services/cruiseBookingParser';
+import { resolveCruiseEntities } from '../services/cruiseEntityResolver';
 import { extractEmailFromFile } from '../services/emailExtractor';
 import { uploadEmailFile } from '../middleware/upload';
 import { z } from 'zod';
@@ -41,22 +43,29 @@ router.post('/parse-email', authenticate, emailParseLimiter, async (req: AuthReq
   try {
     const parsed = parseEmailSchema.parse(req.body);
 
-    // Defensive guard for future domain expansion (Cruise etc.).
-    // Zod already rejects unknown values; this catches the case where the
-    // enum is later widened but handler logic hasn't been extended yet.
-    if (parsed.domain !== 'flight') {
-      return res.status(501).json({
-        error: 'PARSER_DOMAIN_NOT_IMPLEMENTED',
-        message: `Parsing for domain '${parsed.domain}' is not yet implemented. Add entries manually via the /cruises page.`,
-        domain: parsed.domain,
-      });
-    }
-
     const emailContent = parsed.emailContent;
     const subject = parsed.subject;
     const userId = req.userId;
 
-    logger.info(`[Email Parse] Parsing email for user ${userId}`);
+    logger.info({ userId, domain: parsed.domain }, '[Email Parse] Parsing email');
+
+    if (parsed.domain === 'cruise') {
+      const combined = subject ? `${subject}\n\n${emailContent}` : emailContent;
+      const cruiseResult = await parseCruiseBookingText(combined);
+      const resolved = await Promise.all(cruiseResult.cruises.map(resolveCruiseEntities));
+      return res.json({
+        cruises: resolved.map((r) => ({
+          input: r.input,
+          shipMatched: r.shipMatched,
+          unmatchedPorts: r.unmatchedPorts,
+        })),
+        parserUsed: cruiseResult.parserUsed,
+        ollamaAvailable: cruiseResult.ollamaAvailable,
+        text: emailContent,
+        subject: subject ?? undefined,
+        domain: 'cruise',
+      });
+    }
 
     const result = await parseBookingEmail(
       subject || undefined,
@@ -132,19 +141,7 @@ router.post(
           details: domainParse.error.errors,
         });
       }
-      // Defensive guard: unreachable while enum is single-value, but
-      // future-proofs the handler for when the enum is widened.
-      const domainValue = domainParse.data as string;
-      if (domainValue !== 'flight') {
-        if (filePath && fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-        }
-        return res.status(501).json({
-          error: 'PARSER_DOMAIN_NOT_IMPLEMENTED',
-          message: `Parsing for domain '${domainValue}' is not yet implemented. Add entries manually via the /cruises page.`,
-          domain: domainValue,
-        });
-      }
+      const domainValue = domainParse.data;
 
       const userId = req.userId;
       filePath = file.path;
@@ -187,7 +184,35 @@ router.post(
         subject: extracted.subject,
         textLength: extracted.text.length,
         hasHtml: !!extracted.html,
+        domain: domainValue,
       }, '[Email Parse File] Email extracted from file');
+
+      if (domainValue === 'cruise') {
+        const combined = extracted.subject
+          ? `${extracted.subject}\n\n${extracted.text}`
+          : extracted.text;
+        const cruiseResult = await parseCruiseBookingText(combined);
+        const resolved = await Promise.all(cruiseResult.cruises.map(resolveCruiseEntities));
+
+        if (filePath && fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+          logger.debug({ filePath }, '[Email Parse File] Temporary file deleted');
+        }
+
+        return res.json({
+          cruises: resolved.map((r) => ({
+            input: r.input,
+            shipMatched: r.shipMatched,
+            unmatchedPorts: r.unmatchedPorts,
+          })),
+          parserUsed: cruiseResult.parserUsed,
+          ollamaAvailable: cruiseResult.ollamaAvailable,
+          subject: extracted.subject,
+          text: extracted.text,
+          html: extracted.html ?? undefined,
+          domain: 'cruise',
+        });
+      }
 
       // Parse email with configured parser
       const result = await parseBookingEmail(
