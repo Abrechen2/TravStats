@@ -12,7 +12,7 @@
 ## Thread title (paste into the Title field)
 
 ```
-[Support] TravStats — self-hosted flight tracker
+[Support] TravStats — self-hosted travel logbook (flights, cruises, more)
 ```
 
 ---
@@ -20,7 +20,7 @@
 ## Body (paste into the editor, then format as described after)
 
 ```text
-TravStats is a self-hosted flight tracker for small households and groups (1–10 users). Track every flight, visualise routes on interactive 2D/3D maps, collect 58 achievements, import from boarding passes (QR / PDF417 / OCR) and confirmation emails — all on your own Unraid box.
+TravStats is a self-hosted travel logbook for small households and groups (1–10 users). Log every flight (cruises landing in v2), visualise routes on interactive 2D/3D maps, collect 58 achievements, import from boarding passes (QR / PDF417 / OCR) and confirmation emails — all on your own Unraid box. It's a logbook, not a live tracker: you record trips manually or by import, and TravStats turns them into history, stats and maps.
 
 
 Links
@@ -88,7 +88,7 @@ Safe travels.
 If you prefer to paste HTML directly: click `…` in the toolbar to look for a "Source" or "</>" option. If it's there, paste this HTML instead of the plain text above:
 
 ```html
-<p><strong>TravStats</strong> is a self-hosted flight tracker for small households and groups (1–10 users). Track every flight, visualise routes on interactive 2D/3D maps, collect 58 achievements, import from boarding passes (QR / PDF417 / OCR) and confirmation emails — all on your own Unraid box.</p>
+<p><strong>TravStats</strong> is a self-hosted travel logbook for small households and groups (1–10 users). Log every flight (cruises landing in v2), visualise routes on interactive 2D/3D maps, collect 58 achievements, import from boarding passes (QR / PDF417 / OCR) and confirmation emails — all on your own Unraid box. It's a logbook, not a live tracker: you record trips manually or by import, and TravStats turns them into history, stats and maps.</p>
 <h3>Links</h3>
 <ul>
   <li><strong>Project:</strong> <a href="https://github.com/Abrechen2/TravStats">github.com/Abrechen2/TravStats</a></li>

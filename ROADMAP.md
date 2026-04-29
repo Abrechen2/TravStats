@@ -43,7 +43,7 @@ Everything below ships with the first stable release.
 
 ## 🚢 v1.1 — Cruises module
 
-TravStats grows from "flight tracker" into "travel tracker".
+TravStats grows from a flight-only logbook into a full travel logbook.
 
 - First-class cruise data model (ship, voyage, itinerary, cabin, sea days)
 - `/cruises` page parallel to flights with own forms, map view, stats

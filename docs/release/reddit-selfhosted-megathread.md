@@ -21,10 +21,10 @@
 
 **Description:**
 
-Self-hosted flight tracker for small households (1–10 users). Solves the "I want my travel history without handing it to FlightDiary/MFR24/Flighty" problem.
+Self-hosted travel logbook for small households (1–10 users). Solves the "I want my travel history without handing it to FlightDiary/MFR24/Flighty" problem. It's a logbook, not a live tracker — you log flights manually, scan a boarding pass, or import a confirmation email; cruises landing in v2.
 
 Features:
-- Track flights with categories, tags, up to 50 companions, cost + currency
+- Log flights with categories, tags, up to 50 companions, cost + currency
 - Five flight states (flown / scheduled / cancelled / historical / duplicated)
 - Boarding-pass scanner — QR / PDF417 / OCR
 - Email + PDF import — plain text, HTML, Outlook `.msg`, `.eml`. Template parsers for common airlines; optional local LLM parsing via Ollama (`gemma3:12b` default, 100% accuracy on my ~200-email test corpus) for the long tail
