@@ -19,34 +19,39 @@ Post schedule (recommended, staggered):
 
 ## 1. awesome-selfhosted PR
 
-**PR title:** Add TravStats — self-hosted flight tracker
+**PR title:** Add TravStats — self-hosted travel logbook (flights, cruises, more)
 
 **Entry to add** under `## Personal Dashboards` or `## Media Management - Other` (verify current category layout before submission):
 
 ```markdown
-- [TravStats](https://github.com/Abrechen2/TravStats) - Self-hosted flight
-  tracker for small households and groups. Manual entry, boarding-pass OCR,
-  email/PDF import via local LLM (Ollama), interactive 2D/3D maps, 58
-  achievements, automated backups with optional WebDAV sync. Invite-only.
+- [TravStats](https://github.com/Abrechen2/TravStats) - Self-hosted travel
+  logbook for small households and groups. Log flights (cruises in v2)
+  manually, by boarding-pass OCR, or by email/PDF import via local LLM
+  (Ollama). Interactive 2D/3D maps, 58 achievements, automated backups
+  with optional WebDAV sync. Invite-only. Not a live tracker — your
+  trips, your records, your server.
   `AGPL-3.0` `Docker/TypeScript/Express/React`
 ```
 
 ---
 
-## 2. r/selfhosted — "I built a self-hosted flight tracker, v1 is out"
+## 2. r/selfhosted — "I built a self-hosted travel logbook, v1 is out"
 
-**Title (≤300 chars):** I built a self-hosted flight tracker for small households — TravStats v1.0 is out
+**Title (≤300 chars):** I built a self-hosted travel logbook for small households — TravStats v1.0 is out (flights now, cruises soon)
 
 **Body:**
 
 > Hi r/selfhosted,
 >
-> I've been running TravStats as the family's flight tracker for about six
-> months. After a full black-box pentest with all findings fixed, it's now at
-> v1.0. Sharing in case it's useful to anyone else here.
+> I've been running TravStats as the family's travel logbook for about six
+> months. It's a logbook, not a live tracker — you record flights manually,
+> scan a boarding pass, or import a confirmation email, and TravStats turns
+> them into history, stats and maps. After a full black-box pentest with all
+> findings fixed, it's now at v1.0. Sharing in case it's useful to anyone
+> else here.
 >
 > **What it does:**
-> - Track every flight with categories, tags, travel companions, costs
+> - Log every flight with categories, tags, travel companions, costs
 > - Scan boarding passes (QR / barcode / OCR) on desktop and mobile
 > - Import flight confirmation emails (text / HTML / `.msg` / `.eml`) — either
 >   via templates or an optional local Ollama LLM (default model gemma3:12b,
@@ -66,7 +71,7 @@ Post schedule (recommended, staggered):
 > The pentest report is summarised in SECURITY.md — per-finding details are
 > kept internal for the obvious reason.
 >
-> **Intended scale:** 1–10 users (it's a family tracker, not a public SaaS).
+> **Intended scale:** 1–10 users (it's a family logbook, not a public SaaS).
 >
 > **Quickstart:** GHCR image + docker-compose, or Unraid CA template (just
 > submitted). Setup is `docker compose up -d` + one env variable.
@@ -84,7 +89,7 @@ Post schedule (recommended, staggered):
 
 ## 3. Show HN
 
-**Title:** Show HN: TravStats – self-hosted flight tracker with local LLM parsing
+**Title:** Show HN: TravStats – self-hosted travel logbook (flights, cruises soon) with local LLM parsing
 
 **Body:**
 
@@ -116,13 +121,14 @@ Post schedule (recommended, staggered):
 
 ## 4. r/homelab — infra angle
 
-**Title:** Self-hosted flight tracker with local LLM parsing (Ollama) + automated backups — TravStats v1.0
+**Title:** Self-hosted travel logbook with local LLM parsing (Ollama) + automated backups — TravStats v1.0
 
 **Body:**
 
-> Small-household flight tracker I've been running for six months. Might be
-> interesting for anyone who already has Ollama + Postgres containers in
-> their homelab.
+> Small-household travel logbook I've been running for six months — log
+> flights (cruises landing in v2) manually, by boarding-pass scan, or by
+> email import; not a live tracker. Might be interesting for anyone who
+> already has Ollama + Postgres containers in their homelab.
 >
 > **Lab fit:**
 > - Runs in a single container (~200 MB); one Postgres + optional Ollama
@@ -144,14 +150,16 @@ Post schedule (recommended, staggered):
 
 ## 5. r/flying / r/aviation — enthusiast angle
 
-**Title (r/flying):** Built a free, self-hosted flight tracker because the commercial options didn't fit — sharing in case it's useful
+**Title (r/flying):** Built a free, self-hosted flight log because the commercial options didn't fit — sharing in case it's useful
 
 **Body:**
 
-> Hobby project that grew into something I actually use daily. TravStats
-> tracks every flight I've taken — scheduled, flown, cancelled, historical —
-> with the things I actually care about: seat + zone + class, travel
-> companions, costs, route map, year-over-year comparison.
+> Hobby project that grew into something I actually use daily. TravStats is
+> a personal flight log — every flight I've taken, scheduled, flown,
+> cancelled, historical — with the things I actually care about: seat +
+> zone + class, travel companions, costs, route map, year-over-year
+> comparison. (It's a logbook, not an ADS-B tracker — you enter the
+> flights, it gives you the history.)
 >
 > Things flight-nerds might like:
 > - 58 achievements (longest layover, transcontinental, marathon flight,
@@ -173,17 +181,20 @@ Post schedule (recommended, staggered):
 
 ## 6. German — r/de_EDV or r/Homeserver_de
 
-**Titel:** TravStats v1.0 — selbstgehosteter Flugtracker für Familien (1–10 User)
+**Titel:** TravStats v1.0 — selbstgehostetes Reise-Logbuch für Familien (1–10 User, Flüge jetzt, Kreuzfahrten in v2)
 
 **Body:**
 
 > Hi zusammen,
 >
-> ich habe die letzten 6 Monate TravStats als Familien-Flugtracker entwickelt
-> und nach einem vollständigen Pentest (alle Findings gefixt) ist jetzt v1.0
-> raus. Falls jemand hier was Ähnliches sucht:
+> ich habe die letzten 6 Monate TravStats als Familien-Reise-Logbuch
+> entwickelt und nach einem vollständigen Pentest (alle Findings gefixt)
+> ist jetzt v1.0 raus. Es ist ein Logbuch, kein Live-Tracker — Flüge
+> werden manuell erfasst, per Boardingpass gescannt oder aus Mails
+> importiert; daraus werden Historie, Statistiken und Karten. Falls jemand
+> hier was Ähnliches sucht:
 >
-> - Flüge manuell tracken oder per Boardingpass-Scan (QR / Barcode / OCR)
+> - Flüge manuell loggen oder per Boardingpass-Scan (QR / Barcode / OCR)
 > - E-Mail-Import (Klartext / HTML / `.msg` / `.eml`), optional mit lokaler
 >   LLM via Ollama (`gemma3:12b`, läuft komplett im LAN)
 > - 6 Kartenmodi inkl. 3D-Globus, Jahresvergleich, Sitz-/Klassen-Statistik
@@ -205,7 +216,7 @@ Post schedule (recommended, staggered):
 
 | Question | Short answer |
 |---|---|
-| Why not [existing tracker X]? | Not self-hosted; or tied to a subscription; or locks your data in |
+| Why not [existing tracker / logbook X]? | Not self-hosted; or tied to a subscription; or locks your data in |
 | Does it work without API keys? | Yes — manual entry + boarding-pass scan cover the full UX; APIs are only for enrichment |
 | Multi-user? | Invite-only, 1–10 users recommended, each user sees their own flights only |
 | Mobile app? | PWA planned for v1.7; responsive web works today |
