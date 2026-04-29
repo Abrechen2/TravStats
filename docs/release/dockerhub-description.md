@@ -13,16 +13,9 @@ paste the body into the Unraid forum thread (forum has no API).
 Docker Hub re-PATCH snippet (jwt env via ~/.docker-hub-pat):
 
     PAT=$(cat ~/.docker-hub-pat)
-    JWT=$(curl -s -H "Content-Type: application/json" -X POST \
-      -d "{\"username\":\"abrechen2\",\"password\":\"$PAT\"}" \
-      https://hub.docker.com/v2/users/login/ \
-      | python -c "import sys,json;print(json.load(sys.stdin)['token'])")
+    JWT=$(curl -s -H "Content-Type: application/json" -X POST       -d "{\"username\":\"abrechen2\",\"password\":\"$PAT\"}"       https://hub.docker.com/v2/users/login/       | python -c "import sys,json;print(json.load(sys.stdin)['token'])")
     FULL=$(cat docs/release/dockerhub-description.md | python -c "import sys; print(sys.stdin.read().split('-->\n',1)[1].strip())")
-    python -c "import json,urllib.request,os; \
-      req=urllib.request.Request('https://hub.docker.com/v2/repositories/abrechen2/travstats/', \
-      data=json.dumps({'full_description':'''$FULL'''}).encode(), \
-      headers={'Authorization':'JWT $JWT','Content-Type':'application/json'},method='PATCH'); \
-      print(urllib.request.urlopen(req).status)"
+    python -c "import json,urllib.request,os;       req=urllib.request.Request('https://hub.docker.com/v2/repositories/abrechen2/travstats/',       data=json.dumps({'full_description':'''$FULL'''}).encode(),       headers={'Authorization':'JWT $JWT','Content-Type':'application/json'},method='PATCH');       print(urllib.request.urlopen(req).status)"
 -->
 Self-hosted travel logbook for small households and groups (1–10 users).
 
