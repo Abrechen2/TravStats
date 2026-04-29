@@ -4,8 +4,8 @@
 
 # TravStats
 
-**Self-hosted travel logbook for small households and groups.**
-Log your flights, cruises and trips on your own server — see your travel history on interactive maps, collect achievements. No live tracking, no ads, your data stays on your machine.
+**Self-hosted travel logbook for small households and groups (1–10 users).**
+It's a logbook, not a live tracker — you record trips manually, scan a boarding pass, or import a confirmation email, and TravStats turns them into history, stats and maps.
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Release](https://img.shields.io/github/v/release/Abrechen2/TravStats?include_prereleases&sort=semver)](https://github.com/Abrechen2/TravStats/releases)
@@ -23,13 +23,17 @@ Log your flights, cruises and trips on your own server — see your travel histo
 
 ## Why TravStats
 
-Built for 1–10 users who just want to know *where they've been*. TravStats is
-a personal **travel logbook**, not a live tracker — you record flights and
-trips manually, by scanning a boarding pass, or by importing a confirmation
-email, and TravStats turns them into history, stats and maps. Flight data is
-optionally enriched from AirLabs / Aviationstack / OpenSky, but everything
-you record lives in your own PostgreSQL. No accounts on someone else's
-servers, no analytics, no ads.
+Log every flight you take (cruises landing in v2), visualise your routes
+on interactive 2D and 3D maps, collect 58 achievements, and import flights
+from boarding passes (QR / PDF417 / OCR) and confirmation emails — all on
+your own server, no cloud, no telemetry.
+
+It's a logbook, not a live tracker — you record trips manually, scan a
+boarding pass, or import a confirmation email, and TravStats turns them
+into history, stats and maps. Flight data is optionally enriched from
+AirLabs / Aviationstack / OpenSky, but everything you record lives in
+your own PostgreSQL. No accounts on someone else's servers, no analytics,
+no ads.
 
 - 🗺️ **Six map modes** — Routes, Heatmap, Hexagon, 3D columns, animated Trips, 3D Globe
 - 📊 **Year-over-year statistics** across flights, distance, seats, classes, routes
