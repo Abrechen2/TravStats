@@ -4,6 +4,14 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-beta.7] - 2026-04-30 (Beta)
+
+### Fixed
+- **Cruise routes silently using coarse-grid fallback for weeks** — The `searoute-ts` npm package's extensionless ESM imports broke on Node ≥ 22 with `Cannot find module './lib/utils'`, so every cruise leg has been falling through to the 1° A* fallback since the beta cycle started (visible as routes cutting through Denmark / Mecklenburg / Jutland mainland). The package is abandoned (no upstream activity since late 2022), so its data was vendored verbatim into the repo at `backend/data/marnet/marnet.geojson` and a small in-house pathfinder (graph + spatial index + A* with haversine heuristic) replaces the runtime call. Same Eurostat shipping-lane graph (3 599 LineStrings, EUPL-1.2 + ORNL-PD), same chokepoints (Suez, Panama, Bosphorus, Magellan), now reliably loaded. Smoke set: every cruise leg within ±8 % of reference distance, chokepoint transits at ±3 %.
+
+### Removed
+- **`searoute-ts` dependency** — Dropped from `backend/package.json` (327 transitive deps purged). Eliminates the pinned-to-1.2.1 patch surface and the long-tail risk of an unmaintained package on the request hot path.
+
 ## [2.0.0-beta.5] - 2026-04-30 (Beta)
 
 ### Changed
