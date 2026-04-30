@@ -65,7 +65,7 @@ export function parseMajor(version: string): number | null {
  * Triggered before `prisma migrate deploy` on every boot. Compares the
  * version that last ran on this data volume to the version we are
  * about to start. If the major number increased (e.g. 1.x -> 2.x) we
- * snapshot the database to /app/data/backups/pre-vX-upgrade-<ts>.sql.gz
+ * snapshot the database to /app/data/backups/pre-vX-upgrade-<ts>.sql
  * BEFORE any migration runs, so a failed upgrade leaves a recoverable
  * state right next to the running install.
  *
@@ -158,7 +158,7 @@ export async function maybeRunPreMigrationBackup(): Promise<UpgradeBackupContext
     .replace(/[:.]/g, "-")
     .replace(/Z$/, "");
   const safeVersion = currentVersion.replace(/[^a-zA-Z0-9.-]/g, "_");
-  const filename = `pre-v${safeVersion}-upgrade-${timestamp}.sql.gz`;
+  const filename = `pre-v${safeVersion}-upgrade-${timestamp}.sql`;
   const outputPath = path.join(BACKUP_PATH, filename);
 
   try {

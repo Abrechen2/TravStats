@@ -282,6 +282,26 @@ else
 
     set -e  # Re-enable exit on error
 
+    # Pre-migration backup hook (major-version bumps only).
+    # Compares /app/data/backups/last-version with the version we're about
+    # to start. On a major bump (e.g. 1.x -> 2.x) snapshots the DB to
+    # /app/data/backups/pre-vX-upgrade-<ts>.sql before any migration runs.
+    # Soft-fails: if the backup itself errors, the script logs and exits 0
+    # so the migration is never blocked. The migration remains the bottleneck.
+    PRE_MIGRATION_BACKUP_SCRIPT="/app/backend/dist/scripts/preMigrationBackup.js"
+    if [ -f "$PRE_MIGRATION_BACKUP_SCRIPT" ]; then
+        echo "[entrypoint] Checking upgrade-backup trigger..."
+        set +e
+        node "$PRE_MIGRATION_BACKUP_SCRIPT" 2>&1
+        PRE_MIGRATION_BACKUP_EXIT=$?
+        set -e
+        if [ $PRE_MIGRATION_BACKUP_EXIT -ne 0 ]; then
+            echo "[entrypoint] ⚠️  Pre-migration backup hook exited with $PRE_MIGRATION_BACKUP_EXIT — continuing"
+        fi
+    else
+        echo "[entrypoint] ⚠️  $PRE_MIGRATION_BACKUP_SCRIPT not found — skipping upgrade-backup check"
+    fi
+
     # Run migrations with explicit output and timeout
     # Temporarily disable set -e for migration (non-critical)
     set +e
@@ -332,6 +352,31 @@ else
         if [ "$TABLE_CHECK" = "ok" ]; then
             echo "[entrypoint] ✅ Migrations applied successfully"
             MIGRATION_SUCCESS=true
+
+            # Persist the version that successfully migrated this data volume.
+            # Read on the next boot by the upgrade-backup hook to detect
+            # future major bumps. APP_VERSION wins over BUILD_VERSION wins
+            # over /app/backend/VERSION (matches getCurrentVersion() in
+            # backend/src/utils/upgradeBackup.ts).
+            LAST_VERSION_FILE="/app/data/backups/last-version"
+            if [ -n "$APP_VERSION" ]; then
+                CURRENT_VERSION="$APP_VERSION"
+            elif [ -n "$BUILD_VERSION" ]; then
+                CURRENT_VERSION="$BUILD_VERSION"
+            elif [ -f "/app/backend/VERSION" ]; then
+                CURRENT_VERSION=$(cat /app/backend/VERSION | tr -d '[:space:]')
+            else
+                CURRENT_VERSION="unknown"
+            fi
+            if [ -n "$CURRENT_VERSION" ] && [ "$CURRENT_VERSION" != "unknown" ]; then
+                mkdir -p /app/data/backups 2>/dev/null || true
+                if echo -n "$CURRENT_VERSION" > "$LAST_VERSION_FILE" 2>/dev/null; then
+                    chmod 644 "$LAST_VERSION_FILE" 2>/dev/null || true
+                    echo "[entrypoint] ✅ Wrote last-version marker: $CURRENT_VERSION"
+                else
+                    echo "[entrypoint] ⚠️  Could not write $LAST_VERSION_FILE — next boot may re-trigger upgrade backup"
+                fi
+            fi
         else
             echo "[entrypoint] ⚠️  Migration command succeeded but tables not found"
             echo "[entrypoint] This may indicate a database connection issue"
