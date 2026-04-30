@@ -24,6 +24,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
+    "check:drift": "tsx scripts/check-schema-drift.ts",
     "seed:airports:csv": "node dist/seedAirportsFromCSV.js",
     "seed:demo": "node dist/seedDemoAccount.js",
     "dead-code": "ts-prune | grep -v \"(used in module)\"",
