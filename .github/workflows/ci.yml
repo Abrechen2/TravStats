@@ -52,6 +52,11 @@ jobs:
         env:
           DATABASE_URL: postgresql://flights:testpass@localhost:5432/flights_test
 
+      - name: Check schema drift (DB state vs schema.prisma)
+        run: cd backend && npm run check:drift
+        env:
+          DATABASE_URL: postgresql://flights:testpass@localhost:5432/flights_test
+
       - name: Type check
         run: cd backend && npx tsc --noEmit
 
