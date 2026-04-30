@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
+import { PrismaClient } from "@prisma/client";
 import logger from "./logger";
 import { createDatabaseDump } from "../services/backup/backupDatabase";
 
@@ -11,6 +12,7 @@ export interface UpgradeBackupContext {
   previousVersion: string | null;
   currentVersion: string;
   majorBumped: boolean;
+  firstUpgradeFromPreMarker: boolean;
   backupCreated: string | null;
 }
 
@@ -72,37 +74,81 @@ export function parseMajor(version: string): number | null {
  * warning and continue. Refusing to migrate on backup failure would
  * paint users into a corner; the migration itself stays the bottleneck.
  */
+/**
+ * Detects whether the database has any prior `_prisma_migrations` rows.
+ * Used to identify "first upgrade after the last-version marker was
+ * introduced" — pre-marker installs (anything before this code shipped)
+ * have no last-version file but already carry data, so we treat them
+ * as a major bump worth backing up.
+ *
+ * Returns false if the table or DB doesn't exist (truly fresh install).
+ */
+async function hasExistingMigrations(): Promise<boolean> {
+  const prisma = new PrismaClient();
+  try {
+    const result = await prisma.$queryRawUnsafe<Array<{ count: bigint }>>(
+      `SELECT COUNT(*)::bigint AS count FROM "_prisma_migrations"`,
+    );
+    const count = result[0]?.count ?? 0n;
+    return count > 0n;
+  } catch {
+    // Table doesn't exist yet — fresh DB. No backup needed.
+    return false;
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
 export async function maybeRunPreMigrationBackup(): Promise<UpgradeBackupContext> {
   const currentVersion = getCurrentVersion();
   const previousVersion = getLastDeployedVersion();
 
   const prevMajor = previousVersion ? parseMajor(previousVersion) : null;
   const currMajor = parseMajor(currentVersion);
-  const majorBumped =
+  const explicitMajorBump =
     prevMajor !== null && currMajor !== null && currMajor > prevMajor;
+
+  // Pre-marker installs: app shipped before this last-version file was
+  // introduced. No file exists, but the DB carries existing data and
+  // we are about to run new migrations. Treat as a major bump even
+  // though we cannot prove it from the version file — the alternative
+  // is missing the most important upgrade case (1.x -> 2.x without an
+  // intermediate version that would have written the marker).
+  const firstUpgradeFromPreMarker =
+    previousVersion === null && (await hasExistingMigrations());
+
+  const majorBumped = explicitMajorBump || firstUpgradeFromPreMarker;
 
   const ctx: UpgradeBackupContext = {
     previousVersion,
     currentVersion,
     majorBumped,
+    firstUpgradeFromPreMarker,
     backupCreated: null,
   };
 
   if (!majorBumped) {
     logger.info({
       operation: "upgrade_backup_skip",
-      message: "No major-version bump detected; skipping pre-migration backup",
+      message: previousVersion
+        ? "No major-version bump detected; skipping pre-migration backup"
+        : "Fresh install detected; skipping pre-migration backup",
       previousVersion,
       currentVersion,
     });
     return ctx;
   }
 
+  const reason = firstUpgradeFromPreMarker
+    ? `First upgrade with a last-version marker (existing data, no marker file) -> ${currentVersion}`
+    : `Major version bump ${previousVersion} -> ${currentVersion}`;
+
   logger.info({
     operation: "upgrade_backup_start",
-    message: `Major version bump ${previousVersion} -> ${currentVersion}; creating pre-migration backup`,
+    message: `${reason}; creating pre-migration backup`,
     previousVersion,
     currentVersion,
+    firstUpgradeFromPreMarker,
   });
 
   fs.mkdirSync(BACKUP_PATH, { recursive: true });
