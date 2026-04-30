@@ -88,6 +88,12 @@ COPY --from=backend-builder /app/backend/src/seedData ./dist/seedData
 # Without this copy, /api/v1/cruises/geometry(/batch) returns 500 with
 # ENOENT on every request, so cruise paths never render on the globe.
 COPY backend/data/land-mask-0.1deg.bin ./data/land-mask-0.1deg.bin
+# Vendored Eurostat marnet shipping-lane graph used by the marnet
+# pathfinder (services/marnet/marnetGraph.ts). 1.6 MB GeoJSON, ~6 k
+# nodes / ~7.6 k edges. Without this file the marnet router throws
+# ENOENT on first call and every cruise leg falls back to the coarse
+# 1° A*, which cuts across narrow Baltic and Adriatic straits.
+COPY backend/data/marnet/marnet.geojson ./data/marnet/marnet.geojson
 RUN npx prisma generate
 
 # Write VERSION file for runtime version reporting.

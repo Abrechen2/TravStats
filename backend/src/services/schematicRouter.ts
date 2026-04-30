@@ -44,6 +44,7 @@ import {
   latToRow,
   lonToCol,
 } from '../shared/geo/landMaskGrid';
+import { routeMarnet } from './marnet/marnetRouter';
 
 /** Look up whether a lat/lon is water on the FINE 0.1° mask. Used
  * only by the coast-buffer post-pass — A* itself runs on the coarse
@@ -116,36 +117,11 @@ let maskBytes: Uint8Array | null = null;
 let fineMaskBytes: Uint8Array | null = null;
 let loadPromise: Promise<Uint8Array> | null = null;
 
-type SeaRouteFeature = { geometry: { coordinates: number[][] } };
-type SeaRouteFn = (origin: unknown, destination: unknown, units?: 'kilometers') => SeaRouteFeature;
-
-let seaRoutePromise: Promise<SeaRouteFn | null> | null = null;
-
-async function loadSeaRoute(): Promise<SeaRouteFn | null> {
-  if (process.env.NODE_ENV === 'test') return null;
-  if (seaRoutePromise === null) {
-    seaRoutePromise = (async (): Promise<SeaRouteFn | null> => {
-      try {
-        const dynamicImport = new Function('specifier', 'return import(specifier)') as (
-          specifier: string,
-        ) => Promise<{
-          seaRoute?: SeaRouteFn;
-          default?: { seaRoute?: SeaRouteFn };
-          'module.exports'?: { seaRoute?: SeaRouteFn };
-        }>;
-        const mod = await dynamicImport('searoute-ts');
-        return mod.seaRoute ?? mod.default?.seaRoute ?? mod['module.exports']?.seaRoute ?? null;
-      } catch (err) {
-        logger.warn({
-          operation: 'schematic_router_searoute_load_failed',
-          error: err instanceof Error ? err.message : err,
-        });
-        return null;
-      }
-    })();
-  }
-  return seaRoutePromise;
-}
+// Maritime-graph routing is provided by `services/marnet/marnetRouter`,
+// which loads the vendored Eurostat marnet GeoJSON (formerly accessed
+// via `searoute-ts` whose ESM packaging silently broke on Node ≥ 22).
+// Tests inject a synthetic graph through `setMarnetGraphForTesting`
+// where needed.
 
 export interface SchematicRoutePort {
   readonly id?: number;
@@ -611,41 +587,18 @@ async function computeMaritimeGraphRoute(
   arr: { lat: number; lon: number },
   fineBytes: Uint8Array | null,
 ): Promise<[number, number][] | null> {
-  const origin = {
-    type: 'Feature',
-    properties: {},
-    geometry: { type: 'Point', coordinates: [dep.lon, dep.lat] },
-  };
-  const destination = {
-    type: 'Feature',
-    properties: {},
-    geometry: { type: 'Point', coordinates: [arr.lon, arr.lat] },
-  };
-
   try {
-    const seaRoute = await loadSeaRoute();
-    if (seaRoute === null) return null;
-    const feature = seaRoute(origin, destination, 'kilometers');
-    const coords = (feature.geometry.coordinates as number[][]).map(
-      ([lon, lat]) => [lon, lat] as [number, number],
-    );
-    if (coords.length < 2) return null;
-
     const chordKm = haversineKm(dep, arr);
     // Marnet's nearest shipping-lane node is often 30-80 km from a port
-    // (Kiel, Lübeck, Stockholm, Oslo, fjord ports). The previous budget
-    // (60 km floor / 250 km cap / 20 % of chord) rejected those on
-    // short-to-medium legs, dropping us to the 1° A* fallback whose
-    // output cuts through narrow Baltic straits. The new budget is
-    // permissive enough to keep marnet results for every realistic
-    // landlocked-port pairing while still vetoing nonsense snaps.
+    // (Kiel, Lübeck, Stockholm, Oslo, fjord ports). The budget
+    // (100 km floor / 500 km cap / 35 % of chord) is permissive enough
+    // to keep marnet results for every realistic landlocked-port
+    // pairing while still vetoing nonsense snaps.
     const snapBudgetKm = Math.min(500, Math.max(100, chordKm * 0.35));
-    const startSnapKm = haversineKm(dep, { lon: coords[0][0], lat: coords[0][1] });
-    const endSnapKm = haversineKm(arr, {
-      lon: coords[coords.length - 1][0],
-      lat: coords[coords.length - 1][1],
-    });
-    if (startSnapKm > snapBudgetKm || endSnapKm > snapBudgetKm) return null;
+    const route = await routeMarnet(dep, arr, { maxSnapKm: snapBudgetKm });
+    if (route === null) return null;
+    const coords = route.coords.map(([lon, lat]) => [lon, lat] as [number, number]);
+    if (coords.length < 2) return null;
 
     if (fineBytes === null) return coords;
 

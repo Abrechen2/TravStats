@@ -207,13 +207,17 @@ frontend/src/
   backend returns no geometry for a leg (landlocked port, disconnected
   seas). Prototype iteration for routing algorithms lives in
   `tools/sea-route-lab/` — not wired into the app, browser-only.
-- **searoute-ts packaging** — the npm package is shipped as ESM with
-  an extensionless internal import (`./lib/utils`) that Node's ESM
-  loader rejects, plus a stray `console.log(nearestLineIndex)` in the
-  request hot path. Both are patched by `backend/scripts/patch-searoute-ts.mjs`
-  which runs via the `postinstall` hook. If tests fail with
-  `ERR_MODULE_NOT_FOUND` on searoute-ts after an `npm install`, the
-  patch didn't run — check the postinstall output.
+- **Marnet shipping-lane router is in-house** — the abandoned
+  `searoute-ts` npm package was dropped on 2026-04-30 (its extensionless
+  ESM imports broke silently on Node ≥ 22, so every cruise leg was
+  falling through to the coarse 1° fallback for weeks). The vendored
+  Eurostat marnet GeoJSON now lives at `backend/data/marnet/marnet.geojson`
+  and is loaded by `services/marnet/marnetGraph.ts` (graph + A*). The
+  high-level entry point is `routeMarnet()` in `services/marnet/marnetRouter.ts`.
+  Both `services/schematicRouter.ts` and `services/cruiseDistance/marnetCalculator.ts`
+  consume it. The Dockerfile copies `backend/data/marnet/marnet.geojson`
+  into the production image alongside the land mask — without it the
+  router throws ENOENT on first cruise request.
 - **Ship + Port seeds are idempotent** — `seedShipsFromCSV` /
   `seedPortsFromCSV` skip rows whose `imo` / `unlocode` already exists.
   User-added rows (`isUserAdded=true`) are never overwritten by
@@ -297,7 +301,7 @@ Docker Compose paths, local port mappings.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **TravStats** (3666 symbols, 9482 relationships, 270 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **TravStats** (3666 symbols, 9481 relationships, 270 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
