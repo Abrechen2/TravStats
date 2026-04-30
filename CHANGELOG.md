@@ -4,6 +4,11 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-beta.8] - 2026-04-30 (Beta)
+
+### Fixed
+- **Kiel cruise routes were drawing through the Holstein peninsula** — Kiel sits at the southern end of the Kieler Förde and marnet's nearest shipping-lane node is in Lübeck Bay, so every Kiel-routed leg was snapping SE around the south of Fehmarn island instead of taking the natural Kieler-Förde → Kiel-Bight → Fehmarnbelt → open-Baltic exit. Adds a fixed Kiel approach corridor (analogous to the existing Hamburg/Elbe corridor) that walks the route through the Förde, the Bight, and the Fehmarnbelt strait between Puttgarden and Rødby before handing off to marnet at open water east of Lolland. Verified against the Kiel→Copenhagen, Kiel→Bergen, and Kiel→Stockholm cruises in the demo dataset.
+
 ## [2.0.0-beta.7] - 2026-04-30 (Beta)
 
 ### Fixed

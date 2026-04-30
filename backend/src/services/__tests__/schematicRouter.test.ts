@@ -210,6 +210,79 @@ describe('schematicRouter — computeSchematicRoute', () => {
     expect(r.waypoints[r.waypoints.length - 1]).toEqual([5.32, 60.39]);
   });
 
+  it('uses the fixed Kiel approach so the Fehmarnbelt corridor is followed instead of Lübeck-Bay zigzag', async () => {
+    setCoarseMaskForTesting(allWaterMask());
+    const r = await computeSchematicRoute(
+      {
+        name: 'Kiel',
+        city: 'Kiel',
+        country: 'Germany',
+        unlocode: 'DEKEL',
+        lat: 54.32,
+        lon: 10.13,
+      },
+      {
+        name: 'Copenhagen',
+        city: 'Copenhagen',
+        country: 'Denmark',
+        unlocode: 'DKCPH',
+        lat: 55.69,
+        lon: 12.57,
+      },
+    );
+
+    expect(r.routed).toBe(true);
+    expect(r.protectedPrefixCount).toBe(8);
+    // First 8 waypoints: Kiel + 7 corridor points up through Fehmarnbelt
+    // and out into the open Bay of Mecklenburg.
+    expect(r.waypoints.slice(0, 8)).toEqual([
+      [10.13, 54.32],
+      [10.21, 54.4],
+      [10.3, 54.5],
+      [10.8, 54.55],
+      [11.1, 54.65],
+      [11.4, 54.65],
+      [11.8, 54.7],
+      [12.3, 54.8],
+    ]);
+    expect(r.waypoints[r.waypoints.length - 1]).toEqual([12.57, 55.69]);
+  });
+
+  it('uses the fixed Kiel approach in reverse when Kiel is the arrival port', async () => {
+    setCoarseMaskForTesting(allWaterMask());
+    const r = await computeSchematicRoute(
+      {
+        name: 'Copenhagen',
+        city: 'Copenhagen',
+        country: 'Denmark',
+        unlocode: 'DKCPH',
+        lat: 55.69,
+        lon: 12.57,
+      },
+      {
+        name: 'Kiel',
+        city: 'Kiel',
+        country: 'Germany',
+        unlocode: 'DEKEL',
+        lat: 54.32,
+        lon: 10.13,
+      },
+    );
+
+    expect(r.routed).toBe(true);
+    expect(r.protectedSuffixCount).toBe(8);
+    expect(r.waypoints.slice(-8)).toEqual([
+      [12.3, 54.8],
+      [11.8, 54.7],
+      [11.4, 54.65],
+      [11.1, 54.65],
+      [10.8, 54.55],
+      [10.3, 54.5],
+      [10.21, 54.4],
+      [10.13, 54.32],
+    ]);
+  });
+
   it('uses the fixed Hamburg approach in reverse when Hamburg is the arrival port', async () => {
     setCoarseMaskForTesting(allWaterMask());
     const r = await computeSchematicRoute(

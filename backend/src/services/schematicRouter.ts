@@ -157,6 +157,31 @@ const PORT_APPROACHES: ReadonlyArray<PortApproach> = [
       [8.18, 54.05], // German Bight, safely outside the Elbe estuary.
     ],
   },
+  {
+    // Kiel sits at the southern tip of the Kieler Förde. Marnet's
+    // nearest shipping-lane node sits SE in Lübeck Bay — snapping
+    // there draws every Kiel route through the Holstein peninsula
+    // around the south of Fehmarn island. Real cruise traffic exits
+    // Kiel via the Förde, crosses the Kiel Bight, transits Fehmarnbelt
+    // (between Puttgarden and Rødby), and joins the open Baltic east
+    // of Lolland. This corridor encodes that path so the marnet graph
+    // picks up from sensible open water.
+    match: (port) => portMatches(port, {
+      names: ['kiel'],
+      cities: ['kiel'],
+      countries: ['germany', 'deutschland'],
+      unlocodes: ['DEKEL'],
+    }),
+    outbound: [
+      [10.21, 54.4], // Kieler Förde mouth, north of Friedrichsort.
+      [10.3, 54.5], // Kiel Bight open water, off Strande / Schilksee.
+      [10.8, 54.55], // approaching Fehmarn from the west, mid-channel.
+      [11.1, 54.65], // Fehmarnbelt western entry, north of Großenbrode.
+      [11.4, 54.65], // Fehmarnbelt centre, between Puttgarden and Rødby.
+      [11.8, 54.7], // east of Fehmarnbelt, open Bay of Mecklenburg.
+      [12.3, 54.8], // open Baltic east of Lolland, marnet snap territory.
+    ],
+  },
 ];
 
 function normalizePortText(value: string | null | undefined): string {
