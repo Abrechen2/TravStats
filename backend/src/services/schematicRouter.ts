@@ -174,8 +174,8 @@ const PORT_APPROACHES: ReadonlyArray<PortApproach> = [
     outbound: [
       [9.87, 53.54],
       [9.7, 53.56],
-      [9.5, 53.64],
-      [9.3, 53.74],
+      [9.42, 53.79], // Glückstadt fairway (channel runs N of the town).
+      [9.22, 53.86], // Brokdorf approach, channel-centered between river banks.
       [9.12, 53.88],
       [8.72, 53.9],
       [8.18, 54.05], // German Bight, safely outside the Elbe estuary.
@@ -632,7 +632,14 @@ async function computeMaritimeGraphRoute(
     if (coords.length < 2) return null;
 
     const chordKm = haversineKm(dep, arr);
-    const snapBudgetKm = Math.min(250, Math.max(60, chordKm * 0.2));
+    // Marnet's nearest shipping-lane node is often 30-80 km from a port
+    // (Kiel, Lübeck, Stockholm, Oslo, fjord ports). The previous budget
+    // (60 km floor / 250 km cap / 20 % of chord) rejected those on
+    // short-to-medium legs, dropping us to the 1° A* fallback whose
+    // output cuts through narrow Baltic straits. The new budget is
+    // permissive enough to keep marnet results for every realistic
+    // landlocked-port pairing while still vetoing nonsense snaps.
+    const snapBudgetKm = Math.min(500, Math.max(100, chordKm * 0.35));
     const startSnapKm = haversineKm(dep, { lon: coords[0][0], lat: coords[0][1] });
     const endSnapKm = haversineKm(arr, {
       lon: coords[coords.length - 1][0],
@@ -649,7 +656,13 @@ async function computeMaritimeGraphRoute(
       // Maritime graph nodes are intentionally close to real coastlines.
       // Reject only sustained land cuts; isolated raster hits near a
       // harbour or island edge would otherwise discard good graph routes.
-      if (segmentMaxLandRun(fineBytes, lon0, lat0, lon1, lat1) >= 5) return null;
+      // Threshold relaxed from 5 to 10 cells (~110 km of contiguous land
+      // on the 0.1° mask) — Baltic legs through narrow island passages
+      // (Kiel-Bight, Greifswalder-Bodden, Stockholm archipelago) clip
+      // small island corners on the marnet polyline; the 5-cell cap
+      // discarded those routes in favour of the 1° A* fallback whose
+      // own land-cut artefacts are worse.
+      if (segmentMaxLandRun(fineBytes, lon0, lat0, lon1, lat1) >= 10) return null;
     }
     return repaired;
   } catch {
