@@ -12,6 +12,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import logger from './utils/logger';
 import { initializeEncryptionKey } from './utils/encryptionKey';
+import { maybeRunPreMigrationBackup, writeLastDeployedVersion } from './utils/upgradeBackup';
 
 const prisma = new PrismaClient();
 
@@ -117,6 +118,19 @@ async function init() {
       });
     }
 
+    // Step 2.6: Pre-migration backup on major-version bump
+    console.log('2️⃣.6 Checking upgrade-backup trigger...');
+    const upgradeCtx = await maybeRunPreMigrationBackup();
+    if (upgradeCtx.majorBumped) {
+      if (upgradeCtx.backupCreated) {
+        console.log(`   ✅ Pre-upgrade backup created: ${upgradeCtx.backupCreated}\n`);
+      } else {
+        console.log('   ⚠️  Major-version bump detected but backup failed; check warnings above\n');
+      }
+    } else {
+      console.log('   ✅ No major-version bump; skipping upgrade backup\n');
+    }
+
     // Step 3: Run migrations
     console.log('3️⃣  Running database migrations...');
     logger.info({ operation: 'init_migrations', message: 'Running database migrations' });
@@ -127,6 +141,20 @@ async function init() {
       });
       console.log('   ✅ Migrations applied\n');
       logger.info({ operation: 'init_migrations_success', message: 'Migrations applied successfully' });
+      // Persist the version that successfully migrated this data volume.
+      // Used on the next boot to detect future major bumps and trigger
+      // another pre-migration backup. Written only after a green migrate.
+      try {
+        writeLastDeployedVersion(upgradeCtx.currentVersion);
+      } catch (writeError) {
+        logger.warn({
+          operation: 'init_last_version_write_error',
+          message: 'Could not persist last-version marker',
+          error: {
+            message: writeError instanceof Error ? writeError.message : 'Unknown error',
+          },
+        });
+      }
     } catch (error) {
       console.error('   ❌ Migration failed!');
       console.error('   You may need to run: npx prisma migrate dev');
