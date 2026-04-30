@@ -1,13 +1,11 @@
 /**
  * Marnet (Eurostat-derived shipping-lane network) distance calculator.
  *
- * Wraps `searoute-ts`, whose vendored `marnet` graph traces back to the
- * Eurostat SeaRoute project (originally Oak Ridge National Labs Global
- * Shipping Lane Network 2000, AIS-enriched). Returns the routed
- * polyline length plus the haversine snap-distances at each end —
- * dramatically more accurate than great-circle for ocean legs because
- * it follows actual shipping lanes through canals, straits, and around
- * landmasses.
+ * Routes through the vendored `marnet` GeoJSON via `services/marnet/
+ * marnetRouter` (replaces the abandoned `searoute-ts` package, whose
+ * extensionless ESM imports broke on Node ≥ 22). The underlying graph
+ * is identical — same Eurostat SeaRoute / ORNL Global Shipping Lane
+ * Network data — only the loader and pathfinder are now ours.
  *
  * Limitations (Phase 2 scope):
  *   - Inland river legs (region='river') are rejected → fall through
@@ -15,69 +13,21 @@
  *   - Ports >200 km from any marnet node fall back to haversine, since
  *     the snap distances would dominate and confuse the metric.
  *
- * License notes:
- *   - searoute-ts is MIT (Mayur Rawte 2022).
- *   - Underlying network derives from Eurostat SeaRoute (EUPL-1.2) +
+ * License / attribution:
+ *   - Marnet GeoJSON derives from Eurostat SeaRoute (EUPL-1.2) +
  *     ORNL Global Shipping Lane Network (US-Government → public domain).
  *   - We attribute "Sea-route distances based on Eurostat SeaRoute"
  *     in the application (see LICENSES.md / About page).
  */
 
-import logger from "../../utils/logger";
 import { haversineKm, polylineLengthKm } from "../../shared/geo/haversine";
+import { routeMarnet } from "../marnet/marnetRouter";
 import type {
   ComputedLeg,
   Confidence,
   DistanceCalculator,
   PortPoint,
 } from "./types";
-
-interface SeaRouteFeature {
-  geometry: { coordinates: number[][] };
-}
-type SeaRouteFn = (
-  origin: unknown,
-  destination: unknown,
-  units?: "kilometers",
-) => SeaRouteFeature;
-
-let seaRoutePromise: Promise<SeaRouteFn | null> | null = null;
-
-async function loadSeaRoute(): Promise<SeaRouteFn | null> {
-  // Skip during unit tests — the marnet graph is ~3600 features and
-  // path-finder pre-builds an adjacency map at module load. Tests
-  // covering this calculator must mock seaRoute() directly.
-  if (process.env.NODE_ENV === "test") return null;
-
-  if (seaRoutePromise === null) {
-    seaRoutePromise = (async (): Promise<SeaRouteFn | null> => {
-      try {
-        const dynamicImport = new Function(
-          "specifier",
-          "return import(specifier)",
-        ) as (specifier: string) => Promise<{
-          seaRoute?: SeaRouteFn;
-          default?: { seaRoute?: SeaRouteFn };
-          "module.exports"?: { seaRoute?: SeaRouteFn };
-        }>;
-        const mod = await dynamicImport("searoute-ts");
-        return (
-          mod.seaRoute ??
-          mod.default?.seaRoute ??
-          mod["module.exports"]?.seaRoute ??
-          null
-        );
-      } catch (err) {
-        logger.warn({
-          operation: "marnet_calculator_load_failed",
-          error: err instanceof Error ? err.message : err,
-        });
-        return null;
-      }
-    })();
-  }
-  return seaRoutePromise;
-}
 
 /** Below this snap distance (km) → high confidence. */
 const SNAP_HIGH_CONFIDENCE_KM = 25;
@@ -143,51 +93,25 @@ function isInlandPort(port: PortPoint): boolean {
 async function computeMarnetDistance(
   from: PortPoint,
   to: PortPoint,
-  seaRoute: SeaRouteFn,
 ): Promise<ComputedLeg | null> {
-  // searoute-ts wants [lon, lat] points. It internally calls
-  // snapToNetwork() → returns a routed Feature<LineString>.
-  const origin = { type: "Point", coordinates: [from.lon, from.lat] };
-  const destination = { type: "Point", coordinates: [to.lon, to.lat] };
+  const route = await routeMarnet(
+    { lat: from.lat, lon: from.lon },
+    { lat: to.lat, lon: to.lon },
+    { maxSnapKm: SNAP_REJECT_KM },
+  );
+  if (route === null) return null;
+  if (route.coords.length < 2) return null;
 
-  let feature: SeaRouteFeature;
-  try {
-    feature = seaRoute(origin, destination, "kilometers");
-  } catch (err) {
-    logger.warn({
-      operation: "marnet_calculator_route_failed",
-      from: from.id,
-      to: to.id,
-      error: err instanceof Error ? err.message : err,
-    });
-    return null;
-  }
-
-  const coords = feature?.geometry?.coordinates;
-  if (!Array.isArray(coords) || coords.length < 2) return null;
-
-  // searoute-ts already snaps both endpoints to the network. The
+  // routeMarnet already snaps both endpoints to the network. The
   // returned LineString starts at the snapped origin, ends at the
   // snapped destination. We add the haversine "last-mile" hops back
   // (port → snapped origin, snapped destination → port) so the total
   // is comparable to point-to-point measurements.
-  const firstCoord = coords[0];
-  const lastCoord = coords[coords.length - 1];
-  const fromSnapKm = haversineKm(
-    { lat: from.lat, lon: from.lon },
-    { lat: firstCoord[1], lon: firstCoord[0] },
-  );
-  const toSnapKm = haversineKm(
-    { lat: to.lat, lon: to.lon },
-    { lat: lastCoord[1], lon: lastCoord[0] },
-  );
-
-  if (fromSnapKm > SNAP_REJECT_KM || toSnapKm > SNAP_REJECT_KM) {
-    return null;
-  }
+  const fromSnapKm = route.snapDepKm;
+  const toSnapKm = route.snapArrKm;
 
   const polylineKm = polylineLengthKm(
-    coords.map(([lon, lat]) => ({ lat, lon })),
+    route.coords.map(([lon, lat]) => ({ lat, lon })),
   );
   const routedKm = polylineKm + fromSnapKm + toSnapKm;
   const chordKm = haversineKm(
@@ -236,17 +160,6 @@ export const marnetCalculator: DistanceCalculator = {
   },
 
   async compute(from: PortPoint, to: PortPoint): Promise<ComputedLeg | null> {
-    const seaRoute = await loadSeaRoute();
-    if (!seaRoute) {
-      // Test mode (or load failed) — accept() should have already
-      // declined, but if we got here, fall through.
-      return null;
-    }
-    return computeMarnetDistance(from, to, seaRoute);
+    return computeMarnetDistance(from, to);
   },
 };
-
-/** Test helper — resets the lazy-loaded seaRoute promise. */
-export function __resetMarnetCache(): void {
-  seaRoutePromise = null;
-}

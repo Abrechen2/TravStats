@@ -1,7 +1,4 @@
-import {
-  marnetCalculator,
-  __resetMarnetCache,
-} from "../marnetCalculator";
+import { marnetCalculator } from "../marnetCalculator";
 import type { PortPoint } from "../types";
 
 const KIEL: PortPoint = {
@@ -27,8 +24,6 @@ const VIENNA: PortPoint = {
 };
 
 describe("marnetCalculator", () => {
-  beforeEach(() => __resetMarnetCache());
-
   it("rejects inland ports", () => {
     expect(marnetCalculator.accepts(VIENNA, KIEL)).toBe(false);
     expect(marnetCalculator.accepts(KIEL, VIENNA)).toBe(false);
@@ -37,9 +32,5 @@ describe("marnetCalculator", () => {
   it("declines in test mode (so tests can mock instead)", () => {
     expect(process.env.NODE_ENV).toBe("test");
     expect(marnetCalculator.accepts(KIEL, COPENHAGEN)).toBe(false);
-  });
-
-  it("returns null when invoked without a loaded seaRoute (test mode)", async () => {
-    await expect(marnetCalculator.compute(KIEL, COPENHAGEN)).resolves.toBeNull();
   });
 });
