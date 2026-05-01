@@ -1,0 +1,543 @@
+/**
+ * Public API path registration.
+ *
+ * The goal is intentionally NOT 100% endpoint coverage — only the
+ * surfaces an external consumer (AI agent, automation script, third-
+ * party app) actually needs:
+ *
+ *   - flights:    list / get / create / update / delete
+ *   - trips:      list / get / create
+ *   - airports:   search by IATA/ICAO/name
+ *   - stats:      summary + per-domain rollups
+ *   - tokens:     create / list / revoke (cookie-only — disclosed for
+ *                 completeness, never callable from a PAT)
+ *
+ * Internal-only routes (admin/*, parser-templates, parse-logs,
+ * boarding-pass-parse, training, diagnostic exports) are deliberately
+ * omitted — they're tied to the web UI and not stable contracts.
+ *
+ * Each path here is registered using a wrapped/cleaned Zod schema.
+ * Where the live request schema embeds Express-specific transforms
+ * (e.g. emptyStringToUndefined), we use a public-facing `inputSchema`
+ * so the OpenAPI consumer doesn't see the internal coercion noise.
+ */
+
+import { z } from "zod";
+
+import { registry } from "./registry";
+import { createFlightSchema, updateFlightSchema, airportSchema } from "../../schemas/flight";
+import {
+  apiTokenScopeSchema,
+  createApiTokenSchema,
+  sanitizedApiTokenSchema,
+  createdApiTokenSchema,
+} from "../../schemas/apiToken";
+
+/* ─────────────────────────── shared schemas ─────────────────────────── */
+
+const errorResponse = registry.register(
+  "Error",
+  z
+    .object({
+      error: z.string().openapi({ example: "Invalid input" }),
+      details: z.array(z.string()).optional(),
+    })
+    .openapi("Error")
+);
+
+const flightCreateInput = registry.register(
+  "FlightCreateInput",
+  createFlightSchema.openapi("FlightCreateInput")
+);
+
+const flightUpdateInput = registry.register(
+  "FlightUpdateInput",
+  updateFlightSchema.openapi("FlightUpdateInput")
+);
+
+const flightResponse = registry.register(
+  "Flight",
+  z
+    .object({
+      id: z.string().uuid(),
+      userId: z.string().uuid(),
+      airline: z.string().nullable(),
+      operatingAirline: z.string().nullable(),
+      flightNumber: z.string().nullable(),
+      aircraft: z.string().nullable(),
+      depIata: z.string().nullable(),
+      depIcao: z.string().nullable(),
+      depName: z.string().nullable(),
+      depLat: z.number(),
+      depLon: z.number(),
+      arrIata: z.string().nullable(),
+      arrIcao: z.string().nullable(),
+      arrName: z.string().nullable(),
+      arrLat: z.number(),
+      arrLon: z.number(),
+      departureTime: z.string().datetime().nullable(),
+      arrivalTime: z.string().datetime().nullable(),
+      status: z.string(),
+      seatNumber: z.string().nullable(),
+      seatClass: z.string().nullable(),
+      gate: z.string().nullable(),
+      terminal: z.string().nullable(),
+      bookingReference: z.string().nullable(),
+      ticketNumber: z.string().nullable(),
+      price: z.number().nullable(),
+      currency: z.string().nullable(),
+      taxes: z.number().nullable(),
+      fees: z.number().nullable(),
+      category: z.string().nullable(),
+      tags: z.array(z.string()),
+      companions: z.array(z.string()),
+      notes: z.string().nullable(),
+      createdAt: z.string().datetime(),
+    })
+    .openapi("Flight")
+);
+
+const airportResponse = registry.register(
+  "Airport",
+  z
+    .object({
+      id: z.number(),
+      iata: z.string().nullable(),
+      icao: z.string().nullable(),
+      name: z.string(),
+      city: z.string().nullable(),
+      country: z.string().nullable(),
+      lat: z.number(),
+      lon: z.number(),
+      timezone: z.string().nullable(),
+      isClosed: z.boolean(),
+    })
+    .openapi("Airport")
+);
+
+const tripResponse = registry.register(
+  "Trip",
+  z
+    .object({
+      id: z.string().uuid(),
+      userId: z.string().uuid(),
+      name: z.string().nullable(),
+      description: z.string().nullable(),
+      startDate: z.string().datetime().nullable(),
+      endDate: z.string().datetime().nullable(),
+      createdAt: z.string().datetime(),
+    })
+    .openapi("Trip")
+);
+
+void airportSchema; // exported for consumers; not registered as standalone
+
+registry.register("ApiTokenScope", apiTokenScopeSchema.openapi("ApiTokenScope"));
+registry.register("CreateApiTokenInput", createApiTokenSchema.openapi("CreateApiTokenInput"));
+registry.register("ApiToken", sanitizedApiTokenSchema.openapi("ApiToken"));
+registry.register("CreatedApiToken", createdApiTokenSchema.openapi("CreatedApiToken"));
+
+/* ─────────────────────────── path helpers ─────────────────────────── */
+
+const errorContent = {
+  "application/json": { schema: errorResponse },
+};
+
+/* ───────────────────────────── flights ──────────────────────────────── */
+
+registry.registerPath({
+  method: "get",
+  path: "/flights",
+  summary: "List flights",
+  description:
+    "Returns the authenticated user's flights, newest departure first. " +
+    "Pagination via `limit` (default 50, max 500) and `offset`.",
+  tags: ["Flights"],
+  request: {
+    query: z.object({
+      limit: z.coerce.number().int().min(1).max(500).optional(),
+      offset: z.coerce.number().int().min(0).optional(),
+      status: z.string().optional().describe("Filter to a single flight status"),
+      year: z.coerce.number().int().optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: "List of flights",
+      content: {
+        "application/json": {
+          schema: z.object({
+            flights: z.array(flightResponse),
+            total: z.number(),
+          }),
+        },
+      },
+    },
+    401: { description: "Missing or invalid token", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/flights/{id}",
+  summary: "Get a single flight",
+  tags: ["Flights"],
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+  },
+  responses: {
+    200: {
+      description: "Flight",
+      content: { "application/json": { schema: flightResponse } },
+    },
+    404: { description: "Not found", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/flights",
+  summary: "Create a flight",
+  description:
+    "Creates a new flight. Pass `?merge=true` to enrich an existing matching " +
+    "flight (same flightNumber + departureTime ± window) instead of creating " +
+    "a duplicate row — empty fields on the existing flight are filled, " +
+    "non-empty fields are preserved. Pass `?force=true` to skip duplicate " +
+    "detection and always create.",
+  tags: ["Flights"],
+  request: {
+    query: z.object({
+      merge: z.enum(["true", "false"]).optional(),
+      force: z.enum(["true", "false"]).optional(),
+    }),
+    body: {
+      content: { "application/json": { schema: flightCreateInput } },
+    },
+  },
+  responses: {
+    201: {
+      description: "Flight created",
+      content: {
+        "application/json": {
+          schema: z.object({
+            flight: flightResponse,
+            mergedFields: z.array(z.string()).optional(),
+          }),
+        },
+      },
+    },
+    400: { description: "Validation failed", content: errorContent },
+    409: {
+      description: "Duplicate detected (omit `?force` or pass `?merge=true` to handle)",
+      content: errorContent,
+    },
+  },
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/flights/{id}",
+  summary: "Update a flight",
+  tags: ["Flights"],
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+    body: { content: { "application/json": { schema: flightUpdateInput } } },
+  },
+  responses: {
+    200: {
+      description: "Flight updated",
+      content: { "application/json": { schema: flightResponse } },
+    },
+    404: { description: "Not found", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/flights/{id}",
+  summary: "Delete a flight",
+  tags: ["Flights"],
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+  },
+  responses: {
+    204: { description: "Deleted" },
+    404: { description: "Not found", content: errorContent },
+  },
+});
+
+/* ───────────────────────────── trips ────────────────────────────────── */
+
+registry.registerPath({
+  method: "get",
+  path: "/trips",
+  summary: "List trips",
+  tags: ["Trips"],
+  responses: {
+    200: {
+      description: "Trips",
+      content: { "application/json": { schema: z.array(tripResponse) } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/trips/{id}",
+  summary: "Get a trip",
+  tags: ["Trips"],
+  request: { params: z.object({ id: z.string().uuid() }) },
+  responses: {
+    200: { description: "Trip", content: { "application/json": { schema: tripResponse } } },
+    404: { description: "Not found", content: errorContent },
+  },
+});
+
+/* ──────────────────────────── airports ──────────────────────────────── */
+
+registry.registerPath({
+  method: "get",
+  path: "/airports",
+  summary: "Search airports",
+  description:
+    "Search by IATA/ICAO (exact match preferred) or by name/city (substring). " +
+    "Use this to resolve coordinates before creating a flight via API.",
+  tags: ["Airports"],
+  request: {
+    query: z.object({
+      q: z.string().min(1),
+      limit: z.coerce.number().int().min(1).max(50).optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Matching airports",
+      content: { "application/json": { schema: z.array(airportResponse) } },
+    },
+  },
+});
+
+/* ───────────────────────────── stats ────────────────────────────────── */
+
+const statsResponse = registry.register(
+  "StatsSummary",
+  z
+    .object({
+      totalFlights: z.number(),
+      totalDistanceKm: z.number(),
+      totalDurationMinutes: z.number(),
+      uniqueAirports: z.number(),
+      uniqueCountries: z.number(),
+      yearStats: z.record(z.string(), z.number()).optional(),
+    })
+    .openapi("StatsSummary")
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/stats",
+  summary: "Aggregate statistics",
+  description: "Sum of distance, duration and unique-airport counts across the user's flights.",
+  tags: ["Stats"],
+  responses: {
+    200: {
+      description: "Stats",
+      content: { "application/json": { schema: statsResponse } },
+    },
+  },
+});
+
+/* ──────────────────────── parser endpoints ─────────────────────────── */
+
+const parsedFlightSchema = registry.register(
+  "ParsedFlight",
+  z
+    .object({
+      airline: z.string().nullable(),
+      flightNumber: z.string().nullable(),
+      depIata: z.string().nullable(),
+      arrIata: z.string().nullable(),
+      departureTime: z.string().nullable(),
+      arrivalTime: z.string().nullable(),
+      seatNumber: z.string().nullable().optional(),
+      bookingReference: z.string().nullable().optional(),
+      passengerName: z.string().nullable().optional(),
+    })
+    .openapi("ParsedFlight")
+);
+
+registry.registerPath({
+  method: "post",
+  path: "/parse-email",
+  summary: "Extract flights from email content",
+  description:
+    "Sends raw email body (text or HTML, up to 10 MB) through the LLM/regex " +
+    "parser pipeline and returns one or more structured flight candidates. " +
+    "Useful for AI agents that receive forwarded booking confirmations and " +
+    "want to drop them into TravStats without writing per-airline regexes. " +
+    "The result is NOT auto-saved — combine with `POST /flights?merge=true` " +
+    "to persist with duplicate-aware enrichment.",
+  tags: ["Parsers"],
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              emailContent: z.string().min(1).max(10 * 1024 * 1024),
+              subject: z.string().max(1000).optional(),
+            })
+            .openapi("ParseEmailRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Parsed flights",
+      content: {
+        "application/json": {
+          schema: z.object({
+            flights: z.array(parsedFlightSchema),
+            parserUsed: z.string(),
+            subject: z.string().optional(),
+          }),
+        },
+      },
+    },
+    400: { description: "Validation failed", content: errorContent },
+    429: { description: "Rate-limited (parser is expensive)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/parse-boardingpass",
+  summary: "Extract a flight from a boarding-pass image",
+  description:
+    "Accepts a base64-encoded boarding-pass image (PNG/JPEG/PDF, up to 20 MB). " +
+    "Tries QR/PDF417 barcode decoding first, then OCR + vision LLM as fallback. " +
+    "Like /parse-email, the result is NOT auto-saved.",
+  tags: ["Parsers"],
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              imageBase64: z.string().min(1).max(20 * 1024 * 1024),
+              enrichWithApi: z.boolean().default(true).optional(),
+            })
+            .openapi("ParseBoardingpassRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Parsed flight",
+      content: {
+        "application/json": {
+          schema: z.object({
+            flight: parsedFlightSchema,
+            provider: z.string(),
+            fallbackUsed: z.boolean().optional(),
+            enriched: z.boolean().optional(),
+          }),
+        },
+      },
+    },
+    400: { description: "Validation failed or invalid image", content: errorContent },
+    429: { description: "Rate-limited", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/flights/batch",
+  summary: "Create multiple flights atomically",
+  description:
+    "Insert up to 20 flights in a single transaction. Shared booking " +
+    "references are auto-grouped into a Trip + Booking row, so a forwarded " +
+    "round-trip confirmation lands as one trip with two flights. Each entry " +
+    "uses the same shape as `POST /flights`. Errors abort the whole batch — " +
+    "no partial inserts.",
+  tags: ["Flights"],
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.array(flightCreateInput).min(1).max(20),
+        },
+      },
+    },
+  },
+  responses: {
+    201: {
+      description: "Flights created",
+      content: {
+        "application/json": {
+          schema: z.object({
+            flights: z.array(flightResponse),
+            tripIds: z.array(z.string().uuid()).optional(),
+          }),
+        },
+      },
+    },
+    400: { description: "Batch too large or any entry invalid", content: errorContent },
+    429: { description: "Rate-limited (batch is heavy)", content: errorContent },
+  },
+});
+
+/* ─────────────────────────── api tokens ─────────────────────────────── */
+
+registry.registerPath({
+  method: "get",
+  path: "/settings/tokens",
+  summary: "List your API tokens",
+  description: "Cookie-authenticated only. PAT-authenticated requests are rejected with 403.",
+  tags: ["API Tokens"],
+  responses: {
+    200: {
+      description: "Tokens",
+      content: {
+        "application/json": {
+          schema: z.object({ tokens: z.array(sanitizedApiTokenSchema) }),
+        },
+      },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/settings/tokens",
+  summary: "Create a new API token",
+  description:
+    "The plaintext token is returned exactly once in the `plaintext` field — " +
+    "it cannot be retrieved later. Cookie-authenticated only.",
+  tags: ["API Tokens"],
+  request: {
+    body: { content: { "application/json": { schema: createApiTokenSchema } } },
+  },
+  responses: {
+    201: {
+      description: "Token created",
+      content: { "application/json": { schema: createdApiTokenSchema } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/settings/tokens/{id}",
+  summary: "Revoke an API token",
+  tags: ["API Tokens"],
+  request: { params: z.object({ id: z.string().uuid() }) },
+  responses: {
+    200: {
+      description: "Revoked",
+      content: { "application/json": { schema: sanitizedApiTokenSchema } },
+    },
+  },
+});
