@@ -219,20 +219,20 @@ interface DeckOverlayProps {
 }
 
 function DeckGLOverlay({ layers }: DeckOverlayProps): null {
-  // `interleaved: true` is essential on globe projection. In overlay mode
-  // (the default) the deck.gl canvas tracks MapLibre's view state via
-  // periodic event sync, which is reliable for pan/zoom but visibly lags
-  // — and on globe projection, sometimes drops — rotate/pitch changes
-  // (right-mouse drag): the basemap turns under the user's cursor while
-  // the deck.gl arcs and dots stay screen-fixed, looking "frozen". With
-  // `interleaved: true`, deck.gl shares MapLibre's WebGL context and
-  // viewport, so every frame the basemap renders, deck.gl renders with
-  // exactly the same camera — sync is structural, not best-effort.
+  // `interleaved: true` shares MapLibre's WebGL context so deck.gl uses
+  // MapLibre's globe projection matrices directly — without it, the
+  // overlay falls back to mercator and the layers detach into a flat
+  // strip floating beside the globe whenever the camera is rotated.
+  //
+  // No `position` here: MapboxOverlay isn't a corner control, it's a
+  // render-pipeline integration. Passing a position option causes
+  // react-map-gl to mount it as a corner widget, which can confuse the
+  // overlay's lifecycle.
+  //
+  // Caller must gate this component until MapLibre is confirmed in
+  // globe projection — see `mapReady` in GlobeView.
   const overlay = useControl<MapboxOverlay>(
-    () => new MapboxOverlay({ layers, pickingRadius: 5, interleaved: true }),
-    {
-      position: "top-left",
-    }
+    () => new MapboxOverlay({ layers, pickingRadius: 5, interleaved: true })
   );
   overlay.setProps({ layers });
   return null;
@@ -428,6 +428,14 @@ export default function GlobeView({
   });
   const [autoRotate, setAutoRotate] = useState(false);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  // Gate the deck.gl overlay until MapLibre is confirmed in globe
+  // projection. Otherwise MapboxOverlay's constructor (run inside
+  // useControl, which fires *before* onLoad) caches the initial
+  // mercator projection state and never re-detects globe — the
+  // visible symptom is the deck.gl arcs and dots rendering as a
+  // flat mercator strip pasted over the rotated globe (right-mouse
+  // drag rotates the basemap but the layer band stays detached).
+  const [mapReady, setMapReady] = useState(false);
 
   // Time-slider state. Sliced per-field so unrelated store changes
   // don't re-render the whole component. The store mode drives whether
@@ -508,6 +516,9 @@ export default function GlobeView({
     };
     apply();
     map.on("style.load", apply);
+    // Now that globe projection is engaged, mount the deck.gl overlay.
+    // Constructor will detect globe mode and compile globe-aware shaders.
+    setMapReady(true);
   }, []);
 
   // Auto-rotation loop. Drives `map.jumpTo` ~30 fps with a constant
@@ -993,7 +1004,7 @@ export default function GlobeView({
         maxPitch={60}
         style={{ width: "100%", height: "100%" }}
       >
-        <DeckGLOverlay layers={layers} />
+        {mapReady && <DeckGLOverlay layers={layers} />}
       </MapGL>
 
       {/* Bottom-left stack: auto-rotate toggle + heatmap legend */}
