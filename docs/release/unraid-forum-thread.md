@@ -69,6 +69,16 @@ Optional local AI parsing
 Install the Ollama Community App, pull gemma3:12b (~7.5 GB), then in TravStats Admin → Parser set Ollama URL to http://<ollama-host>:11434. Handles multi-flight confirmation emails that the regex templates don't cover.
 
 
+Image tags
+
+abrechen2/travstats:latest — current stable (auto-updates on each promoted release). Default for the template above.
+abrechen2/travstats:stable — alias for :latest.
+abrechen2/travstats:1.2.1 (or any prior X.Y.Z) — pin to one specific release, never auto-updates.
+abrechen2/travstats:rc-latest — bleeding-edge Release Candidate. Receives every new RC via Force Update. May include breaking schema migrations across majors; in-place backup runs automatically on the first start of a new major. Use only if you want to help test before a release goes stable.
+
+Both Docker Hub and GHCR (ghcr.io/abrechen2/travstats) carry the same digests for these moving tags.
+
+
 Bug reports and feature requests welcome — here or on the GitHub issue tracker: https://github.com/Abrechen2/TravStats/issues/new/choose
 
 The app has a one-click "Report Bug" button in the top nav that bundles anonymised diagnostics + log tail.
@@ -119,6 +129,14 @@ If you prefer to paste HTML directly: click `…` in the toolbar to look for a "
 <p>Full install guide with screenshots: <a href="https://github.com/Abrechen2/TravStats/blob/main/docs/unraid/README.md">docs/unraid/README.md</a></p>
 <h3>Optional local AI parsing</h3>
 <p>Install the Ollama Community App, pull <code>gemma3:12b</code> (~7.5 GB), then in TravStats <strong>Admin → Parser</strong> set <em>Ollama URL</em> to <code>http://&lt;ollama-host&gt;:11434</code>. Handles multi-flight confirmation emails that the regex templates don't cover.</p>
+<h3>Image tags</h3>
+<ul>
+  <li><code>abrechen2/travstats:latest</code> — current stable (auto-updates on each promoted release). Default for the template above.</li>
+  <li><code>abrechen2/travstats:stable</code> — alias for <code>:latest</code>.</li>
+  <li><code>abrechen2/travstats:1.2.1</code> (or any prior <code>X.Y.Z</code>) — pin to one specific release, never auto-updates.</li>
+  <li><code>abrechen2/travstats:rc-latest</code> — bleeding-edge Release Candidate. Receives every new RC via Force Update. May include breaking schema migrations across majors; in-place backup runs automatically on the first start of a new major. Use only if you want to help test before a release goes stable.</li>
+</ul>
+<p>Both Docker Hub and GHCR (<code>ghcr.io/abrechen2/travstats</code>) carry the same digests for these moving tags.</p>
 <p>Bug reports and feature requests welcome — here or on the <a href="https://github.com/Abrechen2/TravStats/issues/new/choose">GitHub issue tracker</a>. The app has a one-click "Report Bug" button in the top nav that bundles anonymised diagnostics + log tail.</p>
 <p>Safe travels.</p>
 ```
