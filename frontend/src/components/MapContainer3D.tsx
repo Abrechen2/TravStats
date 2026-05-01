@@ -26,6 +26,35 @@ const GlobeView = lazy(() =>
   ]).then(([mod]) => mod)
 );
 
+// Spike: opt-in MapLibre globe via `?globeEngine=maplibre`. Skip the
+// 2 s splash delay since the spike has no Three.js textures to warm up.
+const GlobeViewMapLibre = lazy(() => import("./GlobeViewMapLibre"));
+
+function readGlobeEngine(): "default" | "maplibre" {
+  if (typeof window === "undefined") return "default";
+  // URL takes precedence so an explicit `?globeEngine=...` always wins
+  // over a previously cached choice. Once read, the value is also
+  // pinned to sessionStorage because the dashboard router strips
+  // unknown query params on tab navigation — without the storage
+  // fallback the spike would only render until the next route change.
+  const params = new URLSearchParams(window.location.search);
+  const fromUrl = params.get("globeEngine");
+  if (fromUrl === "maplibre" || fromUrl === "default") {
+    try {
+      window.sessionStorage.setItem("globeEngine", fromUrl);
+    } catch {
+      // sessionStorage may be unavailable (private mode etc.) — ignore
+    }
+    return fromUrl;
+  }
+  try {
+    if (window.sessionStorage.getItem("globeEngine") === "maplibre") return "maplibre";
+  } catch {
+    // ignore
+  }
+  return "default";
+}
+
 interface MapContainer3DProps {
   flights: GeoJSONFeature[];
   flightList?: Flight[];
@@ -76,6 +105,7 @@ export default function MapContainer3D({
   const cruiseEnabled = enabledDomains.includes("cruise");
   const [fabOpen, setFabOpen] = useState(false);
   const [cruises, setCruises] = useState<Cruise[]>([]);
+  const globeEngine = useMemo(readGlobeEngine, []);
 
   // Fetch cruises as supplemental map overlay. User hides by disabling
   // the cruise domain in settings — no per-layer toggle in V1. Depends
@@ -128,12 +158,21 @@ export default function MapContainer3D({
               </div>
             }
           >
-            <GlobeView
-              flights={flights}
-              cruises={cruises}
-              onFlightClick={onFlightClick}
-              minRouteCount={minRouteCount}
-            />
+            {globeEngine === "maplibre" ? (
+              <GlobeViewMapLibre
+                flights={flights}
+                cruises={cruises}
+                onFlightClick={onFlightClick}
+                minRouteCount={minRouteCount}
+              />
+            ) : (
+              <GlobeView
+                flights={flights}
+                cruises={cruises}
+                onFlightClick={onFlightClick}
+                minRouteCount={minRouteCount}
+              />
+            )}
           </Suspense>
         ) : (
           <DeckGLMap
