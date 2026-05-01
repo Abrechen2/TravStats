@@ -1,6 +1,6 @@
 # TravStats
 
-Flight tracker — Express/TypeScript backend + React/Vite/TypeScript frontend.
+Self-hosted travel logbook (flights, cruises, more) — Express/TypeScript backend + React/Vite/TypeScript frontend.
 
 ## Dev Commands
 

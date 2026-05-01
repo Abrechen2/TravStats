@@ -17,7 +17,7 @@
 ## Title
 
 ```
-TravStats v1.0 — self-hosted flight tracker with boarding-pass OCR, email import via local LLM, 3D maps, and zero-config install (AGPL-3.0)
+TravStats v1.0 — self-hosted travel logbook (flights now, cruises soon) with boarding-pass OCR, email import via local LLM, 3D maps, and zero-config install (AGPL-3.0)
 ```
 
 *(195 Zeichen, Reddit-Limit 300)*
@@ -28,11 +28,11 @@ TravStats v1.0 — self-hosted flight tracker with boarding-pass OCR, email impo
 
 Hi r/selfhosted,
 
-I've been running TravStats as the family's flight tracker for ~6 months on my Unraid box. After a full black-box pentest (22 findings, all fixed) and a week of UAT, it just hit v1.0. Dropping it here in case it fits anyone else's homelab.
+I've been running TravStats as the family's travel logbook for ~6 months on my Unraid box. It's a logbook, not a live tracker — you record flights manually, scan a boarding pass, or import a confirmation email, and TravStats turns them into history, stats and maps. (Cruises landing in v2 — same model, different transport.) After a full black-box pentest (22 findings, all fixed) and a week of UAT, it just hit v1.0. Dropping it here in case it fits anyone else's homelab.
 
 ## What it does
 
-- **Track every flight** with categories, tags, travel companions, cost + currency
+- **Log every flight** with categories, tags, travel companions, cost + currency
 - **Five flight states** — flown, scheduled, cancelled, historical, duplicated
 - **Boarding-pass scanner** — QR / PDF417 / OCR fallback, works on desktop + mobile
 - **Email & PDF import** — plain text / HTML / Outlook `.msg` / `.eml`. Template parsers handle the common airlines; for the long tail I plugged in Ollama — benchmarked `gemma3:12b` at 100% accuracy on my test corpus (~200 confirmations across ~15 carriers). Nothing leaves your LAN.

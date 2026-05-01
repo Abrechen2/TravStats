@@ -4,8 +4,8 @@
 
 # TravStats
 
-**Self-hosted flight tracker for small households and groups.**
-Track every flight, visualise routes on interactive maps, collect achievements — all on your own server.
+**Self-hosted travel logbook for small households and groups (1–10 users).**
+It's a logbook, not a live tracker — you record trips manually, scan a boarding pass, or import a confirmation email, and TravStats turns them into history, stats and maps.
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Release](https://img.shields.io/github/v/release/Abrechen2/TravStats?include_prereleases&sort=semver)](https://github.com/Abrechen2/TravStats/releases)
@@ -23,10 +23,17 @@ Track every flight, visualise routes on interactive maps, collect achievements �
 
 ## Why TravStats
 
-Built for 1–10 users who just want to know *where they've been*. No accounts to
-create on someone else's servers, no tracking, no ads — your flights stay on
-your machine. Flight data is enriched from AirLabs / Aviationstack / OpenSky,
-but everything you record lives in your own PostgreSQL.
+Log every flight you take (cruises landing in v2), visualise your routes
+on interactive 2D and 3D maps, collect 58 achievements, and import flights
+from boarding passes (QR / PDF417 / OCR) and confirmation emails — all on
+your own server, no cloud, no telemetry.
+
+It's a logbook, not a live tracker — you record trips manually, scan a
+boarding pass, or import a confirmation email, and TravStats turns them
+into history, stats and maps. Flight data is optionally enriched from
+AirLabs / Aviationstack / OpenSky, but everything you record lives in
+your own PostgreSQL. No accounts on someone else's servers, no analytics,
+no ads.
 
 - 🗺️ **Six map modes** — Routes, Heatmap, Hexagon, 3D columns, animated Trips, 3D Globe
 - 📊 **Year-over-year statistics** across flights, distance, seats, classes, routes
