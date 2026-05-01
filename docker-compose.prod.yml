@@ -41,6 +41,7 @@ services:
       - SETUID
       - SETGID
       - FOWNER
+      - DAC_READ_SEARCH
     logging:
       driver: "json-file"
       options:
@@ -135,6 +136,10 @@ services:
       - ALL
     cap_add:
       - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETUID
+      - SETGID
     logging:
       driver: "json-file"
       options:
