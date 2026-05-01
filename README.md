@@ -157,6 +157,52 @@ Report vulnerabilities via
 [GitHub Security Advisories](https://github.com/Abrechen2/TravStats/security/advisories/new)
 — **please do not open a public issue**.
 
+## API for external tools
+
+TravStats ships an authenticated REST API for AI agents, automation
+scripts and integrations. Every flight, trip, airport and stat the
+web UI shows is reachable programmatically.
+
+**1. Mint a Personal Access Token**: in the app, go to **Settings →
+API Tokens**, give it a label and a scope (`read`, `write`, `admin`),
+and copy the `ts_pat_…` value. The plaintext is shown exactly once —
+only the bcrypt hash is persisted.
+
+**2. Browse the spec**: open `https://<your-host>/api/v1/docs`
+(Swagger UI) or fetch `/api/v1/openapi.json` for the raw OpenAPI 3.0
+document. The spec is auto-generated from the same Zod schemas the
+backend uses for validation, so it never drifts.
+
+**3. Call it**: every endpoint accepts the token via the standard
+`Authorization` header.
+
+```bash
+TOKEN="ts_pat_…"
+
+# List your flights
+curl -H "Authorization: Bearer $TOKEN" \
+  https://travstats.example.com/api/v1/flights
+
+# Create a flight (write or admin scope required)
+curl -H "Authorization: Bearer $TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"departure":{"iata":"FRA","lat":50.0379,"lon":8.5622},
+          "arrival":{"iata":"JFK","lat":40.6413,"lon":-73.7781},
+          "departureTime":"2026-05-01T08:00:00.000Z",
+          "arrivalTime":"2026-05-01T17:00:00.000Z",
+          "flightNumber":"LH400"}' \
+  https://travstats.example.com/api/v1/flights
+```
+
+Pass `?merge=true` on `POST /flights` to enrich an existing matching
+flight (boarding-pass re-import, email confirmation upgrade) instead
+of creating a duplicate. Read-only tokens are blocked from mutating
+endpoints with 403; admin endpoints additionally require an
+`admin`-scoped token even if the owning user is an admin.
+
+Token requests get their own per-token rate-limit bucket so an
+aggressive script can't lock the user out of the web UI.
+
 ## Contributing
 
 Bug reports, feature ideas and pull requests are welcome. The

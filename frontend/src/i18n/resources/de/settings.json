@@ -537,5 +537,39 @@
       "password": "Passwort",
       "or": "ODER (stattdessen Basic Auth verwenden)"
     }
+  },
+  "apiTokens": {
+    "title": "API-Tokens",
+    "description": "Persönliche Zugriffstokens für externe Tools, AI-Agenten und Skripte. Ein Token wird genau einmal beim Erstellen angezeigt — danach nie wieder.",
+    "docsTitle": "API-Dokumentation",
+    "docsBody": "Vollständige Endpoints, Beispiele und Schemas — interaktiv ausprobieren mit deinem Token.",
+    "docsLink": "Swagger UI öffnen →",
+    "newLabel": "Beschreibung",
+    "newLabelPlaceholder": "z. B. „Home Assistant Integration\"",
+    "scope": "Berechtigung",
+    "scopes": {
+      "read": "Read — nur lesen",
+      "write": "Write — lesen + schreiben",
+      "admin": "Admin — voller Zugriff"
+    },
+    "create": "Token erstellen",
+    "existingTitle": "Bestehende Tokens",
+    "empty": "Noch keine Tokens erstellt.",
+    "lastUsed": "Zuletzt: {{when}}",
+    "neverUsed": "Noch nie benutzt",
+    "revoked": "Widerrufen",
+    "revokeButton": "Widerrufen",
+    "confirmRevoke": "Token wirklich widerrufen? Externe Tools mit diesem Token verlieren sofort den Zugriff.",
+    "justCreatedTitle": "Token erstellt",
+    "justCreatedWarning": "Kopiere diesen Token JETZT — er wird nicht erneut angezeigt. Nur der Hash wird gespeichert.",
+    "copy": "Kopieren",
+    "copied": "Kopiert!",
+    "dismiss": "Verstanden",
+    "errors": {
+      "load": "Tokens konnten nicht geladen werden",
+      "create": "Token konnte nicht erstellt werden",
+      "revoke": "Token konnte nicht widerrufen werden",
+      "labelRequired": "Beschreibung ist erforderlich"
+    }
   }
 }

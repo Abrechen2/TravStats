@@ -3,13 +3,23 @@ import rateLimit from 'express-rate-limit';
 import { RATE_LIMITS } from '../config/constants';
 
 /**
- * Key generator that uses userId (from JWT auth) when available,
- * falling back to IP. This prevents bypass via multiple IPs for
- * the same authenticated user.
+ * Rate-limit bucket key.
+ *
+ *   PAT requests  → "pat:<tokenId>"   — per-token bucket, isolated from
+ *                                      the same user's browser session
+ *                                      (an aggressive AI agent can't
+ *                                      lock the user out of the UI)
+ *   Cookie auth   → "user:<userId>"   — per-user bucket, prevents IP-
+ *                                      hopping bypass for the same
+ *                                      authenticated user
+ *   Anonymous     → "ip:<ip>"         — fallback for unauthenticated
+ *                                      endpoints (auth, password reset)
  */
 const userOrIpKey = (req: Request): string => {
-  const userId = (req as { userId?: string }).userId;
-  return userId ?? req.ip ?? 'unknown';
+  const r = req as { userId?: string; apiToken?: { id: string } };
+  if (r.apiToken) return `pat:${r.apiToken.id}`;
+  if (r.userId) return `user:${r.userId}`;
+  return `ip:${req.ip ?? 'unknown'}`;
 };
 
 /**
@@ -22,6 +32,7 @@ export const airportSearchLimiter = rateLimit({
   message: 'Too many airport search requests, please try again later',
   standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
   legacyHeaders: false, // Disable `X-RateLimit-*` headers
+  keyGenerator: userOrIpKey,
 });
 
 /**
@@ -36,6 +47,7 @@ export const flightCreationLimiter = rateLimit({
   legacyHeaders: false,
   // Skip rate limiting for successful requests (only count failed/repeated attempts)
   skipSuccessfulRequests: false,
+  keyGenerator: userOrIpKey,
 });
 
 /**
@@ -48,6 +60,7 @@ export const generalLimiter = rateLimit({
   message: 'Too many requests, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: userOrIpKey,
 });
 
 /**

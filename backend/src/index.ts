@@ -29,6 +29,7 @@ import trainingRoutes from './routes/training';
 import tripsRoutes from './routes/trips';
 import passwordResetRoutes from './routes/passwordReset';
 import suggestionsRoutes from './routes/suggestions';
+import openapiRoutes from './routes/openapi';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { requestLoggerMiddleware } from './middleware/requestLogger';
 import { prisma } from './db';
@@ -219,6 +220,9 @@ app.get('/api/v1/parser-capabilities', async (_req, res, next) => {
 });
 
 // API routes
+// OpenAPI spec + Swagger UI mounted FIRST so /api/v1/docs and
+// /api/v1/openapi.json don't fall through into authenticated routers.
+app.use('/api/v1', openapiRoutes);
 app.use('/api/v1/setup', setupRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/auth', authRoutes);
