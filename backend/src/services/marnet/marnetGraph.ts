@@ -34,7 +34,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import logger from "../../utils/logger";
-import { haversineKm } from "../../shared/geo/haversine";
+import { bearingDeg, bearingDeviation, haversineKm } from "../../shared/geo/haversine";
 import { BinaryHeap } from "../../shared/geo/binaryHeap";
 
 /** Default location of the vendored GeoJSON. Resolved relative to this
@@ -308,10 +308,27 @@ export interface NearestNodeOptions {
   /** How many bucket rings to scan before giving up. 5 rings × 10° =
    * a 110°-wide window — far more than any real port needs. */
   readonly maxRingRadius?: number;
+  /** Forward direction in degrees from north (0 = north, 90 = east).
+   * When set, candidate nodes whose bearing FROM (lat, lon) deviates
+   * more than `forwardToleranceDeg` from this value are de-prioritised:
+   * the function still returns the nearest forward-pointing node, and
+   * only falls back to the nearest unfiltered node if no forward
+   * candidate exists at all. Used to avoid u-turn snaps where the
+   * geographically nearest marnet node sits *behind* the direction of
+   * travel (e.g. Hamburg-corridor exit snapping back into the Elbe). */
+  readonly forwardBearing?: number;
+  /** Half-angle of the forward cone in degrees, default 90 (so the
+   * accepted cone spans 180°: anything not pointing backwards). */
+  readonly forwardToleranceDeg?: number;
 }
 
 /** Find the closest graph node to (lat, lon). O(buckets-scanned) — in
- * practice 1-3 ring expansions land enough candidates. */
+ * practice 1-3 ring expansions land enough candidates.
+ *
+ * When `forwardBearing` is provided, the scan tracks two best candidates
+ * in parallel: one constrained to the forward cone, one unconstrained.
+ * The forward candidate wins if found; the unconstrained best is the
+ * fallback so corridor-exit-with-no-forward-marnet-node still routes. */
 export function findNearestNode(
   graph: MarnetGraph,
   lat: number,
@@ -320,8 +337,11 @@ export function findNearestNode(
 ): { readonly node: MarnetNode; readonly distKm: number } | null {
   const onlyMain = options.onlyMainComponent !== false;
   const maxRing = options.maxRingRadius ?? 5;
+  const forwardBearing = options.forwardBearing;
+  const forwardTolerance = options.forwardToleranceDeg ?? 90;
 
   let best: { node: MarnetNode; distKm: number } | null = null;
+  let bestForward: { node: MarnetNode; distKm: number } | null = null;
   for (let ring = 0; ring <= maxRing; ring++) {
     let foundInRing = false;
     for (const bk of expandingBuckets(lon, lat, ring)) {
@@ -335,15 +355,31 @@ export function findNearestNode(
         if (best === null || distKm < best.distKm) {
           best = { node, distKm };
         }
+        if (forwardBearing !== undefined && distKm > 1e-6) {
+          const candidateBearing = bearingDeg({ lat, lon }, { lat: node.lat, lon: node.lon });
+          if (bearingDeviation(candidateBearing, forwardBearing) <= forwardTolerance) {
+            if (bestForward === null || distKm < bestForward.distKm) {
+              bestForward = { node, distKm };
+            }
+          }
+        }
         foundInRing = true;
       }
     }
-    // Stop expanding once we've found a candidate in the centre or any
-    // close ring — we know the answer can't be in a more distant ring
-    // than (best.distKm/BUCKET_DEG_KM_AT_EQUATOR) + 1 rings out.
-    if (best !== null && foundInRing && ring >= 1) return best;
+    // Stop expanding once both tracked bests are stable. With a forward
+    // cone the unconstrained best can lock in early but the forward
+    // candidate may need another ring; keep scanning until at least the
+    // forward best is set, or we hit maxRing.
+    if (
+      best !== null &&
+      foundInRing &&
+      ring >= 1 &&
+      (forwardBearing === undefined || bestForward !== null)
+    ) {
+      return bestForward ?? best;
+    }
   }
-  return best;
+  return bestForward ?? best;
 }
 
 export interface MarnetPath {

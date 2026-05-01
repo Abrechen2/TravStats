@@ -34,7 +34,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 
 import logger from '../utils/logger';
-import { haversineKm, slerp } from '../shared/geo/haversine';
+import { bearingDeg, bearingDeviation, haversineKm, slerp } from '../shared/geo/haversine';
 import { BinaryHeap } from '../shared/geo/binaryHeap';
 import {
   MASK_COLS,
@@ -73,7 +73,7 @@ import {
   setBit1,
 } from '../shared/geo/landMaskGridCoarse';
 
-const DEFAULT_FINE_MASK_PATH = path.resolve(__dirname, '..', '..', 'data', 'land-mask-0.1deg.bin');
+const DEFAULT_FINE_MASK_PATH = path.resolve(__dirname, '..', '..', 'data', 'land-mask.bin');
 
 /** A 1° cell is water if at least this fraction of its 100 sub-cells
  * on the 0.1° mask is water. 0.4 is a compromise — too low (0.3) lets
@@ -198,6 +198,26 @@ const PORT_APPROACHES: ReadonlyArray<PortApproach> = [
       [12.3, 54.8], // open Baltic east of Lolland, marnet snap territory.
     ],
   },
+  {
+    // Bergen sits at the inner end of Byfjorden. The cruise channel
+    // exits west via Byfjorden → north of Askøy island → Hjeltefjorden
+    // → past Fedje at the fjord mouth → open North Sea. Without this
+    // corridor the marnet graph snaps to a node west of Bergen across
+    // mountainous terrain, drawing the route over the Norwegian
+    // mainland on every Hamburg → Bergen / Bergen → anywhere leg.
+    match: (port) => portMatches(port, {
+      names: ['bergen'],
+      cities: ['bergen'],
+      countries: ['norway', 'norwegen'],
+      unlocodes: ['NOBGO'],
+    }),
+    outbound: [
+      [5.20, 60.42], // Byfjorden, west of Bergen city, north of Askøy.
+      [4.97, 60.50], // Hjeltefjorden middle, between Askøy and Holsnøy.
+      [4.78, 60.55], // Hjeltefjorden mouth, near Fedje.
+      [4.40, 60.50], // Open North Sea west of the fjord system.
+    ],
+  },
 ];
 
 function normalizePortText(value: string | null | undefined): string {
@@ -270,24 +290,30 @@ function composeRouteWaypoints(
   };
 }
 
-/** Downsample the 0.1° raster to 1°. A 1° cell is water when
- * COARSE_WATER_THRESHOLD of its 100 sub-cells are water. */
+/** Downsample the fine raster to 1°. A 1° cell is water when
+ * COARSE_WATER_THRESHOLD of its sub-cells are water. The factor is
+ * derived from the constants so bumps to mask resolution propagate
+ * automatically — bumping the fine grid from 0.1° to 0.025° goes from
+ * 100 to 1600 sub-cells per coarse cell. */
+const FINE_PER_COARSE_AXIS = MASK_COLS / MASK1_COLS;
+const FINE_PER_COARSE_TOTAL = FINE_PER_COARSE_AXIS * FINE_PER_COARSE_AXIS;
+
 function downsampleMask(finBytes: Uint8Array): Uint8Array {
   const out = new Uint8Array(MASK1_BYTES);
   for (let row = 0; row < MASK1_ROWS; row++) {
-    const fineRowStart = row * 10;
+    const fineRowStart = row * FINE_PER_COARSE_AXIS;
     for (let col = 0; col < MASK1_COLS; col++) {
-      const fineColStart = col * 10;
+      const fineColStart = col * FINE_PER_COARSE_AXIS;
       let water = 0;
-      for (let dr = 0; dr < 10; dr++) {
+      for (let dr = 0; dr < FINE_PER_COARSE_AXIS; dr++) {
         const fr = fineRowStart + dr;
         if (fr >= MASK_ROWS) continue;
-        for (let dc = 0; dc < 10; dc++) {
+        for (let dc = 0; dc < FINE_PER_COARSE_AXIS; dc++) {
           const fc = (fineColStart + dc) % MASK_COLS;
           if (getBit(finBytes, cellIndex(fr, fc)) === 0) water++;
         }
       }
-      const isWater = water / 100 >= COARSE_WATER_THRESHOLD;
+      const isWater = water / FINE_PER_COARSE_TOTAL >= COARSE_WATER_THRESHOLD;
       setBit1(out, cellIndex1(row, col), isWater ? 0 : 1);
     }
   }
@@ -621,9 +647,13 @@ function insertCoastBuffers(
       out.push([lon1, lat1]);
       continue;
     }
-    // Sample the segment at 0.15° intervals. If any interior sample
-    // lands on land, we need a buffer.
-    const samples = Math.max(3, Math.ceil(segLen / 0.15));
+    // Sample the segment at 0.05° intervals (~5.5 km at the equator).
+    // 0.15° was missing islands smaller than the step (Greek islands,
+    // Adriatic islets, Stockholm-archipelago skerries) — a chord through
+    // such an island samples water on both sides while the actual line
+    // cuts the island. 0.05° matches both the new 0.025° fine-mask
+    // resolution and the typical width of small islands.
+    const samples = Math.max(3, Math.ceil(segLen / 0.05));
     let anyLand = false;
     for (let s = 1; s < samples; s++) {
       const t = s / samples;
@@ -680,7 +710,7 @@ function segmentAllWater(
   const dx = lon1 - lon0;
   const dy = lat1 - lat0;
   const segLen = Math.hypot(dx, dy);
-  const samples = Math.max(3, Math.ceil(segLen / 0.15));
+  const samples = Math.max(3, Math.ceil(segLen / 0.05));
   for (let s = 1; s < samples; s++) {
     const t = s / samples;
     if (!isFineWater(fineBytes, lat0 + dy * t, lon0 + dx * t)) return false;
@@ -698,7 +728,7 @@ function segmentMaxLandRun(
   const dx = lon1 - lon0;
   const dy = lat1 - lat0;
   const segLen = Math.hypot(dx, dy);
-  const samples = Math.max(3, Math.ceil(segLen / 0.15));
+  const samples = Math.max(3, Math.ceil(segLen / 0.05));
   let currentRun = 0;
   let maxRun = 0;
   for (let s = 1; s < samples; s++) {
@@ -711,6 +741,55 @@ function segmentMaxLandRun(
     }
   }
   return maxRun;
+}
+
+/**
+ * Drop interior nodes that form a U-turn relative to their neighbours —
+ * the marnet shipping-graph A* sometimes routes through nodes whose
+ * connecting edges flip direction by 120°+. The directional snap fixed
+ * the FIRST hop after the corridor exit, but the graph's internal path
+ * can still backtrack on later hops (e.g. snap NW of the German Bight,
+ * then graph routes through a node SE of the snap before turning back
+ * north). Iterates until stable; conservative 120° threshold means
+ * legitimate sharp coastal turns (corner of Brittany, North Cape) are
+ * preserved.
+ */
+function dropUTurnNodes(
+  waypoints: ReadonlyArray<[number, number]>,
+  thresholdDeg = 120,
+): [number, number][] {
+  let current = waypoints.slice() as [number, number][];
+  for (let pass = 0; pass < 10 && current.length > 2; pass++) {
+    let changed = false;
+    const next: [number, number][] = [current[0]];
+    for (let i = 1; i < current.length - 1; i++) {
+      const prev = next[next.length - 1];
+      const cur = current[i];
+      const nxt = current[i + 1];
+      const inBearing = bearingDeg(
+        { lat: prev[1], lon: prev[0] },
+        { lat: cur[1], lon: cur[0] },
+      );
+      const outBearing = bearingDeg(
+        { lat: cur[1], lon: cur[0] },
+        { lat: nxt[1], lon: nxt[0] },
+      );
+      // Going straight: in≈out, deviation ≈ 0°.
+      // Right-angle turn: deviation ≈ 90°.
+      // Near-u-turn: deviation ≈ 180°.
+      // Drop when the turn is sharper than `thresholdDeg`.
+      const dev = bearingDeviation(inBearing, outBearing);
+      if (dev > thresholdDeg) {
+        changed = true;
+        continue;
+      }
+      next.push(cur);
+    }
+    next.push(current[current.length - 1]);
+    if (!changed) break;
+    current = next;
+  }
+  return current;
 }
 
 async function computeMaritimeGraphRoute(
@@ -726,9 +805,13 @@ async function computeMaritimeGraphRoute(
     // to keep marnet results for every realistic landlocked-port
     // pairing while still vetoing nonsense snaps.
     const snapBudgetKm = Math.min(500, Math.max(100, chordKm * 0.35));
-    const route = await routeMarnet(dep, arr, { maxSnapKm: snapBudgetKm });
+    const route = await routeMarnet(dep, arr, {
+      maxSnapKm: snapBudgetKm,
+      preferForwardSnap: true,
+    });
     if (route === null) return null;
-    const coords = route.coords.map(([lon, lat]) => [lon, lat] as [number, number]);
+    const rawCoords = route.coords.map(([lon, lat]) => [lon, lat] as [number, number]);
+    const coords = dropUTurnNodes(rawCoords);
     if (coords.length < 2) return null;
 
     if (fineBytes === null) return coords;
@@ -746,7 +829,13 @@ async function computeMaritimeGraphRoute(
       // small island corners on the marnet polyline; the 5-cell cap
       // discarded those routes in favour of the 1° A* fallback whose
       // own land-cut artefacts are worse.
-      if (segmentMaxLandRun(fineBytes, lon0, lat0, lon1, lat1) >= 10) return null;
+      // Threshold ≈ 110 km of contiguous land at the new 0.05° sample
+      // step (was 10 × 0.15° on the legacy 0.1° mask, same physical
+      // distance). Baltic legs through narrow Stockholm-archipelago
+      // passages clip small island corners on the marnet polyline; a
+      // tighter cap discards otherwise-valid graph routes in favour of
+      // the 1° A* fallback whose own land-cut artefacts are worse.
+      if (segmentMaxLandRun(fineBytes, lon0, lat0, lon1, lat1) >= 20) return null;
     }
     return repaired;
   } catch {

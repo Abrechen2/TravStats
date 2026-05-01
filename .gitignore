@@ -106,7 +106,7 @@ backend/data/training/test-output/
 backend/data/logs/training/
 
 # Land-mask rasterizer cache (downloaded GeoJSON, regenerated on demand).
-# The packed output at backend/data/land-mask-0.1deg.bin IS committed.
+# The packed output at backend/data/land-mask.bin IS committed.
 backend/data/.cache/
 
 # Tool-generated directories (never commit)

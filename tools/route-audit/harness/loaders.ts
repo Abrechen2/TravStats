@@ -1,7 +1,7 @@
 /**
  * Shared loaders for the routing-strategy harness — ports CSV and the
- * fine 0.1° land mask. Avoids each strategy re-loading these on every
- * call.
+ * fine 0.025° land mask. Avoids each strategy re-loading these on
+ * every call.
  */
 import fs from 'fs';
 import path from 'path';
@@ -17,7 +17,7 @@ import type { Port } from './types';
 
 const ROOT = path.resolve(__dirname, '..', '..', '..');
 const PORTS_CSV = path.resolve(ROOT, 'backend', 'src', 'seedData', 'ports.csv');
-const FINE_MASK = path.resolve(ROOT, 'backend', 'data', 'land-mask-0.1deg.bin');
+const FINE_MASK = path.resolve(ROOT, 'backend', 'data', 'land-mask.bin');
 
 function parseCsv(text: string): Record<string, string>[] {
   const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);

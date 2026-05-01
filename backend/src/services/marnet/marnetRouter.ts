@@ -23,7 +23,7 @@
  */
 
 import logger from "../../utils/logger";
-import { haversineKm } from "../../shared/geo/haversine";
+import { bearingDeg, haversineKm } from "../../shared/geo/haversine";
 import {
   findMarnetPath,
   findNearestNode,
@@ -69,6 +69,14 @@ export interface MarnetRouteOptions {
    * never represent a real ocean cruise route, so we restrict
    * snapping to the global-ocean component. */
   readonly allowDisconnectedComponents?: boolean;
+  /** When `true`, prefer snap nodes that lie ahead of the direction of
+   * travel — i.e. the dep-side snap should be in the dep→arr direction,
+   * the arr-side in the arr→dep direction. Falls back to nearest-overall
+   * when no forward-cone node is found. Eliminates u-turn snaps where the
+   * marnet node closest to a corridor exit sits behind the exit
+   * (Hamburg-Elbe → German-Bight corridor used to snap back into the
+   * estuary, producing 130° + 172° kink pairs at the handoff). */
+  readonly preferForwardSnap?: boolean;
 }
 
 /** Route between two geographic points along the marnet shipping
@@ -93,9 +101,19 @@ export function routeMarnetWithGraph(
 ): MarnetRouteResult | null {
   const onlyMainComponent = options.allowDisconnectedComponents !== true;
   const maxSnapKm = options.maxSnapKm ?? null;
+  const useForwardSnap = options.preferForwardSnap === true;
 
-  const depSnap = findNearestNode(graph, dep.lat, dep.lon, { onlyMainComponent });
-  const arrSnap = findNearestNode(graph, arr.lat, arr.lon, { onlyMainComponent });
+  const depForwardBearing = useForwardSnap ? bearingDeg(dep, arr) : undefined;
+  const arrForwardBearing = useForwardSnap ? bearingDeg(arr, dep) : undefined;
+
+  const depSnap = findNearestNode(graph, dep.lat, dep.lon, {
+    onlyMainComponent,
+    forwardBearing: depForwardBearing,
+  });
+  const arrSnap = findNearestNode(graph, arr.lat, arr.lon, {
+    onlyMainComponent,
+    forwardBearing: arrForwardBearing,
+  });
 
   if (depSnap === null || arrSnap === null) {
     logger.debug({

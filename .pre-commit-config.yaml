@@ -15,11 +15,14 @@ repos:
       - id: check-merge-conflict
       - id: detect-private-key
       - id: check-added-large-files
-        # Raised from 1000 KB so the 0.05° land mask (3.2 MB) and any
-        # future larger raster ship without fuss. Natural Earth 10 m
-        # is the upper end of what we bake into the repo; anything
-        # bigger belongs on a CDN.
-        args: ['--maxkb=4000']
+        # Raised in steps as our raster resolution evolved:
+        #   1 MB → 4 MB (0.05° land mask, 3.2 MB)
+        #   4 MB → 15 MB (0.025° land mask, 12.4 MB — Bosphorus,
+        #           Hjeltefjorden, narrow Norwegian fjords visible)
+        # Natural Earth 10 m at 0.025° is the realistic top end before
+        # we'd need a CDN. Going to 0.005° (Bosphorus-precise) would
+        # cost ~200 MB and definitely belongs on a CDN.
+        args: ['--maxkb=15000']
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.9.0
