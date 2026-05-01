@@ -23,6 +23,7 @@ import { tzAwareDurationMinutes } from '../utils/timezone';
 import { fromZonedTime } from 'date-fns-tz';
 import { normalizeAircraft } from '../utils/aircraftNormalize';
 import { calculateNextApiCheckAt } from '../utils/smartCheckSchedule';
+import { buildFlightMergePatch } from '../utils/flightMerge';
 import batchRouter from './flightsBatch';
 
 const router = Router();
@@ -203,7 +204,14 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
     // flightNumber strings ("LH 123", "lh123") from before the schema-level
     // normalization landed, so fetch the day's candidates and compare
     // normalized in JS rather than relying on a direct WHERE.
+    //
+    // ?force=true → bypass and create a real duplicate row (user opt-in).
+    // ?merge=true → fill missing fields on the existing flight from
+    //   incoming data without ever overwriting curated values; lets a
+    //   second source (boarding pass, email confirmation) enrich a
+    //   manually-entered flight in place. force wins if both are set.
     const forceCreate = req.query['force'] === 'true';
+    const mergeIntoExisting = !forceCreate && req.query['merge'] === 'true';
     if (data.flightNumber && !forceCreate && departureUtc) {
       const dayStart = new Date(departureUtc);
       dayStart.setUTCHours(0, 0, 0, 0);
@@ -233,6 +241,32 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
       );
 
       if (existing) {
+        if (mergeIntoExisting) {
+          const existingFull = await prisma.flight.findUnique({
+            where: { id: existing.id },
+          });
+          if (!existingFull) {
+            res.status(409).json({
+              error: 'DUPLICATE_FLIGHT',
+              message: `Flight ${data.flightNumber} on this day already exists`,
+              existingFlight: existing,
+            });
+            return;
+          }
+          const { patch, mergedFields } = buildFlightMergePatch(existingFull, data);
+          const merged = mergedFields.length === 0
+            ? existingFull
+            : await prisma.flight.update({
+                where: { id: existing.id },
+                data: { ...patch, lastModifiedBy: 'user' },
+              });
+          res.status(200).json({
+            flight: merged,
+            mergedFields,
+          });
+          return;
+        }
+
         res.status(409).json({
           error: 'DUPLICATE_FLIGHT',
           message: `Flight ${data.flightNumber} on this day already exists`,

@@ -149,9 +149,13 @@
     "arrivalAirportCode": "Ankunftsflughafen (IATA) *",
     "duplicate": {
       "title": "Flug existiert bereits",
-      "message": "Flug {{flightNumber}} ({{route}}) existiert für diesen Tag bereits. Trotzdem hinzufügen?",
+      "message": "Flug {{flightNumber}} ({{route}}) existiert für diesen Tag bereits.",
+      "mergeHint": "Mit \"Daten ergänzen\" werden nur leere Felder am bestehenden Flug aufgefüllt — nichts wird überschrieben.",
       "cancel": "Abbrechen",
-      "addAnyway": "Trotzdem hinzufügen"
+      "merge": "Daten ergänzen",
+      "addAnyway": "Trotzdem hinzufügen",
+      "mergedToast": "Bestehender Flug um {{count}} Felder ergänzt",
+      "mergedNoChange": "Keine neuen Felder zu ergänzen"
     }
   },
   "list": {
@@ -271,7 +275,12 @@
   },
   "edit": {
     "title": "Flug bearbeiten",
-    "saveChanges": "Änderungen speichern"
+    "saveChanges": "Änderungen speichern",
+    "tripLabel": "Reise",
+    "tripNone": "Keiner Reise zugeordnet",
+    "tripHint": "Verlinkt diesen Flug mit einer manuell angelegten Reise. Reisen werden im Flüge-Tab erstellt.",
+    "tripAssignedToast": "Reise-Zuordnung aktualisiert",
+    "tripAssignFailed": "Reise-Zuordnung fehlgeschlagen — andere Änderungen wurden gespeichert"
   },
   "scanner": {
     "title": "Boarding Pass scannen",

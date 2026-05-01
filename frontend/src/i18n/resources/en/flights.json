@@ -149,9 +149,13 @@
     "arrivalAirportCode": "Arrival airport (IATA) *",
     "duplicate": {
       "title": "Flight Already Exists",
-      "message": "Flight {{flightNumber}} ({{route}}) already exists for this day. Add it anyway?",
+      "message": "Flight {{flightNumber}} ({{route}}) already exists for this day.",
+      "mergeHint": "\"Fill missing fields\" only adds data to fields that are still empty on the existing flight — nothing is overwritten.",
       "cancel": "Cancel",
-      "addAnyway": "Add Anyway"
+      "merge": "Fill missing fields",
+      "addAnyway": "Add Anyway",
+      "mergedToast": "Existing flight enriched with {{count}} fields",
+      "mergedNoChange": "No empty fields to fill"
     }
   },
   "list": {
@@ -271,7 +275,12 @@
   },
   "edit": {
     "title": "Edit Flight",
-    "saveChanges": "Save Changes"
+    "saveChanges": "Save Changes",
+    "tripLabel": "Trip",
+    "tripNone": "Not assigned to a trip",
+    "tripHint": "Links this flight to a manually-created trip. Trips are created in the Flights tab.",
+    "tripAssignedToast": "Trip assignment updated",
+    "tripAssignFailed": "Trip assignment failed — other changes were saved"
   },
   "scanner": {
     "title": "Scan Boarding Pass",

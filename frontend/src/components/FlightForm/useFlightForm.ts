@@ -39,8 +39,14 @@ export interface DuplicateFlight {
   departureTime: string;
 }
 
+export interface FlightSubmitOptions {
+  force?: boolean;
+  merge?: boolean;
+  hasMoreFlights?: boolean;
+}
+
 export function useFlightForm(
-  onSubmit: (flight: FlightInput, force?: boolean, hasMoreFlights?: boolean) => Promise<void>,
+  onSubmit: (flight: FlightInput, opts?: FlightSubmitOptions) => Promise<void>,
   onCancel: () => void,
   onBatchComplete?: (newAchievements?: UserAchievement[]) => void
 ) {
@@ -482,7 +488,7 @@ export function useFlightForm(
     try {
       storeHistoricalData();
       setTimeEstimationWarning(null);
-      await onSubmit(buildFlightPayload(), false, true);
+      await onSubmit(buildFlightPayload(), { hasMoreFlights: true });
       prepareReturnFlightForm();
       useToastStore.getState().addToast("info", t("flights:form.returnFlightHint"));
     } catch (err: unknown) {
@@ -521,7 +527,40 @@ export function useFlightForm(
     try {
       storeHistoricalData();
       setTimeEstimationWarning(null);
-      await onSubmit(buildFlightPayload(), true);
+      await onSubmit(buildFlightPayload(), { force: true });
+    } catch (err: unknown) {
+      const errorObj = err as {
+        response?: { data?: { error?: string; details?: { field: string; message: string }[] } };
+      };
+      const details = errorObj.response?.data?.details;
+      const msg = details?.length
+        ? details.map((d) => d.message).join("; ")
+        : (errorObj.response?.data?.error ?? t("errors:saveFailed"));
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Resolve the duplicate dialog by merging new fields into the existing
+   * flight. Backend fills only nullish fields on the existing row, so the
+   * user's curated values are never overwritten — this is the safe path
+   * when the second source (boarding pass / email) carries metadata the
+   * first source didn't have (seat, gate, ticket number, …).
+   */
+  const handleMergeSubmit = async (): Promise<void> => {
+    setDuplicateFlight(null);
+    if (!departure || !arrival) {
+      setError(t("errors:missingAirports"));
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      storeHistoricalData();
+      setTimeEstimationWarning(null);
+      await onSubmit(buildFlightPayload(), { merge: true });
     } catch (err: unknown) {
       const errorObj = err as {
         response?: { data?: { error?: string; details?: { field: string; message: string }[] } };
@@ -589,7 +628,7 @@ export function useFlightForm(
       }
     } else {
       // Single flight — use the existing onSubmit callback
-      await onSubmit(enrichedFlight, false, hasMoreFlights);
+      await onSubmit(enrichedFlight, { hasMoreFlights });
 
       if (hasMoreFlights) {
         setCurrentFlightIndex(nextIndex);
@@ -688,6 +727,7 @@ export function useFlightForm(
     handleSubmit,
     handleSubmitAndReturn,
     handleForceSubmit,
+    handleMergeSubmit,
     handleFlightReviewConfirm,
   };
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import type { Flight } from "../types";
+import type { Flight, Trip } from "../types";
 import ReceiptUpload from "./ReceiptUpload";
 import CopyActionButton from "./FlightForm/CopyActionButton";
 import { useTranslation } from "../hooks/useTranslation";
@@ -8,6 +8,7 @@ import { useSuggestions } from "../hooks/useSuggestions";
 import { useToastStore } from "../store/toastStore";
 import { estimateArrivalFromDeparture } from "../lib/timeEstimation";
 import { airportsApi } from "../lib/api/airports";
+import { tripsApi } from "../lib/api/trips";
 import { logger } from "../lib/logger";
 
 import type { FlightInput } from "../types";
@@ -62,12 +63,33 @@ export default function FlightEditModal({
     receiptUrl: f.receiptUrl || "",
     departureTime: toLocalDatetime(f.departureTime),
     arrivalTime: toLocalDatetime(f.arrivalTime),
+    tripId: f.tripId ?? "",
   });
 
   const [formData, setFormData] = useState(buildFormData(flight));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [trips, setTrips] = useState<Trip[]>([]);
   const addToast = useToastStore((s) => s.addToast);
+
+  // Load trips for the picker. Failures are non-fatal: if the list fails
+  // we just hide the picker rather than blocking the whole edit modal,
+  // so the user can still update other flight fields.
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    tripsApi
+      .getAll()
+      .then((all) => {
+        if (!cancelled) setTrips(all);
+      })
+      .catch((err) => {
+        logger.warn("Failed to load trips for FlightEditModal:", err);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen]);
 
   const update = <K extends keyof typeof formData>(key: K, value: (typeof formData)[K]) =>
     setFormData((prev) => ({ ...prev, [key]: value }));
@@ -200,6 +222,37 @@ export default function FlightEditModal({
       };
 
       await onSave(flight.id, updates);
+
+      // Trip assignment lives on a separate endpoint (POST /trips/:id/flights)
+      // because Flight.tripId is owned by the Trip relation, not by the
+      // generic flight-update path. Apply it after onSave succeeds so a
+      // failed field-save doesn't silently move the flight between trips.
+      const previousTripId = flight.tripId ?? "";
+      const nextTripId = formData.tripId;
+      if (nextTripId !== previousTripId) {
+        try {
+          if (nextTripId) {
+            // Add to new trip — backend uses updateMany so this also
+            // moves the flight away from any prior trip atomically.
+            await tripsApi.assignFlights(nextTripId, {
+              flightIds: [flight.id],
+              action: "add",
+            });
+          } else if (previousTripId) {
+            // Cleared selection — detach from current trip.
+            await tripsApi.assignFlights(previousTripId, {
+              flightIds: [flight.id],
+              action: "remove",
+            });
+          }
+          addToast("success", t("flights:edit.tripAssignedToast"));
+        } catch (tripErr) {
+          logger.warn("Failed to update trip assignment:", tripErr);
+          setError(t("flights:edit.tripAssignFailed"));
+          return; // keep modal open so user sees the partial state
+        }
+      }
+
       onClose();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t("errors:updateFailed"));
@@ -484,6 +537,25 @@ export default function FlightEditModal({
                 <option value="private">{t("flights:category.private")}</option>
                 <option value="vacation">{t("flights:category.vacation")}</option>
               </select>
+            </div>
+
+            <div>
+              <label className="label">{t("flights:edit.tripLabel")}</label>
+              <select
+                value={formData.tripId}
+                onChange={(e) => update("tripId", e.target.value)}
+                className="input"
+              >
+                <option value="">{t("flights:edit.tripNone")}</option>
+                {trips.map((trip) => (
+                  <option key={trip.id} value={trip.id}>
+                    {trip.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+                {t("flights:edit.tripHint")}
+              </p>
             </div>
 
             <div>

@@ -17,12 +17,12 @@ import FlightReviewModal from "./FlightReviewModal";
 import FlightLookupStep from "./FlightForm/FlightLookupStep";
 import FlightSelectStep from "./FlightForm/FlightSelectStep";
 import FlightCompleteStep from "./FlightForm/FlightCompleteStep";
-import { useFlightForm } from "./FlightForm/useFlightForm";
+import { useFlightForm, type FlightSubmitOptions } from "./FlightForm/useFlightForm";
 
 import type { FlightInput, UserAchievement } from "../types";
 
 interface SimplifiedFlightFormProps {
-  onSubmit: (flight: FlightInput, force?: boolean, hasMoreFlights?: boolean) => Promise<void>;
+  onSubmit: (flight: FlightInput, opts?: FlightSubmitOptions) => Promise<void>;
   onCancel: () => void;
   onBatchComplete?: (newAchievements?: UserAchievement[]) => void;
 }
@@ -244,13 +244,23 @@ export default function SimplifiedFlightFormV2({
                 route: `${form.duplicateFlight.depIata ?? "?"} → ${form.duplicateFlight.arrIata ?? "?"}`,
               })}
             </p>
-            <div className="flex gap-3">
+            <p className="text-xs text-[var(--text-tertiary)] mb-4">
+              {t("flights:form.duplicate.mergeHint")}
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
               <button
                 type="button"
                 onClick={() => form.setDuplicateFlight(null)}
                 className="flex-1 px-4 py-2 border border-[var(--border)] rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors"
               >
                 {t("flights:form.duplicate.cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={() => void form.handleMergeSubmit()}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                {t("flights:form.duplicate.merge")}
               </button>
               <button
                 type="button"
