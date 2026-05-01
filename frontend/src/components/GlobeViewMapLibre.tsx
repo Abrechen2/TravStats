@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MapGL, { useControl, type MapRef } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import { ArcLayer, PathLayer, ScatterplotLayer } from "@deck.gl/layers";
 import type { Layer, MapViewState } from "@deck.gl/core";
+import type { StyleSpecification } from "maplibre-gl";
 import type { GeoJSONFeature } from "../types";
 import type { Cruise } from "../types/cruise";
-import { useThemeStore } from "../store/themeStore";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../lib/api/cruise";
 import { logger } from "../lib/logger";
 
@@ -27,14 +27,11 @@ interface GlobeViewMapLibreProps {
   minRouteCount?: number;
 }
 
-const LIGHT_MAP_STYLE = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
-const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
-
-const FLIGHT_ARC_COLOR_FROM: [number, number, number, number] = [255, 110, 180, 220]; // pink-400
-const FLIGHT_ARC_COLOR_TO: [number, number, number, number] = [255, 220, 130, 220]; // amber-300
-const CRUISE_PATH_COLOR: [number, number, number, number] = [80, 180, 255, 230]; // sky-blue
-const AIRPORT_DOT_COLOR: [number, number, number, number] = [251, 191, 36, 230]; // amber-400
-const PORT_DOT_COLOR: [number, number, number, number] = [56, 189, 248, 230]; // sky-400
+const FLIGHT_ARC_COLOR_FROM: [number, number, number, number] = [255, 110, 180, 220];
+const FLIGHT_ARC_COLOR_TO: [number, number, number, number] = [255, 220, 130, 220];
+const CRUISE_PATH_COLOR: [number, number, number, number] = [80, 180, 255, 230];
+const AIRPORT_DOT_COLOR: [number, number, number, number] = [251, 191, 36, 230];
+const PORT_DOT_COLOR: [number, number, number, number] = [56, 189, 248, 230];
 
 const INITIAL_VIEW_STATE: MapViewState = {
   longitude: 10,
@@ -43,6 +40,151 @@ const INITIAL_VIEW_STATE: MapViewState = {
   pitch: 0,
   bearing: 0,
 };
+
+// Six tokenless basemap styles, mirrored after geojson.io's style picker.
+// All free, all working without API keys — Positron / Dark-Matter /
+// Voyager are CARTO's published vector styles, OpenFreeMap Liberty is
+// the OSM-based Mapbox-Streets-look-alike, ESRI World Imagery is the
+// raster satellite tile service ESRI keeps free for non-commercial use,
+// and OSM Standard is the OpenStreetMap reference raster (low-volume
+// only — fine for self-hosted use, but not what we'd ship at scale).
+type StyleId = "standard" | "light" | "dark" | "voyager" | "satellite" | "osm";
+
+interface SkyConfig {
+  "sky-color": string;
+  "horizon-color": string;
+  "fog-color": string;
+  "fog-ground-blend": number;
+  "horizon-fog-blend": number;
+  "sky-horizon-blend": number;
+  "atmosphere-blend": number;
+}
+
+interface StyleOption {
+  id: StyleId;
+  label: string;
+  // Either a remote style URL or a fully-inlined MapLibre style spec
+  url: string | StyleSpecification;
+  sky: SkyConfig;
+}
+
+const SKY_LIGHT: SkyConfig = {
+  "sky-color": "#1e293b",
+  "horizon-color": "#a8c0d6",
+  "fog-color": "#e2e8f0",
+  "fog-ground-blend": 0.5,
+  "horizon-fog-blend": 0.6,
+  "sky-horizon-blend": 0.7,
+  "atmosphere-blend": 1.0,
+};
+
+const SKY_DARK: SkyConfig = {
+  "sky-color": "#0a0e1a",
+  "horizon-color": "#3b3f5e",
+  "fog-color": "#1f2937",
+  "fog-ground-blend": 0.5,
+  "horizon-fog-blend": 0.6,
+  "sky-horizon-blend": 0.7,
+  "atmosphere-blend": 1.0,
+};
+
+const SKY_VOYAGER: SkyConfig = {
+  "sky-color": "#1c2540",
+  "horizon-color": "#7aa3c8",
+  "fog-color": "#cfe0ee",
+  "fog-ground-blend": 0.5,
+  "horizon-fog-blend": 0.6,
+  "sky-horizon-blend": 0.7,
+  "atmosphere-blend": 1.0,
+};
+
+const SKY_SATELLITE: SkyConfig = {
+  "sky-color": "#000814",
+  "horizon-color": "#3a4a6e",
+  "fog-color": "#0b1a2a",
+  "fog-ground-blend": 0.4,
+  "horizon-fog-blend": 0.55,
+  "sky-horizon-blend": 0.7,
+  "atmosphere-blend": 1.0,
+};
+
+const buildRasterStyle = (
+  tiles: string[],
+  attribution: string,
+  maxzoom = 19
+): StyleSpecification => ({
+  version: 8,
+  sources: {
+    base: {
+      type: "raster",
+      tiles,
+      tileSize: 256,
+      maxzoom,
+      attribution,
+    },
+  },
+  layers: [
+    {
+      id: "base",
+      type: "raster",
+      source: "base",
+    },
+  ],
+  // Empty sprite/glyphs to satisfy MapLibre 5; raster styles don't
+  // actually need them but the spec validator complains otherwise.
+  glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+});
+
+const STYLE_OPTIONS: StyleOption[] = [
+  {
+    id: "standard",
+    label: "Standard",
+    url: "https://tiles.openfreemap.org/styles/liberty",
+    sky: SKY_LIGHT,
+  },
+  {
+    id: "light",
+    label: "Light",
+    url: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+    sky: SKY_LIGHT,
+  },
+  {
+    id: "dark",
+    label: "Dark",
+    url: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
+    sky: SKY_DARK,
+  },
+  {
+    id: "voyager",
+    label: "Voyager",
+    url: "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json",
+    sky: SKY_VOYAGER,
+  },
+  {
+    id: "satellite",
+    label: "Satellite",
+    url: buildRasterStyle(
+      [
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      ],
+      "Tiles &copy; Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community"
+    ),
+    sky: SKY_SATELLITE,
+  },
+  {
+    id: "osm",
+    label: "OSM",
+    url: buildRasterStyle(
+      [
+        "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      ],
+      "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors"
+    ),
+    sky: SKY_LIGHT,
+  },
+];
 
 interface DeckOverlayProps {
   layers: Layer[];
@@ -82,54 +224,58 @@ export default function GlobeViewMapLibre({
   onFlightClick,
   minRouteCount = 1,
 }: GlobeViewMapLibreProps): JSX.Element {
-  const isDarkMode = useThemeStore((state) => state.isDarkMode);
   const mapRef = useRef<MapRef>(null);
+  const [styleId, setStyleId] = useState<StyleId>(() => {
+    if (typeof window === "undefined") return "standard";
+    const stored = window.sessionStorage.getItem("globeStyleId");
+    return STYLE_OPTIONS.some((s) => s.id === stored) ? (stored as StyleId) : "standard";
+  });
 
-  // Apply globe projection + sky once the underlying MapLibre instance
-  // is ready. react-map-gl exposes `getMap()` which returns the raw
-  // MapLibre GL Map — we use that for setProjection/setSky since the
-  // typed react-map-gl props don't expose every MapLibre 5 API yet.
-  const onMapLoad = (): void => {
-    const map = mapRef.current?.getMap();
-    if (!map) return;
-    try {
-      map.setProjection({ type: "globe" });
-    } catch (err) {
-      logger.warn("GlobeViewMapLibre: setProjection(globe) failed", err);
-    }
-    try {
-      map.setSky({
-        "sky-color": isDarkMode ? "#0a0e1a" : "#1e293b",
-        "horizon-color": isDarkMode ? "#3b3f5e" : "#a8c0d6",
-        "fog-color": isDarkMode ? "#1f2937" : "#e2e8f0",
-        "fog-ground-blend": 0.5,
-        "horizon-fog-blend": 0.6,
-        "sky-horizon-blend": 0.7,
-        "atmosphere-blend": 1.0,
-      });
-    } catch (err) {
-      logger.warn("GlobeViewMapLibre: setSky failed", err);
-    }
-  };
+  const currentStyle = useMemo(
+    () => STYLE_OPTIONS.find((s) => s.id === styleId) ?? STYLE_OPTIONS[0],
+    [styleId]
+  );
 
-  // Re-apply sky on theme change
+  // Latest currentStyle exposed via ref so the style.load handler
+  // (registered once on first map load) sees the active style on every
+  // style switch — without this the handler would close over the
+  // initial style and apply stale sky settings forever.
+  const currentStyleRef = useRef(currentStyle);
   useEffect(() => {
+    currentStyleRef.current = currentStyle;
+  }, [currentStyle]);
+
+  const onStyleChange = useCallback((next: StyleId) => {
+    setStyleId(next);
+    try {
+      window.sessionStorage.setItem("globeStyleId", next);
+    } catch {
+      // sessionStorage may be unavailable in private mode — opt-in only
+    }
+  }, []);
+
+  // Apply globe projection + sky when the map first loads AND on every
+  // subsequent style swap (since MapLibre resets both when replacing
+  // the style). Driven by react-map-gl's onLoad callback because that's
+  // the only event that fires after mapRef is guaranteed populated.
+  const onMapLoad = useCallback((): void => {
     const map = mapRef.current?.getMap();
     if (!map) return;
-    try {
-      map.setSky({
-        "sky-color": isDarkMode ? "#0a0e1a" : "#1e293b",
-        "horizon-color": isDarkMode ? "#3b3f5e" : "#a8c0d6",
-        "fog-color": isDarkMode ? "#1f2937" : "#e2e8f0",
-        "fog-ground-blend": 0.5,
-        "horizon-fog-blend": 0.6,
-        "sky-horizon-blend": 0.7,
-        "atmosphere-blend": 1.0,
-      });
-    } catch {
-      // map not ready yet
-    }
-  }, [isDarkMode]);
+    const apply = (): void => {
+      try {
+        map.setProjection({ type: "globe" });
+      } catch (err) {
+        logger.warn("GlobeViewMapLibre: setProjection(globe) failed", err);
+      }
+      try {
+        map.setSky(currentStyleRef.current.sky);
+      } catch (err) {
+        logger.warn("GlobeViewMapLibre: setSky failed", err);
+      }
+    };
+    apply();
+    map.on("style.load", apply);
+  }, []);
 
   const arcsData = useMemo<ArcDatum[]>(() => {
     interface RouteAcc {
@@ -327,25 +473,57 @@ export default function GlobeViewMapLibre({
     [arcsData, cruisePaths, airportPoints, portPoints, onFlightClick]
   );
 
+  // Dark backdrop pairs with bright styles too — geojson.io always uses
+  // a dark space background regardless of the basemap, which makes the
+  // atmosphere glow the most legible thing on screen.
   return (
     <div
       className="relative h-full w-full"
       style={{
-        background: isDarkMode
-          ? "radial-gradient(ellipse at center, #0a0e1a 0%, #04050a 100%)"
-          : "radial-gradient(ellipse at center, #1e293b 0%, #050810 100%)",
+        background: "radial-gradient(ellipse at center, #0a0e1a 0%, #04050a 100%)",
       }}
     >
       <MapGL
         ref={mapRef}
         initialViewState={INITIAL_VIEW_STATE}
-        mapStyle={isDarkMode ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
-        onLoad={onMapLoad}
+        mapStyle={currentStyle.url}
         attributionControl={false}
+        onLoad={onMapLoad}
         style={{ width: "100%", height: "100%" }}
       >
         <DeckGLOverlay layers={layers} />
       </MapGL>
+
+      {/* Style picker — bottom-left, geojson.io-style horizontal pills. */}
+      <div
+        className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 gap-1 rounded-md p-1"
+        style={{
+          background: "rgba(13, 17, 23, 0.78)",
+          backdropFilter: "blur(12px)",
+          border: "1px solid rgba(255,255,255,0.18)",
+          fontFamily: "'Inter', sans-serif",
+        }}
+      >
+        {STYLE_OPTIONS.map((opt) => {
+          const active = opt.id === styleId;
+          return (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => onStyleChange(opt.id)}
+              className="rounded px-3 py-1 text-xs font-medium transition-colors"
+              style={{
+                background: active ? "rgba(120, 200, 255, 0.18)" : "transparent",
+                color: active ? "#bae6fd" : "rgba(241,245,249,0.78)",
+                border: active ? "1px solid rgba(120, 200, 255, 0.55)" : "1px solid transparent",
+                cursor: "pointer",
+              }}
+            >
+              {opt.label}
+            </button>
+          );
+        })}
+      </div>
 
       {/* Spike-Banner so user knows which engine is currently rendering */}
       <div
