@@ -37,7 +37,7 @@ import {
  * glow alone gives a strong "from orbit" look without the shader.
  */
 
-interface GlobeViewMapLibreProps {
+interface GlobeViewProps {
   flights: GeoJSONFeature[];
   cruises?: Cruise[];
   onFlightClick?: (flightId: string) => void;
@@ -305,12 +305,12 @@ interface TooltipState {
 
 const createRouteKey = (a: string, b: string): string => (a < b ? `${a}-${b}` : `${b}-${a}`);
 
-export default function GlobeViewMapLibre({
+export default function GlobeView({
   flights = [],
   cruises = [],
   onFlightClick,
   minRouteCount = 1,
-}: GlobeViewMapLibreProps): JSX.Element {
+}: GlobeViewProps): JSX.Element {
   const { t } = useTranslation(["map"]);
   const mapRef = useRef<MapRef>(null);
 
@@ -391,12 +391,12 @@ export default function GlobeViewMapLibre({
       try {
         map.setProjection({ type: "globe" });
       } catch (err) {
-        logger.warn("GlobeViewMapLibre: setProjection(globe) failed", err);
+        logger.warn("GlobeView: setProjection(globe) failed", err);
       }
       try {
         map.setSky(currentStyleRef.current.sky);
       } catch (err) {
-        logger.warn("GlobeViewMapLibre: setSky failed", err);
+        logger.warn("GlobeView: setSky failed", err);
       }
     };
     apply();
@@ -551,7 +551,7 @@ export default function GlobeViewMapLibre({
           return next;
         });
       } catch (err: unknown) {
-        logger.error("GlobeViewMapLibre: cruise geometry batch fetch failed", err);
+        logger.error("GlobeView: cruise geometry batch fetch failed", err);
       }
     })();
     return () => {

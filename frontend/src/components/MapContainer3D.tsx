@@ -18,7 +18,7 @@ import { cruiseApi } from "../lib/api";
 // Globe mode renders on MapLibre's native globe projection (same engine
 // as the 2D map), with deck.gl as the data-layer overlay. Lazy-loaded so
 // the dashboard's first paint isn't blocked on MapLibre + deck.gl boot.
-const GlobeView = lazy(() => import("./GlobeViewMapLibre"));
+const GlobeView = lazy(() => import("./GlobeView"));
 
 interface MapContainer3DProps {
   flights: GeoJSONFeature[];
