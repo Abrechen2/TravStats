@@ -275,25 +275,52 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 };
 
 /**
- * Great-circle slerp between two [lng, lat] points, returning N+1
- * intermediate [lng, lat] waypoints along the geodesic.
+ * Peak altitude (meters above ellipsoid) for a flight arc with the
+ * given great-circle distance. Same staircase the old three.js
+ * GlobeView used, expressed as a fraction of earth-radius then
+ * converted to meters:
+ *
+ *   < 1 000 km   →   ~127 –  255 km    (short hops barely lift)
+ *   < 5 000 km   →   ~255 –  765 km
+ *   < 10 000 km  →   ~765 – 1 593 km
+ *   ≥ 10 000 km  →  1 593 – 2 867 km   (clamped at 0.45 of radius)
+ */
+const EARTH_RADIUS_M = 6_371_000;
+
+const getArcPeakAltitudeMeters = (distanceKm: number): number => {
+  let frac: number;
+  if (distanceKm < 1000) frac = 0.02 + (distanceKm / 1000) * 0.02;
+  else if (distanceKm < 5000) frac = 0.04 + ((distanceKm - 1000) / 4000) * 0.08;
+  else if (distanceKm < 10000) frac = 0.12 + ((distanceKm - 5000) / 5000) * 0.13;
+  else frac = Math.min(0.25 + ((distanceKm - 10000) / 10000) * 0.15, 0.45);
+  return frac * EARTH_RADIUS_M;
+};
+
+/**
+ * Great-circle slerp between two [lng, lat] points with a parabolic
+ * z-altitude profile, returning N+1 [lng, lat, altitudeMeters]
+ * waypoints along the geodesic. Altitude peaks at the midpoint and
+ * tapers to zero at the endpoints — gives the classic Flightradar /
+ * three.js-GlobeView arc bow.
  *
  * Why we need this: deck.gl ArcLayer with `greatCircle: true` computes
  * arc height in screen-space, which collapses to zero on MapLibre's
- * globe projection — flight arcs become invisible. PathLayer with
- * pre-tessellated great-circle waypoints renders the same curve via
- * a regular line that the globe-projection matrix handles correctly.
+ * globe projection (arcs become invisible). PathLayer with
+ * pre-tessellated 3D waypoints renders the curve through MapLibre's
+ * regular line pipeline, and the z-coordinate is honoured radially in
+ * globe projection — the path bows outward from the sphere.
  *
  * Math: convert each endpoint to a unit Cartesian vector, slerp by
- * `t = i / steps`, project back to spherical. Long-way-around is
- * suppressed by unwrapping the longitude difference into [-π, π]
- * before slerping.
+ * `t = i / steps`, project back to spherical, apply z = peak·sin(πt).
+ * Long-way-around is suppressed by unwrapping the longitude difference
+ * into [-π, π] before slerping.
  */
 const greatCircleWaypoints = (
   from: [number, number],
   to: [number, number],
+  peakAltitudeM: number,
   steps = 48
-): [number, number][] => {
+): [number, number, number][] => {
   const toRad = (x: number): number => (x * Math.PI) / 180;
   const toDeg = (x: number): number => (x * 180) / Math.PI;
   const [lng1, lat1] = from;
@@ -310,10 +337,14 @@ const greatCircleWaypoints = (
   const dLam = lam2 - lam1;
   const aH = Math.sin(dPhi / 2) ** 2 + Math.cos(phi1) * Math.cos(phi2) * Math.sin(dLam / 2) ** 2;
   const c = 2 * Math.atan2(Math.sqrt(aH), Math.sqrt(Math.max(0, 1 - aH)));
-  if (c < 1e-9) return [from, to];
+  if (c < 1e-9)
+    return [
+      [lng1, lat1, 0],
+      [lng2, lat2, 0],
+    ];
 
   const sinC = Math.sin(c);
-  const out: [number, number][] = [];
+  const out: [number, number, number][] = [];
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
     const A = Math.sin((1 - t) * c) / sinC;
@@ -325,7 +356,8 @@ const greatCircleWaypoints = (
     let lng = toDeg(Math.atan2(y, x));
     while (lng > 180) lng -= 360;
     while (lng < -180) lng += 360;
-    out.push([lng, lat]);
+    const altitude = peakAltitudeM * Math.sin(Math.PI * t);
+    out.push([lng, lat, altitude]);
   }
   return out;
 };
@@ -333,8 +365,13 @@ const greatCircleWaypoints = (
 interface ArcDatum {
   from: [number, number];
   to: [number, number];
-  /** Pre-tessellated great-circle path; first/last entries == from/to. */
-  waypoints: [number, number][];
+  /**
+   * Pre-tessellated great-circle path with parabolic z-altitude in
+   * meters; first/last entries == [from, 0] / [to, 0]. The radial
+   * altitude makes the path bow outward from the sphere on globe
+   * projection, restoring the 3D arc look.
+   */
+  waypoints: [number, number, number][];
   count: number;
   flightIds: string[];
   color: [number, number, number];
@@ -533,16 +570,20 @@ export default function GlobeView({
     const thresholds = calculateHeatmapThresholds(counts);
     const arcs: ArcDatum[] = Array.from(routes.values())
       .filter((r) => r.count >= minRouteCount)
-      .map((r) => ({
-        from: r.from,
-        to: r.to,
-        waypoints: greatCircleWaypoints(r.from, r.to, 48),
-        count: r.count,
-        flightIds: r.flightIds,
-        departure: r.departure,
-        arrival: r.arrival,
-        color: getHeatmapColor(r.count, thresholds),
-      }));
+      .map((r) => {
+        const distanceKm = calculateDistance(r.from[1], r.from[0], r.to[1], r.to[0]);
+        const peakAltitudeM = getArcPeakAltitudeMeters(distanceKm);
+        return {
+          from: r.from,
+          to: r.to,
+          waypoints: greatCircleWaypoints(r.from, r.to, peakAltitudeM, 48),
+          count: r.count,
+          flightIds: r.flightIds,
+          departure: r.departure,
+          arrival: r.arrival,
+          color: getHeatmapColor(r.count, thresholds),
+        };
+      });
     return { arcsData: arcs, heatmapThresholds: thresholds };
   }, [filteredFlights, minRouteCount]);
 
@@ -990,18 +1031,24 @@ export default function GlobeView({
         )}
       </div>
 
-      {/* Bottom-center stack: time slider on top, style picker below.
-          Container's bottom is pinned to bottom-3 so the picker stays
-          flush with the screen edge; the slider grows upward. */}
+      {/* Top-center: time slider. Lives in its own opaque bar so
+          mode toggles (Off / Live / Filter) read clearly against any
+          basemap. Style picker stays bottom-center below. */}
       <div
-        className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2"
+        className="absolute top-3 left-1/2 z-10 -translate-x-1/2"
         style={{ pointerEvents: "auto" }}
       >
         <GlobeTimeSlider
           visibleFlights={filteredFlights.length}
           visibleCruises={new Set(cruisePaths.map((p) => p.cruiseId)).size}
         />
+      </div>
 
+      {/* Bottom-center: basemap style picker, flush with the screen edge. */}
+      <div
+        className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2"
+        style={{ pointerEvents: "auto" }}
+      >
         <div
           className="flex gap-1 rounded-md p-1"
           style={{
