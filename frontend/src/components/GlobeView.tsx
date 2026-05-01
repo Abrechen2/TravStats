@@ -997,11 +997,15 @@ export default function GlobeView({
         mapStyle={currentStyle.url}
         attributionControl={false}
         onLoad={onMapLoad}
-        // Globe projection gets visually unstable past ~60° pitch
-        // (camera dips below the horizon plane). MapLibre's default
-        // 85° lets right-mouse drag-rotate reach that zone where the
-        // deck.gl overlay desyncs and arcs/dots appear to disappear.
-        maxPitch={60}
+        // Right-mouse drag-rotate / pitch is disabled on the globe.
+        // The deck.gl overlay's MapLibre-globe sync isn't reliable
+        // under bearing+pitch changes (layers detach into a flat
+        // mercator strip), and the basemap is already a 3D sphere —
+        // pan + zoom give a complete navigation model on a globe.
+        // The Auto-Rotation toggle covers the "watch it spin" use case.
+        dragRotate={false}
+        pitchWithRotate={false}
+        touchPitch={false}
         style={{ width: "100%", height: "100%" }}
       >
         {mapReady && <DeckGLOverlay layers={layers} />}
