@@ -238,6 +238,10 @@ async function authenticateWithApiToken(req: AuthRequest, plaintext: string): Pr
  * authenticated via PAT. Read-only tokens are explicitly blocked from
  * mutating endpoints. Cookie sessions are not constrained by scope —
  * the user is the resource owner via their browser.
+ *
+ * Method-aware: GET / HEAD / OPTIONS pass through unconditionally so this
+ * middleware can be safely applied at the router level via `router.use()`
+ * without separately distinguishing read vs write routes.
  */
 export const requireWriteScope = (
   req: AuthRequest,
@@ -245,6 +249,10 @@ export const requireWriteScope = (
   next: NextFunction
 ) => {
   if (!req.apiToken) {
+    next();
+    return;
+  }
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
     next();
     return;
   }

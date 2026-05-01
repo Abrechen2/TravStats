@@ -1,7 +1,7 @@
 import { Router, Response, NextFunction } from 'express';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../db';
-import { authenticate, AuthRequest } from '../middleware/auth';
+import { authenticate, requireWriteScope, AuthRequest } from '../middleware/auth';
 import { createFlightSchema, updateFlightSchema, flightQuerySchema } from '../schemas/flight';
 import type { FlightQueryInput } from '../schemas/flight';
 import logger from '../utils/logger';
@@ -76,8 +76,13 @@ function toUtcDate(local: string | null | undefined, tz: string | null | undefin
   return fromZonedTime(local, tz);
 }
 
-// All routes require authentication
+// All routes require authentication.
+// `requireWriteScope` is method-aware: GET/HEAD/OPTIONS pass through, anything
+// else demands a write- or admin-scoped PAT (cookie sessions are unaffected).
+// Order matters — must run before the batchRouter mount so /flights/batch
+// inherits the same scope check.
 router.use(authenticate);
+router.use(requireWriteScope);
 router.use(batchRouter);
 
 // Normalize query params coming from axios (arrays are sent as foo[] by default)
