@@ -64,7 +64,7 @@ is captured by the first-run setup wizard in the browser.
 
 ```bash
 # 1. Grab the compose file
-curl -O https://raw.githubusercontent.com/Abrechen2/TravStats/main/docker-compose.prod.yml
+curl -O https://raw.githubusercontent.com/Abrechen2/TravStats/Main/docker-compose.prod.yml
 
 # 2. Set one variable
 echo "DB_PASSWORD=$(openssl rand -base64 32)" > .env

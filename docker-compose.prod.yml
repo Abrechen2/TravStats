@@ -41,6 +41,7 @@ services:
       - SETUID
       - SETGID
       - FOWNER
+      - DAC_OVERRIDE  # postgres entrypoint chowns $PGDATA then traverses it as root
     logging:
       driver: "json-file"
       options:
@@ -135,6 +136,10 @@ services:
       - ALL
     cap_add:
       - CHOWN
+      - DAC_OVERRIDE   # entrypoint writes /app/data/secrets across uid boundary
+      - FOWNER         # chown the data volume on first boot
+      - SETUID         # drop privs to non-root before starting Node
+      - SETGID
     logging:
       driver: "json-file"
       options:

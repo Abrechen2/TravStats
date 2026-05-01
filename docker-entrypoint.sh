@@ -434,5 +434,16 @@ fi
 
 echo "[entrypoint] TravStats is ready (nginx on :80, backend on :8000)"
 
+# Final ownership reconciliation — the seed scripts above (airports, demo user,
+# achievements) run with the entrypoint's effective UID (root in standard
+# installs) and create files like /app/data/logs/app.log owned root:root. The
+# supervised backend then runs as `node` (uid 1000) and would fail with EACCES
+# on those files. Re-chown after the as-root phase finishes so the long-running
+# process can write its logs. Idempotent — safe even if files were already
+# correctly owned.
+if [ -d /app/data ] && [ -w /app/data ]; then
+    chown -R ${NODE_UID:-1000}:${NODE_GID:-1000} /app/data 2>/dev/null || true
+fi
+
 # Execute the main command (supervisord)
 exec "$@"
