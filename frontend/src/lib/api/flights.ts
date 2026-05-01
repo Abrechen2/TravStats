@@ -39,8 +39,15 @@ export const flightsApi = {
     return data;
   },
 
-  create: async (flight: FlightInput, force = false): Promise<Flight> => {
-    const { data } = await api.post<Flight>(`/flights${force ? "?force=true" : ""}`, flight);
+  create: async (
+    flight: FlightInput,
+    opts: { force?: boolean; merge?: boolean } = {}
+  ): Promise<Flight> => {
+    const params = new URLSearchParams();
+    if (opts.force) params.set("force", "true");
+    else if (opts.merge) params.set("merge", "true");
+    const qs = params.toString();
+    const { data } = await api.post<Flight>(`/flights${qs ? `?${qs}` : ""}`, flight);
     return data;
   },
 

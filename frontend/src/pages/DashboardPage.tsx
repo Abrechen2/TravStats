@@ -21,6 +21,14 @@ import { useClickOutside } from "../hooks/useClickOutside";
 import type { Flight, FlightInput, FlightFilters, GeoJSONFeature } from "../types";
 import { API_LIMITS } from "../lib/constants";
 import { toCsv, escapeXml, downloadBlob } from "../lib/export";
+import {
+  exportFlightsToXlsx,
+  parseXlsxToRows,
+  jsonToFlightRow,
+  type FlightRow,
+} from "../lib/xlsxRoundTrip";
+import { parseCsv } from "../lib/csvParser";
+import { airportsApi } from "../lib/api/airports";
 import { motion, AnimatePresence } from "framer-motion";
 import { FlightPanel } from "../components/FlightPanel";
 // jsPDF and autoTable are dynamically imported when needed to reduce bundle size
@@ -156,12 +164,19 @@ export default function DashboardPage(): JSX.Element {
     loadFlights();
   }, [loadFlights]);
 
-  const handleAddFlight = async (flight: FlightInput, force = false, hasMoreFlights = false) => {
+  const handleAddFlight = async (
+    flight: FlightInput,
+    opts: { force?: boolean; merge?: boolean; hasMoreFlights?: boolean } = {}
+  ) => {
     try {
-      const result = (await flightsApi.create(flight, force)) as Flight & {
+      const result = (await flightsApi.create(flight, {
+        force: opts.force,
+        merge: opts.merge,
+      })) as Flight & {
         newAchievements?: import("../types").UserAchievement[];
+        mergedFields?: string[];
       };
-      if (!hasMoreFlights) {
+      if (!opts.hasMoreFlights) {
         setShowFlightForm(false);
       }
       loadFlights();
@@ -170,6 +185,15 @@ export default function DashboardPage(): JSX.Element {
       const recentData = await flightsApi.getAll({ limit: API_LIMITS.RECENT_FLIGHTS, offset: 0 });
       setRecentFlights(recentData.flights);
       setTotalFlightsCount(recentData.total);
+
+      if (opts.merge && result.mergedFields && result.mergedFields.length > 0) {
+        addToast(
+          "success",
+          t("dashboard:success.flightMerged", { count: result.mergedFields.length })
+        );
+      } else if (opts.merge) {
+        addToast("info", t("dashboard:success.flightMergedNoChange"));
+      }
 
       // Show achievement popup if new achievements were unlocked
       if (result.newAchievements && result.newAchievements.length > 0) {
@@ -321,7 +345,7 @@ export default function DashboardPage(): JSX.Element {
           tags: flight.tags?.length ? flight.tags : undefined,
           companions: flight.companions?.length ? flight.companions : undefined,
         };
-        await flightsApi.create(input, true);
+        await flightsApi.create(input, { force: true });
         const recentData = await flightsApi.getAll({
           limit: API_LIMITS.RECENT_FLIGHTS,
           offset: 0,
@@ -342,8 +366,16 @@ export default function DashboardPage(): JSX.Element {
     setFilters(newFilters);
   };
 
-  const handleExport = async (format: "csv" | "geojson" | "pdf" | "kml") => {
+  const handleExport = async (format: "csv" | "xlsx" | "geojson" | "pdf" | "kml") => {
     try {
+      if (format === "xlsx") {
+        const { minRouteCount: _mapOnlyXlsx, ...apiFilters } = filters;
+        void _mapOnlyXlsx;
+        const data = await flightsApi.getAll(apiFilters);
+        const blob = await exportFlightsToXlsx(data.flights);
+        downloadBlob(blob, `flights-${new Date().toISOString()}.xlsx`);
+        return;
+      }
       if (format === "geojson") {
         // minRouteCount is a map-only filter — not applied to API queries
         const { minRouteCount: _mapOnly, ...apiFilters } = filters;
@@ -480,124 +512,178 @@ export default function DashboardPage(): JSX.Element {
     importInputRef.current?.click();
   };
 
+  /**
+   * Pick the right parser by file extension. JSON is treated as an
+   * already-shaped array of FlightRow-like records; CSV runs through
+   * the RFC-4180 parser; XLSX uses exceljs.
+   */
+  const parseImportFile = async (file: File): Promise<FlightRow[]> => {
+    const lower = file.name.toLowerCase();
+    if (lower.endsWith(".xlsx")) {
+      return parseXlsxToRows(file);
+    }
+    const text = await file.text();
+    if (lower.endsWith(".json")) {
+      const raw = JSON.parse(text) as unknown;
+      if (!Array.isArray(raw)) return [];
+      return raw.map(jsonToFlightRow);
+    }
+    // .csv (default fallback)
+    const records = parseCsv(text);
+    return records.map(jsonToFlightRow);
+  };
+
+  /**
+   * Build the partial update payload for a row that carries an existing
+   * id. Empty cells are skipped so the user can clear individual fields
+   * via the in-app edit modal — round-trip Excel only fills, never
+   * blanks. Lat/lon are deliberately left out: airports cannot be
+   * changed via Excel because we'd need to look up the new coords.
+   */
+  const rowToUpdates = (row: FlightRow): Partial<Flight> => {
+    const u: Partial<Flight> = {};
+    if (row.airline) u.airline = row.airline;
+    if (row.flightNumber) u.flightNumber = row.flightNumber;
+    if (row.operatingAirline) u.operatingAirline = row.operatingAirline;
+    if (row.departureTime) u.departureTime = row.departureTime;
+    if (row.arrivalTime) u.arrivalTime = row.arrivalTime;
+    if (row.status) u.status = row.status as Flight["status"];
+    if (row.aircraft) u.aircraft = row.aircraft;
+    if (row.seatNumber) u.seatNumber = row.seatNumber;
+    if (row.seatClass) u.seatClass = row.seatClass as Flight["seatClass"];
+    if (row.gate) u.gate = row.gate;
+    if (row.terminal) u.terminal = row.terminal;
+    if (row.bookingReference) u.bookingReference = row.bookingReference;
+    if (row.ticketNumber) u.ticketNumber = row.ticketNumber;
+    if (row.category) u.category = row.category as Flight["category"];
+    if (row.tags)
+      u.tags = row.tags
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    if (row.companions)
+      u.companions = row.companions
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    if (row.price) u.price = Number(row.price);
+    if (row.currency) u.currency = row.currency as Flight["currency"];
+    if (row.taxes) u.taxes = Number(row.taxes);
+    if (row.fees) u.fees = Number(row.fees);
+    if (row.notes) u.notes = row.notes;
+    return u;
+  };
+
+  /**
+   * Build a full FlightInput for a brand-new row (no id). Airports are
+   * resolved by IATA via airportsApi — we need lat/lon for the create
+   * payload, and Excel only carries the IATA code. If lookup fails the
+   * whole row is rejected; the user can retry with a corrected code.
+   */
+  const rowToCreateInput = async (row: FlightRow): Promise<FlightInput> => {
+    if (!row.depIata || !row.arrIata) {
+      throw new Error("Departure and arrival IATA required for new flights");
+    }
+    const [dep, arr] = await Promise.all([
+      airportsApi.getByCode(row.depIata),
+      airportsApi.getByCode(row.arrIata),
+    ]);
+    return {
+      airline: row.airline || undefined,
+      flightNumber: row.flightNumber || undefined,
+      operatingAirline: row.operatingAirline || undefined,
+      departure: { iata: dep.iata, icao: dep.icao, name: dep.name, lat: dep.lat, lon: dep.lon },
+      arrival: { iata: arr.iata, icao: arr.icao, name: arr.name, lat: arr.lat, lon: arr.lon },
+      departureTime: row.departureTime || undefined,
+      arrivalTime: row.arrivalTime || undefined,
+      status: (row.status || "flown") as FlightInput["status"],
+      aircraft: row.aircraft || undefined,
+      seatNumber: row.seatNumber || undefined,
+      seatClass: (row.seatClass || undefined) as FlightInput["seatClass"],
+      gate: row.gate || undefined,
+      terminal: row.terminal || undefined,
+      bookingReference: row.bookingReference || undefined,
+      ticketNumber: row.ticketNumber || undefined,
+      category: (row.category || undefined) as FlightInput["category"],
+      tags: row.tags
+        ? row.tags
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : undefined,
+      companions: row.companions
+        ? row.companions
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : undefined,
+      price: row.price ? Number(row.price) : undefined,
+      currency: (row.currency || undefined) as FlightInput["currency"],
+      taxes: row.taxes ? Number(row.taxes) : undefined,
+      fees: row.fees ? Number(row.fees) : undefined,
+      notes: row.notes || undefined,
+    };
+  };
+
   const handleImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     setImporting(true);
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        const content = e.target?.result;
-        if (!content || typeof content !== "string") {
-          addToast("error", t("dashboard:errors.importFailed"));
-          return;
-        }
+    try {
+      const rows = await parseImportFile(file);
+      if (rows.length === 0) {
+        addToast("warning", t("common:messages.noData"));
+        return;
+      }
 
-        let parsed: Record<string, string>[] = [];
-        if (file.name.endsWith(".json")) {
-          parsed = JSON.parse(content) as Record<string, string>[];
-        } else {
-          // naive CSV parser
-          const lines = content.split("\n").filter(Boolean);
-          const header = lines.shift()?.split(",") || [];
-          parsed = lines.map((line) => {
-            const cells = line.split(",");
-            return header.reduce(
-              (acc, key, idx) => {
-                acc[key.trim()] = cells[idx]?.trim();
-                return acc;
-              },
-              {} as Record<string, string>
-            );
-          });
-        }
-
-        // CSV/JSON imports rarely carry an IANA tz column, so we interpret
-        // the local datetime strings in the user's display timezone. Power
-        // users importing cross-timezone data can fix individual entries later.
-        const importTz = useSettingsStore.getState().display?.timezone || "UTC";
-
-        if (parsed.length === 0) {
-          addToast("warning", t("common:messages.noData"));
-          return;
-        }
-
-        // Convert parsed data to FlightInput format and import
-        let successCount = 0;
-        let errorCount = 0;
-
-        for (const item of parsed) {
-          try {
-            // Map CSV/JSON fields to FlightInput
-            const flightInput: FlightInput = {
-              airline: item.airline || item.Airline || "",
-              flightNumber: item.flightNumber || item["Flight Number"] || item.flight_number || "",
-              departure: {
-                iata: item.depIata || item["Departure Airport"] || item.departure_airport || "",
-                icao: item.depIcao || item.departure_icao || "",
-                name: item.depName || item.departure_name || "",
-                lat: Number(item.depLat || item.departure_lat || 0),
-                lon: Number(item.depLon || item.departure_lon || 0),
-              },
-              arrival: {
-                iata: item.arrIata || item["Arrival Airport"] || item.arrival_airport || "",
-                icao: item.arrIcao || item.arrival_icao || "",
-                name: item.arrName || item.arrival_name || "",
-                lat: Number(item.arrLat || item.arrival_lat || 0),
-                lon: Number(item.arrLon || item.arrival_lon || 0),
-              },
-              departureLocal:
-                item.departureTime || item["Departure Time"] || item.departure_time || undefined,
-              depTimezone: importTz,
-              arrivalLocal:
-                item.arrivalTime || item["Arrival Time"] || item.arrival_time || undefined,
-              arrTimezone: importTz,
-              status: (item.status || item.Status || "flown") as
-                | "scheduled"
-                | "flown"
-                | "cancelled",
-              aircraft: item.aircraft || item.Aircraft || "",
-            };
-
-            await flightsApi.create(flightInput);
-            successCount++;
-          } catch (err) {
-            errorCount++;
-            logger.error("Failed to import flight:", err);
+      let updated = 0;
+      let created = 0;
+      let errors = 0;
+      for (const row of rows) {
+        try {
+          if (row.id) {
+            await flightsApi.update(row.id, rowToUpdates(row));
+            updated += 1;
+          } else {
+            const input = await rowToCreateInput(row);
+            await flightsApi.create(input);
+            created += 1;
           }
-        }
-
-        if (successCount > 0 && errorCount > 0) {
-          addToast(
-            "warning",
-            t("dashboard:errors.importPartial", {
-              success: successCount,
-              total: parsed.length,
-              errors: errorCount,
-            })
-          );
-          loadRecentFlights();
-          loadFlights();
-        } else if (successCount > 0) {
-          addToast("success", t("dashboard:success.flightAdded"));
-          // Reload flights
-          loadRecentFlights();
-          loadFlights();
-        } else {
-          addToast("error", t("dashboard:errors.importFailed"));
-        }
-      } catch (err) {
-        logger.error("Import failed:", err);
-        addToast("error", t("dashboard:errors.importFailed"));
-      } finally {
-        setImporting(false);
-        if (importInputRef.current) {
-          importInputRef.current.value = "";
+        } catch (err) {
+          errors += 1;
+          logger.error("Failed to import flight row:", err, row);
         }
       }
-    };
-    reader.readAsText(file);
+
+      const succeeded = updated + created;
+      if (succeeded > 0 && errors > 0) {
+        addToast(
+          "warning",
+          t("dashboard:errors.importPartial", {
+            success: succeeded,
+            total: rows.length,
+            errors,
+          })
+        );
+        loadRecentFlights();
+        loadFlights();
+      } else if (succeeded > 0) {
+        addToast("success", t("dashboard:success.importSummary", { updated, created }));
+        loadRecentFlights();
+        loadFlights();
+      } else {
+        addToast("error", t("dashboard:errors.importFailed"));
+      }
+    } catch (err) {
+      logger.error("Import failed:", err);
+      addToast("error", t("dashboard:errors.importFailed"));
+    } finally {
+      setImporting(false);
+      if (importInputRef.current) {
+        importInputRef.current.value = "";
+      }
+    }
   };
 
   return (
@@ -607,7 +693,7 @@ export default function DashboardPage(): JSX.Element {
     >
       <input
         type="file"
-        accept=".csv,.json"
+        accept=".csv,.json,.xlsx"
         ref={importInputRef}
         onChange={handleImportFile}
         className="hidden"
@@ -798,7 +884,7 @@ export default function DashboardPage(): JSX.Element {
                   minWidth: "140px",
                 }}
               >
-                {(["csv", "pdf", "geojson", "kml"] as const).map((fmt) => (
+                {(["xlsx", "csv", "pdf", "geojson", "kml"] as const).map((fmt) => (
                   <button
                     key={fmt}
                     onClick={() => {
