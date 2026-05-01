@@ -479,6 +479,12 @@ export default function GlobeView({
   // swap (MapLibre resets both when replacing the style). Driven by
   // react-map-gl's onLoad — that's the only event that fires after the
   // map ref is guaranteed populated.
+  //
+  // Also re-applied on pitchend / rotateend: right-mouse drag pitch+yaw
+  // can leave MapLibre in a state where the globe projection silently
+  // reverts to mercator (and the deck.gl overlay then renders against
+  // a stale viewport — visually "everything breaks"). Re-asserting the
+  // projection at the end of the gesture restores the globe.
   const onMapLoad = useCallback((): void => {
     const map = mapRef.current?.getMap();
     if (!map) return;
@@ -496,6 +502,8 @@ export default function GlobeView({
     };
     apply();
     map.on("style.load", apply);
+    map.on("pitchend", apply);
+    map.on("rotateend", apply);
   }, []);
 
   // Auto-rotation loop. Drives `map.jumpTo` ~30 fps with a constant
@@ -974,6 +982,11 @@ export default function GlobeView({
         mapStyle={currentStyle.url}
         attributionControl={false}
         onLoad={onMapLoad}
+        // Globe projection gets visually unstable past ~60° pitch
+        // (camera dips below the horizon plane). MapLibre's default
+        // 85° lets right-mouse drag-rotate reach that zone where the
+        // deck.gl overlay desyncs and arcs/dots appear to disappear.
+        maxPitch={60}
         style={{ width: "100%", height: "100%" }}
       >
         <DeckGLOverlay layers={layers} />
