@@ -1,4 +1,5 @@
 import type { Flight, Prisma } from "@prisma/client";
+import { fromZonedTime } from "date-fns-tz";
 
 import type { CreateFlightInput } from "../schemas/flight";
 
@@ -35,18 +36,21 @@ const STRING_FIELDS = [
 
 const NUMBER_FIELDS = ["price", "taxes", "fees"] as const;
 
+// On the existing Prisma row the column names are *Time / actual*; on the
+// validated incoming payload they come as (local + timezone) pairs and we
+// resolve them to a Date via fromZonedTime before comparing.
 const DATE_FIELDS = [
-  "departureTime",
-  "arrivalTime",
-  "actualDeparture",
-  "actualArrival",
+  { existing: "departureTime", local: "departureLocal", tz: "depTimezone" },
+  { existing: "arrivalTime", local: "arrivalLocal", tz: "arrTimezone" },
+  { existing: "actualDeparture", local: "actualDepartureLocal", tz: "actualDepartureTz" },
+  { existing: "actualArrival", local: "actualArrivalLocal", tz: "actualArrivalTz" },
 ] as const;
 
 const ARRAY_FIELDS = ["tags", "companions", "coPassengers"] as const;
 
 type StringField = (typeof STRING_FIELDS)[number];
 type NumberField = (typeof NUMBER_FIELDS)[number];
-type DateField = (typeof DATE_FIELDS)[number];
+type DateField = (typeof DATE_FIELDS)[number]["existing"];
 type ArrayField = (typeof ARRAY_FIELDS)[number];
 
 export type MergeableField = StringField | NumberField | DateField | ArrayField;
@@ -102,12 +106,13 @@ export function buildFlightMergePatch(
     mergedFields.push(field);
   }
 
-  for (const field of DATE_FIELDS) {
-    if (!isMissingDate(existing[field])) continue;
-    const next = incoming[field];
-    if (next === undefined || next === null) continue;
-    (patch as Record<string, unknown>)[field] = new Date(next);
-    mergedFields.push(field);
+  for (const { existing: existingField, local: localField, tz: tzField } of DATE_FIELDS) {
+    if (!isMissingDate((existing as Record<string, unknown>)[existingField])) continue;
+    const localValue = (incoming as Record<string, unknown>)[localField];
+    const tzValue = (incoming as Record<string, unknown>)[tzField];
+    if (typeof localValue !== "string" || typeof tzValue !== "string") continue;
+    (patch as Record<string, unknown>)[existingField] = fromZonedTime(localValue, tzValue);
+    mergedFields.push(existingField);
   }
 
   for (const field of ARRAY_FIELDS) {
@@ -121,15 +126,17 @@ export function buildFlightMergePatch(
 
   // Recompute delayMinutes only if actualDeparture got merged AND we now
   // have both timestamps to compute against. Use the post-merge values:
-  // departureTime may also have been filled in the same merge pass.
-  const mergedActualDep = mergedFields.includes("actualDeparture");
-  if (mergedActualDep) {
+  // departureTime may also have been filled in the same merge pass (we read
+  // it back from the patch we just built rather than from incoming, which
+  // only carries the unresolved local+tz pair).
+  if (mergedFields.includes("actualDeparture")) {
+    const patchRecord = patch as Record<string, unknown>;
     const depRaw =
-      mergedFields.includes("departureTime") && incoming.departureTime
-        ? new Date(incoming.departureTime)
+      mergedFields.includes("departureTime") && patchRecord.departureTime instanceof Date
+        ? patchRecord.departureTime
         : existing.departureTime;
-    const actualDepRaw = incoming.actualDeparture
-      ? new Date(incoming.actualDeparture)
+    const actualDepRaw = patchRecord.actualDeparture instanceof Date
+      ? patchRecord.actualDeparture
       : null;
     if (depRaw && actualDepRaw) {
       patch.delayMinutes = Math.round(

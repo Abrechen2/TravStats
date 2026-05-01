@@ -4,6 +4,26 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [1.3.0] - 2026-05-01
+
+### Added
+- **Public REST API with Personal Access Tokens** — External tools (AI agents, scripts, integrations) can now reach every flight, trip, airport and stat the web UI shows. Mint a PAT under *Settings → API Tokens*, then send `Authorization: Bearer ts_pat_…` on any authenticated endpoint. Scopes (`read` / `write` / `admin`) are enforced at middleware level; the plaintext token is shown exactly once on creation and stored only as a bcrypt hash. Per-token rate-limit buckets (`pat:<id>`) keep an aggressive automation script from locking the owning user out of the web UI.
+- **OpenAPI 3.0 spec + Swagger UI** — Auto-generated from the existing Zod validation schemas via `zod-to-openapi`. Browse it at `/api/v1/docs` (Swagger UI) or fetch the raw JSON at `/api/v1/openapi.json`. Covers flights CRUD, trips, airports, stats, parsers (email + boarding pass), batch import, and token management.
+- **Boarding-pass-aware flight merge** — `POST /flights?merge=true` now fills missing fields on an existing same-day flight from incoming data without ever overwriting curated values. Boarding-pass scans, email-confirmation imports, and re-imports of partially-entered flights enrich the existing row in place instead of producing a duplicate. The dashboard surfaces a *flightMerged* toast that reports how many fields were filled.
+- **Excel/CSV round-trip import + export** — Export flights as `.xlsx` with a stable column layout, edit them in Excel, re-import the same file: rows with an `id` column update existing flights, rows without create new ones. The shared CSV parser (`parseImportFile`) now handles JSON, CSV, and XLSX through the same pipeline.
+
+### Fixed
+- **Re-importing a boarding pass for an already-entered flight created a duplicate (issue #84)** — Different scan paths emit the same flight as `LH 123`, `LH123`, `lh123` etc. The duplicate-check on `POST /flights` compared raw strings, so re-importing slipped past as a "different" flight. Flight numbers are now normalised at the schema boundary (uppercase, no whitespace) and the duplicate-check fetches all of the day's candidates and compares normalised in JS, so legacy non-canonical rows in the DB still match.
+- **OpenAPI spec drifted from the actual route surface** — Corrected `/airports` → `/airports/search`, `/stats` → `/stats/summary`, swapped `PATCH /flights/{id}` for the actual `PUT`, and added the missing `GET /flights/{id}` endpoint. The Swagger UI now matches what the server serves.
+- **API Tokens settings page flickered + threw an i18n error** — `useCallback`'s dependency array contained the i18n `t` function, whose identity is not stable across renders, so the reload effect re-fired every render. Empty-deps + an `eslint-disable` comment that explains why. Also corrected `t("common:loading")` (which returns an object, not a string) to `t("common:loading.title")`.
+
+### Security
+- **Token mutations are explicitly cookie-only** — `POST/DELETE /settings/tokens` reject Bearer-token requests; a leaked PAT cannot self-renew or mint admin tokens.
+- **Admin endpoints require an `admin`-scoped PAT** — Even when the owning user has `isAdmin=true`, an automation script can only reach `/admin` when its token was minted with the `admin` scope. Account-level admin no longer implicitly elevates token scope.
+
+### Tests
+- **+17 tests** — 6 covering the API-token utility (lookup hash collision-resistance, bcrypt verify, prefix regex, plaintext format), 6 covering the OpenAPI spec build (paths, security scheme, BearerAuth, methods on `/flights/{id}`), 2 covering flight-number normalisation in the schema, 3 covering the boarding-pass merge utility (curated-value preservation, full overwrite via force, partial enrichment).
+
 ## [1.2.1] - 2026-04-28
 
 ### Fixed

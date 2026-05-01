@@ -14,8 +14,10 @@ import { buildFlightMergePatch } from "../utils/flightMerge";
 const validIncomingBase = {
   departure: { iata: "FRA", lat: 50.0379, lon: 8.5622 },
   arrival: { iata: "JFK", lat: 40.6413, lon: -73.7781 },
-  departureTime: "2026-05-01T08:00:00.000Z",
-  arrivalTime: "2026-05-01T17:00:00.000Z",
+  departureLocal: "2026-05-01T08:00",
+  depTimezone: "Europe/Berlin",
+  arrivalLocal: "2026-05-01T17:00",
+  arrTimezone: "America/New_York",
   flightNumber: "LH123",
 };
 
@@ -38,8 +40,9 @@ function makeExistingFlight(overrides: Partial<Flight> = {}): Flight {
     arrName: null,
     arrLat: 40.6413,
     arrLon: -73.7781,
-    departureTime: new Date("2026-05-01T08:00:00.000Z"),
-    arrivalTime: new Date("2026-05-01T17:00:00.000Z"),
+    // 08:00 Europe/Berlin → 06:00 UTC (May, CEST)
+    departureTime: new Date("2026-05-01T06:00:00.000Z"),
+    arrivalTime: new Date("2026-05-01T21:00:00.000Z"),
     status: "scheduled",
     notes: null,
     seatNumber: null,
@@ -157,17 +160,19 @@ describe("buildFlightMergePatch", () => {
     expect(mergedFields).not.toContain("price");
   });
 
-  it("fills null date fields and converts ISO strings to Date", () => {
+  it("fills null date fields and converts (local + tz) pair to Date", () => {
     const existing = makeExistingFlight({ actualDeparture: null });
     const incoming = createFlightSchema.parse({
       ...validIncomingBase,
-      actualDeparture: "2026-05-01T08:15:00.000Z",
+      actualDepartureLocal: "2026-05-01T08:15",
+      actualDepartureTz: "Europe/Berlin",
     });
 
     const { patch, mergedFields } = buildFlightMergePatch(existing, incoming);
 
     expect(patch.actualDeparture).toBeInstanceOf(Date);
-    expect((patch.actualDeparture as Date).toISOString()).toBe("2026-05-01T08:15:00.000Z");
+    // 08:15 Europe/Berlin in May (CEST = +02:00) → 06:15 UTC
+    expect((patch.actualDeparture as Date).toISOString()).toBe("2026-05-01T06:15:00.000Z");
     expect(mergedFields).toContain("actualDeparture");
   });
 
@@ -175,8 +180,9 @@ describe("buildFlightMergePatch", () => {
     const existing = makeExistingFlight({ actualDeparture: null });
     const incoming = createFlightSchema.parse({
       ...validIncomingBase,
-      // 17 min late vs scheduled 08:00
-      actualDeparture: "2026-05-01T08:17:00.000Z",
+      // 17 min late vs scheduled 08:00 Europe/Berlin
+      actualDepartureLocal: "2026-05-01T08:17",
+      actualDepartureTz: "Europe/Berlin",
     });
 
     const { patch } = buildFlightMergePatch(existing, incoming);
@@ -186,12 +192,13 @@ describe("buildFlightMergePatch", () => {
 
   it("does not recompute delayMinutes if actualDeparture is preserved", () => {
     const existing = makeExistingFlight({
-      actualDeparture: new Date("2026-05-01T08:05:00.000Z"),
+      actualDeparture: new Date("2026-05-01T06:05:00.000Z"),
       delayMinutes: 5,
     });
     const incoming = createFlightSchema.parse({
       ...validIncomingBase,
-      actualDeparture: "2026-05-01T09:00:00.000Z", // would be 60 min, but ignored
+      actualDepartureLocal: "2026-05-01T09:00", // would be 60 min, but ignored
+      actualDepartureTz: "Europe/Berlin",
     });
 
     const { patch } = buildFlightMergePatch(existing, incoming);

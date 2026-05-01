@@ -540,22 +540,31 @@ export default function DashboardPage(): JSX.Element {
    * blanks. Lat/lon are deliberately left out: airports cannot be
    * changed via Excel because we'd need to look up the new coords.
    */
-  const rowToUpdates = (row: FlightRow): Partial<Flight> => {
-    const u: Partial<Flight> = {};
+  const rowToUpdates = (row: FlightRow): Partial<FlightInput> => {
+    // CSV/XLSX rounds carry no IANA tz column, so default to the user's
+    // display timezone — the server will resolve to UTC via fromZonedTime.
+    const importTz = useSettingsStore.getState().display?.timezone || "UTC";
+    const u: Partial<FlightInput> = {};
     if (row.airline) u.airline = row.airline;
     if (row.flightNumber) u.flightNumber = row.flightNumber;
     if (row.operatingAirline) u.operatingAirline = row.operatingAirline;
-    if (row.departureTime) u.departureTime = row.departureTime;
-    if (row.arrivalTime) u.arrivalTime = row.arrivalTime;
-    if (row.status) u.status = row.status as Flight["status"];
+    if (row.departureTime) {
+      u.departureLocal = row.departureTime;
+      u.depTimezone = importTz;
+    }
+    if (row.arrivalTime) {
+      u.arrivalLocal = row.arrivalTime;
+      u.arrTimezone = importTz;
+    }
+    if (row.status) u.status = row.status as FlightInput["status"];
     if (row.aircraft) u.aircraft = row.aircraft;
     if (row.seatNumber) u.seatNumber = row.seatNumber;
-    if (row.seatClass) u.seatClass = row.seatClass as Flight["seatClass"];
+    if (row.seatClass) u.seatClass = row.seatClass as FlightInput["seatClass"];
     if (row.gate) u.gate = row.gate;
     if (row.terminal) u.terminal = row.terminal;
     if (row.bookingReference) u.bookingReference = row.bookingReference;
     if (row.ticketNumber) u.ticketNumber = row.ticketNumber;
-    if (row.category) u.category = row.category as Flight["category"];
+    if (row.category) u.category = row.category as FlightInput["category"];
     if (row.tags)
       u.tags = row.tags
         .split(",")
@@ -567,7 +576,7 @@ export default function DashboardPage(): JSX.Element {
         .map((s) => s.trim())
         .filter(Boolean);
     if (row.price) u.price = Number(row.price);
-    if (row.currency) u.currency = row.currency as Flight["currency"];
+    if (row.currency) u.currency = row.currency as FlightInput["currency"];
     if (row.taxes) u.taxes = Number(row.taxes);
     if (row.fees) u.fees = Number(row.fees);
     if (row.notes) u.notes = row.notes;
@@ -588,14 +597,17 @@ export default function DashboardPage(): JSX.Element {
       airportsApi.getByCode(row.depIata),
       airportsApi.getByCode(row.arrIata),
     ]);
+    const importTz = useSettingsStore.getState().display?.timezone || "UTC";
     return {
       airline: row.airline || undefined,
       flightNumber: row.flightNumber || undefined,
       operatingAirline: row.operatingAirline || undefined,
       departure: { iata: dep.iata, icao: dep.icao, name: dep.name, lat: dep.lat, lon: dep.lon },
       arrival: { iata: arr.iata, icao: arr.icao, name: arr.name, lat: arr.lat, lon: arr.lon },
-      departureTime: row.departureTime || undefined,
-      arrivalTime: row.arrivalTime || undefined,
+      departureLocal: row.departureTime || undefined,
+      depTimezone: row.departureTime ? importTz : undefined,
+      arrivalLocal: row.arrivalTime || undefined,
+      arrTimezone: row.arrivalTime ? importTz : undefined,
       status: (row.status || "flown") as FlightInput["status"],
       aircraft: row.aircraft || undefined,
       seatNumber: row.seatNumber || undefined,

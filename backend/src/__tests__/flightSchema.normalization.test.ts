@@ -16,8 +16,10 @@ describe("createFlightSchema flightNumber normalization", () => {
   const validBase = {
     departure: { iata: "FRA", lat: 50.0379, lon: 8.5622 },
     arrival: { iata: "JFK", lat: 40.6413, lon: -73.7781 },
-    departureTime: "2026-05-01T08:00:00.000Z",
-    arrivalTime: "2026-05-01T17:00:00.000Z",
+    departureLocal: "2026-05-01T08:00",
+    depTimezone: "Europe/Berlin",
+    arrivalLocal: "2026-05-01T17:00",
+    arrTimezone: "America/New_York",
   };
 
   it("strips internal whitespace from flight numbers", () => {
