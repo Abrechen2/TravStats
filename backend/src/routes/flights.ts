@@ -194,14 +194,15 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
     const userId = req.userId!;
     const data = createFlightSchema.parse(req.body);
 
-    // Resolve local + tz pairs into canonical real UTC instants up front so
-    // the rest of the handler can work with proper Date objects.
     const departureUtc = toUtcDate(data.departureLocal, data.depTimezone);
     const arrivalUtc = toUtcDate(data.arrivalLocal, data.arrTimezone);
     const actualDepartureUtc = toUtcDate(data.actualDepartureLocal, data.actualDepartureTz);
     const actualArrivalUtc = toUtcDate(data.actualArrivalLocal, data.actualArrivalTz);
 
-    // Duplicate check: same userId + flightNumber + same calendar day
+    // Duplicate check (#84): pre-existing rows can hold non-canonical
+    // flightNumber strings ("LH 123", "lh123") from before the schema-level
+    // normalization landed, so fetch the day's candidates and compare
+    // normalized in JS rather than relying on a direct WHERE.
     const forceCreate = req.query['force'] === 'true';
     if (data.flightNumber && !forceCreate && departureUtc) {
       const dayStart = new Date(departureUtc);
@@ -209,10 +210,9 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
       const dayEnd = new Date(departureUtc);
       dayEnd.setUTCHours(23, 59, 59, 999);
 
-      const existing = await prisma.flight.findFirst({
+      const dayCandidates = await prisma.flight.findMany({
         where: {
           userId,
-          flightNumber: data.flightNumber,
           departureTime: { gte: dayStart, lte: dayEnd },
         },
         select: {
@@ -224,6 +224,13 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
           departureTime: true,
         },
       });
+
+      const normalize = (s: string | null): string =>
+        (s ?? '').replace(/\s+/g, '').toUpperCase();
+      const wantFlightNumber = data.flightNumber; // already normalized by schema
+      const existing = dayCandidates.find(
+        (c) => normalize(c.flightNumber) === wantFlightNumber
+      );
 
       if (existing) {
         res.status(409).json({

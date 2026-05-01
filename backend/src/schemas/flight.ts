@@ -66,7 +66,6 @@ const localDateTime = z
 
 function isValidIanaTimezone(tz: string): boolean {
   try {
-    // Throws RangeError on invalid IANA names
     new Intl.DateTimeFormat('en-US', { timeZone: tz });
     return true;
   } catch {
@@ -77,10 +76,16 @@ const ianaTimezone = z
   .string()
   .refine(isValidIanaTimezone, { message: 'Invalid IANA timezone' });
 
+const normalizedFlightNumber = z.string().optional().transform((v) => {
+  if (!v) return undefined;
+  const cleaned = v.replace(/\s+/g, "").toUpperCase();
+  return cleaned === "" ? undefined : cleaned;
+});
+
 const baseFlightSchema = z.object({
   airline: emptyStringToUndefined,
   operatingAirline: emptyStringToUndefined,
-  flightNumber: emptyStringToUndefined,
+  flightNumber: normalizedFlightNumber,
   callsign: z.string().nullable().optional(),
   aircraft: z.string().nullable().optional(),
   departure: z.object({
