@@ -219,9 +219,21 @@ interface DeckOverlayProps {
 }
 
 function DeckGLOverlay({ layers }: DeckOverlayProps): null {
-  const overlay = useControl<MapboxOverlay>(() => new MapboxOverlay({ layers, pickingRadius: 5 }), {
-    position: "top-left",
-  });
+  // `interleaved: true` is essential on globe projection. In overlay mode
+  // (the default) the deck.gl canvas tracks MapLibre's view state via
+  // periodic event sync, which is reliable for pan/zoom but visibly lags
+  // — and on globe projection, sometimes drops — rotate/pitch changes
+  // (right-mouse drag): the basemap turns under the user's cursor while
+  // the deck.gl arcs and dots stay screen-fixed, looking "frozen". With
+  // `interleaved: true`, deck.gl shares MapLibre's WebGL context and
+  // viewport, so every frame the basemap renders, deck.gl renders with
+  // exactly the same camera — sync is structural, not best-effort.
+  const overlay = useControl<MapboxOverlay>(
+    () => new MapboxOverlay({ layers, pickingRadius: 5, interleaved: true }),
+    {
+      position: "top-left",
+    }
+  );
   overlay.setProps({ layers });
   return null;
 }
@@ -479,12 +491,6 @@ export default function GlobeView({
   // swap (MapLibre resets both when replacing the style). Driven by
   // react-map-gl's onLoad — that's the only event that fires after the
   // map ref is guaranteed populated.
-  //
-  // Also re-applied on pitchend / rotateend: right-mouse drag pitch+yaw
-  // can leave MapLibre in a state where the globe projection silently
-  // reverts to mercator (and the deck.gl overlay then renders against
-  // a stale viewport — visually "everything breaks"). Re-asserting the
-  // projection at the end of the gesture restores the globe.
   const onMapLoad = useCallback((): void => {
     const map = mapRef.current?.getMap();
     if (!map) return;
@@ -502,8 +508,6 @@ export default function GlobeView({
     };
     apply();
     map.on("style.load", apply);
-    map.on("pitchend", apply);
-    map.on("rotateend", apply);
   }, []);
 
   // Auto-rotation loop. Drives `map.jumpTo` ~30 fps with a constant
