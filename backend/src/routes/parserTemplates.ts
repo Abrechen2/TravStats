@@ -1,11 +1,13 @@
 import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
-import { authenticate, AuthRequest } from "../middleware/auth";
+import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { prisma } from "../db";
 import { AppError } from "../middleware/errorHandler";
 
 const router = Router();
 router.use(authenticate);
+// Read-scoped PATs may list templates (GET) but not create / update / delete.
+router.use(requireWriteScope);
 
 // GET /api/v1/parser-templates
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {

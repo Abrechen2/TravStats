@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate } from '../../middleware/auth';
+import { authenticate, requireWriteScope } from '../../middleware/auth';
 import generalRouter from './general';
 import parserRouter from './parser';
 import apiKeysRouter from './apiKeys';
@@ -17,6 +17,12 @@ const router = Router();
 // force), external-API-backed routes (cost) and admin exports (DB-wide
 // reads), not on a user reading their own preferences.
 router.use(authenticate);
+// PAT scope guard. Read-scoped tokens get 403 on PUT/POST/DELETE/PATCH;
+// GET passes through. Cookie sessions are unaffected. Note that
+// `tokens.ts` additionally hard-403s ALL methods for any PAT-authenticated
+// request (PAT-cannot-mint-PAT defence), so this middleware is defence-in-depth
+// for every other settings sub-router.
+router.use(requireWriteScope);
 
 // Mount sub-routers
 router.use('/', generalRouter);

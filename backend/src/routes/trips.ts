@@ -1,6 +1,6 @@
 import { Router, Response, NextFunction } from "express";
 import { prisma } from "../db";
-import { authenticate, AuthRequest } from "../middleware/auth";
+import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { AppError } from "../middleware/errorHandler";
 import {
   createTripSchema,
@@ -48,7 +48,7 @@ router.get("/trips", authenticate, async (req: AuthRequest, res: Response, next:
 });
 
 /** POST /trips/bookings — create a booking (must come before /trips/:id) */
-router.post("/trips/bookings", authenticate, async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+router.post("/trips/bookings", authenticate, requireWriteScope, async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
     const body = createBookingSchema.parse(req.body);
@@ -103,7 +103,7 @@ router.get("/trips/:id", authenticate, async (req: AuthRequest, res: Response, n
 });
 
 /** POST /trips */
-router.post("/trips", authenticate, async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+router.post("/trips", authenticate, requireWriteScope, async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
     const body = createTripSchema.parse(req.body);
@@ -126,7 +126,7 @@ router.post("/trips", authenticate, async (req: AuthRequest, res: Response, next
 });
 
 /** PATCH /trips/:id */
-router.patch("/trips/:id", authenticate, async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+router.patch("/trips/:id", authenticate, requireWriteScope, async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
     const existing = await prisma.trip.findFirst({ where: { id: req.params.id, userId } });
@@ -149,7 +149,7 @@ router.patch("/trips/:id", authenticate, async (req: AuthRequest, res: Response,
 });
 
 /** DELETE /trips/:id */
-router.delete("/trips/:id", authenticate, async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+router.delete("/trips/:id", authenticate, requireWriteScope, async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
     const existing = await prisma.trip.findFirst({ where: { id: req.params.id, userId } });
@@ -164,7 +164,7 @@ router.delete("/trips/:id", authenticate, async (req: AuthRequest, res: Response
 });
 
 /** POST /trips/:id/flights — assign/unassign flights */
-router.post("/trips/:id/flights", authenticate, async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+router.post("/trips/:id/flights", authenticate, requireWriteScope, async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
     const trip = await prisma.trip.findFirst({ where: { id: req.params.id, userId } });

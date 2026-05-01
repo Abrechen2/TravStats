@@ -24,9 +24,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ### Security
 - **Token mutations are explicitly cookie-only** — `POST/DELETE /settings/tokens` reject Bearer-token requests; a leaked PAT cannot self-renew or mint admin tokens.
 - **Admin endpoints require an `admin`-scoped PAT** — Even when the owning user has `isAdmin=true`, an automation script can only reach `/admin` when its token was minted with the `admin` scope. Account-level admin no longer implicitly elevates token scope.
+- **PAT write-scope enforcement on every mutation route** — `requireWriteScope` was defined in the auth middleware but never mounted on any router, so a `read`-scoped PAT could create / update / delete flights, trips, settings, parser templates, achievements, analytics events, and uploads. The guard is now method-aware (`GET/HEAD/OPTIONS` pass through unconditionally) and wired into all mutation routers — read tokens are now genuinely read-only. Cookie sessions are unaffected.
 
 ### Tests
-- **+17 tests** — 6 covering the API-token utility (lookup hash collision-resistance, bcrypt verify, prefix regex, plaintext format), 6 covering the OpenAPI spec build (paths, security scheme, BearerAuth, methods on `/flights/{id}`), 2 covering flight-number normalisation in the schema, 3 covering the boarding-pass merge utility (curated-value preservation, full overwrite via force, partial enrichment).
+- **+38 tests** — 6 for the API-token utility (lookup hash collision-resistance, bcrypt verify, prefix regex, plaintext format), 6 for the OpenAPI spec build (paths, security scheme, BearerAuth, methods on `/flights/{id}`), 2 for flight-number normalisation, 3 for the boarding-pass merge utility, plus 21 for the `requireWriteScope` middleware (cookie passthrough, read-token GET/HEAD/OPTIONS pass, read-token POST/PUT/PATCH/DELETE 403, write/admin-token full passthrough on every method).
 
 ## [1.2.1] - 2026-04-28
 
