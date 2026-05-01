@@ -2,22 +2,27 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MapGL, { useControl, type MapRef } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import { ArcLayer, PathLayer, ScatterplotLayer } from "@deck.gl/layers";
-import type { Layer, MapViewState } from "@deck.gl/core";
+import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
 import type { StyleSpecification } from "maplibre-gl";
 import type { GeoJSONFeature } from "../types";
 import type { Cruise } from "../types/cruise";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../lib/api/cruise";
 import { logger } from "../lib/logger";
+import { escapeHtml } from "../lib/escapeHtml";
+import { useTranslation } from "../hooks/useTranslation";
 
 /**
- * Spike: replace the Three.js-based GlobeView with MapLibre's native
- * globe projection (MapLibre GL 5.x). Same renderer as the 2D map mode
- * — only the projection and a sky layer change. Activated by adding
- * `?globeEngine=maplibre` to any /dashboard URL.
+ * Globe-mode renderer. MapLibre's native globe projection (5.x) draws
+ * the basemap on a sphere; deck.gl renders the data overlay (flight
+ * arcs, cruise paths, airport + port dots) through MapboxOverlay so the
+ * same engine that powers the 2D map drives the globe too.
  *
- * Intentionally minimal: one color per layer, no day/night terminator,
- * no time slider, no fly-to. Goal of the spike is "is this look good
- * enough to drop react-globe.gl + Three.js entirely?"
+ * Six tokenless basemap styles via the bottom-center picker (Standard /
+ * Light / Dark / Voyager / Satellite / OSM), modelled after geojson.io.
+ *
+ * Day/night terminator was intentionally dropped when the migration
+ * away from `react-globe.gl` + `three` happened — the atmosphere + rim
+ * glow alone gives a strong "from orbit" look without the shader.
  */
 
 interface GlobeViewMapLibreProps {
@@ -27,27 +32,11 @@ interface GlobeViewMapLibreProps {
   minRouteCount?: number;
 }
 
-const FLIGHT_ARC_COLOR_FROM: [number, number, number, number] = [255, 110, 180, 220];
-const FLIGHT_ARC_COLOR_TO: [number, number, number, number] = [255, 220, 130, 220];
-const CRUISE_PATH_COLOR: [number, number, number, number] = [80, 180, 255, 230];
-const AIRPORT_DOT_COLOR: [number, number, number, number] = [251, 191, 36, 230];
-const PORT_DOT_COLOR: [number, number, number, number] = [56, 189, 248, 230];
-
-const INITIAL_VIEW_STATE: MapViewState = {
-  longitude: 10,
-  latitude: 25,
-  zoom: 1.6,
-  pitch: 0,
-  bearing: 0,
-};
-
-// Six tokenless basemap styles, mirrored after geojson.io's style picker.
-// All free, all working without API keys — Positron / Dark-Matter /
-// Voyager are CARTO's published vector styles, OpenFreeMap Liberty is
-// the OSM-based Mapbox-Streets-look-alike, ESRI World Imagery is the
-// raster satellite tile service ESRI keeps free for non-commercial use,
-// and OSM Standard is the OpenStreetMap reference raster (low-volume
-// only — fine for self-hosted use, but not what we'd ship at scale).
+// ────────────────────────────────────────────────────────────────────
+// Style options — six tokenless basemaps, modelled after geojson.io.
+// CARTO + OpenFreeMap + ESRI World Imagery + OSM Standard. None of
+// them require an API key.
+// ────────────────────────────────────────────────────────────────────
 type StyleId = "standard" | "light" | "dark" | "voyager" | "satellite" | "osm";
 
 interface SkyConfig {
@@ -63,7 +52,6 @@ interface SkyConfig {
 interface StyleOption {
   id: StyleId;
   label: string;
-  // Either a remote style URL or a fully-inlined MapLibre style spec
   url: string | StyleSpecification;
   sky: SkyConfig;
 }
@@ -130,8 +118,6 @@ const buildRasterStyle = (
       source: "base",
     },
   ],
-  // Empty sprite/glyphs to satisfy MapLibre 5; raster styles don't
-  // actually need them but the spec validator complains otherwise.
   glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
 });
 
@@ -186,6 +172,36 @@ const STYLE_OPTIONS: StyleOption[] = [
   },
 ];
 
+// ────────────────────────────────────────────────────────────────────
+// Heatmap quartile palette — same colours the 2D `routesLayer` uses so
+// flight-arc colour semantics match across map modes.
+// ────────────────────────────────────────────────────────────────────
+const HEAT_RGB = {
+  q4: [239, 68, 68] as [number, number, number], // red — hotspot
+  q3: [249, 115, 22] as [number, number, number], // orange-500
+  q2: [232, 160, 69] as [number, number, number], // brand amber
+  q1: [100, 116, 139] as [number, number, number], // slate-500 — muted
+};
+
+const HEAT_HEX = {
+  q4: "#ef4444",
+  q3: "#f97316",
+  q2: "#e8a045",
+  q1: "#64748b",
+};
+
+const CRUISE_PATH_COLOR: [number, number, number, number] = [80, 180, 255, 230];
+const AIRPORT_DOT_COLOR: [number, number, number, number] = [251, 191, 36, 230];
+const PORT_DOT_COLOR: [number, number, number, number] = [56, 189, 248, 230];
+
+const INITIAL_VIEW_STATE: MapViewState = {
+  longitude: 10,
+  latitude: 25,
+  zoom: 1.6,
+  pitch: 0,
+  bearing: 0,
+};
+
 interface DeckOverlayProps {
   layers: Layer[];
 }
@@ -198,22 +214,81 @@ function DeckGLOverlay({ layers }: DeckOverlayProps): null {
   return null;
 }
 
+interface HeatmapThresholds {
+  q25: number;
+  q50: number;
+  q75: number;
+  max: number;
+}
+
+const calculateHeatmapThresholds = (counts: number[]): HeatmapThresholds => {
+  if (counts.length === 0) return { q25: 1, q50: 2, q75: 3, max: 5 };
+  const sorted = [...counts].sort((a, b) => a - b);
+  const len = sorted.length;
+  const max = sorted[len - 1];
+  const min = sorted[0];
+  if (max === min) {
+    return {
+      q25: Math.floor(min * 0.75),
+      q50: Math.floor(min * 0.85),
+      q75: Math.floor(min * 0.95),
+      max,
+    };
+  }
+  const q25 = sorted[Math.floor(len * 0.25)] ?? min;
+  let q50 = sorted[Math.floor(len * 0.5)] ?? min + Math.floor((max - min) * 0.33);
+  let q75 = sorted[Math.floor(len * 0.75)] ?? min + Math.floor((max - min) * 0.66);
+  if (q50 <= q25) q50 = q25 + Math.max(1, Math.floor((max - q25) * 0.4));
+  if (q75 <= q50) q75 = q50 + Math.max(1, Math.floor((max - q50) * 0.5));
+  return { q25, q50, q75, max };
+};
+
+const getHeatmapColor = (count: number, t: HeatmapThresholds): [number, number, number] => {
+  if (count > t.q75) return HEAT_RGB.q4;
+  if (count > t.q50) return HEAT_RGB.q3;
+  if (count > t.q25) return HEAT_RGB.q2;
+  return HEAT_RGB.q1;
+};
+
+// Haversine distance in km for fly-to-arc zoom heuristic.
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const R = 6371;
+  const toRad = (deg: number): number => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
+
 interface ArcDatum {
   from: [number, number];
   to: [number, number];
   count: number;
   flightIds: string[];
+  color: [number, number, number];
+  departure: { iata?: string; name?: string };
+  arrival: { iata?: string; name?: string };
 }
 
 interface PointDatum {
   position: [number, number];
   size: number;
-  label: string;
+  iata: string;
+  name: string;
 }
 
 interface CruisePathDatum {
   path: [number, number][];
   cruiseId: string;
+  cruiseLabel: string;
+}
+
+interface TooltipState {
+  html: string;
+  x: number;
+  y: number;
 }
 
 const createRouteKey = (a: string, b: string): string => (a < b ? `${a}-${b}` : `${b}-${a}`);
@@ -224,22 +299,21 @@ export default function GlobeViewMapLibre({
   onFlightClick,
   minRouteCount = 1,
 }: GlobeViewMapLibreProps): JSX.Element {
+  const { t } = useTranslation(["map"]);
   const mapRef = useRef<MapRef>(null);
+
   const [styleId, setStyleId] = useState<StyleId>(() => {
     if (typeof window === "undefined") return "standard";
     const stored = window.sessionStorage.getItem("globeStyleId");
     return STYLE_OPTIONS.some((s) => s.id === stored) ? (stored as StyleId) : "standard";
   });
+  const [autoRotate, setAutoRotate] = useState(false);
+  const [tooltip, setTooltip] = useState<TooltipState | null>(null);
 
   const currentStyle = useMemo(
     () => STYLE_OPTIONS.find((s) => s.id === styleId) ?? STYLE_OPTIONS[0],
     [styleId]
   );
-
-  // Latest currentStyle exposed via ref so the style.load handler
-  // (registered once on first map load) sees the active style on every
-  // style switch — without this the handler would close over the
-  // initial style and apply stale sky settings forever.
   const currentStyleRef = useRef(currentStyle);
   useEffect(() => {
     currentStyleRef.current = currentStyle;
@@ -254,10 +328,10 @@ export default function GlobeViewMapLibre({
     }
   }, []);
 
-  // Apply globe projection + sky when the map first loads AND on every
-  // subsequent style swap (since MapLibre resets both when replacing
-  // the style). Driven by react-map-gl's onLoad callback because that's
-  // the only event that fires after mapRef is guaranteed populated.
+  // Apply globe projection + sky on initial load AND after every style
+  // swap (MapLibre resets both when replacing the style). Driven by
+  // react-map-gl's onLoad — that's the only event that fires after the
+  // map ref is guaranteed populated.
   const onMapLoad = useCallback((): void => {
     const map = mapRef.current?.getMap();
     if (!map) return;
@@ -277,12 +351,40 @@ export default function GlobeViewMapLibre({
     map.on("style.load", apply);
   }, []);
 
-  const arcsData = useMemo<ArcDatum[]>(() => {
+  // Auto-rotation loop. Drives `map.jumpTo` ~30 fps with a constant
+  // angular velocity, no easing — gives the same continuous "globe
+  // turning in space" feel the old react-globe.gl impl had via three.js
+  // OrbitControls.autoRotate. Cancellable mid-rotation by toggling the
+  // checkbox; user pan/zoom doesn't pause it (matching old behaviour).
+  useEffect(() => {
+    if (!autoRotate) return;
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+    let raf = 0;
+    let lastT = performance.now();
+    const tick = (now: number): void => {
+      const dt = now - lastT;
+      lastT = now;
+      const center = map.getCenter();
+      // 4 deg/s — a full revolution every 90 s, slightly faster than
+      // the old impl so the motion is obvious without being dizzying.
+      const newLng = ((center.lng + (dt * 4) / 1000 + 540) % 360) - 180;
+      map.jumpTo({ center: [newLng, center.lat] });
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [autoRotate]);
+
+  // Aggregate flights into city-pair routes with count + heatmap colour.
+  const { arcsData, heatmapThresholds } = useMemo(() => {
     interface RouteAcc {
       count: number;
       from: [number, number];
       to: [number, number];
-      ids: string[];
+      flightIds: string[];
+      departure: { iata?: string; name?: string };
+      arrival: { iata?: string; name?: string };
     }
     const routes = new Map<string, RouteAcc>();
     for (const flight of flights) {
@@ -297,25 +399,40 @@ export default function GlobeViewMapLibre({
       ) {
         continue;
       }
-      const dep = flight.properties?.departureAirport?.iata ?? "UNK";
-      const arr = flight.properties?.arrivalAirport?.iata ?? "UNK";
-      const key = createRouteKey(dep, arr);
+      const dep = flight.properties?.departureAirport;
+      const arr = flight.properties?.arrivalAirport;
+      const depKey = dep?.iata ?? "UNK";
+      const arrKey = arr?.iata ?? "UNK";
+      const key = createRouteKey(depKey, arrKey);
       const existing = routes.get(key);
       if (existing) {
         existing.count++;
-        existing.ids.push(flight.properties.id);
+        existing.flightIds.push(flight.properties.id);
       } else {
         routes.set(key, {
           count: 1,
           from: [start[0], start[1]],
           to: [end[0], end[1]],
-          ids: [flight.properties.id],
+          flightIds: [flight.properties.id],
+          departure: dep ?? {},
+          arrival: arr ?? {},
         });
       }
     }
-    return Array.from(routes.values())
+    const counts = Array.from(routes.values()).map((r) => r.count);
+    const thresholds = calculateHeatmapThresholds(counts);
+    const arcs: ArcDatum[] = Array.from(routes.values())
       .filter((r) => r.count >= minRouteCount)
-      .map((r) => ({ from: r.from, to: r.to, count: r.count, flightIds: r.ids }));
+      .map((r) => ({
+        from: r.from,
+        to: r.to,
+        count: r.count,
+        flightIds: r.flightIds,
+        departure: r.departure,
+        arrival: r.arrival,
+        color: getHeatmapColor(r.count, thresholds),
+      }));
+    return { arcsData: arcs, heatmapThresholds: thresholds };
   }, [flights, minRouteCount]);
 
   const airportPoints = useMemo<PointDatum[]>(() => {
@@ -331,22 +448,32 @@ export default function GlobeViewMapLibre({
         const key = dep.iata;
         const cur = seen.get(key);
         if (cur) cur.size++;
-        else seen.set(key, { position: [start[0], start[1]], size: 1, label: dep.iata });
+        else
+          seen.set(key, {
+            position: [start[0], start[1]],
+            size: 1,
+            iata: dep.iata,
+            name: dep.name ?? dep.iata,
+          });
       }
       if (arr?.iata && Number.isFinite(end[0]) && Number.isFinite(end[1])) {
         const key = arr.iata;
         const cur = seen.get(key);
         if (cur) cur.size++;
-        else seen.set(key, { position: [end[0], end[1]], size: 1, label: arr.iata });
+        else
+          seen.set(key, {
+            position: [end[0], end[1]],
+            size: 1,
+            iata: arr.iata,
+            name: arr.name ?? arr.iata,
+          });
       }
     }
     return Array.from(seen.values());
   }, [flights]);
 
   // Pull cruise leg geometry from the schematic-router endpoint; one
-  // FeatureCollection per cruise. Same source as the 2D DeckGLMap and
-  // the existing GlobeView, so paths look identical to the rest of the
-  // app.
+  // FeatureCollection per cruise. Same source as the 2D map.
   const [cruiseGeometry, setCruiseGeometry] = useState<Map<string, CruiseRouteFeatureCollection>>(
     () => new Map()
   );
@@ -385,10 +512,11 @@ export default function GlobeViewMapLibre({
     for (const cruise of cruises) {
       const fc = cruiseGeometry.get(cruise.id);
       if (!fc) continue;
+      const label = cruise.ship?.name ?? cruise.shipNameOverride ?? cruise.cruiseLine ?? "Cruise";
       for (const feature of fc.features) {
         const path = feature.geometry.coordinates as [number, number][];
         if (path.length < 2) continue;
-        out.push({ path, cruiseId: cruise.id });
+        out.push({ path, cruiseId: cruise.id, cruiseLabel: label });
       }
     }
     return out;
@@ -406,12 +534,91 @@ export default function GlobeViewMapLibre({
           seen.set(port.id, {
             position: [port.lon, port.lat],
             size: 1,
-            label: port.unlocode ?? port.name,
+            iata: port.unlocode ?? port.name,
+            name: port.name,
           });
       }
     }
     return Array.from(seen.values());
   }, [cruises]);
+
+  // Smooth fly-to on arc click. Compute mid-point (handling wrap-around)
+  // and pick a zoom level that keeps both endpoints visible without
+  // teleporting too close on short hops.
+  const flyToArc = useCallback((d: ArcDatum): void => {
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+    const lngDiff = d.to[0] - d.from[0];
+    const wrappedTo = lngDiff > 180 ? d.to[0] - 360 : lngDiff < -180 ? d.to[0] + 360 : d.to[0];
+    const midLng = (d.from[0] + wrappedTo) / 2;
+    const midLat = (d.from[1] + d.to[1]) / 2;
+    const distanceKm = calculateDistance(d.from[1], d.from[0], d.to[1], d.to[0]);
+    // Short hops get more zoom; long-haul stays zoomed-out so both
+    // endpoints fit. Tuned visually to feel like the old fly-to-arc.
+    const zoom = Math.max(1.4, Math.min(4, 5.5 - Math.log2(distanceKm / 100)));
+    map.flyTo({ center: [midLng, midLat], zoom, duration: 1500 });
+  }, []);
+
+  const onArcHover = useCallback(
+    (info: PickingInfo<ArcDatum>): void => {
+      if (info.object && info.x != null && info.y != null) {
+        const d = info.object;
+        const html = `
+          <div style="font-weight:600;margin-bottom:2px;">
+            ${escapeHtml(d.departure.iata ?? "UNK")} ↔ ${escapeHtml(d.arrival.iata ?? "UNK")}
+          </div>
+          <div style="font-size:11px;opacity:0.85;margin-bottom:4px;">
+            ${escapeHtml(d.departure.name ?? "Unknown")} ↔ ${escapeHtml(d.arrival.name ?? "Unknown")}
+          </div>
+          <div style="color:rgb(${d.color[0]},${d.color[1]},${d.color[2]});font-weight:600;">
+            ${escapeHtml(t("map:globe.timesFlown", { count: d.count }))}
+          </div>`;
+        setTooltip({ html, x: info.x, y: info.y });
+      } else {
+        setTooltip(null);
+      }
+    },
+    [t]
+  );
+
+  const onAirportHover = useCallback(
+    (info: PickingInfo<PointDatum>): void => {
+      if (info.object && info.x != null && info.y != null) {
+        const d = info.object;
+        const html = `
+          <div style="font-weight:600;">${escapeHtml(d.iata)}</div>
+          <div style="opacity:0.85;font-size:11px;">${escapeHtml(d.name)}</div>
+          <div style="color:#fbbf24;margin-top:2px;">
+            ${d.size} ${escapeHtml(t("map:globe.flight", { count: d.size }))}
+          </div>`;
+        setTooltip({ html, x: info.x, y: info.y });
+      } else {
+        setTooltip(null);
+      }
+    },
+    [t]
+  );
+
+  const onPortHover = useCallback((info: PickingInfo<PointDatum>): void => {
+    if (info.object && info.x != null && info.y != null) {
+      const d = info.object;
+      const html = `
+        <div style="font-weight:600;">⚓ ${escapeHtml(d.name)}</div>
+        ${d.iata !== d.name ? `<div style="opacity:0.85;font-size:11px;">${escapeHtml(d.iata)}</div>` : ""}`;
+      setTooltip({ html, x: info.x, y: info.y });
+    } else {
+      setTooltip(null);
+    }
+  }, []);
+
+  const onCruisePathHover = useCallback((info: PickingInfo<CruisePathDatum>): void => {
+    if (info.object && info.x != null && info.y != null) {
+      const html = `<div style="font-weight:600;">🚢 ${escapeHtml(info.object.cruiseLabel)}</div>`;
+      setTooltip({ html, x: info.x, y: info.y });
+    } else {
+      setTooltip(null);
+    }
+  }, []);
 
   const layers = useMemo<Layer[]>(
     () => [
@@ -420,13 +627,19 @@ export default function GlobeViewMapLibre({
         data: arcsData,
         getSourcePosition: (d) => d.from,
         getTargetPosition: (d) => d.to,
-        getSourceColor: FLIGHT_ARC_COLOR_FROM,
-        getTargetColor: FLIGHT_ARC_COLOR_TO,
+        getSourceColor: (d) => [...d.color, 220] as [number, number, number, number],
+        getTargetColor: (d) => [...d.color, 220] as [number, number, number, number],
         getWidth: (d) => Math.max(1, Math.min(4, 1 + Math.log2(d.count + 1))),
+        widthUnits: "pixels",
         greatCircle: true,
-        pickable: Boolean(onFlightClick),
+        pickable: true,
+        autoHighlight: true,
+        highlightColor: [255, 255, 255, 180],
+        onHover: onArcHover,
         onClick: ({ object }: { object?: ArcDatum }): void => {
-          if (object && onFlightClick && object.flightIds.length > 0) {
+          if (!object) return;
+          flyToArc(object);
+          if (onFlightClick && object.flightIds.length > 0) {
             onFlightClick(object.flightIds[object.flightIds.length - 1]);
           }
         },
@@ -442,6 +655,10 @@ export default function GlobeViewMapLibre({
         widthMaxPixels: 3,
         capRounded: true,
         jointRounded: true,
+        pickable: true,
+        autoHighlight: true,
+        highlightColor: [255, 255, 255, 180],
+        onHover: onCruisePathHover,
       }),
       new ScatterplotLayer<PointDatum>({
         id: "globe-airport-dots",
@@ -455,6 +672,10 @@ export default function GlobeViewMapLibre({
         stroked: true,
         getLineColor: [255, 255, 255, 200],
         lineWidthMinPixels: 0.5,
+        pickable: true,
+        autoHighlight: true,
+        highlightColor: [255, 255, 255, 200],
+        onHover: onAirportHover,
       }),
       new ScatterplotLayer<PointDatum>({
         id: "globe-port-dots",
@@ -468,14 +689,45 @@ export default function GlobeViewMapLibre({
         stroked: true,
         getLineColor: [255, 255, 255, 200],
         lineWidthMinPixels: 0.5,
+        pickable: true,
+        autoHighlight: true,
+        highlightColor: [255, 255, 255, 200],
+        onHover: onPortHover,
       }),
     ],
-    [arcsData, cruisePaths, airportPoints, portPoints, onFlightClick]
+    [
+      arcsData,
+      cruisePaths,
+      airportPoints,
+      portPoints,
+      flyToArc,
+      onArcHover,
+      onAirportHover,
+      onCruisePathHover,
+      onPortHover,
+      onFlightClick,
+    ]
   );
 
-  // Dark backdrop pairs with bright styles too — geojson.io always uses
-  // a dark space background regardless of the basemap, which makes the
-  // atmosphere glow the most legible thing on screen.
+  const legendRanges = useMemo(
+    () => [
+      { color: HEAT_HEX.q1, label: `1–${Math.max(heatmapThresholds.q25, 1)}×` },
+      {
+        color: HEAT_HEX.q2,
+        label: `${heatmapThresholds.q25 + 1}–${heatmapThresholds.q50}×`,
+      },
+      {
+        color: HEAT_HEX.q3,
+        label: `${heatmapThresholds.q50 + 1}–${heatmapThresholds.q75}×`,
+      },
+      {
+        color: HEAT_HEX.q4,
+        label: `${heatmapThresholds.q75 + 1}+ (max ${heatmapThresholds.max}×)`,
+      },
+    ],
+    [heatmapThresholds]
+  );
+
   return (
     <div
       className="relative h-full w-full"
@@ -494,7 +746,59 @@ export default function GlobeViewMapLibre({
         <DeckGLOverlay layers={layers} />
       </MapGL>
 
-      {/* Style picker — bottom-left, geojson.io-style horizontal pills. */}
+      {/* Bottom-left stack: auto-rotate toggle + heatmap legend */}
+      <div
+        className="absolute bottom-4 left-4 z-10 flex flex-col items-start gap-2"
+        style={{ pointerEvents: "auto" }}
+      >
+        <div
+          className="rounded-md p-3 text-xs"
+          style={{
+            background: "rgba(13, 17, 23, 0.78)",
+            backdropFilter: "blur(12px)",
+            border: "1px solid rgba(255,255,255,0.18)",
+            color: "rgba(241,245,249,0.95)",
+            fontFamily: "'Inter', sans-serif",
+          }}
+        >
+          <label className="flex cursor-pointer select-none items-center gap-2">
+            <input
+              type="checkbox"
+              checked={autoRotate}
+              onChange={(e) => setAutoRotate(e.target.checked)}
+              className="cursor-pointer"
+            />
+            <span className="text-xs font-medium">🌍 {t("map:globe.autoRotation")}</span>
+          </label>
+        </div>
+
+        {arcsData.length > 0 && (
+          <div
+            className="rounded-md p-3 text-xs"
+            style={{
+              background: "rgba(13, 17, 23, 0.78)",
+              backdropFilter: "blur(12px)",
+              border: "1px solid rgba(255,255,255,0.18)",
+              color: "rgba(241,245,249,0.95)",
+              fontFamily: "'Inter', sans-serif",
+            }}
+          >
+            <div className="mb-1.5 text-[11px] font-semibold opacity-90">
+              {t("map:globe.routeFrequency")}
+            </div>
+            <div className="space-y-1">
+              {legendRanges.map(({ color, label }) => (
+                <div key={color} className="flex items-center gap-2">
+                  <div className="h-0.5 w-7" style={{ backgroundColor: color }} />
+                  <span className="text-[11px] opacity-80">{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Style picker — bottom-center, geojson.io-style horizontal pills. */}
       <div
         className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 gap-1 rounded-md p-1"
         style={{
@@ -525,19 +829,26 @@ export default function GlobeViewMapLibre({
         })}
       </div>
 
-      {/* Spike-Banner so user knows which engine is currently rendering */}
-      <div
-        className="absolute top-3 right-3 z-10 rounded-md px-3 py-1.5 text-xs font-medium"
-        style={{
-          background: "rgba(13, 17, 23, 0.78)",
-          backdropFilter: "blur(12px)",
-          border: "1px solid rgba(120, 200, 255, 0.5)",
-          color: "rgba(241,245,249,0.95)",
-          fontFamily: "'Inter', sans-serif",
-        }}
-      >
-        🧪 MapLibre Globe (Spike) · {arcsData.length} routes · {cruisePaths.length} cruise legs
-      </div>
+      {/* Hover tooltip — pre-escaped HTML (escapeHtml at every interpolation
+          site upstream), positioned at the deck.gl pick coords. Offset
+          slightly so the cursor doesn't sit on top of the popup. */}
+      {tooltip && (
+        <div
+          className="pointer-events-none absolute z-30 rounded px-3 py-2 text-xs"
+          style={{
+            left: tooltip.x + 12,
+            top: tooltip.y + 12,
+            maxWidth: "280px",
+            background: "rgba(13, 17, 23, 0.92)",
+            backdropFilter: "blur(8px)",
+            border: "1px solid rgba(255,255,255,0.22)",
+            color: "rgba(241,245,249,0.95)",
+            fontFamily: "'Inter', sans-serif",
+            boxShadow: "0 4px 14px rgba(0,0,0,0.45)",
+          }}
+          dangerouslySetInnerHTML={{ __html: tooltip.html }}
+        />
+      )}
     </div>
   );
 }
