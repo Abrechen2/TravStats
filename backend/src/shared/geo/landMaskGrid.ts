@@ -4,26 +4,38 @@
  * water?" in O(1).
  *
  * Layout:
- *  - `COLS = 3600` columns (longitude, -180° … +180°, step 0.1°)
- *  - `ROWS = 1800` rows (latitude, -90° … +90°, step 0.1°)
- *  - Row 0 is the southernmost (-90°..-89.9°), row 1799 the northernmost.
- *  - Column 0 is (-180°..-179.9°), column 3599 is (+179.9°..+180°).
+ *  - `COLS = 14400` columns (longitude, -180° … +180°, step 0.025°)
+ *  - `ROWS = 7200` rows (latitude, -90° … +90°, step 0.025°)
+ *  - Row 0 is the southernmost (-90°..-89.975°), row 7199 the northernmost.
+ *  - Column 0 is (-180°..-179.975°), column 14399 is (+179.975°..+180°).
  *  - Each cell is a single bit. `1` = land, `0` = water.
  *
  * Binary file format: raw packed bits, `ceil(COLS*ROWS / 8)` bytes.
  * Octet order within each byte: bit 7 (MSB) is the lower linear index.
  * Linear index = row * COLS + col.
  *
- * Total size: 3600 * 1800 / 8 = 810 000 bytes (about 810 KB).
+ * Total size: 14400 * 7200 / 8 = 12 960 000 bytes (≈ 13 MB).
+ *
+ * Resolution history:
+ *   The grid started at 0.1° (3600 × 1800, 810 KB) which left the
+ *   Bosphorus, Suez, narrow Norwegian fjords, and the Stockholm
+ *   archipelago entirely subsumed into land cells: an 11×11 km cell at
+ *   the equator can't represent a 1-3 km wide channel. After visible
+ *   land-clipping in Bergen / Stockholm / Bosphorus routes the grid was
+ *   bumped to 0.025° (4× per axis, 16× total), which makes channels
+ *   wider than ~2 km visible. Even at 0.025° Suez (300 m) and the
+ *   narrowest Bosphorus passages remain aliased; those need either a
+ *   ~0.005° grid (≈ 200 MB, too big to ship) or a hand-curated
+ *   port-approach corridor entry (cheap, the route looks better anyway).
  *
  * This file is pure — no I/O, no logger imports — so it can be used
  * both from the backend service at request time and from the
  * rasterizer script at build time.
  */
 
-export const MASK_COLS = 3600;
-export const MASK_ROWS = 1800;
-export const MASK_CELL_DEG = 360 / MASK_COLS; // == 180 / MASK_ROWS == 0.1
+export const MASK_COLS = 14400;
+export const MASK_ROWS = 7200;
+export const MASK_CELL_DEG = 360 / MASK_COLS; // == 180 / MASK_ROWS == 0.025
 export const MASK_TOTAL_CELLS = MASK_COLS * MASK_ROWS;
 export const MASK_BYTES = Math.ceil(MASK_TOTAL_CELLS / 8);
 

@@ -1,9 +1,9 @@
 /**
  * generate-land-mask.ts — one-off rasterizer that downloads Natural
  * Earth's 10 m land polygon GeoJSON and bakes it into the packed
- * bit-grid at `backend/data/land-mask-0.1deg.bin`.
+ * bit-grid at `backend/data/land-mask.bin`.
  *
- * Resolution: 0.1° per cell, 3600 × 1800 grid (6.48 M cells, 810 KB).
+ * Resolution: 0.025° per cell, 14400 × 7200 grid (103.7 M cells, ~13 MB).
  *
  * Run:
  *   cd backend && npx tsx scripts/generate-land-mask.ts
@@ -48,7 +48,7 @@ import {
 
 const NE_URL = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_land.geojson';
 
-const OUT_PATH = path.resolve(__dirname, '..', 'data', 'land-mask-0.1deg.bin');
+const OUT_PATH = path.resolve(__dirname, '..', 'data', 'land-mask.bin');
 const CACHE_DIR = path.resolve(__dirname, '..', 'data', '.cache');
 const CACHE_PATH = path.join(CACHE_DIR, 'ne_10m_land.geojson');
 

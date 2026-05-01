@@ -196,7 +196,10 @@ describe('schematicRouter — computeSchematicRoute', () => {
 
     expect(r.routed).toBe(true);
     expect(r.protectedPrefixCount).toBe(8);
-    expect(r.protectedSuffixCount).toBe(0);
+    // Bergen also has a 4-waypoint Hjeltefjorden approach corridor, so
+    // the suffix is now protected (4 corridor + 1 port = 5 protected
+    // points). The trailing slice still ends at the Bergen port itself.
+    expect(r.protectedSuffixCount).toBe(5);
     expect(r.waypoints.slice(0, 8)).toEqual([
       [9.97, 53.55],
       [9.87, 53.54],
@@ -298,7 +301,9 @@ describe('schematicRouter — computeSchematicRoute', () => {
     );
 
     expect(r.routed).toBe(true);
-    expect(r.protectedPrefixCount).toBe(0);
+    // Bergen now has its own approach corridor (4 outbound waypoints +
+    // the port itself = 5 protected leading waypoints).
+    expect(r.protectedPrefixCount).toBe(5);
     expect(r.protectedSuffixCount).toBe(8);
     expect(r.waypoints.slice(-8)).toEqual([
       [8.18, 54.05],

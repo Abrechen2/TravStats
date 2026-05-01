@@ -87,7 +87,7 @@ COPY --from=backend-builder /app/backend/src/seedData ./dist/seedData
 # its compiled location (dist/services/...), landing at /app/backend/data/.
 # Without this copy, /api/v1/cruises/geometry(/batch) returns 500 with
 # ENOENT on every request, so cruise paths never render on the globe.
-COPY backend/data/land-mask-0.1deg.bin ./data/land-mask-0.1deg.bin
+COPY backend/data/land-mask.bin ./data/land-mask.bin
 # Vendored Eurostat marnet shipping-lane graph used by the marnet
 # pathfinder (services/marnet/marnetGraph.ts). 1.6 MB GeoJSON, ~6 k
 # nodes / ~7.6 k edges. Without this file the marnet router throws
