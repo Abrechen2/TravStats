@@ -85,3 +85,35 @@ export function polylineLengthKm(coords: ReadonlyArray<{ lat: number; lon: numbe
   }
   return total;
 }
+
+/**
+ * Initial bearing (forward azimuth) of the great circle from `a` to `b`,
+ * in degrees from north, clockwise — `0` is north, `90` east, `180`
+ * south, `270` west. Returns a value in the half-open range `[0, 360)`.
+ *
+ * Used by routing to reject snap candidates that lie "behind" the
+ * direction of travel: e.g. when leaving Hamburg toward Bergen, a marnet
+ * node south-east of the corridor exit is geographically wrong even if
+ * it is the closest, because it forces a u-turn.
+ */
+export function bearingDeg(
+  a: { lat: number; lon: number },
+  b: { lat: number; lon: number },
+): number {
+  const lat1 = a.lat * RAD_PER_DEG;
+  const lat2 = b.lat * RAD_PER_DEG;
+  const dLon = (b.lon - a.lon) * RAD_PER_DEG;
+  const y = Math.sin(dLon) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+  return ((Math.atan2(y, x) * DEG_PER_RAD) + 360) % 360;
+}
+
+/**
+ * Smallest absolute angular difference between two bearings in degrees,
+ * in `[0, 180]`. Handles wrap-around so `bearingDeviation(350, 10)` is
+ * `20`, not `340`.
+ */
+export function bearingDeviation(a: number, b: number): number {
+  const d = Math.abs(a - b) % 360;
+  return d > 180 ? 360 - d : d;
+}
