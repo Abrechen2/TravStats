@@ -105,6 +105,21 @@ Install `travstats-db` from there first, then `TravStats`, set the
 > confirmation mails and unknown airline templates are then handled locally —
 > nothing leaves your network.
 
+### Image tags
+
+Both registries (GHCR and Docker Hub) carry the same digests for these
+moving tags. Pick the one your platform defaults to.
+
+| Tag | Points to | Use for |
+|---|---|---|
+| `:latest`, `:stable` | Latest stable release (currently `1.2.1`) | Normal production. Auto-updates to the next promoted release. |
+| `:X.Y.Z` (e.g. `:1.2.1`) | Pinned immutable release | Reproducible installs, audit, regulated environments. |
+| `:rc-latest` | Newest Release Candidate (currently `1.3.0-rc.1`) | Beta testers — receive every fresh RC via `docker compose pull`. May include breaking schema changes across major bumps; an in-place backup is taken automatically on first start of a new major. |
+
+Specific RC tags (`:1.3.0-rc.1`, `:2.0.0-beta.8`) and dev builds live on
+GHCR only — Docker Hub only mirrors the moving tags above plus pinned
+final releases.
+
 ---
 
 ## Configuration
