@@ -591,6 +591,24 @@ router.get('/enrichment-candidates', statsLimiter, async (req: AuthRequest, res:
   }
 });
 
+// Get a single flight by id — added for API consumers (AI agents,
+// scripts) that PATCH/PUT and want to read back the freshly-updated
+// state without re-listing every flight. Returns the flight directly
+// (not wrapped) so curl-piped jq filters stay simple.
+router.get('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId!;
+    const { id } = req.params;
+    const flight = await prisma.flight.findFirst({ where: { id, userId } });
+    if (!flight) {
+      throw new AppError('Flight not found', 404);
+    }
+    res.json(flight);
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Update flight
 router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
