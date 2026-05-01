@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MapGL, { useControl, type MapRef } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
-import { ArcLayer, PathLayer, ScatterplotLayer } from "@deck.gl/layers";
+import { PathLayer, ScatterplotLayer } from "@deck.gl/layers";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
 import type { StyleSpecification } from "maplibre-gl";
 import type { GeoJSONFeature } from "../types";
@@ -274,9 +274,67 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
   return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
+/**
+ * Great-circle slerp between two [lng, lat] points, returning N+1
+ * intermediate [lng, lat] waypoints along the geodesic.
+ *
+ * Why we need this: deck.gl ArcLayer with `greatCircle: true` computes
+ * arc height in screen-space, which collapses to zero on MapLibre's
+ * globe projection — flight arcs become invisible. PathLayer with
+ * pre-tessellated great-circle waypoints renders the same curve via
+ * a regular line that the globe-projection matrix handles correctly.
+ *
+ * Math: convert each endpoint to a unit Cartesian vector, slerp by
+ * `t = i / steps`, project back to spherical. Long-way-around is
+ * suppressed by unwrapping the longitude difference into [-π, π]
+ * before slerping.
+ */
+const greatCircleWaypoints = (
+  from: [number, number],
+  to: [number, number],
+  steps = 48
+): [number, number][] => {
+  const toRad = (x: number): number => (x * Math.PI) / 180;
+  const toDeg = (x: number): number => (x * 180) / Math.PI;
+  const [lng1, lat1] = from;
+  const [lng2, lat2] = to;
+  const phi1 = toRad(lat1);
+  const phi2 = toRad(lat2);
+  const lam1 = toRad(lng1);
+  let lam2 = toRad(lng2);
+  const lamDiff = lam2 - lam1;
+  if (lamDiff > Math.PI) lam2 -= 2 * Math.PI;
+  else if (lamDiff < -Math.PI) lam2 += 2 * Math.PI;
+
+  const dPhi = phi2 - phi1;
+  const dLam = lam2 - lam1;
+  const aH = Math.sin(dPhi / 2) ** 2 + Math.cos(phi1) * Math.cos(phi2) * Math.sin(dLam / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(aH), Math.sqrt(Math.max(0, 1 - aH)));
+  if (c < 1e-9) return [from, to];
+
+  const sinC = Math.sin(c);
+  const out: [number, number][] = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const A = Math.sin((1 - t) * c) / sinC;
+    const B = Math.sin(t * c) / sinC;
+    const x = A * Math.cos(phi1) * Math.cos(lam1) + B * Math.cos(phi2) * Math.cos(lam2);
+    const y = A * Math.cos(phi1) * Math.sin(lam1) + B * Math.cos(phi2) * Math.sin(lam2);
+    const z = A * Math.sin(phi1) + B * Math.sin(phi2);
+    const lat = toDeg(Math.atan2(z, Math.sqrt(x * x + y * y)));
+    let lng = toDeg(Math.atan2(y, x));
+    while (lng > 180) lng -= 360;
+    while (lng < -180) lng += 360;
+    out.push([lng, lat]);
+  }
+  return out;
+};
+
 interface ArcDatum {
   from: [number, number];
   to: [number, number];
+  /** Pre-tessellated great-circle path; first/last entries == from/to. */
+  waypoints: [number, number][];
   count: number;
   flightIds: string[];
   color: [number, number, number];
@@ -478,6 +536,7 @@ export default function GlobeView({
       .map((r) => ({
         from: r.from,
         to: r.to,
+        waypoints: greatCircleWaypoints(r.from, r.to, 48),
         count: r.count,
         flightIds: r.flightIds,
         departure: r.departure,
@@ -749,16 +808,22 @@ export default function GlobeView({
 
   const layers = useMemo<Layer[]>(
     () => [
-      new ArcLayer<ArcDatum>({
+      // Flight arcs as PathLayer with pre-tessellated great-circle
+      // waypoints. ArcLayer.greatCircle is broken on globe projection
+      // (height computed in screen-space → invisible) — explicit
+      // waypoints sidestep the issue and the curve looks identical.
+      new PathLayer<ArcDatum>({
         id: "globe-flight-arcs",
         data: arcsData,
-        getSourcePosition: (d) => d.from,
-        getTargetPosition: (d) => d.to,
-        getSourceColor: (d) => [...d.color, 220] as [number, number, number, number],
-        getTargetColor: (d) => [...d.color, 220] as [number, number, number, number],
+        getPath: (d) => d.waypoints,
+        getColor: (d) => [...d.color, 220] as [number, number, number, number],
         getWidth: (d) => Math.max(1, Math.min(4, 1 + Math.log2(d.count + 1))),
         widthUnits: "pixels",
-        greatCircle: true,
+        widthMinPixels: 1,
+        widthMaxPixels: 4,
+        capRounded: true,
+        jointRounded: true,
+        wrapLongitude: true,
         pickable: true,
         autoHighlight: true,
         highlightColor: [255, 255, 255, 180],
