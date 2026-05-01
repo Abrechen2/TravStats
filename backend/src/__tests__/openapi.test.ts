@@ -29,13 +29,21 @@ describe("openapi spec", () => {
       expect.arrayContaining([
         "/flights",
         "/flights/{id}",
-        "/airports",
+        "/flights/batch",
+        "/airports/search",
         "/trips",
-        "/stats",
+        "/stats/summary",
+        "/parse-email",
+        "/parse-boardingpass",
         "/settings/tokens",
         "/settings/tokens/{id}",
       ])
     );
+  });
+
+  it("/flights/{id} exposes get + put + delete", () => {
+    const methods = Object.keys(doc.paths?.["/flights/{id}"] ?? {});
+    expect(methods).toEqual(expect.arrayContaining(["get", "put", "delete"]));
   });
 
   it("registers shared schemas under components", () => {

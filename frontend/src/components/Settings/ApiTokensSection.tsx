@@ -35,17 +35,24 @@ export default function ApiTokensSection(): JSX.Element {
   const [copyOk, setCopyOk] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Empty dep array on purpose: this only ever runs on mount and after
+  // explicit user actions. Using `[t]` here caused an infinite re-render
+  // loop because the project's useTranslation wrapper doesn't guarantee
+  // a stable `t` reference across renders, so reload's identity changed
+  // every render → useEffect fired every render → setLoading(true) →
+  // re-render → loop.
   const reload = useCallback(async () => {
     setLoading(true);
     try {
       setTokens(await apiTokensApi.list());
     } catch (err) {
       logger.error("Failed to load API tokens", err);
-      setError(t("settings:apiTokens.errors.load"));
+      setError("Failed to load tokens");
     } finally {
       setLoading(false);
     }
-  }, [t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     void reload();
@@ -177,7 +184,7 @@ export default function ApiTokensSection(): JSX.Element {
           className="px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50"
           style={{ background: "var(--accent)", color: "white" }}
         >
-          {creating ? t("common:loading") : t("settings:apiTokens.create")}
+          {creating ? t("common:loading.title") : t("settings:apiTokens.create")}
         </button>
 
         {error && (
@@ -194,7 +201,7 @@ export default function ApiTokensSection(): JSX.Element {
         </h3>
         {loading ? (
           <div className="text-sm" style={{ color: "var(--text-muted)" }}>
-            {t("common:loading")}
+            {t("common:loading.title")}
           </div>
         ) : tokens.length === 0 ? (
           <div className="text-sm" style={{ color: "var(--text-muted)" }}>

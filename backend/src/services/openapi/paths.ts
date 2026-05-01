@@ -235,9 +235,12 @@ registry.registerPath({
 });
 
 registry.registerPath({
-  method: "patch",
+  method: "put",
   path: "/flights/{id}",
   summary: "Update a flight",
+  description:
+    "Replaces the editable fields of an existing flight. Server-managed " +
+    "fields (id, userId, createdAt, enrichmentHistory) are never accepted.",
   tags: ["Flights"],
   request: {
     params: z.object({ id: z.string().uuid() }),
@@ -297,7 +300,7 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/airports",
+  path: "/airports/search",
   summary: "Search airports",
   description:
     "Search by IATA/ICAO (exact match preferred) or by name/city (substring). " +
@@ -324,20 +327,26 @@ const statsResponse = registry.register(
   z
     .object({
       totalFlights: z.number(),
-      totalDistanceKm: z.number(),
-      totalDurationMinutes: z.number(),
-      uniqueAirports: z.number(),
-      uniqueCountries: z.number(),
-      yearStats: z.record(z.string(), z.number()).optional(),
+      totalDistance: z.number().describe("Total distance flown, in km"),
+      totalFlightTime: z.number().describe("Total flight time, in minutes"),
+      avgDistance: z.number(),
+      totalCost: z.number(),
+      byStatus: z.record(z.string(), z.number()),
+      byAirline: z.record(z.string(), z.number()),
+      byCategory: z.record(z.string(), z.number()),
     })
     .openapi("StatsSummary")
 );
 
 registry.registerPath({
   method: "get",
-  path: "/stats",
+  path: "/stats/summary",
   summary: "Aggregate statistics",
-  description: "Sum of distance, duration and unique-airport counts across the user's flights.",
+  description:
+    "Top-level totals (distance, hours, cost) plus rollups by status, " +
+    "airline and category. Other /stats/* sub-routes return more " +
+    "specialized breakdowns (routes, fun, business, unique, seats, " +
+    "airlines, countries) — see the Stats tag for the full list.",
   tags: ["Stats"],
   responses: {
     200: {
