@@ -10,6 +10,18 @@ import { cruiseApi, type CruiseRouteFeatureCollection } from "../lib/api/cruise"
 import { logger } from "../lib/logger";
 import { escapeHtml } from "../lib/escapeHtml";
 import { useTranslation } from "../hooks/useTranslation";
+import { useTimeSliderStore } from "../store/timeSliderStore";
+import { GlobeTimeSlider } from "./Globe/GlobeTimeSlider";
+import {
+  computeCruiseLegDates,
+  computeTimeRange,
+  flightVisibleFilter,
+  flightVisibleLive,
+  legProgress,
+  legVisibleFilter,
+  truncatePolyline,
+  type CruiseLegDates,
+} from "./Globe/timeSliderUtils";
 
 /**
  * Globe-mode renderer. MapLibre's native globe projection (5.x) draws
@@ -310,6 +322,46 @@ export default function GlobeViewMapLibre({
   const [autoRotate, setAutoRotate] = useState(false);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
 
+  // Time-slider state. Sliced per-field so unrelated store changes
+  // don't re-render the whole component. The store mode drives whether
+  // flights / cruise legs / ports get filtered before they reach the
+  // deck.gl layers.
+  const sliderMode = useTimeSliderStore((s) => s.mode);
+  const sliderCurrent = useTimeSliderStore((s) => s.currentDate);
+  const sliderFilterStart = useTimeSliderStore((s) => s.filterStart);
+  const sliderFilterEnd = useTimeSliderStore((s) => s.filterEnd);
+  const setSliderRange = useTimeSliderStore((s) => s.setRange);
+
+  // Push the data-driven [min, max] into the store every time flights
+  // or cruises change identity. The store dedupes if the bounds didn't
+  // actually move, so this stays O(1) on the hot selection-change path.
+  useEffect(() => {
+    const range = computeTimeRange(flights, cruises);
+    if (range) setSliderRange(range.min, range.max);
+  }, [flights, cruises, setSliderRange]);
+
+  // Per-leg date metadata for every cruise. Computed once per cruises
+  // identity. Keyed by cruiseId so the live-mode partial-draw can pair
+  // a leg's geometry with its (start, end) dates in O(1).
+  const cruiseLegDatesByCruise = useMemo<Map<string, CruiseLegDates[]>>(() => {
+    const out = new Map<string, CruiseLegDates[]>();
+    for (const c of cruises) out.set(c.id, computeCruiseLegDates(c));
+    return out;
+  }, [cruises]);
+
+  // The pre-aggregation flight set, filtered by slider state. The arc
+  // builder downstream still groups same-route flights together so a
+  // city pair only renders one arc however many flights are visible.
+  const filteredFlights = useMemo<GeoJSONFeature[]>(() => {
+    if (sliderMode === "off") return flights;
+    if (sliderMode === "live") {
+      if (!sliderCurrent) return flights;
+      return flights.filter((f) => flightVisibleLive(f, sliderCurrent));
+    }
+    if (!sliderFilterStart || !sliderFilterEnd) return flights;
+    return flights.filter((f) => flightVisibleFilter(f, sliderFilterStart, sliderFilterEnd));
+  }, [flights, sliderMode, sliderCurrent, sliderFilterStart, sliderFilterEnd]);
+
   const currentStyle = useMemo(
     () => STYLE_OPTIONS.find((s) => s.id === styleId) ?? STYLE_OPTIONS[0],
     [styleId]
@@ -387,7 +439,7 @@ export default function GlobeViewMapLibre({
       arrival: { iata?: string; name?: string };
     }
     const routes = new Map<string, RouteAcc>();
-    for (const flight of flights) {
+    for (const flight of filteredFlights) {
       const coords = flight.geometry?.coordinates;
       if (!coords || coords.length < 2) continue;
       const start = coords[0];
@@ -433,11 +485,11 @@ export default function GlobeViewMapLibre({
         color: getHeatmapColor(r.count, thresholds),
       }));
     return { arcsData: arcs, heatmapThresholds: thresholds };
-  }, [flights, minRouteCount]);
+  }, [filteredFlights, minRouteCount]);
 
   const airportPoints = useMemo<PointDatum[]>(() => {
     const seen = new Map<string, PointDatum>();
-    for (const flight of flights) {
+    for (const flight of filteredFlights) {
       const coords = flight.geometry?.coordinates;
       if (!coords || coords.length < 2) continue;
       const dep = flight.properties?.departureAirport;
@@ -470,7 +522,7 @@ export default function GlobeViewMapLibre({
       }
     }
     return Array.from(seen.values());
-  }, [flights]);
+  }, [filteredFlights]);
 
   // Pull cruise leg geometry from the schematic-router endpoint; one
   // FeatureCollection per cruise. Same source as the 2D map.
@@ -513,21 +565,89 @@ export default function GlobeViewMapLibre({
       const fc = cruiseGeometry.get(cruise.id);
       if (!fc) continue;
       const label = cruise.ship?.name ?? cruise.shipNameOverride ?? cruise.cruiseLine ?? "Cruise";
+      const legDates = cruiseLegDatesByCruise.get(cruise.id) ?? [];
+      // Index legs by "from:to" so we can pair geometry to date in O(1).
+      const dateByPair = new Map<string, CruiseLegDates>();
+      for (const ld of legDates) dateByPair.set(`${ld.fromPortId}:${ld.toPortId}`, ld);
+
       for (const feature of fc.features) {
         const path = feature.geometry.coordinates as [number, number][];
         if (path.length < 2) continue;
+
+        if (sliderMode === "live" && sliderCurrent) {
+          const ld = dateByPair.get(
+            `${feature.properties.fromPortId}:${feature.properties.toPortId}`
+          );
+          if (ld) {
+            const p = legProgress(ld, sliderCurrent);
+            if (p === 0) continue; // not yet sailed
+            if (p < 1) {
+              // truncatePolyline expects [lat, lng]; MapLibre paths are
+              // [lng, lat]. Swap → truncate → swap back so the
+              // haversine inside the helper sees real latitudes.
+              const swapped = path.map(([lng, lat]) => [lat, lng] as [number, number]);
+              const partialSwapped = truncatePolyline(swapped, p);
+              if (partialSwapped.length < 2) continue;
+              const partial = partialSwapped.map(([lat, lng]) => [lng, lat] as [number, number]);
+              out.push({ path: partial, cruiseId: cruise.id, cruiseLabel: label });
+              continue;
+            }
+            // p >= 1: full leg falls through to push-full below
+          }
+        }
+
+        if (sliderMode === "filter" && sliderFilterStart && sliderFilterEnd) {
+          const ld = dateByPair.get(
+            `${feature.properties.fromPortId}:${feature.properties.toPortId}`
+          );
+          if (ld && !legVisibleFilter(ld, sliderFilterStart, sliderFilterEnd)) continue;
+        }
+
         out.push({ path, cruiseId: cruise.id, cruiseLabel: label });
       }
     }
     return out;
-  }, [cruises, cruiseGeometry]);
+  }, [
+    cruises,
+    cruiseGeometry,
+    cruiseLegDatesByCruise,
+    sliderMode,
+    sliderCurrent,
+    sliderFilterStart,
+    sliderFilterEnd,
+  ]);
 
   const portPoints = useMemo<PointDatum[]>(() => {
     const seen = new Map<number, PointDatum>();
     for (const c of cruises) {
+      const legs = cruiseLegDatesByCruise.get(c.id) ?? [];
+      // A port is "visited" at the ARRIVAL date of the leg ending there
+      // (or at startDate for the first port of the cruise).
+      const portVisitDate = new Map<number, Date>();
+      const startDate = c.startDate ? new Date(c.startDate) : null;
+      const firstPortStop = c.stops.find((s) => !s.isAtSea && s.port);
+      if (firstPortStop?.port && startDate) {
+        portVisitDate.set(firstPortStop.port.id, startDate);
+      }
+      for (const ld of legs) portVisitDate.set(ld.toPortId, ld.endDate);
+
       for (const stop of c.stops) {
         if (stop.isAtSea || !stop.port) continue;
         const port = stop.port;
+        const visit = portVisitDate.get(port.id);
+
+        if (sliderMode === "live" && sliderCurrent) {
+          if (!visit || visit.getTime() > sliderCurrent.getTime()) continue;
+        } else if (sliderMode === "filter" && sliderFilterStart && sliderFilterEnd) {
+          if (
+            !visit ||
+            visit.getTime() < sliderFilterStart.getTime() ||
+            visit.getTime() > sliderFilterEnd.getTime()
+          ) {
+            continue;
+          }
+        }
+
         const cur = seen.get(port.id);
         if (cur) cur.size++;
         else
@@ -540,7 +660,14 @@ export default function GlobeViewMapLibre({
       }
     }
     return Array.from(seen.values());
-  }, [cruises]);
+  }, [
+    cruises,
+    cruiseLegDatesByCruise,
+    sliderMode,
+    sliderCurrent,
+    sliderFilterStart,
+    sliderFilterEnd,
+  ]);
 
   // Smooth fly-to on arc click. Compute mid-point (handling wrap-around)
   // and pick a zoom level that keeps both endpoints visible without
@@ -798,35 +925,47 @@ export default function GlobeViewMapLibre({
         )}
       </div>
 
-      {/* Style picker — bottom-center, geojson.io-style horizontal pills. */}
+      {/* Bottom-center stack: time slider on top, style picker below.
+          Container's bottom is pinned to bottom-3 so the picker stays
+          flush with the screen edge; the slider grows upward. */}
       <div
-        className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 gap-1 rounded-md p-1"
-        style={{
-          background: "rgba(13, 17, 23, 0.78)",
-          backdropFilter: "blur(12px)",
-          border: "1px solid rgba(255,255,255,0.18)",
-          fontFamily: "'Inter', sans-serif",
-        }}
+        className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2"
+        style={{ pointerEvents: "auto" }}
       >
-        {STYLE_OPTIONS.map((opt) => {
-          const active = opt.id === styleId;
-          return (
-            <button
-              key={opt.id}
-              type="button"
-              onClick={() => onStyleChange(opt.id)}
-              className="rounded px-3 py-1 text-xs font-medium transition-colors"
-              style={{
-                background: active ? "rgba(120, 200, 255, 0.18)" : "transparent",
-                color: active ? "#bae6fd" : "rgba(241,245,249,0.78)",
-                border: active ? "1px solid rgba(120, 200, 255, 0.55)" : "1px solid transparent",
-                cursor: "pointer",
-              }}
-            >
-              {opt.label}
-            </button>
-          );
-        })}
+        <GlobeTimeSlider
+          visibleFlights={filteredFlights.length}
+          visibleCruises={new Set(cruisePaths.map((p) => p.cruiseId)).size}
+        />
+
+        <div
+          className="flex gap-1 rounded-md p-1"
+          style={{
+            background: "rgba(13, 17, 23, 0.78)",
+            backdropFilter: "blur(12px)",
+            border: "1px solid rgba(255,255,255,0.18)",
+            fontFamily: "'Inter', sans-serif",
+          }}
+        >
+          {STYLE_OPTIONS.map((opt) => {
+            const active = opt.id === styleId;
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => onStyleChange(opt.id)}
+                className="rounded px-3 py-1 text-xs font-medium transition-colors"
+                style={{
+                  background: active ? "rgba(120, 200, 255, 0.18)" : "transparent",
+                  color: active ? "#bae6fd" : "rgba(241,245,249,0.78)",
+                  border: active ? "1px solid rgba(120, 200, 255, 0.55)" : "1px solid transparent",
+                  cursor: "pointer",
+                }}
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Hover tooltip — pre-escaped HTML (escapeHtml at every interpolation
