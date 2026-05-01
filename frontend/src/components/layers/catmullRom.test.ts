@@ -63,4 +63,26 @@ describe("catmullRomSpline", () => {
     const mid = pts[Math.floor(pts.length / 2)];
     expect(mid[1]).toBeGreaterThan(1);
   });
+
+  it("interpolates the short way across the antimeridian (179° → -179° is 2°, not 358°)", () => {
+    const pts = catmullRomSpline([
+      [178, 50],
+      [179, 50],
+      [-179, 50],
+      [-178, 50],
+    ]);
+    // Every output longitude must be near the great-circle short path
+    // through 180°; bouncing back near 0° (the long way around) is the
+    // failure we're guarding against.
+    for (const [lon] of pts) {
+      const distFrom180 = Math.min(Math.abs(lon - 180), Math.abs(lon + 180), Math.abs(lon - -180));
+      // All samples should sit within ~5° of the antimeridian.
+      expect(distFrom180).toBeLessThan(5);
+    }
+    // Output longitudes are normalised back into [-180, 180].
+    for (const [lon] of pts) {
+      expect(lon).toBeGreaterThanOrEqual(-180);
+      expect(lon).toBeLessThanOrEqual(180);
+    }
+  });
 });

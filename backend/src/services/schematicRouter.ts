@@ -34,7 +34,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 
 import logger from '../utils/logger';
-import { haversineKm } from '../shared/geo/haversine';
+import { haversineKm, slerp } from '../shared/geo/haversine';
 import { BinaryHeap } from '../shared/geo/binaryHeap';
 import {
   MASK_COLS,
@@ -104,6 +104,22 @@ const SIMPLIFY_TOLERANCE_DEG = 0.3;
  * coast-buffer post-pass still runs on the chord, so if the direct
  * line clips a peninsula it still picks up one offshore waypoint. */
 const SHORT_HOP_KM = 150;
+
+/** Arc-length step for the middle-of-route resample applied AFTER
+ * routing. The marnet graph has highly irregular node spacing — clusters
+ * of duplicate near-coincident nodes inside straits (Kiel/Fehmarn,
+ * Florida Strait, Bosphorus) turn into 150-180° u-turns when the spline
+ * tries to interpolate them. Resampling the non-corridor middle at a
+ * uniform ~60 km arc length collapses each cluster into a single
+ * interpolated vertex on the route's general direction, after which the
+ * downstream centripetal Catmull-Rom on the frontend produces a smooth
+ * curve. The resample preserves exact endpoints so corridor handoffs
+ * remain stable. The 60 km value was chosen empirically in the
+ * `tools/route-audit/harness/` test suite — 30 km kept too much node
+ * detail (mean worst kink 19°), 100 km over-smoothed coastal corners
+ * (max land fraction crept up). 60 km hits 0 / 94 demo legs with a
+ * kink ≥ 90° on the rendered curve. */
+const RESAMPLE_STEP_KM = 60;
 
 /** When the BFS-snapped water cell sits more than this many km from the
  * actual port (typical for fjord ports like Flåm, where the 1° cell
@@ -432,6 +448,96 @@ function coarseAStar(
 }
 
 /**
+ * Resample a polyline at uniform great-circle arc-length spacing
+ * (~`stepKm` between consecutive output vertices). Endpoints are
+ * preserved exactly. Intermediate vertices are dropped and replaced
+ * with great-circle-interpolated samples spaced evenly along the
+ * total polyline length.
+ *
+ * Why: the marnet graph has clustered duplicate-coordinate nodes near
+ * straits (Kiel/Fehmarn, Florida Strait, Bosphorus) that produce
+ * 150°+ u-turns in the control polygon. The downstream Catmull-Rom
+ * spline can't smooth a sharp control kink into a smooth curve. After
+ * arc-length resampling, each cluster collapses into a single
+ * interpolated vertex on the route's general bearing, eliminating the
+ * u-turn. See `tools/route-audit/harness/` for the empirical study
+ * that picked `stepKm=60`.
+ *
+ * Returns at least the two endpoints. For inputs shorter than the step,
+ * returns the input unchanged.
+ */
+export function arcLengthResample(
+  points: ReadonlyArray<[number, number]>,
+  stepKm: number,
+): [number, number][] {
+  if (points.length < 2) return points.slice() as [number, number][];
+  const segs: number[] = [];
+  for (let i = 1; i < points.length; i++) {
+    segs.push(haversineKm(
+      { lat: points[i - 1][1], lon: points[i - 1][0] },
+      { lat: points[i][1], lon: points[i][0] },
+    ));
+  }
+  const total = segs.reduce((s, x) => s + x, 0);
+  if (total < stepKm * 0.5) return points.slice() as [number, number][];
+  const cumulative: number[] = [0];
+  for (let i = 0; i < segs.length; i++) cumulative.push(cumulative[i] + segs[i]);
+  const stepCount = Math.max(2, Math.round(total / stepKm));
+  const out: [number, number][] = [[points[0][0], points[0][1]]];
+  for (let s = 1; s < stepCount; s++) {
+    const target = (s / stepCount) * total;
+    let segIdx = 0;
+    while (segIdx < segs.length && cumulative[segIdx + 1] < target) segIdx++;
+    if (segIdx >= segs.length) break;
+    const segStart = cumulative[segIdx];
+    const segEnd = cumulative[segIdx + 1];
+    const t = (target - segStart) / Math.max(1e-9, segEnd - segStart);
+    const a = { lat: points[segIdx][1], lon: points[segIdx][0] };
+    const b = { lat: points[segIdx + 1][1], lon: points[segIdx + 1][0] };
+    const p = slerp(a, b, t);
+    out.push([p.lon, p.lat]);
+  }
+  out.push([points[points.length - 1][0], points[points.length - 1][1]]);
+  return out;
+}
+
+/**
+ * Apply `arcLengthResample` to the non-corridor middle of a composed
+ * route. The corridor prefix/suffix (driven by `protectedPrefixCount`
+ * / `protectedSuffixCount`) is left untouched — those waypoints encode
+ * the hand-tuned harbour-approach paths that must be drawn exactly.
+ *
+ * The middle includes the boundary protected vertices on both sides so
+ * the resampled polyline starts at the corridor's exit point and ends
+ * at the arrival corridor's entry point, keeping the join continuous.
+ *
+ * Returns the new full waypoint list plus updated protected counts.
+ */
+function resampleNonCorridorMiddle(composed: ComposedRoute): ComposedRoute {
+  const wp = composed.waypoints;
+  const prefix = composed.protectedPrefixCount;
+  const suffix = composed.protectedSuffixCount;
+  // Slice the spline input the same way the frontend does — including the
+  // last protected prefix vertex and the first protected suffix vertex so
+  // the resampled curve covers the whole join smoothly.
+  const middleStart = prefix > 0 ? prefix - 1 : 0;
+  const middleEnd = suffix > 0 ? wp.length - suffix + 1 : wp.length;
+  if (middleEnd - middleStart < 3) return composed;
+  const middle = wp.slice(middleStart, middleEnd);
+  const resampled = arcLengthResample(middle, RESAMPLE_STEP_KM);
+  if (resampled.length === middle.length) return composed;
+  const newWaypoints: [number, number][] = [];
+  for (let i = 0; i < middleStart; i++) newWaypoints.push(wp[i]);
+  for (const point of resampled) newWaypoints.push(point);
+  for (let i = middleEnd; i < wp.length; i++) newWaypoints.push(wp[i]);
+  return {
+    waypoints: newWaypoints,
+    protectedPrefixCount: prefix,
+    protectedSuffixCount: suffix,
+  };
+}
+
+/**
  * Douglas-Peucker polyline simplification — drops vertices whose
  * perpendicular distance from the chord between kept vertices is
  * below `toleranceDeg`. Operates in degree space since the output is
@@ -744,7 +850,17 @@ export async function computeSchematicRoute(
     routeCacheMisses++;
   }
 
-  const result = await computeSchematicRouteUncached(dep, arr);
+  const raw = await computeSchematicRouteUncached(dep, arr);
+  // Smoothing pass — collapse marnet duplicate-cluster nodes inside the
+  // non-corridor middle so the downstream Catmull-Rom spline can't snap
+  // through a 150°+ u-turn. Corridor prefix/suffix are left intact.
+  const smoothed = resampleNonCorridorMiddle(raw);
+  const result: SchematicRoute = {
+    ...raw,
+    waypoints: smoothed.waypoints,
+    protectedPrefixCount: smoothed.protectedPrefixCount,
+    protectedSuffixCount: smoothed.protectedSuffixCount,
+  };
 
   if (key !== null) {
     if (routeCache.size >= ROUTE_CACHE_MAX) {
