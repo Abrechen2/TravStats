@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, requireAdmin } from '../../middleware/auth';
+import { authenticate, requireAdmin, requireWriteScope } from '../../middleware/auth';
 import systemRouter from './system';
 import usersRouter from './users';
 import invitationsRouter from './invitations';
@@ -13,9 +13,16 @@ import instanceSettingsRouter from './instanceSettings';
 
 const router = Router();
 
-// Apply auth middleware to ALL admin routes
+// Apply auth middleware to ALL admin routes.
+// requireAdmin already blocks any PAT whose scope !== 'admin', so the
+// 'read'-scoped lockout below is currently redundant — but adding it
+// explicitly is defence-in-depth: if a future intermediate scope (e.g.
+// 'admin-read') is introduced, this still keeps mutations gated. The
+// guard is method-aware, so admin GETs still pass for read tokens that
+// might be issued at that intermediate level.
 router.use(authenticate);
 router.use(requireAdmin);
+router.use(requireWriteScope);
 
 // Mount sub-routers
 router.use('/', systemRouter);
