@@ -95,66 +95,30 @@ describe("Zustand Stores", () => {
 
   describe("ThemeStore", () => {
     beforeEach(() => {
-      // Reset store and localStorage
-      useThemeStore.setState({ isDarkMode: false });
+      useThemeStore.setState({ mapTheme: "glassmorphism" });
       localStorage.clear();
-      document.documentElement.classList.remove("dark");
     });
 
-    it("should initialize with light mode by default", () => {
+    it("should initialize with glassmorphism map theme by default", () => {
       const { result } = renderHook(() => useThemeStore());
 
-      expect(result.current.isDarkMode).toBe(false);
+      expect(result.current.mapTheme).toBe("glassmorphism");
     });
 
-    it("should toggle dark mode", () => {
-      const { result } = renderHook(() => useThemeStore());
-
-      expect(result.current.isDarkMode).toBe(false);
-
-      act(() => {
-        result.current.toggleDarkMode();
-      });
-
-      expect(result.current.isDarkMode).toBe(true);
-
-      act(() => {
-        result.current.toggleDarkMode();
-      });
-
-      expect(result.current.isDarkMode).toBe(false);
-    });
-
-    it("should set dark mode explicitly", () => {
+    it("should set map theme", () => {
       const { result } = renderHook(() => useThemeStore());
 
       act(() => {
-        result.current.setDarkMode(true);
+        result.current.setMapTheme("classic");
       });
 
-      expect(result.current.isDarkMode).toBe(true);
+      expect(result.current.mapTheme).toBe("classic");
 
       act(() => {
-        result.current.setDarkMode(false);
+        result.current.setMapTheme("glassmorphism");
       });
 
-      expect(result.current.isDarkMode).toBe(false);
-    });
-
-    it("should add dark class to document when dark mode is enabled", () => {
-      const { result } = renderHook(() => useThemeStore());
-
-      act(() => {
-        result.current.setDarkMode(true);
-      });
-
-      expect(document.documentElement.classList.contains("dark")).toBe(true);
-
-      act(() => {
-        result.current.setDarkMode(false);
-      });
-
-      expect(document.documentElement.classList.contains("dark")).toBe(false);
+      expect(result.current.mapTheme).toBe("glassmorphism");
     });
   });
 

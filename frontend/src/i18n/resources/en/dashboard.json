@@ -55,7 +55,10 @@
     "flightUpdated": "Flight updated successfully",
     "flightDeleted": "Flight deleted successfully",
     "flightDeletedPending": "Flight deleted",
-    "flightDuplicated": "Flight duplicated"
+    "flightDuplicated": "Flight duplicated",
+    "flightMerged": "Existing flight enriched with {{count}} fields",
+    "flightMergedNoChange": "No empty fields to fill",
+    "importSummary": "{{updated}} flights updated, {{created}} created"
   },
   "duplicateDialog": {
     "title": "Duplicate flight",
@@ -71,10 +74,7 @@
   "pendingUpdates": "Pending Updates",
   "map": {
     "view2d": "2D View",
-    "view3d": "3D View",
-    "help2d": "Switch to 2D view",
-    "help3d": "Switch to 3D view",
-    "helpExpanded": "Switch between 2D and 3D map views. The 3D view shows flight routes with altitude information."
+    "view3d": "3D View"
   },
   "mapUnavailable": "Map unavailable",
   "statsUnavailable": "Stats unavailable",

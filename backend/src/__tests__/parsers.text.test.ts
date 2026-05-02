@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { OllamaTextParser, getOllamaTextParser } from '../services/parsers/text/ollamaTextParser';
+import {
+  OllamaTextParser,
+  getOllamaTextParser,
+  buildSystemPrompt,
+} from '../services/parsers/text/ollamaTextParser';
 import { RegexTextParser, getRegexParser } from '../services/parsers/text/regexParser';
 import { PATTERNS } from '../services/parsers/shared/utils';
 
@@ -45,6 +49,30 @@ describe('Text Parsers', () => {
 
       it('should have provider property set to ollama', () => {
         expect(parser.provider).toBe('ollama');
+      });
+    });
+
+    describe('buildSystemPrompt', () => {
+      it('injects today\'s date so the LLM has a year-resolution anchor', () => {
+        const prompt = buildSystemPrompt();
+        const today = new Date().toISOString().slice(0, 10);
+        expect(prompt).toContain(`Today's date is ${today}`);
+      });
+
+      it('replaces the static 2024 example date with the current year so the model is not primed toward the past', () => {
+        const prompt = buildSystemPrompt();
+        const currentYear = new Date().getFullYear();
+        // Example date in the schema docs uses the current year, not 2024.
+        expect(prompt).toContain(`${currentYear}-06-10T12:35`);
+        // The static "2024-06-10" priming string from the original prompt
+        // must not be present any more, regardless of where it appeared.
+        expect(prompt).not.toContain('2024-06-10');
+      });
+
+      it('describes the inferredFields contract so the model can self-report guesses', () => {
+        const prompt = buildSystemPrompt();
+        expect(prompt).toContain('inferredFields');
+        expect(prompt).toMatch(/next future occurrence/i);
       });
     });
   });

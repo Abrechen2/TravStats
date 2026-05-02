@@ -1,7 +1,7 @@
 import { Router, Response, NextFunction } from 'express';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../db';
-import { authenticate, AuthRequest } from '../middleware/auth';
+import { authenticate, requireWriteScope, AuthRequest } from '../middleware/auth';
 import { createFlightSchema, updateFlightSchema, flightQuerySchema } from '../schemas/flight';
 import type { FlightQueryInput } from '../schemas/flight';
 import logger from '../utils/logger';
@@ -9,8 +9,7 @@ import { AppError } from '../middleware/errorHandler';
 import { calculateDistance, generateArcPoints } from '../utils/geo';
 import { checkAndUpdateAchievements } from '../utils/achievements';
 import { enrichFlightAirports } from '../services/airportLookup';
-import { flightCreationLimiter, flightLookupLimiter, statsLimiter } from '../middleware/rateLimit';
-import { lookupFlightDetails } from '../services/flightLookup';
+import { flightCreationLimiter, statsLimiter } from '../middleware/rateLimit';
 import {
   findEnrichmentCandidates,
   getUserEnrichmentSettings,
@@ -21,8 +20,10 @@ import { estimateRoute } from '../services/routeEstimationService';
 import { calculateCo2Kg, toSeatClass } from '../services/co2Calculator';
 import { getCachedAirports } from '../services/airportCache';
 import { tzAwareDurationMinutes } from '../utils/timezone';
+import { fromZonedTime } from 'date-fns-tz';
 import { normalizeAircraft } from '../utils/aircraftNormalize';
 import { calculateNextApiCheckAt } from '../utils/smartCheckSchedule';
+import { buildFlightMergePatch } from '../utils/flightMerge';
 import batchRouter from './flightsBatch';
 
 const router = Router();
@@ -63,10 +64,25 @@ interface FlightUpdateData {
   co2Kg?: number | null;
   lastModifiedBy?: string;
   nextApiCheckAt?: Date | null;
+  depTimeSemantics?: string;
+  arrTimeSemantics?: string;
 }
 
-// All routes require authentication
+// Resolve a paired (local wall-clock + IANA timezone) input into a real UTC
+// instant. Returns null when either side is missing — schema validation has
+// already enforced that a present local string requires a timezone.
+function toUtcDate(local: string | null | undefined, tz: string | null | undefined): Date | null {
+  if (!local || !tz) return null;
+  return fromZonedTime(local, tz);
+}
+
+// All routes require authentication.
+// `requireWriteScope` is method-aware: GET/HEAD/OPTIONS pass through, anything
+// else demands a write- or admin-scoped PAT (cookie sessions are unaffected).
+// Order matters — must run before the batchRouter mount so /flights/batch
+// inherits the same scope check.
 router.use(authenticate);
+router.use(requireWriteScope);
 router.use(batchRouter);
 
 // Normalize query params coming from axios (arrays are sent as foo[] by default)
@@ -178,50 +194,38 @@ const buildFlightWhere = (
   };
 };
 
-// Lookup flight details from external providers
-router.get('/lookup', flightLookupLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const { flightNumber, date } = req.query;
-
-    if (!flightNumber || typeof flightNumber !== 'string') {
-      return res.status(400).json({ error: 'flightNumber is required' });
-    }
-
-    const lookup = await lookupFlightDetails(
-      flightNumber,
-      typeof date === 'string' ? date : undefined,
-      req.userId!
-    );
-
-    if (!lookup) {
-      return res.status(404).json({ error: 'No flight data found' });
-    }
-
-    res.json(lookup);
-  } catch (error) {
-    next(error);
-  }
-});
-
 // Create flight (rate limited to prevent abuse)
 router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
     const data = createFlightSchema.parse(req.body);
 
-    // Duplicate check: same userId + flightNumber + same calendar day
+    const departureUtc = toUtcDate(data.departureLocal, data.depTimezone);
+    const arrivalUtc = toUtcDate(data.arrivalLocal, data.arrTimezone);
+    const actualDepartureUtc = toUtcDate(data.actualDepartureLocal, data.actualDepartureTz);
+    const actualArrivalUtc = toUtcDate(data.actualArrivalLocal, data.actualArrivalTz);
+
+    // Duplicate check (#84): pre-existing rows can hold non-canonical
+    // flightNumber strings ("LH 123", "lh123") from before the schema-level
+    // normalization landed, so fetch the day's candidates and compare
+    // normalized in JS rather than relying on a direct WHERE.
+    //
+    // ?force=true → bypass and create a real duplicate row (user opt-in).
+    // ?merge=true → fill missing fields on the existing flight from
+    //   incoming data without ever overwriting curated values; lets a
+    //   second source (boarding pass, email confirmation) enrich a
+    //   manually-entered flight in place. force wins if both are set.
     const forceCreate = req.query['force'] === 'true';
-    if (data.flightNumber && !forceCreate && data.departureTime) {
-      const depDate = new Date(data.departureTime);
-      const dayStart = new Date(depDate);
+    const mergeIntoExisting = !forceCreate && req.query['merge'] === 'true';
+    if (data.flightNumber && !forceCreate && departureUtc) {
+      const dayStart = new Date(departureUtc);
       dayStart.setUTCHours(0, 0, 0, 0);
-      const dayEnd = new Date(depDate);
+      const dayEnd = new Date(departureUtc);
       dayEnd.setUTCHours(23, 59, 59, 999);
 
-      const existing = await prisma.flight.findFirst({
+      const dayCandidates = await prisma.flight.findMany({
         where: {
           userId,
-          flightNumber: data.flightNumber,
           departureTime: { gte: dayStart, lte: dayEnd },
         },
         select: {
@@ -234,7 +238,40 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
         },
       });
 
+      const normalize = (s: string | null): string =>
+        (s ?? '').replace(/\s+/g, '').toUpperCase();
+      const wantFlightNumber = data.flightNumber; // already normalized by schema
+      const existing = dayCandidates.find(
+        (c) => normalize(c.flightNumber) === wantFlightNumber
+      );
+
       if (existing) {
+        if (mergeIntoExisting) {
+          const existingFull = await prisma.flight.findUnique({
+            where: { id: existing.id },
+          });
+          if (!existingFull) {
+            res.status(409).json({
+              error: 'DUPLICATE_FLIGHT',
+              message: `Flight ${data.flightNumber} on this day already exists`,
+              existingFlight: existing,
+            });
+            return;
+          }
+          const { patch, mergedFields } = buildFlightMergePatch(existingFull, data);
+          const merged = mergedFields.length === 0
+            ? existingFull
+            : await prisma.flight.update({
+                where: { id: existing.id },
+                data: { ...patch, lastModifiedBy: 'user' },
+              });
+          res.status(200).json({
+            flight: merged,
+            mergedFields,
+          });
+          return;
+        }
+
         res.status(409).json({
           error: 'DUPLICATE_FLIGHT',
           message: `Flight ${data.flightNumber} on this day already exists`,
@@ -282,15 +319,18 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
         arrName: enriched.arrival.name,
         arrLat: enriched.arrival.lat,
         arrLon: enriched.arrival.lon,
-        departureTime: data.departureTime ? new Date(data.departureTime) : null,
-        arrivalTime: data.arrivalTime ? new Date(data.arrivalTime) : null,
-        actualDeparture: data.actualDeparture ? new Date(data.actualDeparture) : null,
-        actualArrival:   data.actualArrival   ? new Date(data.actualArrival)   : null,
+        departureTime: departureUtc,
+        arrivalTime: arrivalUtc,
+        actualDeparture: actualDepartureUtc,
+        actualArrival: actualArrivalUtc,
+        // Default to 'UTC' (the canonical contract). Bulk-import callers can
+        // override with 'DATE_ONLY' or 'UNKNOWN' when the time component is
+        // a placeholder so downstream display/aggregation knows to estimate.
+        depTimeSemantics: data.depTimeSemantics ?? 'UTC',
+        arrTimeSemantics: data.arrTimeSemantics ?? 'UTC',
         delayMinutes:
-          data.actualDeparture && data.departureTime
-            ? Math.round(
-                (new Date(data.actualDeparture).getTime() - new Date(data.departureTime).getTime()) / 60000
-              )
+          actualDepartureUtc && departureUtc
+            ? Math.round((actualDepartureUtc.getTime() - departureUtc.getTime()) / 60000)
             : null,
         co2Kg: calculateCo2Kg({
           depLat: enriched.departure.lat,
@@ -321,11 +361,11 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
         bookingClassLetter: data.bookingClassLetter,
         coPassengers: data.coPassengers ?? [],
         // Data source tracking
-        dataSource: 'manual',
+        dataSource: data.dataSource ?? 'manual',
         lastModifiedBy: 'user',
         nextApiCheckAt: calculateNextApiCheckAt(
-          data.departureTime ? new Date(data.departureTime) : null,
-          data.arrivalTime ? new Date(data.arrivalTime) : null,
+          departureUtc,
+          arrivalUtc,
           data.status ?? 'scheduled',
           data.flightNumber,
         ),
@@ -413,7 +453,16 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
       return {
         ...f,
         durationMinutes: (f.departureTime && f.arrivalTime)
-          ? Math.round(tzAwareDurationMinutes(f.departureTime, f.arrivalTime, depTz, arrTz))
+          ? Math.round(
+              tzAwareDurationMinutes(
+                f.departureTime,
+                f.arrivalTime,
+                depTz,
+                arrTz,
+                f.depTimeSemantics as 'UTC' | 'LEGACY_FAKE_UTC' | 'UNKNOWN',
+                f.arrTimeSemantics as 'UTC' | 'LEGACY_FAKE_UTC' | 'UNKNOWN',
+              )
+            )
           : null,
       };
     });
@@ -550,6 +599,24 @@ router.get('/enrichment-candidates', statsLimiter, async (req: AuthRequest, res:
   }
 });
 
+// Get a single flight by id — added for API consumers (AI agents,
+// scripts) that PATCH/PUT and want to read back the freshly-updated
+// state without re-listing every flight. Returns the flight directly
+// (not wrapped) so curl-piped jq filters stay simple.
+router.get('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId!;
+    const { id } = req.params;
+    const flight = await prisma.flight.findFirst({ where: { id, userId } });
+    if (!flight) {
+      throw new AppError('Flight not found', 404);
+    }
+    res.json(flight);
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Update flight
 router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -643,23 +710,33 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
       updateData.arrLon = enrichedArrival.lon;
     }
 
-    if (data.departureTime) updateData.departureTime = new Date(data.departureTime);
-    if (data.arrivalTime) updateData.arrivalTime = new Date(data.arrivalTime);
+    // Resolve any incoming local+tz pairs to canonical real UTC. A null pair
+    // means the field was not in this update; an empty string is treated the
+    // same — clients should clear actualDeparture by passing null explicitly.
+    const incomingDepUtc = toUtcDate(data.departureLocal, data.depTimezone);
+    const incomingArrUtc = toUtcDate(data.arrivalLocal, data.arrTimezone);
+    const incomingActualDepUtc = toUtcDate(data.actualDepartureLocal, data.actualDepartureTz);
+    const incomingActualArrUtc = toUtcDate(data.actualArrivalLocal, data.actualArrivalTz);
+
+    if (data.departureLocal !== undefined) {
+      updateData.departureTime = incomingDepUtc ?? undefined;
+      updateData.depTimeSemantics = 'UTC';
+    }
+    if (data.arrivalLocal !== undefined) {
+      updateData.arrivalTime = incomingArrUtc ?? undefined;
+      updateData.arrTimeSemantics = 'UTC';
+    }
 
     // Actual times and delay
-    if (data.actualDeparture !== undefined) {
-      updateData.actualDeparture = data.actualDeparture ? new Date(data.actualDeparture) : null;
-      const scheduledDep: Date | null = data.departureTime
-        ? new Date(data.departureTime)
-        : existingFlight.departureTime;
-      updateData.delayMinutes = (data.actualDeparture && scheduledDep)
-        ? Math.round(
-            (new Date(data.actualDeparture).getTime() - scheduledDep.getTime()) / 60000
-          )
+    if (data.actualDepartureLocal !== undefined) {
+      updateData.actualDeparture = incomingActualDepUtc;
+      const scheduledDep: Date | null = incomingDepUtc ?? existingFlight.departureTime;
+      updateData.delayMinutes = incomingActualDepUtc && scheduledDep
+        ? Math.round((incomingActualDepUtc.getTime() - scheduledDep.getTime()) / 60000)
         : null;
     }
-    if (data.actualArrival !== undefined) {
-      updateData.actualArrival = data.actualArrival ? new Date(data.actualArrival) : null;
+    if (data.actualArrivalLocal !== undefined) {
+      updateData.actualArrival = incomingActualArrUtc;
     }
 
     // Recalculate CO₂ when coordinates change or on any update (always keep in sync)
@@ -679,12 +756,17 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     updateData.lastModifiedBy = 'user';
 
     // Recalculate smart API check schedule when departure time or status changes
-    if (data.departureTime || data.arrivalTime || data.status || data.flightNumber) {
-      const effectiveDep = data.departureTime
-        ? new Date(data.departureTime)
+    if (
+      data.departureLocal !== undefined ||
+      data.arrivalLocal !== undefined ||
+      data.status ||
+      data.flightNumber
+    ) {
+      const effectiveDep = data.departureLocal !== undefined
+        ? incomingDepUtc
         : existingFlight.departureTime;
-      const effectiveArr = data.arrivalTime
-        ? new Date(data.arrivalTime)
+      const effectiveArr = data.arrivalLocal !== undefined
+        ? incomingArrUtc
         : existingFlight.arrivalTime;
       const effectiveStatus = data.status ?? existingFlight.status;
       const effectiveFn = data.flightNumber ?? existingFlight.flightNumber;

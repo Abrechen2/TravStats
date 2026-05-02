@@ -15,6 +15,7 @@ import BackupSection from "../components/Settings/BackupSection";
 import AutoUpdateSection from "../components/Settings/AutoUpdateSection";
 import EnrichmentSection from "../components/Settings/EnrichmentSection";
 import ApiKeysSection from "../components/Settings/ApiKeysSection";
+import ApiTokensSection from "../components/Settings/ApiTokensSection";
 import AdminSection from "../components/Settings/AdminSection";
 import AboutSection from "../components/Settings/AboutSection";
 import FeaturesSection from "../components/Settings/FeaturesSection";
@@ -36,12 +37,10 @@ export default function SettingsPage(): JSX.Element {
     setUnits,
     setDefaults,
     setMap,
-    isDarkMode,
     savingProfile,
     uploadingProfilePicture,
     saveProfileSettings,
     handleAvatarUpload,
-    handleThemeToggle,
     showPasswordModal,
     changingPassword,
     passwordForm,
@@ -80,6 +79,7 @@ export default function SettingsPage(): JSX.Element {
     { id: "autoupdate", label: t("settings:autoUpdate.title") || "Auto-Update" },
     { id: "enrichment", label: t("settings:historicalEnrichment.title") || "Enrichment" },
     { id: "apikeys", label: t("settings:apiKeys.title") || "API Keys" },
+    { id: "apitokens", label: t("settings:apiTokens.title") || "API Tokens" },
     ...(user?.isAdmin ? [{ id: "admin", label: t("settings:admin.title") || "Admin" }] : []),
     { id: "about", label: "About" },
   ];
@@ -133,12 +133,7 @@ export default function SettingsPage(): JSX.Element {
             )}
             {activeSection === "homeAirport" && <HomeAirportSection />}
             {activeSection === "display" && (
-              <DisplaySection
-                display={display}
-                isDarkMode={isDarkMode}
-                onSetDisplay={setDisplay}
-                onThemeToggle={handleThemeToggle}
-              />
+              <DisplaySection display={display} onSetDisplay={setDisplay} />
             )}
             {activeSection === "units" && <UnitsSection units={units} onSetUnits={setUnits} />}
             {activeSection === "defaults" && (
@@ -179,6 +174,7 @@ export default function SettingsPage(): JSX.Element {
                 onSave={saveApiKeys}
               />
             )}
+            {activeSection === "apitokens" && <ApiTokensSection />}
             {activeSection === "admin" && user?.isAdmin && <AdminSection />}
             {activeSection === "about" && <AboutSection />}
 

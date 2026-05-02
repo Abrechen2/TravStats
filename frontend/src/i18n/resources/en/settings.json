@@ -68,7 +68,7 @@
   },
   "display": {
     "title": "Display & Language",
-    "description": "Control mode, language and timezone centrally.",
+    "description": "Control language, timezone, and date/time formats centrally.",
     "language": "Language",
     "languages": {
       "de": "Deutsch",
@@ -76,17 +76,7 @@
     },
     "timezone": "Timezone",
     "dateFormat": "Date Format",
-    "timeFormat": "Time Format",
-    "theme": {
-      "title": "Theme Settings",
-      "description": "The theme determines the color scheme of the application. Dark Mode is more pleasant for the eyes in poor lighting conditions.",
-      "lightMode": "Light Mode",
-      "darkMode": "Dark Mode",
-      "lightDescription": "Bright color scheme, ideal in daylight",
-      "darkDescription": "Dark color scheme, reduces eye strain in low light",
-      "autoSave": "The setting is automatically saved and remains for future visits",
-      "active": "active"
-    }
+    "timeFormat": "Time Format"
   },
   "units": {
     "title": "Units & Formats",
@@ -536,6 +526,40 @@
       "username": "Username",
       "password": "Password",
       "or": "OR (use basic auth instead)"
+    }
+  },
+  "apiTokens": {
+    "title": "API Tokens",
+    "description": "Personal access tokens for external tools, AI agents, and scripts. A token is shown exactly once at creation — never again.",
+    "docsTitle": "API documentation",
+    "docsBody": "Full endpoints, examples and schemas — try them interactively with your token.",
+    "docsLink": "Open Swagger UI →",
+    "newLabel": "Label",
+    "newLabelPlaceholder": "e.g. \"Home Assistant integration\"",
+    "scope": "Scope",
+    "scopes": {
+      "read": "Read — read-only",
+      "write": "Write — read + write",
+      "admin": "Admin — full access"
+    },
+    "create": "Create token",
+    "existingTitle": "Existing tokens",
+    "empty": "No tokens created yet.",
+    "lastUsed": "Last used: {{when}}",
+    "neverUsed": "Never used",
+    "revoked": "Revoked",
+    "revokeButton": "Revoke",
+    "confirmRevoke": "Really revoke this token? External tools using it will lose access immediately.",
+    "justCreatedTitle": "Token created",
+    "justCreatedWarning": "Copy this token NOW — it will not be shown again. Only the hash is persisted.",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "dismiss": "Got it",
+    "errors": {
+      "load": "Failed to load tokens",
+      "create": "Failed to create token",
+      "revoke": "Failed to revoke token",
+      "labelRequired": "Label is required"
     }
   }
 }

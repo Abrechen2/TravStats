@@ -25,8 +25,8 @@ It's a logbook, not a live tracker — you record trips manually, scan a boardin
 
 Log every flight you take (cruises landing in v2), visualise your routes
 on interactive 2D and 3D maps, collect 101 achievements, and import flights
-from boarding passes (QR / PDF417 / OCR) and confirmation emails — all on
-your own server, no cloud, no telemetry.
+from boarding passes (QR / PDF417 / OCR), confirmation emails, or
+Excel/CSV — all on your own server, no cloud, no telemetry.
 
 It's a logbook, not a live tracker — you record trips manually, scan a
 boarding pass, or import a confirmation email, and TravStats turns them
@@ -40,9 +40,11 @@ no ads.
 - 🏆 **101 Battlefield-style achievements** across five categories
 - 🎫 **Boarding-pass scanner** — QR / barcode / OCR
 - 📧 **Email import** — plain text, HTML, Outlook `.msg`, `.eml`, with optional local LLM parsing via Ollama
+- 📑 **Excel/CSV round-trip import** — export, edit in Excel, re-import; rows with an `id` update existing flights
+- 🤖 **Public REST API + OpenAPI 3.0 / Swagger UI** — Personal Access Tokens with `read` / `write` / `admin` scopes for AI agents and automation
 - 💾 **Automated backups** with retention + optional WebDAV sync
 - 🔐 **Invite-only by default** — toggle public registration anytime from the admin UI; JWT in HttpOnly cookies, 18 rate limiters on sensitive endpoints
-- 🌐 **German + English UI**, i18n-ready
+- 🌐 **German + English UI** with browser-locale auto-detection, i18n-ready
 
 ---
 
@@ -112,6 +114,21 @@ Install `travstats-db` from there first, then `TravStats`, set the
 > confirmation mails and unknown airline templates are then handled locally —
 > nothing leaves your network.
 
+### Image tags
+
+Both registries (GHCR and Docker Hub) carry the same digests for these
+moving tags. Pick the one your platform defaults to.
+
+| Tag | Points to | Use for |
+|---|---|---|
+| `:latest`, `:stable` | Latest stable release (currently `1.2.1`) | Normal production. Auto-updates to the next promoted release. |
+| `:X.Y.Z` (e.g. `:1.2.1`) | Pinned immutable release | Reproducible installs, audit, regulated environments. |
+| `:rc-latest` | Newest Release Candidate (currently `1.3.0-rc.7`) | Beta testers — receive every fresh RC via `docker compose pull`. May include breaking schema changes across major bumps; an in-place backup is taken automatically on first start of a new major. |
+
+Specific RC tags (`:1.3.0-rc.1`, `:2.0.0-beta.8`) and dev builds live on
+GHCR only — Docker Hub only mirrors the moving tags above plus pinned
+final releases.
+
 ---
 
 ## Configuration
@@ -163,6 +180,52 @@ Helmet CSP, invite-only by default.
 Report vulnerabilities via
 [GitHub Security Advisories](https://github.com/Abrechen2/TravStats/security/advisories/new)
 — **please do not open a public issue**.
+
+## API for external tools
+
+TravStats ships an authenticated REST API for AI agents, automation
+scripts and integrations. Every flight, trip, airport and stat the
+web UI shows is reachable programmatically.
+
+**1. Mint a Personal Access Token**: in the app, go to **Settings →
+API Tokens**, give it a label and a scope (`read`, `write`, `admin`),
+and copy the `ts_pat_…` value. The plaintext is shown exactly once —
+only the bcrypt hash is persisted.
+
+**2. Browse the spec**: open `https://<your-host>/api/v1/docs`
+(Swagger UI) or fetch `/api/v1/openapi.json` for the raw OpenAPI 3.0
+document. The spec is auto-generated from the same Zod schemas the
+backend uses for validation, so it never drifts.
+
+**3. Call it**: every endpoint accepts the token via the standard
+`Authorization` header.
+
+```bash
+TOKEN="ts_pat_…"
+
+# List your flights
+curl -H "Authorization: Bearer $TOKEN" \
+  https://travstats.example.com/api/v1/flights
+
+# Create a flight (write or admin scope required)
+curl -H "Authorization: Bearer $TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"departure":{"iata":"FRA","lat":50.0379,"lon":8.5622},
+          "arrival":{"iata":"JFK","lat":40.6413,"lon":-73.7781},
+          "departureTime":"2026-05-01T08:00:00.000Z",
+          "arrivalTime":"2026-05-01T17:00:00.000Z",
+          "flightNumber":"LH400"}' \
+  https://travstats.example.com/api/v1/flights
+```
+
+Pass `?merge=true` on `POST /flights` to enrich an existing matching
+flight (boarding-pass re-import, email confirmation upgrade) instead
+of creating a duplicate. Read-only tokens are blocked from mutating
+endpoints with 403; admin endpoints additionally require an
+`admin`-scoped token even if the owning user is an admin.
+
+Token requests get their own per-token rate-limit bucket so an
+aggressive script can't lock the user out of the web UI.
 
 ## Contributing
 

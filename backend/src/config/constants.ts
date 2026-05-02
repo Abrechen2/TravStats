@@ -79,6 +79,10 @@ export const RATE_LIMITS = {
   ADMIN_EXPORT_WINDOW_MS: 60 * 60 * 1000, // 1 hour
   ADMIN_EXPORT_MAX: 5, // 5 exports per hour
 
+  // Admin airport reseed rate limits (18k row upsert, expensive)
+  ADMIN_RESEED_WINDOW_MS: 60 * 60 * 1000, // 1 hour
+  ADMIN_RESEED_MAX: 3, // 3 reseeds per hour per admin (DoS guard)
+
   // PDF parse rate limits
   PDF_PARSE_WINDOW_MS: 15 * 60 * 1000, // 15 minutes
   PDF_PARSE_MAX: 20, // 20 requests per window

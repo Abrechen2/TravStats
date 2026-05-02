@@ -38,6 +38,15 @@ export interface Flight {
   arrLon: number;
   departureTime: string | null;
   arrivalTime: string | null;
+  // Time-correctness flag set by the backend.
+  // 'UTC'       — departureTime/arrivalTime are real UTC instants
+  // 'DATE_ONLY' — only the calendar date is real; the time component is a
+  //               12:00 placeholder. Display layer must render duration via
+  //               coord-based estimate (`getFlightDuration`).
+  // 'UNKNOWN'   — neither date nor time is reliable.
+  // 'LEGACY_FAKE_UTC' — pre-V1 row stored a local-as-UTC fake; do not trust.
+  depTimeSemantics?: "UTC" | "DATE_ONLY" | "UNKNOWN" | "LEGACY_FAKE_UTC";
+  arrTimeSemantics?: "UTC" | "DATE_ONLY" | "UNKNOWN" | "LEGACY_FAKE_UTC";
   status: "scheduled" | "flown" | "cancelled" | "historical" | "duplicated";
   notes?: string;
   createdAt: string;
@@ -71,7 +80,8 @@ export interface Flight {
     | "boarding_pass_scan"
     | "historical_enrichment"
     | "live_update"
-    | "api_lookup";
+    | "api_lookup"
+    | "bulk_import";
   lastModifiedBy?: "user" | "auto_update" | "historical_enrichment" | "api";
   enrichmentHistory?: Array<{
     type: string;
@@ -134,8 +144,17 @@ export interface FlightInput {
   aircraft?: string;
   departure: Airport;
   arrival: Airport;
-  departureTime?: string;
-  arrivalTime?: string;
+  // Canonical-UTC submission contract: send local wall-clock + IANA timezone
+  // and let the server build the real UTC instant via fromZonedTime().
+  // Format: "YYYY-MM-DDTHH:mm" (no TZ suffix, no seconds required).
+  departureLocal?: string;
+  depTimezone?: string;
+  arrivalLocal?: string;
+  arrTimezone?: string;
+  actualDepartureLocal?: string;
+  actualDepartureTz?: string;
+  actualArrivalLocal?: string;
+  actualArrivalTz?: string;
   status?: "scheduled" | "flown" | "cancelled" | "historical" | "duplicated";
   notes?: string;
   // Extended fields
@@ -158,8 +177,6 @@ export interface FlightInput {
   frequentFlyerNumber?: string;
   bookingClassLetter?: string;
   coPassengers?: string[];
-  actualDeparture?: string;
-  actualArrival?: string;
 }
 
 export interface ParsedBooking {
@@ -190,6 +207,10 @@ export interface ParsedBooking {
   parserTemplate?: string;
   parserConfidence?: number;
   airlineNotice?: string; // Transient: not persisted to DB, UI-only notice when no template found
+  // Field names that the parser inferred — assigned a value the source did not state
+  // explicitly (e.g. picked a year for a date that omitted it). Surfaced as a
+  // "please verify" badge in the import-review UI. Not persisted.
+  inferredFields?: string[];
   missing?: string[];
   fieldSources?: Partial<
     Record<

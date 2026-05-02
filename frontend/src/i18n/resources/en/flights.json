@@ -55,7 +55,8 @@
     "dateImproves": "Tip: Adding a date improves search accuracy.",
     "lookupLoaded": "Flight details loaded from {{airline}} {{flightNumber}}",
     "estimatedTimes": "Estimated Flight Times",
-    "estimatedTimesHistorical": "Based on {{count}} {{count, plural, one {historical flight} other {historical flights}}} of this route.",
+    "estimatedTimesHistorical_one": "Based on {{count}} historical flight of this route.",
+    "estimatedTimesHistorical_other": "Based on {{count}} historical flights of this route.",
     "estimatedTimesCalculated": "Departure and arrival times were calculated from your previous flights.",
     "estimatedTimesAutomatic": "Automatically estimated based on boarding time and flight distance.",
     "estimatedTimesAssumption": "Assumption: Departure = Boarding + 30min, flight duration -> {{minutes}} minutes.",
@@ -73,8 +74,8 @@
       "price": "The price is saved together with the currency. You can filter by prices later and display statistics.",
       "tags": "Add tags to categorize and filter flights later (e.g. 'business', 'international').",
       "tagsExpanded": "Tags are separated by commas. You can filter by tags later and group statistics by tags. Examples: 'business', 'vacation', 'lufthansa', 'long-haul'.",
-      "flightNumber": "Enter the flight number (e.g. LH400). With the lookup button you can automatically retrieve flight data if an API key is configured.",
-      "flightNumberExpanded": "The automatic flight search uses external APIs (AirLabs, AviationStack, OpenSky) to retrieve flight data. Without an API key, you must enter the data manually."
+      "flightNumber": "Enter the flight number (e.g. LH400). Automatic search works for today's flights. For past or future flights an Aviationstack Basic+ key is required — otherwise please enter the flight manually.",
+      "flightNumberExpanded": "The flight lookup cascades through multiple APIs:\n• Aviationstack (with Basic+ key: past and future flights)\n• AirLabs (today's flights)\n• OpenSky (today's flights, credentials required)\n\nIf no provider covers the selected date, you'll need to enter the flight manually. Even with a key configured, the API may simply not have data for some flights."
     },
     "steps": {
       "input": "Enter flight number for automatic lookup",
@@ -148,9 +149,13 @@
     "arrivalAirportCode": "Arrival airport (IATA) *",
     "duplicate": {
       "title": "Flight Already Exists",
-      "message": "Flight {{flightNumber}} ({{route}}) already exists for this day. Add it anyway?",
+      "message": "Flight {{flightNumber}} ({{route}}) already exists for this day.",
+      "mergeHint": "\"Fill missing fields\" only adds data to fields that are still empty on the existing flight — nothing is overwritten.",
       "cancel": "Cancel",
-      "addAnyway": "Add Anyway"
+      "merge": "Fill missing fields",
+      "addAnyway": "Add Anyway",
+      "mergedToast": "Existing flight enriched with {{count}} fields",
+      "mergedNoChange": "No empty fields to fill"
     }
   },
   "list": {
@@ -229,10 +234,13 @@
     "unknownParser": "Unknown",
     "confidenceLabel": "Confidence",
     "sourceText": "Source text",
-    "hideSourceText": "Hide"
+    "hideSourceText": "Hide",
+    "inferredHint": "Inferred by parser — please verify.",
+    "inferredDateHint": "Source did not state a year — parser guessed it. Please verify the date and year."
   },
   "lookup": {
-    "resultsTitle": "Found {{count}} {{count, plural, one {flight} other {flights}}}",
+    "resultsTitle_one": "Found {{count}} flight",
+    "resultsTitle_other": "Found {{count}} flights",
     "departs": "Departs",
     "backToSearch": "Back to search"
   },
@@ -269,7 +277,12 @@
   },
   "edit": {
     "title": "Edit Flight",
-    "saveChanges": "Save Changes"
+    "saveChanges": "Save Changes",
+    "tripLabel": "Trip",
+    "tripNone": "Not assigned to a trip",
+    "tripHint": "Links this flight to a manually-created trip. Trips are created in the Flights tab.",
+    "tripAssignedToast": "Trip assignment updated",
+    "tripAssignFailed": "Trip assignment failed — other changes were saved"
   },
   "scanner": {
     "title": "Scan Boarding Pass",
@@ -335,7 +348,8 @@
   },
   "enrichmentCount": "Enriched {{count}}x",
   "confidence": "Confidence",
-  "sourceFlightsCount": "{{count}} {{count, plural, one {source flight} other {source flights}}}",
+  "sourceFlightsCount_one": "{{count}} source flight",
+  "sourceFlightsCount_other": "{{count}} source flights",
   "enrichmentHistory": "Enrichment History",
   "pdfImport": {
     "label": "PDF",

@@ -7,6 +7,7 @@ import { useClickOutside } from "../hooks/useClickOutside";
 import { logger } from "../lib/logger";
 import DiagnosticExportModal from "./DiagnosticExportModal";
 import { LogoMark, LogoWordmark } from "./Brand/Logo";
+import UpdateBadge from "./UpdateBadge";
 
 interface NavItem {
   path: string;
@@ -133,6 +134,7 @@ export default function NavigationBar(): JSX.Element {
                   <LogoWordmark size={16} />
                 </span>
               </Link>
+              <UpdateBadge />
             </div>
 
             {/* Center: Desktop Navigation */}

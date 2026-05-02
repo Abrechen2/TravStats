@@ -1,4 +1,5 @@
 import { Router, Response, NextFunction } from "express";
+import { fromZonedTime } from "date-fns-tz";
 import { prisma } from "../db";
 import { AuthRequest } from "../middleware/auth";
 import { batchCreationLimiter } from "../middleware/rateLimit";
@@ -9,6 +10,11 @@ import { enrichFlightAirports } from "../services/airportLookup";
 import { calculateCo2Kg, toSeatClass } from "../services/co2Calculator";
 import { checkAndUpdateAchievements } from "../utils/achievements";
 import { calculateNextApiCheckAt } from "../utils/smartCheckSchedule";
+
+function toUtcDate(local: string | null | undefined, tz: string | null | undefined): Date | null {
+  if (!local || !tz) return null;
+  return fromZonedTime(local, tz);
+}
 
 const router = Router();
 
@@ -54,6 +60,10 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
       // Create all flights
       const flights = [];
       for (const { data, enriched } of enrichedDataList) {
+        const departureUtc = toUtcDate(data.departureLocal, data.depTimezone);
+        const arrivalUtc = toUtcDate(data.arrivalLocal, data.arrTimezone);
+        const actualDepartureUtc = toUtcDate(data.actualDepartureLocal, data.actualDepartureTz);
+        const actualArrivalUtc = toUtcDate(data.actualArrivalLocal, data.actualArrivalTz);
         const flight = await tx.flight.create({
           data: {
             userId,
@@ -72,15 +82,14 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
             arrName: enriched.arrival.name,
             arrLat: enriched.arrival.lat,
             arrLon: enriched.arrival.lon,
-            departureTime: data.departureTime ? new Date(data.departureTime) : null,
-            arrivalTime: data.arrivalTime ? new Date(data.arrivalTime) : null,
-            actualDeparture: data.actualDeparture ? new Date(data.actualDeparture) : null,
-            actualArrival: data.actualArrival ? new Date(data.actualArrival) : null,
-            delayMinutes: (data.actualDeparture && data.departureTime)
-              ? Math.round(
-                  (new Date(data.actualDeparture).getTime() - new Date(data.departureTime).getTime()) /
-                    60000
-                )
+            departureTime: departureUtc,
+            arrivalTime: arrivalUtc,
+            actualDeparture: actualDepartureUtc,
+            actualArrival: actualArrivalUtc,
+            depTimeSemantics: data.depTimeSemantics ?? 'UTC',
+            arrTimeSemantics: data.arrTimeSemantics ?? 'UTC',
+            delayMinutes: actualDepartureUtc && departureUtc
+              ? Math.round((actualDepartureUtc.getTime() - departureUtc.getTime()) / 60000)
               : null,
             co2Kg: calculateCo2Kg({
               depLat: enriched.departure.lat,
@@ -109,11 +118,14 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
             frequentFlyerNumber: data.frequentFlyerNumber,
             bookingClassLetter: data.bookingClassLetter,
             coPassengers: data.coPassengers ?? [],
-            dataSource: "email_import",
+            // Default to 'email_import' for backward compat (this route was
+            // originally only called from the email/PDF parsers). AI-agent
+            // and xlsx imports can override with 'bulk_import'.
+            dataSource: data.dataSource ?? "email_import",
             lastModifiedBy: "user",
             nextApiCheckAt: calculateNextApiCheckAt(
-              data.departureTime ? new Date(data.departureTime) : null,
-              data.arrivalTime ? new Date(data.arrivalTime) : null,
+              departureUtc,
+              arrivalUtc,
               data.status ?? "scheduled",
               data.flightNumber,
             ),

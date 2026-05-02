@@ -42,10 +42,44 @@ model User {
   pendingFlightUpdates  PendingFlightUpdate[]
   pendingUpdateStats    PendingUpdateStatistics?
   parseLogs             ParseTrainingLog[]
-  trips    Trip[]
-  bookings Booking[]
+  trips     Trip[]
+  bookings  Booking[]
+  apiTokens ApiToken[]
 
   @@map("users")
+}
+
+/// Personal Access Tokens for programmatic API access.
+///
+/// The plaintext token is shown to the user exactly once on creation
+/// (formatted as `ts_pat_<32-byte-hex>`). Only the bcrypt hash is
+/// persisted, so a leaked DB never exposes usable tokens.
+///
+/// Scopes are intentionally coarse for v1: a single token grants
+/// `read`, `write`, or `admin`. Finer-grained per-resource scopes can
+/// be layered on later via the `scopes` Json field if needed.
+///
+/// `lookupHash` is a fast SHA-256 of the plaintext, indexed for O(1)
+/// row retrieval on every request — bcrypt is then used as the actual
+/// constant-time secret comparison. Without this, every API request
+/// would have to bcrypt-compare against every active token.
+model ApiToken {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label       String
+  lookupHash  String    @unique @map("lookup_hash")
+  hash        String
+  scope       String    @default("read")
+  prefix      String    @default("ts_pat_")
+  lastUsedAt  DateTime? @map("last_used_at")
+  lastUsedIp  String?   @map("last_used_ip")
+  expiresAt   DateTime? @map("expires_at")
+  revokedAt   DateTime? @map("revoked_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("api_tokens")
 }
 
 model Airport {
@@ -124,7 +158,16 @@ model Flight {
   routeSource      String?  @map("route_source") // 'live_tracking', 'historical_aggregation', 'estimated'
   hasLiveTracking  Boolean  @default(false) @map("has_live_tracking")
   // Data source tracking
-  dataSource       String?  @map("data_source") // 'manual', 'email_import', 'boarding_pass_scan', 'historical_enrichment', 'live_update', 'api_lookup'
+  dataSource       String?  @map("data_source") // 'manual', 'email_import', 'boarding_pass_scan', 'historical_enrichment', 'live_update', 'api_lookup', 'bulk_import'
+  // Time-storage semantics for departureTime / arrivalTime.
+  // 'UTC' = canonical real UTC instant (current writes always use this).
+  // 'LEGACY_FAKE_UTC' = wall-clock encoded as fake-UTC; needs depTz/arrTz to
+  // be interpreted as a real instant. Relic of the pre-canonical write path.
+  // 'UNKNOWN' = not yet classified by the backfill script (DB-side default
+  // for rows existing at the time of the ADD COLUMN migration). New writes
+  // from Prisma default to 'UTC'.
+  depTimeSemantics  String  @default("UTC") @map("dep_time_semantics")
+  arrTimeSemantics  String  @default("UTC") @map("arr_time_semantics")
   lastModifiedBy   String?  @map("last_modified_by") // 'user', 'auto_update', 'historical_enrichment', 'api'
   enrichmentHistory Json?   @map("enrichment_history") // Array of enrichment events [{type, timestamp, confidence?, source?}]
 

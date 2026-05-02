@@ -10,19 +10,18 @@
  * Step UIs live in FlightForm/FlightLookupStep, FlightSelectStep, FlightCompleteStep
  */
 
-import { useThemeStore } from "../store/themeStore";
 import { useTranslation } from "../hooks/useTranslation";
 
 import FlightReviewModal from "./FlightReviewModal";
 import FlightLookupStep from "./FlightForm/FlightLookupStep";
 import FlightSelectStep from "./FlightForm/FlightSelectStep";
 import FlightCompleteStep from "./FlightForm/FlightCompleteStep";
-import { useFlightForm } from "./FlightForm/useFlightForm";
+import { useFlightForm, type FlightSubmitOptions } from "./FlightForm/useFlightForm";
 
 import type { FlightInput, UserAchievement } from "../types";
 
 interface SimplifiedFlightFormProps {
-  onSubmit: (flight: FlightInput, force?: boolean, hasMoreFlights?: boolean) => Promise<void>;
+  onSubmit: (flight: FlightInput, opts?: FlightSubmitOptions) => Promise<void>;
   onCancel: () => void;
   onBatchComplete?: (newAchievements?: UserAchievement[]) => void;
 }
@@ -33,19 +32,16 @@ export default function SimplifiedFlightFormV2({
   onBatchComplete,
 }: SimplifiedFlightFormProps): JSX.Element {
   const { t } = useTranslation(["flights", "errors", "common"]);
-  const isDarkMode = useThemeStore((state) => state.isDarkMode);
 
   const form = useFlightForm(onSubmit, onCancel, onBatchComplete);
 
-  // Theme classes
+  // Theme classes (dark-only — see TravStatsWeb/brand/BRAND.md §1.1)
   const bgClass = "bg-[var(--bg-surface)]";
-  const textClass = isDarkMode ? "text-white" : "text-[var(--text-primary)]";
+  const textClass = "text-white";
   const mutedTextClass = "text-[var(--text-muted)]";
   const borderClass = "border-[var(--color-border)]";
-  const inputClass = isDarkMode
-    ? "bg-[var(--bg-surface)] border-[var(--color-border)] text-white placeholder-[var(--text-muted)]"
-    : "bg-[var(--bg-surface)] border-[var(--color-border)] text-[var(--text-primary)]";
-  const sizedInputClass = `${inputClass} text-base py-3`;
+  const sizedInputClass =
+    "bg-[var(--bg-surface)] border-[var(--color-border)] text-white placeholder-[var(--text-muted)] text-base py-3";
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
@@ -80,7 +76,6 @@ export default function SimplifiedFlightFormV2({
               loading={form.loading}
               showScanner={form.showScanner}
               showEmailUploader={form.showEmailUploader}
-              isDarkMode={isDarkMode}
               textClass={textClass}
               mutedTextClass={mutedTextClass}
               bgClass={bgClass}
@@ -104,7 +99,6 @@ export default function SimplifiedFlightFormV2({
           {form.step === "select" && form.lookupResults.length > 0 && (
             <FlightSelectStep
               lookupResults={form.lookupResults}
-              isDarkMode={isDarkMode}
               textClass={textClass}
               mutedTextClass={mutedTextClass}
               handleSelectFlight={form.handleSelectFlight}
@@ -160,7 +154,6 @@ export default function SimplifiedFlightFormV2({
               setCompanionInput={form.setCompanionInput}
               notes={form.notes}
               setNotes={form.setNotes}
-              isDarkMode={isDarkMode}
               textClass={textClass}
               mutedTextClass={mutedTextClass}
               sizedInputClass={sizedInputClass}
@@ -244,13 +237,23 @@ export default function SimplifiedFlightFormV2({
                 route: `${form.duplicateFlight.depIata ?? "?"} → ${form.duplicateFlight.arrIata ?? "?"}`,
               })}
             </p>
-            <div className="flex gap-3">
+            <p className="text-xs text-[var(--text-tertiary)] mb-4">
+              {t("flights:form.duplicate.mergeHint")}
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
               <button
                 type="button"
                 onClick={() => form.setDuplicateFlight(null)}
                 className="flex-1 px-4 py-2 border border-[var(--border)] rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] transition-colors"
               >
                 {t("flights:form.duplicate.cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={() => void form.handleMergeSubmit()}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                {t("flights:form.duplicate.merge")}
               </button>
               <button
                 type="button"

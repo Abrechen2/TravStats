@@ -12,6 +12,7 @@
   "newTripDesc": "Group flights manually or auto-created on email import",
   "editTrip": "Edit Trip",
   "deleteTrip": "Delete Trip",
+  "removeFromTrip": "Remove from trip",
   "deleteTripConfirm": "Delete trip \"{{name}}\"? Flights will be kept.",
   "showOnMap": "Show on Map",
   "flightCount": "{{count}} Flight",
@@ -43,6 +44,14 @@
     "deleted": "Trip deleted",
     "createError": "Failed to create trip",
     "updateError": "Failed to update trip",
-    "deleteError": "Failed to delete trip"
+    "deleteError": "Failed to delete trip",
+    "flightRemoved": "Flight removed from trip",
+    "flightRemoveError": "Failed to remove flight from trip"
+  },
+  "detectBanner": {
+    "title": "{{count}} potential trips detected",
+    "linkAll": "Link all",
+    "success": "Created {{trips}} trips, linked {{flights}} flights, removed {{orphans}} orphans",
+    "error": "Trip detection failed"
   }
 }

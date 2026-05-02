@@ -14,7 +14,6 @@ export interface FlightLookupStepProps {
   loading: boolean;
   showScanner: boolean;
   showEmailUploader: boolean;
-  isDarkMode: boolean;
   textClass: string;
   mutedTextClass: string;
   bgClass: string;
@@ -44,7 +43,6 @@ export default function FlightLookupStep({
   loading,
   showScanner,
   showEmailUploader,
-  isDarkMode,
   textClass,
   mutedTextClass,
   bgClass,
@@ -68,18 +66,14 @@ export default function FlightLookupStep({
   return (
     <div className="space-y-4">
       {/* Email Import - Beste Option */}
-      <div
-        className={`bg-gradient-to-r ${isDarkMode ? "from-green-900 to-teal-900" : "from-green-50 to-teal-50"} border-2 ${isDarkMode ? "border-green-600 shadow-lg shadow-green-900/50" : "border-green-400 shadow-lg shadow-green-200/50"} rounded-xl p-6 mb-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl ${isDarkMode ? "hover:shadow-green-900/70" : "hover:shadow-green-300/70"} ${isDarkMode ? "ring-2 ring-green-500/30" : "ring-2 ring-green-400/20"}`}
-      >
+      <div className="bg-gradient-to-r from-green-900 to-teal-900 border-2 border-green-600 shadow-lg shadow-green-900/50 rounded-xl p-6 mb-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-green-900/70 ring-2 ring-green-500/30">
         <div className="flex items-start gap-4">
           {/* Badge und Icon Bereich */}
           <div className="flex flex-col items-start gap-2 flex-shrink-0">
-            <span
-              className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${isDarkMode ? "bg-yellow-500 text-[var(--text-primary)]" : "bg-yellow-400 text-[var(--text-primary)]"} shadow-md`}
-            >
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-yellow-500 text-[var(--text-primary)] shadow-md">
               ⭐ {t("flights:form.email.bestOption")}
             </span>
-            <div className={`text-4xl ${isDarkMode ? "text-green-300" : "text-green-600"}`}>📧</div>
+            <div className="text-4xl text-green-300">📧</div>
           </div>
 
           {/* Content Bereich */}
@@ -87,18 +81,12 @@ export default function FlightLookupStep({
             <h3 className={`font-bold text-2xl ${textClass} mb-2`}>
               {t("flights:form.email.title")}
             </h3>
-            <p
-              className={`text-base ${isDarkMode ? mutedTextClass : "text-green-900"} mb-4 font-medium`}
-            >
+            <p className={`text-base ${mutedTextClass} mb-4 font-medium`}>
               {t("flights:form.email.description")}
             </p>
             <div className={`space-y-2 mb-4`}>
-              <p
-                className={`text-sm ${isDarkMode ? "text-green-300" : "text-green-700"} font-semibold flex items-center gap-2`}
-              >
-                <span className={`text-lg ${isDarkMode ? "text-green-400" : "text-green-600"}`}>
-                  ✓
-                </span>
+              <p className="text-sm text-green-300 font-semibold flex items-center gap-2">
+                <span className="text-lg text-green-400">✓</span>
                 {t("flights:form.email.bestOptionDescription")}
               </p>
             </div>
@@ -126,9 +114,7 @@ export default function FlightLookupStep({
       </div>
 
       {/* Boarding Pass Scanner */}
-      <div
-        className={`bg-gradient-to-r ${"from-[var(--bg-elevated)] to-[var(--bg-muted)]"} border ${isDarkMode ? "border-blue-700" : "border-blue-200"} rounded-lg p-4`}
-      >
+      <div className="bg-gradient-to-r from-[var(--bg-elevated)] to-[var(--bg-muted)] border border-blue-700 rounded-lg p-4">
         <div className="flex items-center justify-between">
           <div>
             <h3 className={`font-semibold text-lg ${textClass}`}>
@@ -180,9 +166,7 @@ export default function FlightLookupStep({
         </div>
         <p className={`text-xs ${mutedTextClass} mt-1`}>{t("flights:form.lookupHint")}</p>
         {flightNumber.trim() && !searchDate && (
-          <p className={`text-xs mt-0.5 ${isDarkMode ? "text-yellow-400" : "text-yellow-700"}`}>
-            {t("flights:form.dateImproves")}
-          </p>
+          <p className="text-xs mt-0.5 text-yellow-400">{t("flights:form.dateImproves")}</p>
         )}
       </div>
 
@@ -191,7 +175,7 @@ export default function FlightLookupStep({
         <button
           type="button"
           onClick={() => setStep("complete")}
-          className={`text-sm ${isDarkMode ? "text-blue-400" : "text-blue-600"} hover:underline`}
+          className="text-sm text-blue-400 hover:underline"
         >
           {t("flights:form.manualEntryAction")}
         </button>

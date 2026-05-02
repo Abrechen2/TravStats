@@ -20,6 +20,34 @@ function getFieldBorderClass(
   return "";
 }
 
+function isInferred(
+  fieldName: string,
+  inferredFields?: string[],
+  aliases: readonly string[] = []
+): boolean {
+  if (!inferredFields || inferredFields.length === 0) return false;
+  if (inferredFields.includes(fieldName)) return true;
+  return aliases.some((alias) => inferredFields.includes(alias));
+}
+
+interface InferredBadgeProps {
+  show: boolean;
+  hint: string;
+}
+
+function InferredBadge({ show, hint }: InferredBadgeProps): JSX.Element | null {
+  if (!show) return null;
+  return (
+    <span
+      className="ml-1 inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold rounded-full bg-yellow-400 text-yellow-900 cursor-help"
+      title={hint}
+      aria-label={hint}
+    >
+      !
+    </span>
+  );
+}
+
 function getConfidenceColor(confidence: number): string {
   if (confidence >= 70) return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
   if (confidence >= 40)
@@ -258,14 +286,22 @@ export default function FlightReviewModal({
     setLoading(true);
 
     try {
+      // Pick IANA tz from the airport record; fall back to user display tz if
+      // the airport entry is incomplete. Server converts local + tz → real UTC.
+      const userTz = useSettingsStore.getState().display?.timezone || "UTC";
+      const depTz = departureAirport.timezone || userTz;
+      const arrTz = arrivalAirport.timezone || userTz;
+
       const flightInput: FlightInput = {
         airline,
         flightNumber,
         aircraft,
         departure: departureAirport,
         arrival: arrivalAirport,
-        departureTime: new Date(departureTime).toISOString(),
-        arrivalTime: new Date(arrivalTime).toISOString(),
+        departureLocal: departureTime,
+        depTimezone: depTz,
+        arrivalLocal: arrivalTime,
+        arrTimezone: arrTz,
         seatNumber: seat || undefined,
         seatClass: seatClass || undefined,
         boardingGroup: boardingGroup || undefined,
@@ -387,6 +423,10 @@ export default function FlightReviewModal({
             <div>
               <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                 {t("flights:form.flightNumber")} *
+                <InferredBadge
+                  show={isInferred("flightNumber", initialData.inferredFields)}
+                  hint={t("flights:review.inferredHint")}
+                />
               </label>
               <input
                 type="text"
@@ -401,6 +441,10 @@ export default function FlightReviewModal({
             <div>
               <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                 {t("flights:form.airline")}
+                <InferredBadge
+                  show={isInferred("airline", initialData.inferredFields)}
+                  hint={t("flights:review.inferredHint")}
+                />
               </label>
               <input
                 type="text"
@@ -452,6 +496,10 @@ export default function FlightReviewModal({
             <div>
               <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                 {t("flights:form.departureTime")} *
+                <InferredBadge
+                  show={isInferred("departureTime", initialData.inferredFields)}
+                  hint={t("flights:review.inferredDateHint")}
+                />
               </label>
               <input
                 type="datetime-local"
@@ -465,6 +513,10 @@ export default function FlightReviewModal({
             <div>
               <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                 {t("flights:form.arrivalTime")} *
+                <InferredBadge
+                  show={isInferred("arrivalTime", initialData.inferredFields)}
+                  hint={t("flights:review.inferredDateHint")}
+                />
               </label>
               <input
                 type="datetime-local"
@@ -481,6 +533,10 @@ export default function FlightReviewModal({
             <div>
               <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                 {t("flights:form.aircraft")}
+                <InferredBadge
+                  show={isInferred("aircraft", initialData.inferredFields)}
+                  hint={t("flights:review.inferredHint")}
+                />
               </label>
               <input
                 type="text"
@@ -500,6 +556,10 @@ export default function FlightReviewModal({
             <div>
               <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                 {t("flights:form.seatClass")}
+                <InferredBadge
+                  show={isInferred("seatClass", initialData.inferredFields)}
+                  hint={t("flights:review.inferredHint")}
+                />
               </label>
               <select
                 value={seatClass}
@@ -565,6 +625,10 @@ export default function FlightReviewModal({
             <div>
               <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                 {t("flights:form.bookingReference")}
+                <InferredBadge
+                  show={isInferred("bookingReference", initialData.inferredFields, ["pnr"])}
+                  hint={t("flights:review.inferredHint")}
+                />
               </label>
               <input
                 type="text"
