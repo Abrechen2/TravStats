@@ -87,7 +87,7 @@ export function FlightPanel({
     }
     return grouped;
   }, [flights, sortMode]);
-  const { detailMode, selectedFlights: detailFlights, clearSelection } = useFlightSelectionStore();
+  const { detailMode, selectedFlights: detailFlights, clearSelection, showDetails } = useFlightSelectionStore();
   const addToast = useToastStore((s) => s.addToast);
 
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -136,8 +136,17 @@ export function FlightPanel({
       reloadTrips();
       // Drop the unlinked flight from the current sidebar selection so the
       // user immediately sees the leg disappear without a full refresh.
+      // Selection is the source of truth for what TripDetailsSidebar
+      // renders, so we have to update it explicitly — reloadTrips alone
+      // refreshes only the Trips tab list.
       const remaining = detailFlights.filter((f) => f.id !== flightId);
-      if (remaining.length === 0) clearSelection();
+      if (remaining.length === 0) {
+        clearSelection();
+      } else {
+        // showDetails preserves detailMode = 'trip-details' (setSelection
+        // would clear it and dismiss the sidebar).
+        showDetails(remaining, "trip-details");
+      }
     } catch {
       addToast("error", t("trips:toasts.flightRemoveError"));
     }
