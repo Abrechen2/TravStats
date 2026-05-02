@@ -14,7 +14,7 @@ export function formatDuration(minutes: number): string {
  */
 export function formatDurationWithEstimate(
   minutes: number | null | undefined,
-  estimated: boolean,
+  estimated: boolean
 ): string {
   if (minutes == null) return "—";
   const base = formatDuration(minutes);

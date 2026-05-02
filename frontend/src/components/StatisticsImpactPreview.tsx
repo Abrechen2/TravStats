@@ -80,9 +80,7 @@ export default function StatisticsImpactPreview({
     <div className="space-y-6">
       {/* Distance */}
       {data.distance && (
-        <div
-          className="p-4 rounded-lg bg-[var(--bg-surface)]"
-        >
+        <div className="p-4 rounded-lg bg-[var(--bg-surface)]">
           <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-3">
             {t("pendingUpdates:preview.distance")}
           </h3>
@@ -118,9 +116,7 @@ export default function StatisticsImpactPreview({
 
       {/* Flight Time */}
       {data.flightTime && (
-        <div
-          className="p-4 rounded-lg bg-[var(--bg-surface)]"
-        >
+        <div className="p-4 rounded-lg bg-[var(--bg-surface)]">
           <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-3">
             {t("pendingUpdates:preview.flightTime")}
           </h3>
@@ -156,9 +152,7 @@ export default function StatisticsImpactPreview({
 
       {/* Airlines */}
       {data.airlines && (
-        <div
-          className="p-4 rounded-lg bg-[var(--bg-surface)]"
-        >
+        <div className="p-4 rounded-lg bg-[var(--bg-surface)]">
           <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-3">
             {t("pendingUpdates:preview.airlines")}
           </h3>
@@ -197,9 +191,7 @@ export default function StatisticsImpactPreview({
 
       {/* Airports */}
       {data.airports && (
-        <div
-          className="p-4 rounded-lg bg-[var(--bg-surface)]"
-        >
+        <div className="p-4 rounded-lg bg-[var(--bg-surface)]">
           <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-3">
             {t("pendingUpdates:preview.airports")}
           </h3>

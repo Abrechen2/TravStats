@@ -51,7 +51,7 @@ export function sortFlightsByLegOrder(flights: Flight[]): Flight[] {
 function repairSameDayChain(window: Flight[]): Flight[] | null {
   if (window.length < 2) return null;
   const arrIatas = new Set(
-    window.map((f) => f.arrIata).filter((x): x is string => typeof x === "string"),
+    window.map((f) => f.arrIata).filter((x): x is string => typeof x === "string")
   );
   const heads = window.filter((f) => f.depIata && !arrIatas.has(f.depIata));
   if (heads.length !== 1) return null;
@@ -63,7 +63,7 @@ function repairSameDayChain(window: Flight[]): Flight[] | null {
     out.push(current);
     remaining.delete(current);
     const next: Flight | undefined = [...remaining].find(
-      (f) => f.depIata && current!.arrIata && f.depIata === current!.arrIata,
+      (f) => f.depIata && current!.arrIata && f.depIata === current!.arrIata
     );
     current = next;
   }
@@ -72,7 +72,10 @@ function repairSameDayChain(window: Flight[]): Flight[] | null {
   return out;
 }
 
-function sameYmd(a: string | Date | null | undefined, b: string | Date | null | undefined): boolean {
+function sameYmd(
+  a: string | Date | null | undefined,
+  b: string | Date | null | undefined
+): boolean {
   if (!a || !b) return false;
   const da = typeof a === "string" ? new Date(a) : a;
   const db = typeof b === "string" ? new Date(b) : b;

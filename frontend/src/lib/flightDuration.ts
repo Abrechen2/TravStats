@@ -23,7 +23,8 @@ export interface FlightDuration {
 export function getFlightDuration(flight: Flight): FlightDuration | null {
   const semOk = (flight.depTimeSemantics ?? "UTC") === "UTC";
   if (semOk && flight.departureTime && flight.arrivalTime) {
-    const real = (new Date(flight.arrivalTime).getTime() - new Date(flight.departureTime).getTime()) / 60000;
+    const real =
+      (new Date(flight.arrivalTime).getTime() - new Date(flight.departureTime).getTime()) / 60000;
     if (real > 0) return { minutes: real, estimated: false };
   }
 
@@ -33,7 +34,12 @@ export function getFlightDuration(flight: Flight): FlightDuration | null {
     typeof flight.arrLat === "number" &&
     typeof flight.arrLon === "number"
   ) {
-    const est = estimateDurationHeuristic(flight.depLat, flight.depLon, flight.arrLat, flight.arrLon);
+    const est = estimateDurationHeuristic(
+      flight.depLat,
+      flight.depLon,
+      flight.arrLat,
+      flight.arrLon
+    );
     if (est > 0) return { minutes: est, estimated: true };
   }
 

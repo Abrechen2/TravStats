@@ -39,7 +39,7 @@ export type TimeSemantics = "UTC" | "DATE_ONLY" | "UNKNOWN" | "LEGACY_FAKE_UTC";
 export function formatDateTimeInTimezone(
   input: Date | string,
   timezone: string,
-  semantics?: TimeSemantics,
+  semantics?: TimeSemantics
 ): string {
   const date = toDate(input);
   if (!date) return FALLBACK;
@@ -62,7 +62,7 @@ export function formatDateTimeInTimezone(
 export function formatTimeInTimezone(
   input: Date | string,
   timezone: string,
-  semantics?: TimeSemantics,
+  semantics?: TimeSemantics
 ): string {
   if (semantics === "DATE_ONLY") return FALLBACK;
   const date = toDate(input);

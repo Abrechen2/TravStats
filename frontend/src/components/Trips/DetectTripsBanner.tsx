@@ -24,11 +24,15 @@ export default function DetectTripsBanner({ onChange }: Props): JSX.Element | nu
     let cancelled = false;
     tripsApi
       .detect({ dryRun: true })
-      .then((r) => { if (!cancelled) setResult(r); })
+      .then((r) => {
+        if (!cancelled) setResult(r);
+      })
       .catch(() => {
         // Silent: detection is opportunistic, never blocks the page.
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (!result || result.proposed.length === 0) return null;
@@ -44,7 +48,7 @@ export default function DetectTripsBanner({ onChange }: Props): JSX.Element | nu
           trips: r.created.length,
           flights: linked,
           orphans: r.orphansRemoved,
-        }),
+        })
       );
       setResult({ proposed: [], created: r.created, orphansRemoved: r.orphansRemoved });
       onChange();

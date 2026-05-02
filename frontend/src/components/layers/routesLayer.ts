@@ -100,14 +100,10 @@ function buildPastArcs(
 
     const flightIdsForRoute = agg.flightIds.get(key) ?? [];
     const allHistorical = flightIdsForRoute.every((fid) =>
-      pastFlights.some(
-        (fl) => fl.properties.id === fid && fl.properties.status === "historical"
-      )
+      pastFlights.some((fl) => fl.properties.id === fid && fl.properties.status === "historical")
     );
 
-    const alpha = allHistorical
-      ? HISTORICAL_ALPHA
-      : (Math.min(100 + count * 14, 230) as number);
+    const alpha = allHistorical ? HISTORICAL_ALPHA : (Math.min(100 + count * 14, 230) as number);
     const color = allHistorical
       ? HISTORICAL_COLOR
       : getHeatmapColor(count, q25, q50, q75, themeColors);
