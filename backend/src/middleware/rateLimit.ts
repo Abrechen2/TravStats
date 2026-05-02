@@ -23,12 +23,30 @@ const userOrIpKey = (req: Request): string => {
 };
 
 /**
+ * PAT requests get a higher quota than browser sessions or anonymous IPs.
+ * Bulk-import / AI-agent flows legitimately need to make many writes
+ * back-to-back; the user already had to mint a write-scoped PAT (one-time
+ * deliberate action) so we trust them more than a generic anon IP.
+ *
+ * Browser-session and anonymous limits stay at the configured `baseMax`.
+ * Multiplier of 10 is conservative — a 200-flight xlsx import via
+ * `/flights/batch` (10 batches of 20) needs 10 batch requests; the
+ * default 50/h is plenty even at 1×, but 500/h leaves headroom for
+ * concurrent agent users on the same PAT pool.
+ */
+const PAT_MULTIPLIER = 10;
+const patAwareMax = (baseMax: number) => (req: Request): number => {
+  const r = req as { apiToken?: { id: string } };
+  return r.apiToken ? baseMax * PAT_MULTIPLIER : baseMax;
+};
+
+/**
  * Rate limiter for public airport search endpoints
  * Allows 100 requests per 15 minutes per IP
  */
 export const airportSearchLimiter = rateLimit({
   windowMs: RATE_LIMITS.AIRPORT_SEARCH_WINDOW_MS,
-  max: RATE_LIMITS.AIRPORT_SEARCH_MAX,
+  max: patAwareMax(RATE_LIMITS.AIRPORT_SEARCH_MAX),
   message: 'Too many airport search requests, please try again later',
   standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
   legacyHeaders: false, // Disable `X-RateLimit-*` headers
@@ -41,7 +59,7 @@ export const airportSearchLimiter = rateLimit({
  */
 export const flightCreationLimiter = rateLimit({
   windowMs: RATE_LIMITS.FLIGHT_CREATION_WINDOW_MS,
-  max: RATE_LIMITS.FLIGHT_CREATION_MAX,
+  max: patAwareMax(RATE_LIMITS.FLIGHT_CREATION_MAX),
   message: 'Too many flights created, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
@@ -187,7 +205,7 @@ export const pdfParseLimiter = rateLimit({
  */
 export const batchCreationLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 50, // 50 batch requests per hour
+  max: patAwareMax(50), // 50/h cookie, 500/h with PAT (bulk imports)
   message: 'Too many batch requests, please try again later',
   standardHeaders: true,
   legacyHeaders: false,

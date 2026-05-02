@@ -3,8 +3,38 @@ import { AuthRequest } from '../../middleware/auth';
 import { prisma } from '../../db';
 import { adminExportLimiter } from '../../middleware/rateLimit';
 import { getInstanceSettings } from '../../services/instanceSettingsService';
+import { startAirportSeeding, getSeedingStatus } from '../../services/airportSeedingService';
+import logger from '../../utils/logger';
 
 const router = Router();
+
+// POST /admin/airports/reseed — force a re-run of the OurAirports importer
+// against the existing DB. Idempotent for active airports (composite-key
+// upsert) and adds missing closed airports (TXL/THF/SXF/etc) that were
+// not seeded by the legacy OpenFlights script. Returns immediately with
+// a status row id; use GET /admin/airports/seeding-status to poll.
+router.post('/airports/reseed', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const id = await startAirportSeeding({ force: true });
+    logger.info({
+      operation: 'admin_airport_reseed',
+      message: 'Airport re-seed triggered via admin endpoint',
+      context: { statusId: id, triggeredBy: req.userId, viaPAT: !!req.apiToken },
+    });
+    res.status(202).json({ statusId: id, message: 'Seeding started' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/airports/seeding-status', async (_req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const status = await getSeedingStatus();
+    res.json(status);
+  } catch (error) {
+    next(error);
+  }
+});
 
 // Get system information
 router.get('/system/info', async (req: AuthRequest, res: Response, next: NextFunction) => {
