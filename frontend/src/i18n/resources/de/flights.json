@@ -234,7 +234,9 @@
     "unknownParser": "Unbekannt",
     "confidenceLabel": "Konfidenz",
     "sourceText": "Quelltext",
-    "hideSourceText": "Ausblenden"
+    "hideSourceText": "Ausblenden",
+    "inferredHint": "Vom Parser geraten — bitte prüfen.",
+    "inferredDateHint": "Quelle nannte kein Jahr — Parser hat es geraten. Bitte verifiziere Datum und Jahr."
   },
   "lookup": {
     "resultsTitle_one": "{{count}} Flug gefunden",

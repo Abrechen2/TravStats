@@ -234,7 +234,9 @@
     "unknownParser": "Unknown",
     "confidenceLabel": "Confidence",
     "sourceText": "Source text",
-    "hideSourceText": "Hide"
+    "hideSourceText": "Hide",
+    "inferredHint": "Inferred by parser — please verify.",
+    "inferredDateHint": "Source did not state a year — parser guessed it. Please verify the date and year."
   },
   "lookup": {
     "resultsTitle_one": "Found {{count}} flight",

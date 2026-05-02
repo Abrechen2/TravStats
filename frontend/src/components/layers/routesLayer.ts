@@ -20,27 +20,119 @@ function getCoordsFromFeature(
   };
 }
 
-export function buildRouteData(
-  flights: GeoJSONFeature[],
+interface RouteAggregation {
+  counts: Map<string, number>;
+  flightIds: Map<string, string[]>;
+}
+
+function aggregateRoutes(flights: GeoJSONFeature[]): RouteAggregation {
+  const counts = new Map<string, number>();
+  const flightIds = new Map<string, string[]>();
+  for (const f of flights) {
+    const dep = f.properties.departureAirport;
+    const arr = f.properties.arrivalAirport;
+    if (!dep.iata || !arr.iata) continue;
+    const coords = getCoordsFromFeature(f);
+    if (!coords) continue;
+    const key = routeKey(dep.iata, arr.iata);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+    const ids = flightIds.get(key) ?? [];
+    ids.push(f.properties.id);
+    flightIds.set(key, ids);
+  }
+  return { counts, flightIds };
+}
+
+// Cyan/teal for any route with at least one scheduled flight on it.
+const SCHEDULED_COLOR: [number, number, number] = [100, 200, 220];
+const SCHEDULED_ALPHA = 180;
+// Soft grey for routes whose only flights are historical (legacy, no longer
+// active). Still useful to render so the user sees them dim in the background.
+const HISTORICAL_COLOR: [number, number, number] = [150, 150, 150];
+const HISTORICAL_ALPHA = 140;
+
+function buildScheduledArcs(
+  scheduledFlights: GeoJSONFeature[],
+  agg: RouteAggregation,
+  minRouteCount: number
+): ArcDatum[] {
+  const arcMap = new Map<string, ArcDatum>();
+  for (const f of scheduledFlights) {
+    const dep = f.properties.departureAirport;
+    const arr = f.properties.arrivalAirport;
+    const coords = getCoordsFromFeature(f);
+    if (!dep.iata || !arr.iata || !coords) continue;
+    const key = routeKey(dep.iata, arr.iata);
+    const count = agg.counts.get(key) ?? 0;
+    if (count < minRouteCount || arcMap.has(key)) continue;
+    arcMap.set(key, {
+      sourcePosition: coords.depCoord,
+      targetPosition: coords.arrCoord,
+      count,
+      sourceColor: [...SCHEDULED_COLOR, SCHEDULED_ALPHA] as [number, number, number, number],
+      targetColor: [...SCHEDULED_COLOR, SCHEDULED_ALPHA] as [number, number, number, number],
+      flightIds: agg.flightIds.get(key) ?? [],
+      isScheduled: true,
+      isHistorical: false,
+    });
+  }
+  return [...arcMap.values()];
+}
+
+function buildPastArcs(
+  pastFlights: GeoJSONFeature[],
+  agg: RouteAggregation,
   minRouteCount: number,
   themeColors?: MapLayerColors
-): { arcs: ArcDatum[]; points: PointDatum[] } {
-  const routeCounts = new Map<string, number>();
-  const routeFlightIds = new Map<string, string[]>();
-  const airportMap = new Map<string, PointDatum>();
+): ArcDatum[] {
+  const counts = [...agg.counts.values()];
+  const { q25, q50, q75 } = calcQuantiles(counts.length > 0 ? counts : [0]);
+  const arcMap = new Map<string, ArcDatum>();
 
+  for (const f of pastFlights) {
+    const dep = f.properties.departureAirport;
+    const arr = f.properties.arrivalAirport;
+    const coords = getCoordsFromFeature(f);
+    if (!dep.iata || !arr.iata || !coords) continue;
+    const key = routeKey(dep.iata, arr.iata);
+    const count = agg.counts.get(key) ?? 0;
+    if (count < minRouteCount || arcMap.has(key)) continue;
+
+    const flightIdsForRoute = agg.flightIds.get(key) ?? [];
+    const allHistorical = flightIdsForRoute.every((fid) =>
+      pastFlights.some(
+        (fl) => fl.properties.id === fid && fl.properties.status === "historical"
+      )
+    );
+
+    const alpha = allHistorical
+      ? HISTORICAL_ALPHA
+      : (Math.min(100 + count * 14, 230) as number);
+    const color = allHistorical
+      ? HISTORICAL_COLOR
+      : getHeatmapColor(count, q25, q50, q75, themeColors);
+
+    arcMap.set(key, {
+      sourcePosition: coords.depCoord,
+      targetPosition: coords.arrCoord,
+      count,
+      sourceColor: [...color, alpha] as [number, number, number, number],
+      targetColor: [...color, alpha] as [number, number, number, number],
+      flightIds: flightIdsForRoute,
+      isScheduled: false,
+      isHistorical: allHistorical,
+    });
+  }
+  return [...arcMap.values()];
+}
+
+function buildAirportPoints(flights: GeoJSONFeature[]): PointDatum[] {
+  const airportMap = new Map<string, PointDatum>();
   for (const f of flights) {
     const dep = f.properties.departureAirport;
     const arr = f.properties.arrivalAirport;
     const coords = getCoordsFromFeature(f);
     if (!dep.iata || !arr.iata || !coords) continue;
-
-    const key = routeKey(dep.iata, arr.iata);
-    routeCounts.set(key, (routeCounts.get(key) ?? 0) + 1);
-
-    const ids = routeFlightIds.get(key) ?? [];
-    ids.push(f.properties.id);
-    routeFlightIds.set(key, ids);
 
     if (!airportMap.has(dep.iata)) {
       airportMap.set(dep.iata, {
@@ -63,54 +155,32 @@ export function buildRouteData(
     airportMap.set(dep.iata, { ...depPoint, count: depPoint.count + 1 });
     airportMap.set(arr.iata, { ...arrPoint, count: arrPoint.count + 1 });
   }
+  return [...airportMap.values()];
+}
 
-  const counts = [...routeCounts.values()];
-  const { q25, q50, q75 } = calcQuantiles(counts.length > 0 ? counts : [0]);
-  const arcMap = new Map<string, ArcDatum>();
+export function buildRouteData(
+  flights: GeoJSONFeature[],
+  minRouteCount: number,
+  themeColors?: MapLayerColors
+): { arcs: ArcDatum[]; points: PointDatum[] } {
+  // A route can carry both past and scheduled flights on the same airport
+  // pair (e.g. user flew FRA-CDG in 2024 and has a 2026 trip booked too).
+  // Render two arcs in that case — the past one gets the heatmap colour
+  // (so frequent routes still pop), and the scheduled one is always cyan
+  // so the "this is upcoming" signal survives mixing.
+  const scheduledFlights = flights.filter((f) => f.properties.status === "scheduled");
+  const pastFlights = flights.filter((f) => f.properties.status !== "scheduled");
 
-  for (const f of flights) {
-    const dep = f.properties.departureAirport;
-    const arr = f.properties.arrivalAirport;
-    const coords = getCoordsFromFeature(f);
-    if (!dep.iata || !arr.iata || !coords) continue;
+  const scheduledAgg = aggregateRoutes(scheduledFlights);
+  const pastAgg = aggregateRoutes(pastFlights);
 
-    const key = routeKey(dep.iata, arr.iata);
-    const count = routeCounts.get(key) ?? 0;
-    if (count < minRouteCount || arcMap.has(key)) continue;
+  const scheduledArcs = buildScheduledArcs(scheduledFlights, scheduledAgg, minRouteCount);
+  const pastArcs = buildPastArcs(pastFlights, pastAgg, minRouteCount, themeColors);
 
-    // Check if all flights on this route are scheduled (future/planned)
-    const flightIdsForRoute = routeFlightIds.get(key) ?? [];
-    const allScheduled = flightIdsForRoute.every((fid) =>
-      flights.some((fl) => fl.properties.id === fid && fl.properties.status === "scheduled")
-    );
-    const allHistorical = flightIdsForRoute.every((fid) =>
-      flights.some((fl) => fl.properties.id === fid && fl.properties.status === "historical")
-    );
-
-    // Scheduled-only routes: dashed cyan/teal; historical: grey; mixed/flown: normal heatmap color
-    const alpha = allScheduled
-      ? 180
-      : allHistorical
-        ? 140
-        : (Math.min(100 + count * 14, 230) as number);
-    const color = allScheduled
-      ? ([100, 200, 220] as [number, number, number]) // cyan/teal for scheduled
-      : allHistorical
-        ? ([150, 150, 150] as [number, number, number]) // grey for historical
-        : getHeatmapColor(count, q25, q50, q75, themeColors);
-    arcMap.set(key, {
-      sourcePosition: coords.depCoord,
-      targetPosition: coords.arrCoord,
-      count,
-      sourceColor: [...color, alpha] as [number, number, number, number],
-      targetColor: [...color, alpha] as [number, number, number, number],
-      flightIds: flightIdsForRoute,
-      isScheduled: allScheduled,
-      isHistorical: allHistorical,
-    });
-  }
-
-  return { arcs: [...arcMap.values()], points: [...airportMap.values()] };
+  return {
+    arcs: [...pastArcs, ...scheduledArcs],
+    points: buildAirportPoints(flights),
+  };
 }
 
 // Amber highlight color — stands out clearly against both dark and light map tiles
