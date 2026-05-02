@@ -87,7 +87,12 @@ export function FlightPanel({
     }
     return grouped;
   }, [flights, sortMode]);
-  const { detailMode, selectedFlights: detailFlights, clearSelection, showDetails } = useFlightSelectionStore();
+  const {
+    detailMode,
+    selectedFlights: detailFlights,
+    clearSelection,
+    showDetails,
+  } = useFlightSelectionStore();
   const addToast = useToastStore((s) => s.addToast);
 
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -95,7 +100,10 @@ export function FlightPanel({
   const [deleteTripTarget, setDeleteTripTarget] = useState<Trip | null>(null);
 
   const reloadTrips = (): void => {
-    tripsApi.getAll().then(setTrips).catch(() => {});
+    tripsApi
+      .getAll()
+      .then(setTrips)
+      .catch(() => {});
   };
 
   useEffect(() => {

@@ -60,9 +60,7 @@ export const tripsApi = {
     return data.booking;
   },
 
-  detect: async (
-    input: { dryRun?: boolean } = { dryRun: true },
-  ): Promise<DetectTripsResult> => {
+  detect: async (input: { dryRun?: boolean } = { dryRun: true }): Promise<DetectTripsResult> => {
     const { data } = await api.post<DetectTripsResult>("/trips/detect", input);
     return data;
   },

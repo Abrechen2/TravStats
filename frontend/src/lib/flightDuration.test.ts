@@ -10,8 +10,10 @@ const baseFlight = {
   status: "flown" as const,
   createdAt: "2026-01-01T00:00:00Z",
   // MUC -> JFK coords
-  depLat: 48.354, depLon: 11.786,
-  arrLat: 40.640, arrLon: -73.779,
+  depLat: 48.354,
+  depLon: 11.786,
+  arrLat: 40.64,
+  arrLon: -73.779,
 } satisfies Partial<Flight> as Flight;
 
 describe("getFlightDuration", () => {

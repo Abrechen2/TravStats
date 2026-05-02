@@ -195,12 +195,8 @@ export default function FlightCompleteStep({
     <div className="space-y-6">
       {/* Flight Details (if from lookup) */}
       {selectedFlight && (
-        <div
-          className="p-4 rounded-lg bg-green-900 border border-green-700"
-        >
-          <div
-            className="text-sm font-medium text-green-200"
-          >
+        <div className="p-4 rounded-lg bg-green-900 border border-green-700">
+          <div className="text-sm font-medium text-green-200">
             {t("flights:form.lookupLoaded", {
               airline: selectedFlight.airline,
               flightNumber: selectedFlight.flightNumber,
@@ -211,12 +207,8 @@ export default function FlightCompleteStep({
 
       {/* Time Estimation Warning (hidden for historical flights) */}
       {timeEstimationWarning?.show && status !== "historical" && (
-        <div
-          className="p-4 rounded-lg bg-yellow-900 border border-yellow-700"
-        >
-          <div
-            className="font-medium text-yellow-200 flex items-center gap-2"
-          >
+        <div className="p-4 rounded-lg bg-yellow-900 border border-yellow-700">
+          <div className="font-medium text-yellow-200 flex items-center gap-2">
             {t("flights:form.estimatedTimes")}
           </div>
           <div className="text-sm text-yellow-300 mt-2">
@@ -250,9 +242,7 @@ export default function FlightCompleteStep({
               </>
             )}
           </div>
-          <div
-            className="text-sm text-yellow-300 mt-2 font-semibold"
-          >
+          <div className="text-sm text-yellow-300 mt-2 font-semibold">
             {t("flights:form.reviewTimes")}
           </div>
           <button
@@ -448,10 +438,7 @@ export default function FlightCompleteStep({
                 required
               />
               {arrivalDayOffset > 0 && (
-                <p
-                  className="text-xs mt-1 text-blue-300"
-                  data-testid="arrival-day-offset"
-                >
+                <p className="text-xs mt-1 text-blue-300" data-testid="arrival-day-offset">
                   {arrivalDayOffset === 1
                     ? t("flights:form.arrivalNextDay")
                     : t("flights:form.arrivalDayOffset", { count: arrivalDayOffset })}

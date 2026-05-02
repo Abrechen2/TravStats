@@ -156,9 +156,7 @@ export default function BoardingPassScanner({
       <div className="bg-[var(--bg-surface)] rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-[var(--bg-surface)] border-b border-[var(--color-border)] px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-white">
-            {t("flights:scanner.title")}
-          </h2>
+          <h2 className="text-xl font-bold text-white">{t("flights:scanner.title")}</h2>
           <button
             onClick={onClose}
             disabled={scanning}
