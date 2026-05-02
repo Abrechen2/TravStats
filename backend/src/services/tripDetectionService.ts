@@ -243,7 +243,10 @@ function findHomeLoops(flights: FlightLite[], history: HomeAirportEntry[] | null
  *   - the IATA pair is within OPEN_JAW_KM coord distance (open-jaw
  *     allowance — user took ground transport between two same-metro
  *     airports), AND
- *   - ground gap (next.dep - prev.arr) <= CONTINUITY_GAP_DAYS.
+ *   - departure-to-departure gap (next.dep - prev.dep) <= CONTINUITY_GAP_DAYS.
+ *     We measure dep-to-dep because arrivalTime is not always populated
+ *     (DATE_ONLY rows leave it equal to departureTime); a 7-day window
+ *     is generous enough that the dep-vs-arr difference doesn't matter.
  */
 function findContinuityClusters(flights: FlightLite[]): FlightLite[][] {
   const out: FlightLite[][] = [];
@@ -352,31 +355,54 @@ async function commitProposals(
     return { proposed: proposals, created: [], orphansRemoved: 0 };
   }
 
-  const created = await prisma.$transaction(async (tx) => {
-    const out: DetectionResult["created"] = [];
-    const tripCount = await tx.trip.count({ where: { userId } });
+  // Tighter transaction timeout than Prisma's 5 s default — a first-time
+  // bulk import can produce 50+ proposals, each doing trip.create +
+  // optional booking.create + updateMany. Default would time out
+  // mid-commit and leave zero trips linked.
+  const created = await prisma.$transaction(
+    async (tx) => {
+      const out: DetectionResult["created"] = [];
+      const tripCount = await tx.trip.count({ where: { userId } });
 
-    for (let i = 0; i < proposals.length; i++) {
-      const p = proposals[i];
-      const color = TRIP_COLORS[(tripCount + i) % TRIP_COLORS.length];
-      const trip = await tx.trip.create({
-        data: { userId, name: p.suggestedName, color },
-      });
-      let bookingId: string | null = null;
-      if (p.pnr) {
-        const booking = await tx.booking.create({
-          data: { userId, tripId: trip.id, pnr: p.pnr },
+      for (let i = 0; i < proposals.length; i++) {
+        const p = proposals[i];
+        const color = TRIP_COLORS[(tripCount + i) % TRIP_COLORS.length];
+        const trip = await tx.trip.create({
+          data: { userId, name: p.suggestedName, color },
         });
-        bookingId = booking.id;
+        let bookingId: string | null = null;
+        if (p.pnr) {
+          const booking = await tx.booking.create({
+            data: { userId, tripId: trip.id, pnr: p.pnr },
+          });
+          bookingId = booking.id;
+        }
+        // TOCTOU guard: between snapshot and commit, a concurrent request
+        // could have linked some of these flights to another trip.
+        // updateMany skips rows whose tripId is no longer null. If the
+        // resulting cluster shrinks below 2 legs, abandon this proposal —
+        // a single-flight "trip" is noise, and the bookkeeping done above
+        // (trip + optional booking) gets rolled back via finalize cleanup
+        // (orphan delete) and the booking cascade in the schema.
+        const result = await tx.flight.updateMany({
+          where: { id: { in: p.flightIds }, userId, tripId: null },
+          data: { tripId: trip.id, bookingId },
+        });
+        if (result.count < 2) {
+          // Drop the empty-or-singleton trip + any booking so the orphan
+          // cleanup downstream still has clean state.
+          if (bookingId) {
+            await tx.booking.delete({ where: { id: bookingId } });
+          }
+          await tx.trip.delete({ where: { id: trip.id } });
+          continue;
+        }
+        out.push({ tripId: trip.id, flightIds: p.flightIds, pnr: p.pnr });
       }
-      await tx.flight.updateMany({
-        where: { id: { in: p.flightIds }, userId, tripId: null },
-        data: { tripId: trip.id, bookingId },
-      });
-      out.push({ tripId: trip.id, flightIds: p.flightIds, pnr: p.pnr });
-    }
-    return out;
-  });
+      return out;
+    },
+    { timeout: 30_000, maxWait: 5_000 },
+  );
 
   return { proposed: proposals, created, orphansRemoved: 0 };
 }
