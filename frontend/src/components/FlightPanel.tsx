@@ -274,6 +274,9 @@ export function FlightPanel({
                   onBack={clearSelection}
                   onEditTrip={detailTrip ? handleEditDetailTrip : undefined}
                   onDeleteTrip={detailTrip ? handleDeleteDetailTrip : undefined}
+                  onEditFlight={onEdit}
+                  onDuplicateFlight={onDuplicate}
+                  onDeleteFlight={onDelete}
                 />
               ) : tab === "flights" ? (
                 groups.map((group) =>
