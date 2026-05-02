@@ -197,6 +197,10 @@ export interface ParsedBooking {
   parserTemplate?: string;
   parserConfidence?: number;
   airlineNotice?: string; // Transient: not persisted to DB, UI-only notice when no template found
+  // Field names that the parser inferred — assigned a value the source did not state
+  // explicitly (e.g. picked a year for a date that omitted it). Surfaced as a
+  // "please verify" badge in the import-review UI. Not persisted.
+  inferredFields?: string[];
   missing?: string[];
   fieldSources?: Partial<
     Record<

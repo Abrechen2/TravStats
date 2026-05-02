@@ -67,6 +67,65 @@ describe("buildRouteData", () => {
     const { arcs } = buildRouteData([incomplete], 1);
     expect(arcs).toHaveLength(0);
   });
+
+  it("renders past flown + scheduled on the same airport pair as two distinct arcs", () => {
+    // Madagascar regression: 2024 flown ADD-TNR + 2026 scheduled ADD-TNR
+    // share a route key. Past iteration drew a single mixed arc that fell
+    // through to the heatmap branch and turned red. Now they should render
+    // as two arcs — the past one keeps its heatmap colour, the scheduled
+    // one stays cyan.
+    const flownFlight: GeoJSONFeature = {
+      ...mockFlight,
+      properties: { ...mockFlight.properties, id: "fl-past", status: "flown" },
+    };
+    const scheduledFlight: GeoJSONFeature = {
+      ...mockFlight,
+      properties: { ...mockFlight.properties, id: "fl-future", status: "scheduled" },
+    };
+    const { arcs } = buildRouteData([flownFlight, scheduledFlight], 1);
+
+    expect(arcs).toHaveLength(2);
+    const scheduledArc = arcs.find((a) => a.isScheduled);
+    const pastArc = arcs.find((a) => !a.isScheduled);
+    expect(scheduledArc).toBeDefined();
+    expect(pastArc).toBeDefined();
+
+    // Scheduled arc must always be cyan/teal, regardless of past history.
+    expect(scheduledArc!.sourceColor[0]).toBe(100);
+    expect(scheduledArc!.sourceColor[1]).toBe(200);
+    expect(scheduledArc!.sourceColor[2]).toBe(220);
+    expect(scheduledArc!.flightIds).toEqual(["fl-future"]);
+
+    // Past arc reflects only the flown count (1), not the scheduled one.
+    expect(pastArc!.count).toBe(1);
+    expect(pastArc!.flightIds).toEqual(["fl-past"]);
+  });
+
+  it("colours pure-scheduled routes cyan", () => {
+    const scheduled: GeoJSONFeature = {
+      ...mockFlight,
+      properties: { ...mockFlight.properties, id: "sched-1", status: "scheduled" },
+    };
+    const { arcs } = buildRouteData([scheduled], 1);
+    expect(arcs).toHaveLength(1);
+    expect(arcs[0].isScheduled).toBe(true);
+    expect(arcs[0].sourceColor[0]).toBe(100);
+    expect(arcs[0].sourceColor[1]).toBe(200);
+    expect(arcs[0].sourceColor[2]).toBe(220);
+  });
+
+  it("colours pure-historical routes grey", () => {
+    const historical: GeoJSONFeature = {
+      ...mockFlight,
+      properties: { ...mockFlight.properties, id: "hist-1", status: "historical" },
+    };
+    const { arcs } = buildRouteData([historical], 1);
+    expect(arcs).toHaveLength(1);
+    expect(arcs[0].isHistorical).toBe(true);
+    expect(arcs[0].sourceColor[0]).toBe(150);
+    expect(arcs[0].sourceColor[1]).toBe(150);
+    expect(arcs[0].sourceColor[2]).toBe(150);
+  });
 });
 
 describe("createRoutesLayers", () => {
