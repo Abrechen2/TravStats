@@ -1,4 +1,5 @@
 import { Router, Response, NextFunction } from "express";
+import { z } from "zod";
 import { prisma } from "../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { AppError } from "../middleware/errorHandler";
@@ -10,8 +11,47 @@ import {
   TRIP_COLORS,
 } from "../schemas/trip";
 import logger from "../utils/logger";
+import { detectTrips } from "../services/tripDetectionService";
 
 const router = Router();
+
+const detectTripsSchema = z.object({
+  dryRun: z.boolean().optional().default(true),
+});
+
+/**
+ * POST /trips/detect — run heuristic auto-detection over the user's
+ * trip-less flights. See `services/tripDetectionService.ts` for the
+ * heuristic stack. Default `dryRun: true` returns proposals without
+ * committing; set `dryRun: false` to atomically create trips and link
+ * flights. Always cleans up orphan trips at the end of a non-dry run.
+ */
+router.post(
+  "/trips/detect",
+  authenticate,
+  requireWriteScope,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      const { dryRun } = detectTripsSchema.parse(req.body ?? {});
+      const result = await detectTrips({ userId, dryRun });
+      logger.info({
+        operation: "trips_detect",
+        message: `Trip detection ${dryRun ? "dry-run" : "committed"}`,
+        context: {
+          userId,
+          dryRun,
+          proposed: result.proposed.length,
+          created: result.created.length,
+          orphansRemoved: result.orphansRemoved,
+        },
+      });
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 /** GET /trips — list all trips for the current user */
 router.get("/trips", authenticate, async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {

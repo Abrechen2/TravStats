@@ -44,5 +44,11 @@
     "createError": "Failed to create trip",
     "updateError": "Failed to update trip",
     "deleteError": "Failed to delete trip"
+  },
+  "detectBanner": {
+    "title": "{{count}} potential trips detected",
+    "linkAll": "Link all",
+    "success": "Created {{trips}} trips, linked {{flights}} flights, removed {{orphans}} orphans",
+    "error": "Trip detection failed"
   }
 }
