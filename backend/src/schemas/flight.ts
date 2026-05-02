@@ -104,12 +104,17 @@ const baseFlightSchema = z.object({
   }),
   // Canonical-UTC contract: clients send a local wall-clock string + an IANA
   // timezone. The server converts to a real UTC instant via fromZonedTime and
-  // marks the row with depTimeSemantics='UTC'. There is no fallback to a
-  // pre-resolved ISO string — the legacy datetime() field has been removed.
+  // marks the row with depTimeSemantics='UTC'. Bulk imports (xlsx, CSV) that
+  // only know the calendar date can opt into 'DATE_ONLY' semantics — the
+  // server then accepts dep == arr (12:00 placeholder) and the frontend hides
+  // the meaningless time component / falls back to a great-circle estimate
+  // for duration. 'UNKNOWN' is for legacy / unresolvable rows.
   departureLocal: localDateTime.optional().nullable(),
   depTimezone: ianaTimezone.optional().nullable(),
   arrivalLocal: localDateTime.optional().nullable(),
   arrTimezone: ianaTimezone.optional().nullable(),
+  depTimeSemantics: z.enum(['UTC', 'DATE_ONLY', 'UNKNOWN']).optional(),
+  arrTimeSemantics: z.enum(['UTC', 'DATE_ONLY', 'UNKNOWN']).optional(),
   actualDepartureLocal: localDateTime.optional().nullable(),
   actualDepartureTz: ianaTimezone.optional().nullable(),
   actualArrivalLocal: localDateTime.optional().nullable(),
@@ -125,6 +130,18 @@ const baseFlightSchema = z.object({
   tags: z.array(z.string().max(40)).optional(),
   companions: z.array(z.string().max(100)).max(50).optional().default([]),
   receiptUrl: receiptUrlValidator,
+  // Provenance flag — primarily for bulk-import / AI-agent flows that want
+  // to mark a row as 'bulk_import' so admins can later audit / re-process
+  // them. Defaults to 'manual' in the route when omitted.
+  dataSource: z.enum([
+    'manual',
+    'email_import',
+    'boarding_pass_scan',
+    'historical_enrichment',
+    'live_update',
+    'api_lookup',
+    'bulk_import',
+  ]).optional(),
   // Boarding pass / email import fields
   seatNumber: z.string().max(10).optional(),
   boardingGroup: z.string().max(20).optional(),

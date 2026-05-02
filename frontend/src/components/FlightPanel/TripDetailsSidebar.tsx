@@ -73,13 +73,17 @@ export function TripDetailsSidebar({ flights, onBack }: TripDetailsSidebarProps)
 
       <div className="flex-1 overflow-y-auto">
         {sorted.map((f, i) => {
-          const depTime = f.departureTime
+          // Hide rendered time when the row is flagged DATE_ONLY — the
+          // 12:00 placeholder is meaningless and would mislead the user.
+          const depDateOnly = f.depTimeSemantics === "DATE_ONLY";
+          const arrDateOnly = f.arrTimeSemantics === "DATE_ONLY";
+          const depTime = f.departureTime && !depDateOnly
             ? new Date(f.departureTime).toLocaleTimeString(locale, {
                 hour: "2-digit",
                 minute: "2-digit",
               })
             : "";
-          const arrTime = f.arrivalTime
+          const arrTime = f.arrivalTime && !arrDateOnly
             ? new Date(f.arrivalTime).toLocaleTimeString(locale, {
                 hour: "2-digit",
                 minute: "2-digit",

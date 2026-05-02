@@ -16,6 +16,8 @@ import { useToastStore } from "../store/toastStore";
 import { useSettingsStore } from "../store/settingsStore";
 import { API_LIMITS } from "../lib/constants";
 import { formatDateInTimezone } from "../lib/dateUtils";
+import { getFlightDuration, getFlightDurationMinutes } from "../lib/flightDuration";
+import { formatDurationWithEstimate } from "../lib/formatters";
 import { resolveAirlineDisplay } from "../lib/airlineUtils";
 import { useTranslation } from "../hooks/useTranslation";
 import DataSourceBadges from "../components/DataSourceBadges";
@@ -215,10 +217,7 @@ export default function FlightsTablePage(): JSX.Element {
     }
   };
 
-  const getDurationMinutes = (flight: Flight) =>
-    flight.departureTime && flight.arrivalTime
-      ? (new Date(flight.arrivalTime).getTime() - new Date(flight.departureTime).getTime()) / 60000
-      : 0;
+  const getDurationMinutes = getFlightDurationMinutes;
 
   const tripMap = useMemo(() => new Map(trips.map((t) => [t.id, t])), [trips]);
 
@@ -272,14 +271,9 @@ export default function FlightsTablePage(): JSX.Element {
   const formatDate = (date: string | null): string =>
     date ? formatDateInTimezone(date, timezone) : "—";
 
-  const formatDurationHours = (departure: string | null, arrival: string | null) => {
-    if (!departure || !arrival) return "—";
-    const minutes = getDurationMinutes({
-      departureTime: departure,
-      arrivalTime: arrival,
-    } as Flight);
-    const hours = minutes / 60;
-    return `${hours.toFixed(1)} h`;
+  const formatFlightDurationCell = (flight: Flight) => {
+    const d = getFlightDuration(flight);
+    return formatDurationWithEstimate(d?.minutes ?? null, d?.estimated ?? false);
   };
 
   const sortLabels: Record<typeof sortBy, string> = {
@@ -609,7 +603,7 @@ export default function FlightsTablePage(): JSX.Element {
                                 className="px-4 py-3 text-sm"
                                 style={{ color: "var(--text-muted)" }}
                               >
-                                {formatDurationHours(flight.departureTime, flight.arrivalTime)}
+                                {formatFlightDurationCell(flight)}
                               </td>
                               <td
                                 className="px-4 py-3 text-sm"
