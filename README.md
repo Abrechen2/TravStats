@@ -24,7 +24,7 @@ It's a logbook, not a live tracker — you record trips manually, scan a boardin
 ## Why TravStats
 
 Log every flight you take (cruises landing in v2), visualise your routes
-on interactive 2D and 3D maps, collect 58 achievements, and import flights
+on interactive 2D and 3D maps, collect 101 achievements, and import flights
 from boarding passes (QR / PDF417 / OCR) and confirmation emails — all on
 your own server, no cloud, no telemetry.
 
@@ -37,11 +37,11 @@ no ads.
 
 - 🗺️ **Six map modes** — Routes, Heatmap, Hexagon, 3D columns, animated Trips, 3D Globe
 - 📊 **Year-over-year statistics** across flights, distance, seats, classes, routes
-- 🏆 **58 Battlefield-style achievements** across five categories
+- 🏆 **101 Battlefield-style achievements** across five categories
 - 🎫 **Boarding-pass scanner** — QR / barcode / OCR
 - 📧 **Email import** — plain text, HTML, Outlook `.msg`, `.eml`, with optional local LLM parsing via Ollama
 - 💾 **Automated backups** with retention + optional WebDAV sync
-- 🔐 **Invite-only by default** — toggle public registration anytime from the admin UI; JWT in HttpOnly cookies, 15 rate limiters on sensitive endpoints
+- 🔐 **Invite-only by default** — toggle public registration anytime from the admin UI; JWT in HttpOnly cookies, 18 rate limiters on sensitive endpoints
 - 🌐 **German + English UI**, i18n-ready
 
 ---
@@ -51,11 +51,11 @@ no ads.
 <table>
   <tr>
     <td width="50%"><img src="docs/images/certificate.png" alt="Vintage passport-style flight certificate" /></td>
-    <td width="50%"><img src="docs/images/achievements.png" alt="Achievements gallery with 58 unlockables" /></td>
+    <td width="50%"><img src="docs/images/achievements.png" alt="Achievements gallery with 101 unlockables" /></td>
   </tr>
   <tr>
     <td align="center"><sub>Downloadable PNG certificate with your totals</sub></td>
-    <td align="center"><sub>58 Battlefield-style achievements</sub></td>
+    <td align="center"><sub>101 Battlefield-style achievements</sub></td>
   </tr>
 </table>
 
@@ -156,7 +156,7 @@ CO₂ tracking, trip planner, PWA).
 ## Security
 
 See [SECURITY.md](SECURITY.md) for the hardening summary, audit history, and
-verification commands. TL;DR: JWT in HttpOnly cookies, 15 distinct rate
+verification commands. TL;DR: JWT in HttpOnly cookies, 18 distinct rate
 limiters, Zod validation on every endpoint, Prisma-parameterised queries,
 Helmet CSP, invite-only by default.
 
