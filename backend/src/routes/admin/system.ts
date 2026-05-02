@@ -1,7 +1,7 @@
 import { Router, Response, NextFunction } from 'express';
 import { AuthRequest } from '../../middleware/auth';
 import { prisma } from '../../db';
-import { adminExportLimiter } from '../../middleware/rateLimit';
+import { adminExportLimiter, adminReseedLimiter } from '../../middleware/rateLimit';
 import { getInstanceSettings } from '../../services/instanceSettingsService';
 import { startAirportSeeding, getSeedingStatus } from '../../services/airportSeedingService';
 import logger from '../../utils/logger';
@@ -13,7 +13,7 @@ const router = Router();
 // upsert) and adds missing closed airports (TXL/THF/SXF/etc) that were
 // not seeded by the legacy OpenFlights script. Returns immediately with
 // a status row id; use GET /admin/airports/seeding-status to poll.
-router.post('/airports/reseed', async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.post('/airports/reseed', adminReseedLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const id = await startAirportSeeding({ force: true });
     logger.info({

@@ -187,6 +187,21 @@ export const adminExportLimiter = rateLimit({
 });
 
 /**
+ * Rate limiter for admin airport reseed endpoint. Reseeding upserts ~18k
+ * rows from OurAirports — without a cap a malicious admin PAT could DoS
+ * Postgres by spamming reseeds across process restarts. 3/h is generous
+ * for legitimate operational use (initial seed, after fixing a bad CSV).
+ */
+export const adminReseedLimiter = rateLimit({
+  windowMs: RATE_LIMITS.ADMIN_RESEED_WINDOW_MS,
+  max: RATE_LIMITS.ADMIN_RESEED_MAX,
+  message: 'Too many reseed requests, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+});
+
+/**
  * Rate limiter for PDF parse endpoint
  * Allows 20 requests per 15 minutes per user
  */
