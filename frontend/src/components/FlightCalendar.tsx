@@ -233,7 +233,7 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-[var(--text-muted)]">
-                      {flight.departureTime
+                      {flight.departureTime && flight.depTimeSemantics !== "DATE_ONLY"
                         ? new Date(flight.departureTime).toLocaleTimeString("de-DE", {
                             hour: "2-digit",
                             minute: "2-digit",

@@ -13,6 +13,7 @@ import type {
   SeatStats,
 } from "../types";
 import { API_LIMITS } from "../lib/constants";
+import { getFlightDuration } from "../lib/flightDuration";
 import { useTranslation } from "../hooks/useTranslation";
 import { useSettingsStore } from "../store/settingsStore";
 import { useAuthStore } from "../store/authStore";
@@ -176,21 +177,18 @@ export default function AdvancedStatsPage(): JSX.Element {
     }
   };
 
-  // Calculate flight duration in hours
-  const calculateDuration = (
-    departure: string | null,
-    arrival: string | null,
-    durationMinutes?: number
-  ): number => {
-    // Prefer backend-computed timezone-aware duration when available
-    if (durationMinutes != null && durationMinutes > 0) {
-      return durationMinutes / 60;
+  // Flight duration in hours. Prefers the backend-computed tz-aware value
+  // (`flight.durationMinutes`) when present, otherwise falls back to
+  // `getFlightDuration` which transparently switches to a great-circle
+  // estimate for DATE_ONLY rows (collapsed dep == arr) — without that
+  // estimate the 63 historical date-only rows in this user's data
+  // would have contributed 0h to every aggregate.
+  const calculateDuration = (flight: Flight): number => {
+    if (flight.durationMinutes != null && flight.durationMinutes > 0) {
+      return flight.durationMinutes / 60;
     }
-    if (!departure || !arrival) return 0;
-    // Fallback to naïve calculation (same-timezone flights)
-    const dep = new Date(departure).getTime();
-    const arr = new Date(arrival).getTime();
-    return (arr - dep) / (1000 * 60 * 60);
+    const d = getFlightDuration(flight);
+    return d ? d.minutes / 60 : 0;
   };
 
   // Calculate distance between two coordinates using Haversine formula
@@ -215,11 +213,7 @@ export default function AdvancedStatsPage(): JSX.Element {
         acc[flight.airline] = { count: 0, totalDuration: 0, flights: [] };
       }
       acc[flight.airline].count++;
-      acc[flight.airline].totalDuration += calculateDuration(
-        flight.departureTime,
-        flight.arrivalTime,
-        flight.durationMinutes
-      );
+      acc[flight.airline].totalDuration += calculateDuration(flight);
       acc[flight.airline].flights.push(flight);
       return acc;
     },
@@ -262,18 +256,14 @@ export default function AdvancedStatsPage(): JSX.Element {
   );
 
   const totalFlightTime = flights.reduce((sum, flight) => {
-    if (!flight.departureTime || !flight.arrivalTime) return sum;
-    const dur = calculateDuration(flight.departureTime, flight.arrivalTime, flight.durationMinutes);
+    const dur = calculateDuration(flight);
     return isNaN(dur) || dur <= 0 ? sum : sum + dur;
   }, 0);
 
   const avgFlightDuration = flights.length > 0 ? totalFlightTime / flights.length : 0;
 
   const flightDurations = flights
-    .map((f) => ({
-      flight: f,
-      duration: calculateDuration(f.departureTime, f.arrivalTime, f.durationMinutes),
-    }))
+    .map((f) => ({ flight: f, duration: calculateDuration(f) }))
     .filter((fd) => !isNaN(fd.duration) && fd.duration > 0);
 
   const longestFlight =

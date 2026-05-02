@@ -323,8 +323,11 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
         arrivalTime: arrivalUtc,
         actualDeparture: actualDepartureUtc,
         actualArrival: actualArrivalUtc,
-        depTimeSemantics: 'UTC',
-        arrTimeSemantics: 'UTC',
+        // Default to 'UTC' (the canonical contract). Bulk-import callers can
+        // override with 'DATE_ONLY' or 'UNKNOWN' when the time component is
+        // a placeholder so downstream display/aggregation knows to estimate.
+        depTimeSemantics: data.depTimeSemantics ?? 'UTC',
+        arrTimeSemantics: data.arrTimeSemantics ?? 'UTC',
         delayMinutes:
           actualDepartureUtc && departureUtc
             ? Math.round((actualDepartureUtc.getTime() - departureUtc.getTime()) / 60000)
@@ -358,7 +361,7 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
         bookingClassLetter: data.bookingClassLetter,
         coPassengers: data.coPassengers ?? [],
         // Data source tracking
-        dataSource: 'manual',
+        dataSource: data.dataSource ?? 'manual',
         lastModifiedBy: 'user',
         nextApiCheckAt: calculateNextApiCheckAt(
           departureUtc,

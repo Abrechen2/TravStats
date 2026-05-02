@@ -158,7 +158,7 @@ model Flight {
   routeSource      String?  @map("route_source") // 'live_tracking', 'historical_aggregation', 'estimated'
   hasLiveTracking  Boolean  @default(false) @map("has_live_tracking")
   // Data source tracking
-  dataSource       String?  @map("data_source") // 'manual', 'email_import', 'boarding_pass_scan', 'historical_enrichment', 'live_update', 'api_lookup'
+  dataSource       String?  @map("data_source") // 'manual', 'email_import', 'boarding_pass_scan', 'historical_enrichment', 'live_update', 'api_lookup', 'bulk_import'
   // Time-storage semantics for departureTime / arrivalTime.
   // 'UTC' = canonical real UTC instant (current writes always use this).
   // 'LEGACY_FAKE_UTC' = wall-clock encoded as fake-UTC; needs depTz/arrTz to
