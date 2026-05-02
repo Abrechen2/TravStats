@@ -12,6 +12,7 @@
   "newTripDesc": "Flüge manuell gruppieren oder beim E-Mail-Import auto-erstellt",
   "editTrip": "Trip bearbeiten",
   "deleteTrip": "Trip löschen",
+  "removeFromTrip": "Aus Trip entfernen",
   "deleteTripConfirm": "Trip \"{{name}}\" löschen? Die zugehörigen Flüge bleiben erhalten.",
   "showOnMap": "Auf Karte",
   "flightCount": "{{count}} Flug",
@@ -43,7 +44,9 @@
     "deleted": "Trip gelöscht",
     "createError": "Trip konnte nicht erstellt werden",
     "updateError": "Trip konnte nicht aktualisiert werden",
-    "deleteError": "Trip konnte nicht gelöscht werden"
+    "deleteError": "Trip konnte nicht gelöscht werden",
+    "flightRemoved": "Flug aus Trip entfernt",
+    "flightRemoveError": "Flug konnte nicht aus Trip entfernt werden"
   },
   "detectBanner": {
     "title": "{{count}} mögliche Trips erkannt",

@@ -128,6 +128,21 @@ export function FlightPanel({
     }
   };
 
+  const handleRemoveFlightFromTrip = async (flightId: string): Promise<void> => {
+    if (!detailTrip) return;
+    try {
+      await tripsApi.assignFlights(detailTrip.id, { flightIds: [flightId], action: "remove" });
+      addToast("success", t("trips:toasts.flightRemoved"));
+      reloadTrips();
+      // Drop the unlinked flight from the current sidebar selection so the
+      // user immediately sees the leg disappear without a full refresh.
+      const remaining = detailFlights.filter((f) => f.id !== flightId);
+      if (remaining.length === 0) clearSelection();
+    } catch {
+      addToast("error", t("trips:toasts.flightRemoveError"));
+    }
+  };
+
   // Per-trip stats derived from allFlights
   const tripStats = useMemo(() => {
     const map = new Map<
@@ -276,7 +291,9 @@ export function FlightPanel({
                   onDeleteTrip={detailTrip ? handleDeleteDetailTrip : undefined}
                   onEditFlight={onEdit}
                   onDuplicateFlight={onDuplicate}
-                  onDeleteFlight={onDelete}
+                  onRemoveFlightFromTrip={
+                    detailTrip ? (id) => void handleRemoveFlightFromTrip(id) : undefined
+                  }
                 />
               ) : tab === "flights" ? (
                 groups.map((group) =>

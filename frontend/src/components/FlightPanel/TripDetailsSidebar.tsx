@@ -12,7 +12,11 @@ interface TripDetailsSidebarProps {
   onDeleteTrip?: () => void;
   onEditFlight?: (flight: Flight) => void;
   onDuplicateFlight?: (flight: Flight) => void;
-  onDeleteFlight?: (flightId: string) => void;
+  /**
+   * Removes the flight from the current trip (unlinks tripId/bookingId).
+   * Does NOT delete the flight itself — that lives elsewhere in the UI.
+   */
+  onRemoveFlightFromTrip?: (flightId: string) => void;
 }
 
 export function TripDetailsSidebar({
@@ -22,14 +26,14 @@ export function TripDetailsSidebar({
   onDeleteTrip,
   onEditFlight,
   onDuplicateFlight,
-  onDeleteFlight,
+  onRemoveFlightFromTrip,
 }: TripDetailsSidebarProps): JSX.Element {
   const locale = useLocale();
   const { t } = useTranslation(["dashboard", "common", "trips"]);
 
   const sorted = useMemo(() => sortFlightsByLegOrder(flights), [flights]);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const hasLegActions = Boolean(onEditFlight || onDuplicateFlight || onDeleteFlight);
+  const hasLegActions = Boolean(onEditFlight || onDuplicateFlight || onRemoveFlightFromTrip);
 
   const tripName = sorted[0]?.trip?.name ?? t("dashboard:trips.unnamed");
   const tripColor = sorted[0]?.trip?.color ?? "#f59e0b";
@@ -202,20 +206,18 @@ export function TripDetailsSidebar({
                         </svg>
                       </button>
                     )}
-                    {onDeleteFlight && (
+                    {onRemoveFlightFromTrip && (
                       <button
                         type="button"
-                        onClick={() => onDeleteFlight(f.id)}
-                        aria-label={t("common:buttons.delete")}
-                        title={t("common:buttons.delete")}
+                        onClick={() => onRemoveFlightFromTrip(f.id)}
+                        aria-label={t("trips:removeFromTrip")}
+                        title={t("trips:removeFromTrip")}
                         className="p-1 rounded transition-colors hover:bg-[var(--bg-muted)]"
                         style={{ color: "var(--text-muted)" }}
                       >
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="3 6 5 6 21 6" />
-                          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                          <path d="M10 11v6M14 11v6" />
-                          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                          <circle cx="12" cy="12" r="10" />
+                          <line x1="8" y1="12" x2="16" y2="12" />
                         </svg>
                       </button>
                     )}
