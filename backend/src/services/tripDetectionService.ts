@@ -288,7 +288,15 @@ function makeProposal(
     (a, b) => (a.departureTime?.getTime() ?? 0) - (b.departureTime?.getTime() ?? 0),
   );
   const origin = sorted[0]?.depIata ?? "?";
-  const destination = sorted[Math.ceil(sorted.length / 2) - 1]?.arrIata ?? "?";
+  const lastArrival = sorted[sorted.length - 1]?.arrIata ?? "?";
+  // Round-trip detection: a trip is a "loop" when it ends where it
+  // started — that's true for home_loop by construction, and frequently
+  // true for PNR clusters (a single booking with both legs). For loops
+  // the identity is the *furthest* airport, not the trivial origin
+  // repetition. For one-way (origin !== lastArrival) we name by the
+  // final arrival, which feels more natural than picking the middle leg.
+  const isLoop = source === "home_loop" || origin === lastArrival;
+  const destination = isLoop ? furthestFromOrigin(sorted, origin) : lastArrival;
   const from = sorted[0]?.departureTime
     ? toYmd(sorted[0].departureTime)
     : "";
@@ -298,6 +306,9 @@ function makeProposal(
   const month = sorted[0]?.departureTime
     ? sorted[0].departureTime.toLocaleDateString("en", { month: "short", year: "numeric" })
     : "";
+  // Round-trip arrow for loops, en-dash for one-way. The arrow is a
+  // light visual cue that the trip starts and ends at home.
+  const separator = isLoop ? "↺" : "–";
   return {
     source,
     flightIds: sorted.map((f) => f.id),
@@ -305,8 +316,32 @@ function makeProposal(
     origin,
     destination,
     span: { from, to },
-    suggestedName: `${origin} – ${destination} · ${month}`,
+    suggestedName: `${origin} ${separator} ${destination} · ${month}`,
   };
+}
+
+/**
+ * Return the IATA of the cluster's furthest airport from `origin` by
+ * great-circle distance. Falls back to the last leg's arrival when the
+ * cluster has no usable lat/lon.
+ */
+function furthestFromOrigin(flights: FlightLite[], origin: string): string {
+  const homeFlight = flights.find((f) => f.depIata === origin);
+  if (!homeFlight) return flights[flights.length - 1]?.arrIata ?? "?";
+  const homeLat = homeFlight.depLat;
+  const homeLon = homeFlight.depLon;
+
+  let bestIata: string | null = null;
+  let bestDist = -1;
+  for (const f of flights) {
+    if (!f.arrIata || f.arrIata === origin) continue;
+    const d = calculateDistance(homeLat, homeLon, f.arrLat, f.arrLon);
+    if (d > bestDist) {
+      bestDist = d;
+      bestIata = f.arrIata;
+    }
+  }
+  return bestIata ?? flights[flights.length - 1]?.arrIata ?? "?";
 }
 
 async function commitProposals(
