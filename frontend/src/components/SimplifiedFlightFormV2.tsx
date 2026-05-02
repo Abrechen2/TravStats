@@ -10,7 +10,6 @@
  * Step UIs live in FlightForm/FlightLookupStep, FlightSelectStep, FlightCompleteStep
  */
 
-import { useThemeStore } from "../store/themeStore";
 import { useTranslation } from "../hooks/useTranslation";
 
 import FlightReviewModal from "./FlightReviewModal";
@@ -33,19 +32,16 @@ export default function SimplifiedFlightFormV2({
   onBatchComplete,
 }: SimplifiedFlightFormProps): JSX.Element {
   const { t } = useTranslation(["flights", "errors", "common"]);
-  const isDarkMode = useThemeStore((state) => state.isDarkMode);
 
   const form = useFlightForm(onSubmit, onCancel, onBatchComplete);
 
-  // Theme classes
+  // Theme classes (dark-only — see TravStatsWeb/brand/BRAND.md §1.1)
   const bgClass = "bg-[var(--bg-surface)]";
-  const textClass = isDarkMode ? "text-white" : "text-[var(--text-primary)]";
+  const textClass = "text-white";
   const mutedTextClass = "text-[var(--text-muted)]";
   const borderClass = "border-[var(--color-border)]";
-  const inputClass = isDarkMode
-    ? "bg-[var(--bg-surface)] border-[var(--color-border)] text-white placeholder-[var(--text-muted)]"
-    : "bg-[var(--bg-surface)] border-[var(--color-border)] text-[var(--text-primary)]";
-  const sizedInputClass = `${inputClass} text-base py-3`;
+  const sizedInputClass =
+    "bg-[var(--bg-surface)] border-[var(--color-border)] text-white placeholder-[var(--text-muted)] text-base py-3";
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
@@ -80,7 +76,6 @@ export default function SimplifiedFlightFormV2({
               loading={form.loading}
               showScanner={form.showScanner}
               showEmailUploader={form.showEmailUploader}
-              isDarkMode={isDarkMode}
               textClass={textClass}
               mutedTextClass={mutedTextClass}
               bgClass={bgClass}
@@ -104,7 +99,6 @@ export default function SimplifiedFlightFormV2({
           {form.step === "select" && form.lookupResults.length > 0 && (
             <FlightSelectStep
               lookupResults={form.lookupResults}
-              isDarkMode={isDarkMode}
               textClass={textClass}
               mutedTextClass={mutedTextClass}
               handleSelectFlight={form.handleSelectFlight}
@@ -160,7 +154,6 @@ export default function SimplifiedFlightFormV2({
               setCompanionInput={form.setCompanionInput}
               notes={form.notes}
               setNotes={form.setNotes}
-              isDarkMode={isDarkMode}
               textClass={textClass}
               mutedTextClass={mutedTextClass}
               sizedInputClass={sizedInputClass}

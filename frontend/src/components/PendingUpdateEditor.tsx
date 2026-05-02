@@ -6,7 +6,6 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "../hooks/useTranslation";
-import { useThemeStore } from "../store/themeStore";
 import { pendingUpdatesApi } from "../lib/api";
 import { logger } from "../lib/logger";
 import StatisticsImpactPreview from "./StatisticsImpactPreview";
@@ -42,7 +41,6 @@ export default function PendingUpdateEditor({
   onCancel,
 }: PendingUpdateEditorProps): JSX.Element {
   const { t } = useTranslation(["pendingUpdates", "common"]);
-  const isDarkMode = useThemeStore((state) => state.isDarkMode);
   const [editedData, setEditedData] = useState<FlightUpdateData>(
     update.editedData || update.proposedData
   );
@@ -91,9 +89,7 @@ export default function PendingUpdateEditor({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div
-        className={`${
-          isDarkMode ? "bg-[var(--bg-surface)]" : "bg-[var(--bg-surface)]"
-        } rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-auto`}
+        className="bg-[var(--bg-surface)] rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-auto"
       >
         <div className="p-6">
           {/* Header */}
