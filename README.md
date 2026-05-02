@@ -24,9 +24,9 @@ It's a logbook, not a live tracker — you record trips manually, scan a boardin
 ## Why TravStats
 
 Log every flight you take (cruises landing in v2), visualise your routes
-on interactive 2D and 3D maps, collect 58 achievements, and import flights
-from boarding passes (QR / PDF417 / OCR) and confirmation emails — all on
-your own server, no cloud, no telemetry.
+on interactive 2D and 3D maps, collect 101 achievements, and import flights
+from boarding passes (QR / PDF417 / OCR), confirmation emails, or
+Excel/CSV — all on your own server, no cloud, no telemetry.
 
 It's a logbook, not a live tracker — you record trips manually, scan a
 boarding pass, or import a confirmation email, and TravStats turns them
@@ -37,12 +37,14 @@ no ads.
 
 - 🗺️ **Six map modes** — Routes, Heatmap, Hexagon, 3D columns, animated Trips, 3D Globe
 - 📊 **Year-over-year statistics** across flights, distance, seats, classes, routes
-- 🏆 **58 Battlefield-style achievements** across five categories
+- 🏆 **101 Battlefield-style achievements** across five categories
 - 🎫 **Boarding-pass scanner** — QR / barcode / OCR
 - 📧 **Email import** — plain text, HTML, Outlook `.msg`, `.eml`, with optional local LLM parsing via Ollama
+- 📑 **Excel/CSV round-trip import** — export, edit in Excel, re-import; rows with an `id` update existing flights
+- 🤖 **Public REST API + OpenAPI 3.0 / Swagger UI** — Personal Access Tokens with `read` / `write` / `admin` scopes for AI agents and automation
 - 💾 **Automated backups** with retention + optional WebDAV sync
-- 🔐 **Invite-only by default** — toggle public registration anytime from the admin UI; JWT in HttpOnly cookies, 15 rate limiters on sensitive endpoints
-- 🌐 **German + English UI**, i18n-ready
+- 🔐 **Invite-only by default** — toggle public registration anytime from the admin UI; JWT in HttpOnly cookies, 18 rate limiters on sensitive endpoints
+- 🌐 **German + English UI** with browser-locale auto-detection, i18n-ready
 
 ---
 
@@ -55,7 +57,7 @@ no ads.
   </tr>
   <tr>
     <td align="center"><sub>Downloadable PNG certificate with your totals</sub></td>
-    <td align="center"><sub>58 Battlefield-style achievements</sub></td>
+    <td align="center"><sub>101 Battlefield-style achievements</sub></td>
   </tr>
 </table>
 
@@ -121,7 +123,7 @@ moving tags. Pick the one your platform defaults to.
 |---|---|---|
 | `:latest`, `:stable` | Latest stable release (currently `1.2.1`) | Normal production. Auto-updates to the next promoted release. |
 | `:X.Y.Z` (e.g. `:1.2.1`) | Pinned immutable release | Reproducible installs, audit, regulated environments. |
-| `:rc-latest` | Newest Release Candidate (currently `1.3.0-rc.1`) | Beta testers — receive every fresh RC via `docker compose pull`. May include breaking schema changes across major bumps; an in-place backup is taken automatically on first start of a new major. |
+| `:rc-latest` | Newest Release Candidate (currently `1.3.0-rc.7`) | Beta testers — receive every fresh RC via `docker compose pull`. May include breaking schema changes across major bumps; an in-place backup is taken automatically on first start of a new major. |
 
 Specific RC tags (`:1.3.0-rc.1`, `:2.0.0-beta.8`) and dev builds live on
 GHCR only — Docker Hub only mirrors the moving tags above plus pinned
@@ -171,7 +173,7 @@ CO₂ tracking, trip planner, PWA).
 ## Security
 
 See [SECURITY.md](SECURITY.md) for the hardening summary, audit history, and
-verification commands. TL;DR: JWT in HttpOnly cookies, 15 distinct rate
+verification commands. TL;DR: JWT in HttpOnly cookies, 18 distinct rate
 limiters, Zod validation on every endpoint, Prisma-parameterised queries,
 Helmet CSP, invite-only by default.
 
