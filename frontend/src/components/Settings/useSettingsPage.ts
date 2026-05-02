@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useSettingsStore } from "../../store/settingsStore";
-import { useThemeStore } from "../../store/themeStore";
 import { useAuthStore } from "../../store/authStore";
 import { settingsApi, authApi, backupApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
@@ -46,7 +45,6 @@ export function useSettingsPage() {
     saveRemoteSettings,
   } = useSettingsStore();
 
-  const { isDarkMode, setDarkMode } = useThemeStore();
   const addToast = useToastStore((state) => state.addToast);
 
   // Profile
@@ -213,12 +211,6 @@ export function useSettingsPage() {
     }
   };
 
-  const handleThemeToggle = () => {
-    const nextIsDark = !isDarkMode;
-    setDarkMode(nextIsDark);
-    setDisplay({ theme: nextIsDark ? "dark" : "light" });
-  };
-
   const handlePasswordChange = async () => {
     setPasswordError("");
     if (!passwordForm.oldPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
@@ -346,7 +338,6 @@ export function useSettingsPage() {
     setUnits,
     setDefaults,
     setMap,
-    isDarkMode,
     // Derived
     hasParserAccess,
     // Profile
@@ -354,7 +345,6 @@ export function useSettingsPage() {
     uploadingProfilePicture,
     saveProfileSettings,
     handleAvatarUpload,
-    handleThemeToggle,
     // Password modal
     showPasswordModal,
     setShowPasswordModal,

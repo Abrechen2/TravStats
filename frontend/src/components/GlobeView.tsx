@@ -1,7 +1,6 @@
 import { useEffect, useRef, useMemo, useState, useCallback } from "react";
 import Globe from "react-globe.gl";
 import type { GeoJSONFeature } from "../types";
-import { useThemeStore } from "../store/themeStore";
 import { escapeHtml } from "../lib/escapeHtml";
 import { useTranslation } from "../hooks/useTranslation";
 
@@ -115,7 +114,6 @@ export default function GlobeView({
 }: GlobeViewProps): JSX.Element {
   const { t } = useTranslation(["map"]);
   const globeRef = useRef<GlobeInstance | null>(null);
-  const isDarkMode = useThemeStore((state) => state.isDarkMode);
   const [autoRotate, setAutoRotate] = useState(false);
   const [cameraAltitude, setCameraAltitude] = useState(2.2);
 
@@ -404,14 +402,14 @@ export default function GlobeView({
         pointsData={pointsData}
         pointLat="lat"
         pointLng="lng"
-        pointColor={() => (isDarkMode ? "#fbbf24" : "#f59e0b")}
+        pointColor={() => "#f0a947"}
         pointAltitude={0.01}
         pointRadius={(point: object) => {
           const p = point as PointData;
           return Math.min(Math.sqrt(p.size) * 0.08, 0.3);
         }}
         pointLabel={pointLabel}
-        atmosphereColor={isDarkMode ? "#e8a045" : "#3b82f6"}
+        atmosphereColor="#f0a947"
         atmosphereAltitude={0.25}
         enablePointerInteraction={true}
         animateIn={true}

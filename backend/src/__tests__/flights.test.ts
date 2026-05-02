@@ -52,8 +52,10 @@ describe('Flights API', () => {
             lat: 51.4700,
             lon: -0.4543,
           },
-          departureTime: '2025-01-20T08:00:00Z',
-          arrivalTime: '2025-01-20T09:30:00Z',
+          departureLocal: '2025-01-20T08:00',
+          depTimezone: 'Europe/Berlin',
+          arrivalLocal: '2025-01-20T09:30',
+          arrTimezone: 'Europe/London',
           status: 'scheduled',
         })
         .expect(201);

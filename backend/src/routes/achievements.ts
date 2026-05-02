@@ -1,12 +1,14 @@
 import { Router, Response, NextFunction } from 'express';
 import { prisma } from '../db';
-import { authenticate, AuthRequest } from '../middleware/auth';
+import { authenticate, requireWriteScope, AuthRequest } from '../middleware/auth';
 import { checkAndUpdateAchievements } from '../utils/achievements';
 
 const router = Router();
 
-// All routes require authentication
+// All routes require authentication; PATs need write scope to mutate
+// (POST /check recomputes + persists user achievement state).
 router.use(authenticate);
+router.use(requireWriteScope);
 
 // Get all achievements with user progress
 router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {

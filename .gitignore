@@ -110,6 +110,11 @@ backend/data/logs/training/
 .superpowers/
 screenshots/
 
+# Loose screenshots / lab renders / demo PNGs that accumulate at the
+# repo root during sessions. Tracked PNGs (docs/images/, frontend/public/,
+# test-samples/) are unaffected.
+/*.png
+
 # Production logs (never commit)
 ProdLogs/
 .cursor

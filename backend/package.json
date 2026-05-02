@@ -37,6 +37,7 @@
   "license": "AGPL-3.0-only",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",
+    "@asteasolutions/zod-to-openapi": "^7.3.4",
     "@kenjiuno/msgreader": "^1.28.0",
     "@prisma/client": "^5.7.0",
     "archiver": "^7.0.1",
@@ -62,6 +63,7 @@
     "pdf-parse": "^2.4.5",
     "pino": "^9.6.0",
     "rotating-file-stream": "^3.2.9",
+    "swagger-ui-express": "^5.0.1",
     "tesseract.js": "^6.0.1",
     "uuid": "^14.0.0",
     "webdav": "^5.9.0",
@@ -82,6 +84,7 @@
     "@types/nodemailer": "^8.0.0",
     "@types/pdf-parse": "^1.1.5",
     "@types/supertest": "^6.0.2",
+    "@types/swagger-ui-express": "^4.1.8",
     "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^8.59.0",
     "@typescript-eslint/parser": "^8.58.0",

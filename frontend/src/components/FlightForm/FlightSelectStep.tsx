@@ -24,7 +24,6 @@ interface FlightLookupResult {
 
 export interface FlightSelectStepProps {
   lookupResults: FlightLookupResult[];
-  isDarkMode: boolean;
   textClass: string;
   mutedTextClass: string;
   handleSelectFlight: (flight: FlightLookupResult) => Promise<void>;
@@ -33,7 +32,6 @@ export interface FlightSelectStepProps {
 
 export default function FlightSelectStep({
   lookupResults,
-  isDarkMode,
   textClass,
   mutedTextClass,
   handleSelectFlight,
@@ -51,11 +49,7 @@ export default function FlightSelectStep({
           key={idx}
           type="button"
           onClick={() => handleSelectFlight(flight)}
-          className={`w-full text-left p-4 rounded-lg border-2 ${
-            isDarkMode
-              ? "border-[var(--color-border)] hover:border-blue-500 bg-[var(--bg-surface)]"
-              : "border-[var(--color-border)] hover:border-blue-500 bg-[var(--bg-base)]"
-          } transition-colors`}
+          className="w-full text-left p-4 rounded-lg border-2 border-[var(--color-border)] hover:border-blue-500 bg-[var(--bg-surface)] transition-colors"
         >
           <div className="flex justify-between items-start">
             <div>

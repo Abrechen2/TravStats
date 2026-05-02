@@ -55,7 +55,10 @@
     "flightUpdated": "Flug erfolgreich aktualisiert",
     "flightDeleted": "Flug erfolgreich gelöscht",
     "flightDeletedPending": "Flug gelöscht",
-    "flightDuplicated": "Flug dupliziert"
+    "flightDuplicated": "Flug dupliziert",
+    "flightMerged": "Bestehender Flug um {{count}} Felder ergänzt",
+    "flightMergedNoChange": "Keine neuen Felder zu ergänzen",
+    "importSummary": "{{updated}} Flüge aktualisiert, {{created}} neu angelegt"
   },
   "duplicateDialog": {
     "title": "Flug duplizieren",
@@ -71,10 +74,7 @@
   "pendingUpdates": "Ausstehende Updates",
   "map": {
     "view2d": "2D-Ansicht",
-    "view3d": "3D-Ansicht",
-    "help2d": "Zur 2D-Ansicht wechseln",
-    "help3d": "Zur 3D-Ansicht wechseln",
-    "helpExpanded": "Wechseln Sie zwischen 2D- und 3D-Kartenansicht. Die 3D-Ansicht zeigt die Flugrouten mit Höheninformationen."
+    "view3d": "3D-Ansicht"
   },
   "mapUnavailable": "Karte nicht verfügbar",
   "statsUnavailable": "Statistiken nicht verfügbar",

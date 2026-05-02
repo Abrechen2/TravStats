@@ -55,7 +55,8 @@
     "dateImproves": "Tipp: Mit Datum wird das Suchergebnis genauer.",
     "lookupLoaded": "Flugdaten geladen von {{airline}} {{flightNumber}}",
     "estimatedTimes": "Geschätzte Flugzeiten",
-    "estimatedTimesHistorical": "Basierend auf {{count}} {{count, plural, one {historischen Flug} other {historischen Flügen}}} dieser Route.",
+    "estimatedTimesHistorical_one": "Basierend auf {{count}} historischen Flug dieser Route.",
+    "estimatedTimesHistorical_other": "Basierend auf {{count}} historischen Flügen dieser Route.",
     "estimatedTimesCalculated": "Abflug- und Ankunftszeiten wurden aus Ihren früheren Flügen berechnet.",
     "estimatedTimesAutomatic": "Automatisch geschätzt basierend auf Boarding-Zeit und Flugdistanz.",
     "estimatedTimesAssumption": "Annahme: Abflug = Boarding + 30min, Flugdauer -> {{minutes}} Minuten.",
@@ -73,8 +74,8 @@
       "price": "Der Preis wird zusammen mit der Währung gespeichert. Sie können später nach Preisen filtern und Statistiken anzeigen.",
       "tags": "Fügen Sie Tags hinzu, um Flüge später zu kategorisieren und zu filtern (z.B. 'business', 'international').",
       "tagsExpanded": "Tags werden durch Kommas getrennt. Sie können später nach Tags filtern und Statistiken nach Tags gruppieren. Beispiele: 'business', 'vacation', 'lufthansa', 'long-haul'.",
-      "flightNumber": "Geben Sie die Flugnummer ein (z.B. LH400). Mit dem Lookup-Button können Sie automatisch Flugdaten abrufen, wenn ein API-Schlüssel konfiguriert ist.",
-      "flightNumberExpanded": "Die automatische Flugsuche verwendet externe APIs (AirLabs, AviationStack, OpenSky), um Flugdaten abzurufen. Ohne API-Schlüssel müssen Sie die Daten manuell eingeben."
+      "flightNumber": "Geben Sie die Flugnummer ein (z. B. LH400). Die automatische Suche funktioniert für heutige Flüge. Für vergangene oder zukünftige Flüge ist ein Aviationstack Basic+ Key nötig — sonst bitte manuell eintragen.",
+      "flightNumberExpanded": "Die Flugsuche kaskadiert über mehrere APIs:\n• Aviationstack (mit Basic+ Key: vergangene und zukünftige Flüge)\n• AirLabs (heutige Flüge)\n• OpenSky (heutige Flüge, Login erforderlich)\n\nFehlt ein passender Provider für das gewählte Datum, müssen die Daten manuell eingetragen werden. Auch bei konfiguriertem Key kann es passieren, dass die API einen bestimmten Flug nicht kennt."
     },
     "steps": {
       "input": "Flugnummer für automatische Suche eingeben",
@@ -148,9 +149,13 @@
     "arrivalAirportCode": "Ankunftsflughafen (IATA) *",
     "duplicate": {
       "title": "Flug existiert bereits",
-      "message": "Flug {{flightNumber}} ({{route}}) existiert für diesen Tag bereits. Trotzdem hinzufügen?",
+      "message": "Flug {{flightNumber}} ({{route}}) existiert für diesen Tag bereits.",
+      "mergeHint": "Mit \"Daten ergänzen\" werden nur leere Felder am bestehenden Flug aufgefüllt — nichts wird überschrieben.",
       "cancel": "Abbrechen",
-      "addAnyway": "Trotzdem hinzufügen"
+      "merge": "Daten ergänzen",
+      "addAnyway": "Trotzdem hinzufügen",
+      "mergedToast": "Bestehender Flug um {{count}} Felder ergänzt",
+      "mergedNoChange": "Keine neuen Felder zu ergänzen"
     }
   },
   "list": {
@@ -229,10 +234,13 @@
     "unknownParser": "Unbekannt",
     "confidenceLabel": "Konfidenz",
     "sourceText": "Quelltext",
-    "hideSourceText": "Ausblenden"
+    "hideSourceText": "Ausblenden",
+    "inferredHint": "Vom Parser geraten — bitte prüfen.",
+    "inferredDateHint": "Quelle nannte kein Jahr — Parser hat es geraten. Bitte verifiziere Datum und Jahr."
   },
   "lookup": {
-    "resultsTitle": "{{count}} {{count, plural, one {Flug} other {Flüge}}} gefunden",
+    "resultsTitle_one": "{{count}} Flug gefunden",
+    "resultsTitle_other": "{{count}} Flüge gefunden",
     "departs": "Abflug",
     "backToSearch": "Zurück zur Suche"
   },
@@ -269,7 +277,12 @@
   },
   "edit": {
     "title": "Flug bearbeiten",
-    "saveChanges": "Änderungen speichern"
+    "saveChanges": "Änderungen speichern",
+    "tripLabel": "Reise",
+    "tripNone": "Keiner Reise zugeordnet",
+    "tripHint": "Verlinkt diesen Flug mit einer manuell angelegten Reise. Reisen werden im Flüge-Tab erstellt.",
+    "tripAssignedToast": "Reise-Zuordnung aktualisiert",
+    "tripAssignFailed": "Reise-Zuordnung fehlgeschlagen — andere Änderungen wurden gespeichert"
   },
   "scanner": {
     "title": "Boarding Pass scannen",
@@ -335,7 +348,8 @@
   },
   "enrichmentCount": "{{count}}x angereichert",
   "confidence": "Vertrauen",
-  "sourceFlightsCount": "{{count}} {{count, plural, one {Quellflug} other {Quellflüge}}}",
+  "sourceFlightsCount_one": "{{count}} Quellflug",
+  "sourceFlightsCount_other": "{{count}} Quellflüge",
   "enrichmentHistory": "Anreicherungs-Historie",
   "pdfImport": {
     "label": "PDF",

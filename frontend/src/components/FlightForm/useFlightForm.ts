@@ -39,8 +39,14 @@ export interface DuplicateFlight {
   departureTime: string;
 }
 
+export interface FlightSubmitOptions {
+  force?: boolean;
+  merge?: boolean;
+  hasMoreFlights?: boolean;
+}
+
 export function useFlightForm(
-  onSubmit: (flight: FlightInput, force?: boolean, hasMoreFlights?: boolean) => Promise<void>,
+  onSubmit: (flight: FlightInput, opts?: FlightSubmitOptions) => Promise<void>,
   onCancel: () => void,
   onBatchComplete?: (newAchievements?: UserAchievement[]) => void
 ) {
@@ -193,8 +199,19 @@ export function useFlightForm(
       const response = await fetch(`/api/v1/flight-lookup/${flightNumber}?date=${searchDate}`);
       const data = await response.json();
       if (!data.success || !data.flights || data.flights.length === 0) {
-        setError(t("errors:noFlightsFound"));
-        setStep("complete");
+        // Stay on the input step so the error stays visible — the `step`
+        // useEffect clears errors on every transition, so jumping to
+        // "complete" here would drop the user into manual entry with no
+        // indication of what went wrong (issue #82 follow-up).
+        if (data?.error === "LOOKUP_UNAVAILABLE") {
+          setError(t("errors:lookupOutsideLiveWindow"));
+        } else if (data?.error === "NO_FLIGHT_DATA_API_GAP") {
+          setError(t("errors:noFlightDataApiGap"));
+        } else if (data?.error === "NO_FLIGHT_DATA_FOR_DATE") {
+          setError(t("errors:noFlightDataForDate"));
+        } else {
+          setError(t("errors:noFlightsFound"));
+        }
         return;
       }
       setLookupResults(data.flights);
@@ -202,7 +219,6 @@ export function useFlightForm(
     } catch (err) {
       logger.error("Flight lookup error:", err);
       setError(`${t("errors:lookupUnavailable")} ${t("errors:apiKeyInfo")}`);
-      setStep("complete");
     } finally {
       setLoading(false);
     }
@@ -306,6 +322,22 @@ export function useFlightForm(
     [departure, arrival, departureDate, arrivalDate, status]
   );
 
+  // Resolve a local YYYY-MM-DD + HH:mm pair (or year-only date for historical
+  // flights) into the canonical-UTC submit shape: a local-wall-clock string
+  // without TZ suffix. Year-only ("YYYY") expands to YYYY-01-01T00:00.
+  const buildLocalString = (date: string, time: string): string => {
+    if (date.length === 4) return `${date}-01-01T00:00`;
+    return `${date}T${time}`;
+  };
+
+  // Pick the IANA timezone for a side. Airports cached in the DB carry an
+  // IANA timezone; fall back to the user's display timezone if the airport
+  // record happens to be incomplete. Settings always has a string default
+  // ("Europe/Berlin"), so the result is non-null in practice.
+  const userTz = settings?.display?.timezone || "UTC";
+  const depTz = departure?.timezone || userTz;
+  const arrTz = arrival?.timezone || userTz;
+
   const buildFlightPayload = (): FlightInput => ({
     departure: {
       iata: departure!.iata,
@@ -329,22 +361,13 @@ export function useFlightForm(
     seatNumber: seatNumber || undefined,
     terminal: terminal || undefined,
     gate: gate || undefined,
-    // Historical entries can be year-only ("YYYY") for the
-    // month-unknown case — expand to YYYY-01-01 before serialising.
-    departureTime: !departureDate
-      ? undefined
-      : status === "historical"
-        ? new Date(
-            `${departureDate.length === 4 ? `${departureDate}-01-01` : departureDate}T00:00:00`
-          ).toISOString()
-        : new Date(`${departureDate}T${departureTime}:00`).toISOString(),
-    arrivalTime: !arrivalDate
-      ? undefined
-      : status === "historical"
-        ? new Date(
-            `${arrivalDate.length === 4 ? `${arrivalDate}-01-01` : arrivalDate}T00:00:00`
-          ).toISOString()
-        : new Date(`${arrivalDate}T${arrivalTime}:00`).toISOString(),
+    // Server converts {departureLocal, depTimezone} → real UTC via fromZonedTime.
+    // No browser-side `new Date(...).toISOString()` — that would leak the
+    // browser's local TZ into the payload.
+    departureLocal: departureDate ? buildLocalString(departureDate, departureTime) : undefined,
+    depTimezone: departureDate ? depTz : undefined,
+    arrivalLocal: arrivalDate ? buildLocalString(arrivalDate, arrivalTime) : undefined,
+    arrTimezone: arrivalDate ? arrTz : undefined,
     status,
     notes: notes || undefined,
     price,
@@ -465,7 +488,7 @@ export function useFlightForm(
     try {
       storeHistoricalData();
       setTimeEstimationWarning(null);
-      await onSubmit(buildFlightPayload(), false, true);
+      await onSubmit(buildFlightPayload(), { hasMoreFlights: true });
       prepareReturnFlightForm();
       useToastStore.getState().addToast("info", t("flights:form.returnFlightHint"));
     } catch (err: unknown) {
@@ -504,7 +527,40 @@ export function useFlightForm(
     try {
       storeHistoricalData();
       setTimeEstimationWarning(null);
-      await onSubmit(buildFlightPayload(), true);
+      await onSubmit(buildFlightPayload(), { force: true });
+    } catch (err: unknown) {
+      const errorObj = err as {
+        response?: { data?: { error?: string; details?: { field: string; message: string }[] } };
+      };
+      const details = errorObj.response?.data?.details;
+      const msg = details?.length
+        ? details.map((d) => d.message).join("; ")
+        : (errorObj.response?.data?.error ?? t("errors:saveFailed"));
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Resolve the duplicate dialog by merging new fields into the existing
+   * flight. Backend fills only nullish fields on the existing row, so the
+   * user's curated values are never overwritten — this is the safe path
+   * when the second source (boarding pass / email) carries metadata the
+   * first source didn't have (seat, gate, ticket number, …).
+   */
+  const handleMergeSubmit = async (): Promise<void> => {
+    setDuplicateFlight(null);
+    if (!departure || !arrival) {
+      setError(t("errors:missingAirports"));
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      storeHistoricalData();
+      setTimeEstimationWarning(null);
+      await onSubmit(buildFlightPayload(), { merge: true });
     } catch (err: unknown) {
       const errorObj = err as {
         response?: { data?: { error?: string; details?: { field: string; message: string }[] } };
@@ -572,7 +628,7 @@ export function useFlightForm(
       }
     } else {
       // Single flight — use the existing onSubmit callback
-      await onSubmit(enrichedFlight, false, hasMoreFlights);
+      await onSubmit(enrichedFlight, { hasMoreFlights });
 
       if (hasMoreFlights) {
         setCurrentFlightIndex(nextIndex);
@@ -671,6 +727,7 @@ export function useFlightForm(
     handleSubmit,
     handleSubmitAndReturn,
     handleForceSubmit,
+    handleMergeSubmit,
     handleFlightReviewConfirm,
   };
 }

@@ -4,7 +4,6 @@ import { useEffect, useState, Suspense, lazy } from "react";
 import { useAuthStore } from "./store/authStore";
 import { logger } from "./lib/logger";
 import { useSettingsStore } from "./store/settingsStore";
-import { useThemeStore } from "./store/themeStore";
 import ErrorBoundary from "./components/ErrorBoundary";
 import Toast from "./components/Toast";
 import AirportSeedingBanner from "./components/AirportSeedingBanner";
@@ -51,7 +50,6 @@ function AppContent() {
   const { user, _hasHydrated } = useAuthStore();
   const loadRemoteSettings = useSettingsStore((s) => s.loadRemoteSettings);
   const language = useSettingsStore((s) => s.display.language);
-  const isDarkMode = useThemeStore((s) => s.isDarkMode);
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation("common");
@@ -70,17 +68,6 @@ function AppContent() {
       }
     }
   }, [language]);
-
-  // Ensure theme is applied after store rehydration
-  useEffect(() => {
-    if (typeof document !== "undefined") {
-      if (isDarkMode) {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
-    }
-  }, [isDarkMode]);
 
   // Check setup status on app load
   useEffect(() => {

@@ -211,10 +211,11 @@ describe('Security Tests', () => {
         expect(mockReq.userId).toBe(testUser.id);
       });
 
-      it('should reject Bearer-token-only requests (cookie-only auth policy)', async () => {
-        // XSS-hardening: the middleware intentionally ignores Authorization
-        // headers so a stolen JWT in localStorage / JS-accessible memory can't
-        // be replayed. Only the HttpOnly auth_token cookie is trusted.
+      it('should reject Bearer header carrying a JWT (must be a PAT)', async () => {
+        // V1.3+: the Authorization header is the Personal Access Token entry
+        // point. JWTs are still cookie-only — a JWT presented as a Bearer
+        // does not look like a PAT (`ts_pat_…` prefix), so the middleware
+        // short-circuits before any DB hit with `Invalid API token`.
         const token = generateToken(testUser.id);
         mockReq.headers = { authorization: `Bearer ${token}` };
 
@@ -222,17 +223,19 @@ describe('Security Tests', () => {
 
         expect(mockNext).toHaveBeenCalledWith(
           expect.objectContaining({
-            message: 'No token provided',
+            message: 'Invalid API token',
             statusCode: 401,
           })
         );
         expect(mockReq.userId).toBeUndefined();
       });
 
-      it('should ignore Bearer header even when cookie is also present', async () => {
-        // Stronger guard than the above: even with a valid Bearer header,
-        // ONLY the cookie identity is used. Prevents confusion attacks where
-        // an attacker convinces the UI to send a header alongside a cookie.
+      it('should prefer Bearer over cookie when both are present (Bearer wins)', async () => {
+        // V1.3+: explicit credentials beat ambient session, matching
+        // GitHub / GitLab behaviour. With an invalid Bearer the request
+        // is rejected outright — the middleware does NOT silently fall
+        // back to the cookie, so confusion attacks that inject a header
+        // alongside a cookie cannot escalate to the cookie's identity.
         const cookieToken = generateToken(testUser.id);
         const bearerToken = generateToken('other-user-id');
 
@@ -241,7 +244,13 @@ describe('Security Tests', () => {
 
         await authenticate(mockReq as AuthRequest, mockRes as Response, mockNext);
 
-        expect(mockReq.userId).toBe(testUser.id);
+        expect(mockNext).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: 'Invalid API token',
+            statusCode: 401,
+          })
+        );
+        expect(mockReq.userId).toBeUndefined();
       });
 
       it('should reject request with no token', async () => {

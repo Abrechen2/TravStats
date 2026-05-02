@@ -1,5 +1,5 @@
 import { Router, Response, NextFunction } from 'express';
-import { authenticate, AuthRequest } from '../middleware/auth';
+import { authenticate, requireWriteScope, AuthRequest } from '../middleware/auth';
 import { uploadReceipt, deleteReceiptFile, getUploadDir } from '../middleware/upload';
 import { AppError } from '../middleware/errorHandler';
 import { uploadReceiptLimiter } from '../middleware/rateLimit';
@@ -18,6 +18,7 @@ const router = Router();
 router.post(
   '/receipt',
   authenticate,
+  requireWriteScope,
   uploadReceiptLimiter,
   uploadReceipt.single('receipt'),
   async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -119,6 +120,7 @@ router.get('/receipts/:filename', authenticate, async (req: AuthRequest, res: Re
 router.delete(
   '/receipts/:filename',
   authenticate,
+  requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const { filename } = req.params;

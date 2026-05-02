@@ -29,6 +29,7 @@ import trainingRoutes from './routes/training';
 import tripsRoutes from './routes/trips';
 import passwordResetRoutes from './routes/passwordReset';
 import suggestionsRoutes from './routes/suggestions';
+import openapiRoutes from './routes/openapi';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { requestLoggerMiddleware } from './middleware/requestLogger';
 import { prisma } from './db';
@@ -180,11 +181,26 @@ app.get('/health', (_req, res) => {
 // Public version endpoint — unauthenticated so the About section can
 // show the right version even before login. Returns both the runtime
 // version (what the user sees) and the build version baked into the
-// image (kept for diagnostics, only shown when it differs).
-app.get('/api/v1/version', (_req, res) => {
+// image (kept for diagnostics, only shown when it differs). Also
+// surfaces the latest stable GitHub release so the UI can show an
+// update banner. Network failures degrade to latestAvailable=null so
+// air-gapped installs simply hide the banner.
+app.get('/api/v1/version', async (_req, res) => {
   const version = process.env.APP_VERSION ?? 'unknown';
   const buildVersion = process.env.BUILD_VERSION ?? version;
-  res.json({ version, buildVersion });
+
+  const { getCachedLatestRelease, isUpdateAvailable } = await import('./services/updateChecker');
+  const latest = await getCachedLatestRelease();
+
+  res.json({
+    version,
+    buildVersion,
+    latestAvailable: latest?.latestAvailable ?? null,
+    updateAvailable: latest ? isUpdateAvailable(version, latest.latestAvailable) : false,
+    releaseUrl: latest?.releaseUrl ?? null,
+    releaseNotes: latest?.releaseNotes ?? null,
+    publishedAt: latest?.publishedAt ?? null,
+  });
 });
 
 // Public parser-capabilities endpoint. Lets the email import UI show
@@ -204,6 +220,9 @@ app.get('/api/v1/parser-capabilities', async (_req, res, next) => {
 });
 
 // API routes
+// OpenAPI spec + Swagger UI mounted FIRST so /api/v1/docs and
+// /api/v1/openapi.json don't fall through into authenticated routers.
+app.use('/api/v1', openapiRoutes);
 app.use('/api/v1/setup', setupRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/auth', authRoutes);

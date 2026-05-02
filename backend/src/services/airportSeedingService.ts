@@ -392,22 +392,29 @@ async function seedAirportsFromCSVAsync(statusId: string): Promise<void> {
  * Start airport seeding asynchronously
  * Returns the status ID
  */
-export async function startAirportSeeding(): Promise<string> {
+export async function startAirportSeeding(options?: { force?: boolean }): Promise<string> {
+  // The in-process `seedingInProgress` flag can get stuck `true` if the
+  // process was killed mid-seed (the catch-block reset never runs after
+  // SIGKILL). Reconcile against the DB: if there's no row in `running`
+  // status, the in-memory flag is stale — clear it before proceeding.
   if (seedingInProgress) {
-    // Check if there's an existing running status
-    const existing = await prisma.airportSeedingStatus.findFirst({
+    const running = await prisma.airportSeedingStatus.findFirst({
       where: { status: 'running' },
       orderBy: { createdAt: 'desc' },
     });
-
-    if (existing) {
-      return existing.id;
+    if (running) {
+      return running.id;
     }
+    // DB says no seed is running — flag is stale, clear it.
+    seedingInProgress = false;
   }
 
-  // Check if airports already exist
+  // Check if airports already exist. `force` lets admins re-seed an
+  // existing DB — the inner loop is idempotent (composite-key upsert by
+  // `(iata, isClosed)`) so re-running merely fills in any missing closed
+  // airports without touching the active set.
   const airportCount = await prisma.airport.count();
-  if (airportCount > 0) {
+  if (airportCount > 0 && !options?.force) {
     // Create a completed status if airports already exist
     try {
       const status = await prisma.airportSeedingStatus.create({

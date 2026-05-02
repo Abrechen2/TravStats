@@ -2,7 +2,6 @@ import type {
   Flight,
   FlightFilters,
   FlightInput,
-  FlightLookupResult,
   GeoJSONFeatureCollection,
   UserAchievement,
 } from "../../types";
@@ -40,23 +39,28 @@ export const flightsApi = {
     return data;
   },
 
-  create: async (flight: FlightInput, force = false): Promise<Flight> => {
-    const { data } = await api.post<Flight>(`/flights${force ? "?force=true" : ""}`, flight);
+  create: async (
+    flight: FlightInput,
+    opts: { force?: boolean; merge?: boolean } = {}
+  ): Promise<Flight> => {
+    const params = new URLSearchParams();
+    if (opts.force) params.set("force", "true");
+    else if (opts.merge) params.set("merge", "true");
+    const qs = params.toString();
+    const { data } = await api.post<Flight>(`/flights${qs ? `?${qs}` : ""}`, flight);
     return data;
   },
 
-  update: async (id: string, flight: Partial<FlightInput> | Partial<Flight>): Promise<Flight> => {
+  // Updates accept the canonical-UTC submit contract — partial FlightInput
+  // (with departureLocal + depTimezone pairs). Partial<Flight> is rejected
+  // server-side because departureTime/arrivalTime are no longer recognized.
+  update: async (id: string, flight: Partial<FlightInput>): Promise<Flight> => {
     const { data } = await api.put<Flight>(`/flights/${id}`, flight);
     return data;
   },
 
   delete: async (id: string): Promise<void> => {
     await api.delete(`/flights/${id}`);
-  },
-
-  lookup: async (params: { flightNumber: string; date?: string }): Promise<FlightLookupResult> => {
-    const { data } = await api.get<FlightLookupResult>("/flights/lookup", { params });
-    return data;
   },
 
   createBatch: async (
