@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import type { Trip } from "../../types";
 import TripCard from "./TripCard";
 import TripModal from "./TripModal";
+import DetectTripsBanner from "./DetectTripsBanner";
 import { tripsApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -43,6 +44,7 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
 
   return (
     <div className="p-4">
+      <DetectTripsBanner onChange={onTripsChange} />
       <div className="flex items-center justify-between mb-4">
         <p className="text-xs uppercase tracking-wide" style={{ color: "var(--text-muted)" }}>
           {t("trips:count", { count: trips.length })}

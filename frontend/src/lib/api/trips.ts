@@ -59,4 +59,27 @@ export const tripsApi = {
     const { data } = await api.post<{ booking: Booking }>("/trips/bookings", input);
     return data.booking;
   },
+
+  detect: async (
+    input: { dryRun?: boolean } = { dryRun: true },
+  ): Promise<DetectTripsResult> => {
+    const { data } = await api.post<DetectTripsResult>("/trips/detect", input);
+    return data;
+  },
 };
+
+export interface ProposedTrip {
+  source: "pnr" | "home_loop" | "continuity";
+  flightIds: string[];
+  pnr: string | null;
+  origin: string;
+  destination: string;
+  span: { from: string; to: string };
+  suggestedName: string;
+}
+
+export interface DetectTripsResult {
+  proposed: ProposedTrip[];
+  created: Array<{ tripId: string; flightIds: string[]; pnr: string | null }>;
+  orphansRemoved: number;
+}
