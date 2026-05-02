@@ -68,7 +68,7 @@
   },
   "display": {
     "title": "Display & Language",
-    "description": "Control mode, language and timezone centrally.",
+    "description": "Control language, timezone, and date/time formats centrally.",
     "language": "Language",
     "languages": {
       "de": "Deutsch",
@@ -76,17 +76,7 @@
     },
     "timezone": "Timezone",
     "dateFormat": "Date Format",
-    "timeFormat": "Time Format",
-    "theme": {
-      "title": "Theme Settings",
-      "description": "The theme determines the color scheme of the application. Dark Mode is more pleasant for the eyes in poor lighting conditions.",
-      "lightMode": "Light Mode",
-      "darkMode": "Dark Mode",
-      "lightDescription": "Bright color scheme, ideal in daylight",
-      "darkDescription": "Dark color scheme, reduces eye strain in low light",
-      "autoSave": "The setting is automatically saved and remains for future visits",
-      "active": "active"
-    }
+    "timeFormat": "Time Format"
   },
   "units": {
     "title": "Units & Formats",
