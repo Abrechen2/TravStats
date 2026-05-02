@@ -106,6 +106,30 @@ export interface SettingsState {
   saveRemoteSettings: () => Promise<void>;
 }
 
+// Browser-aware fallbacks for display fields that the backend no longer
+// seeds on a fresh install (issue #87). Run once at module load; safe to
+// call before the i18n module is fully wired since they only touch
+// navigator/Intl.
+const detectInitialLanguage = (): LanguagePreference => {
+  if (typeof navigator === "undefined") return "en";
+  const tag = navigator.language?.split("-")[0];
+  return tag === "de" ? "de" : "en";
+};
+const detectInitialTimezone = (): string => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Berlin";
+  } catch {
+    return "Europe/Berlin";
+  }
+};
+const detectInitialDateFormat = (): DateFormat => {
+  if (typeof navigator === "undefined") return "DD.MM.YYYY";
+  const region = navigator.language?.toLowerCase();
+  if (region?.startsWith("en-us")) return "MM/DD/YYYY";
+  if (region?.startsWith("en")) return "YYYY-MM-DD";
+  return "DD.MM.YYYY";
+};
+
 const defaultSettings: Omit<
   SettingsState,
   | "setProfile"
@@ -128,9 +152,9 @@ const defaultSettings: Omit<
   },
   display: {
     theme: "light",
-    language: "en",
-    timezone: "Europe/Berlin",
-    dateFormat: "DD.MM.YYYY",
+    language: detectInitialLanguage(),
+    timezone: detectInitialTimezone(),
+    dateFormat: detectInitialDateFormat(),
     timeFormat: "24h",
   },
   units: {
@@ -228,9 +252,29 @@ export const useSettingsStore = create<SettingsState>()(
                 ...remoteWithoutDirectFields
               } = remoteRecord;
               /* eslint-enable @typescript-eslint/no-unused-vars */
-              const newState = {
+              // Shallow-merge each settings group instead of replacing it
+              // wholesale. The backend's seed defaults intentionally omit
+              // browser-detectable fields (display.language / timezone /
+              // dateFormat — see issue #87) so local detection survives
+              // the first post-login fetch. A blind top-level spread would
+              // wipe state.display.language back to undefined whenever the
+              // remote payload's display object lacks the key.
+              const mergeGroup = <K extends keyof SettingsState>(key: K) => {
+                const remoteGroup = remoteWithoutDirectFields[key as string];
+                if (remoteGroup && typeof remoteGroup === "object") {
+                  return { ...(state[key] as object), ...(remoteGroup as object) };
+                }
+                return state[key];
+              };
+              const newState: SettingsState = {
                 ...state,
-                ...remoteWithoutDirectFields,
+                profile: mergeGroup("profile") as ProfileSettings,
+                display: mergeGroup("display") as DisplaySettings,
+                units: mergeGroup("units") as UnitsSettings,
+                defaults: mergeGroup("defaults") as DefaultsSettings,
+                map: mergeGroup("map") as MapSettings,
+                notifications: mergeGroup("notifications") as NotificationSettings,
+                features: mergeGroup("features") as FeaturesSettings,
               };
               // If profile username is still the default "Traveler", use the
               // actual account username from the auth store instead.
@@ -239,11 +283,6 @@ export const useSettingsStore = create<SettingsState>()(
                 if (authUser?.username) {
                   newState.profile = { ...newState.profile, username: authUser.username };
                 }
-              }
-              // Sync language to i18n if it changed (will be handled by App.tsx useEffect, but we do it here too for immediate update)
-              if (remote.display?.language && remote.display.language !== state.display.language) {
-                // The language sync will be handled by the useEffect in App.tsx
-                // No need to import i18n here to avoid circular dependencies
               }
               return newState;
             });
