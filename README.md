@@ -53,7 +53,7 @@ no ads.
 <table>
   <tr>
     <td width="50%"><img src="docs/images/certificate.png" alt="Vintage passport-style flight certificate" /></td>
-    <td width="50%"><img src="docs/images/achievements.png" alt="Achievements gallery with 58 unlockables" /></td>
+    <td width="50%"><img src="docs/images/achievements.png" alt="Achievements gallery with 101 unlockables" /></td>
   </tr>
   <tr>
     <td align="center"><sub>Downloadable PNG certificate with your totals</sub></td>
