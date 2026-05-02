@@ -5,7 +5,6 @@
  */
 
 import { useTranslation } from "../hooks/useTranslation";
-import { useThemeStore } from "../store/themeStore";
 
 interface StatisticsImpact {
   distance: {
@@ -40,7 +39,6 @@ export default function StatisticsImpactPreview({
   impact,
 }: StatisticsImpactPreviewProps): JSX.Element {
   const { t } = useTranslation(["pendingUpdates"]);
-  const isDarkMode = useThemeStore((state) => state.isDarkMode);
 
   if (!impact) {
     return (
@@ -83,7 +81,7 @@ export default function StatisticsImpactPreview({
       {/* Distance */}
       {data.distance && (
         <div
-          className={`p-4 rounded-lg ${isDarkMode ? "bg-[var(--bg-surface)]" : "bg-[var(--bg-base)]"}`}
+          className="p-4 rounded-lg bg-[var(--bg-surface)]"
         >
           <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-3">
             {t("pendingUpdates:preview.distance")}
@@ -121,7 +119,7 @@ export default function StatisticsImpactPreview({
       {/* Flight Time */}
       {data.flightTime && (
         <div
-          className={`p-4 rounded-lg ${isDarkMode ? "bg-[var(--bg-surface)]" : "bg-[var(--bg-base)]"}`}
+          className="p-4 rounded-lg bg-[var(--bg-surface)]"
         >
           <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-3">
             {t("pendingUpdates:preview.flightTime")}
@@ -159,7 +157,7 @@ export default function StatisticsImpactPreview({
       {/* Airlines */}
       {data.airlines && (
         <div
-          className={`p-4 rounded-lg ${isDarkMode ? "bg-[var(--bg-surface)]" : "bg-[var(--bg-base)]"}`}
+          className="p-4 rounded-lg bg-[var(--bg-surface)]"
         >
           <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-3">
             {t("pendingUpdates:preview.airlines")}
@@ -200,7 +198,7 @@ export default function StatisticsImpactPreview({
       {/* Airports */}
       {data.airports && (
         <div
-          className={`p-4 rounded-lg ${isDarkMode ? "bg-[var(--bg-surface)]" : "bg-[var(--bg-base)]"}`}
+          className="p-4 rounded-lg bg-[var(--bg-surface)]"
         >
           <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-3">
             {t("pendingUpdates:preview.airports")}
