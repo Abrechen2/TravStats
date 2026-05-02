@@ -78,6 +78,53 @@ describe("sortFlightsByLegOrder", () => {
     expect(sortFlightsByLegOrder(flights).map((x) => x.id)).toEqual(["a", "b"]);
   });
 
+  it("repairs a 3-flight same-day chain (DATE_ONLY interleaved with timed)", () => {
+    // Real-world: a same-day Hawaii hop A→B→C→D where the timestamps put
+    // them in the wrong order because of the 12:00 placeholder. Pairwise
+    // swap can't surface the head; we need a full chain rebuild.
+    const flights = [
+      f({
+        id: "C-D",
+        depIata: "C",
+        arrIata: "D",
+        departureTime: "2024-01-12T08:00:00Z", // earliest by clock — but middle leg
+      }),
+      f({
+        id: "A-B",
+        depIata: "A",
+        arrIata: "B",
+        departureTime: "2024-01-12T12:00:00Z",
+      }),
+      f({
+        id: "B-C",
+        depIata: "B",
+        arrIata: "C",
+        departureTime: "2024-01-12T20:00:00Z",
+      }),
+    ];
+    expect(sortFlightsByLegOrder(flights).map((x) => x.id)).toEqual(["A-B", "B-C", "C-D"]);
+  });
+
+  it("keeps timestamp order for two disjoint chains on the same day", () => {
+    // No unique head (both A and X have depIatas not used as anyone's
+    // arrival) → fall back to timestamp order rather than re-shuffle.
+    const flights = [
+      f({
+        id: "x",
+        depIata: "A",
+        arrIata: "B",
+        departureTime: "2024-01-12T08:00:00Z",
+      }),
+      f({
+        id: "y",
+        depIata: "X",
+        arrIata: "Y",
+        departureTime: "2024-01-12T20:00:00Z",
+      }),
+    ];
+    expect(sortFlightsByLegOrder(flights).map((x) => x.id)).toEqual(["x", "y"]);
+  });
+
   it("only repairs same-day pairs (different days stay timestamp-sorted)", () => {
     const flights = [
       f({
