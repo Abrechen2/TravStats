@@ -108,10 +108,12 @@ describe("lookupFlightAerodatabox", () => {
       data: [
         {
           number: "LH 400",
+          callSign: "DLH400",
           codeshareStatus: "isOperator",
           status: "Arrived",
-          aircraft: { reg: "D-AIHB", model: "Airbus A340-642" },
+          aircraft: { reg: "D-AIHB", model: "Airbus A340-642", modeS: "3C6512" },
           airline: { name: "Lufthansa", iata: "LH", icao: "DLH" },
+          greatCircleDistance: { km: 6204.69, mile: 3855.42 },
           departure: {
             airport: { iata: "FRA", icao: "EDDF", name: "Frankfurt" },
             scheduledTime: { utc: "2024-01-15 17:30Z" },
@@ -142,6 +144,74 @@ describe("lookupFlightAerodatabox", () => {
     expect(result?.arrival?.iata).toBe("JFK");
     expect(result?.departureTime).toBe("2024-01-15T17:30:00.000Z");
     expect(result?.actualDeparture).toBe("2024-01-15T17:42:00.000Z");
+    // Phase-1 enrichment fields
+    expect(result?.aircraftRegistration).toBe("D-AIHB");
+    expect(result?.aircraftModeS).toBe("3C6512");
+    expect(result?.callsign).toBe("DLH400");
+    expect(result?.airlineIata).toBe("LH");
+    expect(result?.airlineIcao).toBe("DLH");
+    expect(result?.distanceKm).toBe(6204.69);
+    expect(result?.isCodeshare).toBe(false);
+    expect(result?.operatingAirline).toBeUndefined();
+    expect(result?.statusOverride).toBeUndefined();
+  });
+
+  it("flags codeshare entries and exposes marketing + operating airline", async () => {
+    apiKeyResolverMock.getApiKey.mockImplementation(async () => "secret-key");
+
+    mockedAxios.get.mockResolvedValueOnce({
+      data: [
+        // Marketing partner (matches the searched number)
+        {
+          number: "UA 8842",
+          codeshareStatus: "isCodeshare",
+          airline: { name: "United Airlines", iata: "UA", icao: "UAL" },
+          departure: { airport: { iata: "FRA" }, scheduledTime: { utc: "2024-01-15 17:30Z" } },
+          arrival: { airport: { iata: "JFK" }, scheduledTime: { utc: "2024-01-16 02:30Z" } },
+        },
+        // Operator (different number, does the actual flying)
+        {
+          number: "LH 400",
+          callSign: "DLH400",
+          codeshareStatus: "isOperator",
+          aircraft: { reg: "D-AIHB", model: "Airbus A340-642" },
+          airline: { name: "Lufthansa", iata: "LH", icao: "DLH" },
+          departure: { airport: { iata: "FRA" }, scheduledTime: { utc: "2024-01-15 17:30Z" } },
+          arrival: { airport: { iata: "JFK" }, scheduledTime: { utc: "2024-01-16 02:30Z" } },
+        },
+      ],
+    });
+
+    const result = await lookupFlightAerodatabox("UA8842", "2024-01-15");
+
+    expect(result?.isCodeshare).toBe(true);
+    expect(result?.airline).toBe("United Airlines");
+    expect(result?.flightNumber).toBe("UA8842");
+    expect(result?.airlineIata).toBe("UA");
+    expect(result?.operatingAirline).toBe("Lufthansa");
+    // Operator-specific metadata still comes from the operator entry
+    expect(result?.aircraftRegistration).toBe("D-AIHB");
+    expect(result?.callsign).toBe("DLH400");
+  });
+
+  it("maps Cancelled and Diverted statuses to statusOverride", async () => {
+    apiKeyResolverMock.getApiKey.mockImplementation(async () => "secret-key");
+
+    mockedAxios.get.mockResolvedValueOnce({
+      data: [
+        {
+          number: "LH 400",
+          codeshareStatus: "isOperator",
+          status: "Cancelled",
+          airline: { name: "Lufthansa" },
+          departure: { airport: { iata: "FRA" }, scheduledTime: { utc: "2024-01-15 17:30Z" } },
+          arrival: { airport: { iata: "JFK" }, scheduledTime: { utc: "2024-01-16 02:30Z" } },
+        },
+      ],
+    });
+
+    const result = await lookupFlightAerodatabox("LH400", "2024-01-15");
+    expect(result?.statusOverride).toBe("cancelled");
   });
 
   it("prefers the operator entry over codeshare entries", async () => {

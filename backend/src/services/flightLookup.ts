@@ -234,6 +234,12 @@ export interface FlightData {
   airline: string;
   airlineIata?: string;
   airlineIcao?: string;
+  /** Operating airline name when the flight number is a marketing codeshare. */
+  operatingAirline?: string;
+  /** True when AeroDataBox flagged the entry as `IsCodeshare`. */
+  isCodeshare?: boolean;
+  /** ATC callsign, e.g. "DLH400". AeroDataBox-only. */
+  callsign?: string;
   departure: {
     iata?: string;
     icao?: string;
@@ -254,8 +260,14 @@ export interface FlightData {
   };
   aircraft?: string;
   aircraftIcao?: string;
+  /** Tail number / aircraft registration, e.g. "D-AIHX". AeroDataBox-only. */
+  aircraftRegistration?: string;
+  /** Mode-S transponder hex, e.g. "3C6518". AeroDataBox-only. */
+  aircraftModeS?: string;
+  /** "scheduled" | "flown" | "cancelled" | "diverted" — derived. */
   status?: string;
   duration?: number;
+  /** Great-circle route distance in km when the provider supplies it. */
   distance?: number;
 }
 
@@ -364,6 +376,29 @@ export interface FlightLookupResult {
   airline?: string;
   flightNumber?: string;
   aircraft?: string;
+  /** Aircraft registration / tail number, e.g. "D-AIHX". AeroDataBox-only. */
+  aircraftRegistration?: string;
+  /** Mode-S transponder hex, e.g. "3C6518". AeroDataBox-only. ADS-B bridge. */
+  aircraftModeS?: string;
+  /** ATC callsign, e.g. "DLH400". AeroDataBox-only. */
+  callsign?: string;
+  /** Operating airline when the requested flight number is a codeshare. */
+  operatingAirline?: string;
+  /** True when the response indicates this flight number is sold by a partner. */
+  isCodeshare?: boolean;
+  /** IATA code of the operating airline (e.g. "LH"). */
+  airlineIata?: string;
+  /** ICAO code of the operating airline (e.g. "DLH"). */
+  airlineIcao?: string;
+  /** Great-circle route distance in km from the provider; saves a haversine. */
+  distanceKm?: number;
+  /**
+   * Hint to override the locally-derived flight status. Currently only
+   * `'cancelled'` and `'diverted'` are surfaced — providers reporting
+   * normal "Landed" / "EnRoute" map to `'flown'` / `'scheduled'` via the
+   * usual date heuristic.
+   */
+  statusOverride?: "cancelled" | "diverted";
   departure?: AirportInfo;
   arrival?: AirportInfo;
   departureTime?: string;
@@ -786,6 +821,11 @@ function flightLookupResultToFlightData(
   return {
     flightNumber: result.flightNumber || fallbackFlightNumber,
     airline: result.airline || 'Unknown',
+    airlineIata: result.airlineIata,
+    airlineIcao: result.airlineIcao,
+    operatingAirline: result.operatingAirline,
+    isCodeshare: result.isCodeshare,
+    callsign: result.callsign,
     departure: {
       iata: toUndef(result.departure?.iata),
       icao: toUndef(result.departure?.icao),
@@ -805,6 +845,10 @@ function flightLookupResultToFlightData(
       gate: result.arrival?.gate,
     },
     aircraft: result.aircraft,
+    aircraftRegistration: result.aircraftRegistration,
+    aircraftModeS: result.aircraftModeS,
+    status: result.statusOverride,
+    distance: result.distanceKm,
   };
 }
 
