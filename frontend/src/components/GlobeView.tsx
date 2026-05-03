@@ -192,14 +192,14 @@ const HEAT_RGB = {
   q4: [239, 68, 68] as [number, number, number], // red — hotspot
   q3: [249, 115, 22] as [number, number, number], // orange-500
   q2: [232, 160, 69] as [number, number, number], // brand amber
-  q1: [100, 116, 139] as [number, number, number], // slate-500 — muted
+  q1: [148, 163, 184] as [number, number, number], // slate-400 — muted
 };
 
 const HEAT_HEX = {
   q4: "#ef4444",
   q3: "#f97316",
   q2: "#e8a045",
-  q1: "#64748b",
+  q1: "#94a3b8",
 };
 
 const CRUISE_PATH_COLOR: [number, number, number, number] = [80, 180, 255, 230];
@@ -378,6 +378,17 @@ const greatCircleWaypoints = (
 
   const sinC = Math.sin(c);
   const out: [number, number, number][] = [];
+  // Continuous-longitude unwrapping: atan2 always returns lng in
+  // (-180, 180], so a great circle that crosses the antimeridian would
+  // emit a 360° jump between consecutive samples (e.g. 179 → -179).
+  // PathLayer interprets that jump as "wrap around the whole globe"
+  // and renders a phantom polyline circling the planet — the ghost
+  // arcs the user reported. We unwrap each sample to stay within ±180
+  // of the previous one so the polyline is mathematically monotone.
+  // MapLibre globe projection accepts lng > 180 / < -180 (it's the
+  // same point on the sphere), so the visible arc lands exactly where
+  // it should. Pair this with `wrapLongitude: false` on PathLayer.
+  let prevLng = lng1;
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
     const A = Math.sin((1 - t) * c) / sinC;
@@ -387,8 +398,9 @@ const greatCircleWaypoints = (
     const z = A * Math.sin(phi1) + B * Math.sin(phi2);
     const lat = toDeg(Math.atan2(z, Math.sqrt(x * x + y * y)));
     let lng = toDeg(Math.atan2(y, x));
-    while (lng > 180) lng -= 360;
-    while (lng < -180) lng += 360;
+    while (lng - prevLng > 180) lng -= 360;
+    while (lng - prevLng < -180) lng += 360;
+    prevLng = lng;
     const altitude = peakAltitudeM * Math.sin(Math.PI * t);
     out.push([lng, lat, altitude]);
   }
@@ -908,14 +920,17 @@ export default function GlobeView({
         id: "globe-flight-arcs",
         data: arcsData,
         getPath: (d) => d.waypoints,
-        getColor: (d) => [...d.color, 220] as [number, number, number, number],
-        getWidth: (d) => Math.max(1, Math.min(4, 1 + Math.log2(d.count + 1))),
+        getColor: (d) => [...d.color, 235] as [number, number, number, number],
+        getWidth: (d) => Math.max(1.5, Math.min(4, 1.5 + Math.log2(d.count + 1))),
         widthUnits: "pixels",
-        widthMinPixels: 1,
+        widthMinPixels: 1.5,
         widthMaxPixels: 4,
         capRounded: true,
         jointRounded: true,
-        wrapLongitude: true,
+        // Waypoints are pre-unwrapped (lng can exceed ±180 to stay
+        // monotone across the antimeridian). PathLayer's own wrapping
+        // would cut them at ±180 and create the phantom-ring artifact.
+        wrapLongitude: false,
         pickable: true,
         autoHighlight: true,
         highlightColor: [255, 255, 255, 180],
