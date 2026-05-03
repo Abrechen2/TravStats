@@ -590,32 +590,65 @@ async function createDemoTrips(userId: string): Promise<void> {
   console.log(`   Created ${createdCount} trips`);
 }
 
-async function seedDemoUser() {
-  console.log('🔐 Creating demo user with sample flights...');
+export interface SeedDemoOptions {
+  username?: string;
+  password?: string;
+  isAdmin?: boolean;
+  /**
+   * If true, reset the password + admin flag on an existing user with this
+   * username. Used by the dev-admin seed so a forgotten admin password can
+   * be recovered idempotently.
+   */
+  resetCredentials?: boolean;
+}
+
+export async function seedDemoUser(options: SeedDemoOptions = {}) {
+  const username = options.username ?? 'demo';
+  const password = options.password ?? 'demo123';
+  const isAdmin = options.isAdmin ?? false;
+  const resetCredentials = options.resetCredentials ?? false;
+
+  console.log(`🔐 Creating ${isAdmin ? 'admin' : 'demo'} user "${username}" with sample flights...`);
 
   try {
-    // Check if demo user already exists
+    // Check if user already exists
     let demoUser = await prisma.user.findUnique({
-      where: { username: 'demo' },
+      where: { username },
     });
 
     if (!demoUser) {
-      // Create demo user
-      const passwordHash = await hashPassword('demo123');
+      // Create user
+      const passwordHash = await hashPassword(password);
       demoUser = await prisma.user.create({
         data: {
-          username: 'demo',
+          username,
           passwordHash,
+          isAdmin,
+          mustChangePassword: false,
         },
       });
 
-      console.log('✅ Demo user created');
-      console.log('   Username: demo');
-      console.log('   Password: demo123');
+      console.log(`✅ User "${username}" created`);
+      console.log(`   Username: ${username}`);
+      console.log(`   Password: ${password}`);
+      if (isAdmin) console.log('   Role:     ADMIN');
       console.log('');
       console.log('✈️  Creating 120 sample flights...');
     } else {
-      console.log('✅ Demo user already exists');
+      console.log(`✅ User "${username}" already exists`);
+
+      if (resetCredentials) {
+        const passwordHash = await hashPassword(password);
+        demoUser = await prisma.user.update({
+          where: { id: demoUser.id },
+          data: {
+            passwordHash,
+            isAdmin,
+            mustChangePassword: false,
+          },
+        });
+        console.log(`🔄 Reset credentials → password: ${password}, isAdmin: ${isAdmin}`);
+      }
       console.log('');
 
       // Check if flights already exist
@@ -717,15 +750,18 @@ async function seedDemoUser() {
     await createDemoTrips(demoUser.id);
 
     console.log('');
-    console.log('✅ Demo user setup complete!');
+    console.log(`✅ User "${username}" setup complete!`);
     console.log('   Main hub: Munich (MUC)');
     console.log('   Routes: Europe, Americas, Asia, Oceania, Africa');
   } catch (error) {
-    console.error('❌ Failed to create demo user:', error);
+    console.error(`❌ Failed to create user "${username}":`, error);
     process.exit(1);
   } finally {
     await prisma.$disconnect();
   }
 }
 
-seedDemoUser();
+// Run as default-demo when executed directly (npm run seed:demo)
+if (require.main === module) {
+  seedDemoUser();
+}
