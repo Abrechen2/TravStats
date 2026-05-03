@@ -519,6 +519,16 @@ export default function GlobeView({
     if (typeof window === "undefined") return false;
     return window.sessionStorage.getItem("globeDirectional") === "1";
   });
+  // Pinned selection: persistent detail card the user opens by clicking
+  // a marker / arc / cruise path. Survives mouse-move (unlike the
+  // hover tooltip) so they can read details without holding still.
+  const [pinned, setPinned] = useState<
+    | { kind: "arc"; data: ArcDatum }
+    | { kind: "airport"; data: PointDatum }
+    | { kind: "port"; data: PointDatum }
+    | { kind: "cruise"; data: CruisePathDatum }
+    | null
+  >(null);
   // null = no filter (all quartiles visible at full opacity). 1-4 =
   // dim every arc outside this quartile so the click-selected band
   // pops. Click the active band again to clear.
@@ -1116,10 +1126,8 @@ export default function GlobeView({
         onHover: onArcHover,
         onClick: ({ object }: { object?: ArcDatum }): void => {
           if (!object) return;
+          setPinned({ kind: "arc", data: object });
           flyToArc(object);
-          if (onFlightClick && object.flightIds.length > 0) {
-            onFlightClick(object.flightIds[object.flightIds.length - 1]);
-          }
         },
       }),
       // Antipodal routes (>= ANTIPODAL_DISTANCE_KM) — flat surface
@@ -1147,6 +1155,9 @@ export default function GlobeView({
         autoHighlight: true,
         highlightColor: [255, 255, 255, 180],
         onHover: onArcHover,
+        onClick: ({ object }: { object?: ArcDatum }): void => {
+          if (object) setPinned({ kind: "arc", data: object });
+        },
       }),
       // Cruise paths render as a dashed "wake" — a long stroke + short
       // gap pattern visually distinguishes ship routes from the solid
@@ -1176,6 +1187,9 @@ export default function GlobeView({
         autoHighlight: true,
         highlightColor: [255, 255, 255, 180],
         onHover: onCruisePathHover,
+        onClick: ({ object }: { object?: CruisePathDatum }): void => {
+          if (object) setPinned({ kind: "cruise", data: object });
+        },
       } as ConstructorParameters<typeof PathLayer<CruisePathDatum>>[0] & PathStyleExtensionProps<CruisePathDatum>),
       // Airport + port markers as ColumnLayer (3D cylinders rendered
       // radially outward from the globe surface). Replaces the old
@@ -1200,6 +1214,9 @@ export default function GlobeView({
         autoHighlight: true,
         highlightColor: [255, 255, 255, 200],
         onHover: onAirportHover,
+        onClick: ({ object }: { object?: PointDatum }): void => {
+          if (object) setPinned({ kind: "airport", data: object });
+        },
       }),
       new ColumnLayer<PointDatum>({
         id: "globe-port-columns",
@@ -1216,6 +1233,9 @@ export default function GlobeView({
         autoHighlight: true,
         highlightColor: [255, 255, 255, 200],
         onHover: onPortHover,
+        onClick: ({ object }: { object?: PointDatum }): void => {
+          if (object) setPinned({ kind: "port", data: object });
+        },
       }),
     ],
     [
@@ -1510,6 +1530,112 @@ export default function GlobeView({
           })}
         </div>
       </div>
+
+      {/* Pinned detail card — persists after click until explicitly
+          dismissed. Sits bottom-right so it doesn't fight the legend
+          (bottom-left), style picker (bottom-center), or stats overlay
+          (top-left). Includes a "Details" CTA on flight arcs that
+          delegates to the parent's onFlightClick to open the full
+          flight page. */}
+      {pinned && (
+        <div
+          className="absolute right-4 bottom-4 z-20"
+          style={{ pointerEvents: "auto", maxWidth: 280 }}
+        >
+          <div
+            className="rounded-md p-3 text-xs"
+            style={{
+              background: "rgba(13, 17, 23, 0.92)",
+              backdropFilter: "blur(12px)",
+              border: "1px solid rgba(255,255,255,0.22)",
+              color: "rgba(241,245,249,0.95)",
+              fontFamily: "'Inter', sans-serif",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+              minWidth: 220,
+            }}
+          >
+            <div className="mb-2 flex items-start justify-between gap-2">
+              <div className="text-[12px] font-semibold">
+                {pinned.kind === "arc" && (
+                  <>
+                    {pinned.data.departure.iata ?? "?"} {directional ? "→" : "↔"}{" "}
+                    {pinned.data.arrival.iata ?? "?"}
+                  </>
+                )}
+                {pinned.kind === "airport" && <>✈️ {pinned.data.iata}</>}
+                {pinned.kind === "port" && <>⚓ {pinned.data.name}</>}
+                {pinned.kind === "cruise" && <>🚢 {pinned.data.cruiseLabel}</>}
+              </div>
+              <button
+                type="button"
+                aria-label="close"
+                onClick={() => setPinned(null)}
+                className="cursor-pointer rounded px-1 text-[11px] leading-none opacity-70 hover:opacity-100"
+                style={{ background: "rgba(255,255,255,0.08)" }}
+              >
+                ✕
+              </button>
+            </div>
+            {pinned.kind === "arc" && (
+              <div className="space-y-1 text-[11px]">
+                <div className="opacity-85">
+                  {pinned.data.departure.name ?? pinned.data.departure.iata ?? "?"} →{" "}
+                  {pinned.data.arrival.name ?? pinned.data.arrival.iata ?? "?"}
+                </div>
+                <div
+                  style={{
+                    color: `rgb(${pinned.data.color[0]},${pinned.data.color[1]},${pinned.data.color[2]})`,
+                    fontWeight: 600,
+                  }}
+                >
+                  {t("map:globe.timesFlown", { count: pinned.data.count })}
+                </div>
+                {onFlightClick && pinned.data.flightIds.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const last = pinned.data.flightIds[pinned.data.flightIds.length - 1];
+                      onFlightClick(last);
+                    }}
+                    className="mt-2 cursor-pointer rounded px-2 py-1 text-[11px] font-medium transition-colors"
+                    style={{
+                      background: "rgba(240,169,71,0.18)",
+                      border: "1px solid rgba(240,169,71,0.45)",
+                      color: "rgba(255,205,128,1)",
+                    }}
+                  >
+                    {t("map:globe.openLastFlight")}
+                  </button>
+                )}
+              </div>
+            )}
+            {pinned.kind === "airport" && (
+              <div className="space-y-1 text-[11px]">
+                <div className="opacity-85">{pinned.data.name}</div>
+                <div style={{ color: "#fbbf24", fontWeight: 600 }}>
+                  {pinned.data.size}{" "}
+                  {t("map:globe.flight", { count: pinned.data.size })}
+                </div>
+              </div>
+            )}
+            {pinned.kind === "port" && (
+              <div className="space-y-1 text-[11px]">
+                {pinned.data.iata !== pinned.data.name && (
+                  <div className="opacity-85">{pinned.data.iata}</div>
+                )}
+                <div style={{ color: "#7dd3fc", fontWeight: 600 }}>
+                  {pinned.data.size} {t("map:airportMarkers.visits")}
+                </div>
+              </div>
+            )}
+            {pinned.kind === "cruise" && (
+              <div className="text-[11px] opacity-85">
+                {t("map:visMode.tripRoutes")}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Hover tooltip — pre-escaped HTML (escapeHtml at every interpolation
           site upstream), positioned at the deck.gl pick coords. Offset
