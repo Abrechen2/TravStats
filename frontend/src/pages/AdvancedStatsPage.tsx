@@ -19,6 +19,7 @@ import { useSettingsStore } from "../store/settingsStore";
 import { useAuthStore } from "../store/authStore";
 import { FlightCertificate, type FlightCertificateStats } from "../components/FlightCertificate";
 import AirlineRankingCard from "../components/Stats/AirlineRankingCard";
+import AircraftRankingCard from "../components/Stats/AircraftRankingCard";
 import CountryDistributionCard from "../components/Stats/CountryDistributionCard";
 import StatsYearFilter from "../components/Stats/StatsYearFilter";
 import StatsOverviewCards from "../components/Stats/StatsOverviewCards";
@@ -627,6 +628,12 @@ export default function AdvancedStatsPage(): JSX.Element {
           {/* Airline Loyalty Ranking */}
           <div className="mt-8 bg-white dark:bg-gray-800 rounded-xl shadow p-6">
             <AirlineRankingCard />
+          </div>
+
+          {/* Aircraft (Hulls) Ranking — only shows when at least one
+              flight has a tail number on file (AeroDataBox-enriched). */}
+          <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow p-6">
+            <AircraftRankingCard />
           </div>
 
           {/* Country Distribution */}

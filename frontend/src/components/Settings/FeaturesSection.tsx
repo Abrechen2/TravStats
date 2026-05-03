@@ -52,6 +52,36 @@ export default function FeaturesSection(): JSX.Element {
           />
         </button>
       </div>
+      <div
+        className="rounded-lg p-4 flex items-center justify-between"
+        style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+      >
+        <div>
+          <p className="font-medium" style={{ color: "var(--text-primary)" }}>
+            {t("settings:features.trackAircraft")}
+          </p>
+          <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
+            {t("settings:features.trackAircraftDesc")}
+          </p>
+        </div>
+        <button
+          onClick={() =>
+            setFeatures({ trackAircraftRegistration: !features.trackAircraftRegistration })
+          }
+          aria-label={t("settings:features.trackAircraft")}
+          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+            features.trackAircraftRegistration ? "bg-[var(--accent)]" : "bg-gray-600"
+          }`}
+          role="switch"
+          aria-checked={features.trackAircraftRegistration}
+        >
+          <span
+            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+              features.trackAircraftRegistration ? "translate-x-6" : "translate-x-1"
+            }`}
+          />
+        </button>
+      </div>
     </div>
   );
 }

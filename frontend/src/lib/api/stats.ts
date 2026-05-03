@@ -1,4 +1,6 @@
 import type {
+  AircraftProfileResponse,
+  AircraftRankingResponse,
   AirlineRankingResponse,
   AirportStats,
   BusinessStats,
@@ -75,6 +77,18 @@ export const statsApi = {
 
   getCountryStats: async (): Promise<CountryStatsResponse> => {
     const { data } = await api.get<CountryStatsResponse>("/stats/countries");
+    return data;
+  },
+
+  getAircraftRanking: async (): Promise<AircraftRankingResponse> => {
+    const { data } = await api.get<AircraftRankingResponse>("/stats/aircraft");
+    return data;
+  },
+
+  getAircraftProfile: async (registration: string): Promise<AircraftProfileResponse> => {
+    const { data } = await api.get<AircraftProfileResponse>(
+      `/stats/aircraft/${encodeURIComponent(registration)}`,
+    );
     return data;
   },
 };

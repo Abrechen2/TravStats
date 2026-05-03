@@ -1,0 +1,18 @@
+{
+  "backToStats": "Back to stats",
+  "notFound": "No flights found for this tail number.",
+  "unknownType": "Unknown aircraft type",
+  "stats": {
+    "flights": "Flights",
+    "distance": "Distance",
+    "airports": "Airports",
+    "firstSeen": "First flight"
+  },
+  "flights": {
+    "title": "Flights on this hull",
+    "date": "Date",
+    "flightNumber": "Flight number",
+    "route": "Route",
+    "distance": "Distance"
+  }
+}

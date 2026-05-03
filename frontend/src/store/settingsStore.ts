@@ -69,6 +69,14 @@ export interface NotificationSettings {
 
 export interface FeaturesSettings {
   enableCostTracking: boolean;
+  /**
+   * Persist tail number / Mode-S identifiers from flight lookups.
+   * Default ON. Off = the form drops aircraftRegistration + Mode-S
+   * before submit, so the database column stays NULL even though the
+   * lookup returned data. Lets privacy-conscious users keep flight
+   * stats without an audit trail of specific airframes they've flown.
+   */
+  trackAircraftRegistration: boolean;
 }
 
 export interface ApiKeyStatus {
@@ -178,6 +186,7 @@ const defaultSettings: Omit<
   },
   features: {
     enableCostTracking: false,
+    trackAircraftRegistration: true,
   },
   apiKeys: null,
 };

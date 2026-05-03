@@ -349,6 +349,8 @@
     "title": "Funktionen",
     "costTracking": "Kostenerfassung",
     "costTrackingDesc": "Preis- und Kostenfelder in Formularen anzeigen und Business-Statistiken auswerten.",
+    "trackAircraft": "Heckkennungen erfassen",
+    "trackAircraftDesc": "Speichert Tail-Nummer und Mode-S aus dem Flug-Lookup. Aus = Nur Aggregate, kein Audit-Trail einzelner Flugzeuge.",
     "help": {
       "title": "Optionale Funktionen",
       "description": "Hier kannst du Funktionen ein- und ausblenden, um die Oberfläche an deine Nutzung anzupassen. Deaktivierte Funktionen bleiben im Code vorhanden und können jederzeit wieder eingeschaltet werden.",
