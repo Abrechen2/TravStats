@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Flight } from "../types";
 import { useTranslation } from "../hooks/useTranslation";
 import { resolveAirlineDisplay } from "../lib/airlineUtils";
+import AirlineLogo from "./AirlineLogo";
 
 interface FlightCalendarProps {
   flights: Flight[];
@@ -222,14 +223,21 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
                 className="p-3 bg-[var(--bg-surface)] rounded border border-[var(--color-border)]"
               >
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-[var(--text-primary)]">
-                      {resolveAirlineDisplay(flight.airline, flight.flightNumber) || flight.airline}{" "}
-                      {flight.flightNumber}
-                    </p>
-                    <p className="text-sm text-[var(--text-muted)]">
-                      {flight.depIata || flight.depIcao} → {flight.arrIata || flight.arrIcao}
-                    </p>
+                  <div className="flex items-center gap-2">
+                    <AirlineLogo
+                      iata={flight.airline?.length === 2 ? flight.airline : undefined}
+                      flightNumber={flight.flightNumber}
+                      size={24}
+                    />
+                    <div>
+                      <p className="font-medium text-[var(--text-primary)]">
+                        {resolveAirlineDisplay(flight.airline, flight.flightNumber) || flight.airline}{" "}
+                        {flight.flightNumber}
+                      </p>
+                      <p className="text-sm text-[var(--text-muted)]">
+                        {flight.depIata || flight.depIcao} → {flight.arrIata || flight.arrIcao}
+                      </p>
+                    </div>
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-[var(--text-muted)]">
