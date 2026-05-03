@@ -637,6 +637,23 @@ export default function GlobeView({
       cruises.length >= LITE_AUTO_CRUISE_THRESHOLD
     );
   }, [liteMode, flights.length, cruises.length]);
+  // Ship markers: tall thin columns rendered at each cruise's current
+  // position when the time slider is playing live. Off by default —
+  // a real 3D glTF ship model would be the v2.x roadmap upgrade; this
+  // marker fills the same need (locating the ship at scrub-time)
+  // without shipping a binary asset.
+  const [shipMarkers, setShipMarkers] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.sessionStorage.getItem("globeShipMarkers") === "1";
+  });
+  const onShipMarkersChange = useCallback((next: boolean) => {
+    setShipMarkers(next);
+    try {
+      window.sessionStorage.setItem("globeShipMarkers", next ? "1" : "0");
+    } catch {
+      // sessionStorage may be unavailable in private mode — opt-in only
+    }
+  }, []);
   // Day/night terminator: thick semi-transparent dark band along the
   // great circle 90° from the sub-solar point. Anchored to the slider
   // currentDate in live mode, otherwise to "now" — so scrubbing the
@@ -1152,6 +1169,26 @@ export default function GlobeView({
     sliderFilterEnd,
   ]);
 
+  // Ship marker positions: take the LAST point of every visible cruise
+  // path. In live mode, cruisePaths are truncated to current progress —
+  // so the last point IS the ship's current location. In off / filter
+  // modes the path is the full route and the last point is the final
+  // port, which is a reasonable secondary use ("most recent destination").
+  const shipMarkerPoints = useMemo<PointDatum[]>(() => {
+    if (!shipMarkers) return [];
+    return cruisePaths
+      .filter((p) => p.path.length >= 2)
+      .map((p) => {
+        const last = p.path[p.path.length - 1];
+        return {
+          position: [last[0], last[1]] as [number, number],
+          size: 1,
+          iata: "🚢",
+          name: p.cruiseLabel,
+        };
+      });
+  }, [shipMarkers, cruisePaths]);
+
   // Terminator path: closed great-circle ring 90° from the sub-solar
   // point at the slider's current date (live mode) or now (otherwise).
   // Recomputed only when the time changes — not every render. Empty
@@ -1483,6 +1520,38 @@ export default function GlobeView({
           if (object) setPinned({ kind: "port", data: object });
         },
       }),
+      // Ship markers: taller, narrower columns at each visible cruise's
+      // current position. Only present when the toggle is on.
+      ...(shipMarkers && shipMarkerPoints.length > 0
+        ? [
+            new ColumnLayer<PointDatum>({
+              id: "globe-ship-columns",
+              data: shipMarkerPoints,
+              getPosition: (d) => d.position,
+              getFillColor: [125, 211, 252, 235],
+              getElevation: MARKER_HEIGHT_M * 2.5,
+              elevationScale: 1,
+              radius: MARKER_RADIUS_M * 0.55,
+              diskResolution: lite ? 6 : 12,
+              extruded: true,
+              material: false,
+              pickable: true,
+              autoHighlight: !lite,
+              highlightColor: [255, 255, 255, 200],
+              onHover: (info: PickingInfo<PointDatum>) => {
+                if (info.object && info.x != null && info.y != null) {
+                  setTooltip({
+                    html: `<div style="font-weight:600;">🚢 ${escapeHtml(info.object.name)}</div>`,
+                    x: info.x,
+                    y: info.y,
+                  });
+                } else {
+                  setTooltip(null);
+                }
+              },
+            }),
+          ]
+        : []),
     ],
     [
       arcsData,
@@ -1495,6 +1564,8 @@ export default function GlobeView({
       bloom,
       terminator,
       terminatorPath,
+      shipMarkers,
+      shipMarkerPoints,
       flyToArc,
       onArcHover,
       onAirportHover,
@@ -1685,6 +1756,18 @@ export default function GlobeView({
               className="cursor-pointer"
             />
             <span className="text-xs font-medium">🌓 {t("map:globe.terminator")}</span>
+          </label>
+          <label
+            className="mt-1.5 flex cursor-pointer select-none items-center gap-2"
+            title={t("map:globe.shipMarkersHint")}
+          >
+            <input
+              type="checkbox"
+              checked={shipMarkers}
+              onChange={(e) => onShipMarkersChange(e.target.checked)}
+              className="cursor-pointer"
+            />
+            <span className="text-xs font-medium">🚢 {t("map:globe.shipMarkers")}</span>
           </label>
           <button
             type="button"

@@ -63,6 +63,8 @@
     "terminatorHint": "Zeigt die aktuelle Sonnenposition als Twilight-Band",
     "weak": "Geschätzte Route",
     "weakHint": "Mindestens ein Flug ohne IATA-Code wurde anhand der Koordinaten zugeordnet — die Aggregation ist möglicherweise unscharf",
+    "shipMarkers": "Schiffsmarker",
+    "shipMarkersHint": "Hohe Säule an der aktuellen Position jeder sichtbaren Kreuzfahrt",
     "performance": "Performance",
     "performanceHint": "Geringere Detailstufe für mehr FPS auf schwächerer Hardware",
     "performanceAuto": "Auto",
