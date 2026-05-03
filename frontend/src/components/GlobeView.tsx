@@ -286,6 +286,15 @@ const getHeatmapColor = (count: number, t: HeatmapThresholds): [number, number, 
   return HEAT_RGB.q1;
 };
 
+type Quartile = 1 | 2 | 3 | 4;
+
+const getQuartile = (count: number, t: HeatmapThresholds): Quartile => {
+  if (count > t.q75) return 4;
+  if (count > t.q50) return 3;
+  if (count > t.q25) return 2;
+  return 1;
+};
+
 // Haversine distance in km for fly-to-arc zoom heuristic.
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
   const R = 6371;
@@ -446,6 +455,7 @@ interface ArcDatum {
   count: number;
   flightIds: string[];
   color: [number, number, number];
+  quartile: Quartile;
   departure: { iata?: string; name?: string };
   arrival: { iata?: string; name?: string };
 }
@@ -501,6 +511,10 @@ export default function GlobeView({
   });
   const [autoRotate, setAutoRotate] = useState(false);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  // null = no filter (all quartiles visible at full opacity). 1-4 =
+  // dim every arc outside this quartile so the click-selected band
+  // pops. Click the active band again to clear.
+  const [activeQuartile, setActiveQuartile] = useState<Quartile | null>(null);
   // Gate the deck.gl overlay until MapLibre is confirmed in globe
   // projection. Otherwise MapboxOverlay's constructor (run inside
   // useControl, which fires *before* onLoad) caches the initial
@@ -719,6 +733,7 @@ export default function GlobeView({
       // them as a flat surface line at altitude 0 so the route still
       // appears visually, but without the polar-ring artifact a high-
       // altitude arc would produce.
+      const quartile = getQuartile(r.count, thresholds);
       if (distanceKm >= ANTIPODAL_DISTANCE_KM) {
         antipodals.push({
           from: r.from,
@@ -729,6 +744,7 @@ export default function GlobeView({
           departure: r.departure,
           arrival: r.arrival,
           color: getHeatmapColor(r.count, thresholds),
+          quartile,
         });
         continue;
       }
@@ -742,6 +758,7 @@ export default function GlobeView({
         departure: r.departure,
         arrival: r.arrival,
         color: getHeatmapColor(r.count, thresholds),
+        quartile,
       });
     }
     return { arcsData: arcs, antipodalArcs: antipodals, heatmapThresholds: thresholds };
@@ -1032,7 +1049,12 @@ export default function GlobeView({
         id: "globe-flight-arcs",
         data: arcsData,
         getPath: (d) => d.waypoints,
-        getColor: (d) => [...d.color, 235] as [number, number, number, number],
+        getColor: (d) =>
+          [
+            ...d.color,
+            activeQuartile === null || activeQuartile === d.quartile ? 235 : 35,
+          ] as [number, number, number, number],
+        updateTriggers: { getColor: [activeQuartile] },
         getWidth: (d) => Math.max(1.5, Math.min(4, 1.5 + Math.log2(d.count + 1))),
         widthUnits: "pixels",
         widthMinPixels: 1.5,
@@ -1063,7 +1085,12 @@ export default function GlobeView({
         id: "globe-flight-arcs-antipodal",
         data: antipodalArcs,
         getPath: (d) => d.waypoints,
-        getColor: (d) => [...d.color, 160] as [number, number, number, number],
+        getColor: (d) =>
+          [
+            ...d.color,
+            activeQuartile === null || activeQuartile === d.quartile ? 160 : 25,
+          ] as [number, number, number, number],
+        updateTriggers: { getColor: [activeQuartile] },
         getWidth: 1,
         widthUnits: "pixels",
         widthMinPixels: 1,
@@ -1152,6 +1179,7 @@ export default function GlobeView({
       cruisePaths,
       airportPoints,
       portPoints,
+      activeQuartile,
       flyToArc,
       onArcHover,
       onAirportHover,
@@ -1161,18 +1189,21 @@ export default function GlobeView({
     ]
   );
 
-  const legendRanges = useMemo(
+  const legendRanges = useMemo<Array<{ q: Quartile; color: string; label: string }>>(
     () => [
-      { color: HEAT_HEX.q1, label: `1–${Math.max(heatmapThresholds.q25, 1)}×` },
+      { q: 1, color: HEAT_HEX.q1, label: `1–${Math.max(heatmapThresholds.q25, 1)}×` },
       {
+        q: 2,
         color: HEAT_HEX.q2,
         label: `${heatmapThresholds.q25 + 1}–${heatmapThresholds.q50}×`,
       },
       {
+        q: 3,
         color: HEAT_HEX.q3,
         label: `${heatmapThresholds.q50 + 1}–${heatmapThresholds.q75}×`,
       },
       {
+        q: 4,
         color: HEAT_HEX.q4,
         label: `${heatmapThresholds.q75 + 1}+ (max ${heatmapThresholds.max}×)`,
       },
@@ -1262,13 +1293,35 @@ export default function GlobeView({
               {t("map:globe.routeFrequency")}
             </div>
             <div className="space-y-1">
-              {legendRanges.map(({ color, label }) => (
-                <div key={color} className="flex items-center gap-2">
-                  <div className="h-0.5 w-7" style={{ backgroundColor: color }} />
-                  <span className="text-[11px] opacity-80">{label}</span>
-                </div>
-              ))}
+              {legendRanges.map(({ q, color, label }) => {
+                const active = activeQuartile === q;
+                return (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => setActiveQuartile(active ? null : q)}
+                    className="flex w-full cursor-pointer items-center gap-2 rounded px-1.5 py-0.5 transition-colors"
+                    style={{
+                      background: active ? "rgba(255,255,255,0.10)" : "transparent",
+                      opacity: activeQuartile === null || active ? 1 : 0.55,
+                    }}
+                    title={t("map:globe.quartileFilterHint")}
+                  >
+                    <div className="h-0.5 w-7" style={{ backgroundColor: color }} />
+                    <span className="text-[11px]">{label}</span>
+                  </button>
+                );
+              })}
             </div>
+            {activeQuartile !== null && (
+              <button
+                type="button"
+                onClick={() => setActiveQuartile(null)}
+                className="mt-1.5 cursor-pointer text-[10px] underline opacity-70 hover:opacity-100"
+              >
+                {t("map:globe.quartileFilterClear")}
+              </button>
+            )}
             {antipodalArcs.length > 0 && (
               <div
                 className="mt-2 border-t pt-1.5 text-[10px] opacity-70"

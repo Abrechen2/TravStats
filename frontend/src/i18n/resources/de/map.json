@@ -54,6 +54,8 @@
     "antipodalSimplified_other": "{{count}} antipodale Routen flach dargestellt",
     "recenter": "Zentrieren",
     "recenterHint": "Standardansicht wiederherstellen",
+    "quartileFilterHint": "Klick: nur dieses Häufigkeitsband zeigen",
+    "quartileFilterClear": "Filter zurücksetzen",
     "timeSlider": {
       "title": "Zeitachse",
       "modeOff": "Aus",
