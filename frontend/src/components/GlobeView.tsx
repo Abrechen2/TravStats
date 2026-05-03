@@ -530,6 +530,39 @@ export default function GlobeView({
   });
   const [autoRotate, setAutoRotate] = useState(false);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  // Camera direction unit vector — updated on every map move so each
+  // pickable layer can compute "is this datum on the front hemisphere?"
+  // via dot product. Fixes the deck.gl + MapLibre globe z-buffer
+  // limitation: MapLibre uses the depth buffer itself for transparency
+  // optimisation (storing horizon-plane distance per vertex), so it
+  // can't be used to clip overlay geometry against the back of the
+  // sphere — the official workaround is JS-side view-frustum culling
+  // or a custom shader. We do the cheap JS path: min-dot across the
+  // start / mid / end points of each arc, smoothstep alpha by it.
+  // Throttled via rAF so dense move events (auto-rotate, drag-pan)
+  // coalesce.
+  const [cameraDir, setCameraDir] = useState<[number, number, number]>([1, 0, 0]);
+
+  // Helper: how visible (0..1) is an arc whose path passes through
+  // these three lng/lat samples? Uses the min dot of all three vs
+  // cameraDir, smoothed via a window so the fade isn't a hard cliff
+  // when the arc edges around the horizon during auto-rotate.
+  const frontVisibility = useCallback(
+    (samples: ReadonlyArray<readonly [number, number]>): number => {
+      let minDot = Infinity;
+      for (const [lng, lat] of samples) {
+        const lngR = (lng * Math.PI) / 180;
+        const latR = (lat * Math.PI) / 180;
+        const dot =
+          Math.cos(latR) * Math.cos(lngR) * cameraDir[0] +
+          Math.cos(latR) * Math.sin(lngR) * cameraDir[1] +
+          Math.sin(latR) * cameraDir[2];
+        if (dot < minDot) minDot = dot;
+      }
+      return Math.max(0, Math.min(1, (minDot + 0.25) / 0.4));
+    },
+    [cameraDir]
+  );
   // Directional mode: when true, A→B and B→A are aggregated as separate
   // arcs so out-/return-leg imbalance shows up in the heatmap. Default
   // false keeps the current "city pair" aggregation.
@@ -730,6 +763,37 @@ export default function GlobeView({
     // Constructor will detect globe mode and compile globe-aware shaders.
     setMapReady(true);
   }, []);
+
+  // Track camera direction as a 3D unit vector pointing OUT FROM the
+  // globe surface toward the viewer. Updates on every map move via rAF
+  // throttle. Used downstream by the arc / column layers to decide
+  // which data is on the front hemisphere (alpha 100%) vs the back
+  // (alpha ~0% so it doesn't bleed through the basemap).
+  useEffect(() => {
+    if (!mapReady) return;
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+    let raf = 0;
+    const onMove = (): void => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const c = map.getCenter();
+        const lng = (c.lng * Math.PI) / 180;
+        const lat = (c.lat * Math.PI) / 180;
+        setCameraDir([
+          Math.cos(lat) * Math.cos(lng),
+          Math.cos(lat) * Math.sin(lng),
+          Math.sin(lat),
+        ]);
+      });
+    };
+    map.on("move", onMove);
+    onMove();
+    return () => {
+      map.off("move", onMove);
+      cancelAnimationFrame(raf);
+    };
+  }, [mapReady]);
 
   // Re-apply globe projection + sky after every style swap. MapLibre
   // resets both when replacing the style, so we listen for `style.load`
@@ -1286,12 +1350,19 @@ export default function GlobeView({
               id: "globe-flight-arcs-bloom",
               data: arcsData,
               getPath: (d) => d.waypoints,
-              getColor: (d) =>
-                [
-                  ...d.color,
-                  activeQuartile === null || activeQuartile === d.quartile ? 35 : 5,
-                ] as [number, number, number, number],
-              updateTriggers: { getColor: [activeQuartile] },
+              getColor: (d) => {
+                const mid = d.waypoints[Math.floor(d.waypoints.length / 2)];
+                const front = frontVisibility([d.from, [mid[0], mid[1]], d.to]);
+                const baseAlpha =
+                  activeQuartile === null || activeQuartile === d.quartile ? 35 : 5;
+                return [...d.color, Math.round(baseAlpha * front)] as [
+                  number,
+                  number,
+                  number,
+                  number,
+                ];
+              },
+              updateTriggers: { getColor: [activeQuartile, cameraDir] },
               getWidth: (d) => Math.max(3, Math.min(6, 3 + Math.log2(d.count + 1) * 0.6)),
               widthUnits: "pixels",
               widthMinPixels: 3,
@@ -1310,16 +1381,27 @@ export default function GlobeView({
       // Dash extension is attached so that arcs aggregated from
       // metadata-weak flights (no IATA) render dashed; strong arcs
       // get a [0,0] dash array which the extension treats as solid.
+      // Front-hemisphere culling: alpha drops to ~0 when the arc
+      // mid-point is on the back of the globe relative to the camera.
+      // Mid-point is a cheap proxy — better than nothing, doesn't
+      // need a custom shader.
       new PathLayer<ArcDatum>({
         id: "globe-flight-arcs",
         data: arcsData,
         getPath: (d) => d.waypoints,
-        getColor: (d) =>
-          [
-            ...d.color,
-            activeQuartile === null || activeQuartile === d.quartile ? 235 : 35,
-          ] as [number, number, number, number],
-        updateTriggers: { getColor: [activeQuartile] },
+        getColor: (d) => {
+          const mid = d.waypoints[Math.floor(d.waypoints.length / 2)];
+          const front = frontVisibility([d.from, [mid[0], mid[1]], d.to]);
+          const baseAlpha =
+            activeQuartile === null || activeQuartile === d.quartile ? 235 : 35;
+          return [...d.color, Math.round(baseAlpha * front)] as [
+            number,
+            number,
+            number,
+            number,
+          ];
+        },
+        updateTriggers: { getColor: [activeQuartile, cameraDir] },
         getWidth: (d) => Math.max(1.5, Math.min(4, 1.5 + Math.log2(d.count + 1))),
         widthUnits: "pixels",
         widthMinPixels: 1.5,
@@ -1352,12 +1434,19 @@ export default function GlobeView({
         id: "globe-flight-arcs-antipodal",
         data: antipodalArcs,
         getPath: (d) => d.waypoints,
-        getColor: (d) =>
-          [
-            ...d.color,
-            activeQuartile === null || activeQuartile === d.quartile ? 160 : 25,
-          ] as [number, number, number, number],
-        updateTriggers: { getColor: [activeQuartile] },
+        getColor: (d) => {
+          const mid = d.waypoints[Math.floor(d.waypoints.length / 2)];
+          const front = frontVisibility([d.from, [mid[0], mid[1]], d.to]);
+          const baseAlpha =
+            activeQuartile === null || activeQuartile === d.quartile ? 160 : 25;
+          return [...d.color, Math.round(baseAlpha * front)] as [
+            number,
+            number,
+            number,
+            number,
+          ];
+        },
+        updateTriggers: { getColor: [activeQuartile, cameraDir] },
         getWidth: 1,
         widthUnits: "pixels",
         widthMinPixels: 1,
@@ -1386,7 +1475,23 @@ export default function GlobeView({
         id: "globe-cruise-paths",
         data: cruisePaths,
         getPath: (d) => d.path,
-        getColor: CRUISE_PATH_COLOR,
+        getColor: (d) => {
+          const start = d.path[0];
+          const mid = d.path[Math.floor(d.path.length / 2)];
+          const end = d.path[d.path.length - 1];
+          const front = frontVisibility([
+            [start[0], start[1]],
+            [mid[0], mid[1]],
+            [end[0], end[1]],
+          ]);
+          return [
+            CRUISE_PATH_COLOR[0],
+            CRUISE_PATH_COLOR[1],
+            CRUISE_PATH_COLOR[2],
+            Math.round(CRUISE_PATH_COLOR[3] * front),
+          ];
+        },
+        updateTriggers: { getColor: [cameraDir] },
         getWidth: 2,
         widthUnits: "pixels",
         widthMinPixels: 1.5,
@@ -1417,7 +1522,16 @@ export default function GlobeView({
         id: "globe-airport-columns",
         data: airportPoints,
         getPosition: (d) => d.position,
-        getFillColor: AIRPORT_DOT_COLOR,
+        getFillColor: (d) => {
+          const front = frontVisibility([d.position]);
+          return [
+            AIRPORT_DOT_COLOR[0],
+            AIRPORT_DOT_COLOR[1],
+            AIRPORT_DOT_COLOR[2],
+            Math.round(AIRPORT_DOT_COLOR[3] * front),
+          ];
+        },
+        updateTriggers: { getFillColor: [cameraDir] },
         getElevation: MARKER_HEIGHT_M,
         elevationScale: 1,
         radius: MARKER_RADIUS_M,
@@ -1436,7 +1550,16 @@ export default function GlobeView({
         id: "globe-port-columns",
         data: portPoints,
         getPosition: (d) => d.position,
-        getFillColor: PORT_DOT_COLOR,
+        getFillColor: (d) => {
+          const front = frontVisibility([d.position]);
+          return [
+            PORT_DOT_COLOR[0],
+            PORT_DOT_COLOR[1],
+            PORT_DOT_COLOR[2],
+            Math.round(PORT_DOT_COLOR[3] * front),
+          ];
+        },
+        updateTriggers: { getFillColor: [cameraDir] },
         getElevation: MARKER_HEIGHT_M,
         elevationScale: 1,
         radius: MARKER_RADIUS_M,
@@ -1544,6 +1667,8 @@ export default function GlobeView({
       activeQuartile,
       lite,
       bloom,
+      cameraDir,
+      frontVisibility,
       shipMarkers,
       shipMarkerPoints,
       headFlightArc,
