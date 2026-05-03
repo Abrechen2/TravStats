@@ -57,6 +57,8 @@
     "directional": "Mit Richtung",
     "directionalHint": "Hin- und Rückflug separat anzeigen, um Ungleichgewichte sichtbar zu machen",
     "openLastFlight": "Letzten Flug öffnen",
+    "bloom": "Glüheffekt",
+    "bloomHint": "Weiches Halo um die Routen — kostet Performance, im Lite-Modus deaktiviert",
     "performance": "Performance",
     "performanceHint": "Geringere Detailstufe für mehr FPS auf schwächerer Hardware",
     "performanceAuto": "Auto",
