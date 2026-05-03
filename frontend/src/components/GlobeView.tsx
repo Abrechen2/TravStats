@@ -1395,6 +1395,10 @@ export default function GlobeView({
       // lite mode (the extra draw call defeats the purpose) and when
       // off by toggle. Same waypoints as the main layer, no picking
       // (the pickable main layer above already handles all interaction).
+      // Width and alpha are deliberately conservative — the previous
+      // 6-14 px / α70 setup washed the heatmap colours out into a single
+      // grey halo brei. 3-6 px / α35 gives a subtle glow that high-
+      // frequency routes still pop above without losing detail.
       ...(bloom && !lite
         ? [
             new PathLayer<ArcDatum>({
@@ -1404,13 +1408,13 @@ export default function GlobeView({
               getColor: (d) =>
                 [
                   ...d.color,
-                  activeQuartile === null || activeQuartile === d.quartile ? 70 : 8,
+                  activeQuartile === null || activeQuartile === d.quartile ? 35 : 5,
                 ] as [number, number, number, number],
               updateTriggers: { getColor: [activeQuartile] },
-              getWidth: (d) => Math.max(6, Math.min(14, 6 + Math.log2(d.count + 1) * 2)),
+              getWidth: (d) => Math.max(3, Math.min(6, 3 + Math.log2(d.count + 1) * 0.6)),
               widthUnits: "pixels",
-              widthMinPixels: 6,
-              widthMaxPixels: 14,
+              widthMinPixels: 3,
+              widthMaxPixels: 6,
               capRounded: true,
               jointRounded: true,
               wrapLongitude: false,
@@ -1722,12 +1726,13 @@ export default function GlobeView({
         {mapReady && <DeckGLOverlay layers={layers} />}
       </MapGL>
 
-      {/* Top-left stats overlay — driven by the same slider-filtered data
-          as the globe layers, so numbers tick in real time as the user
-          scrubs the timeline. Hidden when there's nothing visible. */}
+      {/* Top-right stats overlay — driven by the same slider-filtered
+          data as the globe layers, so numbers tick in real time as the
+          user scrubs. Lives top-right because the top-left is owned by
+          the dashboard's Aktivität sidebar (would otherwise overlap). */}
       {(liveStats.flights > 0 || liveStats.cruises > 0) && (
         <div
-          className="absolute top-4 left-4 z-10"
+          className="absolute top-4 right-4 z-10"
           style={{ pointerEvents: "auto" }}
         >
           <div
