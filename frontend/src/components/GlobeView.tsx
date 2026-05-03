@@ -547,12 +547,19 @@ export default function GlobeView({
   // the screen because the altitude is in absolute meters.
   // Quantised to 1 decimal so we don't re-tessellate every wheel tick.
   const [mapZoom, setMapZoom] = useState<number>(0.6);
-  // Altitude factor: 1.0 below z=0.5, smooth ramp to 0 at z=2.
-  // Quantised so re-tessellation only fires on coarse zoom changes.
-  // Aggressive ramp: z=2 is roughly continent-level — already too
-  // close to want the arcs poking 5000 km off the surface.
+  // Altitude factor: full bow at low zoom, gradually flattens but never
+  // below 0.25 so arcs stay visually present even at city zoom. The
+  // EarthOcclusionExtension handles back-of-globe clipping per fragment,
+  // so we no longer need to flatten arcs to "tame" the streaks — we
+  // only need to scale them down enough that the bow doesn't dominate
+  // the screen at street level.
+  // Quantised to 0.05 so re-tessellation only fires on coarse zoom
+  // changes (avoids re-running greatCircleWaypoints on every scroll
+  // tick).
   const altitudeFactor =
-    Math.round(Math.max(0, Math.min(1, 1 - (mapZoom - 0.5) / 1.5)) * 10) / 10;
+    Math.round(
+      Math.max(0.25, Math.min(1, 1 - 0.18 * Math.max(0, mapZoom - 1))) * 20
+    ) / 20;
 
   // Camera distance from Earth center, in Earth radii. Calibrated to
   // MapLibre's globe view: at z=0 the camera sits ~2.5 ER away (entire
