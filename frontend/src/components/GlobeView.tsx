@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MapGL, { useControl, type MapRef } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
-import { PathLayer, ScatterplotLayer } from "@deck.gl/layers";
+import { ColumnLayer, PathLayer } from "@deck.gl/layers";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
 import type { StyleSpecification } from "maplibre-gl";
 import type { GeoJSONFeature } from "../types";
@@ -205,6 +205,12 @@ const HEAT_HEX = {
 const CRUISE_PATH_COLOR: [number, number, number, number] = [80, 180, 255, 230];
 const AIRPORT_DOT_COLOR: [number, number, number, number] = [251, 191, 36, 230];
 const PORT_DOT_COLOR: [number, number, number, number] = [56, 189, 248, 230];
+
+// Airport + port column markers. Height and radius are constant so all
+// markers look identical regardless of visit count — magnitude encoding
+// belongs on the arcs (heatmap colour), not duplicated on the dots.
+const MARKER_HEIGHT_M = 70_000;
+const MARKER_RADIUS_M = 12_000;
 
 const INITIAL_VIEW_STATE: MapViewState = {
   longitude: 10,
@@ -938,35 +944,41 @@ export default function GlobeView({
         highlightColor: [255, 255, 255, 180],
         onHover: onCruisePathHover,
       }),
-      new ScatterplotLayer<PointDatum>({
-        id: "globe-airport-dots",
+      // Airport + port markers as ColumnLayer (3D cylinders rendered
+      // radially outward from the globe surface). Replaces the old
+      // ScatterplotLayer dots that clipped into the sphere when viewed
+      // from a low pitch — same visual idiom react-globe.gl used. Size
+      // is intentionally constant (height + radius identical for every
+      // marker): visit count is already encoded by the heatmap colour
+      // on the arcs, so dual-encoding it here makes hub clusters
+      // visually overwhelming without adding information.
+      new ColumnLayer<PointDatum>({
+        id: "globe-airport-columns",
         data: airportPoints,
         getPosition: (d) => d.position,
         getFillColor: AIRPORT_DOT_COLOR,
-        getRadius: (d) => 20000 + Math.sqrt(d.size) * 8000,
-        radiusUnits: "meters",
-        radiusMinPixels: 2,
-        radiusMaxPixels: 8,
-        stroked: true,
-        getLineColor: [255, 255, 255, 200],
-        lineWidthMinPixels: 0.5,
+        getElevation: MARKER_HEIGHT_M,
+        elevationScale: 1,
+        radius: MARKER_RADIUS_M,
+        diskResolution: 16,
+        extruded: true,
+        material: false,
         pickable: true,
         autoHighlight: true,
         highlightColor: [255, 255, 255, 200],
         onHover: onAirportHover,
       }),
-      new ScatterplotLayer<PointDatum>({
-        id: "globe-port-dots",
+      new ColumnLayer<PointDatum>({
+        id: "globe-port-columns",
         data: portPoints,
         getPosition: (d) => d.position,
         getFillColor: PORT_DOT_COLOR,
-        getRadius: (d) => 20000 + Math.sqrt(d.size) * 8000,
-        radiusUnits: "meters",
-        radiusMinPixels: 2,
-        radiusMaxPixels: 8,
-        stroked: true,
-        getLineColor: [255, 255, 255, 200],
-        lineWidthMinPixels: 0.5,
+        getElevation: MARKER_HEIGHT_M,
+        elevationScale: 1,
+        radius: MARKER_RADIUS_M,
+        diskResolution: 16,
+        extruded: true,
+        material: false,
         pickable: true,
         autoHighlight: true,
         highlightColor: [255, 255, 255, 200],
