@@ -87,6 +87,7 @@ export interface ParserSettingsUpdateData {
 export interface ApiKeysUpdateData {
   airlabsApiKey?: string | null;
   aviationstackApiKey?: string | null;
+  aerodataboxApiKey?: string | null;
   openskyClientId?: string | null;
   openskyClientSecret?: string | null;
   openskyUsername?: string | null;
@@ -96,6 +97,7 @@ export interface ApiKeysUpdateData {
 export interface UserApiKeySettings {
   airlabsApiKey: string | null;
   aviationstackApiKey: string | null;
+  aerodataboxApiKey: string | null;
   openskyClientId: string | null;
   openskyClientSecret: string | null;
   openskyUsername: string | null;

@@ -122,11 +122,13 @@ export const settingsApi = {
   getApiKeys: async (): Promise<{
     airlabs: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     aviationstack: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+    aerodatabox: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     opensky: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
   }> => {
     const { data } = await api.get<{
       airlabs: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
       aviationstack: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+      aerodatabox: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
       opensky: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     }>("/settings/api-keys");
     return data;
@@ -134,6 +136,7 @@ export const settingsApi = {
   updateApiKeys: async (payload: {
     airlabsApiKey?: string | null;
     aviationstackApiKey?: string | null;
+    aerodataboxApiKey?: string | null;
     openskyClientId?: string | null;
     openskyClientSecret?: string | null;
     openskyUsername?: string | null;
@@ -143,7 +146,7 @@ export const settingsApi = {
     return data;
   },
   testApiKey: async (
-    provider: "airlabs" | "aviationstack" | "opensky",
+    provider: "airlabs" | "aviationstack" | "aerodatabox" | "opensky",
     apiKey?: string,
     openskyCredentials?: {
       clientId?: string;

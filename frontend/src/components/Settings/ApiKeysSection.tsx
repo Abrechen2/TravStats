@@ -6,12 +6,14 @@ import { useTranslation } from "../../hooks/useTranslation";
 interface ApiKeysStatus {
   airlabs: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
   aviationstack: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+  aerodatabox: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
   opensky: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
 }
 
 interface ApiKeysFormState {
   airlabsApiKey: string;
   aviationstackApiKey: string;
+  aerodataboxApiKey: string;
   openskyClientId: string;
   openskyClientSecret: string;
 }
@@ -87,6 +89,17 @@ export default function ApiKeysSection({
               value={apiKeys.aviationstackApiKey}
               onChange={(value) => onSetApiKeys({ ...apiKeys, aviationstackApiKey: value })}
               onClear={() => onSetApiKeys({ ...apiKeys, aviationstackApiKey: "" })}
+            />
+            <ApiKeyCard
+              provider="aerodatabox"
+              label={t("settings:apiKeys.aerodatabox.label")}
+              description={t("settings:apiKeys.aerodatabox.description")}
+              getKeyUrl="https://rapidapi.com/aedbx-aedbx/api/aerodatabox/pricing"
+              isShared={apiKeysStatus?.aerodatabox.isShared || false}
+              hasAccess={apiKeysStatus?.aerodatabox.hasAccess || false}
+              value={apiKeys.aerodataboxApiKey}
+              onChange={(value) => onSetApiKeys({ ...apiKeys, aerodataboxApiKey: value })}
+              onClear={() => onSetApiKeys({ ...apiKeys, aerodataboxApiKey: "" })}
             />
             <ApiKeyCard
               provider="opensky"
