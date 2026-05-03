@@ -1169,6 +1169,52 @@ export default function GlobeView({
     sliderFilterEnd,
   ]);
 
+  // Live-mode head marker: in live slider mode, find the single most
+  // recent flight (latest departureDate) and isolate its great-circle
+  // path. Rendered as a wider, brand-orange overlay so the user's eye
+  // tracks "what just happened" as the slider moves. Empty array
+  // outside live mode → layer is not produced.
+  const headFlightArc = useMemo<ArcDatum | null>(() => {
+    if (sliderMode !== "live" || filteredFlights.length === 0) return null;
+    let latest: GeoJSONFeature | null = null;
+    let latestT = -Infinity;
+    for (const f of filteredFlights) {
+      const dateStr = f.properties?.departureTime;
+      if (!dateStr) continue;
+      const t = new Date(dateStr).getTime();
+      if (Number.isNaN(t)) continue;
+      if (t > latestT) {
+        latestT = t;
+        latest = f;
+      }
+    }
+    if (!latest) return null;
+    const coords = latest.geometry?.coordinates;
+    if (!coords || coords.length < 2) return null;
+    const start = coords[0];
+    const end = coords[coords.length - 1];
+    if (![start[0], start[1], end[0], end[1]].every(Number.isFinite)) return null;
+    const distanceKm = calculateDistance(start[1], start[0], end[1], end[0]);
+    const peakAltitudeM = getArcPeakAltitudeMeters(distanceKm);
+    return {
+      from: [start[0], start[1]],
+      to: [end[0], end[1]],
+      waypoints: greatCircleWaypoints(
+        [start[0], start[1]],
+        [end[0], end[1]],
+        peakAltitudeM,
+        getArcSteps(distanceKm, lite)
+      ),
+      count: 1,
+      flightIds: [latest.properties.id],
+      color: [240, 169, 71],
+      quartile: getQuartile(1, { q25: 1, q50: 1, q75: 1, max: 1 }),
+      departure: latest.properties.departureAirport ?? {},
+      arrival: latest.properties.arrivalAirport ?? {},
+      weak: false,
+    };
+  }, [sliderMode, filteredFlights, lite]);
+
   // Ship marker positions: take the LAST point of every visible cruise
   // path. In live mode, cruisePaths are truncated to current progress —
   // so the last point IS the ship's current location. In off / filter
@@ -1520,6 +1566,57 @@ export default function GlobeView({
           if (object) setPinned({ kind: "port", data: object });
         },
       }),
+      // Live-mode "head" highlight: bright orange overlay on the most
+      // recent flight in the live window. Drawn AFTER everything else so
+      // it visually pops above the heatmap. Pickable so the user can
+      // still click it.
+      ...(headFlightArc
+        ? [
+            new PathLayer<ArcDatum>({
+              id: "globe-flight-head",
+              data: [headFlightArc],
+              getPath: (d) => d.waypoints,
+              getColor: [...headFlightArc.color, 245] as [number, number, number, number],
+              getWidth: 5,
+              widthUnits: "pixels",
+              widthMinPixels: 4,
+              widthMaxPixels: 6,
+              capRounded: true,
+              jointRounded: true,
+              wrapLongitude: false,
+              pickable: true,
+              autoHighlight: !lite,
+              highlightColor: [255, 255, 255, 220],
+              onHover: onArcHover,
+              onClick: ({ object }: { object?: ArcDatum }) => {
+                if (object) setPinned({ kind: "arc", data: object });
+              },
+            }),
+            // Head endpoint dot — column at the arrival airport of the
+            // most-recent flight, so the eye lands on "where the trail
+            // ends right now".
+            new ColumnLayer<PointDatum>({
+              id: "globe-flight-head-marker",
+              data: [
+                {
+                  position: headFlightArc.to,
+                  size: 1,
+                  iata: headFlightArc.arrival.iata ?? "",
+                  name: headFlightArc.arrival.name ?? "",
+                },
+              ],
+              getPosition: (d) => d.position,
+              getFillColor: [240, 169, 71, 235],
+              getElevation: MARKER_HEIGHT_M * 1.6,
+              elevationScale: 1,
+              radius: MARKER_RADIUS_M * 0.85,
+              diskResolution: lite ? 8 : 16,
+              extruded: true,
+              material: false,
+              pickable: false,
+            }),
+          ]
+        : []),
       // Ship markers: taller, narrower columns at each visible cruise's
       // current position. Only present when the toggle is on.
       ...(shipMarkers && shipMarkerPoints.length > 0
@@ -1566,6 +1663,7 @@ export default function GlobeView({
       terminatorPath,
       shipMarkers,
       shipMarkerPoints,
+      headFlightArc,
       flyToArc,
       onArcHover,
       onAirportHover,
