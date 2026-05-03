@@ -84,10 +84,17 @@ const normalizedFlightNumber = z.string().optional().transform((v) => {
 
 const baseFlightSchema = z.object({
   airline: emptyStringToUndefined,
+  airlineIata: z.string().max(4).nullable().optional(),
+  airlineIcao: z.string().max(5).nullable().optional(),
   operatingAirline: emptyStringToUndefined,
+  operatingAirlineIata: z.string().max(4).nullable().optional(),
+  operatingAirlineIcao: z.string().max(5).nullable().optional(),
+  isCodeshare: z.boolean().nullable().optional(),
   flightNumber: normalizedFlightNumber,
   callsign: z.string().nullable().optional(),
   aircraft: z.string().nullable().optional(),
+  aircraftRegistration: z.string().max(20).nullable().optional(),
+  aircraftModeS: z.string().max(10).nullable().optional(),
   departure: z.object({
     icao: z.string().nullable().optional(),
     iata: z.string().nullable().optional(),

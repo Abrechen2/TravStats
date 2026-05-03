@@ -22,10 +22,17 @@ export interface Flight {
   id: string;
   userId: string;
   airline: string;
+  airlineIata?: string;
+  airlineIcao?: string;
   operatingAirline?: string;
+  operatingAirlineIata?: string;
+  operatingAirlineIcao?: string;
+  isCodeshare?: boolean;
   flightNumber: string;
   callsign?: string;
   aircraft?: string;
+  aircraftRegistration?: string;
+  aircraftModeS?: string;
   depIcao?: string;
   depIata?: string;
   depName?: string;
@@ -138,10 +145,17 @@ export interface Trip {
 
 export interface FlightInput {
   airline?: string;
+  airlineIata?: string;
+  airlineIcao?: string;
   operatingAirline?: string;
+  operatingAirlineIata?: string;
+  operatingAirlineIcao?: string;
+  isCodeshare?: boolean;
   flightNumber?: string;
   callsign?: string;
   aircraft?: string;
+  aircraftRegistration?: string;
+  aircraftModeS?: string;
   departure: Airport;
   arrival: Airport;
   // Canonical-UTC submission contract: send local wall-clock + IANA timezone

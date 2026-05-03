@@ -111,6 +111,11 @@ export function useFlightForm(
   // come from AeroDataBox automatically and only appear in the flight
   // detail view post-save. The user can still edit them later.
   const [lookupCallsign, setLookupCallsign] = useState("");
+  const [lookupAircraftRegistration, setLookupAircraftRegistration] = useState("");
+  const [lookupAircraftModeS, setLookupAircraftModeS] = useState("");
+  const [lookupAirlineIata, setLookupAirlineIata] = useState("");
+  const [lookupAirlineIcao, setLookupAirlineIcao] = useState("");
+  const [lookupIsCodeshare, setLookupIsCodeshare] = useState<boolean | null>(null);
   const [terminal, setTerminal] = useState("");
   const [gate, setGate] = useState("");
   const [seatNumber, setSeatNumber] = useState("");
@@ -272,6 +277,11 @@ export function useFlightForm(
       setOperatingAirline(flight.isCodeshare ? flight.operatingAirline || "" : "");
       setAircraft(flight.aircraft || "");
       setLookupCallsign(flight.callsign || "");
+      setLookupAircraftRegistration(flight.aircraftRegistration || "");
+      setLookupAircraftModeS(flight.aircraftModeS || "");
+      setLookupAirlineIata(flight.airlineIata || "");
+      setLookupAirlineIcao(flight.airlineIcao || "");
+      setLookupIsCodeshare(typeof flight.isCodeshare === "boolean" ? flight.isCodeshare : null);
       setTerminal(flight.departure.terminal || "");
       setGate(flight.departure.gate || "");
 
@@ -389,10 +399,15 @@ export function useFlightForm(
       lon: arrival!.lon,
     },
     airline: airline || undefined,
+    airlineIata: lookupAirlineIata || undefined,
+    airlineIcao: lookupAirlineIcao || undefined,
     operatingAirline: operatingAirline || undefined,
+    isCodeshare: lookupIsCodeshare ?? undefined,
     flightNumber: flightNumber || undefined,
     callsign: lookupCallsign || undefined,
     aircraft: aircraft || undefined,
+    aircraftRegistration: lookupAircraftRegistration || undefined,
+    aircraftModeS: lookupAircraftModeS || undefined,
     seatClass: seatClass || undefined,
     seatNumber: seatNumber || undefined,
     terminal: terminal || undefined,
@@ -455,6 +470,11 @@ export function useFlightForm(
     setNotes("");
     setOperatingAirline("");
     setLookupCallsign("");
+    setLookupAircraftRegistration("");
+    setLookupAircraftModeS("");
+    setLookupAirlineIata("");
+    setLookupAirlineIcao("");
+    setLookupIsCodeshare(null);
 
     // Default the new departure date to the original arrival date, time empty —
     // user usually picks both. For a same-day return this is what they want;
