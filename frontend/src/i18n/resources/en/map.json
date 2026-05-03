@@ -57,6 +57,8 @@
     "directional": "Show direction",
     "directionalHint": "Render outbound and return legs as separate arcs to surface imbalance",
     "openLastFlight": "Open last flight",
+    "bloom": "Glow",
+    "bloomHint": "Soft halo around routes - costs FPS, suppressed in Lite mode",
     "performance": "Performance",
     "performanceHint": "Lower detail for higher FPS on weaker hardware",
     "performanceAuto": "Auto",

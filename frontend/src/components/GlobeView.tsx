@@ -558,6 +558,22 @@ export default function GlobeView({
       cruises.length >= LITE_AUTO_CRUISE_THRESHOLD
     );
   }, [liteMode, flights.length, cruises.length]);
+  // Bloom: render a wider, low-alpha clone of the arc layer underneath
+  // the main one. Costs ~one extra draw call per arc — automatically
+  // suppressed in lite mode. Off by default; opt-in via the bottom-left
+  // control stack.
+  const [bloom, setBloom] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.sessionStorage.getItem("globeBloom") === "1";
+  });
+  const onBloomChange = useCallback((next: boolean) => {
+    setBloom(next);
+    try {
+      window.sessionStorage.setItem("globeBloom", next ? "1" : "0");
+    } catch {
+      // sessionStorage may be unavailable in private mode — opt-in only
+    }
+  }, []);
   // First-run coachmark: shown on the first ever globe visit, dismissed
   // forever via localStorage. The check defaults to false (i.e. "shown")
   // when localStorage is unreadable so the user always gets at least
@@ -1155,6 +1171,34 @@ export default function GlobeView({
 
   const layers = useMemo<Layer[]>(
     () => [
+      // Optional bloom underlay — wider, low-alpha clone of the flight
+      // arcs, drawn first so the main arcs render on top. Suppressed in
+      // lite mode (the extra draw call defeats the purpose) and when
+      // off by toggle. Same waypoints as the main layer, no picking
+      // (the pickable main layer above already handles all interaction).
+      ...(bloom && !lite
+        ? [
+            new PathLayer<ArcDatum>({
+              id: "globe-flight-arcs-bloom",
+              data: arcsData,
+              getPath: (d) => d.waypoints,
+              getColor: (d) =>
+                [
+                  ...d.color,
+                  activeQuartile === null || activeQuartile === d.quartile ? 70 : 8,
+                ] as [number, number, number, number],
+              updateTriggers: { getColor: [activeQuartile] },
+              getWidth: (d) => Math.max(6, Math.min(14, 6 + Math.log2(d.count + 1) * 2)),
+              widthUnits: "pixels",
+              widthMinPixels: 6,
+              widthMaxPixels: 14,
+              capRounded: true,
+              jointRounded: true,
+              wrapLongitude: false,
+              pickable: false,
+            }),
+          ]
+        : []),
       // Flight arcs as PathLayer with pre-tessellated great-circle
       // waypoints. ArcLayer.greatCircle is broken on globe projection
       // (height computed in screen-space → invisible) — explicit
@@ -1305,6 +1349,7 @@ export default function GlobeView({
       portPoints,
       activeQuartile,
       lite,
+      bloom,
       flyToArc,
       onArcHover,
       onAirportHover,
@@ -1469,6 +1514,20 @@ export default function GlobeView({
               className="cursor-pointer"
             />
             <span className="text-xs font-medium">↔ {t("map:globe.directional")}</span>
+          </label>
+          <label
+            className="mt-1.5 flex cursor-pointer select-none items-center gap-2"
+            title={t("map:globe.bloomHint")}
+            style={{ opacity: lite ? 0.45 : 1 }}
+          >
+            <input
+              type="checkbox"
+              checked={bloom}
+              disabled={lite}
+              onChange={(e) => onBloomChange(e.target.checked)}
+              className="cursor-pointer"
+            />
+            <span className="text-xs font-medium">✨ {t("map:globe.bloom")}</span>
           </label>
           <button
             type="button"
