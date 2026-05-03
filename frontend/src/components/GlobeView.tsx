@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MapGL, { useControl, type MapRef } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import { ColumnLayer, PathLayer } from "@deck.gl/layers";
+import { PathStyleExtension, type PathStyleExtensionProps } from "@deck.gl/extensions";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
 import type { StyleSpecification } from "maplibre-gl";
 import type { GeoJSONFeature } from "../types";
@@ -1060,6 +1061,15 @@ export default function GlobeView({
         highlightColor: [255, 255, 255, 180],
         onHover: onArcHover,
       }),
+      // Cruise paths render as a dashed "wake" — a long stroke + short
+      // gap pattern visually distinguishes ship routes from the solid
+      // flight arcs without needing a different colour. PathStyleExtension
+      // ships its own shader; high-precision dashes work in globe
+      // projection without the dash length scaling weirdly with zoom.
+      // Cast: PathStyleExtension augments PathLayer props at runtime,
+      // but @deck.gl/extensions doesn't merge those keys into PathLayer's
+      // TS surface. Cast the whole config so the dash props reach the
+      // constructor while keeping the rest literal-checked.
       new PathLayer<CruisePathDatum>({
         id: "globe-cruise-paths",
         data: cruisePaths,
@@ -1071,11 +1081,15 @@ export default function GlobeView({
         widthMaxPixels: 3,
         capRounded: true,
         jointRounded: true,
+        extensions: [new PathStyleExtension({ dash: true, highPrecisionDash: true })],
+        getDashArray: [6, 3],
+        dashJustified: true,
+        dashGapPickable: false,
         pickable: true,
         autoHighlight: true,
         highlightColor: [255, 255, 255, 180],
         onHover: onCruisePathHover,
-      }),
+      } as ConstructorParameters<typeof PathLayer<CruisePathDatum>>[0] & PathStyleExtensionProps<CruisePathDatum>),
       // Airport + port markers as ColumnLayer (3D cylinders rendered
       // radially outward from the globe surface). Replaces the old
       // ScatterplotLayer dots that clipped into the sphere when viewed
