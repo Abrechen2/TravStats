@@ -519,6 +519,26 @@ export default function GlobeView({
     if (typeof window === "undefined") return false;
     return window.sessionStorage.getItem("globeDirectional") === "1";
   });
+  // First-run coachmark: shown on the first ever globe visit, dismissed
+  // forever via localStorage. The check defaults to false (i.e. "shown")
+  // when localStorage is unreadable so the user always gets at least
+  // one chance to see it; setting the flag is best-effort.
+  const [coachmarkOpen, setCoachmarkOpen] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return window.localStorage.getItem("globeCoachmarkSeen") !== "1";
+    } catch {
+      return false;
+    }
+  });
+  const dismissCoachmark = useCallback(() => {
+    setCoachmarkOpen(false);
+    try {
+      window.localStorage.setItem("globeCoachmarkSeen", "1");
+    } catch {
+      // localStorage may be unavailable in private mode — opt-in only
+    }
+  }, []);
   // Pinned selection: persistent detail card the user opens by clicking
   // a marker / arc / cruise path. Survives mouse-move (unlike the
   // hover tooltip) so they can read details without holding still.
@@ -1530,6 +1550,54 @@ export default function GlobeView({
           })}
         </div>
       </div>
+
+      {/* First-run coachmark — semi-modal centered hint, dismissible
+          forever via localStorage. Backdrop is click-through so
+          autoload basemap interaction isn't blocked silently if the
+          card is missed; only the card itself catches pointer. */}
+      {coachmarkOpen && (
+        <div
+          className="absolute inset-0 z-30 flex items-center justify-center"
+          style={{ pointerEvents: "none" }}
+        >
+          <div
+            className="rounded-lg p-5 text-sm"
+            style={{
+              pointerEvents: "auto",
+              maxWidth: 420,
+              background: "rgba(13, 17, 23, 0.96)",
+              backdropFilter: "blur(16px)",
+              border: "1px solid rgba(240,169,71,0.45)",
+              color: "rgba(241,245,249,0.95)",
+              fontFamily: "'Inter', sans-serif",
+              boxShadow: "0 12px 36px rgba(0,0,0,0.6)",
+            }}
+          >
+            <div className="mb-2 text-base font-semibold">
+              {t("map:globe.coachmark.title")}
+            </div>
+            <ul className="mb-4 space-y-1.5 text-[12px] opacity-90">
+              <li>🖱️ {t("map:globe.coachmark.pan")}</li>
+              <li>🔍 {t("map:globe.coachmark.zoom")}</li>
+              <li>📍 {t("map:globe.coachmark.click")}</li>
+              <li>↔ {t("map:globe.coachmark.directional")}</li>
+              <li>🌍 {t("map:globe.coachmark.autoRotate")}</li>
+            </ul>
+            <button
+              type="button"
+              onClick={dismissCoachmark}
+              className="w-full cursor-pointer rounded px-3 py-2 text-[12px] font-medium transition-colors"
+              style={{
+                background: "rgba(240,169,71,0.22)",
+                border: "1px solid rgba(240,169,71,0.55)",
+                color: "rgba(255,205,128,1)",
+              }}
+            >
+              {t("map:globe.coachmark.dismiss")}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Pinned detail card — persists after click until explicitly
           dismissed. Sits bottom-right so it doesn't fight the legend

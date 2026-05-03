@@ -66,6 +66,15 @@
       "ports": "Häfen",
       "top": "Top"
     },
+    "coachmark": {
+      "title": "Willkommen auf dem Globus",
+      "pan": "Ziehen, um die Erde zu drehen",
+      "zoom": "Mausrad zum Zoomen",
+      "click": "Klick auf Marker oder Routen für Details",
+      "directional": "'Mit Richtung' zeigt Hin- und Rückflug separat",
+      "autoRotate": "Auto-Rotation lässt den Globus selbst drehen",
+      "dismiss": "Verstanden, los geht's"
+    },
     "quartileFilterHint": "Klick: nur dieses Häufigkeitsband zeigen",
     "quartileFilterClear": "Filter zurücksetzen",
     "timeSlider": {
