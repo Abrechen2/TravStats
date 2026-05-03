@@ -54,6 +54,8 @@
     "antipodalSimplified_other": "{{count}} antipodal routes shown flat",
     "recenter": "Recenter",
     "recenterHint": "Reset to default view",
+    "quartileFilterHint": "Click to isolate this frequency band",
+    "quartileFilterClear": "Clear filter",
     "timeSlider": {
       "title": "Timeline",
       "modeOff": "Off",
