@@ -112,6 +112,29 @@ TravStats grows from a flight-only logbook into a full travel logbook.
 - Two-stage multi-flight email parser (block-split + per-flight extraction)
 - Community-shared airline templates via GitHub
 - Multi-version template scoring (pick the best parse automatically)
+- **Cloud-mode parser** — Groq (Llama 3) and Gemini Flash adapters as
+  fallbacks for users without a self-hosted Ollama; same template
+  engine, GPU-less option
+
+---
+
+## 💱 v1.9 — Multi-source data enrichment
+
+Layered free-tier integrations to broaden travel-data coverage. All
+sources chosen to keep TravStats hostable as a SaaS without
+non-commercial licence traps.
+
+- **Multi-currency trip costs** — record costs in any of 200+
+  currencies; backend normalises to the user's display currency using
+  historical FX rates from the Frankfurter / ECB pipeline
+- **Weather at departure & arrival** — METAR / TAF history (NOAA AWC
+  for the last 96 h, IEM Mesonet for everything older) layered into
+  the flight detail page: wind, visibility, temperature, conditions.
+  Lazy-fetched per flight, cached per airport-day
+- **Live ship tracking** *(extends v1.1 Cruises)* — opt-in AIS-stream
+  layer (AISStream.io) showing your booked or current ship's
+  real-time position on the cruise map, fed by a single backend
+  WebSocket subscription fanned out to clients
 
 ---
 
@@ -125,6 +148,7 @@ Running in parallel across versions.
 - Route-aggregation clustering (replace median for multi-corridor routes)
 - Confidence-score calibration via user feedback loop
 - Optional 2FA for admins
+- OurAirports CSV as fallback / cross-check source for the airport seed
 
 ---
 
