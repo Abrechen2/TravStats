@@ -61,6 +61,8 @@
     "bloomHint": "Soft halo around routes - costs FPS, suppressed in Lite mode",
     "terminator": "Day/Night",
     "terminatorHint": "Shows the current solar terminator as a twilight band",
+    "weak": "Estimated route",
+    "weakHint": "At least one flight had no IATA code and was matched by coordinates — the aggregation may be approximate",
     "performance": "Performance",
     "performanceHint": "Lower detail for higher FPS on weaker hardware",
     "performanceAuto": "Auto",

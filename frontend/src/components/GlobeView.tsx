@@ -539,6 +539,14 @@ interface ArcDatum {
   quartile: Quartile;
   departure: { iata?: string; name?: string };
   arrival: { iata?: string; name?: string };
+  /**
+   * Set when at least one constituent flight had no IATA on either
+   * endpoint and we fell back to coordinate-rounded identity. The arc
+   * may aggregate flights that were *almost* the same route — surfaced
+   * to the user via a dashed style so they don't blindly trust the
+   * count.
+   */
+  weak: boolean;
 }
 
 interface PointDatum {
@@ -876,6 +884,7 @@ export default function GlobeView({
       flightIds: string[];
       departure: { iata?: string; name?: string };
       arrival: { iata?: string; name?: string };
+      weak: boolean;
     }
     const routes = new Map<string, RouteAcc>();
     for (const flight of filteredFlights) {
@@ -894,6 +903,10 @@ export default function GlobeView({
       const arr = flight.properties?.arrivalAirport;
       const depKey = endpointIdentity(dep?.iata, start[0], start[1]);
       const arrKey = endpointIdentity(arr?.iata, end[0], end[1]);
+      // Weak when either endpoint had no IATA — endpointIdentity then
+      // falls back to a coord-rounded sentinel. This may collapse
+      // multiple flights that were similar-but-not-identical routes.
+      const flightWeak = !dep?.iata || !arr?.iata;
       const key = directional
         ? createDirectionalKey(depKey, arrKey)
         : createRouteKey(depKey, arrKey);
@@ -901,6 +914,7 @@ export default function GlobeView({
       if (existing) {
         existing.count++;
         existing.flightIds.push(flight.properties.id);
+        if (flightWeak) existing.weak = true;
       } else {
         routes.set(key, {
           count: 1,
@@ -909,6 +923,7 @@ export default function GlobeView({
           flightIds: [flight.properties.id],
           departure: dep ?? {},
           arrival: arr ?? {},
+          weak: flightWeak,
         });
       }
     }
@@ -936,6 +951,7 @@ export default function GlobeView({
           arrival: r.arrival,
           color: getHeatmapColor(r.count, thresholds),
           quartile,
+          weak: r.weak,
         });
         continue;
       }
@@ -950,6 +966,7 @@ export default function GlobeView({
         arrival: r.arrival,
         color: getHeatmapColor(r.count, thresholds),
         quartile,
+        weak: r.weak,
       });
     }
     return { arcsData: arcs, antipodalArcs: antipodals, heatmapThresholds: thresholds };
@@ -1322,6 +1339,9 @@ export default function GlobeView({
       // waypoints. ArcLayer.greatCircle is broken on globe projection
       // (height computed in screen-space → invisible) — explicit
       // waypoints sidestep the issue and the curve looks identical.
+      // Dash extension is attached so that arcs aggregated from
+      // metadata-weak flights (no IATA) render dashed; strong arcs
+      // get a [0,0] dash array which the extension treats as solid.
       new PathLayer<ArcDatum>({
         id: "globe-flight-arcs",
         data: arcsData,
@@ -1351,7 +1371,11 @@ export default function GlobeView({
           setPinned({ kind: "arc", data: object });
           flyToArc(object);
         },
-      }),
+        extensions: [new PathStyleExtension({ dash: true, highPrecisionDash: true })],
+        getDashArray: (d: ArcDatum) => (d.weak ? [4, 3] : [0, 0]),
+        dashJustified: true,
+        dashGapPickable: false,
+      } as ConstructorParameters<typeof PathLayer<ArcDatum>>[0] & PathStyleExtensionProps<ArcDatum>),
       // Antipodal routes (>= ANTIPODAL_DISTANCE_KM) — flat surface
       // line at altitude 0, narrower than normal arcs and slightly
       // muted, so the route still appears visually but doesn't grab
@@ -1750,6 +1774,26 @@ export default function GlobeView({
                 style={{ borderColor: "rgba(255,255,255,0.12)" }}
               >
                 {t("map:globe.antipodalSimplified", { count: antipodalArcs.length })}
+              </div>
+            )}
+            {arcsData.some((a) => a.weak) && (
+              <div
+                className="mt-2 flex items-center gap-2 border-t pt-1.5 text-[10px] opacity-75"
+                style={{ borderColor: "rgba(255,255,255,0.12)" }}
+                title={t("map:globe.weakHint")}
+              >
+                <svg width="28" height="2" viewBox="0 0 28 2" aria-hidden>
+                  <line
+                    x1="0"
+                    y1="1"
+                    x2="28"
+                    y2="1"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeDasharray="4 3"
+                  />
+                </svg>
+                <span>{t("map:globe.weak")}</span>
               </div>
             )}
           </div>
