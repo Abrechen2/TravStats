@@ -9,6 +9,7 @@ import {
   testAerodataboxKey,
   testOpenSkyCredentials,
 } from '../../services/apiKeyTester';
+import { getApiKey, getOpenSkyCredentials } from '../../services/apiKeyResolver';
 import logger from '../../utils/logger';
 import {
   ApiKeysUpdateData,
@@ -30,7 +31,7 @@ const apiKeysSchema = z.object({
 }).partial();
 
 const testApiKeySchema = z.object({
-  apiKey: z.string().min(1, 'API key is required'),
+  apiKey: z.string().optional(),
 });
 
 const testOpenSkySchema = z.object({
@@ -38,10 +39,15 @@ const testOpenSkySchema = z.object({
   clientSecret: z.string().optional(),
   username: z.string().optional(),
   password: z.string().optional(),
-}).refine(
-  (data) => (!!data.clientId && !!data.clientSecret) || (!!data.username && !!data.password),
-  { message: 'Provide either clientId+clientSecret or username+password' }
-);
+});
+
+/**
+ * Frontend ships the masked GET-response value (e.g. "ac97****2a86") back
+ * into the Test request when the user hasn't typed anything new. Treat
+ * empty + masked as "test the persisted/inherited key".
+ */
+const looksMasked = (s: string | undefined | null): boolean =>
+  !s || s.includes('****');
 
 // GET /
 router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
@@ -258,7 +264,14 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
 router.post('/test/airlabs', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { apiKey } = testApiKeySchema.parse(req.body);
-    const result = await testAirlabsKey(apiKey, req.userId!);
+    const effective = looksMasked(apiKey)
+      ? (await getApiKey('airlabs', req.userId!)) ?? ''
+      : apiKey!;
+    if (!effective) {
+      res.status(400).json({ success: false, message: 'No AirLabs key configured to test. Save one first.' });
+      return;
+    }
+    const result = await testAirlabsKey(effective, req.userId!);
     res.json(result);
   } catch (error) {
     next(error);
@@ -269,7 +282,14 @@ router.post('/test/airlabs', async (req: AuthRequest, res: Response, next: NextF
 router.post('/test/aviationstack', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { apiKey } = testApiKeySchema.parse(req.body);
-    const result = await testAviationstackKey(apiKey, req.userId!);
+    const effective = looksMasked(apiKey)
+      ? (await getApiKey('aviationstack', req.userId!)) ?? ''
+      : apiKey!;
+    if (!effective) {
+      res.status(400).json({ success: false, message: 'No Aviationstack key configured to test. Save one first.' });
+      return;
+    }
+    const result = await testAviationstackKey(effective, req.userId!);
     res.json(result);
   } catch (error) {
     next(error);
@@ -280,7 +300,14 @@ router.post('/test/aviationstack', async (req: AuthRequest, res: Response, next:
 router.post('/test/aerodatabox', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { apiKey } = testApiKeySchema.parse(req.body);
-    const result = await testAerodataboxKey(apiKey, req.userId!);
+    const effective = looksMasked(apiKey)
+      ? (await getApiKey('aerodatabox', req.userId!)) ?? ''
+      : apiKey!;
+    if (!effective) {
+      res.status(400).json({ success: false, message: 'No AeroDataBox key configured to test. Save one first.' });
+      return;
+    }
+    const result = await testAerodataboxKey(effective, req.userId!);
     res.json(result);
   } catch (error) {
     next(error);
@@ -290,7 +317,18 @@ router.post('/test/aerodatabox', async (req: AuthRequest, res: Response, next: N
 // POST /test/opensky
 router.post('/test/opensky', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { clientId, clientSecret, username, password } = testOpenSkySchema.parse(req.body);
+    let { clientId, clientSecret, username, password } = testOpenSkySchema.parse(req.body);
+    if (looksMasked(clientId) || looksMasked(clientSecret)) {
+      const persisted = await getOpenSkyCredentials(req.userId!);
+      clientId = persisted?.clientId ?? undefined;
+      clientSecret = persisted?.clientSecret ?? undefined;
+      username = username || persisted?.username || undefined;
+      password = password || persisted?.password || undefined;
+    }
+    if (!(clientId && clientSecret) && !(username && password)) {
+      res.status(400).json({ success: false, message: 'No OpenSky credentials configured to test. Save them first.' });
+      return;
+    }
     const result = await testOpenSkyCredentials(
       { clientId, clientSecret, username, password },
       req.userId!
