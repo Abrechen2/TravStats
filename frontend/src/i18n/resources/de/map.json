@@ -56,6 +56,15 @@
     "recenterHint": "Standardansicht wiederherstellen",
     "directional": "Mit Richtung",
     "directionalHint": "Hin- und Rückflug separat anzeigen, um Ungleichgewichte sichtbar zu machen",
+    "stats": {
+      "title": "Sichtbar",
+      "flights": "Flüge",
+      "routes": "Routen",
+      "flightKm": "Flugstrecke",
+      "cruises": "Kreuzfahrten",
+      "ports": "Häfen",
+      "top": "Top"
+    },
     "quartileFilterHint": "Klick: nur dieses Häufigkeitsband zeigen",
     "quartileFilterClear": "Filter zurücksetzen",
     "timeSlider": {
