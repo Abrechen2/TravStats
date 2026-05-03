@@ -533,18 +533,14 @@ export default function GlobeView({
   });
   const [autoRotate, setAutoRotate] = useState(false);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
-  // Camera direction unit vector — Earth-centered, pointing toward the
-  // viewer. Updated on every map move via rAF throttle. Drives the
-  // GPU-side EarthOcclusionExtension that clips overlay geometry against
-  // the back of the sphere per fragment. Replaces the old JS-side
-  // frontVisibility heuristic which only sampled 1-3 points per arc and
-  // bled badly through the back of the globe at high zoom.
-  const [cameraDir, setCameraDir] = useState<[number, number, number]>([1, 0, 0]);
-  // Map zoom — used as a level-of-detail signal. At low zoom the
-  // standard altitude-based arcs look great; at high zoom (street/city
-  // level) those same arcs become unreadable horizontal streaks across
-  // the screen because the altitude is in absolute meters.
-  // Quantised to 1 decimal so we don't re-tessellate every wheel tick.
+  // Map zoom — used as a level-of-detail signal for arc altitude. At
+  // low zoom the standard altitude-based arcs look great; at high zoom
+  // they become horizontal streaks across the screen because the
+  // altitude is in absolute meters. Quantised to 0.05 so re-tessellation
+  // of greatCircleWaypoints only fires on coarse zoom changes — without
+  // the quantisation every scroll tick rebuilds the waypoint arrays.
+  // Sourced from MapLibre's `zoom` event only (NOT `move`) so pan +
+  // rotate don't trigger unrelated layer re-renders.
   const [mapZoom, setMapZoom] = useState<number>(0.6);
   // Altitude factor: full bow at low zoom, gradually flattens but never
   // below 0.25 so arcs stay visually present even at city zoom. The
@@ -552,33 +548,19 @@ export default function GlobeView({
   // so we no longer need to flatten arcs to "tame" the streaks — we
   // only need to scale them down enough that the bow doesn't dominate
   // the screen at street level.
-  // Quantised to 0.05 so re-tessellation only fires on coarse zoom
-  // changes (avoids re-running greatCircleWaypoints on every scroll
-  // tick).
   const altitudeFactor =
     Math.round(
       Math.max(0.25, Math.min(1, 1 - 0.18 * Math.max(0, mapZoom - 1))) * 20
     ) / 20;
 
-  // Camera distance from Earth center, in Earth radii. Calibrated to
-  // MapLibre's globe view: at z=0 the camera sits ~2.5 ER away (entire
-  // hemisphere visible), tightening to ~1.05 ER as the user zooms into
-  // a single continent. Drives the horizon angle in the occlusion
-  // extension — closer camera = smaller visible cap = more aggressive
-  // back-side discard.
-  const cameraDistance = useMemo(() => {
-    return 1 + 1.5 * Math.pow(2, -Math.max(0, mapZoom) * 0.7);
-  }, [mapZoom]);
-  // Memoised props bag forwarded to every deck.gl layer so the per-layer
-  // construction stays terse.
+  // EarthOcclusionExtension props are static — the extension reads the
+  // live camera (lng / lat / zoom) from `viewport` inside its draw()
+  // hook every frame, so we don't push camera state through React.
+  // That avoids per-frame layer reconstruction and the one-frame lag
+  // between basemap rotation and arc rendering.
   const occlusionProps = useMemo<EarthOcclusionExtensionProps>(
-    () => ({
-      earthOcclusionEnabled: true,
-      earthOcclusionCameraDir: cameraDir,
-      earthOcclusionCameraDistance: cameraDistance,
-      earthOcclusionFadeBand: 0.04,
-    }),
-    [cameraDir, cameraDistance]
+    () => ({ earthOcclusionEnabled: true, earthOcclusionFadeBand: 0.04 }),
+    []
   );
   // Single shared extension instance — deck.gl reuses the same shader
   // module across layers, and a stable reference avoids unnecessary
@@ -753,36 +735,28 @@ export default function GlobeView({
     setMapReady(true);
   }, []);
 
-  // Track camera direction as a 3D unit vector pointing OUT FROM the
-  // globe surface toward the viewer, plus the current zoom. Updates on
-  // every map move via rAF throttle. Both feed the EarthOcclusionExtension
-  // (cameraDir → horizon center, zoom → camera distance / horizon radius)
-  // so the back-of-globe discard happens per fragment in the GPU.
+  // Track map zoom as React state — only used to drive `altitudeFactor`,
+  // which controls the bow height of arc waypoints. Subscribes to the
+  // `zoom` event ONLY (not `move`), so pan + rotate don't trigger
+  // unrelated re-renders. rAF-throttled to coalesce wheel-tick bursts.
+  // The horizon-occlusion uniforms run inside the extension's draw()
+  // hook reading `viewport` directly, so React doesn't need to know
+  // about the camera direction at all.
   useEffect(() => {
     if (!mapReady) return;
     const map = mapRef.current?.getMap();
     if (!map) return;
     let raf = 0;
-    const onMove = (): void => {
+    const onZoom = (): void => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
-        const c = map.getCenter();
-        const lng = (c.lng * Math.PI) / 180;
-        const lat = (c.lat * Math.PI) / 180;
-        setCameraDir([
-          Math.cos(lat) * Math.cos(lng),
-          Math.cos(lat) * Math.sin(lng),
-          Math.sin(lat),
-        ]);
         setMapZoom(map.getZoom());
       });
     };
-    map.on("move", onMove);
-    map.on("zoom", onMove);
-    onMove();
+    map.on("zoom", onZoom);
+    onZoom();
     return () => {
-      map.off("move", onMove);
-      map.off("zoom", onMove);
+      map.off("zoom", onZoom);
       cancelAnimationFrame(raf);
     };
   }, [mapReady]);
