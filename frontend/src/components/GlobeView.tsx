@@ -212,6 +212,11 @@ const PORT_DOT_COLOR: [number, number, number, number] = [56, 189, 248, 230];
 const MARKER_HEIGHT_M = 70_000;
 const MARKER_RADIUS_M = 12_000;
 
+// Auto-rotate behaviour.
+const AUTO_ROTATE_DEG_PER_SEC = 4;
+const AUTO_ROTATE_PAUSE_MS = 3500;
+const AUTO_ROTATE_RAMP_MS = 800;
+
 const INITIAL_VIEW_STATE: MapViewState = {
   longitude: 10,
   latitude: 25,
@@ -612,29 +617,50 @@ export default function GlobeView({
     };
   }, [mapReady]);
 
-  // Auto-rotation loop. Drives `map.jumpTo` ~30 fps with a constant
-  // angular velocity, no easing — gives the same continuous "globe
-  // turning in space" feel the old react-globe.gl impl had via three.js
-  // OrbitControls.autoRotate. Cancellable mid-rotation by toggling the
-  // checkbox; user pan/zoom doesn't pause it (matching old behaviour).
+  // Auto-rotation loop. Drives `map.jumpTo` ~60 fps with a constant
+  // angular velocity (4 deg/s = one revolution / 90 s).
+  //
+  // Pauses on any user interaction (pointerdown / wheel / touchstart)
+  // for AUTO_ROTATE_PAUSE_MS so the globe doesn't keep spinning while
+  // the user is pinning a tooltip or zooming in. After the pause
+  // expires, the angular velocity ramps from 0 → full over
+  // AUTO_ROTATE_RAMP_MS so resume feels like a gentle acceleration
+  // rather than a jerk.
   useEffect(() => {
     if (!autoRotate) return;
     const map = mapRef.current?.getMap();
     if (!map) return;
+    const container = map.getContainer();
     let raf = 0;
     let lastT = performance.now();
+    let pausedUntil = 0;
+    const onInteract = (): void => {
+      pausedUntil = performance.now() + AUTO_ROTATE_PAUSE_MS;
+    };
     const tick = (now: number): void => {
       const dt = now - lastT;
       lastT = now;
-      const center = map.getCenter();
-      // 4 deg/s — a full revolution every 90 s, slightly faster than
-      // the old impl so the motion is obvious without being dizzying.
-      const newLng = ((center.lng + (dt * 4) / 1000 + 540) % 360) - 180;
-      map.jumpTo({ center: [newLng, center.lat] });
+      const pauseRemaining = pausedUntil - now;
+      if (pauseRemaining < 0) {
+        const sinceResume = -pauseRemaining;
+        const ramp = Math.min(1, sinceResume / AUTO_ROTATE_RAMP_MS);
+        const center = map.getCenter();
+        const newLng =
+          ((center.lng + (dt * AUTO_ROTATE_DEG_PER_SEC * ramp) / 1000 + 540) % 360) - 180;
+        map.jumpTo({ center: [newLng, center.lat] });
+      }
       raf = requestAnimationFrame(tick);
     };
+    container.addEventListener("pointerdown", onInteract);
+    container.addEventListener("wheel", onInteract, { passive: true });
+    container.addEventListener("touchstart", onInteract, { passive: true });
     raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(raf);
+      container.removeEventListener("pointerdown", onInteract);
+      container.removeEventListener("wheel", onInteract);
+      container.removeEventListener("touchstart", onInteract);
+    };
   }, [autoRotate]);
 
   // Aggregate flights into city-pair routes with count + heatmap colour.
