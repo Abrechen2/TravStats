@@ -63,6 +63,8 @@
     "terminatorHint": "Shows the current solar terminator as a twilight band",
     "weak": "Estimated route",
     "weakHint": "At least one flight had no IATA code and was matched by coordinates — the aggregation may be approximate",
+    "shipMarkers": "Ship markers",
+    "shipMarkersHint": "Tall column at the current position of every visible cruise",
     "performance": "Performance",
     "performanceHint": "Lower detail for higher FPS on weaker hardware",
     "performanceAuto": "Auto",
