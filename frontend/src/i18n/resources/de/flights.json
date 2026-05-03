@@ -242,6 +242,8 @@
     "resultsTitle_one": "{{count}} Flug gefunden",
     "resultsTitle_other": "{{count}} Flüge gefunden",
     "departs": "Abflug",
+    "operatedBy": "Codeshare — geflogen von {{airline}}",
+    "tailNumber": "Kennzeichen",
     "backToSearch": "Zurück zur Suche"
   },
   "status": {

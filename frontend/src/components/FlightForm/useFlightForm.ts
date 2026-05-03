@@ -12,6 +12,16 @@ import type { TimeEstimationWarning } from "./FlightCompleteStep";
 export interface FlightLookupResult {
   flightNumber: string;
   airline: string;
+  /** Operating airline if the searched flight number is a marketing codeshare. */
+  operatingAirline?: string;
+  /** True if the API flagged the entry as `IsCodeshare`. */
+  isCodeshare?: boolean;
+  /** ATC callsign, e.g. "DLH400". AeroDataBox-only. */
+  callsign?: string;
+  /** Airline IATA code, e.g. "LH". AeroDataBox-only. */
+  airlineIata?: string;
+  /** Airline ICAO code, e.g. "DLH". AeroDataBox-only. */
+  airlineIcao?: string;
   departure: {
     iata?: string;
     name?: string;
@@ -27,6 +37,13 @@ export interface FlightLookupResult {
     gate?: string;
   };
   aircraft?: string;
+  /** Tail number / aircraft registration, e.g. "D-AIHX". AeroDataBox-only. */
+  aircraftRegistration?: string;
+  /** Mode-S transponder hex, e.g. "3C6518". AeroDataBox-only. */
+  aircraftModeS?: string;
+  /** Great-circle route distance in km from the provider. */
+  distance?: number;
+  /** Hint to set status to `'cancelled'` or `'diverted'`. AeroDataBox-only. */
   status?: string;
 }
 
@@ -89,6 +106,11 @@ export function useFlightForm(
   const [airline, setAirline] = useState("");
   const [operatingAirline, setOperatingAirline] = useState("");
   const [aircraft, setAircraft] = useState("");
+  // Lookup-derived metadata that is persisted on submit but not directly
+  // surfaced in the form UI: callsign + tail number / Mode-S identifiers
+  // come from AeroDataBox automatically and only appear in the flight
+  // detail view post-save. The user can still edit them later.
+  const [lookupCallsign, setLookupCallsign] = useState("");
   const [terminal, setTerminal] = useState("");
   const [gate, setGate] = useState("");
   const [seatNumber, setSeatNumber] = useState("");
@@ -243,10 +265,23 @@ export function useFlightForm(
       if (arrAirport) setArrival(arrAirport);
 
       setAirline(flight.airline);
-      setOperatingAirline("");
+      // Codeshare path: API marks the searched flight number as marketed
+      // by airline X but operated by airline Y. Surface Y as the operating
+      // carrier so stats can group on the real metal. For non-codeshare
+      // entries (most lookups), leave operatingAirline empty.
+      setOperatingAirline(flight.isCodeshare ? flight.operatingAirline || "" : "");
       setAircraft(flight.aircraft || "");
+      setLookupCallsign(flight.callsign || "");
       setTerminal(flight.departure.terminal || "");
       setGate(flight.departure.gate || "");
+
+      // Auto-flag cancelled flights from the API. "diverted" gets folded
+      // into "cancelled" because the flight-status enum doesn't have a
+      // dedicated diverted bucket — user can edit later. Anything else
+      // is left to the local date heuristic.
+      if (flight.status === "cancelled" || flight.status === "diverted") {
+        setStatus("cancelled");
+      }
 
       const applyDateTime = (
         value?: string,
@@ -356,6 +391,7 @@ export function useFlightForm(
     airline: airline || undefined,
     operatingAirline: operatingAirline || undefined,
     flightNumber: flightNumber || undefined,
+    callsign: lookupCallsign || undefined,
     aircraft: aircraft || undefined,
     seatClass: seatClass || undefined,
     seatNumber: seatNumber || undefined,
@@ -418,6 +454,7 @@ export function useFlightForm(
     setSeatNumber("");
     setNotes("");
     setOperatingAirline("");
+    setLookupCallsign("");
 
     // Default the new departure date to the original arrival date, time empty —
     // user usually picks both. For a same-day return this is what they want;

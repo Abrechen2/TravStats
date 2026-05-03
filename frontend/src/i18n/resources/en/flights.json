@@ -242,6 +242,8 @@
     "resultsTitle_one": "Found {{count}} flight",
     "resultsTitle_other": "Found {{count}} flights",
     "departs": "Departs",
+    "operatedBy": "Codeshare — operated by {{airline}}",
+    "tailNumber": "Tail number",
     "backToSearch": "Back to search"
   },
   "status": {

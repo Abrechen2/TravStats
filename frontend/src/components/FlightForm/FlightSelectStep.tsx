@@ -5,6 +5,9 @@ import AirlineLogo from "../AirlineLogo";
 interface FlightLookupResult {
   flightNumber: string;
   airline: string;
+  operatingAirline?: string;
+  isCodeshare?: boolean;
+  callsign?: string;
   departure: {
     iata?: string;
     name?: string;
@@ -20,6 +23,8 @@ interface FlightLookupResult {
     gate?: string;
   };
   aircraft?: string;
+  aircraftRegistration?: string;
+  distance?: number;
   status?: string;
 }
 
@@ -67,6 +72,17 @@ export default function FlightSelectStep({
                 <div className={`text-sm ${mutedTextClass}`}>
                   {flight.departure.iata} {t("common:labels.routeSeparator")} {flight.arrival.iata}
                 </div>
+                {flight.isCodeshare && flight.operatingAirline && (
+                  <div className={`text-xs ${mutedTextClass} mt-1 italic`}>
+                    {t("flights:lookup.operatedBy", { airline: flight.operatingAirline })}
+                  </div>
+                )}
+                {flight.aircraftRegistration && (
+                  <div className={`text-xs ${mutedTextClass} mt-1`}>
+                    {t("flights:lookup.tailNumber")}:{" "}
+                    <span className="font-mono">{flight.aircraftRegistration}</span>
+                  </div>
+                )}
                 {flight.departure.scheduledTime && (
                   <div className={`text-xs ${mutedTextClass} mt-1`}>
                     {t("flights:lookup.departs")}:{" "}

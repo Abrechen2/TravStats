@@ -51,11 +51,19 @@ interface AerodataboxFlight {
   aircraft?: {
     reg?: string;
     model?: string;
+    modeS?: string;
   };
   airline?: {
     name?: string;
     iata?: string;
     icao?: string;
+  };
+  greatCircleDistance?: {
+    meter?: number;
+    km?: number;
+    mile?: number;
+    nm?: number;
+    feet?: number;
   };
   departure?: AerodataboxMovement;
   arrival?: AerodataboxMovement;
@@ -91,11 +99,35 @@ function parseAerodataboxUtc(value: string | undefined): string | undefined {
   return parsed.toISOString();
 }
 
-/** Pick the operator entry from a multi-codeshare response. */
-function pickOperator(flights: AerodataboxFlight[]): AerodataboxFlight | undefined {
+interface PickedFlights {
+  /** The operator entry (or first entry if none flagged). */
+  operator: AerodataboxFlight;
+  /**
+   * The codeshare entry whose flight number matches what the user
+   * actually searched for. Present when the user typed a marketing
+   * number that is operated by a partner — used to surface the
+   * correct marketing airline name on the result.
+   */
+  marketing?: AerodataboxFlight;
+}
+
+/**
+ * Pick the operator entry from a multi-codeshare response and, if the
+ * user typed a marketing flight number, also pick the matching
+ * codeshare entry so the marketing airline can be surfaced.
+ */
+function pickOperatorAndMarketing(
+  flights: AerodataboxFlight[],
+  requestedNumber: string,
+): PickedFlights | undefined {
   if (flights.length === 0) return undefined;
-  const operator = flights.find((f) => f.codeshareStatus === "isOperator");
-  return operator ?? flights[0];
+  const operator = flights.find((f) => f.codeshareStatus === "isOperator") ?? flights[0];
+  const normalizedRequested = normalizeFlightNumber(requestedNumber);
+  const marketing = flights.find(
+    (f) =>
+      f !== operator && normalizeFlightNumber(f.number ?? "") === normalizedRequested,
+  );
+  return { operator, marketing };
 }
 
 /**
@@ -154,8 +186,8 @@ export async function lookupFlightAerodatabox(
       },
     );
 
-    const operator = pickOperator(response.data ?? []);
-    if (!operator) {
+    const picked = pickOperatorAndMarketing(response.data ?? [], normalized);
+    if (!picked) {
       logger.info(
         { flightNumber: normalized, date, api: "aerodatabox", operation: "api_empty_response" },
         `AeroDataBox returned no data for ${normalized} on ${date}`,
@@ -165,7 +197,7 @@ export async function lookupFlightAerodatabox(
       return null;
     }
 
-    const result = await mapToLookupResult(operator, normalized);
+    const result = await mapToLookupResult(picked.operator, picked.marketing, normalized);
 
     logger.info(
       {
@@ -215,8 +247,22 @@ function isHistoricalDate(date: string): boolean {
   return requested.getTime() < today.getTime();
 }
 
+/**
+ * Map AeroDataBox `status` strings ("Cancelled", "Diverted", "Landed", …)
+ * to TravStats's flight-status enum. Anything unrecognized stays undefined
+ * so the lookup doesn't silently overwrite a curated status.
+ */
+function mapAerodataboxStatus(status: string | undefined): "cancelled" | "diverted" | undefined {
+  if (!status) return undefined;
+  const lower = status.toLowerCase();
+  if (lower === "canceled" || lower === "cancelled") return "cancelled";
+  if (lower === "diverted") return "diverted";
+  return undefined;
+}
+
 async function mapToLookupResult(
   flight: AerodataboxFlight,
+  marketing: AerodataboxFlight | undefined,
   fallbackFlightNumber: string,
 ): Promise<FlightLookupResult> {
   const departureCode = flight.departure?.airport?.iata || flight.departure?.airport?.icao;
@@ -237,10 +283,42 @@ async function mapToLookupResult(
     flight.arrival?.actualTime?.utc ?? flight.arrival?.runwayTime?.utc,
   );
 
+  // Codeshare detection: the user-typed flight number is a marketing
+  // partner's number, not the operator's. We surface:
+  //   airline           = marketing carrier (what the user sees on the ticket)
+  //   operatingAirline  = operator carrier  (who actually flies the metal)
+  //   isCodeshare       = true when those differ
+  const isCodeshare = !!marketing;
+  const marketingAirline = marketing?.airline?.name;
+  const operatorAirline = flight.airline?.name;
+  const airline = marketingAirline ?? operatorAirline;
+  const operatingAirline = isCodeshare ? operatorAirline : undefined;
+
+  const distanceKm =
+    typeof flight.greatCircleDistance?.km === "number"
+      ? Math.round(flight.greatCircleDistance.km * 100) / 100
+      : undefined;
+
+  // When the user searched a marketing number, keep that as the visible
+  // flight number on the result — the user typed it, the user expects to
+  // see it. The operator's number lives implicitly through `callsign`.
+  const visibleFlightNumber = isCodeshare
+    ? normalizeFlightNumber(marketing?.number ?? fallbackFlightNumber)
+    : normalizeFlightNumber(flight.number ?? fallbackFlightNumber);
+
   return {
-    airline: flight.airline?.name,
-    flightNumber: normalizeFlightNumber(flight.number ?? fallbackFlightNumber),
+    airline,
+    flightNumber: visibleFlightNumber,
     aircraft: flight.aircraft?.model || flight.aircraft?.reg,
+    aircraftRegistration: flight.aircraft?.reg,
+    aircraftModeS: flight.aircraft?.modeS,
+    callsign: flight.callSign,
+    operatingAirline,
+    isCodeshare,
+    airlineIata: marketing?.airline?.iata ?? flight.airline?.iata,
+    airlineIcao: marketing?.airline?.icao ?? flight.airline?.icao,
+    distanceKm,
+    statusOverride: mapAerodataboxStatus(flight.status),
     departure: departureAirport
       ? {
           iata: departureAirport.iata ?? undefined,
