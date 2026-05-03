@@ -56,6 +56,15 @@
     "recenterHint": "Reset to default view",
     "directional": "Show direction",
     "directionalHint": "Render outbound and return legs as separate arcs to surface imbalance",
+    "stats": {
+      "title": "Visible",
+      "flights": "Flights",
+      "routes": "Routes",
+      "flightKm": "Distance",
+      "cruises": "Cruises",
+      "ports": "Ports",
+      "top": "Top"
+    },
     "quartileFilterHint": "Click to isolate this frequency band",
     "quartileFilterClear": "Clear filter",
     "timeSlider": {

@@ -819,8 +819,6 @@ export default function GlobeView({
     }
     return Array.from(seen.values());
   }, [filteredFlights]);
-
-  // Pull cruise leg geometry from the schematic-router endpoint; one
   // FeatureCollection per cruise. Same source as the 2D map.
   const [cruiseGeometry, setCruiseGeometry] = useState<Map<string, CruiseRouteFeatureCollection>>(
     () => new Map()
@@ -964,6 +962,34 @@ export default function GlobeView({
     sliderFilterStart,
     sliderFilterEnd,
   ]);
+
+  // Live stats overlay: derived from the same slider-filtered data as
+  // the layers, so the numbers move in lockstep with the time slider.
+  // Cheap because everything is already memoised upstream.
+  const liveStats = useMemo(() => {
+    let flightKm = 0;
+    for (const f of filteredFlights) {
+      const coords = f.geometry?.coordinates;
+      if (!coords || coords.length < 2) continue;
+      const start = coords[0];
+      const end = coords[coords.length - 1];
+      if (![start[0], start[1], end[0], end[1]].every(Number.isFinite)) continue;
+      flightKm += calculateDistance(start[1], start[0], end[1], end[0]);
+    }
+    const topAirport = airportPoints.reduce<PointDatum | null>(
+      (best, p) => (best && best.size >= p.size ? best : p),
+      null
+    );
+    const cruiseCount = new Set(cruisePaths.map((c) => c.cruiseId)).size;
+    return {
+      flights: filteredFlights.length,
+      routes: arcsData.length + antipodalArcs.length,
+      flightKm: Math.round(flightKm),
+      cruises: cruiseCount,
+      ports: portPoints.length,
+      topAirport,
+    };
+  }, [filteredFlights, airportPoints, cruisePaths, portPoints, arcsData, antipodalArcs]);
 
   // Re-center: fly back to the initial overview pose. Useful after the
   // user has zoomed deep or panned far and wants a quick reset without
@@ -1256,6 +1282,77 @@ export default function GlobeView({
       >
         {mapReady && <DeckGLOverlay layers={layers} />}
       </MapGL>
+
+      {/* Top-left stats overlay — driven by the same slider-filtered data
+          as the globe layers, so numbers tick in real time as the user
+          scrubs the timeline. Hidden when there's nothing visible. */}
+      {(liveStats.flights > 0 || liveStats.cruises > 0) && (
+        <div
+          className="absolute top-4 left-4 z-10"
+          style={{ pointerEvents: "auto" }}
+        >
+          <div
+            className="rounded-md p-3 text-xs"
+            style={{
+              background: "rgba(13, 17, 23, 0.78)",
+              backdropFilter: "blur(12px)",
+              border: "1px solid rgba(255,255,255,0.18)",
+              color: "rgba(241,245,249,0.95)",
+              fontFamily: "'Inter', sans-serif",
+              minWidth: 160,
+            }}
+          >
+            <div className="mb-1.5 text-[11px] font-semibold opacity-90">
+              {t("map:globe.stats.title")}
+            </div>
+            <div className="space-y-0.5 text-[11px]">
+              {liveStats.flights > 0 && (
+                <div className="flex items-center justify-between gap-3">
+                  <span className="opacity-75">{t("map:globe.stats.flights")}</span>
+                  <span className="font-medium tabular-nums">{liveStats.flights}</span>
+                </div>
+              )}
+              {liveStats.routes > 0 && (
+                <div className="flex items-center justify-between gap-3">
+                  <span className="opacity-75">{t("map:globe.stats.routes")}</span>
+                  <span className="font-medium tabular-nums">{liveStats.routes}</span>
+                </div>
+              )}
+              {liveStats.flightKm > 0 && (
+                <div className="flex items-center justify-between gap-3">
+                  <span className="opacity-75">{t("map:globe.stats.flightKm")}</span>
+                  <span className="font-medium tabular-nums">
+                    {liveStats.flightKm.toLocaleString()} km
+                  </span>
+                </div>
+              )}
+              {liveStats.cruises > 0 && (
+                <div className="flex items-center justify-between gap-3">
+                  <span className="opacity-75">{t("map:globe.stats.cruises")}</span>
+                  <span className="font-medium tabular-nums">{liveStats.cruises}</span>
+                </div>
+              )}
+              {liveStats.ports > 0 && (
+                <div className="flex items-center justify-between gap-3">
+                  <span className="opacity-75">{t("map:globe.stats.ports")}</span>
+                  <span className="font-medium tabular-nums">{liveStats.ports}</span>
+                </div>
+              )}
+              {liveStats.topAirport && (
+                <div className="mt-1.5 border-t pt-1 text-[10px] opacity-80"
+                  style={{ borderColor: "rgba(255,255,255,0.12)" }}
+                >
+                  <span className="opacity-75">{t("map:globe.stats.top")}:</span>{" "}
+                  <span className="font-medium">
+                    {liveStats.topAirport.iata ?? liveStats.topAirport.name}
+                  </span>
+                  <span className="ml-1 opacity-60">×{liveStats.topAirport.size}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Bottom-left stack: auto-rotate toggle + heatmap legend */}
       <div
