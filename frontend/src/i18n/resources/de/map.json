@@ -57,6 +57,11 @@
     "directional": "Mit Richtung",
     "directionalHint": "Hin- und Rückflug separat anzeigen, um Ungleichgewichte sichtbar zu machen",
     "openLastFlight": "Letzten Flug öffnen",
+    "performance": "Performance",
+    "performanceHint": "Geringere Detailstufe für mehr FPS auf schwächerer Hardware",
+    "performanceAuto": "Auto",
+    "performanceOn": "Lite",
+    "performanceOff": "Voll",
     "stats": {
       "title": "Sichtbar",
       "flights": "Flüge",

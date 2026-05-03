@@ -361,8 +361,18 @@ const getArcPeakAltitudeMeters = (distanceKm: number): number =>
  */
 const ARC_STEPS_MIN = 12;
 const ARC_STEPS_MAX = 64;
-const getArcSteps = (distanceKm: number): number =>
-  Math.min(ARC_STEPS_MAX, Math.max(ARC_STEPS_MIN, Math.round(distanceKm / 300) + 8));
+const ARC_STEPS_LITE = 16;
+const getArcSteps = (distanceKm: number, lite: boolean): number =>
+  lite
+    ? ARC_STEPS_LITE
+    : Math.min(ARC_STEPS_MAX, Math.max(ARC_STEPS_MIN, Math.round(distanceKm / 300) + 8));
+
+// Auto-suggest performance mode when the visible payload crosses these
+// thresholds. Tuned against the 160-flight + 22-cruise demo seed (which
+// runs comfortably without lite) and field reports of jank around the
+// 200-arc / 100-cruise mark on integrated GPUs.
+const LITE_AUTO_ARC_THRESHOLD = 200;
+const LITE_AUTO_CRUISE_THRESHOLD = 100;
 
 /**
  * Great-circle slerp between two [lng, lat] points with a parabolic
@@ -519,6 +529,35 @@ export default function GlobeView({
     if (typeof window === "undefined") return false;
     return window.sessionStorage.getItem("globeDirectional") === "1";
   });
+  // Performance mode: drops arc tessellation to a flat 16 steps,
+  // halves column disk resolution, and disables auto-highlight on
+  // pickable layers. Tri-state: "auto" lets the dataset thresholds
+  // decide; "on" / "off" override forever (within a session).
+  type LiteMode = "auto" | "on" | "off";
+  const [liteMode, setLiteMode] = useState<LiteMode>(() => {
+    if (typeof window === "undefined") return "auto";
+    const stored = window.sessionStorage.getItem("globeLiteMode");
+    return stored === "on" || stored === "off" ? stored : "auto";
+  });
+  const onLiteModeChange = useCallback((next: LiteMode) => {
+    setLiteMode(next);
+    try {
+      window.sessionStorage.setItem("globeLiteMode", next);
+    } catch {
+      // sessionStorage may be unavailable in private mode — opt-in only
+    }
+  }, []);
+  // Resolved boolean: lite is on if user forced it, OR auto + dataset
+  // crosses one of the size thresholds. Recomputed every render — the
+  // inputs are O(1) numbers so the cost is invisible.
+  const lite = useMemo(() => {
+    if (liteMode === "on") return true;
+    if (liteMode === "off") return false;
+    return (
+      flights.length >= LITE_AUTO_ARC_THRESHOLD ||
+      cruises.length >= LITE_AUTO_CRUISE_THRESHOLD
+    );
+  }, [liteMode, flights.length, cruises.length]);
   // First-run coachmark: shown on the first ever globe visit, dismissed
   // forever via localStorage. The check defaults to false (i.e. "shown")
   // when localStorage is unreadable so the user always gets at least
@@ -787,7 +826,7 @@ export default function GlobeView({
         antipodals.push({
           from: r.from,
           to: r.to,
-          waypoints: greatCircleWaypoints(r.from, r.to, 0, getArcSteps(distanceKm)),
+          waypoints: greatCircleWaypoints(r.from, r.to, 0, getArcSteps(distanceKm, lite)),
           count: r.count,
           flightIds: r.flightIds,
           departure: r.departure,
@@ -801,7 +840,7 @@ export default function GlobeView({
       arcs.push({
         from: r.from,
         to: r.to,
-        waypoints: greatCircleWaypoints(r.from, r.to, peakAltitudeM, getArcSteps(distanceKm)),
+        waypoints: greatCircleWaypoints(r.from, r.to, peakAltitudeM, getArcSteps(distanceKm, lite)),
         count: r.count,
         flightIds: r.flightIds,
         departure: r.departure,
@@ -811,7 +850,7 @@ export default function GlobeView({
       });
     }
     return { arcsData: arcs, antipodalArcs: antipodals, heatmapThresholds: thresholds };
-  }, [filteredFlights, minRouteCount, directional]);
+  }, [filteredFlights, minRouteCount, directional, lite]);
 
   const airportPoints = useMemo<PointDatum[]>(() => {
     const seen = new Map<string, PointDatum>();
@@ -1141,7 +1180,7 @@ export default function GlobeView({
         // would cut them at ±180 and create the phantom-ring artifact.
         wrapLongitude: false,
         pickable: true,
-        autoHighlight: true,
+        autoHighlight: !lite,
         highlightColor: [255, 255, 255, 180],
         onHover: onArcHover,
         onClick: ({ object }: { object?: ArcDatum }): void => {
@@ -1172,7 +1211,7 @@ export default function GlobeView({
         jointRounded: true,
         wrapLongitude: false,
         pickable: true,
-        autoHighlight: true,
+        autoHighlight: !lite,
         highlightColor: [255, 255, 255, 180],
         onHover: onArcHover,
         onClick: ({ object }: { object?: ArcDatum }): void => {
@@ -1204,7 +1243,7 @@ export default function GlobeView({
         dashJustified: true,
         dashGapPickable: false,
         pickable: true,
-        autoHighlight: true,
+        autoHighlight: !lite,
         highlightColor: [255, 255, 255, 180],
         onHover: onCruisePathHover,
         onClick: ({ object }: { object?: CruisePathDatum }): void => {
@@ -1227,11 +1266,11 @@ export default function GlobeView({
         getElevation: MARKER_HEIGHT_M,
         elevationScale: 1,
         radius: MARKER_RADIUS_M,
-        diskResolution: 16,
+        diskResolution: lite ? 8 : 16,
         extruded: true,
         material: false,
         pickable: true,
-        autoHighlight: true,
+        autoHighlight: !lite,
         highlightColor: [255, 255, 255, 200],
         onHover: onAirportHover,
         onClick: ({ object }: { object?: PointDatum }): void => {
@@ -1246,11 +1285,11 @@ export default function GlobeView({
         getElevation: MARKER_HEIGHT_M,
         elevationScale: 1,
         radius: MARKER_RADIUS_M,
-        diskResolution: 16,
+        diskResolution: lite ? 8 : 16,
         extruded: true,
         material: false,
         pickable: true,
-        autoHighlight: true,
+        autoHighlight: !lite,
         highlightColor: [255, 255, 255, 200],
         onHover: onPortHover,
         onClick: ({ object }: { object?: PointDatum }): void => {
@@ -1265,6 +1304,7 @@ export default function GlobeView({
       airportPoints,
       portPoints,
       activeQuartile,
+      lite,
       flyToArc,
       onArcHover,
       onAirportHover,
@@ -1444,6 +1484,28 @@ export default function GlobeView({
             <span aria-hidden>🧭</span>
             <span className="font-medium">{t("map:globe.recenter")}</span>
           </button>
+          <div
+            className="mt-1.5 flex items-center justify-between gap-2"
+            title={t("map:globe.performanceHint")}
+          >
+            <span className="text-xs font-medium">⚡ {t("map:globe.performance")}</span>
+            <select
+              value={liteMode}
+              onChange={(e) => onLiteModeChange(e.target.value as LiteMode)}
+              className="cursor-pointer rounded px-1.5 py-0.5 text-[11px]"
+              style={{
+                background: "rgba(255,255,255,0.06)",
+                border: "1px solid rgba(255,255,255,0.18)",
+                color: "rgba(241,245,249,0.95)",
+              }}
+            >
+              <option value="auto">
+                {t("map:globe.performanceAuto")} ({lite ? t("map:globe.performanceOn") : t("map:globe.performanceOff")})
+              </option>
+              <option value="on">{t("map:globe.performanceOn")}</option>
+              <option value="off">{t("map:globe.performanceOff")}</option>
+            </select>
+          </div>
         </div>
 
         {arcsData.length > 0 && (
