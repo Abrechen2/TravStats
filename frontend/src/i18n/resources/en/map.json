@@ -56,6 +56,7 @@
     "recenterHint": "Reset to default view",
     "directional": "Show direction",
     "directionalHint": "Render outbound and return legs as separate arcs to surface imbalance",
+    "openLastFlight": "Open last flight",
     "stats": {
       "title": "Visible",
       "flights": "Flights",
