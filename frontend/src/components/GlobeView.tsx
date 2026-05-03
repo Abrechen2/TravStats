@@ -330,6 +330,26 @@ const getArcPeakAltitudeMeters = (distanceKm: number): number =>
   Math.min(distanceKm * 1000 * ARC_ALTITUDE_FRACTION, ARC_ALTITUDE_CAP_M);
 
 /**
+ * Vertex count for the great-circle slerp. Fixed 48 was wasteful for
+ * short hops (a 300 km flight needs maybe 10 segments to look smooth)
+ * and barely enough for long-haul (12 000 km routes show visible
+ * polygonal kinks at 48). Scaling cuts total vertex count roughly in
+ * half on a typical mixed dataset, which matters on mobile / slow GPUs
+ * where ColumnLayer + PathLayer + base map already saturate the
+ * fragment-shader budget.
+ *
+ *   500 km   →  10 (clamped to 12)
+ *   2 500 km →  16
+ *   6 000 km →  28
+ *  12 000 km →  48
+ *  18 000 km →  64 (clamped)
+ */
+const ARC_STEPS_MIN = 12;
+const ARC_STEPS_MAX = 64;
+const getArcSteps = (distanceKm: number): number =>
+  Math.min(ARC_STEPS_MAX, Math.max(ARC_STEPS_MIN, Math.round(distanceKm / 300) + 8));
+
+/**
  * Great-circle slerp between two [lng, lat] points with a parabolic
  * z-altitude profile, returning N+1 [lng, lat, altitudeMeters]
  * waypoints along the geodesic. Altitude peaks at the midpoint and
@@ -676,7 +696,7 @@ export default function GlobeView({
           {
             from: r.from,
             to: r.to,
-            waypoints: greatCircleWaypoints(r.from, r.to, peakAltitudeM, 48),
+            waypoints: greatCircleWaypoints(r.from, r.to, peakAltitudeM, getArcSteps(distanceKm)),
             count: r.count,
             flightIds: r.flightIds,
             departure: r.departure,
