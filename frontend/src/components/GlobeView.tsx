@@ -996,26 +996,30 @@ export default function GlobeView({
       if (dep?.iata && Number.isFinite(start[0]) && Number.isFinite(start[1])) {
         const key = dep.iata;
         const cur = seen.get(key);
-        if (cur) cur.size++;
-        else
+        if (cur) {
+          seen.set(key, { ...cur, size: cur.size + 1 });
+        } else {
           seen.set(key, {
             position: [start[0], start[1]],
             size: 1,
             iata: dep.iata,
             name: dep.name ?? dep.iata,
           });
+        }
       }
       if (arr?.iata && Number.isFinite(end[0]) && Number.isFinite(end[1])) {
         const key = arr.iata;
         const cur = seen.get(key);
-        if (cur) cur.size++;
-        else
+        if (cur) {
+          seen.set(key, { ...cur, size: cur.size + 1 });
+        } else {
           seen.set(key, {
             position: [end[0], end[1]],
             size: 1,
             iata: arr.iata,
             name: arr.name ?? arr.iata,
           });
+        }
       }
     }
     return Array.from(seen.values());
@@ -1144,14 +1148,16 @@ export default function GlobeView({
         }
 
         const cur = seen.get(port.id);
-        if (cur) cur.size++;
-        else
+        if (cur) {
+          seen.set(port.id, { ...cur, size: cur.size + 1 });
+        } else {
           seen.set(port.id, {
             position: [port.lon, port.lat],
             size: 1,
             iata: port.unlocode ?? port.name,
             name: port.name,
           });
+        }
       }
     }
     return Array.from(seen.values());
@@ -1391,13 +1397,10 @@ export default function GlobeView({
       // waypoints. ArcLayer.greatCircle is broken on globe projection
       // (height computed in screen-space → invisible) — explicit
       // waypoints sidestep the issue and the curve looks identical.
-      // Dash extension is attached so that arcs aggregated from
-      // metadata-weak flights (no IATA) render dashed; strong arcs
-      // get a [0,0] dash array which the extension treats as solid.
-      // Front-hemisphere culling: alpha drops to ~0 when the arc
-      // mid-point is on the back of the globe relative to the camera.
-      // Mid-point is a cheap proxy — better than nothing, doesn't
-      // need a custom shader.
+      // Dash extension renders metadata-weak arcs (aggregated without
+      // an IATA match) as dashed; strong arcs get [0,0] which the
+      // extension treats as solid. EarthOcclusionExtension provides
+      // per-fragment horizon clipping in the GPU.
       new PathLayer<ArcDatum>({
         id: "globe-flight-arcs",
         data: arcsData,
