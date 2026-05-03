@@ -57,8 +57,6 @@
     "directional": "Mit Richtung",
     "directionalHint": "Hin- und Rückflug separat anzeigen, um Ungleichgewichte sichtbar zu machen",
     "openLastFlight": "Letzten Flug öffnen",
-    "bloom": "Glüheffekt",
-    "bloomHint": "Weiches Halo um die Routen — kostet Performance, im Lite-Modus deaktiviert",
     "weak": "Geschätzte Route",
     "weakHint": "Mindestens ein Flug ohne IATA-Code wurde anhand der Koordinaten zugeordnet — die Aggregation ist möglicherweise unscharf",
     "shipMarkers": "Schiffsmarker",

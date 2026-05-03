@@ -57,8 +57,6 @@
     "directional": "Show direction",
     "directionalHint": "Render outbound and return legs as separate arcs to surface imbalance",
     "openLastFlight": "Open last flight",
-    "bloom": "Glow",
-    "bloomHint": "Soft halo around routes - costs FPS, suppressed in Lite mode",
     "weak": "Estimated route",
     "weakHint": "At least one flight had no IATA code and was matched by coordinates — the aggregation may be approximate",
     "shipMarkers": "Ship markers",
