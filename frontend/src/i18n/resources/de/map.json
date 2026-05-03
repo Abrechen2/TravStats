@@ -59,6 +59,8 @@
     "openLastFlight": "Letzten Flug öffnen",
     "bloom": "Glüheffekt",
     "bloomHint": "Weiches Halo um die Routen — kostet Performance, im Lite-Modus deaktiviert",
+    "terminator": "Tag/Nacht",
+    "terminatorHint": "Zeigt die aktuelle Sonnenposition als Twilight-Band",
     "performance": "Performance",
     "performanceHint": "Geringere Detailstufe für mehr FPS auf schwächerer Hardware",
     "performanceAuto": "Auto",
