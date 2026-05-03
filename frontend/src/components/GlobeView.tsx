@@ -502,7 +502,6 @@ interface TooltipState {
 }
 
 const createRouteKey = (a: string, b: string): string => (a < b ? `${a}-${b}` : `${b}-${a}`);
-const createDirectionalKey = (a: string, b: string): string => `${a}→${b}`;
 
 /**
  * Build a stable per-endpoint identity string. Prefers IATA, falls back
@@ -585,13 +584,6 @@ export default function GlobeView({
   // module across layers, and a stable reference avoids unnecessary
   // pipeline recompiles when the layer list rebuilds.
   const occlusionExt = useMemo(() => new EarthOcclusionExtension(), []);
-  // Directional mode: when true, A→B and B→A are aggregated as separate
-  // arcs so out-/return-leg imbalance shows up in the heatmap. Default
-  // false keeps the current "city pair" aggregation.
-  const [directional, setDirectional] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return window.sessionStorage.getItem("globeDirectional") === "1";
-  });
   // Performance mode: drops arc tessellation to a flat 16 steps,
   // halves column disk resolution, and disables auto-highlight on
   // pickable layers. Tri-state: "auto" lets the dataset thresholds
@@ -734,15 +726,6 @@ export default function GlobeView({
     setStyleId(next);
     try {
       window.sessionStorage.setItem("globeStyleId", next);
-    } catch {
-      // sessionStorage may be unavailable in private mode — opt-in only
-    }
-  }, []);
-
-  const onDirectionalChange = useCallback((next: boolean) => {
-    setDirectional(next);
-    try {
-      window.sessionStorage.setItem("globeDirectional", next ? "1" : "0");
     } catch {
       // sessionStorage may be unavailable in private mode — opt-in only
     }
@@ -910,9 +893,7 @@ export default function GlobeView({
       // falls back to a coord-rounded sentinel. This may collapse
       // multiple flights that were similar-but-not-identical routes.
       const flightWeak = !dep?.iata || !arr?.iata;
-      const key = directional
-        ? createDirectionalKey(depKey, arrKey)
-        : createRouteKey(depKey, arrKey);
+      const key = createRouteKey(depKey, arrKey);
       const existing = routes.get(key);
       if (existing) {
         existing.count++;
@@ -973,7 +954,7 @@ export default function GlobeView({
       });
     }
     return { arcsData: arcs, antipodalArcs: antipodals, heatmapThresholds: thresholds };
-  }, [filteredFlights, minRouteCount, directional, lite, altitudeFactor]);
+  }, [filteredFlights, minRouteCount, lite, altitudeFactor]);
 
   const airportPoints = useMemo<PointDatum[]>(() => {
     const seen = new Map<string, PointDatum>();
@@ -1778,18 +1759,6 @@ export default function GlobeView({
           </label>
           <label
             className="mt-1.5 flex cursor-pointer select-none items-center gap-2"
-            title={t("map:globe.directionalHint")}
-          >
-            <input
-              type="checkbox"
-              checked={directional}
-              onChange={(e) => onDirectionalChange(e.target.checked)}
-              className="cursor-pointer"
-            />
-            <span className="text-xs font-medium">↔ {t("map:globe.directional")}</span>
-          </label>
-          <label
-            className="mt-1.5 flex cursor-pointer select-none items-center gap-2"
             title={t("map:globe.shipMarkersHint")}
           >
             <input
@@ -1992,7 +1961,6 @@ export default function GlobeView({
               <li>🖱️ {t("map:globe.coachmark.pan")}</li>
               <li>🔍 {t("map:globe.coachmark.zoom")}</li>
               <li>📍 {t("map:globe.coachmark.click")}</li>
-              <li>↔ {t("map:globe.coachmark.directional")}</li>
               <li>🌍 {t("map:globe.coachmark.autoRotate")}</li>
             </ul>
             <button
@@ -2038,7 +2006,7 @@ export default function GlobeView({
               <div className="text-[12px] font-semibold">
                 {pinned.kind === "arc" && (
                   <>
-                    {pinned.data.departure.iata ?? "?"} {directional ? "→" : "↔"}{" "}
+                    {pinned.data.departure.iata ?? "?"} ↔{" "}
                     {pinned.data.arrival.iata ?? "?"}
                   </>
                 )}
