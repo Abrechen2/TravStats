@@ -929,6 +929,21 @@ export default function GlobeView({
     sliderFilterEnd,
   ]);
 
+  // Re-center: fly back to the initial overview pose. Useful after the
+  // user has zoomed deep or panned far and wants a quick reset without
+  // hunting for the right zoom level.
+  const onRecenter = useCallback((): void => {
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+    map.flyTo({
+      center: [INITIAL_VIEW_STATE.longitude, INITIAL_VIEW_STATE.latitude],
+      zoom: INITIAL_VIEW_STATE.zoom,
+      bearing: INITIAL_VIEW_STATE.bearing,
+      pitch: INITIAL_VIEW_STATE.pitch,
+      duration: 1200,
+    });
+  }, []);
+
   // Smooth fly-to on arc click. Compute mid-point (handling wrap-around)
   // and pick a zoom level that keeps both endpoints visible without
   // teleporting too close on short hops.
@@ -1216,6 +1231,20 @@ export default function GlobeView({
             />
             <span className="text-xs font-medium">🌍 {t("map:globe.autoRotation")}</span>
           </label>
+          <button
+            type="button"
+            onClick={onRecenter}
+            className="mt-2 flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1 text-xs transition-colors"
+            style={{
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,255,255,0.18)",
+              color: "rgba(241,245,249,0.95)",
+            }}
+            title={t("map:globe.recenterHint")}
+          >
+            <span aria-hidden>🧭</span>
+            <span className="font-medium">{t("map:globe.recenter")}</span>
+          </button>
         </div>
 
         {arcsData.length > 0 && (
