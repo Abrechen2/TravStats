@@ -59,8 +59,6 @@
     "openLastFlight": "Open last flight",
     "bloom": "Glow",
     "bloomHint": "Soft halo around routes - costs FPS, suppressed in Lite mode",
-    "terminator": "Day/Night",
-    "terminatorHint": "Shows the current solar terminator as a twilight band",
     "weak": "Estimated route",
     "weakHint": "At least one flight had no IATA code and was matched by coordinates — the aggregation may be approximate",
     "shipMarkers": "Ship markers",

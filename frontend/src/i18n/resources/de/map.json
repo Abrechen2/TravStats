@@ -59,8 +59,6 @@
     "openLastFlight": "Letzten Flug öffnen",
     "bloom": "Glüheffekt",
     "bloomHint": "Weiches Halo um die Routen — kostet Performance, im Lite-Modus deaktiviert",
-    "terminator": "Tag/Nacht",
-    "terminatorHint": "Zeigt die aktuelle Sonnenposition als Twilight-Band",
     "weak": "Geschätzte Route",
     "weakHint": "Mindestens ein Flug ohne IATA-Code wurde anhand der Koordinaten zugeordnet — die Aggregation ist möglicherweise unscharf",
     "shipMarkers": "Schiffsmarker",
