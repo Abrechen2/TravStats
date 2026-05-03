@@ -50,6 +50,8 @@
     "timesFlown": "{{count}}x geflogen",
     "flight_one": "Flug",
     "flight_other": "Flüge",
+    "antipodalSimplified_one": "{{count}} antipodale Route flach dargestellt",
+    "antipodalSimplified_other": "{{count}} antipodale Routen flach dargestellt",
     "timeSlider": {
       "title": "Zeitachse",
       "modeOff": "Aus",

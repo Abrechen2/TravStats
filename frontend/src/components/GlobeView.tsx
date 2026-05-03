@@ -664,7 +664,7 @@ export default function GlobeView({
   }, [autoRotate]);
 
   // Aggregate flights into city-pair routes with count + heatmap colour.
-  const { arcsData, heatmapThresholds } = useMemo(() => {
+  const { arcsData, antipodalArcs, heatmapThresholds } = useMemo(() => {
     interface RouteAcc {
       count: number;
       from: [number, number];
@@ -708,30 +708,42 @@ export default function GlobeView({
     }
     const counts = Array.from(routes.values()).map((r) => r.count);
     const thresholds = calculateHeatmapThresholds(counts);
-    const arcs: ArcDatum[] = Array.from(routes.values())
-      .filter((r) => r.count >= minRouteCount)
-      .flatMap((r) => {
-        const distanceKm = calculateDistance(r.from[1], r.from[0], r.to[1], r.to[0]);
-        // Antipodal pairs (e.g. SYD↔TFS, ~19 900 km) have a degenerate
-        // great circle: the slerp picks an arbitrary polar path that
-        // visually loops as a "ring around the Arctic". Skip them —
-        // the route still appears in stats, just not as a 3D arc.
-        if (distanceKm >= ANTIPODAL_DISTANCE_KM) return [];
-        const peakAltitudeM = getArcPeakAltitudeMeters(distanceKm);
-        return [
-          {
-            from: r.from,
-            to: r.to,
-            waypoints: greatCircleWaypoints(r.from, r.to, peakAltitudeM, getArcSteps(distanceKm)),
-            count: r.count,
-            flightIds: r.flightIds,
-            departure: r.departure,
-            arrival: r.arrival,
-            color: getHeatmapColor(r.count, thresholds),
-          },
-        ];
+    const arcs: ArcDatum[] = [];
+    const antipodals: ArcDatum[] = [];
+    for (const r of routes.values()) {
+      if (r.count < minRouteCount) continue;
+      const distanceKm = calculateDistance(r.from[1], r.from[0], r.to[1], r.to[0]);
+      // Antipodal pairs (e.g. SYD↔TFS, ~19 900 km) have a degenerate
+      // great circle: the slerp picks an arbitrary polar path. Render
+      // them as a flat surface line at altitude 0 so the route still
+      // appears visually, but without the polar-ring artifact a high-
+      // altitude arc would produce.
+      if (distanceKm >= ANTIPODAL_DISTANCE_KM) {
+        antipodals.push({
+          from: r.from,
+          to: r.to,
+          waypoints: greatCircleWaypoints(r.from, r.to, 0, getArcSteps(distanceKm)),
+          count: r.count,
+          flightIds: r.flightIds,
+          departure: r.departure,
+          arrival: r.arrival,
+          color: getHeatmapColor(r.count, thresholds),
+        });
+        continue;
+      }
+      const peakAltitudeM = getArcPeakAltitudeMeters(distanceKm);
+      arcs.push({
+        from: r.from,
+        to: r.to,
+        waypoints: greatCircleWaypoints(r.from, r.to, peakAltitudeM, getArcSteps(distanceKm)),
+        count: r.count,
+        flightIds: r.flightIds,
+        departure: r.departure,
+        arrival: r.arrival,
+        color: getHeatmapColor(r.count, thresholds),
       });
-    return { arcsData: arcs, heatmapThresholds: thresholds };
+    }
+    return { arcsData: arcs, antipodalArcs: antipodals, heatmapThresholds: thresholds };
   }, [filteredFlights, minRouteCount]);
 
   const airportPoints = useMemo<PointDatum[]>(() => {
@@ -1027,6 +1039,27 @@ export default function GlobeView({
           }
         },
       }),
+      // Antipodal routes (>= ANTIPODAL_DISTANCE_KM) — flat surface
+      // line at altitude 0, narrower than normal arcs and slightly
+      // muted, so the route still appears visually but doesn't grab
+      // the eye like a real arc would. Counter shown in the legend.
+      new PathLayer<ArcDatum>({
+        id: "globe-flight-arcs-antipodal",
+        data: antipodalArcs,
+        getPath: (d) => d.waypoints,
+        getColor: (d) => [...d.color, 160] as [number, number, number, number],
+        getWidth: 1,
+        widthUnits: "pixels",
+        widthMinPixels: 1,
+        widthMaxPixels: 1.5,
+        capRounded: true,
+        jointRounded: true,
+        wrapLongitude: false,
+        pickable: true,
+        autoHighlight: true,
+        highlightColor: [255, 255, 255, 180],
+        onHover: onArcHover,
+      }),
       new PathLayer<CruisePathDatum>({
         id: "globe-cruise-paths",
         data: cruisePaths,
@@ -1086,6 +1119,7 @@ export default function GlobeView({
     ],
     [
       arcsData,
+      antipodalArcs,
       cruisePaths,
       airportPoints,
       portPoints,
@@ -1192,6 +1226,14 @@ export default function GlobeView({
                 </div>
               ))}
             </div>
+            {antipodalArcs.length > 0 && (
+              <div
+                className="mt-2 border-t pt-1.5 text-[10px] opacity-70"
+                style={{ borderColor: "rgba(255,255,255,0.12)" }}
+              >
+                {t("map:globe.antipodalSimplified", { count: antipodalArcs.length })}
+              </div>
+            )}
           </div>
         )}
       </div>
