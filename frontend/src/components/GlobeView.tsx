@@ -445,6 +445,20 @@ interface TooltipState {
 
 const createRouteKey = (a: string, b: string): string => (a < b ? `${a}-${b}` : `${b}-${a}`);
 
+/**
+ * Build a stable per-endpoint identity string. Prefers IATA, falls back
+ * to rounded lat,lng (~11 km grid at the equator). Falling back to a
+ * single sentinel like "UNK" would collapse every IATA-less flight into
+ * one bucket and draw a single phantom mega-arc spanning whichever two
+ * arbitrary endpoints happened to land first — exactly the bug Codex
+ * spotted in this file.
+ */
+const endpointIdentity = (
+  iata: string | undefined,
+  lng: number,
+  lat: number
+): string => iata ?? `@${lng.toFixed(1)},${lat.toFixed(1)}`;
+
 export default function GlobeView({
   flights = [],
   cruises = [],
@@ -604,8 +618,8 @@ export default function GlobeView({
       }
       const dep = flight.properties?.departureAirport;
       const arr = flight.properties?.arrivalAirport;
-      const depKey = dep?.iata ?? "UNK";
-      const arrKey = arr?.iata ?? "UNK";
+      const depKey = endpointIdentity(dep?.iata, start[0], start[1]);
+      const arrKey = endpointIdentity(arr?.iata, end[0], end[1]);
       const key = createRouteKey(depKey, arrKey);
       const existing = routes.get(key);
       if (existing) {
