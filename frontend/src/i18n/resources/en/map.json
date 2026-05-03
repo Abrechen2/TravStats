@@ -57,6 +57,11 @@
     "directional": "Show direction",
     "directionalHint": "Render outbound and return legs as separate arcs to surface imbalance",
     "openLastFlight": "Open last flight",
+    "performance": "Performance",
+    "performanceHint": "Lower detail for higher FPS on weaker hardware",
+    "performanceAuto": "Auto",
+    "performanceOn": "Lite",
+    "performanceOff": "Full",
     "stats": {
       "title": "Visible",
       "flights": "Flights",
