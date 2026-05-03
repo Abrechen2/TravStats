@@ -542,6 +542,18 @@ export default function GlobeView({
   // Throttled via rAF so dense move events (auto-rotate, drag-pan)
   // coalesce.
   const [cameraDir, setCameraDir] = useState<[number, number, number]>([1, 0, 0]);
+  // Map zoom — used as a level-of-detail signal. At low zoom the
+  // standard altitude-based arcs look great; at high zoom (street/city
+  // level) those same arcs become unreadable horizontal streaks across
+  // the screen because the altitude is in absolute meters.
+  // Quantised to 1 decimal so we don't re-tessellate every wheel tick.
+  const [mapZoom, setMapZoom] = useState<number>(0.6);
+  // Altitude factor: 1.0 below z=0.5, smooth ramp to 0 at z=2.
+  // Quantised so re-tessellation only fires on coarse zoom changes.
+  // Aggressive ramp: z=2 is roughly continent-level — already too
+  // close to want the arcs poking 5000 km off the surface.
+  const altitudeFactor =
+    Math.round(Math.max(0, Math.min(1, 1 - (mapZoom - 0.5) / 1.5)) * 10) / 10;
 
   // Helper: how visible (0..1) is an arc whose path passes through
   // these three lng/lat samples? Uses the min dot of all three vs
@@ -559,9 +571,21 @@ export default function GlobeView({
           Math.sin(latR) * cameraDir[2];
         if (dot < minDot) minDot = dot;
       }
+      // At higher zoom we tighten the visibility window so far-away
+      // arcs disappear instead of bleeding into the visible map area.
+      // Below z=1 = wide window (show edges of globe). Above z=2 =
+      // tight window (only keep arcs whose endpoints are clearly in
+      // view). Aggressive cutoff above z=2 — that's already where the
+      // user is looking at one continent and globe-spanning arcs don't
+      // belong on screen anyway.
+      if (mapZoom > 2) {
+        // At z=2: require minDot > -0.1. At z=4+: require minDot > 0.3.
+        const cutoff = Math.min(0.3, -0.1 + (mapZoom - 2) * 0.2);
+        return minDot < cutoff ? 0 : Math.max(0, Math.min(1, (minDot - cutoff) * 6));
+      }
       return Math.max(0, Math.min(1, (minDot + 0.25) / 0.4));
     },
-    [cameraDir]
+    [cameraDir, mapZoom]
   );
   // Directional mode: when true, A→B and B→A are aggregated as separate
   // arcs so out-/return-leg imbalance shows up in the heatmap. Default
@@ -785,12 +809,15 @@ export default function GlobeView({
           Math.cos(lat) * Math.sin(lng),
           Math.sin(lat),
         ]);
+        setMapZoom(map.getZoom());
       });
     };
     map.on("move", onMove);
+    map.on("zoom", onMove);
     onMove();
     return () => {
       map.off("move", onMove);
+      map.off("zoom", onMove);
       cancelAnimationFrame(raf);
     };
   }, [mapReady]);
@@ -949,7 +976,7 @@ export default function GlobeView({
         });
         continue;
       }
-      const peakAltitudeM = getArcPeakAltitudeMeters(distanceKm);
+      const peakAltitudeM = getArcPeakAltitudeMeters(distanceKm) * altitudeFactor;
       arcs.push({
         from: r.from,
         to: r.to,
@@ -964,7 +991,7 @@ export default function GlobeView({
       });
     }
     return { arcsData: arcs, antipodalArcs: antipodals, heatmapThresholds: thresholds };
-  }, [filteredFlights, minRouteCount, directional, lite]);
+  }, [filteredFlights, minRouteCount, directional, lite, altitudeFactor]);
 
   const airportPoints = useMemo<PointDatum[]>(() => {
     const seen = new Map<string, PointDatum>();
@@ -1172,7 +1199,7 @@ export default function GlobeView({
     const end = coords[coords.length - 1];
     if (![start[0], start[1], end[0], end[1]].every(Number.isFinite)) return null;
     const distanceKm = calculateDistance(start[1], start[0], end[1], end[0]);
-    const peakAltitudeM = getArcPeakAltitudeMeters(distanceKm);
+    const peakAltitudeM = getArcPeakAltitudeMeters(distanceKm) * altitudeFactor;
     return {
       from: [start[0], start[1]],
       to: [end[0], end[1]],
@@ -1190,7 +1217,7 @@ export default function GlobeView({
       arrival: latest.properties.arrivalAirport ?? {},
       weak: false,
     };
-  }, [sliderMode, filteredFlights, lite]);
+  }, [sliderMode, filteredFlights, lite, altitudeFactor]);
 
   // Ship marker positions: take the LAST point of every visible cruise
   // path. In live mode, cruisePaths are truncated to current progress —
