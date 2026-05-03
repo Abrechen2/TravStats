@@ -15,10 +15,17 @@
 // IconLayer, etc.). `geometry.worldPosition.z` carries altitude in
 // meters, which we convert to Earth radii so high-altitude arcs survive
 // the horizon test slightly farther around the limb.
+//
+// Camera state is pulled from `viewport.longitude/latitude/zoom` inside
+// `draw()` every frame, so the uniforms always match the basemap with
+// zero React-state round-trip and zero per-frame layer reconstruction.
+// This is the difference between arcs that lag the globe rotation by
+// one frame (visible wobble at the limb) and arcs that move in lockstep.
 
 import { LayerExtension, type Layer } from "@deck.gl/core";
 
 const EARTH_RADIUS_M = 6371000.0;
+const DEG_TO_RAD = Math.PI / 180;
 
 const shaderModuleSource = /* glsl */ `
 uniform earthOcclusionUniforms {
@@ -81,11 +88,7 @@ if (earthOcclusion.enabled == 1) {
 export interface EarthOcclusionExtensionProps {
   /** Master switch. Default: true. */
   earthOcclusionEnabled?: boolean;
-  /** Unit vector from Earth center pointing toward the camera. */
-  earthOcclusionCameraDir?: [number, number, number];
-  /** Camera distance from Earth center in Earth radii (>1). */
-  earthOcclusionCameraDistance?: number;
-  /** Soft fade band width across the horizon. */
+  /** Soft fade band width across the horizon, in cosine space. */
   earthOcclusionFadeBand?: number;
 }
 
@@ -97,12 +100,29 @@ interface EarthOcclusionUniforms {
   enabled: number;
 }
 
+interface ViewportLike {
+  longitude?: number;
+  latitude?: number;
+  zoom?: number;
+}
+
+interface DrawParams {
+  context: { viewport?: ViewportLike };
+}
+
 const defaultProps = {
   earthOcclusionEnabled: true,
-  earthOcclusionCameraDir: { type: "array", value: [1, 0, 0], compare: true },
-  earthOcclusionCameraDistance: { type: "number", value: 4, min: 1.001 },
   earthOcclusionFadeBand: { type: "number", value: 0.04, min: 0.001 },
 };
+
+// Same heuristic the GlobeView used for cameraDistance, kept here so the
+// extension is self-contained. At zoom 0 the camera sits ~2.5 ER from
+// Earth center (full hemisphere visible); each zoom step pulls it ~30%
+// closer. The factor 0.7 was tuned empirically against MapLibre's
+// globe view.
+function cameraDistanceFromZoom(zoom: number): number {
+  return 1 + 1.5 * Math.pow(2, -Math.max(0, zoom) * 0.7);
+}
 
 export class EarthOcclusionExtension extends LayerExtension {
   static defaultProps = defaultProps;
@@ -112,11 +132,19 @@ export class EarthOcclusionExtension extends LayerExtension {
     return { modules: [shaderModule], inject: injection };
   }
 
-  draw(this: Layer<EarthOcclusionExtensionProps>): void {
+  draw(this: Layer<EarthOcclusionExtensionProps>, params: DrawParams): void {
     const props = this.props as Required<EarthOcclusionExtensionProps>;
-    const dist = Math.max(1.001, props.earthOcclusionCameraDistance);
+    const viewport = params?.context?.viewport;
+    const lng = (viewport?.longitude ?? 0) * DEG_TO_RAD;
+    const lat = (viewport?.latitude ?? 0) * DEG_TO_RAD;
+    const zoom = viewport?.zoom ?? 0;
+    const dist = Math.max(1.001, cameraDistanceFromZoom(zoom));
     const uniforms: EarthOcclusionUniforms = {
-      cameraDir: props.earthOcclusionCameraDir,
+      cameraDir: [
+        Math.cos(lat) * Math.cos(lng),
+        Math.cos(lat) * Math.sin(lng),
+        Math.sin(lat),
+      ],
       cosHorizon: 1.0 / dist,
       fadeBand: props.earthOcclusionFadeBand,
       altitudeBoost: 1.0 / EARTH_RADIUS_M,
