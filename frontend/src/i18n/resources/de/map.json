@@ -54,8 +54,6 @@
     "antipodalSimplified_other": "{{count}} antipodale Routen flach dargestellt",
     "recenter": "Zentrieren",
     "recenterHint": "Standardansicht wiederherstellen",
-    "directional": "Mit Richtung",
-    "directionalHint": "Hin- und Rückflug separat anzeigen, um Ungleichgewichte sichtbar zu machen",
     "openLastFlight": "Letzten Flug öffnen",
     "weak": "Geschätzte Route",
     "weakHint": "Mindestens ein Flug ohne IATA-Code wurde anhand der Koordinaten zugeordnet — die Aggregation ist möglicherweise unscharf",
@@ -80,7 +78,6 @@
       "pan": "Ziehen, um die Erde zu drehen",
       "zoom": "Mausrad zum Zoomen",
       "click": "Klick auf Marker oder Routen für Details",
-      "directional": "'Mit Richtung' zeigt Hin- und Rückflug separat",
       "autoRotate": "Auto-Rotation lässt den Globus selbst drehen",
       "dismiss": "Verstanden, los geht's"
     },

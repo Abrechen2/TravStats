@@ -54,8 +54,6 @@
     "antipodalSimplified_other": "{{count}} antipodal routes shown flat",
     "recenter": "Recenter",
     "recenterHint": "Reset to default view",
-    "directional": "Show direction",
-    "directionalHint": "Render outbound and return legs as separate arcs to surface imbalance",
     "openLastFlight": "Open last flight",
     "weak": "Estimated route",
     "weakHint": "At least one flight had no IATA code and was matched by coordinates — the aggregation may be approximate",
@@ -80,7 +78,6 @@
       "pan": "Drag to spin the Earth",
       "zoom": "Scroll to zoom",
       "click": "Click any marker or route to pin details",
-      "directional": "Toggle 'Show direction' to split outbound vs return",
       "autoRotate": "Auto-Rotation lets the globe spin by itself",
       "dismiss": "Got it, take me to the globe"
     },
