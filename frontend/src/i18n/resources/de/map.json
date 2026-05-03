@@ -52,6 +52,8 @@
     "flight_other": "Flüge",
     "antipodalSimplified_one": "{{count}} antipodale Route flach dargestellt",
     "antipodalSimplified_other": "{{count}} antipodale Routen flach dargestellt",
+    "recenter": "Zentrieren",
+    "recenterHint": "Standardansicht wiederherstellen",
     "timeSlider": {
       "title": "Zeitachse",
       "modeOff": "Aus",

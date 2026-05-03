@@ -52,6 +52,8 @@
     "flight_other": "flights",
     "antipodalSimplified_one": "{{count}} antipodal route shown flat",
     "antipodalSimplified_other": "{{count}} antipodal routes shown flat",
+    "recenter": "Recenter",
+    "recenterHint": "Reset to default view",
     "timeSlider": {
       "title": "Timeline",
       "modeOff": "Off",
