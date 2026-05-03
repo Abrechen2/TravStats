@@ -31,10 +31,17 @@ const router = Router();
 // Interface for flight update data
 interface FlightUpdateData {
   airline?: string;
+  airlineIata?: string | null;
+  airlineIcao?: string | null;
   operatingAirline?: string | null;
+  operatingAirlineIata?: string | null;
+  operatingAirlineIcao?: string | null;
+  isCodeshare?: boolean | null;
   flightNumber?: string;
   callsign?: string | null;
   aircraft?: string | null;
+  aircraftRegistration?: string | null;
+  aircraftModeS?: string | null;
   status?: string;
   notes?: string | null;
   price?: number | null;
@@ -303,10 +310,17 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
       data: {
         userId,
         airline: data.airline,
+        airlineIata: data.airlineIata,
+        airlineIcao: data.airlineIcao,
         operatingAirline: data.operatingAirline,
+        operatingAirlineIata: data.operatingAirlineIata,
+        operatingAirlineIcao: data.operatingAirlineIcao,
+        isCodeshare: data.isCodeshare,
         flightNumber: data.flightNumber,
         callsign: data.callsign,
         aircraft: data.aircraft ? normalizeAircraft(data.aircraft) : null,
+        aircraftRegistration: data.aircraftRegistration,
+        aircraftModeS: data.aircraftModeS,
         // Use enriched departure data (fills in missing IATA/ICAO/names)
         depIcao: enriched.departure.icao,
         depIata: enriched.departure.iata,
@@ -678,10 +692,17 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
 
     const updateData: FlightUpdateData = {};
     if (data.airline) updateData.airline = data.airline;
+    if (data.airlineIata !== undefined) updateData.airlineIata = data.airlineIata;
+    if (data.airlineIcao !== undefined) updateData.airlineIcao = data.airlineIcao;
     if (data.operatingAirline !== undefined) updateData.operatingAirline = data.operatingAirline;
+    if (data.operatingAirlineIata !== undefined) updateData.operatingAirlineIata = data.operatingAirlineIata;
+    if (data.operatingAirlineIcao !== undefined) updateData.operatingAirlineIcao = data.operatingAirlineIcao;
+    if (data.isCodeshare !== undefined) updateData.isCodeshare = data.isCodeshare;
     if (data.flightNumber) updateData.flightNumber = data.flightNumber;
     if (data.callsign !== undefined) updateData.callsign = data.callsign;
     if (data.aircraft !== undefined) updateData.aircraft = data.aircraft ? normalizeAircraft(data.aircraft) : data.aircraft;
+    if (data.aircraftRegistration !== undefined) updateData.aircraftRegistration = data.aircraftRegistration;
+    if (data.aircraftModeS !== undefined) updateData.aircraftModeS = data.aircraftModeS;
     if (data.status) updateData.status = data.status;
     if (data.notes !== undefined) updateData.notes = data.notes;
     if (data.price !== undefined) updateData.price = data.price;

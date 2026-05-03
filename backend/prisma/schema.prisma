@@ -113,11 +113,18 @@ model Airport {
 model Flight {
   id               String   @id @default(uuid())
   userId           String   @map("user_id")
-  airline          String?
-  operatingAirline String?  @map("operating_airline")
-  flightNumber     String?  @map("flight_number")
-  callsign         String?
-  aircraft         String?
+  airline              String?
+  airlineIata          String?  @map("airline_iata")
+  airlineIcao          String?  @map("airline_icao")
+  operatingAirline     String?  @map("operating_airline")
+  operatingAirlineIata String?  @map("operating_airline_iata")
+  operatingAirlineIcao String?  @map("operating_airline_icao")
+  isCodeshare          Boolean? @map("is_codeshare")
+  flightNumber         String?  @map("flight_number")
+  callsign             String?
+  aircraft             String?
+  aircraftRegistration String?  @map("aircraft_registration")
+  aircraftModeS        String?  @map("aircraft_mode_s")
   depIcao          String?  @map("dep_icao")
   depIata          String?  @map("dep_iata")
   depName          String?  @map("dep_name")
