@@ -349,6 +349,8 @@
     "title": "Features",
     "costTracking": "Cost Tracking",
     "costTrackingDesc": "Show price and cost fields in forms and enable business cost statistics.",
+    "trackAircraft": "Track tail numbers",
+    "trackAircraftDesc": "Persist aircraft registration + Mode-S from flight lookups. Off = aggregates only, no audit trail of specific airframes.",
     "help": {
       "title": "Optional features",
       "description": "Toggle features on and off to tailor the UI to your usage. Disabled features stay in the code and can be re-enabled any time.",

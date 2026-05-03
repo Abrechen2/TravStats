@@ -334,6 +334,13 @@
     "loading": "Loading...",
     "topN": "Top {{n}} Airlines"
   },
+  "aircraftRanking": {
+    "title": "Most-Flown Aircraft (Hulls)",
+    "noData": "No flights with tail numbers yet",
+    "hint": "Add a flight via lookup to capture tail numbers automatically.",
+    "loading": "Loading...",
+    "topN": "Top {{n}} Aircraft"
+  },
   "countryDist": {
     "title": "Country Distribution (Departure)",
     "country": "Country",

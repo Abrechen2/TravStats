@@ -383,6 +383,11 @@ export function useFlightForm(
   const depTz = departure?.timezone || userTz;
   const arrTz = arrival?.timezone || userTz;
 
+  // Honour the user's "track aircraft registrations" opt-out: when off,
+  // the lookup-derived tail number / Mode-S are dropped before submit so
+  // the column stays NULL on the row. Default is ON.
+  const trackAircraft = settings?.features?.trackAircraftRegistration !== false;
+
   const buildFlightPayload = (): FlightInput => ({
     departure: {
       iata: departure!.iata,
@@ -406,8 +411,8 @@ export function useFlightForm(
     flightNumber: flightNumber || undefined,
     callsign: lookupCallsign || undefined,
     aircraft: aircraft || undefined,
-    aircraftRegistration: lookupAircraftRegistration || undefined,
-    aircraftModeS: lookupAircraftModeS || undefined,
+    aircraftRegistration: trackAircraft ? lookupAircraftRegistration || undefined : undefined,
+    aircraftModeS: trackAircraft ? lookupAircraftModeS || undefined : undefined,
     seatClass: seatClass || undefined,
     seatNumber: seatNumber || undefined,
     terminal: terminal || undefined,
