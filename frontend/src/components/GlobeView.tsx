@@ -542,14 +542,39 @@ export default function GlobeView({
     }
   }, []);
 
-  // Apply globe projection + sky on initial load AND after every style
-  // swap (MapLibre resets both when replacing the style). Driven by
-  // react-map-gl's onLoad — that's the only event that fires after the
-  // map ref is guaranteed populated.
+  // Apply globe projection + sky on initial load. Driven by
+  // react-map-gl's onLoad — the only event that fires after the map ref
+  // is guaranteed populated. Re-application after style swaps is owned
+  // by the next effect.
   const onMapLoad = useCallback((): void => {
     const map = mapRef.current?.getMap();
     if (!map) return;
-    const apply = (): void => {
+    try {
+      map.setProjection({ type: "globe" });
+    } catch (err) {
+      logger.warn("GlobeView: setProjection(globe) failed", err);
+    }
+    try {
+      map.setSky(currentStyleRef.current.sky);
+    } catch (err) {
+      logger.warn("GlobeView: setSky failed", err);
+    }
+    // Now that globe projection is engaged, mount the deck.gl overlay.
+    // Constructor will detect globe mode and compile globe-aware shaders.
+    setMapReady(true);
+  }, []);
+
+  // Re-apply globe projection + sky after every style swap. MapLibre
+  // resets both when replacing the style, so we listen for `style.load`
+  // and reapply. Owned by its own effect with explicit cleanup so a
+  // remount or strict-mode double-invoke doesn't stack listeners — every
+  // stacked listener would re-apply projection on the next style load
+  // and slow the swap down linearly.
+  useEffect(() => {
+    if (!mapReady) return;
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+    const reapply = (): void => {
       try {
         map.setProjection({ type: "globe" });
       } catch (err) {
@@ -561,12 +586,11 @@ export default function GlobeView({
         logger.warn("GlobeView: setSky failed", err);
       }
     };
-    apply();
-    map.on("style.load", apply);
-    // Now that globe projection is engaged, mount the deck.gl overlay.
-    // Constructor will detect globe mode and compile globe-aware shaders.
-    setMapReady(true);
-  }, []);
+    map.on("style.load", reapply);
+    return () => {
+      map.off("style.load", reapply);
+    };
+  }, [mapReady]);
 
   // Auto-rotation loop. Drives `map.jumpTo` ~30 fps with a constant
   // angular velocity, no easing — gives the same continuous "globe
