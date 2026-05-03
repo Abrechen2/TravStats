@@ -6,6 +6,7 @@ import { encryptApiKey } from '../../utils/encryption';
 import {
   testAirlabsKey,
   testAviationstackKey,
+  testAerodataboxKey,
   testOpenSkyCredentials,
 } from '../../services/apiKeyTester';
 import logger from '../../utils/logger';
@@ -21,6 +22,7 @@ const router = Router();
 const apiKeysSchema = z.object({
   airlabsApiKey: z.string().optional().nullable(),
   aviationstackApiKey: z.string().optional().nullable(),
+  aerodataboxApiKey: z.string().optional().nullable(),
   openskyClientId: z.string().optional().nullable(),
   openskyClientSecret: z.string().optional().nullable(),
   openskyUsername: z.string().optional().nullable(),
@@ -46,13 +48,14 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
   try {
     const userId = req.userId!;
 
-    let settings: Pick<UserApiKeySettings, 'airlabsApiKey' | 'aviationstackApiKey' | 'openskyClientId' | 'openskyClientSecret' | 'openskyUsername' | 'openskyPassword'> | null = null;
+    let settings: Pick<UserApiKeySettings, 'airlabsApiKey' | 'aviationstackApiKey' | 'aerodataboxApiKey' | 'openskyClientId' | 'openskyClientSecret' | 'openskyUsername' | 'openskyPassword'> | null = null;
     try {
       settings = await prisma.userSettings.findUnique({
         where: { userId },
         select: {
           airlabsApiKey: true,
           aviationstackApiKey: true,
+          aerodataboxApiKey: true,
           openskyClientId: true,
           openskyClientSecret: true,
           openskyUsername: true,
@@ -84,12 +87,14 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
 
     let airlabsAccess = { hasAccess: false, isShared: false };
     let aviationstackAccess = { hasAccess: false, isShared: false };
+    let aerodataboxAccess = { hasAccess: false, isShared: false };
 
     try {
       const { hasApiKeyAccess } = await import('../../services/apiKeyResolver');
-      [airlabsAccess, aviationstackAccess] = await Promise.all([
+      [airlabsAccess, aviationstackAccess, aerodataboxAccess] = await Promise.all([
         hasApiKeyAccess('airlabs', userId),
         hasApiKeyAccess('aviationstack', userId),
+        hasApiKeyAccess('aerodatabox', userId),
       ]);
     } catch (error: unknown) {
       logger.warn({
@@ -116,6 +121,11 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
         hasKey: !!settings?.aviationstackApiKey,
         isShared: aviationstackAccess.isShared,
         hasAccess: aviationstackAccess.hasAccess,
+      },
+      aerodatabox: {
+        hasKey: !!settings?.aerodataboxApiKey,
+        isShared: aerodataboxAccess.isShared,
+        hasAccess: aerodataboxAccess.hasAccess,
       },
       opensky: {
         hasKey: !!hasUserOpensky,
@@ -162,6 +172,13 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
       }
       updateData.aviationstackApiKey = encryptApiKey(payload.aviationstackApiKey);
     }
+    if (payload.aerodataboxApiKey !== undefined) {
+      if (!allowUserFlightApiKeys) {
+        res.status(403).json({ error: 'User flight API keys are not allowed by administrator' });
+        return;
+      }
+      updateData.aerodataboxApiKey = encryptApiKey(payload.aerodataboxApiKey);
+    }
     if (payload.openskyClientId !== undefined) {
       if (!allowUserFlightApiKeys) {
         res.status(403).json({ error: 'User flight API keys are not allowed by administrator' });
@@ -194,9 +211,10 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
     });
 
     const { hasApiKeyAccess } = await import('../../services/apiKeyResolver');
-    const [airlabsAccess, aviationstackAccess] = await Promise.all([
+    const [airlabsAccess, aviationstackAccess, aerodataboxAccess] = await Promise.all([
       hasApiKeyAccess('airlabs', userId),
       hasApiKeyAccess('aviationstack', userId),
+      hasApiKeyAccess('aerodatabox', userId),
     ]);
 
     const updatedSettings = await prisma.userSettings.findUnique({
@@ -220,6 +238,10 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
         aviationstack: {
           hasKey: !!updateData.aviationstackApiKey || aviationstackAccess.hasAccess,
           isShared: aviationstackAccess.isShared,
+        },
+        aerodatabox: {
+          hasKey: !!updateData.aerodataboxApiKey || aerodataboxAccess.hasAccess,
+          isShared: aerodataboxAccess.isShared,
         },
         opensky: {
           hasKey: !!updatedSettings?.openskyClientId,
@@ -248,6 +270,17 @@ router.post('/test/aviationstack', async (req: AuthRequest, res: Response, next:
   try {
     const { apiKey } = testApiKeySchema.parse(req.body);
     const result = await testAviationstackKey(apiKey, req.userId!);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /test/aerodatabox
+router.post('/test/aerodatabox', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { apiKey } = testApiKeySchema.parse(req.body);
+    const result = await testAerodataboxKey(apiKey, req.userId!);
     res.json(result);
   } catch (error) {
     next(error);

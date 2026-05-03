@@ -8,7 +8,13 @@ import { prisma } from '../db';
 import { decryptApiKey } from '../utils/encryption';
 import logger from '../utils/logger';
 
-export type ApiProvider = 'openai' | 'claude' | 'airlabs' | 'aviationstack' | 'opensky';
+export type ApiProvider =
+  | 'openai'
+  | 'claude'
+  | 'airlabs'
+  | 'aviationstack'
+  | 'aerodatabox'
+  | 'opensky';
 
 export interface OpenSkyCredentials {
   clientId?: string;
@@ -35,6 +41,7 @@ export async function getApiKey(
           claudeApiKey: true,
           airlabsApiKey: true,
           aviationstackApiKey: true,
+          aerodataboxApiKey: true,
         },
       });
 
@@ -53,6 +60,9 @@ export async function getApiKey(
             break;
           case 'aviationstack':
             userKey = userSettings.aviationstackApiKey;
+            break;
+          case 'aerodatabox':
+            userKey = userSettings.aerodataboxApiKey;
             break;
         }
 
@@ -83,6 +93,9 @@ export async function getApiKey(
         case 'aviationstack':
           globalKey = adminSettings.globalAviationstackApiKey;
           break;
+        case 'aerodatabox':
+          globalKey = adminSettings.globalAerodataboxApiKey;
+          break;
       }
 
       if (globalKey) {
@@ -103,6 +116,8 @@ export async function getApiKey(
         return process.env.AIRLABS_API_KEY || null;
       case 'aviationstack':
         return process.env.AVIATIONSTACK_API_KEY || null;
+      case 'aerodatabox':
+        return process.env.AERODATABOX_API_KEY || null;
       default:
         return null;
     }
@@ -251,6 +266,7 @@ export async function hasApiKeyAccess(
           claudeApiKey: true,
           airlabsApiKey: true,
           aviationstackApiKey: true,
+          aerodataboxApiKey: true,
         },
       });
 
@@ -268,6 +284,9 @@ export async function hasApiKeyAccess(
             break;
           case 'aviationstack':
             hasUserKey = !!userSettings.aviationstackApiKey;
+            break;
+          case 'aerodatabox':
+            hasUserKey = !!userSettings.aerodataboxApiKey;
             break;
         }
 
@@ -294,6 +313,9 @@ export async function hasApiKeyAccess(
             break;
           case 'aviationstack':
             hasGlobalKey = !!adminSettings.globalAviationstackApiKey;
+            break;
+          case 'aerodatabox':
+            hasGlobalKey = !!adminSettings.globalAerodataboxApiKey;
             break;
         }
       } catch (error: unknown) {
@@ -325,6 +347,9 @@ export async function hasApiKeyAccess(
         break;
       case 'aviationstack':
         hasEnvKey = !!process.env.AVIATIONSTACK_API_KEY;
+        break;
+      case 'aerodatabox':
+        hasEnvKey = !!process.env.AERODATABOX_API_KEY;
         break;
     }
 

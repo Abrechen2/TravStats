@@ -312,6 +312,69 @@ export async function testAviationstackKey(apiKey: string, userId?: string): Pro
 }
 
 /**
+ * Test AeroDataBox API key
+ *
+ * Uses the `/subscriptions/balance` endpoint — it's cheap (1 unit) and
+ * mirrors the actual auth path the lookup adapter uses (RapidAPI host
+ * header + key header). Avoids burning a real flight-lookup call from
+ * the BASIC tier's tight 600-unit/month budget just to validate.
+ */
+export async function testAerodataboxKey(apiKey: string, userId?: string): Promise<ApiKeyTestResult> {
+  try {
+    const key = apiKey || (await getApiKey('aerodatabox', userId));
+    if (!key) {
+      return {
+        success: false,
+        message: 'No API key provided',
+      };
+    }
+
+    const response = await axios.get(
+      'https://aerodatabox.p.rapidapi.com/subscriptions/balance',
+      {
+        headers: {
+          'x-rapidapi-host': 'aerodatabox.p.rapidapi.com',
+          'x-rapidapi-key': key,
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000,
+      },
+    );
+
+    if (response.status === 200) {
+      return {
+        success: true,
+        message: 'API key is valid',
+        details: response.data as Record<string, unknown>,
+      };
+    }
+
+    return {
+      success: false,
+      message: `Unexpected response: ${response.status}`,
+    };
+  } catch (error: unknown) {
+    const errInfo = extractAxiosErrorInfo(error);
+    if (errInfo.status === 401 || errInfo.status === 403) {
+      return {
+        success: false,
+        message: 'Invalid API key',
+      };
+    }
+    if (errInfo.status === 429) {
+      return {
+        success: false,
+        message: 'Rate limit exceeded',
+      };
+    }
+    return {
+      success: false,
+      message: errInfo.message,
+    };
+  }
+}
+
+/**
  * Test OpenSky credentials (OAuth2 only - Client ID + Client Secret)
  */
 export async function testOpenSkyCredentials(

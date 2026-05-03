@@ -5,6 +5,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 export interface GlobalApiKeys {
   globalAirlabsApiKey?: string;
   globalAviationstackApiKey?: string;
+  globalAerodataboxApiKey?: string;
   globalOpenskyClientId?: string;
   globalOpenskyClientSecret?: string;
   globalOpenskyUsername?: string;
@@ -126,6 +127,22 @@ export default function GlobalApiKeysManager({
                 }
                 onClear={() =>
                   onGlobalApiKeysChange({ ...globalApiKeys, globalAviationstackApiKey: "" })
+                }
+                isAdmin={true}
+              />
+              <ApiKeyCard
+                provider="aerodatabox"
+                label={t("admin:globalApiKeys.aerodatabox.label")}
+                description={t("admin:globalApiKeys.aerodatabox.description")}
+                getKeyUrl="https://rapidapi.com/aedbx-aedbx/api/aerodatabox/pricing"
+                isShared={false}
+                hasAccess={!!globalApiKeys.globalAerodataboxApiKey}
+                value={globalApiKeys.globalAerodataboxApiKey || ""}
+                onChange={(value) =>
+                  onGlobalApiKeysChange({ ...globalApiKeys, globalAerodataboxApiKey: value })
+                }
+                onClear={() =>
+                  onGlobalApiKeysChange({ ...globalApiKeys, globalAerodataboxApiKey: "" })
                 }
                 isAdmin={true}
               />

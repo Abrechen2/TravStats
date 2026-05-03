@@ -518,6 +518,10 @@
       "label": "Aviationstack API-Schlüssel",
       "description": "Kostenpflichtiger Service. Wird für Flugdaten-Abfrage mit höherer Genauigkeit verwendet."
     },
+    "aerodatabox": {
+      "label": "AeroDataBox API-Schlüssel",
+      "description": "Kostenlos via RapidAPI: 600 Einheiten/Monat. Schließt die Lücke für historische Flüge bis zu einem Jahr zurück."
+    },
     "opensky": {
       "label": "OpenSky Network",
       "description": "Kostenloser Service. Erfordert Registrierung. Wird für Flugdaten-Abfrage verwendet.",

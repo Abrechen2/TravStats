@@ -253,6 +253,7 @@ export const adminApi = {
   getGlobalApiKeys: async (): Promise<{
     globalAirlabsApiKey?: string;
     globalAviationstackApiKey?: string;
+    globalAerodataboxApiKey?: string;
     globalOpenskyClientId?: string;
     globalOpenskyClientSecret?: string;
     globalOpenskyUsername?: string;
@@ -263,6 +264,7 @@ export const adminApi = {
     const { data } = await api.get<{
       globalAirlabsApiKey?: string;
       globalAviationstackApiKey?: string;
+      globalAerodataboxApiKey?: string;
       globalOpenskyClientId?: string;
       globalOpenskyClientSecret?: string;
       globalOpenskyUsername?: string;
@@ -276,6 +278,7 @@ export const adminApi = {
   updateGlobalApiKeys: async (keys: {
     globalAirlabsApiKey?: string | null;
     globalAviationstackApiKey?: string | null;
+    globalAerodataboxApiKey?: string | null;
     globalOpenskyClientId?: string | null;
     globalOpenskyClientSecret?: string | null;
     globalOpenskyUsername?: string | null;
@@ -288,7 +291,7 @@ export const adminApi = {
   },
 
   testApiKey: async (
-    provider: "openai" | "claude" | "airlabs" | "aviationstack" | "opensky",
+    provider: "openai" | "claude" | "airlabs" | "aviationstack" | "aerodatabox" | "opensky",
     apiKey?: string,
     openskyCredentials?: {
       clientId?: string;
