@@ -59,6 +59,8 @@
     "openLastFlight": "Open last flight",
     "bloom": "Glow",
     "bloomHint": "Soft halo around routes - costs FPS, suppressed in Lite mode",
+    "terminator": "Day/Night",
+    "terminatorHint": "Shows the current solar terminator as a twilight band",
     "performance": "Performance",
     "performanceHint": "Lower detail for higher FPS on weaker hardware",
     "performanceAuto": "Auto",

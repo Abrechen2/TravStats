@@ -452,6 +452,77 @@ const greatCircleWaypoints = (
   return out;
 };
 
+/**
+ * Approximate sub-solar point (where the sun is directly overhead) at
+ * a given UTC date. Uses Cooper's equation for solar declination and
+ * the standard 15°/h rotation for the longitude. Accurate to ~1° —
+ * good enough for a visualization terminator (the real terminator is
+ * itself ~1° wide due to the sun's angular diameter + atmospheric
+ * refraction so anyone wanting astrophysical precision would be
+ * looking elsewhere).
+ */
+const sunDeclinationDeg = (date: Date): number => {
+  const start = Date.UTC(date.getUTCFullYear(), 0, 0);
+  const dayOfYear = Math.floor((date.getTime() - start) / 86_400_000);
+  return 23.44 * Math.sin(((2 * Math.PI) / 365) * (dayOfYear - 81));
+};
+const subSolarPoint = (date: Date): [number, number] => {
+  const utcHours =
+    date.getUTCHours() + date.getUTCMinutes() / 60 + date.getUTCSeconds() / 3600;
+  const lng = -15 * (utcHours - 12);
+  return [lng, sunDeclinationDeg(date)];
+};
+
+/**
+ * Tessellate the night terminator: the great circle 90° from the
+ * sub-solar point. Result is a closed [lng, lat] ring with
+ * monotone-unwrapped longitudes so PathLayer doesn't draw the
+ * phantom-wrap artifact across the antimeridian.
+ */
+const terminatorRing = (date: Date, steps = 96): [number, number][] => {
+  const toRad = (x: number): number => (x * Math.PI) / 180;
+  const toDeg = (x: number): number => (x * 180) / Math.PI;
+  const [sunLng, sunLat] = subSolarPoint(date);
+  const phiS = toRad(sunLat);
+  const lamS = toRad(sunLng);
+  // Build orthonormal basis with sun direction as +Z.
+  const sx = Math.cos(phiS) * Math.cos(lamS);
+  const sy = Math.cos(phiS) * Math.sin(lamS);
+  const sz = Math.sin(phiS);
+  // East = z × sun (axis perpendicular to sun pointing east in tangent plane)
+  const ex = -sy;
+  const ey = sx;
+  const ez = 0;
+  const eMag = Math.hypot(ex, ey, ez) || 1;
+  const ux = ex / eMag;
+  const uy = ey / eMag;
+  const uz = ez / eMag;
+  // North = sun × east
+  const nx = sy * uz - sz * uy;
+  const ny = sz * ux - sx * uz;
+  const nz = sx * uy - sy * ux;
+  const out: [number, number][] = [];
+  let prevLng = NaN;
+  for (let i = 0; i <= steps; i++) {
+    const theta = (i / steps) * 2 * Math.PI;
+    const c = Math.cos(theta);
+    const s = Math.sin(theta);
+    // Point on great circle 90° from sun: any combination of north/east basis.
+    const x = c * ux + s * nx;
+    const y = c * uy + s * ny;
+    const z = c * uz + s * nz;
+    const lat = toDeg(Math.atan2(z, Math.sqrt(x * x + y * y)));
+    let lng = toDeg(Math.atan2(y, x));
+    if (Number.isFinite(prevLng)) {
+      while (lng - prevLng > 180) lng -= 360;
+      while (lng - prevLng < -180) lng += 360;
+    }
+    prevLng = lng;
+    out.push([lng, lat]);
+  }
+  return out;
+};
+
 interface ArcDatum {
   from: [number, number];
   to: [number, number];
@@ -558,6 +629,22 @@ export default function GlobeView({
       cruises.length >= LITE_AUTO_CRUISE_THRESHOLD
     );
   }, [liteMode, flights.length, cruises.length]);
+  // Day/night terminator: thick semi-transparent dark band along the
+  // great circle 90° from the sub-solar point. Anchored to the slider
+  // currentDate in live mode, otherwise to "now" — so scrubbing the
+  // timeline shows the terminator advance through the day.
+  const [terminator, setTerminator] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.sessionStorage.getItem("globeTerminator") === "1";
+  });
+  const onTerminatorChange = useCallback((next: boolean) => {
+    setTerminator(next);
+    try {
+      window.sessionStorage.setItem("globeTerminator", next ? "1" : "0");
+    } catch {
+      // sessionStorage may be unavailable in private mode — opt-in only
+    }
+  }, []);
   // Bloom: render a wider, low-alpha clone of the arc layer underneath
   // the main one. Costs ~one extra draw call per arc — automatically
   // suppressed in lite mode. Off by default; opt-in via the bottom-left
@@ -1048,6 +1135,16 @@ export default function GlobeView({
     sliderFilterEnd,
   ]);
 
+  // Terminator path: closed great-circle ring 90° from the sub-solar
+  // point at the slider's current date (live mode) or now (otherwise).
+  // Recomputed only when the time changes — not every render. Empty
+  // array when the toggle is off so the layer skips rendering entirely.
+  const terminatorPath = useMemo<[number, number][]>(() => {
+    if (!terminator) return [];
+    const date = sliderMode === "live" && sliderCurrent ? sliderCurrent : new Date();
+    return terminatorRing(date);
+  }, [terminator, sliderMode, sliderCurrent]);
+
   // Live stats overlay: derived from the same slider-filtered data as
   // the layers, so the numbers move in lockstep with the time slider.
   // Cheap because everything is already memoised upstream.
@@ -1171,6 +1268,28 @@ export default function GlobeView({
 
   const layers = useMemo<Layer[]>(
     () => [
+      // Day/night terminator — drawn first so everything else renders
+      // above it. Wide stroke gives a "twilight band" look without
+      // needing a SolidPolygonLayer fill (which doesn't compose well
+      // with great-circle polygons in globe projection).
+      ...(terminator && terminatorPath.length > 0
+        ? [
+            new PathLayer<[number, number][]>({
+              id: "globe-terminator",
+              data: [terminatorPath],
+              getPath: (d) => d,
+              getColor: [10, 14, 26, 165],
+              getWidth: 28,
+              widthUnits: "pixels",
+              widthMinPixels: 18,
+              widthMaxPixels: 38,
+              capRounded: true,
+              jointRounded: true,
+              wrapLongitude: false,
+              pickable: false,
+            }),
+          ]
+        : []),
       // Optional bloom underlay — wider, low-alpha clone of the flight
       // arcs, drawn first so the main arcs render on top. Suppressed in
       // lite mode (the extra draw call defeats the purpose) and when
@@ -1350,6 +1469,8 @@ export default function GlobeView({
       activeQuartile,
       lite,
       bloom,
+      terminator,
+      terminatorPath,
       flyToArc,
       onArcHover,
       onAirportHover,
@@ -1528,6 +1649,18 @@ export default function GlobeView({
               className="cursor-pointer"
             />
             <span className="text-xs font-medium">✨ {t("map:globe.bloom")}</span>
+          </label>
+          <label
+            className="mt-1.5 flex cursor-pointer select-none items-center gap-2"
+            title={t("map:globe.terminatorHint")}
+          >
+            <input
+              type="checkbox"
+              checked={terminator}
+              onChange={(e) => onTerminatorChange(e.target.checked)}
+              className="cursor-pointer"
+            />
+            <span className="text-xs font-medium">🌓 {t("map:globe.terminator")}</span>
           </label>
           <button
             type="button"
