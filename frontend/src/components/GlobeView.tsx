@@ -4,6 +4,10 @@ import { MapboxOverlay } from "@deck.gl/mapbox";
 import { ColumnLayer, PathLayer } from "@deck.gl/layers";
 import { PathStyleExtension, type PathStyleExtensionProps } from "@deck.gl/extensions";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
+import {
+  EarthOcclusionExtension,
+  type EarthOcclusionExtensionProps,
+} from "./Globe/EarthOcclusionExtension";
 import type { StyleSpecification } from "maplibre-gl";
 import type { GeoJSONFeature } from "../types";
 import type { Cruise } from "../types/cruise";
@@ -530,17 +534,12 @@ export default function GlobeView({
   });
   const [autoRotate, setAutoRotate] = useState(false);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
-  // Camera direction unit vector — updated on every map move so each
-  // pickable layer can compute "is this datum on the front hemisphere?"
-  // via dot product. Fixes the deck.gl + MapLibre globe z-buffer
-  // limitation: MapLibre uses the depth buffer itself for transparency
-  // optimisation (storing horizon-plane distance per vertex), so it
-  // can't be used to clip overlay geometry against the back of the
-  // sphere — the official workaround is JS-side view-frustum culling
-  // or a custom shader. We do the cheap JS path: min-dot across the
-  // start / mid / end points of each arc, smoothstep alpha by it.
-  // Throttled via rAF so dense move events (auto-rotate, drag-pan)
-  // coalesce.
+  // Camera direction unit vector — Earth-centered, pointing toward the
+  // viewer. Updated on every map move via rAF throttle. Drives the
+  // GPU-side EarthOcclusionExtension that clips overlay geometry against
+  // the back of the sphere per fragment. Replaces the old JS-side
+  // frontVisibility heuristic which only sampled 1-3 points per arc and
+  // bled badly through the back of the globe at high zoom.
   const [cameraDir, setCameraDir] = useState<[number, number, number]>([1, 0, 0]);
   // Map zoom — used as a level-of-detail signal. At low zoom the
   // standard altitude-based arcs look great; at high zoom (street/city
@@ -555,38 +554,30 @@ export default function GlobeView({
   const altitudeFactor =
     Math.round(Math.max(0, Math.min(1, 1 - (mapZoom - 0.5) / 1.5)) * 10) / 10;
 
-  // Helper: how visible (0..1) is an arc whose path passes through
-  // these three lng/lat samples? Uses the min dot of all three vs
-  // cameraDir, smoothed via a window so the fade isn't a hard cliff
-  // when the arc edges around the horizon during auto-rotate.
-  const frontVisibility = useCallback(
-    (samples: ReadonlyArray<readonly [number, number]>): number => {
-      let minDot = Infinity;
-      for (const [lng, lat] of samples) {
-        const lngR = (lng * Math.PI) / 180;
-        const latR = (lat * Math.PI) / 180;
-        const dot =
-          Math.cos(latR) * Math.cos(lngR) * cameraDir[0] +
-          Math.cos(latR) * Math.sin(lngR) * cameraDir[1] +
-          Math.sin(latR) * cameraDir[2];
-        if (dot < minDot) minDot = dot;
-      }
-      // At higher zoom we tighten the visibility window so far-away
-      // arcs disappear instead of bleeding into the visible map area.
-      // Below z=1 = wide window (show edges of globe). Above z=2 =
-      // tight window (only keep arcs whose endpoints are clearly in
-      // view). Aggressive cutoff above z=2 — that's already where the
-      // user is looking at one continent and globe-spanning arcs don't
-      // belong on screen anyway.
-      if (mapZoom > 2) {
-        // At z=2: require minDot > -0.1. At z=4+: require minDot > 0.3.
-        const cutoff = Math.min(0.3, -0.1 + (mapZoom - 2) * 0.2);
-        return minDot < cutoff ? 0 : Math.max(0, Math.min(1, (minDot - cutoff) * 6));
-      }
-      return Math.max(0, Math.min(1, (minDot + 0.25) / 0.4));
-    },
-    [cameraDir, mapZoom]
+  // Camera distance from Earth center, in Earth radii. Calibrated to
+  // MapLibre's globe view: at z=0 the camera sits ~2.5 ER away (entire
+  // hemisphere visible), tightening to ~1.05 ER as the user zooms into
+  // a single continent. Drives the horizon angle in the occlusion
+  // extension — closer camera = smaller visible cap = more aggressive
+  // back-side discard.
+  const cameraDistance = useMemo(() => {
+    return 1 + 1.5 * Math.pow(2, -Math.max(0, mapZoom) * 0.7);
+  }, [mapZoom]);
+  // Memoised props bag forwarded to every deck.gl layer so the per-layer
+  // construction stays terse.
+  const occlusionProps = useMemo<EarthOcclusionExtensionProps>(
+    () => ({
+      earthOcclusionEnabled: true,
+      earthOcclusionCameraDir: cameraDir,
+      earthOcclusionCameraDistance: cameraDistance,
+      earthOcclusionFadeBand: 0.04,
+    }),
+    [cameraDir, cameraDistance]
   );
+  // Single shared extension instance — deck.gl reuses the same shader
+  // module across layers, and a stable reference avoids unnecessary
+  // pipeline recompiles when the layer list rebuilds.
+  const occlusionExt = useMemo(() => new EarthOcclusionExtension(), []);
   // Directional mode: when true, A→B and B→A are aggregated as separate
   // arcs so out-/return-leg imbalance shows up in the heatmap. Default
   // false keeps the current "city pair" aggregation.
@@ -789,10 +780,10 @@ export default function GlobeView({
   }, []);
 
   // Track camera direction as a 3D unit vector pointing OUT FROM the
-  // globe surface toward the viewer. Updates on every map move via rAF
-  // throttle. Used downstream by the arc / column layers to decide
-  // which data is on the front hemisphere (alpha 100%) vs the back
-  // (alpha ~0% so it doesn't bleed through the basemap).
+  // globe surface toward the viewer, plus the current zoom. Updates on
+  // every map move via rAF throttle. Both feed the EarthOcclusionExtension
+  // (cameraDir → horizon center, zoom → camera distance / horizon radius)
+  // so the back-of-globe discard happens per fragment in the GPU.
   useEffect(() => {
     if (!mapReady) return;
     const map = mapRef.current?.getMap();
@@ -1378,18 +1369,11 @@ export default function GlobeView({
               data: arcsData,
               getPath: (d) => d.waypoints,
               getColor: (d) => {
-                const mid = d.waypoints[Math.floor(d.waypoints.length / 2)];
-                const front = frontVisibility([d.from, [mid[0], mid[1]], d.to]);
                 const baseAlpha =
                   activeQuartile === null || activeQuartile === d.quartile ? 35 : 5;
-                return [...d.color, Math.round(baseAlpha * front)] as [
-                  number,
-                  number,
-                  number,
-                  number,
-                ];
+                return [...d.color, baseAlpha] as [number, number, number, number];
               },
-              updateTriggers: { getColor: [activeQuartile, cameraDir] },
+              updateTriggers: { getColor: [activeQuartile] },
               getWidth: (d) => Math.max(3, Math.min(6, 3 + Math.log2(d.count + 1) * 0.6)),
               widthUnits: "pixels",
               widthMinPixels: 3,
@@ -1398,6 +1382,8 @@ export default function GlobeView({
               jointRounded: true,
               wrapLongitude: false,
               pickable: false,
+              extensions: [occlusionExt],
+              ...occlusionProps,
             }),
           ]
         : []),
@@ -1417,18 +1403,11 @@ export default function GlobeView({
         data: arcsData,
         getPath: (d) => d.waypoints,
         getColor: (d) => {
-          const mid = d.waypoints[Math.floor(d.waypoints.length / 2)];
-          const front = frontVisibility([d.from, [mid[0], mid[1]], d.to]);
           const baseAlpha =
             activeQuartile === null || activeQuartile === d.quartile ? 235 : 35;
-          return [...d.color, Math.round(baseAlpha * front)] as [
-            number,
-            number,
-            number,
-            number,
-          ];
+          return [...d.color, baseAlpha] as [number, number, number, number];
         },
-        updateTriggers: { getColor: [activeQuartile, cameraDir] },
+        updateTriggers: { getColor: [activeQuartile] },
         getWidth: (d) => Math.max(1.5, Math.min(4, 1.5 + Math.log2(d.count + 1))),
         widthUnits: "pixels",
         widthMinPixels: 1.5,
@@ -1448,11 +1427,17 @@ export default function GlobeView({
           setPinned({ kind: "arc", data: object });
           flyToArc(object);
         },
-        extensions: [new PathStyleExtension({ dash: true, highPrecisionDash: true })],
+        extensions: [
+          new PathStyleExtension({ dash: true, highPrecisionDash: true }),
+          occlusionExt,
+        ],
         getDashArray: (d: ArcDatum) => (d.weak ? [4, 3] : [0, 0]),
         dashJustified: true,
         dashGapPickable: false,
-      } as ConstructorParameters<typeof PathLayer<ArcDatum>>[0] & PathStyleExtensionProps<ArcDatum>),
+        ...occlusionProps,
+      } as ConstructorParameters<typeof PathLayer<ArcDatum>>[0] &
+        PathStyleExtensionProps<ArcDatum> &
+        EarthOcclusionExtensionProps),
       // Antipodal routes (>= ANTIPODAL_DISTANCE_KM) — flat surface
       // line at altitude 0, narrower than normal arcs and slightly
       // muted, so the route still appears visually but doesn't grab
@@ -1462,18 +1447,11 @@ export default function GlobeView({
         data: antipodalArcs,
         getPath: (d) => d.waypoints,
         getColor: (d) => {
-          const mid = d.waypoints[Math.floor(d.waypoints.length / 2)];
-          const front = frontVisibility([d.from, [mid[0], mid[1]], d.to]);
           const baseAlpha =
             activeQuartile === null || activeQuartile === d.quartile ? 160 : 25;
-          return [...d.color, Math.round(baseAlpha * front)] as [
-            number,
-            number,
-            number,
-            number,
-          ];
+          return [...d.color, baseAlpha] as [number, number, number, number];
         },
-        updateTriggers: { getColor: [activeQuartile, cameraDir] },
+        updateTriggers: { getColor: [activeQuartile] },
         getWidth: 1,
         widthUnits: "pixels",
         widthMinPixels: 1,
@@ -1488,7 +1466,9 @@ export default function GlobeView({
         onClick: ({ object }: { object?: ArcDatum }): void => {
           if (object) setPinned({ kind: "arc", data: object });
         },
-      }),
+        extensions: [occlusionExt],
+        ...occlusionProps,
+      } as ConstructorParameters<typeof PathLayer<ArcDatum>>[0] & EarthOcclusionExtensionProps),
       // Cruise paths render as a dashed "wake" — a long stroke + short
       // gap pattern visually distinguishes ship routes from the solid
       // flight arcs without needing a different colour. PathStyleExtension
@@ -1502,30 +1482,17 @@ export default function GlobeView({
         id: "globe-cruise-paths",
         data: cruisePaths,
         getPath: (d) => d.path,
-        getColor: (d) => {
-          const start = d.path[0];
-          const mid = d.path[Math.floor(d.path.length / 2)];
-          const end = d.path[d.path.length - 1];
-          const front = frontVisibility([
-            [start[0], start[1]],
-            [mid[0], mid[1]],
-            [end[0], end[1]],
-          ]);
-          return [
-            CRUISE_PATH_COLOR[0],
-            CRUISE_PATH_COLOR[1],
-            CRUISE_PATH_COLOR[2],
-            Math.round(CRUISE_PATH_COLOR[3] * front),
-          ];
-        },
-        updateTriggers: { getColor: [cameraDir] },
+        getColor: CRUISE_PATH_COLOR,
         getWidth: 2,
         widthUnits: "pixels",
         widthMinPixels: 1.5,
         widthMaxPixels: 3,
         capRounded: true,
         jointRounded: true,
-        extensions: [new PathStyleExtension({ dash: true, highPrecisionDash: true })],
+        extensions: [
+          new PathStyleExtension({ dash: true, highPrecisionDash: true }),
+          occlusionExt,
+        ],
         getDashArray: [6, 3],
         dashJustified: true,
         dashGapPickable: false,
@@ -1536,7 +1503,10 @@ export default function GlobeView({
         onClick: ({ object }: { object?: CruisePathDatum }): void => {
           if (object) setPinned({ kind: "cruise", data: object });
         },
-      } as ConstructorParameters<typeof PathLayer<CruisePathDatum>>[0] & PathStyleExtensionProps<CruisePathDatum>),
+        ...occlusionProps,
+      } as ConstructorParameters<typeof PathLayer<CruisePathDatum>>[0] &
+        PathStyleExtensionProps<CruisePathDatum> &
+        EarthOcclusionExtensionProps),
       // Airport + port markers as ColumnLayer (3D cylinders rendered
       // radially outward from the globe surface). Replaces the old
       // ScatterplotLayer dots that clipped into the sphere when viewed
@@ -1549,16 +1519,7 @@ export default function GlobeView({
         id: "globe-airport-columns",
         data: airportPoints,
         getPosition: (d) => d.position,
-        getFillColor: (d) => {
-          const front = frontVisibility([d.position]);
-          return [
-            AIRPORT_DOT_COLOR[0],
-            AIRPORT_DOT_COLOR[1],
-            AIRPORT_DOT_COLOR[2],
-            Math.round(AIRPORT_DOT_COLOR[3] * front),
-          ];
-        },
-        updateTriggers: { getFillColor: [cameraDir] },
+        getFillColor: AIRPORT_DOT_COLOR,
         getElevation: MARKER_HEIGHT_M,
         elevationScale: 1,
         radius: MARKER_RADIUS_M,
@@ -1572,21 +1533,14 @@ export default function GlobeView({
         onClick: ({ object }: { object?: PointDatum }): void => {
           if (object) setPinned({ kind: "airport", data: object });
         },
-      }),
+        extensions: [occlusionExt],
+        ...occlusionProps,
+      } as ConstructorParameters<typeof ColumnLayer<PointDatum>>[0] & EarthOcclusionExtensionProps),
       new ColumnLayer<PointDatum>({
         id: "globe-port-columns",
         data: portPoints,
         getPosition: (d) => d.position,
-        getFillColor: (d) => {
-          const front = frontVisibility([d.position]);
-          return [
-            PORT_DOT_COLOR[0],
-            PORT_DOT_COLOR[1],
-            PORT_DOT_COLOR[2],
-            Math.round(PORT_DOT_COLOR[3] * front),
-          ];
-        },
-        updateTriggers: { getFillColor: [cameraDir] },
+        getFillColor: PORT_DOT_COLOR,
         getElevation: MARKER_HEIGHT_M,
         elevationScale: 1,
         radius: MARKER_RADIUS_M,
@@ -1600,7 +1554,9 @@ export default function GlobeView({
         onClick: ({ object }: { object?: PointDatum }): void => {
           if (object) setPinned({ kind: "port", data: object });
         },
-      }),
+        extensions: [occlusionExt],
+        ...occlusionProps,
+      } as ConstructorParameters<typeof ColumnLayer<PointDatum>>[0] & EarthOcclusionExtensionProps),
       // Live-mode "head" highlight: bright orange overlay on the most
       // recent flight in the live window. Drawn AFTER everything else so
       // it visually pops above the heatmap. Pickable so the user can
@@ -1626,7 +1582,10 @@ export default function GlobeView({
               onClick: ({ object }: { object?: ArcDatum }) => {
                 if (object) setPinned({ kind: "arc", data: object });
               },
-            }),
+              extensions: [occlusionExt],
+              ...occlusionProps,
+            } as ConstructorParameters<typeof PathLayer<ArcDatum>>[0] &
+              EarthOcclusionExtensionProps),
             // Head endpoint dot — column at the arrival airport of the
             // most-recent flight, so the eye lands on "where the trail
             // ends right now".
@@ -1649,7 +1608,10 @@ export default function GlobeView({
               extruded: true,
               material: false,
               pickable: false,
-            }),
+              extensions: [occlusionExt],
+              ...occlusionProps,
+            } as ConstructorParameters<typeof ColumnLayer<PointDatum>>[0] &
+              EarthOcclusionExtensionProps),
           ]
         : []),
       // Ship markers: taller, narrower columns at each visible cruise's
@@ -1681,7 +1643,10 @@ export default function GlobeView({
                   setTooltip(null);
                 }
               },
-            }),
+              extensions: [occlusionExt],
+              ...occlusionProps,
+            } as ConstructorParameters<typeof ColumnLayer<PointDatum>>[0] &
+              EarthOcclusionExtensionProps),
           ]
         : []),
     ],
@@ -1694,8 +1659,6 @@ export default function GlobeView({
       activeQuartile,
       lite,
       bloom,
-      cameraDir,
-      frontVisibility,
       shipMarkers,
       shipMarkerPoints,
       headFlightArc,
@@ -1704,7 +1667,8 @@ export default function GlobeView({
       onAirportHover,
       onCruisePathHover,
       onPortHover,
-      onFlightClick,
+      occlusionExt,
+      occlusionProps,
     ]
   );
 
