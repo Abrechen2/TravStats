@@ -115,6 +115,34 @@ TravStats grows from a flight-only logbook into a full travel logbook.
 
 ---
 
+## 🌍 v2.x — Globe experience
+
+A dedicated polish + expansion pass for the 3D globe view, layered on
+the MapLibre globe + deck.gl renderer that landed in v2.0.
+
+- **Story mode** — separate map mode alongside Routes / Heatmap / Trips / Globe.
+  Auto-fly chronologically through trips (mixed flights + cruises) with
+  chapter cards, scrub bar, play / pause / speed controls. Built around the
+  existing `useTimeSliderStore` time scrub but framed as a guided narrative
+  rather than a manual filter.
+- **Animation export** — render Story-Mode tours and free-form globe
+  rotations to MP4 / GIF / WebM for sharing on socials. 4K capture at
+  configurable bitrate.
+- **Photo geotag clusters** — 3D bubbles / billboards anchored to airport
+  + port positions, clustering / unclustering by zoom, linking to user
+  photo uploads from highlights / collections (v1.2).
+- **Atmospheric scattering** — physically-based Rayleigh / Mie scattering
+  for the horizon glow ("thin blue line at altitude") via a custom WebGL
+  layer, replacing the current CSS-gradient backdrop.
+- **Sequential trip arcs** — multi-leg journeys rendered as one
+  continuous polyline with a colour gradient (origin → stops → final
+  destination) instead of N independent arcs.
+- **Terrain elevation** — 3D mesh for cruise paths through fjords + flights
+  over mountain ranges (Himalayas, Andes, Alps). MapLibre terrain RGB
+  source + per-leg elevation sampling.
+
+---
+
 ## 🧰 Continuous improvements
 
 Running in parallel across versions.
