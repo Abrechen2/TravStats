@@ -54,6 +54,8 @@
     "antipodalSimplified_other": "{{count}} antipodale Routen flach dargestellt",
     "recenter": "Zentrieren",
     "recenterHint": "Standardansicht wiederherstellen",
+    "directional": "Mit Richtung",
+    "directionalHint": "Hin- und Rückflug separat anzeigen, um Ungleichgewichte sichtbar zu machen",
     "quartileFilterHint": "Klick: nur dieses Häufigkeitsband zeigen",
     "quartileFilterClear": "Filter zurücksetzen",
     "timeSlider": {
