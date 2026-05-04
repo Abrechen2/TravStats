@@ -138,6 +138,43 @@ non-commercial licence traps.
 
 ---
 
+## 💰 v2.0 — Cost & expense overhaul
+
+Refactor the cost data model. Today, prices live as scalar columns on
+`Flight` (`price`, `taxes`, `fees`, the dead `ticketPrice`) and
+duplicated on `Booking` (`price`), with a `seenBookingIds` dedup hack
+in the stats layer to avoid double-counting. Cruises have no cost
+fields at all, and the dashboard `totalCost` blindly sums values
+across currencies. The v1.9 Frankfurter pipeline is the prerequisite;
+v2.0 is the structural rewrite that makes use of it.
+
+- **Unified `Expense` model** — one row per cost line, polymorphically
+  attached to a Flight, Booking, Trip, Cruise, or CruiseStop. Each row
+  carries the original amount + currency plus a snapshot
+  `amountInBase` / `fxRate` / `fxDate` captured at entry time, so
+  historical stats stay stable when FX moves later
+- **Cost categories** — ticket, tax, fee, ancillary (parking, baggage,
+  lounge, transfer), hotel, excursion, gratuity. Replaces the implicit
+  taxes/fees split
+- **Payment metadata** — payment method, paid-by (self vs employer),
+  reimbursement status, optional companion split
+- **Cruise costs** — solved for free by the polymorphic `Expense`:
+  attach to `Cruise` for the booking, `CruiseStop` for shore
+  excursions and onboard charges
+- **Trip-level budget & default currency** — each Trip can carry a
+  base currency that pre-fills new flights/cruises within it; falls
+  back to the user-level setting otherwise
+- **Stats overhaul** — `totalCost`, `costPerKm`, `costPerHour` move
+  from raw float sums to `SUM(amountInBase) GROUP BY category`, plus
+  category breakdown (how much of last year's $12k was actually
+  ancillaries?), reimbursement-aware filters, and per-trip P&L
+- **Migration** — backfill existing `Flight.price/taxes/fees` and
+  `Booking.price` rows into `Expense`, FX-snapshot via the v1.9
+  Frankfurter pipeline, then drop the legacy columns including the
+  long-dead `ticketPrice`
+
+---
+
 ## 🧰 Continuous improvements
 
 Running in parallel across versions.
