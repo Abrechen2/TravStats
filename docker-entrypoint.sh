@@ -419,6 +419,31 @@ else
     echo "[entrypoint] ⚠️  Skipping airport seed - migrations were not successful"
 fi
 
+# Backfill closed airports for installs whose initial seed (pre-1.4) only
+# imported active airports — TXL, THF, Stapleton, etc. are otherwise
+# missing from the search dropdown. Idempotent: skips if any closed
+# airport is already present, so safe to run on every boot. Disable with
+# CLOSED_AIRPORT_BACKFILL=false.
+if [ "$MIGRATION_SUCCESS" = "true" ] && [ "$CLOSED_AIRPORT_BACKFILL" != "false" ]; then
+    BACKFILL_CLOSED_SCRIPT="/app/backend/dist/scripts/backfillClosedAirports.js"
+    if [ -f "$BACKFILL_CLOSED_SCRIPT" ]; then
+        echo "[entrypoint] Checking closed-airport backfill..."
+        set +e
+        node "$BACKFILL_CLOSED_SCRIPT" 2>&1
+        BACKFILL_CLOSED_EXIT=$?
+        set -e
+        if [ $BACKFILL_CLOSED_EXIT -eq 0 ]; then
+            echo "[entrypoint] ✅ Closed-airport backfill check complete"
+        else
+            echo "[entrypoint] ⚠️  Closed-airport backfill exited with $BACKFILL_CLOSED_EXIT — continuing (closed airports may be missing; admin can trigger reseed manually)"
+        fi
+    else
+        echo "[entrypoint] ⚠️  $BACKFILL_CLOSED_SCRIPT not found — skipping closed-airport backfill"
+    fi
+elif [ "$CLOSED_AIRPORT_BACKFILL" = "false" ]; then
+    echo "[entrypoint] Closed-airport backfill disabled (CLOSED_AIRPORT_BACKFILL=false)"
+fi
+
 # Create demo user if requested (useful for testing)
 # Only run if migrations were successful
 if [ "$MIGRATION_SUCCESS" = "true" ] && [ "$CREATE_DEMO_USER" = "true" ]; then
