@@ -91,8 +91,9 @@ const STATIC_QUOTA_SHAPE: Record<ApiProvider, ProviderQuota> = {
 export function recordObservedQuota(
   provider: ApiProvider,
   userId: string | undefined,
-  headers: Record<string, unknown>,
+  headers: Record<string, unknown> | undefined | null,
 ): void {
+  if (!headers || typeof headers !== 'object') return;
   const parseHeader = (name: string): number => {
     const raw = headers[name];
     return typeof raw === 'string' ? parseInt(raw, 10) : NaN;
