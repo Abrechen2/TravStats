@@ -31,7 +31,11 @@ const settingsSchema = z.object({
   }).partial().optional(),
   units: z.object({
     distanceUnit: z.enum(['kilometers', 'miles', 'nautical_miles']).optional(),
-    currency: z.enum(['EUR', 'USD', 'GBP', 'CHF']).optional(),
+    // Any ISO 4217 alpha-3 code — see schemas/flight.ts for rationale.
+    currency: z
+      .string()
+      .regex(/^[A-Z]{3}$/, 'Must be a 3-letter ISO 4217 code (e.g. EUR, USD, INR)')
+      .optional(),
   }).partial().optional(),
   defaults: z.object({
     flightStatus: z.enum(['scheduled', 'flown']).optional(),

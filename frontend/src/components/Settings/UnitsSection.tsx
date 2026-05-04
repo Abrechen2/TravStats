@@ -2,6 +2,7 @@ import { SectionCard, SectionTitle } from "./SettingsShared";
 import InlineHelp from "../Help/InlineHelp";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { UnitsSettings } from "../../store/settingsStore";
+import { CURRENCY_OPTIONS, getCurrencyDisplayName } from "../../lib/units";
 
 interface UnitsSectionProps {
   units: UnitsSettings;
@@ -53,13 +54,17 @@ export default function UnitsSection({ units, onSetUnits }: UnitsSectionProps): 
           <label className="label">{t("settings:units.currency")}</label>
           <select
             value={units.currency}
-            onChange={(e) => onSetUnits({ currency: e.target.value as typeof units.currency })}
+            onChange={(e) => onSetUnits({ currency: e.target.value })}
             className="input"
           >
-            <option value="EUR">{t("settings:units.options.EUR")}</option>
-            <option value="USD">{t("settings:units.options.USD")}</option>
-            <option value="GBP">{t("settings:units.options.GBP")}</option>
-            <option value="CHF">{t("settings:units.options.CHF")}</option>
+            {(CURRENCY_OPTIONS.includes(units.currency)
+              ? CURRENCY_OPTIONS
+              : [units.currency, ...CURRENCY_OPTIONS]
+            ).map((code) => (
+              <option key={code} value={code}>
+                {code} — {getCurrencyDisplayName(code)}
+              </option>
+            ))}
           </select>
         </div>
       </div>

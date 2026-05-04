@@ -59,7 +59,8 @@ export interface Flight {
   createdAt: string;
   // Costs & categorization
   price?: number;
-  currency?: "EUR" | "USD" | "GBP" | "CHF";
+  /** ISO 4217 alpha-3 code (EUR, USD, GBP, CHF, INR, JPY, …). */
+  currency?: string;
   taxes?: number;
   fees?: number;
   category?: "business" | "private" | "vacation";
@@ -116,7 +117,8 @@ export interface Booking {
   tripId: string | null;
   pnr: string | null;
   price: number | null;
-  currency: "EUR" | "USD" | "GBP" | "CHF" | null;
+  /** ISO 4217 alpha-3 code (EUR, USD, GBP, CHF, INR, JPY, …) or null. */
+  currency: string | null;
 }
 
 export interface Trip {
@@ -180,7 +182,8 @@ export interface FlightInput {
   bookingReference?: string;
   ticketNumber?: string;
   price?: number;
-  currency?: "EUR" | "USD" | "GBP" | "CHF";
+  /** ISO 4217 alpha-3 code (EUR, USD, GBP, CHF, INR, JPY, …). */
+  currency?: string;
   taxes?: number;
   fees?: number;
   category?: "business" | "private" | "vacation";
@@ -323,7 +326,8 @@ export interface GeoJSONFeature {
     category?: "business" | "private" | "vacation";
     tags?: string[];
     price?: number;
-    currency?: "EUR" | "USD" | "GBP" | "CHF";
+    /** ISO 4217 alpha-3 code (EUR, USD, GBP, CHF, INR, JPY, …). */
+  currency?: string;
     taxes?: number;
     fees?: number;
     distance: number;

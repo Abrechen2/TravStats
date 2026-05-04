@@ -60,9 +60,7 @@ export default function FlightList({
 
   const formatCurrency = (value?: number, currency?: string): string => {
     if (value === undefined || value === null) return "";
-    // Use currency from settings if not specified
-    const currencyToUse = (currency || units.currency) as "EUR" | "USD" | "GBP" | "CHF";
-    return formatCurrencyUtil(value, currencyToUse);
+    return formatCurrencyUtil(value, currency || units.currency);
   };
 
   if (flights.length === 0) {

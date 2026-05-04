@@ -22,7 +22,8 @@ export interface CreateBookingInput {
   tripId?: string;
   pnr?: string;
   price?: number;
-  currency?: "EUR" | "USD" | "GBP" | "CHF";
+  /** ISO 4217 alpha-3 code (EUR, USD, GBP, CHF, INR, JPY, …). */
+  currency?: string;
   flightIds?: string[];
 }
 
