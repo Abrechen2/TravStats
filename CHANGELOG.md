@@ -4,6 +4,28 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [1.4.0] - 2026-05-04
+
+### Added
+- **AeroDataBox as a third flight-lookup provider** — Closes the gap that AirLabs and Aviationstack-Free leave open: historical lookup for any date in the last 365 days, plus terminal / gate / aircraft registration / Mode-S / operating-vs-marketing carrier on codeshares. Wired into the cascade as a tertiary fallback for out-of-live-window queries and historical enrichment. RapidAPI BASIC free tier (600 API-units / month).
+- **Bulk historical refresh of existing flights** — Settings → API Keys gains a "Refresh all flights in 365-day range" card under the AeroDataBox key. Backfills tail number, Mode-S, codeshare metadata, distance, airline IATA/ICAO on flights entered before this provider was wired up, never overwriting curated values. A confirmation modal shows how many API calls the run will cost. Disabled on the demo account so shared keys aren't drained by tutorial sessions.
+- **Per-provider quota indicators with capability badges** — Each provider's quota is surfaced honestly on the API Keys page: AeroDataBox shows the live `X/600 API units` (primary) plus the secondary HTTP-request counter; AirLabs / Aviationstack-Free are labelled "provider doesn't expose quota — free tier ~1000/month"; OpenSky says "no monthly limit — IP-based rate-limit only". A "365-day lookup" capability badge marks AeroDataBox as the historical-fallback workhorse so it's clear at a glance which provider does what.
+- **Persisted tail number, Mode-S code, distance and codeshare metadata** — Flights enriched via lookup now carry the operating registration, the 24-bit Mode-S hex identifier, the operating airline when it differs from the marketing carrier, the great-circle distance in km, and airline IATA/ICAO. Feeds the new aircraft-hulls ranking and per-tail profile pages.
+- **Aircraft hulls ranking + per-tail profile pages** — Stats → Advanced gains a leaderboard of the registrations you've flown most often. Each tail number opens its own page (`/aircraft/:reg`) showing type, flights flown, total distance, and the timeline of every flight on that hull. Works against any flight with an `aircraftRegistration` (provider-sourced or manually entered).
+- **Currency input accepts any ISO 4217 code** — The currency picker on flight and cost forms is now a styled combobox that takes any three-letter ISO 4217 code, not just the hardcoded shortlist. Filters as you type, falls back to the raw code for exotic currencies, surfaces the symbol when known. Closes #100.
+- **Airline logos in flight cards and trip sidebar** — Each carrier now renders its logo next to the airline name, served from the Daisycon free aviation-logo CDN. Falls back to a letter-box monogram (LH, BA, …) for carriers not in the CDN — no broken image icons.
+
+### Fixed
+- **AeroDataBox quota indicator showed 2400 instead of the actual 600** — RapidAPI sends two independent rate-limit counters: `X-RateLimit-API-Units-*` (the real BASIC tier quota = 600/month) and `X-RateLimit-Requests-*` (a separate HTTP-request counter ~4× larger and irrelevant for plan budgeting). The indicator was reading the latter, so BASIC-tier users saw a misleading "2400 left" headroom. Now reads API-Units as primary and surfaces the HTTP-request count as a secondary detail only.
+- **Closed and decommissioned airports missing from the seed** — The seeder filtered out OurAirports rows where `type='closed'`, excluding every decommissioned IATA code (BER's predecessor SXF, TXL, etc.). Older flights re-imported via Excel or boarding-pass scan failed to enrich because the lookup couldn't find the code. Closed airports are now seeded on first install, and a one-shot boot-time backfill (`backfillClosedAirports.ts`) adds them to existing installs without re-running the full seed.
+- **API-key test endpoints rejected masked-input retests** — Saving a key, navigating away, returning and clicking "Test" sent the masked display value (`••••abc1`) to the test endpoint instead of the persisted key, so the test always failed with 401 even though the saved key was valid. Test endpoints now fall back to the persisted key when the input is empty or contains the mask placeholder.
+
+### Changed
+- **Currency picker is a styled combobox** — Replaces the native `<datalist>` with a custom dropdown matching the rest of the form styling. Same accept-any-ISO-4217 behaviour, just visually consistent across browsers (native `<datalist>` rendered very differently in Firefox / Chrome / Safari).
+
+### Database
+- **Three new migrations** — `20260503080738_add_aerodatabox_api_key` (admin- and user-level `aerodatabox_api_key` columns), `20260503154328_add_aircraft_provenance` (per-flight `aircraft_registration`, `aircraft_mode_s`, `airline_iata`, `airline_icao`, `distance_km`, `is_codeshare`, `operating_airline`, `callsign`, `status_override`), and `20260504180000_user_is_demo` (`users.is_demo` flag). All additive, idempotent (`IF NOT EXISTS`), zero-downtime safe.
+
 ## [1.3.0] - 2026-05-01
 
 ### Removed
