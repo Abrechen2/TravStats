@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CURRENCY_OPTIONS, getCurrencyDisplayName } from "../lib/units";
 
 interface CurrencyInputProps {
@@ -6,21 +6,15 @@ interface CurrencyInputProps {
   onChange: (value: string) => void;
   className?: string;
   required?: boolean;
-  /** id of the form control, useful when paired with an external `<label>`. */
   id?: string;
-  /** Force the picker open on focus even when the field already has a value. */
-  autoFocus?: boolean;
 }
 
 /**
- * Currency picker — combobox over an HTML5 `<datalist>` so the curated
- * CURRENCY_OPTIONS list is suggested but ANY ISO 4217 alpha-3 code can be
- * typed. Backend validates the same shape (`^[A-Z]{3}$`).
- *
- * The native `<datalist>` element gives us:
- *   - dropdown of suggestions (typeahead-filtered as the user types)
- *   - freedom to enter a code outside the curated list (e.g. KGS, LKR)
- *   - browser-native UX without an external combobox library
+ * Currency picker — styled combobox over CURRENCY_OPTIONS that also accepts
+ * any ISO 4217 alpha-3 code typed by the user (full Option A from #100).
+ * Built on the same layout pattern as AirportAutocomplete (anchored
+ * dropdown, click-outside to close) so the look matches the rest of the
+ * app instead of relying on the browser-native `<datalist>` popup.
  */
 export default function CurrencyInput({
   value,
@@ -28,42 +22,142 @@ export default function CurrencyInput({
   className = "input",
   required = false,
   id,
-  autoFocus,
 }: CurrencyInputProps): JSX.Element {
-  const reactId = useId();
-  const listId = `currency-codes-${reactId}`;
-  // If the current value sits outside the curated list (legacy / API
-  // direct submit) prepend it so the picker still recognises it.
-  const options = CURRENCY_OPTIONS.includes(value)
-    ? CURRENCY_OPTIONS
-    : value
-      ? [value, ...CURRENCY_OPTIONS]
-      : CURRENCY_OPTIONS;
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState(value);
+
+  // Sync query when the parent value changes (e.g. after form reset).
+  useEffect(() => {
+    setQuery(value);
+  }, [value]);
+
+  // Close dropdown on outside click.
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent): void {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Filter the curated list by the user's input — substring match on both
+  // the ISO code ("INR") and the localized display name ("Indische Rupie").
+  const upperQuery = query.toUpperCase();
+  const filtered = CURRENCY_OPTIONS.filter((code) => {
+    if (!query) return true;
+    if (code.includes(upperQuery)) return true;
+    const name = getCurrencyDisplayName(code).toLowerCase();
+    return name.includes(query.toLowerCase());
+  });
+
+  // If the user typed a 3-letter code that's not in the curated list,
+  // surface it as a "use this code" option so freeform entries (KGS, LKR,
+  // NGN, …) feel intentional rather than accidental.
+  const isFreeformCode =
+    /^[A-Z]{3}$/.test(upperQuery) && !CURRENCY_OPTIONS.includes(upperQuery);
+
+  const commit = (code: string): void => {
+    const upper = code.toUpperCase();
+    onChange(upper);
+    setQuery(upper);
+    setIsOpen(false);
+  };
 
   return (
-    <>
+    <div ref={wrapperRef} className="relative">
       <input
         id={id}
         type="text"
-        list={listId}
-        value={value}
-        onChange={(e) => onChange(e.target.value.toUpperCase())}
+        value={query}
+        onChange={(e) => {
+          const next = e.target.value.toUpperCase().slice(0, 3);
+          setQuery(next);
+          setIsOpen(true);
+          // Mirror the typed value upstream as soon as it parses as a valid
+          // ISO 4217 code, so a user typing "KGS" → tab away commits the
+          // value without needing to click a dropdown row.
+          if (/^[A-Z]{3}$/.test(next)) {
+            onChange(next);
+          }
+        }}
+        onFocus={() => setIsOpen(true)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            const trimmed = upperQuery;
+            if (/^[A-Z]{3}$/.test(trimmed)) commit(trimmed);
+          } else if (e.key === "Escape") {
+            setIsOpen(false);
+          }
+        }}
         className={className}
         maxLength={3}
         pattern="[A-Za-z]{3}"
         required={required}
-        autoFocus={autoFocus}
         autoComplete="off"
         spellCheck={false}
-        // Show the title attribute as a tooltip with the localized name —
-        // useful when the user hovers over a code they don't recognise.
         title={value ? `${value} — ${getCurrencyDisplayName(value)}` : undefined}
       />
-      <datalist id={listId}>
-        {options.map((code) => (
-          <option key={code} value={code} label={getCurrencyDisplayName(code)} />
-        ))}
-      </datalist>
-    </>
+
+      {isOpen && (
+        <div
+          className="absolute z-10 w-full mt-1 rounded-lg shadow-lg max-h-60 overflow-auto"
+          style={{
+            background: "var(--bg-elevated)",
+            border: "1px solid var(--color-border)",
+          }}
+        >
+          {isFreeformCode && (
+            <button
+              type="button"
+              onClick={() => commit(upperQuery)}
+              className="w-full px-4 py-2 text-left focus:outline-none border-b"
+              style={{ borderColor: "var(--color-border)" }}
+            >
+              <div className="font-medium">
+                <span className="font-semibold" style={{ color: "var(--accent)" }}>
+                  {upperQuery}
+                </span>
+                <span className="ml-2">{getCurrencyDisplayName(upperQuery)}</span>
+              </div>
+              <div className="text-sm" style={{ color: "var(--text-muted)" }}>
+                ISO 4217 — direkt verwenden
+              </div>
+            </button>
+          )}
+
+          {filtered.length === 0 && !isFreeformCode && (
+            <div className="px-4 py-3 text-sm" style={{ color: "var(--text-muted)" }}>
+              Keine Treffer — gib einen 3-Buchstaben-Code ein (z. B. INR, JPY, KGS).
+            </div>
+          )}
+
+          {filtered.map((code) => (
+            <button
+              key={code}
+              type="button"
+              onClick={() => commit(code)}
+              className="w-full px-4 py-2 text-left focus:outline-none border-b last:border-0"
+              style={{ borderColor: "var(--color-border)" }}
+            >
+              <div className="font-medium">
+                <span
+                  className={code === value ? "font-semibold" : "font-semibold"}
+                  style={{ color: code === value ? "var(--accent)" : "var(--text-primary)" }}
+                >
+                  {code}
+                </span>
+                <span className="ml-2" style={{ color: "var(--text-muted)" }}>
+                  {getCurrencyDisplayName(code)}
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
