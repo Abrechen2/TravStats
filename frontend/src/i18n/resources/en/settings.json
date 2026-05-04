@@ -524,6 +524,27 @@
       "label": "AeroDataBox API Key",
       "description": "Free via RapidAPI: 600 units/month. Closes the gap for historical flights up to a year back."
     },
+    "bulkRefresh": {
+      "title": "Refresh existing flights",
+      "description": "Backfill missing fields (tail number, Mode-S, codeshare flag, airline ICAO/IATA) on your existing flights from the last 365 days via AeroDataBox/Aviationstack. Existing values are never overwritten.",
+      "remainingPrefix": "There are",
+      "remainingSuffix": "flights queued for refresh.",
+      "allUpToDate": "All flights in the 365-day window are up to date — nothing to do.",
+      "demoBlocked": "Disabled on the demo account to avoid burning real API tokens. Available on your prod instance.",
+      "noHistoricalProvider": "You need an AeroDataBox or Aviationstack key to refresh flights older than today. Enter a key above and reload the page.",
+      "button": "Refresh",
+      "running": "Running...",
+      "confirmTitle": "Confirm AeroDataBox calls",
+      "confirmBody": "This will use up to {{count}} AeroDataBox calls in this run. A single click processes at most 25 flights — click again to drain the remainder.",
+      "confirmQuotaHint": "AeroDataBox free tier is capped at 600 units per month. Plan accordingly.",
+      "confirmRun": "Refresh now",
+      "summaryTitle": "Last run",
+      "summaryScanned": "Scanned: {{count}}",
+      "summaryUpdated": "Updated: {{count}}",
+      "summaryNoData": "No provider data: {{count}}",
+      "summaryFailed": "Failed: {{count}}",
+      "summaryRetryHint": "{{count}} more flights remain — click \"Refresh\" again to process the next batch."
+    },
     "opensky": {
       "label": "OpenSky Network",
       "description": "Free service. Requires registration. Used for flight data lookup.",

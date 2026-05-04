@@ -1,5 +1,6 @@
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import ApiKeyCard from "./ApiKeyCard";
+import BulkRefreshCard from "./BulkRefreshCard";
 import InlineHelp from "../Help/InlineHelp";
 import { useTranslation } from "../../hooks/useTranslation";
 
@@ -101,6 +102,7 @@ export default function ApiKeysSection({
               onChange={(value) => onSetApiKeys({ ...apiKeys, aerodataboxApiKey: value })}
               onClear={() => onSetApiKeys({ ...apiKeys, aerodataboxApiKey: "" })}
             />
+            <BulkRefreshCard />
             <ApiKeyCard
               provider="opensky"
               label={t("settings:apiKeys.opensky.label")}
