@@ -7,7 +7,7 @@ import { filterEmailText } from "../lib/filterEmailText";
 import { getAirlineFromFlightNumber } from "../lib/airlineUtils";
 import AirportAutocomplete from "./AirportAutocomplete";
 import { useSuggestions } from "../hooks/useSuggestions";
-import { CURRENCY_OPTIONS, getCurrencyDisplayName } from "../lib/units";
+import CurrencyInput from "./CurrencyInput";
 
 function getFieldBorderClass(
   fieldName: string,
@@ -698,20 +698,11 @@ export default function FlightReviewModal({
                   <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                     {t("flights:form.currency")}
                   </label>
-                  <select
+                  <CurrencyInput
                     value={currency}
-                    onChange={(e) => setCurrency(e.target.value)}
+                    onChange={setCurrency}
                     className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
-                  >
-                    {(CURRENCY_OPTIONS.includes(currency)
-                      ? CURRENCY_OPTIONS
-                      : [currency, ...CURRENCY_OPTIONS]
-                    ).map((code) => (
-                      <option key={code} value={code}>
-                        {code} — {getCurrencyDisplayName(code)}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
 
                 <div>

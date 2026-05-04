@@ -8,7 +8,7 @@ import { useSuggestions } from "../../hooks/useSuggestions";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useToastStore } from "../../store/toastStore";
 import { estimateArrivalFromDeparture } from "../../lib/timeEstimation";
-import { CURRENCY_OPTIONS, getCurrencyDisplayName } from "../../lib/units";
+import CurrencyInput from "../CurrencyInput";
 
 interface FlightLookupResult {
   flightNumber: string;
@@ -647,20 +647,11 @@ export default function FlightCompleteStep({
           </div>
           <div>
             <label className={`label ${textClass}`}>{t("flights:form.currency")}</label>
-            <select
+            <CurrencyInput
               value={currency}
-              onChange={(e) => setCurrency(e.target.value)}
+              onChange={setCurrency}
               className={`input ${sizedInputClass}`}
-            >
-              {(CURRENCY_OPTIONS.includes(currency)
-                ? CURRENCY_OPTIONS
-                : [currency, ...CURRENCY_OPTIONS]
-              ).map((code) => (
-                <option key={code} value={code}>
-                  {code} — {getCurrencyDisplayName(code)}
-                </option>
-              ))}
-            </select>
+            />
           </div>
         </div>
       )}
