@@ -524,6 +524,27 @@
       "label": "AeroDataBox API-Schlüssel",
       "description": "Kostenlos via RapidAPI: 600 Einheiten/Monat. Schließt die Lücke für historische Flüge bis zu einem Jahr zurück."
     },
+    "bulkRefresh": {
+      "title": "Bestandsflüge auffrischen",
+      "description": "Holt fehlende Felder (Kennzeichen, Mode-S, Codeshare, Airline-ICAO/IATA) für deine bisherigen Flüge der letzten 365 Tage über AeroDataBox/Aviationstack nach. Bestehende Werte werden nie überschrieben.",
+      "remainingPrefix": "Es sind",
+      "remainingSuffix": "Flüge zum Auffrischen vorgemerkt.",
+      "allUpToDate": "Alle Flüge im 365-Tage-Fenster sind aktuell — nichts zu tun.",
+      "demoBlocked": "Im Demo-Account deaktiviert, um keine echten API-Tokens zu verbrauchen. In deiner Prod-Instanz verfügbar.",
+      "noHistoricalProvider": "Du benötigst einen AeroDataBox- oder Aviationstack-Schlüssel, um Flüge älter als heute aufzufrischen. Trage einen Schlüssel oben ein und lade die Seite neu.",
+      "button": "Auffrischen",
+      "running": "Läuft...",
+      "confirmTitle": "AeroDataBox-Aufrufe bestätigen",
+      "confirmBody": "Dies verbraucht bis zu {{count}} AeroDataBox-Aufrufe in diesem Durchlauf. Pro Klick werden maximal 25 Flüge bearbeitet, danach kannst du erneut klicken, um den Rest abzuarbeiten.",
+      "confirmQuotaHint": "AeroDataBox Free-Tier ist auf 600 Einheiten pro Monat limitiert. Plane entsprechend.",
+      "confirmRun": "Jetzt auffrischen",
+      "summaryTitle": "Letzter Lauf",
+      "summaryScanned": "Geprüft: {{count}}",
+      "summaryUpdated": "Aktualisiert: {{count}}",
+      "summaryNoData": "Keine Provider-Daten: {{count}}",
+      "summaryFailed": "Fehlgeschlagen: {{count}}",
+      "summaryRetryHint": "{{count}} weitere Flüge stehen noch aus — auf „Auffrischen\" klicken, um den nächsten Stapel zu verarbeiten."
+    },
     "opensky": {
       "label": "OpenSky Network",
       "description": "Kostenloser Service. Erfordert Registrierung. Wird für Flugdaten-Abfrage verwendet.",

@@ -31,6 +31,10 @@ model User {
   mustChangePassword Boolean   @default(false) @map("must_change_password")
   changeToken        String?   @unique @map("change_token")
   changeTokenExpiry  DateTime? @map("change_token_expiry")
+  // True for users seeded by `seedDemoUser` (e.g. local dev `admin:admin123`).
+  // Used to gate quota-burning admin actions like bulk historical refresh so
+  // the dev demo can't drain a real RapidAPI key by accident.
+  isDemo             Boolean   @default(false) @map("is_demo")
   flights               Flight[]
   userAchievements      UserAchievement[]
   settings              UserSettings?

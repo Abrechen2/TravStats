@@ -16,6 +16,11 @@ import {
   aggregateFlightData,
   createHistoricalEnrichment,
 } from '../services/flightEnrichmentService';
+import {
+  countBulkRefreshCandidates,
+  hasHistoricalProvider,
+  runBulkRefresh,
+} from '../services/bulkFlightRefresh';
 import { estimateRoute } from '../services/routeEstimationService';
 import { calculateCo2Kg, toSeatClass } from '../services/co2Calculator';
 import { getCachedAirports } from '../services/airportCache';
@@ -572,6 +577,68 @@ router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) =
       type: 'FeatureCollection',
       features,
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Bulk historical refresh — patches AeroDataBox-only fields
+// (`aircraftRegistration`, `aircraftModeS`, `isCodeshare`, airline ICAO/IATA)
+// onto existing flights that pre-date the Phase-2 enrichment commit.
+//
+// Demo users (seeded by `seedDemoUser`) are rejected to keep the local
+// dev demo from draining real RapidAPI quota. Hard-capped at
+// `MAX_PER_CALL` flights per request — the frontend re-clicks until the
+// returned `remaining` hits zero.
+router.get('/refresh-historical-bulk/preview', flightCreationLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId!;
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { isDemo: true },
+    });
+    if (user?.isDemo) {
+      return res.status(403).json({
+        error: 'DEMO_ACCOUNT_FORBIDDEN',
+        message:
+          'Bulk refresh is disabled for the demo account to keep RapidAPI quota intact. Use a real account on a production deployment.',
+      });
+    }
+    const [remaining, hasProvider] = await Promise.all([
+      countBulkRefreshCandidates(userId),
+      hasHistoricalProvider(userId),
+    ]);
+    res.json({ remaining, hasHistoricalProvider: hasProvider });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/refresh-historical-bulk', flightCreationLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId!;
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { isDemo: true },
+    });
+    if (user?.isDemo) {
+      return res.status(403).json({
+        error: 'DEMO_ACCOUNT_FORBIDDEN',
+        message:
+          'Bulk refresh is disabled for the demo account to keep RapidAPI quota intact. Use a real account on a production deployment.',
+      });
+    }
+
+    if (!(await hasHistoricalProvider(userId))) {
+      return res.status(409).json({
+        error: 'NO_HISTORICAL_PROVIDER',
+        message:
+          'Bulk refresh needs an AeroDataBox or Aviationstack key to look up flights older than today. Configure one in the API keys section above.',
+      });
+    }
+
+    const summary = await runBulkRefresh(userId);
+    res.json(summary);
   } catch (error) {
     next(error);
   }

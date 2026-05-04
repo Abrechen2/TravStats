@@ -625,6 +625,7 @@ export async function seedDemoUser(options: SeedDemoOptions = {}) {
           passwordHash,
           isAdmin,
           mustChangePassword: false,
+          isDemo: true,
         },
       });
 
@@ -645,6 +646,7 @@ export async function seedDemoUser(options: SeedDemoOptions = {}) {
             passwordHash,
             isAdmin,
             mustChangePassword: false,
+            isDemo: true,
           },
         });
         console.log(`🔄 Reset credentials → password: ${password}, isAdmin: ${isAdmin}`);

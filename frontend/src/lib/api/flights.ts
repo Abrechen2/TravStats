@@ -73,4 +73,40 @@ export const flightsApi = {
     }>("/flights/batch", flights);
     return data;
   },
+
+  // Bulk historical refresh — pre-flight count of refreshable flights.
+  // Returns 403 with `error: 'DEMO_ACCOUNT_FORBIDDEN'` for seeded demo
+  // accounts so the UI can disable the button with an explanatory tooltip.
+  bulkRefreshPreview: async (): Promise<{
+    remaining: number;
+    hasHistoricalProvider: boolean;
+  }> => {
+    const { data } = await api.get<{
+      remaining: number;
+      hasHistoricalProvider: boolean;
+    }>("/flights/refresh-historical-bulk/preview");
+    return data;
+  },
+
+  bulkRefreshRun: async (): Promise<BulkRefreshSummary> => {
+    const { data } = await api.post<BulkRefreshSummary>(
+      "/flights/refresh-historical-bulk"
+    );
+    return data;
+  },
 };
+
+export interface BulkRefreshSummary {
+  scanned: number;
+  updated: number;
+  noData: number;
+  failed: number;
+  remaining: number;
+  results: Array<{
+    flightId: string;
+    flightNumber: string;
+    outcome: "updated" | "no_data" | "failed";
+    fieldsUpdated?: string[];
+    error?: string;
+  }>;
+}
