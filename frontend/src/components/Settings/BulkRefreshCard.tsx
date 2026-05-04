@@ -137,14 +137,14 @@ export default function BulkRefreshCard(): JSX.Element | null {
 
       {quota && (quota.remaining !== null || quota.limit !== null) && (
         <div className="text-xs text-[var(--text-muted)]">
-          {t("settings:apiKeys.bulkRefresh.quotaLabel")}:{" "}
+          {t("settings:apiKeys.bulkRefresh.quotaLabelADB")}:{" "}
           <span className="font-semibold text-[var(--text-primary)]">
             {quota.remaining ?? "?"}
           </span>
           {quota.limit !== null && (
             <span className="text-[var(--text-muted)]"> / {quota.limit}</span>
           )}{" "}
-          {t("settings:apiKeys.bulkRefresh.quotaSuffix")}
+          {t("settings:apiKeys.bulkRefresh.quotaSuffixADB")}
         </div>
       )}
 
@@ -238,7 +238,7 @@ export default function BulkRefreshCard(): JSX.Element | null {
               </p>
             )}
             <p className="text-xs text-[var(--text-muted)] mb-4">
-              {t("settings:apiKeys.bulkRefresh.confirmQuotaHint")}
+              {t("settings:apiKeys.bulkRefresh.confirmHistoricalNote")}
             </p>
             <div className="flex justify-end gap-2">
               <button

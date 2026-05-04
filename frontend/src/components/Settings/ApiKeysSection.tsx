@@ -1,8 +1,11 @@
+import { useEffect, useState } from "react";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import ApiKeyCard from "./ApiKeyCard";
 import BulkRefreshCard from "./BulkRefreshCard";
 import InlineHelp from "../Help/InlineHelp";
 import { useTranslation } from "../../hooks/useTranslation";
+import { settingsApi } from "../../lib/api";
+import type { ApiKeyQuotasResponse, ProviderQuota } from "../../lib/api/settings";
 
 interface ApiKeysStatus {
   airlabs: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
@@ -35,6 +38,25 @@ export default function ApiKeysSection({
   onSave,
 }: ApiKeysSectionProps): JSX.Element {
   const { t } = useTranslation(["settings"]);
+  const [quotas, setQuotas] = useState<ApiKeyQuotasResponse | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    settingsApi
+      .getApiKeyQuotas()
+      .then((q) => {
+        if (!cancelled) setQuotas(q);
+      })
+      .catch(() => {
+        // Quota fetch failure is non-fatal — the cards render without it.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const quotaFor = (provider: keyof ApiKeyQuotasResponse): ProviderQuota | undefined =>
+    quotas?.[provider];
 
   return (
     <SectionCard>
@@ -77,6 +99,7 @@ export default function ApiKeysSection({
               isShared={apiKeysStatus?.airlabs.isShared || false}
               hasAccess={apiKeysStatus?.airlabs.hasAccess || false}
               value={apiKeys.airlabsApiKey}
+              quota={quotaFor("airlabs")}
               onChange={(value) => onSetApiKeys({ ...apiKeys, airlabsApiKey: value })}
               onClear={() => onSetApiKeys({ ...apiKeys, airlabsApiKey: "" })}
             />
@@ -88,6 +111,7 @@ export default function ApiKeysSection({
               isShared={apiKeysStatus?.aviationstack.isShared || false}
               hasAccess={apiKeysStatus?.aviationstack.hasAccess || false}
               value={apiKeys.aviationstackApiKey}
+              quota={quotaFor("aviationstack")}
               onChange={(value) => onSetApiKeys({ ...apiKeys, aviationstackApiKey: value })}
               onClear={() => onSetApiKeys({ ...apiKeys, aviationstackApiKey: "" })}
             />
@@ -99,6 +123,8 @@ export default function ApiKeysSection({
               isShared={apiKeysStatus?.aerodatabox.isShared || false}
               hasAccess={apiKeysStatus?.aerodatabox.hasAccess || false}
               value={apiKeys.aerodataboxApiKey}
+              quota={quotaFor("aerodatabox")}
+              capabilities={["historical365"]}
               onChange={(value) => onSetApiKeys({ ...apiKeys, aerodataboxApiKey: value })}
               onClear={() => onSetApiKeys({ ...apiKeys, aerodataboxApiKey: "" })}
             />
@@ -110,6 +136,7 @@ export default function ApiKeysSection({
               getKeyUrl="https://opensky-network.org/accounts/register"
               isShared={apiKeysStatus?.opensky.isShared || false}
               hasAccess={apiKeysStatus?.opensky.hasAccess || false}
+              quota={quotaFor("opensky")}
               openskyFields={{
                 clientId: apiKeys.openskyClientId,
                 clientSecret: apiKeys.openskyClientSecret,

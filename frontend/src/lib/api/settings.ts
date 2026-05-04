@@ -8,6 +8,24 @@ import type {
   UserSettings,
 } from "./types";
 
+/**
+ * Per-provider quota indicator. Backend returns one of three kinds depending
+ * on what the upstream provider exposes:
+ *   - `observed` — live numbers from response headers (AeroDataBox today)
+ *   - `not_reported` — provider doesn't expose quota; we may know a static
+ *     monthly cap (e.g. AirLabs free 1000) but not the current count
+ *   - `rate_limit_only` — IP-based per-second throttling, no monthly quota
+ *     (OpenSky)
+ */
+export type ProviderQuota =
+  | { kind: "observed"; limit: number | null; remaining: number | null; observedAt: string }
+  | { kind: "not_reported"; knownLimitHint?: number }
+  | { kind: "rate_limit_only" };
+
+export type ApiProvider = "aerodatabox" | "airlabs" | "aviationstack" | "opensky";
+
+export type ApiKeyQuotasResponse = Record<ApiProvider, ProviderQuota>;
+
 export interface HomeAirportEntry {
   iata: string;
   fromDate: string; // YYYY-MM-DD
@@ -131,6 +149,10 @@ export const settingsApi = {
       aerodatabox: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
       opensky: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     }>("/settings/api-keys");
+    return data;
+  },
+  getApiKeyQuotas: async (): Promise<ApiKeyQuotasResponse> => {
+    const { data } = await api.get<ApiKeyQuotasResponse>("/settings/api-keys/quota");
     return data;
   },
   updateApiKeys: async (payload: {

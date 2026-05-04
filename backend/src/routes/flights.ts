@@ -21,7 +21,7 @@ import {
   hasHistoricalProvider,
   runBulkRefresh,
 } from '../services/bulkFlightRefresh';
-import { getAerodataboxQuota } from '../services/aerodataboxLookup';
+import { getProviderQuota } from '../services/apiQuota';
 import { estimateRoute } from '../services/routeEstimationService';
 import { calculateCo2Kg, toSeatClass } from '../services/co2Calculator';
 import { getCachedAirports } from '../services/airportCache';
@@ -609,7 +609,8 @@ router.get('/refresh-historical-bulk/preview', flightCreationLimiter, async (req
       countBulkRefreshCandidates(userId),
       hasHistoricalProvider(userId),
     ]);
-    const quota = getAerodataboxQuota(userId);
+    const adbQuota = getProviderQuota('aerodatabox', userId);
+    const quota = adbQuota.kind === 'observed' ? adbQuota : null;
     res.json({
       remaining,
       hasHistoricalProvider: hasProvider,
@@ -644,7 +645,8 @@ router.post('/refresh-historical-bulk', flightCreationLimiter, async (req: AuthR
     }
 
     const summary = await runBulkRefresh(userId);
-    const quota = getAerodataboxQuota(userId);
+    const adbQuota = getProviderQuota('aerodatabox', userId);
+    const quota = adbQuota.kind === 'observed' ? adbQuota : null;
     res.json({ ...summary, aerodataboxQuota: quota });
   } catch (error) {
     next(error);

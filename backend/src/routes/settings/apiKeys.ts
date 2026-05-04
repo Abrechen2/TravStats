@@ -10,6 +10,7 @@ import {
   testOpenSkyCredentials,
 } from '../../services/apiKeyTester';
 import { getApiKey, getOpenSkyCredentials } from '../../services/apiKeyResolver';
+import { getAllProviderQuotas } from '../../services/apiQuota';
 import logger from '../../utils/logger';
 import {
   ApiKeysUpdateData,
@@ -334,6 +335,23 @@ router.post('/test/opensky', async (req: AuthRequest, res: Response, next: NextF
       req.userId!
     );
     res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /quota — per-provider quota observation. Different providers
+// expose quota differently:
+//   - aerodatabox  → live `kind: 'observed'` from RapidAPI headers
+//   - airlabs      → `kind: 'not_reported'` (no headers in free tier)
+//   - aviationstack → `kind: 'not_reported'`
+//   - opensky      → `kind: 'rate_limit_only'` (per-second IP, no monthly)
+// The frontend uses this to show honest, per-card quota indicators
+// rather than a single misleading global counter.
+router.get('/quota', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.userId!;
+    res.json(getAllProviderQuotas(userId));
   } catch (error) {
     next(error);
   }

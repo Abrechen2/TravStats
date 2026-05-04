@@ -499,6 +499,19 @@
     "clear": "Clear",
     "test": "Test",
     "testing": "Testing...",
+    "capabilities": {
+      "historical365": {
+        "label": "Historical search · 365 days",
+        "tooltip": "Only provider that reliably returns flights up to a year in the past."
+      }
+    },
+    "quota": {
+      "label": "Remaining",
+      "observedSuffix": "calls (last observed)",
+      "notReported": "Provider does not return quota headers.",
+      "staticHint": "Free-tier cap: ~{{limit}}/month",
+      "rateLimitOnly": "No monthly limit — IP-based rate limiting."
+    },
     "sharedNote": "This key is shared by the administrator and cannot be edited",
     "save": "Save API Keys",
     "saving": "Saving...",
@@ -526,21 +539,21 @@
     },
     "bulkRefresh": {
       "title": "Refresh existing flights",
-      "description": "Backfill missing fields (tail number, Mode-S, codeshare flag, airline ICAO/IATA) on your existing flights from the last 365 days via AeroDataBox/Aviationstack. Existing values are never overwritten.",
+      "description": "Backfill missing fields (tail number, Mode-S, codeshare flag, airline ICAO/IATA) on your existing flights from the last 365 days. Existing values are never overwritten. Requires AeroDataBox — only this provider covers the 365-day window.",
       "remainingPrefix": "There are",
       "remainingSuffix": "flights queued for refresh.",
       "allUpToDate": "All flights in the 365-day window are up to date — nothing to do.",
       "demoBlocked": "Disabled on the demo account to avoid burning real API tokens. Available on your prod instance.",
-      "noHistoricalProvider": "You need an AeroDataBox or Aviationstack key to refresh flights older than today. Enter a key above and reload the page.",
+      "noHistoricalProvider": "You need an AeroDataBox key to refresh flights older than today — only AeroDataBox covers the 365-day window. Enter a key above and reload the page.",
       "button": "Refresh",
       "running": "Running...",
       "confirmTitle": "Confirm AeroDataBox calls",
       "confirmBody": "This will use up to {{count}} AeroDataBox calls in this run. A single click processes at most 25 flights — click again to drain the remainder.",
-      "confirmQuotaHint": "AeroDataBox free tier is capped at 600 units per month. Plan accordingly.",
-      "confirmQuotaCurrent": "Current quota: {{remaining}} of {{limit}} calls remaining.",
+      "confirmHistoricalNote": "Only AeroDataBox can serve the 365-day window. Other configured APIs (AirLabs, Aviationstack, OpenSky) are not used for this operation.",
+      "confirmQuotaCurrent": "AeroDataBox quota: {{remaining}} of {{limit}} calls remaining.",
       "confirmQuotaWarn": "Remaining quota is below this batch — you will hit zero before completion.",
-      "quotaLabel": "Remaining",
-      "quotaSuffix": "calls this month (last observed)",
+      "quotaLabelADB": "AeroDataBox quota remaining",
+      "quotaSuffixADB": "(last observed)",
       "confirmRun": "Refresh now",
       "summaryTitle": "Last run",
       "summaryScanned": "Scanned: {{count}}",
