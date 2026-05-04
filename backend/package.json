@@ -24,6 +24,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "seed:airports:csv": "node dist/seedAirportsFromCSV.js",
+    "backfill:closed-airports": "node dist/scripts/backfillClosedAirports.js",
     "seed:demo": "node dist/seedDemoUser.js",
     "seed:dev-admin": "tsx src/seedDevAdmin.ts",
     "seed:dev-admin-keys": "tsx src/seedDevAdminKeys.ts",
