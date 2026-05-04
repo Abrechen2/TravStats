@@ -42,6 +42,55 @@ const cache = new NodeCache({
   checkperiod: 600,
 });
 
+/**
+ * Latest RapidAPI rate-limit observation per user. Updated on every call
+ * (success or RapidAPI-throttled error) so the UI can surface "X of 600
+ * left this month" without spending a probing call.
+ *
+ * Quota is per-API-key on RapidAPI, but we key by userId because that's
+ * what the route layer has at hand — when an admin-shared key is in use,
+ * multiple users will see the same numbers under different keys, which
+ * is fine for an indicator. `observedAt` lets the UI age it out (e.g.
+ * "as of 12 minutes ago") if needed.
+ */
+export interface AerodataboxQuota {
+  limit: number | null;
+  remaining: number | null;
+  observedAt: string;
+}
+
+const lastQuotaByUser = new Map<string, AerodataboxQuota>();
+
+const ANON = "__anon__";
+
+function captureRateLimit(headers: Record<string, unknown>, userId?: string): void {
+  // RapidAPI uses `x-ratelimit-requests-limit` / `x-ratelimit-requests-remaining`
+  // for monthly counters and `x-ratelimit-requests-reset` (seconds-until-reset)
+  // for the rolling window. Header keys arrive lowercased from axios.
+  const limitRaw = headers["x-ratelimit-requests-limit"];
+  const remainingRaw = headers["x-ratelimit-requests-remaining"];
+  const limit = typeof limitRaw === "string" ? parseInt(limitRaw, 10) : NaN;
+  const remaining = typeof remainingRaw === "string" ? parseInt(remainingRaw, 10) : NaN;
+  if (Number.isFinite(limit) || Number.isFinite(remaining)) {
+    lastQuotaByUser.set(userId ?? ANON, {
+      limit: Number.isFinite(limit) ? limit : null,
+      remaining: Number.isFinite(remaining) ? remaining : null,
+      observedAt: new Date().toISOString(),
+    });
+  }
+}
+
+/** Surface the latest observed RapidAPI quota for a user, or null if we
+ *  haven't called the API on their behalf yet this server lifetime. */
+export function getAerodataboxQuota(userId?: string): AerodataboxQuota | null {
+  return lastQuotaByUser.get(userId ?? ANON) ?? null;
+}
+
+/** Test helper — clears the in-memory quota map. */
+export function __resetAerodataboxQuotaForTests(): void {
+  lastQuotaByUser.clear();
+}
+
 /** Raw response item from `/flights/number/{n}/{date}`. */
 interface AerodataboxFlight {
   number?: string;
@@ -186,6 +235,8 @@ export async function lookupFlightAerodatabox(
       },
     );
 
+    captureRateLimit(response.headers as Record<string, unknown>, userId);
+
     const picked = pickOperatorAndMarketing(response.data ?? [], normalized);
     if (!picked) {
       logger.info(
@@ -216,8 +267,15 @@ export async function lookupFlightAerodatabox(
     cache.set(cacheKey, result, ttl);
     return result;
   } catch (error: unknown) {
-    const status = (error as { response?: { status?: number } })?.response?.status;
+    const errResponse = (error as { response?: { status?: number; headers?: Record<string, unknown> } })?.response;
+    const status = errResponse?.status;
     const message = error instanceof Error ? error.message : String(error);
+
+    // RapidAPI sends rate-limit headers on 429/4xx responses too — capture
+    // so the UI can show "0 of 600 left" after a throttle.
+    if (errResponse?.headers) {
+      captureRateLimit(errResponse.headers, userId);
+    }
 
     if (status === 429) {
       logger.warn(
