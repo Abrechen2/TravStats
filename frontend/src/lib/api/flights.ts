@@ -80,10 +80,12 @@ export const flightsApi = {
   bulkRefreshPreview: async (): Promise<{
     remaining: number;
     hasHistoricalProvider: boolean;
+    aerodataboxQuota: AerodataboxQuota | null;
   }> => {
     const { data } = await api.get<{
       remaining: number;
       hasHistoricalProvider: boolean;
+      aerodataboxQuota: AerodataboxQuota | null;
     }>("/flights/refresh-historical-bulk/preview");
     return data;
   },
@@ -95,6 +97,12 @@ export const flightsApi = {
     return data;
   },
 };
+
+export interface AerodataboxQuota {
+  limit: number | null;
+  remaining: number | null;
+  observedAt: string;
+}
 
 export interface BulkRefreshSummary {
   scanned: number;
@@ -109,4 +117,5 @@ export interface BulkRefreshSummary {
     fieldsUpdated?: string[];
     error?: string;
   }>;
+  aerodataboxQuota?: AerodataboxQuota | null;
 }

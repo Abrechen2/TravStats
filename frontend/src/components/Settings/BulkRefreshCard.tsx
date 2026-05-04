@@ -21,7 +21,11 @@
  */
 import { useEffect, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { flightsApi, type BulkRefreshSummary } from "../../lib/api/flights";
+import {
+  flightsApi,
+  type AerodataboxQuota,
+  type BulkRefreshSummary,
+} from "../../lib/api/flights";
 
 const MAX_PER_BATCH = 25;
 
@@ -29,6 +33,7 @@ export default function BulkRefreshCard(): JSX.Element | null {
   const { t } = useTranslation(["settings", "common"]);
   const [remaining, setRemaining] = useState<number | null>(null);
   const [hasProvider, setHasProvider] = useState(true);
+  const [quota, setQuota] = useState<AerodataboxQuota | null>(null);
   const [demoBlocked, setDemoBlocked] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -37,9 +42,11 @@ export default function BulkRefreshCard(): JSX.Element | null {
 
   const loadPreview = async (): Promise<void> => {
     try {
-      const { remaining: count, hasHistoricalProvider } = await flightsApi.bulkRefreshPreview();
+      const { remaining: count, hasHistoricalProvider, aerodataboxQuota } =
+        await flightsApi.bulkRefreshPreview();
       setRemaining(count);
       setHasProvider(hasHistoricalProvider);
+      setQuota(aerodataboxQuota);
       setDemoBlocked(false);
       setPreviewError(null);
     } catch (error: unknown) {
@@ -68,6 +75,9 @@ export default function BulkRefreshCard(): JSX.Element | null {
       const summary = await flightsApi.bulkRefreshRun();
       setLastSummary(summary);
       setRemaining(summary.remaining);
+      if (summary.aerodataboxQuota) {
+        setQuota(summary.aerodataboxQuota);
+      }
     } catch (error: unknown) {
       const errObj = error as {
         response?: { status?: number; data?: { error?: string; message?: string } };
@@ -122,6 +132,19 @@ export default function BulkRefreshCard(): JSX.Element | null {
           {t("settings:apiKeys.bulkRefresh.remainingPrefix")}{" "}
           <span className="font-semibold">{remaining}</span>{" "}
           {t("settings:apiKeys.bulkRefresh.remainingSuffix")}
+        </div>
+      )}
+
+      {quota && (quota.remaining !== null || quota.limit !== null) && (
+        <div className="text-xs text-[var(--text-muted)]">
+          {t("settings:apiKeys.bulkRefresh.quotaLabel")}:{" "}
+          <span className="font-semibold text-[var(--text-primary)]">
+            {quota.remaining ?? "?"}
+          </span>
+          {quota.limit !== null && (
+            <span className="text-[var(--text-muted)]"> / {quota.limit}</span>
+          )}{" "}
+          {t("settings:apiKeys.bulkRefresh.quotaSuffix")}
         </div>
       )}
 
@@ -201,6 +224,19 @@ export default function BulkRefreshCard(): JSX.Element | null {
                 count: estimatedCalls,
               })}
             </p>
+            {quota && quota.remaining !== null && (
+              <p className="text-sm text-[var(--text-primary)] mb-3">
+                {t("settings:apiKeys.bulkRefresh.confirmQuotaCurrent", {
+                  remaining: quota.remaining,
+                  limit: quota.limit ?? "?",
+                })}
+                {quota.remaining < estimatedCalls && (
+                  <span className="block mt-1 text-yellow-700">
+                    ⚠ {t("settings:apiKeys.bulkRefresh.confirmQuotaWarn")}
+                  </span>
+                )}
+              </p>
+            )}
             <p className="text-xs text-[var(--text-muted)] mb-4">
               {t("settings:apiKeys.bulkRefresh.confirmQuotaHint")}
             </p>
