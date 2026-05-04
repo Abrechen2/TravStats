@@ -125,7 +125,7 @@ export function useFlightForm(
   const [status, setStatus] = useState<"scheduled" | "flown" | "cancelled" | "historical">("flown");
   const [notes, setNotes] = useState("");
   const [price, setPrice] = useState<number | undefined>(undefined);
-  const [currency, setCurrency] = useState<"EUR" | "USD" | "GBP" | "CHF">("EUR");
+  const [currency, setCurrency] = useState<string>("EUR");
   const [category, setCategory] = useState<"business" | "private" | "vacation">("business");
   const [tags, setTags] = useState<string[]>([]);
   const [companions, setCompanions] = useState<string[]>([]);

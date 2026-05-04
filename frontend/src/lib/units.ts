@@ -1,5 +1,11 @@
 export type DistanceUnit = "kilometers" | "miles" | "nautical_miles";
-export type Currency = "EUR" | "USD" | "GBP" | "CHF";
+
+/**
+ * ISO 4217 alpha-3 currency code. Any 3-letter code accepted by
+ * `Intl.NumberFormat` is valid (EUR, USD, GBP, CHF, INR, JPY, …).
+ * Backend validates the same shape via Zod regex.
+ */
+export type Currency = string;
 
 /**
  * Convert distance from kilometers to the specified unit
@@ -43,49 +49,87 @@ export function getDistanceLabel(unit: DistanceUnit, t: (key: string) => string)
 }
 
 /**
- * Format currency value based on currency code
+ * Curated list of ISO 4217 codes shown in the currency picker dropdown.
+ * Covers the most commonly used currencies in international travel —
+ * users on a different code can still POST it directly to the API
+ * (Backend Zod accepts any /^[A-Z]{3}$/). Add codes here as picker
+ * coverage requests come in.
+ */
+export const CURRENCY_OPTIONS: ReadonlyArray<string> = [
+  "EUR", "USD", "GBP", "CHF", "AUD", "CAD", "NZD",
+  "JPY", "CNY", "KRW", "INR", "SGD", "HKD", "THB", "MYR", "IDR",
+  "AED", "SAR", "ILS",
+  "SEK", "NOK", "DKK", "PLN", "CZK", "HUF",
+  "BRL", "MXN", "ARS", "ZAR", "TRY", "RUB",
+] as const;
+
+/**
+ * Localized display name for an ISO 4217 code (e.g. "Euro", "US-Dollar",
+ * "Indische Rupie"). Falls back to the raw code if Intl.DisplayNames is
+ * unavailable or rejects the input.
+ */
+export function getCurrencyDisplayName(code: string, locale?: string): string {
+  try {
+    const dn = new Intl.DisplayNames([locale || navigator.language || "en"], {
+      type: "currency",
+    });
+    return dn.of(code) || code;
+  } catch {
+    return code;
+  }
+}
+
+// Locale hints for the few currencies whose default Intl formatting differs
+// from what European users expect (e.g. en-IN groups INR as "8,49,999" with
+// the lakh separator). For everything else, the user's browser locale is
+// fine — Intl.NumberFormat resolves the symbol and rules from `currency`.
+const LOCALE_HINTS: Record<string, string> = {
+  EUR: "de-DE",
+  USD: "en-US",
+  GBP: "en-GB",
+  CHF: "de-CH",
+  INR: "en-IN",
+  JPY: "ja-JP",
+  CNY: "zh-CN",
+};
+
+/**
+ * Format currency value as a localized string. Accepts any ISO 4217
+ * alpha-3 code natively supported by Intl.NumberFormat.
  */
 export function formatCurrency(value: number, currency: Currency): string {
   if (value === undefined || value === null || isNaN(value)) return "";
 
+  const locale = LOCALE_HINTS[currency] || undefined;
+
   try {
-    // Map currency codes to locale strings for proper formatting
-    const localeMap: Record<Currency, string> = {
-      EUR: "de-DE",
-      USD: "en-US",
-      GBP: "en-GB",
-      CHF: "de-CH",
-    };
-
-    const locale = localeMap[currency] || "de-DE";
-
     return new Intl.NumberFormat(locale, {
       style: "currency",
-      currency: currency,
+      currency,
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
     }).format(value);
   } catch {
-    // Fallback if Intl.NumberFormat fails
-    const symbolMap: Record<Currency, string> = {
-      EUR: "€",
-      USD: "$",
-      GBP: "£",
-      CHF: "CHF ",
-    };
-    return `${symbolMap[currency] || ""}${value.toLocaleString()}`;
+    // Intl rejects unknown / malformed codes — render the raw value with
+    // the currency code as suffix so the data is still readable.
+    return `${value.toLocaleString()} ${currency}`;
   }
 }
 
 /**
- * Get currency symbol
+ * Get the locale-resolved currency symbol (€, $, ₹, ¥, …) without a
+ * formatted number. Falls back to the ISO code if the runtime can't
+ * resolve a symbol.
  */
 export function getCurrencySymbol(currency: Currency): string {
-  const symbolMap: Record<Currency, string> = {
-    EUR: "€",
-    USD: "$",
-    GBP: "£",
-    CHF: "CHF ",
-  };
-  return symbolMap[currency] || "€";
+  const locale = LOCALE_HINTS[currency] || undefined;
+  try {
+    const parts = new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency,
+    }).formatToParts(0);
+    return parts.find((p) => p.type === "currency")?.value ?? currency;
+  } catch {
+    return currency;
+  }
 }

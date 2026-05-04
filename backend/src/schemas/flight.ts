@@ -129,7 +129,14 @@ const baseFlightSchema = z.object({
   status: z.enum(['scheduled', 'flown', 'cancelled', 'historical', 'duplicated']).default('scheduled'),
   notes: z.string().transform((v) => v.replace(/<[^>]*>/g, '')).optional(),
   price: z.number().min(0).optional(),
-  currency: z.enum(['EUR', 'USD', 'GBP', 'CHF']).optional(),
+  // Any ISO 4217 alpha-3 code — validated only for shape, not against a
+  // hard-coded allow-list, so users worldwide can record costs in their
+  // local currency (INR, JPY, AUD, …). Intl.NumberFormat handles
+  // formatting natively for every code it supports.
+  currency: z
+    .string()
+    .regex(/^[A-Z]{3}$/, 'Must be a 3-letter ISO 4217 code (e.g. EUR, USD, INR)')
+    .optional(),
   taxes: z.number().min(0).optional(),
   fees: z.number().min(0).optional(),
   category: z.enum(['business', 'private', 'vacation']).optional(),

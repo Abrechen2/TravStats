@@ -10,6 +10,7 @@ import { estimateArrivalFromDeparture } from "../lib/timeEstimation";
 import { airportsApi } from "../lib/api/airports";
 import { tripsApi } from "../lib/api/trips";
 import { logger } from "../lib/logger";
+import { CURRENCY_OPTIONS, getCurrencyDisplayName } from "../lib/units";
 
 import type { FlightInput } from "../types";
 
@@ -675,15 +676,17 @@ export default function FlightEditModal({
                   <label className="label">{t("flights:form.currency")}</label>
                   <select
                     value={formData.currency}
-                    onChange={(e) =>
-                      update("currency", e.target.value as Flight["currency"] & string)
-                    }
+                    onChange={(e) => update("currency", e.target.value)}
                     className="input"
                   >
-                    <option value="EUR">{t("flights:currency.EUR")}</option>
-                    <option value="USD">{t("flights:currency.USD")}</option>
-                    <option value="GBP">{t("flights:currency.GBP")}</option>
-                    <option value="CHF">{t("flights:currency.CHF")}</option>
+                    {(CURRENCY_OPTIONS.includes(formData.currency || "")
+                      ? CURRENCY_OPTIONS
+                      : [formData.currency || "EUR", ...CURRENCY_OPTIONS]
+                    ).map((code) => (
+                      <option key={code} value={code}>
+                        {code} — {getCurrencyDisplayName(code)}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>

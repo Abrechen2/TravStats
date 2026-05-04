@@ -7,7 +7,8 @@ import { useAuthStore } from "./authStore";
 type ThemePreference = "light" | "dark";
 type LanguagePreference = "de" | "en";
 type DistanceUnit = "kilometers" | "miles" | "nautical_miles";
-type Currency = "EUR" | "USD" | "GBP" | "CHF";
+/** ISO 4217 alpha-3 code (EUR, USD, GBP, CHF, INR, JPY, …). */
+type Currency = string;
 type FlightCategory = "business" | "private" | "vacation";
 type SeatClass = "economy" | "premium_economy" | "business" | "first";
 

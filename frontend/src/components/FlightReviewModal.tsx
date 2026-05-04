@@ -7,6 +7,7 @@ import { filterEmailText } from "../lib/filterEmailText";
 import { getAirlineFromFlightNumber } from "../lib/airlineUtils";
 import AirportAutocomplete from "./AirportAutocomplete";
 import { useSuggestions } from "../hooks/useSuggestions";
+import { CURRENCY_OPTIONS, getCurrencyDisplayName } from "../lib/units";
 
 function getFieldBorderClass(
   fieldName: string,
@@ -100,7 +101,7 @@ export default function FlightReviewModal({
   const [boardingGroup, setBoardingGroup] = useState("");
   const [ticketNumber, setTicketNumber] = useState("");
   const [price, setPrice] = useState<number | undefined>(undefined);
-  const [currency, setCurrency] = useState<"EUR" | "USD" | "GBP" | "CHF">("EUR");
+  const [currency, setCurrency] = useState<string>("EUR");
   const [taxes, setTaxes] = useState<number | undefined>(undefined);
   const [fees, setFees] = useState<number | undefined>(undefined);
 
@@ -161,7 +162,7 @@ export default function FlightReviewModal({
         setFees(undefined);
       }
       if (initialData.currency) {
-        setCurrency(initialData.currency.toUpperCase() as "EUR" | "USD" | "GBP" | "CHF");
+        setCurrency(initialData.currency.toUpperCase());
       }
 
       // Map seat class
@@ -699,13 +700,17 @@ export default function FlightReviewModal({
                   </label>
                   <select
                     value={currency}
-                    onChange={(e) => setCurrency(e.target.value as "EUR" | "USD" | "GBP" | "CHF")}
+                    onChange={(e) => setCurrency(e.target.value)}
                     className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="EUR">{t("flights:currency.EUR")}</option>
-                    <option value="USD">{t("flights:currency.USD")}</option>
-                    <option value="GBP">{t("flights:currency.GBP")}</option>
-                    <option value="CHF">{t("flights:currency.CHF")}</option>
+                    {(CURRENCY_OPTIONS.includes(currency)
+                      ? CURRENCY_OPTIONS
+                      : [currency, ...CURRENCY_OPTIONS]
+                    ).map((code) => (
+                      <option key={code} value={code}>
+                        {code} — {getCurrencyDisplayName(code)}
+                      </option>
+                    ))}
                   </select>
                 </div>
 

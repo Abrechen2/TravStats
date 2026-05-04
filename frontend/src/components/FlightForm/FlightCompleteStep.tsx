@@ -8,6 +8,7 @@ import { useSuggestions } from "../../hooks/useSuggestions";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useToastStore } from "../../store/toastStore";
 import { estimateArrivalFromDeparture } from "../../lib/timeEstimation";
+import { CURRENCY_OPTIONS, getCurrencyDisplayName } from "../../lib/units";
 
 interface FlightLookupResult {
   flightNumber: string;
@@ -78,9 +79,10 @@ export interface FlightCompleteStepProps {
   setCategory: (v: "business" | "private" | "vacation") => void;
   // Price
   price: number | undefined;
-  currency: "EUR" | "USD" | "GBP" | "CHF";
+  /** ISO 4217 alpha-3 code (EUR, USD, GBP, CHF, INR, JPY, …). */
+  currency: string;
   setPrice: (v: number | undefined) => void;
-  setCurrency: (v: "EUR" | "USD" | "GBP" | "CHF") => void;
+  setCurrency: (v: string) => void;
   // Tags & companions
   tags: string[];
   companions: string[];
@@ -647,13 +649,17 @@ export default function FlightCompleteStep({
             <label className={`label ${textClass}`}>{t("flights:form.currency")}</label>
             <select
               value={currency}
-              onChange={(e) => setCurrency(e.target.value as "EUR" | "USD" | "GBP" | "CHF")}
+              onChange={(e) => setCurrency(e.target.value)}
               className={`input ${sizedInputClass}`}
             >
-              <option value="EUR">{t("flights:currency.EUR")}</option>
-              <option value="USD">{t("flights:currency.USD")}</option>
-              <option value="GBP">{t("flights:currency.GBP")}</option>
-              <option value="CHF">{t("flights:currency.CHF")}</option>
+              {(CURRENCY_OPTIONS.includes(currency)
+                ? CURRENCY_OPTIONS
+                : [currency, ...CURRENCY_OPTIONS]
+              ).map((code) => (
+                <option key={code} value={code}>
+                  {code} — {getCurrencyDisplayName(code)}
+                </option>
+              ))}
             </select>
           </div>
         </div>
