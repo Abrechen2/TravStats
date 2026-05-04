@@ -7,6 +7,9 @@
 import { useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { settingsApi, adminApi } from "../../lib/api";
+import type { ProviderQuota } from "../../lib/api/settings";
+
+export type ApiCardCapability = "historical365";
 
 export interface ApiKeyCardProps {
   provider: "airlabs" | "aviationstack" | "aerodatabox" | "opensky";
@@ -16,6 +19,11 @@ export interface ApiKeyCardProps {
   isShared: boolean;
   hasAccess: boolean;
   value?: string;
+  /** Per-provider quota observation. Different providers report this
+   *  very differently — see `ProviderQuota` for the variants. */
+  quota?: ProviderQuota;
+  /** Capability tags to render as small badges next to the label. */
+  capabilities?: ApiCardCapability[];
   onChange?: (value: string) => void;
   onClear?: () => void;
   isAdmin?: boolean; // If true, use adminApi instead of settingsApi
@@ -40,6 +48,8 @@ export default function ApiKeyCard({
   isShared,
   hasAccess,
   value,
+  quota,
+  capabilities,
   onChange,
   onClear,
   isAdmin = false,
@@ -143,6 +153,53 @@ export default function ApiKeyCard({
             })()}
           </div>
           <p className="text-sm text-[var(--text-muted)]">{description}</p>
+          {capabilities && capabilities.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {capabilities.map((cap) => (
+                <span
+                  key={cap}
+                  className="px-2 py-0.5 text-xs font-medium rounded"
+                  style={{
+                    background: "var(--bg-elevated)",
+                    color: "var(--accent)",
+                    border: "1px solid var(--accent)",
+                  }}
+                  title={t(`settings:apiKeys.capabilities.${cap}.tooltip`)}
+                >
+                  {t(`settings:apiKeys.capabilities.${cap}.label`)}
+                </span>
+              ))}
+            </div>
+          )}
+          {quota && (
+            <div className="mt-2 text-xs text-[var(--text-muted)]">
+              {quota.kind === "observed" && (
+                <>
+                  {t("settings:apiKeys.quota.label")}:{" "}
+                  <span className="font-semibold text-[var(--text-primary)]">
+                    {quota.remaining ?? "?"}
+                  </span>
+                  {quota.limit !== null && (
+                    <span> / {quota.limit}</span>
+                  )}{" "}
+                  {t("settings:apiKeys.quota.observedSuffix")}
+                </>
+              )}
+              {quota.kind === "not_reported" && (
+                <span>
+                  {t("settings:apiKeys.quota.notReported")}
+                  {quota.knownLimitHint && (
+                    <span className="ml-1">
+                      ({t("settings:apiKeys.quota.staticHint", { limit: quota.knownLimitHint })})
+                    </span>
+                  )}
+                </span>
+              )}
+              {quota.kind === "rate_limit_only" && (
+                <span>{t("settings:apiKeys.quota.rateLimitOnly")}</span>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
