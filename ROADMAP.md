@@ -81,7 +81,35 @@ TravStats grows from a flight-only logbook into a full travel logbook.
 
 ---
 
-## 👥 v1.5 — Social & sharing
+## 📦 v1.5 — Full provider field capture
+
+A schema rounding pass for the existing flight-lookup providers. Today
+only a subset of the available API fields is persisted; the rest is
+either re-derivable per flight or thrown away. v1.5 stores everything
+cheap-to-keep so future features (block-time analytics, cargo flag,
+freshness debugging, quality-tag interpretation) don't need a follow-up
+provider re-fetch.
+
+- **AeroDataBox**: persist `runwayTime` (off-block / on-block) on both
+  ends, `isCargo`, `lastUpdatedUtc`, `quality` tags (`string[]`),
+  `baggageBelt`, `checkInDesk`, plus per-airport `timeZone` /
+  `shortName` / `municipalityName`
+- **Backfill** via the existing historical-enrichment scheduler — no
+  manual refresh needed for users on AeroDataBox
+- **Skipped on purpose**:
+  - `aircraft.image` (CC-BY-SA attribution requirement — defer until
+    the v1.6 hull-gallery UI exists; storing the URL without rendering
+    creates a legal display obligation we can't satisfy)
+  - `distance.{meter,mile,nm,feet}` (redundant — derive from `km` on
+    read instead of duplicating four columns)
+
+No UI changes — fields land silently in the schema and start
+populating in the background. Consuming UI features (block-time
+analytics, hull gallery, quality badges) are scheduled into v1.6+.
+
+---
+
+## 👥 v1.6 — Social & sharing
 
 - Year-in-review share graphics (Instagram story, Twitter card, animated WebM)
 - Friend invites with side-by-side stat comparison
@@ -89,7 +117,7 @@ TravStats grows from a flight-only logbook into a full travel logbook.
 
 ---
 
-## 🧠 v1.6 — Smart insights
+## 🧠 v1.7 — Smart insights
 
 - Pattern detection ("your most active month is …")
 - Route recommendations based on history
@@ -98,7 +126,7 @@ TravStats grows from a flight-only logbook into a full travel logbook.
 
 ---
 
-## 📱 v1.7 — PWA & mobile
+## 📱 v1.8 — PWA & mobile
 
 - Service worker, offline access, install-as-app manifest
 - Camera-first boarding-pass scan on mobile
@@ -107,7 +135,7 @@ TravStats grows from a flight-only logbook into a full travel logbook.
 
 ---
 
-## 🤖 v1.8 — Advanced import & automation
+## 🤖 v1.9 — Advanced import & automation
 
 - Two-stage multi-flight email parser (block-split + per-flight extraction)
 - Community-shared airline templates via GitHub
@@ -118,7 +146,7 @@ TravStats grows from a flight-only logbook into a full travel logbook.
 
 ---
 
-## 💱 v1.9 — Multi-source data enrichment
+## 💱 v2.0 — Multi-source data enrichment
 
 Layered free-tier integrations to broaden travel-data coverage. All
 sources chosen to keep TravStats hostable as a SaaS without
@@ -138,14 +166,14 @@ non-commercial licence traps.
 
 ---
 
-## 💰 v2.0 — Cost & expense overhaul
+## 💰 v2.1 — Cost & expense overhaul
 
 Refactor the cost data model. Today, prices live as scalar columns on
 `Flight` (`price`, `taxes`, `fees`, the dead `ticketPrice`) and
 duplicated on `Booking` (`price`), with a `seenBookingIds` dedup hack
 in the stats layer to avoid double-counting. Cruises have no cost
 fields at all, and the dashboard `totalCost` blindly sums values
-across currencies. The v1.9 Frankfurter pipeline is the prerequisite;
+across currencies. The v2.0 Frankfurter pipeline is the prerequisite;
 v2.0 is the structural rewrite that makes use of it.
 
 - **Unified `Expense` model** — one row per cost line, polymorphically
@@ -169,7 +197,7 @@ v2.0 is the structural rewrite that makes use of it.
   category breakdown (how much of last year's $12k was actually
   ancillaries?), reimbursement-aware filters, and per-trip P&L
 - **Migration** — backfill existing `Flight.price/taxes/fees` and
-  `Booking.price` rows into `Expense`, FX-snapshot via the v1.9
+  `Booking.price` rows into `Expense`, FX-snapshot via the v2.0
   Frankfurter pipeline, then drop the legacy columns including the
   long-dead `ticketPrice`
 
