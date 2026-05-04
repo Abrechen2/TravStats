@@ -64,7 +64,7 @@
     "pino": "^9.6.0",
     "rotating-file-stream": "^3.2.9",
     "swagger-ui-express": "^5.0.1",
-    "tesseract.js": "^6.0.1",
+    "tesseract.js": "^7.0.0",
     "uuid": "^14.0.0",
     "webdav": "^5.9.0",
     "zod": "^3.22.4"
