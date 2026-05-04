@@ -175,14 +175,20 @@ export default function ApiKeyCard({
             <div className="mt-2 text-xs text-[var(--text-muted)]">
               {quota.kind === "observed" && (
                 <>
-                  {t("settings:apiKeys.quota.label")}:{" "}
-                  <span className="font-semibold text-[var(--text-primary)]">
-                    {quota.remaining ?? "?"}
-                  </span>
-                  {quota.limit !== null && (
-                    <span> / {quota.limit}</span>
-                  )}{" "}
-                  {t("settings:apiKeys.quota.observedSuffix")}
+                  <div>
+                    {t("settings:apiKeys.quota.label")}:{" "}
+                    <span className="font-semibold text-[var(--text-primary)]">
+                      {quota.remaining ?? "?"}
+                    </span>
+                    {quota.limit !== null && <span> / {quota.limit}</span>}{" "}
+                    {t("settings:apiKeys.quota.unitsSuffix")}
+                  </div>
+                  {quota.requestsLimit != null && quota.requestsRemaining != null && (
+                    <div className="opacity-70">
+                      {t("settings:apiKeys.quota.requestsLabel")}:{" "}
+                      {quota.requestsRemaining} / {quota.requestsLimit}
+                    </div>
+                  )}
                 </>
               )}
               {quota.kind === "not_reported" && (

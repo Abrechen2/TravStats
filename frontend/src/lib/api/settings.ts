@@ -18,7 +18,18 @@ import type {
  *     (OpenSky)
  */
 export type ProviderQuota =
-  | { kind: "observed"; limit: number | null; remaining: number | null; observedAt: string }
+  | {
+      kind: "observed";
+      /** Primary tier quota (AeroDataBox BASIC: 600/month).
+       *  Always prefer this over `requestsLimit` for user-facing budgeting. */
+      limit: number | null;
+      remaining: number | null;
+      /** Secondary HTTP-request counter (RapidAPI BASIC: ~2400/month).
+       *  Shown as supplementary detail only — not the plan budget. */
+      requestsLimit?: number | null;
+      requestsRemaining?: number | null;
+      observedAt: string;
+    }
   | { kind: "not_reported"; knownLimitHint?: number }
   | { kind: "rate_limit_only" };
 
