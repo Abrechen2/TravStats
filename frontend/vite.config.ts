@@ -29,12 +29,25 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        // Optimize chunk file names for better caching
         chunkFileNames: "assets/js/[name]-[hash].js",
         entryFileNames: "assets/js/[name]-[hash].js",
         assetFileNames: "assets/[ext]/[name]-[hash].[ext]",
-        // Explicitly disable source map generation
         sourcemapIgnoreList: () => true,
+        // Force heavy third-party libs into named vendor chunks so feature
+        // chunks (mapAnimationHelpers, AdvancedStatsPage, …) don't drag a
+        // copy of maplibre/deck.gl/three with them when they touch a single
+        // utility from the barrel index.
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return undefined;
+          if (id.includes("/maplibre-gl/")) return "vendor-maplibre";
+          if (id.includes("/@deck.gl/") || id.includes("/deck.gl/")) return "vendor-deck";
+          if (id.includes("/react-globe.gl/")) return "vendor-globe";
+          if (id.includes("/three/")) return "vendor-three";
+          if (id.includes("/jspdf/") || id.includes("/jspdf-")) return "vendor-jspdf";
+          if (id.includes("/exceljs/")) return "vendor-exceljs";
+          if (id.includes("/tesseract.js/")) return "vendor-tesseract";
+          return undefined;
+        },
       },
       // Preserve module structure to prevent initialization issues
       preserveEntrySignatures: false,
