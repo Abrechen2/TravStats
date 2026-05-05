@@ -79,6 +79,19 @@ interface FlightUpdateData {
   nextApiCheckAt?: Date | null;
   depTimeSemantics?: string;
   arrTimeSemantics?: string;
+  // Boarding pass / email import fields — written on POST, must also be
+  // updatable via PUT. Their absence here was a silent-drop bug.
+  seatNumber?: string;
+  boardingGroup?: string;
+  gate?: string;
+  terminal?: string;
+  bookingReference?: string;
+  ticketNumber?: string;
+  baggageAllowance?: string;
+  frequentFlyerNumber?: string;
+  bookingClassLetter?: string;
+  coPassengers?: string[];
+  dataSource?: string;
 }
 
 // Resolve a paired (local wall-clock + IANA timezone) input into a real UTC
@@ -791,6 +804,28 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     if (data.companions !== undefined) updateData.companions = data.companions;
     if (data.receiptUrl !== undefined) updateData.receiptUrl = data.receiptUrl;
 
+    // Boarding pass / email import fields. POST writes these on create;
+    // PUT must propagate them too — without this whitelist the schema
+    // accepts the input, the handler silently drops it, and the user sees
+    // a 200-OK with no DB change (regression report 2026-05-04).
+    if (data.seatNumber !== undefined) updateData.seatNumber = data.seatNumber;
+    if (data.boardingGroup !== undefined) updateData.boardingGroup = data.boardingGroup;
+    if (data.gate !== undefined) updateData.gate = data.gate;
+    if (data.terminal !== undefined) updateData.terminal = data.terminal;
+    if (data.bookingReference !== undefined) updateData.bookingReference = data.bookingReference;
+    if (data.ticketNumber !== undefined) updateData.ticketNumber = data.ticketNumber;
+    if (data.baggageAllowance !== undefined) updateData.baggageAllowance = data.baggageAllowance;
+    if (data.frequentFlyerNumber !== undefined) updateData.frequentFlyerNumber = data.frequentFlyerNumber;
+    if (data.bookingClassLetter !== undefined) updateData.bookingClassLetter = data.bookingClassLetter;
+    if (data.coPassengers !== undefined) updateData.coPassengers = data.coPassengers;
+    if (data.dataSource !== undefined) updateData.dataSource = data.dataSource;
+    // Direct override for time semantics. The localTime branch below sets
+    // 'UTC' implicitly when a localTime is supplied; this lets bulk-import
+    // callers explicitly mark a row as DATE_ONLY / UNKNOWN without changing
+    // the time itself. Explicit beats implicit when both are sent.
+    if (data.depTimeSemantics !== undefined) updateData.depTimeSemantics = data.depTimeSemantics;
+    if (data.arrTimeSemantics !== undefined) updateData.arrTimeSemantics = data.arrTimeSemantics;
+
     if (enrichedDeparture) {
       updateData.depIcao = enrichedDeparture.icao;
       updateData.depIata = enrichedDeparture.iata;
@@ -817,11 +852,16 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
 
     if (data.departureLocal !== undefined) {
       updateData.departureTime = incomingDepUtc ?? undefined;
-      updateData.depTimeSemantics = 'UTC';
+      // Don't overwrite an explicit semantics override the client sent.
+      if (data.depTimeSemantics === undefined) {
+        updateData.depTimeSemantics = 'UTC';
+      }
     }
     if (data.arrivalLocal !== undefined) {
       updateData.arrivalTime = incomingArrUtc ?? undefined;
-      updateData.arrTimeSemantics = 'UTC';
+      if (data.arrTimeSemantics === undefined) {
+        updateData.arrTimeSemantics = 'UTC';
+      }
     }
 
     // Actual times and delay
