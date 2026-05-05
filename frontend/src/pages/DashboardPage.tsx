@@ -6,6 +6,7 @@ import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { flightsApi } from "../lib/api/flights";
 import { cruiseApi } from "../lib/api/cruise";
 import { logger } from "../lib/logger";
+import { prefetchGlobeTextures } from "../lib/prefetchGlobeTextures";
 import { AllTab } from "../components/Dashboard/tabs/AllTab";
 import { FlightsTab } from "../components/Dashboard/tabs/FlightsTab";
 import { CruisesTab } from "../components/Dashboard/tabs/CruisesTab";
@@ -19,6 +20,10 @@ export default function DashboardPage(): JSX.Element {
   // active tab (via key prop) so per-tab data picks up the new entry
   // without needing a separate refetch wiring per tab.
   const [refreshToken, setRefreshToken] = useState(0);
+
+  useEffect(() => {
+    prefetchGlobeTextures();
+  }, []);
 
   useEffect(() => {
     let cancelled = false;

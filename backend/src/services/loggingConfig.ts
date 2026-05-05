@@ -1,4 +1,4 @@
-import { prisma } from '../db';
+import { prisma, setDbQueryLoggingEnabled } from '../db';
 import { systemLogger } from '../utils/logger';
 import { CACHE_TTL, LOGGING_DEFAULTS } from '../config/constants';
 
@@ -102,6 +102,12 @@ export async function updateLoggingConfig(updates: Partial<LogConfig>): Promise<
 
     // Invalidate cache
     configCache = null;
+
+    // Mirror to the sync flag in db.ts so the prisma middleware picks up
+    // the new value immediately without waiting for the 30s refresh tick.
+    const isDebugLevel =
+      (settings.logLevel === 'debug' || settings.logLevel === 'trace');
+    setDbQueryLoggingEnabled(Boolean(settings.logDatabaseQueries) && isDebugLevel);
 
     systemLogger.info({
       operation: 'logging_config_updated',
