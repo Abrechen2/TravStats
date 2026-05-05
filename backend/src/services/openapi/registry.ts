@@ -20,6 +20,7 @@
 
 import "./setup";
 import { OpenAPIRegistry, OpenApiGeneratorV3 } from "@asteasolutions/zod-to-openapi";
+import { appVersion } from "../../utils/version";
 
 const registry = new OpenAPIRegistry();
 
@@ -40,7 +41,7 @@ export function buildOpenApiDocument() {
     openapi: "3.0.3",
     info: {
       title: "TravStats API",
-      version: process.env.APP_VERSION ?? "unknown",
+      version: appVersion,
       description:
         "Programmatic access to flights, trips, airports, and stats.\n\n" +
         "Authenticate every request with a Personal Access Token in the " +

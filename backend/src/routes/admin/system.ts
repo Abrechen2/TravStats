@@ -5,6 +5,7 @@ import { adminExportLimiter, adminReseedLimiter } from '../../middleware/rateLim
 import { getInstanceSettings } from '../../services/instanceSettingsService';
 import { startAirportSeeding, getSeedingStatus } from '../../services/airportSeedingService';
 import logger from '../../utils/logger';
+import { appVersion, buildVersion } from '../../utils/version';
 
 const router = Router();
 
@@ -60,8 +61,8 @@ router.get('/system/info', async (req: AuthRequest, res: Response, next: NextFun
       registrationEnabled: allowRegistration,
       demoUserExists: !!demoUser,
       demoUserActive: demoUser?.isActive || false,
-    version: process.env.APP_VERSION || 'unknown',
-    buildVersion: process.env.BUILD_VERSION || process.env.APP_VERSION || 'unknown',
+    version: appVersion,
+    buildVersion,
   });
   } catch (error) {
     next(error);

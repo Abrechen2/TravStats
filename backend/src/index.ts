@@ -2,8 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
-import * as fs from 'fs';
-import * as path from 'path';
 import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth';
@@ -35,6 +33,7 @@ import { requestLoggerMiddleware } from './middleware/requestLogger';
 import { prisma } from './db';
 import logger from './utils/logger';
 import { DATABASE_URL } from './utils/database';
+import { appVersion, buildVersion } from './utils/version';
 import { templateRegistry } from './services/parsers/templates/registry';
 
 // Load environment variables
@@ -150,28 +149,13 @@ app.use(cookieParser());
 // Request logging middleware (with correlation IDs)
 app.use(requestLoggerMiddleware);
 
-// Version detection. Two layers:
-//   BUILD_VERSION — baked into the image at build time via the VERSION
-//     file (carries the build-arg value, including any `-rc.N` /
-//     `-security-rc.N` suffix).
-//   APP_VERSION   — runtime value the UI displays. Set from the
-//     environment by docker-compose (e.g. `APP_VERSION: ${VERSION}`)
-//     when a promoted RC is deployed against the final tag. Falls back
-//     to BUILD_VERSION when nothing is set at runtime.
-// The split lets us promote an RC image byte-identically (no rebuild)
-// while still surfacing the clean `1.0.1` tag in the About section,
-// with the `1.0.1-security-rc.1` build string kept for diagnostics.
-try {
-  const versionFile = path.join(__dirname, '../VERSION');
-  if (fs.existsSync(versionFile)) {
-    process.env.BUILD_VERSION = fs.readFileSync(versionFile, 'utf-8').trim();
-  }
-} catch {
-  // fallback — BUILD_VERSION stays unset
-}
-if (!process.env.APP_VERSION && process.env.BUILD_VERSION) {
-  process.env.APP_VERSION = process.env.BUILD_VERSION;
-}
+// Version detection: single source of truth is /app/backend/VERSION,
+// loaded by ./utils/version. The Dockerfile writes that file from the
+// build-arg (carries any `-rc.N` / `-security-rc.N` suffix). `appVersion`
+// is the cleaned display string with pre-release suffix stripped, so a
+// byte-identical RC promoted to `:latest` shows the clean release version
+// in About even though the binary is the RC build. `buildVersion` is the
+// raw file contents for diagnostics.
 
 // Health check
 app.get('/health', (_req, res) => {
@@ -186,17 +170,14 @@ app.get('/health', (_req, res) => {
 // update banner. Network failures degrade to latestAvailable=null so
 // air-gapped installs simply hide the banner.
 app.get('/api/v1/version', async (_req, res) => {
-  const version = process.env.APP_VERSION ?? 'unknown';
-  const buildVersion = process.env.BUILD_VERSION ?? version;
-
   const { getCachedLatestRelease, isUpdateAvailable } = await import('./services/updateChecker');
   const latest = await getCachedLatestRelease();
 
   res.json({
-    version,
+    version: appVersion,
     buildVersion,
     latestAvailable: latest?.latestAvailable ?? null,
-    updateAvailable: latest ? isUpdateAvailable(version, latest.latestAvailable) : false,
+    updateAvailable: latest ? isUpdateAvailable(appVersion, latest.latestAvailable) : false,
     releaseUrl: latest?.releaseUrl ?? null,
     releaseNotes: latest?.releaseNotes ?? null,
     publishedAt: latest?.publishedAt ?? null,
