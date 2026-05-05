@@ -44,10 +44,21 @@ export function buildOpenApiDocument() {
       version: appVersion,
       description:
         "Programmatic access to flights, trips, airports, and stats.\n\n" +
-        "Authenticate every request with a Personal Access Token in the " +
-        "`Authorization` header. Tokens are managed via `/settings/tokens` " +
-        "in the web UI and respect their declared scope (`read`, `write`, " +
-        "`admin`) — write endpoints reject `read`-scoped tokens with 403.",
+        "**Scope of this spec.** This document covers the curated stable " +
+        "public API surface — the endpoints external tools, AI agents, " +
+        "and integrations are expected to depend on. The TravStats web " +
+        "frontend talks to additional internal endpoints (admin actions, " +
+        "parser feedback, bulk-import staging, settings management, " +
+        "diagnostics) that are deliberately omitted here so they can " +
+        "evolve without breaking external consumers. Full coverage is " +
+        "a non-goal; if you find yourself reverse-engineering an internal " +
+        "route, please open an issue and we'll either promote it into " +
+        "the spec or expose an equivalent stable surface.\n\n" +
+        "**Authentication.** Authenticate every request with a Personal " +
+        "Access Token in the `Authorization` header. Tokens are managed " +
+        "via `/settings/tokens` in the web UI and respect their declared " +
+        "scope (`read`, `write`, `admin`) — write endpoints reject " +
+        "`read`-scoped tokens with 403.",
       license: { name: "AGPL-3.0-only" },
     },
     servers: [{ url: "/api/v1", description: "Same-origin API root" }],
