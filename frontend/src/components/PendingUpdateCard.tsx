@@ -6,7 +6,6 @@
 
 import { useState } from "react";
 import { useTranslation } from "../hooks/useTranslation";
-import { useThemeStore } from "../store/themeStore";
 import ChangeDiffView from "./ChangeDiffView";
 import PendingUpdateEditor from "./PendingUpdateEditor";
 
@@ -86,7 +85,6 @@ export default function PendingUpdateCard({
   isSelected,
 }: PendingUpdateCardProps): JSX.Element {
   const { t } = useTranslation(["common", "pendingUpdates"]);
-  const isDarkMode = useThemeStore((state) => state.isDarkMode);
   const [showEditor, setShowEditor] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
 
@@ -142,7 +140,7 @@ export default function PendingUpdateCard({
   return (
     <>
       <div
-        className={`${isDarkMode ? "bg-[var(--bg-surface)]" : "bg-[var(--bg-surface)]"} rounded-lg shadow-sm border-2 ${
+        className={`bg-[var(--bg-surface)] rounded-lg shadow-sm border-2 ${
           isSelected ? "border-blue-500" : "border-transparent"
         } transition-all hover:shadow-md`}
       >

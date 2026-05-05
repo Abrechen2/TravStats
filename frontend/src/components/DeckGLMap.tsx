@@ -57,7 +57,6 @@ const INITIAL_VIEW_STATE: MapViewState = {
   bearing: 0,
 };
 
-const LIGHT_MAP_STYLE = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
 interface DeckOverlayProps {
@@ -104,7 +103,6 @@ export function DeckGLMap({
   extraLayers,
   flightRouteColor,
 }: DeckGLMapProps): JSX.Element {
-  const isDarkMode = useThemeStore((state) => state.isDarkMode);
   const mapTheme = useThemeStore((state) => state.mapTheme);
   // Heatmap palette is unchanged by flightRouteColor — the override
   // is threaded explicitly into createRoutesLayers/buildRouteData so
@@ -505,7 +503,7 @@ export function DeckGLMap({
         ref={mapRef}
         reuseMaps
         initialViewState={INITIAL_VIEW_STATE}
-        mapStyle={isDarkMode ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
+        mapStyle={DARK_MAP_STYLE}
         style={{ position: "absolute", inset: "0" }}
         onLoad={() => setMapLoaded(true)}
         onMove={handleMapMove}
@@ -525,8 +523,8 @@ export function DeckGLMap({
         )}
       </MapGL>
 
-      {/* Subtle grid overlay — glassmorphism dark mode only */}
-      {isDarkMode && mapTheme === "glassmorphism" && (
+      {/* Subtle grid overlay — glassmorphism only */}
+      {mapTheme === "glassmorphism" && (
         <div
           className="absolute inset-0 pointer-events-none"
           style={{

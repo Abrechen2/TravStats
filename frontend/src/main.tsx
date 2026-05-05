@@ -7,33 +7,6 @@ import "./i18n/config";
 import { I18nextProvider } from "react-i18next";
 import i18n from "./i18n/config";
 
-// Initialize theme before React renders to prevent flash
-// This ensures the theme is applied immediately when the page loads
-if (typeof window !== "undefined") {
-  try {
-    const stored = localStorage.getItem("theme-storage");
-    let isDark = false;
-
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (parsed?.state && typeof parsed.state.isDarkMode === "boolean") {
-        isDark = parsed.state.isDarkMode;
-      }
-    } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
-      isDark = true;
-    }
-
-    // Apply theme immediately to document
-    if (isDark) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  } catch {
-    // Silently fail - theme store will handle it
-  }
-}
-
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <I18nextProvider i18n={i18n}>

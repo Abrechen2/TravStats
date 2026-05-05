@@ -6,7 +6,6 @@
 
 import { useState } from "react";
 import { useTranslation } from "../hooks/useTranslation";
-import { useThemeStore } from "../store/themeStore";
 
 interface ChangeEntry {
   field: string;
@@ -23,7 +22,6 @@ interface ChangeDiffViewProps {
 
 export default function ChangeDiffView({ changes }: ChangeDiffViewProps): JSX.Element {
   const { t } = useTranslation(["pendingUpdates"]);
-  const isDarkMode = useThemeStore((state) => state.isDarkMode);
   const [expandedFields, setExpandedFields] = useState<Set<string>>(new Set());
 
   const toggleField = (field: string) => {
@@ -69,11 +67,7 @@ export default function ChangeDiffView({ changes }: ChangeDiffViewProps): JSX.El
           return (
             <div
               key={index}
-              className={`border rounded-lg p-3 ${
-                isDarkMode
-                  ? "border-[var(--color-border)] bg-[var(--bg-surface)]"
-                  : "border-[var(--color-border)] bg-[var(--bg-base)]"
-              }`}
+              className="border rounded-lg p-3 border-[var(--color-border)] bg-[var(--bg-surface)]"
             >
               <button
                 onClick={() => toggleField(change.field)}

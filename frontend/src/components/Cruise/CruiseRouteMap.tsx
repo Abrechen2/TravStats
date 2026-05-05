@@ -7,10 +7,8 @@ import { cruiseApi, type CruiseRouteFeatureCollection } from "../../lib/api/crui
 import { createCruiseArcsLayer, createCruiseArrowsLayer } from "../layers/cruiseArcsLayer";
 import { createCruisePortsLayer } from "../layers/cruisePortsLayer";
 import { computeBbox } from "../../utils/mapAnimationHelpers";
-import { useThemeStore } from "../../store/themeStore";
 import { logger } from "../../lib/logger";
 
-const LIGHT_MAP_STYLE = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
 const INITIAL_VIEW: MapViewState = {
@@ -46,7 +44,6 @@ interface Props {
  */
 export function CruiseRouteMap({ cruise }: Props): JSX.Element {
   const mapRef = useRef<MapRef | null>(null);
-  const isDark = useThemeStore((s) => s.isDarkMode);
   const [geometry, setGeometry] = useState<CruiseRouteFeatureCollection | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [zoom, setZoom] = useState<number>(INITIAL_VIEW.zoom ?? 3);
@@ -115,7 +112,7 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
         ref={mapRef}
         reuseMaps
         initialViewState={INITIAL_VIEW}
-        mapStyle={isDark ? DARK_MAP_STYLE : LIGHT_MAP_STYLE}
+        mapStyle={DARK_MAP_STYLE}
         style={{ position: "absolute", inset: "0" }}
         onLoad={(): void => setMapLoaded(true)}
         onMove={(evt): void => {

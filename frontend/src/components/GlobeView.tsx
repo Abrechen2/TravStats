@@ -2,7 +2,6 @@ import { useEffect, useRef, useMemo, useState, useCallback } from "react";
 import Globe from "react-globe.gl";
 import type { GeoJSONFeature } from "../types";
 import type { Cruise } from "../types/cruise";
-import { useThemeStore } from "../store/themeStore";
 import { useTimeSliderStore } from "../store/timeSliderStore";
 import { escapeHtml } from "../lib/escapeHtml";
 import { useTranslation } from "../hooks/useTranslation";
@@ -169,7 +168,6 @@ export default function GlobeView({
 }: GlobeViewProps): JSX.Element {
   const { t } = useTranslation(["map"]);
   const globeRef = useRef<GlobeInstance | null>(null);
-  const isDarkMode = useThemeStore((state) => state.isDarkMode);
   const [autoRotate, setAutoRotate] = useState(false);
   const [cameraAltitude, setCameraAltitude] = useState(2.2);
 
@@ -775,7 +773,7 @@ export default function GlobeView({
         pointColor={(point: object) => {
           const p = point as PointData & { _kind: "airport" | "port" };
           if (p._kind === "port") return CRUISE_PORT_COLOR;
-          return isDarkMode ? "#fbbf24" : "#f59e0b";
+          return "#fbbf24";
         }}
         pointAltitude={0.01}
         pointRadius={(point: object) => {
@@ -783,11 +781,7 @@ export default function GlobeView({
           return Math.min(Math.sqrt(p.size) * 0.08, 0.3);
         }}
         pointLabel={pointLabel}
-        // Fresnel rim glow: slightly fatter halo + warmer dark-mode color
-        // for a richer photo-from-orbit look. The default react-globe.gl
-        // atmosphere already does Fresnel via a back-side sphere; we just
-        // tune the parameters.
-        atmosphereColor={isDarkMode ? "#5fa3ff" : "#3b82f6"}
+        atmosphereColor="#5fa3ff"
         atmosphereAltitude={0.32}
         enablePointerInteraction={true}
         animateIn={true}
