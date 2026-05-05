@@ -7,8 +7,17 @@ export interface ArcDatum {
   sourceColor: [number, number, number, number];
   targetColor: [number, number, number, number];
   flightIds: string[];
-  isScheduled?: boolean;
+  // Route carries at least one scheduled flight. Surfaces as a midpoint
+  // marker (shape, not arc colour, so the heatmap signal stays intact).
+  hasUpcoming?: boolean;
   isHistorical?: boolean;
+}
+
+export interface UpcomingMarkerDatum {
+  position: [number, number];
+  iata: string;
+  count: number;
+  flightIds: string[];
 }
 
 export interface PointDatum {
