@@ -4,6 +4,15 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-beta.9] - 2026-05-05 (Beta)
+
+### Added
+- **Brand token system wired through the app** — `BRAND.md` per-domain palette (flight `#f0a947`, cruise `#6fa0d6`, hotel `#b072d6`, poi `#5ec2b2`) is now the single source of truth. The shared domain registry (`shared/domains.ts` on both backend and frontend) carries the canonical hexes, so dashboard tab strip, AllTab legend, journey layers, and the legend-driven map controls all read from one place. Stats screen consolidated onto a shared `StatCard` surface — ~30 arbitrary Tailwind gradients replaced with brand tokens.
+- **Merged 1.4.0 trunk** — beta.9 carries the full 1.4 main payload: AeroDataBox provider + bulk historical refresh, persisted tail number / Mode-S / codeshare metadata, Aircraft hulls ranking + per-tail profile pages (`/aircraft/:reg`), API tokens for headless ingestion, OpenAPI spec at `/api/v1/openapi.json` + Swagger UI at `/api/v1/docs`, demo account flag (`isDemo`), upgrade-backup hook on container entrypoint.
+
+### Changed
+- **Dark-only theme**, light-mode classes retired across components. `themeStore` simplified to `mapTheme` only — no more `isDarkMode` toggle. `<html class="dark">` is set defensively at boot so a stale `localStorage` payload can't strip it.
+
 ## [1.4.0] - 2026-05-04
 
 ### Added
