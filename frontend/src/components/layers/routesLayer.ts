@@ -160,7 +160,7 @@ export function createRoutesLayers(
   zoom: number = 5
 ): Layer[] {
   const { arcs, points } = routeData;
-  const dotRgb = themeColors?.airportDot ?? ([232, 160, 69] as [number, number, number]);
+  const dotRgb = themeColors?.airportDot ?? ([240, 169, 71] as [number, number, number]);
 
   const selectedSet = new Set(selectedIds);
   const hasSelection = selectedIds.length > 0;

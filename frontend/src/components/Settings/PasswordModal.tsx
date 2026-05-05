@@ -101,7 +101,7 @@ export default function PasswordModal({
             style={{
               background: "var(--accent)",
               color: "#0d1117",
-              boxShadow: "0 0 16px rgba(232,160,69,0.25)",
+              boxShadow: "0 0 16px rgba(240,169,71,0.25)",
             }}
             disabled={changingPassword}
           >

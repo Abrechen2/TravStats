@@ -2,27 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── Design Tokens ──────────────────────────────────────── */
+/* ─── Design Tokens ──────────────────────────────────────────
+   MUST stay in sync with D:\TravStats_Projekt\TravStatsWeb\src\styles\tokens.css.
+   Brand decisions live in TravStatsWeb\brand\BRAND.md — change them
+   there first.
 
-/* Light theme (default) */
+   TravStats is dark-only (BRAND.md §1.1). Tokens here are the dark
+   values directly under :root — there is no light variant and no
+   `prefers-color-scheme` fallback. `<html class="dark">` is hardcoded
+   in index.html so Tailwind's `dark:` utilities still match. */
+
 :root {
-  --bg-base: #f6f8fa;
-  --bg-surface: #ffffff;
-  --bg-elevated: #f6f8fa;
-  --bg-muted: #eaeef2;
-  --color-border: #d0d7de;
-  --text-primary: #1f2328;
-  --text-muted: #636c76;
-  --accent: #e8a045;
-  --accent-dim: #c8842a;
-  --accent-glow: rgba(232, 160, 69, 0.18);
-  --success: #1a7f37;
-  --danger: #cf222e;
-  --warning: #9a6700;
-}
-
-/* Dark theme (html.dark) */
-html.dark {
+  /* Surfaces */
   --bg-base: #0d1117;
   --bg-surface: #161b22;
   --bg-elevated: #1c2128;
@@ -30,12 +21,67 @@ html.dark {
   --color-border: #30363d;
   --text-primary: #e6edf3;
   --text-muted: #8b949e;
-  --accent: #e8a045;
+
+  /* Brand — amber. Same hex as --domain-flight by design (BRAND.md §3). */
+  --accent: #f0a947;
   --accent-dim: #c8842a;
-  --accent-glow: rgba(232, 160, 69, 0.18);
+  --accent-glow: rgba(240, 169, 71, 0.18);
+  --accent-soft: rgba(240, 169, 71, 0.10);
+
+  /* Per-domain accents (BRAND.md §3) */
+  --domain-flight: #f0a947;
+  --domain-flight-soft: rgba(240, 169, 71, 0.10);
+  --domain-flight-locked: rgba(240, 169, 71, 0.18);
+
+  --domain-cruise: #6fa0d6;
+  --domain-cruise-soft: rgba(111, 160, 214, 0.10);
+  --domain-cruise-locked: rgba(111, 160, 214, 0.18);
+
+  --domain-hotel: #b072d6;
+  --domain-hotel-soft: rgba(176, 114, 214, 0.10);
+  --domain-hotel-locked: rgba(176, 114, 214, 0.18);
+
+  --domain-poi: #5ec2b2;
+  --domain-poi-soft: rgba(94, 194, 178, 0.10);
+  --domain-poi-locked: rgba(94, 194, 178, 0.18);
+
+  --domain-train: #8faa5f;
+  --domain-train-soft: rgba(143, 170, 95, 0.10);
+  --domain-train-locked: rgba(143, 170, 95, 0.18);
+
+  --domain-hike: #78966a;
+  --domain-hike-soft: rgba(120, 150, 106, 0.10);
+  --domain-hike-locked: rgba(120, 150, 106, 0.18);
+
+  --domain-bike: #9fbe63;
+  --domain-bike-soft: rgba(159, 190, 99, 0.10);
+  --domain-bike-locked: rgba(159, 190, 99, 0.18);
+
+  --domain-road: #a89984;
+  --domain-road-soft: rgba(168, 153, 132, 0.10);
+  --domain-road-locked: rgba(168, 153, 132, 0.18);
+
+  --domain-ferry: #4aa6b0;
+  --domain-ferry-soft: rgba(74, 166, 176, 0.10);
+  --domain-ferry-locked: rgba(74, 166, 176, 0.18);
+
+  /* State colours — separate from brand decoration */
+  --danger-stamp: #e65a4f;    /* "stamped" alert / milestone */
+  --danger: #f85149;          /* generic destructive */
   --success: #3fb950;
-  --danger: #f85149;
   --warning: #d29922;
+
+  /* Warm neutral pair (passport / boarding-pass paper) */
+  --paper: #f4ece0;
+  --paper-dim: rgba(244, 236, 224, 0.55);
+  --paper-faint: rgba(244, 236, 224, 0.25);
+  --ink-warm: #0b0d10;
+  --ink-warm-alt: #12161b;
+
+  /* Typography */
+  --font-display: "Syne", system-ui, sans-serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", "JetBrains Mono", monospace;
 }
 
 @layer base {
@@ -215,7 +261,7 @@ html.dark {
   width: 600px;
   height: 600px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(232, 160, 69, 0.12) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(240, 169, 71, 0.12) 0%, transparent 70%);
   top: 20%;
   left: 30%;
   animation: driftspot 20s ease-in-out infinite;
@@ -227,7 +273,7 @@ html.dark {
   width: 400px;
   height: 400px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(232, 160, 69, 0.07) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(240, 169, 71, 0.07) 0%, transparent 70%);
   bottom: 10%;
   right: 20%;
   animation: driftspot 28s ease-in-out infinite reverse;
@@ -244,33 +290,33 @@ html.dark {
 /* ─── Map Theme Tokens ───────────────────────────────────── */
 
 [data-map-theme="glassmorphism"] {
-  --map-accent: #e8a045;
-  --map-fab-gradient: linear-gradient(135deg, #c8842a, #e8a045);
-  --map-fab-shadow: rgba(232, 160, 69, 0.4);
-  --map-fab-shadow-open: 0 4px 24px rgba(232, 160, 69, 0.6), 0 0 40px rgba(232, 160, 69, 0.2);
-  --map-active-bg: rgba(232, 160, 69, 0.2);
-  --map-active-border: rgba(232, 160, 69, 0.45);
+  --map-accent: #f0a947;
+  --map-fab-gradient: linear-gradient(135deg, #c8842a, #f0a947);
+  --map-fab-shadow: rgba(240, 169, 71, 0.4);
+  --map-fab-shadow-open: 0 4px 24px rgba(240, 169, 71, 0.6), 0 0 40px rgba(240, 169, 71, 0.2);
+  --map-active-bg: rgba(240, 169, 71, 0.2);
+  --map-active-border: rgba(240, 169, 71, 0.45);
   --map-active-color: #fcd99a;
   --map-active-label-bg: rgba(200, 132, 42, 0.2);
-  --map-active-label-border: rgba(232, 160, 69, 0.35);
+  --map-active-label-border: rgba(240, 169, 71, 0.35);
   --map-badge-bg: rgba(255, 255, 255, 0.06);
   --map-badge-border: rgba(255, 255, 255, 0.12);
   --map-badge-color: #94a3b8;
 }
 
 [data-map-theme="classic"] {
-  --map-accent: #e8a045;
-  --map-fab-gradient: linear-gradient(135deg, #c8842a, #e8a045);
-  --map-fab-shadow: rgba(232, 160, 69, 0.4);
-  --map-fab-shadow-open: 0 4px 24px rgba(232, 160, 69, 0.6);
-  --map-active-bg: rgba(232, 160, 69, 0.15);
-  --map-active-border: rgba(232, 160, 69, 0.4);
-  --map-active-color: #e8a045;
-  --map-active-label-bg: rgba(232, 160, 69, 0.1);
-  --map-active-label-border: rgba(232, 160, 69, 0.3);
-  --map-badge-bg: rgba(232, 160, 69, 0.1);
-  --map-badge-border: rgba(232, 160, 69, 0.25);
-  --map-badge-color: #e8a045;
+  --map-accent: #f0a947;
+  --map-fab-gradient: linear-gradient(135deg, #c8842a, #f0a947);
+  --map-fab-shadow: rgba(240, 169, 71, 0.4);
+  --map-fab-shadow-open: 0 4px 24px rgba(240, 169, 71, 0.6);
+  --map-active-bg: rgba(240, 169, 71, 0.15);
+  --map-active-border: rgba(240, 169, 71, 0.4);
+  --map-active-color: #f0a947;
+  --map-active-label-bg: rgba(240, 169, 71, 0.1);
+  --map-active-label-border: rgba(240, 169, 71, 0.3);
+  --map-badge-bg: rgba(240, 169, 71, 0.1);
+  --map-badge-border: rgba(240, 169, 71, 0.25);
+  --map-badge-color: #f0a947;
 }
 
 /* GlobeLoader keyframes */
