@@ -15,13 +15,17 @@ export interface DomainDescriptor {
   routePrefix: string;
 }
 
+// Per-domain hexes mirror brand/BRAND.md §3 (TravStatsWeb canonical).
+// Drives map route colors, legend swatches, and any future per-domain
+// chart accent. Edits MUST stay in sync with the backend mirror at
+// backend/src/shared/domains.ts and tokens.css `--domain-*` values.
 export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
   flight: {
     key: "flight",
     available: true,
     i18nKey: "domain.flight",
     icon: "✈",
-    color: "#f472b6",
+    color: "#f0a947",
     routePrefix: "/flights",
   },
   cruise: {
@@ -29,7 +33,7 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
     available: true,
     i18nKey: "domain.cruise",
     icon: "🚢",
-    color: "#38bdf8",
+    color: "#6fa0d6",
     routePrefix: "/cruises",
   },
   hotel: {
@@ -37,7 +41,7 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
     available: false,
     i18nKey: "domain.hotel",
     icon: "🏨",
-    color: "#a855f7",
+    color: "#b072d6",
     routePrefix: "/hotels",
   },
   poi: {
@@ -45,7 +49,7 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
     available: false,
     i18nKey: "domain.poi",
     icon: "📍",
-    color: "#facc15",
+    color: "#5ec2b2",
     routePrefix: "/places",
   },
 };

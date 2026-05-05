@@ -101,7 +101,10 @@ export default function CruiseDetailPage(): JSX.Element {
             <div
               aria-hidden
               className="flex h-12 w-12 items-center justify-center rounded-lg text-2xl"
-              style={{ backgroundColor: "#38bdf822", color: "#38bdf8" }}
+              style={{
+                backgroundColor: "var(--domain-cruise-soft)",
+                color: "var(--domain-cruise)",
+              }}
             >
               🚢
             </div>
