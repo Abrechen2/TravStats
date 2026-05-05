@@ -595,6 +595,10 @@
       "label": "Aviationstack API Key",
       "description": "Paid service. Shared with all users for flight data lookup with higher accuracy."
     },
+    "aerodatabox": {
+      "label": "AeroDataBox API Key",
+      "description": "Free via RapidAPI: 600 units/month. Closes the gap for historical flights up to a year back. Shared with all users."
+    },
     "opensky": {
       "label": "OpenSky Network",
       "description": "Free service. Requires registration. Shared with all users for flight data lookup.",

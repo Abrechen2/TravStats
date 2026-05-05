@@ -13,6 +13,7 @@ import { DomainTabStrip } from "./DomainTabStrip";
 import { DashboardControlsBar } from "./DashboardControlsBar";
 import { DashboardFilterDropdown } from "./DashboardFilterDropdown";
 import type { FlightInput } from "../../types";
+import type { FlightSubmitOptions } from "../FlightForm/useFlightForm";
 
 type AddableDomain = "flight" | "cruise" | "poi";
 
@@ -52,20 +53,13 @@ export function DashboardLayout({
 
   const handleFlightCreate = async (
     flight: FlightInput,
-    force = false,
-    hasMoreFlights = false
+    opts?: FlightSubmitOptions
   ): Promise<void> => {
     try {
-      await flightsApi.create(flight, force);
+      await flightsApi.create(flight, opts);
       addToast("success", t("flights:table.toast.updated"));
-      if (!hasMoreFlights) {
-        setAddingDomain(null);
-        onDataChanged?.();
-      } else {
-        // Multi-flight import: keep the modal open, but counts may have
-        // already moved — refresh in the background.
-        onDataChanged?.();
-      }
+      setAddingDomain(null);
+      onDataChanged?.();
     } catch (error) {
       logger.error("Failed to add flight from dashboard:", error);
       throw error;

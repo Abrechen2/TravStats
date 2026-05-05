@@ -31,6 +31,9 @@ export interface ParsedBooking {
   parserTemplate?: string;        // Which template was used, e.g. "LH"
   parserConfidence?: number;      // 0–100
   airlineNotice?: string;         // Transient: not persisted to DB, UI-only notice when no template found
+  // Field names that the parser inferred (assigned a value the source did not state explicitly).
+  // Used by the import-review UI to flag those fields with a "please verify" badge. Not persisted.
+  inferredFields?: string[];
   missing: string[];
   fieldSources?: Partial<Record<
     "flightNumber" | "departureCode" | "arrivalCode" |

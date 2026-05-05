@@ -188,9 +188,7 @@ export default function FlightLookupStep({
         </div>
         <p className={`text-xs ${mutedTextClass} mt-1`}>{t("flights:form.lookupHint")}</p>
         {flightNumber.trim() && !searchDate && (
-          <p className="text-xs mt-0.5 text-yellow-400">
-            {t("flights:form.dateImproves")}
-          </p>
+          <p className="text-xs mt-0.5 text-yellow-400">{t("flights:form.dateImproves")}</p>
         )}
       </div>
 

@@ -39,8 +39,15 @@ export const flightsApi = {
     return data;
   },
 
-  create: async (flight: FlightInput, force = false): Promise<Flight> => {
-    const { data } = await api.post<Flight>(`/flights${force ? "?force=true" : ""}`, flight);
+  create: async (
+    flight: FlightInput,
+    opts: { force?: boolean; merge?: boolean } = {}
+  ): Promise<Flight> => {
+    const params = new URLSearchParams();
+    if (opts.force) params.set("force", "true");
+    else if (opts.merge) params.set("merge", "true");
+    const qs = params.toString();
+    const { data } = await api.post<Flight>(`/flights${qs ? `?${qs}` : ""}`, flight);
     return data;
   },
 
@@ -66,4 +73,47 @@ export const flightsApi = {
     }>("/flights/batch", flights);
     return data;
   },
+
+  // Bulk historical refresh — pre-flight count of refreshable flights.
+  // Returns 403 with `error: 'DEMO_ACCOUNT_FORBIDDEN'` for seeded demo
+  // accounts so the UI can disable the button with an explanatory tooltip.
+  bulkRefreshPreview: async (): Promise<{
+    remaining: number;
+    hasHistoricalProvider: boolean;
+    aerodataboxQuota: AerodataboxQuota | null;
+  }> => {
+    const { data } = await api.get<{
+      remaining: number;
+      hasHistoricalProvider: boolean;
+      aerodataboxQuota: AerodataboxQuota | null;
+    }>("/flights/refresh-historical-bulk/preview");
+    return data;
+  },
+
+  bulkRefreshRun: async (): Promise<BulkRefreshSummary> => {
+    const { data } = await api.post<BulkRefreshSummary>("/flights/refresh-historical-bulk");
+    return data;
+  },
 };
+
+export interface AerodataboxQuota {
+  limit: number | null;
+  remaining: number | null;
+  observedAt: string;
+}
+
+export interface BulkRefreshSummary {
+  scanned: number;
+  updated: number;
+  noData: number;
+  failed: number;
+  remaining: number;
+  results: Array<{
+    flightId: string;
+    flightNumber: string;
+    outcome: "updated" | "no_data" | "failed";
+    fieldsUpdated?: string[];
+    error?: string;
+  }>;
+  aerodataboxQuota?: AerodataboxQuota | null;
+}

@@ -22,10 +22,17 @@ export interface Flight {
   id: string;
   userId: string;
   airline: string;
+  airlineIata?: string;
+  airlineIcao?: string;
   operatingAirline?: string;
+  operatingAirlineIata?: string;
+  operatingAirlineIcao?: string;
+  isCodeshare?: boolean;
   flightNumber: string;
   callsign?: string;
   aircraft?: string;
+  aircraftRegistration?: string;
+  aircraftModeS?: string;
   depIcao?: string;
   depIata?: string;
   depName?: string;
@@ -38,12 +45,22 @@ export interface Flight {
   arrLon: number;
   departureTime: string | null;
   arrivalTime: string | null;
+  // Time-correctness flag set by the backend.
+  // 'UTC'       — departureTime/arrivalTime are real UTC instants
+  // 'DATE_ONLY' — only the calendar date is real; the time component is a
+  //               12:00 placeholder. Display layer must render duration via
+  //               coord-based estimate (`getFlightDuration`).
+  // 'UNKNOWN'   — neither date nor time is reliable.
+  // 'LEGACY_FAKE_UTC' — pre-V1 row stored a local-as-UTC fake; do not trust.
+  depTimeSemantics?: "UTC" | "DATE_ONLY" | "UNKNOWN" | "LEGACY_FAKE_UTC";
+  arrTimeSemantics?: "UTC" | "DATE_ONLY" | "UNKNOWN" | "LEGACY_FAKE_UTC";
   status: "scheduled" | "flown" | "cancelled" | "historical" | "duplicated";
   notes?: string;
   createdAt: string;
   // Costs & categorization
   price?: number;
-  currency?: "EUR" | "USD" | "GBP" | "CHF";
+  /** ISO 4217 alpha-3 code (EUR, USD, GBP, CHF, INR, JPY, …). */
+  currency?: string;
   taxes?: number;
   fees?: number;
   category?: "business" | "private" | "vacation";
@@ -58,6 +75,11 @@ export interface Flight {
   bookingReference?: string;
   ticketNumber?: string;
   companions?: string[];
+  // BP / email-import fields (parser-populated, user-editable)
+  baggageAllowance?: string;
+  frequentFlyerNumber?: string;
+  bookingClassLetter?: string;
+  coPassengers?: string[];
   // Route tracking
   actualRoute?: Array<{ lat: number; lon: number; timestamp?: string; country?: string }>;
   overflownCountries?: string[];
@@ -71,7 +93,8 @@ export interface Flight {
     | "boarding_pass_scan"
     | "historical_enrichment"
     | "live_update"
-    | "api_lookup";
+    | "api_lookup"
+    | "bulk_import";
   lastModifiedBy?: "user" | "auto_update" | "historical_enrichment" | "api";
   enrichmentHistory?: Array<{
     type: string;
@@ -99,7 +122,8 @@ export interface Booking {
   tripId: string | null;
   pnr: string | null;
   price: number | null;
-  currency: "EUR" | "USD" | "GBP" | "CHF" | null;
+  /** ISO 4217 alpha-3 code (EUR, USD, GBP, CHF, INR, JPY, …) or null. */
+  currency: string | null;
 }
 
 export interface Trip {
@@ -136,10 +160,17 @@ export interface Trip {
 
 export interface FlightInput {
   airline?: string;
+  airlineIata?: string;
+  airlineIcao?: string;
   operatingAirline?: string;
+  operatingAirlineIata?: string;
+  operatingAirlineIcao?: string;
+  isCodeshare?: boolean;
   flightNumber?: string;
   callsign?: string;
   aircraft?: string;
+  aircraftRegistration?: string;
+  aircraftModeS?: string;
   departure: Airport;
   arrival: Airport;
   // Canonical-UTC submission contract: send local wall-clock + IANA timezone
@@ -153,7 +184,21 @@ export interface FlightInput {
   actualDepartureTz?: string;
   actualArrivalLocal?: string;
   actualArrivalTz?: string;
+  // Match Flight's broader enum so Partial<Flight> assigns into
+  // Partial<FlightInput> without a cast. The backend schema only accepts
+  // UTC / DATE_ONLY / UNKNOWN — sending LEGACY_FAKE_UTC will 400, which is
+  // intentional (it's a backend-only marker that should never be re-sent).
+  depTimeSemantics?: "UTC" | "DATE_ONLY" | "UNKNOWN" | "LEGACY_FAKE_UTC";
+  arrTimeSemantics?: "UTC" | "DATE_ONLY" | "UNKNOWN" | "LEGACY_FAKE_UTC";
   status?: "scheduled" | "flown" | "cancelled" | "historical" | "duplicated";
+  dataSource?:
+    | "manual"
+    | "email_import"
+    | "boarding_pass_scan"
+    | "historical_enrichment"
+    | "live_update"
+    | "api_lookup"
+    | "bulk_import";
   notes?: string;
   // Extended fields
   seatNumber?: string;
@@ -164,7 +209,8 @@ export interface FlightInput {
   bookingReference?: string;
   ticketNumber?: string;
   price?: number;
-  currency?: "EUR" | "USD" | "GBP" | "CHF";
+  /** ISO 4217 alpha-3 code (EUR, USD, GBP, CHF, INR, JPY, …). */
+  currency?: string;
   taxes?: number;
   fees?: number;
   category?: "business" | "private" | "vacation";
@@ -205,6 +251,10 @@ export interface ParsedBooking {
   parserTemplate?: string;
   parserConfidence?: number;
   airlineNotice?: string; // Transient: not persisted to DB, UI-only notice when no template found
+  // Field names that the parser inferred — assigned a value the source did not state
+  // explicitly (e.g. picked a year for a date that omitted it). Surfaced as a
+  // "please verify" badge in the import-review UI. Not persisted.
+  inferredFields?: string[];
   missing?: string[];
   fieldSources?: Partial<
     Record<
@@ -303,7 +353,8 @@ export interface GeoJSONFeature {
     category?: "business" | "private" | "vacation";
     tags?: string[];
     price?: number;
-    currency?: "EUR" | "USD" | "GBP" | "CHF";
+    /** ISO 4217 alpha-3 code (EUR, USD, GBP, CHF, INR, JPY, …). */
+    currency?: string;
     taxes?: number;
     fees?: number;
     distance: number;
@@ -549,3 +600,45 @@ export interface CountryStatsResponse {
 }
 
 export * from "./cruise";
+
+export interface AircraftRankingItem {
+  registration: string;
+  count: number;
+  airline: string | null;
+  aircraft: string | null;
+  totalDistanceKm: number;
+  firstFlightDate: string | null;
+  lastFlightDate: string | null;
+}
+
+export interface AircraftRankingResponse {
+  aircraft: AircraftRankingItem[];
+  total: number;
+}
+
+export interface AircraftProfileFlight {
+  id: string;
+  flightNumber: string | null;
+  airline: string | null;
+  depIata: string | null;
+  arrIata: string | null;
+  depName: string | null;
+  arrName: string | null;
+  departureTime: string | null;
+  arrivalTime: string | null;
+  distanceKm: number;
+  status: string;
+}
+
+export interface AircraftProfileResponse {
+  registration: string;
+  modeS: string | null;
+  airline: string | null;
+  aircraft: string | null;
+  flightCount: number;
+  totalDistanceKm: number;
+  firstFlightDate: string | null;
+  lastFlightDate: string | null;
+  uniqueAirports: number;
+  flights: AircraftProfileFlight[];
+}

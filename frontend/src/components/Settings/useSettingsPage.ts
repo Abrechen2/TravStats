@@ -23,6 +23,7 @@ interface HistoricalEnrichmentSettings {
 interface ApiKeysFormState {
   airlabsApiKey: string;
   aviationstackApiKey: string;
+  aerodataboxApiKey: string;
   openskyClientId: string;
   openskyClientSecret: string;
 }
@@ -95,11 +96,13 @@ export function useSettingsPage() {
   const [apiKeysStatus, setApiKeysStatus] = useState<{
     airlabs: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     aviationstack: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+    aerodatabox: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     opensky: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
   } | null>(null);
   const [apiKeys, setApiKeys] = useState<ApiKeysFormState>({
     airlabsApiKey: "",
     aviationstackApiKey: "",
+    aerodataboxApiKey: "",
     openskyClientId: "",
     openskyClientSecret: "",
   });
@@ -304,6 +307,7 @@ export function useSettingsPage() {
       setApiKeys({
         airlabsApiKey: "",
         aviationstackApiKey: "",
+        aerodataboxApiKey: "",
         openskyClientId: "",
         openskyClientSecret: "",
       });

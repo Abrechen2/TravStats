@@ -4,12 +4,52 @@ import { AuthRequest } from '../../middleware/auth';
 import { prisma } from '../../db';
 import { AppError } from '../../middleware/errorHandler';
 import { hashPassword } from '../../utils/password';
-import { adminResetPasswordSchema } from '../../schemas/auth';
+import { adminCreateUserSchema, adminResetPasswordSchema } from '../../schemas/auth';
 import { sendAdminPasswordResetEmail } from '../../services/emailService';
 import { SMTP_CONFIG_ID } from './smtp';
 import logger from '../../utils/logger';
+import { getInstanceSettings } from '../../services/instanceSettingsService';
 
 const router = Router();
+
+// POST /users — admin creates a user directly (no invitation token required).
+// Surface for AI-agent / onboarding flows: an admin-scope PAT can call this
+// to provision test users or import-only accounts without the cookie/email
+// invitation dance. The MAX_USERS instance limit is still enforced.
+router.post('/users', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const payload = adminCreateUserSchema.parse(req.body);
+
+    const existing = await prisma.user.findUnique({ where: { username: payload.username } });
+    if (existing) throw new AppError('Username already exists', 400);
+
+    const { maxUsers } = await getInstanceSettings();
+    const userCount = await prisma.user.count();
+    if (userCount >= maxUsers) throw new AppError('User limit reached', 409);
+
+    const passwordHash = await hashPassword(payload.password);
+    const created = await prisma.user.create({
+      data: {
+        username: payload.username,
+        passwordHash,
+        isAdmin: payload.isAdmin,
+        notificationEmail: payload.notificationEmail,
+        invitedBy: req.userId,
+      },
+      select: { id: true, username: true, isAdmin: true, isActive: true, createdAt: true },
+    });
+
+    logger.info({
+      operation: 'admin_user_create',
+      message: 'Admin created user via /admin/users',
+      context: { createdUserId: created.id, createdBy: req.userId, viaPAT: !!req.apiToken },
+    });
+
+    res.status(201).json({ user: created });
+  } catch (error) {
+    next(error);
+  }
+});
 
 // Get all users
 router.get('/users', async (req: AuthRequest, res: Response, next: NextFunction) => {

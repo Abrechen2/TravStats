@@ -97,8 +97,8 @@
       "textFallback": "Email-Text einfügen (Fallback)",
       "textPlaceholder": "Email-Inhalt hier einfügen...",
       "regexWarning": {
-        "title": "Kein LLM konfiguriert — der Regex-Parser ist sehr ungenau",
-        "body": "Die regel-basierten Vorlagen decken nur bekannte Airlines ab und erkennen mehrere Flüge in einer Mail nicht. Empfohlen: Admin → Parser einen lokalen Ollama-Endpoint (z.B. gemma3:12b) eintragen, oder Flüge manuell erfassen."
+        "title": "Automatischer Import noch eingeschränkt",
+        "body": "Ohne lokales LLM (Ollama) wird ein regel-basierter Import genutzt. Dieser unterstützt aktuell nur einige Airlines und kann noch keine E-Mails mit mehreren Flügen verarbeiten. Wir arbeiten aktiv an der Erweiterung.\n\nEmpfehlung: In Admin → Parser einen Ollama-Endpoint (z.B. gemma3:12b) hinterlegen oder Flüge manuell erfassen."
       }
     },
     "simplified": {
@@ -149,9 +149,13 @@
     "arrivalAirportCode": "Ankunftsflughafen (IATA) *",
     "duplicate": {
       "title": "Flug existiert bereits",
-      "message": "Flug {{flightNumber}} ({{route}}) existiert für diesen Tag bereits. Trotzdem hinzufügen?",
+      "message": "Flug {{flightNumber}} ({{route}}) existiert für diesen Tag bereits.",
+      "mergeHint": "Mit \"Daten ergänzen\" werden nur leere Felder am bestehenden Flug aufgefüllt — nichts wird überschrieben.",
       "cancel": "Abbrechen",
-      "addAnyway": "Trotzdem hinzufügen"
+      "merge": "Daten ergänzen",
+      "addAnyway": "Trotzdem hinzufügen",
+      "mergedToast": "Bestehender Flug um {{count}} Felder ergänzt",
+      "mergedNoChange": "Keine neuen Felder zu ergänzen"
     }
   },
   "list": {
@@ -230,12 +234,16 @@
     "unknownParser": "Unbekannt",
     "confidenceLabel": "Konfidenz",
     "sourceText": "Quelltext",
-    "hideSourceText": "Ausblenden"
+    "hideSourceText": "Ausblenden",
+    "inferredHint": "Vom Parser geraten — bitte prüfen.",
+    "inferredDateHint": "Quelle nannte kein Jahr — Parser hat es geraten. Bitte verifiziere Datum und Jahr."
   },
   "lookup": {
     "resultsTitle_one": "{{count}} Flug gefunden",
     "resultsTitle_other": "{{count}} Flüge gefunden",
     "departs": "Abflug",
+    "operatedBy": "Codeshare — geflogen von {{airline}}",
+    "tailNumber": "Kennzeichen",
     "backToSearch": "Zurück zur Suche"
   },
   "status": {
@@ -271,7 +279,12 @@
   },
   "edit": {
     "title": "Flug bearbeiten",
-    "saveChanges": "Änderungen speichern"
+    "saveChanges": "Änderungen speichern",
+    "tripLabel": "Reise",
+    "tripNone": "Keiner Reise zugeordnet",
+    "tripHint": "Verlinkt diesen Flug mit einer manuell angelegten Reise. Reisen werden im Flüge-Tab erstellt.",
+    "tripAssignedToast": "Reise-Zuordnung aktualisiert",
+    "tripAssignFailed": "Reise-Zuordnung fehlgeschlagen — andere Änderungen wurden gespeichert"
   },
   "scanner": {
     "title": "Boarding Pass scannen",

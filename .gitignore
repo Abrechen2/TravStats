@@ -99,6 +99,10 @@ backend/eng.traineddata
 # Dev scripts
 backend/scripts/test-parser-samples.ts
 
+# Lab / scratch tooling — workspace for ad-hoc experiments, never commit
+tools/
+frontend/test-export.xlsx
+
 # Training data and outputs (should not be committed)
 backend/data/training/training-*.jsonl
 backend/data/training/output-*/

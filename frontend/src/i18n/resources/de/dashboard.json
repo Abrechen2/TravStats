@@ -55,7 +55,10 @@
     "flightUpdated": "Flug erfolgreich aktualisiert",
     "flightDeleted": "Flug erfolgreich gelöscht",
     "flightDeletedPending": "Flug gelöscht",
-    "flightDuplicated": "Flug dupliziert"
+    "flightDuplicated": "Flug dupliziert",
+    "flightMerged": "Bestehender Flug um {{count}} Felder ergänzt",
+    "flightMergedNoChange": "Keine neuen Felder zu ergänzen",
+    "importSummary": "{{updated}} Flüge aktualisiert, {{created}} neu angelegt"
   },
   "duplicateDialog": {
     "title": "Flug duplizieren",

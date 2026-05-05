@@ -4,6 +4,7 @@ import { useTranslation } from "../hooks/useTranslation";
 import { useSettingsStore } from "../store/settingsStore";
 import { formatCurrency as formatCurrencyUtil } from "../lib/units";
 import { resolveAirlineDisplay } from "../lib/airlineUtils";
+import AirlineLogo from "./AirlineLogo";
 import DataSourceBadges from "./DataSourceBadges";
 
 interface FlightListProps {
@@ -59,9 +60,7 @@ export default function FlightList({
 
   const formatCurrency = (value?: number, currency?: string): string => {
     if (value === undefined || value === null) return "";
-    // Use currency from settings if not specified
-    const currencyToUse = (currency || units.currency) as "EUR" | "USD" | "GBP" | "CHF";
-    return formatCurrencyUtil(value, currencyToUse);
+    return formatCurrencyUtil(value, currency || units.currency);
   };
 
   if (flights.length === 0) {
@@ -105,6 +104,11 @@ export default function FlightList({
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
+                  <AirlineLogo
+                    iata={flight.airline?.length === 2 ? flight.airline : undefined}
+                    flightNumber={flight.flightNumber}
+                    size={28}
+                  />
                   <h3 className="font-semibold text-lg" style={{ color: "var(--text-primary)" }}>
                     {resolveAirlineDisplay(flight.airline, flight.flightNumber) || flight.airline}{" "}
                     {flight.flightNumber}

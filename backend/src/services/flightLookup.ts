@@ -1,17 +1,22 @@
 /**
  * Flight Number Lookup Service
  *
- * Supports two providers:
- * - AirLabs (free tier, cached)
- * - Aviationstack (if API key is present)
+ * Supports four providers, layered by tier and cost:
+ * - Aviationstack (paid; live window only, daily-budget-gated)
+ * - AeroDataBox (RapidAPI; historical fallback, 365-day window)
+ * - AirLabs (free; live-window today-only — silently lies about other dates)
+ * - OpenSky (free; last-resort callsign lookup)
  *
- * Falls back to AirLabs when Aviationstack is not configured.
+ * The cascade prefers Aviationstack inside the live window, AeroDataBox
+ * for historical / out-of-live-window dates when configured, then AirLabs
+ * for live or ad-hoc lookups, and OpenSky as a final fallback.
  */
 
 import axios from 'axios';
 import NodeCache from 'node-cache';
 import { findOrCreateAirport } from './airportLookup';
 import { getApiKey, getOpenSkyCredentials } from './apiKeyResolver';
+import { lookupFlightAerodatabox } from './aerodataboxLookup';
 import { convertAviationstackTimeToUtc, convertAirlabsTimeToUtc } from '../utils/timezone';
 import { prisma } from '../db';
 import logger from '../utils/logger';
@@ -229,6 +234,12 @@ export interface FlightData {
   airline: string;
   airlineIata?: string;
   airlineIcao?: string;
+  /** Operating airline name when the flight number is a marketing codeshare. */
+  operatingAirline?: string;
+  /** True when AeroDataBox flagged the entry as `IsCodeshare`. */
+  isCodeshare?: boolean;
+  /** ATC callsign, e.g. "DLH400". AeroDataBox-only. */
+  callsign?: string;
   departure: {
     iata?: string;
     icao?: string;
@@ -249,8 +260,14 @@ export interface FlightData {
   };
   aircraft?: string;
   aircraftIcao?: string;
+  /** Tail number / aircraft registration, e.g. "D-AIHX". AeroDataBox-only. */
+  aircraftRegistration?: string;
+  /** Mode-S transponder hex, e.g. "3C6518". AeroDataBox-only. */
+  aircraftModeS?: string;
+  /** "scheduled" | "flown" | "cancelled" | "diverted" — derived. */
   status?: string;
   duration?: number;
+  /** Great-circle route distance in km when the provider supplies it. */
   distance?: number;
 }
 
@@ -359,6 +376,29 @@ export interface FlightLookupResult {
   airline?: string;
   flightNumber?: string;
   aircraft?: string;
+  /** Aircraft registration / tail number, e.g. "D-AIHX". AeroDataBox-only. */
+  aircraftRegistration?: string;
+  /** Mode-S transponder hex, e.g. "3C6518". AeroDataBox-only. ADS-B bridge. */
+  aircraftModeS?: string;
+  /** ATC callsign, e.g. "DLH400". AeroDataBox-only. */
+  callsign?: string;
+  /** Operating airline when the requested flight number is a codeshare. */
+  operatingAirline?: string;
+  /** True when the response indicates this flight number is sold by a partner. */
+  isCodeshare?: boolean;
+  /** IATA code of the operating airline (e.g. "LH"). */
+  airlineIata?: string;
+  /** ICAO code of the operating airline (e.g. "DLH"). */
+  airlineIcao?: string;
+  /** Great-circle route distance in km from the provider; saves a haversine. */
+  distanceKm?: number;
+  /**
+   * Hint to override the locally-derived flight status. Currently only
+   * `'cancelled'` and `'diverted'` are surfaced — providers reporting
+   * normal "Landed" / "EnRoute" map to `'flown'` / `'scheduled'` via the
+   * usual date heuristic.
+   */
+  statusOverride?: "cancelled" | "diverted";
   departure?: AirportInfo;
   arrival?: AirportInfo;
   departureTime?: string;
@@ -584,15 +624,32 @@ export async function lookupFlightDetails(
     }
   }
 
+  // AeroDataBox tertiary fallback — covers the last 365 days plus
+  // ~365 days into the future, which is the gap between Aviationstack
+  // (paid) and AirLabs (live-only). Fires whenever we have a date,
+  // regardless of live window: in-window adds resilience if
+  // Aviationstack 429'd or returned nothing; out-of-window it's the
+  // only free provider that can serve the request.
+  if (date) {
+    const aerodataboxResult = await lookupFlightAerodatabox(trimmedNumber, date, userId);
+    if (aerodataboxResult) {
+      logger.info(
+        { flightNumber: trimmedNumber, date, api: 'aerodatabox', operation: 'lookup_aerodatabox_hit' },
+        `AeroDataBox served ${trimmedNumber} on ${date}`,
+      );
+      return aerodataboxResult;
+    }
+  }
+
   // For deliberate out-of-live-window lookups (caller passed a
   // departureTime that's not within the live window) skip AirLabs
   // entirely. AirLabs's free tier silently ignores `dep_date` and
   // returns today's schedule, which poisons the wrapper's date-mismatch
   // safety net (issue #82). No working free provider exists for past or
-  // future date lookups — Aviationstack (above) is the only one, and
-  // it's already been tried with the correct date filter at this point.
-  // Ad-hoc UI lookups (no departureTime) still treat AirLabs as the
-  // live-window fallback.
+  // future date lookups — Aviationstack and AeroDataBox (above) are the
+  // only ones, and both have already been tried with the correct date
+  // at this point. Ad-hoc UI lookups (no departureTime) still treat
+  // AirLabs as the live-window fallback.
   if (departureTime && !inLiveWindow) {
     logger.info({ flightNumber: trimmedNumber, date, operation: 'lookup_no_result' },
       `No data found for ${trimmedNumber} from any API (outside live window, AirLabs skipped)`);
@@ -764,6 +821,11 @@ function flightLookupResultToFlightData(
   return {
     flightNumber: result.flightNumber || fallbackFlightNumber,
     airline: result.airline || 'Unknown',
+    airlineIata: result.airlineIata,
+    airlineIcao: result.airlineIcao,
+    operatingAirline: result.operatingAirline,
+    isCodeshare: result.isCodeshare,
+    callsign: result.callsign,
     departure: {
       iata: toUndef(result.departure?.iata),
       icao: toUndef(result.departure?.icao),
@@ -783,6 +845,10 @@ function flightLookupResultToFlightData(
       gate: result.arrival?.gate,
     },
     aircraft: result.aircraft,
+    aircraftRegistration: result.aircraftRegistration,
+    aircraftModeS: result.aircraftModeS,
+    status: result.statusOverride,
+    distance: result.distanceKm,
   };
 }
 
@@ -825,12 +891,17 @@ export async function lookupFlightWithHistorical(
 
   const isOutsideLiveWindow = dayDelta !== 0;
 
-  // Capability gate: any non-today request needs Aviationstack. Free
-  // providers only deliver live (today) data — AirLabs lies about other
-  // dates, OpenSky has no working callsign-by-date endpoint.
+  // Capability gate: any non-today request needs Aviationstack OR
+  // AeroDataBox. Without one of them, the free providers can't deliver:
+  // AirLabs lies about non-today dates, OpenSky has no working
+  // callsign-by-date endpoint. AeroDataBox covers historical (≤ 365 d)
+  // and near-future schedules.
   if (isOutsideLiveWindow) {
-    const aviationstackKey = await getApiKey('aviationstack', userId);
-    if (!aviationstackKey) {
+    const [aviationstackKey, aerodataboxKey] = await Promise.all([
+      getApiKey('aviationstack', userId),
+      getApiKey('aerodatabox', userId),
+    ]);
+    if (!aviationstackKey && !aerodataboxKey) {
       logger.info(
         {
           flightNumber: trimmed,
@@ -838,7 +909,7 @@ export async function lookupFlightWithHistorical(
           direction: dayDelta > 0 ? 'future' : 'past',
           operation: 'lookup_unavailable_no_provider',
         },
-        `Lookup outside live window requested for ${trimmed} (date=${requestedStr}, direction=${dayDelta > 0 ? 'future' : 'past'}) but no Aviationstack key is configured`,
+        `Lookup outside live window requested for ${trimmed} (date=${requestedStr}, direction=${dayDelta > 0 ? 'future' : 'past'}) but neither Aviationstack nor AeroDataBox is configured`,
       );
       return { flights: [], unavailableReason: 'no_provider' };
     }

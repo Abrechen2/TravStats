@@ -773,7 +773,7 @@ export default function GlobeView({
         pointColor={(point: object) => {
           const p = point as PointData & { _kind: "airport" | "port" };
           if (p._kind === "port") return CRUISE_PORT_COLOR;
-          return "#fbbf24";
+          return "#f0a947";
         }}
         pointAltitude={0.01}
         pointRadius={(point: object) => {

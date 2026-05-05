@@ -86,8 +86,8 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
             arrivalTime: arrivalUtc,
             actualDeparture: actualDepartureUtc,
             actualArrival: actualArrivalUtc,
-            depTimeSemantics: 'UTC',
-            arrTimeSemantics: 'UTC',
+            depTimeSemantics: data.depTimeSemantics ?? 'UTC',
+            arrTimeSemantics: data.arrTimeSemantics ?? 'UTC',
             delayMinutes: actualDepartureUtc && departureUtc
               ? Math.round((actualDepartureUtc.getTime() - departureUtc.getTime()) / 60000)
               : null,
@@ -118,7 +118,10 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
             frequentFlyerNumber: data.frequentFlyerNumber,
             bookingClassLetter: data.bookingClassLetter,
             coPassengers: data.coPassengers ?? [],
-            dataSource: "email_import",
+            // Default to 'email_import' for backward compat (this route was
+            // originally only called from the email/PDF parsers). AI-agent
+            // and xlsx imports can override with 'bulk_import'.
+            dataSource: data.dataSource ?? "email_import",
             lastModifiedBy: "user",
             nextApiCheckAt: calculateNextApiCheckAt(
               departureUtc,
