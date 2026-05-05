@@ -431,19 +431,27 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
     const normalizedQuery = normalizeQueryParams(req.query as Record<string, string | string[] | undefined>);
     const parsedQuery = flightQuerySchema.parse(normalizedQuery);
     const tagsArray = splitMultiValue(parsedQuery.tags as string | string[] | undefined);
+    // ?all=true bypasses the 500-row cap entirely so API consumers can sync
+    // the full row set in one request. Auth + user-scoped where clause make
+    // an unbounded read safe; the only consumer is the row owner.
+    const all = parsedQuery.all === true;
+    const cappedLimit = Math.min(parsedQuery.limit ?? 100, 500);
     const query = {
       ...parsedQuery,
       tags: tagsArray,
-      limit: Math.min(parsedQuery.limit ?? 100, 500),
+      limit: cappedLimit,
+      offset: all ? 0 : parsedQuery.offset,
     };
+    const take = all ? undefined : cappedLimit;
     const { where, noResults } = buildFlightWhere(query, userId);
 
     if (noResults) {
       return res.json({
         flights: [],
         total: 0,
-        limit: query.limit,
+        limit: take ?? 0,
         offset: query.offset,
+        all,
       });
     }
 
@@ -452,7 +460,7 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
         where,
         orderBy: { departureTime: 'desc' },
         skip: query.offset,
-        take: query.limit,
+        take,
         include: {
           trip: { select: { id: true, name: true, color: true } },
         },
@@ -503,8 +511,9 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
     res.json({
       flights: enrichedFlights,
       total,
-      limit: query.limit,
+      limit: take ?? total,
       offset: query.offset,
+      all,
     });
   } catch (error) {
     next(error);
