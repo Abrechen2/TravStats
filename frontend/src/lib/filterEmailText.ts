@@ -5,12 +5,21 @@
 export function filterEmailText(text: string): string {
   let filtered = text;
 
-  // Remove HTML tags but keep text content (do this first)
-  filtered = filtered.replace(/<[^>]+>/g, "");
+  // Strip HTML tags. Loop until convergence so adversarial inputs like
+  // `<<script>foo<</script>>` (where a single pass leaves another `<…>`
+  // fragment behind) cannot smuggle a tag through.
+  let prev: string;
+  do {
+    prev = filtered;
+    filtered = filtered.replace(/<[^>]*>/g, "");
+  } while (filtered !== prev);
+
+  // Decode HTML entities. `&amp;` is decoded LAST so a literal `&amp;lt;`
+  // does not chain-decode into `<` (double-escape vulnerability).
   filtered = filtered.replace(/&nbsp;/g, " ");
-  filtered = filtered.replace(/&amp;/g, "&");
   filtered = filtered.replace(/&lt;/g, "<");
   filtered = filtered.replace(/&gt;/g, ">");
+  filtered = filtered.replace(/&amp;/g, "&");
 
   // Remove only full URLs (http/https/www), not domain names in text
   filtered = filtered.replace(/https?:\/\/[^\s<>]+/gi, "");

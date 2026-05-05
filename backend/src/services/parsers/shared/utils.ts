@@ -521,7 +521,13 @@ JSON ARRAY OUTPUT:`;
 export function cleanEmailBody(text: string): string {
   let out = text;
   // Remove angle-bracket fragments: <https://...>, <img.png>, etc.
-  out = out.replace(/<[^>]+>/g, "");
+  // Loop until convergence so that adversarial inputs like
+  // `<<script>foo<</script>>` cannot smuggle a tag through a single pass.
+  let prev: string;
+  do {
+    prev = out;
+    out = out.replace(/<[^>]*>/g, "");
+  } while (out !== prev);
   // Remove bare http/https and www URLs
   out = out.replace(/https?:\/\/[^\s<>]+/gi, "");
   out = out.replace(/www\.[^\s<>]+/gi, "");

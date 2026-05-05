@@ -127,7 +127,20 @@ const baseFlightSchema = z.object({
   actualArrivalLocal: localDateTime.optional().nullable(),
   actualArrivalTz: ianaTimezone.optional().nullable(),
   status: z.enum(['scheduled', 'flown', 'cancelled', 'historical', 'duplicated']).default('scheduled'),
-  notes: z.string().transform((v) => v.replace(/<[^>]*>/g, '')).optional(),
+  notes: z
+    .string()
+    .transform((v) => {
+      // Loop until convergence so `<<script>foo<</script>>` cannot smuggle a
+      // tag through a single pass of the strip.
+      let out = v;
+      let prev: string;
+      do {
+        prev = out;
+        out = out.replace(/<[^>]*>/g, '');
+      } while (out !== prev);
+      return out;
+    })
+    .optional(),
   price: z.number().min(0).optional(),
   // Any ISO 4217 alpha-3 code — validated only for shape, not against a
   // hard-coded allow-list, so users worldwide can record costs in their
