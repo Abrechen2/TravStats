@@ -75,6 +75,11 @@ export interface Flight {
   bookingReference?: string;
   ticketNumber?: string;
   companions?: string[];
+  // BP / email-import fields (parser-populated, user-editable)
+  baggageAllowance?: string;
+  frequentFlyerNumber?: string;
+  bookingClassLetter?: string;
+  coPassengers?: string[];
   // Route tracking
   actualRoute?: Array<{ lat: number; lon: number; timestamp?: string; country?: string }>;
   overflownCountries?: string[];
@@ -171,7 +176,21 @@ export interface FlightInput {
   actualDepartureTz?: string;
   actualArrivalLocal?: string;
   actualArrivalTz?: string;
+  // Match Flight's broader enum so Partial<Flight> assigns into
+  // Partial<FlightInput> without a cast. The backend schema only accepts
+  // UTC / DATE_ONLY / UNKNOWN — sending LEGACY_FAKE_UTC will 400, which is
+  // intentional (it's a backend-only marker that should never be re-sent).
+  depTimeSemantics?: "UTC" | "DATE_ONLY" | "UNKNOWN" | "LEGACY_FAKE_UTC";
+  arrTimeSemantics?: "UTC" | "DATE_ONLY" | "UNKNOWN" | "LEGACY_FAKE_UTC";
   status?: "scheduled" | "flown" | "cancelled" | "historical" | "duplicated";
+  dataSource?:
+    | "manual"
+    | "email_import"
+    | "boarding_pass_scan"
+    | "historical_enrichment"
+    | "live_update"
+    | "api_lookup"
+    | "bulk_import";
   notes?: string;
   // Extended fields
   seatNumber?: string;

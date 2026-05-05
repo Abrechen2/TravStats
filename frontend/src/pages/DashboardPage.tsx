@@ -546,8 +546,14 @@ export default function DashboardPage(): JSX.Element {
     const importTz = useSettingsStore.getState().display?.timezone || "UTC";
     const u: Partial<FlightInput> = {};
     if (row.airline) u.airline = row.airline;
+    if (row.airlineIata) u.airlineIata = row.airlineIata;
+    if (row.airlineIcao) u.airlineIcao = row.airlineIcao;
     if (row.flightNumber) u.flightNumber = row.flightNumber;
+    if (row.callsign) u.callsign = row.callsign;
     if (row.operatingAirline) u.operatingAirline = row.operatingAirline;
+    if (row.operatingAirlineIata) u.operatingAirlineIata = row.operatingAirlineIata;
+    if (row.operatingAirlineIcao) u.operatingAirlineIcao = row.operatingAirlineIcao;
+    if (row.isCodeshare) u.isCodeshare = row.isCodeshare === "true";
     if (row.departureTime) {
       u.departureLocal = row.departureTime;
       u.depTimezone = importTz;
@@ -556,14 +562,32 @@ export default function DashboardPage(): JSX.Element {
       u.arrivalLocal = row.arrivalTime;
       u.arrTimezone = importTz;
     }
+    if (row.depTimeSemantics)
+      u.depTimeSemantics = row.depTimeSemantics as FlightInput["depTimeSemantics"];
+    if (row.arrTimeSemantics)
+      u.arrTimeSemantics = row.arrTimeSemantics as FlightInput["arrTimeSemantics"];
+    if (row.actualDeparture) {
+      u.actualDepartureLocal = row.actualDeparture;
+      u.actualDepartureTz = importTz;
+    }
+    if (row.actualArrival) {
+      u.actualArrivalLocal = row.actualArrival;
+      u.actualArrivalTz = importTz;
+    }
     if (row.status) u.status = row.status as FlightInput["status"];
     if (row.aircraft) u.aircraft = row.aircraft;
+    if (row.aircraftRegistration) u.aircraftRegistration = row.aircraftRegistration;
+    if (row.aircraftModeS) u.aircraftModeS = row.aircraftModeS;
     if (row.seatNumber) u.seatNumber = row.seatNumber;
     if (row.seatClass) u.seatClass = row.seatClass as FlightInput["seatClass"];
+    if (row.boardingGroup) u.boardingGroup = row.boardingGroup;
     if (row.gate) u.gate = row.gate;
     if (row.terminal) u.terminal = row.terminal;
     if (row.bookingReference) u.bookingReference = row.bookingReference;
     if (row.ticketNumber) u.ticketNumber = row.ticketNumber;
+    if (row.baggageAllowance) u.baggageAllowance = row.baggageAllowance;
+    if (row.frequentFlyerNumber) u.frequentFlyerNumber = row.frequentFlyerNumber;
+    if (row.bookingClassLetter) u.bookingClassLetter = row.bookingClassLetter;
     if (row.category) u.category = row.category as FlightInput["category"];
     if (row.tags)
       u.tags = row.tags
@@ -575,10 +599,16 @@ export default function DashboardPage(): JSX.Element {
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean);
+    if (row.coPassengers)
+      u.coPassengers = row.coPassengers
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
     if (row.price) u.price = Number(row.price);
     if (row.currency) u.currency = row.currency as FlightInput["currency"];
     if (row.taxes) u.taxes = Number(row.taxes);
     if (row.fees) u.fees = Number(row.fees);
+    if (row.dataSource) u.dataSource = row.dataSource as FlightInput["dataSource"];
     if (row.notes) u.notes = row.notes;
     return u;
   };
@@ -600,22 +630,42 @@ export default function DashboardPage(): JSX.Element {
     const importTz = useSettingsStore.getState().display?.timezone || "UTC";
     return {
       airline: row.airline || undefined,
+      airlineIata: row.airlineIata || undefined,
+      airlineIcao: row.airlineIcao || undefined,
       flightNumber: row.flightNumber || undefined,
+      callsign: row.callsign || undefined,
       operatingAirline: row.operatingAirline || undefined,
+      operatingAirlineIata: row.operatingAirlineIata || undefined,
+      operatingAirlineIcao: row.operatingAirlineIcao || undefined,
+      isCodeshare: row.isCodeshare ? row.isCodeshare === "true" : undefined,
       departure: { iata: dep.iata, icao: dep.icao, name: dep.name, lat: dep.lat, lon: dep.lon },
       arrival: { iata: arr.iata, icao: arr.icao, name: arr.name, lat: arr.lat, lon: arr.lon },
       departureLocal: row.departureTime || undefined,
       depTimezone: row.departureTime ? importTz : undefined,
       arrivalLocal: row.arrivalTime || undefined,
       arrTimezone: row.arrivalTime ? importTz : undefined,
+      depTimeSemantics: (row.depTimeSemantics ||
+        undefined) as FlightInput["depTimeSemantics"],
+      arrTimeSemantics: (row.arrTimeSemantics ||
+        undefined) as FlightInput["arrTimeSemantics"],
+      actualDepartureLocal: row.actualDeparture || undefined,
+      actualDepartureTz: row.actualDeparture ? importTz : undefined,
+      actualArrivalLocal: row.actualArrival || undefined,
+      actualArrivalTz: row.actualArrival ? importTz : undefined,
       status: (row.status || "flown") as FlightInput["status"],
       aircraft: row.aircraft || undefined,
+      aircraftRegistration: row.aircraftRegistration || undefined,
+      aircraftModeS: row.aircraftModeS || undefined,
       seatNumber: row.seatNumber || undefined,
       seatClass: (row.seatClass || undefined) as FlightInput["seatClass"],
+      boardingGroup: row.boardingGroup || undefined,
       gate: row.gate || undefined,
       terminal: row.terminal || undefined,
       bookingReference: row.bookingReference || undefined,
       ticketNumber: row.ticketNumber || undefined,
+      baggageAllowance: row.baggageAllowance || undefined,
+      frequentFlyerNumber: row.frequentFlyerNumber || undefined,
+      bookingClassLetter: row.bookingClassLetter || undefined,
       category: (row.category || undefined) as FlightInput["category"],
       tags: row.tags
         ? row.tags
@@ -629,10 +679,17 @@ export default function DashboardPage(): JSX.Element {
             .map((s) => s.trim())
             .filter(Boolean)
         : undefined,
+      coPassengers: row.coPassengers
+        ? row.coPassengers
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : undefined,
       price: row.price ? Number(row.price) : undefined,
       currency: (row.currency || undefined) as FlightInput["currency"],
       taxes: row.taxes ? Number(row.taxes) : undefined,
       fees: row.fees ? Number(row.fees) : undefined,
+      dataSource: (row.dataSource || undefined) as FlightInput["dataSource"],
       notes: row.notes || undefined,
     };
   };
