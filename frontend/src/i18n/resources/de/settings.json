@@ -100,17 +100,7 @@
     },
     "timezone": "Zeitzone",
     "dateFormat": "Datumsformat",
-    "timeFormat": "Zeitformat",
-    "theme": {
-      "title": "Theme-Einstellungen",
-      "description": "Das Theme bestimmt das Farbschema der Anwendung. Dark Mode ist bei schlechten Lichtverhältnissen angenehmer für die Augen.",
-      "lightMode": "Light Mode",
-      "darkMode": "Dark Mode",
-      "lightDescription": "Helles Farbschema, ideal bei Tageslicht",
-      "darkDescription": "Dunkles Farbschema, reduziert Augenbelastung bei wenig Licht",
-      "autoSave": "Die Einstellung wird automatisch gespeichert und bleibt bei zukünftigen Besuchen erhalten",
-      "active": "aktiv"
-    }
+    "timeFormat": "Zeitformat"
   },
   "units": {
     "title": "Einheiten & Formate",
