@@ -27,6 +27,7 @@ const SetupPage = lazy(() => import("./pages/SetupPage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const ParserPage = lazy(() => import("./pages/ParserPage"));
 const PendingUpdatesPage = lazy(() => import("./pages/PendingUpdatesPage"));
+const AircraftPage = lazy(() => import("./pages/AircraftPage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const ForceChangePasswordPage = lazy(() => import("./pages/ForceChangePasswordPage"));
 
@@ -274,6 +275,10 @@ function AppContent() {
               <Route
                 path="/pending-updates"
                 element={isAuthenticated ? <PendingUpdatesPage /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/aircraft/:registration"
+                element={isAuthenticated ? <AircraftPage /> : <Navigate to="/login" />}
               />
             </Routes>
           </AnimatePresence>

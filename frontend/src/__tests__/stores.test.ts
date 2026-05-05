@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useAuthStore } from "../store/authStore";
+import { useThemeStore } from "../store/themeStore";
 import { useToastStore } from "../store/toastStore";
 import type { User } from "../types";
 
@@ -89,6 +90,35 @@ describe("Zustand Stores", () => {
       });
 
       expect(result.current.user).toBeNull();
+    });
+  });
+
+  describe("ThemeStore", () => {
+    beforeEach(() => {
+      useThemeStore.setState({ mapTheme: "glassmorphism" });
+      localStorage.clear();
+    });
+
+    it("should initialize with glassmorphism map theme by default", () => {
+      const { result } = renderHook(() => useThemeStore());
+
+      expect(result.current.mapTheme).toBe("glassmorphism");
+    });
+
+    it("should set map theme", () => {
+      const { result } = renderHook(() => useThemeStore());
+
+      act(() => {
+        result.current.setMapTheme("classic");
+      });
+
+      expect(result.current.mapTheme).toBe("classic");
+
+      act(() => {
+        result.current.setMapTheme("glassmorphism");
+      });
+
+      expect(result.current.mapTheme).toBe("glassmorphism");
     });
   });
 

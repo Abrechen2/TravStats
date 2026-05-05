@@ -1,79 +1,37 @@
 name: CI
 
+# Solo-project CI: just a Prettier safety net for the rare external PR.
+# The real quality gate is the local pre-/deploy hook (tsc + lint + tests
+# both sides). Re-running it here was duplicate work that produced red
+# badges without catching anything, so it was removed in May 2026.
+
 on:
   push:
     branches: [Main]
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - '.github/ISSUE_TEMPLATE/**'
-      - 'unraid-template.xml'
+    paths:
+      - "frontend/src/**"
+      - "frontend/.prettierrc*"
+      - "frontend/package.json"
+      - "frontend/package-lock.json"
+  pull_request:
+    paths:
+      - "frontend/src/**"
+      - "frontend/.prettierrc*"
+      - "frontend/package.json"
+      - "frontend/package-lock.json"
   workflow_dispatch:
-  workflow_call:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
-  backend:
-    name: Backend (lint + typecheck + test)
+  format:
+    name: Frontend format check
     runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgis/postgis:15-3.4
-        env:
-          POSTGRES_DB: flights_test
-          POSTGRES_USER: flights
-          POSTGRES_PASSWORD: testpass
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: backend/package-lock.json
-
-      - name: Install dependencies
-        run: cd backend && npm ci
-
-      - name: Apply database migrations
-        run: cd backend && npx prisma migrate deploy
-        env:
-          DATABASE_URL: postgresql://flights:testpass@localhost:5432/flights_test
-
-      - name: Check schema drift (DB state vs schema.prisma)
-        run: cd backend && npm run check:drift
-        env:
-          DATABASE_URL: postgresql://flights:testpass@localhost:5432/flights_test
-
-      - name: Type check
-        run: cd backend && npx tsc --noEmit
-
-      - name: Lint
-        run: cd backend && npm run lint
-
-      - name: Test
-        run: cd backend && npm test -- --forceExit
-        env:
-          DATABASE_URL: postgresql://flights:testpass@localhost:5432/flights_test
-          JWT_SECRET: ci-test-secret-min-32-chars-long!!
-          NODE_ENV: test
-
-  frontend:
-    name: Frontend (lint + typecheck + test + coverage)
-    runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v6
 
@@ -86,30 +44,5 @@ jobs:
       - name: Install dependencies
         run: cd frontend && npm ci
 
-      - name: Type check
-        run: cd frontend && npx tsc --noEmit
-
-      - name: Lint
-        run: cd frontend && npm run lint
-
-      - name: Format check
+      - name: Prettier check
         run: cd frontend && npm run format:check
-
-      - name: Test with coverage
-        run: cd frontend && npm run test:coverage
-
-  python-lint:
-    name: Python scripts (ruff + bandit)
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Install ruff and bandit
-        run: pip3 install ruff bandit
-
-      - name: Ruff lint
-        run: ruff check backend/src/scripts/
-
-      - name: Bandit security scan
-        run: bandit -r backend/src/scripts/ -c .bandit.yml

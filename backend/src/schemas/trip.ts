@@ -26,7 +26,11 @@ export const createBookingSchema = z.object({
   tripId: z.string().uuid().optional(),
   pnr: z.string().max(20).optional(),
   price: z.number().min(0).optional(),
-  currency: z.enum(["EUR", "USD", "GBP", "CHF"]).optional(),
+  // Any ISO 4217 alpha-3 code — see schemas/flight.ts for rationale.
+  currency: z
+    .string()
+    .regex(/^[A-Z]{3}$/, "Must be a 3-letter ISO 4217 code (e.g. EUR, USD, INR)")
+    .optional(),
   flightIds: z.array(z.string().uuid()).optional(),
 });
 

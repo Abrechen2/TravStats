@@ -12,6 +12,16 @@ import type { TimeEstimationWarning } from "./FlightCompleteStep";
 export interface FlightLookupResult {
   flightNumber: string;
   airline: string;
+  /** Operating airline if the searched flight number is a marketing codeshare. */
+  operatingAirline?: string;
+  /** True if the API flagged the entry as `IsCodeshare`. */
+  isCodeshare?: boolean;
+  /** ATC callsign, e.g. "DLH400". AeroDataBox-only. */
+  callsign?: string;
+  /** Airline IATA code, e.g. "LH". AeroDataBox-only. */
+  airlineIata?: string;
+  /** Airline ICAO code, e.g. "DLH". AeroDataBox-only. */
+  airlineIcao?: string;
   departure: {
     iata?: string;
     name?: string;
@@ -27,6 +37,13 @@ export interface FlightLookupResult {
     gate?: string;
   };
   aircraft?: string;
+  /** Tail number / aircraft registration, e.g. "D-AIHX". AeroDataBox-only. */
+  aircraftRegistration?: string;
+  /** Mode-S transponder hex, e.g. "3C6518". AeroDataBox-only. */
+  aircraftModeS?: string;
+  /** Great-circle route distance in km from the provider. */
+  distance?: number;
+  /** Hint to set status to `'cancelled'` or `'diverted'`. AeroDataBox-only. */
   status?: string;
 }
 
@@ -39,8 +56,14 @@ export interface DuplicateFlight {
   departureTime: string;
 }
 
+export interface FlightSubmitOptions {
+  force?: boolean;
+  merge?: boolean;
+  hasMoreFlights?: boolean;
+}
+
 export function useFlightForm(
-  onSubmit: (flight: FlightInput, force?: boolean, hasMoreFlights?: boolean) => Promise<void>,
+  onSubmit: (flight: FlightInput, opts?: FlightSubmitOptions) => Promise<void>,
   onCancel: () => void,
   onBatchComplete?: (newAchievements?: UserAchievement[]) => void
 ) {
@@ -83,6 +106,16 @@ export function useFlightForm(
   const [airline, setAirline] = useState("");
   const [operatingAirline, setOperatingAirline] = useState("");
   const [aircraft, setAircraft] = useState("");
+  // Lookup-derived metadata that is persisted on submit but not directly
+  // surfaced in the form UI: callsign + tail number / Mode-S identifiers
+  // come from AeroDataBox automatically and only appear in the flight
+  // detail view post-save. The user can still edit them later.
+  const [lookupCallsign, setLookupCallsign] = useState("");
+  const [lookupAircraftRegistration, setLookupAircraftRegistration] = useState("");
+  const [lookupAircraftModeS, setLookupAircraftModeS] = useState("");
+  const [lookupAirlineIata, setLookupAirlineIata] = useState("");
+  const [lookupAirlineIcao, setLookupAirlineIcao] = useState("");
+  const [lookupIsCodeshare, setLookupIsCodeshare] = useState<boolean | null>(null);
   const [terminal, setTerminal] = useState("");
   const [gate, setGate] = useState("");
   const [seatNumber, setSeatNumber] = useState("");
@@ -92,7 +125,7 @@ export function useFlightForm(
   const [status, setStatus] = useState<"scheduled" | "flown" | "cancelled" | "historical">("flown");
   const [notes, setNotes] = useState("");
   const [price, setPrice] = useState<number | undefined>(undefined);
-  const [currency, setCurrency] = useState<"EUR" | "USD" | "GBP" | "CHF">("EUR");
+  const [currency, setCurrency] = useState<string>("EUR");
   const [category, setCategory] = useState<"business" | "private" | "vacation">("business");
   const [tags, setTags] = useState<string[]>([]);
   const [companions, setCompanions] = useState<string[]>([]);
@@ -237,10 +270,28 @@ export function useFlightForm(
       if (arrAirport) setArrival(arrAirport);
 
       setAirline(flight.airline);
-      setOperatingAirline("");
+      // Codeshare path: API marks the searched flight number as marketed
+      // by airline X but operated by airline Y. Surface Y as the operating
+      // carrier so stats can group on the real metal. For non-codeshare
+      // entries (most lookups), leave operatingAirline empty.
+      setOperatingAirline(flight.isCodeshare ? flight.operatingAirline || "" : "");
       setAircraft(flight.aircraft || "");
+      setLookupCallsign(flight.callsign || "");
+      setLookupAircraftRegistration(flight.aircraftRegistration || "");
+      setLookupAircraftModeS(flight.aircraftModeS || "");
+      setLookupAirlineIata(flight.airlineIata || "");
+      setLookupAirlineIcao(flight.airlineIcao || "");
+      setLookupIsCodeshare(typeof flight.isCodeshare === "boolean" ? flight.isCodeshare : null);
       setTerminal(flight.departure.terminal || "");
       setGate(flight.departure.gate || "");
+
+      // Auto-flag cancelled flights from the API. "diverted" gets folded
+      // into "cancelled" because the flight-status enum doesn't have a
+      // dedicated diverted bucket — user can edit later. Anything else
+      // is left to the local date heuristic.
+      if (flight.status === "cancelled" || flight.status === "diverted") {
+        setStatus("cancelled");
+      }
 
       const applyDateTime = (
         value?: string,
@@ -332,6 +383,11 @@ export function useFlightForm(
   const depTz = departure?.timezone || userTz;
   const arrTz = arrival?.timezone || userTz;
 
+  // Honour the user's "track aircraft registrations" opt-out: when off,
+  // the lookup-derived tail number / Mode-S are dropped before submit so
+  // the column stays NULL on the row. Default is ON.
+  const trackAircraft = settings?.features?.trackAircraftRegistration !== false;
+
   const buildFlightPayload = (): FlightInput => ({
     departure: {
       iata: departure!.iata,
@@ -348,9 +404,15 @@ export function useFlightForm(
       lon: arrival!.lon,
     },
     airline: airline || undefined,
+    airlineIata: lookupAirlineIata || undefined,
+    airlineIcao: lookupAirlineIcao || undefined,
     operatingAirline: operatingAirline || undefined,
+    isCodeshare: lookupIsCodeshare ?? undefined,
     flightNumber: flightNumber || undefined,
+    callsign: lookupCallsign || undefined,
     aircraft: aircraft || undefined,
+    aircraftRegistration: trackAircraft ? lookupAircraftRegistration || undefined : undefined,
+    aircraftModeS: trackAircraft ? lookupAircraftModeS || undefined : undefined,
     seatClass: seatClass || undefined,
     seatNumber: seatNumber || undefined,
     terminal: terminal || undefined,
@@ -412,6 +474,12 @@ export function useFlightForm(
     setSeatNumber("");
     setNotes("");
     setOperatingAirline("");
+    setLookupCallsign("");
+    setLookupAircraftRegistration("");
+    setLookupAircraftModeS("");
+    setLookupAirlineIata("");
+    setLookupAirlineIcao("");
+    setLookupIsCodeshare(null);
 
     // Default the new departure date to the original arrival date, time empty —
     // user usually picks both. For a same-day return this is what they want;
@@ -482,7 +550,7 @@ export function useFlightForm(
     try {
       storeHistoricalData();
       setTimeEstimationWarning(null);
-      await onSubmit(buildFlightPayload(), false, true);
+      await onSubmit(buildFlightPayload(), { hasMoreFlights: true });
       prepareReturnFlightForm();
       useToastStore.getState().addToast("info", t("flights:form.returnFlightHint"));
     } catch (err: unknown) {
@@ -521,7 +589,40 @@ export function useFlightForm(
     try {
       storeHistoricalData();
       setTimeEstimationWarning(null);
-      await onSubmit(buildFlightPayload(), true);
+      await onSubmit(buildFlightPayload(), { force: true });
+    } catch (err: unknown) {
+      const errorObj = err as {
+        response?: { data?: { error?: string; details?: { field: string; message: string }[] } };
+      };
+      const details = errorObj.response?.data?.details;
+      const msg = details?.length
+        ? details.map((d) => d.message).join("; ")
+        : (errorObj.response?.data?.error ?? t("errors:saveFailed"));
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Resolve the duplicate dialog by merging new fields into the existing
+   * flight. Backend fills only nullish fields on the existing row, so the
+   * user's curated values are never overwritten — this is the safe path
+   * when the second source (boarding pass / email) carries metadata the
+   * first source didn't have (seat, gate, ticket number, …).
+   */
+  const handleMergeSubmit = async (): Promise<void> => {
+    setDuplicateFlight(null);
+    if (!departure || !arrival) {
+      setError(t("errors:missingAirports"));
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      storeHistoricalData();
+      setTimeEstimationWarning(null);
+      await onSubmit(buildFlightPayload(), { merge: true });
     } catch (err: unknown) {
       const errorObj = err as {
         response?: { data?: { error?: string; details?: { field: string; message: string }[] } };
@@ -589,7 +690,7 @@ export function useFlightForm(
       }
     } else {
       // Single flight — use the existing onSubmit callback
-      await onSubmit(enrichedFlight, false, hasMoreFlights);
+      await onSubmit(enrichedFlight, { hasMoreFlights });
 
       if (hasMoreFlights) {
         setCurrentFlightIndex(nextIndex);
@@ -688,6 +789,7 @@ export function useFlightForm(
     handleSubmit,
     handleSubmitAndReturn,
     handleForceSubmit,
+    handleMergeSubmit,
     handleFlightReviewConfirm,
   };
 }

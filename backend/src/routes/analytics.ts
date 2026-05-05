@@ -1,13 +1,14 @@
 import { Router, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
-import { authenticate, AuthRequest } from '../middleware/auth';
+import { authenticate, requireWriteScope, AuthRequest } from '../middleware/auth';
 import { analyticsLimiter } from '../middleware/rateLimit';
 import { prisma } from '../db';
 
 const router = Router();
 
 router.use(authenticate);
+router.use(requireWriteScope);
 
 const ALLOWED_EVENT_TYPES = ['parser_feedback', 'pattern_suggestion'] as const;
 

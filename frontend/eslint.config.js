@@ -6,6 +6,16 @@ import pluginReactHooks from "eslint-plugin-react-hooks";
 
 const reactRecommended = pluginReact.configs.flat?.recommended ?? pluginReact.configs.recommended;
 
+const unusedVarsRule = [
+  "error",
+  {
+    argsIgnorePattern: "^_",
+    varsIgnorePattern: "^_",
+    caughtErrorsIgnorePattern: "^_",
+    destructuredArrayIgnorePattern: "^_",
+  },
+];
+
 export default [
   {
     ignores: ["dist/**", "node_modules/**"],
@@ -32,18 +42,21 @@ export default [
     },
     rules: {
       "react/react-in-jsx-scope": "off",
-      ...pluginReactHooks.configs.recommended.rules,
-      // exhaustive-deps is an opinion that clashes with our "load once on
-      // mount" pattern in a dozen places. rules-of-hooks (the real bug
-      // detector) stays on as an error. Revisit if we migrate loaders to
-      // react-query or SWR.
+      "react-hooks/rules-of-hooks": "error",
+      // exhaustive-deps clashes with the "load once on mount" pattern used
+      // in many places (loaders, refresh callbacks). rules-of-hooks (the
+      // real bug detector) stays on as an error. Revisit if we migrate
+      // loaders to react-query or SWR.
       "react-hooks/exhaustive-deps": "off",
+      "@typescript-eslint/no-unused-vars": unusedVarsRule,
+      "no-unused-vars": "off",
     },
   },
   {
     files: ["**/*.d.ts"],
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-empty-object-type": "off",
     },
   },
 ];

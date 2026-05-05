@@ -7,12 +7,14 @@ import logger from '../../utils/logger';
 import {
   testAirlabsKey,
   testAviationstackKey,
+  testAerodataboxKey,
   testOpenSkyCredentials,
 } from '../../services/apiKeyTester';
 
 interface GlobalApiKeysUpdateData {
   globalAirlabsApiKey?: string | null;
   globalAviationstackApiKey?: string | null;
+  globalAerodataboxApiKey?: string | null;
   globalOpenskyClientId?: string | null;
   globalOpenskyClientSecret?: string | null;
   globalOpenskyUsername?: string | null;
@@ -23,6 +25,7 @@ interface GlobalApiKeysUpdateData {
 const globalApiKeysSchema = z.object({
   globalAirlabsApiKey: z.string().optional().nullable(),
   globalAviationstackApiKey: z.string().optional().nullable(),
+  globalAerodataboxApiKey: z.string().optional().nullable(),
   globalOpenskyClientId: z.string().optional().nullable(),
   globalOpenskyClientSecret: z.string().optional().nullable(),
   globalOpenskyUsername: z.string().optional().nullable(),
@@ -31,7 +34,7 @@ const globalApiKeysSchema = z.object({
 }).partial();
 
 const testApiKeySchema = z.object({
-  apiKey: z.string().min(1, 'API key is required'),
+  apiKey: z.string().optional(),
 });
 
 const testOpenSkySchema = z.object({
@@ -39,10 +42,27 @@ const testOpenSkySchema = z.object({
   clientSecret: z.string().optional(),
   username: z.string().optional(),
   password: z.string().optional(),
-}).refine(
-  (data) => (!!data.clientId && !!data.clientSecret) || (!!data.username && !!data.password),
-  { message: 'Provide either clientId+clientSecret or username+password' }
-);
+});
+
+/**
+ * Frontend ships the masked GET-response value (e.g. "ac97****2a86") back
+ * into the Test request when the admin hasn't typed anything new. Treat
+ * empty + masked as "test the persisted key".
+ */
+const looksMasked = (s: string | undefined | null): boolean =>
+  !s || s.includes('****');
+
+async function resolveAdminGlobalKey(
+  column:
+    | 'globalAirlabsApiKey'
+    | 'globalAviationstackApiKey'
+    | 'globalAerodataboxApiKey'
+    | 'globalOpenskyClientId'
+    | 'globalOpenskyClientSecret',
+): Promise<string | null> {
+  const settings = await prisma.adminSettings.findFirst();
+  return decryptApiKey((settings?.[column] as string | null) ?? null);
+}
 
 const router = Router();
 
@@ -63,6 +83,7 @@ router.get('/api-keys', async (req: AuthRequest, res: Response, next: NextFuncti
       return res.json({
         globalAirlabsApiKey: undefined,
         globalAviationstackApiKey: undefined,
+        globalAerodataboxApiKey: undefined,
         globalOpenskyClientId: undefined,
         globalOpenskyClientSecret: undefined,
         globalOpenskyUsername: undefined,
@@ -74,6 +95,7 @@ router.get('/api-keys', async (req: AuthRequest, res: Response, next: NextFuncti
     res.json({
       globalAirlabsApiKey: maskKey(adminSettings.globalAirlabsApiKey),
       globalAviationstackApiKey: maskKey(adminSettings.globalAviationstackApiKey),
+      globalAerodataboxApiKey: maskKey(adminSettings.globalAerodataboxApiKey),
       globalOpenskyClientId: maskKey(adminSettings.globalOpenskyClientId),
       globalOpenskyClientSecret: maskKey(adminSettings.globalOpenskyClientSecret),
       globalOpenskyUsername: maskKey(adminSettings.globalOpenskyUsername),
@@ -106,6 +128,9 @@ router.put('/api-keys', async (req: AuthRequest, res: Response, next: NextFuncti
     }
     if (payload.globalAviationstackApiKey !== undefined) {
       updateData.globalAviationstackApiKey = encryptApiKey(payload.globalAviationstackApiKey);
+    }
+    if (payload.globalAerodataboxApiKey !== undefined) {
+      updateData.globalAerodataboxApiKey = encryptApiKey(payload.globalAerodataboxApiKey);
     }
     if (payload.globalOpenskyClientId !== undefined) {
       updateData.globalOpenskyClientId = encryptApiKey(payload.globalOpenskyClientId);
@@ -145,6 +170,7 @@ router.put('/api-keys', async (req: AuthRequest, res: Response, next: NextFuncti
       settings: {
         globalAirlabsApiKey: maskKey(adminSettings.globalAirlabsApiKey),
         globalAviationstackApiKey: maskKey(adminSettings.globalAviationstackApiKey),
+        globalAerodataboxApiKey: maskKey(adminSettings.globalAerodataboxApiKey),
         globalOpenskyClientId: maskKey(adminSettings.globalOpenskyClientId),
         globalOpenskyClientSecret: maskKey(adminSettings.globalOpenskyClientSecret),
         globalOpenskyUsername: maskKey(adminSettings.globalOpenskyUsername),
@@ -161,7 +187,13 @@ router.put('/api-keys', async (req: AuthRequest, res: Response, next: NextFuncti
 router.post('/api-keys/test/airlabs', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { apiKey } = testApiKeySchema.parse(req.body);
-    const result = await testAirlabsKey(apiKey);
+    const effective = looksMasked(apiKey)
+      ? (await resolveAdminGlobalKey('globalAirlabsApiKey')) ?? ''
+      : apiKey!;
+    if (!effective) {
+      return res.status(400).json({ success: false, message: 'No AirLabs key configured to test. Save one first.' });
+    }
+    const result = await testAirlabsKey(effective);
     res.json(result);
   } catch (error) {
     next(error);
@@ -171,7 +203,29 @@ router.post('/api-keys/test/airlabs', async (req: AuthRequest, res: Response, ne
 router.post('/api-keys/test/aviationstack', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { apiKey } = testApiKeySchema.parse(req.body);
-    const result = await testAviationstackKey(apiKey);
+    const effective = looksMasked(apiKey)
+      ? (await resolveAdminGlobalKey('globalAviationstackApiKey')) ?? ''
+      : apiKey!;
+    if (!effective) {
+      return res.status(400).json({ success: false, message: 'No Aviationstack key configured to test. Save one first.' });
+    }
+    const result = await testAviationstackKey(effective);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/api-keys/test/aerodatabox', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { apiKey } = testApiKeySchema.parse(req.body);
+    const effective = looksMasked(apiKey)
+      ? (await resolveAdminGlobalKey('globalAerodataboxApiKey')) ?? ''
+      : apiKey!;
+    if (!effective) {
+      return res.status(400).json({ success: false, message: 'No AeroDataBox key configured to test. Save one first.' });
+    }
+    const result = await testAerodataboxKey(effective);
     res.json(result);
   } catch (error) {
     next(error);
@@ -180,7 +234,14 @@ router.post('/api-keys/test/aviationstack', async (req: AuthRequest, res: Respon
 
 router.post('/api-keys/test/opensky', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { clientId, clientSecret, username, password } = testOpenSkySchema.parse(req.body);
+    let { clientId, clientSecret, username, password } = testOpenSkySchema.parse(req.body);
+    if (looksMasked(clientId) || looksMasked(clientSecret)) {
+      clientId = (await resolveAdminGlobalKey('globalOpenskyClientId')) ?? undefined;
+      clientSecret = (await resolveAdminGlobalKey('globalOpenskyClientSecret')) ?? undefined;
+    }
+    if (!(clientId && clientSecret) && !(username && password)) {
+      return res.status(400).json({ success: false, message: 'No OpenSky credentials configured to test. Save them first.' });
+    }
     const result = await testOpenSkyCredentials({ clientId, clientSecret, username, password });
     res.json(result);
   } catch (error) {

@@ -23,11 +23,12 @@
     "@turf/turf": "^6.5.0",
     "@zxing/browser": "^0.1.5",
     "@zxing/library": "^0.21.0",
-    "axios": "^1.13.5",
+    "axios": "^1.15.2",
     "d3-geo": "^3.1.1",
     "date-fns": "^3.0.6",
     "date-fns-tz": "^3.2.0",
     "deck.gl": "^9.2.11",
+    "exceljs": "^4.4.0",
     "framer-motion": "^12.34.3",
     "i18next": "^23.7.16",
     "jspdf": "^4.1.0",
@@ -80,6 +81,7 @@
   "license": "AGPL-3.0-only",
   "overrides": {
     "preact": ">=10.27.3",
-    "lodash-es": ">=4.17.23"
+    "lodash-es": ">=4.17.23",
+    "uuid": ">=14.0.0"
   }
 }

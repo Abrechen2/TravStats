@@ -8,6 +8,35 @@ import type {
   UserSettings,
 } from "./types";
 
+/**
+ * Per-provider quota indicator. Backend returns one of three kinds depending
+ * on what the upstream provider exposes:
+ *   - `observed` — live numbers from response headers (AeroDataBox today)
+ *   - `not_reported` — provider doesn't expose quota; we may know a static
+ *     monthly cap (e.g. AirLabs free 1000) but not the current count
+ *   - `rate_limit_only` — IP-based per-second throttling, no monthly quota
+ *     (OpenSky)
+ */
+export type ProviderQuota =
+  | {
+      kind: "observed";
+      /** Primary tier quota (AeroDataBox BASIC: 600/month).
+       *  Always prefer this over `requestsLimit` for user-facing budgeting. */
+      limit: number | null;
+      remaining: number | null;
+      /** Secondary HTTP-request counter (RapidAPI BASIC: ~2400/month).
+       *  Shown as supplementary detail only — not the plan budget. */
+      requestsLimit?: number | null;
+      requestsRemaining?: number | null;
+      observedAt: string;
+    }
+  | { kind: "not_reported"; knownLimitHint?: number }
+  | { kind: "rate_limit_only" };
+
+export type ApiProvider = "aerodatabox" | "airlabs" | "aviationstack" | "opensky";
+
+export type ApiKeyQuotasResponse = Record<ApiProvider, ProviderQuota>;
+
 export interface HomeAirportEntry {
   iata: string;
   fromDate: string; // YYYY-MM-DD
@@ -122,18 +151,25 @@ export const settingsApi = {
   getApiKeys: async (): Promise<{
     airlabs: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     aviationstack: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+    aerodatabox: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     opensky: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
   }> => {
     const { data } = await api.get<{
       airlabs: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
       aviationstack: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+      aerodatabox: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
       opensky: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     }>("/settings/api-keys");
+    return data;
+  },
+  getApiKeyQuotas: async (): Promise<ApiKeyQuotasResponse> => {
+    const { data } = await api.get<ApiKeyQuotasResponse>("/settings/api-keys/quota");
     return data;
   },
   updateApiKeys: async (payload: {
     airlabsApiKey?: string | null;
     aviationstackApiKey?: string | null;
+    aerodataboxApiKey?: string | null;
     openskyClientId?: string | null;
     openskyClientSecret?: string | null;
     openskyUsername?: string | null;
@@ -143,7 +179,7 @@ export const settingsApi = {
     return data;
   },
   testApiKey: async (
-    provider: "airlabs" | "aviationstack" | "opensky",
+    provider: "airlabs" | "aviationstack" | "aerodatabox" | "opensky",
     apiKey?: string,
     openskyCredentials?: {
       clientId?: string;

@@ -2,17 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── Design Tokens ──────────────────────────────────────────
-   MUST stay in sync with D:\TravStats_Projekt\TravStatsWeb\src\styles\tokens.css.
-   Brand decisions live in TravStatsWeb\brand\BRAND.md — change them
-   there first.
+/* ─── Design Tokens ──────────────────────────────────────── */
 
-   TravStats is dark-only (BRAND.md §1.1). Tokens here are the dark
-   values directly under :root — there is no light variant and no
-   `prefers-color-scheme` fallback. `<html class="dark">` is hardcoded
-   in index.html so Tailwind's `dark:` utilities still match. */
-
+/* TravStats is dark-only — see TravStatsWeb/brand/BRAND.md §1.1.
+   Dark values live directly under :root; there is no light variant.
+   The legacy `html.dark` class is preserved as a no-op so any third-
+   party CSS scoped to it still applies, but it is not required. */
 :root {
+  color-scheme: dark;
+
   /* Surfaces */
   --bg-base: #0d1117;
   --bg-surface: #161b22;
@@ -26,62 +24,50 @@
   --accent: #f0a947;
   --accent-dim: #c8842a;
   --accent-glow: rgba(240, 169, 71, 0.18);
-  --accent-soft: rgba(240, 169, 71, 0.10);
+  --accent-soft: rgba(240, 169, 71, 0.1);
 
-  /* Per-domain accents (BRAND.md §3) */
+  /* Per-domain accents (BRAND.md §3) — keep in sync with TravStatsWeb tokens.css */
   --domain-flight: #f0a947;
-  --domain-flight-soft: rgba(240, 169, 71, 0.10);
+  --domain-flight-soft: rgba(240, 169, 71, 0.1);
   --domain-flight-locked: rgba(240, 169, 71, 0.18);
 
   --domain-cruise: #6fa0d6;
-  --domain-cruise-soft: rgba(111, 160, 214, 0.10);
+  --domain-cruise-soft: rgba(111, 160, 214, 0.1);
   --domain-cruise-locked: rgba(111, 160, 214, 0.18);
 
   --domain-hotel: #b072d6;
-  --domain-hotel-soft: rgba(176, 114, 214, 0.10);
+  --domain-hotel-soft: rgba(176, 114, 214, 0.1);
   --domain-hotel-locked: rgba(176, 114, 214, 0.18);
 
   --domain-poi: #5ec2b2;
-  --domain-poi-soft: rgba(94, 194, 178, 0.10);
+  --domain-poi-soft: rgba(94, 194, 178, 0.1);
   --domain-poi-locked: rgba(94, 194, 178, 0.18);
 
   --domain-train: #8faa5f;
-  --domain-train-soft: rgba(143, 170, 95, 0.10);
+  --domain-train-soft: rgba(143, 170, 95, 0.1);
   --domain-train-locked: rgba(143, 170, 95, 0.18);
 
   --domain-hike: #78966a;
-  --domain-hike-soft: rgba(120, 150, 106, 0.10);
+  --domain-hike-soft: rgba(120, 150, 106, 0.1);
   --domain-hike-locked: rgba(120, 150, 106, 0.18);
 
   --domain-bike: #9fbe63;
-  --domain-bike-soft: rgba(159, 190, 99, 0.10);
+  --domain-bike-soft: rgba(159, 190, 99, 0.1);
   --domain-bike-locked: rgba(159, 190, 99, 0.18);
 
   --domain-road: #a89984;
-  --domain-road-soft: rgba(168, 153, 132, 0.10);
+  --domain-road-soft: rgba(168, 153, 132, 0.1);
   --domain-road-locked: rgba(168, 153, 132, 0.18);
 
   --domain-ferry: #4aa6b0;
-  --domain-ferry-soft: rgba(74, 166, 176, 0.10);
+  --domain-ferry-soft: rgba(74, 166, 176, 0.1);
   --domain-ferry-locked: rgba(74, 166, 176, 0.18);
 
-  /* State colours — separate from brand decoration */
-  --danger-stamp: #e65a4f;    /* "stamped" alert / milestone */
-  --danger: #f85149;          /* generic destructive */
+  /* State colours */
+  --danger-stamp: #e65a4f;
+  --danger: #f85149;
   --success: #3fb950;
   --warning: #d29922;
-
-  /* Warm neutral pair (passport / boarding-pass paper) */
-  --paper: #f4ece0;
-  --paper-dim: rgba(244, 236, 224, 0.55);
-  --paper-faint: rgba(244, 236, 224, 0.25);
-  --ink-warm: #0b0d10;
-  --ink-warm-alt: #12161b;
-
-  /* Typography */
-  --font-display: "Syne", system-ui, sans-serif;
-  --font-sans: "Inter", system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", "JetBrains Mono", monospace;
 }
 
 @layer base {

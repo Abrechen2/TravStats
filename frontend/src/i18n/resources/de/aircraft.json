@@ -1,0 +1,18 @@
+{
+  "backToStats": "Zurück zur Statistik",
+  "notFound": "Keine Flüge mit dieser Kennung gefunden.",
+  "unknownType": "Unbekannter Flugzeugtyp",
+  "stats": {
+    "flights": "Flüge",
+    "distance": "Distanz",
+    "airports": "Flughäfen",
+    "firstSeen": "Erster Flug"
+  },
+  "flights": {
+    "title": "Flüge mit dieser Kennung",
+    "date": "Datum",
+    "flightNumber": "Flugnummer",
+    "route": "Strecke",
+    "distance": "Distanz"
+  }
+}

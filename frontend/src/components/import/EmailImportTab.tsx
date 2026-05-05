@@ -118,7 +118,7 @@ export default function EmailImportTab({
       {hasLlm === false && (
         <div className="text-sm text-amber-300 bg-amber-900/20 border border-amber-700 rounded-lg px-4 py-3">
           <p className="font-medium mb-1">{t("import:email.regexWarning.title")}</p>
-          <p>{t("import:email.regexWarning.body")}</p>
+          <p className="whitespace-pre-line">{t("import:email.regexWarning.body")}</p>
         </div>
       )}
 

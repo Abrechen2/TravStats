@@ -7,6 +7,7 @@ import { filterEmailText } from "../lib/filterEmailText";
 import { getAirlineFromFlightNumber } from "../lib/airlineUtils";
 import AirportAutocomplete from "./AirportAutocomplete";
 import { useSuggestions } from "../hooks/useSuggestions";
+import CurrencyInput from "./CurrencyInput";
 
 function getFieldBorderClass(
   fieldName: string,
@@ -18,6 +19,34 @@ function getFieldBorderClass(
   if (source === "llm") return "border-l-4 border-yellow-400";
   if (source === "empty") return "border-l-4 border-red-500";
   return "";
+}
+
+function isInferred(
+  fieldName: string,
+  inferredFields?: string[],
+  aliases: readonly string[] = []
+): boolean {
+  if (!inferredFields || inferredFields.length === 0) return false;
+  if (inferredFields.includes(fieldName)) return true;
+  return aliases.some((alias) => inferredFields.includes(alias));
+}
+
+interface InferredBadgeProps {
+  show: boolean;
+  hint: string;
+}
+
+function InferredBadge({ show, hint }: InferredBadgeProps): JSX.Element | null {
+  if (!show) return null;
+  return (
+    <span
+      className="ml-1 inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold rounded-full bg-yellow-400 text-yellow-900 cursor-help"
+      title={hint}
+      aria-label={hint}
+    >
+      !
+    </span>
+  );
 }
 
 function getConfidenceColor(confidence: number): string {
@@ -72,7 +101,7 @@ export default function FlightReviewModal({
   const [boardingGroup, setBoardingGroup] = useState("");
   const [ticketNumber, setTicketNumber] = useState("");
   const [price, setPrice] = useState<number | undefined>(undefined);
-  const [currency, setCurrency] = useState<"EUR" | "USD" | "GBP" | "CHF">("EUR");
+  const [currency, setCurrency] = useState<string>("EUR");
   const [taxes, setTaxes] = useState<number | undefined>(undefined);
   const [fees, setFees] = useState<number | undefined>(undefined);
 
@@ -133,7 +162,7 @@ export default function FlightReviewModal({
         setFees(undefined);
       }
       if (initialData.currency) {
-        setCurrency(initialData.currency.toUpperCase() as "EUR" | "USD" | "GBP" | "CHF");
+        setCurrency(initialData.currency.toUpperCase());
       }
 
       // Map seat class
@@ -395,6 +424,10 @@ export default function FlightReviewModal({
             <div>
               <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                 {t("flights:form.flightNumber")} *
+                <InferredBadge
+                  show={isInferred("flightNumber", initialData.inferredFields)}
+                  hint={t("flights:review.inferredHint")}
+                />
               </label>
               <input
                 type="text"
@@ -409,6 +442,10 @@ export default function FlightReviewModal({
             <div>
               <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                 {t("flights:form.airline")}
+                <InferredBadge
+                  show={isInferred("airline", initialData.inferredFields)}
+                  hint={t("flights:review.inferredHint")}
+                />
               </label>
               <input
                 type="text"
@@ -460,6 +497,10 @@ export default function FlightReviewModal({
             <div>
               <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                 {t("flights:form.departureTime")} *
+                <InferredBadge
+                  show={isInferred("departureTime", initialData.inferredFields)}
+                  hint={t("flights:review.inferredDateHint")}
+                />
               </label>
               <input
                 type="datetime-local"
@@ -473,6 +514,10 @@ export default function FlightReviewModal({
             <div>
               <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                 {t("flights:form.arrivalTime")} *
+                <InferredBadge
+                  show={isInferred("arrivalTime", initialData.inferredFields)}
+                  hint={t("flights:review.inferredDateHint")}
+                />
               </label>
               <input
                 type="datetime-local"
@@ -489,6 +534,10 @@ export default function FlightReviewModal({
             <div>
               <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                 {t("flights:form.aircraft")}
+                <InferredBadge
+                  show={isInferred("aircraft", initialData.inferredFields)}
+                  hint={t("flights:review.inferredHint")}
+                />
               </label>
               <input
                 type="text"
@@ -508,6 +557,10 @@ export default function FlightReviewModal({
             <div>
               <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                 {t("flights:form.seatClass")}
+                <InferredBadge
+                  show={isInferred("seatClass", initialData.inferredFields)}
+                  hint={t("flights:review.inferredHint")}
+                />
               </label>
               <select
                 value={seatClass}
@@ -573,6 +626,10 @@ export default function FlightReviewModal({
             <div>
               <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                 {t("flights:form.bookingReference")}
+                <InferredBadge
+                  show={isInferred("bookingReference", initialData.inferredFields, ["pnr"])}
+                  hint={t("flights:review.inferredHint")}
+                />
               </label>
               <input
                 type="text"
@@ -641,16 +698,11 @@ export default function FlightReviewModal({
                   <label className="block text-sm font-medium text-[var(--text-primary)] mb-2">
                     {t("flights:form.currency")}
                   </label>
-                  <select
+                  <CurrencyInput
                     value={currency}
-                    onChange={(e) => setCurrency(e.target.value as "EUR" | "USD" | "GBP" | "CHF")}
+                    onChange={setCurrency}
                     className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg bg-[var(--bg-surface)] text-[var(--text-primary)] focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="EUR">{t("flights:currency.EUR")}</option>
-                    <option value="USD">{t("flights:currency.USD")}</option>
-                    <option value="GBP">{t("flights:currency.GBP")}</option>
-                    <option value="CHF">{t("flights:currency.CHF")}</option>
-                  </select>
+                  />
                 </div>
 
                 <div>

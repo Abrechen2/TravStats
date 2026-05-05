@@ -10,7 +10,9 @@ import { tripsApi } from "../lib/api";
 import { calculateDistance } from "../lib/geo";
 import { RouteDetailsSidebar } from "./FlightPanel/RouteDetailsSidebar";
 import { TripDetailsSidebar } from "./FlightPanel/TripDetailsSidebar";
+import TripModal from "./Trips/TripModal";
 import { useFlightSelectionStore } from "../store/flightSelectionStore";
+import { useToastStore } from "../store/toastStore";
 
 type PanelTab = "flights" | "trips";
 type SortMode = "date-desc" | "date-asc" | "route" | "airline" | "status";
@@ -40,7 +42,7 @@ export function FlightPanel({
   onTripSelect,
   allFlights = [],
 }: FlightPanelProps): JSX.Element {
-  const { t } = useTranslation(["dashboard", "common"]);
+  const { t } = useTranslation(["dashboard", "common", "trips"]);
   const locale = useLocale();
   const [tab, setTab] = useState<PanelTab>("flights");
   const [sortMode, setSortMode] = useState<SortMode>("date-desc");
@@ -88,16 +90,73 @@ export function FlightPanel({
   const detailMode = useFlightSelectionStore((s) => s.detailMode);
   const detailFlights = useFlightSelectionStore((s) => s.selectedFlights);
   const clearSelection = useFlightSelectionStore((s) => s.clearSelection);
+  const showDetails = useFlightSelectionStore((s) => s.showDetails);
+  const addToast = useToastStore((s) => s.addToast);
 
   const [trips, setTrips] = useState<Trip[]>([]);
+  const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
+  const [deleteTripTarget, setDeleteTripTarget] = useState<Trip | null>(null);
 
-  useEffect(() => {
-    if (!isOpen) return;
+  const reloadTrips = (): void => {
     tripsApi
       .getAll()
       .then(setTrips)
       .catch(() => {});
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    reloadTrips();
   }, [isOpen]);
+
+  const detailTrip: Trip | null =
+    detailMode === "trip-details" && detailFlights[0]?.trip
+      ? (detailFlights[0].trip as Trip)
+      : null;
+
+  const handleEditDetailTrip = (): void => {
+    if (detailTrip) setEditingTrip(detailTrip);
+  };
+  const handleDeleteDetailTrip = (): void => {
+    if (detailTrip) setDeleteTripTarget(detailTrip);
+  };
+  const handleConfirmDeleteTrip = async (): Promise<void> => {
+    if (!deleteTripTarget) return;
+    try {
+      await tripsApi.delete(deleteTripTarget.id);
+      addToast("success", t("trips:toasts.deleted"));
+      setDeleteTripTarget(null);
+      clearSelection();
+      reloadTrips();
+    } catch {
+      addToast("error", t("trips:toasts.deleteError"));
+      setDeleteTripTarget(null);
+    }
+  };
+
+  const handleRemoveFlightFromTrip = async (flightId: string): Promise<void> => {
+    if (!detailTrip) return;
+    try {
+      await tripsApi.assignFlights(detailTrip.id, { flightIds: [flightId], action: "remove" });
+      addToast("success", t("trips:toasts.flightRemoved"));
+      reloadTrips();
+      // Drop the unlinked flight from the current sidebar selection so the
+      // user immediately sees the leg disappear without a full refresh.
+      // Selection is the source of truth for what TripDetailsSidebar
+      // renders, so we have to update it explicitly — reloadTrips alone
+      // refreshes only the Trips tab list.
+      const remaining = detailFlights.filter((f) => f.id !== flightId);
+      if (remaining.length === 0) {
+        clearSelection();
+      } else {
+        // showDetails preserves detailMode = 'trip-details' (setSelection
+        // would clear it and dismiss the sidebar).
+        showDetails(remaining, "trip-details");
+      }
+    } catch {
+      addToast("error", t("trips:toasts.flightRemoveError"));
+    }
+  };
 
   // Per-trip stats derived from allFlights
   const tripStats = useMemo(() => {
@@ -240,7 +299,17 @@ export function FlightPanel({
               {detailMode === "route-details" && detailFlights.length > 0 ? (
                 <RouteDetailsSidebar flights={detailFlights} onBack={clearSelection} />
               ) : detailMode === "trip-details" && detailFlights.length > 0 ? (
-                <TripDetailsSidebar flights={detailFlights} onBack={clearSelection} />
+                <TripDetailsSidebar
+                  flights={detailFlights}
+                  onBack={clearSelection}
+                  onEditTrip={detailTrip ? handleEditDetailTrip : undefined}
+                  onDeleteTrip={detailTrip ? handleDeleteDetailTrip : undefined}
+                  onEditFlight={onEdit}
+                  onDuplicateFlight={onDuplicate}
+                  onRemoveFlightFromTrip={
+                    detailTrip ? (id) => void handleRemoveFlightFromTrip(id) : undefined
+                  }
+                />
               ) : tab === "flights" ? (
                 groups.map((group) =>
                   group.type === "single" ? (
@@ -340,6 +409,51 @@ export function FlightPanel({
               </div>
             )}
           </motion.div>
+          {editingTrip !== null && (
+            <TripModal
+              trip={editingTrip}
+              onClose={() => setEditingTrip(null)}
+              onSaved={() => {
+                setEditingTrip(null);
+                reloadTrips();
+              }}
+            />
+          )}
+          {deleteTripTarget !== null && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setDeleteTripTarget(null);
+              }}
+            >
+              <div
+                className="w-full max-w-sm rounded-xl shadow-2xl p-6 space-y-4"
+                role="dialog"
+                aria-modal="true"
+                style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+              >
+                <h2 className="text-base font-semibold" style={{ color: "var(--text-primary)" }}>
+                  {t("trips:deleteTripConfirm", { name: deleteTripTarget.name })}
+                </h2>
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setDeleteTripTarget(null)}
+                    className="px-4 py-2 rounded-lg text-sm"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    {t("trips:modal.cancel")}
+                  </button>
+                  <button
+                    onClick={() => void handleConfirmDeleteTrip()}
+                    className="px-4 py-2 rounded-lg text-sm font-medium"
+                    style={{ background: "var(--color-error, #f87171)", color: "#fff" }}
+                  >
+                    {t("trips:deleteTrip")}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </AnimatePresence>

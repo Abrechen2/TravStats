@@ -3,25 +3,76 @@ import rateLimit from 'express-rate-limit';
 import { RATE_LIMITS } from '../config/constants';
 
 /**
- * Key generator that uses userId (from JWT auth) when available,
- * falling back to IP. This prevents bypass via multiple IPs for
- * the same authenticated user.
+ * Rate-limit bucket key.
+ *
+ *   PAT requests  → "pat:<tokenId>"   — per-token bucket, isolated from
+ *                                      the same user's browser session
+ *                                      (an aggressive AI agent can't
+ *                                      lock the user out of the UI)
+ *   Cookie auth   → "user:<userId>"   — per-user bucket, prevents IP-
+ *                                      hopping bypass for the same
+ *                                      authenticated user
+ *   Anonymous     → "ip:<ip>"         — fallback for unauthenticated
+ *                                      endpoints (auth, password reset)
  */
 const userOrIpKey = (req: Request): string => {
-  const userId = (req as { userId?: string }).userId;
-  return userId ?? req.ip ?? 'unknown';
+  const r = req as { userId?: string; apiToken?: { id: string } };
+  if (r.apiToken) return `pat:${r.apiToken.id}`;
+  if (r.userId) return `user:${r.userId}`;
+  return `ip:${req.ip ?? 'unknown'}`;
 };
 
 /**
- * Rate limiter for public airport search endpoints
- * Allows 100 requests per 15 minutes per IP
+ * PAT requests get a higher quota than browser sessions or anonymous IPs.
+ * Bulk-import / AI-agent flows legitimately need to make many writes
+ * back-to-back; the user already had to mint a write-scoped PAT (one-time
+ * deliberate action) so we trust them more than a generic anon IP.
+ *
+ * Browser-session and anonymous limits stay at the configured `baseMax`.
+ * Multiplier of 10 is conservative — a 200-flight xlsx import via
+ * `/flights/batch` (10 batches of 20) needs 10 batch requests; the
+ * default 50/h is plenty even at 1×, but 500/h leaves headroom for
+ * concurrent agent users on the same PAT pool.
+ */
+const PAT_MULTIPLIER = 10;
+const patAwareMax = (baseMax: number) => (req: Request): number => {
+  const r = req as { apiToken?: { id: string } };
+  return r.apiToken ? baseMax * PAT_MULTIPLIER : baseMax;
+};
+
+/**
+ * Rate limiter for public airport search endpoints. Two layers stacked:
+ *
+ *   1. Sustained ceiling: 100/15min (anon) — bounds total daily throughput.
+ *   2. Burst ceiling:     30/min  (anon)   — bounds the per-second burst
+ *      a scraper could otherwise use to enumerate the airport table in a
+ *      handful of seconds before the 15-min window kicks in.
+ *
+ * `/airports/search` is intentionally unauthenticated so the autocomplete
+ * works during signup before a user has credentials — the OurAirports
+ * dataset it surfaces is already public, so there is no secrecy boundary
+ * to defend, but limiting the rate keeps the endpoint from becoming a
+ * cheap DB-pressure or scraping pivot.
+ *
+ * PAT-authenticated callers (autocomplete in agent flows) get the
+ * standard PAT_MULTIPLIER on both buckets.
  */
 export const airportSearchLimiter = rateLimit({
   windowMs: RATE_LIMITS.AIRPORT_SEARCH_WINDOW_MS,
-  max: RATE_LIMITS.AIRPORT_SEARCH_MAX,
+  max: patAwareMax(RATE_LIMITS.AIRPORT_SEARCH_MAX),
   message: 'Too many airport search requests, please try again later',
   standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
   legacyHeaders: false, // Disable `X-RateLimit-*` headers
+  keyGenerator: userOrIpKey,
+});
+
+export const airportSearchBurstLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: patAwareMax(30),
+  message: 'Too many airport search requests in a short burst — slow down',
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
 });
 
 /**
@@ -30,12 +81,13 @@ export const airportSearchLimiter = rateLimit({
  */
 export const flightCreationLimiter = rateLimit({
   windowMs: RATE_LIMITS.FLIGHT_CREATION_WINDOW_MS,
-  max: RATE_LIMITS.FLIGHT_CREATION_MAX,
+  max: patAwareMax(RATE_LIMITS.FLIGHT_CREATION_MAX),
   message: 'Too many flights created, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
   // Skip rate limiting for successful requests (only count failed/repeated attempts)
   skipSuccessfulRequests: false,
+  keyGenerator: userOrIpKey,
 });
 
 /**
@@ -48,6 +100,7 @@ export const generalLimiter = rateLimit({
   message: 'Too many requests, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: userOrIpKey,
 });
 
 /**
@@ -156,6 +209,21 @@ export const adminExportLimiter = rateLimit({
 });
 
 /**
+ * Rate limiter for admin airport reseed endpoint. Reseeding upserts ~18k
+ * rows from OurAirports — without a cap a malicious admin PAT could DoS
+ * Postgres by spamming reseeds across process restarts. 3/h is generous
+ * for legitimate operational use (initial seed, after fixing a bad CSV).
+ */
+export const adminReseedLimiter = rateLimit({
+  windowMs: RATE_LIMITS.ADMIN_RESEED_WINDOW_MS,
+  max: RATE_LIMITS.ADMIN_RESEED_MAX,
+  message: 'Too many reseed requests, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+});
+
+/**
  * Rate limiter for PDF parse endpoint
  * Allows 20 requests per 15 minutes per user
  */
@@ -174,7 +242,7 @@ export const pdfParseLimiter = rateLimit({
  */
 export const batchCreationLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 50, // 50 batch requests per hour
+  max: patAwareMax(50), // 50/h cookie, 500/h with PAT (bulk imports)
   message: 'Too many batch requests, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
