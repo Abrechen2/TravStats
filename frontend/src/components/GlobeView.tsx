@@ -95,7 +95,7 @@ const getHeatmapColor = (
 ): string => {
   if (count > thresholds.q75) return "#ef4444"; // red — hotspot
   if (count > thresholds.q50) return "#f97316"; // orange-500
-  if (count > thresholds.q25) return "#e8a045"; // brand amber
+  if (count > thresholds.q25) return "#f0a947"; // brand amber
   return "#64748b"; // slate-500 — muted
 };
 
@@ -652,7 +652,7 @@ export default function GlobeView({
     () => [
       { color: "#64748b", label: `1–${Math.max(heatmapThresholds.q25, 1)}x` },
       {
-        color: "#e8a045",
+        color: "#f0a947",
         label: `${heatmapThresholds.q25 + 1}–${heatmapThresholds.q50}x`,
       },
       {

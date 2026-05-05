@@ -12,7 +12,7 @@ export function createContourLayer(flights: GeoJSONFeature[]): ContourLayer<Heat
     cellSize: 80000, // 80 km per grid cell
     contours: [
       { threshold: 1, color: [100, 116, 139, 120], strokeWidth: 1 }, // slate — rare
-      { threshold: 4, color: [232, 160, 69, 170], strokeWidth: 2 }, // amber — regular
+      { threshold: 4, color: [240, 169, 71, 170], strokeWidth: 2 }, // amber — regular
       { threshold: 10, color: [249, 115, 22, 210], strokeWidth: 3 }, // orange — frequent
       { threshold: 20, color: [239, 68, 68, 240], strokeWidth: 4 }, // red — hotspot
     ],

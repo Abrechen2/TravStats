@@ -27,7 +27,7 @@ export type HeatmapTier = "low" | "medium" | "high" | "critical";
 
 export const HEATMAP_COLORS: Record<HeatmapTier, [number, number, number]> = {
   low: [100, 116, 139], // slate-500
-  medium: [232, 160, 69], // amber-400
+  medium: [240, 169, 71], // amber (brand --accent)
   high: [249, 115, 22], // orange-500
   critical: [239, 68, 68], // red-500
 };

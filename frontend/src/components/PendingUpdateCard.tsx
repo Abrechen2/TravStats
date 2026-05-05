@@ -163,7 +163,7 @@ export default function PendingUpdateCard({
                     background:
                       update.metadata.enrichmentMode === "full"
                         ? "rgba(34,197,94,0.15)"
-                        : "rgba(232,160,69,0.15)",
+                        : "rgba(240,169,71,0.15)",
                     color:
                       update.metadata.enrichmentMode === "full"
                         ? "rgb(22,163,74)"

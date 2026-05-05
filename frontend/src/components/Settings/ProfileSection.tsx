@@ -154,7 +154,7 @@ export default function ProfileSection({
           onClick={onSaveProfile}
           disabled={savingProfile}
           className="btn-primary"
-          style={{ boxShadow: "0 0 16px rgba(232,160,69,0.25)" }}
+          style={{ boxShadow: "0 0 16px rgba(240,169,71,0.25)" }}
         >
           {savingProfile
             ? t("common:buttons.saving") || "Speichern..."
