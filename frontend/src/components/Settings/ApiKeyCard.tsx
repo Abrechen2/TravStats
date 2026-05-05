@@ -185,8 +185,8 @@ export default function ApiKeyCard({
                   </div>
                   {quota.requestsLimit != null && quota.requestsRemaining != null && (
                     <div className="opacity-70">
-                      {t("settings:apiKeys.quota.requestsLabel")}:{" "}
-                      {quota.requestsRemaining} / {quota.requestsLimit}
+                      {t("settings:apiKeys.quota.requestsLabel")}: {quota.requestsRemaining} /{" "}
+                      {quota.requestsLimit}
                     </div>
                   )}
                 </>

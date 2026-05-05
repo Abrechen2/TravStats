@@ -183,9 +183,7 @@ const DATETIME_FORMAT = "yyyy-mm-dd hh:mm:ss";
  * of exportFlightsToXlsx so tests can inspect the workbook directly without
  * paying the Blob ↔ ArrayBuffer trip that jsdom doesn't fully support.
  */
-export async function buildFlightsWorkbook(
-  flights: Flight[],
-): Promise<import("exceljs").Workbook> {
+export async function buildFlightsWorkbook(flights: Flight[]): Promise<import("exceljs").Workbook> {
   const ExcelJS = (await import("exceljs")).default;
   const wb = new ExcelJS.Workbook();
   wb.creator = "TravStats";
@@ -393,20 +391,12 @@ export function jsonToFlightRow(item: unknown): FlightRow {
     arrivalTime: pick("Arrival Time (UTC)", "Arrival Time", "arrivalTime", "arrival_time"),
     depTimeSemantics: pick("Dep Time Semantics", "depTimeSemantics", "dep_time_semantics"),
     arrTimeSemantics: pick("Arr Time Semantics", "arrTimeSemantics", "arr_time_semantics"),
-    actualDeparture: pick(
-      "Actual Departure (UTC)",
-      "actualDeparture",
-      "actual_departure"
-    ),
+    actualDeparture: pick("Actual Departure (UTC)", "actualDeparture", "actual_departure"),
     actualArrival: pick("Actual Arrival (UTC)", "actualArrival", "actual_arrival"),
     delayMinutes: pick("Delay (min)", "delayMinutes", "delay_minutes"),
     status: pick("Status", "status"),
     aircraft: pick("Aircraft", "aircraft"),
-    aircraftRegistration: pick(
-      "Registration",
-      "aircraftRegistration",
-      "aircraft_registration"
-    ),
+    aircraftRegistration: pick("Registration", "aircraftRegistration", "aircraft_registration"),
     aircraftModeS: pick("Mode-S", "aircraftModeS", "aircraft_mode_s"),
     seatNumber: pick("Seat", "seatNumber", "seat_number"),
     seatClass: pick("Class", "seatClass", "seat_class"),
@@ -416,16 +406,8 @@ export function jsonToFlightRow(item: unknown): FlightRow {
     bookingReference: pick("PNR", "bookingReference", "booking_reference"),
     ticketNumber: pick("Ticket Number", "ticketNumber", "ticket_number"),
     baggageAllowance: pick("Baggage", "baggageAllowance", "baggage_allowance"),
-    frequentFlyerNumber: pick(
-      "Frequent Flyer",
-      "frequentFlyerNumber",
-      "frequent_flyer_number"
-    ),
-    bookingClassLetter: pick(
-      "Booking Class",
-      "bookingClassLetter",
-      "booking_class_letter"
-    ),
+    frequentFlyerNumber: pick("Frequent Flyer", "frequentFlyerNumber", "frequent_flyer_number"),
+    bookingClassLetter: pick("Booking Class", "bookingClassLetter", "booking_class_letter"),
     category: pick("Category", "category"),
     tags: pick("Tags", "tags"),
     companions: pick("Companions", "companions"),

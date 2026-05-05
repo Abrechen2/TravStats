@@ -231,7 +231,8 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
                     />
                     <div>
                       <p className="font-medium text-[var(--text-primary)]">
-                        {resolveAirlineDisplay(flight.airline, flight.flightNumber) || flight.airline}{" "}
+                        {resolveAirlineDisplay(flight.airline, flight.flightNumber) ||
+                          flight.airline}{" "}
                         {flight.flightNumber}
                       </p>
                       <p className="text-sm text-[var(--text-muted)]">

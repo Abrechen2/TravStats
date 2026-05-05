@@ -42,7 +42,12 @@ function deriveIata(flightNumber?: string | null): string | undefined {
   return candidate.length === 2 ? candidate : undefined;
 }
 
-function buildUrl(params: { iata?: string; icao?: string; size: number; bg?: string }): string | null {
+function buildUrl(params: {
+  iata?: string;
+  icao?: string;
+  size: number;
+  bg?: string;
+}): string | null {
   const { iata, icao, size, bg } = params;
   if (!iata && !icao) return null;
   const search = new URLSearchParams();
@@ -66,14 +71,14 @@ export default function AirlineLogo({
   const [errored, setErrored] = useState(false);
 
   const resolvedIata = useMemo(
-    () => (iata?.toUpperCase() || deriveIata(flightNumber)),
-    [iata, flightNumber],
+    () => iata?.toUpperCase() || deriveIata(flightNumber),
+    [iata, flightNumber]
   );
   const resolvedIcao = useMemo(() => icao?.toUpperCase() || undefined, [icao]);
 
   const url = useMemo(
     () => buildUrl({ iata: resolvedIata, icao: resolvedIcao, size, bg }),
-    [resolvedIata, resolvedIcao, size, bg],
+    [resolvedIata, resolvedIcao, size, bg]
   );
 
   const fallbackLabel = resolvedIata || resolvedIcao || "?";

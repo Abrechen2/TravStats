@@ -346,7 +346,7 @@ export interface GeoJSONFeature {
     tags?: string[];
     price?: number;
     /** ISO 4217 alpha-3 code (EUR, USD, GBP, CHF, INR, JPY, …). */
-  currency?: string;
+    currency?: string;
     taxes?: number;
     fees?: number;
     distance: number;
