@@ -77,6 +77,24 @@ export default defineConfig({
     // Ensure proper module format
     modulePreload: {
       polyfill: false,
+      // Drop heavy vendor chunks from the entry's <link rel="modulepreload">
+      // list. With manualChunks splitting, Vite eagerly preloads any vendor
+      // chunk reachable through the entry's static graph — even when only
+      // lazy routes actually consume them. /login then pays for vendor-deck
+      // it never uses. They still load on demand from the lazy route.
+      resolveDependencies(_filename, deps, { hostType }) {
+        if (hostType !== "html") return deps;
+        return deps.filter(
+          (d) =>
+            !d.includes("vendor-deck") &&
+            !d.includes("vendor-three") &&
+            !d.includes("vendor-globe") &&
+            !d.includes("vendor-maplibre") &&
+            !d.includes("vendor-jspdf") &&
+            !d.includes("vendor-exceljs") &&
+            !d.includes("vendor-tesseract"),
+        );
+      },
     },
   },
 });
