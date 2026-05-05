@@ -87,7 +87,7 @@ export const statsApi = {
 
   getAircraftProfile: async (registration: string): Promise<AircraftProfileResponse> => {
     const { data } = await api.get<AircraftProfileResponse>(
-      `/stats/aircraft/${encodeURIComponent(registration)}`,
+      `/stats/aircraft/${encodeURIComponent(registration)}`
     );
     return data;
   },

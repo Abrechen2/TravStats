@@ -74,7 +74,6 @@ const fatFlight: Flight = {
   delayMinutes: 12,
 };
 
-
 describe("xlsxRoundTrip", () => {
   it("exports every user-editable field and round-trips without dropping any", async () => {
     const buffer = await flightsToBuffer([fatFlight]);

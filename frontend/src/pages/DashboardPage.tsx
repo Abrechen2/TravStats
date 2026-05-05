@@ -644,10 +644,8 @@ export default function DashboardPage(): JSX.Element {
       depTimezone: row.departureTime ? importTz : undefined,
       arrivalLocal: row.arrivalTime || undefined,
       arrTimezone: row.arrivalTime ? importTz : undefined,
-      depTimeSemantics: (row.depTimeSemantics ||
-        undefined) as FlightInput["depTimeSemantics"],
-      arrTimeSemantics: (row.arrTimeSemantics ||
-        undefined) as FlightInput["arrTimeSemantics"],
+      depTimeSemantics: (row.depTimeSemantics || undefined) as FlightInput["depTimeSemantics"],
+      arrTimeSemantics: (row.arrTimeSemantics || undefined) as FlightInput["arrTimeSemantics"],
       actualDepartureLocal: row.actualDeparture || undefined,
       actualDepartureTz: row.actualDeparture ? importTz : undefined,
       actualArrivalLocal: row.actualArrival || undefined,

@@ -56,8 +56,7 @@ export default function CurrencyInput({
   // If the user typed a 3-letter code that's not in the curated list,
   // surface it as a "use this code" option so freeform entries (KGS, LKR,
   // NGN, …) feel intentional rather than accidental.
-  const isFreeformCode =
-    /^[A-Z]{3}$/.test(upperQuery) && !CURRENCY_OPTIONS.includes(upperQuery);
+  const isFreeformCode = /^[A-Z]{3}$/.test(upperQuery) && !CURRENCY_OPTIONS.includes(upperQuery);
 
   const commit = (code: string): void => {
     const upper = code.toUpperCase();

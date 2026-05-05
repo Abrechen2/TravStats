@@ -116,10 +116,7 @@ function buildArcs(
   return arcs;
 }
 
-function midpointLonLat(
-  a: [number, number],
-  b: [number, number]
-): [number, number] {
+function midpointLonLat(a: [number, number], b: [number, number]): [number, number] {
   // Naïve 2D midpoint — fine for the indicator marker on most routes.
   // Long routes that cross the antimeridian (lon-delta > 180) would put
   // the marker on the opposite side of the globe; offset back into the
@@ -217,11 +214,7 @@ export function createRoutesLayers(
   selectedIds: string[] = [],
   onAirportClick?: (iata: string, lon: number, lat: number) => void
 ): Layer[] {
-  const { arcs, points, upcomingMarkers } = buildRouteData(
-    flights,
-    minRouteCount,
-    themeColors
-  );
+  const { arcs, points, upcomingMarkers } = buildRouteData(flights, minRouteCount, themeColors);
   const dotRgb = themeColors?.airportDot ?? ([232, 160, 69] as [number, number, number]);
 
   const selectedSet = new Set(selectedIds);
@@ -399,12 +392,5 @@ export function createRoutesLayers(
     },
   });
 
-  return [
-    arcLayer,
-    upcomingMarkerLayer,
-    ringInnerLayer,
-    ringOuterLayer,
-    dotLayer,
-    labelLayer,
-  ];
+  return [arcLayer, upcomingMarkerLayer, ringInnerLayer, ringOuterLayer, dotLayer, labelLayer];
 }

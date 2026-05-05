@@ -21,11 +21,7 @@
  */
 import { useEffect, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import {
-  flightsApi,
-  type AerodataboxQuota,
-  type BulkRefreshSummary,
-} from "../../lib/api/flights";
+import { flightsApi, type AerodataboxQuota, type BulkRefreshSummary } from "../../lib/api/flights";
 
 const MAX_PER_BATCH = 25;
 
@@ -42,8 +38,11 @@ export default function BulkRefreshCard(): JSX.Element | null {
 
   const loadPreview = async (): Promise<void> => {
     try {
-      const { remaining: count, hasHistoricalProvider, aerodataboxQuota } =
-        await flightsApi.bulkRefreshPreview();
+      const {
+        remaining: count,
+        hasHistoricalProvider,
+        aerodataboxQuota,
+      } = await flightsApi.bulkRefreshPreview();
       setRemaining(count);
       setHasProvider(hasHistoricalProvider);
       setQuota(aerodataboxQuota);
@@ -54,12 +53,17 @@ export default function BulkRefreshCard(): JSX.Element | null {
         response?: { status?: number; data?: { error?: string; message?: string } };
         message?: string;
       };
-      if (errObj.response?.status === 403 && errObj.response.data?.error === "DEMO_ACCOUNT_FORBIDDEN") {
+      if (
+        errObj.response?.status === 403 &&
+        errObj.response.data?.error === "DEMO_ACCOUNT_FORBIDDEN"
+      ) {
         setDemoBlocked(true);
         setRemaining(null);
         setPreviewError(null);
       } else {
-        setPreviewError(errObj.response?.data?.message || errObj.message || "Vorschau fehlgeschlagen");
+        setPreviewError(
+          errObj.response?.data?.message || errObj.message || "Vorschau fehlgeschlagen"
+        );
       }
     }
   };
@@ -83,10 +87,15 @@ export default function BulkRefreshCard(): JSX.Element | null {
         response?: { status?: number; data?: { error?: string; message?: string } };
         message?: string;
       };
-      if (errObj.response?.status === 403 && errObj.response.data?.error === "DEMO_ACCOUNT_FORBIDDEN") {
+      if (
+        errObj.response?.status === 403 &&
+        errObj.response.data?.error === "DEMO_ACCOUNT_FORBIDDEN"
+      ) {
         setDemoBlocked(true);
       } else {
-        setPreviewError(errObj.response?.data?.message || errObj.message || "Aktualisierung fehlgeschlagen");
+        setPreviewError(
+          errObj.response?.data?.message || errObj.message || "Aktualisierung fehlgeschlagen"
+        );
       }
     } finally {
       setRunning(false);
@@ -138,9 +147,7 @@ export default function BulkRefreshCard(): JSX.Element | null {
       {quota && (quota.remaining !== null || quota.limit !== null) && (
         <div className="text-xs text-[var(--text-muted)]">
           {t("settings:apiKeys.bulkRefresh.quotaLabelADB")}:{" "}
-          <span className="font-semibold text-[var(--text-primary)]">
-            {quota.remaining ?? "?"}
-          </span>
+          <span className="font-semibold text-[var(--text-primary)]">{quota.remaining ?? "?"}</span>
           {quota.limit !== null && (
             <span className="text-[var(--text-muted)]"> / {quota.limit}</span>
           )}{" "}
@@ -159,11 +166,7 @@ export default function BulkRefreshCard(): JSX.Element | null {
           type="button"
           onClick={() => setConfirmOpen(true)}
           disabled={buttonDisabled}
-          title={
-            demoBlocked
-              ? t("settings:apiKeys.bulkRefresh.demoBlocked")
-              : undefined
-          }
+          title={demoBlocked ? t("settings:apiKeys.bulkRefresh.demoBlocked") : undefined}
           className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-[var(--bg-muted)] disabled:cursor-not-allowed rounded-md transition-colors flex items-center gap-2"
         >
           {running

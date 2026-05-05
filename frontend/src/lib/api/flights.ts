@@ -91,9 +91,7 @@ export const flightsApi = {
   },
 
   bulkRefreshRun: async (): Promise<BulkRefreshSummary> => {
-    const { data } = await api.post<BulkRefreshSummary>(
-      "/flights/refresh-historical-bulk"
-    );
+    const { data } = await api.post<BulkRefreshSummary>("/flights/refresh-historical-bulk");
     return data;
   },
 };

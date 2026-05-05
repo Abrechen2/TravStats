@@ -52,9 +52,7 @@ export default function AircraftPage(): JSX.Element {
           >
             ← {t("aircraft:backToStats")}
           </Link>
-          {loading && (
-            <p className="text-sm text-gray-500">{t("common:loading")}</p>
-          )}
+          {loading && <p className="text-sm text-gray-500">{t("common:loading")}</p>}
           {!loading && notFound && (
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
               <h1 className="text-2xl font-bold mb-2">{registration}</h1>
@@ -64,19 +62,13 @@ export default function AircraftPage(): JSX.Element {
           {!loading && profile && (
             <>
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 mb-6">
-                <h1 className="text-3xl font-bold font-mono mb-1">
-                  {profile.registration}
-                </h1>
+                <h1 className="text-3xl font-bold font-mono mb-1">{profile.registration}</h1>
                 <p className="text-gray-600 dark:text-gray-300">
                   {profile.aircraft || t("aircraft:unknownType")}
-                  {profile.airline && (
-                    <span className="text-gray-500"> · {profile.airline}</span>
-                  )}
+                  {profile.airline && <span className="text-gray-500"> · {profile.airline}</span>}
                 </p>
                 {profile.modeS && (
-                  <p className="text-xs text-gray-400 mt-1 font-mono">
-                    Mode-S: {profile.modeS}
-                  </p>
+                  <p className="text-xs text-gray-400 mt-1 font-mono">Mode-S: {profile.modeS}</p>
                 )}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
                   <Stat
@@ -99,9 +91,7 @@ export default function AircraftPage(): JSX.Element {
               </div>
 
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-                <h2 className="text-xl font-semibold mb-4">
-                  {t("aircraft:flights.title")}
-                </h2>
+                <h2 className="text-xl font-semibold mb-4">{t("aircraft:flights.title")}</h2>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
@@ -109,9 +99,7 @@ export default function AircraftPage(): JSX.Element {
                         <th className="py-2 pr-4">{t("aircraft:flights.date")}</th>
                         <th className="py-2 pr-4">{t("aircraft:flights.flightNumber")}</th>
                         <th className="py-2 pr-4">{t("aircraft:flights.route")}</th>
-                        <th className="py-2 pr-4 text-right">
-                          {t("aircraft:flights.distance")}
-                        </th>
+                        <th className="py-2 pr-4 text-right">{t("aircraft:flights.distance")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -123,9 +111,7 @@ export default function AircraftPage(): JSX.Element {
                           <td className="py-2 pr-4">
                             {formatDate(flight.departureTime, i18n.language)}
                           </td>
-                          <td className="py-2 pr-4 font-mono">
-                            {flight.flightNumber || "—"}
-                          </td>
+                          <td className="py-2 pr-4 font-mono">{flight.flightNumber || "—"}</td>
                           <td className="py-2 pr-4">
                             {flight.depIata || "?"} → {flight.arrIata || "?"}
                           </td>
