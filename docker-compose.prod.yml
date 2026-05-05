@@ -91,12 +91,11 @@ services:
       NODE_ENV: production
       TZ: ${TZ:-UTC}
 
-      # Runtime display version for the About / Admin → System Info panels.
-      # Defaults to the image tag (e.g. `1.0.1`). Falls back to the VERSION
-      # file baked into the image when unset. Keeping this aligned with
-      # ${VERSION} means promoted RC images still show the clean final
-      # version instead of the `-rc.N` suffix carried by the build.
-      APP_VERSION: ${VERSION:-}
+      # Runtime version is read from /app/backend/VERSION on container boot
+      # (single source of truth; no env-var drift). The display version
+      # strips any `-rc.N` / `-security-rc.N` / `-beta.N` / `-alpha.N`
+      # suffix programmatically, so a byte-identical RC promoted to
+      # `:latest` still shows the clean final version in About.
 
       # Database — DB_PASSWORD is the only required variable. Alternatively
       # set DATABASE_URL directly to point at an external Postgres instance.
