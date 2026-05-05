@@ -30,8 +30,8 @@ function hexToRgb(hex: string): [number, number, number] {
     parseInt(clean.slice(4, 6), 16),
   ];
 }
-const FLIGHT_PINK = hexToRgb(DOMAINS.flight.color);
-const CRUISE_BLUE = DOMAINS.cruise.color;
+const FLIGHT_RGB = hexToRgb(DOMAINS.flight.color);
+const CRUISE_HEX = DOMAINS.cruise.color;
 
 // Maps the dashboard-level AllMode to what MapContainer3D's visMode prop expects.
 // "journey" uses extraLayers with showInternalCruises=false so it has full
@@ -242,7 +242,7 @@ export function AllTab(): JSX.Element {
           style={{
             width: 14,
             height: 2,
-            background: CRUISE_BLUE,
+            background: CRUISE_HEX,
             borderRadius: 2,
           }}
         />
@@ -289,7 +289,7 @@ export function AllTab(): JSX.Element {
           showInternalCruises={false}
           onFlightClick={handleFlightClick}
           onRouteClick={handleRouteClick}
-          flightRouteColor={FLIGHT_PINK}
+          flightRouteColor={FLIGHT_RGB}
         />
         {sidebarToggleButton}
         {legend}
@@ -305,7 +305,7 @@ export function AllTab(): JSX.Element {
         flights={flights}
         visMode={visMode}
         onVisModeChange={handleVisModeChange}
-        flightRouteColor={FLIGHT_PINK}
+        flightRouteColor={FLIGHT_RGB}
         onFlightClick={handleFlightClick}
         onRouteClick={handleRouteClick}
       />

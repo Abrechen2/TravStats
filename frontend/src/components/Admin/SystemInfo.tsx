@@ -158,10 +158,7 @@ export default function SystemInfo({
         <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
           {t("admin:systemInfo.dataManagement")}
         </h2>
-        <button
-          onClick={onExportData}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition"
-        >
+        <button onClick={onExportData} className="btn-primary px-4 py-2">
           {t("admin:systemInfo.exportButton")}
         </button>
         <p className="text-sm text-[var(--text-muted)] mt-2">

@@ -66,18 +66,30 @@ export default function FlightLookupStep({
 
   return (
     <div className="space-y-4">
-      {/* Email Import - Beste Option */}
-      <div className="bg-gradient-to-r from-green-900 to-teal-900 border-2 border-green-600 shadow-lg shadow-green-900/50 rounded-xl p-6 mb-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-green-900/70 ring-2 ring-green-500/30">
+      {/* Email Import — "Beste Option" callout. Per BRAND.md §2 recommended /
+          preferred callouts use brand amber, not green. */}
+      <div
+        className="rounded-xl p-6 mb-6 transition-all duration-300 hover:scale-[1.02]"
+        style={{
+          background:
+            "linear-gradient(to right, var(--accent-soft), rgba(240, 169, 71, 0.04))",
+          border: "2px solid var(--accent)",
+          boxShadow: "0 8px 24px rgba(240, 169, 71, 0.18)",
+        }}
+      >
         <div className="flex items-start gap-4">
-          {/* Badge und Icon Bereich */}
           <div className="flex flex-col items-start gap-2 flex-shrink-0">
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-yellow-500 text-[var(--text-primary)] shadow-md">
+            <span
+              className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold shadow-md"
+              style={{ background: "var(--accent)", color: "#0d1117" }}
+            >
               ⭐ {t("flights:form.email.bestOption")}
             </span>
-            <div className="text-4xl text-green-300">📧</div>
+            <div className="text-4xl" style={{ color: "var(--accent)" }}>
+              📧
+            </div>
           </div>
 
-          {/* Content Bereich */}
           <div className="flex-1 min-w-0">
             <h3 className={`font-bold text-2xl ${textClass} mb-2`}>
               {t("flights:form.email.title")}
@@ -85,9 +97,12 @@ export default function FlightLookupStep({
             <p className={`text-base ${mutedTextClass} mb-4 font-medium`}>
               {t("flights:form.email.description")}
             </p>
-            <div className={`space-y-2 mb-4`}>
-              <p className="text-sm text-green-300 font-semibold flex items-center gap-2">
-                <span className="text-lg text-green-400">✓</span>
+            <div className="space-y-2 mb-4">
+              <p
+                className="text-sm font-semibold flex items-center gap-2"
+                style={{ color: "var(--accent)" }}
+              >
+                <span className="text-lg">✓</span>
                 {t("flights:form.email.bestOptionDescription")}
               </p>
             </div>
@@ -114,8 +129,14 @@ export default function FlightLookupStep({
         </div>
       </div>
 
-      {/* Boarding Pass Scanner */}
-      <div className="bg-gradient-to-r from-[var(--bg-elevated)] to-[var(--bg-muted)] border border-blue-700 rounded-lg p-4">
+      <div
+        className="rounded-lg p-4"
+        style={{
+          background:
+            "linear-gradient(to right, var(--bg-elevated), var(--bg-muted))",
+          border: "1px solid var(--color-border)",
+        }}
+      >
         <div className="flex items-center justify-between">
           <div>
             <h3 className={`font-semibold text-lg ${textClass}`}>
