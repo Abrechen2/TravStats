@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
@@ -157,10 +157,14 @@ app.use(requestLoggerMiddleware);
 // in About even though the binary is the RC build. `buildVersion` is the
 // raw file contents for diagnostics.
 
-// Health check
-app.get('/health', (_req, res) => {
+// Health check — mounted at both `/health` (legacy, used by the Dockerfile
+// HEALTHCHECK and the nginx upstream probe) and `/api/v1/health` (versioned,
+// matches the public-API URL convention documented for external callers).
+const healthHandler = (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+};
+app.get('/health', healthHandler);
+app.get('/api/v1/health', healthHandler);
 
 // Public version endpoint — unauthenticated so the About section can
 // show the right version even before login. Returns both the runtime
