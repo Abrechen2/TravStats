@@ -41,8 +41,21 @@ const patAwareMax = (baseMax: number) => (req: Request): number => {
 };
 
 /**
- * Rate limiter for public airport search endpoints
- * Allows 100 requests per 15 minutes per IP
+ * Rate limiter for public airport search endpoints. Two layers stacked:
+ *
+ *   1. Sustained ceiling: 100/15min (anon) — bounds total daily throughput.
+ *   2. Burst ceiling:     30/min  (anon)   — bounds the per-second burst
+ *      a scraper could otherwise use to enumerate the airport table in a
+ *      handful of seconds before the 15-min window kicks in.
+ *
+ * `/airports/search` is intentionally unauthenticated so the autocomplete
+ * works during signup before a user has credentials — the OurAirports
+ * dataset it surfaces is already public, so there is no secrecy boundary
+ * to defend, but limiting the rate keeps the endpoint from becoming a
+ * cheap DB-pressure or scraping pivot.
+ *
+ * PAT-authenticated callers (autocomplete in agent flows) get the
+ * standard PAT_MULTIPLIER on both buckets.
  */
 export const airportSearchLimiter = rateLimit({
   windowMs: RATE_LIMITS.AIRPORT_SEARCH_WINDOW_MS,
@@ -50,6 +63,15 @@ export const airportSearchLimiter = rateLimit({
   message: 'Too many airport search requests, please try again later',
   standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
   legacyHeaders: false, // Disable `X-RateLimit-*` headers
+  keyGenerator: userOrIpKey,
+});
+
+export const airportSearchBurstLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: patAwareMax(30),
+  message: 'Too many airport search requests in a short burst — slow down',
+  standardHeaders: true,
+  legacyHeaders: false,
   keyGenerator: userOrIpKey,
 });
 
