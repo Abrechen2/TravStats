@@ -97,8 +97,8 @@
       "textFallback": "Paste email text (fallback)",
       "textPlaceholder": "Paste email content here...",
       "regexWarning": {
-        "title": "No LLM configured — the regex parser is inaccurate",
-        "body": "The rule-based templates only cover a handful of airlines and can't split an email that contains more than one flight. Recommended: point Admin → Parser at a local Ollama endpoint (e.g. gemma3:12b), or enter flights manually."
+        "title": "Automatic import is still limited",
+        "body": "Without a local LLM (Ollama), a rule-based importer is used. It currently supports only a few airlines and can't yet handle emails with multiple flights. We're actively working on improvements.\n\nRecommendation: configure an Ollama endpoint (e.g. gemma3:12b) under Admin → Parser, or enter flights manually."
       }
     },
     "simplified": {

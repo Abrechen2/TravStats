@@ -97,8 +97,8 @@
       "textFallback": "Email-Text einfügen (Fallback)",
       "textPlaceholder": "Email-Inhalt hier einfügen...",
       "regexWarning": {
-        "title": "Kein LLM konfiguriert — der Regex-Parser ist sehr ungenau",
-        "body": "Die regel-basierten Vorlagen decken nur bekannte Airlines ab und erkennen mehrere Flüge in einer Mail nicht. Empfohlen: Admin → Parser einen lokalen Ollama-Endpoint (z.B. gemma3:12b) eintragen, oder Flüge manuell erfassen."
+        "title": "Automatischer Import noch eingeschränkt",
+        "body": "Ohne lokales LLM (Ollama) wird ein regel-basierter Import genutzt. Dieser unterstützt aktuell nur einige Airlines und kann noch keine E-Mails mit mehreren Flügen verarbeiten. Wir arbeiten aktiv an der Erweiterung.\n\nEmpfehlung: In Admin → Parser einen Ollama-Endpoint (z.B. gemma3:12b) hinterlegen oder Flüge manuell erfassen."
       }
     },
     "simplified": {
