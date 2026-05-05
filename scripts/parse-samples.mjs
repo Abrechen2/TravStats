@@ -96,7 +96,12 @@ function fetchJson(url, body) {
 
 function cleanEmailBody(text) {
   let out = text;
-  out = out.replace(/<[^>]+>/g, "");
+  // Loop until convergence (adversarial-input safe).
+  let prev;
+  do {
+    prev = out;
+    out = out.replace(/<[^>]*>/g, "");
+  } while (out !== prev);
   out = out.replace(/https?:\/\/[^\s<>]+/gi, "");
   out = out.replace(/www\.[^\s<>]+/gi, "");
   out = out.split("\n").map((l) => l.trim()).join("\n");
