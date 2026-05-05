@@ -1,10 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import SimplifiedFlightFormV2 from "../components/SimplifiedFlightFormV2";
-import { useThemeStore } from "../store/themeStore";
 
 vi.mock("../lib/api");
-vi.mock("../store/themeStore");
 vi.mock("../store/settingsStore", () => ({
   useSettingsStore: vi.fn().mockReturnValue({
     features: { enableCostTracking: true },
@@ -29,25 +27,12 @@ vi.mock("../lib/timeEstimation", () => ({
   }),
 }));
 
-const mockUseThemeStore = vi.mocked(useThemeStore);
-
 describe("SimplifiedFlightFormV2", () => {
   const mockOnSubmit = vi.fn();
   const mockOnCancel = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseThemeStore.mockImplementation((selector?: unknown) => {
-      const state = {
-        isDarkMode: false,
-        toggleDarkMode: vi.fn(),
-        setDarkMode: vi.fn(),
-      };
-      if (typeof selector === "function") {
-        return (selector as (s: typeof state) => unknown)(state);
-      }
-      return state;
-    });
   });
 
   it("should render flight form", () => {

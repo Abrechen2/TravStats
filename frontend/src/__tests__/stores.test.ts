@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useAuthStore } from "../store/authStore";
-import { useThemeStore } from "../store/themeStore";
 import { useToastStore } from "../store/toastStore";
 import type { User } from "../types";
 
@@ -90,71 +89,6 @@ describe("Zustand Stores", () => {
       });
 
       expect(result.current.user).toBeNull();
-    });
-  });
-
-  describe("ThemeStore", () => {
-    beforeEach(() => {
-      // Reset store and localStorage
-      useThemeStore.setState({ isDarkMode: false });
-      localStorage.clear();
-      document.documentElement.classList.remove("dark");
-    });
-
-    it("should initialize with light mode by default", () => {
-      const { result } = renderHook(() => useThemeStore());
-
-      expect(result.current.isDarkMode).toBe(false);
-    });
-
-    it("should toggle dark mode", () => {
-      const { result } = renderHook(() => useThemeStore());
-
-      expect(result.current.isDarkMode).toBe(false);
-
-      act(() => {
-        result.current.toggleDarkMode();
-      });
-
-      expect(result.current.isDarkMode).toBe(true);
-
-      act(() => {
-        result.current.toggleDarkMode();
-      });
-
-      expect(result.current.isDarkMode).toBe(false);
-    });
-
-    it("should set dark mode explicitly", () => {
-      const { result } = renderHook(() => useThemeStore());
-
-      act(() => {
-        result.current.setDarkMode(true);
-      });
-
-      expect(result.current.isDarkMode).toBe(true);
-
-      act(() => {
-        result.current.setDarkMode(false);
-      });
-
-      expect(result.current.isDarkMode).toBe(false);
-    });
-
-    it("should add dark class to document when dark mode is enabled", () => {
-      const { result } = renderHook(() => useThemeStore());
-
-      act(() => {
-        result.current.setDarkMode(true);
-      });
-
-      expect(document.documentElement.classList.contains("dark")).toBe(true);
-
-      act(() => {
-        result.current.setDarkMode(false);
-      });
-
-      expect(document.documentElement.classList.contains("dark")).toBe(false);
     });
   });
 

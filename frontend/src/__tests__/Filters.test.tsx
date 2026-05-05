@@ -2,13 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import Filters from "../components/Filters";
 import { flightsApi } from "../lib/api";
-import { useThemeStore } from "../store/themeStore";
 import type { Flight } from "../types";
 
 vi.mock("../lib/api");
-vi.mock("../store/themeStore");
-
-const mockUseThemeStore = vi.mocked(useThemeStore);
 
 describe("Filters", () => {
   const mockOnFilterChange = vi.fn();
@@ -34,17 +30,6 @@ describe("Filters", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseThemeStore.mockImplementation((selector?: unknown) => {
-      const state = {
-        isDarkMode: false,
-        toggleDarkMode: vi.fn(),
-        setDarkMode: vi.fn(),
-      };
-      if (typeof selector === "function") {
-        return (selector as (s: typeof state) => unknown)(state);
-      }
-      return state;
-    });
     vi.mocked(flightsApi.getAll).mockResolvedValue({
       flights: [mockFlight],
       total: 1,
