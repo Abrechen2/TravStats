@@ -32,6 +32,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Security
 - **Per-minute burst limiter stacked on `/airports/search`** — The autocomplete endpoint is unauthenticated by design (signup-flow needs it before credentials exist) and was already capped at 100 / 15 min. A scraper could still fire ~100 requests in seconds before the sustained ceiling tripped; a 30 / min burst limiter now layers on top so abusive enumeration is bounded both per-second and per-window. PAT-authenticated callers retain the 10× multiplier on both buckets.
+- **Closed 14 Dependabot alerts on the frontend lockfile** — axios bumped from `1.15.0` to `1.16.0` (declared `^1.15.2`), sweeping up 13 alerts (3 high, 9 medium, 1 low) covering prototype-pollution gadgets, CRLF injection, NO_PROXY bypass, and header injection. Backend was already on the safe range; this fix syncs the frontend. `uuid` is forced to `^14` via an override (transitive via `exceljs@4.4.0` was on `8.3.2`) — our usage only hits `uuid.v4()` so the buffer-bounds-check vuln in `v3/v5/v6` was not actually reachable, but the override is preferable to dismissing.
 
 ### Docs
 - **OpenAPI spec scope clarified** — The published spec is the curated stable public surface (flights, trips, airports, stats, parsers, batch import, tokens), not 1:1 with the 162-route internal API. The spec description now states this explicitly and invites users to open an issue if they need a route promoted.
