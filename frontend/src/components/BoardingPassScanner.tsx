@@ -1,6 +1,5 @@
 import { useState, useRef } from "react";
 import { parseApi } from "../lib/api";
-import { useThemeStore } from "../store/themeStore";
 import { useTranslation } from "../hooks/useTranslation";
 import { extractBarcodeFromImage } from "../lib/barcodeExtractor";
 import { parseBCBP } from "../lib/bcbpParser";
@@ -35,7 +34,6 @@ export default function BoardingPassScanner({
   const [preview, setPreview] = useState<string | null>(null);
   const [scanSteps, setScanSteps] = useState<ScanStep[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isDarkMode = useThemeStore((s) => s.isDarkMode);
 
   const updateScanStep = (id: string, updates: Partial<ScanStep>) => {
     setScanSteps((prev) => prev.map((step) => (step.id === id ? { ...step, ...updates } : step)));
@@ -158,9 +156,7 @@ export default function BoardingPassScanner({
       <div className="bg-[var(--bg-surface)] rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-[var(--bg-surface)] border-b border-[var(--color-border)] px-6 py-4 flex items-center justify-between">
-          <h2
-            className={`text-xl font-bold ${isDarkMode ? "text-white" : "text-[var(--text-primary)]"}`}
-          >
+          <h2 className="text-xl font-bold text-white">
             {t("flights:scanner.title")}
           </h2>
           <button
@@ -183,14 +179,12 @@ export default function BoardingPassScanner({
         {/* Content */}
         <div className="p-6 space-y-6">
           {error && (
-            <div
-              className={`p-4 ${isDarkMode ? "bg-red-900/20 border-red-800" : "bg-red-50 border-red-200"} border rounded-lg`}
-            >
+            <div className="p-4 bg-red-900/20 border-red-800 border rounded-lg">
               <div className="flex items-start">
                 <span className="text-2xl mr-3" aria-hidden="true">
                   X
                 </span>
-                <p className={`${isDarkMode ? "text-red-200" : "text-red-800"}`}>{error}</p>
+                <p className="text-red-200">{error}</p>
               </div>
             </div>
           )}
@@ -199,11 +193,7 @@ export default function BoardingPassScanner({
           {!scanning && !preview && (
             <div>
               <div
-                className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-                  isDarkMode
-                    ? "border-[var(--color-border)] hover:border-[var(--text-muted)] bg-[var(--bg-elevated)]"
-                    : "border-[var(--color-border)] hover:border-[var(--color-border)] bg-[var(--bg-base)]"
-                }`}
+                className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors border-[var(--color-border)] hover:border-[var(--text-muted)] bg-[var(--bg-elevated)]"
                 onClick={() => fileInputRef.current?.click()}
               >
                 <input
@@ -218,9 +208,7 @@ export default function BoardingPassScanner({
                     🎫
                   </div>
                   <div>
-                    <p
-                      className={`text-lg font-medium ${isDarkMode ? "text-white" : "text-[var(--text-primary)]"}`}
-                    >
+                    <p className="text-lg font-medium text-white">
                       {t("flights:scanner.uploadTitle")}
                     </p>
                     <p className="text-sm mt-1 text-[var(--text-muted)]">
@@ -234,17 +222,11 @@ export default function BoardingPassScanner({
               </div>
 
               {/* Info Box */}
-              <div
-                className={`mt-4 p-4 ${isDarkMode ? "bg-blue-900/20 border-blue-800" : "bg-blue-50 border-blue-200"} border rounded-lg`}
-              >
-                <h3
-                  className={`text-sm font-semibold ${isDarkMode ? "text-blue-200" : "text-blue-900"} mb-2`}
-                >
+              <div className="mt-4 p-4 bg-blue-900/20 border-blue-800 border rounded-lg">
+                <h3 className="text-sm font-semibold text-blue-200 mb-2">
                   {t("flights:scanner.info.title")}
                 </h3>
-                <ul
-                  className={`text-sm ${isDarkMode ? "text-blue-300" : "text-blue-800"} space-y-1`}
-                >
+                <ul className="text-sm text-blue-300 space-y-1">
                   <li>• {t("flights:scanner.info.step1")}</li>
                   <li>• {t("flights:scanner.info.step2")}</li>
                   <li>• {t("flights:scanner.info.step3")}</li>
@@ -274,20 +256,12 @@ export default function BoardingPassScanner({
                       key={step.id}
                       className={`flex items-center gap-3 p-3 rounded-lg ${
                         step.status === "success"
-                          ? isDarkMode
-                            ? "bg-green-900/20 border border-green-800"
-                            : "bg-green-50 border border-green-200"
+                          ? "bg-green-900/20 border border-green-800"
                           : step.status === "error"
-                            ? isDarkMode
-                              ? "bg-red-900/20 border border-red-800"
-                              : "bg-red-50 border border-red-200"
+                            ? "bg-red-900/20 border border-red-800"
                             : step.status === "loading"
-                              ? isDarkMode
-                                ? "bg-blue-900/20 border border-blue-800"
-                                : "bg-blue-50 border border-blue-200"
-                              : isDarkMode
-                                ? "bg-[var(--bg-elevated)] border border-[var(--color-border)]"
-                                : "bg-[var(--bg-base)] border border-[var(--color-border)]"
+                              ? "bg-blue-900/20 border border-blue-800"
+                              : "bg-[var(--bg-elevated)] border border-[var(--color-border)]"
                       }`}
                     >
                       <span className="text-2xl" aria-hidden="true">
@@ -297,20 +271,12 @@ export default function BoardingPassScanner({
                         <p
                           className={`font-medium ${
                             step.status === "success"
-                              ? isDarkMode
-                                ? "text-green-200"
-                                : "text-green-800"
+                              ? "text-green-200"
                               : step.status === "error"
-                                ? isDarkMode
-                                  ? "text-red-200"
-                                  : "text-red-800"
+                                ? "text-red-200"
                                 : step.status === "loading"
-                                  ? isDarkMode
-                                    ? "text-blue-200"
-                                    : "text-blue-800"
-                                  : isDarkMode
-                                    ? "text-[var(--text-muted)]"
-                                    : "text-[var(--text-muted)]"
+                                  ? "text-blue-200"
+                                  : "text-[var(--text-muted)]"
                           }`}
                         >
                           {step.label}
@@ -319,16 +285,10 @@ export default function BoardingPassScanner({
                           <p
                             className={`text-sm ${
                               step.status === "success"
-                                ? isDarkMode
-                                  ? "text-green-300"
-                                  : "text-green-700"
+                                ? "text-green-300"
                                 : step.status === "error"
-                                  ? isDarkMode
-                                    ? "text-red-300"
-                                    : "text-red-700"
-                                  : isDarkMode
-                                    ? "text-blue-300"
-                                    : "text-blue-700"
+                                  ? "text-red-300"
+                                  : "text-blue-300"
                             }`}
                           >
                             {step.detail}

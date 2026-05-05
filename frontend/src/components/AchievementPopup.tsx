@@ -5,7 +5,6 @@
  */
 
 import { useEffect, useState, useRef } from "react";
-import { useThemeStore } from "../store/themeStore";
 import { useTranslation } from "../hooks/useTranslation";
 
 interface Achievement {
@@ -53,7 +52,6 @@ export default function AchievementPopup({
   onClose,
 }: AchievementPopupProps): JSX.Element | null {
   const { t } = useTranslation(["achievements", "common"]);
-  const isDarkMode = useThemeStore((state) => state.isDarkMode);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
   const timeoutRefs = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -200,7 +198,7 @@ export default function AchievementPopup({
             <span
               className={`
               px-3 py-1 rounded-full text-xs font-semibold
-              ${isDarkMode ? "bg-blue-900 text-blue-200" : "bg-blue-100 text-blue-800"}
+              bg-blue-900 text-blue-200
             `}
             >
               +{currentAchievement.achievement.points} {t("achievements:popup.points")}
@@ -239,11 +237,7 @@ export default function AchievementPopup({
               <>
                 <button
                   onClick={handleClose}
-                  className={`flex-1 px-4 py-2 rounded-lg font-medium ${
-                    isDarkMode
-                      ? "bg-[var(--bg-elevated)] hover:bg-[var(--bg-muted)] text-[var(--text-primary)]"
-                      : "bg-[var(--bg-elevated)] hover:bg-[var(--bg-muted)] text-[var(--text-primary)]"
-                  }`}
+                  className="flex-1 px-4 py-2 rounded-lg font-medium bg-[var(--bg-elevated)] hover:bg-[var(--bg-muted)] text-[var(--text-primary)]"
                 >
                   {t("achievements:popup.closeAll")}
                 </button>
