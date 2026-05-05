@@ -51,12 +51,10 @@ export default function SettingsPage(): JSX.Element {
     setDefaults,
     setMap,
     setCruise,
-    isDarkMode,
     savingProfile,
     uploadingProfilePicture,
     saveProfileSettings,
     handleAvatarUpload,
-    handleThemeToggle,
     showPasswordModal,
     changingPassword,
     passwordForm,
@@ -351,12 +349,7 @@ export default function SettingsPage(): JSX.Element {
             )}
             {activeSection === "homeAirport" && <HomeAirportSection />}
             {activeSection === "display" && (
-              <DisplaySection
-                display={display}
-                isDarkMode={isDarkMode}
-                onSetDisplay={setDisplay}
-                onThemeToggle={handleThemeToggle}
-              />
+              <DisplaySection display={display} onSetDisplay={setDisplay} />
             )}
             {activeSection === "modules" && <ModuleSection />}
             {activeSection === "units" && <UnitsSection units={units} onSetUnits={setUnits} />}
