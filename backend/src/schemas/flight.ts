@@ -240,6 +240,14 @@ export const flightQuerySchema = z.object({
   minRouteCount: z.coerce.number().min(1).max(100).optional(), // frontend-only; ignored server-side
   limit: z.coerce.number().min(1).default(100),
   offset: z.coerce.number().min(0).default(0),
+  // ?all=true bypasses the 500-row cap and pagination so external API
+  // consumers can sync the full row set in one request. Authentication
+  // already scopes the query to the calling user's flights, so there's
+  // no enumeration risk to gate behind beyond the existing auth check.
+  all: z
+    .string()
+    .optional()
+    .transform((v) => v === "true"),
 });
 
 export type CreateFlightInput = z.infer<typeof createFlightSchema>;

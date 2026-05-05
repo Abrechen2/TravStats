@@ -86,6 +86,29 @@ describe('Flights API', () => {
       expect(response.body).toHaveProperty('flights');
       expect(Array.isArray(response.body.flights)).toBe(true);
     });
+
+    it('caps result count at 500 by default', async () => {
+      const response = await request(app)
+        .get('/api/v1/flights?limit=1000')
+        .set('Cookie', authCookie)
+        .expect(200);
+
+      // limit in the response body is the applied cap, not the requested one
+      expect(response.body.limit).toBeLessThanOrEqual(500);
+      expect(response.body.all).toBe(false);
+    });
+
+    it('?all=true bypasses the 500-row cap and returns the full set', async () => {
+      const response = await request(app)
+        .get('/api/v1/flights?all=true')
+        .set('Cookie', authCookie)
+        .expect(200);
+
+      expect(response.body.all).toBe(true);
+      // limit echoes total when all=true so consumers know what they got
+      expect(response.body.limit).toBe(response.body.total);
+      expect(response.body.flights.length).toBe(response.body.total);
+    });
   });
 
   describe('GET /api/v1/flights/geo', () => {
