@@ -68,12 +68,14 @@ describe("buildRouteData", () => {
     expect(arcs).toHaveLength(0);
   });
 
-  it("collapses past + scheduled on the same airport pair into ONE arc plus an upcoming marker", () => {
-    // 2024 flown ADD-TNR + 2026 scheduled ADD-TNR share a canonical route
+  it("collapses past + scheduled on the same pair into ONE arc with hasUpcoming flagged", () => {
+    // 2024 flown FRA-JFK + 2026 scheduled FRA-JFK share a canonical route
     // key. The old layer drew two arcs at the same arcHeight=1.0 that
     // perfectly overlapped (Madagascar regression). The new layer collapses
-    // them to a single arc carrying both flightIds, with the "has-upcoming"
-    // signal moved to a midpoint marker (shape, not arc colour).
+    // them into a single ArcDatum; the "scheduled" signal is rendered by a
+    // separate UpcomingArcLayer (custom shader) — the data layer keeps
+    // sourceColor === targetColor (uniform heatmap) and just flags
+    // hasUpcoming.
     const flownFlight: GeoJSONFeature = {
       ...mockFlight,
       properties: { ...mockFlight.properties, id: "fl-past", status: "flown" },
@@ -82,46 +84,36 @@ describe("buildRouteData", () => {
       ...mockFlight,
       properties: { ...mockFlight.properties, id: "fl-future", status: "scheduled" },
     };
-    const { arcs, upcomingMarkers } = buildRouteData([flownFlight, scheduledFlight], 1);
+    const { arcs } = buildRouteData([flownFlight, scheduledFlight], 1);
 
     expect(arcs).toHaveLength(1);
     expect(arcs[0].count).toBe(2);
     expect(arcs[0].flightIds).toEqual(["fl-past", "fl-future"]);
     expect(arcs[0].hasUpcoming).toBe(true);
-
-    // Heatmap colour, NOT the legacy cyan that scheduled arcs used to force.
-    // sourceColor === targetColor so the arc reads as a single visual unit.
+    // Uniform colour at the data layer; the shader paints blue at the ends.
     expect(arcs[0].sourceColor).toEqual(arcs[0].targetColor);
-
-    // Marker emitted for the route, anchored near the midpoint.
-    expect(upcomingMarkers).toHaveLength(1);
-    expect(upcomingMarkers[0].flightIds).toEqual(["fl-past", "fl-future"]);
-    // FRA-JFK midpoint is roughly (-32.6, 45.3); allow some slack.
-    expect(upcomingMarkers[0].position[0]).toBeGreaterThan(-40);
-    expect(upcomingMarkers[0].position[0]).toBeLessThan(-25);
-    expect(upcomingMarkers[0].position[1]).toBeGreaterThan(40);
-    expect(upcomingMarkers[0].position[1]).toBeLessThan(50);
   });
 
-  it("emits an upcoming marker for pure-scheduled routes", () => {
+  it("flags hasUpcoming on pure-scheduled routes and keeps colour uniform", () => {
     const scheduled: GeoJSONFeature = {
       ...mockFlight,
       properties: { ...mockFlight.properties, id: "sched-1", status: "scheduled" },
     };
-    const { arcs, upcomingMarkers } = buildRouteData([scheduled], 1);
+    const { arcs } = buildRouteData([scheduled], 1);
     expect(arcs).toHaveLength(1);
     expect(arcs[0].hasUpcoming).toBe(true);
-    expect(upcomingMarkers).toHaveLength(1);
-    expect(upcomingMarkers[0].flightIds).toEqual(["sched-1"]);
+    expect(arcs[0].sourceColor).toEqual(arcs[0].targetColor);
   });
 
-  it("emits no upcoming marker for routes without a scheduled flight", () => {
+  it("does not flag hasUpcoming on routes without any scheduled flight", () => {
     const flown: GeoJSONFeature = {
       ...mockFlight,
       properties: { ...mockFlight.properties, id: "flown-1", status: "flown" },
     };
-    const { upcomingMarkers } = buildRouteData([flown], 1);
-    expect(upcomingMarkers).toHaveLength(0);
+    const { arcs } = buildRouteData([flown], 1);
+    expect(arcs).toHaveLength(1);
+    expect(arcs[0].hasUpcoming).toBe(false);
+    expect(arcs[0].sourceColor).toEqual(arcs[0].targetColor);
   });
 
   it("colours pure-historical routes grey and flags isHistorical", () => {
@@ -139,19 +131,56 @@ describe("buildRouteData", () => {
 });
 
 describe("createRoutesLayers", () => {
-  it("returns 6 layers: arc, upcoming-marker, ring-inner, ring-outer, dot, labels", () => {
+  it("returns 6 layers: regular arc, upcoming arc, ring-inner, ring-outer, dot, labels", () => {
     const layers = createRoutesLayers([mockFlight], 1);
     expect(layers).toHaveLength(6);
   });
 
-  it("layer ids include routes-upcoming-marker and the airport ring/dot/label set", () => {
-    const layers = createRoutesLayers([mockFlight], 1);
+  it("includes both routes-arc and routes-arc-upcoming so each route is rendered exactly once", () => {
+    const scheduled: GeoJSONFeature = {
+      ...mockFlight,
+      properties: { ...mockFlight.properties, id: "sched-1", status: "scheduled" },
+    };
+    const layers = createRoutesLayers([mockFlight, scheduled], 1);
     const ids = layers.map((l) => l.id);
     expect(ids).toContain("routes-arc");
-    expect(ids).toContain("routes-upcoming-marker");
+    expect(ids).toContain("routes-arc-upcoming");
     expect(ids).toContain("routes-ring-inner");
     expect(ids).toContain("routes-ring-outer");
     expect(ids).toContain("routes-dot");
     expect(ids).toContain("routes-labels");
+    // Earlier rejected attempts — keep out of the layer set:
+    expect(ids).not.toContain("routes-upcoming-marker");
+    expect(ids).not.toContain("routes-upcoming-casing");
+  });
+
+  it("partitions arcs: routes-arc gets non-upcoming, routes-arc-upcoming gets the rest", () => {
+    const flown: GeoJSONFeature = {
+      ...mockFlight,
+      properties: { ...mockFlight.properties, id: "fl-1", status: "flown" },
+    };
+    const scheduled: GeoJSONFeature = {
+      ...mockFlight,
+      properties: {
+        ...mockFlight.properties,
+        id: "sch-1",
+        status: "scheduled",
+        // Different airport pair to keep them as separate canonical routes.
+        departureAirport: { iata: "MUC", name: "Munich", lat: 48.35, lon: 11.78 },
+        arrivalAirport: { iata: "LAX", name: "LAX", lat: 33.94, lon: -118.4 },
+      },
+      geometry: {
+        type: "LineString",
+        coordinates: [
+          [11.78, 48.35],
+          [-118.4, 33.94],
+        ],
+      },
+    };
+    const layers = createRoutesLayers([flown, scheduled], 1);
+    const regular = layers.find((l) => l.id === "routes-arc");
+    const upcoming = layers.find((l) => l.id === "routes-arc-upcoming");
+    expect((regular?.props as { data?: unknown[] }).data).toHaveLength(1);
+    expect((upcoming?.props as { data?: unknown[] }).data).toHaveLength(1);
   });
 });
