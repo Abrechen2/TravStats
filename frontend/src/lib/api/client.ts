@@ -1,6 +1,7 @@
 import axios, { type AxiosError } from "axios";
 
 import { API_TIMEOUTS } from "../../config/constants";
+import { attachGatewayRetry } from "./gatewayRetry";
 
 export const API_URL = import.meta.env?.VITE_API_URL || "";
 
@@ -73,8 +74,14 @@ const handle401Error = (error: AxiosError): Promise<never> => {
   return Promise.reject(error);
 };
 
-api.interceptors.response.use((response) => response, handle401Error);
+// Attach gateway-retry FIRST so transient 5xx are retried before the
+// 401-handler observes a fall-through error. Axios runs response interceptors
+// in attach order on success and in reverse-attach order on rejection — the
+// retry interceptor still gets the first crack at retrying.
+attachGatewayRetry(api);
+attachGatewayRetry(parserApi);
 
+api.interceptors.response.use((response) => response, handle401Error);
 parserApi.interceptors.response.use((response) => response, handle401Error);
 
 export default api;
