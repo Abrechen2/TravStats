@@ -6,6 +6,29 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 WRAPPER="$SCRIPT_DIR/wait-then-nginx.sh"
 
+# Provide a wget shim if the host doesn't ship one (e.g. Git Bash on Windows).
+# The wrapper now bails fast when wget is missing, so the polling tests below
+# need a real (or stubbed) wget on PATH to actually exercise the loop.
+if ! command -v wget >/dev/null 2>&1; then
+  WGET_SHIM_DIR="$(mktemp -d)"
+  cat > "$WGET_SHIM_DIR/wget" <<'EOF'
+#!/bin/sh
+# Minimal wget shim for the test: --spider against a URL — succeed (0) if curl
+# can reach it, fail (1) otherwise. Only --spider semantics are needed here.
+url=""
+for arg in "$@"; do
+  case "$arg" in
+    http*) url="$arg" ;;
+  esac
+done
+[ -n "$url" ] || exit 1
+curl -sSf --max-time 3 "$url" >/dev/null 2>&1
+EOF
+  chmod +x "$WGET_SHIM_DIR/wget"
+  PATH="$WGET_SHIM_DIR:$PATH"
+  export PATH
+fi
+
 # Test 1: backend already up → wrapper exits ~immediately and runs the exec target
 test_backend_already_ready() {
   echo "TEST 1: backend already ready..."
