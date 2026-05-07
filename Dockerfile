@@ -103,6 +103,12 @@ COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN sed -i 's/\r$//' /docker-entrypoint.sh && \
     chmod +x /docker-entrypoint.sh
 
+# Boot-race wrapper: nginx waits for backend /health before serving.
+# See scripts/wait-then-nginx.sh for the why and the env knobs.
+COPY scripts/wait-then-nginx.sh /app/scripts/wait-then-nginx.sh
+RUN sed -i 's/\r$//' /app/scripts/wait-then-nginx.sh && \
+    chmod +x /app/scripts/wait-then-nginx.sh
+
 # Create data directory for persistent config (logs, secrets, backups, …)
 # Secrets live at /app/data/secrets — one mounted volume covers everything.
 # The subdirectory gets 0700 so it's not world-readable even if someone
@@ -119,8 +125,11 @@ VOLUME ["/app/data"]
 
 EXPOSE 80
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s \
+# 180s start-period covers the longest observed boot path:
+# Prisma generate (~5s) + migrate deploy (~10s) + closed-airport
+# backfill (~30s) + airport-seed first install (~90s) + Express
+# listen (~3s) + the wait-then-nginx poll loop (~2s).
+HEALTHCHECK --interval=30s --timeout=3s --start-period=180s \
   CMD wget --no-verbose --tries=1 --spider http://localhost/health || exit 1
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
