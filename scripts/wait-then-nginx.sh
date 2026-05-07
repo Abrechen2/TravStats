@@ -22,6 +22,13 @@ MAX_WAIT_SECONDS="${BACKEND_WAIT_MAX_SECONDS:-300}"
 NGINX_BIN="${NGINX_BIN:-/usr/sbin/nginx}"
 POLL_INTERVAL=2
 
+# Bail fast if wget is missing — silently polling for 5 minutes against a
+# missing binary is the worst possible failure mode.
+if ! command -v wget >/dev/null 2>&1; then
+    echo "[wait-then-nginx] FATAL: wget not found on PATH — starting nginx without health check"
+    exec "$NGINX_BIN" -g "daemon off;"
+fi
+
 elapsed=0
 echo "[wait-then-nginx] Polling ${BACKEND_HEALTH_URL} (max ${MAX_WAIT_SECONDS}s)..."
 
