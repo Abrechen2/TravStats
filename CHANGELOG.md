@@ -4,6 +4,11 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [Unreleased]
+
+### Fixed
+- **Empty UI after every container restart on Unraid + similar setups (boot race)** — supervisord launched nginx and the Express backend in parallel. nginx accepted `/api/*` immediately and proxied to a port where Express wasn't listening yet, so every browser open during the 30-90 s migration window cached `502 / no live upstreams` and never refetched until the user hard-reloaded. Two-layer fix: (1) supervisord now starts nginx via `scripts/wait-then-nginx.sh`, which polls backend `/health` and only `exec`s nginx when ready (5-minute fallthrough so the container never hangs forever); (2) the frontend Axios clients gained a gateway-retry interceptor that retries idempotent verbs on 502/503/504 / `ERR_NETWORK` with exponential backoff (3 attempts, 0.5/1/2 s) so any future short backend outage heals on its own. Docker `HEALTHCHECK --start-period` bumped 40 s → 180 s to absorb the longest observed first-boot path (closed-airport backfill).
+
 ## [1.4.0] - 2026-05-04
 
 ### Added
