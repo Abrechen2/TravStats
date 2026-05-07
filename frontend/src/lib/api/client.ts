@@ -74,10 +74,12 @@ const handle401Error = (error: AxiosError): Promise<never> => {
   return Promise.reject(error);
 };
 
-// Attach gateway-retry FIRST so transient 5xx are retried before the
-// 401-handler observes a fall-through error. Axios runs response interceptors
-// in attach order on success and in reverse-attach order on rejection — the
-// retry interceptor still gets the first crack at retrying.
+// Attach gateway-retry BEFORE handle401Error. Axios runs response error
+// interceptors in REVERSE attach order, so handle401Error runs first; for any
+// non-401 it just re-rejects (it's a passthrough), letting the rejection reach
+// gateway-retry which then retries idempotent reads on transient 5xx /
+// network errors. Net effect: 401s short-circuit to login, 5xx/network
+// errors are silently retried.
 attachGatewayRetry(api);
 attachGatewayRetry(parserApi);
 
