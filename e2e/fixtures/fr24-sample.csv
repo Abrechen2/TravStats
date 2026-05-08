@@ -1,0 +1,10 @@
+
+Date,"Flight number",From,To,"Dep time","Arr time",Duration,Airline,Aircraft,Registration,"Seat number","Seat type","Flight class","Flight reason",Note,Dep_id,Arr_id,Airline_id,Aircraft_id
+2023-03-15,LH401,"Frankfurt am Main / Frankfurt (FRA/EDDF)","New York / John F Kennedy International (JFK/KJFK)",10:30:00,13:25:00,08:55:00,"Lufthansa (LH/DLH)","Boeing 747-8 (B748)",D-ABYD,41A,1,1,1,Spring break trip,524,2670,1102,1842
+2023-03-15,AA1234,"New York / John F Kennedy International (JFK/KJFK)","Los Angeles / Los Angeles (LAX/KLAX)",18:15:00,21:50:00,06:35:00,"American Airlines (AA/AAL)","Boeing 777-200 (B772)",N755AN,32C,3,2,1,Spring break trip,2670,1726,4,246
+2023-03-22,QF12,"Los Angeles / Los Angeles (LAX/KLAX)","Sydney / Kingsford Smith (SYD/YSSY)",22:30:00,06:25:00,14:55:00,"Qantas (QF/QFA)","Airbus A380-800 (A388)",VH-OQB,14K,1,3,1,"Honeymoon, leg 1",1726,2934,156,2104
+2022-08-04,KL1844,"Amsterdam / Schiphol (AMS/EHAM)","Rome / Fiumicino (FCO/LIRF)",14:20:00,16:35:00,02:15:00,"KLM (KL/KLM)","Boeing 737-800 (B738)",PH-BCB,18F,1,1,4,,158,1571,514,245
+2024-02-10,SQ938,"Singapore / Changi (SIN/WSSS)","Tokyo / Narita (NRT/RJAA)",23:55:00,07:55:00,07:00:00,"Singapore Airlines (SQ/SIA)","Boeing 787-10 (B78X)",9V-SCD,11A,1,2,2,Q1 client visit,2057,2104,705,2174
+2024-05-19,WN2147,"Denver / Denver International (DEN/KDEN)","Phoenix / Sky Harbor (PHX/KPHX)",08:45:00,09:30:00,01:45:00,"Southwest Airlines (WN/SWA)","Boeing 737-700 (B737)",N7720F,22A,1,1,1,,645,2078,791,245
+2019-11-08,TK1989,"Istanbul / Istanbul Airport (IST/LTFM)","London / Heathrow (LHR/EGLL)",11:25:00,13:55:00,04:30:00,"Turkish Airlines (TK/THY)","Airbus A330-300 (A333)",TC-JOA,4F,1,3,3,Repositioning flight,1294,1618,4544,31
+2024-09-12,AC456,"Toronto / Pearson (YYZ/CYYZ)","Vancouver / Vancouver International (YVR/CYVR)",16:00:00,18:18:00,05:18:00,"Air Canada (AC/ACA)","Airbus A330-300 (A333)",C-GFAJ,28D,3,1,1,,2992,2929,5,31

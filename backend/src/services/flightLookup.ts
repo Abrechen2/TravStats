@@ -407,6 +407,20 @@ export interface FlightLookupResult {
   actualDeparture?: string;
   /** Actual on-block time (UTC ISO); populated when the API reports it */
   actualArrival?: string;
+  /** Wheels-off time (UTC ISO); AeroDataBox `runwayTime` on the departure side. */
+  runwayDepartureTime?: Date | null;
+  /** Wheels-on time (UTC ISO); AeroDataBox `runwayTime` on the arrival side. */
+  runwayArrivalTime?: Date | null;
+  /** True when AeroDataBox reports the flight as a cargo service. */
+  isCargo?: boolean | null;
+  /** Timestamp of the last data update reported by AeroDataBox. */
+  aerodataboxLastUpdatedUtc?: Date | null;
+  /** AeroDataBox quality tags, e.g. ["Basic", "Live"]. */
+  aerodataboxQualityTags?: string[];
+  /** Arrival baggage belt identifier (departure side is irrelevant for passengers). */
+  baggageBelt?: string | null;
+  /** Departure check-in desk range, e.g. "120-150". */
+  checkInDesk?: string | null;
 }
 
 /**

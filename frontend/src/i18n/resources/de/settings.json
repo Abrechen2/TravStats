@@ -574,6 +574,59 @@
       "or": "ODER (stattdessen Basic Auth verwenden)"
     }
   },
+  "import": {
+    "title": "Import",
+    "description": "Migriere deine Flughistorie aus einem anderen Logbuch oder importiere einen TravStats-Excel-Export erneut.",
+    "tile": {
+      "fr24": {
+        "title": "Von Flightradar24",
+        "description": "Lade deinen CSV-Export von my.flightradar24.com hoch. Zeitzonen-Umrechnung und Flughafen-Lookup werden automatisch durchgeführt.",
+        "uploadLabel": "FR24-CSV auswählen"
+      },
+      "genericCsv": {
+        "title": "Aus beliebigem Logbuch (CSV)",
+        "description": "Lade eine flache Flug-CSV — nach dem Upload öffnet sich ein Mapping-Wizard, mit dem du jede Spalte einem TravStats-Feld zuordnest.",
+        "uploadLabel": "CSV-Datei auswählen"
+      },
+      "roundTrip": {
+        "title": "TravStats-Excel reimportieren",
+        "description": "XLSX/CSV/JSON aus einem TravStats-Export zurückladen. Bestehende Zeilen werden per ID aktualisiert, neue Zeilen angelegt.",
+        "uploadLabel": ".xlsx / .csv / .json auswählen",
+        "successSummary": "Aktualisiert: {{updated}} · Neu: {{created}}"
+      }
+    },
+    "preview": {
+      "title": "Vorschau",
+      "summary": "{{ok}} bereit · {{duplicates}} Duplikate · {{problems}} Probleme",
+      "commit": "{{count}} Zeile importieren",
+      "commit_plural": "{{count}} Zeilen importieren",
+      "cancel": "Abbrechen",
+      "wizard": {
+        "title": "CSV-Spalten auf TravStats-Felder zuordnen",
+        "headerLabel": "TravStats-Feld",
+        "headerColumn": "Deine Spalte",
+        "skip": "— überspringen —",
+        "cancel": "Abbrechen",
+        "continue": "Weiter",
+        "fields": {
+          "date": "Datum (YYYY-MM-DD)",
+          "fromIata": "Von IATA (3-4 Buchstaben)",
+          "toIata": "Nach IATA (3-4 Buchstaben)",
+          "depTimeLocal": "Abflugzeit (HH:MM:SS)",
+          "arrTimeLocal": "Ankunftszeit (HH:MM:SS)",
+          "flightNumber": "Flugnummer",
+          "airline": "Fluggesellschaft",
+          "aircraft": "Flugzeugtyp",
+          "registration": "Kennzeichen",
+          "seatNumber": "Sitzplatznummer",
+          "notes": "Notizen"
+        }
+      }
+    },
+    "toast": {
+      "movedFromDashboard": "Der Flug-Import ist jetzt hier — unter Einstellungen → Import."
+    }
+  },
   "apiTokens": {
     "title": "API-Tokens",
     "description": "Persönliche Zugriffstokens für externe Tools, AI-Agenten und Skripte. Ein Token wird genau einmal beim Erstellen angezeigt — danach nie wieder.",

@@ -135,8 +135,13 @@ export default function AdvancedStatsPage(): JSX.Element {
         offset += limit;
       }
 
-      // Only use flown flights for statistics; scheduled/cancelled are excluded
-      setFlights(allFlights.filter((f) => f.status === "flown"));
+      // Use flown + historical flights for statistics; scheduled/cancelled are excluded.
+      // Historical flights have unreliable times (often 12:00 placeholders) but contribute
+      // accurately to airport/distance/airline/route counts, and `calculateDuration` falls
+      // back to a great-circle estimate for DATE_ONLY rows so duration aggregates stay sane.
+      setFlights(
+        allFlights.filter((f) => f.status === "flown" || f.status === "historical")
+      );
 
       const [fun, business, unique, airports, seat] = await Promise.all([
         statsApi.getFunStats().catch((err) => {
