@@ -352,3 +352,57 @@ describe("lookupFlightWithHistorical — AeroDataBox cascade integration", () =>
     expect(mockedAxios.get).not.toHaveBeenCalled();
   });
 });
+
+describe("aerodataboxLookup — extended-field mapping (v1.5)", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    __resetAerodataboxCacheForTests();
+    apiKeyResolverMock.getApiKey.mockImplementation(async (provider: string) =>
+      provider === "aerodatabox" ? "secret-key" : null,
+    );
+  });
+
+  it("persists runwayTime, isCargo, qualityTags, baggageBelt, checkInDesk, lastUpdatedUtc", async () => {
+    mockedAxios.get.mockResolvedValueOnce({
+      data: [
+        {
+          number: "LH400",
+          codeshareStatus: "isOperator",
+          isCargo: false,
+          lastUpdatedUtc: "2024-01-15 18:30Z",
+          quality: ["Basic", "Live"],
+          airline: { name: "Lufthansa", iata: "LH", icao: "DLH" },
+          aircraft: { reg: "D-AIBL", model: "Airbus A320" },
+          departure: {
+            airport: { iata: "FRA", icao: "EDDF", name: "Frankfurt" },
+            scheduledTime: { utc: "2024-01-15 10:30Z" },
+            runwayTime: { utc: "2024-01-15 10:42Z" },
+            terminal: "1",
+            gate: "A12",
+            checkInDesk: "120-150",
+            baggageBelt: "7",
+          },
+          arrival: {
+            airport: { iata: "JFK", icao: "KJFK", name: "JFK" },
+            scheduledTime: { utc: "2024-01-15 18:30Z" },
+            runwayTime: { utc: "2024-01-15 18:25Z" },
+            terminal: "1",
+            gate: "B14",
+            baggageBelt: "3",
+          },
+        },
+      ],
+    });
+
+    const result = await lookupFlightAerodatabox("LH400", "2024-01-15");
+
+    expect(result).not.toBeNull();
+    expect(result?.runwayDepartureTime?.toISOString()).toBe("2024-01-15T10:42:00.000Z");
+    expect(result?.runwayArrivalTime?.toISOString()).toBe("2024-01-15T18:25:00.000Z");
+    expect(result?.isCargo).toBe(false);
+    expect(result?.aerodataboxQualityTags).toEqual(["Basic", "Live"]);
+    expect(result?.baggageBelt).toBe("3");       // arrival side — passenger picks up here
+    expect(result?.checkInDesk).toBe("120-150"); // departure side — passenger checks in here
+    expect(result?.aerodataboxLastUpdatedUtc?.toISOString()).toBe("2024-01-15T18:30:00.000Z");
+  });
+});
