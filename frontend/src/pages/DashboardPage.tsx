@@ -21,19 +21,35 @@ import { useClickOutside } from "../hooks/useClickOutside";
 import type { Flight, FlightInput, FlightFilters, GeoJSONFeature } from "../types";
 import { API_LIMITS } from "../lib/constants";
 import { toCsv, escapeXml, downloadBlob } from "../lib/export";
-import {
-  exportFlightsToXlsx,
-  parseXlsxToRows,
-  jsonToFlightRow,
-  type FlightRow,
-} from "../lib/xlsxRoundTrip";
-import { parseCsv } from "../lib/csvParser";
-import { airportsApi } from "../lib/api/airports";
+import { exportFlightsToXlsx } from "../lib/xlsxRoundTrip";
 import { motion, AnimatePresence } from "framer-motion";
 import { FlightPanel } from "../components/FlightPanel";
 // jsPDF and autoTable are dynamically imported when needed to reduce bundle size
 
+const IMPORT_MOVED_FLAG = "tsv1_5_import_moved_seen";
+
+/**
+ * One-time info toast telling users that the import feature has moved to
+ * Settings → Import. Suppressed via a localStorage flag after first display.
+ */
+function useImportMigrationToast(): void {
+  const { t } = useTranslation(["settings"]);
+  const addToast = useToastStore((s) => s.addToast);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.localStorage.getItem(IMPORT_MOVED_FLAG)) return;
+    addToast(
+      "info",
+      t("settings:import.toast.movedFromDashboard") ||
+        "The flight import has moved to Settings → Import.",
+      8000
+    );
+    window.localStorage.setItem(IMPORT_MOVED_FLAG, "1");
+  }, [addToast, t]);
+}
+
 export default function DashboardPage(): JSX.Element {
+  useImportMigrationToast();
   const { t } = useTranslation(["dashboard", "common", "flights", "training"]);
   const [allFlights, setFlights] = useState<Flight[]>([]); // Filtered flights for map (not directly rendered)
   const [recentFlights, setRecentFlights] = useState<Flight[]>([]); // Unfiltered recent flights for sidebar
@@ -48,8 +64,6 @@ export default function DashboardPage(): JSX.Element {
   const [visMode, setVisMode] = useState<VisMode>("routes");
   const [activeTripId, setActiveTripId] = useState<string | null>(null);
   const location = useLocation();
-  const importInputRef = useRef<HTMLInputElement | null>(null);
-
   const [leftOpen, setLeftOpen] = useState(false);
   const [rightOpen, setRightOpen] = useState(false);
   const detailMode = useFlightSelectionStore((s) => s.detailMode);
@@ -83,8 +97,6 @@ export default function DashboardPage(): JSX.Element {
   const [newAchievements, setNewAchievements] = useState<import("../types").UserAchievement[]>([]);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
-  const [, setImporting] = useState(false);
-
   // Close export menu when clicking outside
   useClickOutside(exportMenuRef, () => {
     if (showExportMenu) {
@@ -508,263 +520,11 @@ export default function DashboardPage(): JSX.Element {
     }
   };
 
-  const handleImport = () => {
-    importInputRef.current?.click();
-  };
-
-  /**
-   * Pick the right parser by file extension. JSON is treated as an
-   * already-shaped array of FlightRow-like records; CSV runs through
-   * the RFC-4180 parser; XLSX uses exceljs.
-   */
-  const parseImportFile = async (file: File): Promise<FlightRow[]> => {
-    const lower = file.name.toLowerCase();
-    if (lower.endsWith(".xlsx")) {
-      return parseXlsxToRows(file);
-    }
-    const text = await file.text();
-    if (lower.endsWith(".json")) {
-      const raw = JSON.parse(text) as unknown;
-      if (!Array.isArray(raw)) return [];
-      return raw.map(jsonToFlightRow);
-    }
-    // .csv (default fallback)
-    const records = parseCsv(text);
-    return records.map(jsonToFlightRow);
-  };
-
-  /**
-   * Build the partial update payload for a row that carries an existing
-   * id. Empty cells are skipped so the user can clear individual fields
-   * via the in-app edit modal — round-trip Excel only fills, never
-   * blanks. Lat/lon are deliberately left out: airports cannot be
-   * changed via Excel because we'd need to look up the new coords.
-   */
-  const rowToUpdates = (row: FlightRow): Partial<FlightInput> => {
-    // CSV/XLSX rounds carry no IANA tz column, so default to the user's
-    // display timezone — the server will resolve to UTC via fromZonedTime.
-    const importTz = useSettingsStore.getState().display?.timezone || "UTC";
-    const u: Partial<FlightInput> = {};
-    if (row.airline) u.airline = row.airline;
-    if (row.airlineIata) u.airlineIata = row.airlineIata;
-    if (row.airlineIcao) u.airlineIcao = row.airlineIcao;
-    if (row.flightNumber) u.flightNumber = row.flightNumber;
-    if (row.callsign) u.callsign = row.callsign;
-    if (row.operatingAirline) u.operatingAirline = row.operatingAirline;
-    if (row.operatingAirlineIata) u.operatingAirlineIata = row.operatingAirlineIata;
-    if (row.operatingAirlineIcao) u.operatingAirlineIcao = row.operatingAirlineIcao;
-    if (row.isCodeshare) u.isCodeshare = row.isCodeshare === "true";
-    if (row.departureTime) {
-      u.departureLocal = row.departureTime;
-      u.depTimezone = importTz;
-    }
-    if (row.arrivalTime) {
-      u.arrivalLocal = row.arrivalTime;
-      u.arrTimezone = importTz;
-    }
-    if (row.depTimeSemantics)
-      u.depTimeSemantics = row.depTimeSemantics as FlightInput["depTimeSemantics"];
-    if (row.arrTimeSemantics)
-      u.arrTimeSemantics = row.arrTimeSemantics as FlightInput["arrTimeSemantics"];
-    if (row.actualDeparture) {
-      u.actualDepartureLocal = row.actualDeparture;
-      u.actualDepartureTz = importTz;
-    }
-    if (row.actualArrival) {
-      u.actualArrivalLocal = row.actualArrival;
-      u.actualArrivalTz = importTz;
-    }
-    if (row.status) u.status = row.status as FlightInput["status"];
-    if (row.aircraft) u.aircraft = row.aircraft;
-    if (row.aircraftRegistration) u.aircraftRegistration = row.aircraftRegistration;
-    if (row.aircraftModeS) u.aircraftModeS = row.aircraftModeS;
-    if (row.seatNumber) u.seatNumber = row.seatNumber;
-    if (row.seatClass) u.seatClass = row.seatClass as FlightInput["seatClass"];
-    if (row.boardingGroup) u.boardingGroup = row.boardingGroup;
-    if (row.gate) u.gate = row.gate;
-    if (row.terminal) u.terminal = row.terminal;
-    if (row.bookingReference) u.bookingReference = row.bookingReference;
-    if (row.ticketNumber) u.ticketNumber = row.ticketNumber;
-    if (row.baggageAllowance) u.baggageAllowance = row.baggageAllowance;
-    if (row.frequentFlyerNumber) u.frequentFlyerNumber = row.frequentFlyerNumber;
-    if (row.bookingClassLetter) u.bookingClassLetter = row.bookingClassLetter;
-    if (row.category) u.category = row.category as FlightInput["category"];
-    if (row.tags)
-      u.tags = row.tags
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-    if (row.companions)
-      u.companions = row.companions
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-    if (row.coPassengers)
-      u.coPassengers = row.coPassengers
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-    if (row.price) u.price = Number(row.price);
-    if (row.currency) u.currency = row.currency as FlightInput["currency"];
-    if (row.taxes) u.taxes = Number(row.taxes);
-    if (row.fees) u.fees = Number(row.fees);
-    if (row.dataSource) u.dataSource = row.dataSource as FlightInput["dataSource"];
-    if (row.notes) u.notes = row.notes;
-    return u;
-  };
-
-  /**
-   * Build a full FlightInput for a brand-new row (no id). Airports are
-   * resolved by IATA via airportsApi — we need lat/lon for the create
-   * payload, and Excel only carries the IATA code. If lookup fails the
-   * whole row is rejected; the user can retry with a corrected code.
-   */
-  const rowToCreateInput = async (row: FlightRow): Promise<FlightInput> => {
-    if (!row.depIata || !row.arrIata) {
-      throw new Error("Departure and arrival IATA required for new flights");
-    }
-    const [dep, arr] = await Promise.all([
-      airportsApi.getByCode(row.depIata),
-      airportsApi.getByCode(row.arrIata),
-    ]);
-    const importTz = useSettingsStore.getState().display?.timezone || "UTC";
-    return {
-      airline: row.airline || undefined,
-      airlineIata: row.airlineIata || undefined,
-      airlineIcao: row.airlineIcao || undefined,
-      flightNumber: row.flightNumber || undefined,
-      callsign: row.callsign || undefined,
-      operatingAirline: row.operatingAirline || undefined,
-      operatingAirlineIata: row.operatingAirlineIata || undefined,
-      operatingAirlineIcao: row.operatingAirlineIcao || undefined,
-      isCodeshare: row.isCodeshare ? row.isCodeshare === "true" : undefined,
-      departure: { iata: dep.iata, icao: dep.icao, name: dep.name, lat: dep.lat, lon: dep.lon },
-      arrival: { iata: arr.iata, icao: arr.icao, name: arr.name, lat: arr.lat, lon: arr.lon },
-      departureLocal: row.departureTime || undefined,
-      depTimezone: row.departureTime ? importTz : undefined,
-      arrivalLocal: row.arrivalTime || undefined,
-      arrTimezone: row.arrivalTime ? importTz : undefined,
-      depTimeSemantics: (row.depTimeSemantics || undefined) as FlightInput["depTimeSemantics"],
-      arrTimeSemantics: (row.arrTimeSemantics || undefined) as FlightInput["arrTimeSemantics"],
-      actualDepartureLocal: row.actualDeparture || undefined,
-      actualDepartureTz: row.actualDeparture ? importTz : undefined,
-      actualArrivalLocal: row.actualArrival || undefined,
-      actualArrivalTz: row.actualArrival ? importTz : undefined,
-      status: (row.status || "flown") as FlightInput["status"],
-      aircraft: row.aircraft || undefined,
-      aircraftRegistration: row.aircraftRegistration || undefined,
-      aircraftModeS: row.aircraftModeS || undefined,
-      seatNumber: row.seatNumber || undefined,
-      seatClass: (row.seatClass || undefined) as FlightInput["seatClass"],
-      boardingGroup: row.boardingGroup || undefined,
-      gate: row.gate || undefined,
-      terminal: row.terminal || undefined,
-      bookingReference: row.bookingReference || undefined,
-      ticketNumber: row.ticketNumber || undefined,
-      baggageAllowance: row.baggageAllowance || undefined,
-      frequentFlyerNumber: row.frequentFlyerNumber || undefined,
-      bookingClassLetter: row.bookingClassLetter || undefined,
-      category: (row.category || undefined) as FlightInput["category"],
-      tags: row.tags
-        ? row.tags
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean)
-        : undefined,
-      companions: row.companions
-        ? row.companions
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean)
-        : undefined,
-      coPassengers: row.coPassengers
-        ? row.coPassengers
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean)
-        : undefined,
-      price: row.price ? Number(row.price) : undefined,
-      currency: (row.currency || undefined) as FlightInput["currency"],
-      taxes: row.taxes ? Number(row.taxes) : undefined,
-      fees: row.fees ? Number(row.fees) : undefined,
-      dataSource: (row.dataSource || undefined) as FlightInput["dataSource"],
-      notes: row.notes || undefined,
-    };
-  };
-
-  const handleImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setImporting(true);
-    try {
-      const rows = await parseImportFile(file);
-      if (rows.length === 0) {
-        addToast("warning", t("common:messages.noData"));
-        return;
-      }
-
-      let updated = 0;
-      let created = 0;
-      let errors = 0;
-      for (const row of rows) {
-        try {
-          if (row.id) {
-            await flightsApi.update(row.id, rowToUpdates(row));
-            updated += 1;
-          } else {
-            const input = await rowToCreateInput(row);
-            await flightsApi.create(input);
-            created += 1;
-          }
-        } catch (err) {
-          errors += 1;
-          logger.error("Failed to import flight row:", err, row);
-        }
-      }
-
-      const succeeded = updated + created;
-      if (succeeded > 0 && errors > 0) {
-        addToast(
-          "warning",
-          t("dashboard:errors.importPartial", {
-            success: succeeded,
-            total: rows.length,
-            errors,
-          })
-        );
-        loadRecentFlights();
-        loadFlights();
-      } else if (succeeded > 0) {
-        addToast("success", t("dashboard:success.importSummary", { updated, created }));
-        loadRecentFlights();
-        loadFlights();
-      } else {
-        addToast("error", t("dashboard:errors.importFailed"));
-      }
-    } catch (err) {
-      logger.error("Import failed:", err);
-      addToast("error", t("dashboard:errors.importFailed"));
-    } finally {
-      setImporting(false);
-      if (importInputRef.current) {
-        importInputRef.current.value = "";
-      }
-    }
-  };
-
   return (
     <div
       className="h-screen flex flex-col overflow-hidden"
       style={{ background: "var(--bg-base)" }}
     >
-      <input
-        type="file"
-        accept=".csv,.json,.xlsx"
-        ref={importInputRef}
-        onChange={handleImportFile}
-        className="hidden"
-      />
       <NavigationBar />
 
       {/* Achievement Popup */}
@@ -970,29 +730,6 @@ export default function DashboardPage(): JSX.Element {
                     {fmt.toUpperCase()}
                   </button>
                 ))}
-                <div style={{ borderTop: "1px solid var(--color-border)" }} />
-                <button
-                  onClick={() => {
-                    handleImport();
-                    setShowExportMenu(false);
-                  }}
-                  className="w-full text-left px-4 py-2.5 text-sm transition-colors"
-                  style={{ color: "var(--text-muted)" }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.background = "var(--bg-muted)";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.background = "transparent";
-                  }}
-                >
-                  {t("dashboard:import")}
-                </button>
-                <div
-                  className="px-4 pb-2 text-xs"
-                  style={{ color: "var(--text-muted)", opacity: 0.7 }}
-                >
-                  {t("dashboard:importHint")}
-                </div>
               </div>
             )}
           </div>

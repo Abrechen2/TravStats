@@ -574,6 +574,59 @@
       "or": "OR (use basic auth instead)"
     }
   },
+  "import": {
+    "title": "Import",
+    "description": "Migrate your flight history from another logbook, or re-import a TravStats Excel export.",
+    "tile": {
+      "fr24": {
+        "title": "From Flightradar24",
+        "description": "Upload your my.flightradar24.com CSV export. Timezone math + airport lookup auto-handled.",
+        "uploadLabel": "Choose FR24 CSV"
+      },
+      "genericCsv": {
+        "title": "From any logbook (CSV)",
+        "description": "Upload a flat per-flight CSV — after upload, a mapping wizard opens so you can match each column to a TravStats field.",
+        "uploadLabel": "Choose CSV file"
+      },
+      "roundTrip": {
+        "title": "Re-import TravStats Excel",
+        "description": "Round-trip XLSX/CSV/JSON exported from TravStats. Existing rows are updated by ID; new rows are created.",
+        "uploadLabel": "Choose .xlsx / .csv / .json",
+        "successSummary": "Updated: {{updated}} · Created: {{created}}"
+      }
+    },
+    "preview": {
+      "title": "Preview",
+      "summary": "{{ok}} ready · {{duplicates}} duplicates · {{problems}} problems",
+      "commit": "Import {{count}} row",
+      "commit_plural": "Import {{count}} rows",
+      "cancel": "Cancel",
+      "wizard": {
+        "title": "Map your CSV columns to TravStats fields",
+        "headerLabel": "TravStats field",
+        "headerColumn": "Your column",
+        "skip": "— skip —",
+        "cancel": "Cancel",
+        "continue": "Continue",
+        "fields": {
+          "date": "Date (YYYY-MM-DD)",
+          "fromIata": "From IATA (3-4 letters)",
+          "toIata": "To IATA (3-4 letters)",
+          "depTimeLocal": "Departure time (HH:MM:SS)",
+          "arrTimeLocal": "Arrival time (HH:MM:SS)",
+          "flightNumber": "Flight number",
+          "airline": "Airline",
+          "aircraft": "Aircraft",
+          "registration": "Registration",
+          "seatNumber": "Seat number",
+          "notes": "Notes"
+        }
+      }
+    },
+    "toast": {
+      "movedFromDashboard": "The flight import has moved here — under Settings → Import."
+    }
+  },
   "apiTokens": {
     "title": "API Tokens",
     "description": "Personal access tokens for external tools, AI agents, and scripts. A token is shown exactly once at creation — never again.",

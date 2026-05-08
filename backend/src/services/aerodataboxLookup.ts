@@ -26,6 +26,7 @@ import { getApiKey } from "./apiKeyResolver";
 import { recordObservedQuota } from "./apiQuota";
 import logger from "../utils/logger";
 import type { FlightLookupResult } from "./flightLookup";
+import { normalizeFlightNumber } from "../schemas/flight";
 
 const HOST = "aerodatabox.p.rapidapi.com";
 const BASE_URL = `https://${HOST}`;
@@ -54,6 +55,12 @@ interface AerodataboxFlight {
   callSign?: string;
   status?: string;
   codeshareStatus?: "isOperator" | "isCodeshare" | "unknown";
+  /** True when AeroDataBox reports this as a cargo flight. */
+  isCargo?: boolean;
+  /** ISO-ish timestamp of the last data update, e.g. "2024-01-15 18:30Z". */
+  lastUpdatedUtc?: string;
+  /** Quality tier tags, e.g. ["Basic", "Live"]. */
+  quality?: string[];
   aircraft?: {
     reg?: string;
     model?: string;
@@ -88,11 +95,10 @@ interface AerodataboxMovement {
   actualTime?: { utc?: string; local?: string };
   terminal?: string;
   gate?: string;
-}
-
-/** Normalize "LH 400" / "lh400" to "LH400" — AeroDataBox is whitespace-sensitive. */
-function normalizeFlightNumber(input: string): string {
-  return input.replace(/\s+/g, "").toUpperCase();
+  /** Baggage reclaim belt identifier (arrival side). */
+  baggageBelt?: string;
+  /** Check-in desk range (departure side), e.g. "120-150". */
+  checkInDesk?: string;
 }
 
 /** AeroDataBox returns "2024-01-15 18:30Z" — convert to a strict ISO string. */
@@ -159,7 +165,7 @@ export async function lookupFlightAerodatabox(
     return null;
   }
 
-  const normalized = normalizeFlightNumber(trimmed);
+  const normalized = normalizeFlightNumber(trimmed) ?? trimmed;
   const cacheKey = `${normalized}_${date}`;
 
   const cached = cache.get<FlightLookupResult | null>(cacheKey);
@@ -360,6 +366,19 @@ async function mapToLookupResult(
     arrivalTime: scheduledArrival,
     actualDeparture,
     actualArrival,
+    runwayDepartureTime: parseAerodataboxUtc(flight.departure?.runwayTime?.utc)
+      ? new Date(parseAerodataboxUtc(flight.departure!.runwayTime!.utc)!)
+      : null,
+    runwayArrivalTime: parseAerodataboxUtc(flight.arrival?.runwayTime?.utc)
+      ? new Date(parseAerodataboxUtc(flight.arrival!.runwayTime!.utc)!)
+      : null,
+    isCargo: flight.isCargo ?? null,
+    aerodataboxLastUpdatedUtc: parseAerodataboxUtc(flight.lastUpdatedUtc)
+      ? new Date(parseAerodataboxUtc(flight.lastUpdatedUtc)!)
+      : null,
+    aerodataboxQualityTags: flight.quality ?? [],
+    baggageBelt: flight.arrival?.baggageBelt ?? null,
+    checkInDesk: flight.departure?.checkInDesk ?? null,
   };
 }
 

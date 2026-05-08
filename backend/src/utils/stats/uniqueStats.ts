@@ -10,16 +10,42 @@ import { HomeAirportEntry, getHomeAirportAt } from '../homeAirport';
 const LAYOVER_CAP_HOURS = 24;
 
 /**
- * Calculate unique/special statistics
+ * Calculate unique/special statistics.
+ *
+ * Selective filtering — historical flights have unreliable times so we split
+ * the input set:
+ *   - `flownFlights`     : `flown` only with both times set. Used for
+ *                          time-sensitive metrics: timeTravelIndex,
+ *                          longestTravelChain, fastestRoute, mostCountriesInDay,
+ *                          sameDayFlights, midnightFlights, longestLayover,
+ *                          shortestLayover.
+ *   - `countableFlights` : `flown` + `historical`. Used for everything that
+ *                          is time-insensitive: equator/arctic/ocean
+ *                          crossings, highest/northernmost/southernmost
+ *                          airport, hemisphere hops, dateline crossings,
+ *                          continents, tropics, east/west balance, seasons,
+ *                          international/domestic, round-trip master.
+ *
+ * Note on seasons: month-of-departure is read from `departureTime`. For
+ * historical flights with `DATE_ONLY` semantics the month is the user's
+ * stated month; for `UNKNOWN`-year-only entries the schema stores 01-01,
+ * which biases the season count toward winter. The expected volume of
+ * such entries is tiny so we accept this approximation.
  */
 export async function calculateUniqueStats(
   flights: FlightData[],
   homeAirportHistory: HomeAirportEntry[] = []
 ): Promise<UniqueStats> {
-  // Narrow to flown flights with known times (historical flights have null times)
+  // Time-sensitive subset — both times must be present.
   const flownFlights = flights.filter(
     (f): f is typeof f & { departureTime: Date; arrivalTime: Date } =>
       f.status === 'flown' && f.departureTime !== null && f.arrivalTime !== null
+  );
+
+  // Time-insensitive subset — flown + historical contribute to geographic
+  // coverage stats.
+  const countableFlights = flights.filter(
+    (f) => f.status === 'flown' || f.status === 'historical'
   );
 
   // Time travel index - flights where local arrival time (at destination) appears to be before
@@ -27,9 +53,11 @@ export async function calculateUniqueStats(
   // 11:00 GMT — the clock "went back" by 5 hours so the local arrival hour is earlier.
   let timeTravelFlights = 0;
 
-  // Collect all airport codes needed for timezone lookups; reused later for altitude etc.
+  // Collect all airport codes needed for timezone lookups; reused later for
+  // altitude etc. Use the wider `countableFlights` set so altitude /
+  // continent / country lookups also see historical airports.
   const airportCodes = new Set<string>();
-  for (const f of flownFlights) {
+  for (const f of countableFlights) {
     if (f.depIata) airportCodes.add(f.depIata);
     if (f.depIcao) airportCodes.add(f.depIcao);
     if (f.arrIata) airportCodes.add(f.arrIata);
@@ -74,9 +102,9 @@ export async function calculateUniqueStats(
     }
   }
 
-  // Equator crossings
+  // Equator crossings — geographic, time-insensitive.
   let equatorCrossings = 0;
-  flownFlights.forEach(f => {
+  countableFlights.forEach(f => {
     if (f.depLat != null && f.arrLat != null) {
       // Check if flight crosses equator (one hemisphere to another)
       if ((f.depLat > 0 && f.arrLat < 0) || (f.depLat < 0 && f.arrLat > 0)) {
@@ -85,15 +113,16 @@ export async function calculateUniqueStats(
     }
   });
 
-  // Arctic circle flights (north of 66.5°)
+  // Arctic circle flights (north of 66.5°) — geographic, time-insensitive.
   const arcticCircle = 66.5;
-  const arcticFlights = flownFlights.filter(f => {
+  const arcticFlights = countableFlights.filter(f => {
     return (f.depLat != null && f.depLat >= arcticCircle) ||
            (f.arrLat != null && f.arrLat >= arcticCircle);
   }).length;
 
-  // Ocean crossings - simplified heuristic: flights over 5000km likely cross an ocean
-  const oceanCrossings = flownFlights.filter(f => {
+  // Ocean crossings - simplified heuristic: flights over 5000km likely cross
+  // an ocean. Distance-based, time-insensitive.
+  const oceanCrossings = countableFlights.filter(f => {
     if (f.depLat == null || f.depLon == null || f.arrLat == null || f.arrLon == null) return false;
     const dist = calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon);
     return dist > 5000;
@@ -122,11 +151,11 @@ export async function calculateUniqueStats(
     logger.error({ operation: 'calculate_unique_stats', message: 'Failed to fetch airports for altitude calculation', error });
   }
 
-  // Northernmost and southernmost points
+  // Northernmost and southernmost points — geographic, time-insensitive.
   let northernmost: { lat: number; code: string } | null = null;
   let southernmost: { lat: number; code: string } | null = null;
 
-  flownFlights.forEach(f => {
+  countableFlights.forEach(f => {
     if (f.depLat != null) {
       if (!northernmost || f.depLat > northernmost.lat) {
         northernmost = { lat: f.depLat, code: f.depIata || f.depIcao || '?' };
@@ -247,9 +276,10 @@ export async function calculateUniqueStats(
     logger.error({ operation: 'calculate_unique_stats', message: 'Failed to fetch airports for country calculation', error });
   }
 
-  // Hemisphere hopper - flights crossing between northern and southern hemisphere
+  // Hemisphere hopper — flights crossing between northern and southern
+  // hemisphere. Geographic, time-insensitive.
   let hemisphereHops = 0;
-  flownFlights.forEach(f => {
+  countableFlights.forEach(f => {
     if (f.depLat != null && f.arrLat != null) {
       // Check if flight crosses from one hemisphere to another
       if ((f.depLat > 0 && f.arrLat < 0) || (f.depLat < 0 && f.arrLat > 0)) {
@@ -258,9 +288,10 @@ export async function calculateUniqueStats(
     }
   });
 
-  // Date line crosser - flights crossing the International Date Line (180° longitude)
+  // Date line crosser — flights crossing the International Date Line (180°
+  // longitude). Geographic, time-insensitive.
   let dateLineCrossings = 0;
-  flownFlights.forEach(f => {
+  countableFlights.forEach(f => {
     if (f.depLon != null && f.arrLon != null) {
       // Check if flight crosses the date line (180° or -180°)
       const lonDiff = Math.abs(f.arrLon - f.depLon);
@@ -271,13 +302,13 @@ export async function calculateUniqueStats(
     }
   });
 
-  // Continental explorer - count unique continents
+  // Continental explorer — count unique continents. Time-insensitive.
   const continents = new Set<string>();
   try {
     const airports = airportsForTimezone.size > 0
       ? airportsForTimezone
       : await getCachedAirports(Array.from(airportCodes));
-    flownFlights.forEach(f => {
+    countableFlights.forEach(f => {
       const depCode = f.depIata || f.depIcao;
       const arrCode = f.arrIata || f.arrIcao;
 
@@ -300,10 +331,11 @@ export async function calculateUniqueStats(
     logger.error({ operation: 'calculate_unique_stats', message: 'Failed to fetch airports for continent calculation', error });
   }
 
-  // Tropics traveler - flights within the tropics (between 23.5°N and 23.5°S)
+  // Tropics traveler — flights within the tropics (between 23.5°N and
+  // 23.5°S). Geographic, time-insensitive.
   const tropicOfCancer = 23.5;
   const tropicOfCapricorn = -23.5;
-  const tropicsFlights = flownFlights.filter(f => {
+  const tropicsFlights = countableFlights.filter(f => {
     if (f.depLat == null || f.arrLat == null) return false;
     // Check if both departure and arrival are within tropics
     const depInTropics = f.depLat >= tropicOfCapricorn && f.depLat <= tropicOfCancer;
@@ -311,10 +343,11 @@ export async function calculateUniqueStats(
     return depInTropics || arrInTropics;
   }).length;
 
-  // East-West balance - ratio of eastward vs westward flights
+  // East-West balance — ratio of eastward vs westward flights. Geographic,
+  // time-insensitive.
   let eastwardFlights = 0;
   let westwardFlights = 0;
-  flownFlights.forEach(f => {
+  countableFlights.forEach(f => {
     if (f.depLon != null && f.arrLon != null) {
       let lonDiff = f.arrLon - f.depLon;
       // Handle date line crossing
@@ -356,9 +389,12 @@ export async function calculateUniqueStats(
     return depDate !== arrDate;
   }).length;
 
-  // Seasonal explorer - flights in all 4 seasons
+  // Seasonal explorer — flights in all 4 seasons. Month is reliable for
+  // historical flights when the user knows it; UNKNOWN-year-only entries
+  // bias toward winter (month defaults to 01) but the volume is small.
   const seasons = new Set<number>();
-  flownFlights.forEach(f => {
+  countableFlights.forEach(f => {
+    if (!f.departureTime) return;
     const month = new Date(f.departureTime).getMonth(); // 0-11
     // Northern hemisphere seasons
     if (month >= 2 && month <= 4) seasons.add(0); // Spring (Mar-May)
@@ -367,14 +403,14 @@ export async function calculateUniqueStats(
     if (month === 11 || month === 0 || month === 1) seasons.add(3); // Winter (Dec-Feb)
   });
 
-  // International vs domestic - ratio based on countries
+  // International vs domestic — ratio based on countries. Time-insensitive.
   let internationalFlights = 0;
   let domesticFlights = 0;
   try {
     const airports = airportsForTimezone.size > 0
       ? airportsForTimezone
       : await getCachedAirports(Array.from(airportCodes));
-    flownFlights.forEach(f => {
+    countableFlights.forEach(f => {
       const depCode = f.depIata || f.depIcao;
       const arrCode = f.arrIata || f.arrIcao;
 
@@ -437,9 +473,10 @@ export async function calculateUniqueStats(
     }
   }
 
-  // Round trip master - count complete round trips (A->B->A)
+  // Round trip master — count complete round trips (A->B->A). Airport-pair
+  // based, time-insensitive.
   const roundTrips = new Map<string, number>();
-  flownFlights.forEach(f => {
+  countableFlights.forEach(f => {
     const depCode = f.depIata || f.depIcao;
     const arrCode = f.arrIata || f.arrIcao;
 
@@ -447,7 +484,7 @@ export async function calculateUniqueStats(
       const routeKey = `${depCode}-${arrCode}`;
 
       // Check if return flight exists
-      const hasReturn = flownFlights.some(flight => {
+      const hasReturn = countableFlights.some(flight => {
         const fDep = flight.depIata || flight.depIcao;
         const fArr = flight.arrIata || flight.arrIcao;
         return fDep === arrCode && fArr === depCode;

@@ -260,6 +260,8 @@
   "historicalYearPlaceholder": "e.g. 2015",
   "historicalMonth": "Month (optional)",
   "historicalMonthNone": "— unknown —",
+  "historicalDay": "Day",
+  "historicalDayNone": "unknown",
   "category": {
     "business": "Business",
     "private": "Private",
@@ -346,7 +348,13 @@
     "live_update_auto": "Live + Auto Update",
     "live_update_auto_tooltip": "Live tracking with automatic updates",
     "auto_update": "Auto Update",
-    "api_lookup": "API"
+    "api_lookup": "API",
+    "imported_fr24": "FR24",
+    "imported_fr24_tooltip": "Imported from Flightradar24 logbook",
+    "imported_generic_csv": "CSV",
+    "imported_generic_csv_tooltip": "Imported via custom CSV column-mapping",
+    "imported_roundtrip": "Re-import",
+    "imported_roundtrip_tooltip": "Re-imported from a TravStats Excel/CSV/JSON export"
   },
   "enrichmentCount": "Enriched {{count}}x",
   "confidence": "Confidence",
