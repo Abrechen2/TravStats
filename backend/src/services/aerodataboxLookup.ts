@@ -26,6 +26,7 @@ import { getApiKey } from "./apiKeyResolver";
 import { recordObservedQuota } from "./apiQuota";
 import logger from "../utils/logger";
 import type { FlightLookupResult } from "./flightLookup";
+import { normalizeFlightNumber } from "../schemas/flight";
 
 const HOST = "aerodatabox.p.rapidapi.com";
 const BASE_URL = `https://${HOST}`;
@@ -100,11 +101,6 @@ interface AerodataboxMovement {
   checkInDesk?: string;
 }
 
-/** Normalize "LH 400" / "lh400" to "LH400" — AeroDataBox is whitespace-sensitive. */
-function normalizeFlightNumber(input: string): string {
-  return input.replace(/\s+/g, "").toUpperCase();
-}
-
 /** AeroDataBox returns "2024-01-15 18:30Z" — convert to a strict ISO string. */
 function parseAerodataboxUtc(value: string | undefined): string | undefined {
   if (!value) return undefined;
@@ -169,7 +165,7 @@ export async function lookupFlightAerodatabox(
     return null;
   }
 
-  const normalized = normalizeFlightNumber(trimmed);
+  const normalized = normalizeFlightNumber(trimmed) ?? trimmed;
   const cacheKey = `${normalized}_${date}`;
 
   const cached = cache.get<FlightLookupResult | null>(cacheKey);
