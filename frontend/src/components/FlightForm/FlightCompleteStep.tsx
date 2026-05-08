@@ -322,13 +322,34 @@ export default function FlightCompleteStep({
           // sit at the empty "unbekannt" option; the previous code wrote
           // "YYYY-01-01" for both "January" and "unknown", so the dropdown
           // always snapped back to Januar.
+          // Four valid storage shapes, in order of completeness:
+          //   ""           -> nothing entered yet
+          //   "YYYY"       -> year known, month unknown
+          //   "YYYY-MM"    -> year + month known, day unknown (NEW)
+          //   "YYYY-MM-DD" -> year + month + real day known
+          // The legacy "YYYY-MM-01" shape is read as year+month+day=1 and
+          // will display Day=1 in the new UI, which is honest about the data.
           const yearMatch = departureDate.match(/^(\d{1,4})/);
           const monthMatch = departureDate.match(/^\d{4}-(\d{2})/);
+          const dayMatch = departureDate.match(/^\d{4}-\d{2}-(\d{2})$/);
           const yearStr = yearMatch?.[1] ?? "";
           const monthPadded = monthMatch?.[1] ?? "";
           const monthValue = monthPadded ? String(parseInt(monthPadded, 10)) : "";
+          const dayPadded = dayMatch?.[1] ?? "";
+          const dayValue = dayPadded ? String(parseInt(dayPadded, 10)) : "";
+
+          // Returns how many days are in (year, month) where month is 1-12.
+          // new Date(year, month, 0) gives the last day of the prior month
+          // when month is treated as 1-based (JS idiom).
+          const daysInMonth = (year: number, month: number): number =>
+            new Date(year, month, 0).getDate();
+
+          const numYear = yearStr ? parseInt(yearStr, 10) : new Date().getFullYear();
+          const numMonth = monthValue ? parseInt(monthValue, 10) : 0;
+          const maxDay = numMonth > 0 ? daysInMonth(numYear, numMonth) : 31;
+
           return (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4" style={{ gridTemplateColumns: "1.5fr 2fr 1.2fr" }}>
               <div>
                 <label className={`label ${textClass}`}>{t("flights:historicalYear")}</label>
                 <input
@@ -345,9 +366,19 @@ export default function FlightCompleteStep({
                       setArrivalDate("");
                       return;
                     }
-                    // If a month was already chosen, preserve it; otherwise
-                    // store year-only so the month select stays "unbekannt".
-                    const next = monthPadded ? `${y}-${monthPadded}-01` : y;
+                    let next: string;
+                    if (!monthPadded) {
+                      // No month selected — store year-only
+                      next = y;
+                    } else if (!dayPadded) {
+                      // Month known, no day — store YYYY-MM
+                      next = `${y}-${monthPadded}`;
+                    } else {
+                      // Year + month + day: clamp day to the new month's max
+                      const newMax = daysInMonth(parseInt(y, 10), parseInt(monthPadded, 10));
+                      const clampedDay = Math.min(parseInt(dayPadded, 10), newMax);
+                      next = `${y}-${monthPadded}-${String(clampedDay).padStart(2, "0")}`;
+                    }
                     setDepartureDate(next);
                     setArrivalDate(next);
                   }}
@@ -361,9 +392,19 @@ export default function FlightCompleteStep({
                   onChange={(e) => {
                     const m = e.target.value;
                     const y = yearStr || String(new Date().getFullYear());
-                    // Picking "unbekannt" must not snap to January — store
-                    // year-only so the dropdown stays empty next render.
-                    const next = m ? `${y}-${m.padStart(2, "0")}-01` : y;
+                    let next: string;
+                    if (!m) {
+                      // Month cleared — drop back to year-only (also clears day)
+                      next = yearStr ? yearStr : "";
+                    } else if (!dayPadded) {
+                      // Month selected, no day — store YYYY-MM (NOT YYYY-MM-01)
+                      next = `${y}-${m.padStart(2, "0")}`;
+                    } else {
+                      // Month changed while day is set — clamp day if needed
+                      const newMax = daysInMonth(parseInt(y, 10), parseInt(m, 10));
+                      const clampedDay = Math.min(parseInt(dayPadded, 10), newMax);
+                      next = `${y}-${m.padStart(2, "0")}-${String(clampedDay).padStart(2, "0")}`;
+                    }
                     setDepartureDate(next);
                     setArrivalDate(next);
                   }}
@@ -373,6 +414,35 @@ export default function FlightCompleteStep({
                   {Array.from({ length: 12 }, (_, i) => (
                     <option key={i + 1} value={String(i + 1)}>
                       {new Date(2000, i).toLocaleDateString(i18n.language, { month: "long" })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={`label ${textClass}`}>{t("flights:historicalDay")}</label>
+                <select
+                  value={dayValue}
+                  disabled={!monthValue}
+                  onChange={(e) => {
+                    const d = e.target.value;
+                    const y = yearStr || String(new Date().getFullYear());
+                    const m = monthPadded;
+                    let next: string;
+                    if (!d) {
+                      // Day cleared — transition back to YYYY-MM
+                      next = `${y}-${m}`;
+                    } else {
+                      next = `${y}-${m}-${d.padStart(2, "0")}`;
+                    }
+                    setDepartureDate(next);
+                    setArrivalDate(next);
+                  }}
+                  className={`input ${sizedInputClass} disabled:opacity-40 disabled:cursor-not-allowed`}
+                >
+                  <option value="">{t("flights:historicalDayNone")}</option>
+                  {Array.from({ length: maxDay }, (_, i) => (
+                    <option key={i + 1} value={String(i + 1)}>
+                      {i + 1}
                     </option>
                   ))}
                 </select>

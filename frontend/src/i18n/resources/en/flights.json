@@ -260,6 +260,8 @@
   "historicalYearPlaceholder": "e.g. 2015",
   "historicalMonth": "Month (optional)",
   "historicalMonthNone": "— unknown —",
+  "historicalDay": "Day",
+  "historicalDayNone": "unknown",
   "category": {
     "business": "Business",
     "private": "Private",
