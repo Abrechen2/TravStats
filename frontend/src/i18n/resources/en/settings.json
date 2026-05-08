@@ -591,7 +591,8 @@
       "roundTrip": {
         "title": "Re-import TravStats Excel",
         "description": "Round-trip XLSX/CSV/JSON exported from TravStats. Existing rows are updated by ID; new rows are created.",
-        "uploadLabel": "Choose .xlsx / .csv / .json"
+        "uploadLabel": "Choose .xlsx / .csv / .json",
+        "successSummary": "Updated: {{updated}} · Created: {{created}}"
       }
     },
     "preview": {

@@ -591,7 +591,8 @@
       "roundTrip": {
         "title": "TravStats-Excel reimportieren",
         "description": "XLSX/CSV/JSON aus einem TravStats-Export zurückladen. Bestehende Zeilen werden per ID aktualisiert, neue Zeilen angelegt.",
-        "uploadLabel": ".xlsx / .csv / .json auswählen"
+        "uploadLabel": ".xlsx / .csv / .json auswählen",
+        "successSummary": "Aktualisiert: {{updated}} · Neu: {{created}}"
       }
     },
     "preview": {
