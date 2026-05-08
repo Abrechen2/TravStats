@@ -4,6 +4,39 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [1.5.0] - 2026-05-08
+
+### Added
+- **FR24 CSV importer** — Settings → Import → "From Flightradar24" takes the unmodified `my.flightradar24.com` CSV export. Server-side timezone conversion via the existing airport lookup, hardcoded column map for FR24's known schema (handles the leading blank line and embedded `(IATA/ICAO)` annotations), `Flight reason → category`, `Seat number → seatNumber`, `Note → notes`. Status auto-defaults from `dep_utc` vs. now (past → `flown`, future → `scheduled`). Closes #99.
+- **Generic CSV importer with column-mapping wizard** — Drop any flat per-flight CSV; a wizard opens automatically and lets you assign each column to a TravStats field (Departure IATA, Departure Time, Arrival IATA, Status, Airline, Aircraft, …) with auto-suggestions for known field names.
+- **Re-import TravStats Excel relocated to Settings → Import** — The round-trip XLSX/CSV/JSON importer (existing rows updated by ID, new rows created) moved off the dashboard into the new dedicated section so all three importers share one place.
+- **Shared import preview modal** — Every importer routes through the same preview screen: per-row checkboxes, flag badges (`duplicate`, `duration_mismatch`, `unresolvable_airport`, `date_invalid`), commit dispatched in 20-flight chunks via the existing `/flights/batch` route. Each row tagged with the appropriate `dataSource` (`imported_fr24`, `imported_generic_csv`, `imported_roundtrip`).
+- **AeroDataBox extended-field capture** — Lookups now persist `runwayDepartureTime`, `runwayArrivalTime`, `isCargo`, `aerodataboxQualityTags`, `baggageBelt`, `checkInDesk`, plus airport `shortName` and `municipalityName`. Backfill onto existing rows runs through the existing scheduler.
+- **DataSource badges for imports** — Flight cards now show `📊 imported_fr24` (orange), `📥 imported_generic_csv`, `↻ imported_roundtrip` so the import provenance is visible at a glance, distinct from `📧 email_import` and `🎫 boarding_pass_scan`.
+- **Historical-flight Day select** — The historical-mode date input gained a Day dropdown (Year + Month + Day) so flights with a remembered exact date but no precise time can store as `YYYY-MM-DD` with `depTimeSemantics: 'DATE_ONLY'`. Year-only and Year+Month entry continue to work unchanged.
+- **Year-inferred warning badge** — BCBP boarding-pass barcodes carry only a Julian day-of-year (no year ever) and the Tesseract OCR fallback silently substitutes the current year when none is captured. Both paths now mark `departureTime` as inferred so `FlightReviewModal` shows the existing yellow "!" badge with a "Year guessed — please verify" tooltip.
+- **Historical flights now feed time-insensitive stats** — Old logbook entries (status `historical`) contribute to airport count, country count, continent count, distance, route counts, seat-class breakdown, and milestone-year — every stat that depends only on date / airport / airline. Time-of-day buckets, layovers, durations, fastest-route km/h, and midnight crossings stay `flown`-only because historical timestamps carry placeholder times that would skew them.
+
+### Changed
+- **Routes-layer rendering** — Maximum line width reduced from 7 px to 4 px so dense maps stay readable. Routes carrying only future scheduled flights render as solid sky-blue arcs (no gradient). Routes with both past and upcoming flights render with a hardcoded two-tier red core (red-400 below median frequency, red-600 at/above) plus blue tips, replacing the heatmap-tinted core. Routes with only flown legs continue to use the frequency-driven heatmap palette.
+- **Settings → Import UI** — Redesigned to match the rest of the Settings design system: outer `SectionCard` with title, three sub-cards in a responsive grid (1 / 2 / 3 columns by viewport), `btn-primary` file pickers with 📁 prefix replacing native `<input type="file">` buttons, red-tinted error blocks, green-tinted success blocks.
+- **Generic CSV import description** — Reworded so the upload-then-wizard flow is explicit ("Upload a flat per-flight CSV — after upload, a mapping wizard opens so you can match each column to a TravStats field"), avoiding the prior implication that "Wizard" was a button.
+
+### Fixed
+- **Two-stage-review quality findings on import code** — Several issues caught by the post-implementation review: silent chunk-error swallowing in commit dispatcher (now surfaced), hardcoded English in mapping-wizard labels (now fully i18n'd DE+EN), missing parse-error truncation hint, `useState(initialChecked)` stale-state risk in `PreviewModal`, missing `aria-labelledby` on the modal.
+- **`imported_fr24` badge collided with `historical_enrichment` colour** — Both rendered as amber on the same flight card when an FR24-imported flight got enriched. `imported_fr24` now uses orange; the others stay amber.
+
+### Tests
+- **E2E Playwright critical paths for all three importers** — End-to-end coverage for FR24, Generic-CSV (full mapping-wizard flow), and Round-Trip imports against a fresh dev DB. 5 new tests, suite now 90 across 6 files.
+- **Regression tests for scheduled-flight leakage** — Locked-in coverage that scheduled flights cannot trigger general achievements (`flights_count`, `airports`, `countries`, `continents`, …) or contaminate `highestAirport` / similar unique stats. The engine architecture filters at the SQL layer; these tests prevent silent regressions.
+- **Bug-slot unit tests** — 32 new tests for the historical-date shape discriminator (`useFlightForm.dateShape.test.ts` covering 4 storage shapes), 7 for `bcbpToScanResult`, 4 for Tesseract `extractDateTimes`, plus 10 for historical-flight stats inclusion. Backend 607/607, frontend 348/348.
+
+### Database
+- **One new migration** — `20260508120000_add_aerodatabox_extended_fields`: 9 additive `ALTER TABLE ADD COLUMN` statements for the AeroDataBox extended fields (Flight: `runwayDepartureTime`, `runwayArrivalTime`, `isCargo`, `aerodataboxLastUpdatedUtc`, `aerodataboxQualityTags`, `baggageBelt`, `checkInDesk`; Airport: `shortName`, `municipalityName`). Zero-downtime safe, idempotent.
+
+### Docs
+- **Roadmap restructured** — v1.5 (silent field capture) and v1.6 (importers) merged into a single V1 finale; v1.7–v1.9 (social / insights / PWA) moved into V2 as v2.3–v2.5.
+
 ## [1.4.0] - 2026-05-04
 
 ### Added
