@@ -134,7 +134,11 @@ function getDataSourceConfig(
     imported_fr24: {
       icon: "📊",
       label: t("flights:dataSource.imported_fr24"),
-      color: "bg-amber-100 text-amber-800",
+      // Distinct orange (not amber) to avoid colliding with the
+      // historical_enrichment badge which is also amber and is rendered
+      // on the same flight card whenever an FR24-imported flight is later
+      // enriched in the background.
+      color: "bg-orange-100 text-orange-800",
     },
     imported_generic_csv: {
       icon: "📥",
