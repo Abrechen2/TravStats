@@ -76,3 +76,37 @@ describe("normalizeFlightNumber (exported helper)", () => {
     expect(normalizeFlightNumber("LH 400")).toBe("LH400");
   });
 });
+
+describe("dataSource enum (v1.5 imported_*)", () => {
+  it("accepts the three new imported_* values", () => {
+    for (const v of ["imported_fr24", "imported_generic_csv", "imported_roundtrip"]) {
+      const result = createFlightSchema.safeParse({
+        airline: "LH",
+        flightNumber: "LH400",
+        departureLocal: "2024-01-01T10:00:00",
+        depTimezone: "Europe/Berlin",
+        arrivalLocal: "2024-01-01T13:00:00",
+        arrTimezone: "America/New_York",
+        departure: { iata: "FRA", name: "Frankfurt", lat: 50, lon: 8 },
+        arrival: { iata: "JFK", name: "JFK", lat: 40, lon: -73 },
+        dataSource: v,
+      });
+      expect(result.success).toBe(true);
+    }
+  });
+
+  it("rejects unknown dataSource values", () => {
+    const result = createFlightSchema.safeParse({
+      airline: "LH",
+      flightNumber: "LH400",
+      departureLocal: "2024-01-01T10:00:00",
+      depTimezone: "Europe/Berlin",
+      arrivalLocal: "2024-01-01T13:00:00",
+      arrTimezone: "America/New_York",
+      departure: { iata: "FRA", name: "Frankfurt", lat: 50, lon: 8 },
+      arrival: { iata: "JFK", name: "JFK", lat: 40, lon: -73 },
+      dataSource: "imported_someUnknownThing",
+    });
+    expect(result.success).toBe(false);
+  });
+});
