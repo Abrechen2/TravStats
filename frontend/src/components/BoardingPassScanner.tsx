@@ -4,12 +4,13 @@ import { useTranslation } from "../hooks/useTranslation";
 import { extractBarcodeFromImage } from "../lib/barcodeExtractor";
 import { parseBCBP } from "../lib/bcbpParser";
 import { logger } from "../lib/logger";
+import { bcbpToScanResult } from "./bcbpToScanResult";
 
-import type { ParsedBooking } from "../types";
+import type { ScanResultData } from "./BoardingPassScanner.types";
 
-export interface ScanResultData extends ParsedBooking {
-  seatNumber?: string;
-}
+// Re-export so existing call-sites (`import { ScanResultData } from ".../BoardingPassScanner"`)
+// continue to compile without churn.
+export type { ScanResultData } from "./BoardingPassScanner.types";
 
 interface BoardingPassScannerProps {
   onScanSuccess: (data: ScanResultData) => void;
@@ -80,15 +81,7 @@ export default function BoardingPassScanner({
               updateScanStep("ocr", { status: "pending" });
               updateScanStep("complete", { status: "success" });
 
-              const flightData: ScanResultData = {
-                flightNumber: `${parsedData.operatingCarrierDesignator}${parsedData.flightNumber}`,
-                departureCode: parsedData.departureAirport,
-                arrivalCode: parsedData.arrivalAirport,
-                departureTime: parsedData.dateOfFlight,
-                seatNumber: parsedData.seatNumber,
-                seatClass: parsedData.seatClass || "economy",
-                airline: parsedData.airlineName || parsedData.operatingCarrierDesignator,
-              };
+              const flightData: ScanResultData = bcbpToScanResult(parsedData);
 
               await new Promise((resolve) => setTimeout(resolve, 800));
               onScanSuccess(flightData);

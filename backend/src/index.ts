@@ -31,6 +31,7 @@ import portsRoutes from './routes/ports';
 import shipsRoutes from './routes/ships';
 import cruisesRouter from './routes/cruises';
 import openapiRoutes from './routes/openapi';
+import importRoutes from './routes/import';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { requestLoggerMiddleware } from './middleware/requestLogger';
 import { prisma } from './db';
@@ -239,6 +240,7 @@ app.use('/api/v1/suggestions', suggestionsRoutes);
 app.use('/api/v1/ports', portsRoutes);
 app.use('/api/v1/ships', shipsRoutes);
 app.use('/api/v1/cruises', cruisesRouter);
+app.use('/api/v1/import', importRoutes);
 
 // 404 handler for unmatched routes (must be before errorHandler)
 app.use(notFoundHandler);

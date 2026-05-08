@@ -1,6 +1,7 @@
 import axios, { type AxiosError } from "axios";
 
 import { API_TIMEOUTS } from "../../config/constants";
+import { attachGatewayRetry } from "./gatewayRetry";
 
 export const API_URL = import.meta.env?.VITE_API_URL || "";
 
@@ -73,8 +74,16 @@ const handle401Error = (error: AxiosError): Promise<never> => {
   return Promise.reject(error);
 };
 
-api.interceptors.response.use((response) => response, handle401Error);
+// Attach gateway-retry BEFORE handle401Error. Axios runs response error
+// interceptors in REVERSE attach order, so handle401Error runs first; for any
+// non-401 it just re-rejects (it's a passthrough), letting the rejection reach
+// gateway-retry which then retries idempotent reads on transient 5xx /
+// network errors. Net effect: 401s short-circuit to login, 5xx/network
+// errors are silently retried.
+attachGatewayRetry(api);
+attachGatewayRetry(parserApi);
 
+api.interceptors.response.use((response) => response, handle401Error);
 parserApi.interceptors.response.use((response) => response, handle401Error);
 
 export default api;

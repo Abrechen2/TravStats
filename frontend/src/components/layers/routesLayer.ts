@@ -2,8 +2,9 @@ import { ArcLayer, ScatterplotLayer, TextLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
 import type { GeoJSONFeature } from "../../types";
 import { calcQuantiles, getHeatmapColor } from "./layerTypes";
-import type { ArcDatum, PointDatum, UpcomingMarkerDatum } from "./layerTypes";
+import type { ArcDatum, PointDatum } from "./layerTypes";
 import type { MapLayerColors } from "../../types/mapTheme";
+import { UpcomingArcLayer } from "./UpcomingArcLayer";
 
 function routeKey(a: string, b: string): string {
   return [a, b].sort().join("-");
@@ -25,6 +26,16 @@ function getCoordsFromFeature(
 const HISTORICAL_COLOR: [number, number, number] = [150, 150, 150];
 const HISTORICAL_ALPHA = 140;
 
+// Sky-blue for pure-scheduled (never-flown) routes. Matches EDGE_COLOR_GLSL
+// in UpcomingArcLayer: 0.3137 * 255 ≈ 80, 0.7843 * 255 ≈ 200, 1.0 * 255 = 255.
+export const SCHEDULED_BLUE: [number, number, number] = [80, 200, 255];
+// Two-tier red for mixed-route (flown + scheduled) cores. Below median
+// frequency: lighter red (Tailwind red-400). At/above median: deeper red
+// (Tailwind red-600). The blue tips of UpcomingArcLayer fade these in.
+export const MIXED_RED_LOW: [number, number, number] = [248, 113, 113];
+export const MIXED_RED_HIGH: [number, number, number] = [220, 38, 38];
+
+
 interface RouteRecord {
   key: string;
   // First-seen coordinates for this canonical route. Either direction of
@@ -35,12 +46,14 @@ interface RouteRecord {
   count: number;
   flightIds: string[];
   hasUpcoming: boolean;
+  // True when at least one flight on this canonical pair has status !==
+  // 'scheduled' (i.e. it has actually been flown — flown / cancelled /
+  // historical / duplicated all count). Combined with `hasUpcoming` to
+  // distinguish "pure-scheduled" (blue) from "mixed" (blue-tipped red).
+  hasPastFlown: boolean;
   // True when every flight on this canonical pair is `status: 'historical'`.
   // Used to fade the arc to the dim grey treatment.
   allHistorical: boolean;
-  // Departure IATA on the most-recently-added scheduled flight, used to
-  // anchor the upcoming-marker label.
-  upcomingIata: string | null;
 }
 
 function aggregateAllRoutes(flights: GeoJSONFeature[]): Map<string, RouteRecord> {
@@ -58,10 +71,8 @@ function aggregateAllRoutes(flights: GeoJSONFeature[]): Map<string, RouteRecord>
     if (existing) {
       existing.count += 1;
       existing.flightIds.push(f.properties.id);
-      if (isScheduled) {
-        existing.hasUpcoming = true;
-        existing.upcomingIata = dep.iata;
-      }
+      if (isScheduled) existing.hasUpcoming = true;
+      if (!isScheduled) existing.hasPastFlown = true;
       if (!isHistorical) existing.allHistorical = false;
     } else {
       records.set(key, {
@@ -71,8 +82,8 @@ function aggregateAllRoutes(flights: GeoJSONFeature[]): Map<string, RouteRecord>
         count: 1,
         flightIds: [f.properties.id],
         hasUpcoming: isScheduled,
+        hasPastFlown: !isScheduled,
         allHistorical: isHistorical,
-        upcomingIata: isScheduled ? dep.iata : null,
       });
     }
   }
@@ -100,16 +111,41 @@ function buildArcs(
   for (const r of records.values()) {
     if (r.count < minRouteCount) continue;
 
-    const alpha = r.allHistorical
-      ? HISTORICAL_ALPHA
-      : (Math.min(100 + r.count * 14, 230) as number);
-    const color = r.allHistorical
-      ? HISTORICAL_COLOR
-      : (paletteOverride ?? getHeatmapColor(r.count, q25, q50, q75, themeColors));
+    // Four-way category resolution. Priority:
+    //   1. allHistorical — dim grey, lowest precedence.
+    //   2. pure-scheduled (hasUpcoming && !hasPastFlown) — solid sky-blue,
+    //      rendered through plain ArcLayer (no shader inject).
+    //   3. mixed (hasUpcoming && hasPastFlown) — hardcoded 2-tier red core,
+    //      rendered through UpcomingArcLayer which fades blue at both ends.
+    //   4. regular past-only — frequency-driven heatmap, or paletteOverride
+    //      when the caller wants to force a domain-specific palette (e.g.
+    //      cruise routes use a different palette than flight heatmaps).
+    let color: [number, number, number];
+    let alpha: number;
 
-    // sourceColor === targetColor: no gradient, the route is directionless
-    // and a same-colour arc reads as a single visual unit — frequency lives
-    // in width and colour brightness, not direction.
+    if (r.allHistorical) {
+      color = HISTORICAL_COLOR;
+      alpha = HISTORICAL_ALPHA;
+    } else if (r.hasUpcoming && !r.hasPastFlown) {
+      // Pure-scheduled — never-flown route with an upcoming flight. Solid
+      // sky-blue across the whole arc, no shader gradient.
+      color = SCHEDULED_BLUE;
+      alpha = Math.min(140 + r.count * 14, 230);
+    } else if (r.hasUpcoming && r.hasPastFlown) {
+      // Mixed — hardcoded 2-tier red core; UpcomingArcLayer fades blue at
+      // both ends. Below median frequency: red-400. At/above median:
+      // red-600.
+      color = r.count <= q50 ? MIXED_RED_LOW : MIXED_RED_HIGH;
+      alpha = Math.min(100 + r.count * 14, 230);
+    } else {
+      // Regular past-only — frequency-driven heatmap, or domain-scoped
+      // palette when the caller passes paletteOverride.
+      color = paletteOverride ?? getHeatmapColor(r.count, q25, q50, q75, themeColors);
+      alpha = Math.min(100 + r.count * 14, 230);
+    }
+
+    // sourceColor === targetColor: arc is uniform colour at the data layer.
+    // Mixed-route blue tips are added by UpcomingArcLayer's fragment shader.
     const argb = [...color, alpha] as [number, number, number, number];
     arcs.push({
       sourcePosition: r.depCoord,
@@ -119,40 +155,11 @@ function buildArcs(
       targetColor: argb,
       flightIds: r.flightIds,
       hasUpcoming: r.hasUpcoming,
+      hasPastFlown: r.hasPastFlown,
       isHistorical: r.allHistorical,
     });
   }
   return arcs;
-}
-
-function midpointLonLat(a: [number, number], b: [number, number]): [number, number] {
-  // Naïve 2D midpoint — fine for the indicator marker on most routes.
-  // Long routes that cross the antimeridian (lon-delta > 180) would put
-  // the marker on the opposite side of the globe; offset back into the
-  // wrap-aware midpoint so the marker still sits visually on the arc.
-  let lonA = a[0];
-  let lonB = b[0];
-  if (Math.abs(lonB - lonA) > 180) {
-    if (lonA < lonB) lonA += 360;
-    else lonB += 360;
-  }
-  let lon = (lonA + lonB) / 2;
-  if (lon > 180) lon -= 360;
-  return [lon, (a[1] + b[1]) / 2];
-}
-
-function buildUpcomingMarkers(records: Map<string, RouteRecord>): UpcomingMarkerDatum[] {
-  const markers: UpcomingMarkerDatum[] = [];
-  for (const r of records.values()) {
-    if (!r.hasUpcoming) continue;
-    markers.push({
-      position: midpointLonLat(r.depCoord, r.arrCoord),
-      iata: r.upcomingIata ?? "",
-      count: r.count,
-      flightIds: r.flightIds,
-    });
-  }
-  return markers;
 }
 
 function buildAirportPoints(flights: GeoJSONFeature[]): PointDatum[] {
@@ -190,7 +197,6 @@ function buildAirportPoints(flights: GeoJSONFeature[]): PointDatum[] {
 export interface RouteData {
   arcs: ArcDatum[];
   points: PointDatum[];
-  upcomingMarkers: UpcomingMarkerDatum[];
 }
 
 export function buildRouteData(
@@ -201,14 +207,14 @@ export function buildRouteData(
 ): RouteData {
   // Single arc per canonical airport pair (FRA-MUC === MUC-FRA), regardless
   // of whether the route carries past, scheduled, or mixed flights. Frequency
-  // drives width + colour; the "has-upcoming" signal moves to a separate
-  // midpoint marker layer (shape, not colour) so the heatmap stays readable
-  // and accessibility doesn't depend on a colour that some users won't see.
+  // drives width + colour. Arcs that carry at least one scheduled flight get
+  // a soft outer casing layer rendered behind them — signal lives on the arc
+  // itself, not as a separate dot, and reads as a halo without competing
+  // with the heatmap.
   const records = aggregateAllRoutes(flights);
   return {
     arcs: buildArcs(records, minRouteCount, themeColors, paletteOverride),
     points: buildAirportPoints(flights),
-    upcomingMarkers: buildUpcomingMarkers(records),
   };
 }
 
@@ -242,7 +248,7 @@ export function createRoutesLayers(
   onAirportClick?: (iata: string, lon: number, lat: number) => void,
   zoom: number = 5
 ): Layer[] {
-  const { arcs, points, upcomingMarkers } = routeData;
+  const { arcs, points } = routeData;
   const dotRgb = themeColors?.airportDot ?? ([240, 169, 71] as [number, number, number]);
 
   const selectedSet = new Set(selectedIds);
@@ -251,49 +257,52 @@ export function createRoutesLayers(
   const airportOpacity = hasSelection ? 0.15 : 1;
   const labelsVisible = zoom >= LABEL_VISIBILITY_MIN_ZOOM;
 
-  // Arc width scales with route frequency. Selected arc is visually thicker.
-  const arcLayer = new ArcLayer<ArcDatum>({
-    id: "routes-arc",
-    data: arcs,
-    getSourcePosition: (d) => d.sourcePosition,
-    getTargetPosition: (d) => d.targetPosition,
-    getSourceColor: (d) => {
+  // Three arc datasets:
+  //   - regular: no upcoming flight — heatmap colour through plain ArcLayer.
+  //   - pure-scheduled: upcoming, never flown — solid sky-blue through
+  //     plain ArcLayer (no shader gradient).
+  //   - mixed: upcoming AND has been flown — hardcoded red core through
+  //     UpcomingArcLayer which fades blue at both ends.
+  // Each route appears exactly once on screen (one line, no overlap).
+  const regularArcs = arcs.filter((a) => !a.hasUpcoming);
+  const pureScheduledArcs = arcs.filter((a) => a.hasUpcoming && !a.hasPastFlown);
+  const mixedArcs = arcs.filter((a) => a.hasUpcoming && a.hasPastFlown);
+
+  // Shared arc props: width, source/target getters, click handler. Used by
+  // both the regular and the upcoming layer.
+  const sharedArcProps = {
+    getSourcePosition: (d: ArcDatum) => d.sourcePosition,
+    getTargetPosition: (d: ArcDatum) => d.targetPosition,
+    getSourceColor: (d: ArcDatum): [number, number, number, number] => {
       if (!hasSelection) return d.sourceColor;
       const isSelected = d.flightIds.some((id) => selectedSet.has(id));
       if (isSelected) return HIGHLIGHT_COLOR;
-      return [d.sourceColor[0], d.sourceColor[1], d.sourceColor[2], DIM_ALPHA] as [
-        number,
-        number,
-        number,
-        number,
-      ];
+      return [d.sourceColor[0], d.sourceColor[1], d.sourceColor[2], DIM_ALPHA];
     },
-    getTargetColor: (d) => {
+    getTargetColor: (d: ArcDatum): [number, number, number, number] => {
       if (!hasSelection) return d.targetColor;
       const isSelected = d.flightIds.some((id) => selectedSet.has(id));
       if (isSelected) return HIGHLIGHT_COLOR;
-      return [d.targetColor[0], d.targetColor[1], d.targetColor[2], DIM_ALPHA] as [
-        number,
-        number,
-        number,
-        number,
-      ];
+      return [d.targetColor[0], d.targetColor[1], d.targetColor[2], DIM_ALPHA];
     },
-    getWidth: (d) => {
+    getWidth: (d: ArcDatum) => {
       // Width follows frequency for live routes; historical-only routes stay
       // visually muted regardless of count so they don't drown out active
-      // ones. has-upcoming has its own marker — width should not also encode
-      // that, otherwise the same dimension carries two signals.
+      // ones. Cap at 4 px (was 7) — multiplier dropped from 1.3 to 1.0 so
+      // 1 flight = 1 px, 16 flights = max 4 px (smooth ramp across realistic
+      // counts).
       if (d.isHistorical) return 1.2;
-      const base = Math.min(Math.sqrt(d.count) * 1.3, 7);
+      const base = Math.min(Math.sqrt(d.count) * 1.0, 4);
       if (!hasSelection) return base;
-      return d.flightIds.some((id) => selectedSet.has(id)) ? Math.max(base * 2, 5) : base;
+      // Selected fallback floor matches the new max so a selected mixed
+      // route doesn't pop bigger than the unselected cap.
+      return d.flightIds.some((id) => selectedSet.has(id)) ? Math.max(base * 2, 4) : base;
     },
     getHeight: arcHeight,
     widthMinPixels: 1,
     pickable: !!onFlightClick,
     onClick: onFlightClick
-      ? ({ object }) => {
+      ? ({ object }: { object?: ArcDatum }) => {
           const ids = object?.flightIds;
           if (ids && ids.length > 0) onFlightClick(ids);
         }
@@ -303,6 +312,30 @@ export function createRoutesLayers(
       getTargetColor: selectedIds,
       getWidth: selectedIds,
     },
+  };
+
+  const arcLayer = new ArcLayer<ArcDatum>({
+    id: "routes-arc",
+    data: regularArcs,
+    ...sharedArcProps,
+  });
+
+  // Pure-scheduled routes — never flown, only an upcoming flight on this
+  // pair. Solid sky-blue, no shader gradient.
+  const scheduledArcLayer = new ArcLayer<ArcDatum>({
+    id: "routes-arc-scheduled",
+    data: pureScheduledArcs,
+    ...sharedArcProps,
+  });
+
+  // Mixed routes — already flown AND carry an upcoming flight. Red core
+  // (data layer), blue tips (UpcomingArcLayer fragment shader). Layer id
+  // kept as `routes-arc-upcoming` for layer-state continuity (selection
+  // state, picking buffers).
+  const upcomingArcLayer = new UpcomingArcLayer<ArcDatum>({
+    id: "routes-arc-upcoming",
+    data: mixedArcs,
+    ...sharedArcProps,
   });
 
   // Inner ring — close to the airport dot
@@ -383,46 +416,16 @@ export function createRoutesLayers(
     parameters: { depthCompare: "always" as const },
   });
 
-  // Upcoming-flight indicator at the midpoint of every route that carries
-  // a scheduled flight. A small, bright cyan-bordered dot — distinct shape
-  // and brightness so users with limited colour vision still pick up the
-  // signal. Render order: AFTER the arc so the marker sits on top.
-  const UPCOMING_FILL: [number, number, number, number] = [100, 200, 220, 230];
-  const UPCOMING_STROKE: [number, number, number, number] = [255, 255, 255, 240];
-  const upcomingMarkerLayer = new ScatterplotLayer<UpcomingMarkerDatum>({
-    id: "routes-upcoming-marker",
-    data: upcomingMarkers,
-    getPosition: (d) => d.position,
-    getRadius: 1500,
-    getFillColor: (d) => {
-      if (!hasSelection) return UPCOMING_FILL;
-      const isSelected = d.flightIds.some((id) => selectedSet.has(id));
-      return isSelected
-        ? HIGHLIGHT_COLOR
-        : ([UPCOMING_FILL[0], UPCOMING_FILL[1], UPCOMING_FILL[2], DIM_ALPHA] as [
-            number,
-            number,
-            number,
-            number,
-          ]);
-    },
-    getLineColor: UPCOMING_STROKE,
-    stroked: true,
-    filled: true,
-    lineWidthMinPixels: 1.5,
-    radiusMinPixels: 4,
-    radiusMaxPixels: 7,
-    pickable: !!onFlightClick,
-    onClick: onFlightClick
-      ? ({ object }) => {
-          const ids = object?.flightIds;
-          if (ids && ids.length > 0) onFlightClick(ids);
-        }
-      : undefined,
-    updateTriggers: {
-      getFillColor: selectedIds,
-    },
-  });
-
-  return [arcLayer, upcomingMarkerLayer, ringInnerLayer, ringOuterLayer, dotLayer, labelLayer];
+  // Render order: regular arcs first, then pure-scheduled (sky-blue solids),
+  // then mixed (gradient on top in case of stacked picking), then airport
+  // visuals.
+  return [
+    arcLayer,
+    scheduledArcLayer,
+    upcomingArcLayer,
+    ringInnerLayer,
+    ringOuterLayer,
+    dotLayer,
+    labelLayer,
+  ];
 }

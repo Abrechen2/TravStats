@@ -23,6 +23,7 @@ import ApiKeysSection from "../components/Settings/ApiKeysSection";
 import ApiTokensSection from "../components/Settings/ApiTokensSection";
 import AdminSection from "../components/Settings/AdminSection";
 import AboutSection from "../components/Settings/AboutSection";
+import ImportSection from "../components/Settings/ImportSection";
 import FeaturesSection from "../components/Settings/FeaturesSection";
 import CruisePreferencesSection from "../components/Settings/CruisePreferencesSection";
 import PasswordModal from "../components/Settings/PasswordModal";
@@ -103,6 +104,7 @@ export default function SettingsPage(): JSX.Element {
       { id: "defaults", label: t("settings:defaults.title") || "Defaults" },
       { id: "map", label: t("settings:map.title") || "Map" },
       { id: "enrichment", label: t("settings:historicalEnrichment.title") || "Enrichment" },
+      { id: "import", label: t("settings:import.title") || "Import" },
     ];
     const cruiseTab: SectionRef[] = [
       {
@@ -395,6 +397,7 @@ export default function SettingsPage(): JSX.Element {
               />
             )}
             {activeSection === "apitokens" && <ApiTokensSection />}
+            {activeSection === "import" && <ImportSection />}
             {activeSection === "admin" && user?.isAdmin && <AdminSection />}
             {activeSection === "about" && <AboutSection />}
 

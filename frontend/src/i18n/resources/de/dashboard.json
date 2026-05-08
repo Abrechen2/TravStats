@@ -30,8 +30,6 @@
   "showFlightList": "Flugliste anzeigen",
   "showStats": "Statistiken anzeigen",
   "flightMap": "Flugkarte",
-  "import": "Importieren",
-  "importHint": "CSV-Spalten: depIata, arrIata, departureTime, arrivalTime (ISO 8601, z.B. 2025-12-01T07:30:00.000Z)",
   "filters": "Filter",
   "stats": "Statistiken",
   "flights": "Flüge",

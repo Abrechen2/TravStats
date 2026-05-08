@@ -96,6 +96,8 @@ model Airport {
   lon      Float
   altitude Int?
   timezone String?
+  shortName                   String?      @map("short_name")
+  municipalityName            String?      @map("municipality_name")
   /// True if the airport has been permanently closed (e.g. Berlin Tegel TXL
   /// after 2020-11-08). Users can still pick closed airports for historical
   /// flights — the UI just marks them visually.
@@ -168,7 +170,11 @@ model Flight {
   routeSource        String?   @map("route_source") // 'live_tracking', 'historical_aggregation', 'estimated'
   hasLiveTracking    Boolean   @default(false) @map("has_live_tracking")
   // Data source tracking
+<<<<<<< HEAD
   dataSource         String?   @map("data_source") // 'manual', 'email_import', 'boarding_pass_scan', 'historical_enrichment', 'live_update', 'api_lookup', 'bulk_import'
+=======
+  dataSource       String?  @map("data_source") // 'manual', 'email_import', 'boarding_pass_scan', 'historical_enrichment', 'live_update', 'api_lookup', 'bulk_import', 'imported_fr24', 'imported_generic_csv', 'imported_roundtrip'
+>>>>>>> Main
   // Time-storage semantics for departureTime / arrivalTime.
   // 'UTC' = canonical real UTC instant (current writes always use this).
   // 'LEGACY_FAKE_UTC' = wall-clock encoded as fake-UTC; needs depTz/arrTz to
@@ -194,6 +200,15 @@ model Flight {
   coPassengers        String[] @default([]) @map("co_passengers") // Names parsed from booking email (vs. companions = user-defined travel group)
   parserTemplate      String?  @map("parser_template") // e.g. "LH" or null
   parserConfidence    Int?     @map("parser_confidence") // 0–100
+
+  // AeroDataBox extended fields (v1.5 importers — additive nullable)
+  runwayDepartureTime         DateTime?    @map("runway_departure_time")
+  runwayArrivalTime           DateTime?    @map("runway_arrival_time")
+  isCargo                     Boolean?     @map("is_cargo")
+  aerodataboxLastUpdatedUtc   DateTime?    @map("aerodatabox_last_updated_utc")
+  aerodataboxQualityTags      String[]     @map("aerodatabox_quality_tags") @default([])
+  baggageBelt                 String?      @map("baggage_belt")
+  checkInDesk                 String?      @map("check_in_desk")
 
   // Smart API check — scheduled time for next live-data lookup
   nextApiCheckAt DateTime? @map("next_api_check_at")
