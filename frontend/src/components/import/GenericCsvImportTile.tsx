@@ -15,14 +15,18 @@ export function GenericCsvImportTile(): JSX.Element {
   const [error, setError] = useState<string | null>(null);
 
   const handleFile = useCallback(async (file: File): Promise<void> => {
-    const text = await file.text();
-    const records = parseCsv(text);
-    if (records.length === 0) {
-      setError("Empty CSV.");
-      return;
+    try {
+      const text = await file.text();
+      const records = parseCsv(text);
+      if (records.length === 0) {
+        setError("Empty CSV.");
+        return;
+      }
+      setCsvText(text);
+      setCsvHeaders(Object.keys(records[0]));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
     }
-    setCsvText(text);
-    setCsvHeaders(Object.keys(records[0]));
   }, []);
 
   const handleMappingSubmit = useCallback(
@@ -30,12 +34,12 @@ export function GenericCsvImportTile(): JSX.Element {
       if (!csvText) return;
       const parsed = parseGenericCsv(csvText, mapping);
       if (parsed.parserErrors.length > 0) {
-        setError(
-          parsed.parserErrors
-            .map((e) => `${e.field ?? "spec"} (row ${e.rowIndex}): ${e.message}`)
-            .slice(0, 5)
-            .join("\n"),
-        );
+        const total = parsed.parserErrors.length;
+        const lines = parsed.parserErrors
+          .slice(0, 5)
+          .map((e) => `${e.field ?? "spec"} (row ${e.rowIndex}): ${e.message}`);
+        if (total > 5) lines.push(`… and ${total - 5} more`);
+        setError(lines.join("\n"));
         return;
       }
       try {
@@ -78,12 +82,16 @@ export function GenericCsvImportTile(): JSX.Element {
         <PreviewModal
           rows={preview.rows}
           summary={preview.summary}
-          onCommit={(rows) =>
-            commitPreviewRows(rows, "imported_generic_csv").then(() => {
-              setPreview(null);
-              setCsvText(null);
-            })
-          }
+          onCommit={async (rows) => {
+            const result = await commitPreviewRows(rows, "imported_generic_csv");
+            if (result.failures.length > 0) {
+              setError(
+                `Imported ${result.committed} of ${rows.length}. ${result.failures.length} chunk(s) failed: ${result.failures.map((f) => `chunk ${f.chunkIndex}: ${f.error}`).join("; ")}`,
+              );
+            }
+            setPreview(null);
+            setCsvText(null);
+          }}
           onCancel={() => {
             setPreview(null);
             setCsvText(null);
