@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "../../hooks/useTranslation";
 import type { GenericMapping } from "../../lib/importers/genericCsv";
 
 interface Props {
@@ -7,40 +8,41 @@ interface Props {
   onCancel: () => void;
 }
 
-const TARGET_FIELDS: Array<{ key: keyof GenericMapping; label: string; required: boolean }> = [
-  { key: "date", label: "Date (YYYY-MM-DD)", required: true },
-  { key: "fromIata", label: "From IATA (3-4 letters)", required: true },
-  { key: "toIata", label: "To IATA (3-4 letters)", required: true },
-  { key: "depTimeLocal", label: "Departure time (HH:MM:SS)", required: false },
-  { key: "arrTimeLocal", label: "Arrival time (HH:MM:SS)", required: false },
-  { key: "flightNumber", label: "Flight number", required: false },
-  { key: "airline", label: "Airline", required: false },
-  { key: "aircraft", label: "Aircraft", required: false },
-  { key: "registration", label: "Registration", required: false },
-  { key: "seatNumber", label: "Seat number", required: false },
-  { key: "notes", label: "Notes", required: false },
+const TARGET_FIELDS: Array<{ key: keyof GenericMapping; required: boolean }> = [
+  { key: "date", required: true },
+  { key: "fromIata", required: true },
+  { key: "toIata", required: true },
+  { key: "depTimeLocal", required: false },
+  { key: "arrTimeLocal", required: false },
+  { key: "flightNumber", required: false },
+  { key: "airline", required: false },
+  { key: "aircraft", required: false },
+  { key: "registration", required: false },
+  { key: "seatNumber", required: false },
+  { key: "notes", required: false },
 ];
 
 export function ColumnMappingWizard({ csvHeaders, onSubmit, onCancel }: Props): JSX.Element {
+  const { t } = useTranslation();
   const [mapping, setMapping] = useState<GenericMapping>({});
 
   const ok = TARGET_FIELDS.filter((f) => f.required).every((f) => mapping[f.key]);
 
   return (
-    <div role="dialog" aria-modal="true" className="mapping-wizard">
-      <h3>Map your CSV columns to TravStats fields</h3>
+    <div role="dialog" aria-modal="true" aria-labelledby="mapping-wizard-title" className="mapping-wizard">
+      <h3 id="mapping-wizard-title">{t("settings:import.preview.wizard.title")}</h3>
       <table>
         <thead>
           <tr>
-            <th>TravStats field</th>
-            <th>Your column</th>
+            <th>{t("settings:import.preview.wizard.headerLabel")}</th>
+            <th>{t("settings:import.preview.wizard.headerColumn")}</th>
           </tr>
         </thead>
         <tbody>
           {TARGET_FIELDS.map((f) => (
             <tr key={f.key}>
               <td>
-                {f.label}
+                {t(`settings:import.preview.wizard.fields.${f.key}`)}
                 {f.required && <span style={{ color: "var(--accent)" }}>*</span>}
               </td>
               <td>
@@ -50,7 +52,7 @@ export function ColumnMappingWizard({ csvHeaders, onSubmit, onCancel }: Props): 
                     setMapping({ ...mapping, [f.key]: e.target.value || undefined })
                   }
                 >
-                  <option value="">— skip —</option>
+                  <option value="">{t("settings:import.preview.wizard.skip")}</option>
                   {csvHeaders.map((h) => (
                     <option key={h} value={h}>
                       {h}
@@ -63,9 +65,9 @@ export function ColumnMappingWizard({ csvHeaders, onSubmit, onCancel }: Props): 
         </tbody>
       </table>
       <footer>
-        <button onClick={onCancel}>Cancel</button>
+        <button onClick={onCancel}>{t("settings:import.preview.wizard.cancel")}</button>
         <button disabled={!ok} onClick={() => onSubmit(mapping)}>
-          Continue
+          {t("settings:import.preview.wizard.continue")}
         </button>
       </footer>
     </div>

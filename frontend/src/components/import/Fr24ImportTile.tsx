@@ -18,12 +18,10 @@ export function Fr24ImportTile(): JSX.Element {
       const text = await file.text();
       const parsed = parseFr24(text);
       if (parsed.parserErrors.length > 0) {
-        setError(
-          parsed.parserErrors
-            .map((e) => `Row ${e.rowIndex}: ${e.message}`)
-            .slice(0, 5)
-            .join("\n"),
-        );
+        const total = parsed.parserErrors.length;
+        const lines = parsed.parserErrors.slice(0, 5).map((e) => `Row ${e.rowIndex}: ${e.message}`);
+        if (total > 5) lines.push(`… and ${total - 5} more`);
+        setError(lines.join("\n"));
         return;
       }
       const result = await postImportPreview(parsed.rows);
@@ -56,9 +54,15 @@ export function Fr24ImportTile(): JSX.Element {
         <PreviewModal
           rows={preview.rows}
           summary={preview.summary}
-          onCommit={(rows) =>
-            commitPreviewRows(rows, "imported_fr24").then(() => setPreview(null))
-          }
+          onCommit={async (rows) => {
+            const result = await commitPreviewRows(rows, "imported_fr24");
+            if (result.failures.length > 0) {
+              setError(
+                `Imported ${result.committed} of ${rows.length}. ${result.failures.length} chunk(s) failed: ${result.failures.map((f) => `chunk ${f.chunkIndex}: ${f.error}`).join("; ")}`,
+              );
+            }
+            setPreview(null);
+          }}
           onCancel={() => setPreview(null)}
         />
       )}

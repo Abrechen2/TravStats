@@ -1,13 +1,24 @@
 import { api } from "../../lib/api/client";
+import { logger } from "../../lib/logger";
 import type { PreviewRowEnriched } from "../../lib/api/import";
 
 const CHUNK_SIZE = 20;
 
+export interface CommitChunkFailure {
+  chunkIndex: number;
+  error: string;
+}
+
+export interface CommitResult {
+  committed: number;
+  failures: CommitChunkFailure[];
+}
+
 export async function commitPreviewRows(
   rows: PreviewRowEnriched[],
   dataSource: "imported_fr24" | "imported_generic_csv",
-): Promise<{ committed: number; failedChunks: number[] }> {
-  const failedChunks: number[] = [];
+): Promise<CommitResult> {
+  const failures: CommitChunkFailure[] = [];
   let committed = 0;
 
   for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
@@ -30,13 +41,16 @@ export async function commitPreviewRows(
       status: r.statusDefault,
       dataSource,
     }));
+    const chunkIndex = Math.floor(i / CHUNK_SIZE);
     try {
       await api.post("/flights/batch", payload);
       committed += chunk.length;
-    } catch {
-      failedChunks.push(i / CHUNK_SIZE);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      logger.error("import_commit_chunk_failed", { chunkIndex, dataSource, message });
+      failures.push({ chunkIndex, error: message });
     }
   }
 
-  return { committed, failedChunks };
+  return { committed, failures };
 }

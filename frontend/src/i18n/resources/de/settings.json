@@ -599,7 +599,28 @@
       "summary": "{{ok}} bereit · {{duplicates}} Duplikate · {{problems}} Probleme",
       "commit": "{{count}} Zeile importieren",
       "commit_plural": "{{count}} Zeilen importieren",
-      "cancel": "Abbrechen"
+      "cancel": "Abbrechen",
+      "wizard": {
+        "title": "CSV-Spalten auf TravStats-Felder zuordnen",
+        "headerLabel": "TravStats-Feld",
+        "headerColumn": "Deine Spalte",
+        "skip": "— überspringen —",
+        "cancel": "Abbrechen",
+        "continue": "Weiter",
+        "fields": {
+          "date": "Datum (YYYY-MM-DD)",
+          "fromIata": "Von IATA (3-4 Buchstaben)",
+          "toIata": "Nach IATA (3-4 Buchstaben)",
+          "depTimeLocal": "Abflugzeit (HH:MM:SS)",
+          "arrTimeLocal": "Ankunftszeit (HH:MM:SS)",
+          "flightNumber": "Flugnummer",
+          "airline": "Fluggesellschaft",
+          "aircraft": "Flugzeugtyp",
+          "registration": "Kennzeichen",
+          "seatNumber": "Sitzplatznummer",
+          "notes": "Notizen"
+        }
+      }
     },
     "toast": {
       "movedFromDashboard": "Der Flug-Import ist jetzt hier — unter Einstellungen → Import."

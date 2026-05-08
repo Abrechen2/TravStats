@@ -599,7 +599,28 @@
       "summary": "{{ok}} ready · {{duplicates}} duplicates · {{problems}} problems",
       "commit": "Import {{count}} row",
       "commit_plural": "Import {{count}} rows",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "wizard": {
+        "title": "Map your CSV columns to TravStats fields",
+        "headerLabel": "TravStats field",
+        "headerColumn": "Your column",
+        "skip": "— skip —",
+        "cancel": "Cancel",
+        "continue": "Continue",
+        "fields": {
+          "date": "Date (YYYY-MM-DD)",
+          "fromIata": "From IATA (3-4 letters)",
+          "toIata": "To IATA (3-4 letters)",
+          "depTimeLocal": "Departure time (HH:MM:SS)",
+          "arrTimeLocal": "Arrival time (HH:MM:SS)",
+          "flightNumber": "Flight number",
+          "airline": "Airline",
+          "aircraft": "Aircraft",
+          "registration": "Registration",
+          "seatNumber": "Seat number",
+          "notes": "Notes"
+        }
+      }
     },
     "toast": {
       "movedFromDashboard": "The flight import has moved here — under Settings → Import."
