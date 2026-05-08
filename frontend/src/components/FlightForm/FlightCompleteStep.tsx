@@ -314,14 +314,6 @@ export default function FlightCompleteStep({
       {/* Date & Time — full inputs for normal flights, year/month for historical */}
       {status === "historical" ? (
         (() => {
-          // Three valid storage shapes, in order of completeness:
-          //   ""           → nothing entered yet
-          //   "YYYY"       → year known, month unknown ("unbekannt")
-          //   "YYYY-MM-DD" → year + month known
-          // Storing year-only (no "-MM-DD") is what lets the month select
-          // sit at the empty "unbekannt" option; the previous code wrote
-          // "YYYY-01-01" for both "January" and "unknown", so the dropdown
-          // always snapped back to Januar.
           // Four valid storage shapes, in order of completeness:
           //   ""           -> nothing entered yet
           //   "YYYY"       -> year known, month unknown
