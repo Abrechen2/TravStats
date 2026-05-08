@@ -32,7 +32,7 @@ describe("PreviewModal", () => {
   it("renders one row per input", () => {
     render(
       <PreviewModal
-        rows={[row(), row({ flightNumber: "AA1234", flightNumberNormalised: "AA1234" })]}
+        rows={[row(), row({ sourceRowIndex: 1, flightNumber: "AA1234", flightNumberNormalised: "AA1234" })]}
         summary={{ ok: 2, problems: 0, duplicates: 0, unresolvable: 0 }}
         onCommit={() => {}}
         onCancel={() => {}}
