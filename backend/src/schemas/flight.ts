@@ -180,6 +180,9 @@ const baseFlightSchema = z.object({
     'live_update',
     'api_lookup',
     'bulk_import',
+    'imported_fr24',
+    'imported_generic_csv',
+    'imported_roundtrip',
   ]).optional(),
   // Boarding pass / email import fields
   seatNumber: z.string().max(10).optional(),
@@ -192,6 +195,14 @@ const baseFlightSchema = z.object({
   frequentFlyerNumber: z.string().max(30).optional(),
   bookingClassLetter: z.string().max(5).optional(),
   coPassengers: z.array(z.string().max(100)).max(50).optional(),
+  // AeroDataBox extended fields (v1.5 importers)
+  runwayDepartureTime: z.coerce.date().nullable().optional(),
+  runwayArrivalTime: z.coerce.date().nullable().optional(),
+  isCargo: z.boolean().nullable().optional(),
+  aerodataboxLastUpdatedUtc: z.coerce.date().nullable().optional(),
+  aerodataboxQualityTags: z.array(z.string().max(64)).max(20).optional().default([]),
+  baggageBelt: z.string().max(20).nullable().optional(),
+  checkInDesk: z.string().max(40).nullable().optional(),
 });
 
 type LocalTzPair =
