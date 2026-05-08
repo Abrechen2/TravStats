@@ -69,8 +69,15 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
   };
 
   const calculateStats = (flights: Flight[]): StatsType => {
+    // Distance is time-insensitive — count flown + historical flights so old
+    // logbook entries contribute to the total. Flight time stays flown-only
+    // because historical entries use placeholder times that would distort
+    // the duration sum.
+    const countableFlights = flights.filter(
+      (f) => f.status === "flown" || f.status === "historical"
+    );
     const flownFlights = flights.filter((f) => f.status === "flown");
-    const totalDistance = flownFlights.reduce((sum, f) => {
+    const totalDistance = countableFlights.reduce((sum, f) => {
       // Use accurate Haversine formula for distance calculation
       // Skip flights with missing coordinates
       if (f.depLat == null || f.depLon == null || f.arrLat == null || f.arrLon == null) {
