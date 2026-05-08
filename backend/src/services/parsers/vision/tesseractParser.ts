@@ -88,8 +88,14 @@ export class TesseractVisionParser implements IVisionParser {
       // Extract flight data using pattern matching
       const parsedData = this.parseOCRText(extractedText);
 
-      // Normalize and validate
+      // Normalize and validate. `normalizeParsedBooking` only retains the fields
+      // it explicitly enumerates, so any `inferredFields` set during parsing
+      // (e.g. year fallback) must be merged back onto the normalized result.
       const result = normalizeParsedBooking(parsedData);
+      if (parsedData.inferredFields && parsedData.inferredFields.length > 0) {
+        const existing = result.inferredFields ?? [];
+        result.inferredFields = Array.from(new Set([...existing, ...parsedData.inferredFields]));
+      }
 
       logger.info(
         {
@@ -127,6 +133,12 @@ export class TesseractVisionParser implements IVisionParser {
     const times = this.extractDateTimes(text);
     if (times.departure) result.departureTime = times.departure;
     if (times.arrival) result.arrivalTime = times.arrival;
+    // Propagate fields that the parser had to guess (e.g. year fallback) so the
+    // import-review UI can flag them with a "please verify" badge.
+    if (times.inferredFields.length > 0) {
+      const existing = result.inferredFields ?? [];
+      result.inferredFields = Array.from(new Set([...existing, ...times.inferredFields]));
+    }
 
     // Airline name (common carriers)
     const airline = this.extractAirline(textUpper);
@@ -188,10 +200,24 @@ export class TesseractVisionParser implements IVisionParser {
   }
 
   /**
-   * Extract departure and arrival times
+   * Extract departure and arrival times.
+   *
+   * `inferredFields` lists fields whose value the parser had to guess (rather
+   * than read directly from the source). The boarding-pass-format fallback,
+   * for example, will silently substitute the current year when the OCR text
+   * doesn't carry one — that case is flagged here so the UI can warn the user.
+   *
+   * Marked `protected` to enable focused unit testing via subclassing without
+   * exposing it on the public parser surface.
    */
-  private extractDateTimes(text: string): { departure?: string; arrival?: string } {
-    const result: { departure?: string; arrival?: string } = {};
+  protected extractDateTimes(text: string): {
+    departure?: string;
+    arrival?: string;
+    inferredFields: string[];
+  } {
+    const result: { departure?: string; arrival?: string; inferredFields: string[] } = {
+      inferredFields: [],
+    };
 
     // Look for ISO format dates
     const isoMatches = text.matchAll(PATTERNS.DATE_ISO);
@@ -207,12 +233,18 @@ export class TesseractVisionParser implements IVisionParser {
 
     if (dateMatches.length > 0 && !result.departure) {
       const match = dateMatches[0];
-      const year = match[3] || new Date().getFullYear().toString();
+      // The regex's year group is optional — when absent we silently fall back
+      // to the current year, so flag the field as inferred for the review UI.
+      const yearCaptured = match[3];
+      const year = yearCaptured || new Date().getFullYear().toString();
       const month = this.monthToNumber(match[2]);
       const day = match[1].padStart(2, '0');
       const hour = match[4].padStart(2, '0');
       const minute = match[5];
       result.departure = `${year}-${month}-${day}T${hour}:${minute}`;
+      if (!yearCaptured) {
+        result.inferredFields.push('departureTime');
+      }
     }
 
     return result;

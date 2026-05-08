@@ -251,8 +251,10 @@ router.get('/routes', async (req: AuthRequest, res: Response, next: NextFunction
     }
     const limit = parsed.data.limit ?? 10;
 
+    // Routes are time-insensitive (airport-pair grouping + great-circle distance),
+    // so historical flights are included.
     const flights = await prisma.flight.findMany({
-      where: { userId, status: 'flown' },
+      where: { userId, status: { in: ['flown', 'historical'] } },
       select: {
         depIata: true,
         depIcao: true,
@@ -332,7 +334,10 @@ router.get('/fun', async (req: AuthRequest, res: Response, next: NextFunction): 
     }
     const { fromDate, toDate } = parsed.data;
 
-    const where: Prisma.FlightWhereInput = { userId, status: 'flown' };
+    // Fun stats are computed across both flown and historical flights; the
+    // helper applies a tighter `flown`-only filter for time-sensitive parts
+    // (time-of-day buckets, weekend warrior).
+    const where: Prisma.FlightWhereInput = { userId, status: { in: ['flown', 'historical'] } };
 
     if (fromDate || toDate) {
       where.departureTime = {};
@@ -423,7 +428,10 @@ router.get('/business', async (req: AuthRequest, res: Response, next: NextFuncti
     }
     const { fromDate, toDate } = parsed.data;
 
-    const where: Prisma.FlightWhereInput = { userId, status: 'flown' };
+    // Business stats are computed across both flown and historical flights; the
+    // helper applies a tighter `flown`-only filter for duration-based metrics
+    // (avgFlightDuration, costPerHour).
+    const where: Prisma.FlightWhereInput = { userId, status: { in: ['flown', 'historical'] } };
 
     if (fromDate || toDate) {
       where.departureTime = {};
@@ -508,7 +516,10 @@ router.get('/unique', async (req: AuthRequest, res: Response, next: NextFunction
     }
     const { fromDate, toDate } = parsed.data;
 
-    const where: Prisma.FlightWhereInput = { userId, status: 'flown' };
+    // Unique stats are computed across both flown and historical flights; the
+    // helper applies a tighter `flown`-only filter for time-sensitive parts
+    // (time-travel index, layovers, fastest route, midnight crossings, etc.).
+    const where: Prisma.FlightWhereInput = { userId, status: { in: ['flown', 'historical'] } };
 
     if (fromDate || toDate) {
       where.departureTime = {};
@@ -618,7 +629,9 @@ router.get(
       }
       const { fromDate, toDate } = parsed.data;
 
-      const where: Prisma.FlightWhereInput = { userId, status: 'flown' };
+      // Airport stats are time-insensitive (counts, country/continent, distance),
+      // so historical flights are included.
+      const where: Prisma.FlightWhereInput = { userId, status: { in: ['flown', 'historical'] } };
       if (fromDate || toDate) {
         where.departureTime = {};
         if (fromDate) where.departureTime.gte = new Date(fromDate);
@@ -695,7 +708,9 @@ router.get('/seats', async (req: AuthRequest, res: Response, next: NextFunction)
     }
     const { fromDate, toDate } = parsed.data;
 
-    const where: Prisma.FlightWhereInput = { userId, status: 'flown' };
+    // Seat statistics are time-insensitive (just position/class buckets),
+    // so historical flights with seat data are included.
+    const where: Prisma.FlightWhereInput = { userId, status: { in: ['flown', 'historical'] } };
 
     if (fromDate || toDate) {
       where.departureTime = {};

@@ -2,13 +2,31 @@ import { calculateDistance } from '../geo';
 import type { FlightData, BusinessStats } from './types';
 
 /**
- * Calculate business/informative statistics
+ * Calculate business/informative statistics.
+ *
+ * Selective filtering — historical flights have unreliable times so we split
+ * the input set:
+ *   - `flownFlights`     : `flown` only with both times set. Used for
+ *                          duration-dependent metrics: avgFlightDuration and
+ *                          costPerHour.
+ *   - `countableFlights` : `flown` + `historical`. Used for everything that
+ *                          is time-insensitive: costPerKm (distance based),
+ *                          seatClassDistribution, mostCommonCategory,
+ *                          airportDiversity, busiestMonth (year+month is
+ *                          reliable enough), totalDistance, totalCost,
+ *                          categoryDistribution.
  */
 export function calculateBusinessStats(flights: FlightData[]): BusinessStats {
-  // Narrow to flown flights with known times (historical flights have null times)
+  // Time-sensitive subset — both times must be present.
   const flownFlights = flights.filter(
     (f): f is typeof f & { departureTime: Date; arrivalTime: Date } =>
       f.status === 'flown' && f.departureTime !== null && f.arrivalTime !== null
+  );
+
+  // Time-insensitive subset — flown + historical contribute to distance,
+  // cost, category, and airport coverage.
+  const countableFlights = flights.filter(
+    (f) => f.status === 'flown' || f.status === 'historical'
   );
 
   // Cost per kilometer — only consider flights that have a cost entry so the denominator
@@ -20,7 +38,7 @@ export function calculateBusinessStats(flights: FlightData[]): BusinessStats {
 
   const seenBookingIds = new Set<string>();
 
-  for (const f of flownFlights) {
+  for (const f of countableFlights) {
     const hasCoordsForDistance =
       f.depLat != null && f.depLon != null && f.arrLat != null && f.arrLon != null;
     const dist = hasCoordsForDistance
@@ -61,7 +79,7 @@ export function calculateBusinessStats(flights: FlightData[]): BusinessStats {
     : 0;
 
   // Cost per flight hour — only include hours for flights that have a cost entry.
-  // Deduplicate costs the same way as above (booking price counted once).
+  // Time-sensitive: requires precise duration, so flown-only.
   let totalCostForHours = 0;
   let totalFlightHoursWithCost = 0;
 
@@ -94,23 +112,23 @@ export function calculateBusinessStats(flights: FlightData[]): BusinessStats {
     ? Math.round((totalCostForHours / totalFlightHoursWithCost) * 100) / 100
     : 0;
 
-  // Seat class distribution
+  // Seat class distribution (time-insensitive).
   const seatClassCounts: Record<string, number> = {};
-  flownFlights.forEach(f => {
+  countableFlights.forEach(f => {
     const seatClass = f.seatClass || 'unknown';
     seatClassCounts[seatClass] = (seatClassCounts[seatClass] || 0) + 1;
   });
 
   const seatClassDistribution: Record<string, number> = {};
   Object.entries(seatClassCounts).forEach(([seatClass, count]) => {
-    seatClassDistribution[seatClass] = flownFlights.length > 0
-      ? Math.round((count / flownFlights.length) * 100)
+    seatClassDistribution[seatClass] = countableFlights.length > 0
+      ? Math.round((count / countableFlights.length) * 100)
       : 0;
   });
 
-  // Category distribution
+  // Category distribution (time-insensitive).
   const categoryCounts: Record<string, number> = {};
-  flownFlights.forEach(f => {
+  countableFlights.forEach(f => {
     const category = f.category || 'unassigned';
     categoryCounts[category] = (categoryCounts[category] || 0) + 1;
   });
@@ -119,15 +137,16 @@ export function calculateBusinessStats(flights: FlightData[]): BusinessStats {
     .sort(([, a], [, b]) => b - a)[0]?.[0] || null;
 
   // Airport diversity — prefer IATA, fall back to ICAO; one code per physical airport.
+  // Time-insensitive.
   const uniqueAirports = new Set<string>();
-  flownFlights.forEach(f => {
+  countableFlights.forEach(f => {
     const dep = f.depIata || f.depIcao;
     if (dep) uniqueAirports.add(dep);
     const arr = f.arrIata || f.arrIcao;
     if (arr) uniqueAirports.add(arr);
   });
 
-  // Average flight duration
+  // Average flight duration — needs precise times, flown-only.
   const flightDurations = flownFlights
     .map(f => {
       const hours = (new Date(f.arrivalTime).getTime() - new Date(f.departureTime).getTime()) / (1000 * 60 * 60);
@@ -139,9 +158,13 @@ export function calculateBusinessStats(flights: FlightData[]): BusinessStats {
     ? Math.round((flightDurations.reduce((a, b) => a + b, 0) / flightDurations.length) * 10) / 10
     : 0;
 
-  // Seasonal analysis
+  // Seasonal analysis — month is reliable for historical flights when the
+  // user knows the month (e.g. "March 1989"); UNKNOWN-year-only entries
+  // default month to January which slightly biases the count toward winter,
+  // but the absolute number of such entries is expected to be tiny.
   const flightsByMonth: Record<number, number> = {};
-  flownFlights.forEach(f => {
+  countableFlights.forEach(f => {
+    if (!f.departureTime) return;
     const month = new Date(f.departureTime).getMonth(); // 0-11
     flightsByMonth[month] = (flightsByMonth[month] || 0) + 1;
   });

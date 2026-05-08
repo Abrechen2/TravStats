@@ -1,4 +1,4 @@
-import { createFlightSchema } from "../schemas/flight";
+import { createFlightSchema, normalizeFlightNumber } from "../schemas/flight";
 
 /**
  * Issue #84: re-importing a boarding pass for a flight that already
@@ -55,5 +55,58 @@ describe("createFlightSchema flightNumber normalization", () => {
   it("preserves alphabetic suffixes (regional / charter codes)", () => {
     const result = createFlightSchema.parse({ ...validBase, flightNumber: "ba 287a" });
     expect(result.flightNumber).toBe("BA287A");
+  });
+});
+
+describe("normalizeFlightNumber (exported helper)", () => {
+  it("strips whitespace and uppercases", () => {
+    expect(normalizeFlightNumber("lh 400")).toBe("LH400");
+    expect(normalizeFlightNumber(" LH400 ")).toBe("LH400");
+    expect(normalizeFlightNumber("Lh400")).toBe("LH400");
+  });
+
+  it("returns undefined for nullish or empty input", () => {
+    expect(normalizeFlightNumber(undefined)).toBeUndefined();
+    expect(normalizeFlightNumber("")).toBeUndefined();
+    expect(normalizeFlightNumber("   ")).toBeUndefined();
+  });
+
+  it("handles non-Latin whitespace classes", () => {
+    expect(normalizeFlightNumber("LH\t400")).toBe("LH400");
+    expect(normalizeFlightNumber("LH 400")).toBe("LH400");
+  });
+});
+
+describe("dataSource enum (v1.5 imported_*)", () => {
+  it("accepts the three new imported_* values", () => {
+    for (const v of ["imported_fr24", "imported_generic_csv", "imported_roundtrip"]) {
+      const result = createFlightSchema.safeParse({
+        airline: "LH",
+        flightNumber: "LH400",
+        departureLocal: "2024-01-01T10:00:00",
+        depTimezone: "Europe/Berlin",
+        arrivalLocal: "2024-01-01T13:00:00",
+        arrTimezone: "America/New_York",
+        departure: { iata: "FRA", name: "Frankfurt", lat: 50, lon: 8 },
+        arrival: { iata: "JFK", name: "JFK", lat: 40, lon: -73 },
+        dataSource: v,
+      });
+      expect(result.success).toBe(true);
+    }
+  });
+
+  it("rejects unknown dataSource values", () => {
+    const result = createFlightSchema.safeParse({
+      airline: "LH",
+      flightNumber: "LH400",
+      departureLocal: "2024-01-01T10:00:00",
+      depTimezone: "Europe/Berlin",
+      arrivalLocal: "2024-01-01T13:00:00",
+      arrTimezone: "America/New_York",
+      departure: { iata: "FRA", name: "Frankfurt", lat: 50, lon: 8 },
+      arrival: { iata: "JFK", name: "JFK", lat: 40, lon: -73 },
+      dataSource: "imported_someUnknownThing",
+    });
+    expect(result.success).toBe(false);
   });
 });

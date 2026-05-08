@@ -81,40 +81,18 @@ TravStats grows from a flight-only logbook into a full travel logbook.
 
 ---
 
-## 📦 v1.5 — Full provider field capture
+## 📥 v1.5 — Importers, onboarding & full provider field capture
 
-A schema rounding pass for the existing flight-lookup providers. Today
-only a subset of the available API fields is persisted; the rest is
-either re-derivable per flight or thrown away. v1.5 stores everything
-cheap-to-keep so future features (block-time analytics, cargo flag,
-freshness debugging, quality-tag interpretation) don't need a follow-up
-provider re-fetch.
+V1 finale. Two parallel scope items in one release: a pluggable
+import pipeline so existing logbooks can seed TravStats on day one,
+plus a silent schema rounding pass for the existing flight-lookup
+providers so the next round of features (block-time analytics, hull
+gallery, quality badges) doesn't need a follow-up provider re-fetch.
 
-- **AeroDataBox**: persist `runwayTime` (off-block / on-block) on both
-  ends, `isCargo`, `lastUpdatedUtc`, `quality` tags (`string[]`),
-  `baggageBelt`, `checkInDesk`, plus per-airport `timeZone` /
-  `shortName` / `municipalityName`
-- **Backfill** via the existing historical-enrichment scheduler — no
-  manual refresh needed for users on AeroDataBox
-- **Skipped on purpose**:
-  - `aircraft.image` (CC-BY-SA attribution requirement — defer until
-    the v1.6 hull-gallery UI exists; storing the URL without rendering
-    creates a legal display obligation we can't satisfy)
-  - `distance.{meter,mile,nm,feet}` (redundant — derive from `km` on
-    read instead of duplicating four columns)
+### Importers (user-facing headline)
 
-No UI changes — fields land silently in the schema and start
-populating in the background. Consuming UI features (block-time
-analytics, hull gallery, quality badges) are scheduled into v1.6+.
-
----
-
-## 📥 v1.6 — Importers & onboarding
-
-A pluggable import pipeline so existing logbooks can seed TravStats
-on day one without requiring users to write code or do manual
-timezone math. Same skeleton across providers; new sources slot in
-as parser plug-ins.
+Pluggable parser pipeline — same skeleton across providers; new
+sources slot in as parser plug-ins.
 
 **Sources (initial set)**
 
@@ -147,34 +125,30 @@ as parser plug-ins.
   future → `scheduled`
 
 **Cruise-side equivalent** (Cruisemapper, MyShipTracking exports)
-deferred to a follow-up — the parser skeleton + bulk-route are
-flight-specific today; cruise needs its own batch endpoint first.
+deferred to V2 — the parser skeleton + bulk-route are flight-specific
+today; cruise needs its own batch endpoint first.
 
----
+### Provider field capture (silent backend pass)
 
-## 👥 v1.7 — Social & sharing
+Stores everything cheap-to-keep that the existing flight-lookup
+providers already return.
 
-- Year-in-review share graphics (Instagram story, Twitter card, animated WebM)
-- Friend invites with side-by-side stat comparison
-- Shared route-map images (PNG/SVG, customisable themes)
+- **AeroDataBox**: persist `runwayTime` (off-block / on-block) on both
+  ends, `isCargo`, `lastUpdatedUtc`, `quality` tags (`string[]`),
+  `baggageBelt`, `checkInDesk`, plus per-airport `timeZone` /
+  `shortName` / `municipalityName`
+- **Backfill** via the existing historical-enrichment scheduler — no
+  manual refresh needed for users on AeroDataBox
+- **Skipped on purpose**:
+  - `aircraft.image` (CC-BY-SA attribution requirement — defer until
+    a hull-gallery UI exists; storing the URL without rendering
+    creates a legal display obligation we can't satisfy)
+  - `distance.{meter,mile,nm,feet}` (redundant — derive from `km` on
+    read instead of duplicating four columns)
 
----
-
-## 🧠 v1.8 — Smart insights
-
-- Pattern detection ("your most active month is …")
-- Route recommendations based on history
-- Seat-preference analytics over time
-- Jetlag score and recovery estimation
-
----
-
-## 📱 v1.9 — PWA & mobile
-
-- Service worker, offline access, install-as-app manifest
-- Camera-first boarding-pass scan on mobile
-- Push notifications (gate changes, check-in reminders)
-- Touch-friendly map gestures
+No UI changes from this half — fields land silently in the schema
+and start populating in the background. Consuming UI features
+(block-time analytics, hull gallery, quality badges) move to V2.
 
 ---
 
@@ -243,6 +217,32 @@ v2.0 is the structural rewrite that makes use of it.
   `Booking.price` rows into `Expense`, FX-snapshot via the v2.1
   Frankfurter pipeline, then drop the legacy columns including the
   long-dead `ticketPrice`
+
+---
+
+## 👥 v2.3 — Social & sharing
+
+- Year-in-review share graphics (Instagram story, Twitter card, animated WebM)
+- Friend invites with side-by-side stat comparison
+- Shared route-map images (PNG/SVG, customisable themes)
+
+---
+
+## 🧠 v2.4 — Smart insights
+
+- Pattern detection ("your most active month is …")
+- Route recommendations based on history
+- Seat-preference analytics over time
+- Jetlag score and recovery estimation
+
+---
+
+## 📱 v2.5 — PWA & mobile
+
+- Service worker, offline access, install-as-app manifest
+- Camera-first boarding-pass scan on mobile
+- Push notifications (gate changes, check-in reminders)
+- Touch-friendly map gestures
 
 ---
 

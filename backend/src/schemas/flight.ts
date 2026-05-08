@@ -76,11 +76,23 @@ const ianaTimezone = z
   .string()
   .refine(isValidIanaTimezone, { message: 'Invalid IANA timezone' });
 
-const normalizedFlightNumber = z.string().optional().transform((v) => {
+/**
+ * Canonical flight-number normalisation: strip every whitespace character
+ * (incl. tabs and non-breaking spaces) and uppercase. Empty results collapse
+ * to undefined so optional fields stay nullable. Used by both the Zod schema
+ * and any code path that needs to compare flight numbers across sources
+ * (importers, dedupe-hint, etc.).
+ */
+export function normalizeFlightNumber(v: string | undefined | null): string | undefined {
   if (!v) return undefined;
   const cleaned = v.replace(/\s+/g, "").toUpperCase();
   return cleaned === "" ? undefined : cleaned;
-});
+}
+
+const normalizedFlightNumber = z
+  .string()
+  .optional()
+  .transform((v) => normalizeFlightNumber(v));
 
 const baseFlightSchema = z.object({
   airline: emptyStringToUndefined,
@@ -168,6 +180,9 @@ const baseFlightSchema = z.object({
     'live_update',
     'api_lookup',
     'bulk_import',
+    'imported_fr24',
+    'imported_generic_csv',
+    'imported_roundtrip',
   ]).optional(),
   // Boarding pass / email import fields
   seatNumber: z.string().max(10).optional(),
@@ -180,6 +195,14 @@ const baseFlightSchema = z.object({
   frequentFlyerNumber: z.string().max(30).optional(),
   bookingClassLetter: z.string().max(5).optional(),
   coPassengers: z.array(z.string().max(100)).max(50).optional(),
+  // AeroDataBox extended fields (v1.5 importers)
+  runwayDepartureTime: z.coerce.date().nullable().optional(),
+  runwayArrivalTime: z.coerce.date().nullable().optional(),
+  isCargo: z.boolean().nullable().optional(),
+  aerodataboxLastUpdatedUtc: z.coerce.date().nullable().optional(),
+  aerodataboxQualityTags: z.array(z.string().max(64)).max(20).optional().default([]),
+  baggageBelt: z.string().max(20).nullable().optional(),
+  checkInDesk: z.string().max(40).nullable().optional(),
 });
 
 type LocalTzPair =

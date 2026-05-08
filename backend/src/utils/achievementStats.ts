@@ -160,7 +160,11 @@ export function getContinent(lat: number, lon: number): string | null {
 
 export async function calculateUserStats(flights: FlightData[]): Promise<UserStats> {
   const stats: UserStats = {
-    flightsCount: flights.filter(f => f.status === 'flown').length,
+    // Historical flights are real past flights and count toward "flights_count"
+    // achievements. Time-sensitive sub-stats below stay narrowed to `flown`.
+    flightsCount: flights.filter(
+      f => f.status === 'flown' || f.status === 'historical'
+    ).length,
     totalDistance: 0,
     totalFlightHours: 0,
     countries: new Set(),
@@ -335,18 +339,25 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
       stats.aircraftTypes.add(normalizeAircraft(flight.aircraft));
     }
 
-    // Time-based stats — only applicable when departure time is known
+    // Time-based stats — only applicable when departure time is known.
+    // Time-of-day buckets (night/weekend) require precise local hour and
+    // weekday, so they are gated to `flown` only — historical flights with
+    // 12:00 placeholders would skew the counts. Year/month aggregation
+    // (monthsWithFlights, flightsByMonth, flightsByYear) is reliable enough
+    // for historical flights so those remain inclusive.
     if (flight.departureTime) {
-      // Night flights (00:00 - 06:00)
-      const depHour = flight.departureTime.getHours();
-      if (depHour >= 0 && depHour < 6) {
-        stats.nightFlights++;
-      }
+      if (flight.status === 'flown') {
+        // Night flights (00:00 - 06:00)
+        const depHour = flight.departureTime.getHours();
+        if (depHour >= 0 && depHour < 6) {
+          stats.nightFlights++;
+        }
 
-      // Weekend flights
-      const depDay = flight.departureTime.getDay();
-      if (depDay === 0 || depDay === 6) {
-        stats.weekendFlights++;
+        // Weekend flights
+        const depDay = flight.departureTime.getDay();
+        if (depDay === 0 || depDay === 6) {
+          stats.weekendFlights++;
+        }
       }
 
       // Months with flights
@@ -412,8 +423,9 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
       }
     }
 
-    // Red-eye / not-a-morning-person (departure hour local)
-    if (flight.departureTime) {
+    // Red-eye / not-a-morning-person (departure hour local) — needs precise
+    // local hour, so flown-only. Historical placeholders would skew this.
+    if (flight.departureTime && flight.status === 'flown') {
       const h = flight.departureTime.getHours();
       if (h >= 23 || h < 5) stats.redEyeFlights++;
       if (h >= 4 && h < 7) stats.earlyMorningFlights++;
