@@ -54,6 +54,12 @@ interface AerodataboxFlight {
   callSign?: string;
   status?: string;
   codeshareStatus?: "isOperator" | "isCodeshare" | "unknown";
+  /** True when AeroDataBox reports this as a cargo flight. */
+  isCargo?: boolean;
+  /** ISO-ish timestamp of the last data update, e.g. "2024-01-15 18:30Z". */
+  lastUpdatedUtc?: string;
+  /** Quality tier tags, e.g. ["Basic", "Live"]. */
+  quality?: string[];
   aircraft?: {
     reg?: string;
     model?: string;
@@ -88,6 +94,10 @@ interface AerodataboxMovement {
   actualTime?: { utc?: string; local?: string };
   terminal?: string;
   gate?: string;
+  /** Baggage reclaim belt identifier (arrival side). */
+  baggageBelt?: string;
+  /** Check-in desk range (departure side), e.g. "120-150". */
+  checkInDesk?: string;
 }
 
 /** Normalize "LH 400" / "lh400" to "LH400" — AeroDataBox is whitespace-sensitive. */
@@ -360,6 +370,19 @@ async function mapToLookupResult(
     arrivalTime: scheduledArrival,
     actualDeparture,
     actualArrival,
+    runwayDepartureTime: parseAerodataboxUtc(flight.departure?.runwayTime?.utc)
+      ? new Date(parseAerodataboxUtc(flight.departure!.runwayTime!.utc)!)
+      : null,
+    runwayArrivalTime: parseAerodataboxUtc(flight.arrival?.runwayTime?.utc)
+      ? new Date(parseAerodataboxUtc(flight.arrival!.runwayTime!.utc)!)
+      : null,
+    isCargo: flight.isCargo ?? null,
+    aerodataboxLastUpdatedUtc: parseAerodataboxUtc(flight.lastUpdatedUtc)
+      ? new Date(parseAerodataboxUtc(flight.lastUpdatedUtc)!)
+      : null,
+    aerodataboxQualityTags: flight.quality ?? [],
+    baggageBelt: flight.arrival?.baggageBelt ?? null,
+    checkInDesk: flight.departure?.checkInDesk ?? null,
   };
 }
 
