@@ -18,6 +18,7 @@ import ApiKeysSection from "../components/Settings/ApiKeysSection";
 import ApiTokensSection from "../components/Settings/ApiTokensSection";
 import AdminSection from "../components/Settings/AdminSection";
 import AboutSection from "../components/Settings/AboutSection";
+import ImportSection from "../components/Settings/ImportSection";
 import FeaturesSection from "../components/Settings/FeaturesSection";
 import PasswordModal from "../components/Settings/PasswordModal";
 
@@ -80,6 +81,7 @@ export default function SettingsPage(): JSX.Element {
     { id: "enrichment", label: t("settings:historicalEnrichment.title") || "Enrichment" },
     { id: "apikeys", label: t("settings:apiKeys.title") || "API Keys" },
     { id: "apitokens", label: t("settings:apiTokens.title") || "API Tokens" },
+    { id: "import", label: t("settings:import.title") || "Import" },
     ...(user?.isAdmin ? [{ id: "admin", label: t("settings:admin.title") || "Admin" }] : []),
     { id: "about", label: "About" },
   ];
@@ -175,6 +177,7 @@ export default function SettingsPage(): JSX.Element {
               />
             )}
             {activeSection === "apitokens" && <ApiTokensSection />}
+            {activeSection === "import" && <ImportSection />}
             {activeSection === "admin" && user?.isAdmin && <AdminSection />}
             {activeSection === "about" && <AboutSection />}
 
