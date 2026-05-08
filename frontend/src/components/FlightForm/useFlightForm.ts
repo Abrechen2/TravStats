@@ -367,12 +367,31 @@ export function useFlightForm(
     [departure, arrival, departureDate, arrivalDate, status]
   );
 
-  // Resolve a local YYYY-MM-DD + HH:mm pair (or year-only date for historical
-  // flights) into the canonical-UTC submit shape: a local-wall-clock string
-  // without TZ suffix. Year-only ("YYYY") expands to YYYY-01-01T00:00.
+  // Resolve a historical date string (YYYY / YYYY-MM / YYYY-MM-DD) plus an
+  // optional HH:mm time into the canonical local-wall-clock submit shape.
+  // Year-only  -> YYYY-01-01T00:00
+  // Year+Month -> YYYY-MM-01T00:00
+  // Year+Month+Day -> YYYY-MM-DDT<time|12:00>
+  // Everything else falls through to the original YYYY-MM-DDT<time> path.
   const buildLocalString = (date: string, time: string): string => {
-    if (date.length === 4) return `${date}-01-01T00:00`;
+    if (/^\d{4}$/.test(date)) {
+      return `${date}-01-01T00:00`;
+    }
+    if (/^\d{4}-\d{2}$/.test(date)) {
+      return `${date}-01T00:00`;
+    }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return `${date}T${time || "12:00"}`;
+    }
     return `${date}T${time}`;
+  };
+
+  // Derive which date-precision shape a historical departure date has.
+  const historicalDateShape = (date: string): "year" | "year_month" | "year_month_day" | "unknown" => {
+    if (/^\d{4}$/.test(date)) return "year";
+    if (/^\d{4}-\d{2}$/.test(date)) return "year_month";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return "year_month_day";
+    return "unknown";
   };
 
   // Pick the IANA timezone for a side. Airports cached in the DB carry an
@@ -388,54 +407,76 @@ export function useFlightForm(
   // the column stays NULL on the row. Default is ON.
   const trackAircraft = settings?.features?.trackAircraftRegistration !== false;
 
-  const buildFlightPayload = (): FlightInput => ({
-    departure: {
-      iata: departure!.iata,
-      icao: departure!.icao,
-      name: departure!.name,
-      lat: departure!.lat,
-      lon: departure!.lon,
-    },
-    arrival: {
-      iata: arrival!.iata,
-      icao: arrival!.icao,
-      name: arrival!.name,
-      lat: arrival!.lat,
-      lon: arrival!.lon,
-    },
-    airline: airline || undefined,
-    airlineIata: lookupAirlineIata || undefined,
-    airlineIcao: lookupAirlineIcao || undefined,
-    operatingAirline: operatingAirline || undefined,
-    isCodeshare: lookupIsCodeshare ?? undefined,
-    flightNumber: flightNumber || undefined,
-    callsign: lookupCallsign || undefined,
-    aircraft: aircraft || undefined,
-    aircraftRegistration: trackAircraft ? lookupAircraftRegistration || undefined : undefined,
-    aircraftModeS: trackAircraft ? lookupAircraftModeS || undefined : undefined,
-    seatClass: seatClass || undefined,
-    seatNumber: seatNumber || undefined,
-    terminal: terminal || undefined,
-    gate: gate || undefined,
-    // Server converts {departureLocal, depTimezone} → real UTC via fromZonedTime.
-    // No browser-side `new Date(...).toISOString()` — that would leak the
-    // browser's local TZ into the payload.
-    departureLocal: departureDate ? buildLocalString(departureDate, departureTime) : undefined,
-    depTimezone: departureDate ? depTz : undefined,
-    arrivalLocal: arrivalDate ? buildLocalString(arrivalDate, arrivalTime) : undefined,
-    arrTimezone: arrivalDate ? arrTz : undefined,
-    status,
-    notes: notes || undefined,
-    price,
-    currency,
-    category,
-    tags: tags.length ? tags : undefined,
-    companions: companions.length ? companions : undefined,
-    baggageAllowance,
-    frequentFlyerNumber,
-    bookingClassLetter,
-    coPassengers: coPassengers.length ? coPassengers : undefined,
-  });
+  const buildFlightPayload = (): FlightInput => {
+    // For historical flights, derive time-semantics from the date-precision shape.
+    // DATE_ONLY when the user knows the real calendar date but not the time;
+    // UNKNOWN for year-only or year+month rows (no meaningful time at all).
+    const depShape = status === "historical" ? historicalDateShape(departureDate) : "unknown";
+    const depTimeSemantics: FlightInput["depTimeSemantics"] =
+      depShape === "year_month_day" ? "DATE_ONLY" : depShape !== "unknown" ? "UNKNOWN" : undefined;
+    const arrTimeSemantics: FlightInput["arrTimeSemantics"] = depTimeSemantics;
+
+    // For DATE_ONLY historical rows, arrival mirrors departure so the wall-clock
+    // duration is 0 (great-circle estimate takes over downstream). The form already
+    // keeps arrivalDate in sync via setArrivalDate — this makes it explicit.
+    const effectiveArrivalDate =
+      status === "historical" && depShape === "year_month_day" ? departureDate : arrivalDate;
+    const effectiveArrivalTime =
+      status === "historical" && depShape === "year_month_day" ? departureTime : arrivalTime;
+
+    return {
+      departure: {
+        iata: departure!.iata,
+        icao: departure!.icao,
+        name: departure!.name,
+        lat: departure!.lat,
+        lon: departure!.lon,
+      },
+      arrival: {
+        iata: arrival!.iata,
+        icao: arrival!.icao,
+        name: arrival!.name,
+        lat: arrival!.lat,
+        lon: arrival!.lon,
+      },
+      airline: airline || undefined,
+      airlineIata: lookupAirlineIata || undefined,
+      airlineIcao: lookupAirlineIcao || undefined,
+      operatingAirline: operatingAirline || undefined,
+      isCodeshare: lookupIsCodeshare ?? undefined,
+      flightNumber: flightNumber || undefined,
+      callsign: lookupCallsign || undefined,
+      aircraft: aircraft || undefined,
+      aircraftRegistration: trackAircraft ? lookupAircraftRegistration || undefined : undefined,
+      aircraftModeS: trackAircraft ? lookupAircraftModeS || undefined : undefined,
+      seatClass: seatClass || undefined,
+      seatNumber: seatNumber || undefined,
+      terminal: terminal || undefined,
+      gate: gate || undefined,
+      // Server converts {departureLocal, depTimezone} -> real UTC via fromZonedTime.
+      // No browser-side `new Date(...).toISOString()` — that would leak the
+      // browser's local TZ into the payload.
+      departureLocal: departureDate ? buildLocalString(departureDate, departureTime) : undefined,
+      depTimezone: departureDate ? depTz : undefined,
+      arrivalLocal: effectiveArrivalDate
+        ? buildLocalString(effectiveArrivalDate, effectiveArrivalTime)
+        : undefined,
+      arrTimezone: effectiveArrivalDate ? arrTz : undefined,
+      depTimeSemantics,
+      arrTimeSemantics,
+      status,
+      notes: notes || undefined,
+      price,
+      currency,
+      category,
+      tags: tags.length ? tags : undefined,
+      companions: companions.length ? companions : undefined,
+      baggageAllowance,
+      frequentFlyerNumber,
+      bookingClassLetter,
+      coPassengers: coPassengers.length ? coPassengers : undefined,
+    };
+  };
 
   const storeHistoricalData = () => {
     if (flightNumber && departureTime && arrivalTime && departure?.iata && arrival?.iata) {
