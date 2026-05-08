@@ -78,7 +78,10 @@ export interface PreviewRowInput {
 }
 ```
 
-### Server endpoint: `POST /import/preview`
+### Server endpoint: `POST /api/v1/import/preview`
+
+Mounted via `app.use('/api/v1/import', importRoutes)` in `backend/src/index.ts`, matching the existing `/api/v1/<scope>` convention used for every other route module.
+
 
 - **Auth:** standard auth middleware → `req.userId` is source of truth, body **must not** carry `userId` (IDOR defense).
 - **Input:** `{ rows: PreviewRowInput[] }` — max 1000 rows per call. Frontend pages larger uploads.
@@ -174,8 +177,11 @@ Plus the four touchpoints flagged by Gemini:
 ```prisma
 model Flight {
   // ... existing ...
-  runwayDepartureTime         DateTime?    // NEW — off-block UTC
-  runwayArrivalTime           DateTime?    // NEW — on-block UTC
+  // AeroDataBox runway times are wheels-up / wheels-down — distinct from
+  // existing actualDeparture/actualArrival which are off-block (gate pushback /
+  // gate arrival). Both are persisted independently when AeroDataBox returns them.
+  runwayDepartureTime         DateTime?    // NEW — wheels-up UTC (takeoff)
+  runwayArrivalTime           DateTime?    // NEW — wheels-down UTC (touchdown)
   isCargo                     Boolean?     // NEW
   aerodataboxLastUpdatedUtc   DateTime?    // NEW — for freshness debugging
   aerodataboxQualityTags      String[]     // NEW — Postgres array
@@ -187,7 +193,7 @@ model Airport {
   // ... existing ...
   shortName                   String?      // NEW
   municipalityName            String?      // NEW
-  // timeZone already exists — used by enrichFlightAirports today
+  // `timezone` (lowercase z) already exists — used by enrichFlightAirports today
 }
 ```
 
@@ -217,10 +223,10 @@ All columns are nullable / additive — zero-downtime, idempotent (`IF NOT EXIST
 
 | File | Change |
 |---|---|
-| `schemas/flight.ts` | Extend `dataSource` enum |
+| `schemas/flight.ts` | (a) Extend `dataSource` Zod enum with 3 new values. (b) Extend `baseFlightSchema` with the 9 new AeroDataBox-derived fields (`runwayDepartureTime`, `runwayArrivalTime`, `isCargo`, `aerodataboxLastUpdatedUtc`, `aerodataboxQualityTags`, `baggageBelt`, `checkInDesk`, `Airport.shortName`, `Airport.municipalityName`) — without these, Zod strips the columns on every POST/GET and Migration B becomes invisible to the API. (c) Extract the inline flight-number normalisation transform (currently lines 80-82) into a top-level **exported `normalizeFlightNumber(v: string): string \| undefined`** helper so `services/importPreview.ts` can reuse it without code duplication |
 | `services/aerodataboxLookup.ts` | Map new fields (`runwayTime`, `quality`, `isCargo`, `lastUpdatedUtc`, `baggageBelt`, `checkInDesk`) from API response into `FlightLookupResult` |
 | `services/historicalEnrichment.ts` | Existing scheduler picks up new fields when re-fetching — no new cron, no boot-time backfill |
-| `index.ts` | Mount `routes/import.ts` |
+| `index.ts` | Mount `routes/import.ts` at `/api/v1/import` (matching existing prefix convention) |
 
 ### Frontend — new
 
@@ -256,9 +262,9 @@ All columns are nullable / additive — zero-downtime, idempotent (`IF NOT EXIST
 | Class | Where | Example | UX |
 |---|---|---|---|
 | **A — Parser error** | Frontend, pre-server | Malformed CSV, unrecognized FR24 header | Toast + docs link, no server roundtrip |
-| **B — Per-row hard error** | Server `/import/preview` | IATA not in airport DB, TZ-lookup empty, malformed time | Row stays in preview, **red badge**, tooltip explaining cause, **auto-unchecked**. User can manually re-check to commit anyway (accepting that the row will likely be rejected by `/flights/batch` Zod validation) — but the default path is "skip this row entirely" |
+| **B — Per-row hard error** | Server `/import/preview` | IATA not in airport DB, TZ-lookup empty, malformed time | Row stays in preview, **red badge**, tooltip explaining cause, **auto-unchecked, no recovery affordance**. The row cannot be committed as-is because `createFlightSchema` requires `lat`/`lon`/`tz` from the airport lookup — re-checking would just guarantee a `/flights/batch` 400. User must fix the source CSV (correct an unrecognized IATA code, etc.) and re-upload |
 | **C — Per-row warning** | Server `/import/preview` | `dedupe-hint != 'none'`, `duration_mismatch`, optional field missing | **Yellow badge**, tooltip, **checked by default**, user decides |
-| **D — Commit-chunk error** | `/flights/batch` | Single row Zod-fails, DB constraint violation in chunk | 4xx response per chunk → UI marks affected rows red, remaining chunks committed (best-effort), retry button |
+| **D — Commit-chunk error** | `/flights/batch` | Single row Zod-fails, DB constraint violation, transient DB error | **Chunks are atomic.** `flightsBatch.ts` wraps all 20 rows in `prisma.$transaction`, so one row failing rolls back the entire chunk. UI behaviour: when a chunk responds 4xx, mark **all 20 rows in that chunk** as failed (red badge), surface the server's error message at chunk level (e.g. "row 14 had an unrecognised seat-class"), let user fix the source row(s) and retry the chunk. Successful chunks before the failed one stay committed; chunks after are not attempted. **Mitigation:** the preview is comprehensive enough that almost all Zod failures are caught client-side before commit, so chunk-level failures should be rare (mostly transient DB issues, not data issues) |
 | **E — Network error** | Either side | Connection drop during preview / commit | Preview: re-upload prompt. Commit: cursor in `localStorage` so user can resume from last successful chunk |
 
 ---
@@ -289,21 +295,25 @@ All columns are nullable / additive — zero-downtime, idempotent (`IF NOT EXIST
 
 **Rollback realism:**
 
-Migration A (enum extension) is **not cleanly reversible by image-swap alone**. Once a Flight row has `data_source = 'imported_fr24'`, the 1.4 Prisma client cannot deserialize it — the older Prisma schema doesn't know that enum value, and Postgres enum members can't be silently dropped while rows reference them. Migration B (additive nullable columns) is harmless on rollback — old code just doesn't read the new columns.
+`Flight.dataSource` is currently `String?` in `prisma/schema.prisma` (line 172) — **not** a native Postgres enum. So Migration A is purely a Zod-layer change; the database accepts any string. Migration B is additive nullable columns; old code just ignores them.
+
+**Application-layer concern only:** if the user rolls back the image from 1.5 to 1.4, the 1.4 Zod parser does not know `imported_fr24` / `imported_generic_csv` / `imported_roundtrip` — `dataSource: z.enum([...])` will reject those strings on every read of an affected flight. The Dashboard / API endpoints would then 500 for users who imported during 1.5.
 
 **Operating model:** v1.5 is a **fix-forward** release. If a catastrophic 1.5 bug appears, the path is "deploy `1.5.x` with the fix," not "redeploy 1.4."
 
 **If true rollback to 1.4 becomes necessary** (e.g., 1.5 corrupted user data and we need the old image running NOW):
 
 ```bash
-# Step 1 — neutralise the new enum values BEFORE redeploying 1.4
+# Neutralise the new dataSource values BEFORE redeploying 1.4 — this collapses
+# imported_* rows back to bulk_import, which 1.4's Zod enum already accepts:
 docker exec travstats-db psql -U flights -d flights -c \
   "UPDATE flights SET data_source = 'bulk_import' WHERE data_source LIKE 'imported_%';"
-# Step 2 — only then can the 1.4 image start without Prisma deserialization errors
-# (Migration B nullable columns stay in the DB; 1.4 ignores them)
+# (Migration B nullable columns stay in the DB; 1.4 silently ignores them)
 ```
 
 Document this in `docs/runbooks/rollback-1-5-to-1-4.md` as a deploy artefact when 1.5 ships.
+
+**Caveat on `bulk_import` as the rollback collapse target:** the existing `bulk_import` value is the catch-all for "ad-hoc bulk operations" and is not heavily used in dashboard filters today, so collapsing the three new values onto it is a low-cost lossy decision. After fix-forward redeploy of 1.5, the per-source granularity returns from the new imports onwards but is not retroactively recoverable for the rolled-back rows.
 
 **Frontend rollback:** old image redeployed; `Settings → Import` section just doesn't render. Old Dashboard import button is gone but the dismissed-toast `localStorage` flag survives the rollback, so users won't be re-prompted later. Acceptable.
 
@@ -313,7 +323,7 @@ Document this in `docs/runbooks/rollback-1-5-to-1-4.md` as a deploy artefact whe
 
 ### Backend (Jest)
 
-- `importPreview.test.ts` — golden-master against `__tests__/fixtures/fr24-sample.csv`. Cover all 8 jay-tau edge cases:
+- `importPreview.test.ts` — golden-master against `__tests__/fixtures/fr24-sample.csv`. Cover all 9 edge cases:
   1. Leading blank line
   2. IDL-westbound (LAX→SYD, +48h derivation via Duration)
   3. IDL-eastbound
@@ -322,6 +332,7 @@ Document this in `docs/runbooks/rollback-1-5-to-1-4.md` as a deploy artefact whe
   6. Missing IATA (Class-B unresolvable_airport flag)
   7. All numeric-code mappings (Seat type 1/2/3, Flight class 1-5, Flight reason 1-4)
   8. Registration format variations (D-ABYD, N755AN, VH-OQB, 9V-SCD, TC-JOA)
+  9. **Malformed Date or Time** (`2024-02-30`, `25:00:00`, empty `Date` cell) — must be caught by the parser as Class-A error before reaching server-side TZ math; `fromZonedTime` returning Invalid-Date should never propagate into a 500
 - `import.routes.test.ts` — Auth tests including IDOR-defense (body-`userId` ignored), oversized-payload (>1000 rows) rejected, malformed-JSON rejected
 - `aerodataboxLookup.test.ts` — Extend with new field mappings (`runwayTime`, `isCargo`, `qualityTags`, `baggageBelt`, `checkInDesk`) from mock API response → DB
 - `flightsBatch.test.ts` — Regression: `dataSource` enum extension doesn't break existing flows
@@ -359,6 +370,21 @@ Run on Section 1 of this design via `gemini-cli` skill. Substantive findings inc
 7. ❌ DataSource UI multi-touchpoint (Zod + Badges + DE i18n + EN i18n) → **fixed:** all 4 touchpoints enumerated in §5
 
 Gemini noise (rejected): theoretical race between `/preview` and `/batch` enrichment — `enrichFlightAirports` runs in `/batch` anyway, idempotent.
+
+**Gemini second-pass review (DONE 2026-05-08):**
+
+After the spec doc was written and committed, Gemini was given the full spec cold for a follow-up review. 8 substantive findings, all verified against the codebase, all fixed in the same spec document:
+
+1. ✅ **`normalizeFlightNumber` not exported** — was an inline transform at `schemas/flight.ts:80-82`, not a named helper. Spec now requires the refactor (extract to top-level export).
+2. ✅ **AeroDataBox-fields missing from Zod schema (BLOCKER)** — §5 only enumerated the `dataSource` enum touchpoint and missed extending `baseFlightSchema` with the 9 new columns. Without that, Zod silently strips them on every POST/GET. Now explicitly listed.
+3. ✅ **`runwayDepartureTime` semantic confusion** — labelled "off-block" originally; off-block = gate pushback (already covered by `actualDeparture`). The AeroDataBox `runwayTime` is wheels-up/touchdown. Now clarified.
+4. ✅ **`Airport.timeZone` casing** — actual schema has lowercase `timezone`. Fixed.
+5. ✅ **`dataSource` Postgres-enum overstatement** — column is `String?`, not native Postgres enum. §7 rollback drama softened; concern is purely Zod-layer.
+6. ✅ **Class-B "re-check anyway" was a dead-end** — `createFlightSchema` requires `lat`/`lon`/`tz`; re-checking guarantees a 400. Affordance dropped.
+7. ✅ **Class-D chunk-atomicity** — `flightsBatch.ts` wraps all 20 rows in `prisma.$transaction`; chunks are all-or-nothing. UX behaviour clarified.
+8. ✅ **API prefix `/api/v1/import/preview`** — was vague; now explicit.
+
+Plus: malformed-Date/Time edge case added as the 9th golden-master test.
 
 **Codex — post-implementation review (SCHEDULED):**
 
