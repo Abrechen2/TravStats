@@ -268,8 +268,10 @@ export function RoundTripImportTile(): JSX.Element {
       {error && <pre className="import-error">{error}</pre>}
       {stats && (
         <p className="import-tile__stats">
-          {t("settings:import.tile.roundTrip.title")} — Updated {stats.updated} · Created{" "}
-          {stats.created}
+          {t("settings:import.tile.roundTrip.successSummary", {
+            updated: stats.updated,
+            created: stats.created,
+          })}
         </p>
       )}
     </div>
