@@ -11,6 +11,13 @@ export interface ArcDatum {
   // casing layer that haloes the main arc — signal lives on the arc, not
   // as a separate midpoint dot.
   hasUpcoming?: boolean;
+  // Route carries at least one flight whose status is NOT 'scheduled'
+  // (i.e. it has actually been flown — flown / cancelled / historical /
+  // duplicated). Combined with `hasUpcoming`, this splits arcs into:
+  //   - regular (no upcoming): heatmap colour
+  //   - pure-scheduled (upcoming, never flown): solid sky-blue
+  //   - mixed (upcoming + past-flown): blue-tipped, hardcoded red core
+  hasPastFlown?: boolean;
   isHistorical?: boolean;
 }
 

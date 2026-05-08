@@ -26,6 +26,15 @@ function getCoordsFromFeature(
 const HISTORICAL_COLOR: [number, number, number] = [150, 150, 150];
 const HISTORICAL_ALPHA = 140;
 
+// Sky-blue for pure-scheduled (never-flown) routes. Matches EDGE_COLOR_GLSL
+// in UpcomingArcLayer: 0.3137 * 255 ≈ 80, 0.7843 * 255 ≈ 200, 1.0 * 255 = 255.
+export const SCHEDULED_BLUE: [number, number, number] = [80, 200, 255];
+// Two-tier red for mixed-route (flown + scheduled) cores. Below median
+// frequency: lighter red (Tailwind red-400). At/above median: deeper red
+// (Tailwind red-600). The blue tips of UpcomingArcLayer fade these in.
+export const MIXED_RED_LOW: [number, number, number] = [248, 113, 113];
+export const MIXED_RED_HIGH: [number, number, number] = [220, 38, 38];
+
 
 interface RouteRecord {
   key: string;
@@ -37,6 +46,11 @@ interface RouteRecord {
   count: number;
   flightIds: string[];
   hasUpcoming: boolean;
+  // True when at least one flight on this canonical pair has status !==
+  // 'scheduled' (i.e. it has actually been flown — flown / cancelled /
+  // historical / duplicated all count). Combined with `hasUpcoming` to
+  // distinguish "pure-scheduled" (blue) from "mixed" (blue-tipped red).
+  hasPastFlown: boolean;
   // True when every flight on this canonical pair is `status: 'historical'`.
   // Used to fade the arc to the dim grey treatment.
   allHistorical: boolean;
@@ -58,6 +72,7 @@ function aggregateAllRoutes(flights: GeoJSONFeature[]): Map<string, RouteRecord>
       existing.count += 1;
       existing.flightIds.push(f.properties.id);
       if (isScheduled) existing.hasUpcoming = true;
+      if (!isScheduled) existing.hasPastFlown = true;
       if (!isHistorical) existing.allHistorical = false;
     } else {
       records.set(key, {
@@ -67,6 +82,7 @@ function aggregateAllRoutes(flights: GeoJSONFeature[]): Map<string, RouteRecord>
         count: 1,
         flightIds: [f.properties.id],
         hasUpcoming: isScheduled,
+        hasPastFlown: !isScheduled,
         allHistorical: isHistorical,
       });
     }
@@ -86,17 +102,38 @@ function buildArcs(
   for (const r of records.values()) {
     if (r.count < minRouteCount) continue;
 
-    const alpha = r.allHistorical
-      ? HISTORICAL_ALPHA
-      : (Math.min(100 + r.count * 14, 230) as number);
-    const color = r.allHistorical
-      ? HISTORICAL_COLOR
-      : getHeatmapColor(r.count, q25, q50, q75, themeColors);
+    // Four-way category resolution. Priority:
+    //   1. allHistorical — dim grey, lowest precedence.
+    //   2. pure-scheduled (hasUpcoming && !hasPastFlown) — solid sky-blue,
+    //      rendered through plain ArcLayer (no shader inject).
+    //   3. mixed (hasUpcoming && hasPastFlown) — hardcoded 2-tier red core,
+    //      rendered through UpcomingArcLayer which fades blue at both ends.
+    //   4. regular past-only — frequency-driven heatmap, unchanged.
+    let color: [number, number, number];
+    let alpha: number;
 
-    // sourceColor === targetColor: arc is uniform heatmap colour,
-    // directionless. The "scheduled" signal lives in the rendering layer:
-    // upcoming arcs go through UpcomingArcLayer which mixes blue at both
-    // ends via fragment shader. No per-instance colour shift here.
+    if (r.allHistorical) {
+      color = HISTORICAL_COLOR;
+      alpha = HISTORICAL_ALPHA;
+    } else if (r.hasUpcoming && !r.hasPastFlown) {
+      // Pure-scheduled — never-flown route with an upcoming flight. Solid
+      // sky-blue across the whole arc, no shader gradient.
+      color = SCHEDULED_BLUE;
+      alpha = Math.min(140 + r.count * 14, 230);
+    } else if (r.hasUpcoming && r.hasPastFlown) {
+      // Mixed — hardcoded 2-tier red core; UpcomingArcLayer fades blue at
+      // both ends. Below median frequency: red-400. At/above median:
+      // red-600.
+      color = r.count <= q50 ? MIXED_RED_LOW : MIXED_RED_HIGH;
+      alpha = Math.min(100 + r.count * 14, 230);
+    } else {
+      // Regular past-only — frequency-driven heatmap (unchanged behaviour).
+      color = getHeatmapColor(r.count, q25, q50, q75, themeColors);
+      alpha = Math.min(100 + r.count * 14, 230);
+    }
+
+    // sourceColor === targetColor: arc is uniform colour at the data layer.
+    // Mixed-route blue tips are added by UpcomingArcLayer's fragment shader.
     const argb = [...color, alpha] as [number, number, number, number];
     arcs.push({
       sourcePosition: r.depCoord,
@@ -106,6 +143,7 @@ function buildArcs(
       targetColor: argb,
       flightIds: r.flightIds,
       hasUpcoming: r.hasUpcoming,
+      hasPastFlown: r.hasPastFlown,
       isHistorical: r.allHistorical,
     });
   }
@@ -187,12 +225,16 @@ export function createRoutesLayers(
   // Airport opacity: dim when a route is highlighted so pulse rings stand out
   const airportOpacity = hasSelection ? 0.15 : 1;
 
-  // Two arc datasets — non-upcoming render through the regular ArcLayer,
-  // upcoming render through UpcomingArcLayer which adds the symmetric
-  // blue-tip gradient via a fragment-shader inject. Each route still
-  // appears exactly once on screen (one line, no overlap).
-  const nonUpcomingArcs = arcs.filter((a) => !a.hasUpcoming);
-  const upcomingArcs = arcs.filter((a) => a.hasUpcoming);
+  // Three arc datasets:
+  //   - regular: no upcoming flight — heatmap colour through plain ArcLayer.
+  //   - pure-scheduled: upcoming, never flown — solid sky-blue through
+  //     plain ArcLayer (no shader gradient).
+  //   - mixed: upcoming AND has been flown — hardcoded red core through
+  //     UpcomingArcLayer which fades blue at both ends.
+  // Each route appears exactly once on screen (one line, no overlap).
+  const regularArcs = arcs.filter((a) => !a.hasUpcoming);
+  const pureScheduledArcs = arcs.filter((a) => a.hasUpcoming && !a.hasPastFlown);
+  const mixedArcs = arcs.filter((a) => a.hasUpcoming && a.hasPastFlown);
 
   // Shared arc props: width, source/target getters, click handler. Used by
   // both the regular and the upcoming layer.
@@ -214,11 +256,15 @@ export function createRoutesLayers(
     getWidth: (d: ArcDatum) => {
       // Width follows frequency for live routes; historical-only routes stay
       // visually muted regardless of count so they don't drown out active
-      // ones.
+      // ones. Cap at 4 px (was 7) — multiplier dropped from 1.3 to 1.0 so
+      // 1 flight = 1 px, 16 flights = max 4 px (smooth ramp across realistic
+      // counts).
       if (d.isHistorical) return 1.2;
-      const base = Math.min(Math.sqrt(d.count) * 1.3, 7);
+      const base = Math.min(Math.sqrt(d.count) * 1.0, 4);
       if (!hasSelection) return base;
-      return d.flightIds.some((id) => selectedSet.has(id)) ? Math.max(base * 2, 5) : base;
+      // Selected fallback floor matches the new max so a selected mixed
+      // route doesn't pop bigger than the unselected cap.
+      return d.flightIds.some((id) => selectedSet.has(id)) ? Math.max(base * 2, 4) : base;
     },
     getHeight: arcHeight,
     widthMinPixels: 1,
@@ -238,15 +284,25 @@ export function createRoutesLayers(
 
   const arcLayer = new ArcLayer<ArcDatum>({
     id: "routes-arc",
-    data: nonUpcomingArcs,
+    data: regularArcs,
     ...sharedArcProps,
   });
 
-  // Upcoming routes — same arc geometry, custom shader fades the heatmap
-  // colour to sky-blue at both ends (symmetric "Zahnpasta" gradient).
+  // Pure-scheduled routes — never flown, only an upcoming flight on this
+  // pair. Solid sky-blue, no shader gradient.
+  const scheduledArcLayer = new ArcLayer<ArcDatum>({
+    id: "routes-arc-scheduled",
+    data: pureScheduledArcs,
+    ...sharedArcProps,
+  });
+
+  // Mixed routes — already flown AND carry an upcoming flight. Red core
+  // (data layer), blue tips (UpcomingArcLayer fragment shader). Layer id
+  // kept as `routes-arc-upcoming` for layer-state continuity (selection
+  // state, picking buffers).
   const upcomingArcLayer = new UpcomingArcLayer<ArcDatum>({
     id: "routes-arc-upcoming",
-    data: upcomingArcs,
+    data: mixedArcs,
     ...sharedArcProps,
   });
 
@@ -325,7 +381,16 @@ export function createRoutesLayers(
     parameters: { depthCompare: "always" as const },
   });
 
-  // Render order: regular arcs first, then upcoming arcs (so the blue-tip
-  // gradient sits on top in case of stacked picking), then airport visuals.
-  return [arcLayer, upcomingArcLayer, ringInnerLayer, ringOuterLayer, dotLayer, labelLayer];
+  // Render order: regular arcs first, then pure-scheduled (sky-blue solids),
+  // then mixed (gradient on top in case of stacked picking), then airport
+  // visuals.
+  return [
+    arcLayer,
+    scheduledArcLayer,
+    upcomingArcLayer,
+    ringInnerLayer,
+    ringOuterLayer,
+    dotLayer,
+    labelLayer,
+  ];
 }
