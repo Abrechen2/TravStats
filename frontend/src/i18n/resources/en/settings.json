@@ -585,7 +585,7 @@
       },
       "genericCsv": {
         "title": "From any logbook (CSV)",
-        "description": "Map your CSV columns to TravStats fields with a wizard. Works with any flat per-flight CSV.",
+        "description": "Upload a flat per-flight CSV — after upload, a mapping wizard opens so you can match each column to a TravStats field.",
         "uploadLabel": "Choose CSV file"
       },
       "roundTrip": {

@@ -585,7 +585,7 @@
       },
       "genericCsv": {
         "title": "Aus beliebigem Logbuch (CSV)",
-        "description": "Ordne deine CSV-Spalten mit einem Wizard den TravStats-Feldern zu. Funktioniert mit jedem flachen Flug-CSV.",
+        "description": "Lade eine flache Flug-CSV — nach dem Upload öffnet sich ein Mapping-Wizard, mit dem du jede Spalte einem TravStats-Feld zuordnest.",
         "uploadLabel": "CSV-Datei auswählen"
       },
       "roundTrip": {
