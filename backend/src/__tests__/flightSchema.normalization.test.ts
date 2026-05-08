@@ -1,4 +1,4 @@
-import { createFlightSchema } from "../schemas/flight";
+import { createFlightSchema, normalizeFlightNumber } from "../schemas/flight";
 
 /**
  * Issue #84: re-importing a boarding pass for a flight that already
@@ -55,5 +55,24 @@ describe("createFlightSchema flightNumber normalization", () => {
   it("preserves alphabetic suffixes (regional / charter codes)", () => {
     const result = createFlightSchema.parse({ ...validBase, flightNumber: "ba 287a" });
     expect(result.flightNumber).toBe("BA287A");
+  });
+});
+
+describe("normalizeFlightNumber (exported helper)", () => {
+  it("strips whitespace and uppercases", () => {
+    expect(normalizeFlightNumber("lh 400")).toBe("LH400");
+    expect(normalizeFlightNumber(" LH400 ")).toBe("LH400");
+    expect(normalizeFlightNumber("Lh400")).toBe("LH400");
+  });
+
+  it("returns undefined for nullish or empty input", () => {
+    expect(normalizeFlightNumber(undefined)).toBeUndefined();
+    expect(normalizeFlightNumber("")).toBeUndefined();
+    expect(normalizeFlightNumber("   ")).toBeUndefined();
+  });
+
+  it("handles non-Latin whitespace classes", () => {
+    expect(normalizeFlightNumber("LH\t400")).toBe("LH400");
+    expect(normalizeFlightNumber("LH 400")).toBe("LH400");
   });
 });
