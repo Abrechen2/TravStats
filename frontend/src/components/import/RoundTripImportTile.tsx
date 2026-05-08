@@ -11,6 +11,7 @@ import { airportsApi } from "../../lib/api/airports";
 import { logger } from "../../lib/logger";
 import { useSettingsStore } from "../../store/settingsStore";
 import type { FlightInput } from "../../types";
+import { ImportTileShell, ImportFilePicker, ImportErrorBlock } from "./ImportTileShell";
 
 // ---------------------------------------------------------------------------
 // Helpers lifted verbatim from DashboardPage.tsx (Task 9 — see Task 10 for
@@ -246,34 +247,39 @@ export function RoundTripImportTile(): JSX.Element {
   }, []);
 
   return (
-    <div className="import-tile">
-      <h3>{t("settings:import.tile.roundTrip.title")}</h3>
-      <p>{t("settings:import.tile.roundTrip.description")}</p>
-      <label>
-        <span>{t("settings:import.tile.roundTrip.uploadLabel")}</span>
-        <input
-          type="file"
+    <ImportTileShell
+      title={t("settings:import.tile.roundTrip.title")}
+      description={t("settings:import.tile.roundTrip.description")}
+      picker={
+        <ImportFilePicker
+          label={t("settings:import.tile.roundTrip.uploadLabel")}
           accept=".csv,.json,.xlsx"
           disabled={busy}
-          aria-label={t("settings:import.tile.roundTrip.uploadLabel")}
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) {
-              void handleFile(file);
-            }
-          }}
+          onFile={(file) => void handleFile(file)}
         />
-      </label>
-      {busy && <p className="import-tile__busy">{t("common:loading")}</p>}
-      {error && <pre className="import-error">{error}</pre>}
-      {stats && (
-        <p className="import-tile__stats">
-          {t("settings:import.tile.roundTrip.successSummary", {
-            updated: stats.updated,
-            created: stats.created,
-          })}
-        </p>
-      )}
-    </div>
+      }
+      errorBlock={error ? <ImportErrorBlock message={error} /> : undefined}
+      statusBlock={
+        busy ? (
+          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+            {t("common:loading")}
+          </p>
+        ) : stats ? (
+          <p
+            className="rounded-md p-3 text-sm"
+            style={{
+              background: "rgba(34, 197, 94, 0.1)",
+              border: "1px solid rgba(34, 197, 94, 0.4)",
+              color: "rgb(134, 239, 172)",
+            }}
+          >
+            {t("settings:import.tile.roundTrip.successSummary", {
+              updated: stats.updated,
+              created: stats.created,
+            })}
+          </p>
+        ) : undefined
+      }
+    />
   );
 }

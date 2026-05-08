@@ -6,6 +6,7 @@ import { postImportPreview, type PreviewResponse } from "../../lib/api/import";
 import { ColumnMappingWizard } from "./ColumnMappingWizard";
 import { PreviewModal } from "./PreviewModal";
 import { commitPreviewRows } from "./commitPreview";
+import { ImportTileShell, ImportFilePicker, ImportErrorBlock } from "./ImportTileShell";
 
 export function GenericCsvImportTile(): JSX.Element {
   const { t } = useTranslation();
@@ -53,21 +54,18 @@ export function GenericCsvImportTile(): JSX.Element {
   );
 
   return (
-    <div className="import-tile">
-      <h3>{t("settings:import.tile.genericCsv.title")}</h3>
-      <p>{t("settings:import.tile.genericCsv.description")}</p>
-      <label>
-        <input
-          type="file"
+    <ImportTileShell
+      title={t("settings:import.tile.genericCsv.title")}
+      description={t("settings:import.tile.genericCsv.description")}
+      picker={
+        <ImportFilePicker
+          label={t("settings:import.tile.genericCsv.uploadLabel")}
           accept=".csv"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) void handleFile(file);
-          }}
+          onFile={(file) => void handleFile(file)}
         />
-        <span>{t("settings:import.tile.genericCsv.uploadLabel")}</span>
-      </label>
-      {error && <pre className="import-error">{error}</pre>}
+      }
+      errorBlock={error ? <ImportErrorBlock message={error} /> : undefined}
+    >
       {csvText && !preview && (
         <ColumnMappingWizard
           csvHeaders={csvHeaders}
@@ -98,6 +96,6 @@ export function GenericCsvImportTile(): JSX.Element {
           }}
         />
       )}
-    </div>
+    </ImportTileShell>
   );
 }
