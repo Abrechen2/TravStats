@@ -76,11 +76,23 @@ const ianaTimezone = z
   .string()
   .refine(isValidIanaTimezone, { message: 'Invalid IANA timezone' });
 
-const normalizedFlightNumber = z.string().optional().transform((v) => {
+/**
+ * Canonical flight-number normalisation: strip every whitespace character
+ * (incl. tabs and non-breaking spaces) and uppercase. Empty results collapse
+ * to undefined so optional fields stay nullable. Used by both the Zod schema
+ * and any code path that needs to compare flight numbers across sources
+ * (importers, dedupe-hint, etc.).
+ */
+export function normalizeFlightNumber(v: string | undefined | null): string | undefined {
   if (!v) return undefined;
   const cleaned = v.replace(/\s+/g, "").toUpperCase();
   return cleaned === "" ? undefined : cleaned;
-});
+}
+
+const normalizedFlightNumber = z
+  .string()
+  .optional()
+  .transform((v) => normalizeFlightNumber(v));
 
 const baseFlightSchema = z.object({
   airline: emptyStringToUndefined,
