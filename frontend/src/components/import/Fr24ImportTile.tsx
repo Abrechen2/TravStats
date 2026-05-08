@@ -4,6 +4,7 @@ import { parseFr24 } from "../../lib/importers/fr24";
 import { postImportPreview, type PreviewResponse } from "../../lib/api/import";
 import { PreviewModal } from "./PreviewModal";
 import { commitPreviewRows } from "./commitPreview";
+import { ImportTileShell, ImportFilePicker, ImportErrorBlock } from "./ImportTileShell";
 
 export function Fr24ImportTile(): JSX.Element {
   const { t } = useTranslation();
@@ -34,22 +35,19 @@ export function Fr24ImportTile(): JSX.Element {
   }, []);
 
   return (
-    <div className="import-tile">
-      <h3>{t("settings:import.tile.fr24.title")}</h3>
-      <p>{t("settings:import.tile.fr24.description")}</p>
-      <label>
-        <input
-          type="file"
+    <ImportTileShell
+      title={t("settings:import.tile.fr24.title")}
+      description={t("settings:import.tile.fr24.description")}
+      picker={
+        <ImportFilePicker
+          label={t("settings:import.tile.fr24.uploadLabel")}
           accept=".csv"
           disabled={busy}
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) void handleFile(file);
-          }}
+          onFile={(file) => void handleFile(file)}
         />
-        <span>{t("settings:import.tile.fr24.uploadLabel")}</span>
-      </label>
-      {error && <pre className="import-error">{error}</pre>}
+      }
+      errorBlock={error ? <ImportErrorBlock message={error} /> : undefined}
+    >
       {preview && (
         <PreviewModal
           rows={preview.rows}
@@ -66,6 +64,6 @@ export function Fr24ImportTile(): JSX.Element {
           onCancel={() => setPreview(null)}
         />
       )}
-    </div>
+    </ImportTileShell>
   );
 }
