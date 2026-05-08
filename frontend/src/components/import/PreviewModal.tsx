@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import type { PreviewRowEnriched } from "../../lib/api/import";
 
 export interface PreviewModalProps {
@@ -9,24 +9,13 @@ export interface PreviewModalProps {
 }
 
 /**
- * Determine whether a date string is the SAFE_DATE sentinel (epoch 0).
- * The server sets depUtc/arrUtc to new Date(0) when a row has hard errors —
- * always check flags.length > 0 before rendering date columns.
- */
-function isSafeDate(isoString: string): boolean {
-  return isoString.startsWith("1970-01-01");
-}
-
-/**
  * Render a date cell safely, returning "—" for flagged (hard-error) rows.
- * Rows with flags have their depUtc/arrUtc set to SAFE_DATE (epoch 0) by the
- * server, so showing the date would display a confusing "1970-01-01" value.
+ * The server sets depUtc/arrUtc to epoch 0 only when flags.length > 0, so
+ * the flag check alone is the correct guard — checking the date string for
+ * "1970-01-01" would false-positive on legitimate early-aviation flights.
  */
 function safeDateDisplay(isoString: string, flags: PreviewRowEnriched["flags"]): string {
-  if (flags.length > 0 || isSafeDate(isoString)) {
-    return "—";
-  }
-  return isoString.slice(0, 10);
+  return flags.length > 0 ? "—" : isoString.slice(0, 10);
 }
 
 /**
@@ -52,6 +41,10 @@ export function PreviewModal({ rows, summary, onCommit, onCancel }: PreviewModal
   }, [rows]);
   const [checked, setChecked] = useState<Map<number, boolean>>(initialChecked);
 
+  useEffect(() => {
+    setChecked(initialChecked);
+  }, [initialChecked]);
+
   const toggle = (idx: number): void => {
     setChecked((prev) => {
       const next = new Map(prev);
@@ -67,9 +60,9 @@ export function PreviewModal({ rows, summary, onCommit, onCancel }: PreviewModal
   };
 
   return (
-    <div role="dialog" aria-modal="true" className="preview-modal">
+    <div role="dialog" aria-modal="true" aria-labelledby="preview-modal-title" className="preview-modal">
       <header>
-        <h2>Preview import</h2>
+        <h2 id="preview-modal-title">Preview import</h2>
         <p>
           {summary.ok} ready · {summary.duplicates} duplicates · {summary.problems} problems
           {summary.unresolvable > 0 && ` · ${summary.unresolvable} unresolvable airports`}
