@@ -6,10 +6,16 @@ const EDGE_COLOR_GLSL = "vec3(0.3137, 0.7843, 1.0000)";
 
 /**
  * ArcLayer subclass that renders the same arc geometry but applies a
- * symmetric gradient: heatmap colour in the middle, fading to sky-blue at
- * BOTH ends. Used for routes carrying at least one scheduled flight — the
- * blue tips on each side "Zahnpasta" the arc into a single multi-coloured
- * stroke that reads as "scheduled" without any second visual element.
+ * symmetric blue-tipped gradient: hardcoded red core in the middle, fading
+ * to sky-blue at BOTH ends. Used for *mixed* routes only — i.e. routes
+ * that have ALREADY been flown AND carry an upcoming scheduled flight. The
+ * blue tips on each side "Zahnpasta" the arc into a blue → red → blue
+ * stroke that reads as "this route is both lived-in and has more flights
+ * coming" without any second visual element.
+ *
+ * Pure-scheduled routes (upcoming, never flown) skip this layer entirely
+ * and render through plain ArcLayer with `SCHEDULED_BLUE` (see
+ * routesLayer.ts).
  *
  * Implementation: fragment-shader inject only. ArcLayer's existing `uv`
  * varying (uv.x = 0..1 along the arc) is the segment parameter we need;
@@ -24,15 +30,15 @@ export class UpcomingArcLayer<DataT = unknown> extends ArcLayer<DataT> {
       ...shaders,
       inject: {
         ...(shaders.inject || {}),
-        // Symmetric blue-leaning blend. geometry.uv.x is the segment ratio
+        // Symmetric blue-tipped blend. geometry.uv.x is the segment ratio
         // along the arc (0 at source, 1 at target). endProximity is 0 in
-        // the middle and 1 at either end. The blend keeps a baseline blue
-        // tint everywhere (45%) and ramps to full blue at the ends — the
-        // arc reads as "primarily scheduled, with a heatmap-tinted core"
-        // rather than "heatmap with blue tips".
+        // the middle and 1 at either end. The blend lets the red core come
+        // through more strongly (centre = 35% blue mix, was 60%) while
+        // still preserving a strongly blue end (≈85% blue at the tips).
+        // Result: a clearly readable blue → red → blue gradient.
         "fs:DECKGL_FILTER_COLOR": `
           float endProximity = clamp(abs(geometry.uv.x - 0.5) * 2.0, 0.0, 1.0);
-          float blend = 0.6 + 0.4 * smoothstep(0.0, 0.7, endProximity);
+          float blend = 0.35 + 0.5 * smoothstep(0.0, 0.7, endProximity);
           color.rgb = mix(color.rgb, ${EDGE_COLOR_GLSL}, blend);
         `,
       },
