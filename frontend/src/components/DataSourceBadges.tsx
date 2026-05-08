@@ -131,16 +131,41 @@ function getDataSourceConfig(
       label: t("flights:dataSource.api_lookup"),
       color: "bg-cyan-100 text-cyan-800",
     },
+    imported_fr24: {
+      icon: "📊",
+      label: t("flights:dataSource.imported_fr24"),
+      color: "bg-amber-100 text-amber-800",
+    },
+    imported_generic_csv: {
+      icon: "📥",
+      label: t("flights:dataSource.imported_generic_csv"),
+      color: "bg-[var(--bg-elevated)] text-[var(--text-muted)]",
+    },
+    imported_roundtrip: {
+      icon: "↻",
+      label: t("flights:dataSource.imported_roundtrip"),
+      color: "bg-[var(--bg-elevated)] text-[var(--text-muted)]",
+    },
   };
 
   return configs[source] || null;
 }
+
+const IMPORT_SOURCE_TOOLTIP_KEYS: Record<string, string> = {
+  imported_fr24: "flights:dataSource.imported_fr24_tooltip",
+  imported_generic_csv: "flights:dataSource.imported_generic_csv_tooltip",
+  imported_roundtrip: "flights:dataSource.imported_roundtrip_tooltip",
+};
 
 function getDataSourceTooltip(
   flight: Flight,
   sourceLabel: string,
   t: (key: string, options?: Record<string, unknown>) => string
 ): string {
+  if (flight.dataSource && IMPORT_SOURCE_TOOLTIP_KEYS[flight.dataSource]) {
+    return t(IMPORT_SOURCE_TOOLTIP_KEYS[flight.dataSource]);
+  }
+
   let tooltip = sourceLabel;
 
   if (flight.dataSource === "historical_enrichment" && flight.enrichmentHistory) {
