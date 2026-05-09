@@ -4,7 +4,72 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
-<<<<<<< HEAD
+## [2.0.0-beta.10] - 2026-05-09 (Beta)
+
+### Added
+- **Trip System V2** — A redesigned Trip surface with a dedicated detail page
+  carrying five sub-tabs (Overview / Timeline / Map / Gallery / Logistics).
+  Iterations 1-9 land in this beta: list-card redesign, stops + journal
+  entries, real Map tab with click-to-fly and Globe/Flat projection toggle,
+  per-proposal review flow for trip auto-detection, TripModal split into
+  4 sub-tabs with cover preview, photo gallery with lightbox + upload, and
+  LLM-generated trip summaries via Ollama (gemma3:12b, 3-paragraph DE
+  travel-blog format, persisted to `trip.summary`).
+- **Special Flights as a Flight subtype** — Sightseeing, repositioning,
+  training, and charter flights can now be logged with type-specific
+  metadata (event location, label, lat/lon) without distorting the Flight
+  schema or the Trip system. Special-flight overlays render on top of
+  routes-mode with their own legend and tooltip variant — they are NOT a
+  separate domain or MapMode.
+- **Globe modernization** — The 3D Globe is rewritten on MapLibre 5 +
+  deck.gl `MapboxOverlay` + `useControl`, replacing the legacy
+  `react-globe.gl` + Three.js engine. Earth-occlusion is now GPU
+  per-fragment via a custom deck.gl extension reading camera state every
+  frame. New helper modules (`buildGlobeLayers`, `arcUtils`,
+  `heatmapUtils`, `globeLayerTypes`) replace inline implementations.
+- **Merged 1.5.0 trunk** — beta.10 carries the full 1.5 main payload:
+  FR24 CSV importer, generic CSV importer with column-mapping wizard,
+  shared import preview modal, AeroDataBox extended-field capture,
+  dataSource badges, historical-flight Day select, `POST /import/parse`
+  API endpoint, and the `route_distance` backfill script.
+
+### Changed
+- **Globe default basemap** — From `standard` (openfreemap liberty) to
+  `dark` (CartoDB dark-matter), matching BRAND.md §1.1's dark-only app
+  shell. Users can still pick any style; the choice persists in
+  `sessionStorage`.
+- **TripDetailPage TabBar inactive contrast** — Inactive tab labels
+  brightened from `--text-muted` to white at 65 % opacity with a hover
+  transition to `--text-primary`.
+- **Globe perf** — Texture sharpness, live-mode smoothness, and removal
+  of the night cycle. Frame pacing is now fully GPU-driven.
+
+### Fixed
+- **Trip delete-confirmation heading was nearly invisible** — The `<h2>`
+  in the delete-confirm modal on the Trip detail page was missing an
+  explicit text colour and inherited a muted shade against the dark
+  surface. Resolved by adding `style={{ color: "var(--text-primary)" }}`
+  in line with the existing TripsTab and FlightPanel patterns.
+- **`TEST_LEAK_*` regression-test achievements bled into the user UI** —
+  The `achievements.scheduledLeak.test.ts` regression suite seeds nine
+  `TEST_LEAK_*` rows into the achievements table to verify
+  scheduled-flight isolation, but the seeds remained after the test ran
+  and showed up in the live Achievements page (e.g. "Leak: First
+  Aircraft Type"). The list / recent / leaderboard endpoints now filter
+  `code NOT LIKE 'TEST_%'`, and the dev DB has been cleaned.
+- **deck.gl warning `fontSettings.sdf is required to render outline`** —
+  The IATA label TextLayer set `outlineWidth: 2` + `outlineColor` but
+  never enabled the SDF font flag, so the outline never actually
+  rendered and deck.gl logged a warning every frame.
+  `fontSettings: { sdf: true }` is now set explicitly.
+
+### Database
+- **Four new migrations** — `20260509120000_trip_metadata`,
+  `20260509130000_trip_stops_and_journal`, `20260509140000_trip_photos`,
+  `20260509150000_special_flights_subtype`. All additive, idempotent,
+  zero-downtime safe. Plus the 1.5.0 `_add_aerodatabox_extended_fields`
+  migration carried in via the main merge.
+
 ## [2.0.0-beta.9] - 2026-05-05 (Beta)
 
 ### Added
@@ -13,7 +78,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Changed
 - **Dark-only theme**, light-mode classes retired across components. `themeStore` simplified to `mapTheme` only — no more `isDarkMode` toggle. `<html class="dark">` is set defensively at boot so a stale `localStorage` payload can't strip it.
-=======
+
 ## [1.5.0] - 2026-05-08
 
 ### Added
@@ -60,7 +125,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ### Docs
 - **Roadmap restructured** — v1.5 (silent field capture) and v1.6 (importers) merged into a single V1 finale; v1.7–v1.9 (social / insights / PWA) moved into V2 as v2.3–v2.5.
->>>>>>> Main
 
 ## [1.4.0] - 2026-05-04
 
