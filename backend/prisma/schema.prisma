@@ -212,6 +212,21 @@ model Flight {
   tripId    String? @map("trip_id")
   bookingId String? @map("booking_id")
 
+  // Special flights (Sonder-Flüge) — non-null specialType marks flight as
+  // non-standard (sightseeing loop, eclipse chase, rocket launch, ZeroG,
+  // aurora, training, ferry, test). When null, flight is a regular line
+  // flight and the new fields are unused. eventLat/Lon mark the off-route
+  // attraction (rocket pad, eclipse path) and patternLat/Lon the optional
+  // hold/orbit pattern centre. specialData is a free-form JSON blob for
+  // type-specific extras (e.g. eclipse magnitude, parabola count).
+  specialType    String? @map("special_type")
+  eventLat       Float?  @map("event_lat")
+  eventLon       Float?  @map("event_lon")
+  eventLabel     String? @map("event_label")
+  patternLat     Float?  @map("pattern_lat")
+  patternLon     Float?  @map("pattern_lon")
+  specialData    Json?   @map("special_data")
+
   user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   trip           Trip?                 @relation(fields: [tripId], references: [id], onDelete: SetNull)
   booking        Booking?              @relation(fields: [bookingId], references: [id], onDelete: SetNull)
@@ -225,6 +240,7 @@ model Flight {
   @@index([tripId])
   @@index([bookingId])
   @@index([nextApiCheckAt])
+  @@index([specialType])
   @@map("flights")
 }
 
