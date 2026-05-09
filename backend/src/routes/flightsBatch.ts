@@ -7,7 +7,7 @@ import { createFlightSchema } from "../schemas/flight";
 import { TRIP_COLORS } from "../schemas/trip";
 import logger from "../utils/logger";
 import { enrichFlightAirports } from "../services/airportLookup";
-import { calculateCo2Kg, toSeatClass } from "../services/co2Calculator";
+import { calculateCo2Kg, haversineKm, toSeatClass } from "../services/co2Calculator";
 import { checkAndUpdateAchievements } from "../utils/achievements";
 import { calculateNextApiCheckAt } from "../utils/smartCheckSchedule";
 
@@ -31,6 +31,22 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
 
     // Validate each flight entry
     const parsedFlights = rawBody.map((entry: unknown) => createFlightSchema.parse(entry));
+
+    // Soft warning for past-dated `scheduled` rows (G4) — not rejected so
+    // legitimate manually-edited just-departed rows still succeed, but
+    // flagged for ops review since these are usually status-flip bugs or
+    // year-typos in bulk imports.
+    const nowIso = new Date().toISOString().slice(0, 19);
+    for (const data of parsedFlights) {
+      if (data.status === 'scheduled' && data.departureLocal && data.departureLocal < nowIso) {
+        logger.warn({
+          operation: 'flight_batch_scheduled_in_past',
+          userId,
+          departureLocal: data.departureLocal,
+          flightNumber: data.flightNumber,
+        });
+      }
+    }
 
     // Step 1: Enrich airports OUTSIDE the transaction (async I/O, not DB ops)
     const enrichedDataList = await Promise.all(
@@ -98,6 +114,15 @@ router.post("/batch", batchCreationLimiter, async (req: AuthRequest, res: Respon
               arrLon: enriched.arrival.lon,
               seatClass: toSeatClass(data.seatClass),
             }),
+            // Haversine route distance — written on every insert so stats
+            // ("total km", "longest flight", distance achievements) work
+            // immediately, not only after a Provider lookup. v1.5.0-rc.3.
+            routeDistance: haversineKm(
+              enriched.departure.lat,
+              enriched.departure.lon,
+              enriched.arrival.lat,
+              enriched.arrival.lon,
+            ),
             status: data.status,
             notes: data.notes,
             price: data.price,
