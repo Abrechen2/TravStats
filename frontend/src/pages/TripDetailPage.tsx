@@ -10,6 +10,7 @@ import PageTransition from "../components/PageTransition";
 import TripModal from "../components/Trips/TripModal";
 import JournalEntryModal from "../components/Trips/JournalEntryModal";
 import StopModal from "../components/Trips/StopModal";
+import TripMap from "../components/Trips/TripMap";
 
 type TabKey = "overview" | "timeline" | "map" | "gallery" | "logistics";
 const TABS: TabKey[] = ["overview", "timeline", "map", "gallery", "logistics"];
@@ -109,7 +110,7 @@ export default function TripDetailPage(): JSX.Element {
           {tab === "timeline" && (
             <TimelineTab trip={trip} onChanged={() => void load()} t={t} />
           )}
-          {tab === "map" && <Placeholder text={t("trips:detail.tabPlaceholder.map")} />}
+          {tab === "map" && <TripMap trip={trip} />}
           {tab === "gallery" && (
             <Placeholder text={t("trips:detail.tabPlaceholder.gallery")} />
           )}
