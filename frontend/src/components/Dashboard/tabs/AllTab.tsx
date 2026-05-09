@@ -180,76 +180,79 @@ export function AllTab(): JSX.Element {
     [setMode]
   );
 
-  const sidebarToggleButton = (
-    <button
-      type="button"
-      onClick={() => setSidebarOpen((prev) => !prev)}
-      style={{
-        position: "absolute",
-        top: 12,
-        left: 12,
-        zIndex: 30,
-        padding: "6px 12px",
-        borderRadius: 10,
-        background: "rgba(22,27,34,0.85)",
-        color: "var(--text-primary)",
-        border: "1px solid var(--color-border)",
-        cursor: "pointer",
-      }}
-    >
-      ☰ {t("dashboard:sidebar.activity")}
-    </button>
-  );
-
-  // Legend pill — sits next to the sidebar toggle, explains the
-  // flight/cruise color split. Only visible on the Alle tab because
-  // that's the only view where both domains share the map.
-  const legend = (
+  // Toggle + legend share one flex row so they auto-flow without
+  // manual left-offset math. The whole row shifts right when the
+  // sidebar opens so the chips clear the panel.
+  const toggleAndLegend = (
     <div
       style={{
         position: "absolute",
         top: 12,
-        left: sidebarOpen ? 340 : 128,
+        left: sidebarOpen ? 340 : 12,
         zIndex: 30,
         display: "flex",
-        gap: 12,
-        padding: "6px 12px",
-        borderRadius: 10,
-        background: "rgba(22,27,34,0.85)",
-        color: "var(--text-muted)",
-        border: "1px solid var(--color-border)",
-        fontSize: 12,
+        gap: 8,
+        alignItems: "center",
         transition: "left 0.2s ease",
       }}
     >
-      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-        <span
-          aria-hidden
-          style={{
-            width: 14,
-            height: 2,
-            background: DOMAINS.flight.color,
-            borderRadius: 2,
-          }}
-        />
-        <span style={{ color: "var(--text-primary)" }}>
-          {t("dashboard:sidebar.filters.flight")}
+      <button
+        type="button"
+        onClick={() => setSidebarOpen((prev) => !prev)}
+        style={{
+          padding: "6px 12px",
+          borderRadius: 10,
+          background: "rgba(22,27,34,0.85)",
+          color: "var(--text-primary)",
+          border: "1px solid var(--color-border)",
+          cursor: "pointer",
+          whiteSpace: "nowrap",
+        }}
+      >
+        ☰ {t("dashboard:sidebar.activity")}
+      </button>
+      <div
+        style={{
+          display: "flex",
+          gap: 12,
+          padding: "6px 12px",
+          borderRadius: 10,
+          background: "rgba(22,27,34,0.85)",
+          color: "var(--text-muted)",
+          border: "1px solid var(--color-border)",
+          fontSize: 12,
+          whiteSpace: "nowrap",
+        }}
+      >
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <span
+            aria-hidden
+            style={{
+              width: 14,
+              height: 2,
+              background: DOMAINS.flight.color,
+              borderRadius: 2,
+            }}
+          />
+          <span style={{ color: "var(--text-primary)" }}>
+            {t("dashboard:sidebar.filters.flight")}
+          </span>
         </span>
-      </span>
-      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-        <span
-          aria-hidden
-          style={{
-            width: 14,
-            height: 2,
-            background: CRUISE_HEX,
-            borderRadius: 2,
-          }}
-        />
-        <span style={{ color: "var(--text-primary)" }}>
-          {t("dashboard:sidebar.filters.cruise")}
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <span
+            aria-hidden
+            style={{
+              width: 14,
+              height: 2,
+              background: CRUISE_HEX,
+              borderRadius: 2,
+            }}
+          />
+          <span style={{ color: "var(--text-primary)" }}>
+            {t("dashboard:sidebar.filters.cruise")}
+          </span>
         </span>
-      </span>
+      </div>
     </div>
   );
 
@@ -291,8 +294,7 @@ export function AllTab(): JSX.Element {
           onRouteClick={handleRouteClick}
           flightRouteColor={FLIGHT_RGB}
         />
-        {sidebarToggleButton}
-        {legend}
+        {toggleAndLegend}
         {activityPanel}
         {editModal}
       </div>
@@ -309,8 +311,7 @@ export function AllTab(): JSX.Element {
         onFlightClick={handleFlightClick}
         onRouteClick={handleRouteClick}
       />
-      {sidebarToggleButton}
-      {legend}
+      {toggleAndLegend}
       {activityPanel}
       {editModal}
     </div>
