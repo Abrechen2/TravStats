@@ -28,6 +28,12 @@ interface MapContainer3DProps {
   onFlightClick?: (flightId: string) => void;
   onRouteClick?: (flightIds: string[]) => void;
   onEdit?: (flight: Flight) => void;
+  /** Globe-only: fires when the pinned-card "Open last flight" CTA is
+      clicked — should open the flight (modal or detail page). */
+  onFlightOpen?: (flightId: string) => void;
+  /** Globe-only: fires when the pinned-card "Open cruise" CTA is
+      clicked — should navigate to the cruise detail page. */
+  onCruiseOpen?: (cruiseId: string) => void;
   visMode: MapMode;
   onVisModeChange: (mode: MapMode) => void;
   minRouteCount?: number;
@@ -57,6 +63,8 @@ export default function MapContainer3D({
   onFlightClick,
   onRouteClick,
   onEdit,
+  onFlightOpen,
+  onCruiseOpen,
   visMode,
   onVisModeChange,
   minRouteCount = 1,
@@ -139,7 +147,8 @@ export default function MapContainer3D({
             <GlobeView
               flights={flights}
               cruises={cruises}
-              onFlightClick={onFlightClick}
+              onFlightOpen={onFlightOpen ?? onFlightClick}
+              onCruiseOpen={onCruiseOpen}
               minRouteCount={minRouteCount}
             />
           </Suspense>

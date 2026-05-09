@@ -4,6 +4,22 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-beta.18] - 2026-05-09 (Beta)
+
+### Fixed
+- **Globe pinned-card "Open last flight" CTA was a no-op** — The CTA
+  was wired to a callback named `onFlightClick` that mapped to
+  `setSelection([flight])` upstream, which only highlights the row in
+  the activity panel. Renamed to `onFlightOpen` and re-wired in
+  AllTab + FlightsTab to actually open the flight edit modal — same
+  modal the activity-panel "Details" button opens.
+
+### Added
+- **Cruise pinned-card now has an "Open cruise" CTA** — Symmetric to
+  the flight CTA. New `onCruiseOpen` prop on GlobeView /
+  MapContainer3D, wired in AllTab to navigate to `/cruises/:id` —
+  same destination the activity-panel cruise "Details" button uses.
+
 ## [2.0.0-beta.17] - 2026-05-09 (Beta)
 
 ### Fixed

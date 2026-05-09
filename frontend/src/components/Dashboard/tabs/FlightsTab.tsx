@@ -228,6 +228,10 @@ export function FlightsTab(): JSX.Element {
         showInternalCruises={false}
         onFlightClick={handleFlightClick}
         onRouteClick={handleRouteClick}
+        onFlightOpen={(flightId) => {
+          const f = lookup(flightId);
+          if (f) setEditingFlight(f);
+        }}
       />
       <button
         type="button"
