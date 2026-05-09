@@ -172,5 +172,13 @@
     "review": "Prüfen",
     "success": "{{trips}} Reisen erstellt, {{flights}} Flüge zugeordnet, {{orphans}} verwaiste Reisen entfernt",
     "error": "Reise-Erkennung fehlgeschlagen"
+  },
+  "detectReview": {
+    "title": "Reisen erkennen",
+    "subtitle": "{{count}} Vorschläge — wähle, was zu Reisen werden soll.",
+    "selectAll": "Alle auswählen",
+    "summary": "{{trips}} ausgewählt · {{flights}} Flüge werden zugeordnet",
+    "commit": "{{count}} Reisen erstellen",
+    "discard": "Verwerfen"
   }
 }

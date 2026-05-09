@@ -96,7 +96,17 @@ export const tripsApi = {
     return data.booking;
   },
 
-  detect: async (input: { dryRun?: boolean } = { dryRun: true }): Promise<DetectTripsResult> => {
+  detect: async (
+    input: {
+      dryRun?: boolean;
+      selectedProposals?: Array<{
+        flightIds: string[];
+        name: string;
+        pnr?: string | null;
+        source?: ProposedTrip["source"];
+      }>;
+    } = { dryRun: true }
+  ): Promise<DetectTripsResult> => {
     const { data } = await api.post<DetectTripsResult>("/trips/detect", input);
     return data;
   },

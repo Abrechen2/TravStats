@@ -172,5 +172,13 @@
     "review": "Review",
     "success": "Created {{trips}} journeys, linked {{flights}} flights, removed {{orphans}} orphans",
     "error": "Journey detection failed"
+  },
+  "detectReview": {
+    "title": "Review journeys",
+    "subtitle": "{{count}} suggestions — pick which become journeys.",
+    "selectAll": "Select all",
+    "summary": "{{trips}} selected · {{flights}} flights to be linked",
+    "commit": "Create {{count}} journeys",
+    "discard": "Discard"
   }
 }
