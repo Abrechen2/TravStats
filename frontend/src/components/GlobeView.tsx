@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import MapGL, { useControl, type MapRef } from "react-map-gl/maplibre";
-import maplibregl from "maplibre-gl";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
 import {
@@ -28,6 +26,7 @@ import {
 } from "./Globe/heatmapUtils";
 import { buildGlobeLayers } from "./Globe/buildGlobeLayers";
 import { PinnedCard } from "./Globe/PinnedCard";
+import { PinnedCardBoundary } from "./Globe/PinnedCardBoundary";
 import type {
   ArcDatum,
   CruisePathDatum,
@@ -373,19 +372,23 @@ export default function GlobeView({
   // hover tooltip) so they can read details without holding still.
   const [pinned, setPinned] = useState<GlobePinned | null>(null);
 
-  // The pinned card is rendered into a stable host div via createPortal,
-  // and that host div is wired to a MapLibre `Popup` so MapLibre handles
-  // lng/lat → screen-pixel projection, repositioning on camera move,
-  // edge-aware anchor flipping, and `locationOccludedOpacity:0` for
-  // back-of-globe culling. We never re-create the host or the popup
-  // instance — only setLngLat() / addTo() / remove() — so React's
-  // reconciliation of card content stays orthogonal to MapLibre's
-  // imperative popup lifecycle.
-  const popupHostRef = useRef<HTMLDivElement | null>(null);
-  if (popupHostRef.current === null) {
-    popupHostRef.current = document.createElement("div");
-  }
-  const popupRef = useRef<maplibregl.Popup | null>(null);
+  // The pinned card is rendered as a custom absolutely-positioned
+  // overlay above the map container. MapLibre's own Popup primitive
+  // was attempted in beta.12 — it crashed the WebGL canvas on click
+  // in our specific stack (maplibre-gl 5.19 + deck.gl 9 interleaved
+  // + globe projection), per upstream issue #512: the popup's
+  // `locationOccludedOpacity` path performs an internal occlusion
+  // pass that does not restore `gl.SCISSOR_TEST`, leaving the shared
+  // GL state corrupted on next deck.gl draw. The custom overlay
+  // here uses `map.project()` on every render frame and a JS-side
+  // dot-product visibility check — same math as
+  // EarthOcclusionExtension — so we never trigger the popup's
+  // internal occlusion pipeline.
+  const [popupScreenPos, setPopupScreenPos] = useState<{
+    x: number;
+    y: number;
+    visible: boolean;
+  } | null>(null);
   // null = no filter (all quartiles visible at full opacity). 1-4 =
   // dim every arc outside this quartile so the click-selected band
   // pops. Click the active band again to clear.
@@ -728,62 +731,70 @@ export default function GlobeView({
   // own globe-visibility math to fade the popup when the anchor is on
   // the back of the earth — same logic as the layer occlusion shader,
   // no JS-side dot-product replay needed.
+  // Subscribe to MapLibre `render` events while a card is pinned and
+  // re-project the anchor lng/lat → screen pixel each frame. The
+  // visibility check is the same dot-product math the EarthOcclusion
+  // shader uses on the GPU, just executed once per frame in JS.
   useEffect(() => {
     const map = mapRef.current?.getMap();
-    const host = popupHostRef.current;
-    if (!map || !host) return;
+    if (!map) return;
 
-    // Wrap the popup lifecycle in try/catch — a single throw from
-    // MapLibre's projection or anchor-flipping math would otherwise
-    // bubble all the way up and unmount the entire GlobeView tree,
-    // which the user observes as "the globe disappears". The popup
-    // missing is recoverable; the canvas going away is not.
-    try {
-      if (!pinned) {
-        popupRef.current?.remove();
-        return;
-      }
-
-      if (!popupRef.current) {
-        popupRef.current = new maplibregl.Popup({
-          closeButton: false,
-          closeOnClick: false,
-          closeOnMove: false,
-          // Cap the wrapper at the same outer width the inner card
-          // wants — the inner card's own min/max width then drives
-          // the actual layout. Leaving this at "none" lets the wrapper
-          // stretch to viewport width on tall content.
-          maxWidth: "320px",
-          offset: 14,
-          subpixelPositioning: true,
-          locationOccludedOpacity: 0,
-          anchor: "bottom",
-          className: "globe-pinned-popup",
-        }).setDOMContent(host);
-      }
-
-      const [lng, lat] = pinned.anchorLngLat;
-      // Guard against NaN/Infinity which would crash MapLibre's
-      // setLngLat → projection chain.
-      if (!Number.isFinite(lng) || !Number.isFinite(lat)) return;
-
-      popupRef.current.setLngLat([lng, lat]);
-      if (!popupRef.current.isOpen()) {
-        popupRef.current.addTo(map);
-      }
-    } catch (err) {
-      logger.error({ err, pinned }, "globe.pinned-popup.mount-failed");
+    if (!pinned) {
+      setPopupScreenPos(null);
+      return;
     }
-  }, [pinned]);
 
-  // Tear down the popup on component unmount so we don't leak DOM
-  // nodes if GlobeView is dismounted while a card is pinned.
-  useEffect(() => {
-    return () => {
-      popupRef.current?.remove();
-      popupRef.current = null;
+    const [lng, lat] = pinned.anchorLngLat;
+    if (!Number.isFinite(lng) || !Number.isFinite(lat)) {
+      setPopupScreenPos(null);
+      return;
+    }
+
+    const update = (): void => {
+      try {
+        const p = map.project([lng, lat]);
+        // Visibility: anchor is on the front hemisphere if the dot
+        // product between its surface-normal vector and the camera's
+        // direction vector is greater than cos(horizonAngle). Same
+        // approach as EarthOcclusionExtension, just JS-side.
+        const center = map.getCenter();
+        const zoom = map.getZoom();
+        const DEG = Math.PI / 180;
+        const camLng = center.lng * DEG;
+        const camLat = center.lat * DEG;
+        const aLng = lng * DEG;
+        const aLat = lat * DEG;
+        const camDir: [number, number, number] = [
+          Math.cos(camLat) * Math.cos(camLng),
+          Math.cos(camLat) * Math.sin(camLng),
+          Math.sin(camLat),
+        ];
+        const anchorDir: [number, number, number] = [
+          Math.cos(aLat) * Math.cos(aLng),
+          Math.cos(aLat) * Math.sin(aLng),
+          Math.sin(aLat),
+        ];
+        const dotProd =
+          camDir[0] * anchorDir[0] +
+          camDir[1] * anchorDir[1] +
+          camDir[2] * anchorDir[2];
+        // cameraDistanceFromZoom heuristic, mirrored from the shader
+        const dist = 1 + 1.5 * Math.pow(2, -Math.max(0, zoom) * 0.7);
+        const cosHorizon = 1.0 / Math.max(1.001, dist);
+        const visible = dotProd > cosHorizon;
+        setPopupScreenPos({ x: p.x, y: p.y, visible });
+      } catch (err) {
+        logger.error({ err, pinned }, "globe.pinned-overlay.project-failed");
+        setPopupScreenPos(null);
+      }
     };
-  }, []);
+
+    update();
+    map.on("render", update);
+    return () => {
+      map.off("render", update);
+    };
+  }, [pinned]);
 
   useEffect(() => {
     if (cruises.length === 0) return;
@@ -1520,23 +1531,32 @@ export default function GlobeView({
         </div>
       )}
 
-      {/* Pinned detail card — rendered into the MapLibre Popup host
-          via createPortal. The Popup itself is mounted by the
-          `pinned`-effect above; positioning, anchor flipping, and
-          back-of-globe occlusion (locationOccludedOpacity:0) are all
-          handled by MapLibre. */}
-      {pinned &&
-        popupHostRef.current &&
-        createPortal(
-          <PinnedCard
-            pinned={pinned}
-            flights={flights}
-            cruises={cruises ?? []}
-            onClose={() => setPinned(null)}
-            onFlightClick={onFlightClick}
-          />,
-          popupHostRef.current,
-        )}
+      {/* Pinned detail card — custom React overlay positioned via
+          map.project() on every render frame. Replaces the MapLibre
+          Popup primitive that was crashing the WebGL canvas in this
+          stack (interleaved deck.gl 9 + globe projection). Visibility
+          flag from the JS-side dot-product check fades the card when
+          the anchor rotates to the back of the globe. */}
+      {pinned && popupScreenPos && popupScreenPos.visible && (
+        <div
+          className="absolute z-30 pointer-events-auto"
+          style={{
+            left: popupScreenPos.x,
+            top: popupScreenPos.y,
+            transform: "translate(-50%, calc(-100% - 14px))",
+          }}
+        >
+          <PinnedCardBoundary>
+            <PinnedCard
+              pinned={pinned}
+              flights={flights}
+              cruises={cruises ?? []}
+              onClose={() => setPinned(null)}
+              onFlightClick={onFlightClick}
+            />
+          </PinnedCardBoundary>
+        </div>
+      )}
 
       {/* Hover tooltip — pre-escaped HTML (escapeHtml at every interpolation
           site upstream), positioned at the deck.gl pick coords. Offset
