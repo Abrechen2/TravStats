@@ -61,8 +61,16 @@
     "notesLabel": "Notes (Markdown)",
     "notesPlaceholder": "Longer notes about the journey…",
     "colorLabel": "Accent colour",
+    "coverUploadHint": "Photo upload arrives with the gallery iteration. For now paste a URL to a public image.",
+    "notesMarkdownHint": "Markdown supported — headings, lists, **bold**, *italic*, [links](https://…).",
     "save": "Save",
     "cancel": "Cancel"
+  },
+  "modalTabs": {
+    "general": "General",
+    "people": "Travellers & Tags",
+    "appearance": "Appearance",
+    "notes": "Notes"
   },
   "badge": {
     "noTrip": "—"

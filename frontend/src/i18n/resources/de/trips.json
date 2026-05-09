@@ -61,8 +61,16 @@
     "notesLabel": "Notizen (Markdown)",
     "notesPlaceholder": "Längere Notizen über die Reise …",
     "colorLabel": "Akzent-Farbe",
+    "coverUploadHint": "Foto-Upload kommt mit der Galerie-Iteration. Bis dahin: URL einer öffentlichen Bilddatei einfügen.",
+    "notesMarkdownHint": "Markdown unterstützt — Überschriften, Listen, **fett**, *kursiv*, [Links](https://…).",
     "save": "Speichern",
     "cancel": "Abbrechen"
+  },
+  "modalTabs": {
+    "general": "Allgemein",
+    "people": "Reisende & Tags",
+    "appearance": "Erscheinungsbild",
+    "notes": "Notizen"
   },
   "badge": {
     "noTrip": "—"
