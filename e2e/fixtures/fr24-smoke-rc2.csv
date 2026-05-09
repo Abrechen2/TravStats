@@ -1,0 +1,4 @@
+
+Date,"Flight number",From,To,"Dep time","Arr time",Duration,Airline,Aircraft,Registration,"Seat number","Seat type","Flight class","Flight reason",Note,Dep_id,Arr_id,Airline_id,Aircraft_id
+2023-03-15,LH401,"Frankfurt am Main / Frankfurt (FRA/EDDF)","New York / John F Kennedy International (JFK/KJFK)",10:30:00,13:25:00,08:55:00,"Lufthansa (LH/DLH)","Boeing 747-8 (B748)",D-ABYD,41A,1,1,1,Smoke-test row,524,2670,1102,1842
+2023-03-15,AF191,"Bengaluru / Kempegowda International (BLR/VOBL)","Paris / Charles de Gaulle (CDG/LFPG)",01:30:00,08:00:00,09:30:00,"Air France (AF/AFR)","Boeing 777-300ER (B77W)",F-GSQK,12A,1,3,2,RC2 BLR-soft-warning row,1234,5678,42,99

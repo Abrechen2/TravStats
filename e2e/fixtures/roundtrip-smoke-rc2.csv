@@ -1,0 +1,2 @@
+depIata,arrIata,departureTime,arrivalTime,flightNumber,airline,aircraft,seatNumber,seatClass,status
+ZRH,ATH,2024-09-10T08:30:00,2024-09-10T12:45:00,LX1838,Swiss,Airbus A320,11D,economy,flown

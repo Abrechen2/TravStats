@@ -234,19 +234,70 @@ const requirePairedTimezone = (
   }
 };
 
+/**
+ * Cross-field validations applied to BOTH create and update.
+ *
+ * 1. Chronological order — for any status where both departureLocal AND
+ *    arrivalLocal are supplied (and the wall-clock strings parse), arrival
+ *    must not precede departure. Previously only `flown` and `scheduled`
+ *    were checked; v1.5.0-rc.3 extends this to `historical` because the
+ *    Norbert UAT (issue #99) surfaced an ATL→MUC 1986 row with arr 8 h
+ *    BEFORE dep that the handler had silently accepted. NULL `arrivalLocal`
+ *    remains legal for `historical` (legitimate date-only bulk imports).
+ *
+ * 2. Status / time-axis sanity — `flown` and `historical` cannot have a
+ *    departure in the future; both states mean the flight has already
+ *    happened. `scheduled` past-dated rows are NOT rejected here (a
+ *    legitimate edge case is a manually re-edited row whose flight has
+ *    just departed) — the route handler logs them as a warning instead.
+ */
+const requireChronologicalOrder = (
+  data: { departureLocal?: string | null; arrivalLocal?: string | null },
+  ctx: z.RefinementCtx,
+): void => {
+  if (!data.departureLocal || !data.arrivalLocal) return;
+  if (data.departureLocal > data.arrivalLocal) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'arrivalLocal must not precede departureLocal',
+      path: ['arrivalLocal'],
+    });
+  }
+};
+
+const requireStatusTimeAxisSanity = (
+  data: { status?: string; departureLocal?: string | null },
+  ctx: z.RefinementCtx,
+): void => {
+  if (!data.departureLocal) return;
+  // departureLocal is a wall-clock string; compare against now via ISO
+  // string slicing — both are YYYY-MM-DDTHH:mm[:ss]. We accept the local
+  // string at face value (the proper IANA conversion happens in the
+  // handler). For sanity bounds this lexicographic compare is enough.
+  const nowIso = new Date().toISOString().slice(0, 19);
+  if ((data.status === 'historical' || data.status === 'flown') && data.departureLocal > nowIso) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `${data.status} flights cannot have a departureLocal in the future`,
+      path: ['departureLocal'],
+    });
+  }
+};
+
 export const createFlightSchema = baseFlightSchema
   .superRefine(requirePairedTimezone)
+  .superRefine(requireChronologicalOrder)
+  .superRefine(requireStatusTimeAxisSanity)
   .refine(
     (data) => {
       if (data.status === 'historical' || data.status === 'duplicated') return true;
-      if (!data.departureLocal || !data.arrivalLocal) return false;
-      // Compare wall-clock strings lexicographically — only used for sanity
-      // bounds (>-12h, <+24h). Real per-second checks would need conversion,
-      // but the route handler performs that with the proper tz pair.
-      return data.departureLocal <= data.arrivalLocal;
+      // `flown` and `scheduled` need both dep + arr times — historicals can
+      // legitimately omit arrival (date-only bulk imports). Chronological
+      // order itself is now handled in `requireChronologicalOrder` above.
+      return Boolean(data.departureLocal && data.arrivalLocal);
     },
     {
-      message: 'Non-historical flights require departureLocal and arrivalLocal in chronological order',
+      message: 'Non-historical flights require both departureLocal and arrivalLocal',
       path: ['arrivalLocal'],
     }
   );
@@ -254,6 +305,8 @@ export const createFlightSchema = baseFlightSchema
 export const updateFlightSchema = baseFlightSchema
   .partial()
   .superRefine(requirePairedTimezone)
+  .superRefine(requireChronologicalOrder)
+  .superRefine(requireStatusTimeAxisSanity)
   .refine(
     (data) => Object.keys(data).length > 0,
     {
