@@ -4,6 +4,23 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-beta.22] - 2026-05-09 (Beta)
+
+### Fixed
+- **Year + domain filter now actually filters data** — Beta.20 added
+  the year dropdown and domain pill row but only updated the store;
+  the data layer didn't read either. Wired both into the Alle, Flüge,
+  and Kreuzfahrten tabs:
+  - Alle tab filters flights by `departureTime` within the year range
+    and cruises by interval overlap (start/end), and gates each domain
+    on/off via the pill row. Activity panel reflects the same
+    filtered set.
+  - Flüge / Kreuzfahrten apply the year filter only — domain pills are
+    cross-domain and a domain-dedicated tab keeps showing its domain
+    regardless of pill state.
+  - `MapContainer3D` gained a `cruisesOverride` prop that bypasses its
+    internal cruise fetch so the tabs can hand it the pre-filtered set.
+
 ## [2.0.0-beta.21] - 2026-05-09 (Beta)
 
 ### Changed

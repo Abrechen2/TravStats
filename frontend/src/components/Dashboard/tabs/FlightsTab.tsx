@@ -6,6 +6,7 @@ import { useFlightLookup } from "../../../hooks/useFlightLookup";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { flightsApi } from "../../../lib/api/flights";
 import { logger } from "../../../lib/logger";
+import { useDashboardFilterStore } from "../../../store/dashboardFilterStore";
 import { useFlightSelectionStore } from "../../../store/flightSelectionStore";
 import { useToastStore } from "../../../store/toastStore";
 import type { Flight, FlightInput, GeoJSONFeature } from "../../../types";
@@ -216,16 +217,37 @@ export function FlightsTab(): JSX.Element {
     [setMode]
   );
 
+  // Apply the global year filter to the flight set. Domain visibility
+  // is intentionally NOT applied here — this tab is dedicated to
+  // flights, the user already opened it, so hiding everything when the
+  // domain pill is off would be a worse UX than ignoring the pill on
+  // a dedicated tab.
+  const filterTime = useDashboardFilterStore((s) => s.time);
+  const visibleFlights = useMemo<GeoJSONFeature[]>(() => {
+    const from = filterTime.from;
+    const to = filterTime.to;
+    if (!from && !to) return flights;
+    const fromMs = from ? Date.parse(from) : Number.NEGATIVE_INFINITY;
+    const toMs = to ? Date.parse(to) : Number.POSITIVE_INFINITY;
+    return flights.filter((f) => {
+      const dep = f.properties.departureTime;
+      if (!dep) return true;
+      const t = Date.parse(dep);
+      if (Number.isNaN(t)) return true;
+      return t >= fromMs && t <= toMs;
+    });
+  }, [flights, filterTime.from, filterTime.to]);
+
   // Build airport-frequency markers when stats-map mode is active.
   const statsMapLayers = useMemo<Layer[]>(() => {
     if (flightMode !== "stats-map") return [];
-    return [buildStatsMapLayer(flights)];
-  }, [flightMode, flights]);
+    return [buildStatsMapLayer(visibleFlights)];
+  }, [flightMode, visibleFlights]);
 
   return (
     <div style={{ position: "absolute", inset: 0 }}>
       <MapContainer3D
-        flights={flightMode === "stats-map" ? [] : flights}
+        flights={flightMode === "stats-map" ? [] : visibleFlights}
         visMode={visMode}
         onVisModeChange={handleVisModeChange}
         extraLayers={statsMapLayers}

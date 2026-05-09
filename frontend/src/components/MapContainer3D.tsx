@@ -67,6 +67,15 @@ interface MapContainer3DProps {
    * mode dropdown only — its modes don't map 1:1 to MapMode).
    */
   hideVisModeSelector?: boolean;
+  /**
+   * Pre-filtered cruise list. When provided, the internal cruiseApi
+   * fetch is bypassed and these cruises are rendered instead. Lets
+   * tabs pre-filter cruises by year / domain visibility upstream
+   * before the data reaches the map. `showInternalCruises` is the
+   * binary on/off; `cruisesOverride` is the "yes but with this list"
+   * variant.
+   */
+  cruisesOverride?: readonly Cruise[];
 }
 
 export default function MapContainer3D({
@@ -87,38 +96,47 @@ export default function MapContainer3D({
   flightRouteColor,
   availableModes,
   hideVisModeSelector = false,
+  cruisesOverride,
 }: MapContainer3DProps): JSX.Element {
   const { t } = useTranslation(["common", "map"]);
   const mapTheme = useThemeStore((s) => s.mapTheme);
   const { enabled: enabledDomains } = useEnabledDomains();
   const cruiseEnabled = enabledDomains.includes("cruise");
   const [fabOpen, setFabOpen] = useState(false);
-  const [cruises, setCruises] = useState<Cruise[]>([]);
+  const [internalCruises, setInternalCruises] = useState<Cruise[]>([]);
 
   // Fetch cruises as supplemental map overlay. User hides by disabling
   // the cruise domain in settings — no per-layer toggle in V1. Depends
   // on the stable boolean (not the `isEnabled` closure) to avoid an
   // effect loop when Zustand returns a fresh selector object.
-  // Suppressed when showInternalCruises=false so that tabs owning their
-  // own cruise rendering (e.g. CruisesTab) don't double-fetch.
+  // Suppressed when showInternalCruises=false (tab owns rendering) or
+  // when cruisesOverride is provided (tab passed a pre-filtered list).
   useEffect(() => {
-    if (!showInternalCruises || !cruiseEnabled) {
-      setCruises((prev) => (prev.length === 0 ? prev : []));
+    if (!showInternalCruises || !cruiseEnabled || cruisesOverride !== undefined) {
+      setInternalCruises((prev) => (prev.length === 0 ? prev : []));
       return;
     }
     let cancelled = false;
     void (async () => {
       try {
         const data = await cruiseApi.list();
-        if (!cancelled) setCruises(data);
+        if (!cancelled) setInternalCruises(data);
       } catch {
-        if (!cancelled) setCruises((prev) => (prev.length === 0 ? prev : []));
+        if (!cancelled) setInternalCruises((prev) => (prev.length === 0 ? prev : []));
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [cruiseEnabled, showInternalCruises]);
+  }, [cruiseEnabled, showInternalCruises, cruisesOverride]);
+
+  // Materialise the cruise array: override > internal fetch. When
+  // override is set we trust the caller's list verbatim (already
+  // filtered upstream).
+  const cruises = useMemo<Cruise[]>(
+    () => (cruisesOverride !== undefined ? [...cruisesOverride] : internalCruises),
+    [cruisesOverride, internalCruises]
+  );
 
   const routeCount = useMemo(() => {
     if (visMode !== "routes") return null;

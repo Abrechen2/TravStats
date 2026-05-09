@@ -8,6 +8,10 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { cruiseApi } from "../../../lib/api/cruise";
 import { logger } from "../../../lib/logger";
 import { useCruiseSelectionStore } from "../../../store/cruiseSelectionStore";
+import {
+  intervalOverlapsRange,
+  useDashboardFilterStore,
+} from "../../../store/dashboardFilterStore";
 import type { Cruise } from "../../../types/cruise";
 import MapContainer3D from "../../MapContainer3D";
 import { buildPortFrequencyLayer } from "../modes/buildPortFrequencyLayer";
@@ -56,10 +60,24 @@ export function CruisesTab(): JSX.Element {
     };
   }, []);
 
+  // Apply the global year filter to the cruise set. Domain visibility
+  // is intentionally NOT applied here — same rationale as FlightsTab:
+  // a domain-dedicated tab should keep showing its domain regardless
+  // of the cross-domain pill state.
+  const filterTime = useDashboardFilterStore((s) => s.time);
+  const visibleCruises = useMemo<Cruise[]>(() => {
+    if (!filterTime.from && !filterTime.to) return cruises;
+    return cruises.filter((c) =>
+      // Cruises with a null startDate stay visible — same permissive
+      // policy intervalOverlapsRange uses for unparseable dates.
+      intervalOverlapsRange(c.startDate ?? "", c.endDate, filterTime.from, filterTime.to)
+    );
+  }, [cruises, filterTime.from, filterTime.to]);
+
   const itineraryLayers = useMemo<Layer[]>(() => {
     if (mode !== "itinerary") return [];
 
-    const stops: ItineraryDot[] = cruises.flatMap((c) =>
+    const stops: ItineraryDot[] = visibleCruises.flatMap((c) =>
       c.stops
         .filter((s) => !s.isAtSea && s.port !== null)
         .map((s, index) => ({
@@ -94,12 +112,12 @@ export function CruisesTab(): JSX.Element {
         getBackgroundColor: [34, 50, 80, 220],
       }),
     ];
-  }, [cruises, mode]);
+  }, [visibleCruises, mode]);
 
   const portFrequencyLayers = useMemo<Layer[]>(() => {
     if (mode !== "port-frequency") return [];
-    return [buildPortFrequencyLayer(cruises)];
-  }, [cruises, mode]);
+    return [buildPortFrequencyLayer(visibleCruises)];
+  }, [visibleCruises, mode]);
 
   // Stable empty-array fallback so DeckGLMap's layer useMemo doesn't see a
   // fresh reference on every render and re-build all layers downstream.
@@ -124,6 +142,7 @@ export function CruisesTab(): JSX.Element {
         extraLayers={extraLayers}
         showInternalCruises={showInternalCruises}
         hideVisModeSelector
+        cruisesOverride={visibleCruises}
       />
       <button
         type="button"
@@ -144,7 +163,7 @@ export function CruisesTab(): JSX.Element {
         ☰ {t("dashboard:sidebar.cruises")}
       </button>
       <CruiseListPanel
-        cruises={cruises}
+        cruises={visibleCruises}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         onSelect={handleSelectCruise}
