@@ -69,7 +69,8 @@ export interface BuildGlobeLayersOptions {
   onAirportHover: (info: PickingInfo<PointDatum>) => void;
   onPortHover: (info: PickingInfo<PointDatum>) => void;
   onCruisePathHover: (info: PickingInfo<CruisePathDatum>) => void;
-  flyToArc: (arc: ArcDatum) => void;
+  /** @deprecated retained for source compat; click no longer flies the camera. */
+  flyToArc?: (arc: ArcDatum) => void;
   setPinned: (pinned: GlobePinned | null) => void;
   setTooltip: (tooltip: TooltipState | null) => void;
 }
@@ -92,7 +93,6 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
     onAirportHover,
     onPortHover,
     onCruisePathHover,
-    flyToArc,
     setPinned,
     setTooltip,
   } = opts;
@@ -135,7 +135,11 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
         if (!object) return;
         const anchor = pickingCoordToLngLat(info.coordinate, object.waypoints);
         setPinned({ kind: "arc", data: object, anchorLngLat: anchor });
-        flyToArc(object);
+        // No flyToArc here. The popup is now anchored to the click
+        // coordinate, so flying the camera away from where the user
+        // tapped is anti-pattern, and stacking a 1.5 s flyTo on top of
+        // the popup mount + globe re-render was crashing the canvas
+        // in some camera states (regression observed on beta.15).
       },
       extensions: [
         new PathStyleExtension({ dash: true, highPrecisionDash: true }),

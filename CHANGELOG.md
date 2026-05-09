@@ -4,6 +4,26 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-beta.16] - 2026-05-09 (Beta)
+
+### Fixed
+- **Globe disappeared completely on flight-route click** — Critical
+  regression in beta.12-15: clicking an aggregated arc fired both
+  `setPinned()` (mounting the new MapLibre Popup) and a 1.5 s
+  `flyTo()` camera animation. The popup mount + camera flyTo +
+  globe re-render combo crashed the WebGL canvas in some camera
+  states, leaving a black screen instead of the globe. Two-layer
+  fix:
+  - **Drop the camera flyTo on click.** With the popup now anchored
+    to the click coordinate, flying the camera away from where the
+    user just tapped is anti-pattern anyway, and removing it
+    eliminates the race entirely.
+  - **Wrap the popup mount in try/catch + finite-coord guard.** A
+    single throw from MapLibre's projection or anchor-flipping math
+    used to bubble up and unmount the entire GlobeView. Now caught
+    and logged; popup missing is recoverable, canvas going away is
+    not.
+
 ## [2.0.0-beta.15] - 2026-05-09 (Beta)
 
 ### Changed
