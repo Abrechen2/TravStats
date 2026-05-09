@@ -196,6 +196,16 @@
     "commit": "Create {{count}} journeys",
     "discard": "Discard"
   },
+  "summary": {
+    "title": "AI summary",
+    "cta": "Have the AI write a short, personal recap of this journey — based on stops, journal entries and linked flights / cruises.",
+    "generateButton": "Generate summary",
+    "regenerate": "Regenerate",
+    "generating": "Writing…",
+    "generated": "Summary created",
+    "error": "Summary failed",
+    "unavailable": "AI unreachable — start Ollama and pull the model."
+  },
   "gallery": {
     "title": "Gallery",
     "uploadButton": "📷 Upload",

@@ -196,6 +196,16 @@
     "commit": "{{count}} Reisen erstellen",
     "discard": "Verwerfen"
   },
+  "summary": {
+    "title": "KI-Zusammenfassung",
+    "cta": "Lass die KI eine kurze, persönliche Zusammenfassung dieser Reise schreiben — auf Basis der Stopps, Tagebucheinträge und verknüpften Flüge / Kreuzfahrten.",
+    "generateButton": "Zusammenfassung erstellen",
+    "regenerate": "Neu generieren",
+    "generating": "Schreibt …",
+    "generated": "Zusammenfassung erstellt",
+    "error": "Zusammenfassung fehlgeschlagen",
+    "unavailable": "KI nicht erreichbar — Ollama starten und Modell ziehen."
+  },
   "gallery": {
     "title": "Galerie",
     "uploadButton": "📷 Hochladen",
