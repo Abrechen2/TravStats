@@ -4,6 +4,8 @@ import { QuickActions } from "./QuickActions";
 import { InlineStats } from "./InlineStats";
 import { useFlightSelectionStore } from "../../store/flightSelectionStore";
 import { useTranslation } from "../../hooks/useTranslation";
+import SpecialTypeBadge from "../specialFlights/SpecialTypeBadge";
+import type { SpecialType } from "../specialFlights/specialTypeMeta";
 
 interface FlightEntryProps {
   flight: Flight;
@@ -89,6 +91,9 @@ export function FlightEntry({
                 >
                   dupliziert
                 </span>
+              )}
+              {flight.specialType && (
+                <SpecialTypeBadge type={flight.specialType as SpecialType} />
               )}
             </div>
             <div className="text-xs" style={{ color: "var(--text-muted)" }}>

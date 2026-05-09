@@ -14,6 +14,8 @@ import { useTranslation } from "../hooks/useTranslation";
 import { useThemeStore } from "../store/themeStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { cruiseApi } from "../lib/api";
+import SpecialFlightsLegend from "./specialFlights/SpecialFlightsLegend";
+import type { SpecialType } from "./specialFlights/specialTypeMeta";
 
 // Hold the branded Suspense fallback for at least 2 s on first mount so
 // the GlobeLoader doesn't just flash by. React.lazy caches the resolved
@@ -113,6 +115,18 @@ export default function MapContainer3D({
     return seen.size;
   }, [flights, visMode]);
 
+  // Populate the legend only with specialType values actually present
+  // in the current flight set — otherwise 8 entries (most empty) would
+  // dominate the corner.
+  const specialTypesPresent = useMemo(() => {
+    const s = new Set<SpecialType>();
+    for (const f of flightList ?? []) {
+      if (!f.specialType) continue;
+      s.add(f.specialType as SpecialType);
+    }
+    return s;
+  }, [flightList]);
+
   return (
     <div
       data-map-theme={mapTheme}
@@ -159,6 +173,13 @@ export default function MapContainer3D({
           style={{ background: "rgba(10, 8, 30, 0.45)", backdropFilter: "blur(1px)" }}
           onClick={() => setFabOpen(false)}
         />
+      )}
+
+      {/* Special-flight legend — routes mode only, only when we have
+          at least one special flight to explain. Sits as an overlay,
+          NOT a separate MapMode (per the V2 architectural call). */}
+      {visMode === "routes" && specialTypesPresent.size > 0 && (
+        <SpecialFlightsLegend presentTypes={specialTypesPresent} />
       )}
 
       {/* Info pill — flights + routes count, routes mode only.

@@ -18,14 +18,12 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Map, { Marker, type MapLayerMouseEvent, type MapRef } from "react-map-gl/maplibre";
-import { useThemeStore } from "../../store/themeStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { NominatimError, searchPlaces, type NominatimPlace } from "../../lib/nominatim";
 
 /** MapLibre styles — reuse the same CartoCDN basemaps as DeckGLMap so the
  *  mini-map blends visually with the main map. */
-const LIGHT_MAP_STYLE = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
 /** Fallback view when no position is set — Europe-centered, continent-scale. */
@@ -74,7 +72,6 @@ export function EventLocationPicker({
   idPrefix = "event-location",
 }: EventLocationPickerProps): JSX.Element {
   const { t } = useTranslation(["specialFlights"]);
-  const isDarkMode = useThemeStore((s) => s.isDarkMode);
 
   const mapRef = useRef<MapRef | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -241,7 +238,7 @@ export function EventLocationPicker({
     return DEFAULT_VIEW;
   }, [hasPosition, value.lat, value.lon]);
 
-  const mapStyle = isDarkMode ? DARK_MAP_STYLE : LIGHT_MAP_STYLE;
+  const mapStyle = DARK_MAP_STYLE;
 
   // ---- Render ------------------------------------------------------------
   return (
