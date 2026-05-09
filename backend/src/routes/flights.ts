@@ -25,8 +25,9 @@ import { getProviderQuota } from '../services/apiQuota';
 import { estimateRoute } from '../services/routeEstimationService';
 import { calculateCo2Kg, haversineKm, toSeatClass } from '../services/co2Calculator';
 import { getCachedAirports } from '../services/airportCache';
-import { tzAwareDurationMinutes } from '../utils/timezone';
+import { tzAwareDurationMinutes, type FlightTimeSemantics } from '../utils/timezone';
 import { fromZonedTime } from 'date-fns-tz';
+import { resolveAirlineCodes } from '../utils/airlineNormalize';
 import { normalizeAircraft } from '../utils/aircraftNormalize';
 import { calculateNextApiCheckAt } from '../utils/smartCheckSchedule';
 import { buildFlightMergePatch } from '../utils/flightMerge';
@@ -248,6 +249,17 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
     const actualDepartureUtc = toUtcDate(data.actualDepartureLocal, data.actualDepartureTz);
     const actualArrivalUtc = toUtcDate(data.actualArrivalLocal, data.actualArrivalTz);
 
+    // Resolve airline codes if name provided but IATA/ICAO missing
+    let airlineIata = data.airlineIata;
+    let airlineIcao = data.airlineIcao;
+    if (data.airline && !airlineIata && !airlineIcao) {
+      const resolved = resolveAirlineCodes(data.airline);
+      if (resolved) {
+        airlineIata = resolved.iata ?? null;
+        airlineIcao = resolved.icao ?? null;
+      }
+    }
+
     // Duplicate check (#84): pre-existing rows can hold non-canonical
     // flightNumber strings ("LH 123", "lh123") from before the schema-level
     // normalization landed, so fetch the day's candidates and compare
@@ -346,8 +358,8 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
       data: {
         userId,
         airline: data.airline,
-        airlineIata: data.airlineIata,
-        airlineIcao: data.airlineIcao,
+        airlineIata,
+        airlineIcao,
         operatingAirline: data.operatingAirline,
         operatingAirlineIata: data.operatingAirlineIata,
         operatingAirlineIcao: data.operatingAirlineIcao,
@@ -515,20 +527,21 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
       const arrTz = (f.arrIata && tzMap.get(f.arrIata))
         || (f.arrIcao && tzMap.get(f.arrIcao))
         || null;
+      const rawDuration = (f.departureTime && f.arrivalTime)
+        ? tzAwareDurationMinutes(
+            f.departureTime,
+            f.arrivalTime,
+            depTz,
+            arrTz,
+            f.depTimeSemantics as FlightTimeSemantics,
+            f.arrTimeSemantics as FlightTimeSemantics,
+          )
+        : null;
+      // null = DATE_ONLY semantics (issue #106A) — display layer renders
+      // a great-circle estimate instead of the placeholder-time duration.
       return {
         ...f,
-        durationMinutes: (f.departureTime && f.arrivalTime)
-          ? Math.round(
-              tzAwareDurationMinutes(
-                f.departureTime,
-                f.arrivalTime,
-                depTz,
-                arrTz,
-                f.depTimeSemantics as 'UTC' | 'LEGACY_FAKE_UTC' | 'UNKNOWN',
-                f.arrTimeSemantics as 'UTC' | 'LEGACY_FAKE_UTC' | 'UNKNOWN',
-              )
-            )
-          : null,
+        durationMinutes: rawDuration === null ? null : Math.round(rawDuration),
       };
     });
 
@@ -814,8 +827,19 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
 
     const updateData: FlightUpdateData = {};
     if (data.airline) updateData.airline = data.airline;
-    if (data.airlineIata !== undefined) updateData.airlineIata = data.airlineIata;
-    if (data.airlineIcao !== undefined) updateData.airlineIcao = data.airlineIcao;
+    
+    // Resolve airline codes if name provided but IATA/ICAO missing
+    let airlineIata = data.airlineIata;
+    let airlineIcao = data.airlineIcao;
+    if (data.airline && airlineIata === undefined && airlineIcao === undefined) {
+      const resolved = resolveAirlineCodes(data.airline);
+      if (resolved) {
+        airlineIata = resolved.iata ?? null;
+        airlineIcao = resolved.icao ?? null;
+      }
+    }
+    if (airlineIata !== undefined) updateData.airlineIata = airlineIata;
+    if (airlineIcao !== undefined) updateData.airlineIcao = airlineIcao;
     if (data.operatingAirline !== undefined) updateData.operatingAirline = data.operatingAirline;
     if (data.operatingAirlineIata !== undefined) updateData.operatingAirlineIata = data.operatingAirlineIata;
     if (data.operatingAirlineIcao !== undefined) updateData.operatingAirlineIcao = data.operatingAirlineIcao;
