@@ -4,6 +4,15 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-beta.25] - 2026-05-09 (Beta)
+
+### Fixed
+- **Alle-tab map legend now reflects domain pills** — The legend stripe
+  (sky-blue cruise + orange flight) hard-coded both rows, so toggling
+  cruise off in the filter dropdown left the legend lying that cruises
+  were still on screen. Each row is now gated on its domain pill state;
+  if both pills are off, the legend block is hidden entirely.
+
 ## [2.0.0-beta.24] - 2026-05-09 (Beta)
 
 ### Added

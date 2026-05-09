@@ -257,48 +257,54 @@ export function AllTab(): JSX.Element {
       >
         ☰ {t("dashboard:sidebar.activity")}
       </button>
-      <div
-        style={{
-          display: "flex",
-          gap: 12,
-          padding: "6px 12px",
-          borderRadius: 10,
-          background: "rgba(22,27,34,0.85)",
-          color: "var(--text-muted)",
-          border: "1px solid var(--color-border)",
-          fontSize: 12,
-          whiteSpace: "nowrap",
-        }}
-      >
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-          <span
-            aria-hidden
-            style={{
-              width: 14,
-              height: 2,
-              background: DOMAINS.flight.color,
-              borderRadius: 2,
-            }}
-          />
-          <span style={{ color: "var(--text-primary)" }}>
-            {t("dashboard:sidebar.filters.flight")}
-          </span>
-        </span>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-          <span
-            aria-hidden
-            style={{
-              width: 14,
-              height: 2,
-              background: CRUISE_HEX,
-              borderRadius: 2,
-            }}
-          />
-          <span style={{ color: "var(--text-primary)" }}>
-            {t("dashboard:sidebar.filters.cruise")}
-          </span>
-        </span>
-      </div>
+      {(flightsVisible || cruisesVisible) && (
+        <div
+          style={{
+            display: "flex",
+            gap: 12,
+            padding: "6px 12px",
+            borderRadius: 10,
+            background: "rgba(22,27,34,0.85)",
+            color: "var(--text-muted)",
+            border: "1px solid var(--color-border)",
+            fontSize: 12,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {flightsVisible && (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <span
+                aria-hidden
+                style={{
+                  width: 14,
+                  height: 2,
+                  background: DOMAINS.flight.color,
+                  borderRadius: 2,
+                }}
+              />
+              <span style={{ color: "var(--text-primary)" }}>
+                {t("dashboard:sidebar.filters.flight")}
+              </span>
+            </span>
+          )}
+          {cruisesVisible && (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <span
+                aria-hidden
+                style={{
+                  width: 14,
+                  height: 2,
+                  background: CRUISE_HEX,
+                  borderRadius: 2,
+                }}
+              />
+              <span style={{ color: "var(--text-primary)" }}>
+                {t("dashboard:sidebar.filters.cruise")}
+              </span>
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 
