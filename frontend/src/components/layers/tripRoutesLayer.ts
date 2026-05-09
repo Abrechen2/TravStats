@@ -6,7 +6,7 @@ import type { Flight } from "../../types";
 const HIGHLIGHT_COLOR: [number, number, number, number] = [245, 158, 11, 255];
 const DIM_ALPHA = 18;
 // Same dot color as routes mode
-const DOT_RGB: [number, number, number] = [232, 160, 69];
+const DOT_RGB: [number, number, number] = [240, 169, 71];
 
 function hexToRgba(hex: string, alpha = 200): [number, number, number, number] {
   const r = parseInt(hex.slice(1, 3), 16);

@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useSettingsStore } from "../../store/settingsStore";
-import { useThemeStore } from "../../store/themeStore";
 import { useAuthStore } from "../../store/authStore";
 import { settingsApi, authApi, backupApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
@@ -24,6 +23,7 @@ interface HistoricalEnrichmentSettings {
 interface ApiKeysFormState {
   airlabsApiKey: string;
   aviationstackApiKey: string;
+  aerodataboxApiKey: string;
   openskyClientId: string;
   openskyClientSecret: string;
 }
@@ -48,7 +48,6 @@ export function useSettingsPage() {
     saveRemoteSettings,
   } = useSettingsStore();
 
-  const { isDarkMode, setDarkMode } = useThemeStore();
   const addToast = useToastStore((state) => state.addToast);
 
   // Profile
@@ -97,11 +96,13 @@ export function useSettingsPage() {
   const [apiKeysStatus, setApiKeysStatus] = useState<{
     airlabs: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     aviationstack: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+    aerodatabox: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     opensky: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
   } | null>(null);
   const [apiKeys, setApiKeys] = useState<ApiKeysFormState>({
     airlabsApiKey: "",
     aviationstackApiKey: "",
+    aerodataboxApiKey: "",
     openskyClientId: "",
     openskyClientSecret: "",
   });
@@ -215,12 +216,6 @@ export function useSettingsPage() {
     }
   };
 
-  const handleThemeToggle = () => {
-    const nextIsDark = !isDarkMode;
-    setDarkMode(nextIsDark);
-    setDisplay({ theme: nextIsDark ? "dark" : "light" });
-  };
-
   const handlePasswordChange = async () => {
     setPasswordError("");
     if (!passwordForm.oldPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
@@ -312,6 +307,7 @@ export function useSettingsPage() {
       setApiKeys({
         airlabsApiKey: "",
         aviationstackApiKey: "",
+        aerodataboxApiKey: "",
         openskyClientId: "",
         openskyClientSecret: "",
       });
@@ -350,7 +346,6 @@ export function useSettingsPage() {
     setDefaults,
     setMap,
     setCruise,
-    isDarkMode,
     // Derived
     hasParserAccess,
     // Profile
@@ -358,7 +353,6 @@ export function useSettingsPage() {
     uploadingProfilePicture,
     saveProfileSettings,
     handleAvatarUpload,
-    handleThemeToggle,
     // Password modal
     showPasswordModal,
     setShowPasswordModal,

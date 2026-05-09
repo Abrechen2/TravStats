@@ -4,7 +4,6 @@ import { useEffect, useState, Suspense, lazy } from "react";
 import { useAuthStore } from "./store/authStore";
 import { logger } from "./lib/logger";
 import { useSettingsStore } from "./store/settingsStore";
-import { useThemeStore } from "./store/themeStore";
 import ErrorBoundary from "./components/ErrorBoundary";
 import Toast from "./components/Toast";
 import AirportSeedingBanner from "./components/AirportSeedingBanner";
@@ -21,6 +20,8 @@ const DashboardPage = lazy(() => import("./pages/DashboardPage"));
 const FlightsTablePage = lazy(() => import("./pages/FlightsTablePage"));
 const CruisesPage = lazy(() => import("./pages/CruisesPage"));
 const CruiseDetailPage = lazy(() => import("./pages/CruiseDetailPage"));
+const TripsPage = lazy(() => import("./pages/TripsPage"));
+const TripDetailPage = lazy(() => import("./pages/TripDetailPage"));
 const AchievementsPage = lazy(() => import("./pages/AchievementsPage"));
 const AdvancedStatsPage = lazy(() => import("./pages/AdvancedStatsPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
@@ -28,6 +29,7 @@ const SetupPage = lazy(() => import("./pages/SetupPage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const ParserPage = lazy(() => import("./pages/ParserPage"));
 const PendingUpdatesPage = lazy(() => import("./pages/PendingUpdatesPage"));
+const AircraftPage = lazy(() => import("./pages/AircraftPage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const ForceChangePasswordPage = lazy(() => import("./pages/ForceChangePasswordPage"));
 
@@ -54,7 +56,6 @@ function AppContent() {
   const { user, _hasHydrated } = useAuthStore();
   const loadRemoteSettings = useSettingsStore((s) => s.loadRemoteSettings);
   const language = useSettingsStore((s) => s.display.language);
-  const isDarkMode = useThemeStore((s) => s.isDarkMode);
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation("common");
@@ -74,17 +75,6 @@ function AppContent() {
       }
     }
   }, [language]);
-
-  // Ensure theme is applied after store rehydration
-  useEffect(() => {
-    if (typeof document !== "undefined") {
-      if (isDarkMode) {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
-    }
-  }, [isDarkMode]);
 
   // Check setup status on app load
   useEffect(() => {
@@ -259,6 +249,14 @@ function AppContent() {
                 }
               />
               <Route
+                path="/trips"
+                element={isAuthenticated ? <TripsPage /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/trips/:id"
+                element={isAuthenticated ? <TripDetailPage /> : <Navigate to="/login" />}
+              />
+              <Route
                 path="/achievements"
                 element={isAuthenticated ? <AchievementsPage /> : <Navigate to="/login" />}
               />
@@ -287,6 +285,10 @@ function AppContent() {
               <Route
                 path="/pending-updates"
                 element={isAuthenticated ? <PendingUpdatesPage /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/aircraft/:registration"
+                element={isAuthenticated ? <AircraftPage /> : <Navigate to="/login" />}
               />
             </Routes>
           </AnimatePresence>

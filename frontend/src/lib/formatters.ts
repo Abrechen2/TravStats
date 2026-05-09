@@ -6,3 +6,17 @@ export function formatDuration(minutes: number): string {
   if (m === 0) return `${h}h`;
   return `${h}h ${m}min`;
 }
+
+/**
+ * Same as `formatDuration` but prefixes a `~` when the value is an
+ * estimate (e.g. great-circle-based for DATE_ONLY rows). Returns the
+ * fallback marker `"—"` when minutes is null.
+ */
+export function formatDurationWithEstimate(
+  minutes: number | null | undefined,
+  estimated: boolean
+): string {
+  if (minutes == null) return "—";
+  const base = formatDuration(minutes);
+  return estimated ? `~${base}` : base;
+}

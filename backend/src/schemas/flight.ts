@@ -66,7 +66,6 @@ const localDateTime = z
 
 function isValidIanaTimezone(tz: string): boolean {
   try {
-    // Throws RangeError on invalid IANA names
     new Intl.DateTimeFormat('en-US', { timeZone: tz });
     return true;
   } catch {
@@ -77,12 +76,37 @@ const ianaTimezone = z
   .string()
   .refine(isValidIanaTimezone, { message: 'Invalid IANA timezone' });
 
+/**
+ * Canonical flight-number normalisation: strip every whitespace character
+ * (incl. tabs and non-breaking spaces) and uppercase. Empty results collapse
+ * to undefined so optional fields stay nullable. Used by both the Zod schema
+ * and any code path that needs to compare flight numbers across sources
+ * (importers, dedupe-hint, etc.).
+ */
+export function normalizeFlightNumber(v: string | undefined | null): string | undefined {
+  if (!v) return undefined;
+  const cleaned = v.replace(/\s+/g, "").toUpperCase();
+  return cleaned === "" ? undefined : cleaned;
+}
+
+const normalizedFlightNumber = z
+  .string()
+  .optional()
+  .transform((v) => normalizeFlightNumber(v));
+
 const baseFlightSchema = z.object({
   airline: emptyStringToUndefined,
+  airlineIata: z.string().max(4).nullable().optional(),
+  airlineIcao: z.string().max(5).nullable().optional(),
   operatingAirline: emptyStringToUndefined,
-  flightNumber: emptyStringToUndefined,
+  operatingAirlineIata: z.string().max(4).nullable().optional(),
+  operatingAirlineIcao: z.string().max(5).nullable().optional(),
+  isCodeshare: z.boolean().nullable().optional(),
+  flightNumber: normalizedFlightNumber,
   callsign: z.string().nullable().optional(),
   aircraft: z.string().nullable().optional(),
+  aircraftRegistration: z.string().max(20).nullable().optional(),
+  aircraftModeS: z.string().max(10).nullable().optional(),
   departure: z.object({
     icao: z.string().nullable().optional(),
     iata: z.string().nullable().optional(),
@@ -99,20 +123,45 @@ const baseFlightSchema = z.object({
   }),
   // Canonical-UTC contract: clients send a local wall-clock string + an IANA
   // timezone. The server converts to a real UTC instant via fromZonedTime and
-  // marks the row with depTimeSemantics='UTC'. There is no fallback to a
-  // pre-resolved ISO string — the legacy datetime() field has been removed.
+  // marks the row with depTimeSemantics='UTC'. Bulk imports (xlsx, CSV) that
+  // only know the calendar date can opt into 'DATE_ONLY' semantics — the
+  // server then accepts dep == arr (12:00 placeholder) and the frontend hides
+  // the meaningless time component / falls back to a great-circle estimate
+  // for duration. 'UNKNOWN' is for legacy / unresolvable rows.
   departureLocal: localDateTime.optional().nullable(),
   depTimezone: ianaTimezone.optional().nullable(),
   arrivalLocal: localDateTime.optional().nullable(),
   arrTimezone: ianaTimezone.optional().nullable(),
+  depTimeSemantics: z.enum(['UTC', 'DATE_ONLY', 'UNKNOWN']).optional(),
+  arrTimeSemantics: z.enum(['UTC', 'DATE_ONLY', 'UNKNOWN']).optional(),
   actualDepartureLocal: localDateTime.optional().nullable(),
   actualDepartureTz: ianaTimezone.optional().nullable(),
   actualArrivalLocal: localDateTime.optional().nullable(),
   actualArrivalTz: ianaTimezone.optional().nullable(),
   status: z.enum(['scheduled', 'flown', 'cancelled', 'historical', 'duplicated']).default('scheduled'),
-  notes: z.string().transform((v) => v.replace(/<[^>]*>/g, '')).optional(),
+  notes: z
+    .string()
+    .transform((v) => {
+      // Loop until convergence so `<<script>foo<</script>>` cannot smuggle a
+      // tag through a single pass of the strip.
+      let out = v;
+      let prev: string;
+      do {
+        prev = out;
+        out = out.replace(/<[^>]*>/g, '');
+      } while (out !== prev);
+      return out;
+    })
+    .optional(),
   price: z.number().min(0).optional(),
-  currency: z.enum(['EUR', 'USD', 'GBP', 'CHF']).optional(),
+  // Any ISO 4217 alpha-3 code — validated only for shape, not against a
+  // hard-coded allow-list, so users worldwide can record costs in their
+  // local currency (INR, JPY, AUD, …). Intl.NumberFormat handles
+  // formatting natively for every code it supports.
+  currency: z
+    .string()
+    .regex(/^[A-Z]{3}$/, 'Must be a 3-letter ISO 4217 code (e.g. EUR, USD, INR)')
+    .optional(),
   taxes: z.number().min(0).optional(),
   fees: z.number().min(0).optional(),
   category: z.enum(['business', 'private', 'vacation']).optional(),
@@ -120,6 +169,21 @@ const baseFlightSchema = z.object({
   tags: z.array(z.string().max(40)).optional(),
   companions: z.array(z.string().max(100)).max(50).optional().default([]),
   receiptUrl: receiptUrlValidator,
+  // Provenance flag — primarily for bulk-import / AI-agent flows that want
+  // to mark a row as 'bulk_import' so admins can later audit / re-process
+  // them. Defaults to 'manual' in the route when omitted.
+  dataSource: z.enum([
+    'manual',
+    'email_import',
+    'boarding_pass_scan',
+    'historical_enrichment',
+    'live_update',
+    'api_lookup',
+    'bulk_import',
+    'imported_fr24',
+    'imported_generic_csv',
+    'imported_roundtrip',
+  ]).optional(),
   // Boarding pass / email import fields
   seatNumber: z.string().max(10).optional(),
   boardingGroup: z.string().max(20).optional(),
@@ -131,6 +195,14 @@ const baseFlightSchema = z.object({
   frequentFlyerNumber: z.string().max(30).optional(),
   bookingClassLetter: z.string().max(5).optional(),
   coPassengers: z.array(z.string().max(100)).max(50).optional(),
+  // AeroDataBox extended fields (v1.5 importers)
+  runwayDepartureTime: z.coerce.date().nullable().optional(),
+  runwayArrivalTime: z.coerce.date().nullable().optional(),
+  isCargo: z.boolean().nullable().optional(),
+  aerodataboxLastUpdatedUtc: z.coerce.date().nullable().optional(),
+  aerodataboxQualityTags: z.array(z.string().max(64)).max(20).optional().default([]),
+  baggageBelt: z.string().max(20).nullable().optional(),
+  checkInDesk: z.string().max(40).nullable().optional(),
 });
 
 type LocalTzPair =
@@ -162,19 +234,70 @@ const requirePairedTimezone = (
   }
 };
 
+/**
+ * Cross-field validations applied to BOTH create and update.
+ *
+ * 1. Chronological order — for any status where both departureLocal AND
+ *    arrivalLocal are supplied (and the wall-clock strings parse), arrival
+ *    must not precede departure. Previously only `flown` and `scheduled`
+ *    were checked; v1.5.0-rc.3 extends this to `historical` because the
+ *    Norbert UAT (issue #99) surfaced an ATL→MUC 1986 row with arr 8 h
+ *    BEFORE dep that the handler had silently accepted. NULL `arrivalLocal`
+ *    remains legal for `historical` (legitimate date-only bulk imports).
+ *
+ * 2. Status / time-axis sanity — `flown` and `historical` cannot have a
+ *    departure in the future; both states mean the flight has already
+ *    happened. `scheduled` past-dated rows are NOT rejected here (a
+ *    legitimate edge case is a manually re-edited row whose flight has
+ *    just departed) — the route handler logs them as a warning instead.
+ */
+const requireChronologicalOrder = (
+  data: { departureLocal?: string | null; arrivalLocal?: string | null },
+  ctx: z.RefinementCtx,
+): void => {
+  if (!data.departureLocal || !data.arrivalLocal) return;
+  if (data.departureLocal > data.arrivalLocal) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'arrivalLocal must not precede departureLocal',
+      path: ['arrivalLocal'],
+    });
+  }
+};
+
+const requireStatusTimeAxisSanity = (
+  data: { status?: string; departureLocal?: string | null },
+  ctx: z.RefinementCtx,
+): void => {
+  if (!data.departureLocal) return;
+  // departureLocal is a wall-clock string; compare against now via ISO
+  // string slicing — both are YYYY-MM-DDTHH:mm[:ss]. We accept the local
+  // string at face value (the proper IANA conversion happens in the
+  // handler). For sanity bounds this lexicographic compare is enough.
+  const nowIso = new Date().toISOString().slice(0, 19);
+  if ((data.status === 'historical' || data.status === 'flown') && data.departureLocal > nowIso) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `${data.status} flights cannot have a departureLocal in the future`,
+      path: ['departureLocal'],
+    });
+  }
+};
+
 export const createFlightSchema = baseFlightSchema
   .superRefine(requirePairedTimezone)
+  .superRefine(requireChronologicalOrder)
+  .superRefine(requireStatusTimeAxisSanity)
   .refine(
     (data) => {
       if (data.status === 'historical' || data.status === 'duplicated') return true;
-      if (!data.departureLocal || !data.arrivalLocal) return false;
-      // Compare wall-clock strings lexicographically — only used for sanity
-      // bounds (>-12h, <+24h). Real per-second checks would need conversion,
-      // but the route handler performs that with the proper tz pair.
-      return data.departureLocal <= data.arrivalLocal;
+      // `flown` and `scheduled` need both dep + arr times — historicals can
+      // legitimately omit arrival (date-only bulk imports). Chronological
+      // order itself is now handled in `requireChronologicalOrder` above.
+      return Boolean(data.departureLocal && data.arrivalLocal);
     },
     {
-      message: 'Non-historical flights require departureLocal and arrivalLocal in chronological order',
+      message: 'Non-historical flights require both departureLocal and arrivalLocal',
       path: ['arrivalLocal'],
     }
   );
@@ -182,6 +305,8 @@ export const createFlightSchema = baseFlightSchema
 export const updateFlightSchema = baseFlightSchema
   .partial()
   .superRefine(requirePairedTimezone)
+  .superRefine(requireChronologicalOrder)
+  .superRefine(requireStatusTimeAxisSanity)
   .refine(
     (data) => Object.keys(data).length > 0,
     {
@@ -204,6 +329,14 @@ export const flightQuerySchema = z.object({
   minRouteCount: z.coerce.number().min(1).max(100).optional(), // frontend-only; ignored server-side
   limit: z.coerce.number().min(1).default(100),
   offset: z.coerce.number().min(0).default(0),
+  // ?all=true bypasses the 500-row cap and pagination so external API
+  // consumers can sync the full row set in one request. Authentication
+  // already scopes the query to the calling user's flights, so there's
+  // no enumeration risk to gate behind beyond the existing auth check.
+  all: z
+    .string()
+    .optional()
+    .transform((v) => v === "true"),
 });
 
 export type CreateFlightInput = z.infer<typeof createFlightSchema>;

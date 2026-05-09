@@ -1,5 +1,4 @@
 import { SectionCard, SectionTitle } from "./SettingsShared";
-import InlineHelp from "../Help/InlineHelp";
 import { useTranslation } from "../../hooks/useTranslation";
 import { changeLanguage } from "../../i18n/config";
 import type { DisplaySettings } from "../../store/settingsStore";
@@ -15,60 +14,20 @@ const timezoneOptions = [
 
 interface DisplaySectionProps {
   display: DisplaySettings;
-  isDarkMode: boolean;
   onSetDisplay: (partial: Partial<DisplaySettings>) => void;
-  onThemeToggle: () => void;
 }
 
 export default function DisplaySection({
   display,
-  isDarkMode,
   onSetDisplay,
-  onThemeToggle,
 }: DisplaySectionProps): JSX.Element {
   const { t } = useTranslation(["settings"]);
 
   return (
     <SectionCard>
-      <div className="flex items-center justify-between">
-        <SectionTitle
-          title={t("settings:display.title")}
-          description={t("settings:display.description")}
-        />
-        <button
-          onClick={onThemeToggle}
-          className="px-3 py-2 rounded-lg border text-sm"
-          style={{
-            background: "var(--bg-elevated)",
-            color: isDarkMode ? "var(--accent)" : "var(--text-primary)",
-            borderColor: "var(--color-border)",
-          }}
-        >
-          {isDarkMode
-            ? t("settings:display.theme.darkMode") + " " + t("settings:display.theme.active")
-            : t("settings:display.theme.lightMode") + " " + t("settings:display.theme.active")}
-        </button>
-      </div>
-
-      <InlineHelp
-        title={t("settings:display.theme.title")}
-        category="basic"
-        content={
-          <div className="space-y-2">
-            <p>{t("settings:display.theme.description")}</p>
-            <ul className="list-disc list-inside space-y-1 ml-2 text-sm">
-              <li>
-                <strong>{t("settings:display.theme.lightMode")}:</strong>{" "}
-                {t("settings:display.theme.lightDescription")}
-              </li>
-              <li>
-                <strong>{t("settings:display.theme.darkMode")}:</strong>{" "}
-                {t("settings:display.theme.darkDescription")}
-              </li>
-              <li>{t("settings:display.theme.autoSave")}</li>
-            </ul>
-          </div>
-        }
+      <SectionTitle
+        title={t("settings:display.title")}
+        description={t("settings:display.description")}
       />
 
       {/* Form fields are constrained to a readable max-width so dropdowns

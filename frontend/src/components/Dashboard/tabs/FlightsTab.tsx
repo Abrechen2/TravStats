@@ -14,6 +14,7 @@ import FlightEditModal from "../../FlightEditModal";
 import { FlightPanel } from "../../FlightPanel";
 import MapContainer3D, { type MapMode } from "../../MapContainer3D";
 import SimplifiedFlightFormV2 from "../../SimplifiedFlightFormV2";
+import type { FlightSubmitOptions } from "../../FlightForm/useFlightForm";
 import { buildStatsMapLayer } from "../modes/buildStatsMapLayer";
 
 // Maps the dashboard-level FlightMode to what MapContainer3D's visMode prop expects.
@@ -138,7 +139,7 @@ export function FlightsTab(): JSX.Element {
         notes: nullToUndef(flight.notes),
       };
       try {
-        const created = await flightsApi.create(input, true);
+        const created = await flightsApi.create(input, { force: true });
         addToast("success", t("flights:table.toast.duplicated"));
         await refreshAll();
         setEditingFlight(created);
@@ -169,11 +170,11 @@ export function FlightsTab(): JSX.Element {
   }, []);
 
   const handleAddSubmit = useCallback(
-    async (flight: FlightInput, force = false, hasMoreFlights = false): Promise<void> => {
+    async (flight: FlightInput, opts?: FlightSubmitOptions): Promise<void> => {
       try {
-        await flightsApi.create(flight, force);
+        await flightsApi.create(flight, opts);
         addToast("success", t("flights:table.toast.updated"));
-        if (!hasMoreFlights) setShowAddFlight(false);
+        setShowAddFlight(false);
         await refreshAll();
       } catch (err: unknown) {
         logger.error("FlightsTab: add failed", err);

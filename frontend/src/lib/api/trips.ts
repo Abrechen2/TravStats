@@ -1,16 +1,52 @@
 import { api } from "./client";
-import type { Trip, Booking } from "../../types";
+import type {
+  Trip,
+  Booking,
+  TripStatus,
+  TripCategory,
+  TripStop,
+  TripJournalEntry,
+  TripPhoto,
+} from "../../types";
 
 export interface CreateTripInput {
   name: string;
   description?: string;
   color?: string;
+  startDate?: string;
+  endDate?: string;
+  status?: TripStatus;
+  category?: TripCategory;
+  tags?: string[];
+  companions?: string[];
+  notes?: string;
+  summary?: string;
+  originLabel?: string;
+  destinationLabel?: string;
+  coverImageUrl?: string;
+  icon?: string;
+  countries?: string[];
 }
 
+// PATCH semantics: explicit `null` clears nullable fields,
+// `undefined` leaves them untouched. Arrays replace the whole list.
 export interface UpdateTripInput {
   name?: string;
   description?: string | null;
   color?: string;
+  startDate?: string | null;
+  endDate?: string | null;
+  status?: TripStatus;
+  category?: TripCategory | null;
+  tags?: string[];
+  companions?: string[];
+  notes?: string | null;
+  summary?: string | null;
+  originLabel?: string | null;
+  destinationLabel?: string | null;
+  coverImageUrl?: string | null;
+  icon?: string | null;
+  countries?: string[];
 }
 
 export interface AssignFlightsInput {
@@ -22,7 +58,8 @@ export interface CreateBookingInput {
   tripId?: string;
   pnr?: string;
   price?: number;
-  currency?: "EUR" | "USD" | "GBP" | "CHF";
+  /** ISO 4217 alpha-3 code (EUR, USD, GBP, CHF, INR, JPY, …). */
+  currency?: string;
   flightIds?: string[];
 }
 
@@ -59,4 +96,173 @@ export const tripsApi = {
     const { data } = await api.post<{ booking: Booking }>("/trips/bookings", input);
     return data.booking;
   },
+
+  detect: async (
+    input: {
+      dryRun?: boolean;
+      selectedProposals?: Array<{
+        flightIds: string[];
+        name: string;
+        pnr?: string | null;
+        source?: ProposedTrip["source"];
+      }>;
+    } = { dryRun: true }
+  ): Promise<DetectTripsResult> => {
+    const { data } = await api.post<DetectTripsResult>("/trips/detect", input);
+    return data;
+  },
+
+  /* ─────────── Stops ─────────── */
+
+  createStop: async (tripId: string, input: CreateStopInput): Promise<TripStop> => {
+    const { data } = await api.post<{ stop: TripStop }>(`/trips/${tripId}/stops`, input);
+    return data.stop;
+  },
+  updateStop: async (
+    tripId: string,
+    stopId: string,
+    input: UpdateStopInput
+  ): Promise<TripStop> => {
+    const { data } = await api.patch<{ stop: TripStop }>(
+      `/trips/${tripId}/stops/${stopId}`,
+      input
+    );
+    return data.stop;
+  },
+  deleteStop: async (tripId: string, stopId: string): Promise<void> => {
+    await api.delete(`/trips/${tripId}/stops/${stopId}`);
+  },
+
+  /* ─────────── Journal entries ─────────── */
+
+  createJournalEntry: async (
+    tripId: string,
+    input: CreateJournalInput
+  ): Promise<TripJournalEntry> => {
+    const { data } = await api.post<{ entry: TripJournalEntry }>(
+      `/trips/${tripId}/journal`,
+      input
+    );
+    return data.entry;
+  },
+  updateJournalEntry: async (
+    tripId: string,
+    entryId: string,
+    input: UpdateJournalInput
+  ): Promise<TripJournalEntry> => {
+    const { data } = await api.patch<{ entry: TripJournalEntry }>(
+      `/trips/${tripId}/journal/${entryId}`,
+      input
+    );
+    return data.entry;
+  },
+  deleteJournalEntry: async (tripId: string, entryId: string): Promise<void> => {
+    await api.delete(`/trips/${tripId}/journal/${entryId}`);
+  },
+
+  /* ─────────── Photos ─────────── */
+
+  uploadPhotos: async (tripId: string, files: File[]): Promise<TripPhoto[]> => {
+    const fd = new FormData();
+    for (const f of files) fd.append("photos", f);
+    const { data } = await api.post<{ photos: TripPhoto[] }>(
+      `/trips/${tripId}/photos`,
+      fd,
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
+    return data.photos;
+  },
+  updatePhoto: async (
+    tripId: string,
+    photoId: string,
+    input: { caption?: string | null; takenAt?: string | null; sortIdx?: number },
+  ): Promise<TripPhoto> => {
+    const { data } = await api.patch<{ photo: TripPhoto }>(
+      `/trips/${tripId}/photos/${photoId}`,
+      input,
+    );
+    return data.photo;
+  },
+  deletePhoto: async (tripId: string, photoId: string): Promise<void> => {
+    await api.delete(`/trips/${tripId}/photos/${photoId}`);
+  },
+  uploadCover: async (tripId: string, file: File): Promise<{ trip: Trip; coverUrl: string }> => {
+    const fd = new FormData();
+    fd.append("cover", file);
+    const { data } = await api.post<{ trip: Trip; coverUrl: string }>(
+      `/trips/${tripId}/cover`,
+      fd,
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
+    return data;
+  },
+
+  /* ─────────── LLM summary ─────────── */
+
+  summarize: async (
+    tripId: string,
+  ): Promise<{ summary: string; model: string; durationMs: number }> => {
+    const { data } = await api.post<{ summary: string; model: string; durationMs: number }>(
+      `/trips/${tripId}/summarize`,
+    );
+    return data;
+  },
 };
+
+export interface CreateStopInput {
+  title: string;
+  domain?: string;
+  sourceId?: string;
+  description?: string;
+  startDate?: string;
+  endDate?: string;
+  lat?: number;
+  lon?: number;
+  notes?: string;
+  orderIdx?: number;
+}
+
+export interface UpdateStopInput {
+  title?: string;
+  domain?: string | null;
+  sourceId?: string | null;
+  description?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  lat?: number | null;
+  lon?: number | null;
+  notes?: string | null;
+  orderIdx?: number;
+}
+
+export interface CreateJournalInput {
+  date: string;
+  title?: string;
+  body: string;
+  mood?: string;
+  weather?: string;
+}
+
+export interface UpdateJournalInput {
+  date?: string;
+  title?: string | null;
+  body?: string;
+  mood?: string | null;
+  weather?: string | null;
+}
+
+export interface ProposedTrip {
+  source: "pnr" | "home_loop" | "continuity";
+  flightIds: string[];
+  pnr: string | null;
+  origin: string;
+  destination: string;
+  span: { from: string; to: string };
+  suggestedName: string;
+}
+
+export interface DetectTripsResult {
+  proposed: ProposedTrip[];
+  created: Array<{ tripId: string; flightIds: string[]; pnr: string | null }>;
+  orphansRemoved: number;
+}

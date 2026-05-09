@@ -1,17 +1,23 @@
+import { useEffect, useState } from "react";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import ApiKeyCard from "./ApiKeyCard";
+import BulkRefreshCard from "./BulkRefreshCard";
 import InlineHelp from "../Help/InlineHelp";
 import { useTranslation } from "../../hooks/useTranslation";
+import { settingsApi } from "../../lib/api";
+import type { ApiKeyQuotasResponse, ProviderQuota } from "../../lib/api/settings";
 
 interface ApiKeysStatus {
   airlabs: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
   aviationstack: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+  aerodatabox: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
   opensky: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
 }
 
 interface ApiKeysFormState {
   airlabsApiKey: string;
   aviationstackApiKey: string;
+  aerodataboxApiKey: string;
   openskyClientId: string;
   openskyClientSecret: string;
 }
@@ -32,6 +38,25 @@ export default function ApiKeysSection({
   onSave,
 }: ApiKeysSectionProps): JSX.Element {
   const { t } = useTranslation(["settings"]);
+  const [quotas, setQuotas] = useState<ApiKeyQuotasResponse | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    settingsApi
+      .getApiKeyQuotas()
+      .then((q) => {
+        if (!cancelled) setQuotas(q);
+      })
+      .catch(() => {
+        // Quota fetch failure is non-fatal — the cards render without it.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const quotaFor = (provider: keyof ApiKeyQuotasResponse): ProviderQuota | undefined =>
+    quotas?.[provider];
 
   return (
     <SectionCard>
@@ -74,6 +99,7 @@ export default function ApiKeysSection({
               isShared={apiKeysStatus?.airlabs.isShared || false}
               hasAccess={apiKeysStatus?.airlabs.hasAccess || false}
               value={apiKeys.airlabsApiKey}
+              quota={quotaFor("airlabs")}
               onChange={(value) => onSetApiKeys({ ...apiKeys, airlabsApiKey: value })}
               onClear={() => onSetApiKeys({ ...apiKeys, airlabsApiKey: "" })}
             />
@@ -85,9 +111,24 @@ export default function ApiKeysSection({
               isShared={apiKeysStatus?.aviationstack.isShared || false}
               hasAccess={apiKeysStatus?.aviationstack.hasAccess || false}
               value={apiKeys.aviationstackApiKey}
+              quota={quotaFor("aviationstack")}
               onChange={(value) => onSetApiKeys({ ...apiKeys, aviationstackApiKey: value })}
               onClear={() => onSetApiKeys({ ...apiKeys, aviationstackApiKey: "" })}
             />
+            <ApiKeyCard
+              provider="aerodatabox"
+              label={t("settings:apiKeys.aerodatabox.label")}
+              description={t("settings:apiKeys.aerodatabox.description")}
+              getKeyUrl="https://rapidapi.com/aedbx-aedbx/api/aerodatabox/pricing"
+              isShared={apiKeysStatus?.aerodatabox.isShared || false}
+              hasAccess={apiKeysStatus?.aerodatabox.hasAccess || false}
+              value={apiKeys.aerodataboxApiKey}
+              quota={quotaFor("aerodatabox")}
+              capabilities={["historical365"]}
+              onChange={(value) => onSetApiKeys({ ...apiKeys, aerodataboxApiKey: value })}
+              onClear={() => onSetApiKeys({ ...apiKeys, aerodataboxApiKey: "" })}
+            />
+            <BulkRefreshCard />
             <ApiKeyCard
               provider="opensky"
               label={t("settings:apiKeys.opensky.label")}
@@ -95,6 +136,7 @@ export default function ApiKeysSection({
               getKeyUrl="https://opensky-network.org/accounts/register"
               isShared={apiKeysStatus?.opensky.isShared || false}
               hasAccess={apiKeysStatus?.opensky.hasAccess || false}
+              quota={quotaFor("opensky")}
               openskyFields={{
                 clientId: apiKeys.openskyClientId,
                 clientSecret: apiKeys.openskyClientSecret,
@@ -114,7 +156,7 @@ export default function ApiKeysSection({
           onClick={onSave}
           disabled={loadingApiKeys}
           className="btn-primary"
-          style={{ boxShadow: "0 0 16px rgba(232,160,69,0.25)" }}
+          style={{ boxShadow: "0 0 16px rgba(240,169,71,0.25)" }}
         >
           {loadingApiKeys
             ? t("settings:apiKeys.saving") || "Saving..."

@@ -7,7 +7,17 @@ export interface ArcDatum {
   sourceColor: [number, number, number, number];
   targetColor: [number, number, number, number];
   flightIds: string[];
-  isScheduled?: boolean;
+  // Route carries at least one scheduled flight. Drives the soft outer
+  // casing layer that haloes the main arc — signal lives on the arc, not
+  // as a separate midpoint dot.
+  hasUpcoming?: boolean;
+  // Route carries at least one flight whose status is NOT 'scheduled'
+  // (i.e. it has actually been flown — flown / cancelled / historical /
+  // duplicated). Combined with `hasUpcoming`, this splits arcs into:
+  //   - regular (no upcoming): heatmap colour
+  //   - pure-scheduled (upcoming, never flown): solid sky-blue
+  //   - mixed (upcoming + past-flown): blue-tipped, hardcoded red core
+  hasPastFlown?: boolean;
   isHistorical?: boolean;
 }
 
@@ -27,7 +37,7 @@ export type HeatmapTier = "low" | "medium" | "high" | "critical";
 
 export const HEATMAP_COLORS: Record<HeatmapTier, [number, number, number]> = {
   low: [100, 116, 139], // slate-500
-  medium: [232, 160, 69], // amber-400
+  medium: [240, 169, 71], // amber (brand --accent)
   high: [249, 115, 22], // orange-500
   critical: [239, 68, 68], // red-500
 };

@@ -8,6 +8,7 @@ import { useSuggestions } from "../../hooks/useSuggestions";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useToastStore } from "../../store/toastStore";
 import { estimateArrivalFromDeparture } from "../../lib/timeEstimation";
+import CurrencyInput from "../CurrencyInput";
 
 interface FlightLookupResult {
   flightNumber: string;
@@ -78,9 +79,10 @@ export interface FlightCompleteStepProps {
   setCategory: (v: "business" | "private" | "vacation") => void;
   // Price
   price: number | undefined;
-  currency: "EUR" | "USD" | "GBP" | "CHF";
+  /** ISO 4217 alpha-3 code (EUR, USD, GBP, CHF, INR, JPY, …). */
+  currency: string;
   setPrice: (v: number | undefined) => void;
-  setCurrency: (v: "EUR" | "USD" | "GBP" | "CHF") => void;
+  setCurrency: (v: string) => void;
   // Tags & companions
   tags: string[];
   companions: string[];
@@ -92,7 +94,6 @@ export interface FlightCompleteStepProps {
   notes: string;
   setNotes: (v: string) => void;
   // Theme
-  isDarkMode: boolean;
   textClass: string;
   mutedTextClass: string;
   sizedInputClass: string;
@@ -147,7 +148,6 @@ export default function FlightCompleteStep({
   setCompanionInput,
   notes,
   setNotes,
-  isDarkMode,
   textClass,
   mutedTextClass,
   sizedInputClass,
@@ -197,12 +197,8 @@ export default function FlightCompleteStep({
     <div className="space-y-6">
       {/* Flight Details (if from lookup) */}
       {selectedFlight && (
-        <div
-          className={`p-4 rounded-lg ${isDarkMode ? "bg-green-900" : "bg-green-50"} border ${isDarkMode ? "border-green-700" : "border-green-200"}`}
-        >
-          <div
-            className={`text-sm font-medium ${isDarkMode ? "text-green-200" : "text-green-800"}`}
-          >
+        <div className="p-4 rounded-lg bg-green-900 border border-green-700">
+          <div className="text-sm font-medium text-green-200">
             {t("flights:form.lookupLoaded", {
               airline: selectedFlight.airline,
               flightNumber: selectedFlight.flightNumber,
@@ -213,15 +209,11 @@ export default function FlightCompleteStep({
 
       {/* Time Estimation Warning (hidden for historical flights) */}
       {timeEstimationWarning?.show && status !== "historical" && (
-        <div
-          className={`p-4 rounded-lg ${isDarkMode ? "bg-yellow-900" : "bg-yellow-50"} border ${isDarkMode ? "border-yellow-700" : "border-yellow-200"}`}
-        >
-          <div
-            className={`font-medium ${isDarkMode ? "text-yellow-200" : "text-yellow-800"} flex items-center gap-2`}
-          >
+        <div className="p-4 rounded-lg bg-yellow-900 border border-yellow-700">
+          <div className="font-medium text-yellow-200 flex items-center gap-2">
             {t("flights:form.estimatedTimes")}
           </div>
-          <div className={`text-sm ${isDarkMode ? "text-yellow-300" : "text-yellow-700"} mt-2`}>
+          <div className="text-sm text-yellow-300 mt-2">
             {timeEstimationWarning.source === "historical" ? (
               <>
                 <strong>
@@ -252,15 +244,13 @@ export default function FlightCompleteStep({
               </>
             )}
           </div>
-          <div
-            className={`text-sm ${isDarkMode ? "text-yellow-300" : "text-yellow-700"} mt-2 font-semibold`}
-          >
+          <div className="text-sm text-yellow-300 mt-2 font-semibold">
             {t("flights:form.reviewTimes")}
           </div>
           <button
             type="button"
             onClick={() => setTimeEstimationWarning(null)}
-            className={`text-xs ${isDarkMode ? "text-yellow-400 hover:text-yellow-300" : "text-yellow-600 hover:text-yellow-800"} mt-2 underline`}
+            className="text-xs text-yellow-400 hover:text-yellow-300 mt-2 underline"
           >
             {t("flights:form.hideWarning")}
           </button>
@@ -324,21 +314,34 @@ export default function FlightCompleteStep({
       {/* Date & Time — full inputs for normal flights, year/month for historical */}
       {status === "historical" ? (
         (() => {
-          // Three valid storage shapes, in order of completeness:
-          //   ""           → nothing entered yet
-          //   "YYYY"       → year known, month unknown ("unbekannt")
-          //   "YYYY-MM-DD" → year + month known
-          // Storing year-only (no "-MM-DD") is what lets the month select
-          // sit at the empty "unbekannt" option; the previous code wrote
-          // "YYYY-01-01" for both "January" and "unknown", so the dropdown
-          // always snapped back to Januar.
+          // Four valid storage shapes, in order of completeness:
+          //   ""           -> nothing entered yet
+          //   "YYYY"       -> year known, month unknown
+          //   "YYYY-MM"    -> year + month known, day unknown (NEW)
+          //   "YYYY-MM-DD" -> year + month + real day known
+          // The legacy "YYYY-MM-01" shape is read as year+month+day=1 and
+          // will display Day=1 in the new UI, which is honest about the data.
           const yearMatch = departureDate.match(/^(\d{1,4})/);
           const monthMatch = departureDate.match(/^\d{4}-(\d{2})/);
+          const dayMatch = departureDate.match(/^\d{4}-\d{2}-(\d{2})$/);
           const yearStr = yearMatch?.[1] ?? "";
           const monthPadded = monthMatch?.[1] ?? "";
           const monthValue = monthPadded ? String(parseInt(monthPadded, 10)) : "";
+          const dayPadded = dayMatch?.[1] ?? "";
+          const dayValue = dayPadded ? String(parseInt(dayPadded, 10)) : "";
+
+          // Returns how many days are in (year, month) where month is 1-12.
+          // new Date(year, month, 0) gives the last day of the prior month
+          // when month is treated as 1-based (JS idiom).
+          const daysInMonth = (year: number, month: number): number =>
+            new Date(year, month, 0).getDate();
+
+          const numYear = yearStr ? parseInt(yearStr, 10) : new Date().getFullYear();
+          const numMonth = monthValue ? parseInt(monthValue, 10) : 0;
+          const maxDay = numMonth > 0 ? daysInMonth(numYear, numMonth) : 31;
+
           return (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4" style={{ gridTemplateColumns: "1.5fr 2fr 1.2fr" }}>
               <div>
                 <label className={`label ${textClass}`}>{t("flights:historicalYear")}</label>
                 <input
@@ -355,9 +358,19 @@ export default function FlightCompleteStep({
                       setArrivalDate("");
                       return;
                     }
-                    // If a month was already chosen, preserve it; otherwise
-                    // store year-only so the month select stays "unbekannt".
-                    const next = monthPadded ? `${y}-${monthPadded}-01` : y;
+                    let next: string;
+                    if (!monthPadded) {
+                      // No month selected — store year-only
+                      next = y;
+                    } else if (!dayPadded) {
+                      // Month known, no day — store YYYY-MM
+                      next = `${y}-${monthPadded}`;
+                    } else {
+                      // Year + month + day: clamp day to the new month's max
+                      const newMax = daysInMonth(parseInt(y, 10), parseInt(monthPadded, 10));
+                      const clampedDay = Math.min(parseInt(dayPadded, 10), newMax);
+                      next = `${y}-${monthPadded}-${String(clampedDay).padStart(2, "0")}`;
+                    }
                     setDepartureDate(next);
                     setArrivalDate(next);
                   }}
@@ -371,9 +384,19 @@ export default function FlightCompleteStep({
                   onChange={(e) => {
                     const m = e.target.value;
                     const y = yearStr || String(new Date().getFullYear());
-                    // Picking "unbekannt" must not snap to January — store
-                    // year-only so the dropdown stays empty next render.
-                    const next = m ? `${y}-${m.padStart(2, "0")}-01` : y;
+                    let next: string;
+                    if (!m) {
+                      // Month cleared — drop back to year-only (also clears day)
+                      next = yearStr ? yearStr : "";
+                    } else if (!dayPadded) {
+                      // Month selected, no day — store YYYY-MM (NOT YYYY-MM-01)
+                      next = `${y}-${m.padStart(2, "0")}`;
+                    } else {
+                      // Month changed while day is set — clamp day if needed
+                      const newMax = daysInMonth(parseInt(y, 10), parseInt(m, 10));
+                      const clampedDay = Math.min(parseInt(dayPadded, 10), newMax);
+                      next = `${y}-${m.padStart(2, "0")}-${String(clampedDay).padStart(2, "0")}`;
+                    }
                     setDepartureDate(next);
                     setArrivalDate(next);
                   }}
@@ -383,6 +406,35 @@ export default function FlightCompleteStep({
                   {Array.from({ length: 12 }, (_, i) => (
                     <option key={i + 1} value={String(i + 1)}>
                       {new Date(2000, i).toLocaleDateString(i18n.language, { month: "long" })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={`label ${textClass}`}>{t("flights:historicalDay")}</label>
+                <select
+                  value={dayValue}
+                  disabled={!monthValue}
+                  onChange={(e) => {
+                    const d = e.target.value;
+                    const y = yearStr || String(new Date().getFullYear());
+                    const m = monthPadded;
+                    let next: string;
+                    if (!d) {
+                      // Day cleared — transition back to YYYY-MM
+                      next = `${y}-${m}`;
+                    } else {
+                      next = `${y}-${m}-${d.padStart(2, "0")}`;
+                    }
+                    setDepartureDate(next);
+                    setArrivalDate(next);
+                  }}
+                  className={`input ${sizedInputClass} disabled:opacity-40 disabled:cursor-not-allowed`}
+                >
+                  <option value="">{t("flights:historicalDayNone")}</option>
+                  {Array.from({ length: maxDay }, (_, i) => (
+                    <option key={i + 1} value={String(i + 1)}>
+                      {i + 1}
                     </option>
                   ))}
                 </select>
@@ -450,10 +502,7 @@ export default function FlightCompleteStep({
                 required
               />
               {arrivalDayOffset > 0 && (
-                <p
-                  className={`text-xs mt-1 ${isDarkMode ? "text-blue-300" : "text-blue-700"}`}
-                  data-testid="arrival-day-offset"
-                >
+                <p className="text-xs mt-1 text-blue-300" data-testid="arrival-day-offset">
                   {arrivalDayOffset === 1
                     ? t("flights:form.arrivalNextDay")
                     : t("flights:form.arrivalDayOffset", { count: arrivalDayOffset })}
@@ -660,16 +709,11 @@ export default function FlightCompleteStep({
           </div>
           <div>
             <label className={`label ${textClass}`}>{t("flights:form.currency")}</label>
-            <select
+            <CurrencyInput
               value={currency}
-              onChange={(e) => setCurrency(e.target.value as "EUR" | "USD" | "GBP" | "CHF")}
+              onChange={setCurrency}
               className={`input ${sizedInputClass}`}
-            >
-              <option value="EUR">{t("flights:currency.EUR")}</option>
-              <option value="USD">{t("flights:currency.USD")}</option>
-              <option value="GBP">{t("flights:currency.GBP")}</option>
-              <option value="CHF">{t("flights:currency.CHF")}</option>
-            </select>
+            />
           </div>
         </div>
       )}

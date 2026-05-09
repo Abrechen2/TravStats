@@ -6,6 +6,35 @@ export const prisma = new PrismaClient({
   log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
 });
 
+// Sync flag refreshed every 30s in the background. The previous middleware
+// awaited shouldLogDatabaseQueries() on every query, which adds a microtask
+// per call even when the underlying value comes from a cache. Reading a
+// boolean is free; the refresh runs out-of-band.
+let dbQueryLoggingEnabled = false;
+let dbQueryLoggingTimer: NodeJS.Timeout | null = null;
+
+async function refreshDbQueryLoggingFlag(): Promise<void> {
+  try {
+    dbQueryLoggingEnabled = await shouldLogDatabaseQueries();
+  } catch {
+    dbQueryLoggingEnabled = false;
+  }
+}
+
+if (process.env.NODE_ENV !== 'test') {
+  void refreshDbQueryLoggingFlag();
+  dbQueryLoggingTimer = setInterval(() => {
+    void refreshDbQueryLoggingFlag();
+  }, 30_000);
+  dbQueryLoggingTimer.unref();
+}
+
+// Exported so update endpoints can flip the flag immediately rather than
+// waiting up to 30s for the next refresh.
+export function setDbQueryLoggingEnabled(enabled: boolean): void {
+  dbQueryLoggingEnabled = enabled;
+}
+
 /**
  * Sanitize Prisma query arguments to remove sensitive data
  */
@@ -63,10 +92,7 @@ prisma.$use(async (params, next) => {
     // IMPORTANT: Exclude adminSettings queries from logging to prevent infinite recursion
     // (shouldLogDatabaseQueries() itself queries adminSettings)
     if (params.model !== 'AdminSettings') {
-      // Only log if database query logging is enabled
-      const shouldLog = await shouldLogDatabaseQueries().catch(() => false);
-
-      if (shouldLog) {
+      if (dbQueryLoggingEnabled) {
         const duration = Date.now() - startTime;
         const resultCount = Array.isArray(result) ? result.length : result ? 1 : 0;
 

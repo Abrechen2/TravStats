@@ -300,7 +300,7 @@ To add support for a new airline:
 - [`BoardingPassScanner.tsx`](../../components/BoardingPassScanner.tsx) - Scanner UI component
 - [`bcbpParser.ts`](../bcbpParser.ts) - Main parser with fallback chain
 - [`SimplifiedFlightFormV2.tsx`](../../components/SimplifiedFlightFormV2.tsx) - Form integration
-- [`test-bcbp-parser.html`](../../test-bcbp-parser.html) - Standalone testing page
+- [`test-bcbp-parser.html`](../../../test-fixtures/test-bcbp-parser.html) - Standalone testing page
 
 ---
 

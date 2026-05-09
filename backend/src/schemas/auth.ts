@@ -5,6 +5,15 @@ export const registerSchema = z.object({
   password: z.string().min(8).max(100),
 });
 
+// Admin-only payload for creating users programmatically (e.g. via admin
+// PAT during AI-agent / automated onboarding). `isAdmin` defaults to false.
+export const adminCreateUserSchema = z.object({
+  username: z.string().min(3).max(50),
+  password: z.string().min(8).max(100),
+  isAdmin: z.boolean().optional().default(false),
+  notificationEmail: z.string().email().optional(),
+});
+
 export const loginSchema = z.object({
   username: z.string(),
   password: z.string(),

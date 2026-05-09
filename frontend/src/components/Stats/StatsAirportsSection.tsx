@@ -1,5 +1,6 @@
 import type { AirportStats } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
+import StatCard from "./StatCard";
 
 interface StatsAirportsSectionProps {
   airportStats: AirportStats | null;
@@ -57,34 +58,27 @@ export default function StatsAirportsSection({
         {t("stats:airportStats.title")}
       </h2>
 
-      {/* Counters row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <div className="bg-gradient-to-br from-sky-500 to-indigo-500 rounded-lg p-6 text-white shadow-md">
-          <h3 className="text-sm font-medium opacity-90 mb-2">
-            {t("stats:airportStats.airportCount")}
-          </h3>
-          <p className="text-4xl font-bold mb-1">{airportCount}</p>
-          <p className="text-sm opacity-75">{t("stats:airportStats.airportCountDesc")}</p>
-        </div>
-
-        <div className="bg-gradient-to-br from-emerald-500 to-teal-500 rounded-lg p-6 text-white shadow-md">
-          <h3 className="text-sm font-medium opacity-90 mb-2">
-            {t("stats:airportStats.countryCount")}
-          </h3>
-          <p className="text-4xl font-bold mb-1">{countryCount}</p>
-          <p className="text-sm opacity-75">{t("stats:airportStats.countryCountDesc")}</p>
-        </div>
-
-        <div className="bg-gradient-to-br from-fuchsia-500 to-pink-500 rounded-lg p-6 text-white shadow-md">
-          <h3 className="text-sm font-medium opacity-90 mb-2">
-            {t("stats:airportStats.continentCount")}
-          </h3>
-          <p className="text-4xl font-bold mb-1">
-            {continentCount}
-            <span className="text-xl ml-1 opacity-70">/ 6</span>
-          </p>
-          <p className="text-sm opacity-75">{t("stats:airportStats.continentCountDesc")}</p>
-        </div>
+        <StatCard
+          title={t("stats:airportStats.airportCount")}
+          value={airportCount}
+          description={t("stats:airportStats.airportCountDesc")}
+        />
+        <StatCard
+          title={t("stats:airportStats.countryCount")}
+          value={countryCount}
+          description={t("stats:airportStats.countryCountDesc")}
+        />
+        <StatCard
+          title={t("stats:airportStats.continentCount")}
+          value={
+            <>
+              {continentCount}
+              <span className="text-xl ml-1 opacity-70">/ 6</span>
+            </>
+          }
+          description={t("stats:airportStats.continentCountDesc")}
+        />
       </div>
 
       {/* Detail cards */}
@@ -169,28 +163,33 @@ export default function StatsAirportsSection({
           )}
         </div>
 
-        {/* Farthest from home */}
-        <div className="bg-gradient-to-br from-violet-600 to-purple-600 rounded-lg p-6 text-white shadow-md">
-          <h3 className="text-sm font-medium opacity-90 mb-2">
-            {t("stats:airportStats.farthestFromHome")}
-          </h3>
-          {farthestFromHome ? (
-            <>
-              <p className="text-3xl font-bold mb-1">{farthestFromHome.code}</p>
-              <p className="text-sm opacity-75">
-                {t("stats:airportStats.farthestFromHomeDesc", {
-                  distance: farthestFromHome.distanceKm.toLocaleString(),
-                  home: farthestFromHome.homeCode,
-                })}
-              </p>
-              {farthestFromHome.name && (
-                <p className="text-xs opacity-60 mt-1">{farthestFromHome.name}</p>
-              )}
-            </>
-          ) : (
-            <p className="text-sm opacity-75">{t("stats:airportStats.farthestFromHomeNoHome")}</p>
-          )}
-        </div>
+        {farthestFromHome ? (
+          <StatCard
+            title={t("stats:airportStats.farthestFromHome")}
+            valueSize="md"
+            value={farthestFromHome.code}
+            description={t("stats:airportStats.farthestFromHomeDesc", {
+              distance: farthestFromHome.distanceKm.toLocaleString(),
+              home: farthestFromHome.homeCode,
+            })}
+            footnote={farthestFromHome.name || undefined}
+          />
+        ) : (
+          <div
+            className="rounded-lg p-6"
+            style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+          >
+            <h3
+              className="text-sm font-semibold mb-3 uppercase tracking-wide"
+              style={{ color: "var(--text-muted)" }}
+            >
+              {t("stats:airportStats.farthestFromHome")}
+            </h3>
+            <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+              {t("stats:airportStats.farthestFromHomeNoHome")}
+            </p>
+          </div>
+        )}
 
         {/* New this year */}
         <div

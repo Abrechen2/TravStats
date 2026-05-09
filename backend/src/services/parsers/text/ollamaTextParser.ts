@@ -4,12 +4,18 @@ import { ITextParser, ProviderAvailability, TextProvider } from "../types";
 import { ParsedBooking } from "../../bookingParser";
 import logger from "../../../utils/logger";
 
-const SYSTEM_PROMPT = `You are a flight booking data extractor. Extract all flight segments from booking confirmation emails.
+export function buildSystemPrompt(): string {
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const exampleYear = new Date().getFullYear();
+  return `You are a flight booking data extractor. Extract all flight segments from booking confirmation emails.
+
+Today's date is ${today}. Use this as the reference point for any date that does not carry an explicit year in the source.
+
 Return a JSON array. Each element is one flight leg with these fields:
 - flightNumber: string (e.g. "LH2424", no space)
 - departureCode: string (IATA, 3 letters, e.g. "MUC")
 - arrivalCode: string (IATA, 3 letters)
-- departureTime: string (ISO 8601, e.g. "2024-06-10T12:35")
+- departureTime: string (ISO 8601, e.g. "${exampleYear}-06-10T12:35")
 - arrivalTime: string (ISO 8601)
 - seat: string or null (e.g. "11C")
 - seatClass: "economy" | "premium_economy" | "business" | "first" or null
@@ -17,15 +23,28 @@ Return a JSON array. Each element is one flight leg with these fields:
 - operatingAirline: string or null (actual operator if different from marketing carrier)
 - pnr: string or null (booking reference / PNR)
 - ticketNumber: string or null
+- inferredFields: array of field names that you HAD TO GUESS or DEFAULT because the source text did not state them explicitly (see "Inference reporting" below)
 
 Rules:
 - Extract ALL flight legs, including connecting flights and return legs
 - Use IATA codes only (3-letter airport codes)
 - Dates must be ISO 8601 with time component
 - If operatingAirline is the same as airline, set it to null
+- If a date in the source does not carry a year, choose the next future occurrence of that month/day relative to today's date (${today}), and add "departureTime" and/or "arrivalTime" to inferredFields
+- If a field is not present in the source AND cannot be reasonably inferred, set it to null — do NOT add it to inferredFields (null means "no value", inferred means "I assigned a value the source did not state")
 - Return ONLY the JSON array, no explanation, no markdown, no <think> tags
+
+Inference reporting:
+- inferredFields lists every field whose value you ASSIGNED but is NOT explicitly stated in the source text. Examples:
+  * Source has "Mo 18 Mai 22:05" with no year → year inferred → include "departureTime"
+  * Source has booking class "Q" but no cabin label → seatClass inferred from booking class → include "seatClass"
+  * Source has flight number "ET853" but no airline name → airline inferred from carrier code → include "airline"
+- Fields you extracted directly from the source text MUST NOT appear in inferredFields
+- Fields you left null MUST NOT appear in inferredFields
+- inferredFields may be an empty array if nothing was inferred
 /no_think
 `;
+}
 
 // Ollama generation timeout. qwen3-class reasoning models on large emails can
 // take minutes; the previous 120s was too aggressive and caused fallback to
@@ -104,6 +123,32 @@ interface RawFlight {
   operatingAirline?: string | null;
   pnr?: string | null;
   ticketNumber?: string | null;
+  inferredFields?: string[];
+}
+
+const KNOWN_INFERRED_FIELDS: ReadonlySet<string> = new Set([
+  "flightNumber",
+  "departureCode",
+  "arrivalCode",
+  "departureTime",
+  "arrivalTime",
+  "seat",
+  "seatClass",
+  "airline",
+  "operatingAirline",
+  "pnr",
+  "ticketNumber",
+  "bookingReference",
+]);
+
+function sanitizeInferredFields(raw: unknown): string[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const seen = new Set<string>();
+  for (const entry of raw) {
+    if (typeof entry !== "string") continue;
+    if (KNOWN_INFERRED_FIELDS.has(entry)) seen.add(entry);
+  }
+  return seen.size > 0 ? [...seen] : undefined;
 }
 
 export class OllamaTextParser implements ITextParser {
@@ -146,7 +191,7 @@ export class OllamaTextParser implements ITextParser {
     // JSON extraction.
     const body = JSON.stringify({
       model: this.model,
-      system: SYSTEM_PROMPT,
+      system: buildSystemPrompt(),
       prompt: userPrompt,
       stream: false,
       think: false,
@@ -223,6 +268,9 @@ export class OllamaTextParser implements ITextParser {
       if (f.operatingAirline) booking.operatingAirline = f.operatingAirline;
       if (f.pnr) { booking.pnr = f.pnr; booking.bookingReference = f.pnr; }
       if (f.ticketNumber) booking.ticketNumber = f.ticketNumber;
+
+      const inferred = sanitizeInferredFields(f.inferredFields);
+      if (inferred) booking.inferredFields = inferred;
 
       const critical = ["flightNumber", "departureCode", "arrivalCode", "departureTime", "arrivalTime"] as const;
       for (const field of critical) {
