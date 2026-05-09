@@ -4,6 +4,40 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-beta.20] - 2026-05-09 (Beta)
+
+### Changed
+- **Globe mode is now exclusive to the Alle tab** — The 3-D globe is
+  cross-domain by design (mixes flights and cruises on one sphere), so
+  exposing it on per-domain tabs caused two problems: clicking it on
+  Flüge/Kreuzfahrten swapped to a globe view that broke domain scoping,
+  and the heatmap legend never matched. The in-map FAB now takes an
+  `availableModes` subset — `[routes, heatmap, globe]` on Alle,
+  `[routes, heatmap, trips]` on Flüge, and the FAB is hidden entirely
+  on Kreuzfahrten (cruise modes don't map 1:1 to the FAB's Map modes).
+- **Flat-map cruise port markers re-aligned with airport markers** —
+  Ports were a single 4–10 px scatter dot scaled by visit count, while
+  airports are a meter-based dot + halo ring stack. On the same map
+  they read as two unrelated marker systems. The port layer now mirrors
+  the airport stack: 2.2 km solid dot in sky-blue + 6 km halo ring +
+  clickable port-name label (TextLayer, billboarded). Same visual
+  weight at every zoom.
+- **Empty ship-marker toggle removed** — The "Schiffsmarker" checkbox
+  in the globe FAB row had no real handler — toggling it left the
+  layer state untouched. Removed the toggle and the dormant
+  shipMarkers state plumbing in GlobeView and buildGlobeLayers.
+
+### Added
+- **Year + domain dropdown filter** — The dashboard filter dropdown
+  now offers a single year selector (current year + 14 years back, or
+  "Alle Jahre") instead of two from/to date pickers. Per-day
+  precision is unnecessary for the use cases TravStats supports, and
+  consolidates against the Globe day slider so the two don't fight.
+  On the Alle tab a domain pill row toggles flight / cruise / poi
+  visibility together. Store extended with `setYear` (mirrors to the
+  underlying `time` range so existing range-overlap consumers keep
+  working) and `setDomains`.
+
 ## [2.0.0-beta.19] - 2026-05-09 (Beta)
 
 ### Fixed

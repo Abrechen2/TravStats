@@ -33,6 +33,40 @@ describe("dashboardFilterStore", () => {
     expect(cruise.status).toBe("scheduled");
     expect(flight.airline).toBeUndefined();
   });
+
+  it("setYear mirrors the selected year into the time range", () => {
+    useDashboardFilterStore.getState().setYear(2024);
+    const { year, time } = useDashboardFilterStore.getState();
+    expect(year).toBe(2024);
+    expect(time.from).toBe("2024-01-01");
+    expect(time.to).toBe("2024-12-31");
+  });
+
+  it("setYear(null) clears both year and time range", () => {
+    useDashboardFilterStore.getState().setYear(2024);
+    useDashboardFilterStore.getState().setYear(null);
+    const { year, time } = useDashboardFilterStore.getState();
+    expect(year).toBeNull();
+    expect(time.from).toBeNull();
+    expect(time.to).toBeNull();
+  });
+
+  it("setDomains replaces the domain visibility set", () => {
+    useDashboardFilterStore.getState().setDomains(["flight"]);
+    expect(useDashboardFilterStore.getState().domains).toEqual(["flight"]);
+    useDashboardFilterStore.getState().setDomains(["cruise", "poi"]);
+    expect(useDashboardFilterStore.getState().domains).toEqual(["cruise", "poi"]);
+  });
+
+  it("reset restores year=null and full domain set", () => {
+    useDashboardFilterStore.getState().setYear(2024);
+    useDashboardFilterStore.getState().setDomains(["flight"]);
+    useDashboardFilterStore.getState().reset();
+    const { year, domains, time } = useDashboardFilterStore.getState();
+    expect(year).toBeNull();
+    expect(time.from).toBeNull();
+    expect(domains.length).toBeGreaterThan(0);
+  });
 });
 
 describe("intervalOverlapsRange", () => {

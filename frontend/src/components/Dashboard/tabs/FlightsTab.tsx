@@ -36,6 +36,10 @@ const MAP_MODE_TO_FLIGHT_MODE: Partial<Record<MapMode, FlightMode>> = {
   trips: "trips",
 };
 
+// Subset of MapMode values offered by the in-map FAB on the Flüge tab.
+// Globe is cross-domain — only exposed on the Alle tab.
+const FLIGHT_TAB_MAP_MODES: readonly MapMode[] = ["routes", "heatmap", "trips"];
+
 // Convert nullable DB columns to undefined so Zod .optional() accepts them
 // when re-creating a flight (duplicate). See project memory note on
 // Zod + nullable+optional.
@@ -232,6 +236,7 @@ export function FlightsTab(): JSX.Element {
           const f = lookup(flightId);
           if (f) setEditingFlight(f);
         }}
+        availableModes={FLIGHT_TAB_MAP_MODES}
       />
       <button
         type="button"
