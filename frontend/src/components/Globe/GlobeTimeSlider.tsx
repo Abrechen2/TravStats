@@ -71,29 +71,47 @@ export const GlobeTimeSlider = ({
 
   // requestAnimationFrame loop for live-mode playback. Uses deltaT so
   // the rate is wall-clock (speed = days per real-time second), not
-  // frames per second. When the cursor reaches rangeMax we stop —
-  // looping forever was the first instinct but felt cheap, like a
-  // weather radar.
+  // frames per second. When the cursor reaches rangeMax we stop.
+  //
+  // Store commits are throttled to ~100ms wall-time. Without throttling,
+  // every animation frame would push a new `currentDate` into Zustand,
+  // which cascades into GlobeView re-running its filteredFlights /
+  // arcsData / cruisePathsData / cruisePointsData / pointsData memos
+  // 60×/s and re-tesselating every layer. The thumb still moves
+  // smoothly because percent-of-range-per-second is small enough that
+  // 10Hz updates look identical to 60Hz at this slider scale.
   const lastTickRef = useRef<number | null>(null);
+  const lastStoreCommitRef = useRef<number>(0);
+  const playheadRef = useRef<Date | null>(null);
   useEffect(() => {
     if (mode !== "live" || !isPlaying || !rangeMin || !rangeMax) {
       lastTickRef.current = null;
+      lastStoreCommitRef.current = 0;
+      playheadRef.current = null;
       return;
     }
     let raf = 0;
     const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+    const STORE_COMMIT_THROTTLE_MS = 100;
+    playheadRef.current =
+      playheadRef.current ?? useTimeSliderStore.getState().currentDate ?? rangeMin;
     const tick = (now: number): void => {
       const last = lastTickRef.current ?? now;
       const dt = (now - last) / 1000;
       lastTickRef.current = now;
-      const cur = useTimeSliderStore.getState().currentDate;
-      const next = new Date((cur ?? rangeMin).getTime() + speed * dt * ONE_DAY_MS);
+      const cur = playheadRef.current ?? rangeMin;
+      const next = new Date(cur.getTime() + speed * dt * ONE_DAY_MS);
       if (next.getTime() >= rangeMax.getTime()) {
         setCurrentDate(rangeMax);
         setPlaying(false);
+        playheadRef.current = null;
         return;
       }
-      setCurrentDate(next);
+      playheadRef.current = next;
+      if (now - lastStoreCommitRef.current >= STORE_COMMIT_THROTTLE_MS) {
+        lastStoreCommitRef.current = now;
+        setCurrentDate(next);
+      }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);

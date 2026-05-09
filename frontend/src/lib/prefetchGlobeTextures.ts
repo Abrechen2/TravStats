@@ -4,7 +4,7 @@
 // which cost ~4.3 MB on every cold /login even when the user never opened
 // the globe.
 
-const TEXTURE_URLS = ["/earth-night.jpg", "/earth-topology.png", "/night-sky.png"];
+const TEXTURE_URLS = ["/earth-day.jpg", "/earth-topology.png", "/night-sky.png"];
 
 let prefetched = false;
 
