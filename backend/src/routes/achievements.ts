@@ -5,6 +5,11 @@ import { checkAndUpdateAchievements } from '../utils/achievements';
 
 const router = Router();
 
+// Internal scaffolding seeded by regression tests
+// (`achievements.scheduledLeak.test.ts`) uses this prefix. These rows
+// are not user-facing — filter them out of every list endpoint.
+const TEST_ACHIEVEMENT_PREFIX = "TEST_";
+
 // All routes require authentication; PATs need write scope to mutate
 // (POST /check recomputes + persists user achievement state).
 router.use(authenticate);
@@ -17,6 +22,9 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
 
     // Get all achievements
     const achievements = await prisma.achievement.findMany({
+      where: {
+        code: { not: { startsWith: TEST_ACHIEVEMENT_PREFIX } },
+      },
       orderBy: [
         { category: 'asc' },
         { tier: 'asc' },
@@ -94,7 +102,12 @@ router.get('/recent', async (req: AuthRequest, res: Response, next: NextFunction
     const limit = Number.isFinite(rawLimit) ? Math.min(rawLimit, 100) : 10;
 
     const allRecent = await prisma.userAchievement.findMany({
-      where: { userId },
+      where: {
+        userId,
+        achievement: {
+          code: { not: { startsWith: TEST_ACHIEVEMENT_PREFIX } },
+        },
+      },
       include: { achievement: true },
       orderBy: { unlockedAt: 'desc' },
     });
@@ -135,6 +148,11 @@ router.get('/leaderboard', async (req: AuthRequest, res: Response, next: NextFun
 
     // Get user achievements with points and requirement for unlock check
     const userAchievements = await prisma.userAchievement.findMany({
+      where: {
+        achievement: {
+          code: { not: { startsWith: TEST_ACHIEVEMENT_PREFIX } },
+        },
+      },
       select: {
         userId: true,
         progress: true,
