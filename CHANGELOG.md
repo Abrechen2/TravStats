@@ -34,6 +34,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
   API endpoint, and the `route_distance` backfill script.
 
 ### Changed
+- **Settings → Import promoted to top-level (General tab)** — The
+  1.5.0 import section landed nested under Settings → Flug → Import,
+  one tab-level deep. With V2 multi-domain ahead (cruise / hotel / POI
+  imports) and feedback that the nesting hid the section, Import now
+  lives in the General tab right after Backup. The three tiles
+  (Flightradar24 CSV, generic CSV with mapping wizard, Round-Trip
+  XLSX) and all underlying parsers are unchanged.
 - **Globe default basemap** — From `standard` (openfreemap liberty) to
   `dark` (CartoDB dark-matter), matching BRAND.md §1.1's dark-only app
   shell. Users can still pick any style; the choice persists in
