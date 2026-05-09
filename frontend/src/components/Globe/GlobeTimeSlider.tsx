@@ -120,14 +120,14 @@ export const GlobeTimeSlider = ({
 
   if (!rangeMin || !rangeMax) {
     return (
-      <div className="bg-[var(--bg-surface)]/95 backdrop-blur rounded-lg shadow-lg px-3 py-2 border border-[var(--color-border)] text-xs text-[var(--text-muted)]">
+      <div className="bg-[var(--bg-surface)] rounded-lg shadow-lg px-3 py-2 border border-[var(--color-border)] text-xs text-[var(--text-muted)]">
         {t("map:globe.timeSlider.noData")}
       </div>
     );
   }
 
   return (
-    <div className="bg-[var(--bg-surface)]/95 backdrop-blur rounded-lg shadow-lg p-3 border border-[var(--color-border)] flex flex-col gap-2 min-w-[420px] max-w-[640px]">
+    <div className="bg-[var(--bg-surface)] rounded-lg shadow-lg p-3 border border-[var(--color-border)] flex flex-col gap-2 min-w-[420px] max-w-[640px]">
       <div className="flex items-center justify-between gap-3">
         <div className="text-xs font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
           <span>📅</span>

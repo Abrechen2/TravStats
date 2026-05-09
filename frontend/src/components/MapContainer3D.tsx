@@ -17,16 +17,10 @@ import { cruiseApi } from "../lib/api";
 import SpecialFlightsLegend from "./specialFlights/SpecialFlightsLegend";
 import type { SpecialType } from "./specialFlights/specialTypeMeta";
 
-// Hold the branded Suspense fallback for at least 2 s on first mount so
-// the GlobeLoader doesn't just flash by. React.lazy caches the resolved
-// module, so this delay only fires the first time the 3D globe is
-// opened in a session.
-const GlobeView = lazy(() =>
-  Promise.all([
-    import("./GlobeView"),
-    new Promise<void>((resolve) => setTimeout(resolve, 2000)),
-  ]).then(([mod]) => mod)
-);
+// Globe mode renders on MapLibre's native globe projection (same engine
+// as the 2D map), with deck.gl as the data-layer overlay. Lazy-loaded so
+// the dashboard's first paint isn't blocked on MapLibre + deck.gl boot.
+const GlobeView = lazy(() => import("./GlobeView"));
 
 interface MapContainer3DProps {
   flights: GeoJSONFeature[];
