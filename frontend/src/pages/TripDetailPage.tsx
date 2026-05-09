@@ -11,6 +11,7 @@ import TripModal from "../components/Trips/TripModal";
 import JournalEntryModal from "../components/Trips/JournalEntryModal";
 import StopModal from "../components/Trips/StopModal";
 import TripMap from "../components/Trips/TripMap";
+import TripGallery from "../components/Trips/TripGallery";
 
 type TabKey = "overview" | "timeline" | "map" | "gallery" | "logistics";
 const TABS: TabKey[] = ["overview", "timeline", "map", "gallery", "logistics"];
@@ -112,7 +113,11 @@ export default function TripDetailPage(): JSX.Element {
           )}
           {tab === "map" && <TripMap trip={trip} />}
           {tab === "gallery" && (
-            <Placeholder text={t("trips:detail.tabPlaceholder.gallery")} />
+            <TripGallery
+              tripId={trip.id}
+              photos={trip.photos ?? []}
+              onChange={() => void load()}
+            />
           )}
           {tab === "logistics" && <LogisticsTab trip={trip} t={t} />}
         </div>

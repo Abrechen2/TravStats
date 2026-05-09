@@ -61,7 +61,9 @@
     "notesLabel": "Notizen (Markdown)",
     "notesPlaceholder": "Längere Notizen über die Reise …",
     "colorLabel": "Akzent-Farbe",
-    "coverUploadHint": "Foto-Upload kommt mit der Galerie-Iteration. Bis dahin: URL einer öffentlichen Bilddatei einfügen.",
+    "coverUploadButton": "📷 Datei",
+    "coverUploadReady": "Eigene Datei hochladen oder URL eines öffentlichen Bildes einfügen.",
+    "coverUploadCreateFirst": "Reise zuerst speichern, dann kannst du ein Cover hochladen.",
     "notesMarkdownHint": "Markdown unterstützt — Überschriften, Listen, **fett**, *kursiv*, [Links](https://…).",
     "save": "Speichern",
     "cancel": "Abbrechen"
@@ -193,5 +195,16 @@
     "summary": "{{trips}} ausgewählt · {{flights}} Flüge werden zugeordnet",
     "commit": "{{count}} Reisen erstellen",
     "discard": "Verwerfen"
+  },
+  "gallery": {
+    "title": "Galerie",
+    "uploadButton": "📷 Hochladen",
+    "uploaded": "{{count}} Foto hochgeladen",
+    "uploaded_plural": "{{count}} Fotos hochgeladen",
+    "uploadError": "Upload fehlgeschlagen",
+    "coverUploaded": "Cover aktualisiert",
+    "deleteConfirm": "Foto wirklich löschen?",
+    "deleteError": "Foto konnte nicht gelöscht werden",
+    "empty": "Noch keine Fotos — lade die ersten Erinnerungen dieser Reise hoch."
   }
 }

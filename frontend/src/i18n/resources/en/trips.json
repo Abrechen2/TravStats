@@ -61,7 +61,9 @@
     "notesLabel": "Notes (Markdown)",
     "notesPlaceholder": "Longer notes about the journey…",
     "colorLabel": "Accent colour",
-    "coverUploadHint": "Photo upload arrives with the gallery iteration. For now paste a URL to a public image.",
+    "coverUploadButton": "📷 File",
+    "coverUploadReady": "Upload your own file or paste the URL of a public image.",
+    "coverUploadCreateFirst": "Save the journey first, then you can upload a cover.",
     "notesMarkdownHint": "Markdown supported — headings, lists, **bold**, *italic*, [links](https://…).",
     "save": "Save",
     "cancel": "Cancel"
@@ -193,5 +195,16 @@
     "summary": "{{trips}} selected · {{flights}} flights to be linked",
     "commit": "Create {{count}} journeys",
     "discard": "Discard"
+  },
+  "gallery": {
+    "title": "Gallery",
+    "uploadButton": "📷 Upload",
+    "uploaded": "{{count}} photo uploaded",
+    "uploaded_plural": "{{count}} photos uploaded",
+    "uploadError": "Upload failed",
+    "coverUploaded": "Cover updated",
+    "deleteConfirm": "Really delete this photo?",
+    "deleteError": "Failed to delete photo",
+    "empty": "No photos yet — upload the first memories of this journey."
   }
 }

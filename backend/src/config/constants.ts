@@ -30,6 +30,8 @@ export const FILE_LIMITS = {
   EMAIL_MAX_SIZE: 5 * 1024 * 1024, // 5 MB
   BOARDING_PASS_MAX_SIZE: 10 * 1024 * 1024, // 10 MB (for base64 images)
   PDF_MAX_SIZE: 20 * 1024 * 1024, // 20 MB
+  TRIP_PHOTO_MAX_SIZE: 15 * 1024 * 1024, // 15 MB per photo
+  TRIP_PHOTO_MAX_COUNT: 20, // per upload request
 
   // Body parsing limits
   JSON_BODY_MAX_SIZE: '10mb',

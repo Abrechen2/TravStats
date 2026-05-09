@@ -634,10 +634,29 @@ model Trip {
   cruises        Cruise[]
   stops          TripStop[]
   journalEntries TripJournalEntry[]
+  photos         TripPhoto[]
 
   @@index([userId])
   @@index([userId, status])
   @@map("trips")
+}
+
+model TripPhoto {
+  id        String    @id @default(uuid())
+  tripId    String    @map("trip_id")
+  filename  String
+  mimetype  String
+  sizeBytes Int       @map("size_bytes")
+  caption   String?
+  takenAt   DateTime? @map("taken_at")
+  sortIdx   Int       @default(0) @map("sort_idx")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+  @@index([tripId, sortIdx])
+  @@map("trip_photos")
 }
 
 model TripStop {

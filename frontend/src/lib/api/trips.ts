@@ -6,6 +6,7 @@ import type {
   TripCategory,
   TripStop,
   TripJournalEntry,
+  TripPhoto,
 } from "../../types";
 
 export interface CreateTripInput {
@@ -157,6 +158,43 @@ export const tripsApi = {
   },
   deleteJournalEntry: async (tripId: string, entryId: string): Promise<void> => {
     await api.delete(`/trips/${tripId}/journal/${entryId}`);
+  },
+
+  /* ─────────── Photos ─────────── */
+
+  uploadPhotos: async (tripId: string, files: File[]): Promise<TripPhoto[]> => {
+    const fd = new FormData();
+    for (const f of files) fd.append("photos", f);
+    const { data } = await api.post<{ photos: TripPhoto[] }>(
+      `/trips/${tripId}/photos`,
+      fd,
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
+    return data.photos;
+  },
+  updatePhoto: async (
+    tripId: string,
+    photoId: string,
+    input: { caption?: string | null; takenAt?: string | null; sortIdx?: number },
+  ): Promise<TripPhoto> => {
+    const { data } = await api.patch<{ photo: TripPhoto }>(
+      `/trips/${tripId}/photos/${photoId}`,
+      input,
+    );
+    return data.photo;
+  },
+  deletePhoto: async (tripId: string, photoId: string): Promise<void> => {
+    await api.delete(`/trips/${tripId}/photos/${photoId}`);
+  },
+  uploadCover: async (tripId: string, file: File): Promise<{ trip: Trip; coverUrl: string }> => {
+    const fd = new FormData();
+    fd.append("cover", file);
+    const { data } = await api.post<{ trip: Trip; coverUrl: string }>(
+      `/trips/${tripId}/cover`,
+      fd,
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
+    return data;
   },
 };
 

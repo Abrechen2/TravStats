@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { Trip, TripCategory, TripStatus } from "../../types";
 import { tripsApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
@@ -75,6 +75,28 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
   const [notes, setNotes] = useState(trip?.notes ?? "");
   const [coverImageUrl, setCoverImageUrl] = useState(trip?.coverImageUrl ?? "");
   const [saving, setSaving] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+
+  const handleCoverFile = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!trip) {
+      addToast("error", t("trips:modal.coverUploadCreateFirst"));
+      return;
+    }
+    setUploadingCover(true);
+    try {
+      const { coverUrl } = await tripsApi.uploadCover(trip.id, file);
+      setCoverImageUrl(coverUrl);
+      addToast("success", t("trips:gallery.coverUploaded"));
+    } catch {
+      addToast("error", t("trips:gallery.uploadError"));
+    } finally {
+      setUploadingCover(false);
+    }
+  };
 
   useEffect(() => {
     if (!trip) return;
@@ -327,17 +349,39 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
           {tab === "appearance" && (
             <>
               <Field label={t("trips:modal.coverLabel")}>
-                <input
-                  value={coverImageUrl}
-                  onChange={(e) => setCoverImageUrl(e.target.value)}
-                  placeholder="https://… / /uploads/…"
-                  className="w-full rounded-lg px-3 py-2 text-sm"
-                  style={inputStyle}
-                />
+                <div className="flex gap-2">
+                  <input
+                    value={coverImageUrl}
+                    onChange={(e) => setCoverImageUrl(e.target.value)}
+                    placeholder="https://… / /api/v1/trips/…"
+                    className="flex-1 rounded-lg px-3 py-2 text-sm"
+                    style={inputStyle}
+                  />
+                  <input
+                    ref={coverInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="hidden"
+                    onChange={(e) => void handleCoverFile(e)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => coverInputRef.current?.click()}
+                    disabled={uploadingCover || !trip}
+                    title={!trip ? t("trips:modal.coverUploadCreateFirst") : undefined}
+                    className="px-3 py-2 rounded-lg text-sm font-medium border disabled:opacity-50"
+                    style={{
+                      borderColor: "var(--accent)",
+                      color: "var(--accent)",
+                    }}
+                  >
+                    {uploadingCover ? "…" : t("trips:modal.coverUploadButton")}
+                  </button>
+                </div>
               </Field>
               <CoverPreview url={coverImageUrl} accent={color} title={name || "—"} />
               <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>
-                {t("trips:modal.coverUploadHint")}
+                {trip ? t("trips:modal.coverUploadReady") : t("trips:modal.coverUploadCreateFirst")}
               </p>
 
               <Field label={t("trips:modal.colorLabel")}>
