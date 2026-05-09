@@ -22,6 +22,15 @@ const CATEGORY_ICON: Record<TripCategory, string> = {
   other: "🗺",
 };
 
+type ModalTab = "general" | "people" | "appearance" | "notes";
+
+const TABS: ReadonlyArray<{ id: ModalTab; icon: string }> = [
+  { id: "general", icon: "📋" },
+  { id: "people", icon: "👥" },
+  { id: "appearance", icon: "🎨" },
+  { id: "notes", icon: "📝" },
+];
+
 // Convert ISO date string ↔ <input type="date"> "YYYY-MM-DD" form. Local
 // timezone is fine here — trip dates are calendar dates, not instants.
 function toDateInput(iso: string | null): string {
@@ -51,6 +60,7 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
   const { t } = useTranslation(["trips", "common"]);
   const addToast = useToastStore((s) => s.addToast);
 
+  const [tab, setTab] = useState<ModalTab>("general");
   const [name, setName] = useState(trip?.name ?? "");
   const [description, setDescription] = useState(trip?.description ?? "");
   const [color, setColor] = useState(trip?.color ?? PALETTE[0]);
@@ -87,8 +97,6 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
     if (!name.trim()) return;
     setSaving(true);
     try {
-      // Shared payload. PATCH-semantics handle null vs undefined: send
-      // `null` to clear, omit to leave untouched.
       if (trip) {
         await tripsApi.update(trip.id, {
           name: name.trim(),
@@ -157,214 +165,218 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
           </h2>
         </div>
 
-        <div className="p-5 space-y-4 overflow-y-auto">
-          <Field label={t("trips:modal.nameLabel")}>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t("trips:modal.namePlaceholder")}
-              className="w-full rounded-lg px-3 py-2 text-sm"
-              style={inputStyle}
-            />
-          </Field>
-
-          <div className="grid grid-cols-2 gap-3">
-            <Field
-              label={t("trips:modal.statusLabel", { defaultValue: "Status" })}
-            >
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as TripStatus)}
-                className="w-full rounded-lg px-3 py-2 text-sm"
-                style={inputStyle}
+        <div
+          className="flex gap-1 px-3 pt-3"
+          style={{ borderBottom: "1px solid var(--color-border)" }}
+          role="tablist"
+        >
+          {TABS.map((tDef) => {
+            const active = tab === tDef.id;
+            return (
+              <button
+                key={tDef.id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setTab(tDef.id)}
+                className="px-3 py-2 text-sm rounded-t-md transition-colors flex items-center gap-1.5"
+                style={{
+                  background: active ? "var(--bg-surface)" : "transparent",
+                  borderBottom: active ? "2px solid var(--accent)" : "2px solid transparent",
+                  color: active ? "var(--text-primary)" : "var(--text-muted)",
+                  fontWeight: active ? 600 : 400,
+                  marginBottom: "-1px",
+                }}
               >
-                {STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {t(`trips:status.${s}`, {
-                      defaultValue:
-                        s === "planned"
-                          ? "Geplant"
-                          : s === "in_progress"
-                            ? "Aktuell"
-                            : "Abgeschlossen",
-                    })}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field
-              label={t("trips:modal.categoryLabel", { defaultValue: "Kategorie" })}
-            >
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value as TripCategory | "")}
-                className="w-full rounded-lg px-3 py-2 text-sm"
-                style={inputStyle}
-              >
-                <option value="">—</option>
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {CATEGORY_ICON[c]}{" "}
-                    {t(`trips:category.${c}`, {
-                      defaultValue:
-                        c === "vacation"
-                          ? "Urlaub"
-                          : c === "business"
-                            ? "Geschäft"
-                            : c === "weekend"
-                              ? "Wochenende"
-                              : c === "family"
-                                ? "Familie"
-                                : "Sonstiges",
-                    })}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          </div>
+                <span>{tDef.icon}</span>
+                <span>{t(`trips:modalTabs.${tDef.id}`)}</span>
+              </button>
+            );
+          })}
+        </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Field
-              label={t("trips:modal.startDateLabel", { defaultValue: "Startdatum" })}
-            >
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full rounded-lg px-3 py-2 text-sm"
-                style={inputStyle}
-              />
-            </Field>
-            <Field
-              label={t("trips:modal.endDateLabel", { defaultValue: "Enddatum" })}
-            >
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full rounded-lg px-3 py-2 text-sm"
-                style={inputStyle}
-              />
-            </Field>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <Field
-              label={t("trips:modal.originLabel", { defaultValue: "Herkunft" })}
-            >
-              <input
-                value={originLabel}
-                onChange={(e) => setOriginLabel(e.target.value)}
-                placeholder="München"
-                className="w-full rounded-lg px-3 py-2 text-sm"
-                style={inputStyle}
-              />
-            </Field>
-            <Field
-              label={t("trips:modal.destinationLabel", { defaultValue: "Ziel" })}
-            >
-              <input
-                value={destinationLabel}
-                onChange={(e) => setDestinationLabel(e.target.value)}
-                placeholder="Tokyo, Japan"
-                className="w-full rounded-lg px-3 py-2 text-sm"
-                style={inputStyle}
-              />
-            </Field>
-          </div>
-
-          <Field
-            label={t("trips:modal.tagsLabel", {
-              defaultValue: "Tags (kommagetrennt)",
-            })}
-          >
-            <input
-              value={tagsCsv}
-              onChange={(e) => setTagsCsv(e.target.value)}
-              placeholder="kultur, food, fotos"
-              className="w-full rounded-lg px-3 py-2 text-sm"
-              style={inputStyle}
-            />
-          </Field>
-
-          <Field
-            label={t("trips:modal.companionsLabel", {
-              defaultValue: "Mitreisende (kommagetrennt)",
-            })}
-          >
-            <input
-              value={companionsCsv}
-              onChange={(e) => setCompanionsCsv(e.target.value)}
-              placeholder="Marie, Tom"
-              className="w-full rounded-lg px-3 py-2 text-sm"
-              style={inputStyle}
-            />
-          </Field>
-
-          <Field
-            label={t("trips:modal.coverLabel", { defaultValue: "Coverbild-URL" })}
-          >
-            <input
-              value={coverImageUrl}
-              onChange={(e) => setCoverImageUrl(e.target.value)}
-              placeholder="https://… / /uploads/…"
-              className="w-full rounded-lg px-3 py-2 text-sm"
-              style={inputStyle}
-            />
-          </Field>
-
-          <Field
-            label={t("trips:modal.notesLabel", {
-              defaultValue: "Notizen (Markdown)",
-            })}
-          >
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder={t("trips:modal.notesPlaceholder", {
-                defaultValue: "Längere Notizen über die Reise …",
-              })}
-              rows={4}
-              className="w-full rounded-lg px-3 py-2 text-sm resize-none"
-              style={inputStyle}
-            />
-          </Field>
-
-          <Field
-            label={t("trips:modal.descLabel")}
-            hint={t("trips:modal.descHint", {
-              defaultValue: "Kurze Beschreibung — erscheint auf der Karte.",
-            })}
-          >
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder={t("trips:modal.descPlaceholder")}
-              rows={2}
-              className="w-full rounded-lg px-3 py-2 text-sm resize-none"
-              style={inputStyle}
-            />
-          </Field>
-
-          <Field label={t("trips:modal.colorLabel")}>
-            <div className="flex gap-2 flex-wrap">
-              {PALETTE.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => setColor(c)}
-                  aria-label={c}
-                  aria-pressed={color === c}
-                  type="button"
-                  className="w-7 h-7 rounded-full transition-transform hover:scale-110"
-                  style={{
-                    background: c,
-                    outline: color === c ? `2px solid ${c}` : "none",
-                    outlineOffset: "2px",
-                  }}
+        <div className="p-5 space-y-4 overflow-y-auto flex-1">
+          {tab === "general" && (
+            <>
+              <Field label={t("trips:modal.nameLabel")}>
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder={t("trips:modal.namePlaceholder")}
+                  className="w-full rounded-lg px-3 py-2 text-sm"
+                  style={inputStyle}
                 />
-              ))}
-            </div>
-          </Field>
+              </Field>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Field label={t("trips:modal.statusLabel")}>
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value as TripStatus)}
+                    className="w-full rounded-lg px-3 py-2 text-sm"
+                    style={inputStyle}
+                  >
+                    {STATUSES.map((s) => (
+                      <option key={s} value={s}>
+                        {t(`trips:status.${s}`)}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label={t("trips:modal.categoryLabel")}>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value as TripCategory | "")}
+                    className="w-full rounded-lg px-3 py-2 text-sm"
+                    style={inputStyle}
+                  >
+                    <option value="">—</option>
+                    {CATEGORIES.map((c) => (
+                      <option key={c} value={c}>
+                        {CATEGORY_ICON[c]} {t(`trips:category.${c}`)}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Field label={t("trips:modal.startDateLabel")}>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full rounded-lg px-3 py-2 text-sm"
+                    style={inputStyle}
+                  />
+                </Field>
+                <Field label={t("trips:modal.endDateLabel")}>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full rounded-lg px-3 py-2 text-sm"
+                    style={inputStyle}
+                  />
+                </Field>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Field label={t("trips:modal.originLabel")}>
+                  <input
+                    value={originLabel}
+                    onChange={(e) => setOriginLabel(e.target.value)}
+                    placeholder="München"
+                    className="w-full rounded-lg px-3 py-2 text-sm"
+                    style={inputStyle}
+                  />
+                </Field>
+                <Field label={t("trips:modal.destinationLabel")}>
+                  <input
+                    value={destinationLabel}
+                    onChange={(e) => setDestinationLabel(e.target.value)}
+                    placeholder="Tokyo, Japan"
+                    className="w-full rounded-lg px-3 py-2 text-sm"
+                    style={inputStyle}
+                  />
+                </Field>
+              </div>
+
+              <Field
+                label={t("trips:modal.descLabel")}
+                hint={t("trips:modal.descHint")}
+              >
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder={t("trips:modal.descPlaceholder")}
+                  rows={2}
+                  className="w-full rounded-lg px-3 py-2 text-sm resize-none"
+                  style={inputStyle}
+                />
+              </Field>
+            </>
+          )}
+
+          {tab === "people" && (
+            <>
+              <Field label={t("trips:modal.companionsLabel")}>
+                <input
+                  value={companionsCsv}
+                  onChange={(e) => setCompanionsCsv(e.target.value)}
+                  placeholder="Marie, Tom"
+                  className="w-full rounded-lg px-3 py-2 text-sm"
+                  style={inputStyle}
+                />
+              </Field>
+              <CompanionPreview values={arrayFromCsv(companionsCsv)} />
+
+              <Field label={t("trips:modal.tagsLabel")}>
+                <input
+                  value={tagsCsv}
+                  onChange={(e) => setTagsCsv(e.target.value)}
+                  placeholder="kultur, food, fotos"
+                  className="w-full rounded-lg px-3 py-2 text-sm"
+                  style={inputStyle}
+                />
+              </Field>
+              <TagPreview values={arrayFromCsv(tagsCsv)} accent={color} />
+            </>
+          )}
+
+          {tab === "appearance" && (
+            <>
+              <Field label={t("trips:modal.coverLabel")}>
+                <input
+                  value={coverImageUrl}
+                  onChange={(e) => setCoverImageUrl(e.target.value)}
+                  placeholder="https://… / /uploads/…"
+                  className="w-full rounded-lg px-3 py-2 text-sm"
+                  style={inputStyle}
+                />
+              </Field>
+              <CoverPreview url={coverImageUrl} accent={color} title={name || "—"} />
+              <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+                {t("trips:modal.coverUploadHint")}
+              </p>
+
+              <Field label={t("trips:modal.colorLabel")}>
+                <div className="flex gap-2 flex-wrap">
+                  {PALETTE.map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => setColor(c)}
+                      aria-label={c}
+                      aria-pressed={color === c}
+                      type="button"
+                      className="w-7 h-7 rounded-full transition-transform hover:scale-110"
+                      style={{
+                        background: c,
+                        outline: color === c ? `2px solid ${c}` : "none",
+                        outlineOffset: "2px",
+                      }}
+                    />
+                  ))}
+                </div>
+              </Field>
+            </>
+          )}
+
+          {tab === "notes" && (
+            <Field
+              label={t("trips:modal.notesLabel")}
+              hint={t("trips:modal.notesMarkdownHint")}
+            >
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder={t("trips:modal.notesPlaceholder")}
+                rows={14}
+                className="w-full rounded-lg px-3 py-2 text-sm resize-none font-mono"
+                style={inputStyle}
+              />
+            </Field>
+          )}
         </div>
 
         <div
@@ -413,6 +425,85 @@ function Field({ label, hint, children }: FieldProps): JSX.Element {
           {hint}
         </p>
       )}
+    </div>
+  );
+}
+
+interface CoverPreviewProps {
+  url: string;
+  accent: string;
+  title: string;
+}
+
+function CoverPreview({ url, accent, title }: CoverPreviewProps): JSX.Element {
+  const trimmed = url.trim();
+  return (
+    <div
+      className="rounded-lg overflow-hidden h-32 relative flex items-end p-3"
+      style={{
+        background: trimmed
+          ? `url(${JSON.stringify(trimmed)}) center/cover`
+          : `linear-gradient(135deg, ${accent}40, ${accent}10)`,
+        border: "1px solid var(--color-border)",
+      }}
+    >
+      {!trimmed && (
+        <div
+          className="absolute inset-0 flex items-center justify-center text-3xl opacity-40"
+          aria-hidden
+        >
+          🌍
+        </div>
+      )}
+      <div
+        className="relative font-display font-bold text-lg drop-shadow-lg"
+        style={{ color: trimmed ? "#fff" : "var(--text-primary)" }}
+      >
+        {title}
+      </div>
+    </div>
+  );
+}
+
+function CompanionPreview({ values }: { values: string[] }): JSX.Element | null {
+  if (values.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {values.map((v) => (
+        <span
+          key={v}
+          className="px-2.5 py-1 rounded-full text-xs flex items-center gap-1.5"
+          style={{
+            background: "var(--bg-elevated)",
+            border: "1px solid var(--color-border)",
+            color: "var(--text-primary)",
+          }}
+        >
+          <span aria-hidden>👤</span>
+          {v}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function TagPreview({ values, accent }: { values: string[]; accent: string }): JSX.Element | null {
+  if (values.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {values.map((v) => (
+        <span
+          key={v}
+          className="px-2.5 py-1 rounded-full text-xs"
+          style={{
+            background: `${accent}1f`,
+            border: `1px solid ${accent}66`,
+            color: accent,
+          }}
+        >
+          #{v}
+        </span>
+      ))}
     </div>
   );
 }
