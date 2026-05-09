@@ -205,7 +205,7 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
                 style={{
                   background: active ? "var(--bg-surface)" : "transparent",
                   borderBottom: active ? "2px solid var(--accent)" : "2px solid transparent",
-                  color: active ? "var(--text-primary)" : "var(--text-muted)",
+                  color: active ? "var(--text-primary)" : "var(--text-secondary)",
                   fontWeight: active ? 600 : 400,
                   marginBottom: "-1px",
                 }}

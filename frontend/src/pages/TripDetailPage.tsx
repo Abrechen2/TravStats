@@ -316,7 +316,7 @@ function TabBar({ tab, onChange, t }: TabBarProps): JSX.Element {
               onClick={() => onChange(key)}
               className="px-4 py-3.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2 hover:text-[var(--text-primary)]"
               style={{
-                color: isActive ? "var(--accent)" : "rgba(230, 237, 243, 0.65)",
+                color: isActive ? "var(--accent)" : "var(--text-secondary)",
                 borderColor: isActive ? "var(--accent)" : "transparent",
                 marginBottom: -1,
               }}

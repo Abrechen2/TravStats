@@ -522,7 +522,7 @@ export default function AdvancedStatsPage(): JSX.Element {
               className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                 filter === "all"
                   ? "border-[var(--accent)] text-[var(--accent)]"
-                  : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                  : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
               }`}
             >
               {t("stats:filter.all")}
@@ -537,7 +537,7 @@ export default function AdvancedStatsPage(): JSX.Element {
                   className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                     filter === k
                       ? "border-[var(--accent)] text-[var(--accent)]"
-                      : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                      : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                   }`}
                 >
                   <span className="mr-1.5" aria-hidden>
