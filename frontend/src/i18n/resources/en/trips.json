@@ -106,7 +106,54 @@
       "cruises": "Cruises",
       "bookings": "Bookings",
       "totalBooked": "Total"
+    },
+    "timeline": {
+      "addEntry": "+ Add entry",
+      "addJournal": "📝 Journal entry",
+      "addStop": "📍 Stop / place",
+      "noEvents": "No events yet — add a journal entry or a stop.",
+      "deletedJournal": "Entry deleted",
+      "deletedStop": "Stop deleted",
+      "deleteJournalConfirm": "Delete journal entry?",
+      "deleteStopConfirm": "Delete stop \"{{title}}\"?"
     }
+  },
+  "journalModal": {
+    "createTitle": "Journal Entry",
+    "editTitle": "Edit Entry",
+    "dateLabel": "Date",
+    "titleLabel": "Title (optional)",
+    "titlePlaceholder": "e.g. Day 4 — Shinkansen to Kyoto",
+    "bodyLabel": "Body (Markdown)",
+    "bodyPlaceholder": "What happened today? …",
+    "moodLabel": "Mood (optional)",
+    "weatherLabel": "Weather (optional)",
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "stopModal": {
+    "createTitle": "Add stop / place",
+    "editTitle": "Edit stop",
+    "titleLabel": "Title",
+    "titlePlaceholder": "e.g. Hotel Mandarin Oriental",
+    "domainLabel": "Kind",
+    "domainOptions": {
+      "poi": "Point of interest",
+      "hotel": "Hotel",
+      "train": "Train",
+      "road": "Car / bus",
+      "ferry": "Ferry",
+      "hike": "Hike",
+      "bike": "Bike",
+      "other": "Other"
+    },
+    "startDateLabel": "Start",
+    "endDateLabel": "End",
+    "latLabel": "Latitude",
+    "lonLabel": "Longitude",
+    "notesLabel": "Notes",
+    "save": "Save",
+    "cancel": "Cancel"
   },
   "toasts": {
     "created": "Journey created",

@@ -106,7 +106,54 @@
       "cruises": "Kreuzfahrten",
       "bookings": "Buchungen",
       "totalBooked": "Gesamt"
+    },
+    "timeline": {
+      "addEntry": "+ Eintrag hinzufügen",
+      "addJournal": "📝 Tagebuch-Eintrag",
+      "addStop": "📍 Stopp / Ort",
+      "noEvents": "Noch keine Ereignisse — füge einen Tagebuch-Eintrag oder einen Stopp hinzu.",
+      "deletedJournal": "Eintrag gelöscht",
+      "deletedStop": "Stopp gelöscht",
+      "deleteJournalConfirm": "Tagebuch-Eintrag löschen?",
+      "deleteStopConfirm": "Stopp \"{{title}}\" löschen?"
     }
+  },
+  "journalModal": {
+    "createTitle": "Tagebuch-Eintrag",
+    "editTitle": "Eintrag bearbeiten",
+    "dateLabel": "Datum",
+    "titleLabel": "Titel (optional)",
+    "titlePlaceholder": "z.B. Tag 4 — Shinkansen nach Kyoto",
+    "bodyLabel": "Text (Markdown)",
+    "bodyPlaceholder": "Was war heute los? …",
+    "moodLabel": "Stimmung (optional)",
+    "weatherLabel": "Wetter (optional)",
+    "save": "Speichern",
+    "cancel": "Abbrechen"
+  },
+  "stopModal": {
+    "createTitle": "Stopp / Ort hinzufügen",
+    "editTitle": "Stopp bearbeiten",
+    "titleLabel": "Bezeichnung",
+    "titlePlaceholder": "z.B. Hotel Mandarin Oriental",
+    "domainLabel": "Art",
+    "domainOptions": {
+      "poi": "Sehenswürdigkeit",
+      "hotel": "Hotel",
+      "train": "Zug",
+      "road": "Auto / Bus",
+      "ferry": "Fähre",
+      "hike": "Wanderung",
+      "bike": "Rad",
+      "other": "Sonstiges"
+    },
+    "startDateLabel": "Beginn",
+    "endDateLabel": "Ende",
+    "latLabel": "Breitengrad",
+    "lonLabel": "Längengrad",
+    "notesLabel": "Notizen",
+    "save": "Speichern",
+    "cancel": "Abbrechen"
   },
   "toasts": {
     "created": "Reise erstellt",

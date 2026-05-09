@@ -628,14 +628,60 @@ model Trip {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  flights  Flight[]
-  bookings Booking[]
-  cruises  Cruise[]
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flights        Flight[]
+  bookings       Booking[]
+  cruises        Cruise[]
+  stops          TripStop[]
+  journalEntries TripJournalEntry[]
 
   @@index([userId])
   @@index([userId, status])
   @@map("trips")
+}
+
+model TripStop {
+  id          String    @id @default(uuid())
+  tripId      String    @map("trip_id")
+  orderIdx    Int       @default(0) @map("order_idx")
+  // Free-form DomainKey-style label so the timeline picks the right
+  // colour ("poi", "hotel", "train", "hike", …). Null means "generic".
+  domain      String?
+  // Optional id of an existing flight/cruise/etc. that this stop wraps.
+  sourceId    String?   @map("source_id")
+  title       String
+  description String?
+  startDate   DateTime? @map("start_date")
+  endDate     DateTime? @map("end_date")
+  lat         Float?
+  lon         Float?
+  notes       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+  @@index([tripId, orderIdx])
+  @@map("trip_stops")
+}
+
+model TripJournalEntry {
+  id        String   @id @default(uuid())
+  tripId    String   @map("trip_id")
+  date      DateTime
+  title     String?
+  body      String
+  mood      String?
+  weather   String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+  @@index([tripId, date])
+  @@map("trip_journal_entries")
 }
 
 model Booking {

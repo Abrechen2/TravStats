@@ -129,6 +129,35 @@ export interface Booking {
 export type TripStatus = "planned" | "in_progress" | "completed";
 export type TripCategory = "vacation" | "business" | "weekend" | "family" | "other";
 
+export interface TripStop {
+  id: string;
+  tripId: string;
+  orderIdx: number;
+  domain: string | null;
+  sourceId: string | null;
+  title: string;
+  description: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  lat: number | null;
+  lon: number | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TripJournalEntry {
+  id: string;
+  tripId: string;
+  date: string;
+  title: string | null;
+  body: string;
+  mood: string | null;
+  weather: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Trip {
   id: string;
   userId: string;
@@ -176,6 +205,8 @@ export interface Trip {
     status: string;
     shipId: number | null;
   }>;
+  stops?: TripStop[];
+  journalEntries?: TripJournalEntry[];
 }
 
 export interface FlightInput {

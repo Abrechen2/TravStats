@@ -5,10 +5,11 @@ import { tripsApi } from "../lib/api";
 import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
 import { useTranslation } from "../hooks/useTranslation";
-import type { Trip, TripStatus } from "../types";
+import type { Trip, TripJournalEntry, TripStatus, TripStop } from "../types";
 import PageTransition from "../components/PageTransition";
 import TripModal from "../components/Trips/TripModal";
-import TripTimeline, { type TimelineEvent } from "../components/Trip/TripTimeline";
+import JournalEntryModal from "../components/Trips/JournalEntryModal";
+import StopModal from "../components/Trips/StopModal";
 
 type TabKey = "overview" | "timeline" | "map" | "gallery" | "logistics";
 const TABS: TabKey[] = ["overview", "timeline", "map", "gallery", "logistics"];
@@ -105,7 +106,9 @@ export default function TripDetailPage(): JSX.Element {
 
         <div className="max-w-7xl mx-auto px-4 py-6">
           {tab === "overview" && <OverviewTab trip={trip} t={t} />}
-          {tab === "timeline" && <TimelineTab trip={trip} t={t} />}
+          {tab === "timeline" && (
+            <TimelineTab trip={trip} onChanged={() => void load()} t={t} />
+          )}
           {tab === "map" && <Placeholder text={t("trips:detail.tabPlaceholder.map")} />}
           {tab === "gallery" && (
             <Placeholder text={t("trips:detail.tabPlaceholder.gallery")} />
@@ -405,20 +408,64 @@ function OverviewTab({
 
 /* ─────────── Tab: Timeline ─────────── */
 
-function TimelineTab({
-  trip,
-  t,
-}: {
+type TimelineEvent =
+  | {
+      id: string;
+      kind: "flight";
+      date: string;
+      title: string;
+      subtitle: string | null;
+    }
+  | {
+      id: string;
+      kind: "cruise";
+      date: string;
+      title: string;
+      subtitle: string | null;
+    }
+  | {
+      id: string;
+      kind: "stop";
+      date: string;
+      stop: TripStop;
+    }
+  | {
+      id: string;
+      kind: "journal";
+      date: string;
+      entry: TripJournalEntry;
+    };
+
+const STOP_DOMAIN_ICON: Record<string, string> = {
+  poi: "📍",
+  hotel: "🏨",
+  train: "🚄",
+  road: "🚗",
+  ferry: "⛴",
+  hike: "🥾",
+  bike: "🚴",
+  other: "📌",
+};
+
+interface TimelineTabProps {
   trip: Trip;
+  onChanged: () => void;
   t: ReturnType<typeof useTranslation>["t"];
-}): JSX.Element {
+}
+
+function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
+  const addToast = useToastStore((s) => s.addToast);
+  const [adding, setAdding] = useState<null | "journal" | "stop">(null);
+  const [editingJournal, setEditingJournal] = useState<TripJournalEntry | null>(null);
+  const [editingStop, setEditingStop] = useState<TripStop | null>(null);
+
   const events = useMemo<TimelineEvent[]>(() => {
     const out: TimelineEvent[] = [];
     for (const f of trip.flights ?? []) {
       if (!f.departureTime) continue;
       out.push({
         id: `flight-${f.id}`,
-        domain: "flight",
+        kind: "flight",
         date: f.departureTime,
         title: `${f.depIata ?? "???"} → ${f.arrIata ?? "???"}`,
         subtitle: f.arrivalTime
@@ -430,7 +477,7 @@ function TimelineTab({
       if (!c.startDate) continue;
       out.push({
         id: `cruise-${c.id}`,
-        domain: "cruise",
+        kind: "cruise",
         date: c.startDate,
         title: c.cruiseLine ?? "Kreuzfahrt",
         subtitle: c.endDate
@@ -438,13 +485,340 @@ function TimelineTab({
           : new Date(c.startDate).toLocaleDateString(),
       });
     }
-    return out;
+    for (const s of trip.stops ?? []) {
+      out.push({
+        id: `stop-${s.id}`,
+        kind: "stop",
+        date: s.startDate ?? s.createdAt,
+        stop: s,
+      });
+    }
+    for (const e of trip.journalEntries ?? []) {
+      out.push({
+        id: `journal-${e.id}`,
+        kind: "journal",
+        date: e.date,
+        entry: e,
+      });
+    }
+    return out.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [trip]);
 
-  if (events.length === 0) {
-    return <Placeholder text={t("trips:detail.noLinks")} />;
+  const empty = events.length === 0;
+
+  const handleDeleteJournal = async (entry: TripJournalEntry): Promise<void> => {
+    if (!window.confirm(t("trips:detail.timeline.deleteJournalConfirm"))) return;
+    try {
+      await tripsApi.deleteJournalEntry(trip.id, entry.id);
+      addToast("success", t("trips:detail.timeline.deletedJournal"));
+      onChanged();
+    } catch {
+      addToast("error", t("trips:toasts.deleteError"));
+    }
+  };
+
+  const handleDeleteStop = async (stop: TripStop): Promise<void> => {
+    if (!window.confirm(t("trips:detail.timeline.deleteStopConfirm", { title: stop.title }))) {
+      return;
+    }
+    try {
+      await tripsApi.deleteStop(trip.id, stop.id);
+      addToast("success", t("trips:detail.timeline.deletedStop"));
+      onChanged();
+    } catch {
+      addToast("error", t("trips:toasts.deleteError"));
+    }
+  };
+
+  return (
+    <>
+      <div className="mb-4 flex gap-2 flex-wrap">
+        <button
+          type="button"
+          onClick={() => setAdding("journal")}
+          className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+          style={{ borderColor: "var(--color-border)", color: "var(--text-muted)" }}
+        >
+          {t("trips:detail.timeline.addJournal")}
+        </button>
+        <button
+          type="button"
+          onClick={() => setAdding("stop")}
+          className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+          style={{ borderColor: "var(--color-border)", color: "var(--text-muted)" }}
+        >
+          {t("trips:detail.timeline.addStop")}
+        </button>
+      </div>
+
+      {empty ? (
+        <Placeholder text={t("trips:detail.timeline.noEvents")} />
+      ) : (
+        <ol
+          className="relative pl-7"
+          style={{ listStyle: "none", margin: 0 }}
+        >
+          <span
+            aria-hidden
+            className="absolute top-3 bottom-3 w-px"
+            style={{ left: 10, background: "var(--color-border)" }}
+          />
+          {events.map((ev) => (
+            <li key={ev.id} className="relative mb-3">
+              <span
+                aria-hidden
+                className="absolute -left-[26px] top-4 w-3 h-3 rounded-full"
+                style={{
+                  border: `2px solid ${dotColor(ev)}`,
+                  background: "var(--bg-base)",
+                }}
+              />
+              {ev.kind === "flight" && <FlightCard ev={ev} />}
+              {ev.kind === "cruise" && <CruiseCard ev={ev} />}
+              {ev.kind === "stop" && (
+                <StopCard
+                  ev={ev}
+                  onEdit={() => setEditingStop(ev.stop)}
+                  onDelete={() => void handleDeleteStop(ev.stop)}
+                />
+              )}
+              {ev.kind === "journal" && (
+                <JournalCard
+                  ev={ev}
+                  onEdit={() => setEditingJournal(ev.entry)}
+                  onDelete={() => void handleDeleteJournal(ev.entry)}
+                />
+              )}
+            </li>
+          ))}
+        </ol>
+      )}
+
+      {(adding === "journal" || editingJournal) && (
+        <JournalEntryModal
+          tripId={trip.id}
+          entry={editingJournal}
+          defaultDate={trip.startDate ?? undefined}
+          onClose={() => {
+            setAdding(null);
+            setEditingJournal(null);
+          }}
+          onSaved={() => {
+            setAdding(null);
+            setEditingJournal(null);
+            onChanged();
+          }}
+        />
+      )}
+      {(adding === "stop" || editingStop) && (
+        <StopModal
+          tripId={trip.id}
+          stop={editingStop}
+          defaultDate={trip.startDate ?? undefined}
+          onClose={() => {
+            setAdding(null);
+            setEditingStop(null);
+          }}
+          onSaved={() => {
+            setAdding(null);
+            setEditingStop(null);
+            onChanged();
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+function dotColor(ev: TimelineEvent): string {
+  switch (ev.kind) {
+    case "flight":
+      return "var(--domain-flight, var(--accent))";
+    case "cruise":
+      return "var(--domain-cruise, #6fa0d6)";
+    case "stop":
+      return "var(--domain-poi, #5ec2b2)";
+    case "journal":
+      return "#60a5fa";
   }
-  return <TripTimeline events={events} />;
+}
+
+function EventCard({
+  icon,
+  bg,
+  iconColor,
+  title,
+  subtitle,
+  meta,
+  date,
+  actions,
+}: {
+  icon: string;
+  bg: string;
+  iconColor: string;
+  title: string;
+  subtitle?: string | null;
+  meta?: string;
+  date: string;
+  actions?: React.ReactNode;
+}): JSX.Element {
+  return (
+    <div
+      className="rounded-xl px-4 py-3 flex items-start gap-3"
+      style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+    >
+      <span
+        className="w-9 h-9 rounded-lg flex items-center justify-center text-base shrink-0"
+        style={{ background: bg, color: iconColor }}
+      >
+        {icon}
+      </span>
+      <div className="flex-1 min-w-0">
+        <div className="font-semibold text-sm">{title}</div>
+        {subtitle && (
+          <div className="text-xs mt-0.5 truncate" style={{ color: "var(--text-muted)" }}>
+            {subtitle}
+          </div>
+        )}
+        {meta && (
+          <div
+            className="text-xs mt-1.5 leading-relaxed"
+            style={{ color: "var(--text-primary)", opacity: 0.85 }}
+          >
+            {meta}
+          </div>
+        )}
+      </div>
+      <div className="flex flex-col items-end gap-1 shrink-0 text-right">
+        <time
+          className="text-[11px] font-mono"
+          style={{ color: "var(--text-muted)" }}
+          dateTime={date}
+        >
+          {new Date(date).toLocaleDateString()}
+        </time>
+        {actions}
+      </div>
+    </div>
+  );
+}
+
+function FlightCard({ ev }: { ev: Extract<TimelineEvent, { kind: "flight" }> }): JSX.Element {
+  return (
+    <EventCard
+      icon="✈"
+      bg="rgba(240,169,71,0.15)"
+      iconColor="var(--domain-flight, var(--accent))"
+      title={ev.title}
+      subtitle={ev.subtitle}
+      date={ev.date}
+    />
+  );
+}
+
+function CruiseCard({ ev }: { ev: Extract<TimelineEvent, { kind: "cruise" }> }): JSX.Element {
+  return (
+    <EventCard
+      icon="⚓"
+      bg="rgba(111,160,214,0.15)"
+      iconColor="var(--domain-cruise, #6fa0d6)"
+      title={ev.title}
+      subtitle={ev.subtitle}
+      date={ev.date}
+    />
+  );
+}
+
+function StopCard({
+  ev,
+  onEdit,
+  onDelete,
+}: {
+  ev: Extract<TimelineEvent, { kind: "stop" }>;
+  onEdit: () => void;
+  onDelete: () => void;
+}): JSX.Element {
+  const s = ev.stop;
+  const icon = STOP_DOMAIN_ICON[s.domain ?? "other"] ?? "📍";
+  const subtitle = s.lat != null && s.lon != null
+    ? `${s.lat.toFixed(3)}, ${s.lon.toFixed(3)}`
+    : s.description ?? null;
+  return (
+    <EventCard
+      icon={icon}
+      bg="rgba(94,194,178,0.15)"
+      iconColor="var(--domain-poi, #5ec2b2)"
+      title={s.title}
+      subtitle={subtitle}
+      meta={s.notes ?? undefined}
+      date={ev.date}
+      actions={<RowActions onEdit={onEdit} onDelete={onDelete} />}
+    />
+  );
+}
+
+function JournalCard({
+  ev,
+  onEdit,
+  onDelete,
+}: {
+  ev: Extract<TimelineEvent, { kind: "journal" }>;
+  onEdit: () => void;
+  onDelete: () => void;
+}): JSX.Element {
+  const e = ev.entry;
+  const headline = e.title ?? truncate(e.body, 50);
+  const meta = [e.weather, e.mood].filter(Boolean).join(" · ") || undefined;
+  return (
+    <EventCard
+      icon="📝"
+      bg="rgba(96,165,250,0.15)"
+      iconColor="#60a5fa"
+      title={headline}
+      subtitle={meta ?? null}
+      meta={e.title ? truncate(e.body, 200) : undefined}
+      date={ev.date}
+      actions={<RowActions onEdit={onEdit} onDelete={onDelete} />}
+    />
+  );
+}
+
+function RowActions({
+  onEdit,
+  onDelete,
+}: {
+  onEdit: () => void;
+  onDelete: () => void;
+}): JSX.Element {
+  return (
+    <div className="flex gap-1 mt-1">
+      <button
+        type="button"
+        onClick={onEdit}
+        className="text-[11px] px-1.5 py-0.5 rounded"
+        style={{ color: "var(--text-muted)" }}
+        aria-label="edit"
+        title="edit"
+      >
+        ✎
+      </button>
+      <button
+        type="button"
+        onClick={onDelete}
+        className="text-[11px] px-1.5 py-0.5 rounded"
+        style={{ color: "var(--danger, #f87171)" }}
+        aria-label="delete"
+        title="delete"
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
+
+function truncate(text: string, n: number): string {
+  if (text.length <= n) return text;
+  return text.slice(0, n - 1).trimEnd() + "…";
 }
 
 /* ─────────── Tab: Logistics ─────────── */

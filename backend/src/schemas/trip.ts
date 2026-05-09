@@ -78,3 +78,55 @@ export type AssignFlightsInput = z.infer<typeof assignFlightsSchema>;
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;
 export type TripStatus = (typeof TRIP_STATUSES)[number];
 export type TripCategory = (typeof TRIP_CATEGORIES)[number];
+
+/* ---------------- Trip stops ---------------- */
+
+export const createStopSchema = z.object({
+  title: z.string().min(1).max(200),
+  domain: z.string().max(40).optional(),
+  sourceId: z.string().max(120).optional(),
+  description: z.string().max(2000).optional(),
+  startDate: ISO_DATE.optional(),
+  endDate: ISO_DATE.optional(),
+  lat: z.number().min(-90).max(90).optional(),
+  lon: z.number().min(-180).max(180).optional(),
+  notes: z.string().max(20000).optional(),
+  orderIdx: z.number().int().min(0).optional(),
+});
+
+export const updateStopSchema = z.object({
+  title: z.string().min(1).max(200).optional(),
+  domain: z.string().max(40).nullable().optional(),
+  sourceId: z.string().max(120).nullable().optional(),
+  description: z.string().max(2000).nullable().optional(),
+  startDate: ISO_DATE.nullable().optional(),
+  endDate: ISO_DATE.nullable().optional(),
+  lat: z.number().min(-90).max(90).nullable().optional(),
+  lon: z.number().min(-180).max(180).nullable().optional(),
+  notes: z.string().max(20000).nullable().optional(),
+  orderIdx: z.number().int().min(0).optional(),
+});
+
+export type CreateStopInput = z.infer<typeof createStopSchema>;
+export type UpdateStopInput = z.infer<typeof updateStopSchema>;
+
+/* ---------------- Journal entries ---------------- */
+
+export const createJournalSchema = z.object({
+  date: ISO_DATE,
+  title: z.string().max(200).optional(),
+  body: z.string().min(1).max(20000),
+  mood: z.string().max(40).optional(),
+  weather: z.string().max(40).optional(),
+});
+
+export const updateJournalSchema = z.object({
+  date: ISO_DATE.optional(),
+  title: z.string().max(200).nullable().optional(),
+  body: z.string().min(1).max(20000).optional(),
+  mood: z.string().max(40).nullable().optional(),
+  weather: z.string().max(40).nullable().optional(),
+});
+
+export type CreateJournalInput = z.infer<typeof createJournalSchema>;
+export type UpdateJournalInput = z.infer<typeof updateJournalSchema>;
