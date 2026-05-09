@@ -457,6 +457,26 @@
       "name": "Halloween-Flieger",
       "description": "Ein Flug am 31. Oktober — idealerweise im Dunkeln"
     },
+    "SPECIAL_FIRST_SIGHTSEEING": {
+      "name": "Erster Rundflug",
+      "description": "Absolviere deinen ersten Rundflug / lokalen Rundkurs"
+    },
+    "SPECIAL_FIRST_ZEROG": {
+      "name": "Erster Schwerelosigkeits-Flug",
+      "description": "Absolviere deinen ersten Parabelflug / Zero-G-Flug"
+    },
+    "SPECIAL_FIRST_ECLIPSE": {
+      "name": "Sonnenfinsternis-Jäger",
+      "description": "Absolviere deinen ersten Sonnenfinsternis-Flug"
+    },
+    "SPECIAL_FIRST_ROCKET": {
+      "name": "Raketen-Zuschauer",
+      "description": "Fliege, um einen Raketenstart zu sehen"
+    },
+    "SPECIAL_VARIETY_3": {
+      "name": "Sonder-Flug-Sammler",
+      "description": "Sammle drei verschiedene Arten von Sonder-Flügen"
+    },
     "WANDERLUST": {
       "name": "Fernweh",
       "description": "5 geplante Flüge im Kalender"

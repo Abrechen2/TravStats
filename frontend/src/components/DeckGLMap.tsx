@@ -8,6 +8,9 @@ import type { MapMode } from "./MapContainer3D";
 import { buildRouteData, createRoutesLayers } from "./layers/routesLayer";
 import { createHeatmapLayer } from "./layers/heatmapLayer";
 import { createTripsLayer, buildTripsData, getTimeRange } from "./layers/tripsLayer";
+import { createSpecialFlightsLayers } from "./layers/specialFlightsLayer";
+import { SpecialFlightTooltip } from "./specialFlights/SpecialFlightTooltip";
+import { getSpecialTooltipAnchor } from "./specialFlights/specialTooltipAnchor";
 import {
   createCruiseArcsLayer,
   createCruiseArrowsLayer,
@@ -322,11 +325,20 @@ export function DeckGLMap({
         tooltipGeoRef.current = { mode: "group", points: pts };
       } else {
         const f = selectedFlights[0];
-        if (f.depLon == null || f.arrLon == null || f.depLat == null || f.arrLat == null) return;
-        tooltipGeoRef.current = {
-          mode: "single",
-          points: [[(f.depLon + f.arrLon) / 2, (f.depLat + f.arrLat) / 2]],
-        };
+        // Special flights anchor off event/pattern coords when regular
+        // dep/arr coords would make the tooltip float over empty ocean
+        // (e.g. eclipse chase mid-Atlantic, ZeroG hold pattern).
+        if (f.specialType) {
+          const anchor = getSpecialTooltipAnchor(f);
+          if (!anchor) return;
+          tooltipGeoRef.current = { mode: "single", points: [anchor] };
+        } else {
+          if (f.depLon == null || f.arrLon == null || f.depLat == null || f.arrLat == null) return;
+          tooltipGeoRef.current = {
+            mode: "single",
+            points: [[(f.depLon + f.arrLon) / 2, (f.depLat + f.arrLat) / 2]],
+          };
+        }
       }
 
       recomputeAllPositions();
@@ -380,19 +392,37 @@ export function DeckGLMap({
     [flights, minRouteCount, themeColors, flightRouteColor]
   );
 
+  // Standalone layer set for Sonder-Flüge — rendered on top of the
+  // normal route layers in "routes" mode so rundowns, eclipse chases,
+  // ZeroG and rocket-launch flights get a distinct visual language
+  // instead of a garbage-collapsed arc from airport to itself. Per the
+  // V2 architectural call, special-flights are an overlay, NOT a new
+  // MapMode.
+  const specialFlightLayers = useMemo(
+    () =>
+      createSpecialFlightsLayers(
+        (flightList ?? []).filter((f) => !!f.specialType),
+        (id) => handleFlightClick(id)
+      ),
+    [flightList, handleFlightClick]
+  );
+
   const layers = useMemo((): Layer[] => {
     let base: Layer[];
     switch (visMode) {
       case "routes":
-        base = createRoutesLayers(
-          routeData,
-          handleFlightClick,
-          themeColors,
-          0.3,
-          selectedIds,
-          handleAirportClick,
-          zoom
-        );
+        base = [
+          ...createRoutesLayers(
+            routeData,
+            handleFlightClick,
+            themeColors,
+            0.3,
+            selectedIds,
+            handleAirportClick,
+            zoom
+          ),
+          ...specialFlightLayers,
+        ];
         break;
       case "heatmap":
         base = [createHeatmapLayer(flights)];
@@ -443,6 +473,7 @@ export function DeckGLMap({
     cruiseGeometry,
     extraLayers,
     zoom,
+    specialFlightLayers,
   ]);
 
   // No 3D modes remain — lighting effect is unused but kept as empty array for
@@ -566,21 +597,38 @@ export function DeckGLMap({
         />
       )}
 
-      {tooltipVisible && highlightMode !== "group" && selectedFlights.length > 0 && (
-        <MapTooltip
-          flight={selectedFlights[0]}
-          screenX={tooltipPos.x}
-          screenY={tooltipPos.y}
-          onEdit={(flight) => {
-            clearSelection();
-            onEdit?.(flight);
-          }}
-          onClose={() => {
-            clearSelection();
-            setTooltipVisible(false);
-          }}
-        />
-      )}
+      {tooltipVisible &&
+        highlightMode !== "group" &&
+        selectedFlights.length > 0 &&
+        (selectedFlights[0].specialType ? (
+          <SpecialFlightTooltip
+            flight={selectedFlights[0]}
+            screenX={tooltipPos.x}
+            screenY={tooltipPos.y}
+            onEdit={(flight) => {
+              clearSelection();
+              onEdit?.(flight);
+            }}
+            onClose={() => {
+              clearSelection();
+              setTooltipVisible(false);
+            }}
+          />
+        ) : (
+          <MapTooltip
+            flight={selectedFlights[0]}
+            screenX={tooltipPos.x}
+            screenY={tooltipPos.y}
+            onEdit={(flight) => {
+              clearSelection();
+              onEdit?.(flight);
+            }}
+            onClose={() => {
+              clearSelection();
+              setTooltipVisible(false);
+            }}
+          />
+        ))}
 
       {airportIata && (
         <AirportTooltip

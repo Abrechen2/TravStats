@@ -44,6 +44,8 @@ export interface FlightData {
   departureTime: Date | null;
   arrivalTime: Date | null;
   status: string;
+  /** Sonder-Flug discriminator — `null` for normal scheduled flights. */
+  specialType: string | null;
 }
 
 export interface UserStats {
@@ -103,6 +105,15 @@ export interface UserStats {
   piDayFlights: number;
   piPrecisionFlights: number;
   halloweenFlights: number;
+  // Sonder-Flüge — counts per signature type, plus a distinct-type
+  // counter for the "variety" achievement.
+  specialSightseeingCount: number;
+  specialZerogCount: number;
+  specialEclipseCount: number;
+  specialRocketCount: number;
+  /** Number of distinct specialType values present in the user's
+   *  flights — any of the 8 enum values counts as one. */
+  specialVariety: number;
   // Cruise stats (V1 multi-domain)
   cruisesCount: number;
   cruisePortsUnique: number;
@@ -219,6 +230,11 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
     piDayFlights: 0,
     piPrecisionFlights: 0,
     halloweenFlights: 0,
+    specialSightseeingCount: 0,
+    specialZerogCount: 0,
+    specialEclipseCount: 0,
+    specialRocketCount: 0,
+    specialVariety: 0,
     // Cruise stats — filled in by caller via spread after calculateCruiseStats
     cruisesCount: 0,
     cruisePortsUnique: 0,
@@ -469,7 +485,25 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
       }
       if (month === 9 && day === 31) stats.halloweenFlights++;         // 31 Oct — Halloween
     }
+
+    // Sonder-Flüge counts — per-type counters for the "first X" single-event
+    // achievements. Every special flight counts regardless of status
+    // (scheduled eclipse chases are milestones in the real world even
+    // before they fly).
+    if (flight.specialType) {
+      if (flight.specialType === 'sightseeing') stats.specialSightseeingCount++;
+      else if (flight.specialType === 'zerog') stats.specialZerogCount++;
+      else if (flight.specialType === 'eclipse') stats.specialEclipseCount++;
+      else if (flight.specialType === 'rocket_launch') stats.specialRocketCount++;
+    }
   }
+
+  // specialVariety — number of distinct specialType values seen.
+  const specialTypeSet = new Set<string>();
+  for (const flight of flights) {
+    if (flight.specialType) specialTypeSet.add(flight.specialType);
+  }
+  stats.specialVariety = specialTypeSet.size;
 
   // Reset shortestSingleFlight if no flights
   if (stats.shortestSingleFlight === Number.POSITIVE_INFINITY) stats.shortestSingleFlight = 0;

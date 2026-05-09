@@ -422,6 +422,28 @@ export function checkAchievement(
       isUnlocked = progress >= achievement.requirement;
       break;
 
+    // ── Sonder-Flüge ──────────────────────────────────────────────
+    case 'special_sightseeing_count':
+      progress = stats.specialSightseeingCount;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'special_zerog_count':
+      progress = stats.specialZerogCount;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'special_eclipse_count':
+      progress = stats.specialEclipseCount;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'special_rocket_count':
+      progress = stats.specialRocketCount;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+    case 'special_variety':
+      progress = stats.specialVariety;
+      isUnlocked = progress >= achievement.requirement;
+      break;
+
     default:
       progress = 0;
       isUnlocked = false;
