@@ -201,7 +201,7 @@ function PortBody({
           <Row label={t("map:globe.pinned.country")} value={stats.country} />
         )}
         {stats.region && (
-          <Row label={t("map:globe.pinned.region")} value={stats.region} />
+          <Row label={t("map:globe.pinned.region")} value={capitalize(stats.region)} />
         )}
         {stats.ships.length > 0 && (
           <Row
@@ -310,14 +310,8 @@ function CruiseBody({
       {stats.line && <SubHeading>{stats.line}</SubHeading>}
       <Hero color="#7dd3fc">{dateRange}</Hero>
       <Grid>
-        <Row
-          label={t("map:globe.pinned.ports_other", { count: stats.portCount })}
-          value={String(stats.portCount)}
-        />
-        <Row
-          label={t("map:globe.pinned.seaDays_other", { count: stats.seaDays })}
-          value={String(stats.seaDays)}
-        />
+        <Row label={t("map:globe.pinned.portsLabel")} value={String(stats.portCount)} />
+        <Row label={t("map:globe.pinned.seaDaysLabel")} value={String(stats.seaDays)} />
         {stats.embarkPort && (
           <Row label={t("map:globe.pinned.embark")} value={stats.embarkPort} />
         )}
@@ -390,6 +384,11 @@ function Cta({
 
 function formatKm(km: number): string {
   return `${formatKmNumber(km)} km`;
+}
+
+function capitalize(s: string): string {
+  if (!s) return s;
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 function formatKmNumber(km: number): string {

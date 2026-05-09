@@ -4,6 +4,23 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-beta.14] - 2026-05-09 (Beta)
+
+### Fixed
+- **Globe pinned-card width stretched to viewport on long content** —
+  The MapLibre Popup wrapper was created with `maxWidth: "none"`, which
+  let the inner card balloon out to the full viewport width as soon as
+  the content didn't naturally cap itself. Capped at `320px` so the
+  inner card's own min/max widths drive the layout.
+- **Cruise card duplicated the port / sea-day count** — Both fields
+  used pluralised i18n keys that already include the count
+  (`{{count}} Häfen`), and then rendered the count again as the value
+  cell, producing rows like `6 HÄFEN  6`. Replaced the pluralised
+  keys with plain `Häfen` / `Seetage` labels.
+- **Port region rendered lowercase** — The `port.region` column in
+  the seed (e.g. `mediterranean`) is the raw enum value. Capitalised
+  for display.
+
 ## [2.0.0-beta.13] - 2026-05-09 (Beta)
 
 ### Added

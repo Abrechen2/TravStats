@@ -743,7 +743,11 @@ export default function GlobeView({
         closeButton: false,
         closeOnClick: false,
         closeOnMove: false,
-        maxWidth: "none",
+        // Cap the wrapper at the same outer width the inner card
+        // wants — the inner card's own min/max width then drives
+        // the actual layout. Leaving this at "none" lets the wrapper
+        // stretch to viewport width on tall content.
+        maxWidth: "320px",
         offset: 14,
         subpixelPositioning: true,
         locationOccludedOpacity: 0,
