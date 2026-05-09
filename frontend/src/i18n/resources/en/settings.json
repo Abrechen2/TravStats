@@ -621,11 +621,42 @@
       }
     },
     "preview": {
-      "title": "Preview",
+      "title": "Preview import",
       "summary": "{{ok}} ready · {{duplicates}} duplicates · {{problems}} problems",
-      "commit": "Import {{count}} row",
-      "commit_plural": "Import {{count}} rows",
+      "commit_one": "Import {{count}} row",
+      "commit_other": "Import {{count}} rows",
       "cancel": "Cancel",
+      "submitting": "Importing…",
+      "columns": {
+        "date": "Date",
+        "route": "Route",
+        "flight": "Flight",
+        "status": "Status",
+        "flags": "Flags"
+      },
+      "warningBadge": {
+        "duration_mismatch": "Duration mismatch — using calculated arrival from departure + duration"
+      },
+      "errorBadge": {
+        "unresolvable_airport": "Airport not found",
+        "malformed_datetime": "Invalid date or time",
+        "missing_required": "Missing required field"
+      },
+      "dedupeBadge": {
+        "exact_match": "Already imported",
+        "same_day_same_route": "Possible duplicate"
+      },
+      "rowAriaLabel": "Include row {{index}}",
+      "success": {
+        "title": "Import complete",
+        "imported_one": "✅ Imported {{count}} flight",
+        "imported_other": "✅ Imported {{count}} flights",
+        "skipped": "{{count}} skipped via preview",
+        "failed_one": "{{count}} chunk failed — see error message",
+        "failed_other": "{{count}} chunks failed — see error message",
+        "openFlights": "Open flights list",
+        "close": "Close"
+      },
       "wizard": {
         "title": "Map your CSV columns to TravStats fields",
         "headerLabel": "TravStats field",
@@ -633,6 +664,16 @@
         "skip": "— skip —",
         "cancel": "Cancel",
         "continue": "Continue",
+        "requiredSection": "Required",
+        "optionalSection": "Optional (recommended)",
+        "autoDetected": "Auto-detected",
+        "samplePrefix": "Sample",
+        "duplicateMapping": "Duplicate mapping",
+        "duplicateMappingHint": "One CSV column is mapped to two TravStats fields — please resolve",
+        "missingFields": "Missing required: {{fields}}",
+        "allMapped": "All required fields mapped",
+        "optionalSkipped_one": "{{count}} optional skipped",
+        "optionalSkipped_other": "{{count}} optional skipped",
         "fields": {
           "date": "Date (YYYY-MM-DD)",
           "fromIata": "From IATA (3-4 letters)",

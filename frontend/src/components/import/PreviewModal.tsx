@@ -1,48 +1,71 @@
 import { useState, useMemo, useEffect } from "react";
-import type { PreviewRowEnriched } from "../../lib/api/import";
+import { useTranslation } from "../../hooks/useTranslation";
+import {
+  hasHardError,
+  type PreviewFlag,
+  type PreviewRowEnriched,
+} from "../../lib/api/import";
+
+export interface PreviewCommitResult {
+  committed: number;
+  failedChunks: number;
+  failureMessage?: string;
+}
 
 export interface PreviewModalProps {
   rows: PreviewRowEnriched[];
   summary: { ok: number; problems: number; duplicates: number; unresolvable: number };
-  onCommit: (rows: PreviewRowEnriched[]) => void;
-  onCancel: () => void;
+  /**
+   * Persist the rows to the API. Returns an aggregated commit result so the
+   * modal can transition to its `success` view with the actual count. The
+   * parent should NOT close the modal — that is owned by the modal itself
+   * via `onClose`, which fires after success-state dismissal or cancel.
+   */
+  onCommit: (rows: PreviewRowEnriched[]) => Promise<PreviewCommitResult>;
+  onClose: () => void;
+  /** Optional link target shown in the success view (e.g. "/flights"). */
+  flightsListHref?: string;
 }
 
-/**
- * Render a date cell safely, returning "—" for flagged (hard-error) rows.
- * The server sets depUtc/arrUtc to epoch 0 only when flags.length > 0, so
- * the flag check alone is the correct guard — checking the date string for
- * "1970-01-01" would false-positive on legitimate early-aviation flights.
- */
-function safeDateDisplay(isoString: string, flags: PreviewRowEnriched["flags"]): string {
-  return flags.length > 0 ? "—" : isoString.slice(0, 10);
+type SubmitState =
+  | { phase: "idle" }
+  | { phase: "submitting" }
+  | { phase: "success"; committed: number; skipped: number; failedChunks: number }
+  | { phase: "error"; message: string };
+
+const WARNING_FLAGS = ["duration_mismatch"] as const;
+type WarningFlag = (typeof WARNING_FLAGS)[number];
+
+function isWarningFlag(f: PreviewFlag): f is WarningFlag {
+  return (WARNING_FLAGS as readonly PreviewFlag[]).includes(f);
 }
 
-/**
- * Resolve a human-readable status pill for the row, respecting the SAFE_DATE
- * guard: flagged rows should not show "flown"/"scheduled" because the
- * computation is meaningless when the date fields are sentinel values.
- */
-function statusDisplay(row: PreviewRowEnriched): string {
-  if (row.flags.length > 0) {
-    return "—";
-  }
-  return row.statusDefault;
+function formatDate(isoString: string): string {
+  return isoString.slice(0, 10);
 }
 
-export function PreviewModal({ rows, summary, onCommit, onCancel }: PreviewModalProps): JSX.Element {
+export function PreviewModal({
+  rows,
+  summary,
+  onCommit,
+  onClose,
+  flightsListHref,
+}: PreviewModalProps): JSX.Element {
+  const { t } = useTranslation("settings");
+
   const initialChecked = useMemo(() => {
     const m = new Map<number, boolean>();
     for (const r of rows) {
-      const isHardError = r.flags.length > 0;
-      m.set(r.sourceRowIndex, !isHardError);
+      m.set(r.sourceRowIndex, !hasHardError(r.flags));
     }
     return m;
   }, [rows]);
   const [checked, setChecked] = useState<Map<number, boolean>>(initialChecked);
+  const [submitState, setSubmitState] = useState<SubmitState>({ phase: "idle" });
 
   useEffect(() => {
     setChecked(initialChecked);
+    setSubmitState({ phase: "idle" });
   }, [initialChecked]);
 
   const toggle = (idx: number): void => {
@@ -54,74 +77,296 @@ export function PreviewModal({ rows, summary, onCommit, onCancel }: PreviewModal
   };
 
   const acceptedRows = rows.filter((r) => checked.get(r.sourceRowIndex));
+  const isSubmitting = submitState.phase === "submitting";
 
-  const submit = (): void => {
-    onCommit(acceptedRows);
+  const submit = async (): Promise<void> => {
+    setSubmitState({ phase: "submitting" });
+    try {
+      const result = await onCommit(acceptedRows);
+      setSubmitState({
+        phase: "success",
+        committed: result.committed,
+        skipped: rows.length - acceptedRows.length,
+        failedChunks: result.failedChunks,
+      });
+    } catch (err) {
+      setSubmitState({
+        phase: "error",
+        message: err instanceof Error ? err.message : String(err),
+      });
+    }
   };
 
   return (
-    <div role="dialog" aria-modal="true" aria-labelledby="preview-modal-title" className="preview-modal">
-      <header>
-        <h2 id="preview-modal-title">Preview import</h2>
-        <p>
-          {summary.ok} ready · {summary.duplicates} duplicates · {summary.problems} problems
-          {summary.unresolvable > 0 && ` · ${summary.unresolvable} unresolvable airports`}
-        </p>
-      </header>
-      <table>
-        <thead>
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="preview-modal-title"
+    >
+      <div
+        className="flex max-h-[90vh] w-full max-w-5xl flex-col rounded-lg shadow-xl"
+        style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+      >
+        <header
+          className="flex items-center justify-between border-b px-6 py-4"
+          style={{ borderColor: "var(--color-border)" }}
+        >
+          <div>
+            <h2
+              id="preview-modal-title"
+              className="text-lg font-semibold"
+              style={{ color: "var(--text-primary)" }}
+            >
+              {submitState.phase === "success"
+                ? t("settings:import.preview.success.title")
+                : t("settings:import.preview.title")}
+            </h2>
+            {submitState.phase !== "success" && (
+              <p className="mt-1 text-sm" style={{ color: "var(--text-muted)" }}>
+                {t("settings:import.preview.summary", {
+                  ok: summary.ok,
+                  duplicates: summary.duplicates,
+                  problems: summary.problems,
+                })}
+                {summary.unresolvable > 0 && ` · ${summary.unresolvable} unresolvable`}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="text-2xl leading-none disabled:opacity-50"
+            style={{ color: "var(--text-muted)" }}
+            aria-label={t("settings:import.preview.success.close")}
+          >
+            ×
+          </button>
+        </header>
+
+        {submitState.phase === "success" ? (
+          <SuccessView
+            committed={submitState.committed}
+            skipped={submitState.skipped}
+            failedChunks={submitState.failedChunks}
+            flightsListHref={flightsListHref}
+            onClose={onClose}
+            t={t}
+          />
+        ) : (
+          <RowsView
+            rows={rows}
+            checked={checked}
+            toggle={toggle}
+            isSubmitting={isSubmitting}
+            t={t}
+          />
+        )}
+
+        {submitState.phase !== "success" && (
+          <footer
+            className="flex flex-wrap items-center justify-end gap-2 border-t px-6 py-4"
+            style={{ borderColor: "var(--color-border)" }}
+          >
+            {submitState.phase === "error" && (
+              <p className="mr-auto text-sm" style={{ color: "rgb(252, 165, 165)" }}>
+                {submitState.message}
+              </p>
+            )}
+            <button
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="btn-secondary px-3 py-1.5 text-sm disabled:opacity-50"
+              style={{ background: "var(--bg-elevated)" }}
+            >
+              {t("settings:import.preview.cancel")}
+            </button>
+            <button
+              onClick={() => void submit()}
+              disabled={acceptedRows.length === 0 || isSubmitting}
+              className="btn-primary px-4 py-1.5 text-sm disabled:opacity-50"
+            >
+              {isSubmitting
+                ? t("settings:import.preview.submitting")
+                : t("settings:import.preview.commit", { count: acceptedRows.length })}
+            </button>
+          </footer>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface RowsViewProps {
+  rows: PreviewRowEnriched[];
+  checked: Map<number, boolean>;
+  toggle: (idx: number) => void;
+  isSubmitting: boolean;
+  t: (key: string, options?: Record<string, unknown>) => string;
+}
+
+function RowsView({ rows, checked, toggle, isSubmitting, t }: RowsViewProps): JSX.Element {
+  return (
+    <div className="overflow-auto px-6 py-4">
+      <table className="w-full text-sm">
+        <thead
+          className="sticky top-0 text-left"
+          style={{ background: "var(--bg-surface)", color: "var(--text-muted)" }}
+        >
           <tr>
-            <th />
-            <th>Date</th>
-            <th>Route</th>
-            <th>Flight</th>
-            <th>Status</th>
-            <th>Flags</th>
+            <th className="w-8 py-2" />
+            <th className="py-2 pr-3">{t("settings:import.preview.columns.date")}</th>
+            <th className="py-2 pr-3">{t("settings:import.preview.columns.route")}</th>
+            <th className="py-2 pr-3">{t("settings:import.preview.columns.flight")}</th>
+            <th className="py-2 pr-3">{t("settings:import.preview.columns.status")}</th>
+            <th className="py-2">{t("settings:import.preview.columns.flags")}</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => {
-            const isHardError = r.flags.length > 0;
+            const hardError = hasHardError(r.flags);
+            const warnings = r.flags.filter(isWarningFlag);
+            const errors = r.flags.filter((f) => !isWarningFlag(f));
             const isDup = r.dedupeHint !== "none";
-            const cls = isHardError ? "row-error" : isDup ? "row-warn" : "row-ok";
             return (
-              <tr key={r.sourceRowIndex} className={cls}>
-                <td>
+              <tr
+                key={r.sourceRowIndex}
+                className="border-t"
+                style={{
+                  borderColor: "var(--color-border)",
+                  background: hardError
+                    ? "rgba(239, 68, 68, 0.08)"
+                    : warnings.length > 0
+                      ? "rgba(245, 158, 11, 0.08)"
+                      : isDup
+                        ? "rgba(245, 158, 11, 0.05)"
+                        : "transparent",
+                }}
+              >
+                <td className="py-2">
                   <input
                     type="checkbox"
-                    aria-label={`row ${r.sourceRowIndex}`}
+                    aria-label={t("settings:import.preview.rowAriaLabel", {
+                      index: r.sourceRowIndex,
+                    })}
                     checked={!!checked.get(r.sourceRowIndex)}
-                    disabled={isHardError}
+                    disabled={hardError || isSubmitting}
                     onChange={() => toggle(r.sourceRowIndex)}
                   />
                 </td>
-                {/* SAFE_DATE guard: show "—" for flagged rows — their depUtc/arrUtc
-                    are set to epoch 0 by the server and must not be displayed as dates */}
-                <td>{safeDateDisplay(r.depUtc, r.flags)}</td>
-                <td>
+                <td className="py-2 pr-3" style={{ color: "var(--text-primary)" }}>
+                  {hardError ? "—" : formatDate(r.depUtc)}
+                </td>
+                <td className="py-2 pr-3" style={{ color: "var(--text-primary)" }}>
                   {r.fromIata} → {r.toIata}
                 </td>
-                <td>{r.flightNumberNormalised ?? r.flightNumber ?? "—"}</td>
-                <td>{statusDisplay(r)}</td>
-                <td>
-                  {r.flags.map((f) => (
-                    <span key={f} title={f} className="flag-badge flag-error">
-                      {f}
+                <td className="py-2 pr-3" style={{ color: "var(--text-primary)" }}>
+                  {r.flightNumberNormalised ?? r.flightNumber ?? "—"}
+                </td>
+                <td className="py-2 pr-3" style={{ color: "var(--text-primary)" }}>
+                  {hardError ? "—" : r.statusDefault}
+                </td>
+                <td className="flex flex-wrap gap-1 py-2">
+                  {errors.map((f) => (
+                    <span
+                      key={f}
+                      title={t(`settings:import.preview.errorBadge.${f}`)}
+                      className="inline-flex items-center rounded px-2 py-0.5 text-xs"
+                      style={{
+                        background: "rgba(239, 68, 68, 0.18)",
+                        color: "rgb(252, 165, 165)",
+                      }}
+                    >
+                      {t(`settings:import.preview.errorBadge.${f}`)}
                     </span>
                   ))}
-                  {isDup && <span className="flag-badge flag-warn">{r.dedupeHint}</span>}
+                  {warnings.map((f) => (
+                    <span
+                      key={f}
+                      title={t(`settings:import.preview.warningBadge.${f}`)}
+                      className="inline-flex items-center rounded px-2 py-0.5 text-xs"
+                      style={{
+                        background: "rgba(245, 158, 11, 0.18)",
+                        color: "rgb(252, 211, 77)",
+                      }}
+                    >
+                      {t(`settings:import.preview.warningBadge.${f}`)}
+                    </span>
+                  ))}
+                  {isDup && (
+                    <span
+                      className="inline-flex items-center rounded px-2 py-0.5 text-xs"
+                      style={{
+                        background: "rgba(245, 158, 11, 0.12)",
+                        color: "rgb(252, 211, 77)",
+                      }}
+                    >
+                      {t(`settings:import.preview.dedupeBadge.${r.dedupeHint}`, {
+                        defaultValue: r.dedupeHint,
+                      })}
+                    </span>
+                  )}
                 </td>
               </tr>
             );
           })}
         </tbody>
       </table>
-      <footer>
-        <button onClick={onCancel}>Cancel</button>
-        <button onClick={submit} disabled={acceptedRows.length === 0}>
-          Import {acceptedRows.length} row{acceptedRows.length === 1 ? "" : "s"}
+    </div>
+  );
+}
+
+interface SuccessViewProps {
+  committed: number;
+  skipped: number;
+  failedChunks: number;
+  flightsListHref?: string;
+  onClose: () => void;
+  t: (key: string, options?: Record<string, unknown>) => string;
+}
+
+function SuccessView({
+  committed,
+  skipped,
+  failedChunks,
+  flightsListHref,
+  onClose,
+  t,
+}: SuccessViewProps): JSX.Element {
+  return (
+    <>
+      <div className="px-6 py-8" style={{ color: "var(--text-primary)" }}>
+        <p className="text-lg font-medium">
+          {t("settings:import.preview.success.imported", { count: committed })}
+        </p>
+        {skipped > 0 && (
+          <p className="mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
+            {t("settings:import.preview.success.skipped", { count: skipped })}
+          </p>
+        )}
+        {failedChunks > 0 && (
+          <p className="mt-2 text-sm" style={{ color: "rgb(252, 165, 165)" }}>
+            {t("settings:import.preview.success.failed", { count: failedChunks })}
+          </p>
+        )}
+      </div>
+      <footer
+        className="flex flex-wrap items-center justify-end gap-2 border-t px-6 py-4"
+        style={{ borderColor: "var(--color-border)" }}
+      >
+        {flightsListHref && (
+          <a
+            href={flightsListHref}
+            className="btn-secondary px-3 py-1.5 text-sm"
+            style={{ background: "var(--bg-elevated)" }}
+          >
+            {t("settings:import.preview.success.openFlights")}
+          </a>
+        )}
+        <button onClick={onClose} className="btn-primary px-4 py-1.5 text-sm">
+          {t("settings:import.preview.success.close")}
         </button>
       </footer>
-    </div>
+    </>
   );
 }

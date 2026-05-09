@@ -621,11 +621,42 @@
       }
     },
     "preview": {
-      "title": "Vorschau",
+      "title": "Import-Vorschau",
       "summary": "{{ok}} bereit · {{duplicates}} Duplikate · {{problems}} Probleme",
-      "commit": "{{count}} Zeile importieren",
-      "commit_plural": "{{count}} Zeilen importieren",
+      "commit_one": "{{count}} Zeile importieren",
+      "commit_other": "{{count}} Zeilen importieren",
       "cancel": "Abbrechen",
+      "submitting": "Wird importiert…",
+      "columns": {
+        "date": "Datum",
+        "route": "Route",
+        "flight": "Flug",
+        "status": "Status",
+        "flags": "Hinweise"
+      },
+      "warningBadge": {
+        "duration_mismatch": "Duration-Diskrepanz — verwende berechnete Ankunftszeit aus Abflug + Dauer"
+      },
+      "errorBadge": {
+        "unresolvable_airport": "Flughafen nicht gefunden",
+        "malformed_datetime": "Ungültiges Datum oder Uhrzeit",
+        "missing_required": "Pflichtfeld fehlt"
+      },
+      "dedupeBadge": {
+        "exact_match": "Bereits importiert",
+        "same_day_same_route": "Mögliches Duplikat"
+      },
+      "rowAriaLabel": "Zeile {{index}} einschließen",
+      "success": {
+        "title": "Import abgeschlossen",
+        "imported_one": "✅ {{count}} Flug importiert",
+        "imported_other": "✅ {{count}} Flüge importiert",
+        "skipped": "{{count}} per Vorschau übersprungen",
+        "failed_one": "{{count}} Block fehlgeschlagen — Fehlermeldung beachten",
+        "failed_other": "{{count}} Blöcke fehlgeschlagen — Fehlermeldung beachten",
+        "openFlights": "Zur Flugliste",
+        "close": "Schließen"
+      },
       "wizard": {
         "title": "CSV-Spalten auf TravStats-Felder zuordnen",
         "headerLabel": "TravStats-Feld",
@@ -633,6 +664,16 @@
         "skip": "— überspringen —",
         "cancel": "Abbrechen",
         "continue": "Weiter",
+        "requiredSection": "Pflichtfelder",
+        "optionalSection": "Optional (empfohlen)",
+        "autoDetected": "Auto-erkannt",
+        "samplePrefix": "Beispiel",
+        "duplicateMapping": "Doppelte Zuordnung",
+        "duplicateMappingHint": "Eine CSV-Spalte ist zwei TravStats-Feldern zugeordnet — bitte auflösen",
+        "missingFields": "Pflichtfelder fehlen: {{fields}}",
+        "allMapped": "Alle Pflichtfelder zugeordnet",
+        "optionalSkipped_one": "{{count}} optional übersprungen",
+        "optionalSkipped_other": "{{count}} optional übersprungen",
         "fields": {
           "date": "Datum (YYYY-MM-DD)",
           "fromIata": "Von IATA (3-4 Buchstaben)",

@@ -14,12 +14,12 @@
  *  - Settings sidebar nav: button with exact text "Import" (EN i18n label)
  *  - FR24 tile file input is wrapped inside a <label> — use setInputFiles on
  *    'label:has-text("Choose FR24 CSV") input[type="file"]'
- *  - PreviewModal title is hardcoded "Preview import" (role=dialog aria-labelledby)
- *  - PreviewModal summary text: "{N} ready · {D} duplicates · …"
- *  - Import commit button text: "Import {N} rows" (hardcoded in PreviewModal footer)
- *  - Dedup hint is rendered as a <span class="flag-badge flag-warn"> with the dedupeHint value
- *    (e.g. "exact_match") — we check for the summary text "duplicates" which is always present
- *    when the server returns duplicate rows
+ *  - PreviewModal title is i18n'd (settings:import.preview.title → "Preview import" in EN)
+ *  - PreviewModal summary text: "{N} ready · {D} duplicates · …" (i18n template)
+ *  - Import commit button text: "Import {N} rows" (i18n plural key)
+ *  - Dedup hint is rendered as a yellow badge with the localised dedupe-hint label
+ *    (e.g. "Already imported") — we check for the summary text "duplicates" which is always
+ *    present when the server returns duplicate rows
  */
 import { test, expect } from "@playwright/test";
 import path from "path";

@@ -84,6 +84,41 @@ describe("importPreview.buildPreviewRows", () => {
     expect(rows[0].flags).toContain("duration_mismatch");
   });
 
+  it("duration_mismatch is a soft warning — depUtc/arrUtc/arrivalLocalCorrected stay valid", async () => {
+    // Regression for jay-tau UAT (issue #99): FR24's `Duration` field uses
+    // UTC+4 instead of Asia/Kolkata (+5:30) for BLR-international flights,
+    // tripping duration_mismatch on otherwise valid rows. The frontend used
+    // to silently drop them. The backend MUST keep producing usable
+    // depUtc/arrUtc/arrivalLocalCorrected so the row stays importable.
+    // Reproduces jay-tau's AF191 BLR→CDG observation:
+    //   real ~10h35, IATA-correct math 11h00, FR24's broken Duration 9h30
+    // depUtc = 2023-03-15 01:30 IST = 2023-03-14 20:00 UTC
+    // naive arrUtc = 2023-03-15 08:00 CET = 2023-03-15 07:00 UTC (= 11h flight)
+    // derived arrUtc = depUtc + 9h30 = 2023-03-15 05:30 UTC
+    // delta = 90 min, well past the 30-min threshold
+    const blrRoute: PreviewRowInput[] = [
+      {
+        date: "2023-03-15",
+        depTimeLocal: "01:30:00",
+        arrTimeLocal: "08:00:00",
+        durationSeconds: 9 * 3600 + 30 * 60,
+        fromIata: "BLR",
+        toIata: "CDG",
+        flightNumber: "AF191",
+        source: "fr24",
+        sourceRowIndex: 0,
+      },
+    ];
+    const rows = (await buildPreviewRows(userId, blrRoute)).rows;
+    expect(rows[0].flags).toContain("duration_mismatch");
+    // depUtc must NOT be SAFE_DATE (epoch 0) — frontend uses this directly
+    expect(rows[0].depUtc.getTime()).toBeGreaterThan(0);
+    expect(rows[0].arrUtc.getTime()).toBeGreaterThan(0);
+    expect(rows[0].arrivalLocalCorrected).not.toBe("");
+    // statusDefault should resolve normally — the date is in the past
+    expect(rows[0].statusDefault).toBe("flown");
+  });
+
   it("flag — unresolvable_airport is set for unknown IATA", async () => {
     const bad: PreviewRowInput[] = [
       {

@@ -12,6 +12,7 @@ export function GenericCsvImportTile(): JSX.Element {
   const { t } = useTranslation();
   const [csvText, setCsvText] = useState<string | null>(null);
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
+  const [csvSamples, setCsvSamples] = useState<Record<string, string>>({});
   const [preview, setPreview] = useState<PreviewResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,6 +26,7 @@ export function GenericCsvImportTile(): JSX.Element {
       }
       setCsvText(text);
       setCsvHeaders(Object.keys(records[0]));
+      setCsvSamples(records[0]);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
@@ -69,10 +71,12 @@ export function GenericCsvImportTile(): JSX.Element {
       {csvText && !preview && (
         <ColumnMappingWizard
           csvHeaders={csvHeaders}
+          csvSamples={csvSamples}
           onSubmit={(mapping) => void handleMappingSubmit(mapping)}
           onCancel={() => {
             setCsvText(null);
             setCsvHeaders([]);
+            setCsvSamples({});
           }}
         />
       )}
@@ -80,6 +84,7 @@ export function GenericCsvImportTile(): JSX.Element {
         <PreviewModal
           rows={preview.rows}
           summary={preview.summary}
+          flightsListHref="/flights"
           onCommit={async (rows) => {
             const result = await commitPreviewRows(rows, "imported_generic_csv");
             if (result.failures.length > 0) {
@@ -87,12 +92,15 @@ export function GenericCsvImportTile(): JSX.Element {
                 `Imported ${result.committed} of ${rows.length}. ${result.failures.length} chunk(s) failed: ${result.failures.map((f) => `chunk ${f.chunkIndex}: ${f.error}`).join("; ")}`,
               );
             }
-            setPreview(null);
-            setCsvText(null);
+            return {
+              committed: result.committed,
+              failedChunks: result.failures.length,
+            };
           }}
-          onCancel={() => {
+          onClose={() => {
             setPreview(null);
             setCsvText(null);
+            setCsvSamples({});
           }}
         />
       )}

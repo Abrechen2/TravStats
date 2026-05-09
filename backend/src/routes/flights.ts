@@ -23,7 +23,7 @@ import {
 } from '../services/bulkFlightRefresh';
 import { getProviderQuota } from '../services/apiQuota';
 import { estimateRoute } from '../services/routeEstimationService';
-import { calculateCo2Kg, toSeatClass } from '../services/co2Calculator';
+import { calculateCo2Kg, haversineKm, toSeatClass } from '../services/co2Calculator';
 import { getCachedAirports } from '../services/airportCache';
 import { tzAwareDurationMinutes } from '../utils/timezone';
 import { fromZonedTime } from 'date-fns-tz';
@@ -75,6 +75,7 @@ interface FlightUpdateData {
   actualArrival?: Date | null;
   delayMinutes?: number | null;
   co2Kg?: number | null;
+  routeDistance?: number | null;
   lastModifiedBy?: string;
   nextApiCheckAt?: Date | null;
   depTimeSemantics?: string;
@@ -226,6 +227,22 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
     const userId = req.userId!;
     const data = createFlightSchema.parse(req.body);
 
+    // Soft warning for past-dated `scheduled` rows (G4) — not rejected so
+    // legitimate edge cases (manually re-edited just-departed rows) still
+    // succeed, but flagged for ops review since these are almost always a
+    // status-flip bug or a year-typo in bulk imports.
+    if (data.status === 'scheduled' && data.departureLocal) {
+      const nowIso = new Date().toISOString().slice(0, 19);
+      if (data.departureLocal < nowIso) {
+        logger.warn({
+          operation: 'flight_create_scheduled_in_past',
+          userId,
+          departureLocal: data.departureLocal,
+          flightNumber: data.flightNumber,
+        });
+      }
+    }
+
     const departureUtc = toUtcDate(data.departureLocal, data.depTimezone);
     const arrivalUtc = toUtcDate(data.arrivalLocal, data.arrTimezone);
     const actualDepartureUtc = toUtcDate(data.actualDepartureLocal, data.actualDepartureTz);
@@ -372,6 +389,13 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
           arrLon: enriched.arrival.lon,
           seatClass: toSeatClass(data.seatClass),
         }),
+        // Haversine route distance — see flightsBatch.ts for context.
+        routeDistance: haversineKm(
+          enriched.departure.lat,
+          enriched.departure.lon,
+          enriched.arrival.lat,
+          enriched.arrival.lon,
+        ),
         status: data.status,
         notes: data.notes,
         price: data.price,
@@ -886,7 +910,8 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
       updateData.actualArrival = incomingActualArrUtc;
     }
 
-    // Recalculate CO₂ when coordinates change or on any update (always keep in sync)
+    // Recalculate CO₂ + route distance when coordinates change or on any
+    // update (always keep both in sync — same source of truth).
     const depLat = enrichedDeparture?.lat ?? existingFlight.depLat;
     const depLon = enrichedDeparture?.lon ?? existingFlight.depLon;
     const arrLat = enrichedArrival?.lat  ?? existingFlight.arrLat;
@@ -898,6 +923,7 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
       arrLon,
       seatClass: toSeatClass(data.seatClass ?? existingFlight.seatClass),
     });
+    updateData.routeDistance = haversineKm(depLat, depLon, arrLat, arrLon);
 
     // Set lastModifiedBy when user updates
     updateData.lastModifiedBy = 'user';
