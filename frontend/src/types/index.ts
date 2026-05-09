@@ -207,6 +207,18 @@ export interface Trip {
   }>;
   stops?: TripStop[];
   journalEntries?: TripJournalEntry[];
+  photos?: TripPhoto[];
+}
+
+export interface TripPhoto {
+  id: string;
+  url: string;
+  caption: string | null;
+  takenAt: string | null;
+  sortIdx: number;
+  mimetype: string;
+  sizeBytes: number;
+  createdAt: string;
 }
 
 export interface FlightInput {
