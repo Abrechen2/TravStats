@@ -14,6 +14,7 @@ import FlightEditModal from "../../FlightEditModal";
 import { FlightPanel } from "../../FlightPanel";
 import MapContainer3D, { type MapMode } from "../../MapContainer3D";
 import SimplifiedFlightFormV2 from "../../SimplifiedFlightFormV2";
+import SpecialFlightModal from "../../SpecialFlightModal";
 import type { FlightSubmitOptions } from "../../FlightForm/useFlightForm";
 import { buildStatsMapLayer } from "../modes/buildStatsMapLayer";
 
@@ -50,7 +51,9 @@ export function FlightsTab(): JSX.Element {
   const [structuredTotal, setStructuredTotal] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
+  const [editingSpecialFlight, setEditingSpecialFlight] = useState<Flight | null>(null);
   const [showAddFlight, setShowAddFlight] = useState(false);
+  const [showSpecialModal, setShowSpecialModal] = useState(false);
   const { lookup, lookupMany } = useFlightLookup();
   const setSelection = useFlightSelectionStore((s) => s.setSelection);
   const addToast = useToastStore((s) => s.addToast);
@@ -267,8 +270,25 @@ export function FlightsTab(): JSX.Element {
         <SimplifiedFlightFormV2
           onSubmit={handleAddSubmit}
           onCancel={() => setShowAddFlight(false)}
+          onPickSpecialFlight={() => {
+            setShowAddFlight(false);
+            setShowSpecialModal(true);
+          }}
         />
       )}
+      <SpecialFlightModal
+        isOpen={showSpecialModal || editingSpecialFlight !== null}
+        flight={editingSpecialFlight}
+        onClose={() => {
+          setShowSpecialModal(false);
+          setEditingSpecialFlight(null);
+        }}
+        onSaved={() => {
+          setShowSpecialModal(false);
+          setEditingSpecialFlight(null);
+          void refreshAll();
+        }}
+      />
     </div>
   );
 }

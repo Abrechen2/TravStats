@@ -457,6 +457,26 @@
       "name": "Halloween Flyer",
       "description": "A flight on 31 October — ideally in the dark"
     },
+    "SPECIAL_FIRST_SIGHTSEEING": {
+      "name": "First Sightseeing",
+      "description": "Complete your first sightseeing / local round trip"
+    },
+    "SPECIAL_FIRST_ZEROG": {
+      "name": "First ZeroG",
+      "description": "Complete your first zero-gravity parabolic flight"
+    },
+    "SPECIAL_FIRST_ECLIPSE": {
+      "name": "Eclipse Chaser",
+      "description": "Complete your first solar-eclipse chase flight"
+    },
+    "SPECIAL_FIRST_ROCKET": {
+      "name": "Rocket Watcher",
+      "description": "Fly to watch a rocket launch"
+    },
+    "SPECIAL_VARIETY_3": {
+      "name": "Special-Flight Collector",
+      "description": "Collect three different kinds of special flight"
+    },
     "WANDERLUST": {
       "name": "Wanderlust",
       "description": "Have 5 planned flights in your calendar"

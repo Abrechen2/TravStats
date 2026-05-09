@@ -11,7 +11,15 @@ import NavigationBar from "../components/NavigationBar";
 import type { Flight, FlightFilters, FlightInput, Trip } from "../types";
 import Filters from "../components/Filters";
 import SimplifiedFlightFormV2 from "../components/SimplifiedFlightFormV2";
+import SpecialFlightModal from "../components/SpecialFlightModal";
 import FlightEditModal from "../components/FlightEditModal";
+import FlightRowActions from "../components/FlightRowActions";
+import SpecialTypeBadge from "../components/specialFlights/SpecialTypeBadge";
+import { buildDuplicateInput } from "../lib/flightDuplicate";
+import type { SpecialType } from "../components/specialFlights/specialTypeMeta";
+import SpecialFlightFilter, {
+  type SpecialTypeFilter,
+} from "../components/specialFlights/SpecialFlightFilter";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import { useToastStore } from "../store/toastStore";
 import { useSettingsStore } from "../store/settingsStore";
@@ -31,13 +39,15 @@ import { SkeletonTable } from "../components/SkeletonLoader";
 // each flight row is a Link to /trips/:id.
 
 export default function FlightsTablePage(): JSX.Element {
-  const { t } = useTranslation(["flights", "common", "dashboard", "trips"]);
+  const { t } = useTranslation(["flights", "common", "dashboard", "trips", "specialFlights"]);
   const [flights, setFlights] = useState<Flight[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [tripFilter, setTripFilter] = useState<"all" | "with" | "without" | string>("all");
+  const [specialFilter, setSpecialFilter] = useState<SpecialTypeFilter>("all");
   const [filters, setFilters] = useState<FlightFilters>({});
   const [loading, setLoading] = useState(true);
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
+  const [editingSpecialFlight, setEditingSpecialFlight] = useState<Flight | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [flightToDelete, setFlightToDelete] = useState<string | null>(null);
   const [duplicateMenuFor, setDuplicateMenuFor] = useState<string | null>(null);
@@ -46,6 +56,7 @@ export default function FlightsTablePage(): JSX.Element {
   );
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [showAddFlight, setShowAddFlight] = useState(false);
+  const [showSpecialModal, setShowSpecialModal] = useState(false);
   const addToast = useToastStore((state) => state.addToast);
   const timezone = useSettingsStore((s) => s.display.timezone);
 
@@ -131,44 +142,7 @@ export default function FlightsTablePage(): JSX.Element {
 
   const handleDuplicate = async (flight: Flight, mode: "return" | "same") => {
     setDuplicateMenuFor(null);
-
-    const depAirport = {
-      iata: flight.depIata,
-      icao: flight.depIcao,
-      name: flight.depName,
-      lat: flight.depLat,
-      lon: flight.depLon,
-    };
-    const arrAirport = {
-      iata: flight.arrIata,
-      icao: flight.arrIcao,
-      name: flight.arrName,
-      lat: flight.arrLat,
-      lon: flight.arrLon,
-    };
-
-    // Convert nulls to undefined — Zod .optional() rejects null on the
-    // backend, see project memory note about Zod nullable+optional.
-    const nullToUndef = <T,>(v: T | null | undefined): T | undefined => v ?? undefined;
-
-    const input: FlightInput = {
-      airline: nullToUndef(flight.airline),
-      operatingAirline: nullToUndef(flight.operatingAirline),
-      flightNumber: nullToUndef(flight.flightNumber),
-      aircraft: nullToUndef(flight.aircraft),
-      departure: mode === "return" ? arrAirport : depAirport,
-      arrival: mode === "return" ? depAirport : arrAirport,
-      // "duplicated" is a status without time requirements (5-status set
-      // historical/scheduled/flown/cancelled/duplicated). User changes it to
-      // scheduled in the edit modal once they pick real dates. Times are
-      // deliberately not copied — they belong to a specific trip instance.
-      status: "duplicated",
-      category: nullToUndef(flight.category),
-      tags: flight.tags ?? undefined,
-      companions: flight.companions ?? undefined,
-      notes: nullToUndef(flight.notes),
-    };
-
+    const input = buildDuplicateInput(flight, mode);
     try {
       const created = await flightsApi.create(input, { force: true });
       addToast("success", t("flights:table.toast.duplicated"));
@@ -263,12 +237,31 @@ export default function FlightsTablePage(): JSX.Element {
   const displayedFlights = useMemo(
     () =>
       sortedFlights.filter((f) => {
-        if (tripFilter === "all") return true;
-        if (tripFilter === "with") return !!f.tripId;
-        if (tripFilter === "without") return !f.tripId;
-        return f.tripId === tripFilter;
+        // Trip filter
+        if (tripFilter === "with" && !f.tripId) return false;
+        if (tripFilter === "without" && f.tripId) return false;
+        if (
+          tripFilter !== "all" &&
+          tripFilter !== "with" &&
+          tripFilter !== "without" &&
+          f.tripId !== tripFilter
+        )
+          return false;
+
+        // Special-type filter
+        if (specialFilter === "standard" && f.specialType) return false;
+        if (specialFilter === "special" && !f.specialType) return false;
+        if (
+          specialFilter !== "all" &&
+          specialFilter !== "standard" &&
+          specialFilter !== "special" &&
+          f.specialType !== specialFilter
+        )
+          return false;
+
+        return true;
       }),
-    [sortedFlights, tripFilter]
+    [sortedFlights, tripFilter, specialFilter]
   );
 
   const formatDate = (date: string | null): string =>
@@ -362,6 +355,9 @@ export default function FlightsTablePage(): JSX.Element {
                     </button>
                   ))}
                 </div>
+
+                {/* Special-type filter chips */}
+                <SpecialFlightFilter value={specialFilter} onChange={setSpecialFilter} />
 
                 <div className="overflow-x-auto">
                   {loading ? (
@@ -501,6 +497,11 @@ export default function FlightsTablePage(): JSX.Element {
                                   {resolveAirlineDisplay(flight.airline, flight.flightNumber) ||
                                     t("common:labels.notAvailable")}
                                 </div>
+                                {flight.specialType && (
+                                  <div className="mt-1">
+                                    <SpecialTypeBadge type={flight.specialType as SpecialType} />
+                                  </div>
+                                )}
                               </td>
                               <td className="px-4 py-3" style={{ color: "var(--text-muted)" }}>
                                 {flight.flightNumber || t("common:labels.notAvailable")}
@@ -623,70 +624,24 @@ export default function FlightsTablePage(): JSX.Element {
                                 )}
                               </td>
                               <td className="px-4 py-3 text-right whitespace-nowrap">
-                                <div className="flex items-center justify-end gap-2">
-                                  <button
-                                    onClick={() => setEditingFlight(flight)}
-                                    className="px-3 py-1 text-xs font-medium rounded flex-shrink-0"
-                                    style={{
-                                      background: "rgba(56,139,253,0.15)",
-                                      color: "#388bfd",
-                                    }}
-                                  >
-                                    {t("common:buttons.edit")}
-                                  </button>
-                                  <div className="relative flex-shrink-0" data-duplicate-menu>
-                                    <button
-                                      onClick={() =>
-                                        setDuplicateMenuFor(
-                                          duplicateMenuFor === flight.id ? null : flight.id
-                                        )
-                                      }
-                                      className="px-3 py-1 text-xs font-medium rounded"
-                                      style={{
-                                        background: "rgba(139,148,158,0.15)",
-                                        color: "var(--text-muted)",
-                                      }}
-                                      aria-label={t("flights:table.duplicate.label")}
-                                      title={t("flights:table.duplicate.label")}
-                                    >
-                                      {t("flights:table.duplicate.label")}
-                                    </button>
-                                    {duplicateMenuFor === flight.id && (
-                                      <div
-                                        className="absolute right-0 mt-1 rounded shadow-lg z-20 min-w-[180px]"
-                                        style={{
-                                          background: "var(--bg-surface)",
-                                          border: "1px solid var(--color-border)",
-                                        }}
-                                      >
-                                        <button
-                                          onClick={() => void handleDuplicate(flight, "same")}
-                                          className="block w-full text-left px-3 py-2 text-xs hover:bg-[var(--bg-elevated)]"
-                                          style={{ color: "var(--text-primary)" }}
-                                        >
-                                          {t("flights:table.duplicate.same")}
-                                        </button>
-                                        <button
-                                          onClick={() => void handleDuplicate(flight, "return")}
-                                          className="block w-full text-left px-3 py-2 text-xs hover:bg-[var(--bg-elevated)]"
-                                          style={{ color: "var(--text-primary)" }}
-                                        >
-                                          {t("flights:table.duplicate.return")}
-                                        </button>
-                                      </div>
-                                    )}
-                                  </div>
-                                  <button
-                                    onClick={() => handleDeleteClick(flight.id)}
-                                    className="px-3 py-1 text-xs font-medium rounded flex-shrink-0"
-                                    style={{
-                                      background: "rgba(248,81,73,0.15)",
-                                      color: "var(--danger)",
-                                    }}
-                                  >
-                                    {t("common:buttons.delete")}
-                                  </button>
-                                </div>
+                                <FlightRowActions
+                                  flight={flight}
+                                  openDuplicateMenuFor={duplicateMenuFor}
+                                  onToggleDuplicateMenu={setDuplicateMenuFor}
+                                  onEdit={(f) => {
+                                    // Special flights → SpecialFlightModal so the user
+                                    // edits eclipse coords / parabolas / etc. through the
+                                    // same UI that created them, not the generic edit
+                                    // modal (which hides those fields entirely).
+                                    if (f.specialType) {
+                                      setEditingSpecialFlight(f);
+                                    } else {
+                                      setEditingFlight(f);
+                                    }
+                                  }}
+                                  onDuplicate={(f, mode) => void handleDuplicate(f, mode)}
+                                  onDelete={handleDeleteClick}
+                                />
                               </td>
                             </tr>
                           );
@@ -741,8 +696,28 @@ export default function FlightsTablePage(): JSX.Element {
           <SimplifiedFlightFormV2
             onSubmit={handleAddFlight}
             onCancel={() => setShowAddFlight(false)}
+            onPickSpecialFlight={() => {
+              setShowAddFlight(false);
+              setShowSpecialModal(true);
+            }}
           />
         )}
+
+        {/* Special Flight Modal — create (showSpecialModal) OR edit (editingSpecialFlight) */}
+        <SpecialFlightModal
+          isOpen={showSpecialModal || !!editingSpecialFlight}
+          flight={editingSpecialFlight}
+          onClose={() => {
+            setShowSpecialModal(false);
+            setEditingSpecialFlight(null);
+          }}
+          onSaved={() => {
+            setShowSpecialModal(false);
+            setEditingSpecialFlight(null);
+            addToast("success", t("flights:table.toast.updated"));
+            void loadFlights();
+          }}
+        />
 
         {/* Delete Confirmation Modal */}
         <ConfirmModal

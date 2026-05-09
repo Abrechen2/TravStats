@@ -1,0 +1,108 @@
+{
+  "button": {
+    "add": "+ Sonder-Flug"
+  },
+  "chooser": {
+    "title": "Sonder-Flug?",
+    "description": "Rundflug, Sonnenfinsternis, Raketenstart, ZeroG …",
+    "cta": "Sonder-Flug"
+  },
+  "modal": {
+    "title": "Sonder-Flug erfassen",
+    "editTitle": "Sonder-Flug bearbeiten",
+    "subtitle": "Nicht-Linien-Flug dokumentieren"
+  },
+  "type": {
+    "sightseeing": "Rundflug",
+    "event": "Event-Flug",
+    "zerog": "ZeroG / Parabelflug"
+  },
+  "typeDescription": {
+    "sightseeing": "Lokaler Rundflug, Start = Ziel",
+    "event": "Sonnenfinsternis, Raketenstart, Polarlicht",
+    "zerog": "Parabelflug / Schwerelosigkeit"
+  },
+  "subtype": {
+    "eclipse": "Sonnenfinsternis",
+    "rocket_launch": "Raketenstart",
+    "aurora": "Polarlicht",
+    "other": "Anderes Ereignis"
+  },
+  "specialType": {
+    "sightseeing": "Rundflug",
+    "eclipse": "Sonnenfinsternis",
+    "rocket_launch": "Raketenstart",
+    "zerog": "ZeroG",
+    "aurora": "Polarlicht",
+    "training": "Schulungsflug",
+    "ferry": "Überführung",
+    "test": "Testflug"
+  },
+  "filter": {
+    "label": "Sonder-Flüge",
+    "all": "Alle",
+    "standardOnly": "Nur Linienflüge",
+    "allSpecial": "Nur Sonder-Flüge"
+  },
+  "legend": {
+    "label": "Sonder-Flüge"
+  },
+  "field": {
+    "airport": "Flughafen",
+    "departureAirport": "Start-Flughafen",
+    "arrivalAirport": "Ziel-Flughafen",
+    "aircraft": "Luftfahrzeug",
+    "aircraftHint": "z.B. Heli H125, Ballon D-XYZA, Cessna 172",
+    "event_label": "Ereignis-Beschreibung",
+    "event_lat": "Ereignis-Breite",
+    "event_lon": "Ereignis-Länge",
+    "pattern_lat": "Pattern-Zentrum Breite",
+    "pattern_lon": "Pattern-Zentrum Länge",
+    "parabolas": "Anzahl Parabeln",
+    "provider": "Anbieter",
+    "providerOther": "Anbieter-Name",
+    "departureTime": "Abflug",
+    "arrivalTime": "Ankunft",
+    "notes": "Notizen",
+    "tags": "Tags (kommagetrennt)",
+    "companions": "Begleitung (kommagetrennt)"
+  },
+  "picker": {
+    "provider_other": "Sonstiger Anbieter"
+  },
+  "subtype_label": {
+    "question": "Was für ein Ereignis?"
+  },
+  "step": {
+    "pick_type": "Typ wählen",
+    "back": "← Typ ändern"
+  },
+  "placeholder": {
+    "eclipse": "Totale Sonnenfinsternis 2026-08-12 — Zentrallinie",
+    "rocket_launch": "Starship IFT-X, Boca Chica",
+    "aurora": "Polarlicht 2026-11-15, 65°N",
+    "tags": "z.B. bucket-list, jahrestag",
+    "companions": "z.B. Max, Anna"
+  },
+  "actions": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "saving": "Speichere..."
+  },
+  "error": {
+    "missingAirport": "Bitte einen Flughafen auswählen.",
+    "invalidCoordinates": "Ungültige Koordinaten.",
+    "saveFailed": "Speichern fehlgeschlagen."
+  },
+  "location": {
+    "searchLabel": "Ort suchen",
+    "searchPlaceholder": "Ort eingeben …",
+    "searchHint": "z. B. »Tromsø«, »Kennedy Space Center«, »Mauna Kea«",
+    "noResults": "Keine Treffer.",
+    "searchError": "Suche fehlgeschlagen. Bitte erneut versuchen.",
+    "advanced": "Erweitert",
+    "clear": "✕ Position zurücksetzen",
+    "attribution": "© OpenStreetMap Mitwirkende",
+    "mapAriaLabel": "Karte zur Auswahl der Ereignis-Position"
+  }
+}
