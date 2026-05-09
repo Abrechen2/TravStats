@@ -1,0 +1,2 @@
+flight_date,origin,dest,dpt_local,arr_local,flight_no,carrier,plane,tail,seat_no,extra_col
+2024-06-15,MUC,FCO,09:30:00,11:15:00,LH1844,Lufthansa,A320,D-AIPA,14C,unrelated

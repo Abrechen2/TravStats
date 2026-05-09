@@ -12,6 +12,7 @@ export function GenericCsvImportTile(): JSX.Element {
   const { t } = useTranslation();
   const [csvText, setCsvText] = useState<string | null>(null);
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
+  const [csvSamples, setCsvSamples] = useState<Record<string, string>>({});
   const [preview, setPreview] = useState<PreviewResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,6 +26,7 @@ export function GenericCsvImportTile(): JSX.Element {
       }
       setCsvText(text);
       setCsvHeaders(Object.keys(records[0]));
+      setCsvSamples(records[0]);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
@@ -69,10 +71,12 @@ export function GenericCsvImportTile(): JSX.Element {
       {csvText && !preview && (
         <ColumnMappingWizard
           csvHeaders={csvHeaders}
+          csvSamples={csvSamples}
           onSubmit={(mapping) => void handleMappingSubmit(mapping)}
           onCancel={() => {
             setCsvText(null);
             setCsvHeaders([]);
+            setCsvSamples({});
           }}
         />
       )}
@@ -96,6 +100,7 @@ export function GenericCsvImportTile(): JSX.Element {
           onClose={() => {
             setPreview(null);
             setCsvText(null);
+            setCsvSamples({});
           }}
         />
       )}
