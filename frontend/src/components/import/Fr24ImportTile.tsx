@@ -52,6 +52,7 @@ export function Fr24ImportTile(): JSX.Element {
         <PreviewModal
           rows={preview.rows}
           summary={preview.summary}
+          flightsListHref="/flights"
           onCommit={async (rows) => {
             const result = await commitPreviewRows(rows, "imported_fr24");
             if (result.failures.length > 0) {
@@ -59,9 +60,12 @@ export function Fr24ImportTile(): JSX.Element {
                 `Imported ${result.committed} of ${rows.length}. ${result.failures.length} chunk(s) failed: ${result.failures.map((f) => `chunk ${f.chunkIndex}: ${f.error}`).join("; ")}`,
               );
             }
-            setPreview(null);
+            return {
+              committed: result.committed,
+              failedChunks: result.failures.length,
+            };
           }}
-          onCancel={() => setPreview(null)}
+          onClose={() => setPreview(null)}
         />
       )}
     </ImportTileShell>
