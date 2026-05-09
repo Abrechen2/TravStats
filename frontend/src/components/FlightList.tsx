@@ -6,6 +6,8 @@ import { formatCurrency as formatCurrencyUtil } from "../lib/units";
 import { resolveAirlineDisplay } from "../lib/airlineUtils";
 import AirlineLogo from "./AirlineLogo";
 import DataSourceBadges from "./DataSourceBadges";
+import SpecialTypeBadge from "./specialFlights/SpecialTypeBadge";
+import type { SpecialType } from "./specialFlights/specialTypeMeta";
 
 interface FlightListProps {
   flights: Flight[];
@@ -115,6 +117,9 @@ export default function FlightList({
                   </h3>
                   {getStatusBadge(flight.status)}
                   {getCategoryBadge(flight.category)}
+                  {flight.specialType && (
+                    <SpecialTypeBadge type={flight.specialType as SpecialType} />
+                  )}
                   {flight.delayMinutes != null && flight.delayMinutes !== 0 && (
                     <span
                       data-testid="delay-badge"

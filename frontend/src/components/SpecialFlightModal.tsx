@@ -220,15 +220,10 @@ export default function SpecialFlightModal({
     setError("");
   };
 
-  const toIsoOrUndef = (local: string): string | undefined => {
-    if (!local) return undefined;
-    const d = new Date(local);
-    if (Number.isNaN(d.getTime())) return undefined;
-    return d.toISOString();
-  };
+  const orUndef = (s: string): string | undefined => (s ? s : undefined);
 
   // Typical duration in minutes per special-flight kind. Used to auto-fill
-  // arrival when the user only provided departureTime. Loosely based on
+  // arrival when the user only provided departureLocal. Loosely based on
   // real-world averages: sightseeing loops ~1h, event flights ~2h, ZeroG
   // parabolic campaigns ~1.5h.
   const defaultDurationMinutes = (k: SpecialKind | null): number => {
@@ -238,36 +233,74 @@ export default function SpecialFlightModal({
     return 60;
   };
 
-  // Resolve times into the shape the backend Zod schema expects. The backend
-  // rejects non-historical flights without a valid duration, which trips
-  // users who leave the times blank (typical for sightseeing loops they just
-  // want to log). So:
+  // Add `+minutes` to a "YYYY-MM-DDTHH:mm" wall-clock string, returning the
+  // same shape. Tz-naive — purely arithmetic on the local clock, which is
+  // exactly what the canonical-UTC submit contract wants for arrivalLocal.
+  const addMinutesToLocal = (local: string, minutes: number): string => {
+    const d = new Date(local);
+    if (Number.isNaN(d.getTime())) return local;
+    d.setMinutes(d.getMinutes() + minutes);
+    const pad = (n: number): string => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+      d.getHours()
+    )}:${pad(d.getMinutes())}`;
+  };
+
+  // Resolve times into the V2 canonical-UTC submit contract shape: pairs of
+  // local wall-clock + IANA timezone. Timezones come from the picked
+  // airports. The backend rejects non-historical flights without a valid
+  // duration, so:
   //  - both empty → flip status to "historical" so the refine allows nulls.
-  //  - departure set, arrival empty → estimate arrival = departure + kind-default.
+  //  - departure set, arrival empty → estimate arrival = dep + kind-default.
   //  - both set → pass through untouched.
   const resolveTimesAndStatus = (): Pick<
     FlightInput,
-    "departureTime" | "arrivalTime" | "status"
+    "departureLocal" | "depTimezone" | "arrivalLocal" | "arrTimezone" | "status"
   > => {
-    const dep = toIsoOrUndef(departureTime);
-    const arr = toIsoOrUndef(arrivalTime);
+    const dep = orUndef(departureTime);
+    const arr = orUndef(arrivalTime);
+    const depTz = departureAirport?.timezone ?? undefined;
+    const arrTz = arrivalAirport?.timezone ?? departureAirport?.timezone ?? undefined;
     const baseStatus = flight?.status ?? "scheduled";
 
     if (!dep && !arr) {
-      return { departureTime: undefined, arrivalTime: undefined, status: "historical" };
+      return {
+        departureLocal: undefined,
+        depTimezone: undefined,
+        arrivalLocal: undefined,
+        arrTimezone: undefined,
+        status: "historical",
+      };
     }
     if (dep && !arr) {
-      const estArr = new Date(
-        new Date(dep).getTime() + defaultDurationMinutes(kind) * 60_000
-      ).toISOString();
-      return { departureTime: dep, arrivalTime: estArr, status: baseStatus };
+      const estArr = addMinutesToLocal(dep, defaultDurationMinutes(kind));
+      return {
+        departureLocal: dep,
+        depTimezone: depTz,
+        arrivalLocal: estArr,
+        arrTimezone: arrTz,
+        status: baseStatus,
+      };
     }
-    return { departureTime: dep, arrivalTime: arr, status: baseStatus };
+    return {
+      departureLocal: dep,
+      depTimezone: depTz,
+      arrivalLocal: arr,
+      arrTimezone: arrTz,
+      status: baseStatus,
+    };
   };
 
   const baseSharedFields = (): Pick<
     FlightInput,
-    "departureTime" | "arrivalTime" | "notes" | "tags" | "companions" | "status"
+    | "departureLocal"
+    | "depTimezone"
+    | "arrivalLocal"
+    | "arrTimezone"
+    | "notes"
+    | "tags"
+    | "companions"
+    | "status"
   > => ({
     ...resolveTimesAndStatus(),
     notes: notes.trim() || undefined,

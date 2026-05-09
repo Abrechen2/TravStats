@@ -36,6 +36,10 @@ export interface FlightLookupStepProps {
     data: { subject?: string; text?: string; html?: string } | undefined
   ) => void;
   setShowFlightReview: (v: boolean) => void;
+  // Optional: launches SpecialFlightModal. When provided, a "Sonder-Flug"
+  // card appears below the Boarding Pass card. The parent is responsible
+  // for closing this form and opening the special-flight modal.
+  onPickSpecialFlight?: () => void;
 }
 
 export default function FlightLookupStep({
@@ -61,8 +65,9 @@ export default function FlightLookupStep({
   setParserProvider,
   setOriginalEmailData,
   setShowFlightReview,
+  onPickSpecialFlight,
 }: FlightLookupStepProps): JSX.Element {
-  const { t } = useTranslation(["flights", "common"]);
+  const { t } = useTranslation(["flights", "common", "specialFlights"]);
 
   return (
     <div className="space-y-4">
@@ -151,6 +156,31 @@ export default function FlightLookupStep({
           </button>
         </div>
       </div>
+
+      {/* Special flight — same visual weight as Boarding Pass, purple accent.
+          Dark-only (V2): no light/dark toggle. */}
+      {onPickSpecialFlight && (
+        <div className="bg-gradient-to-r from-[var(--bg-elevated)] to-[var(--bg-muted)] border border-purple-700 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span aria-hidden className="text-2xl">
+                ✨
+              </span>
+              <div>
+                <h3 className={`font-semibold text-lg ${textClass}`}>
+                  {t("specialFlights:chooser.title")}
+                </h3>
+                <p className={`text-sm ${mutedTextClass}`}>
+                  {t("specialFlights:chooser.description")}
+                </p>
+              </div>
+            </div>
+            <button type="button" onClick={onPickSpecialFlight} className="btn-primary">
+              {t("specialFlights:chooser.pickAction")}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Flight Number Input */}
       <div>

@@ -24,12 +24,16 @@ interface SimplifiedFlightFormProps {
   onSubmit: (flight: FlightInput, opts?: FlightSubmitOptions) => Promise<void>;
   onCancel: () => void;
   onBatchComplete?: (newAchievements?: UserAchievement[]) => void;
+  // When provided, a "Sonder-Flug" card is shown in the lookup step. The
+  // parent handles closing this form and opening SpecialFlightModal.
+  onPickSpecialFlight?: () => void;
 }
 
 export default function SimplifiedFlightFormV2({
   onSubmit,
   onCancel,
   onBatchComplete,
+  onPickSpecialFlight,
 }: SimplifiedFlightFormProps): JSX.Element {
   const { t } = useTranslation(["flights", "errors", "common"]);
 
@@ -93,6 +97,7 @@ export default function SimplifiedFlightFormV2({
               setParserProvider={form.setParserProvider}
               setOriginalEmailData={form.setOriginalEmailData}
               setShowFlightReview={form.setShowFlightReview}
+              onPickSpecialFlight={onPickSpecialFlight}
             />
           )}
 

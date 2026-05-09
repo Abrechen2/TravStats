@@ -114,6 +114,24 @@ export interface Flight {
   tripId?: string | null;
   bookingId?: string | null;
   trip?: { id: string; name: string; color: string } | null;
+  // Sonder-Flug (special flights) — flight subtype, see backend schema.
+  // null/undefined → standard line flight, the rest of these fields unused.
+  specialType?:
+    | "sightseeing"
+    | "eclipse"
+    | "rocket_launch"
+    | "zerog"
+    | "aurora"
+    | "training"
+    | "ferry"
+    | "test"
+    | null;
+  eventLat?: number | null;
+  eventLon?: number | null;
+  eventLabel?: string | null;
+  patternLat?: number | null;
+  patternLon?: number | null;
+  specialData?: Record<string, unknown> | null;
 }
 
 export interface Booking {
@@ -284,6 +302,23 @@ export interface FlightInput {
   frequentFlyerNumber?: string;
   bookingClassLetter?: string;
   coPassengers?: string[];
+  // Sonder-Flug (special flights) — see Flight interface
+  specialType?:
+    | "sightseeing"
+    | "eclipse"
+    | "rocket_launch"
+    | "zerog"
+    | "aurora"
+    | "training"
+    | "ferry"
+    | "test"
+    | null;
+  eventLat?: number | null;
+  eventLon?: number | null;
+  eventLabel?: string | null;
+  patternLat?: number | null;
+  patternLon?: number | null;
+  specialData?: Record<string, unknown> | null;
 }
 
 export interface ParsedBooking {
