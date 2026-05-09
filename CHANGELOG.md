@@ -4,6 +4,28 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-beta.17] - 2026-05-09 (Beta)
+
+### Fixed
+- **Globe canvas still disappeared on click after beta.16** — Removing
+  `flyToArc` and adding try/catch wasn't enough. Per Gemini's diagnosis
+  (matching upstream issue #512), the actual root cause is MapLibre 5's
+  `locationOccludedOpacity` feature: it performs an internal occlusion
+  pass that does not restore `gl.SCISSOR_TEST`, leaving the shared GL
+  context corrupted on next deck.gl draw. With `interleaved: true` in
+  `MapboxOverlay`, deck.gl and MapLibre share the WebGL context, so any
+  popup creation triggered a state leak that blanked the canvas.
+- **Replaced `maplibregl.Popup` with a custom React overlay** —
+  Pinned-card now mounts as an absolutely-positioned `<div>` whose
+  `left/top` come from `map.project([lng, lat])`, refreshed on every
+  MapLibre `render` event. Back-of-globe culling is replicated in JS
+  via the same dot-product math the EarthOcclusionExtension shader
+  uses. Same UX (anchored, follows camera, fades when occluded), zero
+  GL-state risk.
+- **`PinnedCardBoundary` error boundary around the card** — Defense
+  in depth: a throw inside the React subtree now logs and renders
+  null, instead of bubbling up and unmounting GlobeView.
+
 ## [2.0.0-beta.16] - 2026-05-09 (Beta)
 
 ### Fixed
