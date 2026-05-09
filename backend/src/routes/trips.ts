@@ -16,6 +16,8 @@ import {
 } from "../schemas/trip";
 import logger from "../utils/logger";
 import { detectTrips } from "../services/tripDetectionService";
+import { summariseTrip, checkOllamaAvailable } from "../services/tripSummaryService";
+import { emailParseLimiter } from "../middleware/rateLimit";
 import {
   uploadTripPhotos,
   uploadTripCover,
@@ -492,6 +494,35 @@ router.delete(
       if (!existing) throw new AppError("Journal entry not found", 404);
       await prisma.tripJournalEntry.delete({ where: { id: req.params.entryId } });
       res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/* ─────────── LLM summary (iter 9) ─────────── */
+
+/** POST /trips/:id/summarize — generate + persist a 3-paragraph summary */
+router.post(
+  "/trips/:id/summarize",
+  authenticate,
+  requireWriteScope,
+  emailParseLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      await resolveTrip(userId, req.params.id);
+
+      const ollamaUp = await checkOllamaAvailable();
+      if (!ollamaUp) {
+        throw new AppError(
+          "LLM service unavailable. Set OLLAMA_URL and ensure the model is pulled.",
+          503,
+        );
+      }
+
+      const result = await summariseTrip(req.params.id, userId);
+      res.json(result);
     } catch (error) {
       next(error);
     }

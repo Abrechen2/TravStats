@@ -196,6 +196,17 @@ export const tripsApi = {
     );
     return data;
   },
+
+  /* ─────────── LLM summary ─────────── */
+
+  summarize: async (
+    tripId: string,
+  ): Promise<{ summary: string; model: string; durationMs: number }> => {
+    const { data } = await api.post<{ summary: string; model: string; durationMs: number }>(
+      `/trips/${tripId}/summarize`,
+    );
+    return data;
+  },
 };
 
 export interface CreateStopInput {
