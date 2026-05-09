@@ -9,6 +9,10 @@ import { flightsApi } from "../../../lib/api/flights";
 import { logger } from "../../../lib/logger";
 import { DOMAINS } from "../../../shared/domains";
 import { useCruiseSelectionStore } from "../../../store/cruiseSelectionStore";
+import {
+  intervalOverlapsRange,
+  useDashboardFilterStore,
+} from "../../../store/dashboardFilterStore";
 import { useFlightSelectionStore } from "../../../store/flightSelectionStore";
 import type { Flight, GeoJSONFeature } from "../../../types";
 import type { Cruise } from "../../../types/cruise";
@@ -71,6 +75,44 @@ export function AllTab(): JSX.Element {
   const setCruiseSelection = useCruiseSelectionStore((s) => s.setSelection);
   const navigate = useNavigate();
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
+
+  // Global dashboard filter — year populates `time.from/to`, domain
+  // pill row toggles flight/cruise visibility on the Alle tab.
+  const filterTime = useDashboardFilterStore((s) => s.time);
+  const filterDomains = useDashboardFilterStore((s) => s.domains);
+  const flightsVisible = filterDomains.includes("flight");
+  const cruisesVisible = filterDomains.includes("cruise");
+
+  // Filter flights by departureTime within the year/time range.
+  // Flights without a departureTime stay visible (treat NaN as
+  // unbounded, mirroring intervalOverlapsRange's permissive policy).
+  const visibleFlights = useMemo<GeoJSONFeature[]>(() => {
+    if (!flightsVisible) return [];
+    const from = filterTime.from;
+    const to = filterTime.to;
+    if (!from && !to) return flights;
+    const fromMs = from ? Date.parse(from) : Number.NEGATIVE_INFINITY;
+    const toMs = to ? Date.parse(to) : Number.POSITIVE_INFINITY;
+    return flights.filter((f) => {
+      const dep = f.properties.departureTime;
+      if (!dep) return true;
+      const t = Date.parse(dep);
+      if (Number.isNaN(t)) return true;
+      return t >= fromMs && t <= toMs;
+    });
+  }, [flights, flightsVisible, filterTime.from, filterTime.to]);
+
+  // Cruises filtered by interval overlap (cruise has start + optional end);
+  // hidden entirely when domain is off.
+  const visibleCruises = useMemo<Cruise[]>(() => {
+    if (!cruisesVisible) return [];
+    if (!filterTime.from && !filterTime.to) return cruises;
+    return cruises.filter((c) =>
+      // Cruises with a null startDate stay visible — same permissive
+      // policy intervalOverlapsRange uses for unparseable dates.
+      intervalOverlapsRange(c.startDate ?? "", c.endDate, filterTime.from, filterTime.to)
+    );
+  }, [cruises, cruisesVisible, filterTime.from, filterTime.to]);
 
   // Map click → selection store. DeckGLMap handles dim/highlight + tooltip.
   const handleFlightClick = useCallback(
@@ -171,8 +213,8 @@ export function AllTab(): JSX.Element {
   // auto-populate; until then only cruise legs appear.
   const journeyLayers = useMemo<Layer[]>(() => {
     if (allMode !== "journey") return [];
-    return buildJourneyLayers(flights, cruises, null);
-  }, [allMode, flights, cruises]);
+    return buildJourneyLayers(visibleFlights, visibleCruises, null);
+  }, [allMode, visibleFlights, visibleCruises]);
 
   const handleVisModeChange = useCallback(
     (next: MapMode): void => {
@@ -262,8 +304,8 @@ export function AllTab(): JSX.Element {
 
   const activityPanel = (
     <UnifiedActivityPanel
-      flights={flights}
-      cruises={cruises}
+      flights={visibleFlights}
+      cruises={visibleCruises}
       isOpen={sidebarOpen}
       onClose={() => setSidebarOpen(false)}
       onFlightSelect={handlePanelFlightSelect}
@@ -300,6 +342,7 @@ export function AllTab(): JSX.Element {
           onCruiseOpen={(cruiseId) => navigate(`/cruises/${cruiseId}`)}
           flightRouteColor={FLIGHT_RGB}
           availableModes={ALL_TAB_MAP_MODES}
+          cruisesOverride={visibleCruises}
         />
         {toggleAndLegend}
         {activityPanel}
@@ -311,7 +354,7 @@ export function AllTab(): JSX.Element {
   return (
     <div style={{ position: "absolute", inset: 0 }}>
       <MapContainer3D
-        flights={flights}
+        flights={visibleFlights}
         visMode={visMode}
         onVisModeChange={handleVisModeChange}
         flightRouteColor={FLIGHT_RGB}
@@ -320,6 +363,7 @@ export function AllTab(): JSX.Element {
         onFlightOpen={handlePanelFlightDetails}
         onCruiseOpen={(cruiseId) => navigate(`/cruises/${cruiseId}`)}
         availableModes={ALL_TAB_MAP_MODES}
+        cruisesOverride={visibleCruises}
       />
       {toggleAndLegend}
       {activityPanel}
