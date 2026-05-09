@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MapGL, { useControl, type MapRef } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
+import { buildMarkerTooltip } from "./map/markerTooltip";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
 import {
   EarthOcclusionExtension,
@@ -255,7 +256,13 @@ function DeckGLOverlay({ layers }: DeckOverlayProps): null {
   // Caller must gate this component until MapLibre is confirmed in
   // globe projection — see `mapReady` in GlobeView.
   const overlay = useControl<MapboxOverlay>(
-    () => new MapboxOverlay({ layers, pickingRadius: 5, interleaved: true })
+    () =>
+      new MapboxOverlay({
+        layers,
+        pickingRadius: 5,
+        interleaved: true,
+        getTooltip: buildMarkerTooltip,
+      })
   );
   overlay.setProps({ layers });
   return null;
