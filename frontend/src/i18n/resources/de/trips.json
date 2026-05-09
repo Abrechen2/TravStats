@@ -109,6 +109,11 @@
       "gallery": "Galerie kommt in der nächsten Iteration — sobald Foto-Upload und Speicher-Backend stehen.",
       "map": "Eine reisespezifische Karte folgt in der nächsten Iteration."
     },
+    "map": {
+      "empty": "Diese Reise hat noch keine Geo-Daten — füge Stopps mit Koordinaten oder Flüge / Kreuzfahrten mit Routendaten hinzu.",
+      "clickHint": "Tipp: Auf eine Route oder einen Punkt klicken, um zu zoomen.",
+      "toggleProjectionHint": "Zwischen Globus und flacher Karte umschalten"
+    },
     "logistics": {
       "flights": "Flüge",
       "cruises": "Kreuzfahrten",
