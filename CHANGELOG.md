@@ -4,6 +4,19 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-beta.24] - 2026-05-09 (Beta)
+
+### Added
+- **Filter button shows active state** — When the year dropdown picks
+  a specific year or any domain pill is off, the dashboard top-bar
+  Filter button switches to an accent border + the picked year next to
+  the label, and a "n/m" pill displays how many domains are active.
+  Without this indicator users can't tell at a glance whether they're
+  seeing the full dataset or a filtered slice.
+- **"Filter zurücksetzen" link in the dropdown** — Single click to
+  clear year + domain selection back to the unfiltered defaults.
+  Disabled when no filter is active.
+
 ## [2.0.0-beta.23] - 2026-05-09 (Beta)
 
 ### Fixed

@@ -137,6 +137,8 @@
     "year": "Year",
     "allYears": "All years",
     "domains": "Domains",
+    "reset": "Reset filters",
+    "activeDomainCount": "{{count}} of {{total}} domains shown",
     "timeFrom": "From",
     "timeTo": "To",
     "airline": "Airline",

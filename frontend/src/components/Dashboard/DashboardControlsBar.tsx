@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import { AVAILABLE_DOMAINS } from "../../shared/domains";
+import { useDashboardFilterStore } from "../../store/dashboardFilterStore";
 import type { DashboardMode, DashboardTab } from "../../types/dashboard";
 import { TAB_MODE_REGISTRY } from "../../types/dashboard";
 import { AddDomainPicker } from "./AddDomainPicker";
@@ -45,6 +47,16 @@ export function DashboardControlsBar({
   }, [modeMenuOpen]);
 
   const modes = TAB_MODE_REGISTRY[tab].modes;
+
+  // Filter-button indicator: any non-default state (year picked or
+  // a domain hidden) lights up the button so users can tell at a
+  // glance whether they're seeing the full dataset or a filtered slice.
+  const filterYear = useDashboardFilterStore((s) => s.year);
+  const filterDomains = useDashboardFilterStore((s) => s.domains);
+  const yearActive = filterYear !== null;
+  const domainsHidden = AVAILABLE_DOMAINS.length - filterDomains.length;
+  const domainsFiltered = domainsHidden > 0;
+  const filterActive = yearActive || domainsFiltered;
 
   return (
     <div
@@ -122,21 +134,49 @@ export function DashboardControlsBar({
         )}
       </div>
 
-      {/* Filter button */}
+      {/* Filter button \u2014 lights up + carries an active-state suffix
+          when the year or domain filter has been narrowed. */}
       <button
         type="button"
         onClick={onFilterOpen}
+        aria-pressed={filterActive}
         style={{
-          background: "var(--bg-surface)",
-          border: "1px solid var(--color-border)",
+          background: filterActive ? "var(--map-active-bg, rgba(240,169,71,0.14))" : "var(--bg-surface)",
+          border: filterActive
+            ? "1px solid var(--accent)"
+            : "1px solid var(--color-border)",
           padding: "6px 12px",
           borderRadius: "10px",
-          color: "var(--text-primary)",
+          color: filterActive ? "var(--accent)" : "var(--text-primary)",
           fontSize: "13px",
+          fontWeight: filterActive ? 600 : 400,
           cursor: "pointer",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
         }}
       >
-        {t("dashboard:controls.filter")} {"\u25be"}
+        {t("dashboard:controls.filter")}
+        {yearActive && <span>{filterYear}</span>}
+        {domainsFiltered && (
+          <span
+            aria-label={t("dashboard:filter.activeDomainCount", {
+              count: filterDomains.length,
+              total: AVAILABLE_DOMAINS.length,
+            })}
+            style={{
+              background: "var(--accent)",
+              color: "#0d1117",
+              borderRadius: 999,
+              padding: "1px 6px",
+              fontSize: 11,
+              fontWeight: 700,
+            }}
+          >
+            {filterDomains.length}/{AVAILABLE_DOMAINS.length}
+          </span>
+        )}
+        {"\u25be"}
       </button>
 
       {/* Add action — domain-specific button or universal picker */}

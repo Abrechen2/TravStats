@@ -59,6 +59,15 @@ export function DashboardFilterDropdown({
   const setFlightFilter = useDashboardFilterStore((s) => s.setFlightFilter);
   const cruise = useDashboardFilterStore((s) => s.cruise);
   const setCruiseFilter = useDashboardFilterStore((s) => s.setCruiseFilter);
+  const resetFilter = useDashboardFilterStore((s) => s.reset);
+
+  // "Active" means anything that visibly shrinks the dataset.
+  // Drives the Reset button's enabled state.
+  const yearActive = year !== null;
+  const domainsFiltered = AVAILABLE_DOMAINS.length !== domains.length;
+  const flightFiltered = !!flight.airline;
+  const cruiseFiltered = !!cruise.cruiseLine;
+  const filterActive = yearActive || domainsFiltered || flightFiltered || cruiseFiltered;
 
   const yearOptions = useMemo(() => buildYearOptions(), []);
 
@@ -178,6 +187,33 @@ export function DashboardFilterDropdown({
           />
         </div>
       )}
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          marginTop: 8,
+          paddingTop: 8,
+          borderTop: "1px solid var(--color-border)",
+        }}
+      >
+        <button
+          type="button"
+          onClick={resetFilter}
+          disabled={!filterActive}
+          style={{
+            background: "transparent",
+            border: "none",
+            padding: "4px 8px",
+            color: filterActive ? "var(--accent)" : "var(--text-muted)",
+            fontSize: 12,
+            cursor: filterActive ? "pointer" : "not-allowed",
+            fontWeight: 500,
+          }}
+        >
+          {t("dashboard:filter.reset")}
+        </button>
+      </div>
     </div>
   );
 }
