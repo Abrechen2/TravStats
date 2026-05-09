@@ -4,6 +4,18 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-beta.11] - 2026-05-09 (Beta)
+
+### Fixed
+- **Activity-toggle and legend overlapped on the dashboard `Alle` tab** —
+  The `☰ Aktivität` button and the flight/cruise legend were two
+  independent absolutely-positioned pills with hand-tuned offsets
+  (toggle at `left:12`, legend at `left:128`). Tight gap and variable
+  letter widths caused the legend pill to render on top of the toggle's
+  right edge. Both pills now share a single absolute flex container
+  with `gap:8`, so they auto-flow without offset math; the container as
+  a whole shifts to `left:340` when the sidebar opens.
+
 ## [2.0.0-beta.10] - 2026-05-09 (Beta)
 
 ### Added
