@@ -4,6 +4,28 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-beta.13] - 2026-05-09 (Beta)
+
+### Added
+- **Globe pinned-card content density (Phase B)** — The pinned detail
+  card that opens on click now follows a 3-tier hierarchy: heading
+  (icon + identifier), hero stat (the one number you want to see),
+  and a metadata grid of 3-5 high-value facts. Concrete fields:
+  - **Airport**: visit count + name + longest route from here +
+    top airline + top aircraft + last visit date.
+  - **Port**: visit count + country + region + ships visited
+    (truncated to 3) + longest port-call duration + last call.
+  - **Flight route**: times flown + total kilometres (sum across all
+    aggregated flights on this route) + last flight date + aircraft
+    types + top airline + the existing "Open last flight" CTA.
+  - **Cruise**: cruise line + date range + port count + sea-day count
+    + embark / debark ports.
+  All aggregations are pure helpers in `Globe/cardStats.ts` derived
+  from the `flights` / `cruises` arrays already passed to GlobeView —
+  no extra API roundtrip. Card content extracted into
+  `Globe/PinnedCard.tsx` (~330 LoC) so the GlobeView shell stays
+  focused on map + popup lifecycle. 21 new i18n keys per locale.
+
 ## [2.0.0-beta.12] - 2026-05-09 (Beta)
 
 ### Changed

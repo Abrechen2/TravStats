@@ -27,6 +27,7 @@ import {
   type Quartile,
 } from "./Globe/heatmapUtils";
 import { buildGlobeLayers } from "./Globe/buildGlobeLayers";
+import { PinnedCard } from "./Globe/PinnedCard";
 import type {
   ArcDatum,
   CruisePathDatum,
@@ -1509,99 +1510,13 @@ export default function GlobeView({
       {pinned &&
         popupHostRef.current &&
         createPortal(
-          <div
-            className="rounded-md p-3 text-xs"
-            style={{
-              background: "rgba(13, 17, 23, 0.92)",
-              backdropFilter: "blur(12px)",
-              border: "1px solid rgba(255,255,255,0.22)",
-              color: "rgba(241,245,249,0.95)",
-              fontFamily: "'Inter', sans-serif",
-              boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
-              minWidth: 220,
-              maxWidth: 280,
-            }}
-          >
-            <div className="mb-2 flex items-start justify-between gap-2">
-              <div className="text-[12px] font-semibold">
-                {pinned.kind === "arc" && (
-                  <>
-                    {pinned.data.departure.iata ?? "?"} ↔{" "}
-                    {pinned.data.arrival.iata ?? "?"}
-                  </>
-                )}
-                {pinned.kind === "airport" && <>✈️ {pinned.data.iata}</>}
-                {pinned.kind === "port" && <>⚓ {pinned.data.name}</>}
-                {pinned.kind === "cruise" && <>🚢 {pinned.data.cruiseLabel}</>}
-              </div>
-              <button
-                type="button"
-                aria-label="close"
-                onClick={() => setPinned(null)}
-                className="cursor-pointer rounded px-1 text-[11px] leading-none opacity-70 hover:opacity-100"
-                style={{ background: "rgba(255,255,255,0.08)" }}
-              >
-                ✕
-              </button>
-            </div>
-            {pinned.kind === "arc" && (
-              <div className="space-y-1 text-[11px]">
-                <div className="opacity-85">
-                  {pinned.data.departure.name ?? pinned.data.departure.iata ?? "?"} →{" "}
-                  {pinned.data.arrival.name ?? pinned.data.arrival.iata ?? "?"}
-                </div>
-                <div
-                  style={{
-                    color: `rgb(${pinned.data.color[0]},${pinned.data.color[1]},${pinned.data.color[2]})`,
-                    fontWeight: 600,
-                  }}
-                >
-                  {t("map:globe.timesFlown", { count: pinned.data.count })}
-                </div>
-                {onFlightClick && pinned.data.flightIds.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const last = pinned.data.flightIds[pinned.data.flightIds.length - 1];
-                      onFlightClick(last);
-                    }}
-                    className="mt-2 cursor-pointer rounded px-2 py-1 text-[11px] font-medium transition-colors"
-                    style={{
-                      background: "rgba(240,169,71,0.18)",
-                      border: "1px solid rgba(240,169,71,0.45)",
-                      color: "rgba(255,205,128,1)",
-                    }}
-                  >
-                    {t("map:globe.openLastFlight")}
-                  </button>
-                )}
-              </div>
-            )}
-            {pinned.kind === "airport" && (
-              <div className="space-y-1 text-[11px]">
-                <div className="opacity-85">{pinned.data.name}</div>
-                <div style={{ color: "#fbbf24", fontWeight: 600 }}>
-                  {pinned.data.size}{" "}
-                  {t("map:globe.flight", { count: pinned.data.size })}
-                </div>
-              </div>
-            )}
-            {pinned.kind === "port" && (
-              <div className="space-y-1 text-[11px]">
-                {pinned.data.iata !== pinned.data.name && (
-                  <div className="opacity-85">{pinned.data.iata}</div>
-                )}
-                <div style={{ color: "#7dd3fc", fontWeight: 600 }}>
-                  {pinned.data.size} {t("map:airportMarkers.visits")}
-                </div>
-              </div>
-            )}
-            {pinned.kind === "cruise" && (
-              <div className="text-[11px] opacity-85">
-                {t("map:visMode.tripRoutes")}
-              </div>
-            )}
-          </div>,
+          <PinnedCard
+            pinned={pinned}
+            flights={flights}
+            cruises={cruises ?? []}
+            onClose={() => setPinned(null)}
+            onFlightClick={onFlightClick}
+          />,
           popupHostRef.current,
         )}
 
