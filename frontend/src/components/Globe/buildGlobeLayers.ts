@@ -34,6 +34,15 @@ const PORT_DOT_COLOR: [number, number, number, number] = [56, 189, 248, 230];
 const MARKER_HEIGHT_M = 70_000;
 const MARKER_RADIUS_M = 12_000;
 
+// Lift cruise paths a few km off the sphere surface so they don't
+// z-fight with / clip into the globe. The path geometry comes from the
+// backend as 2-D `[lng, lat]` (sea-route GeoJSON); without an altitude
+// component, deck.gl renders it at exactly altitude 0 which shares
+// depth-buffer values with the sphere mesh and produces the clipping
+// the user observed. 5 km is invisible at any user-relevant zoom but
+// safely above the precision noise of the fragment depth.
+const CRUISE_PATH_ALTITUDE_M = 5_000;
+
 // Convert a deck.gl PickingInfo.coordinate into a [lng, lat] pair so we
 // can anchor the popup where the user actually clicked the line. The
 // coordinate is `number[]` of length ≥ 2 in deck.gl's typing — pull
@@ -198,7 +207,12 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
     new PathLayer<CruisePathDatum>({
       id: "globe-cruise-paths",
       data: cruisePaths,
-      getPath: (d) => d.path,
+      // Lift each [lng, lat] point to [lng, lat, alt] so the line
+      // renders just above the sphere instead of through it.
+      getPath: (d) =>
+        d.path.map(
+          (p) => [p[0], p[1], CRUISE_PATH_ALTITUDE_M] as [number, number, number],
+        ),
       getColor: CRUISE_PATH_COLOR,
       getWidth: 2,
       widthUnits: "pixels",
