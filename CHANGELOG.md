@@ -4,6 +4,18 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
+## [2.0.0-beta.19] - 2026-05-09 (Beta)
+
+### Fixed
+- **Cruise paths clipped into the globe** — Cruise sea-route geometry
+  comes from the backend as 2-D `[lng, lat]` points, so deck.gl
+  rendered the path at exactly altitude 0. That shares depth-buffer
+  values with the sphere mesh and produces visible z-fighting /
+  clipping where segments dip into the globe. Lifted each path
+  point to 5 km altitude in `globe-cruise-paths`'s `getPath` —
+  invisible at any user-relevant zoom but well above the depth
+  precision noise.
+
 ## [2.0.0-beta.18] - 2026-05-09 (Beta)
 
 ### Fixed
