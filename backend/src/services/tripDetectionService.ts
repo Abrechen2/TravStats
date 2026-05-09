@@ -74,14 +74,47 @@ export interface DetectionResult {
   orphansRemoved: number;
 }
 
+/** Caller-supplied proposal for the review-flow commit path: the user
+ *  may keep the auto-suggested name or override it, and may also
+ *  rearrange flightIds (filtering / re-grouping). The server still
+ *  enforces ownership + tripId=null in the transaction. */
+export interface ReviewProposal {
+  flightIds: string[];
+  name: string;
+  pnr?: string | null;
+  source?: ProposedTrip["source"];
+}
+
 interface DetectOptions {
   userId: string;
   dryRun: boolean;
+  /** When provided in commit mode (dryRun=false), commit ONLY these
+   *  proposals (with the supplied names) — do not re-run detection.
+   *  When omitted in commit mode, fall back to legacy "commit all
+   *  auto-detected proposals" behaviour. */
+  selectedProposals?: ReviewProposal[];
 }
 
 /** Public entry point. */
 export async function detectTrips(opts: DetectOptions): Promise<DetectionResult> {
-  const { userId, dryRun } = opts;
+  const { userId, dryRun, selectedProposals } = opts;
+
+  // Review-flow commit: trust the client's selection (server still
+  // enforces ownership inside the transaction). Skip re-running
+  // detection entirely so renamed proposals don't get clobbered.
+  if (!dryRun && selectedProposals) {
+    const proposals: ProposedTrip[] = selectedProposals.map((p) => ({
+      source: p.source ?? "continuity",
+      flightIds: p.flightIds,
+      pnr: p.pnr ?? null,
+      origin: "?",
+      destination: "?",
+      span: { from: "", to: "" },
+      suggestedName: p.name,
+    }));
+    const committed = await commitProposals(userId, proposals);
+    return await finalizeWithCleanup(committed, userId, dryRun);
+  }
 
   const flights = await prisma.flight.findMany({
     where: { userId, tripId: null },

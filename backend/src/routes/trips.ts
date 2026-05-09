@@ -19,8 +19,18 @@ import { detectTrips } from "../services/tripDetectionService";
 
 const router = Router();
 
+const reviewProposalSchema = z.object({
+  flightIds: z.array(z.string().uuid()).min(2),
+  name: z.string().min(1).max(200),
+  pnr: z.string().max(20).nullable().optional(),
+  source: z.enum(["pnr", "home_loop", "continuity"]).optional(),
+});
+
 const detectTripsSchema = z.object({
   dryRun: z.boolean().optional().default(true),
+  // Review-flow override: when provided in commit mode (dryRun=false),
+  // commit only these proposals with their (possibly renamed) names.
+  selectedProposals: z.array(reviewProposalSchema).optional(),
 });
 
 /**
@@ -37,8 +47,8 @@ router.post(
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const { dryRun } = detectTripsSchema.parse(req.body ?? {});
-      const result = await detectTrips({ userId, dryRun });
+      const { dryRun, selectedProposals } = detectTripsSchema.parse(req.body ?? {});
+      const result = await detectTrips({ userId, dryRun, selectedProposals });
       logger.info({
         operation: "trips_detect",
         message: `Trip detection ${dryRun ? "dry-run" : "committed"}`,
