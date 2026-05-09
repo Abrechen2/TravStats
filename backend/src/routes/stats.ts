@@ -15,7 +15,7 @@ import { normalizeHistory } from '../utils/homeAirport';
 import type { SettingsDataJson } from './settings/types';
 import logger from '../utils/logger';
 import { statsLimiter } from '../middleware/rateLimit';
-import { tzAwareDurationMinutes } from '../utils/timezone';
+import { tzAwareDurationMinutes, type FlightTimeSemantics } from '../utils/timezone';
 import { normalizeAirline, mergeAirlineCounts } from '../utils/airlineNormalize';
 
 const router = Router();
@@ -94,6 +94,8 @@ async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummarySt
         arrLon: true,
         departureTime: true,
         arrivalTime: true,
+        depTimeSemantics: true,
+        arrTimeSemantics: true,
       },
     }),
     prisma.flight.count({ where }),
@@ -159,9 +161,18 @@ async function computeSummary(where: Prisma.FlightWhereInput): Promise<SummarySt
       || (flight.arrIcao && tzMap.get(flight.arrIcao))
       || null;
     const flightTime = (flight.departureTime && flight.arrivalTime)
-      ? tzAwareDurationMinutes(flight.departureTime, flight.arrivalTime, depTz, arrTz)
-      : 0;
-    totalFlightTime += flightTime;
+      ? tzAwareDurationMinutes(
+          flight.departureTime,
+          flight.arrivalTime,
+          depTz,
+          arrTz,
+          flight.depTimeSemantics as FlightTimeSemantics,
+          flight.arrTimeSemantics as FlightTimeSemantics,
+        )
+      : null;
+    // null durations (DATE_ONLY rows) are skipped — they would otherwise
+    // poison the aggregate with placeholder-time fictions (issue #106A).
+    totalFlightTime += flightTime ?? 0;
   });
 
   const avgDistance = flownFlights.length > 0 ? totalDistance / flownFlights.length : 0;
