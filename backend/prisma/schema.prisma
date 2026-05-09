@@ -608,8 +608,25 @@ model Trip {
   name        String
   description String?
   color       String   @default("#818cf8") @map("color")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Phase-1 metadata redesign — see migration 20260509120000_trip_metadata.
+  // All optional / defaulted so legacy rows stay valid.
+  startDate        DateTime? @map("start_date")
+  endDate          DateTime? @map("end_date")
+  status           String    @default("completed") // planned | in_progress | completed
+  category         String?   // vacation | business | weekend | family | other
+  tags             String[]  @default([])
+  companions       String[]  @default([])
+  notes            String?   // markdown long-form
+  summary          String?   // optional, may be LLM-generated later
+  originLabel      String?   @map("origin_label")
+  destinationLabel String?   @map("destination_label")
+  coverImageUrl    String?   @map("cover_image_url")
+  icon             String?
+  countries        String[]  @default([])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   flights  Flight[]
@@ -617,6 +634,7 @@ model Trip {
   cruises  Cruise[]
 
   @@index([userId])
+  @@index([userId, status])
   @@map("trips")
 }
 

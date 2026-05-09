@@ -8,6 +8,10 @@ import { tripsApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
 
+// Card click → /trips/:id (detail page). The legacy "show on map" handler
+// pushed `visMode: "trip-routes"` to `/`, which never matched the dashboard
+// MapMode union — left over from before trips had their own page.
+
 interface TripsTabProps {
   trips: Trip[];
   onTripsChange: () => void;
@@ -38,8 +42,8 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
     }
   };
 
-  const handleShowOnMap = (trip: Trip): void => {
-    navigate("/", { state: { visMode: "trip-routes", tripId: trip.id } });
+  const handleOpen = (trip: Trip): void => {
+    navigate(`/trips/${trip.id}`);
   };
 
   return (
@@ -74,9 +78,9 @@ export default function TripsTab({ trips, onTripsChange }: TripsTabProps): JSX.E
             <TripCard
               key={trip.id}
               trip={trip}
+              onOpen={handleOpen}
               onEdit={setEditingTrip}
               onDelete={(tripToDelete) => void handleDelete(tripToDelete)}
-              onShowOnMap={handleShowOnMap}
             />
           ))}
           {/* New trip placeholder card */}

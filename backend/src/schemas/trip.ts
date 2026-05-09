@@ -5,16 +5,54 @@ export const TRIP_COLORS = [
   "#a78bfa", "#22d3ee", "#86efac", "#fbbf24", "#f87171",
 ];
 
+export const TRIP_STATUSES = ["planned", "in_progress", "completed"] as const;
+export const TRIP_CATEGORIES = ["vacation", "business", "weekend", "family", "other"] as const;
+
+const HEX_COLOR = z.string().regex(/^#[0-9a-fA-F]{6}$/);
+const ISO_DATE = z.string().datetime().or(z.coerce.date()).transform((d) => new Date(d));
+const STRING_LIST = z.array(z.string().min(1).max(80)).max(40);
+const COUNTRY_LIST = z.array(z.string().regex(/^[A-Z]{2}$/, "ISO 3166-1 alpha-2")).max(60);
+
 export const createTripSchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(1000).optional(),
-  color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  color: HEX_COLOR.optional(),
+  // Phase-1 metadata redesign — every field optional on create.
+  startDate: ISO_DATE.optional(),
+  endDate: ISO_DATE.optional(),
+  status: z.enum(TRIP_STATUSES).optional(),
+  category: z.enum(TRIP_CATEGORIES).optional(),
+  tags: STRING_LIST.optional(),
+  companions: STRING_LIST.optional(),
+  notes: z.string().max(20000).optional(),
+  summary: z.string().max(2000).optional(),
+  originLabel: z.string().max(120).optional(),
+  destinationLabel: z.string().max(120).optional(),
+  coverImageUrl: z.string().max(500).optional(),
+  icon: z.string().max(8).optional(),
+  countries: COUNTRY_LIST.optional(),
 });
 
+// PATCH semantics: explicit `null` clears nullable string fields, `undefined`
+// leaves them untouched. Arrays accept the new full list (no element-level
+// patch — keeps the contract small).
 export const updateTripSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   description: z.string().max(1000).nullable().optional(),
-  color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  color: HEX_COLOR.optional(),
+  startDate: ISO_DATE.nullable().optional(),
+  endDate: ISO_DATE.nullable().optional(),
+  status: z.enum(TRIP_STATUSES).optional(),
+  category: z.enum(TRIP_CATEGORIES).nullable().optional(),
+  tags: STRING_LIST.optional(),
+  companions: STRING_LIST.optional(),
+  notes: z.string().max(20000).nullable().optional(),
+  summary: z.string().max(2000).nullable().optional(),
+  originLabel: z.string().max(120).nullable().optional(),
+  destinationLabel: z.string().max(120).nullable().optional(),
+  coverImageUrl: z.string().max(500).nullable().optional(),
+  icon: z.string().max(8).nullable().optional(),
+  countries: COUNTRY_LIST.optional(),
 });
 
 export const assignFlightsSchema = z.object({
@@ -38,3 +76,5 @@ export type CreateTripInput = z.infer<typeof createTripSchema>;
 export type UpdateTripInput = z.infer<typeof updateTripSchema>;
 export type AssignFlightsInput = z.infer<typeof assignFlightsSchema>;
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;
+export type TripStatus = (typeof TRIP_STATUSES)[number];
+export type TripCategory = (typeof TRIP_CATEGORIES)[number];

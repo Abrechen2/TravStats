@@ -126,6 +126,9 @@ export interface Booking {
   currency: string | null;
 }
 
+export type TripStatus = "planned" | "in_progress" | "completed";
+export type TripCategory = "vacation" | "business" | "weekend" | "family" | "other";
+
 export interface Trip {
   id: string;
   userId: string;
@@ -134,6 +137,23 @@ export interface Trip {
   color: string;
   createdAt: string;
   updatedAt: string;
+
+  // Phase-1 metadata redesign — see migration 20260509120000_trip_metadata.
+  // Optional / defaulted on the server. Older rows return defaults.
+  startDate: string | null;
+  endDate: string | null;
+  status: TripStatus;
+  category: TripCategory | null;
+  tags: string[];
+  companions: string[];
+  notes: string | null;
+  summary: string | null;
+  originLabel: string | null;
+  destinationLabel: string | null;
+  coverImageUrl: string | null;
+  icon: string | null;
+  countries: string[];
+
   _count?: { flights: number; cruises?: number };
   bookings?: Booking[];
   flights?: Pick<

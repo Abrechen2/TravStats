@@ -1,16 +1,44 @@
 import { api } from "./client";
-import type { Trip, Booking } from "../../types";
+import type { Trip, Booking, TripStatus, TripCategory } from "../../types";
 
 export interface CreateTripInput {
   name: string;
   description?: string;
   color?: string;
+  startDate?: string;
+  endDate?: string;
+  status?: TripStatus;
+  category?: TripCategory;
+  tags?: string[];
+  companions?: string[];
+  notes?: string;
+  summary?: string;
+  originLabel?: string;
+  destinationLabel?: string;
+  coverImageUrl?: string;
+  icon?: string;
+  countries?: string[];
 }
 
+// PATCH semantics: explicit `null` clears nullable fields,
+// `undefined` leaves them untouched. Arrays replace the whole list.
 export interface UpdateTripInput {
   name?: string;
   description?: string | null;
   color?: string;
+  startDate?: string | null;
+  endDate?: string | null;
+  status?: TripStatus;
+  category?: TripCategory | null;
+  tags?: string[];
+  companions?: string[];
+  notes?: string | null;
+  summary?: string | null;
+  originLabel?: string | null;
+  destinationLabel?: string | null;
+  coverImageUrl?: string | null;
+  icon?: string | null;
+  countries?: string[];
 }
 
 export interface AssignFlightsInput {
