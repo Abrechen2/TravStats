@@ -384,6 +384,13 @@
     "loading": "Lädt...",
     "topN": "Top {{n}} Airlines"
   },
+  "aircraftRanking": {
+    "title": "Häufigste Flugzeuge (Hulls)",
+    "noData": "Noch keine Flüge mit Kennung",
+    "hint": "Tragen Sie eine Flugnummer per Lookup ein, um Heckkennungen zu erfassen.",
+    "loading": "Lädt...",
+    "topN": "Top {{n}} Flugzeuge"
+  },
   "countryDist": {
     "title": "Länder-Verteilung (Abflugort)",
     "country": "Land",

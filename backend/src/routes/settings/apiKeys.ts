@@ -6,8 +6,11 @@ import { encryptApiKey } from '../../utils/encryption';
 import {
   testAirlabsKey,
   testAviationstackKey,
+  testAerodataboxKey,
   testOpenSkyCredentials,
 } from '../../services/apiKeyTester';
+import { getApiKey, getOpenSkyCredentials } from '../../services/apiKeyResolver';
+import { getAllProviderQuotas } from '../../services/apiQuota';
 import logger from '../../utils/logger';
 import {
   ApiKeysUpdateData,
@@ -21,6 +24,7 @@ const router = Router();
 const apiKeysSchema = z.object({
   airlabsApiKey: z.string().optional().nullable(),
   aviationstackApiKey: z.string().optional().nullable(),
+  aerodataboxApiKey: z.string().optional().nullable(),
   openskyClientId: z.string().optional().nullable(),
   openskyClientSecret: z.string().optional().nullable(),
   openskyUsername: z.string().optional().nullable(),
@@ -28,7 +32,7 @@ const apiKeysSchema = z.object({
 }).partial();
 
 const testApiKeySchema = z.object({
-  apiKey: z.string().min(1, 'API key is required'),
+  apiKey: z.string().optional(),
 });
 
 const testOpenSkySchema = z.object({
@@ -36,23 +40,29 @@ const testOpenSkySchema = z.object({
   clientSecret: z.string().optional(),
   username: z.string().optional(),
   password: z.string().optional(),
-}).refine(
-  (data) => (!!data.clientId && !!data.clientSecret) || (!!data.username && !!data.password),
-  { message: 'Provide either clientId+clientSecret or username+password' }
-);
+});
+
+/**
+ * Frontend ships the masked GET-response value (e.g. "ac97****2a86") back
+ * into the Test request when the user hasn't typed anything new. Treat
+ * empty + masked as "test the persisted/inherited key".
+ */
+const looksMasked = (s: string | undefined | null): boolean =>
+  !s || s.includes('****');
 
 // GET /
 router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
 
-    let settings: Pick<UserApiKeySettings, 'airlabsApiKey' | 'aviationstackApiKey' | 'openskyClientId' | 'openskyClientSecret' | 'openskyUsername' | 'openskyPassword'> | null = null;
+    let settings: Pick<UserApiKeySettings, 'airlabsApiKey' | 'aviationstackApiKey' | 'aerodataboxApiKey' | 'openskyClientId' | 'openskyClientSecret' | 'openskyUsername' | 'openskyPassword'> | null = null;
     try {
       settings = await prisma.userSettings.findUnique({
         where: { userId },
         select: {
           airlabsApiKey: true,
           aviationstackApiKey: true,
+          aerodataboxApiKey: true,
           openskyClientId: true,
           openskyClientSecret: true,
           openskyUsername: true,
@@ -84,12 +94,14 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
 
     let airlabsAccess = { hasAccess: false, isShared: false };
     let aviationstackAccess = { hasAccess: false, isShared: false };
+    let aerodataboxAccess = { hasAccess: false, isShared: false };
 
     try {
       const { hasApiKeyAccess } = await import('../../services/apiKeyResolver');
-      [airlabsAccess, aviationstackAccess] = await Promise.all([
+      [airlabsAccess, aviationstackAccess, aerodataboxAccess] = await Promise.all([
         hasApiKeyAccess('airlabs', userId),
         hasApiKeyAccess('aviationstack', userId),
+        hasApiKeyAccess('aerodatabox', userId),
       ]);
     } catch (error: unknown) {
       logger.warn({
@@ -116,6 +128,11 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
         hasKey: !!settings?.aviationstackApiKey,
         isShared: aviationstackAccess.isShared,
         hasAccess: aviationstackAccess.hasAccess,
+      },
+      aerodatabox: {
+        hasKey: !!settings?.aerodataboxApiKey,
+        isShared: aerodataboxAccess.isShared,
+        hasAccess: aerodataboxAccess.hasAccess,
       },
       opensky: {
         hasKey: !!hasUserOpensky,
@@ -162,6 +179,13 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
       }
       updateData.aviationstackApiKey = encryptApiKey(payload.aviationstackApiKey);
     }
+    if (payload.aerodataboxApiKey !== undefined) {
+      if (!allowUserFlightApiKeys) {
+        res.status(403).json({ error: 'User flight API keys are not allowed by administrator' });
+        return;
+      }
+      updateData.aerodataboxApiKey = encryptApiKey(payload.aerodataboxApiKey);
+    }
     if (payload.openskyClientId !== undefined) {
       if (!allowUserFlightApiKeys) {
         res.status(403).json({ error: 'User flight API keys are not allowed by administrator' });
@@ -194,9 +218,10 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
     });
 
     const { hasApiKeyAccess } = await import('../../services/apiKeyResolver');
-    const [airlabsAccess, aviationstackAccess] = await Promise.all([
+    const [airlabsAccess, aviationstackAccess, aerodataboxAccess] = await Promise.all([
       hasApiKeyAccess('airlabs', userId),
       hasApiKeyAccess('aviationstack', userId),
+      hasApiKeyAccess('aerodatabox', userId),
     ]);
 
     const updatedSettings = await prisma.userSettings.findUnique({
@@ -221,6 +246,10 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
           hasKey: !!updateData.aviationstackApiKey || aviationstackAccess.hasAccess,
           isShared: aviationstackAccess.isShared,
         },
+        aerodatabox: {
+          hasKey: !!updateData.aerodataboxApiKey || aerodataboxAccess.hasAccess,
+          isShared: aerodataboxAccess.isShared,
+        },
         opensky: {
           hasKey: !!updatedSettings?.openskyClientId,
           isShared: hasGlobalOpensky && !updatedSettings?.openskyClientId,
@@ -236,7 +265,14 @@ router.put('/', async (req: AuthRequest, res: Response, next: NextFunction): Pro
 router.post('/test/airlabs', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { apiKey } = testApiKeySchema.parse(req.body);
-    const result = await testAirlabsKey(apiKey, req.userId!);
+    const effective = looksMasked(apiKey)
+      ? (await getApiKey('airlabs', req.userId!)) ?? ''
+      : apiKey!;
+    if (!effective) {
+      res.status(400).json({ success: false, message: 'No AirLabs key configured to test. Save one first.' });
+      return;
+    }
+    const result = await testAirlabsKey(effective, req.userId!);
     res.json(result);
   } catch (error) {
     next(error);
@@ -247,7 +283,32 @@ router.post('/test/airlabs', async (req: AuthRequest, res: Response, next: NextF
 router.post('/test/aviationstack', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { apiKey } = testApiKeySchema.parse(req.body);
-    const result = await testAviationstackKey(apiKey, req.userId!);
+    const effective = looksMasked(apiKey)
+      ? (await getApiKey('aviationstack', req.userId!)) ?? ''
+      : apiKey!;
+    if (!effective) {
+      res.status(400).json({ success: false, message: 'No Aviationstack key configured to test. Save one first.' });
+      return;
+    }
+    const result = await testAviationstackKey(effective, req.userId!);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST /test/aerodatabox
+router.post('/test/aerodatabox', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { apiKey } = testApiKeySchema.parse(req.body);
+    const effective = looksMasked(apiKey)
+      ? (await getApiKey('aerodatabox', req.userId!)) ?? ''
+      : apiKey!;
+    if (!effective) {
+      res.status(400).json({ success: false, message: 'No AeroDataBox key configured to test. Save one first.' });
+      return;
+    }
+    const result = await testAerodataboxKey(effective, req.userId!);
     res.json(result);
   } catch (error) {
     next(error);
@@ -257,12 +318,40 @@ router.post('/test/aviationstack', async (req: AuthRequest, res: Response, next:
 // POST /test/opensky
 router.post('/test/opensky', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { clientId, clientSecret, username, password } = testOpenSkySchema.parse(req.body);
+    let { clientId, clientSecret, username, password } = testOpenSkySchema.parse(req.body);
+    if (looksMasked(clientId) || looksMasked(clientSecret)) {
+      const persisted = await getOpenSkyCredentials(req.userId!);
+      clientId = persisted?.clientId ?? undefined;
+      clientSecret = persisted?.clientSecret ?? undefined;
+      username = username || persisted?.username || undefined;
+      password = password || persisted?.password || undefined;
+    }
+    if (!(clientId && clientSecret) && !(username && password)) {
+      res.status(400).json({ success: false, message: 'No OpenSky credentials configured to test. Save them first.' });
+      return;
+    }
     const result = await testOpenSkyCredentials(
       { clientId, clientSecret, username, password },
       req.userId!
     );
     res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /quota — per-provider quota observation. Different providers
+// expose quota differently:
+//   - aerodatabox  → live `kind: 'observed'` from RapidAPI headers
+//   - airlabs      → `kind: 'not_reported'` (no headers in free tier)
+//   - aviationstack → `kind: 'not_reported'`
+//   - opensky      → `kind: 'rate_limit_only'` (per-second IP, no monthly)
+// The frontend uses this to show honest, per-card quota indicators
+// rather than a single misleading global counter.
+router.get('/quota', async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.userId!;
+    res.json(getAllProviderQuotas(userId));
   } catch (error) {
     next(error);
   }

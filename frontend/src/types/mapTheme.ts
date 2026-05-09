@@ -12,13 +12,13 @@ export interface MapLayerColors {
 export const MAP_LAYER_COLORS: Record<MapTheme, MapLayerColors> = {
   glassmorphism: {
     low: [100, 116, 139],
-    mid: [232, 160, 69],
+    mid: [240, 169, 71],
     high: [249, 115, 22],
     peak: [239, 68, 68],
-    airportDot: [232, 160, 69],
+    airportDot: [240, 169, 71],
     hexRange: [
       [100, 116, 139, 190],
-      [232, 160, 69, 200],
+      [240, 169, 71, 200],
       [245, 140, 50, 210],
       [249, 115, 22, 215],
       [239, 68, 68, 220],
@@ -27,15 +27,15 @@ export const MAP_LAYER_COLORS: Record<MapTheme, MapLayerColors> = {
   },
   classic: {
     low: [100, 116, 139],
-    mid: [232, 160, 69],
+    mid: [240, 169, 71],
     high: [249, 115, 22],
     peak: [239, 68, 68],
-    airportDot: [232, 160, 69],
+    airportDot: [240, 169, 71],
     hexRange: [
       [100, 116, 139, 190],
       [99, 102, 241, 200],
       [139, 92, 246, 210],
-      [232, 160, 69, 215],
+      [240, 169, 71, 215],
       [249, 115, 22, 220],
       [239, 68, 68, 230],
     ],

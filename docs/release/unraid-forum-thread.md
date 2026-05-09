@@ -80,6 +80,16 @@ Optional local AI parsing
 Install the Ollama Community App, pull gemma3:12b (~7.5 GB), then in TravStats: Admin → Parser → set Ollama URL to http://<ollama-host>:11434. Handles multi-flight confirmation emails that the built-in regex templates miss.
 
 
+Image tags
+
+abrechen2/travstats:latest — current stable (auto-updates on each promoted release). Default for the template above.
+abrechen2/travstats:stable — alias for :latest.
+abrechen2/travstats:1.2.1 (or any prior X.Y.Z) — pin to one specific release, never auto-updates.
+abrechen2/travstats:rc-latest — bleeding-edge Release Candidate. Receives every new RC via Force Update. May include breaking schema migrations across majors; in-place backup runs automatically on the first start of a new major. Use only if you want to help test before a release goes stable.
+
+Both Docker Hub and GHCR (ghcr.io/abrechen2/travstats) carry the same digests for these moving tags.
+
+
 Coming next
 
 - Cruise + multi-domain travel logbook (sea routes with realistic ship paths, day/night animation on the globe).
@@ -98,7 +108,7 @@ Safe travels.
 
 ## Formatting in the WYSIWYG after paste
 
-1. Put the cursor on the section headings ("Links", "Requirements", "Highlights", "Installation", "Optional local AI parsing", "Coming next", "Bug reports & feature requests") and click `B` (bold) — that's the only formatting you need.
+1. Put the cursor on the section headings ("Links", "Requirements", "Highlights", "Installation", "Optional local AI parsing", "Image tags", "Coming next", "Bug reports & feature requests") and click `B` (bold) — that's the only formatting you need.
 2. The URLs that stand alone on a line auto-link on save.
 3. Optional: drag `docs/images/logo.svg` (from the GitHub raw URL or your local copy) into the editor as the first element — it uploads inline. If the forum rejects SVG, export a PNG from the same file first.
 4. Optional: drag one of the screenshots (`map-2d.png` or `stats.png`) in after the Highlights section so the thread has a visual.
@@ -147,6 +157,14 @@ If you prefer to paste HTML directly: click `…` in the toolbar to look for a "
 <p>Updates: just hit the regular Update button on the Docker tab — the container pulls the latest stable image from GHCR. The app shows a yellow "Update" badge in the header when a new release is available.</p>
 <h3>Optional local AI parsing</h3>
 <p>Install the Ollama Community App, pull <code>gemma3:12b</code> (~7.5 GB), then in TravStats <strong>Admin → Parser</strong> set <em>Ollama URL</em> to <code>http://&lt;ollama-host&gt;:11434</code>. Handles multi-flight confirmation emails that the built-in regex templates miss.</p>
+<h3>Image tags</h3>
+<ul>
+  <li><code>abrechen2/travstats:latest</code> — current stable (auto-updates on each promoted release). Default for the template above.</li>
+  <li><code>abrechen2/travstats:stable</code> — alias for <code>:latest</code>.</li>
+  <li><code>abrechen2/travstats:1.2.1</code> (or any prior <code>X.Y.Z</code>) — pin to one specific release, never auto-updates.</li>
+  <li><code>abrechen2/travstats:rc-latest</code> — bleeding-edge Release Candidate. Receives every new RC via Force Update. May include breaking schema migrations across majors; in-place backup runs automatically on the first start of a new major. Use only if you want to help test before a release goes stable.</li>
+</ul>
+<p>Both Docker Hub and GHCR (<code>ghcr.io/abrechen2/travstats</code>) carry the same digests for these moving tags.</p>
 <h3>Coming next</h3>
 <ul>
   <li>Cruise + multi-domain travel logbook (sea routes with realistic ship paths, day/night animation on the globe).</li>

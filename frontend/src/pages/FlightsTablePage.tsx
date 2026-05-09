@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { flightsApi, tripsApi } from "../lib/api";
 import NavigationBar from "../components/NavigationBar";
 import type { Flight, FlightFilters, FlightInput, Trip } from "../types";
@@ -16,18 +17,22 @@ import { useToastStore } from "../store/toastStore";
 import { useSettingsStore } from "../store/settingsStore";
 import { API_LIMITS } from "../lib/constants";
 import { formatDateInTimezone } from "../lib/dateUtils";
+import { getFlightDuration, getFlightDurationMinutes } from "../lib/flightDuration";
+import { formatDurationWithEstimate } from "../lib/formatters";
 import { resolveAirlineDisplay } from "../lib/airlineUtils";
 import { useTranslation } from "../hooks/useTranslation";
 import DataSourceBadges from "../components/DataSourceBadges";
 import { logger } from "../lib/logger";
 import PageTransition from "../components/PageTransition";
 import { SkeletonTable } from "../components/SkeletonLoader";
-import TripsTab from "../components/Trips/TripsTab";
+
+// Trips moved to their own /trips top-level page (Phase-1 redesign).
+// This page now focuses purely on the flight table; the trip badge in
+// each flight row is a Link to /trips/:id.
 
 export default function FlightsTablePage(): JSX.Element {
   const { t } = useTranslation(["flights", "common", "dashboard", "trips"]);
   const [flights, setFlights] = useState<Flight[]>([]);
-  const [activeTab, setActiveTab] = useState<"flights" | "trips">("flights");
   const [trips, setTrips] = useState<Trip[]>([]);
   const [tripFilter, setTripFilter] = useState<"all" | "with" | "without" | string>("all");
   const [filters, setFilters] = useState<FlightFilters>({});
@@ -165,7 +170,7 @@ export default function FlightsTablePage(): JSX.Element {
     };
 
     try {
-      const created = await flightsApi.create(input, true);
+      const created = await flightsApi.create(input, { force: true });
       addToast("success", t("flights:table.toast.duplicated"));
       await loadFlights();
       setEditingFlight(created);
@@ -190,13 +195,22 @@ export default function FlightsTablePage(): JSX.Element {
 
   const handleAddFlight = async (
     flight: FlightInput,
-    force = false,
-    hasMoreFlights = false
+    opts: { force?: boolean; merge?: boolean; hasMoreFlights?: boolean } = {}
   ): Promise<void> => {
     try {
-      await flightsApi.create(flight, force);
-      addToast("success", t("flights:table.toast.updated"));
-      if (!hasMoreFlights) {
+      const result = (await flightsApi.create(flight, {
+        force: opts.force,
+        merge: opts.merge,
+      })) as Flight & { mergedFields?: string[] };
+      if (opts.merge && result.mergedFields && result.mergedFields.length > 0) {
+        addToast(
+          "success",
+          t("flights:form.duplicate.mergedToast", { count: result.mergedFields.length })
+        );
+      } else {
+        addToast("success", t("flights:table.toast.updated"));
+      }
+      if (!opts.hasMoreFlights) {
         setShowAddFlight(false);
       }
       void loadFlights();
@@ -206,10 +220,7 @@ export default function FlightsTablePage(): JSX.Element {
     }
   };
 
-  const getDurationMinutes = (flight: Flight) =>
-    flight.departureTime && flight.arrivalTime
-      ? (new Date(flight.arrivalTime).getTime() - new Date(flight.departureTime).getTime()) / 60000
-      : 0;
+  const getDurationMinutes = getFlightDurationMinutes;
 
   const tripMap = useMemo(() => new Map(trips.map((t) => [t.id, t])), [trips]);
 
@@ -263,14 +274,9 @@ export default function FlightsTablePage(): JSX.Element {
   const formatDate = (date: string | null): string =>
     date ? formatDateInTimezone(date, timezone) : "—";
 
-  const formatDurationHours = (departure: string | null, arrival: string | null) => {
-    if (!departure || !arrival) return "—";
-    const minutes = getDurationMinutes({
-      departureTime: departure,
-      arrivalTime: arrival,
-    } as Flight);
-    const hours = minutes / 60;
-    return `${hours.toFixed(1)} h`;
+  const formatFlightDurationCell = (flight: Flight) => {
+    const d = getFlightDuration(flight);
+    return formatDurationWithEstimate(d?.minutes ?? null, d?.estimated ?? false);
   };
 
   const sortLabels: Record<typeof sortBy, string> = {
@@ -306,7 +312,7 @@ export default function FlightsTablePage(): JSX.Element {
         </div>
 
         {/* Main Content */}
-        <div className="container mx-auto px-4 py-6 max-w-7xl">
+        <div className="container mx-auto px-4 py-6 max-w-screen-2xl">
           <div className="flex items-center justify-between mb-4">
             <button
               className="btn-primary flex items-center gap-2 whitespace-nowrap"
@@ -317,45 +323,12 @@ export default function FlightsTablePage(): JSX.Element {
             </button>
           </div>
 
-          {/* Tab bar */}
-          <div
-            className="flex border-b rounded-t-lg overflow-hidden"
-            style={{ background: "var(--bg-surface)", borderColor: "var(--color-border)" }}
-          >
-            <button
-              onClick={() => setActiveTab("flights")}
-              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === "flights"
-                  ? "border-[var(--accent)] text-[var(--accent)]"
-                  : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-              }`}
-            >
-              ✈ {t("trips:tabFlights")}
-            </button>
-            <button
-              onClick={() => setActiveTab("trips")}
-              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === "trips"
-                  ? "border-[var(--accent)] text-[var(--accent)]"
-                  : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-              }`}
-            >
-              🗺 {t("trips:tab")}
-              {trips.length > 0 && (
-                <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded-full bg-[var(--bg-muted)]">
-                  {trips.length}
-                </span>
-              )}
-            </button>
-          </div>
-
           {/* Table */}
           <div
-            className="rounded-b-lg shadow-sm overflow-hidden"
-            style={{ border: "1px solid var(--color-border)", borderTop: "none" }}
+            className="rounded-lg shadow-sm overflow-hidden"
+            style={{ border: "1px solid var(--color-border)" }}
           >
-            {activeTab === "flights" ? (
-              <>
+            <>
                 {/* Trip filter chips */}
                 <div
                   className="flex flex-wrap gap-2 px-4 py-2"
@@ -496,7 +469,7 @@ export default function FlightsTablePage(): JSX.Element {
                             {t("trips:tab")}
                           </th>
                           <th
-                            className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider"
+                            className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider whitespace-nowrap"
                             style={thStyle}
                           >
                             {t("flights:table.actions")}
@@ -610,7 +583,7 @@ export default function FlightsTablePage(): JSX.Element {
                                 className="px-4 py-3 text-sm"
                                 style={{ color: "var(--text-muted)" }}
                               >
-                                {formatDurationHours(flight.departureTime, flight.arrivalTime)}
+                                {formatFlightDurationCell(flight)}
                               </td>
                               <td
                                 className="px-4 py-3 text-sm"
@@ -628,8 +601,8 @@ export default function FlightsTablePage(): JSX.Element {
                               </td>
                               <td className="px-3 py-2">
                                 {tripEntry ? (
-                                  <button
-                                    onClick={() => setActiveTab("trips")}
+                                  <Link
+                                    to={`/trips/${tripEntry.id}`}
                                     className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium border transition-all hover:brightness-110"
                                     style={{
                                       background: `${tripEntry.color}18`,
@@ -642,18 +615,18 @@ export default function FlightsTablePage(): JSX.Element {
                                       style={{ background: tripEntry.color }}
                                     />
                                     {tripEntry.name}
-                                  </button>
+                                  </Link>
                                 ) : (
                                   <span style={{ color: "var(--text-muted)", opacity: 0.3 }}>
                                     —
                                   </span>
                                 )}
                               </td>
-                              <td className="px-4 py-3 text-right">
+                              <td className="px-4 py-3 text-right whitespace-nowrap">
                                 <div className="flex items-center justify-end gap-2">
                                   <button
                                     onClick={() => setEditingFlight(flight)}
-                                    className="px-3 py-1 text-xs font-medium rounded"
+                                    className="px-3 py-1 text-xs font-medium rounded flex-shrink-0"
                                     style={{
                                       background: "rgba(56,139,253,0.15)",
                                       color: "#388bfd",
@@ -661,7 +634,7 @@ export default function FlightsTablePage(): JSX.Element {
                                   >
                                     {t("common:buttons.edit")}
                                   </button>
-                                  <div className="relative" data-duplicate-menu>
+                                  <div className="relative flex-shrink-0" data-duplicate-menu>
                                     <button
                                       onClick={() =>
                                         setDuplicateMenuFor(
@@ -705,7 +678,7 @@ export default function FlightsTablePage(): JSX.Element {
                                   </div>
                                   <button
                                     onClick={() => handleDeleteClick(flight.id)}
-                                    className="px-3 py-1 text-xs font-medium rounded"
+                                    className="px-3 py-1 text-xs font-medium rounded flex-shrink-0"
                                     style={{
                                       background: "rgba(248,81,73,0.15)",
                                       color: "var(--danger)",
@@ -750,9 +723,6 @@ export default function FlightsTablePage(): JSX.Element {
                   </div>
                 )}
               </>
-            ) : (
-              <TripsTab trips={trips} onTripsChange={() => void loadTrips()} />
-            )}
           </div>
         </div>
 

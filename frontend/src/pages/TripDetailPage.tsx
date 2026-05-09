@@ -1,0 +1,1206 @@
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { differenceInCalendarDays } from "date-fns";
+import { tripsApi } from "../lib/api";
+import { logger } from "../lib/logger";
+import { useToastStore } from "../store/toastStore";
+import { useTranslation } from "../hooks/useTranslation";
+import type { Trip, TripJournalEntry, TripStatus, TripStop } from "../types";
+import PageTransition from "../components/PageTransition";
+import TripModal from "../components/Trips/TripModal";
+import JournalEntryModal from "../components/Trips/JournalEntryModal";
+import StopModal from "../components/Trips/StopModal";
+import TripMap from "../components/Trips/TripMap";
+import TripGallery from "../components/Trips/TripGallery";
+
+type TabKey = "overview" | "timeline" | "map" | "gallery" | "logistics";
+const TABS: TabKey[] = ["overview", "timeline", "map", "gallery", "logistics"];
+const TAB_ICON: Record<TabKey, string> = {
+  overview: "📋",
+  timeline: "📅",
+  map: "🗺",
+  gallery: "📷",
+  logistics: "🧾",
+};
+
+/**
+ * Trip detail page with five tabs (Phase-1 iteration 2).
+ *
+ * - **Overview**: hero context (notes preview, latest items, side panels for
+ *   companions / tags / countries).
+ * - **Timeline**: chronological mix of flights and cruises rendered through
+ *   `TripTimeline` (the multi-domain event list that was sitting unused).
+ * - **Map**: placeholder. A trip-specific map comes once `TripStop`
+ *   waypoints exist.
+ * - **Gallery**: placeholder. Photos come once upload + storage are wired.
+ * - **Logistics**: tabular flight + cruise + booking list (the previous
+ *   single-pane linked-items view, promoted to a dedicated tab).
+ */
+export default function TripDetailPage(): JSX.Element {
+  const { id } = useParams<{ id: string }>();
+  const { t, i18n } = useTranslation(["trips", "common"]);
+  const navigate = useNavigate();
+  const addToast = useToastStore((s) => s.addToast);
+
+  const [trip, setTrip] = useState<Trip | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<TabKey>("overview");
+  const [editing, setEditing] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const load = async (): Promise<void> => {
+    if (!id) return;
+    try {
+      setLoading(true);
+      const data = await tripsApi.getById(id);
+      setTrip(data);
+    } catch (err) {
+      logger.warn("Failed to load trip", err);
+      addToast("error", t("trips:toasts.loadError"));
+      navigate("/trips");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void load();
+  }, [id]);
+
+  const handleDelete = async (): Promise<void> => {
+    if (!trip) return;
+    try {
+      await tripsApi.delete(trip.id);
+      addToast("success", t("trips:toasts.deleted"));
+      navigate("/trips");
+    } catch {
+      addToast("error", t("trips:toasts.deleteError"));
+      setConfirmDelete(false);
+    }
+  };
+
+  if (loading || !trip) {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: "var(--bg-base)", color: "var(--text-muted)" }}
+      >
+        {t("common:loading", { defaultValue: "Lädt …" })}
+      </div>
+    );
+  }
+
+  return (
+    <PageTransition>
+      <div
+        className="min-h-screen"
+        style={{ background: "var(--bg-base)", color: "var(--text-primary)" }}
+      >
+        <TripHero
+          trip={trip}
+          locale={i18n.language}
+          t={t}
+          onEdit={() => setEditing(true)}
+          onDelete={() => setConfirmDelete(true)}
+        />
+
+        <TabBar tab={tab} onChange={setTab} t={t} />
+
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          {tab === "overview" && (
+            <OverviewTab trip={trip} t={t} onChanged={() => void load()} />
+          )}
+          {tab === "timeline" && (
+            <TimelineTab trip={trip} onChanged={() => void load()} t={t} />
+          )}
+          {tab === "map" && <TripMap trip={trip} />}
+          {tab === "gallery" && (
+            <TripGallery
+              tripId={trip.id}
+              photos={trip.photos ?? []}
+              onChange={() => void load()}
+            />
+          )}
+          {tab === "logistics" && <LogisticsTab trip={trip} t={t} />}
+        </div>
+      </div>
+
+      {editing && (
+        <TripModal
+          trip={trip}
+          onClose={() => setEditing(false)}
+          onSaved={() => {
+            setEditing(false);
+            void load();
+          }}
+        />
+      )}
+
+      {confirmDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.6)" }}
+        >
+          <div
+            className="w-full max-w-sm rounded-xl shadow-2xl p-6 space-y-4"
+            style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+            role="dialog"
+            aria-modal="true"
+          >
+            <h2 className="text-base font-semibold">
+              {t("trips:deleteTripConfirm", { name: trip.name })}
+            </h2>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmDelete(false)}
+                className="px-4 py-2 rounded-lg text-sm"
+                style={{ color: "var(--text-muted)" }}
+              >
+                {t("trips:modal.cancel")}
+              </button>
+              <button
+                onClick={() => void handleDelete()}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-white"
+                style={{ background: "var(--danger, #f87171)" }}
+              >
+                {t("trips:deleteTrip")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </PageTransition>
+  );
+}
+
+const STATUS_PILL_CLASS: Record<TripStatus, { bg: string; color: string }> = {
+  planned: { bg: "rgba(96,165,250,0.18)", color: "#93c5fd" },
+  in_progress: { bg: "rgba(240,169,71,0.22)", color: "#f0a947" },
+  completed: { bg: "rgba(74,222,128,0.16)", color: "#86efac" },
+};
+
+interface TripHeroProps {
+  trip: Trip;
+  locale: string;
+  t: ReturnType<typeof useTranslation>["t"];
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
+function TripHero({ trip, locale, t, onEdit, onDelete }: TripHeroProps): JSX.Element {
+  const start = trip.startDate ? new Date(trip.startDate) : null;
+  const end = trip.endDate ? new Date(trip.endDate) : null;
+  const dateRange = formatDateRange(start, end, locale);
+  const nights = start && end ? Math.max(0, differenceInCalendarDays(end, start)) : null;
+
+  const heroBg = trip.coverImageUrl
+    ? `url(${trip.coverImageUrl})`
+    : `linear-gradient(135deg, ${trip.color}, ${trip.color}40 60%, var(--bg-base))`;
+
+  return (
+    <div
+      className="relative"
+      style={{
+        height: 240,
+        background: heroBg,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}
+    >
+      <div
+        className="absolute inset-0"
+        style={{
+          background: "linear-gradient(to bottom, rgba(13,17,23,0.35), rgba(13,17,23,0.95))",
+        }}
+      />
+      <div className="absolute top-4 right-4 flex gap-2 z-10">
+        <button
+          onClick={onEdit}
+          aria-label={t("trips:editTrip")}
+          title={t("trips:editTrip")}
+          className="w-9 h-9 rounded-lg flex items-center justify-center"
+          style={{
+            background: "rgba(13,17,23,0.7)",
+            backdropFilter: "blur(8px)",
+            border: "1px solid var(--color-border)",
+            color: "var(--text-primary)",
+          }}
+        >
+          ✎
+        </button>
+        <button
+          onClick={onDelete}
+          aria-label={t("trips:deleteTrip")}
+          title={t("trips:deleteTrip")}
+          className="w-9 h-9 rounded-lg flex items-center justify-center"
+          style={{
+            background: "rgba(13,17,23,0.7)",
+            backdropFilter: "blur(8px)",
+            border: "1px solid var(--color-border)",
+            color: "var(--text-primary)",
+          }}
+        >
+          🗑
+        </button>
+      </div>
+      <div className="absolute bottom-0 left-0 right-0 max-w-7xl mx-auto px-4 pb-5 z-[1]">
+        <Link
+          to="/trips"
+          className="inline-flex items-center gap-1 text-xs mb-3"
+          style={{ color: "var(--text-muted)" }}
+        >
+          ← {t("trips:detail.backToList")}
+        </Link>
+        <div className="flex items-end gap-3 flex-wrap">
+          <h1 className="text-3xl font-display font-bold leading-tight">{trip.name}</h1>
+          <StatusPill status={trip.status} t={t} />
+          {trip.icon && <span className="text-2xl">{trip.icon}</span>}
+        </div>
+        <div className="flex flex-wrap gap-3 mt-2 text-sm" style={{ color: "var(--text-muted)" }}>
+          {dateRange && <span>{dateRange}</span>}
+          {nights !== null && nights > 0 && (
+            <span>· {t("trips:nights", { count: nights })}</span>
+          )}
+          {trip.destinationLabel && <span>· 📍 {trip.destinationLabel}</span>}
+          {trip.companions.length > 0 && (
+            <span>· 👥 {trip.companions.slice(0, 3).join(", ")}{trip.companions.length > 3 ? " …" : ""}</span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatusPill({
+  status,
+  t,
+}: {
+  status: TripStatus;
+  t: ReturnType<typeof useTranslation>["t"];
+}): JSX.Element {
+  const c = STATUS_PILL_CLASS[status];
+  return (
+    <span
+      className="text-[10px] uppercase tracking-wide font-medium px-2 py-1 rounded-full"
+      style={{ background: c.bg, color: c.color, backdropFilter: "blur(8px)" }}
+    >
+      {t(`trips:status.${status}`)}
+    </span>
+  );
+}
+
+interface TabBarProps {
+  tab: TabKey;
+  onChange: (tab: TabKey) => void;
+  t: ReturnType<typeof useTranslation>["t"];
+}
+
+function TabBar({ tab, onChange, t }: TabBarProps): JSX.Element {
+  return (
+    <div
+      className="sticky top-0 z-30"
+      style={{
+        background: "var(--bg-base)",
+        borderBottom: "1px solid var(--color-border)",
+      }}
+    >
+      <div className="max-w-7xl mx-auto px-4 flex gap-1 overflow-x-auto">
+        {TABS.map((key) => (
+          <button
+            key={key}
+            onClick={() => onChange(key)}
+            className="px-4 py-3.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2"
+            style={{
+              color: tab === key ? "var(--accent)" : "var(--text-muted)",
+              borderColor: tab === key ? "var(--accent)" : "transparent",
+              marginBottom: -1,
+            }}
+          >
+            <span className="mr-1.5">{TAB_ICON[key]}</span>
+            {t(`trips:detail.tabs.${key}`)}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─────────── Tab: Overview ─────────── */
+
+function OverviewTab({
+  trip,
+  t,
+  onChanged,
+}: {
+  trip: Trip;
+  t: ReturnType<typeof useTranslation>["t"];
+  onChanged: () => void;
+}): JSX.Element {
+  return (
+    <>
+      <TripStatsRow trip={trip} t={t} />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-6">
+        <div className="lg:col-span-2 space-y-4">
+          <SummaryPanel trip={trip} t={t} onChanged={onChanged} />
+          {trip.notes && <NotesPanel notes={trip.notes} t={t} />}
+          {!trip.notes && (
+            <div
+              className="rounded-xl p-4 text-sm"
+              style={{
+                background: "var(--bg-surface)",
+                border: "1px dashed var(--color-border)",
+                color: "var(--text-muted)",
+              }}
+            >
+              {t("trips:modal.notesPlaceholder")}
+            </div>
+          )}
+        </div>
+        <div className="space-y-4">
+          {trip.companions.length > 0 && (
+            <SidePanel title={t("trips:detail.companions")}>
+              <div className="flex flex-wrap gap-2">
+                {trip.companions.map((name) => (
+                  <span
+                    key={name}
+                    className="px-2 py-1 rounded-full text-xs"
+                    style={{
+                      background: "var(--bg-muted)",
+                      color: "var(--text-primary)",
+                    }}
+                  >
+                    {name}
+                  </span>
+                ))}
+              </div>
+            </SidePanel>
+          )}
+          {trip.tags.length > 0 && (
+            <SidePanel title={t("trips:detail.tags")}>
+              <div className="flex flex-wrap gap-1">
+                {trip.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="px-2 py-0.5 rounded text-xs"
+                    style={{
+                      background: "var(--bg-muted)",
+                      color: "var(--text-muted)",
+                    }}
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </SidePanel>
+          )}
+          {trip.countries.length > 0 && (
+            <SidePanel title={t("trips:detail.countries")}>
+              <div className="flex flex-wrap gap-1 font-mono text-xs">
+                {trip.countries.map((cc) => (
+                  <span
+                    key={cc}
+                    className="px-2 py-0.5 rounded"
+                    style={{
+                      background: "var(--bg-muted)",
+                      color: "var(--text-muted)",
+                    }}
+                  >
+                    {cc}
+                  </span>
+                ))}
+              </div>
+            </SidePanel>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ─────────── Tab: Timeline ─────────── */
+
+type TimelineEvent =
+  | {
+      id: string;
+      kind: "flight";
+      date: string;
+      title: string;
+      subtitle: string | null;
+    }
+  | {
+      id: string;
+      kind: "cruise";
+      date: string;
+      title: string;
+      subtitle: string | null;
+    }
+  | {
+      id: string;
+      kind: "stop";
+      date: string;
+      stop: TripStop;
+    }
+  | {
+      id: string;
+      kind: "journal";
+      date: string;
+      entry: TripJournalEntry;
+    };
+
+const STOP_DOMAIN_ICON: Record<string, string> = {
+  poi: "📍",
+  hotel: "🏨",
+  train: "🚄",
+  road: "🚗",
+  ferry: "⛴",
+  hike: "🥾",
+  bike: "🚴",
+  other: "📌",
+};
+
+interface TimelineTabProps {
+  trip: Trip;
+  onChanged: () => void;
+  t: ReturnType<typeof useTranslation>["t"];
+}
+
+function TimelineTab({ trip, onChanged, t }: TimelineTabProps): JSX.Element {
+  const addToast = useToastStore((s) => s.addToast);
+  const [adding, setAdding] = useState<null | "journal" | "stop">(null);
+  const [editingJournal, setEditingJournal] = useState<TripJournalEntry | null>(null);
+  const [editingStop, setEditingStop] = useState<TripStop | null>(null);
+
+  const events = useMemo<TimelineEvent[]>(() => {
+    const out: TimelineEvent[] = [];
+    for (const f of trip.flights ?? []) {
+      if (!f.departureTime) continue;
+      out.push({
+        id: `flight-${f.id}`,
+        kind: "flight",
+        date: f.departureTime,
+        title: `${f.depIata ?? "???"} → ${f.arrIata ?? "???"}`,
+        subtitle: f.arrivalTime
+          ? `${new Date(f.departureTime).toLocaleString()} → ${new Date(f.arrivalTime).toLocaleString()}`
+          : new Date(f.departureTime).toLocaleString(),
+      });
+    }
+    for (const c of trip.cruises ?? []) {
+      if (!c.startDate) continue;
+      out.push({
+        id: `cruise-${c.id}`,
+        kind: "cruise",
+        date: c.startDate,
+        title: c.cruiseLine ?? "Kreuzfahrt",
+        subtitle: c.endDate
+          ? `${new Date(c.startDate).toLocaleDateString()} → ${new Date(c.endDate).toLocaleDateString()}`
+          : new Date(c.startDate).toLocaleDateString(),
+      });
+    }
+    for (const s of trip.stops ?? []) {
+      out.push({
+        id: `stop-${s.id}`,
+        kind: "stop",
+        date: s.startDate ?? s.createdAt,
+        stop: s,
+      });
+    }
+    for (const e of trip.journalEntries ?? []) {
+      out.push({
+        id: `journal-${e.id}`,
+        kind: "journal",
+        date: e.date,
+        entry: e,
+      });
+    }
+    return out.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [trip]);
+
+  const empty = events.length === 0;
+
+  const handleDeleteJournal = async (entry: TripJournalEntry): Promise<void> => {
+    if (!window.confirm(t("trips:detail.timeline.deleteJournalConfirm"))) return;
+    try {
+      await tripsApi.deleteJournalEntry(trip.id, entry.id);
+      addToast("success", t("trips:detail.timeline.deletedJournal"));
+      onChanged();
+    } catch {
+      addToast("error", t("trips:toasts.deleteError"));
+    }
+  };
+
+  const handleDeleteStop = async (stop: TripStop): Promise<void> => {
+    if (!window.confirm(t("trips:detail.timeline.deleteStopConfirm", { title: stop.title }))) {
+      return;
+    }
+    try {
+      await tripsApi.deleteStop(trip.id, stop.id);
+      addToast("success", t("trips:detail.timeline.deletedStop"));
+      onChanged();
+    } catch {
+      addToast("error", t("trips:toasts.deleteError"));
+    }
+  };
+
+  return (
+    <>
+      <div className="mb-4 flex gap-2 flex-wrap">
+        <button
+          type="button"
+          onClick={() => setAdding("journal")}
+          className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+          style={{ borderColor: "var(--color-border)", color: "var(--text-muted)" }}
+        >
+          {t("trips:detail.timeline.addJournal")}
+        </button>
+        <button
+          type="button"
+          onClick={() => setAdding("stop")}
+          className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+          style={{ borderColor: "var(--color-border)", color: "var(--text-muted)" }}
+        >
+          {t("trips:detail.timeline.addStop")}
+        </button>
+      </div>
+
+      {empty ? (
+        <Placeholder text={t("trips:detail.timeline.noEvents")} />
+      ) : (
+        <ol
+          className="relative pl-7"
+          style={{ listStyle: "none", margin: 0 }}
+        >
+          <span
+            aria-hidden
+            className="absolute top-3 bottom-3 w-px"
+            style={{ left: 10, background: "var(--color-border)" }}
+          />
+          {events.map((ev) => (
+            <li key={ev.id} className="relative mb-3">
+              <span
+                aria-hidden
+                className="absolute -left-[26px] top-4 w-3 h-3 rounded-full"
+                style={{
+                  border: `2px solid ${dotColor(ev)}`,
+                  background: "var(--bg-base)",
+                }}
+              />
+              {ev.kind === "flight" && <FlightCard ev={ev} />}
+              {ev.kind === "cruise" && <CruiseCard ev={ev} />}
+              {ev.kind === "stop" && (
+                <StopCard
+                  ev={ev}
+                  onEdit={() => setEditingStop(ev.stop)}
+                  onDelete={() => void handleDeleteStop(ev.stop)}
+                />
+              )}
+              {ev.kind === "journal" && (
+                <JournalCard
+                  ev={ev}
+                  onEdit={() => setEditingJournal(ev.entry)}
+                  onDelete={() => void handleDeleteJournal(ev.entry)}
+                />
+              )}
+            </li>
+          ))}
+        </ol>
+      )}
+
+      {(adding === "journal" || editingJournal) && (
+        <JournalEntryModal
+          tripId={trip.id}
+          entry={editingJournal}
+          defaultDate={trip.startDate ?? undefined}
+          onClose={() => {
+            setAdding(null);
+            setEditingJournal(null);
+          }}
+          onSaved={() => {
+            setAdding(null);
+            setEditingJournal(null);
+            onChanged();
+          }}
+        />
+      )}
+      {(adding === "stop" || editingStop) && (
+        <StopModal
+          tripId={trip.id}
+          stop={editingStop}
+          defaultDate={trip.startDate ?? undefined}
+          onClose={() => {
+            setAdding(null);
+            setEditingStop(null);
+          }}
+          onSaved={() => {
+            setAdding(null);
+            setEditingStop(null);
+            onChanged();
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+function dotColor(ev: TimelineEvent): string {
+  switch (ev.kind) {
+    case "flight":
+      return "var(--domain-flight, var(--accent))";
+    case "cruise":
+      return "var(--domain-cruise, #6fa0d6)";
+    case "stop":
+      return "var(--domain-poi, #5ec2b2)";
+    case "journal":
+      return "#60a5fa";
+  }
+}
+
+function EventCard({
+  icon,
+  bg,
+  iconColor,
+  title,
+  subtitle,
+  meta,
+  date,
+  actions,
+}: {
+  icon: string;
+  bg: string;
+  iconColor: string;
+  title: string;
+  subtitle?: string | null;
+  meta?: string;
+  date: string;
+  actions?: React.ReactNode;
+}): JSX.Element {
+  return (
+    <div
+      className="rounded-xl px-4 py-3 flex items-start gap-3"
+      style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+    >
+      <span
+        className="w-9 h-9 rounded-lg flex items-center justify-center text-base shrink-0"
+        style={{ background: bg, color: iconColor }}
+      >
+        {icon}
+      </span>
+      <div className="flex-1 min-w-0">
+        <div className="font-semibold text-sm">{title}</div>
+        {subtitle && (
+          <div className="text-xs mt-0.5 truncate" style={{ color: "var(--text-muted)" }}>
+            {subtitle}
+          </div>
+        )}
+        {meta && (
+          <div
+            className="text-xs mt-1.5 leading-relaxed"
+            style={{ color: "var(--text-primary)", opacity: 0.85 }}
+          >
+            {meta}
+          </div>
+        )}
+      </div>
+      <div className="flex flex-col items-end gap-1 shrink-0 text-right">
+        <time
+          className="text-[11px] font-mono"
+          style={{ color: "var(--text-muted)" }}
+          dateTime={date}
+        >
+          {new Date(date).toLocaleDateString()}
+        </time>
+        {actions}
+      </div>
+    </div>
+  );
+}
+
+function FlightCard({ ev }: { ev: Extract<TimelineEvent, { kind: "flight" }> }): JSX.Element {
+  return (
+    <EventCard
+      icon="✈"
+      bg="rgba(240,169,71,0.15)"
+      iconColor="var(--domain-flight, var(--accent))"
+      title={ev.title}
+      subtitle={ev.subtitle}
+      date={ev.date}
+    />
+  );
+}
+
+function CruiseCard({ ev }: { ev: Extract<TimelineEvent, { kind: "cruise" }> }): JSX.Element {
+  return (
+    <EventCard
+      icon="⚓"
+      bg="rgba(111,160,214,0.15)"
+      iconColor="var(--domain-cruise, #6fa0d6)"
+      title={ev.title}
+      subtitle={ev.subtitle}
+      date={ev.date}
+    />
+  );
+}
+
+function StopCard({
+  ev,
+  onEdit,
+  onDelete,
+}: {
+  ev: Extract<TimelineEvent, { kind: "stop" }>;
+  onEdit: () => void;
+  onDelete: () => void;
+}): JSX.Element {
+  const s = ev.stop;
+  const icon = STOP_DOMAIN_ICON[s.domain ?? "other"] ?? "📍";
+  const subtitle = s.lat != null && s.lon != null
+    ? `${s.lat.toFixed(3)}, ${s.lon.toFixed(3)}`
+    : s.description ?? null;
+  return (
+    <EventCard
+      icon={icon}
+      bg="rgba(94,194,178,0.15)"
+      iconColor="var(--domain-poi, #5ec2b2)"
+      title={s.title}
+      subtitle={subtitle}
+      meta={s.notes ?? undefined}
+      date={ev.date}
+      actions={<RowActions onEdit={onEdit} onDelete={onDelete} />}
+    />
+  );
+}
+
+function JournalCard({
+  ev,
+  onEdit,
+  onDelete,
+}: {
+  ev: Extract<TimelineEvent, { kind: "journal" }>;
+  onEdit: () => void;
+  onDelete: () => void;
+}): JSX.Element {
+  const e = ev.entry;
+  const headline = e.title ?? truncate(e.body, 50);
+  const meta = [e.weather, e.mood].filter(Boolean).join(" · ") || undefined;
+  return (
+    <EventCard
+      icon="📝"
+      bg="rgba(96,165,250,0.15)"
+      iconColor="#60a5fa"
+      title={headline}
+      subtitle={meta ?? null}
+      meta={e.title ? truncate(e.body, 200) : undefined}
+      date={ev.date}
+      actions={<RowActions onEdit={onEdit} onDelete={onDelete} />}
+    />
+  );
+}
+
+function RowActions({
+  onEdit,
+  onDelete,
+}: {
+  onEdit: () => void;
+  onDelete: () => void;
+}): JSX.Element {
+  return (
+    <div className="flex gap-1 mt-1">
+      <button
+        type="button"
+        onClick={onEdit}
+        className="text-[11px] px-1.5 py-0.5 rounded"
+        style={{ color: "var(--text-muted)" }}
+        aria-label="edit"
+        title="edit"
+      >
+        ✎
+      </button>
+      <button
+        type="button"
+        onClick={onDelete}
+        className="text-[11px] px-1.5 py-0.5 rounded"
+        style={{ color: "var(--danger, #f87171)" }}
+        aria-label="delete"
+        title="delete"
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
+
+function truncate(text: string, n: number): string {
+  if (text.length <= n) return text;
+  return text.slice(0, n - 1).trimEnd() + "…";
+}
+
+/* ─────────── Tab: Logistics ─────────── */
+
+function LogisticsTab({
+  trip,
+  t,
+}: {
+  trip: Trip;
+  t: ReturnType<typeof useTranslation>["t"];
+}): JSX.Element {
+  const flights = trip.flights ?? [];
+  const cruises = trip.cruises ?? [];
+  const bookings = trip.bookings ?? [];
+
+  const totalCost = bookings.reduce((sum, b) => sum + (b.price ?? 0), 0);
+  const currency = bookings.find((b) => b.currency)?.currency ?? "EUR";
+
+  if (flights.length === 0 && cruises.length === 0 && bookings.length === 0) {
+    return <Placeholder text={t("trips:detail.noLinks")} />;
+  }
+
+  return (
+    <div className="space-y-4">
+      {flights.length > 0 && (
+        <div
+          className="rounded-xl"
+          style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+        >
+          <PanelHeader>{t("trips:detail.logistics.flights")} ({flights.length})</PanelHeader>
+          <table className="w-full text-sm">
+            <thead>
+              <tr
+                className="text-xs uppercase tracking-wide"
+                style={{ color: "var(--text-muted)" }}
+              >
+                <th className="text-left px-4 py-2">Datum</th>
+                <th className="text-left px-4 py-2">Route</th>
+                <th className="text-right px-4 py-2">↗</th>
+              </tr>
+            </thead>
+            <tbody>
+              {flights.map((f) => (
+                <tr
+                  key={f.id}
+                  style={{ borderTop: "1px solid var(--color-border)" }}
+                >
+                  <td className="px-4 py-2.5 whitespace-nowrap" style={{ color: "var(--text-muted)" }}>
+                    {f.departureTime ? new Date(f.departureTime).toLocaleDateString() : "—"}
+                  </td>
+                  <td className="px-4 py-2.5 font-mono">
+                    {f.depIata ?? "???"} → {f.arrIata ?? "???"}
+                  </td>
+                  <td className="px-4 py-2.5 text-right">
+                    <Link
+                      to="/flights"
+                      className="text-xs"
+                      style={{ color: "var(--accent)" }}
+                    >
+                      öffnen
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {cruises.length > 0 && (
+        <div
+          className="rounded-xl"
+          style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+        >
+          <PanelHeader>{t("trips:detail.logistics.cruises")} ({cruises.length})</PanelHeader>
+          <table className="w-full text-sm">
+            <thead>
+              <tr
+                className="text-xs uppercase tracking-wide"
+                style={{ color: "var(--text-muted)" }}
+              >
+                <th className="text-left px-4 py-2">Datum</th>
+                <th className="text-left px-4 py-2">Reederei</th>
+                <th className="text-right px-4 py-2">↗</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cruises.map((c) => (
+                <tr key={c.id} style={{ borderTop: "1px solid var(--color-border)" }}>
+                  <td className="px-4 py-2.5 whitespace-nowrap" style={{ color: "var(--text-muted)" }}>
+                    {c.startDate ? new Date(c.startDate).toLocaleDateString() : "—"}
+                  </td>
+                  <td className="px-4 py-2.5">{c.cruiseLine ?? "Kreuzfahrt"}</td>
+                  <td className="px-4 py-2.5 text-right">
+                    <Link
+                      to={`/cruises/${c.id}`}
+                      className="text-xs"
+                      style={{ color: "var(--accent)" }}
+                    >
+                      öffnen
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {bookings.length > 0 && (
+        <div
+          className="rounded-xl"
+          style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+        >
+          <PanelHeader>
+            {t("trips:detail.logistics.bookings")} ({bookings.length})
+            {totalCost > 0 && (
+              <span className="ml-2 text-xs font-normal" style={{ color: "var(--text-muted)" }}>
+                · {t("trips:detail.logistics.totalBooked")}:{" "}
+                <strong style={{ color: "var(--text-primary)" }}>
+                  {currency} {Math.round(totalCost)}
+                </strong>
+              </span>
+            )}
+          </PanelHeader>
+          <table className="w-full text-sm">
+            <thead>
+              <tr
+                className="text-xs uppercase tracking-wide"
+                style={{ color: "var(--text-muted)" }}
+              >
+                <th className="text-left px-4 py-2">PNR</th>
+                <th className="text-right px-4 py-2">Preis</th>
+              </tr>
+            </thead>
+            <tbody>
+              {bookings.map((b) => (
+                <tr key={b.id} style={{ borderTop: "1px solid var(--color-border)" }}>
+                  <td className="px-4 py-2.5 font-mono">{b.pnr ?? "—"}</td>
+                  <td className="px-4 py-2.5 text-right">
+                    {b.price != null
+                      ? `${b.currency ?? "EUR"} ${b.price.toFixed(2)}`
+                      : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─────────── Shared bits ─────────── */
+
+function TripStatsRow({
+  trip,
+  t,
+}: {
+  trip: Trip;
+  t: ReturnType<typeof useTranslation>["t"];
+}): JSX.Element {
+  const flightCount = trip._count?.flights ?? trip.flights?.length ?? 0;
+  const cruiseCount = trip._count?.cruises ?? trip.cruises?.length ?? 0;
+  const totalCost = trip.bookings?.reduce((sum, b) => sum + (b.price ?? 0), 0) ?? 0;
+  const currency = trip.bookings?.find((b) => b.currency)?.currency ?? "EUR";
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <StatTile value={flightCount} label={t("trips:detail.stats.flights")} />
+      <StatTile value={cruiseCount} label={t("trips:detail.stats.cruises")} />
+      <StatTile value={trip.countries.length} label={t("trips:detail.stats.countries")} />
+      <StatTile value={trip.companions.length} label={t("trips:detail.stats.companions")} />
+      <StatTile
+        value={totalCost > 0 ? `${currency} ${Math.round(totalCost)}` : "—"}
+        label={t("trips:totalCost")}
+      />
+      <StatTile value={trip.tags.length} label={t("trips:detail.stats.tags")} />
+    </div>
+  );
+}
+
+function StatTile({ value, label }: { value: string | number; label: string }): JSX.Element {
+  return (
+    <div
+      className="rounded-xl p-3"
+      style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+    >
+      <div className="text-xl font-display font-bold">{value}</div>
+      <div
+        className="text-[10px] uppercase tracking-wide mt-0.5"
+        style={{ color: "var(--text-muted)" }}
+      >
+        {label}
+      </div>
+    </div>
+  );
+}
+
+function SummaryPanel({
+  trip,
+  t,
+  onChanged,
+}: {
+  trip: Trip;
+  t: ReturnType<typeof useTranslation>["t"];
+  onChanged: () => void;
+}): JSX.Element {
+  const addToast = useToastStore((s) => s.addToast);
+  const [generating, setGenerating] = useState(false);
+
+  const generate = async (): Promise<void> => {
+    setGenerating(true);
+    try {
+      await tripsApi.summarize(trip.id);
+      addToast("success", t("trips:summary.generated"));
+      onChanged();
+    } catch (err: unknown) {
+      const status =
+        typeof err === "object" && err !== null && "response" in err
+          ? ((err as { response?: { status?: number } }).response?.status ?? 0)
+          : 0;
+      addToast(
+        "error",
+        status === 503 ? t("trips:summary.unavailable") : t("trips:summary.error"),
+      );
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  if (!trip.summary) {
+    return (
+      <div
+        className="rounded-xl p-4 flex items-center gap-3"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(240,169,71,0.06), rgba(74,166,176,0.04))",
+          border: "1px dashed var(--color-border)",
+        }}
+      >
+        <div className="text-2xl shrink-0" aria-hidden>
+          ✨
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+            {t("trips:summary.title")}
+          </div>
+          <div className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
+            {t("trips:summary.cta")}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => void generate()}
+          disabled={generating}
+          className="px-3 py-1.5 rounded-md text-xs font-medium border disabled:opacity-50"
+          style={{ borderColor: "var(--accent)", color: "var(--accent)" }}
+        >
+          {generating ? t("trips:summary.generating") : t("trips:summary.generateButton")}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="rounded-xl p-4"
+      style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <div
+          className="text-[10px] uppercase tracking-wide flex items-center gap-1.5"
+          style={{ color: "var(--text-muted)" }}
+        >
+          <span aria-hidden>✨</span>
+          {t("trips:summary.title")}
+        </div>
+        <button
+          type="button"
+          onClick={() => void generate()}
+          disabled={generating}
+          className="text-[11px] underline disabled:opacity-50"
+          style={{ color: "var(--text-muted)" }}
+        >
+          {generating ? t("trips:summary.generating") : t("trips:summary.regenerate")}
+        </button>
+      </div>
+      <div className="text-sm whitespace-pre-wrap leading-relaxed">{trip.summary}</div>
+    </div>
+  );
+}
+
+function NotesPanel({
+  notes,
+  t,
+}: {
+  notes: string;
+  t: ReturnType<typeof useTranslation>["t"];
+}): JSX.Element {
+  return (
+    <div
+      className="rounded-xl p-4"
+      style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+    >
+      <div
+        className="text-[10px] uppercase tracking-wide mb-2"
+        style={{ color: "var(--text-muted)" }}
+      >
+        {t("trips:detail.notes")}
+      </div>
+      <div className="text-sm whitespace-pre-wrap leading-relaxed">{notes}</div>
+    </div>
+  );
+}
+
+function SidePanel({ title, children }: { title: string; children: React.ReactNode }): JSX.Element {
+  return (
+    <div
+      className="rounded-xl p-4"
+      style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+    >
+      <div
+        className="text-[10px] uppercase tracking-wide mb-2"
+        style={{ color: "var(--text-muted)" }}
+      >
+        {title}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function PanelHeader({ children }: { children: React.ReactNode }): JSX.Element {
+  return (
+    <div
+      className="px-4 py-2.5 text-xs uppercase tracking-wide"
+      style={{
+        color: "var(--text-muted)",
+        borderBottom: "1px solid var(--color-border)",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function Placeholder({ text }: { text: string }): JSX.Element {
+  return (
+    <div
+      className="rounded-xl p-12 text-center text-sm"
+      style={{
+        background: "var(--bg-surface)",
+        border: "1px dashed var(--color-border)",
+        color: "var(--text-muted)",
+      }}
+    >
+      {text}
+    </div>
+  );
+}
+
+function formatDateRange(start: Date | null, end: Date | null, locale: string): string | null {
+  if (!start && !end) return null;
+  const fmt = (d: Date): string =>
+    d.toLocaleDateString(locale, { day: "2-digit", month: "short", year: "numeric" });
+  if (start && end) {
+    return start.getFullYear() === end.getFullYear()
+      ? `${start.toLocaleDateString(locale, { day: "2-digit", month: "short" })} – ${fmt(end)}`
+      : `${fmt(start)} – ${fmt(end)}`;
+  }
+  return fmt((start ?? end) as Date);
+}

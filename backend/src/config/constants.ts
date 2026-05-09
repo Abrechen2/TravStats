@@ -30,6 +30,8 @@ export const FILE_LIMITS = {
   EMAIL_MAX_SIZE: 5 * 1024 * 1024, // 5 MB
   BOARDING_PASS_MAX_SIZE: 10 * 1024 * 1024, // 10 MB (for base64 images)
   PDF_MAX_SIZE: 20 * 1024 * 1024, // 20 MB
+  TRIP_PHOTO_MAX_SIZE: 15 * 1024 * 1024, // 15 MB per photo
+  TRIP_PHOTO_MAX_COUNT: 20, // per upload request
 
   // Body parsing limits
   JSON_BODY_MAX_SIZE: '10mb',
@@ -78,6 +80,10 @@ export const RATE_LIMITS = {
   // Admin export rate limits (loads entire DB)
   ADMIN_EXPORT_WINDOW_MS: 60 * 60 * 1000, // 1 hour
   ADMIN_EXPORT_MAX: 5, // 5 exports per hour
+
+  // Admin airport reseed rate limits (18k row upsert, expensive)
+  ADMIN_RESEED_WINDOW_MS: 60 * 60 * 1000, // 1 hour
+  ADMIN_RESEED_MAX: 3, // 3 reseeds per hour per admin (DoS guard)
 
   // PDF parse rate limits
   PDF_PARSE_WINDOW_MS: 15 * 60 * 1000, // 15 minutes

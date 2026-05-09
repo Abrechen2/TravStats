@@ -12,6 +12,7 @@
 import { getLogStats, listLogFiles, readLogWindow, LogEntry } from './logManager';
 import logger from '../utils/logger';
 import { prisma } from '../db';
+import { appVersion, buildVersion } from '../utils/version';
 
 /**
  * Fields that may contain PII or credentials. If a log entry has any of these
@@ -40,6 +41,10 @@ const SENSITIVE_KEYS = new Set([
   'globalClaudeApiKey',
   'airlabsApiKey',
   'aviationstackApiKey',
+  'aerodataboxApiKey',
+  'globalAirlabsApiKey',
+  'globalAviationstackApiKey',
+  'globalAerodataboxApiKey',
   'clientSecret',
   'accessToken',
   'refreshToken',
@@ -328,8 +333,8 @@ export async function buildDiagnosticBundle(userId: string): Promise<DiagnosticB
 
   return {
     generatedAt: new Date().toISOString(),
-    version: process.env.APP_VERSION || 'unknown',
-    buildVersion: process.env.BUILD_VERSION || process.env.APP_VERSION || 'unknown',
+    version: appVersion,
+    buildVersion,
     platform: {
       nodeVersion: process.version,
       os: process.platform,

@@ -7,7 +7,7 @@ import {
   enrichAirportData
 } from '../services/airportLookup';
 import { authenticate, AuthRequest } from '../middleware/auth';
-import { airportSearchLimiter } from '../middleware/rateLimit';
+import { airportSearchBurstLimiter, airportSearchLimiter } from '../middleware/rateLimit';
 
 const enrichAirportSchema = z.object({
   iata: z.string().length(3).toUpperCase().optional(),
@@ -21,8 +21,15 @@ const enrichAirportSchema = z.object({
 
 const router = Router();
 
-// Search airports (no auth required for better UX, but rate limited)
-router.get('/search', airportSearchLimiter, async (req: Request, res: Response, next: NextFunction) => {
+// Search airports — unauthenticated by design so the signup-flow autocomplete
+// works before a user has credentials. The OurAirports dataset itself is
+// public, so there's no secrecy to defend; the two stacked rate-limit buckets
+// (15-min sustained + 1-min burst) bound enumeration / DB-pressure abuse.
+router.get(
+  '/search',
+  airportSearchBurstLimiter,
+  airportSearchLimiter,
+  async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { q } = req.query;
 

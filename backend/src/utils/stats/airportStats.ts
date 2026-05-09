@@ -93,12 +93,18 @@ function continentOf(country: string | null | undefined): string {
  * Calculate airport-focused statistics. Takes the same flight list used by
  * calculateUniqueStats and the user's home airport history (for the
  * farthest-from-home computation).
+ *
+ * All metrics here are time-insensitive (airport counts, country/continent
+ * coverage, great-circle distance), so we count both `flown` and
+ * `historical` flights.
  */
 export async function calculateAirportStats(
   flights: FlightData[],
   homeAirportHistory: HomeAirportEntry[] = []
 ): Promise<AirportStats> {
-  const flownFlights = flights.filter((f) => f.status === 'flown');
+  const flownFlights = flights.filter(
+    (f) => f.status === 'flown' || f.status === 'historical'
+  );
   if (flownFlights.length === 0) return emptyAirportStats();
 
   // Collect airport codes to look up names and countries in one batched call.

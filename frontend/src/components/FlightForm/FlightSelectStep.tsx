@@ -1,9 +1,13 @@
 import { useTranslation } from "../../hooks/useTranslation";
 import { resolveAirlineDisplay } from "../../lib/airlineUtils";
+import AirlineLogo from "../AirlineLogo";
 
 interface FlightLookupResult {
   flightNumber: string;
   airline: string;
+  operatingAirline?: string;
+  isCodeshare?: boolean;
+  callsign?: string;
   departure: {
     iata?: string;
     name?: string;
@@ -19,12 +23,13 @@ interface FlightLookupResult {
     gate?: string;
   };
   aircraft?: string;
+  aircraftRegistration?: string;
+  distance?: number;
   status?: string;
 }
 
 export interface FlightSelectStepProps {
   lookupResults: FlightLookupResult[];
-  isDarkMode: boolean;
   textClass: string;
   mutedTextClass: string;
   handleSelectFlight: (flight: FlightLookupResult) => Promise<void>;
@@ -33,7 +38,6 @@ export interface FlightSelectStepProps {
 
 export default function FlightSelectStep({
   lookupResults,
-  isDarkMode,
   textClass,
   mutedTextClass,
   handleSelectFlight,
@@ -51,27 +55,41 @@ export default function FlightSelectStep({
           key={idx}
           type="button"
           onClick={() => handleSelectFlight(flight)}
-          className={`w-full text-left p-4 rounded-lg border-2 ${
-            isDarkMode
-              ? "border-[var(--color-border)] hover:border-blue-500 bg-[var(--bg-surface)]"
-              : "border-[var(--color-border)] hover:border-blue-500 bg-[var(--bg-base)]"
-          } transition-colors`}
+          className="w-full text-left p-4 rounded-lg border-2 border-[var(--color-border)] hover:border-blue-500 bg-[var(--bg-surface)] transition-colors"
         >
           <div className="flex justify-between items-start">
-            <div>
-              <div className={`font-bold ${textClass}`}>
-                {resolveAirlineDisplay(flight.airline, flight.flightNumber) || flight.airline}{" "}
-                {flight.flightNumber}
-              </div>
-              <div className={`text-sm ${mutedTextClass}`}>
-                {flight.departure.iata} {t("common:labels.routeSeparator")} {flight.arrival.iata}
-              </div>
-              {flight.departure.scheduledTime && (
-                <div className={`text-xs ${mutedTextClass} mt-1`}>
-                  {t("flights:lookup.departs")}:{" "}
-                  {new Date(flight.departure.scheduledTime).toLocaleString()}
+            <div className="flex items-start gap-2">
+              <AirlineLogo
+                iata={flight.airline?.length === 2 ? flight.airline : undefined}
+                flightNumber={flight.flightNumber}
+                size={28}
+              />
+              <div>
+                <div className={`font-bold ${textClass}`}>
+                  {resolveAirlineDisplay(flight.airline, flight.flightNumber) || flight.airline}{" "}
+                  {flight.flightNumber}
                 </div>
-              )}
+                <div className={`text-sm ${mutedTextClass}`}>
+                  {flight.departure.iata} {t("common:labels.routeSeparator")} {flight.arrival.iata}
+                </div>
+                {flight.isCodeshare && flight.operatingAirline && (
+                  <div className={`text-xs ${mutedTextClass} mt-1 italic`}>
+                    {t("flights:lookup.operatedBy", { airline: flight.operatingAirline })}
+                  </div>
+                )}
+                {flight.aircraftRegistration && (
+                  <div className={`text-xs ${mutedTextClass} mt-1`}>
+                    {t("flights:lookup.tailNumber")}:{" "}
+                    <span className="font-mono">{flight.aircraftRegistration}</span>
+                  </div>
+                )}
+                {flight.departure.scheduledTime && (
+                  <div className={`text-xs ${mutedTextClass} mt-1`}>
+                    {t("flights:lookup.departs")}:{" "}
+                    {new Date(flight.departure.scheduledTime).toLocaleString()}
+                  </div>
+                )}
+              </div>
             </div>
             {flight.status && (
               <span

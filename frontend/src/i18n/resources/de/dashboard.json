@@ -30,8 +30,6 @@
   "showFlightList": "Flugliste anzeigen",
   "showStats": "Statistiken anzeigen",
   "flightMap": "Flugkarte",
-  "import": "Importieren",
-  "importHint": "CSV-Spalten: depIata, arrIata, departureTime, arrivalTime (ISO 8601, z.B. 2025-12-01T07:30:00.000Z)",
   "filters": "Filter",
   "stats": "Statistiken",
   "flights": "Flüge",
@@ -55,7 +53,10 @@
     "flightUpdated": "Flug erfolgreich aktualisiert",
     "flightDeleted": "Flug erfolgreich gelöscht",
     "flightDeletedPending": "Flug gelöscht",
-    "flightDuplicated": "Flug dupliziert"
+    "flightDuplicated": "Flug dupliziert",
+    "flightMerged": "Bestehender Flug um {{count}} Felder ergänzt",
+    "flightMergedNoChange": "Keine neuen Felder zu ergänzen",
+    "importSummary": "{{updated}} Flüge aktualisiert, {{created}} neu angelegt"
   },
   "duplicateDialog": {
     "title": "Flug duplizieren",

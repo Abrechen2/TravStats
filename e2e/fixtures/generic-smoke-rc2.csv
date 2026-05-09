@@ -1,0 +1,4 @@
+date,fromIata,toIata,depTimeLocal,arrTimeLocal,flightNumber,airline,aircraft,registration,seatNumber
+2024-06-15,MUC,FCO,09:30:00,11:15:00,LH1844,Lufthansa,Airbus A320-200,D-AIPA,14C
+2024-06-22,FCO,MUC,18:00:00,20:00:00,LH1845,Lufthansa,Airbus A320-200,D-AIPA,14C
+2024-08-03,MUC,LHR,07:45:00,08:30:00,BA951,British Airways,Airbus A320-200,G-EUUE,7A

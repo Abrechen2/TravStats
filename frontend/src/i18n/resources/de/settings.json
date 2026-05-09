@@ -92,7 +92,7 @@
   },
   "display": {
     "title": "Anzeige & Sprache",
-    "description": "Modus, Sprache und Zeitzone zentral steuern.",
+    "description": "Sprache, Zeitzone sowie Datums- und Zeitformat zentral steuern.",
     "language": "Sprache",
     "languages": {
       "de": "Deutsch",
@@ -100,17 +100,7 @@
     },
     "timezone": "Zeitzone",
     "dateFormat": "Datumsformat",
-    "timeFormat": "Zeitformat",
-    "theme": {
-      "title": "Theme-Einstellungen",
-      "description": "Das Theme bestimmt das Farbschema der Anwendung. Dark Mode ist bei schlechten Lichtverhältnissen angenehmer für die Augen.",
-      "lightMode": "Light Mode",
-      "darkMode": "Dark Mode",
-      "lightDescription": "Helles Farbschema, ideal bei Tageslicht",
-      "darkDescription": "Dunkles Farbschema, reduziert Augenbelastung bei wenig Licht",
-      "autoSave": "Die Einstellung wird automatisch gespeichert und bleibt bei zukünftigen Besuchen erhalten",
-      "active": "aktiv"
-    }
+    "timeFormat": "Zeitformat"
   },
   "units": {
     "title": "Einheiten & Formate",
@@ -383,6 +373,8 @@
     "title": "Funktionen",
     "costTracking": "Kostenerfassung",
     "costTrackingDesc": "Preis- und Kostenfelder in Formularen anzeigen und Business-Statistiken auswerten.",
+    "trackAircraft": "Heckkennungen erfassen",
+    "trackAircraftDesc": "Speichert Tail-Nummer und Mode-S aus dem Flug-Lookup. Aus = Nur Aggregate, kein Audit-Trail einzelner Flugzeuge.",
     "help": {
       "title": "Optionale Funktionen",
       "description": "Hier kannst du Funktionen ein- und ausblenden, um die Oberfläche an deine Nutzung anzupassen. Deaktivierte Funktionen bleiben im Code vorhanden und können jederzeit wieder eingeschaltet werden.",
@@ -532,6 +524,21 @@
     "clear": "Löschen",
     "test": "Testen",
     "testing": "Teste...",
+    "capabilities": {
+      "historical365": {
+        "label": "Historische Suche · 365 Tage",
+        "tooltip": "Einziger Provider, der zuverlässig Flüge bis zu einem Jahr in der Vergangenheit liefert."
+      }
+    },
+    "quota": {
+      "label": "Verbleibend",
+      "unitsSuffix": "API-Units (zuletzt beobachtet)",
+      "requestsLabel": "Plus HTTP-Requests",
+      "observedSuffix": "Aufrufe (zuletzt beobachtet)",
+      "notReported": "Provider liefert keine Quota-Header zurück.",
+      "staticHint": "Free-Tier-Cap: ~{{limit}}/Monat",
+      "rateLimitOnly": "Kein Monats-Limit — IP-basierte Rate-Limits."
+    },
     "sharedNote": "Dieser Schlüssel wird vom Administrator geteilt und kann nicht bearbeitet werden",
     "save": "API-Schlüssel speichern",
     "saving": "Wird gespeichert...",
@@ -553,6 +560,35 @@
       "label": "Aviationstack API-Schlüssel",
       "description": "Kostenpflichtiger Service. Wird für Flugdaten-Abfrage mit höherer Genauigkeit verwendet."
     },
+    "aerodatabox": {
+      "label": "AeroDataBox API-Schlüssel",
+      "description": "Kostenlos via RapidAPI: 600 Einheiten/Monat. Schließt die Lücke für historische Flüge bis zu einem Jahr zurück."
+    },
+    "bulkRefresh": {
+      "title": "Bestandsflüge auffrischen",
+      "description": "Holt fehlende Felder (Kennzeichen, Mode-S, Codeshare, Airline-ICAO/IATA) für deine bisherigen Flüge der letzten 365 Tage nach. Bestehende Werte werden nie überschrieben. Benötigt AeroDataBox — nur dieser Provider deckt das 365-Tage-Fenster ab.",
+      "remainingPrefix": "Es sind",
+      "remainingSuffix": "Flüge zum Auffrischen vorgemerkt.",
+      "allUpToDate": "Alle Flüge im 365-Tage-Fenster sind aktuell — nichts zu tun.",
+      "demoBlocked": "Im Demo-Account deaktiviert, um keine echten API-Tokens zu verbrauchen. In deiner Prod-Instanz verfügbar.",
+      "noHistoricalProvider": "Du benötigst einen AeroDataBox-Schlüssel, um Flüge älter als heute aufzufrischen — nur AeroDataBox deckt das 365-Tage-Fenster ab. Trage einen Schlüssel oben ein und lade die Seite neu.",
+      "button": "Auffrischen",
+      "running": "Läuft...",
+      "confirmTitle": "AeroDataBox-Aufrufe bestätigen",
+      "confirmBody": "Dies verbraucht bis zu {{count}} AeroDataBox-Aufrufe in diesem Durchlauf. Pro Klick werden maximal 25 Flüge bearbeitet, danach kannst du erneut klicken, um den Rest abzuarbeiten.",
+      "confirmHistoricalNote": "Nur AeroDataBox kann das 365-Tage-Fenster bedienen. Andere konfigurierte APIs (AirLabs, Aviationstack, OpenSky) werden für diesen Vorgang nicht genutzt.",
+      "confirmQuotaCurrent": "AeroDataBox-Quota: {{remaining}} von {{limit}} API-Units verbleibend.",
+      "confirmQuotaWarn": "Verbleibende Quota reicht nicht für diesen Durchlauf — wirst vorzeitig auf 0 fallen.",
+      "quotaLabelADB": "AeroDataBox-Quota verbleibend",
+      "quotaSuffixADB": "API-Units (zuletzt beobachtet)",
+      "confirmRun": "Jetzt auffrischen",
+      "summaryTitle": "Letzter Lauf",
+      "summaryScanned": "Geprüft: {{count}}",
+      "summaryUpdated": "Aktualisiert: {{count}}",
+      "summaryNoData": "Keine Provider-Daten: {{count}}",
+      "summaryFailed": "Fehlgeschlagen: {{count}}",
+      "summaryRetryHint": "{{count}} weitere Flüge stehen noch aus — auf „Auffrischen\" klicken, um den nächsten Stapel zu verarbeiten."
+    },
     "opensky": {
       "label": "OpenSky Network",
       "description": "Kostenloser Service. Erfordert Registrierung. Wird für Flugdaten-Abfrage verwendet.",
@@ -561,6 +597,134 @@
       "username": "Benutzername",
       "password": "Passwort",
       "or": "ODER (stattdessen Basic Auth verwenden)"
+    }
+  },
+  "import": {
+    "title": "Import",
+    "description": "Migriere deine Flughistorie aus einem anderen Logbuch oder importiere einen TravStats-Excel-Export erneut.",
+    "tile": {
+      "fr24": {
+        "title": "Von Flightradar24",
+        "description": "Lade deinen CSV-Export von my.flightradar24.com hoch. Zeitzonen-Umrechnung und Flughafen-Lookup werden automatisch durchgeführt.",
+        "uploadLabel": "FR24-CSV auswählen"
+      },
+      "genericCsv": {
+        "title": "Aus beliebigem Logbuch (CSV)",
+        "description": "Lade eine flache Flug-CSV — nach dem Upload öffnet sich ein Mapping-Wizard, mit dem du jede Spalte einem TravStats-Feld zuordnest.",
+        "uploadLabel": "CSV-Datei auswählen"
+      },
+      "roundTrip": {
+        "title": "TravStats-Excel reimportieren",
+        "description": "XLSX/CSV/JSON aus einem TravStats-Export zurückladen. Bestehende Zeilen werden per ID aktualisiert, neue Zeilen angelegt.",
+        "uploadLabel": ".xlsx / .csv / .json auswählen",
+        "successSummary": "Aktualisiert: {{updated}} · Neu: {{created}}"
+      }
+    },
+    "preview": {
+      "title": "Import-Vorschau",
+      "summary": "{{ok}} bereit · {{duplicates}} Duplikate · {{problems}} Probleme",
+      "commit_one": "{{count}} Zeile importieren",
+      "commit_other": "{{count}} Zeilen importieren",
+      "cancel": "Abbrechen",
+      "submitting": "Wird importiert…",
+      "columns": {
+        "date": "Datum",
+        "route": "Route",
+        "flight": "Flug",
+        "status": "Status",
+        "flags": "Hinweise"
+      },
+      "warningBadge": {
+        "duration_mismatch": "Duration-Diskrepanz — verwende berechnete Ankunftszeit aus Abflug + Dauer"
+      },
+      "errorBadge": {
+        "unresolvable_airport": "Flughafen nicht gefunden",
+        "malformed_datetime": "Ungültiges Datum oder Uhrzeit",
+        "missing_required": "Pflichtfeld fehlt"
+      },
+      "dedupeBadge": {
+        "exact_match": "Bereits importiert",
+        "same_day_same_route": "Mögliches Duplikat"
+      },
+      "rowAriaLabel": "Zeile {{index}} einschließen",
+      "success": {
+        "title": "Import abgeschlossen",
+        "imported_one": "✅ {{count}} Flug importiert",
+        "imported_other": "✅ {{count}} Flüge importiert",
+        "skipped": "{{count}} per Vorschau übersprungen",
+        "failed_one": "{{count}} Block fehlgeschlagen — Fehlermeldung beachten",
+        "failed_other": "{{count}} Blöcke fehlgeschlagen — Fehlermeldung beachten",
+        "openFlights": "Zur Flugliste",
+        "close": "Schließen"
+      },
+      "wizard": {
+        "title": "CSV-Spalten auf TravStats-Felder zuordnen",
+        "headerLabel": "TravStats-Feld",
+        "headerColumn": "Deine Spalte",
+        "skip": "— überspringen —",
+        "cancel": "Abbrechen",
+        "continue": "Weiter",
+        "requiredSection": "Pflichtfelder",
+        "optionalSection": "Optional (empfohlen)",
+        "autoDetected": "Auto-erkannt",
+        "samplePrefix": "Beispiel",
+        "duplicateMapping": "Doppelte Zuordnung",
+        "duplicateMappingHint": "Eine CSV-Spalte ist zwei TravStats-Feldern zugeordnet — bitte auflösen",
+        "missingFields": "Pflichtfelder fehlen: {{fields}}",
+        "allMapped": "Alle Pflichtfelder zugeordnet",
+        "optionalSkipped_one": "{{count}} optional übersprungen",
+        "optionalSkipped_other": "{{count}} optional übersprungen",
+        "fields": {
+          "date": "Datum (YYYY-MM-DD)",
+          "fromIata": "Von IATA (3-4 Buchstaben)",
+          "toIata": "Nach IATA (3-4 Buchstaben)",
+          "depTimeLocal": "Abflugzeit (HH:MM:SS)",
+          "arrTimeLocal": "Ankunftszeit (HH:MM:SS)",
+          "flightNumber": "Flugnummer",
+          "airline": "Fluggesellschaft",
+          "aircraft": "Flugzeugtyp",
+          "registration": "Kennzeichen",
+          "seatNumber": "Sitzplatznummer",
+          "notes": "Notizen"
+        }
+      }
+    },
+    "toast": {
+      "movedFromDashboard": "Der Flug-Import ist jetzt hier — unter Einstellungen → Import."
+    }
+  },
+  "apiTokens": {
+    "title": "API-Tokens",
+    "description": "Persönliche Zugriffstokens für externe Tools, AI-Agenten und Skripte. Ein Token wird genau einmal beim Erstellen angezeigt — danach nie wieder.",
+    "docsTitle": "API-Dokumentation",
+    "docsBody": "Vollständige Endpoints, Beispiele und Schemas — interaktiv ausprobieren mit deinem Token.",
+    "docsLink": "Swagger UI öffnen →",
+    "newLabel": "Beschreibung",
+    "newLabelPlaceholder": "z. B. „Home Assistant Integration\"",
+    "scope": "Berechtigung",
+    "scopes": {
+      "read": "Read — nur lesen",
+      "write": "Write — lesen + schreiben",
+      "admin": "Admin — voller Zugriff"
+    },
+    "create": "Token erstellen",
+    "existingTitle": "Bestehende Tokens",
+    "empty": "Noch keine Tokens erstellt.",
+    "lastUsed": "Zuletzt: {{when}}",
+    "neverUsed": "Noch nie benutzt",
+    "revoked": "Widerrufen",
+    "revokeButton": "Widerrufen",
+    "confirmRevoke": "Token wirklich widerrufen? Externe Tools mit diesem Token verlieren sofort den Zugriff.",
+    "justCreatedTitle": "Token erstellt",
+    "justCreatedWarning": "Kopiere diesen Token JETZT — er wird nicht erneut angezeigt. Nur der Hash wird gespeichert.",
+    "copy": "Kopieren",
+    "copied": "Kopiert!",
+    "dismiss": "Verstanden",
+    "errors": {
+      "load": "Tokens konnten nicht geladen werden",
+      "create": "Token konnte nicht erstellt werden",
+      "revoke": "Token konnte nicht widerrufen werden",
+      "labelRequired": "Beschreibung ist erforderlich"
     }
   }
 }

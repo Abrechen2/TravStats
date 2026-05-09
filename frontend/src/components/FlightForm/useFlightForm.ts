@@ -12,6 +12,16 @@ import type { TimeEstimationWarning } from "./FlightCompleteStep";
 export interface FlightLookupResult {
   flightNumber: string;
   airline: string;
+  /** Operating airline if the searched flight number is a marketing codeshare. */
+  operatingAirline?: string;
+  /** True if the API flagged the entry as `IsCodeshare`. */
+  isCodeshare?: boolean;
+  /** ATC callsign, e.g. "DLH400". AeroDataBox-only. */
+  callsign?: string;
+  /** Airline IATA code, e.g. "LH". AeroDataBox-only. */
+  airlineIata?: string;
+  /** Airline ICAO code, e.g. "DLH". AeroDataBox-only. */
+  airlineIcao?: string;
   departure: {
     iata?: string;
     name?: string;
@@ -27,6 +37,13 @@ export interface FlightLookupResult {
     gate?: string;
   };
   aircraft?: string;
+  /** Tail number / aircraft registration, e.g. "D-AIHX". AeroDataBox-only. */
+  aircraftRegistration?: string;
+  /** Mode-S transponder hex, e.g. "3C6518". AeroDataBox-only. */
+  aircraftModeS?: string;
+  /** Great-circle route distance in km from the provider. */
+  distance?: number;
+  /** Hint to set status to `'cancelled'` or `'diverted'`. AeroDataBox-only. */
   status?: string;
 }
 
@@ -39,8 +56,14 @@ export interface DuplicateFlight {
   departureTime: string;
 }
 
+export interface FlightSubmitOptions {
+  force?: boolean;
+  merge?: boolean;
+  hasMoreFlights?: boolean;
+}
+
 export function useFlightForm(
-  onSubmit: (flight: FlightInput, force?: boolean, hasMoreFlights?: boolean) => Promise<void>,
+  onSubmit: (flight: FlightInput, opts?: FlightSubmitOptions) => Promise<void>,
   onCancel: () => void,
   onBatchComplete?: (newAchievements?: UserAchievement[]) => void
 ) {
@@ -83,6 +106,16 @@ export function useFlightForm(
   const [airline, setAirline] = useState("");
   const [operatingAirline, setOperatingAirline] = useState("");
   const [aircraft, setAircraft] = useState("");
+  // Lookup-derived metadata that is persisted on submit but not directly
+  // surfaced in the form UI: callsign + tail number / Mode-S identifiers
+  // come from AeroDataBox automatically and only appear in the flight
+  // detail view post-save. The user can still edit them later.
+  const [lookupCallsign, setLookupCallsign] = useState("");
+  const [lookupAircraftRegistration, setLookupAircraftRegistration] = useState("");
+  const [lookupAircraftModeS, setLookupAircraftModeS] = useState("");
+  const [lookupAirlineIata, setLookupAirlineIata] = useState("");
+  const [lookupAirlineIcao, setLookupAirlineIcao] = useState("");
+  const [lookupIsCodeshare, setLookupIsCodeshare] = useState<boolean | null>(null);
   const [terminal, setTerminal] = useState("");
   const [gate, setGate] = useState("");
   const [seatNumber, setSeatNumber] = useState("");
@@ -92,7 +125,7 @@ export function useFlightForm(
   const [status, setStatus] = useState<"scheduled" | "flown" | "cancelled" | "historical">("flown");
   const [notes, setNotes] = useState("");
   const [price, setPrice] = useState<number | undefined>(undefined);
-  const [currency, setCurrency] = useState<"EUR" | "USD" | "GBP" | "CHF">("EUR");
+  const [currency, setCurrency] = useState<string>("EUR");
   const [category, setCategory] = useState<"business" | "private" | "vacation">("business");
   const [tags, setTags] = useState<string[]>([]);
   const [companions, setCompanions] = useState<string[]>([]);
@@ -237,10 +270,28 @@ export function useFlightForm(
       if (arrAirport) setArrival(arrAirport);
 
       setAirline(flight.airline);
-      setOperatingAirline("");
+      // Codeshare path: API marks the searched flight number as marketed
+      // by airline X but operated by airline Y. Surface Y as the operating
+      // carrier so stats can group on the real metal. For non-codeshare
+      // entries (most lookups), leave operatingAirline empty.
+      setOperatingAirline(flight.isCodeshare ? flight.operatingAirline || "" : "");
       setAircraft(flight.aircraft || "");
+      setLookupCallsign(flight.callsign || "");
+      setLookupAircraftRegistration(flight.aircraftRegistration || "");
+      setLookupAircraftModeS(flight.aircraftModeS || "");
+      setLookupAirlineIata(flight.airlineIata || "");
+      setLookupAirlineIcao(flight.airlineIcao || "");
+      setLookupIsCodeshare(typeof flight.isCodeshare === "boolean" ? flight.isCodeshare : null);
       setTerminal(flight.departure.terminal || "");
       setGate(flight.departure.gate || "");
+
+      // Auto-flag cancelled flights from the API. "diverted" gets folded
+      // into "cancelled" because the flight-status enum doesn't have a
+      // dedicated diverted bucket — user can edit later. Anything else
+      // is left to the local date heuristic.
+      if (flight.status === "cancelled" || flight.status === "diverted") {
+        setStatus("cancelled");
+      }
 
       const applyDateTime = (
         value?: string,
@@ -316,12 +367,31 @@ export function useFlightForm(
     [departure, arrival, departureDate, arrivalDate, status]
   );
 
-  // Resolve a local YYYY-MM-DD + HH:mm pair (or year-only date for historical
-  // flights) into the canonical-UTC submit shape: a local-wall-clock string
-  // without TZ suffix. Year-only ("YYYY") expands to YYYY-01-01T00:00.
+  // Resolve a historical date string (YYYY / YYYY-MM / YYYY-MM-DD) plus an
+  // optional HH:mm time into the canonical local-wall-clock submit shape.
+  // Year-only  -> YYYY-01-01T00:00
+  // Year+Month -> YYYY-MM-01T00:00
+  // Year+Month+Day -> YYYY-MM-DDT<time|12:00>
+  // Everything else falls through to the original YYYY-MM-DDT<time> path.
   const buildLocalString = (date: string, time: string): string => {
-    if (date.length === 4) return `${date}-01-01T00:00`;
+    if (/^\d{4}$/.test(date)) {
+      return `${date}-01-01T00:00`;
+    }
+    if (/^\d{4}-\d{2}$/.test(date)) {
+      return `${date}-01T00:00`;
+    }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return `${date}T${time || "12:00"}`;
+    }
     return `${date}T${time}`;
+  };
+
+  // Derive which date-precision shape a historical departure date has.
+  const historicalDateShape = (date: string): "year" | "year_month" | "year_month_day" | "unknown" => {
+    if (/^\d{4}$/.test(date)) return "year";
+    if (/^\d{4}-\d{2}$/.test(date)) return "year_month";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return "year_month_day";
+    return "unknown";
   };
 
   // Pick the IANA timezone for a side. Airports cached in the DB carry an
@@ -332,48 +402,81 @@ export function useFlightForm(
   const depTz = departure?.timezone || userTz;
   const arrTz = arrival?.timezone || userTz;
 
-  const buildFlightPayload = (): FlightInput => ({
-    departure: {
-      iata: departure!.iata,
-      icao: departure!.icao,
-      name: departure!.name,
-      lat: departure!.lat,
-      lon: departure!.lon,
-    },
-    arrival: {
-      iata: arrival!.iata,
-      icao: arrival!.icao,
-      name: arrival!.name,
-      lat: arrival!.lat,
-      lon: arrival!.lon,
-    },
-    airline: airline || undefined,
-    operatingAirline: operatingAirline || undefined,
-    flightNumber: flightNumber || undefined,
-    aircraft: aircraft || undefined,
-    seatClass: seatClass || undefined,
-    seatNumber: seatNumber || undefined,
-    terminal: terminal || undefined,
-    gate: gate || undefined,
-    // Server converts {departureLocal, depTimezone} → real UTC via fromZonedTime.
-    // No browser-side `new Date(...).toISOString()` — that would leak the
-    // browser's local TZ into the payload.
-    departureLocal: departureDate ? buildLocalString(departureDate, departureTime) : undefined,
-    depTimezone: departureDate ? depTz : undefined,
-    arrivalLocal: arrivalDate ? buildLocalString(arrivalDate, arrivalTime) : undefined,
-    arrTimezone: arrivalDate ? arrTz : undefined,
-    status,
-    notes: notes || undefined,
-    price,
-    currency,
-    category,
-    tags: tags.length ? tags : undefined,
-    companions: companions.length ? companions : undefined,
-    baggageAllowance,
-    frequentFlyerNumber,
-    bookingClassLetter,
-    coPassengers: coPassengers.length ? coPassengers : undefined,
-  });
+  // Honour the user's "track aircraft registrations" opt-out: when off,
+  // the lookup-derived tail number / Mode-S are dropped before submit so
+  // the column stays NULL on the row. Default is ON.
+  const trackAircraft = settings?.features?.trackAircraftRegistration !== false;
+
+  const buildFlightPayload = (): FlightInput => {
+    // For historical flights, derive time-semantics from the date-precision shape.
+    // DATE_ONLY when the user knows the real calendar date but not the time;
+    // UNKNOWN for year-only or year+month rows (no meaningful time at all).
+    const depShape = status === "historical" ? historicalDateShape(departureDate) : "unknown";
+    const depTimeSemantics: FlightInput["depTimeSemantics"] =
+      depShape === "year_month_day" ? "DATE_ONLY" : depShape !== "unknown" ? "UNKNOWN" : undefined;
+    const arrTimeSemantics: FlightInput["arrTimeSemantics"] = depTimeSemantics;
+
+    // For DATE_ONLY historical rows, arrival mirrors departure so the wall-clock
+    // duration is 0 (great-circle estimate takes over downstream). The form already
+    // keeps arrivalDate in sync via setArrivalDate — this makes it explicit.
+    const effectiveArrivalDate =
+      status === "historical" && depShape === "year_month_day" ? departureDate : arrivalDate;
+    const effectiveArrivalTime =
+      status === "historical" && depShape === "year_month_day" ? departureTime : arrivalTime;
+
+    return {
+      departure: {
+        iata: departure!.iata,
+        icao: departure!.icao,
+        name: departure!.name,
+        lat: departure!.lat,
+        lon: departure!.lon,
+      },
+      arrival: {
+        iata: arrival!.iata,
+        icao: arrival!.icao,
+        name: arrival!.name,
+        lat: arrival!.lat,
+        lon: arrival!.lon,
+      },
+      airline: airline || undefined,
+      airlineIata: lookupAirlineIata || undefined,
+      airlineIcao: lookupAirlineIcao || undefined,
+      operatingAirline: operatingAirline || undefined,
+      isCodeshare: lookupIsCodeshare ?? undefined,
+      flightNumber: flightNumber || undefined,
+      callsign: lookupCallsign || undefined,
+      aircraft: aircraft || undefined,
+      aircraftRegistration: trackAircraft ? lookupAircraftRegistration || undefined : undefined,
+      aircraftModeS: trackAircraft ? lookupAircraftModeS || undefined : undefined,
+      seatClass: seatClass || undefined,
+      seatNumber: seatNumber || undefined,
+      terminal: terminal || undefined,
+      gate: gate || undefined,
+      // Server converts {departureLocal, depTimezone} -> real UTC via fromZonedTime.
+      // No browser-side `new Date(...).toISOString()` — that would leak the
+      // browser's local TZ into the payload.
+      departureLocal: departureDate ? buildLocalString(departureDate, departureTime) : undefined,
+      depTimezone: departureDate ? depTz : undefined,
+      arrivalLocal: effectiveArrivalDate
+        ? buildLocalString(effectiveArrivalDate, effectiveArrivalTime)
+        : undefined,
+      arrTimezone: effectiveArrivalDate ? arrTz : undefined,
+      depTimeSemantics,
+      arrTimeSemantics,
+      status,
+      notes: notes || undefined,
+      price,
+      currency,
+      category,
+      tags: tags.length ? tags : undefined,
+      companions: companions.length ? companions : undefined,
+      baggageAllowance,
+      frequentFlyerNumber,
+      bookingClassLetter,
+      coPassengers: coPassengers.length ? coPassengers : undefined,
+    };
+  };
 
   const storeHistoricalData = () => {
     if (flightNumber && departureTime && arrivalTime && departure?.iata && arrival?.iata) {
@@ -412,6 +515,12 @@ export function useFlightForm(
     setSeatNumber("");
     setNotes("");
     setOperatingAirline("");
+    setLookupCallsign("");
+    setLookupAircraftRegistration("");
+    setLookupAircraftModeS("");
+    setLookupAirlineIata("");
+    setLookupAirlineIcao("");
+    setLookupIsCodeshare(null);
 
     // Default the new departure date to the original arrival date, time empty —
     // user usually picks both. For a same-day return this is what they want;
@@ -482,7 +591,7 @@ export function useFlightForm(
     try {
       storeHistoricalData();
       setTimeEstimationWarning(null);
-      await onSubmit(buildFlightPayload(), false, true);
+      await onSubmit(buildFlightPayload(), { hasMoreFlights: true });
       prepareReturnFlightForm();
       useToastStore.getState().addToast("info", t("flights:form.returnFlightHint"));
     } catch (err: unknown) {
@@ -521,7 +630,40 @@ export function useFlightForm(
     try {
       storeHistoricalData();
       setTimeEstimationWarning(null);
-      await onSubmit(buildFlightPayload(), true);
+      await onSubmit(buildFlightPayload(), { force: true });
+    } catch (err: unknown) {
+      const errorObj = err as {
+        response?: { data?: { error?: string; details?: { field: string; message: string }[] } };
+      };
+      const details = errorObj.response?.data?.details;
+      const msg = details?.length
+        ? details.map((d) => d.message).join("; ")
+        : (errorObj.response?.data?.error ?? t("errors:saveFailed"));
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Resolve the duplicate dialog by merging new fields into the existing
+   * flight. Backend fills only nullish fields on the existing row, so the
+   * user's curated values are never overwritten — this is the safe path
+   * when the second source (boarding pass / email) carries metadata the
+   * first source didn't have (seat, gate, ticket number, …).
+   */
+  const handleMergeSubmit = async (): Promise<void> => {
+    setDuplicateFlight(null);
+    if (!departure || !arrival) {
+      setError(t("errors:missingAirports"));
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      storeHistoricalData();
+      setTimeEstimationWarning(null);
+      await onSubmit(buildFlightPayload(), { merge: true });
     } catch (err: unknown) {
       const errorObj = err as {
         response?: { data?: { error?: string; details?: { field: string; message: string }[] } };
@@ -589,7 +731,7 @@ export function useFlightForm(
       }
     } else {
       // Single flight — use the existing onSubmit callback
-      await onSubmit(enrichedFlight, false, hasMoreFlights);
+      await onSubmit(enrichedFlight, { hasMoreFlights });
 
       if (hasMoreFlights) {
         setCurrentFlightIndex(nextIndex);
@@ -688,6 +830,7 @@ export function useFlightForm(
     handleSubmit,
     handleSubmitAndReturn,
     handleForceSubmit,
+    handleMergeSubmit,
     handleFlightReviewConfirm,
   };
 }

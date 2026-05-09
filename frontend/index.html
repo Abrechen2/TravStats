@@ -20,17 +20,10 @@
       crossorigin=""
     />
     <!--
-      Globe textures (~2.2 MB total). `rel="prefetch"` lets the browser
-      pull them with idle-priority during initial app load so the first
-      time the user opens the 3D Globe mode the sphere paints instantly
-      instead of flashing a blank black ball while textures stream in.
-      Skipped if the user never enables cruise/globe mode — the lazy
-      `import("./GlobeView")` only triggers on view-mode switch, but
-      cached textures are ready when it does.
+      Globe textures (~4.3 MB) used to be prefetched here. They're now
+      prefetched on dashboard mount via `prefetchGlobeTextures()` so a
+      cold /login doesn't pay 4 MB for a feature most users never open.
     -->
-    <link rel="prefetch" as="image" href="/earth-night.jpg" />
-    <link rel="prefetch" as="image" href="/earth-topology.png" />
-    <link rel="prefetch" as="image" href="/night-sky.png" />
   </head>
   <body>
     <div id="root"></div>

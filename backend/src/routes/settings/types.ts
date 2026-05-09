@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { Prisma } from "@prisma/client";
 
 // ---- Interfaces for settings data stored as JSON ----
 
@@ -89,6 +89,7 @@ export interface ParserSettingsUpdateData {
 export interface ApiKeysUpdateData {
   airlabsApiKey?: string | null;
   aviationstackApiKey?: string | null;
+  aerodataboxApiKey?: string | null;
   openskyClientId?: string | null;
   openskyClientSecret?: string | null;
   openskyUsername?: string | null;
@@ -98,6 +99,7 @@ export interface ApiKeysUpdateData {
 export interface UserApiKeySettings {
   airlabsApiKey: string | null;
   aviationstackApiKey: string | null;
+  aerodataboxApiKey: string | null;
   openskyClientId: string | null;
   openskyClientSecret: string | null;
   openskyUsername: string | null;
@@ -108,12 +110,41 @@ export interface PrismaErrorWithCode extends Error {
   code?: string;
 }
 
-// Shared default settings used across sub-routers
+// Shared default settings used across sub-routers.
+//
+// `display.language`, `display.timezone`, and `display.dateFormat` are
+// intentionally absent: when no UserSettings row exists yet for a fresh
+// account, we want the frontend's browser detection to win (issue #87).
+// Hardcoding `de` / `Europe/Berlin` / `DD.MM.YYYY` here used to clobber
+// the locally-detected `en` the moment `loadRemoteSettings()` fired
+// post-login, flipping every English-locale user's UI to German on first
+// login. The frontend Zustand store still has its own browser-detected
+// fallback for these three fields, so omitting them here means the
+// backend response merges in without overwriting them.
 export const defaultSettings = {
-  profile: { username: 'Traveler', email: 'traveler@example.com', profilePicture: null },
-  display: { theme: 'light', language: 'de', timezone: 'Europe/Berlin', dateFormat: 'DD.MM.YYYY', timeFormat: '24h' },
-  units: { distanceUnit: 'kilometers', currency: 'EUR' },
-  defaults: { flightStatus: 'scheduled', seatClass: 'economy', favoriteAirline: 'Lufthansa', flightCategory: 'business' },
-  map: { mapStyle: 'osm', zoomLevel: 3, markerStyle: 'pin', routeColor: '#2563eb' },
-  notifications: { emailNotifications: true, flightReminder: '24h', checkInReminder: true, featureUpdates: true },
+  profile: {
+    username: "Traveler",
+    email: "traveler@example.com",
+    profilePicture: null,
+  },
+  display: { theme: "light", timeFormat: "24h" },
+  units: { distanceUnit: "kilometers", currency: "EUR" },
+  defaults: {
+    flightStatus: "scheduled",
+    seatClass: "economy",
+    favoriteAirline: "Lufthansa",
+    flightCategory: "business",
+  },
+  map: {
+    mapStyle: "osm",
+    zoomLevel: 3,
+    markerStyle: "pin",
+    routeColor: "#2563eb",
+  },
+  notifications: {
+    emailNotifications: true,
+    flightReminder: "24h",
+    checkInReminder: true,
+    featureUpdates: true,
+  },
 };

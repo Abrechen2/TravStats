@@ -135,7 +135,7 @@ function calculateAverageDuration(samples: HistoricalFlightTime[]): number {
 /**
  * Estimate flight duration using heuristics
  */
-function estimateDurationHeuristic(
+export function estimateDurationHeuristic(
   departureLat: number,
   departureLon: number,
   arrivalLat: number,

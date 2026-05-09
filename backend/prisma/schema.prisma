@@ -29,6 +29,10 @@ model User {
   mustChangePassword   Boolean                  @default(false) @map("must_change_password")
   changeToken          String?                  @unique @map("change_token")
   changeTokenExpiry    DateTime?                @map("change_token_expiry")
+  // True for users seeded by `seedDemoUser` (e.g. local dev `admin:admin123`).
+  // Used to gate quota-burning admin actions like bulk historical refresh so
+  // the dev demo can't drain a real RapidAPI key by accident.
+  isDemo               Boolean                  @default(false) @map("is_demo")
   flights              Flight[]
   userAchievements     UserAchievement[]
   settings             UserSettings?
@@ -43,8 +47,42 @@ model User {
   trips                Trip[]
   bookings             Booking[]
   cruises              Cruise[]
+  apiTokens            ApiToken[]
 
   @@map("users")
+}
+
+/// Personal Access Tokens for programmatic API access.
+///
+/// The plaintext token is shown to the user exactly once on creation
+/// (formatted as `ts_pat_<32-byte-hex>`). Only the bcrypt hash is
+/// persisted, so a leaked DB never exposes usable tokens.
+///
+/// Scopes are intentionally coarse for v1: a single token grants
+/// `read`, `write`, or `admin`. Finer-grained per-resource scopes can
+/// be layered on later via the `scopes` Json field if needed.
+///
+/// `lookupHash` is a fast SHA-256 of the plaintext, indexed for O(1)
+/// row retrieval on every request — bcrypt is then used as the actual
+/// constant-time secret comparison. Without this, every API request
+/// would have to bcrypt-compare against every active token.
+model ApiToken {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label       String
+  lookupHash  String    @unique @map("lookup_hash")
+  hash        String
+  scope       String    @default("read")
+  prefix      String    @default("ts_pat_")
+  lastUsedAt  DateTime? @map("last_used_at")
+  lastUsedIp  String?   @map("last_used_ip")
+  expiresAt   DateTime? @map("expires_at")
+  revokedAt   DateTime? @map("revoked_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("api_tokens")
 }
 
 model Airport {
@@ -58,6 +96,8 @@ model Airport {
   lon      Float
   altitude Int?
   timezone String?
+  shortName                   String?      @map("short_name")
+  municipalityName            String?      @map("municipality_name")
   /// True if the airport has been permanently closed (e.g. Berlin Tegel TXL
   /// after 2020-11-08). Users can still pick closed airports for historical
   /// flights — the UI just marks them visually.
@@ -76,27 +116,34 @@ model Airport {
 }
 
 model Flight {
-  id                 String    @id @default(uuid())
-  userId             String    @map("user_id")
-  airline            String?
-  operatingAirline   String?   @map("operating_airline")
-  flightNumber       String?   @map("flight_number")
-  callsign           String?
-  aircraft           String?
-  depIcao            String?   @map("dep_icao")
-  depIata            String?   @map("dep_iata")
-  depName            String?   @map("dep_name")
-  depLat             Float     @map("dep_lat")
-  depLon             Float     @map("dep_lon")
-  arrIcao            String?   @map("arr_icao")
-  arrIata            String?   @map("arr_iata")
-  arrName            String?   @map("arr_name")
-  arrLat             Float     @map("arr_lat")
-  arrLon             Float     @map("arr_lon")
-  departureTime      DateTime? @map("departure_time")
-  arrivalTime        DateTime? @map("arrival_time")
-  status             String    @default("scheduled") // scheduled, flown, cancelled, historical
-  notes              String?
+  id                   String    @id @default(uuid())
+  userId               String    @map("user_id")
+  airline              String?
+  airlineIata          String?   @map("airline_iata")
+  airlineIcao          String?   @map("airline_icao")
+  operatingAirline     String?   @map("operating_airline")
+  operatingAirlineIata String?   @map("operating_airline_iata")
+  operatingAirlineIcao String?   @map("operating_airline_icao")
+  isCodeshare          Boolean?  @map("is_codeshare")
+  flightNumber         String?   @map("flight_number")
+  callsign             String?
+  aircraft             String?
+  aircraftRegistration String?   @map("aircraft_registration")
+  aircraftModeS        String?   @map("aircraft_mode_s")
+  depIcao              String?   @map("dep_icao")
+  depIata              String?   @map("dep_iata")
+  depName              String?   @map("dep_name")
+  depLat               Float     @map("dep_lat")
+  depLon               Float     @map("dep_lon")
+  arrIcao              String?   @map("arr_icao")
+  arrIata              String?   @map("arr_iata")
+  arrName              String?   @map("arr_name")
+  arrLat               Float     @map("arr_lat")
+  arrLon               Float     @map("arr_lon")
+  departureTime        DateTime? @map("departure_time")
+  arrivalTime          DateTime? @map("arrival_time")
+  status               String    @default("scheduled") // scheduled, flown, cancelled, historical
+  notes                String?
   // Boarding Pass Information
   seatNumber         String?   @map("seat_number")
   seatClass          String?   @map("seat_class") // economy, premium_economy, business, first
@@ -123,7 +170,7 @@ model Flight {
   routeSource        String?   @map("route_source") // 'live_tracking', 'historical_aggregation', 'estimated'
   hasLiveTracking    Boolean   @default(false) @map("has_live_tracking")
   // Data source tracking
-  dataSource         String?   @map("data_source") // 'manual', 'email_import', 'boarding_pass_scan', 'historical_enrichment', 'live_update', 'api_lookup'
+  dataSource         String?   @map("data_source") // 'manual', 'email_import', 'boarding_pass_scan', 'historical_enrichment', 'live_update', 'api_lookup', 'bulk_import', 'imported_fr24', 'imported_generic_csv', 'imported_roundtrip'
   // Time-storage semantics for departureTime / arrivalTime.
   // 'UTC' = canonical real UTC instant (current writes always use this).
   // 'LEGACY_FAKE_UTC' = wall-clock encoded as fake-UTC; needs depTz/arrTz to
@@ -149,6 +196,15 @@ model Flight {
   coPassengers        String[] @default([]) @map("co_passengers") // Names parsed from booking email (vs. companions = user-defined travel group)
   parserTemplate      String?  @map("parser_template") // e.g. "LH" or null
   parserConfidence    Int?     @map("parser_confidence") // 0–100
+
+  // AeroDataBox extended fields (v1.5 importers — additive nullable)
+  runwayDepartureTime         DateTime?    @map("runway_departure_time")
+  runwayArrivalTime           DateTime?    @map("runway_arrival_time")
+  isCargo                     Boolean?     @map("is_cargo")
+  aerodataboxLastUpdatedUtc   DateTime?    @map("aerodatabox_last_updated_utc")
+  aerodataboxQualityTags      String[]     @map("aerodatabox_quality_tags") @default([])
+  baggageBelt                 String?      @map("baggage_belt")
+  checkInDesk                 String?      @map("check_in_desk")
 
   // Smart API check — scheduled time for next live-data lookup
   nextApiCheckAt DateTime? @map("next_api_check_at")
@@ -229,6 +285,7 @@ model UserSettings {
   // Flight lookup API keys (encrypted at application level)
   airlabsApiKey       String? @map("airlabs_api_key")
   aviationstackApiKey String? @map("aviationstack_api_key")
+  aerodataboxApiKey   String? @map("aerodatabox_api_key")
   openskyClientId     String? @map("opensky_client_id")
   openskyClientSecret String? @map("opensky_client_secret")
   openskyUsername     String? @map("opensky_username")
@@ -307,6 +364,7 @@ model AdminSettings {
   // Global flight lookup API keys (encrypted at application level)
   globalAirlabsApiKey       String? @map("global_airlabs_api_key")
   globalAviationstackApiKey String? @map("global_aviationstack_api_key")
+  globalAerodataboxApiKey   String? @map("global_aerodatabox_api_key")
   globalOpenskyClientId     String? @map("global_opensky_client_id")
   globalOpenskyClientSecret String? @map("global_opensky_client_secret")
   globalOpenskyUsername     String? @map("global_opensky_username")
@@ -550,16 +608,99 @@ model Trip {
   name        String
   description String?
   color       String   @default("#818cf8") @map("color")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  flights  Flight[]
-  bookings Booking[]
-  cruises  Cruise[]
+  // Phase-1 metadata redesign — see migration 20260509120000_trip_metadata.
+  // All optional / defaulted so legacy rows stay valid.
+  startDate        DateTime? @map("start_date")
+  endDate          DateTime? @map("end_date")
+  status           String    @default("completed") // planned | in_progress | completed
+  category         String?   // vacation | business | weekend | family | other
+  tags             String[]  @default([])
+  companions       String[]  @default([])
+  notes            String?   // markdown long-form
+  summary          String?   // optional, may be LLM-generated later
+  originLabel      String?   @map("origin_label")
+  destinationLabel String?   @map("destination_label")
+  coverImageUrl    String?   @map("cover_image_url")
+  icon             String?
+  countries        String[]  @default([])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flights        Flight[]
+  bookings       Booking[]
+  cruises        Cruise[]
+  stops          TripStop[]
+  journalEntries TripJournalEntry[]
+  photos         TripPhoto[]
 
   @@index([userId])
+  @@index([userId, status])
   @@map("trips")
+}
+
+model TripPhoto {
+  id        String    @id @default(uuid())
+  tripId    String    @map("trip_id")
+  filename  String
+  mimetype  String
+  sizeBytes Int       @map("size_bytes")
+  caption   String?
+  takenAt   DateTime? @map("taken_at")
+  sortIdx   Int       @default(0) @map("sort_idx")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+  @@index([tripId, sortIdx])
+  @@map("trip_photos")
+}
+
+model TripStop {
+  id          String    @id @default(uuid())
+  tripId      String    @map("trip_id")
+  orderIdx    Int       @default(0) @map("order_idx")
+  // Free-form DomainKey-style label so the timeline picks the right
+  // colour ("poi", "hotel", "train", "hike", …). Null means "generic".
+  domain      String?
+  // Optional id of an existing flight/cruise/etc. that this stop wraps.
+  sourceId    String?   @map("source_id")
+  title       String
+  description String?
+  startDate   DateTime? @map("start_date")
+  endDate     DateTime? @map("end_date")
+  lat         Float?
+  lon         Float?
+  notes       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+  @@index([tripId, orderIdx])
+  @@map("trip_stops")
+}
+
+model TripJournalEntry {
+  id        String   @id @default(uuid())
+  tripId    String   @map("trip_id")
+  date      DateTime
+  title     String?
+  body      String
+  mood      String?
+  weather   String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+  @@index([tripId, date])
+  @@map("trip_journal_entries")
 }
 
 model Booking {

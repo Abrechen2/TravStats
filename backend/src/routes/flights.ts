@@ -1,7 +1,7 @@
 import { Router, Response, NextFunction } from 'express';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../db';
-import { authenticate, AuthRequest } from '../middleware/auth';
+import { authenticate, requireWriteScope, AuthRequest } from '../middleware/auth';
 import { createFlightSchema, updateFlightSchema, flightQuerySchema } from '../schemas/flight';
 import type { FlightQueryInput } from '../schemas/flight';
 import logger from '../utils/logger';
@@ -16,13 +16,20 @@ import {
   aggregateFlightData,
   createHistoricalEnrichment,
 } from '../services/flightEnrichmentService';
+import {
+  countBulkRefreshCandidates,
+  hasHistoricalProvider,
+  runBulkRefresh,
+} from '../services/bulkFlightRefresh';
+import { getProviderQuota } from '../services/apiQuota';
 import { estimateRoute } from '../services/routeEstimationService';
-import { calculateCo2Kg, toSeatClass } from '../services/co2Calculator';
+import { calculateCo2Kg, haversineKm, toSeatClass } from '../services/co2Calculator';
 import { getCachedAirports } from '../services/airportCache';
 import { tzAwareDurationMinutes } from '../utils/timezone';
 import { fromZonedTime } from 'date-fns-tz';
 import { normalizeAircraft } from '../utils/aircraftNormalize';
 import { calculateNextApiCheckAt } from '../utils/smartCheckSchedule';
+import { buildFlightMergePatch } from '../utils/flightMerge';
 import batchRouter from './flightsBatch';
 
 const router = Router();
@@ -30,10 +37,17 @@ const router = Router();
 // Interface for flight update data
 interface FlightUpdateData {
   airline?: string;
+  airlineIata?: string | null;
+  airlineIcao?: string | null;
   operatingAirline?: string | null;
+  operatingAirlineIata?: string | null;
+  operatingAirlineIcao?: string | null;
+  isCodeshare?: boolean | null;
   flightNumber?: string;
   callsign?: string | null;
   aircraft?: string | null;
+  aircraftRegistration?: string | null;
+  aircraftModeS?: string | null;
   status?: string;
   notes?: string | null;
   price?: number | null;
@@ -61,10 +75,24 @@ interface FlightUpdateData {
   actualArrival?: Date | null;
   delayMinutes?: number | null;
   co2Kg?: number | null;
+  routeDistance?: number | null;
   lastModifiedBy?: string;
   nextApiCheckAt?: Date | null;
   depTimeSemantics?: string;
   arrTimeSemantics?: string;
+  // Boarding pass / email import fields — written on POST, must also be
+  // updatable via PUT. Their absence here was a silent-drop bug.
+  seatNumber?: string;
+  boardingGroup?: string;
+  gate?: string;
+  terminal?: string;
+  bookingReference?: string;
+  ticketNumber?: string;
+  baggageAllowance?: string;
+  frequentFlyerNumber?: string;
+  bookingClassLetter?: string;
+  coPassengers?: string[];
+  dataSource?: string;
 }
 
 // Resolve a paired (local wall-clock + IANA timezone) input into a real UTC
@@ -75,8 +103,13 @@ function toUtcDate(local: string | null | undefined, tz: string | null | undefin
   return fromZonedTime(local, tz);
 }
 
-// All routes require authentication
+// All routes require authentication.
+// `requireWriteScope` is method-aware: GET/HEAD/OPTIONS pass through, anything
+// else demands a write- or admin-scoped PAT (cookie sessions are unaffected).
+// Order matters — must run before the batchRouter mount so /flights/batch
+// inherits the same scope check.
 router.use(authenticate);
+router.use(requireWriteScope);
 router.use(batchRouter);
 
 // Normalize query params coming from axios (arrays are sent as foo[] by default)
@@ -194,25 +227,48 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
     const userId = req.userId!;
     const data = createFlightSchema.parse(req.body);
 
-    // Resolve local + tz pairs into canonical real UTC instants up front so
-    // the rest of the handler can work with proper Date objects.
+    // Soft warning for past-dated `scheduled` rows (G4) — not rejected so
+    // legitimate edge cases (manually re-edited just-departed rows) still
+    // succeed, but flagged for ops review since these are almost always a
+    // status-flip bug or a year-typo in bulk imports.
+    if (data.status === 'scheduled' && data.departureLocal) {
+      const nowIso = new Date().toISOString().slice(0, 19);
+      if (data.departureLocal < nowIso) {
+        logger.warn({
+          operation: 'flight_create_scheduled_in_past',
+          userId,
+          departureLocal: data.departureLocal,
+          flightNumber: data.flightNumber,
+        });
+      }
+    }
+
     const departureUtc = toUtcDate(data.departureLocal, data.depTimezone);
     const arrivalUtc = toUtcDate(data.arrivalLocal, data.arrTimezone);
     const actualDepartureUtc = toUtcDate(data.actualDepartureLocal, data.actualDepartureTz);
     const actualArrivalUtc = toUtcDate(data.actualArrivalLocal, data.actualArrivalTz);
 
-    // Duplicate check: same userId + flightNumber + same calendar day
+    // Duplicate check (#84): pre-existing rows can hold non-canonical
+    // flightNumber strings ("LH 123", "lh123") from before the schema-level
+    // normalization landed, so fetch the day's candidates and compare
+    // normalized in JS rather than relying on a direct WHERE.
+    //
+    // ?force=true → bypass and create a real duplicate row (user opt-in).
+    // ?merge=true → fill missing fields on the existing flight from
+    //   incoming data without ever overwriting curated values; lets a
+    //   second source (boarding pass, email confirmation) enrich a
+    //   manually-entered flight in place. force wins if both are set.
     const forceCreate = req.query['force'] === 'true';
+    const mergeIntoExisting = !forceCreate && req.query['merge'] === 'true';
     if (data.flightNumber && !forceCreate && departureUtc) {
       const dayStart = new Date(departureUtc);
       dayStart.setUTCHours(0, 0, 0, 0);
       const dayEnd = new Date(departureUtc);
       dayEnd.setUTCHours(23, 59, 59, 999);
 
-      const existing = await prisma.flight.findFirst({
+      const dayCandidates = await prisma.flight.findMany({
         where: {
           userId,
-          flightNumber: data.flightNumber,
           departureTime: { gte: dayStart, lte: dayEnd },
         },
         select: {
@@ -225,7 +281,40 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
         },
       });
 
+      const normalize = (s: string | null): string =>
+        (s ?? '').replace(/\s+/g, '').toUpperCase();
+      const wantFlightNumber = data.flightNumber; // already normalized by schema
+      const existing = dayCandidates.find(
+        (c) => normalize(c.flightNumber) === wantFlightNumber
+      );
+
       if (existing) {
+        if (mergeIntoExisting) {
+          const existingFull = await prisma.flight.findUnique({
+            where: { id: existing.id },
+          });
+          if (!existingFull) {
+            res.status(409).json({
+              error: 'DUPLICATE_FLIGHT',
+              message: `Flight ${data.flightNumber} on this day already exists`,
+              existingFlight: existing,
+            });
+            return;
+          }
+          const { patch, mergedFields } = buildFlightMergePatch(existingFull, data);
+          const merged = mergedFields.length === 0
+            ? existingFull
+            : await prisma.flight.update({
+                where: { id: existing.id },
+                data: { ...patch, lastModifiedBy: 'user' },
+              });
+          res.status(200).json({
+            flight: merged,
+            mergedFields,
+          });
+          return;
+        }
+
         res.status(409).json({
           error: 'DUPLICATE_FLIGHT',
           message: `Flight ${data.flightNumber} on this day already exists`,
@@ -257,10 +346,17 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
       data: {
         userId,
         airline: data.airline,
+        airlineIata: data.airlineIata,
+        airlineIcao: data.airlineIcao,
         operatingAirline: data.operatingAirline,
+        operatingAirlineIata: data.operatingAirlineIata,
+        operatingAirlineIcao: data.operatingAirlineIcao,
+        isCodeshare: data.isCodeshare,
         flightNumber: data.flightNumber,
         callsign: data.callsign,
         aircraft: data.aircraft ? normalizeAircraft(data.aircraft) : null,
+        aircraftRegistration: data.aircraftRegistration,
+        aircraftModeS: data.aircraftModeS,
         // Use enriched departure data (fills in missing IATA/ICAO/names)
         depIcao: enriched.departure.icao,
         depIata: enriched.departure.iata,
@@ -277,8 +373,11 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
         arrivalTime: arrivalUtc,
         actualDeparture: actualDepartureUtc,
         actualArrival: actualArrivalUtc,
-        depTimeSemantics: 'UTC',
-        arrTimeSemantics: 'UTC',
+        // Default to 'UTC' (the canonical contract). Bulk-import callers can
+        // override with 'DATE_ONLY' or 'UNKNOWN' when the time component is
+        // a placeholder so downstream display/aggregation knows to estimate.
+        depTimeSemantics: data.depTimeSemantics ?? 'UTC',
+        arrTimeSemantics: data.arrTimeSemantics ?? 'UTC',
         delayMinutes:
           actualDepartureUtc && departureUtc
             ? Math.round((actualDepartureUtc.getTime() - departureUtc.getTime()) / 60000)
@@ -290,6 +389,13 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
           arrLon: enriched.arrival.lon,
           seatClass: toSeatClass(data.seatClass),
         }),
+        // Haversine route distance — see flightsBatch.ts for context.
+        routeDistance: haversineKm(
+          enriched.departure.lat,
+          enriched.departure.lon,
+          enriched.arrival.lat,
+          enriched.arrival.lon,
+        ),
         status: data.status,
         notes: data.notes,
         price: data.price,
@@ -312,7 +418,7 @@ router.post('/', flightCreationLimiter, async (req: AuthRequest, res: Response, 
         bookingClassLetter: data.bookingClassLetter,
         coPassengers: data.coPassengers ?? [],
         // Data source tracking
-        dataSource: 'manual',
+        dataSource: data.dataSource ?? 'manual',
         lastModifiedBy: 'user',
         nextApiCheckAt: calculateNextApiCheckAt(
           departureUtc,
@@ -349,19 +455,27 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
     const normalizedQuery = normalizeQueryParams(req.query as Record<string, string | string[] | undefined>);
     const parsedQuery = flightQuerySchema.parse(normalizedQuery);
     const tagsArray = splitMultiValue(parsedQuery.tags as string | string[] | undefined);
+    // ?all=true bypasses the 500-row cap entirely so API consumers can sync
+    // the full row set in one request. Auth + user-scoped where clause make
+    // an unbounded read safe; the only consumer is the row owner.
+    const all = parsedQuery.all === true;
+    const cappedLimit = Math.min(parsedQuery.limit ?? 100, 500);
     const query = {
       ...parsedQuery,
       tags: tagsArray,
-      limit: Math.min(parsedQuery.limit ?? 100, 500),
+      limit: cappedLimit,
+      offset: all ? 0 : parsedQuery.offset,
     };
+    const take = all ? undefined : cappedLimit;
     const { where, noResults } = buildFlightWhere(query, userId);
 
     if (noResults) {
       return res.json({
         flights: [],
         total: 0,
-        limit: query.limit,
+        limit: take ?? 0,
         offset: query.offset,
+        all,
       });
     }
 
@@ -370,7 +484,7 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
         where,
         orderBy: { departureTime: 'desc' },
         skip: query.offset,
-        take: query.limit,
+        take,
         include: {
           trip: { select: { id: true, name: true, color: true } },
         },
@@ -421,8 +535,9 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
     res.json({
       flights: enrichedFlights,
       total,
-      limit: query.limit,
+      limit: take ?? total,
       offset: query.offset,
+      all,
     });
   } catch (error) {
     next(error);
@@ -515,6 +630,76 @@ router.get('/geo', async (req: AuthRequest, res: Response, next: NextFunction) =
   }
 });
 
+// Bulk historical refresh — patches AeroDataBox-only fields
+// (`aircraftRegistration`, `aircraftModeS`, `isCodeshare`, airline ICAO/IATA)
+// onto existing flights that pre-date the Phase-2 enrichment commit.
+//
+// Demo users (seeded by `seedDemoUser`) are rejected to keep the local
+// dev demo from draining real RapidAPI quota. Hard-capped at
+// `MAX_PER_CALL` flights per request — the frontend re-clicks until the
+// returned `remaining` hits zero.
+router.get('/refresh-historical-bulk/preview', flightCreationLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId!;
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { isDemo: true },
+    });
+    if (user?.isDemo) {
+      return res.status(403).json({
+        error: 'DEMO_ACCOUNT_FORBIDDEN',
+        message:
+          'Bulk refresh is disabled for the demo account to keep RapidAPI quota intact. Use a real account on a production deployment.',
+      });
+    }
+    const [remaining, hasProvider] = await Promise.all([
+      countBulkRefreshCandidates(userId),
+      hasHistoricalProvider(userId),
+    ]);
+    const adbQuota = getProviderQuota('aerodatabox', userId);
+    const quota = adbQuota.kind === 'observed' ? adbQuota : null;
+    res.json({
+      remaining,
+      hasHistoricalProvider: hasProvider,
+      aerodataboxQuota: quota,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/refresh-historical-bulk', flightCreationLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId!;
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { isDemo: true },
+    });
+    if (user?.isDemo) {
+      return res.status(403).json({
+        error: 'DEMO_ACCOUNT_FORBIDDEN',
+        message:
+          'Bulk refresh is disabled for the demo account to keep RapidAPI quota intact. Use a real account on a production deployment.',
+      });
+    }
+
+    if (!(await hasHistoricalProvider(userId))) {
+      return res.status(409).json({
+        error: 'NO_HISTORICAL_PROVIDER',
+        message:
+          'Bulk refresh needs an AeroDataBox or Aviationstack key to look up flights older than today. Configure one in the API keys section above.',
+      });
+    }
+
+    const summary = await runBulkRefresh(userId);
+    const adbQuota = getProviderQuota('aerodatabox', userId);
+    const quota = adbQuota.kind === 'observed' ? adbQuota : null;
+    res.json({ ...summary, aerodataboxQuota: quota });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Get enrichment candidates
 router.get('/enrichment-candidates', statsLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -546,6 +731,24 @@ router.get('/enrichment-candidates', statsLimiter, async (req: AuthRequest, res:
       candidates,
       settings,
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get a single flight by id — added for API consumers (AI agents,
+// scripts) that PATCH/PUT and want to read back the freshly-updated
+// state without re-listing every flight. Returns the flight directly
+// (not wrapped) so curl-piped jq filters stay simple.
+router.get('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.userId!;
+    const { id } = req.params;
+    const flight = await prisma.flight.findFirst({ where: { id, userId } });
+    if (!flight) {
+      throw new AppError('Flight not found', 404);
+    }
+    res.json(flight);
   } catch (error) {
     next(error);
   }
@@ -612,10 +815,17 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
 
     const updateData: FlightUpdateData = {};
     if (data.airline) updateData.airline = data.airline;
+    if (data.airlineIata !== undefined) updateData.airlineIata = data.airlineIata;
+    if (data.airlineIcao !== undefined) updateData.airlineIcao = data.airlineIcao;
     if (data.operatingAirline !== undefined) updateData.operatingAirline = data.operatingAirline;
+    if (data.operatingAirlineIata !== undefined) updateData.operatingAirlineIata = data.operatingAirlineIata;
+    if (data.operatingAirlineIcao !== undefined) updateData.operatingAirlineIcao = data.operatingAirlineIcao;
+    if (data.isCodeshare !== undefined) updateData.isCodeshare = data.isCodeshare;
     if (data.flightNumber) updateData.flightNumber = data.flightNumber;
     if (data.callsign !== undefined) updateData.callsign = data.callsign;
     if (data.aircraft !== undefined) updateData.aircraft = data.aircraft ? normalizeAircraft(data.aircraft) : data.aircraft;
+    if (data.aircraftRegistration !== undefined) updateData.aircraftRegistration = data.aircraftRegistration;
+    if (data.aircraftModeS !== undefined) updateData.aircraftModeS = data.aircraftModeS;
     if (data.status) updateData.status = data.status;
     if (data.notes !== undefined) updateData.notes = data.notes;
     if (data.price !== undefined) updateData.price = data.price;
@@ -627,6 +837,28 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
     if (data.tags !== undefined) updateData.tags = data.tags;
     if (data.companions !== undefined) updateData.companions = data.companions;
     if (data.receiptUrl !== undefined) updateData.receiptUrl = data.receiptUrl;
+
+    // Boarding pass / email import fields. POST writes these on create;
+    // PUT must propagate them too — without this whitelist the schema
+    // accepts the input, the handler silently drops it, and the user sees
+    // a 200-OK with no DB change (regression report 2026-05-04).
+    if (data.seatNumber !== undefined) updateData.seatNumber = data.seatNumber;
+    if (data.boardingGroup !== undefined) updateData.boardingGroup = data.boardingGroup;
+    if (data.gate !== undefined) updateData.gate = data.gate;
+    if (data.terminal !== undefined) updateData.terminal = data.terminal;
+    if (data.bookingReference !== undefined) updateData.bookingReference = data.bookingReference;
+    if (data.ticketNumber !== undefined) updateData.ticketNumber = data.ticketNumber;
+    if (data.baggageAllowance !== undefined) updateData.baggageAllowance = data.baggageAllowance;
+    if (data.frequentFlyerNumber !== undefined) updateData.frequentFlyerNumber = data.frequentFlyerNumber;
+    if (data.bookingClassLetter !== undefined) updateData.bookingClassLetter = data.bookingClassLetter;
+    if (data.coPassengers !== undefined) updateData.coPassengers = data.coPassengers;
+    if (data.dataSource !== undefined) updateData.dataSource = data.dataSource;
+    // Direct override for time semantics. The localTime branch below sets
+    // 'UTC' implicitly when a localTime is supplied; this lets bulk-import
+    // callers explicitly mark a row as DATE_ONLY / UNKNOWN without changing
+    // the time itself. Explicit beats implicit when both are sent.
+    if (data.depTimeSemantics !== undefined) updateData.depTimeSemantics = data.depTimeSemantics;
+    if (data.arrTimeSemantics !== undefined) updateData.arrTimeSemantics = data.arrTimeSemantics;
 
     if (enrichedDeparture) {
       updateData.depIcao = enrichedDeparture.icao;
@@ -654,11 +886,16 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
 
     if (data.departureLocal !== undefined) {
       updateData.departureTime = incomingDepUtc ?? undefined;
-      updateData.depTimeSemantics = 'UTC';
+      // Don't overwrite an explicit semantics override the client sent.
+      if (data.depTimeSemantics === undefined) {
+        updateData.depTimeSemantics = 'UTC';
+      }
     }
     if (data.arrivalLocal !== undefined) {
       updateData.arrivalTime = incomingArrUtc ?? undefined;
-      updateData.arrTimeSemantics = 'UTC';
+      if (data.arrTimeSemantics === undefined) {
+        updateData.arrTimeSemantics = 'UTC';
+      }
     }
 
     // Actual times and delay
@@ -673,7 +910,8 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
       updateData.actualArrival = incomingActualArrUtc;
     }
 
-    // Recalculate CO₂ when coordinates change or on any update (always keep in sync)
+    // Recalculate CO₂ + route distance when coordinates change or on any
+    // update (always keep both in sync — same source of truth).
     const depLat = enrichedDeparture?.lat ?? existingFlight.depLat;
     const depLon = enrichedDeparture?.lon ?? existingFlight.depLon;
     const arrLat = enrichedArrival?.lat  ?? existingFlight.arrLat;
@@ -685,6 +923,7 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
       arrLon,
       seatClass: toSeatClass(data.seatClass ?? existingFlight.seatClass),
     });
+    updateData.routeDistance = haversineKm(depLat, depLon, arrLat, arrLon);
 
     // Set lastModifiedBy when user updates
     updateData.lastModifiedBy = 'user';

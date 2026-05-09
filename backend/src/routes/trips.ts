@@ -1,17 +1,81 @@
 import { Router, Response, NextFunction } from "express";
+import { z } from "zod";
 import { prisma } from "../db";
-import { authenticate, AuthRequest } from "../middleware/auth";
+import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { AppError } from "../middleware/errorHandler";
 import {
   createTripSchema,
   updateTripSchema,
   assignFlightsSchema,
   createBookingSchema,
+  createStopSchema,
+  updateStopSchema,
+  createJournalSchema,
+  updateJournalSchema,
   TRIP_COLORS,
 } from "../schemas/trip";
 import logger from "../utils/logger";
+import { detectTrips } from "../services/tripDetectionService";
+import { summariseTrip, checkOllamaAvailable } from "../services/tripSummaryService";
+import { emailParseLimiter } from "../middleware/rateLimit";
+import {
+  uploadTripPhotos,
+  uploadTripCover,
+  deleteTripPhotoFile,
+  getTripPhotoDir,
+} from "../middleware/upload";
+import path from "path";
+import fs from "fs";
 
 const router = Router();
+
+const reviewProposalSchema = z.object({
+  flightIds: z.array(z.string().uuid()).min(2),
+  name: z.string().min(1).max(200),
+  pnr: z.string().max(20).nullable().optional(),
+  source: z.enum(["pnr", "home_loop", "continuity"]).optional(),
+});
+
+const detectTripsSchema = z.object({
+  dryRun: z.boolean().optional().default(true),
+  // Review-flow override: when provided in commit mode (dryRun=false),
+  // commit only these proposals with their (possibly renamed) names.
+  selectedProposals: z.array(reviewProposalSchema).optional(),
+});
+
+/**
+ * POST /trips/detect — run heuristic auto-detection over the user's
+ * trip-less flights. See `services/tripDetectionService.ts` for the
+ * heuristic stack. Default `dryRun: true` returns proposals without
+ * committing; set `dryRun: false` to atomically create trips and link
+ * flights. Always cleans up orphan trips at the end of a non-dry run.
+ */
+router.post(
+  "/trips/detect",
+  authenticate,
+  requireWriteScope,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      const { dryRun, selectedProposals } = detectTripsSchema.parse(req.body ?? {});
+      const result = await detectTrips({ userId, dryRun, selectedProposals });
+      logger.info({
+        operation: "trips_detect",
+        message: `Trip detection ${dryRun ? "dry-run" : "committed"}`,
+        context: {
+          userId,
+          dryRun,
+          proposed: result.proposed.length,
+          created: result.created.length,
+          orphansRemoved: result.orphansRemoved,
+        },
+      });
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 /** GET /trips — list all trips for the current user */
 router.get("/trips", authenticate, async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
@@ -60,7 +124,7 @@ router.get("/trips", authenticate, async (req: AuthRequest, res: Response, next:
 });
 
 /** POST /trips/bookings — create a booking (must come before /trips/:id) */
-router.post("/trips/bookings", authenticate, async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+router.post("/trips/bookings", authenticate, requireWriteScope, async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
     const body = createBookingSchema.parse(req.body);
@@ -114,17 +178,23 @@ router.get("/trips/:id", authenticate, async (req: AuthRequest, res: Response, n
           },
           orderBy: { startDate: "asc" },
         },
+        stops: { orderBy: [{ orderIdx: "asc" }, { startDate: "asc" }] },
+        journalEntries: { orderBy: { date: "asc" } },
+        photos: { orderBy: [{ sortIdx: "asc" }, { createdAt: "asc" }] },
       },
     });
     if (!trip) throw new AppError("Trip not found", 404);
-    res.json({ trip });
+    // Map raw photo rows to DTOs (drops internal "__cover__" sentinel
+    // photos so the gallery never shows the cover twice).
+    const photos = trip.photos.filter((p) => p.caption !== "__cover__").map(toPhotoDto);
+    res.json({ trip: { ...trip, photos } });
   } catch (error) {
     next(error);
   }
 });
 
 /** POST /trips */
-router.post("/trips", authenticate, async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+router.post("/trips", authenticate, requireWriteScope, async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
     const body = createTripSchema.parse(req.body);
@@ -136,7 +206,25 @@ router.post("/trips", authenticate, async (req: AuthRequest, res: Response, next
     }
 
     const trip = await prisma.trip.create({
-      data: { userId, name: body.name, description: body.description, color },
+      data: {
+        userId,
+        name: body.name,
+        description: body.description,
+        color,
+        startDate: body.startDate,
+        endDate: body.endDate,
+        status: body.status,
+        category: body.category,
+        tags: body.tags,
+        companions: body.companions,
+        notes: body.notes,
+        summary: body.summary,
+        originLabel: body.originLabel,
+        destinationLabel: body.destinationLabel,
+        coverImageUrl: body.coverImageUrl,
+        icon: body.icon,
+        countries: body.countries,
+      },
     });
 
     logger.info({ tripId: trip.id, userId }, "[Trips] Created trip");
@@ -147,7 +235,7 @@ router.post("/trips", authenticate, async (req: AuthRequest, res: Response, next
 });
 
 /** PATCH /trips/:id */
-router.patch("/trips/:id", authenticate, async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+router.patch("/trips/:id", authenticate, requireWriteScope, async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
     const existing = await prisma.trip.findFirst({ where: { id: req.params.id, userId } });
@@ -160,6 +248,19 @@ router.patch("/trips/:id", authenticate, async (req: AuthRequest, res: Response,
         ...(body.name !== undefined && { name: body.name }),
         ...(body.description !== undefined && { description: body.description }),
         ...(body.color !== undefined && { color: body.color }),
+        ...(body.startDate !== undefined && { startDate: body.startDate }),
+        ...(body.endDate !== undefined && { endDate: body.endDate }),
+        ...(body.status !== undefined && { status: body.status }),
+        ...(body.category !== undefined && { category: body.category }),
+        ...(body.tags !== undefined && { tags: body.tags }),
+        ...(body.companions !== undefined && { companions: body.companions }),
+        ...(body.notes !== undefined && { notes: body.notes }),
+        ...(body.summary !== undefined && { summary: body.summary }),
+        ...(body.originLabel !== undefined && { originLabel: body.originLabel }),
+        ...(body.destinationLabel !== undefined && { destinationLabel: body.destinationLabel }),
+        ...(body.coverImageUrl !== undefined && { coverImageUrl: body.coverImageUrl }),
+        ...(body.icon !== undefined && { icon: body.icon }),
+        ...(body.countries !== undefined && { countries: body.countries }),
       },
     });
 
@@ -170,7 +271,7 @@ router.patch("/trips/:id", authenticate, async (req: AuthRequest, res: Response,
 });
 
 /** DELETE /trips/:id */
-router.delete("/trips/:id", authenticate, async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+router.delete("/trips/:id", authenticate, requireWriteScope, async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
     const existing = await prisma.trip.findFirst({ where: { id: req.params.id, userId } });
@@ -185,7 +286,7 @@ router.delete("/trips/:id", authenticate, async (req: AuthRequest, res: Response
 });
 
 /** POST /trips/:id/flights — assign/unassign flights */
-router.post("/trips/:id/flights", authenticate, async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+router.post("/trips/:id/flights", authenticate, requireWriteScope, async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
     const trip = await prisma.trip.findFirst({ where: { id: req.params.id, userId } });
@@ -218,5 +319,430 @@ router.post("/trips/:id/flights", authenticate, async (req: AuthRequest, res: Re
     next(error);
   }
 });
+
+/* ─────────── Stops ─────────── */
+
+/** Resolve and authorise a trip by id from the URL — used for every
+ *  stop / journal sub-route. Throws 404 if the user doesn't own it. */
+async function resolveTrip(userId: string, tripId: string): Promise<{ id: string }> {
+  const trip = await prisma.trip.findFirst({ where: { id: tripId, userId }, select: { id: true } });
+  if (!trip) throw new AppError("Trip not found", 404);
+  return trip;
+}
+
+/** POST /trips/:id/stops */
+router.post(
+  "/trips/:id/stops",
+  authenticate,
+  requireWriteScope,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      const trip = await resolveTrip(userId, req.params.id);
+      const body = createStopSchema.parse(req.body);
+      const stop = await prisma.tripStop.create({
+        data: {
+          tripId: trip.id,
+          title: body.title,
+          domain: body.domain,
+          sourceId: body.sourceId,
+          description: body.description,
+          startDate: body.startDate,
+          endDate: body.endDate,
+          lat: body.lat,
+          lon: body.lon,
+          notes: body.notes,
+          orderIdx: body.orderIdx ?? 0,
+        },
+      });
+      res.status(201).json({ stop });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/** PATCH /trips/:id/stops/:stopId */
+router.patch(
+  "/trips/:id/stops/:stopId",
+  authenticate,
+  requireWriteScope,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      await resolveTrip(userId, req.params.id);
+      const existing = await prisma.tripStop.findFirst({
+        where: { id: req.params.stopId, tripId: req.params.id },
+      });
+      if (!existing) throw new AppError("Stop not found", 404);
+      const body = updateStopSchema.parse(req.body);
+      const stop = await prisma.tripStop.update({
+        where: { id: req.params.stopId },
+        data: {
+          ...(body.title !== undefined && { title: body.title }),
+          ...(body.domain !== undefined && { domain: body.domain }),
+          ...(body.sourceId !== undefined && { sourceId: body.sourceId }),
+          ...(body.description !== undefined && { description: body.description }),
+          ...(body.startDate !== undefined && { startDate: body.startDate }),
+          ...(body.endDate !== undefined && { endDate: body.endDate }),
+          ...(body.lat !== undefined && { lat: body.lat }),
+          ...(body.lon !== undefined && { lon: body.lon }),
+          ...(body.notes !== undefined && { notes: body.notes }),
+          ...(body.orderIdx !== undefined && { orderIdx: body.orderIdx }),
+        },
+      });
+      res.json({ stop });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/** DELETE /trips/:id/stops/:stopId */
+router.delete(
+  "/trips/:id/stops/:stopId",
+  authenticate,
+  requireWriteScope,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      await resolveTrip(userId, req.params.id);
+      const existing = await prisma.tripStop.findFirst({
+        where: { id: req.params.stopId, tripId: req.params.id },
+      });
+      if (!existing) throw new AppError("Stop not found", 404);
+      await prisma.tripStop.delete({ where: { id: req.params.stopId } });
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/* ─────────── Journal entries ─────────── */
+
+/** POST /trips/:id/journal */
+router.post(
+  "/trips/:id/journal",
+  authenticate,
+  requireWriteScope,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      const trip = await resolveTrip(userId, req.params.id);
+      const body = createJournalSchema.parse(req.body);
+      const entry = await prisma.tripJournalEntry.create({
+        data: {
+          tripId: trip.id,
+          date: body.date,
+          title: body.title,
+          body: body.body,
+          mood: body.mood,
+          weather: body.weather,
+        },
+      });
+      res.status(201).json({ entry });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/** PATCH /trips/:id/journal/:entryId */
+router.patch(
+  "/trips/:id/journal/:entryId",
+  authenticate,
+  requireWriteScope,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      await resolveTrip(userId, req.params.id);
+      const existing = await prisma.tripJournalEntry.findFirst({
+        where: { id: req.params.entryId, tripId: req.params.id },
+      });
+      if (!existing) throw new AppError("Journal entry not found", 404);
+      const body = updateJournalSchema.parse(req.body);
+      const entry = await prisma.tripJournalEntry.update({
+        where: { id: req.params.entryId },
+        data: {
+          ...(body.date !== undefined && { date: body.date }),
+          ...(body.title !== undefined && { title: body.title }),
+          ...(body.body !== undefined && { body: body.body }),
+          ...(body.mood !== undefined && { mood: body.mood }),
+          ...(body.weather !== undefined && { weather: body.weather }),
+        },
+      });
+      res.json({ entry });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/** DELETE /trips/:id/journal/:entryId */
+router.delete(
+  "/trips/:id/journal/:entryId",
+  authenticate,
+  requireWriteScope,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      await resolveTrip(userId, req.params.id);
+      const existing = await prisma.tripJournalEntry.findFirst({
+        where: { id: req.params.entryId, tripId: req.params.id },
+      });
+      if (!existing) throw new AppError("Journal entry not found", 404);
+      await prisma.tripJournalEntry.delete({ where: { id: req.params.entryId } });
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/* ─────────── LLM summary (iter 9) ─────────── */
+
+/** POST /trips/:id/summarize — generate + persist a 3-paragraph summary */
+router.post(
+  "/trips/:id/summarize",
+  authenticate,
+  requireWriteScope,
+  emailParseLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      await resolveTrip(userId, req.params.id);
+
+      const ollamaUp = await checkOllamaAvailable();
+      if (!ollamaUp) {
+        throw new AppError(
+          "LLM service unavailable. Set OLLAMA_URL and ensure the model is pulled.",
+          503,
+        );
+      }
+
+      const result = await summariseTrip(req.params.id, userId);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/* ─────────── Photos (iter 7) ─────────── */
+
+const updatePhotoSchema = z.object({
+  caption: z.string().max(500).nullable().optional(),
+  takenAt: z.string().datetime().nullable().optional(),
+  sortIdx: z.number().int().min(0).max(10000).optional(),
+});
+
+/** POST /trips/:id/photos — upload one or more images */
+router.post(
+  "/trips/:id/photos",
+  authenticate,
+  requireWriteScope,
+  uploadTripPhotos.array("photos", 20),
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    const uploaded: Express.Multer.File[] = (req.files as Express.Multer.File[] | undefined) ?? [];
+    try {
+      const userId = req.userId!;
+      await resolveTrip(userId, req.params.id);
+      if (uploaded.length === 0) throw new AppError("No photos uploaded", 400);
+
+      const last = await prisma.tripPhoto.findFirst({
+        where: { tripId: req.params.id },
+        orderBy: { sortIdx: "desc" },
+        select: { sortIdx: true },
+      });
+      let nextIdx = (last?.sortIdx ?? -1) + 1;
+
+      const created = await prisma.$transaction(
+        uploaded.map((f) =>
+          prisma.tripPhoto.create({
+            data: {
+              tripId: req.params.id,
+              filename: f.filename,
+              mimetype: f.mimetype,
+              sizeBytes: f.size,
+              sortIdx: nextIdx++,
+            },
+          }),
+        ),
+      );
+      res.status(201).json({ photos: created.map(toPhotoDto) });
+    } catch (error) {
+      // Cleanup uploaded files on any failure to avoid orphaning bytes.
+      for (const f of uploaded) {
+        try {
+          fs.existsSync(f.path) && fs.unlinkSync(f.path);
+        } catch (_e) {
+          logger.warn({
+            operation: "trip_photo_upload_cleanup_error",
+            message: "Failed to cleanup orphaned trip photo file",
+            context: { path: f.path },
+          });
+        }
+      }
+      next(error);
+    }
+  },
+);
+
+/** GET /trips/:id/photos/:photoId/file — serve image bytes */
+router.get(
+  "/trips/:id/photos/:photoId/file",
+  authenticate,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      await resolveTrip(userId, req.params.id);
+      const photo = await prisma.tripPhoto.findFirst({
+        where: { id: req.params.photoId, tripId: req.params.id },
+      });
+      if (!photo) throw new AppError("Photo not found", 404);
+      const filePath = path.join(getTripPhotoDir(), path.basename(photo.filename));
+      if (!fs.existsSync(filePath)) throw new AppError("File missing", 404);
+      res.type(photo.mimetype);
+      res.sendFile(filePath);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/** PATCH /trips/:id/photos/:photoId — update caption / sortIdx / takenAt */
+router.patch(
+  "/trips/:id/photos/:photoId",
+  authenticate,
+  requireWriteScope,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      await resolveTrip(userId, req.params.id);
+      const existing = await prisma.tripPhoto.findFirst({
+        where: { id: req.params.photoId, tripId: req.params.id },
+      });
+      if (!existing) throw new AppError("Photo not found", 404);
+      const body = updatePhotoSchema.parse(req.body);
+      const photo = await prisma.tripPhoto.update({
+        where: { id: req.params.photoId },
+        data: {
+          ...(body.caption !== undefined && { caption: body.caption }),
+          ...(body.takenAt !== undefined && {
+            takenAt: body.takenAt ? new Date(body.takenAt) : null,
+          }),
+          ...(body.sortIdx !== undefined && { sortIdx: body.sortIdx }),
+        },
+      });
+      res.json({ photo: toPhotoDto(photo) });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/** DELETE /trips/:id/photos/:photoId */
+router.delete(
+  "/trips/:id/photos/:photoId",
+  authenticate,
+  requireWriteScope,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      await resolveTrip(userId, req.params.id);
+      const photo = await prisma.tripPhoto.findFirst({
+        where: { id: req.params.photoId, tripId: req.params.id },
+      });
+      if (!photo) throw new AppError("Photo not found", 404);
+      await prisma.tripPhoto.delete({ where: { id: req.params.photoId } });
+      deleteTripPhotoFile(photo.filename);
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/** POST /trips/:id/cover — upload single image and set as coverImageUrl */
+router.post(
+  "/trips/:id/cover",
+  authenticate,
+  requireWriteScope,
+  uploadTripCover.single("cover"),
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    const uploaded = req.file;
+    try {
+      const userId = req.userId!;
+      await resolveTrip(userId, req.params.id);
+      if (!uploaded) throw new AppError("No cover uploaded", 400);
+      // Reuse the trip-photos directory but scope the URL under the
+      // trip's REST namespace via a pseudo-photo row, so cover deletion
+      // is unified with photo deletion later.
+      const photo = await prisma.tripPhoto.create({
+        data: {
+          tripId: req.params.id,
+          filename: uploaded.filename,
+          mimetype: uploaded.mimetype,
+          sizeBytes: uploaded.size,
+          sortIdx: -1, // covers sort below user photos
+          caption: "__cover__",
+        },
+      });
+      const coverUrl = `/api/v1/trips/${req.params.id}/photos/${photo.id}/file`;
+      const trip = await prisma.trip.update({
+        where: { id: req.params.id },
+        data: { coverImageUrl: coverUrl },
+      });
+      res.status(201).json({ trip, coverUrl });
+    } catch (error) {
+      if (uploaded) {
+        try {
+          fs.existsSync(uploaded.path) && fs.unlinkSync(uploaded.path);
+        } catch (_e) {
+          logger.warn({
+            operation: "trip_cover_upload_cleanup_error",
+            message: "Failed to cleanup orphaned trip cover file",
+            context: { path: uploaded.path },
+          });
+        }
+      }
+      next(error);
+    }
+  },
+);
+
+interface PhotoDto {
+  id: string;
+  url: string;
+  caption: string | null;
+  takenAt: string | null;
+  sortIdx: number;
+  mimetype: string;
+  sizeBytes: number;
+  createdAt: string;
+}
+
+function toPhotoDto(p: {
+  id: string;
+  tripId: string;
+  caption: string | null;
+  takenAt: Date | null;
+  sortIdx: number;
+  mimetype: string;
+  sizeBytes: number;
+  createdAt: Date;
+}): PhotoDto {
+  return {
+    id: p.id,
+    url: `/api/v1/trips/${p.tripId}/photos/${p.id}/file`,
+    caption: p.caption,
+    takenAt: p.takenAt?.toISOString() ?? null,
+    sortIdx: p.sortIdx,
+    mimetype: p.mimetype,
+    sizeBytes: p.sizeBytes,
+    createdAt: p.createdAt.toISOString(),
+  };
+}
 
 export default router;

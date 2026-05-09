@@ -92,7 +92,7 @@
   },
   "display": {
     "title": "Display & Language",
-    "description": "Control mode, language and timezone centrally.",
+    "description": "Control language, timezone, and date/time formats centrally.",
     "language": "Language",
     "languages": {
       "de": "Deutsch",
@@ -100,17 +100,7 @@
     },
     "timezone": "Timezone",
     "dateFormat": "Date Format",
-    "timeFormat": "Time Format",
-    "theme": {
-      "title": "Theme Settings",
-      "description": "The theme determines the color scheme of the application. Dark Mode is more pleasant for the eyes in poor lighting conditions.",
-      "lightMode": "Light Mode",
-      "darkMode": "Dark Mode",
-      "lightDescription": "Bright color scheme, ideal in daylight",
-      "darkDescription": "Dark color scheme, reduces eye strain in low light",
-      "autoSave": "The setting is automatically saved and remains for future visits",
-      "active": "active"
-    }
+    "timeFormat": "Time Format"
   },
   "units": {
     "title": "Units & Formats",
@@ -383,6 +373,8 @@
     "title": "Features",
     "costTracking": "Cost Tracking",
     "costTrackingDesc": "Show price and cost fields in forms and enable business cost statistics.",
+    "trackAircraft": "Track tail numbers",
+    "trackAircraftDesc": "Persist aircraft registration + Mode-S from flight lookups. Off = aggregates only, no audit trail of specific airframes.",
     "help": {
       "title": "Optional features",
       "description": "Toggle features on and off to tailor the UI to your usage. Disabled features stay in the code and can be re-enabled any time.",
@@ -532,6 +524,21 @@
     "clear": "Clear",
     "test": "Test",
     "testing": "Testing...",
+    "capabilities": {
+      "historical365": {
+        "label": "Historical search · 365 days",
+        "tooltip": "Only provider that reliably returns flights up to a year in the past."
+      }
+    },
+    "quota": {
+      "label": "Remaining",
+      "unitsSuffix": "API units (last observed)",
+      "requestsLabel": "Plus HTTP requests",
+      "observedSuffix": "calls (last observed)",
+      "notReported": "Provider does not return quota headers.",
+      "staticHint": "Free-tier cap: ~{{limit}}/month",
+      "rateLimitOnly": "No monthly limit — IP-based rate limiting."
+    },
     "sharedNote": "This key is shared by the administrator and cannot be edited",
     "save": "Save API Keys",
     "saving": "Saving...",
@@ -553,6 +560,35 @@
       "label": "Aviationstack API Key",
       "description": "Paid service. Used for flight data lookup with higher accuracy."
     },
+    "aerodatabox": {
+      "label": "AeroDataBox API Key",
+      "description": "Free via RapidAPI: 600 units/month. Closes the gap for historical flights up to a year back."
+    },
+    "bulkRefresh": {
+      "title": "Refresh existing flights",
+      "description": "Backfill missing fields (tail number, Mode-S, codeshare flag, airline ICAO/IATA) on your existing flights from the last 365 days. Existing values are never overwritten. Requires AeroDataBox — only this provider covers the 365-day window.",
+      "remainingPrefix": "There are",
+      "remainingSuffix": "flights queued for refresh.",
+      "allUpToDate": "All flights in the 365-day window are up to date — nothing to do.",
+      "demoBlocked": "Disabled on the demo account to avoid burning real API tokens. Available on your prod instance.",
+      "noHistoricalProvider": "You need an AeroDataBox key to refresh flights older than today — only AeroDataBox covers the 365-day window. Enter a key above and reload the page.",
+      "button": "Refresh",
+      "running": "Running...",
+      "confirmTitle": "Confirm AeroDataBox calls",
+      "confirmBody": "This will use up to {{count}} AeroDataBox calls in this run. A single click processes at most 25 flights — click again to drain the remainder.",
+      "confirmHistoricalNote": "Only AeroDataBox can serve the 365-day window. Other configured APIs (AirLabs, Aviationstack, OpenSky) are not used for this operation.",
+      "confirmQuotaCurrent": "AeroDataBox quota: {{remaining}} of {{limit}} API units remaining.",
+      "confirmQuotaWarn": "Remaining quota is below this batch — you will hit zero before completion.",
+      "quotaLabelADB": "AeroDataBox quota remaining",
+      "quotaSuffixADB": "API units (last observed)",
+      "confirmRun": "Refresh now",
+      "summaryTitle": "Last run",
+      "summaryScanned": "Scanned: {{count}}",
+      "summaryUpdated": "Updated: {{count}}",
+      "summaryNoData": "No provider data: {{count}}",
+      "summaryFailed": "Failed: {{count}}",
+      "summaryRetryHint": "{{count}} more flights remain — click \"Refresh\" again to process the next batch."
+    },
     "opensky": {
       "label": "OpenSky Network",
       "description": "Free service. Requires registration. Used for flight data lookup.",
@@ -561,6 +597,134 @@
       "username": "Username",
       "password": "Password",
       "or": "OR (use basic auth instead)"
+    }
+  },
+  "import": {
+    "title": "Import",
+    "description": "Migrate your flight history from another logbook, or re-import a TravStats Excel export.",
+    "tile": {
+      "fr24": {
+        "title": "From Flightradar24",
+        "description": "Upload your my.flightradar24.com CSV export. Timezone math + airport lookup auto-handled.",
+        "uploadLabel": "Choose FR24 CSV"
+      },
+      "genericCsv": {
+        "title": "From any logbook (CSV)",
+        "description": "Upload a flat per-flight CSV — after upload, a mapping wizard opens so you can match each column to a TravStats field.",
+        "uploadLabel": "Choose CSV file"
+      },
+      "roundTrip": {
+        "title": "Re-import TravStats Excel",
+        "description": "Round-trip XLSX/CSV/JSON exported from TravStats. Existing rows are updated by ID; new rows are created.",
+        "uploadLabel": "Choose .xlsx / .csv / .json",
+        "successSummary": "Updated: {{updated}} · Created: {{created}}"
+      }
+    },
+    "preview": {
+      "title": "Preview import",
+      "summary": "{{ok}} ready · {{duplicates}} duplicates · {{problems}} problems",
+      "commit_one": "Import {{count}} row",
+      "commit_other": "Import {{count}} rows",
+      "cancel": "Cancel",
+      "submitting": "Importing…",
+      "columns": {
+        "date": "Date",
+        "route": "Route",
+        "flight": "Flight",
+        "status": "Status",
+        "flags": "Flags"
+      },
+      "warningBadge": {
+        "duration_mismatch": "Duration mismatch — using calculated arrival from departure + duration"
+      },
+      "errorBadge": {
+        "unresolvable_airport": "Airport not found",
+        "malformed_datetime": "Invalid date or time",
+        "missing_required": "Missing required field"
+      },
+      "dedupeBadge": {
+        "exact_match": "Already imported",
+        "same_day_same_route": "Possible duplicate"
+      },
+      "rowAriaLabel": "Include row {{index}}",
+      "success": {
+        "title": "Import complete",
+        "imported_one": "✅ Imported {{count}} flight",
+        "imported_other": "✅ Imported {{count}} flights",
+        "skipped": "{{count}} skipped via preview",
+        "failed_one": "{{count}} chunk failed — see error message",
+        "failed_other": "{{count}} chunks failed — see error message",
+        "openFlights": "Open flights list",
+        "close": "Close"
+      },
+      "wizard": {
+        "title": "Map your CSV columns to TravStats fields",
+        "headerLabel": "TravStats field",
+        "headerColumn": "Your column",
+        "skip": "— skip —",
+        "cancel": "Cancel",
+        "continue": "Continue",
+        "requiredSection": "Required",
+        "optionalSection": "Optional (recommended)",
+        "autoDetected": "Auto-detected",
+        "samplePrefix": "Sample",
+        "duplicateMapping": "Duplicate mapping",
+        "duplicateMappingHint": "One CSV column is mapped to two TravStats fields — please resolve",
+        "missingFields": "Missing required: {{fields}}",
+        "allMapped": "All required fields mapped",
+        "optionalSkipped_one": "{{count}} optional skipped",
+        "optionalSkipped_other": "{{count}} optional skipped",
+        "fields": {
+          "date": "Date (YYYY-MM-DD)",
+          "fromIata": "From IATA (3-4 letters)",
+          "toIata": "To IATA (3-4 letters)",
+          "depTimeLocal": "Departure time (HH:MM:SS)",
+          "arrTimeLocal": "Arrival time (HH:MM:SS)",
+          "flightNumber": "Flight number",
+          "airline": "Airline",
+          "aircraft": "Aircraft",
+          "registration": "Registration",
+          "seatNumber": "Seat number",
+          "notes": "Notes"
+        }
+      }
+    },
+    "toast": {
+      "movedFromDashboard": "The flight import has moved here — under Settings → Import."
+    }
+  },
+  "apiTokens": {
+    "title": "API Tokens",
+    "description": "Personal access tokens for external tools, AI agents, and scripts. A token is shown exactly once at creation — never again.",
+    "docsTitle": "API documentation",
+    "docsBody": "Full endpoints, examples and schemas — try them interactively with your token.",
+    "docsLink": "Open Swagger UI →",
+    "newLabel": "Label",
+    "newLabelPlaceholder": "e.g. \"Home Assistant integration\"",
+    "scope": "Scope",
+    "scopes": {
+      "read": "Read — read-only",
+      "write": "Write — read + write",
+      "admin": "Admin — full access"
+    },
+    "create": "Create token",
+    "existingTitle": "Existing tokens",
+    "empty": "No tokens created yet.",
+    "lastUsed": "Last used: {{when}}",
+    "neverUsed": "Never used",
+    "revoked": "Revoked",
+    "revokeButton": "Revoke",
+    "confirmRevoke": "Really revoke this token? External tools using it will lose access immediately.",
+    "justCreatedTitle": "Token created",
+    "justCreatedWarning": "Copy this token NOW — it will not be shown again. Only the hash is persisted.",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "dismiss": "Got it",
+    "errors": {
+      "load": "Failed to load tokens",
+      "create": "Failed to create token",
+      "revoke": "Failed to revoke token",
+      "labelRequired": "Label is required"
     }
   }
 }

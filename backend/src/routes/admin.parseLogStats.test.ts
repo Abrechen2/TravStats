@@ -14,9 +14,11 @@ jest.mock("../db", () => ({
 jest.mock("../middleware/auth", () => ({
   authenticate: (_req: unknown, _res: unknown, next: () => void) => next(),
   requireAdmin: (_req: unknown, _res: unknown, next: () => void) => next(),
+  requireWriteScope: (_req: unknown, _res: unknown, next: () => void) => next(),
 }));
 jest.mock("../middleware/rateLimit", () => ({
   adminExportLimiter: (_req: unknown, _res: unknown, next: () => void) => next(),
+  adminReseedLimiter: (_req: unknown, _res: unknown, next: () => void) => next(),
   generalLimiter: (_req: unknown, _res: unknown, next: () => void) => next(),
 }));
 jest.mock("../services/loggingConfig", () => ({

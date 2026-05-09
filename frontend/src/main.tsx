@@ -7,31 +7,11 @@ import "./i18n/config";
 import { I18nextProvider } from "react-i18next";
 import i18n from "./i18n/config";
 
-// Initialize theme before React renders to prevent flash
-// This ensures the theme is applied immediately when the page loads
-if (typeof window !== "undefined") {
-  try {
-    const stored = localStorage.getItem("theme-storage");
-    let isDark = false;
-
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (parsed?.state && typeof parsed.state.isDarkMode === "boolean") {
-        isDark = parsed.state.isDarkMode;
-      }
-    } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
-      isDark = true;
-    }
-
-    // Apply theme immediately to document
-    if (isDark) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  } catch {
-    // Silently fail - theme store will handle it
-  }
+// TravStats is dark-only (BRAND.md §1.1). The `dark` class is hardcoded
+// here before React mounts so any CSS scoped to `html.dark` applies on
+// first paint without flash.
+if (typeof document !== "undefined") {
+  document.documentElement.classList.add("dark");
 }
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
