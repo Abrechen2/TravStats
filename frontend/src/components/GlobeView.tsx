@@ -733,32 +733,46 @@ export default function GlobeView({
     const host = popupHostRef.current;
     if (!map || !host) return;
 
-    if (!pinned) {
-      popupRef.current?.remove();
-      return;
-    }
+    // Wrap the popup lifecycle in try/catch — a single throw from
+    // MapLibre's projection or anchor-flipping math would otherwise
+    // bubble all the way up and unmount the entire GlobeView tree,
+    // which the user observes as "the globe disappears". The popup
+    // missing is recoverable; the canvas going away is not.
+    try {
+      if (!pinned) {
+        popupRef.current?.remove();
+        return;
+      }
 
-    if (!popupRef.current) {
-      popupRef.current = new maplibregl.Popup({
-        closeButton: false,
-        closeOnClick: false,
-        closeOnMove: false,
-        // Cap the wrapper at the same outer width the inner card
-        // wants — the inner card's own min/max width then drives
-        // the actual layout. Leaving this at "none" lets the wrapper
-        // stretch to viewport width on tall content.
-        maxWidth: "320px",
-        offset: 14,
-        subpixelPositioning: true,
-        locationOccludedOpacity: 0,
-        anchor: "bottom",
-        className: "globe-pinned-popup",
-      }).setDOMContent(host);
-    }
+      if (!popupRef.current) {
+        popupRef.current = new maplibregl.Popup({
+          closeButton: false,
+          closeOnClick: false,
+          closeOnMove: false,
+          // Cap the wrapper at the same outer width the inner card
+          // wants — the inner card's own min/max width then drives
+          // the actual layout. Leaving this at "none" lets the wrapper
+          // stretch to viewport width on tall content.
+          maxWidth: "320px",
+          offset: 14,
+          subpixelPositioning: true,
+          locationOccludedOpacity: 0,
+          anchor: "bottom",
+          className: "globe-pinned-popup",
+        }).setDOMContent(host);
+      }
 
-    popupRef.current.setLngLat(pinned.anchorLngLat);
-    if (!popupRef.current.isOpen()) {
-      popupRef.current.addTo(map);
+      const [lng, lat] = pinned.anchorLngLat;
+      // Guard against NaN/Infinity which would crash MapLibre's
+      // setLngLat → projection chain.
+      if (!Number.isFinite(lng) || !Number.isFinite(lat)) return;
+
+      popupRef.current.setLngLat([lng, lat]);
+      if (!popupRef.current.isOpen()) {
+        popupRef.current.addTo(map);
+      }
+    } catch (err) {
+      logger.error({ err, pinned }, "globe.pinned-popup.mount-failed");
     }
   }, [pinned]);
 
