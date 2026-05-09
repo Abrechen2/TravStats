@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import MapGL, { useControl, type MapRef } from "react-map-gl/maplibre";
+import maplibregl from "maplibre-gl";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
 import {
@@ -369,6 +371,20 @@ export default function GlobeView({
   // a marker / arc / cruise path. Survives mouse-move (unlike the
   // hover tooltip) so they can read details without holding still.
   const [pinned, setPinned] = useState<GlobePinned | null>(null);
+
+  // The pinned card is rendered into a stable host div via createPortal,
+  // and that host div is wired to a MapLibre `Popup` so MapLibre handles
+  // lng/lat → screen-pixel projection, repositioning on camera move,
+  // edge-aware anchor flipping, and `locationOccludedOpacity:0` for
+  // back-of-globe culling. We never re-create the host or the popup
+  // instance — only setLngLat() / addTo() / remove() — so React's
+  // reconciliation of card content stays orthogonal to MapLibre's
+  // imperative popup lifecycle.
+  const popupHostRef = useRef<HTMLDivElement | null>(null);
+  if (popupHostRef.current === null) {
+    popupHostRef.current = document.createElement("div");
+  }
+  const popupRef = useRef<maplibregl.Popup | null>(null);
   // null = no filter (all quartiles visible at full opacity). 1-4 =
   // dim every arc outside this quartile so the click-selected band
   // pops. Click the active band again to clear.
@@ -705,6 +721,50 @@ export default function GlobeView({
   useEffect(() => {
     cruiseGeometryRef.current = cruiseGeometry;
   }, [cruiseGeometry]);
+
+  // Mount / re-anchor / dismount the MapLibre Popup that hosts the
+  // pinned detail card. `locationOccludedOpacity: 0` uses MapLibre's
+  // own globe-visibility math to fade the popup when the anchor is on
+  // the back of the earth — same logic as the layer occlusion shader,
+  // no JS-side dot-product replay needed.
+  useEffect(() => {
+    const map = mapRef.current?.getMap();
+    const host = popupHostRef.current;
+    if (!map || !host) return;
+
+    if (!pinned) {
+      popupRef.current?.remove();
+      return;
+    }
+
+    if (!popupRef.current) {
+      popupRef.current = new maplibregl.Popup({
+        closeButton: false,
+        closeOnClick: false,
+        closeOnMove: false,
+        maxWidth: "none",
+        offset: 14,
+        subpixelPositioning: true,
+        locationOccludedOpacity: 0,
+        anchor: "bottom",
+        className: "globe-pinned-popup",
+      }).setDOMContent(host);
+    }
+
+    popupRef.current.setLngLat(pinned.anchorLngLat);
+    if (!popupRef.current.isOpen()) {
+      popupRef.current.addTo(map);
+    }
+  }, [pinned]);
+
+  // Tear down the popup on component unmount so we don't leak DOM
+  // nodes if GlobeView is dismounted while a card is pinned.
+  useEffect(() => {
+    return () => {
+      popupRef.current?.remove();
+      popupRef.current = null;
+    };
+  }, []);
 
   useEffect(() => {
     if (cruises.length === 0) return;
@@ -1441,17 +1501,14 @@ export default function GlobeView({
         </div>
       )}
 
-      {/* Pinned detail card — persists after click until explicitly
-          dismissed. Sits bottom-right so it doesn't fight the legend
-          (bottom-left), style picker (bottom-center), or stats overlay
-          (top-left). Includes a "Details" CTA on flight arcs that
-          delegates to the parent's onFlightClick to open the full
-          flight page. */}
-      {pinned && (
-        <div
-          className="absolute right-4 bottom-4 z-20"
-          style={{ pointerEvents: "auto", maxWidth: 280 }}
-        >
+      {/* Pinned detail card — rendered into the MapLibre Popup host
+          via createPortal. The Popup itself is mounted by the
+          `pinned`-effect above; positioning, anchor flipping, and
+          back-of-globe occlusion (locationOccludedOpacity:0) are all
+          handled by MapLibre. */}
+      {pinned &&
+        popupHostRef.current &&
+        createPortal(
           <div
             className="rounded-md p-3 text-xs"
             style={{
@@ -1462,6 +1519,7 @@ export default function GlobeView({
               fontFamily: "'Inter', sans-serif",
               boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
               minWidth: 220,
+              maxWidth: 280,
             }}
           >
             <div className="mb-2 flex items-start justify-between gap-2">
@@ -1543,9 +1601,9 @@ export default function GlobeView({
                 {t("map:visMode.tripRoutes")}
               </div>
             )}
-          </div>
-        </div>
-      )}
+          </div>,
+          popupHostRef.current,
+        )}
 
       {/* Hover tooltip — pre-escaped HTML (escapeHtml at every interpolation
           site upstream), positioned at the deck.gl pick coords. Offset
