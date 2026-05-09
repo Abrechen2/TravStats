@@ -1,32 +1,66 @@
 {
-  "tab": "Trips",
+  "tab": "Journeys",
   "tabFlights": "Flights",
-  "count": "{{count}} Trip",
-  "count_plural": "{{count}} Trips",
+  "count": "{{count}} Journey",
+  "count_plural": "{{count}} Journeys",
+  "countSpan": "{{count}} Journeys · {{from}} – {{to}}",
   "nights": "{{count}} Night",
   "nights_plural": "{{count}} Nights",
-  "noTrips": "No trips yet.",
-  "noTripsDesc": "Trips are auto-detected on email import or can be created manually.",
-  "createTrip": "Create Trip",
-  "newTrip": "Create New Trip",
-  "newTripDesc": "Group flights manually or auto-created on email import",
-  "editTrip": "Edit Trip",
-  "deleteTrip": "Delete Trip",
-  "removeFromTrip": "Remove from trip",
-  "deleteTripConfirm": "Delete trip \"{{name}}\"? Flights will be kept.",
+  "noTrips": "No journeys yet.",
+  "noTripsDesc": "Journeys are auto-detected on email import or can be created manually.",
+  "createTrip": "Create Journey",
+  "newTrip": "Create New Journey",
+  "newTripDesc": "Group flights & cruises manually or auto-created on import",
+  "openTrip": "Open",
+  "editTrip": "Edit Journey",
+  "deleteTrip": "Delete Journey",
+  "removeFromTrip": "Remove from journey",
+  "deleteTripConfirm": "Delete journey \"{{name}}\"? Linked flights & cruises will be kept.",
   "showOnMap": "Show on Map",
   "flightCount": "{{count}} Flight",
   "flightCount_plural": "{{count}} Flights",
+  "cruiseCount": "{{count}} Cruise",
+  "cruiseCount_plural": "{{count}} Cruises",
   "pnrLabel": "Booking ref.",
   "totalCost": "Total Cost",
   "costPerKm": "Cost/km",
   "distance": "Distance",
+  "status": {
+    "planned": "Planned",
+    "in_progress": "Ongoing",
+    "completed": "Completed"
+  },
+  "category": {
+    "vacation": "Vacation",
+    "business": "Business",
+    "weekend": "Weekend",
+    "family": "Family",
+    "other": "Other"
+  },
+  "filterBar": {
+    "search": "Search by name, country, tag …",
+    "allStatuses": "All",
+    "allCategories": "All categories",
+    "noResults": "No journeys match the filters."
+  },
   "modal": {
-    "nameLabel": "Trip Name",
+    "nameLabel": "Journey Name",
     "namePlaceholder": "e.g. Trondheim Jun 2024",
     "descLabel": "Description (optional)",
-    "descPlaceholder": "Notes about the trip...",
-    "colorLabel": "Color",
+    "descPlaceholder": "Notes about the journey…",
+    "descHint": "Short summary — appears on the card.",
+    "statusLabel": "Status",
+    "categoryLabel": "Category",
+    "startDateLabel": "Start Date",
+    "endDateLabel": "End Date",
+    "originLabel": "Origin",
+    "destinationLabel": "Destination",
+    "tagsLabel": "Tags (comma separated)",
+    "companionsLabel": "Companions (comma separated)",
+    "coverLabel": "Cover image URL",
+    "notesLabel": "Notes (Markdown)",
+    "notesPlaceholder": "Longer notes about the journey…",
+    "colorLabel": "Accent colour",
     "save": "Save",
     "cancel": "Cancel"
   },
@@ -35,23 +69,61 @@
   },
   "filter": {
     "all": "All",
-    "with": "With Trip",
-    "without": "Without Trip"
+    "with": "With Journey",
+    "without": "Without Journey"
+  },
+  "detail": {
+    "backToList": "Back to Journeys",
+    "notes": "Notes",
+    "companions": "Companions",
+    "tags": "Tags",
+    "countries": "Countries",
+    "noLinks": "No flights or cruises linked yet.",
+    "flightsCount": "{{count}} Flight",
+    "flightsCount_plural": "{{count}} Flights",
+    "cruisesCount": "{{count}} Cruise",
+    "cruisesCount_plural": "{{count}} Cruises",
+    "stats": {
+      "flights": "Flights",
+      "cruises": "Cruises",
+      "countries": "Countries",
+      "companions": "Companions",
+      "tags": "Tags"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "timeline": "Timeline",
+      "map": "Map",
+      "gallery": "Gallery",
+      "logistics": "Logistics"
+    },
+    "tabPlaceholder": {
+      "gallery": "Gallery comes in the next iteration once photo upload + storage are in place.",
+      "map": "A journey-specific map view comes in the next iteration."
+    },
+    "logistics": {
+      "flights": "Flights",
+      "cruises": "Cruises",
+      "bookings": "Bookings",
+      "totalBooked": "Total"
+    }
   },
   "toasts": {
-    "created": "Trip created",
-    "updated": "Trip updated",
-    "deleted": "Trip deleted",
-    "createError": "Failed to create trip",
-    "updateError": "Failed to update trip",
-    "deleteError": "Failed to delete trip",
-    "flightRemoved": "Flight removed from trip",
-    "flightRemoveError": "Failed to remove flight from trip"
+    "created": "Journey created",
+    "updated": "Journey updated",
+    "deleted": "Journey deleted",
+    "loadError": "Journey not found",
+    "createError": "Failed to create journey",
+    "updateError": "Failed to update journey",
+    "deleteError": "Failed to delete journey",
+    "flightRemoved": "Flight removed from journey",
+    "flightRemoveError": "Failed to remove flight from journey"
   },
   "detectBanner": {
-    "title": "{{count}} potential trips detected",
+    "title": "{{count}} potential journeys detected",
     "linkAll": "Link all",
-    "success": "Created {{trips}} trips, linked {{flights}} flights, removed {{orphans}} orphans",
-    "error": "Trip detection failed"
+    "review": "Review",
+    "success": "Created {{trips}} journeys, linked {{flights}} flights, removed {{orphans}} orphans",
+    "error": "Journey detection failed"
   }
 }
