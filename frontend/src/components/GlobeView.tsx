@@ -260,9 +260,9 @@ export default function GlobeView({
   const mapRef = useRef<MapRef>(null);
 
   const [styleId, setStyleId] = useState<StyleId>(() => {
-    if (typeof window === "undefined") return "standard";
+    if (typeof window === "undefined") return "dark";
     const stored = window.sessionStorage.getItem("globeStyleId");
-    return STYLE_OPTIONS.some((s) => s.id === stored) ? (stored as StyleId) : "standard";
+    return STYLE_OPTIONS.some((s) => s.id === stored) ? (stored as StyleId) : "dark";
   });
   const [autoRotate, setAutoRotate] = useState(false);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);

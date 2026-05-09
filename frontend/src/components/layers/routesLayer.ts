@@ -400,6 +400,7 @@ export function createRoutesLayers(
     backgroundPadding: [5, 3, 5, 3],
     fontFamily: '"Inter", system-ui, monospace',
     fontWeight: "bold",
+    fontSettings: { sdf: true },
     getPixelOffset: [0, -20],
     outlineWidth: 2,
     outlineColor: [0, 0, 0, 120],

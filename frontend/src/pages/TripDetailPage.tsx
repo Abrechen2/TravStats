@@ -308,21 +308,24 @@ function TabBar({ tab, onChange, t }: TabBarProps): JSX.Element {
       }}
     >
       <div className="max-w-7xl mx-auto px-4 flex gap-1 overflow-x-auto">
-        {TABS.map((key) => (
-          <button
-            key={key}
-            onClick={() => onChange(key)}
-            className="px-4 py-3.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2"
-            style={{
-              color: tab === key ? "var(--accent)" : "var(--text-muted)",
-              borderColor: tab === key ? "var(--accent)" : "transparent",
-              marginBottom: -1,
-            }}
-          >
-            <span className="mr-1.5">{TAB_ICON[key]}</span>
-            {t(`trips:detail.tabs.${key}`)}
-          </button>
-        ))}
+        {TABS.map((key) => {
+          const isActive = tab === key;
+          return (
+            <button
+              key={key}
+              onClick={() => onChange(key)}
+              className="px-4 py-3.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2 hover:text-[var(--text-primary)]"
+              style={{
+                color: isActive ? "var(--accent)" : "rgba(230, 237, 243, 0.65)",
+                borderColor: isActive ? "var(--accent)" : "transparent",
+                marginBottom: -1,
+              }}
+            >
+              <span className="mr-1.5">{TAB_ICON[key]}</span>
+              {t(`trips:detail.tabs.${key}`)}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
